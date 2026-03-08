@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ──────────────────────────────────────────
+// Enums PostgreSQL natifs
+// ──────────────────────────────────────────
+
+enum StatutVague {
+  EN_COURS
+  TERMINEE
+  ANNULEE
+}
+
+enum TypeReleve {
+  BIOMETRIE
+  MORTALITE
+  ALIMENTATION
+  QUALITE_EAU
+  COMPTAGE
+  OBSERVATION
+}
+
+enum TypeAliment {
+  ARTISANAL
+  COMMERCIAL
+  MIXTE
+}
+
+enum CauseMortalite {
+  MALADIE
+  QUALITE_EAU
+  STRESS
+  PREDATION
+  CANNIBALISME
+  INCONNUE
+  AUTRE
+}
+
+enum MethodeComptage {
+  DIRECT
+  ESTIMATION
+  ECHANTILLONNAGE
+}
+
+// ──────────────────────────────────────────
+// Modèles
+// ──────────────────────────────────────────
+
+model Bac {
+  id              String   @id @default(cuid())
+  nom             String
+  volume          Float
+  nombrePoissons  Int?
+  vagueId         String?
+  vague           Vague?   @relation(fields: [vagueId], references: [id])
+  releves         Releve[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([vagueId])
+}
+
+model Vague {
+  id                  String      @id @default(cuid())
+  code                String      @unique
+  dateDebut           DateTime
+  dateFin             DateTime?
+  nombreInitial       Int
+  poidsMoyenInitial   Float
+  origineAlevins      String?
+  statut              StatutVague @default(EN_COURS)
+  bacs                Bac[]
+  releves             Releve[]
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+}
+
+model Releve {
+  id          String     @id @default(cuid())
+  date        DateTime
+  typeReleve  TypeReleve
+  vagueId     String
+  vague       Vague      @relation(fields: [vagueId], references: [id])
+  bacId       String
+  bac         Bac        @relation(fields: [bacId], references: [id])
+  notes       String?
+
+  // Champs biométrie
+  poidsMoyen        Float?
+  tailleMoyenne     Float?
+  echantillonCount  Int?
+
+  // Champs mortalité
+  nombreMorts       Int?
+  causeMortalite    CauseMortalite?
+
+  // Champs alimentation
+  typeAliment       TypeAliment?
+  quantiteAliment   Float?
+  frequenceAliment  Int?
+
+  // Champs qualité eau
+  temperature       Float?
+  ph                Float?
+  oxygene           Float?
+  ammoniac          Float?
+
+  // Champs comptage
+  nombreCompte      Int?
+  methodeComptage   MethodeComptage?
+
+  // Champs observation
+  description       String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([vagueId, typeReleve])
+  @@index([bacId])
+  @@index([date])
+}

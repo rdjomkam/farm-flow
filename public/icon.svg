@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0d9488"/>
+  <g transform="translate(256,256)">
+    <!-- Fish body -->
+    <ellipse cx="0" cy="0" rx="140" ry="70" fill="#ffffff"/>
+    <!-- Tail -->
+    <polygon points="120,-10 170,-55 170,55 120,10" fill="#ffffff"/>
+    <!-- Eye -->
+    <circle cx="-60" cy="-15" r="14" fill="#0d9488"/>
+    <circle cx="-56" cy="-18" r="5" fill="#ffffff"/>
+    <!-- Dorsal fin -->
+    <path d="M-20,-70 Q20,-110 60,-70" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/>
+    <!-- Ventral fin -->
+    <path d="M0,70 Q20,100 50,80" fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round"/>
+    <!-- Gill line -->
+    <path d="M-30,-40 Q-40,0 -30,40" fill="none" stroke="#0d9488" stroke-width="6" stroke-linecap="round" opacity="0.4"/>
+  </g>
+</svg>
