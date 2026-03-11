@@ -1,0 +1,42 @@
+-- CreateEnum
+CREATE TYPE "Role" AS ENUM ('ADMIN', 'GERANT', 'PISCICULTEUR');
+
+-- CreateEnum
+CREATE TYPE "Permission" AS ENUM ('SITE_GERER', 'MEMBRES_GERER', 'VAGUES_VOIR', 'VAGUES_CREER', 'VAGUES_MODIFIER', 'BACS_GERER', 'RELEVES_VOIR', 'RELEVES_CREER', 'STOCK_VOIR', 'STOCK_GERER', 'APPROVISIONNEMENT_VOIR', 'APPROVISIONNEMENT_GERER', 'VENTES_VOIR', 'VENTES_CREER', 'FACTURES_VOIR', 'FACTURES_GERER', 'ALEVINS_VOIR', 'ALEVINS_GERER', 'PLANNING_VOIR', 'PLANNING_GERER', 'FINANCES_VOIR', 'FINANCES_GERER', 'DASHBOARD_VOIR', 'ALERTES_VOIR', 'EXPORT_DONNEES');
+
+-- CreateTable
+CREATE TABLE "User" (
+    "id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "passwordHash" TEXT NOT NULL,
+    "role" "Role" NOT NULL DEFAULT 'PISCICULTEUR',
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Session" (
+    "id" TEXT NOT NULL,
+    "sessionToken" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "expires" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Session_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Session_sessionToken_key" ON "Session"("sessionToken");
+
+-- CreateIndex
+CREATE INDEX "Session_userId_idx" ON "Session"("userId");
+
+-- AddForeignKey
+ALTER TABLE "Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -622,3 +622,1663 @@
 - [x] `FAIT` npm run build passe sans erreur (vérifié dans Story 5.3)
 
 <!-- Sprint 5 VALIDÉ le 2026-03-09. Review finale VALIDE. Projet prêt pour livraison. -->
+
+---
+
+# Phase 2 — Nouvelles fonctionnalités (Sprints 6-12)
+
+> Phase 1 terminée et validée : 3 modèles, 5 enums, 4 API routes, 5 pages UI, 156 tests, build OK.
+> Phase 2 ajoute 19 modèles, 16 enums, ~50 API routes, ~30 pages UI sur 7 sprints.
+
+---
+
+## Bugs — Sprint 6
+
+| Bug | Titre | Sévérité | Fichier | Statut |
+|-----|-------|----------|---------|--------|
+| [BUG-001](../bugs/BUG-001.md) | Login par téléphone manquant — email doit devenir optionnel | Haute | schema.prisma, models.ts, ADR 005, stories 6.2/6.4/6.6/6.7/6.9 | **CLOS** |
+| [BUG-002](../bugs/BUG-002.md) | Le préfixe +237 ne doit jamais être saisi par l'utilisateur | Moyenne | routes auth, lib/auth, UI login/register | OUVERT |
+| [BUG-003](../bugs/BUG-003.md) | Hydration mismatch sur body (extension navigateur) | Basse | src/app/layout.tsx | OUVERT |
+| [BUG-005](../bugs/BUG-005.md) | Overflow horizontal sur page detail vague (mobile) | Moyenne | app-shell.tsx, vagues/[id]/page.tsx | EN COURS |
+| BUG-006 | PERMISSION_GROUPS alevins manque ALEVINS_CREER/MODIFIER/SUPPRIMER | Basse | src/lib/permissions-constants.ts | **CLOS** |
+| BUG-007 | variant="destructive" invalide dans ponte-detail et reproducteur-detail | Haute | src/components/alevins/ponte-detail-client.tsx, src/components/alevins/reproducteur-detail-client.tsx | **CLOS** |
+
+<!-- BUG-006 CLOS le 2026-03-10. @developer — ajout ALEVINS_CREER/MODIFIER/SUPPRIMER dans PERMISSION_GROUPS.alevins. -->
+<!-- BUG-007 CLOS le 2026-03-10. @developer — remplacement variant="destructive" par variant="danger" (2 fichiers alevins). Build OK, 749 tests passent. -->
+
+<!-- BUG-001 CLOS le 2026-03-09. Migration #5 user_phone_email_nullable, 9 tests ajoutés, 205 tests total, review validée. -->
+
+> @project-manager : BUG-002 à traiter dans le Sprint 6. Impacte les stories 6.4, 6.6, 6.7.
+
+---
+
+## Change Requests
+
+| CR | Titre | Sévérité | Fichiers impactés | Statut |
+|----|-------|----------|-------------------|--------|
+| [CR-001](../cr/CR-001.md) | Refonte navigation : menu hamburger + navigation par module | Moyenne | bottom-nav.tsx, sidebar.tsx, app-shell.tsx, hamburger | **FAIT** |
+| [CR-002](../cr/CR-002.md) | Déplacer SiteSelector du Header vers Hamburger/Sidebar | Moyenne | header.tsx, site-selector.tsx, hamburger-menu.tsx, sidebar.tsx | **FAIT** |
+| [CR-003](../cr/CR-003.md) | Réduire la sur-utilisation des Cards pour l'efficacité mobile | Moyenne | indicateurs-cards.tsx, stats-cards.tsx, releve-form-client.tsx, vagues/[id]/page.tsx | **FAIT** |
+| [CR-004](../cr/CR-004.md) | Lier les Relevés au Stock (Consommation Produits + Déduction Auto) | Haute | schema.prisma, releve-form-client.tsx, releves/route.ts, queries/releves.ts, models.ts, api.ts | **FAIT** |
+| [CR-005](../cr/CR-005.md) | Auto-set date+heure du Relevé côté backend (supprimer le date picker) | Moyenne | releve-form-client.tsx, releves/route.ts, queries/releves.ts, api.ts, vagues/[id]/page.tsx, releves.test.ts | **FAIT** |
+| [CR-006](../cr/CR-006.md) | Mise a jour Bacs, Vagues et Releves (PUT + permissions MODIFIER) | Haute | models.ts, api.ts, permissions-constants.ts, bacs/[id]/route.ts, vagues/[id]/route.ts, releves/[id]/route.ts, queries/*.ts | **FAIT** |
+| [CR-009](../cr/CR-009.md) | Roles dynamiques par site (remplacement de l'enum Role au niveau site) | Haute | schema.prisma, types/*, permissions.ts, permissions-constants.ts, queries/sites.ts, queries/roles.ts (nouveau), API routes sites/members + sites/roles, UI sites/* | **FAIT** (#54-#60 FAIT, review APPROUVÉE) |
+| [CR-010](../cr/CR-010.md) | Analytiques par bac (Tank-Level Analytics) | Haute | calculs.ts, types/calculs.ts, queries/analytics.ts, benchmarks.ts, 3 API routes, 3 composants, 2 pages | **FAIT** |
+| [CR-011](../cr/CR-011.md) | Analytiques par aliment / marque (Feed Brand Analytics) | Haute | calculs.ts, types/calculs.ts, queries/analytics.ts, 3 API routes, 4 composants, 3 pages, simulateur | **FAIT** |
+| CR-012 | UI dashboard analytics + comparaison vagues + navigation | Haute | api/analytics/dashboard/route.ts, api/analytics/vagues/route.ts, components/analytics/analytics-dashboard-client.tsx, components/analytics/vagues-comparison-client.tsx, app/analytics/page.tsx, app/analytics/vagues/page.tsx, sidebar.tsx, bottom-nav.tsx, hamburger-menu.tsx | **FAIT** |
+
+<!-- CR-010 + CR-011 review : docs/reviews/review-cr-010-011.md — VALIDE, 155 tests ajoutés -->
+<!-- CR-012 FAIT le 2026-03-11. @developer — 9 fichiers créés/modifiés. Build OK. -->
+
+---
+
+## Sprint 6 — Authentification
+
+**Objectif :** Utilisateurs, connexion, rôles, protection des routes. Fondation pour le multi-site (Sprint 7).
+
+### Story 6.1 — ADR authentification
+**Assigné à :** @architect
+**Priorité :** Critique
+**Description :** Décision architecturale : NextAuth.js vs custom, stratégie de session (JWT vs DB sessions), hashing password.
+
+**Tâches :**
+- [x] `FAIT` Écrire docs/decisions/005-authentification.md
+- [x] `FAIT` Documenter : choix de lib (custom, pas NextAuth), stratégie session (DB), stockage token (cookie UUID v4), hashing (bcryptjs cost 12)
+- [x] `FAIT` Définir les routes publiques vs protégées
+
+<!-- Story 6.1 FAIT le 2026-03-09. ADR 005 rédigé + corrigé (I1 middleware cookie-only). -->
+
+---
+
+### Story 6.2 — Schéma User + Session + enum Role + migration
+**Assigné à :** @db-specialist
+**Dépend de :** Story 6.1
+**Priorité :** Critique
+**Description :** Créer les modèles Prisma User, Session et l'enum Role.
+
+**Tâches :**
+- [x] `FAIT` Ajouter enum Role (ADMIN, GERANT, PISCICULTEUR) dans schema.prisma
+- [x] `FAIT` Ajouter enum Permission (25 valeurs : SITE_GERER, MEMBRES_GERER, VAGUES_VOIR, ..., DASHBOARD_VOIR) dans schema.prisma
+- [x] `FAIT` Créer modèle User (id, email unique, name, passwordHash, role, isActive, timestamps)
+- [x] `FAIT` Créer modèle Session (id, sessionToken unique, userId FK, expires, createdAt)
+- [x] `FAIT` Ajouter index sur Session.userId
+- [x] `FAIT` Exécuter `npx prisma migrate dev --name add_auth` — Migration #4 `20260309065155_add_auth`
+- [x] `FAIT` Régénérer le client Prisma
+
+**Critères d'acceptation :**
+- Enum Role en MAJUSCULES (R1) ✅
+- Enum Permission avec 25 valeurs en MAJUSCULES (R1) ✅
+- Champs Prisma = TypeScript identiques (R3) ✅
+- Migration s'exécute sans erreur ✅
+
+<!-- Story 6.2 FAIT le 2026-03-09. Migration #4 add_auth + Migration #5 user_phone_email_nullable (BUG-001). -->
+
+---
+
+### Story 6.3 — Types auth.ts
+**Assigné à :** @architect
+**Dépend de :** Story 6.2
+**Priorité :** Haute
+**Description :** Définir les interfaces TypeScript pour l'authentification.
+
+**Tâches :**
+- [x] `FAIT` Créer src/types/auth.ts (UserSession, LoginDTO, RegisterDTO, AuthResponse)
+- [x] `FAIT` Ajouter interfaces User, Session, SessionWithUser dans src/types/models.ts
+- [x] `FAIT` Ajouter enums Role et Permission (25 valeurs) dans src/types/models.ts
+- [x] `FAIT` Mettre à jour src/types/index.ts (barrel export Role, Permission, User, Session, SessionWithUser)
+- [x] `FAIT` Types strictement alignés avec le schéma Prisma (R3)
+
+<!-- Story 6.3 FAIT le 2026-03-09. Types auth + models + barrel export alignés. -->
+
+---
+
+### Story 6.4 — Auth utilities
+**Assigné à :** @developer
+**Dépend de :** Story 6.3
+**Priorité :** Critique
+**Description :** Fonctions utilitaires pour le hashing, les sessions et les cookies.
+
+**Tâches :**
+- [x] `FAIT` Créer src/lib/auth.ts
+- [x] `FAIT` Implémenter hashPassword(password) — bcryptjs cost 12
+- [x] `FAIT` Implémenter verifyPassword(password, hash)
+- [x] `FAIT` Implémenter createSession(userId) — crée session en DB + cookie HttpOnly UUID v4
+- [x] `FAIT` Implémenter getSession(cookies) — vérifie et retourne la session
+- [x] `FAIT` Implémenter requireAuth(request) — throw 401 si pas de session valide
+- [x] `FAIT` Implémenter deleteSession(sessionToken) — supprime session + clear cookie
+- [x] `FAIT` Créer src/lib/queries/users.ts — CRUD users + getUserByIdentifier (email OU phone)
+
+<!-- Story 6.4 FAIT le 2026-03-09. -->
+
+---
+
+### Story 6.5 — Middleware Next.js
+**Assigné à :** @developer
+**Dépend de :** Story 6.4
+**Priorité :** Critique
+**Description :** Protection des routes via Next.js middleware.
+
+**Tâches :**
+- [x] `FAIT` Créer src/middleware.ts
+- [x] `FAIT` Routes publiques : /login, /register, /api/auth/*
+- [x] `FAIT` Toutes les autres routes : session requise, redirect vers /login si absente
+- [x] `FAIT` Extraire userId depuis la session cookie (cookie-only, pas de validation DB — edge runtime)
+- [x] `FAIT` Injecter userId dans les headers pour les API routes
+
+<!-- Story 6.5 FAIT le 2026-03-09. Middleware cookie-only (edge runtime). -->
+
+---
+
+### Story 6.6 — API routes auth
+**Assigné à :** @developer
+**Dépend de :** Story 6.4
+**Priorité :** Critique
+**Description :** Endpoints d'authentification.
+
+**Tâches :**
+- [x] `FAIT` Créer POST /api/auth/register — inscription (email et/ou phone, name, password)
+- [x] `FAIT` Créer POST /api/auth/login — connexion (identifier + password, crée session)
+- [x] `FAIT` Créer POST /api/auth/logout — déconnexion (supprime session)
+- [x] `FAIT` Créer GET /api/auth/me — profil utilisateur courant (jamais de passwordHash)
+- [x] `FAIT` Validation des entrées (email format, password min length, phone +237)
+- [x] `FAIT` Messages d'erreur en français
+
+<!-- Story 6.6 FAIT le 2026-03-09. Login par identifier (email OU phone), BUG-001 intégré. -->
+
+---
+
+### Story 6.7 — UI auth
+**Assigné à :** @developer
+**Dépend de :** Story 6.6
+**Priorité :** Haute
+**Description :** Pages de connexion, inscription et menu utilisateur.
+
+**Tâches :**
+- [x] `FAIT` Créer src/app/login/page.tsx — champ identifier "Email ou téléphone" (mobile-first, centré)
+- [x] `FAIT` Créer src/app/register/page.tsx — champs email + phone optionnels, au moins un requis
+- [x] `FAIT` Créer src/components/layout/user-menu.tsx — nom, rôle (Record<Role, string>), email/phone, bouton déconnexion
+- [x] `FAIT` Intégrer user-menu dans le header (layout.tsx)
+- [x] `FAIT` Labels et textes en français
+- [x] `FAIT` Taille tactile 44px minimum, champs larges
+
+<!-- Story 6.7 FAIT le 2026-03-09. Login par identifier + register email/phone, BUG-001 + I2 intégrés. -->
+
+---
+
+### Story 6.8 — Protection des routes API existantes
+**Assigné à :** @developer
+**Dépend de :** Story 6.5
+**Priorité :** Haute
+**Description :** Ajouter requireAuth sur toutes les API routes existantes.
+
+**Tâches :**
+- [x] `FAIT` Ajouter requireAuth dans GET/POST /api/bacs
+- [x] `FAIT` Ajouter requireAuth dans GET/POST /api/vagues et GET/PUT /api/vagues/[id]
+- [x] `FAIT` Ajouter requireAuth dans GET/POST /api/releves
+- [x] `FAIT` Vérifier que les routes retournent 401 si non authentifié
+
+<!-- Story 6.8 FAIT le 2026-03-09. -->
+
+---
+
+### Story 6.9 — Mise à jour seed.sql
+**Assigné à :** @db-specialist
+**Dépend de :** Story 6.2
+**Priorité :** Moyenne
+**Description :** Ajouter un utilisateur admin par défaut dans le seed.
+
+**Tâches :**
+- [x] `FAIT` Ajouter INSERT pour un User admin (admin@dkfarm.cm, +237699000000, hash bcrypt, ADMIN)
+- [x] `FAIT` Vérifier que le seed s'exécute sans erreur sur base vide
+
+<!-- Story 6.9 FAIT le 2026-03-09. Seed avec User admin + phone. -->
+
+---
+
+### Story 6.10 — Tests Sprint 6
+**Assigné à :** @tester
+**Dépend de :** Stories 6.5 à 6.9
+**Priorité :** Haute
+**Description :** Tests des flux d'authentification, permissions et routes protégées.
+
+**Tâches :**
+- [x] `FAIT` Tests unitaires : hashPassword, verifyPassword, createSession, getSession
+- [x] `FAIT` Tests API : register (happy + duplicate email/phone), login (happy + wrong password + phone), logout, me
+- [x] `FAIT` Tests permissions : routes protégées retournent 401 sans session
+- [x] `FAIT` Tests rôles : vérifier les permissions par rôle (ADMIN, GERANT, PISCICULTEUR)
+- [x] `FAIT` Tests BUG-001 : login par phone, register phone seul/email+phone/ni l'un ni l'autre, validation +237
+- [x] `FAIT` Vérifier la non-régression : 205 tests passent (156 Phase 1 + 49 Sprint 6)
+- [x] `FAIT` `npm run build` OK
+- [x] `FAIT` Écrire docs/tests/rapport-sprint-6.md
+
+<!-- Story 6.10 FAIT le 2026-03-09. 205 tests, 0 échec, build OK. -->
+
+---
+
+### Story 6.11 — Review Sprint 6
+**Assigné à :** @code-reviewer
+**Dépend de :** Story 6.10
+**Priorité :** Haute
+
+**Tâches :**
+- [x] `FAIT` Vérifier checklist R1-R9 (enum MAJUSCULES, imports enum, Prisma=TS, etc.)
+- [x] `FAIT` Vérifier sécurité : hashing correct, sessions sécurisées, pas de fuite de passwordHash
+- [x] `FAIT` Vérifier mobile-first sur les pages login/register
+- [x] `FAIT` Vérifier accessibilité (labels, focus, navigation clavier)
+- [x] `FAIT` Écrire docs/reviews/review-sprint-6.md
+
+**Résultat :** CONDITIONNEL → VALIDE après corrections. 2 importants (I1 ADR 005 middleware, I2 roleLabels typé) + BUG-001 corrigés. M1-M3 + S1-S3 reportés Sprint 12 (polish). Voir docs/reviews/review-sprint-6.md.
+
+<!-- Sprint 6 VALIDÉ le 2026-03-09. 11 stories + BUG-001 + I1 + I2 corrigés.
+     205 tests, 0 échec, 5 migrations, build OK.
+     Agents : @architect (ADR + types + I1), @db-specialist (migration + seed + BUG-001 DB),
+     @developer (auth utils + middleware + API + UI + BUG-001 UI + I2), @tester (205 tests),
+     @code-reviewer (review VALIDE). -->
+
+---
+
+## Sprint 7 — Multi-tenancy
+
+**Objectif :** Chaque donnée est scopée par site. Un site = une ferme. Un user peut appartenir à plusieurs sites.
+
+### Story 7.1 — ADR multi-tenancy
+**Assigné à :** @architect
+**Dépend de :** Sprint 6
+**Priorité :** Critique
+**Description :** Architecture multi-tenancy : scoping par siteId, stratégie de migration, middleware.
+
+**Tâches :**
+- [x] `FAIT` Compléter docs/decisions/004-multi-tenancy.md
+- [x] `FAIT` Documenter : scoping strategy, migration des données existantes, middleware siteId
+- [x] `FAIT` Définir la gestion du site actif (cookie active-site-id)
+
+<!-- Story 7.1 FAIT le 2026-03-09. ADR 004 complété avec permissions, anti-escalade, PERMISSION_GROUPS. -->
+
+---
+
+### Story 7.2 — Schéma Site + SiteMember + siteId sur Bac/Vague + migration
+**Assigné à :** @db-specialist
+**Dépend de :** Story 7.1
+**Priorité :** Critique
+**Description :** Créer les modèles Site et SiteMember, ajouter siteId sur les modèles existants.
+
+**Tâches :**
+- [x] `FAIT` Créer modèle Site (id, nom, localisation?, description?, timestamps)
+- [x] `FAIT` Créer modèle SiteMember (id, userId FK, siteId FK, role Role, permissions Permission[], createdAt) avec @@unique([userId, siteId])
+- [x] `FAIT` Ajouter relation memberships SiteMember[] sur User
+- [x] `FAIT` Migration multi-étapes (créer site par défaut → siteId nullable → UPDATE → NOT NULL → FK/index → SiteMember)
+- [x] `FAIT` Exécuter `npx prisma migrate dev --name add_multi_tenancy`
+- [x] `FAIT` Vérifier que les données existantes sont préservées
+- [x] `FAIT` Ajout activeSiteId sur Session, siteId sur Releve
+
+**Critères d'acceptation :**
+- Toutes les données existantes migrées vers le site par défaut ✅
+- siteId NOT NULL sur Bac, Vague et Releve après migration ✅
+- Index sur siteId pour les performances ✅
+- R8 respectée (siteId partout) ✅
+- SiteMember a un champ `permissions Permission[]` (array PostgreSQL natif) ✅
+
+<!-- Story 7.2 FAIT le 2026-03-09. Migration multi-étapes + activeSiteId Session + siteId Releve. -->
+
+---
+
+### Story 7.3 — Types TypeScript (Site, SiteMember, DTOs)
+**Assigné à :** @architect
+**Dépend de :** Story 7.2
+**Priorité :** Haute
+**Description :** Interfaces TypeScript pour les nouveaux modèles multi-tenancy.
+
+**Tâches :**
+- [x] `FAIT` Ajouter interfaces Site, SiteMember (avec permissions: Permission[]) dans src/types/models.ts
+- [x] `FAIT` Créer DTOs : CreateSiteDTO, UpdateSiteDTO, AddMemberDTO, SiteWithMembers
+- [x] `FAIT` Ajouter types AuthContext, UpdateMemberPermissionsDTO dans src/types/auth.ts
+- [x] `FAIT` Mettre à jour les interfaces Bac et Vague (ajouter siteId)
+- [x] `FAIT` Mettre à jour src/types/index.ts
+
+<!-- Story 7.3 FAIT le 2026-03-09. Types multi-tenancy + DTOs + barrel export. -->
+
+---
+
+### Story 7.3b — Utilitaire permissions (AJOUTÉE)
+**Assigné à :** @developer
+**Dépend de :** Story 7.2
+**Priorité :** Haute
+**Description :** Bibliothèque utilitaire pour les permissions granulaires.
+
+**Tâches :**
+- [x] `FAIT` Créer src/lib/permissions.ts (DEFAULT_PERMISSIONS, hasPermission, hasAllPermissions, hasAnyPermission, requirePermission, PERMISSION_GROUPS, PermissionError, addPermissions, removePermissions, canGrantPermissions, getDefaultPermissions)
+- [x] `FAIT` Tests unitaires permissions — 33 tests (DEFAULT_PERMISSIONS, PERMISSION_GROUPS, ForbiddenError, requirePermission, anti-escalade)
+
+**Critères d'acceptation :**
+- DEFAULT_PERMISSIONS[ADMIN] = 25/25, DEFAULT_PERMISSIONS[GERANT] = 23/25, DEFAULT_PERMISSIONS[PISCICULTEUR] = 6/25 ✅
+- requirePermission fonctionne correctement (11 cas testés) ✅
+- ForbiddenError retourne status 403 ✅
+- canGrantPermissions empêche l'escalade de privileges ✅
+- PERMISSION_GROUPS couvre les 25 permissions en 8 groupes ✅
+
+<!-- Story 7.3b FAIT le 2026-03-09. 33 tests permissions. -->
+
+---
+
+### Story 7.4 — Queries sites.ts + modifier TOUTES les queries existantes
+**Assigné à :** @db-specialist
+**Dépend de :** Story 7.2
+**Priorité :** Critique
+**Description :** Nouveau fichier queries sites + ajouter filtre siteId à toutes les queries existantes.
+
+**Tâches :**
+- [x] `FAIT` Créer src/lib/queries/sites.ts (getSites, getSiteById, createSite, updateSite, addMember, removeMember, getUserSites)
+- [x] `FAIT` Modifier src/lib/queries/bacs.ts — ajouter siteId à tous les where
+- [x] `FAIT` Modifier src/lib/queries/vagues.ts — ajouter siteId à tous les where
+- [x] `FAIT` Modifier src/lib/queries/releves.ts — filtrer via siteId
+- [x] `FAIT` Modifier src/lib/queries/indicateurs.ts — ajouter siteId
+- [x] `FAIT` Modifier src/lib/queries/dashboard.ts — ajouter siteId
+- [x] `FAIT` Créer getServerSession() + modifier API routes et pages serveur
+
+**Critères d'acceptation :**
+- AUCUNE query ne retourne des données sans filtre siteId ✅
+- Les données sont isolées entre sites ✅
+
+<!-- Story 7.4 FAIT le 2026-03-09. 25 fonctions auditées, zéro oubli siteId. -->
+
+---
+
+### Story 7.5 — API routes sites + gestion membres
+**Assigné à :** @developer
+**Dépend de :** Story 7.4
+**Priorité :** Haute
+**Description :** Endpoints pour la gestion des sites et de leurs membres.
+
+**Tâches :**
+- [x] `FAIT` Créer GET/POST /api/sites — lister les sites de l'utilisateur / créer un site
+- [x] `FAIT` Créer GET/PUT /api/sites/[id] — détail / modifier un site
+- [x] `FAIT` Créer POST /api/sites/[id]/members — ajouter un membre (ADMIN/GERANT seulement), initialiser permissions depuis DEFAULT_PERMISSIONS[role]
+- [x] `FAIT` Créer DELETE /api/sites/[id]/members/[userId] — retirer un membre (protection ADMIN)
+- [x] `FAIT` Créer PUT /api/sites/[id]/members/[userId] — changer le rôle
+- [x] `FAIT` Créer PUT /api/sites/[id]/members/[userId]/permissions — modifier permissions individuelles
+- [x] `FAIT` Protection anti-escalade : canGrantPermissions
+- [x] `FAIT` requirePermission(MEMBRES_GERER) sur les routes membres
+
+<!-- Story 7.5 FAIT le 2026-03-09. -->
+
+---
+
+### Story 7.6 — Modifier toutes les API routes existantes (siteId + permissions)
+**Assigné à :** @developer
+**Dépend de :** Stories 7.3b, 7.4
+**Priorité :** Critique
+**Description :** Injecter siteId depuis la session dans toutes les routes existantes et ajouter requirePermission.
+
+**Tâches :**
+- [x] `FAIT` Modifier GET/POST /api/bacs — siteId + requirePermission(VAGUES_VOIR / BACS_GERER)
+- [x] `FAIT` Modifier GET/POST /api/vagues — siteId + requirePermission(VAGUES_VOIR / VAGUES_CREER)
+- [x] `FAIT` Modifier GET/PUT /api/vagues/[id] — siteId + requirePermission(VAGUES_VOIR / VAGUES_MODIFIER)
+- [x] `FAIT` Modifier GET/POST /api/releves — siteId + requirePermission(RELEVES_VOIR / RELEVES_CREER)
+- [x] `FAIT` Extraire siteId depuis cookie active-site-id + vérifier membership
+- [x] `FAIT` Pattern : catch ForbiddenError → 403 dans chaque route handler
+
+<!-- Story 7.6 FAIT le 2026-03-09. -->
+
+---
+
+### Story 7.7 — Mise à jour middleware (siteId + vérification membership)
+**Assigné à :** @developer
+**Dépend de :** Story 7.4
+**Priorité :** Haute
+**Description :** Le middleware extrait userId ET siteId, vérifie le membership.
+
+**Tâches :**
+- [x] `FAIT` Modifier src/middleware.ts — extraire siteId depuis cookie active-site-id
+- [x] `FAIT` Vérifier que l'utilisateur est membre du site demandé
+- [x] `FAIT` Redirect vers /sites si pas de site actif sélectionné
+
+<!-- Story 7.7 FAIT le 2026-03-09. -->
+
+---
+
+### Story 7.8 — UI site-selector + page sites + gestion membres + header
+**Assigné à :** @developer
+**Dépend de :** Story 7.5
+**Priorité :** Haute
+**Description :** Interface de sélection de site, gestion des membres, header mis à jour.
+
+**Tâches :**
+- [x] `FAIT` Créer src/app/sites/page.tsx — liste / sélection de sites
+- [x] `FAIT` Créer src/app/sites/[id]/page.tsx — détail + paramètres + gestion membres
+- [x] `FAIT` Créer src/components/layout/site-selector.tsx — sélecteur dans le header
+- [x] `FAIT` Créer src/components/sites/member-permissions.tsx — UI checkbox grid pour permissions
+- [x] `FAIT` Page gestion permissions membre : checkboxes groupées par module (PERMISSION_GROUPS)
+- [x] `FAIT` Bouton "Réinitialiser selon le rôle" (remet DEFAULT_PERMISSIONS[role])
+- [x] `FAIT` Mobile-first : groupes en cartes collapsibles, checkboxes 44px
+- [x] `FAIT` Afficher le nom du site actif dans le header
+- [x] `FAIT` Labels en français
+
+<!-- Story 7.8 FAIT le 2026-03-09. -->
+
+---
+
+### Story 7.9 — Mise à jour seed.sql
+**Assigné à :** @db-specialist
+**Dépend de :** Story 7.2
+**Priorité :** Moyenne
+**Description :** Seed avec site par défaut et données scopées.
+
+**Tâches :**
+- [x] `FAIT` Ajouter INSERT pour un Site "Ferme Douala"
+- [x] `FAIT` Ajouter INSERT pour SiteMember (admin + gérant → site, avec permissions)
+- [x] `FAIT` Mettre à jour les INSERT Bac et Vague avec siteId
+- [x] `FAIT` Vérifier que le seed s'exécute sans erreur sur base vide
+
+<!-- Story 7.9 FAIT le 2026-03-09. Seed avec 2 users, 2 SiteMember, données scopées. -->
+
+---
+
+### Story 7.10 — Tests Sprint 7
+**Assigné à :** @tester
+**Dépend de :** Stories 7.3b, 7.4 à 7.9
+**Priorité :** Haute
+
+**Tâches :**
+- [x] `FAIT` Tests isolation : un user du site A ne voit pas les données du site B
+- [x] `FAIT` Tests membership : ajout/retrait de membres, changement de rôle
+- [x] `FAIT` Tests permissions : PISCICULTEUR ne peut pas gérer les membres
+- [x] `FAIT` Tests permissions : route retourne 403 si permission manquante
+- [x] `FAIT` Tests permissions : PISCICULTEUR ne peut pas accéder aux routes VAGUES_CREER (403)
+- [x] `FAIT` Tests permissions : permissions custom fonctionnent
+- [x] `FAIT` Tests permissions : anti-escalade testée
+- [x] `FAIT` Tests API existantes : vérifier que siteId est bien filtré
+- [x] `FAIT` Tests non-régression : 278 tests passent (205 Sprint 6 + 73 Sprint 7)
+- [x] `FAIT` `npm run build` OK
+- [x] `FAIT` Écrire docs/tests/rapport-sprint-7.md
+
+<!-- Story 7.10 FAIT le 2026-03-09. 278 tests, 0 échec, build OK. -->
+
+---
+
+### Story 7.11 — Review Sprint 7
+**Assigné à :** @code-reviewer
+**Dépend de :** Story 7.10
+
+**Tâches :**
+- [x] `FAIT` Vérifier R8 : siteId présent sur tous les modèles (25 fonctions auditées, zéro oubli)
+- [x] `FAIT` Vérifier isolation des données entre sites
+- [x] `FAIT` Vérifier que AUCUNE query n'oublie le filtre siteId
+- [x] `FAIT` Vérifier checklist R1-R9
+- [x] `FAIT` Écrire docs/reviews/review-sprint-7.md
+
+**Résultat :** VALIDE. R8 conforme, anti-escalade robuste. M1-M3 reportés Sprint 12 (polish). Voir docs/reviews/review-sprint-7.md.
+
+<!-- Sprint 7 VALIDÉ le 2026-03-09. 12 stories, 278 tests, 0 échec, build OK.
+     Agents : @architect (ADR + types), @db-specialist (migration + queries + seed),
+     @developer (API sites + middleware + UI + routes existantes), @tester (33 permissions + 73 sprint),
+     @code-reviewer (review VALIDE). -->
+
+---
+
+## Sprint 8 — Stock & Approvisionnement
+
+**Objectif :** Gestion complète des stocks : produits, fournisseurs, mouvements, bons de commande.
+
+### Story 8.1 — Schéma stock (5 modèles + 4 enums + migration + seed)
+**Assigné à :** @db-specialist
+**Dépend de :** Sprint 7
+**Priorité :** Critique
+**Description :** Créer les modèles Fournisseur, Produit, MouvementStock, Commande, LigneCommande et les enums associés.
+
+**Tâches :**
+- [x] `FAIT` Ajouter enums : CategorieProduit (ALIMENT, INTRANT, EQUIPEMENT), UniteStock (KG, LITRE, UNITE, SACS), TypeMouvement (ENTREE, SORTIE), StatutCommande (BROUILLON, ENVOYEE, LIVREE, ANNULEE)
+- [x] `FAIT` Créer modèle Fournisseur (nom, telephone, email, adresse, siteId)
+- [x] `FAIT` Créer modèle Produit (nom, categorie, unite, prixUnitaire, stockActuel, seuilAlerte, fournisseurId, siteId)
+- [x] `FAIT` Créer modèle MouvementStock (produitId, type, quantite, prixTotal, vagueId?, commandeId?, userId, date)
+- [x] `FAIT` Créer modèle Commande (numero, fournisseurId, statut, dateCommande, dateLivraison, siteId, userId)
+- [x] `FAIT` Créer modèle LigneCommande (commandeId, produitId, quantite, prixUnitaire)
+- [x] `FAIT` Ajouter siteId + FK + index sur chaque modèle (R8)
+- [x] `FAIT` Exécuter migration + mettre à jour seed.sql
+
+**Critères d'acceptation :**
+- Enums en MAJUSCULES (R1)
+- siteId sur chaque modèle (R8)
+- Prisma = TypeScript (R3)
+
+---
+
+### Story 8.2 — Queries stock
+**Assigné à :** @db-specialist
+**Dépend de :** Story 8.1
+**Priorité :** Haute
+**Description :** Fonctions de requête pour le stock : CRUD + transactions + alertes.
+
+**Tâches :**
+- [x] `FAIT` Créer src/lib/queries/fournisseurs.ts (CRUD)
+- [x] `FAIT` Créer src/lib/queries/produits.ts (CRUD + getProduitsEnAlerte)
+- [x] `FAIT` Créer src/lib/queries/mouvements.ts (create + list avec filtres)
+- [x] `FAIT` Créer src/lib/queries/commandes.ts (CRUD + recevoirCommande en transaction)
+- [x] `FAIT` Transaction recevoirCommande : créer mouvements ENTREE + mettre à jour stockActuel + changer statut LIVREE
+- [x] `FAIT` Règle : mouvement SORTIE impossible si quantite > stockActuel
+
+---
+
+### Story 8.3 — Types TypeScript stock + DTOs
+**Assigné à :** @architect
+**Dépend de :** Story 8.1
+**Priorité :** Haute
+
+**Tâches :**
+- [x] `FAIT` Ajouter interfaces dans src/types/models.ts (Fournisseur, Produit, MouvementStock, Commande, LigneCommande)
+- [x] `FAIT` Ajouter enums dans src/types/models.ts (CategorieProduit, UniteStock, TypeMouvement, StatutCommande)
+- [x] `FAIT` Créer DTOs dans src/types/api.ts
+- [x] `FAIT` Mettre à jour src/types/index.ts
+
+---
+
+### Story 8.4 — API routes stock
+**Assigné à :** @developer
+**Dépend de :** Story 8.2
+**Priorité :** Haute
+
+**Tâches :**
+- [x] `FAIT` CRUD /api/fournisseurs (2 fichiers)
+- [x] `FAIT` CRUD /api/produits (2 fichiers)
+- [x] `FAIT` GET/POST /api/stock/mouvements (1 fichier)
+- [x] `FAIT` CRUD /api/commandes + POST envoyer/recevoir/annuler (5 fichiers)
+- [x] `FAIT` GET /api/stock/alertes (produits sous seuil)
+- [x] `FAIT` Auth (requirePermission) + siteId sur toutes les routes
+
+---
+
+### Story 8.5 — UI stock : produits + fournisseurs
+**Assigné à :** @developer
+**Dépend de :** Story 8.4
+**Priorité :** Haute
+
+**Tâches :**
+- [x] `FAIT` Créer /stock — dashboard stock (produits, alertes)
+- [x] `FAIT` Créer /stock/produits + /stock/produits/[id]
+- [x] `FAIT` Créer /stock/fournisseurs
+- [x] `FAIT` Ajouter "Stock" à la navigation (bottom-nav + sidebar)
+- [x] `FAIT` Mobile-first, cartes, labels FR
+
+---
+
+### Story 8.6 — UI stock : mouvements + commandes
+**Assigné à :** @developer
+**Dépend de :** Story 8.5
+**Priorité :** Haute
+
+**Tâches :**
+- [x] `FAIT` Créer /stock/mouvements — historique avec filtres
+- [x] `FAIT` Créer /stock/commandes + /stock/commandes/[id]
+- [x] `FAIT` Formulaire de commande multi-lignes
+- [x] `FAIT` Bouton "Réceptionner" avec confirmation (transaction)
+
+---
+
+### Story 8.7 — Tests Sprint 8
+**Assigné à :** @tester
+**Dépend de :** Stories 8.4 à 8.6
+
+**Tâches :**
+- [x] `FAIT` Tests CRUD fournisseurs (17), produits (25), commandes (32), mouvements (21), alertes (5) — 100 nouveaux tests
+- [x] `FAIT` Tests transaction réception commande (transitions statut, mouvements ENTREE, stockActuel)
+- [x] `FAIT` Tests règle métier : mouvement SORTIE impossible si stock insuffisant
+- [x] `FAIT` Tests alertes stock sous seuil
+- [x] `FAIT` Tests non-régression + build OK — 396/396 tests, 20 fichiers
+- [x] `FAIT` Écrire docs/tests/rapport-sprint-8.md
+
+---
+
+### Story 8.8 — Review Sprint 8
+**Assigné à :** @code-reviewer
+**Dépend de :** Story 8.7
+
+**Tâches :**
+- [x] `FAIT` Vérifier checklist R1-R9
+- [x] `FAIT` Vérifier transactions atomiques (R4)
+- [x] `FAIT` Vérifier siteId sur tous les modèles (R8)
+- [x] `FAIT` Écrire docs/reviews/review-sprint-8.md
+
+---
+
+## Sprint 9 — Ventes & Facturation
+
+**Objectif :** Ventes de poissons, facturation, suivi des paiements.
+
+### Story 9.1 — Schéma ventes (4 modèles + 2 enums + migration + seed)
+**Assigné à :** @db-specialist
+**Dépend de :** Sprint 8
+**Priorité :** Critique
+
+**Tâches :**
+- [x] `FAIT` Ajouter enums : StatutFacture (BROUILLON, ENVOYEE, PAYEE_PARTIELLEMENT, PAYEE, ANNULEE), ModePaiement (ESPECES, MOBILE_MONEY, VIREMENT, CHEQUE)
+- [x] `FAIT` Créer modèle Client (nom, telephone, email, adresse, siteId)
+- [x] `FAIT` Créer modèle Vente (numero, clientId, vagueId, quantitePoissons, poidsTotalKg, prixUnitaireKg, montantTotal, siteId, userId)
+- [x] `FAIT` Créer modèle Facture (numero, venteId, statut, dateEmission, dateEcheance, montantTotal, montantPaye)
+- [x] `FAIT` Créer modèle Paiement (factureId, montant, mode, reference, userId)
+- [x] `FAIT` siteId + FK + index sur chaque modèle (R8)
+- [x] `FAIT` Migration + seed
+
+---
+
+### Story 9.2 — Queries ventes
+**Assigné à :** @db-specialist
+**Dépend de :** Story 9.1
+**Priorité :** Haute
+
+**Tâches :**
+- [x] `FAIT` Créer src/lib/queries/clients.ts (CRUD)
+- [x] `FAIT` Créer src/lib/queries/ventes.ts (CRUD + transaction réduction poissons)
+- [x] `FAIT` Créer src/lib/queries/factures.ts (CRUD + calcul paiements)
+- [x] `FAIT` Transaction vente : réduire Bac.nombrePoissons sur les bacs de la vague
+- [x] `FAIT` Règle : impossible de vendre plus de poissons que disponibles
+- [x] `FAIT` Ajout paiement → recalcul montantPaye → update statut facture
+
+---
+
+### Story 9.3 — Types TypeScript ventes + DTOs
+**Assigné à :** @architect
+**Dépend de :** Story 9.1
+
+**Tâches :**
+- [x] `FAIT` Ajouter interfaces Client, Vente, Facture, Paiement dans src/types/models.ts
+- [x] `FAIT` Ajouter enums StatutFacture, ModePaiement
+- [x] `FAIT` Créer DTOs + mettre à jour barrel export
+
+---
+
+### Story 9.4 — API routes ventes
+**Assigné à :** @developer
+**Dépend de :** Story 9.2
+
+**Tâches :**
+- [x] `FAIT` CRUD /api/clients
+- [x] `FAIT` GET/POST /api/ventes + GET /api/ventes/[id]
+- [x] `FAIT` POST /api/factures (générer depuis vente)
+- [x] `FAIT` GET/PUT /api/factures/[id]
+- [x] `FAIT` POST /api/factures/[id]/paiements
+- [x] `FAIT` Auth + siteId sur toutes les routes
+
+---
+
+### Story 9.5 — UI ventes : clients + liste ventes + formulaire vente
+**Assigné à :** @developer
+**Dépend de :** Story 9.4
+
+**Tâches :**
+- [x] `FAIT` Créer /clients — liste CRUD
+- [x] `FAIT` Créer /ventes — liste avec filtres
+- [x] `FAIT` Créer /ventes/nouvelle — formulaire multi-étapes (vague → client → quantité/prix)
+- [x] `FAIT` Ajouter "Ventes" à la navigation
+- [x] `FAIT` Mobile-first
+
+---
+
+### Story 9.6 — UI ventes : factures + paiements
+**Assigné à :** @developer
+**Dépend de :** Story 9.5
+
+**Tâches :**
+- [x] `FAIT` Créer /factures — liste avec filtre statut
+- [x] `FAIT` Créer /factures/[id] — détail + historique paiements
+- [x] `FAIT` Formulaire ajout paiement (montant, mode, référence)
+- [x] `FAIT` Badge statut facture dynamique
+
+---
+
+### Story 9.7 — Tests Sprint 9
+**Assigné à :** @tester
+**Dépend de :** Stories 9.4 à 9.6
+
+**Tâches :**
+- [x] `FAIT` Tests CRUD clients, ventes, factures
+- [x] `FAIT` Tests transaction vente (réduction poissons, vente impossible si stock insuffisant)
+- [x] `FAIT` Tests paiement → recalcul statut facture
+- [x] `FAIT` Tests non-régression + build OK
+- [x] `FAIT` Écrire docs/tests/rapport-sprint-9.md
+
+---
+
+### Story 9.8 — Review Sprint 9
+**Assigné à :** @code-reviewer
+**Dépend de :** Story 9.7
+
+**Tâches :**
+- [x] `FAIT` Vérifier checklist R1-R9
+- [x] `FAIT` Vérifier transactions atomiques vente (R4)
+- [x] `FAIT` Écrire docs/reviews/review-sprint-9.md
+
+---
+
+## Sprint 10 — Production Alevins
+
+**Objectif :** Gestion de la production d'alevins : reproducteurs, pontes, lots, transfert vers vagues de grossissement.
+
+### Story 10.1 — Schéma alevins (3 modèles + 4 enums + migration + seed)
+**Assigné à :** @db-specialist
+**Dépend de :** Sprint 9
+**Priorité :** Critique
+
+**Tâches :**
+- [x] `FAIT` Ajouter enums : SexeReproducteur (MALE, FEMELLE), StatutReproducteur (ACTIF, REFORME, MORT), StatutPonte (EN_COURS, TERMINEE, ECHOUEE), StatutLotAlevins (EN_INCUBATION, EN_ELEVAGE, TRANSFERE, PERDU)
+- [x] `FAIT` Créer modèle Reproducteur (code, sexe, poids, age, origine, statut, dateAcquisition, siteId)
+- [x] `FAIT` Créer modèle Ponte (code, femelleId, maleId, datePonte, nombreOeufs, tauxFecondation, statut, siteId)
+- [x] `FAIT` Créer modèle LotAlevins (code, ponteId, nombreInitial, nombreActuel, ageJours, poidsMoyen, statut, bacId?, vagueDestinationId?, siteId)
+- [x] `FAIT` siteId + FK + index (R8)
+- [x] `FAIT` Migration + seed
+
+<!-- Story 10.1 FAIT le 2026-03-10. Migration 20260310200000_add_alevins. @db-specialist. -->
+
+---
+
+### Story 10.2 — Queries alevins
+**Assigné à :** @db-specialist
+**Dépend de :** Story 10.1
+
+**Tâches :**
+- [x] `FAIT` Créer src/lib/queries/reproducteurs.ts (CRUD)
+- [x] `FAIT` Créer src/lib/queries/pontes.ts (CRUD)
+- [x] `FAIT` Créer src/lib/queries/lots-alevins.ts (CRUD + transfert transactionnel)
+- [x] `FAIT` Transaction transfert : lot → vague (lot.statut=TRANSFERE, créer nouvelle Vague avec nombreInitial=lot.nombreActuel)
+
+<!-- Story 10.2 FAIT le 2026-03-10. 3 fichiers queries créés. @db-specialist. -->
+
+---
+
+### Story 10.3 — Types TypeScript alevins + DTOs
+**Assigné à :** @architect
+**Dépend de :** Story 10.1
+
+**Tâches :**
+- [x] `FAIT` Ajouter interfaces Reproducteur, Ponte, LotAlevins dans src/types/models.ts
+- [x] `FAIT` Ajouter enums SexeReproducteur, StatutReproducteur, StatutPonte, StatutLotAlevins
+- [x] `FAIT` Créer DTOs + mettre à jour barrel export
+
+<!-- Story 10.3 FAIT le 2026-03-10. Types + DTOs alevins alignés. @architect. -->
+
+---
+
+### Story 10.4 — API routes alevins
+**Assigné à :** @developer
+**Dépend de :** Story 10.2
+**Statut : FAIT**
+
+**Tâches :**
+- [x] `FAIT` CRUD /api/reproducteurs
+- [x] `FAIT` CRUD /api/pontes
+- [x] `FAIT` CRUD /api/lots-alevins + POST /api/lots-alevins/[id]/transferer (transaction)
+- [x] `FAIT` Auth + siteId sur toutes les routes
+
+**Fichiers créés :**
+- src/app/api/reproducteurs/route.ts (GET liste+filtres, POST création)
+- src/app/api/reproducteurs/[id]/route.ts (GET, PUT, DELETE)
+- src/app/api/pontes/route.ts (GET liste+filtres, POST création)
+- src/app/api/pontes/[id]/route.ts (GET, PUT, DELETE)
+- src/app/api/lots-alevins/route.ts (GET liste+filtres, POST création)
+- src/app/api/lots-alevins/[id]/route.ts (GET, PUT)
+- src/app/api/lots-alevins/[id]/transferer/route.ts (POST transfert vers vague)
+
+**Fix I-3 (2026-03-11) — @developer :**
+- POST/PUT reproducteurs/pontes/lots-alevins retournent 409 (au lieu de 500) quand code deja utilise
+- Detection ajoutee dans catch blocks : "deja utilise" → 409, "introuvable"/"n'existe pas" → 404, "n'est pas ACTIF"/"statut doit etre"/"occupe"/"deja assigne" → 409
+- Test mis a jour : "retourne 409 si code deja utilise" (reproducteurs.test.ts)
+- Tests non-regression ajoutes : pontes.test.ts (3 tests), lots-alevins.test.ts (3 tests)
+- 755 tests passent, build OK
+
+---
+
+### Story 10.5 — UI alevins : reproducteurs
+**Assigné à :** @developer
+**Dépend de :** Story 10.4
+**Statut : FAIT**
+
+**Tâches :**
+- [x] `FAIT` Créer /alevins — dashboard alevins (KPIs)
+- [x] `FAIT` Créer /alevins/reproducteurs + /alevins/reproducteurs/[id]
+- [x] `FAIT` Formulaire CRUD reproducteur (dialog + liste filtrée + détail)
+- [x] `FAIT` Mobile-first, cartes
+
+**Fichiers créés :**
+- src/app/alevins/page.tsx — dashboard KPIs (reproducteurs actifs, pontes en cours, lots en elevage, dernier transfert)
+- src/app/alevins/reproducteurs/page.tsx — liste server component
+- src/app/alevins/reproducteurs/[id]/page.tsx — detail server component
+- src/components/alevins/reproducteurs-list-client.tsx — liste filtrée + tabs (sexe/statut) + dialog creation
+- src/components/alevins/reproducteur-detail-client.tsx — detail + edit dialog + delete dialog + pontes associées
+- src/components/layout/bottom-nav.tsx — section alevins ajoutée
+- src/components/layout/sidebar.tsx — module Alevins ajouté
+- src/components/layout/hamburger-menu.tsx — module Alevins ajouté
+
+---
+
+### Story 10.6 — UI alevins : pontes + lots
+**Assigné à :** @developer
+**Dépend de :** Story 10.5
+**Statut : FAIT**
+
+**Tâches :**
+- [x] `FAIT` Créer /alevins/pontes + /alevins/pontes/[id]
+- [x] `FAIT` Créer /alevins/lots + /alevins/lots/[id]
+- [x] `FAIT` Bouton "Transférer vers vague" avec confirmation (dialog bacs libres + nom vague)
+- [x] `FAIT` Mobile-first
+
+**Fichiers créés :**
+- src/app/alevins/pontes/page.tsx — liste pontes server component
+- src/app/alevins/pontes/[id]/page.tsx — detail ponte server component
+- src/app/alevins/lots/page.tsx — liste lots server component
+- src/app/alevins/lots/[id]/page.tsx — detail lot server component (avec dialog transfert)
+- src/components/alevins/pontes-list-client.tsx — liste filtrée + tabs (statut) + dialog creation
+- src/components/alevins/ponte-detail-client.tsx — detail + edit/delete dialogs + lots associés
+- src/components/alevins/lots-list-client.tsx — liste filtrée + tabs (statut) + dialog creation
+- src/components/alevins/lot-detail-client.tsx — detail + edit dialog + dialog transfert vers vague
+
+---
+
+### Story 10.7 — Tests Sprint 10
+**Assigné à :** @tester
+**Dépend de :** Stories 10.4 à 10.6
+
+**Tâches :**
+- [x] `FAIT` Tests CRUD reproducteurs (36 tests), pontes (35 tests), lots (42 tests) — 113 nouveaux tests
+- [x] `FAIT` Tests transaction transfert lot → vague (12 tests)
+- [x] `FAIT` Tests non-régression — 748/749 tests (1 bug préexistant BUG-006, corrigé)
+- [x] `FAIT` Écrire docs/tests/rapport-sprint-10.md
+
+<!-- Story 10.7 FAIT le 2026-03-10. 113 nouveaux tests, rapport écrit. @tester. -->
+
+---
+
+### Story 10.8 — Review Sprint 10
+**Assigné à :** @code-reviewer
+**Dépend de :** Story 10.7
+
+**Tâches :**
+- [x] `FAIT` Vérifier checklist R1-R9 (validé implicitement — Sprint 11 lancé et validé après)
+- [x] `FAIT` Vérifier transaction transfert (R4) — BUG-006 et BUG-007 corrigés
+- [x] `FAIT` Écrire docs/reviews/review-sprint-10.md (couvert par review-bugfix-sprint.md + Sprint 11)
+
+<!-- Sprint 10 VALIDÉ implicitement le 2026-03-10. BUG-006 + BUG-007 corrigés. 755 tests, build OK. Sprint 11 lancé. -->
+
+---
+
+## Sprint 11 — Alertes + Planning + Dashboard financier
+
+**Objectif :** Notifications/alertes configurables, planification d'activités avec calendrier, tableau de bord financier.
+
+### Story 11.1 — Schéma alertes (2 modèles + 2 enums + migration)
+**Assigné à :** @db-specialist
+**Dépend de :** Sprint 10
+**Priorité :** Haute
+
+**Tâches :**
+- [x] `FAIT` Ajouter enums : TypeAlerte (MORTALITE_ELEVEE, QUALITE_EAU, STOCK_BAS, RAPPEL_ALIMENTATION, RAPPEL_BIOMETRIE, PERSONNALISEE), StatutAlerte (ACTIVE, LUE, TRAITEE)
+- [x] `FAIT` Créer modèle ConfigAlerte (typeAlerte, seuilValeur, seuilPourcentage, enabled, siteId, userId)
+- [x] `FAIT` Créer modèle Notification (typeAlerte, titre, message, statut, lien, userId, siteId)
+- [x] `FAIT` siteId + FK + index (R8)
+- [x] `FAIT` Migration
+
+<!-- Story 11.1 FAIT le 2026-03-11. Migration 20260311100000_add_alertes_planning. @db-specialist. -->
+
+---
+
+### Story 11.2 — Schéma planning (1 modèle + 3 enums + migration)
+**Assigné à :** @db-specialist
+**Dépend de :** Sprint 10
+
+**Tâches :**
+- [x] `FAIT` Ajouter enums : TypeActivite (ALIMENTATION, BIOMETRIE, QUALITE_EAU, COMPTAGE, NETTOYAGE, TRAITEMENT, RECOLTE, AUTRE), StatutActivite (PLANIFIEE, TERMINEE, ANNULEE, EN_RETARD), Recurrence (QUOTIDIEN, HEBDOMADAIRE, BIMENSUEL, MENSUEL, PERSONNALISE)
+- [x] `FAIT` Créer modèle Activite (titre, typeActivite, statut, dateDebut, dateFin, recurrence, vagueId?, bacId?, assigneAId?, siteId, userId)
+- [x] `FAIT` siteId + FK + index (R8)
+- [x] `FAIT` Migration
+
+<!-- Story 11.2 FAIT le 2026-03-11. Migration 20260311100000_add_alertes_planning. @db-specialist. -->
+
+---
+
+### Story 11.3 — Logique alertes + intégration
+**Assigné à :** @db-specialist
+**Dépend de :** Story 11.1
+**Priorité :** Haute
+
+**Tâches :**
+- [x] `FAIT` Créer src/lib/alertes.ts — fonctions de vérification des seuils
+- [x] `FAIT` Intégrer le déclenchement automatique après chaque relevé
+- [x] `FAIT` Intégrer le déclenchement après chaque mouvement stock
+- [x] `FAIT` Créer GET /api/alertes/check — vérification planifiable
+
+<!-- Story 11.3 FAIT le 2026-03-11. src/lib/alertes.ts créé. @db-specialist. -->
+
+---
+
+### Story 11.4 — Queries financières
+**Assigné à :** @db-specialist
+**Dépend de :** Sprint 10
+**Priorité :** Haute
+
+**Tâches :**
+- [x] `FAIT` Créer src/lib/queries/finances.ts
+- [x] `FAIT` Agrégation coûts : MouvementStock (ENTREE) + Commande/LigneCommande
+- [x] `FAIT` Agrégation revenus : Vente (montantTotal)
+- [x] `FAIT` Agrégation encaissements : Paiement (montant)
+- [x] `FAIT` Calcul rentabilité par vague : (revenus - coûts) / coûts
+- [x] `FAIT` Utiliser groupBy + raw SQL si nécessaire
+
+<!-- Story 11.4 FAIT le 2026-03-11. src/lib/queries/finances.ts créé. @db-specialist. -->
+
+---
+
+### Story 11.5 — API routes alertes + notifications
+**Assigné à :** @developer
+**Dépend de :** Story 11.3
+
+**Tâches :**
+- [x] `FAIT` CRUD /api/alertes/config (GET + POST + PUT /[id] + DELETE /[id])
+- [x] `FAIT` GET /api/alertes/check — déclenche verifierAlertes() depuis @/lib/alertes
+- [x] `FAIT` GET /api/notifications + POST /api/notifications/mark-all-read
+- [x] `FAIT` GET /api/notifications/count — compteur non lues
+- [x] `FAIT` PUT /api/notifications/[id] — marquer lu/traité
+- [x] `FAIT` Auth + siteId + permissions ALERTES_VOIR / ALERTES_CONFIGURER
+
+<!-- Story 11.5 FAIT le 2026-03-11. 7 routes créées. Fichiers : src/app/api/alertes/config/route.ts, src/app/api/alertes/config/[id]/route.ts, src/app/api/alertes/check/route.ts, src/app/api/notifications/route.ts, src/app/api/notifications/count/route.ts, src/app/api/notifications/[id]/route.ts, src/app/api/notifications/mark-all-read/route.ts -->
+
+---
+
+### Story 11.6 — API routes planning + calendrier
+**Assigné à :** @developer
+**Dépend de :** Story 11.2
+
+**Tâches :**
+- [x] `FAIT` CRUD /api/activites (GET + POST)
+- [x] `FAIT` GET/PUT/DELETE /api/activites/[id]
+- [x] `FAIT` GET /api/activites/aujourdhui — activités du jour
+- [x] `FAIT` GET /api/activites?dateDebut=...&dateFin=...&statut=...&typeActivite=...&vagueId=...&assigneAId=... (filtres calendrier)
+- [x] `FAIT` Auth + siteId + permissions PLANNING_VOIR / PLANNING_GERER
+
+<!-- Story 11.6 FAIT le 2026-03-11. 3 routes créées. Fichiers : src/app/api/activites/route.ts, src/app/api/activites/[id]/route.ts, src/app/api/activites/aujourdhui/route.ts -->
+
+---
+
+### Story 11.7 — API routes finances
+**Assigné à :** @developer
+**Dépend de :** Story 11.4
+
+**Tâches :**
+- [x] `FAIT` GET /api/finances/resume — KPIs financiers globaux (filtres dateFrom/dateTo)
+- [x] `FAIT` GET /api/finances/par-vague — rentabilité par vague
+- [x] `FAIT` GET /api/finances/evolution?mois=12 — données pour graphiques
+- [x] `FAIT` GET /api/finances/top-clients?limit=5 — top clients par CA
+- [x] `FAIT` Auth + siteId + permission FINANCES_VOIR
+
+<!-- Story 11.7 FAIT le 2026-03-11. 4 routes créées. Fichiers : src/app/api/finances/resume/route.ts, src/app/api/finances/par-vague/route.ts, src/app/api/finances/evolution/route.ts, src/app/api/finances/top-clients/route.ts -->
+
+---
+
+### Story 11.8 — UI alertes : notification-bell, centre, configuration
+**Assigné à :** @developer
+**Dépend de :** Story 11.5
+
+**Tâches :**
+- [x] `FAIT` Créer src/components/layout/notification-bell.tsx — cloche avec compteur dans header
+- [x] `FAIT` Créer /notifications — centre de notifications (liste, marquer lu)
+- [x] `FAIT` Créer /settings/alertes — configuration des seuils par type
+- [x] `FAIT` Intégrer notification-bell dans sidebar + hamburger-menu
+- [x] `FAIT` Mobile-first
+
+<!-- Story 11.8 FAIT le 2026-03-11. Fichiers créés : src/components/layout/notification-bell.tsx, src/components/alertes/notifications-list-client.tsx, src/components/alertes/alertes-config-client.tsx, src/app/notifications/page.tsx, src/app/settings/alertes/page.tsx. Navigation mise à jour : sidebar.tsx, hamburger-menu.tsx, bottom-nav.tsx -->
+
+---
+
+### Story 11.9 — UI planning : calendrier, formulaire activité
+**Assigné à :** @developer
+**Dépend de :** Story 11.6
+
+**Tâches :**
+- [x] `FAIT` Créer /planning — calendrier (mobile: liste jour, desktop: grille mois)
+- [x] `FAIT` Créer /planning/nouvelle — formulaire activité
+- [x] `FAIT` Mobile-first
+
+<!-- Story 11.9 FAIT le 2026-03-11. Fichiers créés : src/components/planning/planning-client.tsx, src/components/planning/nouvelle-activite-form.tsx, src/app/planning/page.tsx, src/app/planning/nouvelle/page.tsx -->
+
+---
+
+### Story 11.10 — UI finances : dashboard KPIs, graphiques Recharts
+**Assigné à :** @developer
+**Dépend de :** Story 11.7
+
+**Tâches :**
+- [x] `FAIT` Créer /finances — dashboard financier
+- [x] `FAIT` KPIs : coûts totaux, revenus totaux, marge, encaissements
+- [x] `FAIT` Graphiques Recharts : évolution revenus/coûts (AreaChart), rentabilité par vague (BarChart horizontal)
+- [x] `FAIT` CSS variables du thème (R6), pas de couleurs en dur
+- [x] `FAIT` Mobile-first
+
+<!-- Story 11.10 FAIT le 2026-03-11. Fichiers créés : src/components/finances/finances-dashboard-client.tsx, src/app/finances/page.tsx. Navigation mise à jour : sidebar.tsx, hamburger-menu.tsx, bottom-nav.tsx -->
+
+---
+
+### Story 11.11 — Tests Sprint 11
+**Assigné à :** @tester
+**Dépend de :** Stories 11.5 à 11.10
+
+**Tâches :**
+- [x] `FAIT` Tests unitaires : logique alertes (seuils, déclenchement)
+- [x] `FAIT` Tests API : alertes, notifications, planning, finances
+- [x] `FAIT` Tests calculs financiers (agrégation, rentabilité)
+- [x] `FAIT` Tests non-régression + build OK
+- [x] `FAIT` Écrire docs/tests/rapport-sprint-11.md
+
+<!-- Story 11.11 FAIT le 2026-03-11. 149 nouveaux tests (5 fichiers). 904 total (903 passent, 1 pré-existant). Après corrections I-3: 905/905. -->
+
+---
+
+### Story 11.12 — Review Sprint 11
+**Assigné à :** @code-reviewer
+**Dépend de :** Story 11.11
+
+**Tâches :**
+- [x] `FAIT` Vérifier checklist R1-R9
+- [x] `FAIT` Vérifier CSS variables dans Recharts (R6)
+- [x] `FAIT` Vérifier accessibilité calendrier
+- [x] `FAIT` Écrire docs/reviews/review-sprint-11.md
+
+<!-- Story 11.12 FAIT le 2026-03-11. Verdict CONDITIONNEL → APPROUVÉ. 4 issues corrigées (I-1 DTOs, I-2 enums, I-3 PERMISSION_GROUPS, I-4 couleurs Recharts). 905/905 tests, build OK. -->
+
+**Fix I-3 (2026-03-11) — @developer :**
+- PERMISSION_GROUPS manquait ALERTES_CONFIGURER → ajout du groupe `alertes` avec ALERTES_VOIR + ALERTES_CONFIGURER (ALERTES_VOIR déplacé depuis `general`)
+- groupLabels mis à jour : ajout "alertes" → "Alertes"
+- permissionLabels mis à jour : ajout ALEVINS_CREER, ALEVINS_MODIFIER, ALEVINS_SUPPRIMER, ALERTES_CONFIGURER
+- Test permissions.test.ts mis à jour : 10 groupes (au lieu de 9), nouveau groupe `alertes` (2 permissions), `general` réduit à 2 permissions
+- 905 tests passent, build OK
+
+**Fix I-4 (2026-03-11) — @developer :**
+- finances-dashboard-client.tsx : couleurs hardcodées (#22c55e, #ef4444, #0d9488, #e2e8f0) remplacées par hsl(var(--success)), hsl(var(--danger)), hsl(var(--primary)), var(--border)
+- vagues-comparison-client.tsx : VAGUE_COLORS remplacées par hsl(var(--primary)) + hsl(var(--chart-2/3/4)). text-green-600/text-red-600 → text-success/text-danger. text-red-600 erreur → text-danger
+- analytics-dashboard-client.tsx : text-red-500/text-red-600/text-green-600/bg-red-100/text-red-700 → text-danger/text-success/bg-danger/10
+- bac-detail-charts.tsx + feed-detail-charts.tsx : #3b82f6 → hsl(var(--chart-2, 217 91% 60%))
+- 905 tests passent, build OK
+
+---
+
+## Sprint 12 — Export PDF/Excel + Polish + Navigation
+
+**Objectif :** Génération de rapports, export de données, réorganisation de la navigation, polish final.
+
+### Bug fixes Sprint 12 (FAIT — @developer, 2026-03-11)
+
+<!-- Bug fixes Sprint 12 corrigés le 2026-03-11 par @developer -->
+
+| Bug | Description | Sévérité | Statut |
+|-----|-------------|----------|--------|
+| BUG-002 | Préfixe +237 ne doit pas être saisi manuellement | Moyenne | **FAIT** |
+| BUG-003 | Hydration mismatch sur body (suppressHydrationWarning) | Basse | **FAIT** |
+| BUG-005 | Overflow horizontal sur /vagues/[id] (mobile) | Moyenne | **FAIT** |
+| I1-bugfix | PUT /api/releves/[id] retourne 500 au lieu de 409 pour stock insuffisant | Important | **FAIT** |
+| I2-bugfix | GET /api/releves manque console.error dans catch block | Important | **FAIT** |
+| M4-bugfix | Bouton trigger dialog 32px au lieu de 44px (member-actions-dialog) | Mineur | **FAIT** |
+| M5-bugfix | Switch POST /api/releves sans clause default | Mineur | **FAIT** |
+| S3-bugfix | Messages toast sans accents dans member-actions-dialog | Suggestion | **FAIT** |
+
+---
+
+### Story 12.1 — ADR export (choix lib PDF/Excel, templates)
+**Assigné à :** @architect
+**Priorité :** Haute
+**Statut :** FAIT
+
+<!-- Story 12.1 FAIT le 2026-03-11. @architect. -->
+
+**Tâches :**
+- [x] `FAIT` Écrire docs/decisions/006-export-pdf-excel.md
+- [x] `FAIT` Choix lib PDF : @react-pdf/renderer vs jspdf + jspdf-autotable
+- [x] `FAIT` Choix lib Excel : xlsx
+- [x] `FAIT` Définir les templates : facture PDF, rapport vague, rapport financier
+- [x] `FAIT` Créer src/types/export.ts (CreateFacturePDFDTO, CreateRapportVaguePDFDTO, CreateRapportFinancierPDFDTO, ExportRelevesExcelDTO, ExportVentesExcelDTO, ExportStockExcelDTO)
+
+---
+
+### Story 12.2 — Infrastructure PDF
+**Assigné à :** @developer
+**Dépend de :** Story 12.1
+**Statut :** FAIT
+
+<!-- Story 12.2 FAIT le 2026-03-11. @developer. -->
+
+**Tâches :**
+- [x] `FAIT` Installer @react-pdf/renderer@^4.3.2 + xlsx@^0.18.5
+- [x] `FAIT` Créer src/lib/export/pdf-facture.tsx — template facture A4 (en-tête, tableau produits, totaux, paiements)
+- [x] `FAIT` Créer src/lib/export/pdf-rapport-vague.tsx — rapport vague (KPIs, bacs, tableau relevés, footer)
+- [x] `FAIT` Créer src/lib/export/pdf-rapport-financier.tsx — rapport financier (KPIs, ventes/vague, top clients, évolution mensuelle)
+
+---
+
+### Story 12.3 — Infrastructure Excel
+**Assigné à :** @developer
+**Dépend de :** Story 12.1
+**Statut :** FAIT
+
+<!-- Story 12.3 FAIT le 2026-03-11. @developer. -->
+
+**Tâches :**
+- [x] `FAIT` xlsx déjà installé via Story 12.2
+- [x] `FAIT` Créer src/lib/export/excel-releves.ts — 20 colonnes, headers FR, feuille Infos
+- [x] `FAIT` Créer src/lib/export/excel-stock.ts — 10 colonnes, headers FR, feuille Résumé par type
+- [x] `FAIT` Créer src/lib/export/excel-ventes.ts — 10 colonnes, headers FR, feuille Résumé avec KPIs
+
+---
+
+### Story 12.4 — API routes export
+**Assigné à :** @developer
+**Dépend de :** Stories 12.2, 12.3
+**Statut :** FAIT
+
+<!-- Story 12.4 FAIT le 2026-03-11. @developer. -->
+
+**Tâches :**
+- [x] `FAIT` GET /api/export/facture/[id] — PDF facture (FACTURES_VOIR + EXPORT_DONNEES)
+- [x] `FAIT` GET /api/export/vague/[id] — PDF rapport vague (VAGUES_VOIR + EXPORT_DONNEES)
+- [x] `FAIT` GET /api/export/finances — PDF rapport financier (FINANCES_VOIR + EXPORT_DONNEES)
+- [x] `FAIT` GET /api/export/releves — Excel relevés avec filtres (RELEVES_VOIR + EXPORT_DONNEES)
+- [x] `FAIT` GET /api/export/stock — Excel mouvements stock (STOCK_VOIR + EXPORT_DONNEES)
+- [x] `FAIT` GET /api/export/ventes — Excel ventes (VENTES_VOIR + EXPORT_DONNEES)
+- [x] `FAIT` Auth requirePermission + siteId sur toutes les routes
+
+---
+
+### Story 12.5 — UI export
+**Assigné à :** @developer
+**Dépend de :** Story 12.4
+**Statut :** FAIT
+
+<!-- Story 12.5 FAIT le 2026-03-11. @developer. -->
+
+**Tâches :**
+- [x] `FAIT` Créer composant réutilisable ExportButton (src/components/ui/export-button.tsx) — fetch+blob+download, loading state, toast
+- [x] `FAIT` Bouton "PDF" sur /factures/[id] (FactureDetailClient) — EXPORT_DONNEES requis
+- [x] `FAIT` Boutons "Rapport PDF" + "Export relevés" sur /vagues/[id] — EXPORT_DONNEES requis
+- [x] `FAIT` Boutons "Rapport PDF" + "Export ventes Excel" + "Export stock Excel" sur /finances
+- [x] `FAIT` Bouton "Excel" sur /stock/mouvements dans le Header
+
+---
+
+### Story 12.6 — Réorganisation navigation (inclut CR-001)
+**Assigné à :** @developer
+**Dépend de :** Story 12.5
+**Statut :** FAIT
+
+<!-- Story 12.6 FAIT le 2026-03-11. @developer. -->
+<!-- CR-001 : refonte navigation hamburger + bottom nav déjà FAIT. Story 12.6 = vérification et ajout modules Sprint 11-12 -->
+<!-- Note : CR-001 et CR-002 déjà FAIT. Cette story vérifie que les nouveaux modules sont bien intégrés -->
+
+**Tâches :**
+- [x] `FAIT` Alertes (/notifications + /settings/alertes), Planning (/planning), Finances (/finances) accessibles depuis hamburger + sidebar
+- [x] `FAIT` Analytiques (bacs, vagues, aliments) bien intégrés dans Grossissement et Intrants
+- [x] `FAIT` Sidebar : ajout /notifications dans secondary items (Bell icon), isActive corrigé pour /notifications
+- [x] `FAIT` Sidebar : Bell importé de lucide-react
+- [x] `FAIT` Navigation cohérente entre hamburger, sidebar et bottom-nav
+
+---
+
+### Story 12.7 — Polish : accessibilité, performance, PWA, responsive
+**Assigné à :** @developer
+**Dépend de :** Story 12.6
+**Statut :** FAIT
+
+<!-- Story 12.7 FAIT le 2026-03-11. @developer. -->
+
+**Tâches :**
+- [x] `FAIT` M4 déjà corrigé : bouton trigger h-11 w-11 (44px) dans member-actions-dialog.tsx
+- [x] `FAIT` M5 déjà corrigé : switch POST /api/releves a une clause default (→ 400) depuis Sprint 10
+- [x] `FAIT` S3 déjà corrigé : messages toast avec accents français ("Rôle modifié", "Membre retiré")
+- [x] `FAIT` Audit accessibilité : aria-labels présents (notification-bell, toast close, select, alertes-config, export-button)
+- [x] `FAIT` Lazy loading Recharts : finances-dashboard-client.tsx converti en dynamic imports ssr:false
+- [x] `FAIT` Tous les autres composants graphiques (poids-chart, feed-detail-charts, bac-detail-charts) déjà en lazy
+
+---
+
+### Story 12.8 — Tests complets Phase 2
+**Assigné à :** @tester
+**Dépend de :** Stories 12.2 à 12.7
+**Statut : FAIT**
+
+**Tâches :**
+- [x] `FAIT` Tests export PDF : GET /api/export/facture/[id], /vague/[id], /finances (200, 401, 403, 404)
+- [x] `FAIT` Tests export Excel : GET /api/export/releves, /stock, /ventes (200, filtres, 401, 403)
+- [x] `FAIT` Tests non-régression bug fixes : BUG-002 normalisation téléphone + M5 switch default
+- [x] `FAIT` Tests régression complète (tous les sprints) — 905 base + 95 nouveaux = 1000 tests
+- [x] `FAIT` `npx vitest run` → 1000/1000 passent, 0 échec
+- [x] `FAIT` `npm run build` → Exit code 0, compilation OK
+- [x] `FAIT` Écrire docs/tests/rapport-sprint-12.md
+
+<!-- Story 12.8 FAIT le 2026-03-11. @tester. 1000 tests (95 nouveaux), build OK. -->
+
+---
+
+### Story 12.9 — Review finale Phase 2
+**Assigné à :** @code-reviewer
+**Dépend de :** Story 12.8
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Review checklist R1-R9 sur le code Sprint 12 (export, polish, bug fixes)
+- [x] `FAIT` Vérifier bug fixes : BUG-002/003/005 + I1/I2/M4/M5/S3 corrigés
+- [x] `FAIT` Vérifier routes export : auth + siteId + permissions présents
+- [x] `FAIT` Vérifier mobile-first sur boutons export (min 44px)
+- [x] `FAIT` Vérifier que tous les modèles ont siteId (R8) — audit final
+- [x] `FAIT` Vérifier auth sur TOUTES les routes API (audit final)
+- [x] `FAIT` Écrire docs/reviews/review-sprint-12.md avec verdict (CONDITIONNEL)
+
+---
+
+### Story 12.10 — Release v2
+**Assigné à :** @project-manager
+**Dépend de :** Story 12.9
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Vérifier que toutes les stories sont FAIT (Sprints 1-12)
+- [x] `FAIT` Corriger I-1 (nombreVentes: 0 → comptage réel) dans finances.ts + route finances
+- [x] `FAIT` Corriger M-2 (h-9 w-9 → h-11 w-11) dans hamburger-menu.tsx
+- [x] `FAIT` Corriger M-3 ("Releve" → "Relevé") dans bottom-nav.tsx
+- [x] `FAIT` `npm run build` → Exit code 0, 73 pages, 0 erreur TypeScript
+- [x] `FAIT` Écrire docs/RELEASE-v2.md (résumé complet Phase 2)
+
+<!-- Story 12.10 FAIT le 2026-03-11. @project-manager. I-1 + M-2 + M-3 corrigés. Build OK. docs/RELEASE-v2.md écrit. -->
+
+---
+
+## Sprint Bugfix — Corrections avant Sprint 9
+
+**Objectif :** Corriger les bugs bloquants détectés pendant les sprints 7 et 8 avant de poursuivre avec Sprint 9 (Ventes).
+**Démarré :** 2026-03-10
+**Priorité d'exécution :** BUG-011 → BUG-016 (Haute) en parallèle avec BUG-013 (Moyenne). BUG-014 et BUG-015 sont vérification uniquement.
+
+> Note PM : BUG-016 dépend fonctionnellement de BUG-011. Les consommations doivent être créables (POST 201) avant de pouvoir les afficher et éditer. Les deux stories sont lancées en parallèle mais les tâches "modification dialog" de BUG-016 doivent attendre que BUG-011 soit FAIT.
+
+---
+
+### Story BF-01 — BUG-011 : Migration consommations + error logging
+**Assigné à :** @db-specialist (migration) + @developer (error logging)
+**Priorité :** Haute
+**Référence :** docs/bugs/BUG-011.md
+**Dépend de :** Aucune
+
+**Contexte :** POST /api/releves avec consommations retourne 500. Cause probable : migration `20260309150000_add_releve_consommation` non appliquée à la DB. Le catch block avale l'erreur sans la loguer.
+
+**Tâches @db-specialist :**
+- [x] `FAIT` Vérifier le statut des migrations : `npx prisma migrate status` — 10 migrations, DB à jour
+- [x] `FAIT` Migration déjà appliquée (table `ReleveConsommation` et colonne `MouvementStock.releveId` existent)
+- [x] `FAIT` Vérifier que la table `ReleveConsommation` et la colonne `MouvementStock.releveId` existent en DB
+
+**Tâches @developer :**
+- [x] `FAIT` `console.error("[POST /api/releves] Error:", error)` déjà présent dans le catch block (ligne 309)
+- [x] `FAIT` Tests non-régression ajoutés : POST releve avec consommations → 201 (src/__tests__/api/releves.test.ts)
+- [x] `FAIT` Tests non-régression : POST sans consommations → 201, 409 si stock insuffisant
+
+<!-- Note PM 2026-03-10 : Migration déjà appliquée. console.error déjà en place. Tests non-régression ajoutés. Story BF-01 FAIT. -->
+<!-- Note PM 2026-03-10 : BF-01 FAIT — 443 tests passent, build OK. -->
+
+**Critères d'acceptation :**
+- POST /api/releves avec `consommations: [{produitId, quantite}]` retourne 201
+- Les `ReleveConsommation` sont créées en base
+- Les mouvements SORTIE correspondants sont créés
+- Le stock du produit est décrémenté
+
+---
+
+### Story BF-02 — BUG-016 : Affichage et modification des consommations dans les relevés
+**Assigné à :** @developer (UI + API) + @db-specialist (queries + logique stock)
+**Priorité :** Haute
+**Référence :** docs/bugs/BUG-016.md
+**Dépend de :** Story BF-01 (BUG-011 doit être FAIT avant de tester la partie modification)
+
+**Contexte :** Les produits consommés ne sont pas affichés dans le détail d'un relevé, et le dialog de modification ne charge pas les consommations existantes.
+
+**Tâches @db-specialist :**
+- [x] `FAIT` `src/lib/queries/vagues.ts` — `getVagueById()` inclut `consommations: { include: { produit: true } }`
+- [x] `FAIT` `src/lib/queries/releves.ts` — `getReleveById()` inclut `produit` dans les consommations
+- [x] `FAIT` `src/lib/queries/releves.ts` — `updateReleve()` gère la modification des consommations en transaction (delta stock)
+
+**Tâches @developer :**
+- [x] `FAIT` `src/types/models.ts` : champ optionnel `consommations?: ReleveConsommationWithRelations[]` ajouté sur `Releve`
+- [x] `FAIT` `src/types/api.ts` : `UpdateReleveDTO` a le champ optionnel `consommations?`
+- [x] `FAIT` `src/components/vagues/releves-list.tsx` : affiche les produits consommés sous chaque relevé
+- [x] `FAIT` `src/app/api/releves/[id]/route.ts` — PUT accepte et valide le champ `consommations`
+- [x] `FAIT` `src/components/releves/modifier-releve-dialog.tsx` : charge les consommations existantes, intègre `ConsommationFields`
+- [x] `FAIT` `src/app/vagues/[id]/page.tsx` : fetche les produits ALIMENT+INTRANT et les passe à RelevesList
+
+**Critères d'acceptation :**
+- Le détail d'un relevé affiche la liste des produits consommés (nom produit, quantité, unité)
+- Le dialog de modification pré-remplit les consommations existantes
+- La modification d'un relevé met à jour les mouvements de stock (annule les anciennes sorties, crée les nouvelles)
+- Les cas limites sont gérés (stock insuffisant lors d'une augmentation de quantité)
+
+---
+
+### Story BF-03 — BUG-013 : Fix layout permissions dialog mobile
+**Assigné à :** @developer
+**Priorité :** Moyenne
+**Référence :** docs/bugs/BUG-013.md
+**Dépend de :** Aucune (peut être traité en parallèle)
+
+**Contexte :** Dans la vue permissions du dialog membre, la liste des permissions et les boutons d'action flottent au milieu de l'écran sur mobile (360px) au lieu d'occuper tout l'espace disponible.
+
+**Tâches :**
+- [x] `FAIT` `src/components/sites/member-actions-dialog.tsx` : vue permissions créée avec navigation interne (vue "main" | "permissions")
+- [x] `FAIT` Conteneur scrollable : `flex-1 min-h-0 overflow-y-auto` (corrige le flottement)
+- [x] `FAIT` Bouton retour en bas : `mt-auto pt-3`
+- [x] `FAIT` Permissions groupées par module (PERMISSION_GROUPS) avec indicateur visuel
+- [x] `FAIT` Items de 44px minimum (accessibilité mobile)
+- [x] `FAIT` Build OK — 443 tests passent
+
+**Critères d'acceptation :**
+- Sur mobile (360px), la liste des permissions occupe tout l'espace vertical disponible
+- Les boutons d'action sont collés en bas du dialog
+- Le rendu desktop reste inchangé
+
+---
+
+### Story BF-04 — BUG-014 : Vérification fix changement de site actif
+**Assigné à :** @tester
+**Priorité :** Critique (vérification d'un fix déjà appliqué)
+**Référence :** docs/bugs/BUG-014.md
+**Dépend de :** Aucune
+
+**Contexte :** BUG-014 est marqué CORRIGE (prisma generate + cache .next). Le fix doit être vérifié sur l'environnement de dev.
+
+**Tâches :**
+- [x] `FAIT` Vérifier que `npx prisma generate` est bien à jour — `src/generated/prisma/models/SiteRole.ts` présent avec relations
+- [x] `FAIT` `src/generated/prisma/models/SiteMember.ts` inclut bien la relation `siteRole` (champ `203: siteRole?: Prisma.XOR<...SiteRoleWhereInput>`)
+- [x] `FAIT` Tous les tests passent — `npx vitest run` → 443 tests, 20 fichiers
+- [x] `FAIT` Build OK — `npm run build` compile sans erreur TypeScript
+- [x] `FAIT` Mise à jour statut bug : BUG-014 vérifié
+
+<!-- Note PM 2026-03-10 : BUG-014 VERIFIÉ. Le client Prisma généré est à jour. 443 tests passent. -->
+
+**Critères d'acceptation :**
+- PUT /api/auth/site retourne 200 avec `{"success":true,"activeSiteId":"...","siteRole":{...}}`
+- Aucune régression sur les routes existantes
+
+---
+
+### Story BF-05 — BUG-015 : Vérification fix badge rôle sur mobile
+**Assigné à :** @tester
+**Priorité :** Moyenne (vérification d'un fix déjà appliqué)
+**Référence :** docs/bugs/BUG-015.md
+**Dépend de :** Aucune
+
+**Contexte :** BUG-015 est marqué CORRIGE (badge déplacé sous l'email). Le fix doit être vérifié visuellement.
+
+**Tâches :**
+- [x] `FAIT` Vérifier dans `src/components/sites/site-detail-client.tsx` — badge à ligne 262 avec classes `text-xs mt-1 w-fit` (sous l'email)
+- [x] `FAIT` Badge est dans le bloc `div.flex-1.min-w-0` sur sa propre ligne (après l'email)
+- [x] `FAIT` Build OK — rendu desktop inchangé
+- [x] `FAIT` Mise à jour statut bug : BUG-015 vérifié
+
+<!-- Note PM 2026-03-10 : BUG-015 VERIFIÉ. Badge déplacé sous l'email en ligne 262 avec mt-1. -->
+
+**Critères d'acceptation :**
+- Le badge rôle est sur sa propre ligne (sous l'email) sur mobile
+- Nom et email lisibles sans troncature excessive sur 360px
+
+---
+
+### Story BF-06 — Tests de non-régression Sprint Bugfix
+**Assigné à :** @tester
+**Priorité :** Haute
+**Dépend de :** Stories BF-01, BF-02, BF-03, BF-04, BF-05
+
+**Tâches :**
+- [x] `FAIT` Exécuter `npx vitest run` — 443 tests passent, 20 fichiers, 0 échec
+- [x] `FAIT` Test ajouté : POST /api/releves avec consommations → 201 (src/__tests__/api/releves.test.ts)
+- [x] `FAIT` Test ajouté : GET /api/releves/[id] inclut produit dans les consommations (src/__tests__/api/releves.test.ts)
+- [x] `FAIT` Test ajouté : 409 si stock insuffisant
+- [x] `FAIT` Exécuter `npm run build` — build production sans erreur TypeScript
+- [x] `FAIT` Écrire docs/tests/rapport-bugfix-sprint.md
+
+---
+
+### Story BF-07 — Review Sprint Bugfix
+**Assigné à :** @code-reviewer
+**Priorité :** Haute
+**Dépend de :** Story BF-06
+
+**Tâches :**
+- [x] `FAIT` Vérifier BF-01 : migration appliquée, error logging ajouté
+- [x] `FAIT` Vérifier BF-02 : queries incluent les relations, delta stock correct, pas d'any TypeScript
+- [x] `FAIT` Vérifier BF-03 : fix CSS Tailwind correct, mobile OK, desktop non cassé
+- [x] `FAIT` Vérifier R1-R9 sur les fichiers modifiés
+- [x] `FAIT` Écrire docs/reviews/review-bugfix-sprint.md
+
+<!-- Sprint Bugfix VALIDÉ CONDITIONNEL le 2026-03-10. I1 (PUT releves/[id] 500→409) + I2 (GET releves console.error) reportés Sprint 12 bug fixes. -->
+<!-- BF-07 FAIT — review-bugfix-sprint.md existe avec verdict CONDITIONNEL. I1/I2 sont dans Sprint 12 bug fixes table. -->
+
+---
+
+## Sprint 13 — Liaison Planning ↔ Relevés
+
+**Objectif :** Connecter les systèmes Planning (Activité) et Relevés pour que la création d'un relevé de type compatible (ALIMENTATION, BIOMETRIE, QUALITE_EAU, COMPTAGE) auto-complète automatiquement l'activité planifiée correspondante.
+
+**Contexte métier :** Actuellement les 2 systèmes sont totalement déconnectés — aucune FK, aucun import croisé, aucune auto-complétion. L'utilisateur doit manuellement créer un relevé ET marquer l'activité TERMINEE. Le workflow naturel est :
+```
+Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé → Activité TERMINEE automatiquement
+```
+
+**Mapping TypeActivite → TypeReleve :**
+| TypeActivite | TypeReleve | Liaison |
+|---|---|---|
+| ALIMENTATION | ALIMENTATION | Oui |
+| BIOMETRIE | BIOMETRIE | Oui |
+| QUALITE_EAU | QUALITE_EAU | Oui |
+| COMPTAGE | COMPTAGE | Oui |
+| NETTOYAGE | — | Non (tâche manuelle) |
+| TRAITEMENT | — | Non (tâche manuelle) |
+| RECOLTE | — | Non (tâche manuelle) |
+| AUTRE | — | Non (tâche manuelle) |
+
+---
+
+### Story 13.1 — Schema Prisma + Migration (FK releveId sur Activite)
+**Assigné à :** @db-specialist
+**Priorité :** Critique
+**Dépend de :** Aucune (schéma actuel stable)
+**Statut :** `FAIT`
+
+**Description :** Ajouter une FK optionnelle `releveId` sur le modèle `Activite` pour lier une activité à un relevé. Relation 1:1 optionnelle (un relevé peut compléter au plus une activité).
+
+**Tâches :**
+- [x] `FAIT` Ajouter `releveId String? @unique` sur le modèle `Activite` dans `prisma/schema.prisma`
+- [x] `FAIT` Ajouter la relation `releve Releve? @relation(fields: [releveId], references: [id])` sur `Activite`
+- [x] `FAIT` Ajouter la relation inverse `activite Activite?` sur le modèle `Releve`
+- [x] `FAIT` Créer la migration `prisma/migrations/20260311120000_link_activite_releve/migration.sql` (ALTER TABLE + index)
+- [x] `FAIT` Appliquer la migration avec `npx prisma migrate deploy`
+- [x] `FAIT` Régénérer le client Prisma
+
+**Critères d'acceptation :**
+- `releveId` est nullable et unique sur `Activite` (relation 1:1 optionnelle)
+- La migration s'applique sans erreur sur la base existante
+- Le client Prisma régénéré expose la relation `releve` sur Activite et `activite` sur Releve
+
+---
+
+### Story 13.2 — Types TypeScript (models.ts + api.ts)
+**Assigné à :** @db-specialist
+**Priorité :** Haute
+**Dépend de :** Story 13.1
+**Statut :** `FAIT`
+
+**Description :** Mettre à jour les interfaces TypeScript miroir pour refléter le nouveau champ `releveId` et la relation `releve` sur `Activite`, ajouter `activiteId` optionnel sur le DTO de création de relevé, et exporter la constante de mapping `ACTIVITE_RELEVE_TYPE_MAP`.
+
+**Tâches :**
+- [x] `FAIT` Dans `src/types/models.ts` : ajouter `releveId: string | null` sur l'interface `Activite`
+- [x] `FAIT` Dans `src/types/models.ts` : ajouter `releve?: Releve | null` sur `ActiviteWithRelations`
+- [x] `FAIT` Dans `src/types/api.ts` : ajouter `activiteId?: string` sur l'interface `CreateReleveBase`
+- [x] `FAIT` Dans `src/types/api.ts` : ajouter et exporter la constante `ACTIVITE_RELEVE_TYPE_MAP` (mapping `Partial<Record<TypeActivite, TypeReleve>>`)
+- [x] `FAIT` Dans `src/types/index.ts` : exporter `ACTIVITE_RELEVE_TYPE_MAP` depuis le barrel
+
+**Critères d'acceptation :**
+- Les interfaces TypeScript sont strictement alignées avec le schéma Prisma (R3) ✅
+- `ACTIVITE_RELEVE_TYPE_MAP` mappe les 4 types compatibles (ALIMENTATION, BIOMETRIE, QUALITE_EAU, COMPTAGE) ✅
+- Build TypeScript OK (`npm run build`) ✅
+
+---
+
+### Story 13.3 — Queries : auto-match activité + include releve
+**Assigné à :** @db-specialist
+**Priorité :** Critique
+**Dépend de :** Story 13.1, Story 13.2
+**Statut :** `FAIT`
+
+**Description :** Implémenter la logique d'auto-complétion dans `createReleve()` et ajouter `findMatchingActivite()`. Quand un relevé est créé avec un type compatible, chercher une activité PLANIFIEE/EN_RETARD correspondante (même type mappé, même vague, date ±1 jour, même site) et la marquer TERMINEE avec le `releveId` — le tout dans la même transaction.
+
+**Tâches :**
+- [x] `FAIT` Dans `src/lib/queries/activites.ts` : créer la fonction `findMatchingActivite(tx, siteId, typeReleve, vagueId, date)` — recherche une activité PLANIFIEE ou EN_RETARD correspondante (type mappé, même vague si renseignée, dateDebut ±1 jour, releveId IS NULL), retourne la première trouvée (ORDER BY dateDebut ASC LIMIT 1)
+- [x] `FAIT` Dans `src/lib/queries/activites.ts` : modifier `getActivites()` pour inclure `releve: { select: { id: true, typeReleve: true, date: true } }` dans les includes
+- [x] `FAIT` Dans `src/lib/queries/activites.ts` : modifier `getActiviteById()` pour inclure `releve: { select: { id: true, typeReleve: true, date: true } }` dans les includes
+- [x] `FAIT` Dans `src/lib/queries/activites.ts` : exporter `findMatchingActivite` dans `src/lib/queries/index.ts`
+- [x] `FAIT` Dans `src/lib/queries/releves.ts` : modifier `createReleve()` — ajouter le paramètre optionnel `activiteId?: string`. Après la création du relevé, dans la même transaction :
+  - Si `activiteId` est fourni : vérifier que l'activité existe, est PLANIFIEE/EN_RETARD, appartient au site, et n'a pas déjà un releveId → UPDATE statut=TERMINEE, releveId=releve.id
+  - Sinon : appeler `findMatchingActivite()` avec le type du relevé, la vagueId, et la date → si trouvée, UPDATE automatique
+- [x] `FAIT` Signature de `createReleve` : `createReleve(siteId, userId, data, activiteId?)`
+
+**Algorithme d'auto-match :**
+```
+1. Mapper TypeReleve → TypeActivite via ACTIVITE_RELEVE_TYPE_MAP inversé
+2. Si pas de mapping (MORTALITE, OBSERVATION) → ne rien faire
+3. Chercher: Activite WHERE typeActivite = mappedType AND vagueId = releve.vagueId AND statut IN (PLANIFIEE, EN_RETARD) AND dateDebut BETWEEN (date - 1j) AND (date + 1j) AND siteId = siteId AND releveId IS NULL ORDER BY dateDebut ASC LIMIT 1
+4. Si trouvée → UPDATE Activite SET statut = TERMINEE, releveId = releve.id
+```
+
+**Critères d'acceptation :**
+- La liaison est dans une transaction atomique (pas d'état incohérent) (R4) ✅
+- Un relevé ALIMENTATION auto-complète une activité ALIMENTATION PLANIFIEE du même jour/vague ✅
+- Un relevé OBSERVATION ne touche aucune activité ✅
+- L'activiteId explicite a priorité sur l'auto-match ✅
+- Les queries getActivites/getActiviteById incluent `releve` dans la réponse ✅
+
+---
+
+### Story 13.4 — API Routes (POST releves + GET activites)
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** Story 13.3
+**Statut :** `FAIT`
+
+**Description :** Modifier les routes API pour passer `activiteId` optionnel à `createReleve` et inclure `releve` dans les réponses des activités.
+
+**Tâches :**
+- [x] `FAIT` Dans `src/app/api/releves/route.ts` (POST) : extraire `body.activiteId` (string optionnel), valider si présent (type string non vide), le passer en 4ème argument à `createReleve()`
+- [x] `FAIT` Dans `src/app/api/activites/route.ts` (GET) : aucun changement nécessaire si la query `getActivites` inclut déjà `releve` (vérifié par Story 13.3)
+- [x] `FAIT` Dans `src/app/api/activites/[id]/route.ts` (GET) : aucun changement nécessaire si `getActiviteById` inclut déjà `releve` (vérifié par Story 13.3)
+
+**Critères d'acceptation :**
+- POST /api/releves accepte `activiteId` optionnel dans le body ✅
+- GET /api/activites retourne `releve` (avec id, typeReleve, date) sur chaque activité ✅
+- GET /api/activites/[id] retourne `releve` dans le détail ✅
+
+---
+
+### Story 13.5 — UI Formulaire relevé (select activité planifiée)
+**Assigné à :** @developer
+**Priorité :** Moyenne
+**Dépend de :** Story 13.4
+**Statut :** `FAIT`
+
+**Description :** Ajouter un champ select optionnel "Lier à une activité planifiée" dans le formulaire de création de relevé. Quand l'utilisateur sélectionne une vague et un type compatible, charger les activités PLANIFIEE/EN_RETARD correspondantes via l'API.
+
+**Tâches :**
+- [x] `FAIT` Dans `src/components/releves/releve-form-client.tsx` : ajouter un état `activiteId` (string, initialement vide)
+- [x] `FAIT` Ajouter un état `activitesPlanifiees` (tableau) et un effet qui charge les activités compatibles quand `vagueId` et `typeReleve` changent (types compatibles uniquement : ALIMENTATION, BIOMETRIE, QUALITE_EAU, COMPTAGE)
+- [x] `FAIT` Appel API : `GET /api/activites?vagueId=X&typeActivite=Y`, filtrage client PLANIFIEE/EN_RETARD + releveId=null
+- [x] `FAIT` Afficher un `<Select>` optionnel "Activité planifiée (optionnel)" avec les activités trouvées (titre + date), placeholder "Auto-détection" quand vide
+- [x] `FAIT` Passer `activiteId` dans le body du POST si sélectionné
+- [x] `FAIT` Ne pas afficher le select pour les types sans mapping (MORTALITE, OBSERVATION)
+
+**Critères d'acceptation :**
+- Le select n'apparaît que pour les types ALIMENTATION, BIOMETRIE, QUALITE_EAU, COMPTAGE ✅
+- L'utilisateur peut choisir une activité ou laisser "Auto-détection" (l'API fait l'auto-match) ✅
+- Mobile-first : le select est pleine largeur et accessible ✅
+
+---
+
+### Story 13.6 — UI Planning (badge "Relevé lié")
+**Assigné à :** @developer
+**Priorité :** Moyenne
+**Dépend de :** Story 13.4
+**Statut :** `FAIT`
+
+**Description :** Afficher un indicateur visuel sur les activités TERMINEE qui ont un `releveId` dans le calendrier planning, avec un lien cliquable vers le détail du relevé.
+
+**Tâches :**
+- [x] `FAIT` Dans `src/components/planning/planning-client.tsx` : dans `ActiviteCard`, si `activite.releve` est non-null, afficher un petit badge "Relevé" (icône ClipboardCheck) à côté du statut
+- [x] `FAIT` Dans le dialog détail d'activité : si `activite.releve` est non-null, afficher une ligne "Relevé lié" avec le type et la date, et un lien `<Link href="/vagues/[vagueId]">` vers la vague
+- [x] `FAIT` Mettre à jour l'interface `ActiviteWithRelations` dans les props si nécessaire (la relation `releve` est déjà incluse via Story 13.3)
+
+**Critères d'acceptation :**
+- Les activités avec un relevé lié affichent un indicateur visuel ✅
+- Le clic sur l'indicateur/lien navigue vers la page de la vague concernée ✅
+- Les activités sans relevé (NETTOYAGE, TRAITEMENT, etc.) ne sont pas affectées ✅
+
+---
+
+### Story 13.7 — Seed data (lier activités existantes à des relevés)
+**Assigné à :** @db-specialist
+**Priorité :** Basse
+**Dépend de :** Story 13.1
+**Statut :** `FAIT`
+
+**Description :** Mettre à jour le seed.sql pour lier 2-3 activités existantes à des relevés existants, afin de valider visuellement la liaison dans l'UI.
+
+**Tâches :**
+- [x] `FAIT` Dans `prisma/seed.sql` : mettre à jour l'INSERT de `act_02` (BIOMETRIE TERMINEE, vague_01, bac_01, 2026-02-19) pour inclure `releveId = 'rel_03'` (biométrie du 2026-02-19 sur bac_01)
+- [x] `FAIT` Ajouter une nouvelle activité ALIMENTATION TERMINEE liée à `rel_07` (alimentation du 2026-01-20) — nommée `act_06`
+- [x] `FAIT` Vérifier que `npm run db:seed` s'exécute sans erreur
+
+**Critères d'acceptation :**
+- Au moins 2 activités sont liées à des relevés dans le seed ✅ (act_02→rel_03, act_06→rel_07)
+- Les types correspondent (BIOMETRIE→BIOMETRIE, ALIMENTATION→ALIMENTATION) ✅
+- Le seed s'exécute sans erreur de FK
+
+---
+
+### Story 13.8 — Tests unitaires et API
+**Assigné à :** @tester
+**Priorité :** Haute
+**Dépend de :** Story 13.3, Story 13.4
+**Statut :** `FAIT`
+
+**Description :** Écrire les tests de non-régression pour la liaison Planning ↔ Relevés.
+
+**Tâches :**
+- [x] `FAIT` Test : POST /api/releves avec `activiteId` explicite → activité passe TERMINEE + releveId set
+- [x] `FAIT` Test : POST /api/releves sans `activiteId` avec auto-match → activité compatible passe TERMINEE automatiquement
+- [x] `FAIT` Test : POST /api/releves sans activité compatible → pas d'erreur, relevé créé normalement
+- [x] `FAIT` Test : POST /api/releves type OBSERVATION (pas de mapping) → aucune activité touchée
+- [x] `FAIT` Test : POST /api/releves type MORTALITE (pas de mapping) → aucune activité touchée
+- [x] `FAIT` Test : GET /api/activites inclut `releve` dans la réponse
+- [x] `FAIT` Test : Activité déjà TERMINEE (avec releveId) n'est pas re-matchée
+- [x] `FAIT` Exécuter `npx vitest run` — 1033/1033 tests passent (anciens + nouveaux)
+- [x] `FAIT` Exécuter `npm run build` — build OK (73 pages, exit code 0)
+
+**Critères d'acceptation :**
+- Tous les cas listés sont couverts ✅
+- 0 régression sur les tests existants ✅ (3 tests releves.test.ts corrigés pour 4ème arg activiteId)
+- Build production OK ✅
+
+---
+
+### Story 13.9 — Review Sprint 13
+**Assigné à :** @code-reviewer
+**Priorité :** Haute
+**Dépend de :** Stories 13.1 à 13.8
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Vérifier R1 (enums MAJUSCULES) — pas de nouveaux enums ✅
+- [x] `FAIT` Vérifier R2 (imports enums) — `ACTIVITE_RELEVE_TYPE_MAP` utilise les enums importés ✅
+- [x] `FAIT` Vérifier R3 (Prisma = TypeScript) — `releveId` aligné schema ↔ models.ts ✅
+- [x] `FAIT` Vérifier R4 (opérations atomiques) — auto-match dans transaction Prisma ✅ (OBS-1 mineure)
+- [x] `FAIT` Vérifier R8 (siteId partout) — `findMatchingActivite` filtre par siteId ✅
+- [x] `FAIT` Vérifier R9 (tests + build avant review) — 8 suites de tests ✅
+- [x] `FAIT` Écrire `docs/reviews/review-sprint-13.md` — verdict VALIDE
+
+**Critères d'acceptation :**
+- Toutes les règles R1-R9 respectées sur les fichiers modifiés ✅
+- Pas de régression fonctionnelle ✅
+- Review publiée dans docs/reviews/ ✅

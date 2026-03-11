@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getReleves, createReleve } from "@/lib/queries/releves";
-import { TypeReleve, CauseMortalite, TypeAliment, MethodeComptage } from "@/types";
+import { AuthError } from "@/lib/auth";
+import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { TypeReleve, CauseMortalite, TypeAliment, MethodeComptage, Permission } from "@/types";
 import type { CreateReleveDTO, ReleveFilters } from "@/types";
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requirePermission(request, Permission.RELEVES_VOIR);
     const { searchParams } = new URL(request.url);
 
     const filters: ReleveFilters = {};
@@ -21,7 +24,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(
           {
             status: 400,
-            message: `Type de relevé invalide. Valeurs acceptées : ${Object.values(TypeReleve).join(", ")}.`,
+            message: `Type de releve invalide. Valeurs acceptees : ${Object.values(TypeReleve).join(", ")}.`,
             field: "typeReleve",
           },
           { status: 400 }
@@ -31,12 +34,20 @@ export async function GET(request: NextRequest) {
     }
     if (dateFrom) filters.dateFrom = dateFrom;
     if (dateTo) filters.dateTo = dateTo;
+    if (searchParams.get("nonLie") === "true") filters.nonLie = true;
 
-    const result = await getReleves(filters);
+    const result = await getReleves(auth.activeSiteId, filters);
     return NextResponse.json(result);
-  } catch {
+  } catch (error) {
+    console.error("[GET /api/releves] Error:", error);
+    if (error instanceof AuthError) {
+      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+    }
+    if (error instanceof ForbiddenError) {
+      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+    }
     return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la récupération des relevés." },
+      { status: 500, message: "Erreur serveur lors de la recuperation des releves." },
       { status: 500 }
     );
   }
@@ -44,27 +55,22 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requirePermission(request, Permission.RELEVES_CREER);
     const body = await request.json();
     const errors: { field: string; message: string }[] = [];
 
     // Common required fields
-    if (!body.date || typeof body.date !== "string") {
-      errors.push({ field: "date", message: "La date est obligatoire." });
-    } else if (Number.isNaN(Date.parse(body.date))) {
-      errors.push({ field: "date", message: "La date n'est pas valide." });
-    }
-
     if (!body.typeReleve) {
       errors.push({
         field: "typeReleve",
-        message: "Le type de relevé est obligatoire.",
+        message: "Le type de releve est obligatoire.",
       });
     } else if (
       !Object.values(TypeReleve).includes(body.typeReleve as TypeReleve)
     ) {
       errors.push({
         field: "typeReleve",
-        message: `Type de relevé invalide. Valeurs acceptées : ${Object.values(TypeReleve).join(", ")}.`,
+        message: `Type de releve invalide. Valeurs acceptees : ${Object.values(TypeReleve).join(", ")}.`,
       });
     }
 
@@ -87,13 +93,13 @@ export async function POST(request: NextRequest) {
       if (body.poidsMoyen == null || typeof body.poidsMoyen !== "number" || body.poidsMoyen <= 0) {
         errors.push({
           field: "poidsMoyen",
-          message: "Le poids moyen est obligatoire et doit être supérieur à 0.",
+          message: "Le poids moyen est obligatoire et doit etre superieur a 0.",
         });
       }
       if (body.tailleMoyenne == null || typeof body.tailleMoyenne !== "number" || body.tailleMoyenne <= 0) {
         errors.push({
           field: "tailleMoyenne",
-          message: "La taille moyenne est obligatoire et doit être supérieure à 0.",
+          message: "La taille moyenne est obligatoire et doit etre superieure a 0.",
         });
       }
       if (
@@ -104,7 +110,7 @@ export async function POST(request: NextRequest) {
       ) {
         errors.push({
           field: "echantillonCount",
-          message: "Le nombre d'échantillons est obligatoire et doit être un entier supérieur à 0.",
+          message: "Le nombre d'echantillons est obligatoire et doit etre un entier superieur a 0.",
         });
       }
     }
@@ -118,7 +124,7 @@ export async function POST(request: NextRequest) {
       ) {
         errors.push({
           field: "nombreMorts",
-          message: "Le nombre de morts est obligatoire et doit être un entier positif ou nul.",
+          message: "Le nombre de morts est obligatoire et doit etre un entier positif ou nul.",
         });
       }
       if (
@@ -127,7 +133,7 @@ export async function POST(request: NextRequest) {
       ) {
         errors.push({
           field: "causeMortalite",
-          message: `La cause de mortalité est obligatoire. Valeurs acceptées : ${Object.values(CauseMortalite).join(", ")}.`,
+          message: `La cause de mortalite est obligatoire. Valeurs acceptees : ${Object.values(CauseMortalite).join(", ")}.`,
         });
       }
     }
@@ -140,7 +146,7 @@ export async function POST(request: NextRequest) {
       ) {
         errors.push({
           field: "quantiteAliment",
-          message: "La quantité d'aliment est obligatoire et doit être supérieure à 0.",
+          message: "La quantite d'aliment est obligatoire et doit etre superieure a 0.",
         });
       }
       if (
@@ -149,7 +155,7 @@ export async function POST(request: NextRequest) {
       ) {
         errors.push({
           field: "typeAliment",
-          message: `Le type d'aliment est obligatoire. Valeurs acceptées : ${Object.values(TypeAliment).join(", ")}.`,
+          message: `Le type d'aliment est obligatoire. Valeurs acceptees : ${Object.values(TypeAliment).join(", ")}.`,
         });
       }
       if (
@@ -160,7 +166,7 @@ export async function POST(request: NextRequest) {
       ) {
         errors.push({
           field: "frequenceAliment",
-          message: "La fréquence d'alimentation est obligatoire et doit être un entier supérieur à 0.",
+          message: "La frequence d'alimentation est obligatoire et doit etre un entier superieur a 0.",
         });
       }
     }
@@ -174,7 +180,7 @@ export async function POST(request: NextRequest) {
       ) {
         errors.push({
           field: "nombreCompte",
-          message: "Le nombre compté est obligatoire et doit être un entier positif ou nul.",
+          message: "Le nombre compte est obligatoire et doit etre un entier positif ou nul.",
         });
       }
       if (
@@ -183,7 +189,7 @@ export async function POST(request: NextRequest) {
       ) {
         errors.push({
           field: "methodeComptage",
-          message: `La méthode de comptage est obligatoire. Valeurs acceptées : ${Object.values(MethodeComptage).join(", ")}.`,
+          message: `La methode de comptage est obligatoire. Valeurs acceptees : ${Object.values(MethodeComptage).join(", ")}.`,
         });
       }
     }
@@ -197,6 +203,43 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Validate optional activiteId
+    let activiteId: string | undefined;
+    if (body.activiteId != null) {
+      if (typeof body.activiteId !== "string" || body.activiteId.trim() === "") {
+        errors.push({
+          field: "activiteId",
+          message: "L'identifiant d'activite doit etre une chaine non vide.",
+        });
+      } else {
+        activiteId = body.activiteId.trim();
+      }
+    }
+
+    if (errors.length > 0) {
+      return NextResponse.json(
+        { status: 400, message: "Erreurs de validation", errors },
+        { status: 400 }
+      );
+    }
+
+    // Validate consommations if present
+    if (body.consommations != null) {
+      if (!Array.isArray(body.consommations)) {
+        errors.push({ field: "consommations", message: "Les consommations doivent etre un tableau." });
+      } else {
+        for (let i = 0; i < body.consommations.length; i++) {
+          const c = body.consommations[i];
+          if (!c.produitId || typeof c.produitId !== "string") {
+            errors.push({ field: `consommations[${i}].produitId`, message: "L'identifiant du produit est obligatoire." });
+          }
+          if (c.quantite == null || typeof c.quantite !== "number" || c.quantite <= 0) {
+            errors.push({ field: `consommations[${i}].quantite`, message: "La quantite doit etre superieure a 0." });
+          }
+        }
+      }
+    }
+
     if (errors.length > 0) {
       return NextResponse.json(
         { status: 400, message: "Erreurs de validation", errors },
@@ -205,14 +248,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Build clean DTO from validated fields
+    const consommations = Array.isArray(body.consommations) && body.consommations.length > 0
+      ? body.consommations.map((c: { produitId: string; quantite: number }) => ({
+          produitId: c.produitId,
+          quantite: c.quantite,
+        }))
+      : undefined;
+
     const base = {
-      date: body.date,
       vagueId: body.vagueId,
       bacId: body.bacId,
       ...(body.notes != null && { notes: body.notes }),
+      ...(consommations && { consommations }),
     };
 
-    let dto: CreateReleveDTO;
+    let dto!: CreateReleveDTO;
 
     switch (body.typeReleve as TypeReleve) {
       case TypeReleve.BIOMETRIE:
@@ -266,11 +316,23 @@ export async function POST(request: NextRequest) {
           description: body.description.trim(),
         };
         break;
+      default:
+        return NextResponse.json(
+          { status: 400, message: `Type de relevé non supporté: ${body.typeReleve}` },
+          { status: 400 }
+        );
     }
 
-    const releve = await createReleve(dto);
+    const releve = await createReleve(auth.activeSiteId, auth.userId, dto, activiteId);
     return NextResponse.json(releve, { status: 201 });
   } catch (error) {
+    console.error("[POST /api/releves] Error:", error);
+    if (error instanceof AuthError) {
+      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+    }
+    if (error instanceof ForbiddenError) {
+      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+    }
     const message =
       error instanceof Error ? error.message : "Erreur serveur inattendue.";
 
@@ -278,12 +340,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: 404, message }, { status: 404 });
     }
 
-    if (message.includes("n'appartient pas") || message.includes("clôturée")) {
+    if (message.includes("n'appartient pas") || message.includes("cloturee") || message.includes("Stock insuffisant") || message.includes("n'est pas de categorie")) {
       return NextResponse.json({ status: 409, message }, { status: 409 });
     }
 
     return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la création du relevé." },
+      { status: 500, message: "Erreur serveur lors de la creation du releve." },
       { status: 500 }
     );
   }

@@ -6,6 +6,9 @@ import { BottomNav } from "@/components/layout/bottom-nav";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Permission } from "@/types";
+
+const allPermissions = Object.values(Permission);
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -21,23 +24,23 @@ vi.mock("next/navigation", () => ({
 
 describe("Responsive — Mobile first patterns", () => {
   it("BottomNav est visible sur mobile (md:hidden)", () => {
-    const { container } = render(<BottomNav />);
+    const { container } = render(<BottomNav permissions={allPermissions} />);
     const nav = container.querySelector("nav");
     expect(nav?.className).toContain("md:hidden");
   });
 
   it("BottomNav a une hauteur tactile suffisante (min-h-[56px])", () => {
-    const { container } = render(<BottomNav />);
+    const { container } = render(<BottomNav permissions={allPermissions} />);
     const links = container.querySelectorAll("a");
     links.forEach((link) => {
       expect(link.className).toContain("min-h-[56px]");
     });
   });
 
-  it("BottomNav a les 4 onglets de navigation", () => {
-    const { container } = render(<BottomNav />);
+  it("BottomNav a les 5 onglets de navigation (suivi par defaut)", () => {
+    const { container } = render(<BottomNav permissions={allPermissions} />);
     const links = container.querySelectorAll("a");
-    expect(links).toHaveLength(4);
+    expect(links).toHaveLength(5);
   });
 });
 
@@ -91,7 +94,7 @@ describe("Responsive — Badge", () => {
   it("Badge warning a le bon style (bac occupé)", () => {
     const { container } = render(<Badge variant="warning">Occupé</Badge>);
     const badge = container.querySelector("span");
-    expect(badge?.className).toContain("text-amber-700");
+    expect(badge?.className).toContain("text-accent-amber");
   });
 });
 

@@ -2,9 +2,9 @@ import { prisma } from "@/lib/db";
 import { StatutVague } from "@/types";
 import type { CreateVagueDTO, UpdateVagueDTO } from "@/types";
 
-/** Liste les vagues avec filtre optionnel sur le statut */
-export async function getVagues(filters?: { statut?: string }) {
-  const where: Record<string, unknown> = {};
+/** Liste les vagues d'un site avec filtre optionnel sur le statut */
+export async function getVagues(siteId: string, filters?: { statut?: string }) {
+  const where: Record<string, unknown> = { siteId };
   if (filters?.statut) where.statut = filters.statut;
 
   return prisma.vague.findMany({
@@ -16,23 +16,30 @@ export async function getVagues(filters?: { statut?: string }) {
   });
 }
 
-/** Recupere une vague par ID avec ses bacs et releves */
-export async function getVagueById(id: string) {
-  return prisma.vague.findUnique({
-    where: { id },
+/** Recupere une vague par ID (verifie qu'elle appartient au site) */
+export async function getVagueById(id: string, siteId: string) {
+  return prisma.vague.findFirst({
+    where: { id, siteId },
     include: {
       bacs: { orderBy: { nom: "asc" } },
-      releves: { orderBy: { date: "desc" } },
+      releves: {
+        orderBy: { date: "desc" },
+        include: {
+          consommations: {
+            include: { produit: true },
+          },
+        },
+      },
     },
   });
 }
 
 /** Cree une vague et assigne les bacs en transaction */
-export async function createVague(data: CreateVagueDTO) {
+export async function createVague(siteId: string, data: CreateVagueDTO) {
   return prisma.$transaction(async (tx) => {
-    // Verifier que tous les bacs existent et sont libres
+    // Verifier que tous les bacs existent, sont libres, et appartiennent au site
     const bacs = await tx.bac.findMany({
-      where: { id: { in: data.bacIds } },
+      where: { id: { in: data.bacIds }, siteId },
     });
 
     if (bacs.length !== data.bacIds.length) {
@@ -61,12 +68,13 @@ export async function createVague(data: CreateVagueDTO) {
         nombreInitial: data.nombreInitial,
         poidsMoyenInitial: data.poidsMoyenInitial,
         origineAlevins: data.origineAlevins ?? null,
+        siteId,
       },
     });
 
     // Assigner les bacs
     await tx.bac.updateMany({
-      where: { id: { in: data.bacIds } },
+      where: { id: { in: data.bacIds }, siteId },
       data: { vagueId: vague.id },
     });
 
@@ -78,10 +86,10 @@ export async function createVague(data: CreateVagueDTO) {
 }
 
 /** Cloturer une vague : passe le statut a TERMINEE et libere tous les bacs */
-export async function cloturerVague(id: string, dateFin?: string) {
+export async function cloturerVague(id: string, siteId: string, dateFin?: string) {
   return prisma.$transaction(async (tx) => {
-    const vague = await tx.vague.findUnique({
-      where: { id },
+    const vague = await tx.vague.findFirst({
+      where: { id, siteId },
       include: { bacs: true },
     });
 
@@ -95,7 +103,7 @@ export async function cloturerVague(id: string, dateFin?: string) {
 
     // Liberer tous les bacs
     await tx.bac.updateMany({
-      where: { vagueId: id },
+      where: { vagueId: id, siteId },
       data: { vagueId: null },
     });
 
@@ -112,14 +120,14 @@ export async function cloturerVague(id: string, dateFin?: string) {
 }
 
 /** Mettre a jour une vague (modification partielle) */
-export async function updateVague(id: string, data: UpdateVagueDTO) {
-  // Si cloture demandee, deleguer a cloturerVague (evite une transaction imbriquee)
+export async function updateVague(id: string, siteId: string, data: UpdateVagueDTO) {
+  // Si cloture demandee, deleguer a cloturerVague
   if (data.statut === StatutVague.TERMINEE) {
-    return cloturerVague(id, data.dateFin);
+    return cloturerVague(id, siteId, data.dateFin);
   }
 
   return prisma.$transaction(async (tx) => {
-    const vague = await tx.vague.findUnique({ where: { id } });
+    const vague = await tx.vague.findFirst({ where: { id, siteId } });
 
     if (!vague) {
       throw new Error("Vague introuvable");
@@ -128,7 +136,7 @@ export async function updateVague(id: string, data: UpdateVagueDTO) {
     // Ajouter des bacs
     if (data.addBacIds && data.addBacIds.length > 0) {
       const bacs = await tx.bac.findMany({
-        where: { id: { in: data.addBacIds } },
+        where: { id: { in: data.addBacIds }, siteId },
       });
 
       const bacsOccupes = bacs.filter((b) => b.vagueId !== null);
@@ -138,7 +146,7 @@ export async function updateVague(id: string, data: UpdateVagueDTO) {
       }
 
       await tx.bac.updateMany({
-        where: { id: { in: data.addBacIds } },
+        where: { id: { in: data.addBacIds }, siteId },
         data: { vagueId: id },
       });
     }
@@ -146,9 +154,16 @@ export async function updateVague(id: string, data: UpdateVagueDTO) {
     // Retirer des bacs
     if (data.removeBacIds && data.removeBacIds.length > 0) {
       await tx.bac.updateMany({
-        where: { id: { in: data.removeBacIds }, vagueId: id },
+        where: { id: { in: data.removeBacIds }, vagueId: id, siteId },
         data: { vagueId: null },
       });
+    }
+
+    // Bloquer modification champs numeriques si vague TERMINEE
+    if (vague.statut === StatutVague.TERMINEE) {
+      if (data.nombreInitial !== undefined || data.poidsMoyenInitial !== undefined || data.origineAlevins !== undefined) {
+        throw new Error("Impossible de modifier les parametres d'une vague cloturee");
+      }
     }
 
     // Mettre a jour les champs simples
@@ -157,6 +172,9 @@ export async function updateVague(id: string, data: UpdateVagueDTO) {
       data: {
         ...(data.statut && { statut: data.statut }),
         ...(data.dateFin && { dateFin: new Date(data.dateFin) }),
+        ...(data.nombreInitial !== undefined && { nombreInitial: data.nombreInitial }),
+        ...(data.poidsMoyenInitial !== undefined && { poidsMoyenInitial: data.poidsMoyenInitial }),
+        ...(data.origineAlevins !== undefined && { origineAlevins: data.origineAlevins }),
       },
       include: { _count: { select: { bacs: true } } },
     });

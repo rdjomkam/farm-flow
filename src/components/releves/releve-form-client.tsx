@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// Card removed for density (CR-003)
 import {
   Select,
   SelectTrigger,
@@ -13,14 +13,33 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
+import { FormSection } from "@/components/ui/form-section";
 import { FormBiometrie } from "./form-biometrie";
 import { FormMortalite } from "./form-mortalite";
 import { FormAlimentation } from "./form-alimentation";
 import { FormQualiteEau } from "./form-qualite-eau";
 import { FormComptage } from "./form-comptage";
 import { FormObservation } from "./form-observation";
-import { TypeReleve } from "@/types";
+import { ConsommationFields } from "./consommation-fields";
+import type { ConsommationLine, ProduitOption } from "./consommation-fields";
+import { TypeReleve, TypeActivite, StatutActivite, CategorieProduit, ACTIVITE_RELEVE_TYPE_MAP } from "@/types";
 import type { BacResponse } from "@/types";
+
+/** Inverse de ACTIVITE_RELEVE_TYPE_MAP : TypeReleve → TypeActivite compatible */
+const RELEVE_ACTIVITE_TYPE_MAP: Partial<Record<string, TypeActivite>> = {};
+for (const [typeActivite, typeReleve] of Object.entries(ACTIVITE_RELEVE_TYPE_MAP)) {
+  if (typeReleve) {
+    RELEVE_ACTIVITE_TYPE_MAP[typeReleve] = typeActivite as TypeActivite;
+  }
+}
+
+interface ActivitePlanifiee {
+  id: string;
+  titre: string;
+  dateDebut: string | Date;
+  statut: string;
+  releveId: string | null;
+}
 
 const typeLabels: Record<TypeReleve, string> = {
   [TypeReleve.BIOMETRIE]: "Biométrie",
@@ -33,9 +52,10 @@ const typeLabels: Record<TypeReleve, string> = {
 
 interface ReleveFormClientProps {
   vagues: { id: string; code: string }[];
+  produits: ProduitOption[];
 }
 
-export function ReleveFormClient({ vagues }: ReleveFormClientProps) {
+export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -43,12 +63,17 @@ export function ReleveFormClient({ vagues }: ReleveFormClientProps) {
   const [vagueId, setVagueId] = useState(searchParams.get("vagueId") ?? "");
   const [bacId, setBacId] = useState("");
   const [typeReleve, setTypeReleve] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
   const [bacs, setBacs] = useState<BacResponse[]>([]);
   const [loadingBacs, setLoadingBacs] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [consommations, setConsommations] = useState<ConsommationLine[]>([]);
+
+  // Liaison activité planifiée (optionnelle)
+  const [activiteId, setActiviteId] = useState("");
+  const [activitesPlanifiees, setActivitesPlanifiees] = useState<ActivitePlanifiee[]>([]);
+  const [loadingActivites, setLoadingActivites] = useState(false);
 
   // Type-specific field values
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -78,17 +103,43 @@ export function ReleveFormClient({ vagues }: ReleveFormClientProps) {
       .finally(() => setLoadingBacs(false));
   }, [vagueId]);
 
-  // Reset type-specific fields when type changes
+  // Reset type-specific fields, consommations et activiteId quand le type change
   useEffect(() => {
     setFields({});
+    setConsommations([]);
+    setActiviteId("");
   }, [typeReleve]);
+
+  // Charger les activites planifiees compatibles quand vagueId ou typeReleve changent
+  useEffect(() => {
+    setActivitesPlanifiees([]);
+    setActiviteId("");
+
+    if (!vagueId || !typeReleve) return;
+
+    const typeActiviteCompat = RELEVE_ACTIVITE_TYPE_MAP[typeReleve];
+    if (!typeActiviteCompat) return; // MORTALITE, OBSERVATION — pas de mapping
+
+    setLoadingActivites(true);
+    fetch(`/api/activites?vagueId=${encodeURIComponent(vagueId)}&typeActivite=${encodeURIComponent(typeActiviteCompat)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        const compatibles = (data.activites ?? []).filter(
+          (a: ActivitePlanifiee) =>
+            (a.statut === StatutActivite.PLANIFIEE || a.statut === StatutActivite.EN_RETARD) &&
+            !a.releveId
+        );
+        setActivitesPlanifiees(compatibles);
+      })
+      .catch(() => setActivitesPlanifiees([]))
+      .finally(() => setLoadingActivites(false));
+  }, [vagueId, typeReleve]);
 
   function validate(): Record<string, string> {
     const errs: Record<string, string> = {};
     if (!vagueId) errs.vagueId = "Sélectionnez une vague.";
     if (!bacId) errs.bacId = "Sélectionnez un bac.";
     if (!typeReleve) errs.typeReleve = "Sélectionnez un type de relevé.";
-    if (!date) errs.date = "La date est obligatoire.";
 
     if (typeReleve === TypeReleve.BIOMETRIE) {
       if (!fields.poidsMoyen || Number(fields.poidsMoyen) <= 0)
@@ -133,11 +184,11 @@ export function ReleveFormClient({ vagues }: ReleveFormClientProps) {
     setErrors({});
 
     const body: Record<string, unknown> = {
-      date,
       vagueId,
       bacId,
       typeReleve,
       ...(notes.trim() && { notes: notes.trim() }),
+      ...(activiteId && { activiteId }),
     };
 
     // Add type-specific numeric fields
@@ -157,6 +208,17 @@ export function ReleveFormClient({ vagues }: ReleveFormClientProps) {
       if (fields[f]) {
         body[f] = f === "description" ? fields[f].trim() : fields[f];
       }
+    }
+
+    // Consommations de stock
+    const validConsos = consommations.filter(
+      (c) => c.produitId && c.quantite && Number(c.quantite) > 0
+    );
+    if (validConsos.length > 0) {
+      body.consommations = validConsos.map((c) => ({
+        produitId: c.produitId,
+        quantite: Number(c.quantite),
+      }));
     }
 
     try {
@@ -183,128 +245,196 @@ export function ReleveFormClient({ vagues }: ReleveFormClientProps) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Saisir un relevé</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {/* Vague */}
-          <Select value={vagueId} onValueChange={setVagueId}>
-            <SelectTrigger label="Vague" error={errors.vagueId}>
-              <SelectValue placeholder="Sélectionner une vague" />
-            </SelectTrigger>
-            <SelectContent>
-              {vagues.map((v) => (
-                <SelectItem key={v.id} value={v.id}>
-                  {v.code}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+    <section>
+      <h2 className="text-base font-semibold mb-4">Saisir un releve</h2>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <FormSection title="Identification" description="Vague et bac concernés">
+            <Select value={vagueId} onValueChange={setVagueId}>
+              <SelectTrigger label="Vague" error={errors.vagueId}>
+                <SelectValue placeholder="Sélectionner une vague" />
+              </SelectTrigger>
+              <SelectContent>
+                {vagues.map((v) => (
+                  <SelectItem key={v.id} value={v.id}>
+                    {v.code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          {/* Bac */}
-          <Select value={bacId} onValueChange={setBacId} disabled={!vagueId || loadingBacs}>
-            <SelectTrigger label="Bac" error={errors.bacId}>
-              <SelectValue
-                placeholder={
-                  loadingBacs ? "Chargement..." : !vagueId ? "Sélectionnez d'abord une vague" : "Sélectionner un bac"
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {bacs.map((b) => (
-                <SelectItem key={b.id} value={b.id}>
-                  {b.nom} ({b.volume}L)
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <Select value={bacId} onValueChange={setBacId} disabled={!vagueId || loadingBacs}>
+              <SelectTrigger label="Bac" error={errors.bacId}>
+                <SelectValue
+                  placeholder={
+                    loadingBacs ? "Chargement..." : !vagueId ? "Sélectionnez d'abord une vague" : "Sélectionner un bac"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {bacs.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.nom} ({b.volume}L)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormSection>
 
-          {/* Date */}
-          <Input
-            id="date"
-            label="Date du relevé"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            error={errors.date}
-          />
+          <FormSection title="Type de releve" description="Choisissez le type de mesure">
+            <Select value={typeReleve} onValueChange={setTypeReleve}>
+              <SelectTrigger label="Type de relevé" error={errors.typeReleve}>
+                <SelectValue placeholder="Sélectionner un type" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(TypeReleve).map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {typeLabels[t]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          {/* Type */}
-          <Select value={typeReleve} onValueChange={setTypeReleve}>
-            <SelectTrigger label="Type de relevé" error={errors.typeReleve}>
-              <SelectValue placeholder="Sélectionner un type" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.values(TypeReleve).map((t) => (
-                <SelectItem key={t} value={t}>
-                  {typeLabels[t]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            {/* Select activite planifiee — uniquement pour les types avec mapping */}
+            {vagueId && typeReleve && RELEVE_ACTIVITE_TYPE_MAP[typeReleve] && (
+              <Select
+                value={activiteId || "__auto__"}
+                onValueChange={(val) => setActiviteId(val === "__auto__" ? "" : val)}
+                disabled={loadingActivites}
+              >
+                <SelectTrigger label="Activité planifiée (optionnel)">
+                  <SelectValue
+                    placeholder={
+                      loadingActivites
+                        ? "Chargement..."
+                        : activitesPlanifiees.length === 0
+                        ? "Auto-détection (aucune activité planifiée)"
+                        : "Auto-détection"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {activitesPlanifiees.length > 0 && (
+                    <SelectItem value="__auto__">Auto-détection</SelectItem>
+                  )}
+                  {activitesPlanifiees.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.titre}
+                      {" · "}
+                      {new Date(a.dateDebut).toLocaleDateString("fr-FR", {
+                        day: "numeric",
+                        month: "short",
+                      })}
+                      {a.statut === StatutActivite.EN_RETARD && " ⚠"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </FormSection>
 
-          {/* Dynamic fields */}
           {typeReleve === TypeReleve.BIOMETRIE && (
-            <FormBiometrie
-              values={{
-                poidsMoyen: fields.poidsMoyen ?? "",
-                tailleMoyenne: fields.tailleMoyenne ?? "",
-                echantillonCount: fields.echantillonCount ?? "",
-              }}
-              onChange={updateField}
-              errors={errors}
-            />
+            <FormSection title="Mesures biométriques" description="Poids, taille et échantillon">
+              <FormBiometrie
+                values={{
+                  poidsMoyen: fields.poidsMoyen ?? "",
+                  tailleMoyenne: fields.tailleMoyenne ?? "",
+                  echantillonCount: fields.echantillonCount ?? "",
+                }}
+                onChange={updateField}
+                errors={errors}
+              />
+            </FormSection>
           )}
           {typeReleve === TypeReleve.MORTALITE && (
-            <FormMortalite
-              values={{
-                nombreMorts: fields.nombreMorts ?? "",
-                causeMortalite: fields.causeMortalite ?? "",
-              }}
-              onChange={updateField}
-              errors={errors}
-            />
+            <>
+              <FormSection title="Mortalité" description="Nombre et cause">
+                <FormMortalite
+                  values={{
+                    nombreMorts: fields.nombreMorts ?? "",
+                    causeMortalite: fields.causeMortalite ?? "",
+                  }}
+                  onChange={updateField}
+                  errors={errors}
+                />
+              </FormSection>
+              <FormSection title="Consommation de stock" description="Produits utilisés (optionnel)">
+                <ConsommationFields
+                  lignes={consommations}
+                  onChange={setConsommations}
+                  produits={produits}
+                  categorie={CategorieProduit.INTRANT}
+                  optional
+                />
+              </FormSection>
+            </>
           )}
           {typeReleve === TypeReleve.ALIMENTATION && (
-            <FormAlimentation
-              values={{
-                quantiteAliment: fields.quantiteAliment ?? "",
-                typeAliment: fields.typeAliment ?? "",
-                frequenceAliment: fields.frequenceAliment ?? "",
-              }}
-              onChange={updateField}
-              errors={errors}
-            />
+            <>
+              <FormSection title="Alimentation" description="Quantité et type d'aliment">
+                <FormAlimentation
+                  values={{
+                    quantiteAliment: fields.quantiteAliment ?? "",
+                    typeAliment: fields.typeAliment ?? "",
+                    frequenceAliment: fields.frequenceAliment ?? "",
+                  }}
+                  onChange={updateField}
+                  errors={errors}
+                />
+              </FormSection>
+              <FormSection title="Consommation de stock" description="Produits consommés">
+                <ConsommationFields
+                  lignes={consommations}
+                  onChange={setConsommations}
+                  produits={produits}
+                  categorie={CategorieProduit.ALIMENT}
+                />
+              </FormSection>
+            </>
           )}
           {typeReleve === TypeReleve.QUALITE_EAU && (
-            <FormQualiteEau
-              values={{
-                temperature: fields.temperature ?? "",
-                ph: fields.ph ?? "",
-                oxygene: fields.oxygene ?? "",
-                ammoniac: fields.ammoniac ?? "",
-              }}
-              onChange={updateField}
-            />
+            <>
+              <FormSection title="Qualité de l'eau" description="Paramètres physico-chimiques">
+                <FormQualiteEau
+                  values={{
+                    temperature: fields.temperature ?? "",
+                    ph: fields.ph ?? "",
+                    oxygene: fields.oxygene ?? "",
+                    ammoniac: fields.ammoniac ?? "",
+                  }}
+                  onChange={updateField}
+                />
+              </FormSection>
+              <FormSection title="Consommation de stock" description="Produits utilisés (optionnel)">
+                <ConsommationFields
+                  lignes={consommations}
+                  onChange={setConsommations}
+                  produits={produits}
+                  categorie={CategorieProduit.INTRANT}
+                  optional
+                />
+              </FormSection>
+            </>
           )}
           {typeReleve === TypeReleve.COMPTAGE && (
-            <FormComptage
-              values={{
-                nombreCompte: fields.nombreCompte ?? "",
-                methodeComptage: fields.methodeComptage ?? "",
-              }}
-              onChange={updateField}
-              errors={errors}
-            />
+            <FormSection title="Comptage" description="Nombre et méthode">
+              <FormComptage
+                values={{
+                  nombreCompte: fields.nombreCompte ?? "",
+                  methodeComptage: fields.methodeComptage ?? "",
+                }}
+                onChange={updateField}
+                errors={errors}
+              />
+            </FormSection>
           )}
           {typeReleve === TypeReleve.OBSERVATION && (
-            <FormObservation
-              values={{ description: fields.description ?? "" }}
-              onChange={updateField}
-              errors={errors}
-            />
+            <FormSection title="Observation" description="Description libre">
+              <FormObservation
+                values={{ description: fields.description ?? "" }}
+                onChange={updateField}
+                errors={errors}
+              />
+            </FormSection>
           )}
 
           {/* Notes */}
@@ -321,7 +451,6 @@ export function ReleveFormClient({ vagues }: ReleveFormClientProps) {
             {submitting ? "Enregistrement..." : "Enregistrer le relevé"}
           </Button>
         </form>
-      </CardContent>
-    </Card>
+    </section>
   );
 }

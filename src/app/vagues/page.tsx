@@ -1,14 +1,24 @@
+import { redirect } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { VaguesListClient } from "@/components/vagues/vagues-list-client";
+import { AccessDenied } from "@/components/ui/access-denied";
+import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getVagues } from "@/lib/queries/vagues";
 import { getBacsLibres } from "@/lib/queries/bacs";
-import { StatutVague } from "@/types";
+import { StatutVague, Permission } from "@/types";
 import type { VagueSummaryResponse, BacResponse } from "@/types";
 
 export default async function VaguesPage() {
+  const session = await getServerSession();
+  if (!session) redirect("/login");
+  if (!session.activeSiteId) redirect("/sites");
+
+  const permissions = await checkPagePermission(session, Permission.VAGUES_VOIR);
+  if (!permissions) return <AccessDenied />;
+
   const [vaguesRaw, bacsLibresRaw] = await Promise.all([
-    getVagues(),
-    getBacsLibres(),
+    getVagues(session.activeSiteId),
+    getBacsLibres(session.activeSiteId),
   ]);
 
   const vagues: VagueSummaryResponse[] = vaguesRaw.map((v) => {
@@ -37,6 +47,7 @@ export default async function VaguesPage() {
     volume: b.volume,
     nombrePoissons: b.nombrePoissons,
     vagueId: b.vagueId,
+    siteId: b.siteId,
     vagueCode: null,
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
@@ -45,7 +56,7 @@ export default async function VaguesPage() {
   return (
     <>
       <Header title="Vagues" />
-      <VaguesListClient vagues={vagues} bacsLibres={bacsLibres} />
+      <VaguesListClient vagues={vagues} bacsLibres={bacsLibres} permissions={permissions} />
     </>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, Waves } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -16,16 +16,19 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
+import { EmptyState } from "@/components/ui/empty-state";
+import { FormSection } from "@/components/ui/form-section";
 import { VagueCard } from "./vague-card";
-import { StatutVague } from "@/types";
+import { StatutVague, Permission } from "@/types";
 import type { VagueSummaryResponse, BacResponse } from "@/types";
 
 interface VaguesListClientProps {
   vagues: VagueSummaryResponse[];
   bacsLibres: BacResponse[];
+  permissions: Permission[];
 }
 
-export function VaguesListClient({ vagues, bacsLibres }: VaguesListClientProps) {
+export function VaguesListClient({ vagues, bacsLibres, permissions }: VaguesListClientProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -114,9 +117,11 @@ export function VaguesListClient({ vagues, bacsLibres }: VaguesListClientProps) 
   function renderVagueGrid(items: VagueSummaryResponse[]) {
     if (items.length === 0) {
       return (
-        <p className="py-8 text-center text-sm text-muted-foreground">
-          Aucune vague dans cette catégorie.
-        </p>
+        <EmptyState
+          icon={<Waves className="h-7 w-7" />}
+          title="Aucune vague"
+          description="Aucune vague ne correspond a ce filtre."
+        />
       );
     }
     return (
@@ -134,6 +139,7 @@ export function VaguesListClient({ vagues, bacsLibres }: VaguesListClientProps) 
         <h2 className="text-base font-semibold">
           {vagues.length} vague{vagues.length > 1 ? "s" : ""}
         </h2>
+        {permissions.includes(Permission.VAGUES_CREER) && (
         <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button size="sm">
@@ -149,53 +155,55 @@ export function VaguesListClient({ vagues, bacsLibres }: VaguesListClientProps) 
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <Input
-                id="code"
-                label="Code de la vague"
-                placeholder="Ex : VAGUE-2026-001"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                error={errors.code}
-              />
-              <Input
-                id="dateDebut"
-                label="Date de mise en eau"
-                type="date"
-                value={dateDebut}
-                onChange={(e) => setDateDebut(e.target.value)}
-                error={errors.dateDebut}
-              />
-              <Input
-                id="nombreInitial"
-                label="Nombre d'alevins"
-                type="number"
-                min="1"
-                value={nombreInitial}
-                onChange={(e) => setNombreInitial(e.target.value)}
-                error={errors.nombreInitial}
-              />
-              <Input
-                id="poidsMoyenInitial"
-                label="Poids moyen initial (g)"
-                type="number"
-                min="0.1"
-                step="0.1"
-                value={poidsMoyenInitial}
-                onChange={(e) => setPoidsMoyenInitial(e.target.value)}
-                error={errors.poidsMoyenInitial}
-              />
-              <Input
-                id="origineAlevins"
-                label="Origine des alevins (optionnel)"
-                placeholder="Ex : Écloserie locale"
-                value={origineAlevins}
-                onChange={(e) => setOrigineAlevins(e.target.value)}
-              />
+              <FormSection title="Identification" description="Code et date de la vague">
+                <Input
+                  id="code"
+                  label="Code de la vague"
+                  placeholder="Ex : VAGUE-2026-001"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  error={errors.code}
+                />
+                <Input
+                  id="dateDebut"
+                  label="Date de mise en eau"
+                  type="date"
+                  value={dateDebut}
+                  onChange={(e) => setDateDebut(e.target.value)}
+                  error={errors.dateDebut}
+                />
+              </FormSection>
 
-              <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium text-foreground">
-                  Bacs à assigner
-                </span>
+              <FormSection title="Population initiale" description="Informations sur les alevins">
+                <Input
+                  id="nombreInitial"
+                  label="Nombre d'alevins"
+                  type="number"
+                  min="1"
+                  value={nombreInitial}
+                  onChange={(e) => setNombreInitial(e.target.value)}
+                  error={errors.nombreInitial}
+                />
+                <Input
+                  id="poidsMoyenInitial"
+                  label="Poids moyen initial (g)"
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  value={poidsMoyenInitial}
+                  onChange={(e) => setPoidsMoyenInitial(e.target.value)}
+                  error={errors.poidsMoyenInitial}
+                />
+                <Input
+                  id="origineAlevins"
+                  label="Origine des alevins (optionnel)"
+                  placeholder="Ex : Écloserie locale"
+                  value={origineAlevins}
+                  onChange={(e) => setOrigineAlevins(e.target.value)}
+                />
+              </FormSection>
+
+              <FormSection title="Bacs" description="Sélectionnez les bacs à assigner">
                 {bacsLibres.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     Aucun bac libre disponible.
@@ -230,7 +238,7 @@ export function VaguesListClient({ vagues, bacsLibres }: VaguesListClientProps) 
                 {errors.bacIds && (
                   <p className="text-sm text-danger">{errors.bacIds}</p>
                 )}
-              </div>
+              </FormSection>
 
               <DialogFooter>
                 <Button
@@ -247,6 +255,7 @@ export function VaguesListClient({ vagues, bacsLibres }: VaguesListClientProps) 
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <div className="p-4">

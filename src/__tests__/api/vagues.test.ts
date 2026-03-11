@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET, POST } from "@/app/api/vagues/route";
 import { GET as GET_DETAIL, PUT } from "@/app/api/vagues/[id]/route";
 import { NextRequest } from "next/server";
+import { Permission } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -24,6 +25,44 @@ vi.mock("@/lib/queries/indicateurs", () => ({
   getIndicateursVague: (...args: unknown[]) => mockGetIndicateursVague(...args),
 }));
 
+const mockRequirePermission = vi.fn();
+
+vi.mock("@/lib/permissions", () => ({
+  requirePermission: (...args: unknown[]) => mockRequirePermission(...args),
+  ForbiddenError: class ForbiddenError extends Error {
+    public readonly status = 403;
+    constructor(message: string) {
+      super(message);
+      this.name = "ForbiddenError";
+    }
+  },
+}));
+
+vi.mock("@/lib/auth", () => ({
+  AuthError: class AuthError extends Error {
+    public readonly status = 401;
+    constructor(message: string) {
+      super(message);
+      this.name = "AuthError";
+    }
+  },
+}));
+
+const AUTH_CONTEXT = {
+  userId: "user-1",
+  email: "test@dkfarm.cm",
+  phone: null,
+  name: "Test User",
+  globalRole: "GERANT",
+  activeSiteId: "site-1",
+  siteRole: "GERANT",
+  permissions: [
+    Permission.VAGUES_VOIR,
+    Permission.VAGUES_CREER,
+    Permission.VAGUES_MODIFIER,
+  ],
+};
+
 function makeRequest(url: string, init?: RequestInit) {
   return new NextRequest(new URL(url, "http://localhost:3000"), init);
 }
@@ -37,6 +76,7 @@ const pastDate = new Date("2026-01-15T00:00:00Z");
 describe("GET /api/vagues", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
   });
 
   it("retourne la liste des vagues avec le total", async () => {
@@ -69,7 +109,6 @@ describe("GET /api/vagues", () => {
   });
 
   it("filtre les vagues par statut EN_COURS", async () => {
-    // getVagues filtre côté DB — le mock retourne déjà le résultat filtré
     mockGetVagues.mockResolvedValue([
       {
         id: "vague-1",
@@ -93,7 +132,15 @@ describe("GET /api/vagues", () => {
     expect(response.status).toBe(200);
     expect(data.vagues).toHaveLength(1);
     expect(data.vagues[0].statut).toBe("EN_COURS");
-    expect(mockGetVagues).toHaveBeenCalledWith({ statut: "EN_COURS" });
+    expect(mockGetVagues).toHaveBeenCalledWith("site-1", { statut: "EN_COURS" });
+  });
+
+  it("passe le siteId a getVagues sans filtre", async () => {
+    mockGetVagues.mockResolvedValue([]);
+
+    await GET(makeRequest("/api/vagues"));
+
+    expect(mockGetVagues).toHaveBeenCalledWith("site-1", undefined);
   });
 
   it("retourne une liste vide quand pas de vagues", async () => {
@@ -115,6 +162,7 @@ describe("GET /api/vagues", () => {
 describe("POST /api/vagues", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
   });
 
   const validBody = {
@@ -126,7 +174,7 @@ describe("POST /api/vagues", () => {
     bacIds: ["bac-1", "bac-2"],
   };
 
-  it("crée une vague avec des données valides", async () => {
+  it("cree une vague avec des donnees valides", async () => {
     mockCreateVague.mockResolvedValue({
       id: "vague-new",
       code: "VAGUE-2026-003",
@@ -152,6 +200,10 @@ describe("POST /api/vagues", () => {
     expect(response.status).toBe(201);
     expect(data.code).toBe("VAGUE-2026-003");
     expect(data.nombreBacs).toBe(2);
+    expect(mockCreateVague).toHaveBeenCalledWith("site-1", expect.objectContaining({
+      code: "VAGUE-2026-003",
+      bacIds: ["bac-1", "bac-2"],
+    }));
   });
 
   it("retourne 400 si le code est manquant", async () => {
@@ -182,7 +234,7 @@ describe("POST /api/vagues", () => {
     expect(data.errors.some((e: { field: string }) => e.field === "dateDebut")).toBe(true);
   });
 
-  it("retourne 400 si nombreInitial est 0 ou négatif", async () => {
+  it("retourne 400 si nombreInitial est 0 ou negatif", async () => {
     const body = { ...validBody, nombreInitial: 0 };
     const request = makeRequest("/api/vagues", {
       method: "POST",
@@ -240,9 +292,9 @@ describe("POST /api/vagues", () => {
     expect(data.errors.some((e: { field: string }) => e.field === "bacIds")).toBe(true);
   });
 
-  it("retourne 409 quand un bac est déjà assigné", async () => {
+  it("retourne 409 quand un bac est deja assigne", async () => {
     mockCreateVague.mockRejectedValue(
-      new Error("Bacs déjà assignés à une vague : Bac 1")
+      new Error("Bacs deja assigne a une vague : Bac 1")
     );
 
     const request = makeRequest("/api/vagues", {
@@ -254,12 +306,12 @@ describe("POST /api/vagues", () => {
     const data = await response.json();
 
     expect(response.status).toBe(409);
-    expect(data.message).toContain("déjà assigné");
+    expect(data.message).toContain("deja assigne");
   });
 
-  it("retourne 409 quand le code est déjà utilisé", async () => {
+  it("retourne 409 quand le code est deja utilise", async () => {
     mockCreateVague.mockRejectedValue(
-      new Error('Le code "VAGUE-2026-003" est déjà utilisé')
+      new Error('Le code "VAGUE-2026-003" est deja utilise')
     );
 
     const request = makeRequest("/api/vagues", {
@@ -271,7 +323,7 @@ describe("POST /api/vagues", () => {
     const data = await response.json();
 
     expect(response.status).toBe(409);
-    expect(data.message).toContain("déjà utilisé");
+    expect(data.message).toContain("deja utilise");
   });
 
   it("retourne 404 quand un bac est introuvable", async () => {
@@ -298,9 +350,10 @@ describe("POST /api/vagues", () => {
 describe("GET /api/vagues/[id]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
   });
 
-  it("retourne le détail d'une vague avec indicateurs", async () => {
+  it("retourne le detail d'une vague avec indicateurs", async () => {
     const vagueData = {
       id: "vague-1",
       code: "VAGUE-2026-001",
@@ -343,7 +396,32 @@ describe("GET /api/vagues/[id]", () => {
     expect(data.indicateurs.fcr).toBe(1.3);
   });
 
-  it("retourne des indicateurs par défaut quand aucune donnée", async () => {
+  it("passe siteId a getVagueById et getIndicateursVague", async () => {
+    mockGetVagueById.mockResolvedValue({
+      id: "vague-1",
+      code: "V",
+      dateDebut: pastDate,
+      dateFin: null,
+      statut: "EN_COURS",
+      nombreInitial: 500,
+      poidsMoyenInitial: 5.0,
+      origineAlevins: null,
+      createdAt: pastDate,
+      updatedAt: now,
+      bacs: [],
+      releves: [],
+    });
+    mockGetIndicateursVague.mockResolvedValue(null);
+
+    await GET_DETAIL(makeRequest("/api/vagues/vague-1"), {
+      params: Promise.resolve({ id: "vague-1" }),
+    });
+
+    expect(mockGetVagueById).toHaveBeenCalledWith("vague-1", "site-1");
+    expect(mockGetIndicateursVague).toHaveBeenCalledWith("site-1", "vague-1");
+  });
+
+  it("retourne des indicateurs par defaut quand aucune donnee", async () => {
     mockGetVagueById.mockResolvedValue({
       id: "vague-1",
       code: "VAGUE-2026-001",
@@ -387,14 +465,15 @@ describe("GET /api/vagues/[id]", () => {
 });
 
 // ---------------------------------------------------------------------------
-// PUT /api/vagues/[id] — Clôture et modification
+// PUT /api/vagues/[id] — Cloture et modification
 // ---------------------------------------------------------------------------
 describe("PUT /api/vagues/[id]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
   });
 
-  it("clôture une vague avec statut TERMINEE et dateFin", async () => {
+  it("cloture une vague avec statut TERMINEE et dateFin", async () => {
     mockUpdateVague.mockResolvedValue({
       id: "vague-1",
       code: "VAGUE-2026-001",
@@ -424,6 +503,35 @@ describe("PUT /api/vagues/[id]", () => {
 
     expect(response.status).toBe(200);
     expect(data.statut).toBe("TERMINEE");
+  });
+
+  it("passe siteId a updateVague", async () => {
+    mockUpdateVague.mockResolvedValue({
+      id: "vague-1",
+      code: "V",
+      dateDebut: pastDate,
+      dateFin: now,
+      statut: "TERMINEE",
+      nombreInitial: 500,
+      poidsMoyenInitial: 5.0,
+      origineAlevins: null,
+      createdAt: pastDate,
+      updatedAt: now,
+      _count: { bacs: 0 },
+    });
+
+    const request = makeRequest("/api/vagues/vague-1", {
+      method: "PUT",
+      body: JSON.stringify({ statut: "TERMINEE", dateFin: "2026-03-08" }),
+    });
+
+    await PUT(request, { params: Promise.resolve({ id: "vague-1" }) });
+
+    expect(mockUpdateVague).toHaveBeenCalledWith(
+      "vague-1",
+      "site-1",
+      expect.objectContaining({ statut: "TERMINEE" })
+    );
   });
 
   it("retourne 400 si statut TERMINEE sans dateFin", async () => {
@@ -473,9 +581,9 @@ describe("PUT /api/vagues/[id]", () => {
     expect(data.message).toContain("introuvable");
   });
 
-  it("retourne 409 quand on tente de clôturer une vague déjà clôturée", async () => {
+  it("retourne 409 quand on tente de cloturer une vague deja cloturee", async () => {
     mockUpdateVague.mockRejectedValue(
-      new Error("Seule une vague en cours peut être clôturée")
+      new Error("Seule une vague en cours peut etre cloturee")
     );
 
     const request = makeRequest("/api/vagues/vague-1", {
@@ -489,10 +597,10 @@ describe("PUT /api/vagues/[id]", () => {
     const data = await response.json();
 
     expect(response.status).toBe(409);
-    expect(data.message).toContain("clôturée");
+    expect(data.message).toContain("cloturee");
   });
 
-  it("ajoute des bacs à une vague", async () => {
+  it("ajoute des bacs a une vague", async () => {
     mockUpdateVague.mockResolvedValue({
       id: "vague-1",
       code: "VAGUE-2026-001",
@@ -518,15 +626,15 @@ describe("PUT /api/vagues/[id]", () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(mockUpdateVague).toHaveBeenCalledWith("vague-1", {
+    expect(mockUpdateVague).toHaveBeenCalledWith("vague-1", "site-1", {
       addBacIds: ["bac-3"],
     });
     expect(data.code).toBe("VAGUE-2026-001");
   });
 
-  it("retourne 409 si bac à ajouter est déjà assigné", async () => {
+  it("retourne 409 si bac a ajouter est deja assigne", async () => {
     mockUpdateVague.mockRejectedValue(
-      new Error("Bacs déjà assignés : Bac 3")
+      new Error("Bacs deja assigne : Bac 3")
     );
 
     const request = makeRequest("/api/vagues/vague-1", {
@@ -540,6 +648,6 @@ describe("PUT /api/vagues/[id]", () => {
     const data = await response.json();
 
     expect(response.status).toBe(409);
-    expect(data.message).toContain("déjà assigné");
+    expect(data.message).toContain("deja assigne");
   });
 });

@@ -19,15 +19,15 @@ export function IndicateursCards({ indicateurs }: IndicateursCardsProps) {
       label: "Biomasse",
       value: indicateurs.biomasse !== null ? `${indicateurs.biomasse} kg` : "—",
       icon: Weight,
-      color: "text-blue-600",
-      bgColor: "bg-blue-100",
+      color: "text-accent-blue",
+      bgColor: "bg-accent-blue-muted",
     },
     {
       label: "Poids moyen",
       value: indicateurs.poidsMoyen !== null ? `${indicateurs.poidsMoyen} g` : "—",
       icon: Scale,
-      color: "text-purple-600",
-      bgColor: "bg-purple-100",
+      color: "text-accent-purple",
+      bgColor: "bg-accent-purple-muted",
     },
     {
       label: "SGR",
@@ -40,27 +40,27 @@ export function IndicateursCards({ indicateurs }: IndicateursCardsProps) {
       label: "FCR",
       value: indicateurs.fcr !== null ? `${indicateurs.fcr}` : "—",
       icon: Activity,
-      color: "text-amber-600",
-      bgColor: "bg-amber-100",
+      color: "text-accent-amber",
+      bgColor: "bg-accent-amber-muted",
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
-      {items.map((item) => {
-        const Icon = item.icon;
-        return (
-          <Card key={item.label}>
-            <CardContent className="flex flex-col items-center gap-1 p-3 text-center">
-              <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${item.bgColor}`}>
+    <Card className="overflow-hidden">
+      <CardContent className="grid grid-cols-3 gap-2 p-3 sm:grid-cols-5">
+        {items.map((item) => {
+          const Icon = item.icon;
+          return (
+            <div key={item.label} className="flex flex-col items-center gap-1 text-center min-w-0">
+              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${item.bgColor}`}>
                 <Icon className={`h-4 w-4 ${item.color}`} />
               </div>
-              <p className="text-lg font-bold leading-tight">{item.value}</p>
-              <p className="text-xs text-muted-foreground">{item.label}</p>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
+              <p className="text-sm font-bold leading-tight truncate w-full text-center">{item.value}</p>
+              <p className="text-xs text-muted-foreground leading-tight">{item.label}</p>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
   );
 }

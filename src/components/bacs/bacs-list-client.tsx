@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, Pencil, Container } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,13 +17,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Permission } from "@/types";
 import type { BacResponse } from "@/types";
 
 interface BacsListClientProps {
   bacs: BacResponse[];
+  permissions: Permission[];
 }
 
-export function BacsListClient({ bacs }: BacsListClientProps) {
+export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -31,6 +34,14 @@ export function BacsListClient({ bacs }: BacsListClientProps) {
   const [nom, setNom] = useState("");
   const [volume, setVolume] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Edit state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editBac, setEditBac] = useState<BacResponse | null>(null);
+  const [editNom, setEditNom] = useState("");
+  const [editVolume, setEditVolume] = useState("");
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   function resetForm() {
     setNom("");
@@ -76,62 +87,106 @@ export function BacsListClient({ bacs }: BacsListClientProps) {
     }
   }
 
+  function openEdit(bac: BacResponse) {
+    setEditBac(bac);
+    setEditNom(bac.nom);
+    setEditVolume(String(bac.volume));
+    setEditErrors({});
+    setEditOpen(true);
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault();
+    const errs: Record<string, string> = {};
+    if (!editNom.trim()) errs.nom = "Le nom est obligatoire.";
+    if (!editVolume || Number(editVolume) <= 0) errs.volume = "Le volume doit etre superieur a 0.";
+    if (Object.keys(errs).length > 0) { setEditErrors(errs); return; }
+
+    setEditSubmitting(true);
+    setEditErrors({});
+    try {
+      const res = await fetch(`/api/bacs/${editBac!.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nom: editNom.trim(), volume: Number(editVolume) }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        toast({ title: data.message || "Erreur lors de la modification.", variant: "error" });
+        return;
+      }
+      toast({ title: "Bac modifie !", variant: "success" });
+      setEditOpen(false);
+      router.refresh();
+    } catch {
+      toast({ title: "Erreur reseau.", variant: "error" });
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
+
   return (
     <>
       <div className="flex items-center justify-between px-4 pt-4">
         <h2 className="text-base font-semibold">
           {bacs.length} bac{bacs.length > 1 ? "s" : ""}
         </h2>
-        <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="h-4 w-4" />
-              Nouveau bac
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Nouveau bac</DialogTitle>
-              <DialogDescription>
-                Ajoutez un nouveau contenant pour vos poissons.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <Input
-                id="nom"
-                label="Nom du bac"
-                placeholder="Ex : Bac 1"
-                value={nom}
-                onChange={(e) => setNom(e.target.value)}
-                error={errors.nom}
-              />
-              <Input
-                id="volume"
-                label="Volume (litres)"
-                type="number"
-                min="1"
-                value={volume}
-                onChange={(e) => setVolume(e.target.value)}
-                error={errors.volume}
-              />
-              <DialogFooter>
-                <Button type="button" variant="secondary" onClick={() => setDialogOpen(false)}>
-                  Annuler
-                </Button>
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? "Création..." : "Créer le bac"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        {permissions.includes(Permission.BACS_GERER) && (
+          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="h-4 w-4" />
+                Nouveau bac
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Nouveau bac</DialogTitle>
+                <DialogDescription>
+                  Ajoutez un nouveau contenant pour vos poissons.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <Input
+                  id="nom"
+                  label="Nom du bac"
+                  placeholder="Ex : Bac 1"
+                  value={nom}
+                  onChange={(e) => setNom(e.target.value)}
+                  error={errors.nom}
+                />
+                <Input
+                  id="volume"
+                  label="Volume (litres)"
+                  type="number"
+                  min="1"
+                  value={volume}
+                  onChange={(e) => setVolume(e.target.value)}
+                  error={errors.volume}
+                />
+                <DialogFooter>
+                  <Button type="button" variant="secondary" onClick={() => setDialogOpen(false)}>
+                    Annuler
+                  </Button>
+                  <Button type="submit" disabled={submitting}>
+                    {submitting ? "Création..." : "Créer le bac"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="grid gap-3 p-4 md:grid-cols-2 lg:grid-cols-3">
         {bacs.length === 0 ? (
-          <p className="col-span-full py-8 text-center text-sm text-muted-foreground">
-            Aucun bac enregistré.
-          </p>
+          <div className="col-span-full">
+            <EmptyState
+              icon={<Container className="h-7 w-7" />}
+              title="Aucun bac"
+              description="Commencez par creer un bac pour votre site."
+            />
+          </div>
         ) : (
           bacs.map((bac) => {
             const isOccupe = bac.vagueId !== null;
@@ -142,19 +197,62 @@ export function BacsListClient({ bacs }: BacsListClientProps) {
                     <p className="font-medium">{bac.nom}</p>
                     <p className="text-sm text-muted-foreground">{bac.volume} L</p>
                   </div>
-                  {isOccupe ? (
-                    <Badge variant="warning">
-                      {bac.vagueCode ?? "Occupé"}
-                    </Badge>
-                  ) : (
-                    <Badge variant="info">Libre</Badge>
-                  )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {isOccupe ? (
+                      <Badge variant="warning">
+                        {bac.vagueCode ?? "Occupé"}
+                      </Badge>
+                    ) : (
+                      <Badge variant="info">Libre</Badge>
+                    )}
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEdit(bac)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             );
           })
         )}
       </div>
+
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onOpenChange={(open) => { setEditOpen(open); if (!open) setEditBac(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier le bac</DialogTitle>
+            <DialogDescription>
+              Modifiez le nom ou le volume du bac.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEdit} className="flex flex-col gap-4">
+            <Input
+              id="edit-nom"
+              label="Nom du bac"
+              value={editNom}
+              onChange={(e) => setEditNom(e.target.value)}
+              error={editErrors.nom}
+            />
+            <Input
+              id="edit-volume"
+              label="Volume (litres)"
+              type="number"
+              min="1"
+              value={editVolume}
+              onChange={(e) => setEditVolume(e.target.value)}
+              error={editErrors.volume}
+            />
+            <DialogFooter>
+              <Button type="button" variant="secondary" onClick={() => setEditOpen(false)}>
+                Annuler
+              </Button>
+              <Button type="submit" disabled={editSubmitting}>
+                {editSubmitting ? "Modification..." : "Enregistrer"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

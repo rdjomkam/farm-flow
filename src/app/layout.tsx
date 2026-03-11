@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { BottomNav } from "@/components/layout/bottom-nav";
-import { Sidebar } from "@/components/layout/sidebar";
+import { AppShell } from "@/components/layout/app-shell";
 import { ToastProvider } from "@/components/ui/toast";
+import { getServerSession } from "@/lib/auth";
+import { getServerPermissions } from "@/lib/auth/permissions-server";
+import { Permission } from "@/types";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,24 +35,22 @@ export const viewport: Viewport = {
   themeColor: "#0d9488",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getServerSession();
+  const permissions: Permission[] = session ? await getServerPermissions(session) : [];
+
   return (
     <html lang="fr">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
       >
         <ToastProvider>
-          <div className="flex min-h-dvh">
-            <Sidebar />
-            <main className="flex-1 pb-16 md:pb-0">
-              {children}
-            </main>
-          </div>
-          <BottomNav />
+          <AppShell permissions={permissions}>{children}</AppShell>
         </ToastProvider>
       </body>
     </html>

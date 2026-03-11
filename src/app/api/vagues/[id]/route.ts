@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getVagueById, updateVague } from "@/lib/queries/vagues";
 import { getIndicateursVague } from "@/lib/queries/indicateurs";
-import { StatutVague } from "@/types";
+import { AuthError } from "@/lib/auth";
+import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { StatutVague, Permission } from "@/types";
 import type { UpdateVagueDTO } from "@/types";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requirePermission(request, Permission.VAGUES_VOIR);
     const { id } = await params;
-    const vague = await getVagueById(id);
+    const vague = await getVagueById(id, auth.activeSiteId);
 
     if (!vague) {
       return NextResponse.json(
@@ -19,7 +22,7 @@ export async function GET(
       );
     }
 
-    const indicateurs = await getIndicateursVague(id);
+    const indicateurs = await getIndicateursVague(auth.activeSiteId, id);
 
     return NextResponse.json({
       vague: {
@@ -50,9 +53,15 @@ export async function GET(
         joursEcoules: 0,
       },
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+    }
+    if (error instanceof ForbiddenError) {
+      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+    }
     return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la récupération de la vague." },
+      { status: 500, message: "Erreur serveur lors de la recuperation de la vague." },
       { status: 500 }
     );
   }
@@ -63,6 +72,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requirePermission(request, Permission.VAGUES_MODIFIER);
     const { id } = await params;
     const body = await request.json();
     const errors: { field: string; message: string }[] = [];
@@ -73,7 +83,7 @@ export async function PUT(
       if (!validStatuts.includes(body.statut)) {
         errors.push({
           field: "statut",
-          message: `Le statut doit être l'un de : ${validStatuts.join(", ")}.`,
+          message: `Le statut doit etre l'un de : ${validStatuts.join(", ")}.`,
         });
       }
 
@@ -81,7 +91,7 @@ export async function PUT(
         errors.push({
           field: "dateFin",
           message:
-            "La date de fin est obligatoire pour clôturer une vague.",
+            "La date de fin est obligatoire pour cloturer une vague.",
         });
       }
     }
@@ -96,15 +106,34 @@ export async function PUT(
     if (body.addBacIds != null && (!Array.isArray(body.addBacIds) || body.addBacIds.length === 0)) {
       errors.push({
         field: "addBacIds",
-        message: "addBacIds doit être un tableau non vide.",
+        message: "addBacIds doit etre un tableau non vide.",
       });
     }
 
     if (body.removeBacIds != null && (!Array.isArray(body.removeBacIds) || body.removeBacIds.length === 0)) {
       errors.push({
         field: "removeBacIds",
-        message: "removeBacIds doit être un tableau non vide.",
+        message: "removeBacIds doit etre un tableau non vide.",
       });
+    }
+
+    // Validate new editable fields
+    if (body.nombreInitial !== undefined) {
+      if (typeof body.nombreInitial !== "number" || !Number.isInteger(body.nombreInitial) || body.nombreInitial <= 0) {
+        errors.push({ field: "nombreInitial", message: "Le nombre initial doit etre un entier superieur a 0." });
+      }
+    }
+
+    if (body.poidsMoyenInitial !== undefined) {
+      if (typeof body.poidsMoyenInitial !== "number" || body.poidsMoyenInitial <= 0) {
+        errors.push({ field: "poidsMoyenInitial", message: "Le poids moyen initial doit etre superieur a 0." });
+      }
+    }
+
+    if (body.origineAlevins !== undefined && body.origineAlevins !== null) {
+      if (typeof body.origineAlevins !== "string") {
+        errors.push({ field: "origineAlevins", message: "L'origine des alevins doit etre une chaine de caracteres." });
+      }
     }
 
     if (errors.length > 0) {
@@ -119,8 +148,11 @@ export async function PUT(
     if (body.dateFin != null) data.dateFin = body.dateFin;
     if (body.addBacIds != null) data.addBacIds = body.addBacIds;
     if (body.removeBacIds != null) data.removeBacIds = body.removeBacIds;
+    if (body.nombreInitial !== undefined) data.nombreInitial = body.nombreInitial;
+    if (body.poidsMoyenInitial !== undefined) data.poidsMoyenInitial = body.poidsMoyenInitial;
+    if (body.origineAlevins !== undefined) data.origineAlevins = body.origineAlevins;
 
-    const vague = await updateVague(id, data);
+    const vague = await updateVague(id, auth.activeSiteId, data);
 
     const now = vague.dateFin ?? new Date();
     const joursEcoules = Math.floor(
@@ -141,6 +173,12 @@ export async function PUT(
       createdAt: vague.createdAt,
     });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+    }
+    if (error instanceof ForbiddenError) {
+      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+    }
     const message =
       error instanceof Error ? error.message : "Erreur serveur inattendue.";
 
@@ -148,12 +186,12 @@ export async function PUT(
       return NextResponse.json({ status: 404, message }, { status: 404 });
     }
 
-    if (message.includes("déjà assigné") || message.includes("clôturée")) {
+    if (message.includes("deja assigne") || message.includes("cloturee") || message.includes("vague cloturee")) {
       return NextResponse.json({ status: 409, message }, { status: 409 });
     }
 
     return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la mise à jour de la vague." },
+      { status: 500, message: "Erreur serveur lors de la mise a jour de la vague." },
       { status: 500 }
     );
   }

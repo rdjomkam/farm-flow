@@ -5,8 +5,8 @@ const variants = {
   en_cours: "bg-primary/15 text-primary",
   terminee: "bg-success/15 text-success",
   annulee: "bg-danger/15 text-danger",
-  info: "bg-blue-100 text-blue-700",
-  warning: "bg-amber-100 text-amber-700",
+  info: "bg-accent-blue-muted text-accent-blue",
+  warning: "bg-accent-amber-muted text-accent-amber",
 };
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {

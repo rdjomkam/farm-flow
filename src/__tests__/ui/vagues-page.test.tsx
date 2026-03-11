@@ -5,8 +5,10 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { VaguesListClient } from "@/components/vagues/vagues-list-client";
 import { VagueCard } from "@/components/vagues/vague-card";
 import { IndicateursCards } from "@/components/vagues/indicateurs-cards";
-import { StatutVague } from "@/types";
+import { StatutVague, Permission } from "@/types";
 import type { VagueSummaryResponse, BacResponse, IndicateursVague } from "@/types";
+
+const allPermissions = Object.values(Permission);
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -79,24 +81,24 @@ describe("VaguesListClient — Affichage et filtres", () => {
   });
 
   it("affiche le nombre total de vagues", () => {
-    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} />);
+    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} />);
     expect(screen.getByText("2 vagues")).toBeInTheDocument();
   });
 
   it("affiche les onglets En cours, Terminées, Annulées", () => {
-    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} />);
+    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} />);
     expect(screen.getByText("En cours (1)")).toBeInTheDocument();
     expect(screen.getByText("Terminées (1)")).toBeInTheDocument();
     expect(screen.getByText("Annulées (0)")).toBeInTheDocument();
   });
 
   it("affiche un message quand aucune vague", () => {
-    render(<VaguesListClient vagues={[]} bacsLibres={[]} />);
+    render(<VaguesListClient vagues={[]} bacsLibres={[]} permissions={allPermissions} />);
     expect(screen.getByText("0 vague")).toBeInTheDocument();
   });
 
   it("a un bouton 'Nouvelle vague'", () => {
-    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} />);
+    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} />);
     expect(screen.getByText("Nouvelle vague")).toBeInTheDocument();
   });
 });
@@ -108,7 +110,7 @@ describe("VaguesListClient — Formulaire de création", () => {
   });
 
   it("ouvre le dialogue au clic sur 'Nouvelle vague'", async () => {
-    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} />);
+    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} />);
     fireEvent.click(screen.getByText("Nouvelle vague"));
 
     await waitFor(() => {
@@ -117,7 +119,7 @@ describe("VaguesListClient — Formulaire de création", () => {
   });
 
   it("affiche les erreurs de validation si champs vides", async () => {
-    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} />);
+    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} />);
     fireEvent.click(screen.getByText("Nouvelle vague"));
 
     await waitFor(() => {
@@ -134,7 +136,7 @@ describe("VaguesListClient — Formulaire de création", () => {
   });
 
   it("affiche les bacs libres disponibles dans le formulaire", async () => {
-    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} />);
+    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} />);
     fireEvent.click(screen.getByText("Nouvelle vague"));
 
     await waitFor(() => {
@@ -144,7 +146,7 @@ describe("VaguesListClient — Formulaire de création", () => {
   });
 
   it("affiche un message quand aucun bac libre", async () => {
-    render(<VaguesListClient vagues={fakeVagues} bacsLibres={[]} />);
+    render(<VaguesListClient vagues={fakeVagues} bacsLibres={[]} permissions={allPermissions} />);
     fireEvent.click(screen.getByText("Nouvelle vague"));
 
     await waitFor(() => {
@@ -158,7 +160,7 @@ describe("VaguesListClient — Formulaire de création", () => {
       json: async () => ({ id: "vague-new", code: "VAGUE-2026-003" }),
     });
 
-    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} />);
+    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} />);
     fireEvent.click(screen.getByText("Nouvelle vague"));
 
     await waitFor(() => {

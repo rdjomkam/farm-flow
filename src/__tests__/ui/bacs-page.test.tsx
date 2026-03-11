@@ -3,7 +3,10 @@ import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BacsListClient } from "@/components/bacs/bacs-list-client";
+import { Permission } from "@/types";
 import type { BacResponse } from "@/types";
+
+const allPermissions = Object.values(Permission);
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -54,12 +57,12 @@ describe("BacsListClient — Affichage", () => {
   });
 
   it("affiche le nombre total de bacs", () => {
-    render(<BacsListClient bacs={fakeBacs} />);
+    render(<BacsListClient bacs={fakeBacs} permissions={allPermissions} />);
     expect(screen.getByText("2 bacs")).toBeInTheDocument();
   });
 
   it("affiche le nom et volume de chaque bac", () => {
-    render(<BacsListClient bacs={fakeBacs} />);
+    render(<BacsListClient bacs={fakeBacs} permissions={allPermissions} />);
     expect(screen.getByText("Bac 1")).toBeInTheDocument();
     expect(screen.getByText("1000 L")).toBeInTheDocument();
     expect(screen.getByText("Bac 2")).toBeInTheDocument();
@@ -67,22 +70,22 @@ describe("BacsListClient — Affichage", () => {
   });
 
   it("affiche 'Libre' pour un bac sans vague", () => {
-    render(<BacsListClient bacs={fakeBacs} />);
+    render(<BacsListClient bacs={fakeBacs} permissions={allPermissions} />);
     expect(screen.getByText("Libre")).toBeInTheDocument();
   });
 
   it("affiche le code vague pour un bac occupé", () => {
-    render(<BacsListClient bacs={fakeBacs} />);
+    render(<BacsListClient bacs={fakeBacs} permissions={allPermissions} />);
     expect(screen.getByText("VAGUE-2026-001")).toBeInTheDocument();
   });
 
   it("affiche un message quand aucun bac", () => {
-    render(<BacsListClient bacs={[]} />);
-    expect(screen.getByText("Aucun bac enregistré.")).toBeInTheDocument();
+    render(<BacsListClient bacs={[]} permissions={allPermissions} />);
+    expect(screen.getByText("Aucun bac")).toBeInTheDocument();
   });
 
   it("a un bouton 'Nouveau bac'", () => {
-    render(<BacsListClient bacs={fakeBacs} />);
+    render(<BacsListClient bacs={fakeBacs} permissions={allPermissions} />);
     expect(screen.getByText("Nouveau bac")).toBeInTheDocument();
   });
 });
@@ -94,7 +97,7 @@ describe("BacsListClient — Formulaire de création", () => {
   });
 
   it("ouvre le dialogue de création au clic sur 'Nouveau bac'", async () => {
-    render(<BacsListClient bacs={fakeBacs} />);
+    render(<BacsListClient bacs={fakeBacs} permissions={allPermissions} />);
     fireEvent.click(screen.getByText("Nouveau bac"));
 
     await waitFor(() => {
@@ -103,7 +106,7 @@ describe("BacsListClient — Formulaire de création", () => {
   });
 
   it("affiche une erreur si le nom est vide à la soumission", async () => {
-    render(<BacsListClient bacs={fakeBacs} />);
+    render(<BacsListClient bacs={fakeBacs} permissions={allPermissions} />);
     fireEvent.click(screen.getByText("Nouveau bac"));
 
     await waitFor(() => {
@@ -118,7 +121,7 @@ describe("BacsListClient — Formulaire de création", () => {
   });
 
   it("affiche une erreur si le volume est 0", async () => {
-    render(<BacsListClient bacs={fakeBacs} />);
+    render(<BacsListClient bacs={fakeBacs} permissions={allPermissions} />);
     fireEvent.click(screen.getByText("Nouveau bac"));
 
     await waitFor(() => {
@@ -143,7 +146,7 @@ describe("BacsListClient — Formulaire de création", () => {
       json: async () => ({ id: "bac-new", nom: "Bac Test", volume: 1500 }),
     });
 
-    render(<BacsListClient bacs={fakeBacs} />);
+    render(<BacsListClient bacs={fakeBacs} permissions={allPermissions} />);
     fireEvent.click(screen.getByText("Nouveau bac"));
 
     await waitFor(() => {

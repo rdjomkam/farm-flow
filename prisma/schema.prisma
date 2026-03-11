@@ -48,8 +48,284 @@ enum MethodeComptage {
   ECHANTILLONNAGE
 }
 
+enum Role {
+  ADMIN
+  GERANT
+  PISCICULTEUR
+}
+
+enum CategorieProduit {
+  ALIMENT
+  INTRANT
+  EQUIPEMENT
+}
+
+enum UniteStock {
+  KG
+  LITRE
+  UNITE
+  SACS
+}
+
+enum TypeMouvement {
+  ENTREE
+  SORTIE
+}
+
+enum StatutCommande {
+  BROUILLON
+  ENVOYEE
+  LIVREE
+  ANNULEE
+}
+
+enum StatutFacture {
+  BROUILLON
+  ENVOYEE
+  PAYEE_PARTIELLEMENT
+  PAYEE
+  ANNULEE
+}
+
+enum ModePaiement {
+  ESPECES
+  MOBILE_MONEY
+  VIREMENT
+  CHEQUE
+}
+
+enum Permission {
+  // Administration (2)
+  SITE_GERER
+  MEMBRES_GERER
+  // Élevage (8)
+  VAGUES_VOIR
+  VAGUES_CREER
+  VAGUES_MODIFIER
+  BACS_GERER
+  BACS_MODIFIER
+  RELEVES_VOIR
+  RELEVES_CREER
+  RELEVES_MODIFIER
+  // Stock (4)
+  STOCK_VOIR
+  STOCK_GERER
+  APPROVISIONNEMENT_VOIR
+  APPROVISIONNEMENT_GERER
+  // Clients (2)
+  CLIENTS_VOIR
+  CLIENTS_GERER
+  // Ventes (4)
+  VENTES_VOIR
+  VENTES_CREER
+  FACTURES_VOIR
+  FACTURES_GERER
+  // Paiements (1)
+  PAIEMENTS_CREER
+  // Alevins (6)
+  ALEVINS_VOIR
+  ALEVINS_GERER
+  ALEVINS_CREER
+  ALEVINS_MODIFIER
+  ALEVINS_SUPPRIMER
+  // Planning (2)
+  PLANNING_VOIR
+  PLANNING_GERER
+  // Finances (2)
+  FINANCES_VOIR
+  FINANCES_GERER
+  // Général (3)
+  DASHBOARD_VOIR
+  ALERTES_VOIR
+  EXPORT_DONNEES
+  // Alertes (1)
+  ALERTES_CONFIGURER
+}
+
 // ──────────────────────────────────────────
-// Modèles
+// Enums — Alertes & Planning
+// ──────────────────────────────────────────
+
+enum TypeAlerte {
+  MORTALITE_ELEVEE
+  QUALITE_EAU
+  STOCK_BAS
+  RAPPEL_ALIMENTATION
+  RAPPEL_BIOMETRIE
+  PERSONNALISEE
+}
+
+enum StatutAlerte {
+  ACTIVE
+  LUE
+  TRAITEE
+}
+
+enum TypeActivite {
+  ALIMENTATION
+  BIOMETRIE
+  QUALITE_EAU
+  COMPTAGE
+  NETTOYAGE
+  TRAITEMENT
+  RECOLTE
+  AUTRE
+}
+
+enum StatutActivite {
+  PLANIFIEE
+  TERMINEE
+  ANNULEE
+  EN_RETARD
+}
+
+enum Recurrence {
+  QUOTIDIEN
+  HEBDOMADAIRE
+  BIMENSUEL
+  MENSUEL
+  PERSONNALISE
+}
+
+// ──────────────────────────────────────────
+// Enums — Production Alevins
+// ──────────────────────────────────────────
+
+enum SexeReproducteur {
+  MALE
+  FEMELLE
+}
+
+enum StatutReproducteur {
+  ACTIF
+  REFORME
+  MORT
+}
+
+enum StatutPonte {
+  EN_COURS
+  TERMINEE
+  ECHOUEE
+}
+
+enum StatutLotAlevins {
+  EN_INCUBATION
+  EN_ELEVAGE
+  TRANSFERE
+  PERDU
+}
+
+// ──────────────────────────────────────────
+// Modèles — Multi-tenancy
+// ──────────────────────────────────────────
+
+model Site {
+  id           String           @id @default(cuid())
+  name         String
+  address      String?
+  isActive     Boolean          @default(true)
+  members      SiteMember[]
+  roles        SiteRole[]
+  bacs         Bac[]
+  vagues       Vague[]
+  releves      Releve[]
+  sessions     Session[]
+  fournisseurs Fournisseur[]
+  produits     Produit[]
+  mouvements           MouvementStock[]
+  commandes            Commande[]
+  releveConsommations  ReleveConsommation[]
+  clients              Client[]
+  ventes               Vente[]
+  factures             Facture[]
+  paiements            Paiement[]
+  reproducteurs        Reproducteur[]
+  pontes               Ponte[]
+  lotsAlevins          LotAlevins[]
+  configAlertes        ConfigAlerte[]
+  notifications        Notification[]
+  activites            Activite[]
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+}
+
+model SiteRole {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  permissions Permission[]
+  isSystem    Boolean      @default(false)
+  siteId      String
+  site        Site         @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  members     SiteMember[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([siteId, name])
+  @@index([siteId])
+}
+
+model SiteMember {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  siteId      String
+  site        Site         @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  siteRoleId  String
+  siteRole    SiteRole     @relation(fields: [siteRoleId], references: [id], onDelete: Restrict)
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([userId, siteId])
+  @@index([userId])
+  @@index([siteId])
+  @@index([siteRoleId])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Authentification
+// ──────────────────────────────────────────
+
+model User {
+  id                  String           @id @default(cuid())
+  email               String?          @unique
+  phone               String?          @unique
+  name                String
+  passwordHash        String
+  role                Role             @default(PISCICULTEUR)
+  isActive            Boolean          @default(true)
+  sessions            Session[]
+  memberships         SiteMember[]
+  mouvements          MouvementStock[]
+  commandes           Commande[]
+  ventes              Vente[]          @relation("VenteUser")
+  factures            Facture[]        @relation("FactureUser")
+  paiements           Paiement[]       @relation("PaiementUser")
+  configAlertes       ConfigAlerte[]
+  notifications       Notification[]
+  activitesCreees     Activite[]       @relation("ActivitesCreees")
+  activitesAssignees  Activite[]       @relation("ActivitesAssignees")
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeSiteId String?
+  activeSite   Site?    @relation(fields: [activeSiteId], references: [id])
+  expires      DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([activeSiteId])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Élevage
 // ──────────────────────────────────────────
 
 model Bac {
@@ -59,26 +335,39 @@ model Bac {
   nombrePoissons  Int?
   vagueId         String?
   vague           Vague?   @relation(fields: [vagueId], references: [id])
+  siteId          String
+  site            Site     @relation(fields: [siteId], references: [id])
   releves         Releve[]
+  lotsAlevins     LotAlevins[]
+  activites       Activite[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   @@index([vagueId])
+  @@index([siteId])
 }
 
 model Vague {
-  id                  String      @id @default(cuid())
-  code                String      @unique
+  id                  String           @id @default(cuid())
+  code                String           @unique
   dateDebut           DateTime
   dateFin             DateTime?
   nombreInitial       Int
   poidsMoyenInitial   Float
   origineAlevins      String?
-  statut              StatutVague @default(EN_COURS)
-  bacs                Bac[]
-  releves             Releve[]
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  statut              StatutVague      @default(EN_COURS)
+  siteId              String
+  site                Site             @relation(fields: [siteId], references: [id])
+  bacs                    Bac[]
+  releves                 Releve[]
+  mouvements              MouvementStock[]
+  ventes                  Vente[]
+  lotsAlevinsTransferes   LotAlevins[]
+  activites               Activite[]
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+
+  @@index([siteId])
 }
 
 model Releve {
@@ -89,6 +378,8 @@ model Releve {
   vague       Vague      @relation(fields: [vagueId], references: [id])
   bacId       String
   bac         Bac        @relation(fields: [bacId], references: [id])
+  siteId      String
+  site        Site       @relation(fields: [siteId], references: [id])
   notes       String?
 
   // Champs biométrie
@@ -118,10 +409,379 @@ model Releve {
   // Champs observation
   description       String?
 
+  consommations   ReleveConsommation[]
+  mouvements      MouvementStock[]
+
+  // Relation inverse : un releve peut etre lie a au plus une activite (1:1 optionnelle)
+  activite        Activite?
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   @@index([vagueId, typeReleve])
   @@index([bacId])
   @@index([date])
+  @@index([siteId])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Stock & Approvisionnement
+// ──────────────────────────────────────────
+
+model Fournisseur {
+  id        String     @id @default(cuid())
+  nom       String
+  telephone String?
+  email     String?
+  adresse   String?
+  isActive  Boolean    @default(true)
+  siteId    String
+  site      Site       @relation(fields: [siteId], references: [id])
+  produits  Produit[]
+  commandes Commande[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([siteId])
+}
+
+model Produit {
+  id             String           @id @default(cuid())
+  nom            String
+  categorie      CategorieProduit
+  unite          UniteStock
+  prixUnitaire   Float
+  stockActuel    Float            @default(0)
+  seuilAlerte    Float            @default(0)
+  fournisseurId  String?
+  fournisseur    Fournisseur?     @relation(fields: [fournisseurId], references: [id], onDelete: SetNull)
+  isActive       Boolean          @default(true)
+  siteId         String
+  site           Site             @relation(fields: [siteId], references: [id])
+  mouvements     MouvementStock[]
+  lignesCommande LigneCommande[]
+  consommations  ReleveConsommation[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([siteId])
+  @@index([fournisseurId])
+  @@index([categorie])
+}
+
+model MouvementStock {
+  id         String        @id @default(cuid())
+  produitId  String
+  produit    Produit       @relation(fields: [produitId], references: [id])
+  type       TypeMouvement
+  quantite   Float
+  prixTotal  Float?
+  vagueId    String?
+  vague      Vague?        @relation(fields: [vagueId], references: [id])
+  commandeId String?
+  commande   Commande?     @relation(fields: [commandeId], references: [id])
+  releveId   String?
+  releve     Releve?       @relation(fields: [releveId], references: [id])
+  userId     String
+  user       User          @relation(fields: [userId], references: [id])
+  date       DateTime
+  notes      String?
+  siteId     String
+  site       Site          @relation(fields: [siteId], references: [id])
+  createdAt  DateTime      @default(now())
+
+  @@index([siteId])
+  @@index([produitId])
+  @@index([date])
+  @@index([vagueId])
+  @@index([commandeId])
+  @@index([releveId])
+}
+
+model Commande {
+  id             String          @id @default(cuid())
+  numero         String          @unique
+  fournisseurId  String
+  fournisseur    Fournisseur     @relation(fields: [fournisseurId], references: [id])
+  statut         StatutCommande  @default(BROUILLON)
+  dateCommande   DateTime
+  dateLivraison  DateTime?
+  montantTotal   Float           @default(0)
+  userId         String
+  user           User            @relation(fields: [userId], references: [id])
+  siteId         String
+  site           Site            @relation(fields: [siteId], references: [id])
+  lignes         LigneCommande[]
+  mouvements     MouvementStock[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([siteId])
+  @@index([fournisseurId])
+  @@index([statut])
+  @@index([dateCommande])
+}
+
+model LigneCommande {
+  id           String   @id @default(cuid())
+  commandeId   String
+  commande     Commande @relation(fields: [commandeId], references: [id], onDelete: Cascade)
+  produitId    String
+  produit      Produit  @relation(fields: [produitId], references: [id])
+  quantite     Float
+  prixUnitaire Float
+  createdAt    DateTime @default(now())
+
+  @@index([commandeId])
+  @@index([produitId])
+}
+
+// ──────────────────────────────────────────
+// Modèle — Consommation produits via relevés
+// ──────────────────────────────────────────
+
+model ReleveConsommation {
+  id        String   @id @default(cuid())
+  releveId  String
+  releve    Releve   @relation(fields: [releveId], references: [id], onDelete: Cascade)
+  produitId String
+  produit   Produit  @relation(fields: [produitId], references: [id])
+  quantite  Float
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([releveId])
+  @@index([produitId])
+  @@index([siteId])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Ventes & Facturation
+// ──────────────────────────────────────────
+
+model Client {
+  id        String   @id @default(cuid())
+  nom       String
+  telephone String?
+  email     String?
+  adresse   String?
+  isActive  Boolean  @default(true)
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id])
+  ventes    Vente[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteId])
+}
+
+model Vente {
+  id               String   @id @default(cuid())
+  numero           String   @unique
+  clientId         String
+  client           Client   @relation(fields: [clientId], references: [id])
+  vagueId          String
+  vague            Vague    @relation(fields: [vagueId], references: [id])
+  quantitePoissons Int
+  poidsTotalKg     Float
+  prixUnitaireKg   Float
+  montantTotal     Float
+  notes            String?
+  siteId           String
+  site             Site     @relation(fields: [siteId], references: [id])
+  userId           String
+  user             User     @relation("VenteUser", fields: [userId], references: [id])
+  facture          Facture?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([siteId])
+  @@index([clientId])
+  @@index([vagueId])
+}
+
+model Facture {
+  id           String        @id @default(cuid())
+  numero       String        @unique
+  venteId      String        @unique
+  vente        Vente         @relation(fields: [venteId], references: [id])
+  statut       StatutFacture @default(BROUILLON)
+  dateEmission DateTime      @default(now())
+  dateEcheance DateTime?
+  montantTotal Float
+  montantPaye  Float         @default(0)
+  notes        String?
+  siteId       String
+  site         Site          @relation(fields: [siteId], references: [id])
+  userId       String
+  user         User          @relation("FactureUser", fields: [userId], references: [id])
+  paiements    Paiement[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([siteId])
+  @@index([statut])
+}
+
+model Paiement {
+  id        String       @id @default(cuid())
+  factureId String
+  facture   Facture      @relation(fields: [factureId], references: [id], onDelete: Cascade)
+  montant   Float
+  mode      ModePaiement
+  reference String?
+  date      DateTime     @default(now())
+  siteId    String
+  site      Site         @relation(fields: [siteId], references: [id])
+  userId    String
+  user      User         @relation("PaiementUser", fields: [userId], references: [id])
+  createdAt DateTime     @default(now())
+
+  @@index([factureId])
+  @@index([siteId])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Production Alevins
+// ──────────────────────────────────────────
+
+model Reproducteur {
+  id              String             @id @default(cuid())
+  code            String             @unique
+  sexe            SexeReproducteur
+  poids           Float
+  age             Int?
+  origine         String?
+  statut          StatutReproducteur @default(ACTIF)
+  dateAcquisition DateTime           @default(now())
+  notes           String?
+  siteId          String
+  site            Site               @relation(fields: [siteId], references: [id])
+  pontesAsFemelle Ponte[]            @relation("PonteFemelle")
+  pontesAsMale    Ponte[]            @relation("PonteMale")
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([siteId])
+  @@index([siteId, statut])
+}
+
+model Ponte {
+  id              String      @id @default(cuid())
+  code            String      @unique
+  femelleId       String
+  femelle         Reproducteur @relation("PonteFemelle", fields: [femelleId], references: [id])
+  maleId          String?
+  male            Reproducteur? @relation("PonteMale", fields: [maleId], references: [id])
+  datePonte       DateTime
+  nombreOeufs     Int?
+  tauxFecondation Float?
+  statut          StatutPonte @default(EN_COURS)
+  notes           String?
+  siteId          String
+  site            Site        @relation(fields: [siteId], references: [id])
+  lots            LotAlevins[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([siteId])
+  @@index([femelleId])
+  @@index([siteId, statut])
+}
+
+model LotAlevins {
+  id                  String           @id @default(cuid())
+  code                String           @unique
+  ponteId             String
+  ponte               Ponte            @relation(fields: [ponteId], references: [id])
+  nombreInitial       Int
+  nombreActuel        Int
+  ageJours            Int              @default(0)
+  poidsMoyen          Float?
+  statut              StatutLotAlevins @default(EN_INCUBATION)
+  bacId               String?
+  bac                 Bac?             @relation(fields: [bacId], references: [id])
+  vagueDestinationId  String?
+  vagueDestination    Vague?           @relation(fields: [vagueDestinationId], references: [id])
+  dateTransfert       DateTime?
+  notes               String?
+  siteId              String
+  site                Site             @relation(fields: [siteId], references: [id])
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  @@index([siteId])
+  @@index([ponteId])
+  @@index([siteId, statut])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Alertes & Planning
+// ──────────────────────────────────────────
+
+model ConfigAlerte {
+  id                String     @id @default(cuid())
+  typeAlerte        TypeAlerte
+  seuilValeur       Float?
+  seuilPourcentage  Float?
+  enabled           Boolean    @default(true)
+  userId            String
+  user              User       @relation(fields: [userId], references: [id])
+  siteId            String
+  site              Site       @relation(fields: [siteId], references: [id])
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@unique([userId, siteId, typeAlerte])
+  @@index([siteId])
+}
+
+model Notification {
+  id         String       @id @default(cuid())
+  typeAlerte TypeAlerte
+  titre      String
+  message    String
+  statut     StatutAlerte @default(ACTIVE)
+  lien       String?
+  userId     String
+  user       User         @relation(fields: [userId], references: [id])
+  siteId     String
+  site       Site         @relation(fields: [siteId], references: [id])
+  createdAt  DateTime     @default(now())
+
+  @@index([userId, siteId, statut])
+  @@index([siteId])
+}
+
+model Activite {
+  id           String         @id @default(cuid())
+  titre        String
+  description  String?
+  typeActivite TypeActivite
+  statut       StatutActivite @default(PLANIFIEE)
+  dateDebut    DateTime
+  dateFin      DateTime?
+  recurrence   Recurrence?
+  vagueId      String?
+  vague        Vague?         @relation(fields: [vagueId], references: [id])
+  bacId        String?
+  bac          Bac?           @relation(fields: [bacId], references: [id])
+  assigneAId   String?
+  assigneA     User?          @relation("ActivitesAssignees", fields: [assigneAId], references: [id])
+  userId       String
+  user         User           @relation("ActivitesCreees", fields: [userId], references: [id])
+  siteId       String
+  site         Site           @relation(fields: [siteId], references: [id])
+  releveId       String?        @unique
+  releve         Releve?        @relation(fields: [releveId], references: [id])
+  dateTerminee   DateTime?
+  noteCompletion String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([siteId, dateDebut])
+  @@index([siteId, statut])
+  @@index([assigneAId])
+  @@index([releveId])
 }

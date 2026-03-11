@@ -36,24 +36,17 @@ describe("ReleveFormClient — Affichage initial", () => {
   });
 
   it("affiche le titre du formulaire", () => {
-    render(<ReleveFormClient vagues={fakeVagues} />);
-    expect(screen.getByText("Saisir un relevé")).toBeInTheDocument();
+    render(<ReleveFormClient vagues={fakeVagues} produits={[]} />);
+    expect(screen.getByText("Saisir un releve")).toBeInTheDocument();
   });
 
   it("affiche le bouton de soumission", () => {
-    render(<ReleveFormClient vagues={fakeVagues} />);
+    render(<ReleveFormClient vagues={fakeVagues} produits={[]} />);
     expect(screen.getByText("Enregistrer le relevé")).toBeInTheDocument();
   });
 
-  it("affiche le champ date avec la date du jour", () => {
-    render(<ReleveFormClient vagues={fakeVagues} />);
-    const dateInput = screen.getByLabelText("Date du relevé");
-    expect(dateInput).toBeInTheDocument();
-    expect((dateInput as HTMLInputElement).value).toBeTruthy();
-  });
-
   it("affiche le champ Notes optionnel", () => {
-    render(<ReleveFormClient vagues={fakeVagues} />);
+    render(<ReleveFormClient vagues={fakeVagues} produits={[]} />);
     expect(screen.getByLabelText("Notes (optionnel)")).toBeInTheDocument();
   });
 });
@@ -65,7 +58,7 @@ describe("ReleveFormClient — Validation", () => {
   });
 
   it("affiche les erreurs quand soumission sans sélection", async () => {
-    render(<ReleveFormClient vagues={fakeVagues} />);
+    render(<ReleveFormClient vagues={fakeVagues} produits={[]} />);
 
     fireEvent.click(screen.getByText("Enregistrer le relevé"));
 
@@ -77,7 +70,7 @@ describe("ReleveFormClient — Validation", () => {
   });
 
   it("ne soumet pas le formulaire si validation échoue", async () => {
-    render(<ReleveFormClient vagues={fakeVagues} />);
+    render(<ReleveFormClient vagues={fakeVagues} produits={[]} />);
     fireEvent.click(screen.getByText("Enregistrer le relevé"));
 
     await waitFor(() => {

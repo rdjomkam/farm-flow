@@ -1,0 +1,141 @@
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { prisma } from "@/lib/db";
+import type { UserSession } from "@/types";
+
+const COOKIE_NAME = "session_token";
+const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const SESSION_MAX_AGE_S = 30 * 24 * 60 * 60; // 30 days in seconds
+
+/** Create a new session in DB for the given userId */
+export async function createSession(userId: string): Promise<{
+  sessionToken: string;
+  expires: Date;
+}> {
+  const sessionToken = crypto.randomUUID();
+  const expires = new Date(Date.now() + SESSION_DURATION_MS);
+
+  await prisma.session.create({
+    data: { sessionToken, userId, expires },
+  });
+
+  return { sessionToken, expires };
+}
+
+/** Read the session cookie, validate in DB, return user data or null */
+export async function getSession(
+  request: NextRequest
+): Promise<UserSession | null> {
+  const token = request.cookies.get(COOKIE_NAME)?.value;
+  if (!token) return null;
+
+  const session = await prisma.session.findUnique({
+    where: { sessionToken: token },
+    include: { user: true },
+  });
+
+  if (!session) return null;
+
+  // Check expiration
+  if (session.expires < new Date()) {
+    // Clean up expired session
+    await prisma.session.delete({ where: { id: session.id } });
+    return null;
+  }
+
+  // Check user is active
+  if (!session.user.isActive) return null;
+
+  return {
+    userId: session.user.id,
+    email: session.user.email,
+    phone: session.user.phone,
+    name: session.user.name,
+    role: session.user.role as UserSession["role"],
+    activeSiteId: session.activeSiteId,
+  };
+}
+
+/** Read session from cookies() (for Server Components / Server Actions) */
+export async function getServerSession(): Promise<UserSession | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COOKIE_NAME)?.value;
+  if (!token) return null;
+
+  const session = await prisma.session.findUnique({
+    where: { sessionToken: token },
+    include: { user: true },
+  });
+
+  if (!session) return null;
+
+  if (session.expires < new Date()) {
+    await prisma.session.delete({ where: { id: session.id } });
+    return null;
+  }
+
+  if (!session.user.isActive) return null;
+
+  return {
+    userId: session.user.id,
+    email: session.user.email,
+    phone: session.user.phone,
+    name: session.user.name,
+    role: session.user.role as UserSession["role"],
+    activeSiteId: session.activeSiteId,
+  };
+}
+
+/** Validate session or throw a 401-style error */
+export async function requireAuth(request: NextRequest): Promise<UserSession> {
+  const session = await getSession(request);
+  if (!session) {
+    throw new AuthError("Non authentifie. Veuillez vous connecter.");
+  }
+  return session;
+}
+
+/** Delete a session from DB by its token */
+export async function deleteSession(sessionToken: string): Promise<void> {
+  await prisma.session.deleteMany({ where: { sessionToken } });
+}
+
+/** Set the session cookie on a response */
+export function setSessionCookie(
+  response: NextResponse,
+  sessionToken: string,
+  expires: Date
+): void {
+  response.cookies.set(COOKIE_NAME, sessionToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_MAX_AGE_S,
+    expires,
+  });
+}
+
+/** Clear the session cookie on a response */
+export function clearSessionCookie(response: NextResponse): void {
+  response.cookies.set(COOKIE_NAME, "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
+}
+
+/** Auth error with status code for API route handlers */
+export class AuthError extends Error {
+  public readonly status = 401;
+
+  constructor(message: string) {
+    super(message);
+    this.name = "AuthError";
+  }
+}
+
+/** Cookie name exported for use by middleware */
+export const SESSION_COOKIE_NAME = COOKIE_NAME;

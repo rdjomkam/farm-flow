@@ -5,6 +5,14 @@ import {
   calculerSGR,
   calculerFCR,
   calculerBiomasse,
+  calculerDensite,
+  calculerTauxMortalite,
+  calculerGainQuotidien,
+  calculerCoutParKg,
+  calculerROI,
+  calculerFCRParAliment,
+  calculerCoutParKgGain,
+  genererRecommandation,
 } from "@/lib/calculs";
 
 // ---------------------------------------------------------------------------
@@ -224,5 +232,336 @@ describe("calculerBiomasse", () => {
 
   it("retourne null si les deux paramètres sont null", () => {
     expect(calculerBiomasse(null, null)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// calculerDensite
+// ---------------------------------------------------------------------------
+describe("calculerDensite", () => {
+  it("calcule la densite pour un bac de 1000L avec 75kg de biomasse", () => {
+    // 75 kg / (1000L / 1000) = 75 kg/m³
+    expect(calculerDensite(75, 1000)).toBe(75);
+  });
+
+  it("calcule la densite pour un grand bac", () => {
+    // 50 kg / (5000L / 1000) = 50 / 5 = 10 kg/m³
+    expect(calculerDensite(50, 5000)).toBe(10);
+  });
+
+  it("retourne null si biomasse est null", () => {
+    expect(calculerDensite(null, 1000)).toBeNull();
+  });
+
+  it("retourne null si volume est null", () => {
+    expect(calculerDensite(75, null)).toBeNull();
+  });
+
+  it("retourne null si volume est 0 (division par zero)", () => {
+    expect(calculerDensite(75, 0)).toBeNull();
+  });
+
+  it("retourne null si volume est negatif", () => {
+    expect(calculerDensite(75, -100)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// calculerTauxMortalite
+// ---------------------------------------------------------------------------
+describe("calculerTauxMortalite", () => {
+  it("calcule correctement le taux de mortalite", () => {
+    // 50 morts sur 1000 → 5%
+    expect(calculerTauxMortalite(50, 1000)).toBe(5);
+  });
+
+  it("retourne 0% quand aucune mortalite", () => {
+    expect(calculerTauxMortalite(0, 500)).toBe(0);
+  });
+
+  it("retourne 100% quand tous sont morts", () => {
+    expect(calculerTauxMortalite(500, 500)).toBe(100);
+  });
+
+  it("retourne null si totalMorts est null", () => {
+    expect(calculerTauxMortalite(null, 500)).toBeNull();
+  });
+
+  it("retourne null si nombreInitial est null", () => {
+    expect(calculerTauxMortalite(50, null)).toBeNull();
+  });
+
+  it("retourne null si nombreInitial est 0", () => {
+    expect(calculerTauxMortalite(50, 0)).toBeNull();
+  });
+
+  it("retourne null si nombreInitial est negatif", () => {
+    expect(calculerTauxMortalite(50, -10)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// calculerGainQuotidien
+// ---------------------------------------------------------------------------
+describe("calculerGainQuotidien", () => {
+  it("calcule le gain quotidien en kg/jour", () => {
+    // 10 kg debut, 40 kg fin, 30 jours → 1 kg/jour
+    expect(calculerGainQuotidien(10, 40, 30)).toBe(1);
+  });
+
+  it("retourne une valeur negative en cas de perte", () => {
+    // 50 kg debut, 40 kg fin → perte
+    expect(calculerGainQuotidien(50, 40, 10)).toBe(-1);
+  });
+
+  it("retourne 0 quand pas de changement", () => {
+    expect(calculerGainQuotidien(30, 30, 10)).toBe(0);
+  });
+
+  it("retourne null si jours est 0", () => {
+    expect(calculerGainQuotidien(10, 40, 0)).toBeNull();
+  });
+
+  it("retourne null si jours est negatif", () => {
+    expect(calculerGainQuotidien(10, 40, -5)).toBeNull();
+  });
+
+  it("retourne null si biomasseDebut est null", () => {
+    expect(calculerGainQuotidien(null, 40, 30)).toBeNull();
+  });
+
+  it("retourne null si biomasseFin est null", () => {
+    expect(calculerGainQuotidien(10, null, 30)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// calculerCoutParKg
+// ---------------------------------------------------------------------------
+describe("calculerCoutParKg", () => {
+  it("calcule le cout par kg de biomasse produite", () => {
+    // 5000 FCFA d'aliment, 10 kg de gain → 500 FCFA/kg
+    expect(calculerCoutParKg(5000, 10)).toBe(500);
+  });
+
+  it("retourne null si gainBiomasse est 0", () => {
+    expect(calculerCoutParKg(5000, 0)).toBeNull();
+  });
+
+  it("retourne null si gainBiomasse est negatif", () => {
+    expect(calculerCoutParKg(5000, -10)).toBeNull();
+  });
+
+  it("retourne null si coutTotal est null", () => {
+    expect(calculerCoutParKg(null, 10)).toBeNull();
+  });
+
+  it("retourne null si gainBiomasse est null", () => {
+    expect(calculerCoutParKg(5000, null)).toBeNull();
+  });
+
+  it("retourne 0 si coutTotal est 0", () => {
+    expect(calculerCoutParKg(0, 10)).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// calculerROI
+// ---------------------------------------------------------------------------
+describe("calculerROI", () => {
+  it("calcule un ROI positif", () => {
+    // Revenu 150000, cout 100000 → ROI = 50%
+    expect(calculerROI(150000, 100000)).toBe(50);
+  });
+
+  it("calcule un ROI negatif (perte)", () => {
+    // Revenu 80000, cout 100000 → ROI = -20%
+    expect(calculerROI(80000, 100000)).toBe(-20);
+  });
+
+  it("calcule un ROI de 0% (seuil de rentabilite)", () => {
+    expect(calculerROI(100000, 100000)).toBe(0);
+  });
+
+  it("retourne null si coutTotal est 0", () => {
+    expect(calculerROI(100000, 0)).toBeNull();
+  });
+
+  it("retourne null si coutTotal est negatif", () => {
+    expect(calculerROI(100000, -5000)).toBeNull();
+  });
+
+  it("retourne null si revenu est null", () => {
+    expect(calculerROI(null, 100000)).toBeNull();
+  });
+
+  it("retourne null si coutTotal est null", () => {
+    expect(calculerROI(100000, null)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// calculerFCRParAliment (CR-011)
+// ---------------------------------------------------------------------------
+describe("calculerFCRParAliment", () => {
+  it("calcule le FCR pondere pour une seule vague", () => {
+    // 50 kg aliment, 40 kg gain → FCR = 1.25
+    const result = calculerFCRParAliment([{ quantite: 50, gainBiomasse: 40 }]);
+    expect(result).toBe(1.25);
+  });
+
+  it("calcule le FCR pondere pour plusieurs vagues", () => {
+    // Vague 1: 30 kg aliment, 20 kg gain
+    // Vague 2: 50 kg aliment, 30 kg gain
+    // Total: 80 / 50 = 1.6
+    const result = calculerFCRParAliment([
+      { quantite: 30, gainBiomasse: 20 },
+      { quantite: 50, gainBiomasse: 30 },
+    ]);
+    expect(result).toBe(1.6);
+  });
+
+  it("ignore les vagues sans gain de biomasse", () => {
+    // Vague avec gain null est ignoree
+    const result = calculerFCRParAliment([
+      { quantite: 50, gainBiomasse: 40 },
+      { quantite: 20, gainBiomasse: null },
+    ]);
+    expect(result).toBe(1.25);
+  });
+
+  it("ignore les vagues avec gain negatif", () => {
+    const result = calculerFCRParAliment([
+      { quantite: 50, gainBiomasse: 40 },
+      { quantite: 20, gainBiomasse: -5 },
+    ]);
+    expect(result).toBe(1.25);
+  });
+
+  it("ignore les vagues avec gain = 0", () => {
+    const result = calculerFCRParAliment([
+      { quantite: 50, gainBiomasse: 40 },
+      { quantite: 20, gainBiomasse: 0 },
+    ]);
+    expect(result).toBe(1.25);
+  });
+
+  it("retourne null si aucune vague valide", () => {
+    expect(calculerFCRParAliment([
+      { quantite: 10, gainBiomasse: null },
+      { quantite: 20, gainBiomasse: -5 },
+    ])).toBeNull();
+  });
+
+  it("retourne null si tableau vide", () => {
+    expect(calculerFCRParAliment([])).toBeNull();
+  });
+
+  it("retourne null si toutes les quantites sont 0", () => {
+    expect(calculerFCRParAliment([
+      { quantite: 0, gainBiomasse: 40 },
+    ])).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// calculerCoutParKgGain (CR-011)
+// ---------------------------------------------------------------------------
+describe("calculerCoutParKgGain", () => {
+  it("calcule le cout par kg de gain", () => {
+    // 50 kg aliment × 2000 CFA/kg = 100 000 CFA / 40 kg gain = 2500 CFA/kg
+    expect(calculerCoutParKgGain(50, 2000, 40)).toBe(2500);
+  });
+
+  it("retourne null si quantite est null", () => {
+    expect(calculerCoutParKgGain(null, 2000, 40)).toBeNull();
+  });
+
+  it("retourne null si prixUnitaire est null", () => {
+    expect(calculerCoutParKgGain(50, null, 40)).toBeNull();
+  });
+
+  it("retourne null si gainBiomasse est null", () => {
+    expect(calculerCoutParKgGain(50, 2000, null)).toBeNull();
+  });
+
+  it("retourne null si quantite est 0", () => {
+    expect(calculerCoutParKgGain(0, 2000, 40)).toBeNull();
+  });
+
+  it("retourne null si gainBiomasse est 0", () => {
+    expect(calculerCoutParKgGain(50, 2000, 0)).toBeNull();
+  });
+
+  it("retourne null si gainBiomasse est negatif", () => {
+    expect(calculerCoutParKgGain(50, 2000, -10)).toBeNull();
+  });
+
+  it("gere un aliment gratuit (prix 0)", () => {
+    // 50 kg × 0 CFA / 40 kg = 0
+    expect(calculerCoutParKgGain(50, 0, 40)).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// genererRecommandation (CR-011)
+// ---------------------------------------------------------------------------
+describe("genererRecommandation", () => {
+  it("genere une recommandation avec fournisseur et comparaison", () => {
+    const result = genererRecommandation(
+      { nom: "Raanan 42%", fournisseur: "AquaFeed", fcrMoyen: 1.52, coutParKgGain: 2280 },
+      { nom: "Coppens Catfish", fcrMoyen: 1.85, coutParKgGain: 2960 }
+    );
+    expect(result).toContain("Raanan 42%");
+    expect(result).toContain("AquaFeed");
+    expect(result).toContain("1.52");
+    expect(result).toContain("2280");
+    expect(result).toContain("Coppens Catfish");
+    expect(result).toContain("economiser");
+  });
+
+  it("genere une recommandation sans fournisseur", () => {
+    const result = genererRecommandation(
+      { nom: "Aliment A", fournisseur: null, fcrMoyen: 1.5, coutParKgGain: 3000 },
+      null
+    );
+    expect(result).toContain("Aliment A");
+    expect(result).not.toContain("fournisseur");
+    expect(result).toContain("1.50");
+  });
+
+  it("genere une recommandation sans deuxieme aliment", () => {
+    const result = genererRecommandation(
+      { nom: "Aliment A", fournisseur: "Fourn", fcrMoyen: 1.5, coutParKgGain: 3000 },
+      null
+    );
+    expect(result).toContain("Aliment A");
+    expect(result).not.toContain("economiser");
+  });
+
+  it("ne mentionne pas l'economie si le deuxieme est meilleur", () => {
+    const result = genererRecommandation(
+      { nom: "Aliment A", fournisseur: null, fcrMoyen: 1.5, coutParKgGain: 3000 },
+      { nom: "Aliment B", fcrMoyen: 1.8, coutParKgGain: 2500 }
+    );
+    expect(result).not.toContain("economiser");
+  });
+
+  it("retourne null si meilleur est null", () => {
+    expect(genererRecommandation(null, null)).toBeNull();
+  });
+
+  it("retourne null si fcrMoyen est null", () => {
+    expect(genererRecommandation(
+      { nom: "A", fournisseur: null, fcrMoyen: null, coutParKgGain: 3000 },
+      null
+    )).toBeNull();
+  });
+
+  it("retourne null si coutParKgGain est null", () => {
+    expect(genererRecommandation(
+      { nom: "A", fournisseur: null, fcrMoyen: 1.5, coutParKgGain: null },
+      null
+    )).toBeNull();
   });
 });

@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getVagues, createVague } from "@/lib/queries/vagues";
-import { StatutVague } from "@/types";
+import { AuthError } from "@/lib/auth";
+import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { Permission } from "@/types";
 import type { CreateVagueDTO } from "@/types";
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requirePermission(request, Permission.VAGUES_VOIR);
     const { searchParams } = new URL(request.url);
     const statut = searchParams.get("statut");
 
-    const vagues = await getVagues(statut ? { statut } : undefined);
+    const vagues = await getVagues(auth.activeSiteId, statut ? { statut } : undefined);
 
     const result = vagues.map((v) => {
       const now = v.dateFin ?? new Date();
@@ -31,9 +34,15 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ vagues: result, total: result.length });
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+    }
+    if (error instanceof ForbiddenError) {
+      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+    }
     return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la récupération des vagues." },
+      { status: 500, message: "Erreur serveur lors de la recuperation des vagues." },
       { status: 500 }
     );
   }
@@ -41,6 +50,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requirePermission(request, Permission.VAGUES_CREER);
     const body = await request.json();
     const errors: { field: string; message: string }[] = [];
 
@@ -51,12 +61,12 @@ export async function POST(request: NextRequest) {
     if (!body.dateDebut || typeof body.dateDebut !== "string") {
       errors.push({
         field: "dateDebut",
-        message: "La date de début est obligatoire (format ISO 8601).",
+        message: "La date de debut est obligatoire (format ISO 8601).",
       });
     } else if (isNaN(Date.parse(body.dateDebut))) {
       errors.push({
         field: "dateDebut",
-        message: "La date de début n'est pas une date valide.",
+        message: "La date de debut n'est pas une date valide.",
       });
     }
 
@@ -68,7 +78,7 @@ export async function POST(request: NextRequest) {
     ) {
       errors.push({
         field: "nombreInitial",
-        message: "Le nombre initial doit être un entier supérieur à 0.",
+        message: "Le nombre initial doit etre un entier superieur a 0.",
       });
     }
 
@@ -79,14 +89,14 @@ export async function POST(request: NextRequest) {
     ) {
       errors.push({
         field: "poidsMoyenInitial",
-        message: "Le poids moyen initial doit être un nombre supérieur à 0.",
+        message: "Le poids moyen initial doit etre un nombre superieur a 0.",
       });
     }
 
     if (!Array.isArray(body.bacIds) || body.bacIds.length === 0) {
       errors.push({
         field: "bacIds",
-        message: "Au moins un bac doit être sélectionné.",
+        message: "Au moins un bac doit etre selectionne.",
       });
     }
 
@@ -106,11 +116,11 @@ export async function POST(request: NextRequest) {
       bacIds: body.bacIds,
     };
 
-    const vague = await createVague(data);
+    const vague = await createVague(auth.activeSiteId, data);
 
     if (!vague) {
       return NextResponse.json(
-        { status: 500, message: "Erreur lors de la création de la vague." },
+        { status: 500, message: "Erreur lors de la creation de la vague." },
         { status: 500 }
       );
     }
@@ -137,10 +147,16 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+    }
+    if (error instanceof ForbiddenError) {
+      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+    }
     const message =
       error instanceof Error ? error.message : "Erreur serveur inattendue.";
 
-    if (message.includes("déjà assigné") || message.includes("déjà utilisé")) {
+    if (message.includes("deja assigne") || message.includes("deja utilise")) {
       return NextResponse.json({ status: 409, message }, { status: 409 });
     }
 
@@ -149,7 +165,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la création de la vague." },
+      { status: 500, message: "Erreur serveur lors de la creation de la vague." },
       { status: 500 }
     );
   }

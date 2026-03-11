@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Calendar } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Calendar, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { TypeReleve } from "@/types";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ModifierReleveDialog } from "@/components/releves/modifier-releve-dialog";
+import { TypeReleve, Permission } from "@/types";
 import type { Releve } from "@/types";
+import type { ProduitOption } from "@/components/releves/consommation-fields";
 
 const typeLabels: Record<TypeReleve, string> = {
   [TypeReleve.BIOMETRIE]: "Biométrie",
@@ -71,9 +73,11 @@ function ReleveDetails({ releve }: { releve: Releve }) {
 
 interface RelevesListProps {
   releves: Releve[];
+  produits?: ProduitOption[];
+  permissions: Permission[];
 }
 
-export function RelevesList({ releves }: RelevesListProps) {
+export function RelevesList({ releves, produits = [], permissions }: RelevesListProps) {
   const [tab, setTab] = useState("tous");
 
   const filtered = tab === "tous"
@@ -108,29 +112,47 @@ export function RelevesList({ releves }: RelevesListProps) {
         </div>
         <TabsContent value={tab}>
           {filtered.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              Aucun relevé.
-            </p>
+            <EmptyState
+              icon={<FileText className="h-7 w-7" />}
+              title="Aucun releve"
+              description="Les releves apparaitront ici au fur et a mesure du suivi."
+            />
           ) : (
             <div className="flex flex-col gap-2">
               {filtered.map((r) => (
-                <Card key={r.id}>
-                  <CardContent className="flex flex-col gap-1 p-3">
+                <div key={r.id} id={`releve-${r.id}`}>
+                  <div className="flex flex-col gap-1 p-3">
                     <div className="flex items-center justify-between">
                       <Badge variant={typeVariants[r.typeReleve as TypeReleve]}>
                         {typeLabels[r.typeReleve as TypeReleve]}
                       </Badge>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        {new Date(r.date).toLocaleDateString("fr-FR")}
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          {new Date(r.date).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })}
+                        </span>
+                        <ModifierReleveDialog releve={r} produits={produits} permissions={permissions} />
                       </div>
                     </div>
                     <ReleveDetails releve={r} />
+                    {r.consommations && r.consommations.length > 0 && (
+                      <div className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
+                        {r.consommations.map((c) => (
+                          <span key={c.id} className="text-xs text-muted-foreground">
+                            <span className="font-medium">{c.produit.nom}</span>{" "}
+                            {c.quantite}{" "}
+                            {c.produit.unite.toLowerCase()}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {r.notes && (
                       <p className="text-xs italic text-muted-foreground">{r.notes}</p>
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
+                  {/* Separator */}
+                  <div className="border-t border-border" />
+                </div>
               ))}
             </div>
           )}

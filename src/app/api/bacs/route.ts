@@ -1,14 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBacs, createBac } from "@/lib/queries/bacs";
+import { AuthError } from "@/lib/auth";
+import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { Permission } from "@/types";
 import type { CreateBacDTO } from "@/types";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const bacs = await getBacs();
+    const auth = await requirePermission(request, Permission.BACS_GERER);
+    const bacs = await getBacs(auth.activeSiteId);
     return NextResponse.json({ bacs, total: bacs.length });
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+    }
+    if (error instanceof ForbiddenError) {
+      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+    }
     return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la récupération des bacs." },
+      { status: 500, message: "Erreur serveur lors de la recuperation des bacs." },
       { status: 500 }
     );
   }
@@ -16,6 +26,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requirePermission(request, Permission.BACS_GERER);
     const body = await request.json();
 
     const errors: { field: string; message: string }[] = [];
@@ -27,7 +38,7 @@ export async function POST(request: NextRequest) {
     if (body.volume == null || typeof body.volume !== "number" || body.volume <= 0) {
       errors.push({
         field: "volume",
-        message: "Le volume doit être un nombre supérieur à 0.",
+        message: "Le volume doit etre un nombre superieur a 0.",
       });
     }
 
@@ -37,7 +48,7 @@ export async function POST(request: NextRequest) {
     ) {
       errors.push({
         field: "nombrePoissons",
-        message: "Le nombre de poissons doit être un nombre positif ou nul.",
+        message: "Le nombre de poissons doit etre un nombre positif ou nul.",
       });
     }
 
@@ -54,12 +65,18 @@ export async function POST(request: NextRequest) {
       ...(body.nombrePoissons != null && { nombrePoissons: body.nombrePoissons }),
     };
 
-    const bac = await createBac(data);
+    const bac = await createBac(auth.activeSiteId, data);
 
     return NextResponse.json(bac, { status: 201 });
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+    }
+    if (error instanceof ForbiddenError) {
+      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+    }
     return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la création du bac." },
+      { status: 500, message: "Erreur serveur lors de la creation du bac." },
       { status: 500 }
     );
   }

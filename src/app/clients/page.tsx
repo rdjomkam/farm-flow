@@ -1,0 +1,30 @@
+import { redirect } from "next/navigation";
+import { Header } from "@/components/layout/header";
+import { ClientsListClient } from "@/components/ventes/clients-list-client";
+import { getServerSession, checkPagePermission } from "@/lib/auth";
+import { AccessDenied } from "@/components/ui/access-denied";
+import { getClients } from "@/lib/queries/clients";
+import { Permission } from "@/types";
+
+export default async function ClientsPage() {
+  const session = await getServerSession();
+  if (!session) redirect("/login");
+  if (!session.activeSiteId) redirect("/sites");
+
+  const permissions = await checkPagePermission(session, Permission.CLIENTS_VOIR);
+  if (!permissions) return <AccessDenied />;
+
+  const clients = await getClients(session.activeSiteId);
+
+  return (
+    <>
+      <Header title="Clients" />
+      <div className="p-4">
+        <ClientsListClient
+          clients={JSON.parse(JSON.stringify(clients))}
+          permissions={permissions}
+        />
+      </div>
+    </>
+  );
+}

@@ -11,15 +11,14 @@ import {
 
 /**
  * Agrege les donnees d'une vague pour calculer ses indicateurs.
- *
- * Recupere en une seule requete : la vague, ses releves de biometrie,
- * mortalite, alimentation et comptage, puis calcule les indicateurs.
+ * Verifie que la vague appartient au site.
  */
 export async function getIndicateursVague(
+  siteId: string,
   vagueId: string
 ): Promise<IndicateursVague | null> {
-  const vague = await prisma.vague.findUnique({
-    where: { id: vagueId },
+  const vague = await prisma.vague.findFirst({
+    where: { id: vagueId, siteId },
     include: {
       releves: {
         orderBy: { date: "asc" },

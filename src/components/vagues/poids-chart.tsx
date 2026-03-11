@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { ChartTooltip } from "@/components/ui/chart-tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { EvolutionPoidsPoint } from "@/types";
 
@@ -43,11 +44,11 @@ export function PoidsChart({ data }: PoidsChartProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Évolution du poids moyen</CardTitle>
+          <CardTitle className="text-base">Evolution du poids moyen</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="py-8 text-center text-sm text-muted-foreground">
-            Aucune donnée biométrique disponible.
+            Aucune donnee biometrique disponible.
           </p>
         </CardContent>
       </Card>
@@ -57,15 +58,15 @@ export function PoidsChart({ data }: PoidsChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Évolution du poids moyen</CardTitle>
+        <CardTitle className="text-base">Evolution du poids moyen</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="h-[250px] w-full">
+      <CardContent className="overflow-hidden">
+        <div className="h-[220px] w-full max-w-full">
           <ResponsiveContainer
             width="100%"
             height="100%"
           >
-            <LineChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+            <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis
                 dataKey="jour"
@@ -73,20 +74,25 @@ export function PoidsChart({ data }: PoidsChartProps) {
                 tickFormatter={(v) => `J${v}`}
               />
               <YAxis
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 11 }}
                 tickFormatter={(v) => `${v}g`}
-                width={50}
+                width={42}
               />
               <Tooltip
-                formatter={(value) => [`${value} g`, "Poids moyen"]}
-                labelFormatter={(label) => `Jour ${label}`}
+                content={
+                  <ChartTooltip
+                    labelFormatter={(label) => `Jour ${label}`}
+                    valueFormatter={(v) => `${v} g`}
+                  />
+                }
               />
               <Line
                 type="monotone"
                 dataKey="poidsMoyen"
+                name="Poids moyen"
                 stroke="var(--primary)"
                 strokeWidth={2}
-                dot={{ r: 4 }}
+                dot={{ r: 3 }}
                 activeDot={{ r: 6 }}
               />
             </LineChart>

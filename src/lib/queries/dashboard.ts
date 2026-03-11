@@ -4,16 +4,16 @@ import type { DashboardData, VagueDashboardSummary } from "@/types";
 import { calculerTauxSurvie, calculerBiomasse } from "@/lib/calculs";
 
 /**
- * Charge les donnees du dashboard :
+ * Charge les donnees du dashboard pour un site :
  * - Nombre de vagues actives
  * - Biomasse totale et taux de survie moyen
  * - Bacs occupes / total
  * - Resume par vague active
  */
-export async function getDashboardData(): Promise<DashboardData> {
+export async function getDashboardData(siteId: string): Promise<DashboardData> {
   const [vaguesActives, bacsTotal, bacsOccupes] = await Promise.all([
     prisma.vague.findMany({
-      where: { statut: StatutVague.EN_COURS },
+      where: { siteId, statut: StatutVague.EN_COURS },
       include: {
         _count: { select: { bacs: true } },
         releves: {
@@ -28,8 +28,8 @@ export async function getDashboardData(): Promise<DashboardData> {
       },
       orderBy: { dateDebut: "desc" },
     }),
-    prisma.bac.count(),
-    prisma.bac.count({ where: { vagueId: { not: null } } }),
+    prisma.bac.count({ where: { siteId } }),
+    prisma.bac.count({ where: { siteId, vagueId: { not: null } } }),
   ]);
 
   const vagues: VagueDashboardSummary[] = vaguesActives.map((v) => {
@@ -75,4 +75,19 @@ export async function getDashboardData(): Promise<DashboardData> {
     bacsTotal,
     vagues,
   };
+}
+
+/**
+ * Charge les derniers releves pour le fil d'activite recente du dashboard.
+ */
+export async function getRecentActivity(siteId: string, limit = 5) {
+  return prisma.releve.findMany({
+    where: { siteId },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    include: {
+      vague: { select: { code: true } },
+      bac: { select: { nom: true } },
+    },
+  });
 }

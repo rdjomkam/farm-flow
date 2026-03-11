@@ -18,6 +18,44 @@
   --card: #ffffff;
   --card-foreground: #0f172a;
   --overlay: rgba(0, 0, 0, 0.5);
+
+  /* Surface hierarchy */
+  --surface-0: #f7fafa;
+  --surface-1: #ffffff;
+  --surface-2: #f0f7f6;
+
+  /* Shadow tokens */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  --shadow-card-hover: 0 8px 16px -4px rgb(13 148 136 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+  --shadow-elevated: 0 12px 24px -4px rgb(0 0 0 / 0.08), 0 4px 8px -4px rgb(0 0 0 / 0.04);
+
+  /* Accent palette */
+  --accent-blue: #2563eb;
+  --accent-blue-muted: #dbeafe;
+  --accent-purple: #7c3aed;
+  --accent-purple-muted: #ede9fe;
+  --accent-amber: #d97706;
+  --accent-amber-muted: #fef3c7;
+  --accent-emerald: #059669;
+  --accent-emerald-muted: #d1fae5;
+  --accent-red: #dc2626;
+  --accent-red-muted: #fee2e2;
+  --accent-green: #16a34a;
+  --accent-green-muted: #dcfce7;
+  --accent-yellow: #ca8a04;
+  --accent-yellow-muted: #fef9c3;
+  --accent-orange: #ea580c;
+  --accent-orange-muted: #fff7ed;
+  --accent-pink: #db2777;
+  --accent-pink-muted: #fce7f3;
+  --accent-indigo: #4f46e5;
+  --accent-indigo-muted: #e0e7ff;
+  --accent-cyan: #0891b2;
+  --accent-cyan-muted: #cffafe;
+
+  /* Gradient */
+  --primary-gradient: linear-gradient(135deg, #0d9488 0%, #0f766e 50%, #115e59 100%);
 }
 
 @theme inline {
@@ -38,12 +76,70 @@
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-overlay: var(--overlay);
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-blue-muted: var(--accent-blue-muted);
+  --color-accent-purple: var(--accent-purple);
+  --color-accent-purple-muted: var(--accent-purple-muted);
+  --color-accent-amber: var(--accent-amber);
+  --color-accent-amber-muted: var(--accent-amber-muted);
+  --color-accent-emerald: var(--accent-emerald);
+  --color-accent-emerald-muted: var(--accent-emerald-muted);
+  --color-accent-red: var(--accent-red);
+  --color-accent-red-muted: var(--accent-red-muted);
+  --color-accent-green: var(--accent-green);
+  --color-accent-green-muted: var(--accent-green-muted);
+  --color-accent-yellow: var(--accent-yellow);
+  --color-accent-yellow-muted: var(--accent-yellow-muted);
+  --color-accent-orange: var(--accent-orange);
+  --color-accent-orange-muted: var(--accent-orange-muted);
+  --color-accent-pink: var(--accent-pink);
+  --color-accent-pink-muted: var(--accent-pink-muted);
+  --color-accent-indigo: var(--accent-indigo);
+  --color-accent-indigo-muted: var(--accent-indigo-muted);
+  --color-accent-cyan: var(--accent-cyan);
+  --color-accent-cyan-muted: var(--accent-cyan-muted);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: var(--background);
+  background: var(--surface-0);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Animations */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out forwards;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in-left {
+  animation: slide-in-left 0.3s ease-out forwards;
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out forwards;
 }

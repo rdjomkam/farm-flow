@@ -7,9 +7,9 @@ import { cn } from "@/lib/utils";
 
 const variants = {
   default: "border-border bg-card text-card-foreground",
-  success: "border-success/30 bg-success/10 text-success",
-  error: "border-danger/30 bg-danger/10 text-danger",
-  info: "border-primary/30 bg-primary/10 text-primary",
+  success: "border-success/30 bg-card text-success",
+  error: "border-danger/30 bg-card text-danger",
+  info: "border-primary/30 bg-card text-primary",
 };
 
 interface Toast {
@@ -45,11 +45,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ToastContext value={{ toast }}>
-      <ToastPrimitive.Provider swipeDirection="right" duration={4000}>
+      <ToastPrimitive.Provider swipeDirection="right" duration={2000}>
         {children}
         {toasts.map((t) => (
           <ToastPrimitive.Root
             key={t.id}
+            duration={2000}
             className={cn(
               "group pointer-events-auto relative flex w-full items-center gap-3 overflow-hidden rounded-lg border p-4 shadow-lg transition-all",
               "data-[state=open]:animate-in data-[state=open]:slide-in-from-top-full",

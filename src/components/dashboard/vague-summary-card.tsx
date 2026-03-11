@@ -7,8 +7,8 @@ import type { VagueDashboardSummary } from "@/types";
 
 const statutLabels: Record<StatutVague, string> = {
   [StatutVague.EN_COURS]: "En cours",
-  [StatutVague.TERMINEE]: "Terminée",
-  [StatutVague.ANNULEE]: "Annulée",
+  [StatutVague.TERMINEE]: "Terminee",
+  [StatutVague.ANNULEE]: "Annulee",
 };
 
 const statutVariants: Record<StatutVague, "en_cours" | "terminee" | "annulee"> = {
@@ -19,12 +19,17 @@ const statutVariants: Record<StatutVague, "en_cours" | "terminee" | "annulee"> =
 
 interface VagueSummaryCardProps {
   vague: VagueDashboardSummary;
+  index?: number;
 }
 
-export function VagueSummaryCard({ vague }: VagueSummaryCardProps) {
+export function VagueSummaryCard({ vague, index = 0 }: VagueSummaryCardProps) {
   return (
     <Link href={`/vagues/${vague.id}`}>
-      <Card className="transition-shadow hover:shadow-md">
+      <Card
+        interactive
+        className="animate-fade-in-up opacity-0"
+        style={{ animationDelay: `${index * 80}ms` }}
+      >
         <CardHeader className="flex-row items-center justify-between gap-2 pb-2">
           <CardTitle className="text-base">{vague.code}</CardTitle>
           <Badge variant={statutVariants[vague.statut]}>{statutLabels[vague.statut]}</Badge>
@@ -40,15 +45,15 @@ export function VagueSummaryCard({ vague }: VagueSummaryCardProps) {
               <span>{vague.nombreBacs} bac{vague.nombreBacs > 1 ? "s" : ""}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <Weight className="h-3.5 w-3.5 text-blue-600" />
+              <Weight className="h-3.5 w-3.5 text-accent-blue" />
               <span className="font-medium">
-                {vague.biomasse !== null ? `${vague.biomasse} kg` : "—"}
+                {vague.biomasse !== null ? `${vague.biomasse} kg` : "\u2014"}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
               <HeartPulse className="h-3.5 w-3.5 text-success" />
               <span className="font-medium">
-                {vague.tauxSurvie !== null ? `${vague.tauxSurvie}%` : "—"}
+                {vague.tauxSurvie !== null ? `${vague.tauxSurvie}%` : "\u2014"}
               </span>
             </div>
           </div>
