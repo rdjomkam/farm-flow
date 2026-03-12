@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, AuthError } from "@/lib/auth";
 import { getUserSites, createSite } from "@/lib/queries/sites";
+import { Role } from "@/types";
 
 /** GET /api/sites — list sites the user is a member of */
 export async function GET(request: NextRequest) {
@@ -39,6 +40,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth(request);
+
+    if (session.role !== Role.ADMIN) {
+      return NextResponse.json(
+        { status: 403, message: "Seuls les administrateurs peuvent creer des sites." },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
 
     const errors: { field: string; message: string }[] = [];

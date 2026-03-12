@@ -26,6 +26,8 @@
       "Bash(npx prisma migrate deploy:*)",
       "Bash(docker ps:*)",
       "Bash(head -10 grep -n \"prisma\\\\.notification\\\\|prisma\\\\.configAlerte\" /Users/ronald/project/dkfarm/farm-flow/src/lib/queries/alertes.ts)",
+      "Bash(DATABASE_URL=\"postgresql://dkfarm:%40DkFarm2026%21@localhost:8432/farm-flow\" node --input-type=module:*)",
+      "Bash(DATABASE_URL=\"postgresql://dkfarm:%40DkFarm2026%21@localhost:8432/farm-flow\" node:*)",
       "Bash(claude --version:*)",
       "Bash(claude --team-list:*)",
       "Bash(claude team:*)",

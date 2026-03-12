@@ -33,9 +33,10 @@ interface SiteData {
 interface Props {
   sites: SiteData[];
   activeSiteId: string | null;
+  canCreate: boolean;
 }
 
-export function SitesListClient({ sites, activeSiteId }: Props) {
+export function SitesListClient({ sites, activeSiteId, canCreate }: Props) {
   const router = useRouter();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -113,42 +114,44 @@ export function SitesListClient({ sites, activeSiteId }: Props) {
         <p className="text-sm text-muted-foreground">
           {sites.length} site{sites.length > 1 ? "s" : ""}
         </p>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-1" />
-              Nouveau site
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Creer un site</DialogTitle>
-            </DialogHeader>
-            <div className="flex flex-col gap-4 py-2">
-              <Input
-                label="Nom du site"
-                placeholder="Ex: Ferme de Douala"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                autoFocus
-              />
-              <Input
-                label="Adresse (optionnel)"
-                placeholder="Ex: Douala, Cameroun"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-              />
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline">Annuler</Button>
-              </DialogClose>
-              <Button onClick={handleCreate} disabled={creating || !name.trim()}>
-                {creating ? "Creation..." : "Creer"}
+        {canCreate && (
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-1" />
+                Nouveau site
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Creer un site</DialogTitle>
+              </DialogHeader>
+              <div className="flex flex-col gap-4 py-2">
+                <Input
+                  label="Nom du site"
+                  placeholder="Ex: Ferme de Douala"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoFocus
+                />
+                <Input
+                  label="Adresse (optionnel)"
+                  placeholder="Ex: Douala, Cameroun"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                />
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Annuler</Button>
+                </DialogClose>
+                <Button onClick={handleCreate} disabled={creating || !name.trim()}>
+                  {creating ? "Creation..." : "Creer"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {sites.length === 0 ? (
@@ -156,7 +159,9 @@ export function SitesListClient({ sites, activeSiteId }: Props) {
           <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
           <p className="text-muted-foreground mb-2">Aucun site</p>
           <p className="text-sm text-muted-foreground">
-            Creez votre premier site pour commencer.
+            {canCreate
+              ? "Creez votre premier site pour commencer."
+              : "Demandez a un administrateur de vous ajouter a un site."}
           </p>
         </div>
       ) : (

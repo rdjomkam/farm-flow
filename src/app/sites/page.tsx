@@ -3,6 +3,7 @@ import { Header } from "@/components/layout/header";
 import { getServerSession } from "@/lib/auth";
 import { getUserSites } from "@/lib/queries/sites";
 import { SitesListClient } from "@/components/sites/sites-list-client";
+import { Role } from "@/types";
 
 export default async function SitesPage() {
   const session = await getServerSession();
@@ -28,6 +29,7 @@ export default async function SitesPage() {
         <SitesListClient
           sites={sitesData}
           activeSiteId={session.activeSiteId}
+          canCreate={session.role === Role.ADMIN}
         />
       </div>
     </>
