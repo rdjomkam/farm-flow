@@ -108,7 +108,7 @@ export default function LoginPage() {
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl mb-3" style={{ background: "var(--primary-gradient)" }}>
             <Fish className="h-7 w-7 text-white" />
           </div>
-          <h1 className="text-xl font-bold">Suivi Silures</h1>
+          <h1 className="text-xl font-bold">FarmFlow</h1>
         </div>
 
         <Card className="w-full max-w-md">
