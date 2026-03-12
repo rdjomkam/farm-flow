@@ -31,6 +31,8 @@ export default async function CommandesPage() {
     id: p.id,
     nom: p.nom,
     unite: p.unite,
+    uniteAchat: p.uniteAchat,
+    contenance: p.contenance,
     prixUnitaire: p.prixUnitaire,
   }));
 

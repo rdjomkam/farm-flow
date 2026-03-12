@@ -42,7 +42,9 @@ const statutVariants: Record<StatutCommande, "default" | "info" | "en_cours" | "
 };
 
 const uniteLabels: Record<string, string> = {
+  [UniteStock.GRAMME]: "g",
   [UniteStock.KG]: "kg",
+  [UniteStock.MILLILITRE]: "mL",
   [UniteStock.LITRE]: "L",
   [UniteStock.UNITE]: "unite",
   [UniteStock.SACS]: "sacs",
@@ -52,7 +54,7 @@ interface LigneData {
   id: string;
   quantite: number;
   prixUnitaire: number;
-  produit: { id: string; nom: string; unite: string };
+  produit: { id: string; nom: string; unite: string; uniteAchat: string | null; contenance: number | null };
 }
 
 interface CommandeData {
@@ -247,7 +249,10 @@ export function CommandeDetailClient({ commande, permissions }: Props) {
         <CardContent className="p-0">
           <div className="divide-y divide-border">
             {commande.lignes.map((ligne) => {
-              const unite = uniteLabels[ligne.produit.unite] ?? ligne.produit.unite;
+              const hasAchat = ligne.produit.uniteAchat;
+              const displayUnite = hasAchat
+                ? (uniteLabels[ligne.produit.uniteAchat!] ?? ligne.produit.uniteAchat!)
+                : (uniteLabels[ligne.produit.unite] ?? ligne.produit.unite);
               const sousTotal = ligne.quantite * ligne.prixUnitaire;
               return (
                 <div key={ligne.id} className="flex items-center justify-between px-4 py-3">
@@ -256,7 +261,7 @@ export function CommandeDetailClient({ commande, permissions }: Props) {
                       {ligne.produit.nom}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {ligne.quantite} {unite} x {ligne.prixUnitaire.toLocaleString("fr-FR")} FCFA
+                      {ligne.quantite} {displayUnite} x {ligne.prixUnitaire.toLocaleString("fr-FR")} FCFA
                     </p>
                   </div>
                   <p className="text-sm font-semibold shrink-0">

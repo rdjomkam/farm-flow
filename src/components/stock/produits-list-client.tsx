@@ -36,7 +36,9 @@ const categorieLabels: Record<CategorieProduit, string> = {
 };
 
 const uniteLabels: Record<UniteStock, string> = {
+  [UniteStock.GRAMME]: "g",
   [UniteStock.KG]: "kg",
+  [UniteStock.MILLILITRE]: "mL",
   [UniteStock.LITRE]: "L",
   [UniteStock.UNITE]: "unite",
   [UniteStock.SACS]: "sacs",
@@ -47,6 +49,8 @@ interface ProduitData {
   nom: string;
   categorie: string;
   unite: string;
+  uniteAchat: string | null;
+  contenance: number | null;
   prixUnitaire: number;
   stockActuel: number;
   seuilAlerte: number;
@@ -74,6 +78,9 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
   const [prixUnitaire, setPrixUnitaire] = useState("");
   const [seuilAlerte, setSeuilAlerte] = useState("");
   const [fournisseurId, setFournisseurId] = useState("");
+  const [dualUnit, setDualUnit] = useState(false);
+  const [uniteAchat, setUniteAchat] = useState<string>("");
+  const [contenance, setContenance] = useState("");
 
   const filtered =
     tab === "tous"
@@ -93,6 +100,9 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
     setPrixUnitaire("");
     setSeuilAlerte("");
     setFournisseurId("");
+    setDualUnit(false);
+    setUniteAchat("");
+    setContenance("");
   }
 
   async function handleCreate() {
@@ -110,6 +120,8 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
           prixUnitaire: parseFloat(prixUnitaire) || 0,
           seuilAlerte: parseFloat(seuilAlerte) || 0,
           ...(fournisseurId && { fournisseurId }),
+          ...(dualUnit && uniteAchat && { uniteAchat }),
+          ...(dualUnit && contenance && { contenance: parseFloat(contenance) }),
         }),
       });
 
@@ -176,7 +188,7 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
                 </SelectContent>
               </Select>
               <Select value={unite} onValueChange={setUnite}>
-                <SelectTrigger label="Unite">
+                <SelectTrigger label="Unite de base">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -187,6 +199,46 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
                   ))}
                 </SelectContent>
               </Select>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={dualUnit}
+                  onChange={(e) => {
+                    setDualUnit(e.target.checked);
+                    if (!e.target.checked) {
+                      setUniteAchat("");
+                      setContenance("");
+                    }
+                  }}
+                  className="rounded border-border"
+                />
+                Unite d&apos;achat differente
+              </label>
+              {dualUnit && (
+                <>
+                  <Select value={uniteAchat} onValueChange={setUniteAchat}>
+                    <SelectTrigger label="Unite d'achat">
+                      <SelectValue placeholder="Choisir" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(uniteLabels)
+                        .filter(([val]) => val !== unite)
+                        .map(([val, label]) => (
+                          <SelectItem key={val} value={val}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    label={`Contenance (${uniteLabels[unite as UniteStock] ?? unite} par ${uniteAchat ? (uniteLabels[uniteAchat as UniteStock] ?? uniteAchat) : "unite d'achat"})`}
+                    type="number"
+                    placeholder="Ex: 25"
+                    value={contenance}
+                    onChange={(e) => setContenance(e.target.value)}
+                  />
+                </>
+              )}
               <Input
                 label="Prix unitaire (FCFA)"
                 type="number"
@@ -282,6 +334,11 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
                           <p className="font-bold">
                             {p.stockActuel} {uniteLabels[p.unite as UniteStock] ?? p.unite}
                           </p>
+                          {p.uniteAchat && p.contenance && p.contenance > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              1 {uniteLabels[p.uniteAchat as UniteStock] ?? p.uniteAchat} = {p.contenance} {uniteLabels[p.unite as UniteStock] ?? p.unite}
+                            </p>
+                          )}
                           <p className="text-xs text-muted-foreground">
                             {p.prixUnitaire.toLocaleString("fr-FR")} FCFA
                           </p>

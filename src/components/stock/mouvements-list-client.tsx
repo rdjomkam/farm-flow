@@ -36,7 +36,9 @@ import { useToast } from "@/components/ui/toast";
 import { TypeMouvement, UniteStock, Permission } from "@/types";
 
 const uniteLabels: Record<string, string> = {
+  [UniteStock.GRAMME]: "g",
   [UniteStock.KG]: "kg",
+  [UniteStock.MILLILITRE]: "mL",
   [UniteStock.LITRE]: "L",
   [UniteStock.UNITE]: "unite",
   [UniteStock.SACS]: "sacs",
@@ -49,7 +51,7 @@ interface MouvementData {
   prixTotal: number | null;
   date: string;
   notes: string | null;
-  produit: { id: string; nom: string; unite: string };
+  produit: { id: string; nom: string; unite: string; uniteAchat: string | null; contenance: number | null };
   user: { id: string; name: string };
   vague: { id: string; code: string } | null;
   commande: { id: string; numero: string } | null;
@@ -251,7 +253,14 @@ export function MouvementsListClient({ mouvements, produits, vagues, permissions
             <div className="flex flex-col gap-2">
               {filtered.map((m) => {
                 const isEntree = m.type === TypeMouvement.ENTREE;
-                const unite = uniteLabels[m.produit.unite] ?? m.produit.unite;
+                const uniteBase = uniteLabels[m.produit.unite] ?? m.produit.unite;
+                const hasAchat = isEntree && m.produit.uniteAchat && m.produit.contenance;
+                const displayUnite = hasAchat
+                  ? (uniteLabels[m.produit.uniteAchat!] ?? m.produit.uniteAchat!)
+                  : uniteBase;
+                const equivalence = hasAchat
+                  ? `${m.quantite * m.produit.contenance!} ${uniteBase}`
+                  : null;
                 return (
                   <Card key={m.id}>
                     <CardContent className="flex items-center gap-3 p-3">
@@ -270,7 +279,8 @@ export function MouvementsListClient({ mouvements, produits, vagues, permissions
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <Badge variant={isEntree ? "en_cours" : "warning"}>
-                            {isEntree ? "+" : "-"}{m.quantite} {unite}
+                            {isEntree ? "+" : "-"}{m.quantite} {displayUnite}
+                            {equivalence && ` (${equivalence})`}
                           </Badge>
                           {m.vague && (
                             <span className="text-xs text-muted-foreground">

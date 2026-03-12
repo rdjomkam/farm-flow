@@ -18,14 +18,15 @@ interface FormAlimentationProps {
   values: { quantiteAliment: string; typeAliment: string; frequenceAliment: string };
   onChange: (field: string, value: string) => void;
   errors: Record<string, string>;
+  uniteAliment?: string;
 }
 
-export function FormAlimentation({ values, onChange, errors }: FormAlimentationProps) {
+export function FormAlimentation({ values, onChange, errors, uniteAliment }: FormAlimentationProps) {
   return (
     <>
       <Input
         id="quantiteAliment"
-        label="Quantité d'aliment (kg)"
+        label={`Quantité d'aliment (${uniteAliment ?? "kg"})`}
         type="number"
         min="0.01"
         step="0.01"

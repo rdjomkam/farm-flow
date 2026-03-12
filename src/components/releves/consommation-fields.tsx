@@ -15,7 +15,9 @@ import { cn } from "@/lib/utils";
 import { UniteStock } from "@/types";
 
 const uniteLabels: Record<string, string> = {
+  [UniteStock.GRAMME]: "g",
   [UniteStock.KG]: "kg",
+  [UniteStock.MILLILITRE]: "mL",
   [UniteStock.LITRE]: "L",
   [UniteStock.UNITE]: "unite",
   [UniteStock.SACS]: "sacs",

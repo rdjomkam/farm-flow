@@ -22,7 +22,7 @@ import { FormComptage } from "./form-comptage";
 import { FormObservation } from "./form-observation";
 import { ConsommationFields } from "./consommation-fields";
 import type { ConsommationLine, ProduitOption } from "./consommation-fields";
-import { TypeReleve, TypeActivite, StatutActivite, CategorieProduit, ACTIVITE_RELEVE_TYPE_MAP } from "@/types";
+import { TypeReleve, TypeActivite, StatutActivite, CategorieProduit, UniteStock, ACTIVITE_RELEVE_TYPE_MAP } from "@/types";
 import type { BacResponse } from "@/types";
 
 /** Inverse de ACTIVITE_RELEVE_TYPE_MAP : TypeReleve → TypeActivite compatible */
@@ -40,6 +40,15 @@ interface ActivitePlanifiee {
   statut: string;
   releveId: string | null;
 }
+
+const uniteLabels: Record<string, string> = {
+  [UniteStock.GRAMME]: "g",
+  [UniteStock.KG]: "kg",
+  [UniteStock.MILLILITRE]: "mL",
+  [UniteStock.LITRE]: "L",
+  [UniteStock.UNITE]: "unite",
+  [UniteStock.SACS]: "sacs",
+};
 
 const typeLabels: Record<TypeReleve, string> = {
   [TypeReleve.BIOMETRIE]: "Biométrie",
@@ -368,7 +377,15 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
               </FormSection>
             </>
           )}
-          {typeReleve === TypeReleve.ALIMENTATION && (
+          {typeReleve === TypeReleve.ALIMENTATION && (() => {
+            const firstAlimentLine = consommations.find((c) => c.produitId);
+            const firstProduit = firstAlimentLine
+              ? produits.find((p) => p.id === firstAlimentLine.produitId && p.categorie === CategorieProduit.ALIMENT)
+              : undefined;
+            const uniteAliment = firstProduit
+              ? (uniteLabels[firstProduit.unite] ?? firstProduit.unite)
+              : undefined;
+            return (
             <>
               <FormSection title="Alimentation" description="Quantité et type d'aliment">
                 <FormAlimentation
@@ -379,6 +396,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
                   }}
                   onChange={updateField}
                   errors={errors}
+                  uniteAliment={uniteAliment}
                 />
               </FormSection>
               <FormSection title="Consommation de stock" description="Produits consommés">
@@ -390,7 +408,8 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
                 />
               </FormSection>
             </>
-          )}
+            );
+          })()}
           {typeReleve === TypeReleve.QUALITE_EAU && (
             <>
               <FormSection title="Qualité de l'eau" description="Paramètres physico-chimiques">

@@ -107,7 +107,7 @@ export default function RegisterPage() {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm mb-6">
             <Fish className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Suivi Silures</h1>
+          <h1 className="text-2xl font-bold text-white mb-2">FarmFlow</h1>
           <p className="text-white/80 mb-8">Gerez vos elevages de silures avec precision et simplicite.</p>
           <div className="space-y-4 text-left">
             <div className="flex items-center gap-3 text-white/90">
@@ -135,7 +135,7 @@ export default function RegisterPage() {
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl mb-3" style={{ background: "var(--primary-gradient)" }}>
             <Fish className="h-7 w-7 text-white" />
           </div>
-          <h1 className="text-xl font-bold">Suivi Silures</h1>
+          <h1 className="text-xl font-bold">FarmFlow</h1>
         </div>
 
         <Card className="w-full max-w-md">

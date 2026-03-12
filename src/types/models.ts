@@ -127,7 +127,9 @@ export enum CategorieProduit {
 
 /** Unite de mesure du stock */
 export enum UniteStock {
+  GRAMME = "GRAMME",
   KG = "KG",
+  MILLILITRE = "MILLILITRE",
   LITRE = "LITRE",
   UNITE = "UNITE",
   SACS = "SACS",
@@ -457,6 +459,10 @@ export interface Produit {
   nom: string;
   categorie: CategorieProduit;
   unite: UniteStock;
+  /** Unite d'achat (ex: SACS) — null si identique a unite */
+  uniteAchat: UniteStock | null;
+  /** Contenance d'une unite d'achat dans l'unite de base (ex: 25 kg/sac) — null si pas de conversion */
+  contenance: number | null;
   prixUnitaire: number;
   /** Quantite actuelle en stock (mise a jour via MouvementStock) */
   stockActuel: number;

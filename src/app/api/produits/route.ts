@@ -73,6 +73,41 @@ export async function POST(request: NextRequest) {
       errors.push({ field: "seuilAlerte", message: "Le seuil d'alerte doit etre un nombre >= 0." });
     }
 
+    // Validation uniteAchat + contenance (doivent etre fournis ensemble)
+    const hasUniteAchat = body.uniteAchat !== undefined && body.uniteAchat !== null;
+    const hasContenance = body.contenance !== undefined && body.contenance !== null;
+
+    if (hasUniteAchat !== hasContenance) {
+      errors.push({
+        field: hasUniteAchat ? "contenance" : "uniteAchat",
+        message: "L'unite d'achat et la contenance doivent etre fournies ensemble.",
+      });
+    }
+
+    if (hasUniteAchat) {
+      if (!VALID_UNITES.includes(body.uniteAchat)) {
+        errors.push({
+          field: "uniteAchat",
+          message: `L'unite d'achat doit etre : ${VALID_UNITES.join(", ")}.`,
+        });
+      }
+      if (body.uniteAchat === body.unite) {
+        errors.push({
+          field: "uniteAchat",
+          message: "L'unite d'achat ne peut pas etre identique a l'unite de base.",
+        });
+      }
+    }
+
+    if (hasContenance) {
+      if (typeof body.contenance !== "number" || body.contenance <= 0) {
+        errors.push({
+          field: "contenance",
+          message: "La contenance doit etre un nombre > 0.",
+        });
+      }
+    }
+
     if (errors.length > 0) {
       return NextResponse.json(
         { status: 400, message: "Erreurs de validation", errors },
@@ -87,6 +122,8 @@ export async function POST(request: NextRequest) {
       prixUnitaire: body.prixUnitaire,
       seuilAlerte: body.seuilAlerte,
       fournisseurId: body.fournisseurId || undefined,
+      uniteAchat: body.uniteAchat || undefined,
+      contenance: body.contenance || undefined,
     };
 
     const produit = await createProduit(auth.activeSiteId, data);

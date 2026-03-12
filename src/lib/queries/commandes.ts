@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { StatutCommande, TypeMouvement } from "@/types";
 import type { CreateCommandeDTO, CommandeFilters } from "@/types";
+import { convertirQuantiteAchat } from "@/lib/calculs";
 
 /** Liste les commandes d'un site avec filtres */
 export async function getCommandes(siteId: string, filters?: CommandeFilters) {
@@ -36,7 +37,7 @@ export async function getCommandeById(id: string, siteId: string) {
       user: { select: { id: true, name: true } },
       lignes: {
         include: {
-          produit: { select: { id: true, nom: true, unite: true } },
+          produit: { select: { id: true, nom: true, unite: true, uniteAchat: true, contenance: true } },
         },
         orderBy: { createdAt: "asc" },
       },
@@ -152,10 +153,18 @@ export async function recevoirCommande(
   dateLivraison?: string
 ) {
   return prisma.$transaction(async (tx) => {
-    // Get commande with lignes
+    // Get commande with lignes + product conversion info
     const commande = await tx.commande.findFirst({
       where: { id, siteId },
-      include: { lignes: true },
+      include: {
+        lignes: {
+          include: {
+            produit: {
+              select: { uniteAchat: true, contenance: true },
+            },
+          },
+        },
+      },
     });
 
     if (!commande) throw new Error("Commande introuvable");
@@ -168,8 +177,10 @@ export async function recevoirCommande(
 
     const livraisonDate = dateLivraison ? new Date(dateLivraison) : new Date();
 
-    // Create ENTREE mouvement for each ligne + update stock
+    // Create ENTREE mouvement for each ligne + update stock (with unit conversion)
     for (const ligne of commande.lignes) {
+      const quantiteBase = convertirQuantiteAchat(ligne.quantite, ligne.produit);
+
       await tx.mouvementStock.create({
         data: {
           produitId: ligne.produitId,
@@ -186,7 +197,7 @@ export async function recevoirCommande(
 
       await tx.produit.update({
         where: { id: ligne.produitId },
-        data: { stockActuel: { increment: ligne.quantite } },
+        data: { stockActuel: { increment: quantiteBase } },
       });
     }
 

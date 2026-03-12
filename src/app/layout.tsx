@@ -18,13 +18,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Suivi Silures",
-  description: "Application de suivi du grossissement de silures",
+  title: "FarmFlow",
+  description: "Application de suivi d'élevage de silures",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Suivi Silures",
+    title: "FarmFlow",
   },
 };
 

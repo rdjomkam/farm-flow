@@ -2282,3 +2282,105 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 - Toutes les règles R1-R9 respectées sur les fichiers modifiés ✅
 - Pas de régression fonctionnelle ✅
 - Review publiée dans docs/reviews/ ✅
+
+---
+
+## Sprint 14 — Support des unites d'achat/consommation differentes
+
+**Objectif :** Permettre de definir une unite d'achat differente de l'unite de stockage pour les produits (ex: acheter en SACS de 25 KG, stocker en KG). Ajouter GRAMME et MILLILITRE au enum UniteStock.
+
+### Story 14.1 — Schema Prisma + Migration + Seed
+**Assigne a :** @db-specialist
+**Priorite :** Critique
+**Statut :** `FAIT`
+
+**Taches :**
+- [x] `FAIT` Ajouter GRAMME/MILLILITRE a UniteStock enum (RECREATE strategy)
+- [x] `FAIT` Ajouter uniteAchat (UniteStock?) et contenance (Float?) au modele Produit
+- [x] `FAIT` Creer migration SQL manuelle (20260312100000_add_unite_achat)
+- [x] `FAIT` Appliquer migration + regenerer client Prisma
+- [x] `FAIT` Mettre a jour seed.sql (prod_03 avec uniteAchat=SACS, contenance=25, stockActuel en KG)
+- [x] `FAIT` Verifier npm run db:seed
+
+---
+
+### Story 14.2 — Types TypeScript (UniteStock + Produit)
+**Assigne a :** @db-specialist
+**Depend de :** Story 14.1
+**Priorite :** Haute
+**Statut :** `FAIT`
+
+**Taches :**
+- [x] `FAIT` Ajouter GRAMME/MILLILITRE a UniteStock dans src/types/models.ts
+- [x] `FAIT` Ajouter uniteAchat/contenance a l'interface Produit
+- [x] `FAIT` Ajouter uniteAchat/contenance a CreateProduitDTO et UpdateProduitDTO dans src/types/api.ts
+
+---
+
+### Story 14.3 — Fonctions utilitaires + Queries
+**Assigne a :** @db-specialist
+**Depend de :** Story 14.2
+**Priorite :** Haute
+**Statut :** `FAIT`
+
+**Taches :**
+- [x] `FAIT` src/lib/calculs.ts : ajouter getPrixParUniteBase() et convertirQuantiteAchat()
+- [x] `FAIT` src/lib/queries/produits.ts : passer uniteAchat+contenance dans create/update, bloquer changement contenance si stockActuel>0
+- [x] `FAIT` src/lib/queries/mouvements.ts : pour ENTREE, convertir quantite via convertirQuantiteAchat()
+- [x] `FAIT` src/lib/queries/commandes.ts : dans recevoirCommande(), convertir quantites avant incrementer stock
+- [x] `FAIT` src/lib/queries/analytics.ts : remplacer produit.prixUnitaire par getPrixParUniteBase(produit)
+- [x] `FAIT` src/lib/queries/finances.ts : meme correction avec getPrixParUniteBase()
+
+---
+
+### Story 14.4 — API Routes validation (produits)
+**Assigne a :** @developer
+**Depend de :** Story 14.3
+**Priorite :** Haute
+**Statut :** `EN COURS`
+
+**Taches :**
+- [ ] `TODO` POST /api/produits : valider uniteAchat+contenance ensemble, contenance>0, uniteAchat!==unite
+- [ ] `TODO` PUT /api/produits/[id] : memes validations + gerer erreur 409
+
+---
+
+### Story 14.5 — UI Stock (produits, mouvements, commandes)
+**Assigne a :** @developer
+**Depend de :** Story 14.4
+**Priorite :** Haute
+**Statut :** `TODO`
+
+**Taches :**
+- [ ] `TODO` produits-list-client.tsx : ajouter GRAMME/MILLILITRE aux uniteLabels, champs formulaire uniteAchat/contenance, afficher equivalence sur cartes
+- [ ] `TODO` produit-detail-client.tsx : meme dans formulaire edition, afficher equivalence stock, avertir si stockActuel>0
+- [ ] `TODO` mouvements-list-client.tsx : afficher bonne unite par type mouvement (ENTREE en uniteAchat, SORTIE en unite)
+- [ ] `TODO` commandes-list-client.tsx + commande-detail-client.tsx : afficher uniteAchat dans lignes commande
+
+---
+
+### Story 14.6 — UI Releves (champs consommation)
+**Assigne a :** @developer
+**Depend de :** Story 14.5
+**Priorite :** Moyenne
+**Statut :** `TODO`
+
+**Taches :**
+- [ ] `TODO` consommation-fields.tsx : ajouter GRAMME/MILLILITRE aux uniteLabels
+- [ ] `TODO` form-alimentation.tsx : ajouter prop uniteAliment, label dynamique
+- [ ] `TODO` releve-form-client.tsx : deriver uniteAliment depuis le premier produit selectionne
+
+---
+
+### Story 14.7 — Tests Sprint 14
+**Assigne a :** @tester
+**Depend de :** Stories 14.4, 14.5, 14.6
+**Priorite :** Haute
+**Statut :** `TODO`
+
+**Taches :**
+- [ ] `TODO` Tests getPrixParUniteBase() et convertirQuantiteAchat()
+- [ ] `TODO` Tests CRUD produits avec uniteAchat+contenance
+- [ ] `TODO` Tests mouvement ENTREE avec conversion
+- [ ] `TODO` Tests non-regression
+- [ ] `TODO` npx vitest run + npm run build

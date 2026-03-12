@@ -371,4 +371,78 @@ describe("POST /api/stock/mouvements", () => {
 
     expect(response.status).toBe(401);
   });
+
+  // --- Sprint 14 : conversion d'unites d'achat pour ENTREE ---
+
+  it("passe la quantite originale au createMouvement (conversion dans la query)", async () => {
+    // La conversion est faite dans la query, pas dans la route API.
+    // Le mouvement stocke la quantite originale (ex: 2 sacs).
+    const mouvementEntreeConversion = {
+      ...FAKE_MOUVEMENT,
+      quantite: 2,
+      produit: {
+        id: "prod-1",
+        nom: "Farine poisson",
+        unite: "KG",
+        uniteAchat: "SACS",
+        contenance: 25,
+      },
+    };
+    mockCreateMouvement.mockResolvedValue(mouvementEntreeConversion);
+
+    const response = await POST(
+      makeRequest("/api/stock/mouvements", {
+        method: "POST",
+        body: JSON.stringify({
+          ...validBody,
+          quantite: 2,
+        }),
+      })
+    );
+
+    expect(response.status).toBe(201);
+    // L'API route passe la quantite brute; la conversion se fait dans createMouvement
+    expect(mockCreateMouvement).toHaveBeenCalledWith(
+      "site-1",
+      "user-1",
+      expect.objectContaining({ quantite: 2 })
+    );
+  });
+
+  it("cree un mouvement SORTIE sans conversion (quantite en unite de base)", async () => {
+    const mouvementSortie = {
+      ...FAKE_MOUVEMENT,
+      type: TypeMouvement.SORTIE,
+      quantite: 5,
+      produit: {
+        id: "prod-1",
+        nom: "Farine poisson",
+        unite: "KG",
+        uniteAchat: "SACS",
+        contenance: 25,
+      },
+    };
+    mockCreateMouvement.mockResolvedValue(mouvementSortie);
+
+    const response = await POST(
+      makeRequest("/api/stock/mouvements", {
+        method: "POST",
+        body: JSON.stringify({
+          ...validBody,
+          type: TypeMouvement.SORTIE,
+          quantite: 5,
+        }),
+      })
+    );
+
+    expect(response.status).toBe(201);
+    expect(mockCreateMouvement).toHaveBeenCalledWith(
+      "site-1",
+      "user-1",
+      expect.objectContaining({
+        type: TypeMouvement.SORTIE,
+        quantite: 5,
+      })
+    );
+  });
 });

@@ -295,6 +295,143 @@ describe("POST /api/produits", () => {
 
     expect(response.status).toBe(404);
   });
+
+  // --- Sprint 14 : uniteAchat + contenance validation ---
+
+  it("retourne 400 si uniteAchat fourni sans contenance", async () => {
+    const response = await POST(
+      makeRequest("/api/produits", {
+        method: "POST",
+        body: JSON.stringify({ ...validBody, uniteAchat: UniteStock.SACS }),
+      })
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.errors).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "contenance" })])
+    );
+  });
+
+  it("retourne 400 si contenance fournie sans uniteAchat", async () => {
+    const response = await POST(
+      makeRequest("/api/produits", {
+        method: "POST",
+        body: JSON.stringify({ ...validBody, contenance: 25 }),
+      })
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.errors).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "uniteAchat" })])
+    );
+  });
+
+  it("retourne 400 si contenance <= 0", async () => {
+    const response = await POST(
+      makeRequest("/api/produits", {
+        method: "POST",
+        body: JSON.stringify({
+          ...validBody,
+          uniteAchat: UniteStock.SACS,
+          contenance: 0,
+        }),
+      })
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.errors).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "contenance" })])
+    );
+  });
+
+  it("retourne 400 si contenance negative", async () => {
+    const response = await POST(
+      makeRequest("/api/produits", {
+        method: "POST",
+        body: JSON.stringify({
+          ...validBody,
+          uniteAchat: UniteStock.SACS,
+          contenance: -10,
+        }),
+      })
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.errors).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "contenance" })])
+    );
+  });
+
+  it("retourne 400 si uniteAchat === unite (meme unite)", async () => {
+    const response = await POST(
+      makeRequest("/api/produits", {
+        method: "POST",
+        body: JSON.stringify({
+          ...validBody,
+          uniteAchat: UniteStock.KG,
+          contenance: 25,
+        }),
+      })
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.errors).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "uniteAchat" })])
+    );
+  });
+
+  it("retourne 400 si uniteAchat invalide", async () => {
+    const response = await POST(
+      makeRequest("/api/produits", {
+        method: "POST",
+        body: JSON.stringify({
+          ...validBody,
+          uniteAchat: "INVALIDE",
+          contenance: 25,
+        }),
+      })
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.errors).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "uniteAchat" })])
+    );
+  });
+
+  it("cree un produit avec uniteAchat + contenance valides", async () => {
+    const produitAvecConversion = {
+      ...FAKE_PRODUIT,
+      uniteAchat: UniteStock.SACS,
+      contenance: 25,
+    };
+    mockCreateProduit.mockResolvedValue(produitAvecConversion);
+
+    const response = await POST(
+      makeRequest("/api/produits", {
+        method: "POST",
+        body: JSON.stringify({
+          ...validBody,
+          uniteAchat: UniteStock.SACS,
+          contenance: 25,
+        }),
+      })
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(data.id).toBe("prod-1");
+    expect(mockCreateProduit).toHaveBeenCalledWith("site-1", {
+      ...validBody,
+      uniteAchat: UniteStock.SACS,
+      contenance: 25,
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -404,6 +541,87 @@ describe("PUT /api/produits/[id]", () => {
     );
 
     expect(response.status).toBe(404);
+  });
+
+  // --- Sprint 14 : uniteAchat + contenance validation en update ---
+
+  it("retourne 400 si uniteAchat fourni sans contenance en update", async () => {
+    const response = await PUT(
+      makeRequest("/api/produits/prod-1", {
+        method: "PUT",
+        body: JSON.stringify({ uniteAchat: UniteStock.SACS }),
+      }),
+      { params: Promise.resolve({ id: "prod-1" }) }
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.errors).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "contenance" })])
+    );
+  });
+
+  it("retourne 400 si contenance fournie sans uniteAchat en update", async () => {
+    const response = await PUT(
+      makeRequest("/api/produits/prod-1", {
+        method: "PUT",
+        body: JSON.stringify({ contenance: 25 }),
+      }),
+      { params: Promise.resolve({ id: "prod-1" }) }
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.errors).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "uniteAchat" })])
+    );
+  });
+
+  it("retourne 400 si contenance <= 0 en update", async () => {
+    const response = await PUT(
+      makeRequest("/api/produits/prod-1", {
+        method: "PUT",
+        body: JSON.stringify({ uniteAchat: UniteStock.SACS, contenance: 0 }),
+      }),
+      { params: Promise.resolve({ id: "prod-1" }) }
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.errors).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "contenance" })])
+    );
+  });
+
+  it("retourne 409 si contenance change quand stockActuel > 0", async () => {
+    mockUpdateProduit.mockRejectedValue(new Error("contenance non modifiable"));
+
+    const response = await PUT(
+      makeRequest("/api/produits/prod-1", {
+        method: "PUT",
+        body: JSON.stringify({ uniteAchat: UniteStock.SACS, contenance: 50 }),
+      }),
+      { params: Promise.resolve({ id: "prod-1" }) }
+    );
+
+    expect(response.status).toBe(409);
+    const data = await response.json();
+    expect(data.message).toContain("contenance non modifiable");
+  });
+
+  it("met a jour uniteAchat + contenance avec succes", async () => {
+    const updated = { ...FAKE_PRODUIT, uniteAchat: UniteStock.SACS, contenance: 25 };
+    mockUpdateProduit.mockResolvedValue(updated);
+
+    const response = await PUT(
+      makeRequest("/api/produits/prod-1", {
+        method: "PUT",
+        body: JSON.stringify({ uniteAchat: UniteStock.SACS, contenance: 25 }),
+      }),
+      { params: Promise.resolve({ id: "prod-1" }) }
+    );
+
+    expect(response.status).toBe(200);
   });
 });
 

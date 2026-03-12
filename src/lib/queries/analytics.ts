@@ -25,6 +25,7 @@ import {
   calculerCoutParKg,
   calculerROI,
   genererRecommandation,
+  getPrixParUniteBase,
 } from "@/lib/calculs";
 import {
   BENCHMARK_SURVIE,
@@ -447,6 +448,8 @@ async function computeAlimentMetrics(
     id: string;
     nom: string;
     prixUnitaire: number;
+    uniteAchat?: string | null;
+    contenance?: number | null;
     fournisseur: { nom: string } | null;
   }
 ): Promise<{
@@ -476,7 +479,7 @@ async function computeAlimentMetrics(
         produitNom: produit.nom,
         fournisseurNom: produit.fournisseur?.nom ?? null,
         categorie: CategorieProduit.ALIMENT,
-        prixUnitaire: produit.prixUnitaire,
+        prixUnitaire: getPrixParUniteBase(produit),
         quantiteTotale: 0,
         coutTotal: 0,
         nombreVagues: 0,
@@ -586,7 +589,7 @@ async function computeAlimentMetrics(
     const fcr = calculerFCR(conso.quantite, gainBiomasse);
     const sgr = calculerSGR(vague.poidsMoyenInitial, poidsMoyen, jours);
     const tauxSurvie = calculerTauxSurvie(nombreVivants, vague.nombreInitial);
-    const coutKg = calculerCoutParKgGain(conso.quantite, produit.prixUnitaire, gainBiomasse);
+    const coutKg = calculerCoutParKgGain(conso.quantite, getPrixParUniteBase(produit), gainBiomasse);
 
     vagueMetrics.push({
       quantite: conso.quantite,
@@ -619,7 +622,8 @@ async function computeAlimentMetrics(
 
   // Aggregate metrics
   const quantiteTotale = vagueMetrics.reduce((s, v) => s + v.quantite, 0);
-  const coutTotal = Math.round(quantiteTotale * produit.prixUnitaire);
+  const prixBase = getPrixParUniteBase(produit);
+  const coutTotal = Math.round(quantiteTotale * prixBase);
 
   const fcrMoyen = calculerFCRParAliment(
     vagueMetrics.map((v) => ({ quantite: v.quantite, gainBiomasse: v.gainBiomasse }))
@@ -654,7 +658,7 @@ async function computeAlimentMetrics(
       produitNom: produit.nom,
       fournisseurNom: produit.fournisseur?.nom ?? null,
       categorie: CategorieProduit.ALIMENT,
-      prixUnitaire: produit.prixUnitaire,
+      prixUnitaire: prixBase,
       quantiteTotale: Math.round(quantiteTotale * 100) / 100,
       coutTotal,
       nombreVagues: vagueMetrics.length,
@@ -697,6 +701,8 @@ export async function getComparaisonAliments(
       id: true,
       nom: true,
       prixUnitaire: true,
+      uniteAchat: true,
+      contenance: true,
       fournisseur: { select: { nom: true } },
     },
     orderBy: { nom: "asc" },
@@ -788,6 +794,8 @@ export async function getDetailAliment(
       id: true,
       nom: true,
       prixUnitaire: true,
+      uniteAchat: true,
+      contenance: true,
       fournisseur: { select: { nom: true } },
     },
   });
@@ -820,11 +828,11 @@ export async function getSimulationChangementAliment(
   const [ancien, nouveau] = await Promise.all([
     prisma.produit.findFirst({
       where: { id: ancienProduitId, siteId, categorie: CategorieProduit.ALIMENT },
-      select: { id: true, nom: true, prixUnitaire: true, fournisseur: { select: { nom: true } } },
+      select: { id: true, nom: true, prixUnitaire: true, uniteAchat: true, contenance: true, fournisseur: { select: { nom: true } } },
     }),
     prisma.produit.findFirst({
       where: { id: nouveauProduitId, siteId, categorie: CategorieProduit.ALIMENT },
-      select: { id: true, nom: true, prixUnitaire: true, fournisseur: { select: { nom: true } } },
+      select: { id: true, nom: true, prixUnitaire: true, uniteAchat: true, contenance: true, fournisseur: { select: { nom: true } } },
     }),
   ]);
 
@@ -838,11 +846,11 @@ export async function getSimulationChangementAliment(
   const ancienFCR = metricsAncien.analytique.fcrMoyen;
   const nouveauFCR = metricsNouveau.analytique.fcrMoyen;
 
-  // Cout = FCR × prixUnitaire × productionCible
+  // Cout = FCR × prixParUniteBase × productionCible
   const ancienCout =
-    ancienFCR !== null ? Math.round(ancienFCR * ancien.prixUnitaire * productionCible) : null;
+    ancienFCR !== null ? Math.round(ancienFCR * getPrixParUniteBase(ancien) * productionCible) : null;
   const nouveauCout =
-    nouveauFCR !== null ? Math.round(nouveauFCR * nouveau.prixUnitaire * productionCible) : null;
+    nouveauFCR !== null ? Math.round(nouveauFCR * getPrixParUniteBase(nouveau) * productionCible) : null;
 
   const economie =
     ancienCout !== null && nouveauCout !== null ? ancienCout - nouveauCout : null;
@@ -1079,6 +1087,8 @@ export async function getAnalyticsDashboard(siteId: string): Promise<AnalyticsDa
       id: true,
       nom: true,
       prixUnitaire: true,
+      uniteAchat: true,
+      contenance: true,
       fournisseur: { select: { nom: true } },
     },
   });
@@ -1226,7 +1236,7 @@ export async function getComparaisonVagues(
         consommations: {
           select: {
             quantite: true,
-            produit: { select: { prixUnitaire: true } },
+            produit: { select: { prixUnitaire: true, uniteAchat: true, contenance: true } },
           },
         },
       },
@@ -1291,11 +1301,11 @@ export async function getComparaisonVagues(
     const sgrMoyen = calculerSGR(poidsMoyenDebut, poidsMoyenFinal, dureeJours);
 
     // ---- Indicateurs financiers ----
-    // Cout total aliment : SUM(quantite * prixUnitaire) depuis ReleveConsommation
+    // Cout total aliment : SUM(quantite * prixParUniteBase) depuis ReleveConsommation
     let coutTotalAliment = 0;
     for (const r of releves) {
       for (const c of r.consommations) {
-        coutTotalAliment += c.quantite * c.produit.prixUnitaire;
+        coutTotalAliment += c.quantite * getPrixParUniteBase(c.produit);
       }
     }
     coutTotalAliment = Math.round(coutTotalAliment);

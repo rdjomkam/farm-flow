@@ -35,7 +35,9 @@ const typeMouvLabels: Record<TypeMouvement, string> = {
 };
 
 const uniteLabels: Record<UniteStock, string> = {
+  [UniteStock.GRAMME]: "g",
   [UniteStock.KG]: "kg",
+  [UniteStock.MILLILITRE]: "mL",
   [UniteStock.LITRE]: "litre",
   [UniteStock.UNITE]: "unité",
   [UniteStock.SACS]: "sacs",

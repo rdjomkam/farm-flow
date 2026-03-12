@@ -61,7 +61,9 @@ enum CategorieProduit {
 }
 
 enum UniteStock {
+  GRAMME
   KG
+  MILLILITRE
   LITRE
   UNITE
   SACS
@@ -450,6 +452,8 @@ model Produit {
   nom            String
   categorie      CategorieProduit
   unite          UniteStock
+  uniteAchat     UniteStock?
+  contenance     Float?
   prixUnitaire   Float
   stockActuel    Float            @default(0)
   seuilAlerte    Float            @default(0)

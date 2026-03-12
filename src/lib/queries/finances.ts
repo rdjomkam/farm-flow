@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { CategorieProduit, TypeMouvement } from "@/types";
+import { getPrixParUniteBase } from "@/lib/calculs";
 
 // ---------------------------------------------------------------------------
 // Types de retour locaux
@@ -256,7 +257,7 @@ export async function getRentabiliteParVague(
     select: {
       quantite: true,
       releve: { select: { vagueId: true } },
-      produit: { select: { prixUnitaire: true } },
+      produit: { select: { prixUnitaire: true, uniteAchat: true, contenance: true } },
     },
   });
 
@@ -280,7 +281,7 @@ export async function getRentabiliteParVague(
   const coutsByVague = new Map<string, number>();
   for (const c of toutesConsommations) {
     const vagueId = c.releve.vagueId;
-    const coutLigne = c.quantite * c.produit.prixUnitaire;
+    const coutLigne = c.quantite * getPrixParUniteBase(c.produit);
     coutsByVague.set(vagueId, (coutsByVague.get(vagueId) ?? 0) + coutLigne);
   }
 

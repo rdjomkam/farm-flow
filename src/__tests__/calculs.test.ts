@@ -13,6 +13,8 @@ import {
   calculerFCRParAliment,
   calculerCoutParKgGain,
   genererRecommandation,
+  getPrixParUniteBase,
+  convertirQuantiteAchat,
 } from "@/lib/calculs";
 
 // ---------------------------------------------------------------------------
@@ -563,5 +565,160 @@ describe("genererRecommandation", () => {
       { nom: "A", fournisseur: null, fcrMoyen: 1.5, coutParKgGain: null },
       null
     )).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getPrixParUniteBase (Sprint 14 — conversion unites d'achat)
+// ---------------------------------------------------------------------------
+describe("getPrixParUniteBase", () => {
+  it("retourne prixUnitaire / contenance quand uniteAchat + contenance definis", () => {
+    // Farine de poisson: 15000 CFA/sac de 25 kg → 600 CFA/kg
+    const result = getPrixParUniteBase({
+      prixUnitaire: 15000,
+      uniteAchat: "SACS",
+      contenance: 25,
+    });
+    expect(result).toBe(600);
+  });
+
+  it("retourne prixUnitaire inchange quand pas d'uniteAchat", () => {
+    const result = getPrixParUniteBase({
+      prixUnitaire: 2000,
+      uniteAchat: null,
+      contenance: null,
+    });
+    expect(result).toBe(2000);
+  });
+
+  it("retourne prixUnitaire inchange quand uniteAchat undefined", () => {
+    const result = getPrixParUniteBase({
+      prixUnitaire: 2000,
+    });
+    expect(result).toBe(2000);
+  });
+
+  it("retourne prixUnitaire quand contenance est 0 (pas de division par zero)", () => {
+    const result = getPrixParUniteBase({
+      prixUnitaire: 15000,
+      uniteAchat: "SACS",
+      contenance: 0,
+    });
+    expect(result).toBe(15000);
+  });
+
+  it("retourne prixUnitaire quand contenance est null", () => {
+    const result = getPrixParUniteBase({
+      prixUnitaire: 15000,
+      uniteAchat: "SACS",
+      contenance: null,
+    });
+    expect(result).toBe(15000);
+  });
+
+  it("retourne prixUnitaire quand contenance est negative", () => {
+    // contenance negative: contenance > 0 est false, fallback
+    const result = getPrixParUniteBase({
+      prixUnitaire: 15000,
+      uniteAchat: "SACS",
+      contenance: -5,
+    });
+    expect(result).toBe(15000);
+  });
+
+  it("gere un prix unitaire de 0", () => {
+    const result = getPrixParUniteBase({
+      prixUnitaire: 0,
+      uniteAchat: "SACS",
+      contenance: 25,
+    });
+    expect(result).toBe(0);
+  });
+
+  it("calcule correctement avec contenance decimale", () => {
+    // 10000 CFA / 2.5 L = 4000 CFA/L
+    const result = getPrixParUniteBase({
+      prixUnitaire: 10000,
+      uniteAchat: "LITRE",
+      contenance: 2.5,
+    });
+    expect(result).toBe(4000);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// convertirQuantiteAchat (Sprint 14 — conversion unites d'achat)
+// ---------------------------------------------------------------------------
+describe("convertirQuantiteAchat", () => {
+  it("convertit quantite * contenance quand uniteAchat + contenance definis", () => {
+    // 2 sacs de 25 kg → 50 kg
+    const result = convertirQuantiteAchat(2, {
+      uniteAchat: "SACS",
+      contenance: 25,
+    });
+    expect(result).toBe(50);
+  });
+
+  it("retourne quantite inchangee quand pas d'uniteAchat", () => {
+    const result = convertirQuantiteAchat(10, {
+      uniteAchat: null,
+      contenance: null,
+    });
+    expect(result).toBe(10);
+  });
+
+  it("retourne quantite inchangee quand uniteAchat undefined", () => {
+    const result = convertirQuantiteAchat(10, {});
+    expect(result).toBe(10);
+  });
+
+  it("retourne quantite inchangee quand contenance est null", () => {
+    const result = convertirQuantiteAchat(10, {
+      uniteAchat: "SACS",
+      contenance: null,
+    });
+    expect(result).toBe(10);
+  });
+
+  it("retourne quantite inchangee quand contenance est 0", () => {
+    const result = convertirQuantiteAchat(10, {
+      uniteAchat: "SACS",
+      contenance: 0,
+    });
+    expect(result).toBe(10);
+  });
+
+  it("retourne quantite inchangee quand contenance est negative", () => {
+    const result = convertirQuantiteAchat(10, {
+      uniteAchat: "SACS",
+      contenance: -5,
+    });
+    expect(result).toBe(10);
+  });
+
+  it("gere une quantite de 0", () => {
+    const result = convertirQuantiteAchat(0, {
+      uniteAchat: "SACS",
+      contenance: 25,
+    });
+    expect(result).toBe(0);
+  });
+
+  it("gere une contenance decimale", () => {
+    // 3 bidons de 2.5 L → 7.5 L
+    const result = convertirQuantiteAchat(3, {
+      uniteAchat: "LITRE",
+      contenance: 2.5,
+    });
+    expect(result).toBe(7.5);
+  });
+
+  it("gere une grande quantite", () => {
+    // 100 sacs de 50 kg → 5000 kg
+    const result = convertirQuantiteAchat(100, {
+      uniteAchat: "SACS",
+      contenance: 50,
+    });
+    expect(result).toBe(5000);
   });
 });

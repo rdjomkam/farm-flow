@@ -220,6 +220,48 @@ export function calculerROI(
 }
 
 // ---------------------------------------------------------------------------
+// Conversion d'unites d'achat (Sprint 14)
+// ---------------------------------------------------------------------------
+
+/**
+ * Prix par unite de base. Si uniteAchat defini : prixUnitaire / contenance.
+ *
+ * Exemple : Farine de poisson a 15000 CFA/sac de 25 kg → 600 CFA/kg.
+ *
+ * @param p - Produit avec prixUnitaire, uniteAchat et contenance
+ * @returns Prix par unite de base
+ */
+export function getPrixParUniteBase(p: {
+  prixUnitaire: number;
+  uniteAchat?: string | null;
+  contenance?: number | null;
+}): number {
+  if (p.uniteAchat && p.contenance && p.contenance > 0) {
+    return p.prixUnitaire / p.contenance;
+  }
+  return p.prixUnitaire;
+}
+
+/**
+ * Convertit quantite achat en quantite base. quantite * contenance si applicable.
+ *
+ * Exemple : 2 sacs de 25 kg → 50 kg.
+ *
+ * @param quantite - Quantite en unite d'achat
+ * @param p - Produit avec uniteAchat et contenance
+ * @returns Quantite en unite de base
+ */
+export function convertirQuantiteAchat(
+  quantite: number,
+  p: { uniteAchat?: string | null; contenance?: number | null }
+): number {
+  if (p.uniteAchat && p.contenance && p.contenance > 0) {
+    return quantite * p.contenance;
+  }
+  return quantite;
+}
+
+// ---------------------------------------------------------------------------
 // Analytiques par aliment (CR-011)
 // ---------------------------------------------------------------------------
 

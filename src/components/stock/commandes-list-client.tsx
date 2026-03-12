@@ -43,7 +43,9 @@ const statutVariants: Record<StatutCommande, "default" | "info" | "en_cours" | "
 };
 
 const uniteLabels: Record<string, string> = {
+  [UniteStock.GRAMME]: "g",
   [UniteStock.KG]: "kg",
+  [UniteStock.MILLILITRE]: "mL",
   [UniteStock.LITRE]: "L",
   [UniteStock.UNITE]: "unite",
   [UniteStock.SACS]: "sacs",
@@ -70,7 +72,7 @@ interface LigneForm {
 interface Props {
   commandes: CommandeData[];
   fournisseurs: { id: string; nom: string }[];
-  produits: { id: string; nom: string; unite: string; prixUnitaire: number }[];
+  produits: { id: string; nom: string; unite: string; uniteAchat: string | null; contenance: number | null; prixUnitaire: number }[];
   permissions: Permission[];
 }
 
@@ -222,7 +224,9 @@ export function CommandesListClient({ commandes, fournisseurs, produits, permiss
                     (p) => p.id === ligne.produitId
                   );
                   const unite = selectedProduit
-                    ? uniteLabels[selectedProduit.unite] ?? selectedProduit.unite
+                    ? (selectedProduit.uniteAchat
+                        ? (uniteLabels[selectedProduit.uniteAchat] ?? selectedProduit.uniteAchat)
+                        : (uniteLabels[selectedProduit.unite] ?? selectedProduit.unite))
                     : "";
                   return (
                     <Card key={i}>

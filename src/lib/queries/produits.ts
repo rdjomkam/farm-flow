@@ -66,6 +66,8 @@ export async function createProduit(siteId: string, data: CreateProduitDTO) {
       nom: data.nom,
       categorie: data.categorie,
       unite: data.unite,
+      uniteAchat: data.uniteAchat ?? null,
+      contenance: data.contenance ?? null,
       prixUnitaire: data.prixUnitaire,
       seuilAlerte: data.seuilAlerte ?? 0,
       fournisseurId: data.fournisseurId ?? null,
@@ -91,12 +93,25 @@ export async function updateProduit(
     if (!fournisseur) throw new Error("Fournisseur introuvable");
   }
 
+  // Block contenance change if stockActuel > 0
+  if (data.contenance !== undefined) {
+    const produit = await prisma.produit.findFirst({
+      where: { id, siteId },
+      select: { stockActuel: true, contenance: true },
+    });
+    if (produit && produit.stockActuel > 0 && data.contenance !== produit.contenance) {
+      throw new Error("contenance non modifiable");
+    }
+  }
+
   const result = await prisma.produit.updateMany({
     where: { id, siteId },
     data: {
       ...(data.nom !== undefined && { nom: data.nom }),
       ...(data.categorie !== undefined && { categorie: data.categorie }),
       ...(data.unite !== undefined && { unite: data.unite }),
+      ...(data.uniteAchat !== undefined && { uniteAchat: data.uniteAchat }),
+      ...(data.contenance !== undefined && { contenance: data.contenance }),
       ...(data.prixUnitaire !== undefined && { prixUnitaire: data.prixUnitaire }),
       ...(data.seuilAlerte !== undefined && { seuilAlerte: data.seuilAlerte }),
       ...(data.fournisseurId !== undefined && { fournisseurId: data.fournisseurId }),

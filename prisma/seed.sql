@@ -249,14 +249,14 @@ VALUES
 -- Produits (6 : 3 aliments, 2 intrants, 1 equipement)
 -- ──────────────────────────────────────────
 
-INSERT INTO "Produit" (id, nom, categorie, unite, "prixUnitaire", "stockActuel", "seuilAlerte", "fournisseurId", "isActive", "siteId", "createdAt", "updatedAt")
+INSERT INTO "Produit" (id, nom, categorie, unite, "uniteAchat", contenance, "prixUnitaire", "stockActuel", "seuilAlerte", "fournisseurId", "isActive", "siteId", "createdAt", "updatedAt")
 VALUES
-  ('prod_01', 'Aliment Croissance 3mm', 'ALIMENT', 'KG', 850, 120.0, 50.0, 'fourn_01', true, 'site_01', NOW(), NOW()),
-  ('prod_02', 'Aliment Demarrage 1mm', 'ALIMENT', 'KG', 1200, 25.0, 20.0, 'fourn_01', true, 'site_01', NOW(), NOW()),
-  ('prod_03', 'Farine de poisson', 'ALIMENT', 'SACS', 15000, 8.0, 5.0, 'fourn_01', true, 'site_01', NOW(), NOW()),
-  ('prod_04', 'Sulfate de cuivre', 'INTRANT', 'KG', 3500, 2.5, 1.0, 'fourn_02', true, 'site_01', NOW(), NOW()),
-  ('prod_05', 'Sel non iode', 'INTRANT', 'KG', 200, 50.0, 20.0, 'fourn_02', true, 'site_01', NOW(), NOW()),
-  ('prod_06', 'Epuisette 40cm', 'EQUIPEMENT', 'UNITE', 8500, 3.0, 2.0, 'fourn_03', true, 'site_01', NOW(), NOW());
+  ('prod_01', 'Aliment Croissance 3mm', 'ALIMENT', 'KG', NULL, NULL, 850, 120.0, 50.0, 'fourn_01', true, 'site_01', NOW(), NOW()),
+  ('prod_02', 'Aliment Demarrage 1mm', 'ALIMENT', 'KG', NULL, NULL, 1200, 25.0, 20.0, 'fourn_01', true, 'site_01', NOW(), NOW()),
+  ('prod_03', 'Farine de poisson', 'ALIMENT', 'KG', 'SACS', 25, 15000, 200.0, 125.0, 'fourn_01', true, 'site_01', NOW(), NOW()),
+  ('prod_04', 'Sulfate de cuivre', 'INTRANT', 'KG', NULL, NULL, 3500, 2.5, 1.0, 'fourn_02', true, 'site_01', NOW(), NOW()),
+  ('prod_05', 'Sel non iode', 'INTRANT', 'KG', NULL, NULL, 200, 50.0, 20.0, 'fourn_02', true, 'site_01', NOW(), NOW()),
+  ('prod_06', 'Epuisette 40cm', 'EQUIPEMENT', 'UNITE', NULL, NULL, 8500, 3.0, 2.0, 'fourn_03', true, 'site_01', NOW(), NOW());
 
 -- ──────────────────────────────────────────
 -- Commandes (2 : 1 livree, 1 envoyee)

@@ -372,6 +372,10 @@ export interface CreateProduitDTO {
   nom: string;
   categorie: CategorieProduit;
   unite: UniteStock;
+  /** Unite d'achat si differente de l'unite de base (ex: SACS pour un produit en KG) */
+  uniteAchat?: UniteStock;
+  /** Contenance d'une unite d'achat dans l'unite de base (ex: 25 kg/sac) */
+  contenance?: number;
   prixUnitaire: number;
   seuilAlerte?: number;
   fournisseurId?: string;
@@ -382,6 +386,10 @@ export interface UpdateProduitDTO {
   nom?: string;
   categorie?: CategorieProduit;
   unite?: UniteStock;
+  /** Unite d'achat (null pour effacer) */
+  uniteAchat?: UniteStock | null;
+  /** Contenance (null pour effacer) */
+  contenance?: number | null;
   prixUnitaire?: number;
   seuilAlerte?: number;
   fournisseurId?: string | null;

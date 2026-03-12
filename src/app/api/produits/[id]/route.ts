@@ -71,6 +71,42 @@ export async function PUT(request: NextRequest, { params }: Params) {
       errors.push({ field: "seuilAlerte", message: "Le seuil d'alerte doit etre un nombre >= 0." });
     }
 
+    // Validation uniteAchat + contenance
+    const hasUniteAchat = body.uniteAchat !== undefined && body.uniteAchat !== null;
+    const hasContenance = body.contenance !== undefined && body.contenance !== null;
+
+    if (hasUniteAchat !== hasContenance) {
+      errors.push({
+        field: hasUniteAchat ? "contenance" : "uniteAchat",
+        message: "L'unite d'achat et la contenance doivent etre fournies ensemble.",
+      });
+    }
+
+    if (hasUniteAchat) {
+      if (!VALID_UNITES.includes(body.uniteAchat)) {
+        errors.push({
+          field: "uniteAchat",
+          message: `L'unite d'achat doit etre : ${VALID_UNITES.join(", ")}.`,
+        });
+      }
+      const effectiveUnite = body.unite ?? undefined;
+      if (body.uniteAchat === effectiveUnite) {
+        errors.push({
+          field: "uniteAchat",
+          message: "L'unite d'achat ne peut pas etre identique a l'unite de base.",
+        });
+      }
+    }
+
+    if (hasContenance) {
+      if (typeof body.contenance !== "number" || body.contenance <= 0) {
+        errors.push({
+          field: "contenance",
+          message: "La contenance doit etre un nombre > 0.",
+        });
+      }
+    }
+
     if (errors.length > 0) {
       return NextResponse.json(
         { status: 400, message: "Erreurs de validation", errors },
@@ -85,6 +121,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (body.prixUnitaire !== undefined) data.prixUnitaire = body.prixUnitaire;
     if (body.seuilAlerte !== undefined) data.seuilAlerte = body.seuilAlerte;
     if (body.fournisseurId !== undefined) data.fournisseurId = body.fournisseurId;
+    if (body.uniteAchat !== undefined) data.uniteAchat = body.uniteAchat;
+    if (body.contenance !== undefined) data.contenance = body.contenance;
 
     const produit = await updateProduit(id, auth.activeSiteId, data);
     return NextResponse.json(produit);
@@ -98,6 +136,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
       return NextResponse.json({ status: 404, message }, { status: 404 });
+    }
+    if (message.includes("contenance non modifiable")) {
+      return NextResponse.json({ status: 409, message }, { status: 409 });
     }
     return NextResponse.json({ status: 500, message }, { status: 500 });
   }
