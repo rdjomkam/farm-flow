@@ -518,7 +518,8 @@ describe("POST /api/commandes/[id]/recevoir", () => {
       statut: StatutCommande.LIVREE,
       dateLivraison: new Date(),
     };
-    mockRecevoirCommande.mockResolvedValue(livree);
+    // Sprint 16: recevoirCommande retourne maintenant { commande, depense }
+    mockRecevoirCommande.mockResolvedValue({ commande: livree, depense: null });
 
     const response = await POST_RECEVOIR(
       makeRequest("/api/commandes/cmd-1/recevoir", {
@@ -530,7 +531,7 @@ describe("POST /api/commandes/[id]/recevoir", () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.statut).toBe(StatutCommande.LIVREE);
+    expect(data.commande.statut).toBe(StatutCommande.LIVREE);
     expect(mockRecevoirCommande).toHaveBeenCalledWith(
       "cmd-1",
       "site-1",
@@ -545,7 +546,8 @@ describe("POST /api/commandes/[id]/recevoir", () => {
       statut: StatutCommande.LIVREE,
       dateLivraison: new Date("2026-03-09"),
     };
-    mockRecevoirCommande.mockResolvedValue(livree);
+    // Sprint 16: recevoirCommande retourne maintenant { commande, depense }
+    mockRecevoirCommande.mockResolvedValue({ commande: livree, depense: null });
 
     const response = await POST_RECEVOIR(
       makeRequest("/api/commandes/cmd-1/recevoir", {

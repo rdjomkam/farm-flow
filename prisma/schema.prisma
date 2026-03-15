@@ -142,6 +142,14 @@ enum Permission {
   EXPORT_DONNEES
   // Alertes (1)
   ALERTES_CONFIGURER
+  // Dépenses (3)
+  DEPENSES_VOIR
+  DEPENSES_CREER
+  DEPENSES_PAYER
+  // Besoins (3)
+  BESOINS_SOUMETTRE
+  BESOINS_APPROUVER
+  BESOINS_TRAITER
 }
 
 // ──────────────────────────────────────────
@@ -187,6 +195,41 @@ enum Recurrence {
   BIMENSUEL
   MENSUEL
   PERSONNALISE
+}
+
+enum CategorieDepense {
+  ALIMENT
+  INTRANT
+  EQUIPEMENT
+  ELECTRICITE
+  EAU
+  LOYER
+  SALAIRE
+  TRANSPORT
+  VETERINAIRE
+  REPARATION
+  INVESTISSEMENT
+  AUTRE
+}
+
+enum StatutDepense {
+  NON_PAYEE
+  PAYEE_PARTIELLEMENT
+  PAYEE
+}
+
+enum FrequenceRecurrence {
+  MENSUEL
+  TRIMESTRIEL
+  ANNUEL
+}
+
+enum StatutBesoins {
+  SOUMISE
+  APPROUVEE
+  TRAITEE
+  CLOTUREE
+  REJETEE
 }
 
 // ──────────────────────────────────────────
@@ -247,6 +290,10 @@ model Site {
   configAlertes        ConfigAlerte[]
   notifications        Notification[]
   activites            Activite[]
+  depenses             Depense[]
+  paiementsDepense     PaiementDepense[]
+  depensesRecurrentes  DepenseRecurrente[]
+  listesBesoins        ListeBesoins[]
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 }
@@ -308,8 +355,13 @@ model User {
   notifications       Notification[]
   activitesCreees     Activite[]       @relation("ActivitesCreees")
   activitesAssignees  Activite[]       @relation("ActivitesAssignees")
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  depenses              Depense[]
+  paiementsDepense      PaiementDepense[]
+  depensesRecurrentes   DepenseRecurrente[]
+  listesBesoinsCreees   ListeBesoins[]     @relation("ListeBesoinsCreees")
+  listesBesoinsValidees ListeBesoins[]     @relation("ListeBesoinsValidees")
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
 }
 
 model Session {
@@ -366,6 +418,8 @@ model Vague {
   ventes                  Vente[]
   lotsAlevinsTransferes   LotAlevins[]
   activites               Activite[]
+  depenses                Depense[]
+  listesBesoins           ListeBesoins[]
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
 
@@ -465,6 +519,7 @@ model Produit {
   mouvements     MouvementStock[]
   lignesCommande LigneCommande[]
   consommations  ReleveConsommation[]
+  lignesBesoins  LigneBesoin[]
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
@@ -511,12 +566,16 @@ model Commande {
   dateCommande   DateTime
   dateLivraison  DateTime?
   montantTotal   Float           @default(0)
+  /** URL de la facture fournisseur stockee sur Hetzner Object Storage (nullable) */
+  factureUrl     String?
   userId         String
   user           User            @relation(fields: [userId], references: [id])
   siteId         String
   site           Site            @relation(fields: [siteId], references: [id])
   lignes         LigneCommande[]
   mouvements     MouvementStock[]
+  depenses       Depense[]
+  lignesBesoins  LigneBesoin[]
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
@@ -788,4 +847,154 @@ model Activite {
   @@index([siteId, statut])
   @@index([assigneAId])
   @@index([releveId])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Dépenses
+// ──────────────────────────────────────────
+
+model Depense {
+  id               String           @id @default(cuid())
+  /** Numéro auto-généré format DEP-YYYY-NNN */
+  numero           String           @unique
+  description      String
+  categorieDepense CategorieDepense
+  montantTotal     Float
+  montantPaye      Float            @default(0)
+  statut           StatutDepense    @default(NON_PAYEE)
+  date             DateTime
+  dateEcheance     DateTime?
+  /** URL facture fournisseur sur Hetzner Object Storage */
+  factureUrl       String?
+  notes            String?
+  /** Lien optionnel vers la commande d'origine */
+  commandeId       String?
+  commande         Commande?        @relation(fields: [commandeId], references: [id], onDelete: SetNull)
+  /** Lien optionnel vers la vague concernée */
+  vagueId          String?
+  vague            Vague?           @relation(fields: [vagueId], references: [id], onDelete: SetNull)
+  /** Lien optionnel vers la liste de besoins d'origine */
+  listeBesoinsId   String?
+  listeBesoins     ListeBesoins?    @relation(fields: [listeBesoinsId], references: [id], onDelete: SetNull)
+  userId           String
+  user             User             @relation(fields: [userId], references: [id])
+  siteId           String
+  site             Site             @relation(fields: [siteId], references: [id])
+  paiements        PaiementDepense[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([siteId])
+  @@index([siteId, categorieDepense])
+  @@index([siteId, statut])
+  @@index([commandeId])
+  @@index([vagueId])
+  @@index([listeBesoinsId])
+  @@index([date])
+}
+
+model PaiementDepense {
+  id        String       @id @default(cuid())
+  depenseId String
+  depense   Depense      @relation(fields: [depenseId], references: [id], onDelete: Cascade)
+  montant   Float
+  mode      ModePaiement
+  reference String?
+  date      DateTime     @default(now())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id])
+  siteId    String
+  site      Site         @relation(fields: [siteId], references: [id])
+  createdAt DateTime     @default(now())
+
+  @@index([depenseId])
+  @@index([siteId])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Dépenses Récurrentes (Sprint 18)
+// ──────────────────────────────────────────
+
+model DepenseRecurrente {
+  id                  String              @id @default(cuid())
+  description         String
+  categorieDepense    CategorieDepense
+  montantEstime       Float
+  frequence           FrequenceRecurrence
+  /** Jour du mois de génération (1-28, contraint par CHECK côté SQL) */
+  jourDuMois          Int                 @default(1)
+  isActive            Boolean             @default(true)
+  derniereGeneration  DateTime?
+  userId              String
+  user                User                @relation(fields: [userId], references: [id])
+  siteId              String
+  site                Site                @relation(fields: [siteId], references: [id])
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@index([siteId])
+  @@index([siteId, isActive])
+  @@index([siteId, frequence])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Besoins (Sprint 17)
+// ──────────────────────────────────────────
+
+model ListeBesoins {
+  id             String         @id @default(cuid())
+  /** Numéro auto-généré format BES-YYYY-NNN */
+  numero         String         @unique
+  titre          String
+  demandeurId    String
+  demandeur      User           @relation("ListeBesoinsCreees", fields: [demandeurId], references: [id])
+  valideurId     String?
+  valideur       User?          @relation("ListeBesoinsValidees", fields: [valideurId], references: [id])
+  vagueId        String?
+  vague          Vague?         @relation(fields: [vagueId], references: [id], onDelete: SetNull)
+  statut         StatutBesoins  @default(SOUMISE)
+  /** Somme estimée des besoins (SUM quantite * prixEstime) */
+  montantEstime  Float          @default(0)
+  /** Montant réel après clôture (nullable) */
+  montantReel    Float?
+  /** Motif de rejet (nullable, rempli si REJETEE) */
+  motifRejet     String?
+  notes          String?
+  siteId         String
+  site           Site           @relation(fields: [siteId], references: [id])
+  lignes         LigneBesoin[]
+  depenses       Depense[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([siteId])
+  @@index([siteId, statut])
+  @@index([demandeurId])
+  @@index([vagueId])
+}
+
+model LigneBesoin {
+  id               String        @id @default(cuid())
+  listeBesoinsId   String
+  listeBesoins     ListeBesoins  @relation(fields: [listeBesoinsId], references: [id], onDelete: Cascade)
+  /** Désignation libre de l'article */
+  designation      String
+  /** Produit en stock lié (nullable — libre si null) */
+  produitId        String?
+  produit          Produit?      @relation(fields: [produitId], references: [id], onDelete: SetNull)
+  quantite         Float
+  /** Unité libre (nullable si produit avec unité définie) */
+  unite            String?
+  /** Prix unitaire estimé */
+  prixEstime       Float         @default(0)
+  /** Prix unitaire réel après clôture (nullable) */
+  prixReel         Float?
+  /** Commande générée lors du traitement (nullable) */
+  commandeId       String?
+  commande         Commande?     @relation(fields: [commandeId], references: [id], onDelete: SetNull)
+  createdAt        DateTime      @default(now())
+
+  @@index([listeBesoinsId])
+  @@index([produitId])
+  @@index([commandeId])
 }

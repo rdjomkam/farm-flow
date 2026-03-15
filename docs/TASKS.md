@@ -2337,11 +2337,11 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigne a :** @developer
 **Depend de :** Story 14.3
 **Priorite :** Haute
-**Statut :** `EN COURS`
+**Statut :** `FAIT`
 
 **Taches :**
-- [ ] `TODO` POST /api/produits : valider uniteAchat+contenance ensemble, contenance>0, uniteAchat!==unite
-- [ ] `TODO` PUT /api/produits/[id] : memes validations + gerer erreur 409
+- [x] `FAIT` POST /api/produits : valider uniteAchat+contenance ensemble, contenance>0, uniteAchat!==unite
+- [x] `FAIT` PUT /api/produits/[id] : memes validations + gerer erreur 409
 
 ---
 
@@ -2349,13 +2349,13 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigne a :** @developer
 **Depend de :** Story 14.4
 **Priorite :** Haute
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Taches :**
-- [ ] `TODO` produits-list-client.tsx : ajouter GRAMME/MILLILITRE aux uniteLabels, champs formulaire uniteAchat/contenance, afficher equivalence sur cartes
-- [ ] `TODO` produit-detail-client.tsx : meme dans formulaire edition, afficher equivalence stock, avertir si stockActuel>0
-- [ ] `TODO` mouvements-list-client.tsx : afficher bonne unite par type mouvement (ENTREE en uniteAchat, SORTIE en unite)
-- [ ] `TODO` commandes-list-client.tsx + commande-detail-client.tsx : afficher uniteAchat dans lignes commande
+- [x] `FAIT` produits-list-client.tsx : ajouter GRAMME/MILLILITRE aux uniteLabels, champs formulaire uniteAchat/contenance, afficher equivalence sur cartes
+- [x] `FAIT` produit-detail-client.tsx : meme dans formulaire edition, afficher equivalence stock, avertir si stockActuel>0
+- [x] `FAIT` mouvements-list-client.tsx : afficher bonne unite par type mouvement (ENTREE en uniteAchat, SORTIE en unite)
+- [x] `FAIT` commandes-list-client.tsx + commande-detail-client.tsx : afficher uniteAchat dans lignes commande
 
 ---
 
@@ -2363,12 +2363,12 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigne a :** @developer
 **Depend de :** Story 14.5
 **Priorite :** Moyenne
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Taches :**
-- [ ] `TODO` consommation-fields.tsx : ajouter GRAMME/MILLILITRE aux uniteLabels
-- [ ] `TODO` form-alimentation.tsx : ajouter prop uniteAliment, label dynamique
-- [ ] `TODO` releve-form-client.tsx : deriver uniteAliment depuis le premier produit selectionne
+- [x] `FAIT` consommation-fields.tsx : ajouter GRAMME/MILLILITRE aux uniteLabels
+- [x] `FAIT` form-alimentation.tsx : ajouter prop uniteAliment, label dynamique
+- [x] `FAIT` releve-form-client.tsx : deriver uniteAliment depuis le premier produit selectionne
 
 ---
 
@@ -2376,11 +2376,846 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigne a :** @tester
 **Depend de :** Stories 14.4, 14.5, 14.6
 **Priorite :** Haute
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Taches :**
-- [ ] `TODO` Tests getPrixParUniteBase() et convertirQuantiteAchat()
-- [ ] `TODO` Tests CRUD produits avec uniteAchat+contenance
-- [ ] `TODO` Tests mouvement ENTREE avec conversion
-- [ ] `TODO` Tests non-regression
-- [ ] `TODO` npx vitest run + npm run build
+- [x] `FAIT` Tests getPrixParUniteBase() et convertirQuantiteAchat()
+- [x] `FAIT` Tests CRUD produits avec uniteAchat+contenance
+- [x] `FAIT` Tests mouvement ENTREE avec conversion
+- [x] `FAIT` Tests non-regression
+- [x] `FAIT` npx vitest run + npm run build
+- [x] `FAIT` Ecrire rapport docs/tests/rapport-sprint-14.md
+
+**Resultat :** 1079/1079 tests passent, build OK. Voir docs/tests/rapport-sprint-14.md.
+
+### Review Sprint 14
+**Assigne a :** @code-reviewer
+**Depend de :** Story 14.7
+**Statut :** `FAIT`
+
+**Resultat :** VALIDE avec 2 observations mineures non-bloquantes. Voir docs/reviews/review-sprint-14.md.
+
+---
+
+## Sprint 15 — Upload Facture sur Commande
+
+**Objectif :** Permettre l'upload optionnel de la facture fournisseur (PDF/JPG/PNG) lors de la réception d'une commande. Stockage sur Hetzner Object Storage (S3-compatible). Visualisation et suppression depuis le détail commande.
+
+---
+
+### Story 15.1 — Schéma Prisma (factureUrl + migration)
+**Assigné à :** @db-specialist
+**Priorité :** Critique
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Ajouter `factureUrl String?` au modèle Commande dans `prisma/schema.prisma`
+- [x] `FAIT` Créer la migration SQL manuelle (`prisma/migrations/20260315100000_add_facture_url/migration.sql`)
+- [x] `FAIT` Appliquer la migration avec `npx prisma migrate deploy`
+- [x] `FAIT` Mettre à jour `prisma/seed.sql` : 1 commande LIVREE avec factureUrl renseigné (URL fictive)
+- [x] `FAIT` Vérifier `npx prisma generate` + build OK
+
+**Critères d'acceptation :**
+- Migration appliquée sans erreur ✅
+- Le champ `factureUrl` est nullable (pas de breakage sur les commandes existantes) ✅
+- R8 respecté (siteId déjà présent sur Commande) ✅
+- Seed exécutable sur base vide ✅
+
+---
+
+### Story 15.2 — Infrastructure upload (client S3 Hetzner)
+**Assigné à :** @architect + @developer
+**Dépend de :** Story 15.1
+**Priorité :** Critique
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Installer `@aws-sdk/client-s3` et `@aws-sdk/s3-request-presigner`
+- [x] `FAIT` Créer `src/lib/storage.ts` avec client S3 configuré pour Hetzner Object Storage
+- [x] `FAIT` Implémenter `uploadFile(key, body, contentType)` → retourne la clé S3
+- [x] `FAIT` Implémenter `deleteFile(key)` → suppression du fichier
+- [x] `FAIT` Implémenter `getSignedUrl(key, expiresIn)` → URL présignée (défaut 1h)
+- [x] `FAIT` Ajouter les variables d'environnement dans `.env.example`
+- [x] `FAIT` Implémenter `validateFile(file)` : taille max 10 Mo, types MIME autorisés
+- [x] `FAIT` Implémenter `generateFactureKey(commandeId, originalName)` : convention de nommage
+
+**Critères d'acceptation :**
+- Upload, download (signed URL) et delete fonctionnels
+- Les fichiers ne sont pas publics (accès uniquement via signed URLs)
+- Validation MIME + taille côté serveur (rejet avec message d'erreur clair)
+- Variables d'environnement documentées dans `.env.example`
+
+---
+
+### Story 15.3 — Types TypeScript + DTOs
+**Assigné à :** @architect
+**Dépend de :** Story 15.1
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Ajouter `factureUrl: string | null` à l'interface Commande dans `src/types/models.ts`
+- [x] `FAIT` Créer `UploadFactureCommandeDTO` et `FactureCommandeResponse` dans `src/types/api.ts`
+- [x] `FAIT` Barrel export à jour dans `src/types/index.ts`
+- [x] `FAIT` Vérifier l'alignement R3 (Prisma = TypeScript identiques)
+
+**Critères d'acceptation :**
+- R3 respecté : types TypeScript miroirs du schéma Prisma ✅
+- Pas de `any` dans les types ✅
+- Barrel export à jour dans `src/types/index.ts` ✅
+
+---
+
+### Story 15.4 — API routes upload facture
+**Assigné à :** @developer
+**Dépend de :** Story 15.2 + Story 15.3
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Créer `POST /api/commandes/[id]/facture` : upload via FormData, valider type MIME + taille, stocker sur Hetzner, sauvegarder `factureUrl` en DB
+- [x] `FAIT` Créer `GET /api/commandes/[id]/facture` : retourner signed URL JSON `{ url, fileName }`
+- [x] `FAIT` Créer `DELETE /api/commandes/[id]/facture` : supprimer fichier de Hetzner + mettre `factureUrl` à null en DB
+- [x] `FAIT` Modifier `POST /api/commandes/[id]/recevoir` : accepter FormData avec fichier facture optionnel (upload + réception en 1 appel)
+- [x] `FAIT` Permissions `APPROVISIONNEMENT_GERER` sur toutes les routes
+- [x] `FAIT` Filtre `siteId` sur toutes les routes (R8)
+
+**Critères d'acceptation :**
+- Upload PDF + JPG + PNG OK
+- Rejet avec 400 si fichier > 10 Mo ou type MIME invalide
+- Signed URL expire après 1h
+- Suppression cascade : supprimer le fichier Hetzner quand on supprime la facture
+- Réception avec fichier : stock mis à jour + factureUrl sauvegardé en 1 appel
+- Réception sans fichier : comportement inchangé (rétro-compatible)
+
+---
+
+### Story 15.5 — UI : upload facture + visualisation
+**Assigné à :** @developer
+**Dépend de :** Story 15.4
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Modifier dialog réception dans `commande-detail-client.tsx` : ajouter champ file input optionnel, envoyer FormData au lieu de JSON
+- [x] `FAIT` Ajouter section "Facture fournisseur" dans le détail commande (visible si `factureUrl` renseigné) : bouton "Voir la facture" (ouvre signed URL dans nouvel onglet), bouton "Supprimer" (avec dialog de confirmation)
+- [x] `FAIT` Ajouter bouton "Ajouter facture" visible quand statut LIVREE et pas de `factureUrl`
+- [x] `FAIT` Afficher preview du nom de fichier avant envoi dans le dialog réception
+- [x] `FAIT` Afficher icône distincte selon le type (PDF vs image)
+- [x] `FAIT` Gérer les erreurs : message clair si taille ou format invalide
+- [x] `FAIT` Mobile first : boutons larges, champ file accessible, pas de tableau
+
+**Critères d'acceptation :**
+- Upload fonctionne sur mobile (360px)
+- Preview du nom de fichier avant envoi
+- Erreurs affichées clairement (taille, format)
+- Facture visualisable après upload (nouvel onglet)
+- Suppression avec confirmation
+- UX cohérente avec le reste de l'application
+
+---
+
+### Story 15.6 — Tests Sprint 15
+**Assigné à :** @tester
+**Dépend de :** Story 15.4 + Story 15.5
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Tests upload : POST facture PDF → 201, POST facture JPG → 201, POST facture PNG → 201
+- [x] `FAIT` Tests rejet : POST fichier .exe → 400, POST fichier > 10 Mo → 400
+- [x] `FAIT` Tests API : GET facture → signed URL valide, DELETE facture → 200 + factureUrl null en DB
+- [x] `FAIT` Tests réception avec facture : POST recevoir avec FormData + fichier → 200 + upload effectué
+- [x] `FAIT` Tests réception sans facture : POST recevoir sans fichier → 200 (comportement inchangé)
+- [x] `FAIT` Tests permissions : requête sans APPROVISIONNEMENT_GERER → 403
+- [x] `FAIT` Non-régression : `npx vitest run` 1102/1102 + `npm run build` OK
+- [x] `FAIT` Écrire rapport dans `docs/tests/rapport-sprint-15.md`
+
+**Résultat :** 23 nouveaux tests, 1102/1102 total passent, build OK.
+
+**Critères d'acceptation :**
+- Tous les tests passent
+- Build production OK
+- Rapport de test dans `docs/tests/`
+- Aucune régression sur les fonctionnalités existantes
+
+---
+
+### Story 15.7 — Review Sprint 15
+**Assigné à :** @code-reviewer
+**Dépend de :** Story 15.6
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Checklist R1-R9 sur tout le code du sprint
+- [x] `FAIT` Vérifier : pas de secrets en dur (clés S3, endpoints)
+- [x] `FAIT` Vérifier : signed URLs uniquement (pas d'URL publique vers les fichiers)
+- [x] `FAIT` Vérifier : validation MIME côté serveur (pas uniquement côté client)
+- [x] `FAIT` Vérifier : siteId sur toutes les routes (R8)
+- [x] `FAIT` Vérifier : permissions APPROVISIONNEMENT_GERER
+- [x] `FAIT` Vérifier : mobile first (360px) sur les composants modifiés
+- [x] `FAIT` Écrire `docs/reviews/review-sprint-15.md`
+
+**Résultat :** VALIDE avec 3 observations mineures non-bloquantes. Voir docs/reviews/review-sprint-15.md.
+
+---
+
+## Sprint 16 — Dépenses base
+
+**Objectif :** Ajouter la gestion des dépenses opérationnelles (électricité, salaires, réparations, etc.) avec paiements partiels et auto-création depuis les commandes. Nouveaux modèles `Depense` et `PaiementDepense`, 3 enums, 6 permissions, API complète et UI mobile-first.
+
+---
+
+### Story 16.1 — Schéma Prisma (Depense + PaiementDepense + enums)
+**Assigné à :** @db-specialist
+**Priorité :** Critique
+**Statut :** `FAIT`
+
+**Tâches :**
+- [ ] `TODO` Ajouter enum `CategorieDepense` : ALIMENT, INTRANT, EQUIPEMENT, ELECTRICITE, EAU, LOYER, SALAIRE, TRANSPORT, VETERINAIRE, REPARATION, INVESTISSEMENT, AUTRE
+- [ ] `TODO` Ajouter enum `StatutDepense` : NON_PAYEE, PAYEE_PARTIELLEMENT, PAYEE
+- [ ] `TODO` Ajouter enum `FrequenceRecurrence` : MENSUEL, TRIMESTRIEL, ANNUEL
+- [ ] `TODO` Ajouter 6 permissions à l'enum `Permission` : DEPENSES_VOIR, DEPENSES_CREER, DEPENSES_PAYER, BESOINS_SOUMETTRE, BESOINS_APPROUVER, BESOINS_TRAITER
+- [ ] `TODO` Ajouter modèle `Depense` : id, numero (unique), description, categorieDepense, montantTotal, montantPaye (default 0), statut (default NON_PAYEE), date, dateEcheance?, factureUrl?, notes?, commandeId?, listeBesoinsId?, vagueId?, userId, siteId, paiements[]
+- [ ] `TODO` Ajouter modèle `PaiementDepense` : id, depenseId (CASCADE), montant, mode (ModePaiement réutilisé), reference?, date, userId, siteId
+- [ ] `TODO` Ajouter index sur Depense (siteId, categorieDepense, statut, commandeId, listeBesoinsId, vagueId, date)
+- [ ] `TODO` Ajouter relations inverses sur Site, User, Vague, Commande
+- [ ] `TODO` Créer migration `add_depenses` (manuelle SQL)
+- [ ] `TODO` Appliquer migration avec `npx prisma migrate deploy`
+- [ ] `TODO` Mettre à jour `prisma/seed.sql` : 5 dépenses (variées par catégorie/statut) + 4 paiements dépense
+- [ ] `TODO` Vérifier `npx prisma generate` + `npm run db:seed`
+
+**Critères d'acceptation :**
+- Migration appliquée sans erreur
+- R1 : toutes les valeurs d'enum en UPPERCASE
+- R8 : siteId sur Depense et PaiementDepense
+- Seed exécutable sur base vide
+- Relations cascade sur PaiementDepense (suppression Depense → suppression paiements)
+
+---
+
+### Story 16.2 — Types TypeScript (Depense + PaiementDepense)
+**Assigné à :** @architect
+**Dépend de :** Story 16.1
+**Priorité :** Critique
+**Statut :** `FAIT`
+
+**Tâches :**
+- [ ] `TODO` Ajouter enums `CategorieDepense`, `StatutDepense`, `FrequenceRecurrence` dans `src/types/models.ts`
+- [ ] `TODO` Ajouter 6 permissions à l'enum `Permission` dans `src/types/models.ts`
+- [ ] `TODO` Ajouter interfaces `Depense` et `PaiementDepense` dans `src/types/models.ts`
+- [ ] `TODO` Ajouter DTOs dans `src/types/api.ts` : `CreateDepenseDTO`, `UpdateDepenseDTO`, `DepenseFilters`, `CreatePaiementDepenseDTO`
+- [ ] `TODO` Mettre à jour barrel export dans `src/types/index.ts`
+
+**Critères d'acceptation :**
+- R3 : Prisma = TypeScript identiques (noms de champs et types alignés)
+- R2 : import des enums (jamais de string literals)
+- Pas de `any` dans les types
+
+---
+
+### Story 16.3 — Queries CRUD Depense + PaiementDepense
+**Assigné à :** @developer
+**Dépend de :** Story 16.2
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/lib/queries/depenses.ts`
+- [ ] `TODO` `getDepenses(siteId, filters?)` — liste avec filtres (categorie, statut, dateFrom/dateTo, vagueId, commandeId)
+- [ ] `TODO` `getDepenseById(id, siteId)` — détail avec relations (paiements, commande, vague, listeBesoins)
+- [ ] `TODO` `createDepense(siteId, userId, data)` — transaction, numéro auto `DEP-YYYY-NNN`
+- [ ] `TODO` `updateDepense(id, siteId, data)` — update partiel
+- [ ] `TODO` `deleteDepense(id, siteId)` — seulement si statut NON_PAYEE
+- [ ] `TODO` `ajouterPaiementDepense(siteId, depenseId, userId, data)` — même pattern que `ajouterPaiement()` de `factures.ts` (calcul montantPaye, mise à jour statut)
+
+**Critères d'acceptation :**
+- Pattern paiement partiel identique à Facture/Paiement (surpaiement refusé, auto-statut NON_PAYEE→PAYEE_PARTIELLEMENT→PAYEE)
+- R4 : opérations atomiques (transactions)
+- R8 : siteId dans toutes les queries
+- Pattern référence : `src/lib/queries/factures.ts`
+
+---
+
+### Story 16.4 — Auto-création Depense à réception Commande
+**Assigné à :** @developer
+**Dépend de :** Story 16.3
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [ ] `TODO` Modifier `recevoirCommande()` dans `src/lib/queries/commandes.ts`
+- [ ] `TODO` Dans la même `$transaction` : créer Depense (description="Commande {numero}", categorieDepense dérivée du produit dominant, montantTotal=commande.montantTotal, commandeId, statut=NON_PAYEE)
+- [ ] `TODO` Retourner la Depense créée dans la réponse
+
+**Critères d'acceptation :**
+- Atomique : réception + création dépense dans la même transaction
+- Pas de doublon : une commande ne génère qu'une seule dépense
+- Depense retournée dans la réponse de réception
+
+---
+
+### Story 16.5 — API Routes Dépenses
+**Assigné à :** @developer
+**Dépend de :** Story 16.3
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [ ] `TODO` `GET /api/depenses` — permission DEPENSES_VOIR, filtres query params
+- [ ] `TODO` `POST /api/depenses` — permission DEPENSES_CREER, validation body
+- [ ] `TODO` `GET /api/depenses/[id]` — permission DEPENSES_VOIR
+- [ ] `TODO` `PUT /api/depenses/[id]` — permission DEPENSES_CREER
+- [ ] `TODO` `DELETE /api/depenses/[id]` — permission DEPENSES_CREER, seulement si NON_PAYEE
+- [ ] `TODO` `POST /api/depenses/[id]/paiements` — permission DEPENSES_PAYER
+- [ ] `TODO` `POST /api/depenses/[id]/upload` — permission DEPENSES_CREER, upload facture S3 (infrastructure Sprint 15)
+
+**Critères d'acceptation :**
+- Permissions vérifiées sur chaque route
+- Validation des données entrantes
+- Error handling cohérent avec les routes existantes
+- R8 : siteId filtré sur toutes les routes
+- Pattern référence : `src/app/api/vagues/route.ts`
+
+---
+
+### Story 16.6 — UI Liste des dépenses
+**Assigné à :** @developer
+**Dépend de :** Story 16.5
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/depenses/page.tsx` (Server Component)
+- [ ] `TODO` Créer `src/components/depenses/depenses-list-client.tsx` (Client Component)
+- [ ] `TODO` Tabs par statut : Toutes | Non payées | Partiellement payées | Payées
+- [ ] `TODO` Filtre par catégorie (dropdown)
+- [ ] `TODO` Cartes mobile-first : numéro, description, catégorie badge, montants (total/payé), statut, date
+
+**Critères d'acceptation :**
+- Mobile 360px : cartes empilées, pas de tableaux
+- R6 : CSS variables du thème
+- Pattern référence : `src/components/vagues/vagues-list-client.tsx`
+
+---
+
+### Story 16.7 — UI Détail dépense + paiements
+**Assigné à :** @developer
+**Dépend de :** Story 16.6
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/depenses/[id]/page.tsx` (Server Component)
+- [ ] `TODO` Créer `src/components/depenses/depense-detail-client.tsx` (Client Component)
+- [ ] `TODO` Afficher infos dépense, lien commande/vague, historique paiements
+- [ ] `TODO` Barre de progression montantPaye/montantTotal
+- [ ] `TODO` Dialog "Ajouter un paiement" (même pattern que facture)
+- [ ] `TODO` Bouton upload facture (réutilise infrastructure Sprint 15)
+
+**Critères d'acceptation :**
+- R5 : DialogTrigger asChild
+- Pattern paiement partiel identique à la page facture
+- Mobile-first 360px
+
+---
+
+### Story 16.8 — UI Formulaire création dépense
+**Assigné à :** @developer
+**Dépend de :** Story 16.5
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/depenses/nouvelle/page.tsx`
+- [ ] `TODO` Créer `src/components/depenses/depense-form-client.tsx`
+- [ ] `TODO` Champs : description, categorieDepense (select), montantTotal, date, dateEcheance? (optionnel), vagueId? (select optionnel), notes? (textarea)
+- [ ] `TODO` Lien optionnel à une Commande LIVREE sans dépense associée
+- [ ] `TODO` Validation client + redirect après création
+
+**Critères d'acceptation :**
+- Mobile-first : champs larges, gros boutons
+- Validation client avant soumission
+- Redirect vers détail après création
+- Pattern référence : `src/components/releves/releve-form-client.tsx`
+
+---
+
+### Story 16.9 — Tests Sprint 16
+**Assigné à :** @tester
+**Dépend de :** Story 16.1 à 16.8
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [ ] `TODO` Tests unitaires : `ajouterPaiementDepense` (partiel, surpaiement refusé, auto-statut NON_PAYEE→PAYEE_PARTIELLEMENT→PAYEE)
+- [ ] `TODO` Tests unitaires : auto-création dépense dans `recevoirCommande` (commande sans dépense → dépense créée, commande avec dépense → pas de doublon)
+- [ ] `TODO` Tests API : tous les endpoints dépenses (GET, POST, PUT, DELETE, paiements, upload)
+- [ ] `TODO` Tests permissions : requêtes sans permissions → 403
+- [ ] `TODO` Non-régression : `npx vitest run` + `npm run build`
+- [ ] `TODO` Écrire rapport dans `docs/tests/test-sprint-16.md`
+
+**Critères d'acceptation :**
+- R9 : tous les tests passent, build OK
+- Aucune régression sur les fonctionnalités existantes
+- Rapport de test dans `docs/tests/`
+
+---
+
+### Story 16.10 — Review Sprint 16
+**Assigné à :** @code-reviewer
+**Dépend de :** Story 16.9
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [ ] `TODO` Checklist R1-R9 sur tout le code du sprint
+- [ ] `TODO` Vérifier permissions sur toutes les routes
+- [ ] `TODO` Vérifier siteId sur toutes les queries et routes (R8)
+- [ ] `TODO` Vérifier mobile-first (360px) sur les composants UI
+- [ ] `TODO` Vérifier pattern paiement partiel (identique à Facture/Paiement)
+- [ ] `TODO` Vérifier anti-doublon auto-création dépense
+- [ ] `TODO` Écrire `docs/reviews/review-sprint-16.md`
+
+**Critères d'acceptation :**
+- Toutes les règles R1-R9 respectées
+- Rapport de review dans `docs/reviews/`
+
+---
+
+## Sprint 17 — Besoins + Workflow
+
+**Objectif :** Ajouter la gestion des listes de besoins avec workflow de validation (SOUMISE→APPROUVEE→TRAITEE→CLOTUREE|REJETEE). Nouveaux modèles `ListeBesoins` et `LigneBesoin`, enum `StatutBesoins`. Traitement des besoins avec génération automatique de commandes et dépenses.
+
+---
+
+### Story 17.1 — Schéma Prisma (ListeBesoins + LigneBesoin)
+**Assigné à :** @db-specialist
+**Dépend de :** Sprint 16
+**Priorité :** Critique
+**Statut :** `FAIT`
+
+**Tâches :**
+- [ ] `TODO` Ajouter enum `StatutBesoins` : SOUMISE, APPROUVEE, TRAITEE, CLOTUREE, REJETEE
+- [ ] `TODO` Ajouter modèle `ListeBesoins` : id, numero (unique), titre, demandeurId (FK User), valideurId? (FK User), vagueId? (FK Vague), statut (default SOUMISE), montantEstime (default 0), montantReel?, notes?, siteId, lignes[], depenses[]
+- [ ] `TODO` Ajouter modèle `LigneBesoin` : id, listeBesoinsId (CASCADE), designation, produitId? (FK Produit), quantite, unite?, prixEstime (default 0), prixReel?, commandeId? (FK Commande)
+- [ ] `TODO` Ajouter index sur ListeBesoins (siteId, statut, demandeurId, vagueId)
+- [ ] `TODO` Ajouter relations : demandeur (User), valideur? (User), vague? (Vague), lignes[] (LigneBesoin), depenses[] (Depense)
+- [ ] `TODO` CASCADE delete : ListeBesoins → LigneBesoin
+- [ ] `TODO` Ajouter relation inverse listeBesoinsId sur Depense (déjà prévu Sprint 16)
+- [ ] `TODO` Créer migration `add_besoins` (manuelle SQL)
+- [ ] `TODO` Appliquer migration avec `npx prisma migrate deploy`
+- [ ] `TODO` Mettre à jour `prisma/seed.sql` : 3 listes de besoins (statuts variés) + 8 lignes de besoin
+- [ ] `TODO` Vérifier `npx prisma generate` + `npm run db:seed`
+
+**Critères d'acceptation :**
+- Migration appliquée sans erreur
+- R8 : siteId sur ListeBesoins (LigneBesoin hérite via la relation)
+- Cascade OK : suppression ListeBesoins → suppression lignes
+- Seed exécutable sur base vide
+
+---
+
+### Story 17.2 — Types TypeScript (ListeBesoins + LigneBesoin)
+**Assigné à :** @architect
+**Dépend de :** Story 17.1
+**Priorité :** Critique
+**Statut :** `FAIT`
+
+**Tâches :**
+- [ ] `TODO` Ajouter enum `StatutBesoins` dans `src/types/models.ts`
+- [ ] `TODO` Ajouter interfaces `ListeBesoins` et `LigneBesoin` dans `src/types/models.ts`
+- [ ] `TODO` Ajouter DTOs dans `src/types/api.ts` : `CreateListeBesoinsDTO`, `UpdateListeBesoinsDTO`, `ListeBesoinsFilters`, `TraiterLigneAction` (COMMANDE | LIBRE), `TraiterBesoinsDTO`, `CloturerBesoinsDTO`
+- [ ] `TODO` Mettre à jour barrel export dans `src/types/index.ts`
+
+**Critères d'acceptation :**
+- R3 : Prisma = TypeScript identiques
+- DTO `TraiterLigneAction` bien typé pour le choix par ligne (COMMANDE si produitId, LIBRE sinon)
+- Pas de `any`
+
+---
+
+### Story 17.3 — Queries CRUD + Workflow Besoins
+**Assigné à :** @developer
+**Dépend de :** Story 17.2
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/lib/queries/besoins.ts`
+- [ ] `TODO` `getListeBesoins(siteId, filters?)` — liste avec filtres (statut, demandeurId, vagueId)
+- [ ] `TODO` `getListeBesoinsById(id, siteId)` — détail avec relations (lignes, demandeur, valideur, vague, depenses, commandes)
+- [ ] `TODO` `createListeBesoins(siteId, userId, data)` — avec lignes, numéro auto `BES-YYYY-NNN`, auto-calcul montantEstime = SUM(quantite * prixEstime)
+- [ ] `TODO` `approuverBesoins(id, siteId, valideurId)` — transition SOUMISE → APPROUVEE
+- [ ] `TODO` `rejeterBesoins(id, siteId, valideurId, motif?)` — transition SOUMISE → REJETEE
+- [ ] `TODO` `traiterBesoins(id, siteId, userId, ligneActions)` — transition APPROUVEE → TRAITEE :
+  - Lignes COMMANDE (avec produitId) : grouper par fournisseur, générer Commande(s) BROUILLON, lier commandeId sur LigneBesoin
+  - Créer Depense liée à la ListeBesoins (montantEstime)
+  - Créer PaiementDepense (décaissement au demandeur)
+- [ ] `TODO` `cloturerBesoins(id, siteId, userId, lignesReelles)` — transition TRAITEE → CLOTUREE :
+  - Mettre à jour prixReel sur chaque ligne
+  - Calculer et mettre à jour montantReel sur la liste
+- [ ] `TODO` `deleteListeBesoins(id, siteId)` — seulement si statut SOUMISE
+
+**Critères d'acceptation :**
+- Transitions validées (rejet si transition invalide)
+- Groupement par fournisseur pour les commandes générées
+- R4 : toutes les opérations complexes dans des transactions
+- R8 : siteId dans toutes les queries
+
+---
+
+### Story 17.4 — API Routes Besoins
+**Assigné à :** @developer
+**Dépend de :** Story 17.3
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [ ] `TODO` `GET /api/besoins` — permission BESOINS_SOUMETTRE (voir ses propres) ou BESOINS_APPROUVER (voir tous)
+- [ ] `TODO` `POST /api/besoins` — permission BESOINS_SOUMETTRE
+- [ ] `TODO` `GET /api/besoins/[id]` — permission BESOINS_SOUMETTRE
+- [ ] `TODO` `PUT /api/besoins/[id]` — permission BESOINS_SOUMETTRE, seulement si SOUMISE
+- [ ] `TODO` `DELETE /api/besoins/[id]` — permission BESOINS_SOUMETTRE, seulement si SOUMISE
+- [ ] `TODO` `POST /api/besoins/[id]/approuver` — permission BESOINS_APPROUVER
+- [ ] `TODO` `POST /api/besoins/[id]/rejeter` — permission BESOINS_APPROUVER, body: motif?
+- [ ] `TODO` `POST /api/besoins/[id]/traiter` — permission BESOINS_TRAITER, body: actions par ligne
+- [ ] `TODO` `POST /api/besoins/[id]/cloturer` — permission BESOINS_TRAITER, body: montants réels par ligne
+
+**Critères d'acceptation :**
+- Permissions granulaires vérifiées sur chaque route
+- Error handling cohérent avec les routes existantes
+- Transitions invalides → 400 avec message clair
+- R8 : siteId filtré sur toutes les routes
+
+---
+
+### Story 17.5 — UI Liste des besoins
+**Assigné à :** @developer
+**Dépend de :** Story 17.4
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/besoins/page.tsx` (Server Component)
+- [ ] `TODO` Créer `src/components/besoins/besoins-list-client.tsx` (Client Component)
+- [ ] `TODO` Tabs par statut : Toutes | Soumises | Approuvées | Traitées | Clôturées | Rejetées
+- [ ] `TODO` Cartes mobile-first : numéro, titre, demandeur, montantEstime, statut badge, date, nombre de lignes
+
+**Critères d'acceptation :**
+- Mobile 360px : cartes empilées, pas de tableaux
+- Badges couleur par statut (SOUMISE=bleu, APPROUVEE=vert, TRAITEE=orange, CLOTUREE=gris, REJETEE=rouge)
+- Pattern référence : `src/components/vagues/vagues-list-client.tsx`
+
+---
+
+### Story 17.6 — UI Détail besoins + actions workflow
+**Assigné à :** @developer
+**Dépend de :** Story 17.5
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/besoins/[id]/page.tsx` (Server Component)
+- [ ] `TODO` Créer `src/components/besoins/besoins-detail-client.tsx` (Client Component)
+- [ ] `TODO` Header : numéro, titre, statut badge, demandeur, vague?, dates
+- [ ] `TODO` Liste des LigneBesoin en cartes : designation, quantité, prixEstime, prixReel?
+- [ ] `TODO` Boutons workflow selon statut + permissions :
+  - SOUMISE : "Approuver" / "Rejeter" (BESOINS_APPROUVER)
+  - APPROUVEE : "Traiter" → dialog traitement (BESOINS_TRAITER)
+  - TRAITEE : "Clôturer" → formulaire montants réels + upload factures
+- [ ] `TODO` Liens vers Commandes générées et Dépenses liées
+- [ ] `TODO` Créer `src/components/besoins/traitement-dialog.tsx` : choix par ligne (COMMANDE si produitId, sinon LIBRE)
+- [ ] `TODO` Créer `src/components/besoins/cloture-form.tsx` : input prixReel par ligne + upload factures
+
+**Critères d'acceptation :**
+- Boutons affichés uniquement selon transitions valides et permissions utilisateur
+- Dialog traitement : choix correct par ligne
+- R5 : DialogTrigger asChild
+- Mobile-first 360px
+
+---
+
+### Story 17.7 — UI Formulaire création besoin
+**Assigné à :** @developer
+**Dépend de :** Story 17.4
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/besoins/nouveau/page.tsx`
+- [ ] `TODO` Créer `src/components/besoins/besoins-form-client.tsx`
+- [ ] `TODO` Formulaire dynamique :
+  - Titre (required), vagueId? (select optionnel)
+  - Ajout dynamique de lignes : designation, produitId? (recherche produit), quantité, unité?, prixEstime
+  - Bouton "Ajouter une ligne" + bouton supprimer par ligne
+  - Calcul temps réel montantEstime = SUM(quantité × prixEstime)
+
+**Critères d'acceptation :**
+- Ajout/suppression dynamique de lignes
+- Calcul montantEstime en temps réel
+- Mobile-first : champs larges, gros boutons
+- Pattern référence : `src/components/releves/releve-form-client.tsx`
+
+---
+
+### Story 17.8 — Tests Sprint 17
+**Assigné à :** @tester
+**Dépend de :** Story 17.1 à 17.7
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [ ] `TODO` Tests workflow : transitions valides (SOUMISE→APPROUVEE, SOUMISE→REJETEE, APPROUVEE→TRAITEE, TRAITEE→CLOTUREE)
+- [ ] `TODO` Tests workflow : transitions invalides rejetées (REJETEE→APPROUVEE, CLOTUREE→TRAITEE, etc.)
+- [ ] `TODO` Tests `traiterBesoins` : génération Commande BROUILLON, création Dépense, groupement par fournisseur
+- [ ] `TODO` Tests `cloturerBesoins` : calcul montantReel correct
+- [ ] `TODO` Tests API : tous les endpoints besoins (CRUD + workflow)
+- [ ] `TODO` Tests permissions : requêtes sans permissions → 403
+- [ ] `TODO` Non-régression : `npx vitest run` + `npm run build`
+- [ ] `TODO` Écrire rapport dans `docs/tests/test-sprint-17.md`
+
+**Critères d'acceptation :**
+- R9 : tous les tests passent, build OK
+- Aucune régression sur les fonctionnalités existantes (dont Sprint 16)
+- Rapport de test dans `docs/tests/`
+
+---
+
+### Story 17.9 — Review Sprint 17
+**Assigné à :** @code-reviewer
+**Dépend de :** Story 17.8
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [ ] `TODO` Checklist R1-R9 sur tout le code du sprint
+- [ ] `TODO` Vérifier transitions workflow (pas de transition invalide possible)
+- [ ] `TODO` Vérifier permissions granulaires sur toutes les routes
+- [ ] `TODO` Vérifier groupement par fournisseur dans `traiterBesoins`
+- [ ] `TODO` Vérifier mobile-first (360px) sur les composants UI
+- [ ] `TODO` Écrire `docs/reviews/review-sprint-17.md`
+
+**Critères d'acceptation :**
+- Toutes les règles R1-R9 respectées
+- Workflow transitions sécurisées
+- Rapport de review dans `docs/reviews/`
+
+---
+
+## Sprint 18 — Récurrences + Dashboard financier étendu
+
+**Objectif :** Ajouter les dépenses récurrentes (templates auto-générés), intégrer les dépenses dans le dashboard financier avec anti-double-comptage, et ajouter la navigation vers Dépenses et Besoins.
+
+---
+
+### Story 18.1 — Schéma Prisma (DepenseRecurrente)
+**Assigné à :** @db-specialist
+**Dépend de :** Sprint 17
+**Priorité :** Critique
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Ajouter modèle `DepenseRecurrente` : id, description, categorieDepense (CategorieDepense), montantEstime, frequence (FrequenceRecurrence — enum déjà ajouté Sprint 16), jourDuMois (default 1), isActive (default true), derniereGeneration?, userId, siteId
+- [x] `FAIT` Ajouter relations Site, User
+- [x] `FAIT` Ajouter index sur DepenseRecurrente (siteId, isActive, frequence)
+- [x] `FAIT` Créer migration `add_depenses_recurrentes` (manuelle SQL)
+- [x] `FAIT` Appliquer migration avec `npx prisma migrate deploy`
+- [x] `FAIT` Mettre à jour `prisma/seed.sql` : 3 templates (LOYER mensuel, ELECTRICITE mensuel, SALAIRE mensuel)
+- [x] `FAIT` Vérifier `npx prisma generate` + `npm run db:seed`
+
+**Critères d'acceptation :**
+- Migration appliquée sans erreur
+- R8 : siteId sur DepenseRecurrente
+- jourDuMois contraint entre 1 et 28 (éviter problèmes fin de mois)
+- Seed exécutable sur base vide
+
+---
+
+### Story 18.2 — Types TypeScript (DepenseRecurrente)
+**Assigné à :** @architect
+**Dépend de :** Story 18.1
+**Priorité :** Critique
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Ajouter interface `DepenseRecurrente` dans `src/types/models.ts`
+- [x] `FAIT` Ajouter DTOs dans `src/types/api.ts` : `CreateDepenseRecurrenteDTO`, `UpdateDepenseRecurrenteDTO`
+- [x] `FAIT` Mettre à jour barrel export dans `src/types/index.ts`
+
+**Critères d'acceptation :**
+- R3 : Prisma = TypeScript identiques
+- Pas de `any`
+
+---
+
+### Story 18.3 — Queries DepenseRecurrente + auto-génération
+**Assigné à :** @developer
+**Dépend de :** Story 18.2
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Créer `src/lib/queries/depenses-recurrentes.ts`
+- [x] `FAIT` CRUD standard : `getDepensesRecurrentes(siteId)`, `getDepenseRecurrenteById(id, siteId)`, `createDepenseRecurrente(siteId, userId, data)`, `updateDepenseRecurrente(id, siteId, data)`, `deleteDepenseRecurrente(id, siteId)`
+- [x] `FAIT` `genererDepensesRecurrentes(siteId, userId)` :
+  - Trouver toutes les DepenseRecurrente actives du site
+  - Pour chaque : vérifier si génération due (fréquence + jourDuMois + derniereGeneration)
+  - [x] MENSUEL : due si derniereGeneration < début du mois courant
+  - [x] TRIMESTRIEL : due si derniereGeneration < début du trimestre courant
+  - [x] ANNUEL : due si derniereGeneration < début de l'année courante
+  - [x] Si due : créer Depense NON_PAYEE, mettre à jour derniereGeneration
+  - [x] Retourner liste des Dépenses générées
+
+**Critères d'acceptation :**
+- Logique MENSUEL/TRIMESTRIEL/ANNUEL correcte
+- Idempotent : pas de doublon si appelé plusieurs fois dans le même mois
+- R4 : transactions
+- R8 : siteId
+
+---
+
+### Story 18.4 — API Routes DepenseRecurrente
+**Assigné à :** @developer
+**Dépend de :** Story 18.3
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` `GET /api/depenses-recurrentes` — permission DEPENSES_VOIR
+- [x] `FAIT` `POST /api/depenses-recurrentes` — permission DEPENSES_CREER
+- [x] `FAIT` `GET /api/depenses-recurrentes/[id]` — permission DEPENSES_VOIR
+- [x] `FAIT` `PUT /api/depenses-recurrentes/[id]` — permission DEPENSES_CREER
+- [x] `FAIT` `DELETE /api/depenses-recurrentes/[id]` — permission DEPENSES_CREER
+- [x] `FAIT` `POST /api/depenses-recurrentes/generer` — permission DEPENSES_CREER, trigger génération manuelle
+- [x] `FAIT` Lazy generation : appeler `genererDepensesRecurrentes()` au chargement du dashboard financier
+
+**Critères d'acceptation :**
+- CRUD OK
+- Génération idempotente (pas de doublon)
+- R8 : siteId sur toutes les routes
+
+---
+
+### Story 18.5 — Intégration dashboard financier
+**Assigné à :** @developer
+**Dépend de :** Story 16.3, Story 18.3
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Modifier `getResumeFinancier()` dans `src/lib/queries/finances.ts` :
+  - [x] Ajouter `depensesTotales`, `depensesPayees`, `depensesImpayees`
+  - [x] Ajouter `depensesParCategorie: Record<CategorieDepense, number>`
+  - [x] `coutsTotaux` = coûts MouvementStock (existant) + Dépenses WHERE commandeId IS NULL (anti double-comptage)
+  - [x] Mettre à jour `margeBrute` avec les nouveaux coûts
+- [x] `FAIT` Modifier `getRentabiliteParVague()` : inclure Dépenses liées à chaque vague (vagueId)
+- [x] `FAIT` Modifier `getEvolutionFinanciere()` : inclure dépenses hors-commande dans les coûts mensuels
+- [x] `FAIT` Mettre à jour interface `ResumeFinancier` dans `src/types/`
+
+**Critères d'acceptation :**
+- Anti double-comptage : dépenses liées à une Commande NE sont PAS ajoutées par-dessus les coûts MouvementStock
+- Dépenses manuelles (sans commandeId) bien intégrées dans les coûts
+- Marge brute correcte avec les nouveaux coûts
+
+---
+
+### Story 18.6 — UI Templates récurrents
+**Assigné à :** @developer
+**Dépend de :** Story 18.4
+**Priorité :** Moyenne
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Créer `src/app/depenses/recurrentes/page.tsx` (Server Component)
+- [x] `FAIT` Créer `src/components/depenses/recurrentes-list-client.tsx` (Client Component)
+- [x] `FAIT` Cartes : description, catégorie, montant, fréquence, jourDuMois, toggle actif/inactif, dernière génération
+- [x] `FAIT` Bouton "Générer maintenant" (appel POST /api/depenses-recurrentes/generer)
+- [x] `FAIT` Formulaire création/édition récurrence (dialog ou page dédiée)
+
+**Critères d'acceptation :**
+- Toggle actif/inactif fonctionnel
+- Génération manuelle avec feedback (nombre de dépenses générées)
+- Mobile-first 360px
+
+---
+
+### Story 18.7 — UI Dashboard financier étendu
+**Assigné à :** @developer
+**Dépend de :** Story 18.5
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Modifier `src/components/finances/finances-dashboard-client.tsx`
+- [x] `FAIT` Ajouter section "Dépenses" : total dépenses, payées vs impayées
+- [x] `FAIT` Ajouter graphique répartition par catégorie (barres de progression, top 5)
+- [x] `FAIT` Mettre à jour affichage marge brute avec nouveaux coûts
+- [x] `FAIT` Ajouter lien vers la page dépenses (/depenses)
+
+**Critères d'acceptation :**
+- Anti double-comptage visible dans les chiffres affichés
+- Graphiques responsive mobile
+- R6 : CSS variables du thème
+
+---
+
+### Story 18.8 — Navigation
+**Assigné à :** @developer
+**Dépend de :** Story 16.6, Story 17.5, Story 18.6
+**Priorité :** Moyenne
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Modifier `src/components/layout/bottom-nav.tsx` : ajouter Dépenses et Besoins dans groupe Ventes
+- [x] `FAIT` Modifier `src/components/layout/sidebar.tsx` : ajouter Dépenses, Recurrentes et Besoins dans module Ventes
+- [x] `FAIT` Ajouter permissions DEPENSES_VOIR, BESOINS_SOUMETTRE dans `ITEM_VIEW_PERMISSIONS`
+- [x] `FAIT` Navigation conditionnelle selon permissions utilisateur
+
+**Critères d'acceptation :**
+- Navigation conditionnelle : items visibles uniquement si l'utilisateur a les permissions
+- Cohérence entre bottom-nav (mobile) et sidebar (desktop)
+
+---
+
+### Story 18.9 — Tests Sprint 18
+**Assigné à :** @tester
+**Dépend de :** Story 18.1 à 18.8
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Tests `genererDepensesRecurrentes()` : due/not due, idempotent, toutes fréquences (MENSUEL, TRIMESTRIEL, ANNUEL)
+- [x] `FAIT` Tests `getResumeFinancier()` mis à jour : anti double-comptage (dépense avec commandeId vs sans)
+- [x] `FAIT` Tests `getRentabiliteParVague()` : dépenses liées à la vague incluses
+- [x] `FAIT` Tests API : tous les endpoints dépenses récurrentes
+- [x] `FAIT` Non-régression finances existantes (revenus, factures, paiements inchangés)
+- [x] `FAIT` Non-régression : `npx vitest run` (1175 passed) + `npm run build` (OK)
+- [x] `FAIT` Écrire rapport dans `docs/tests/test-sprint-18.md`
+
+**Critères d'acceptation :**
+- R9 : tous les tests passent, build OK
+- Non-régression OK (finances existantes inchangées)
+- Rapport de test dans `docs/tests/`
+
+---
+
+### Story 18.10 — Review Sprint 18
+**Assigné à :** @code-reviewer
+**Dépend de :** Story 18.9
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Checklist R1-R9 sur tout le code du sprint
+- [x] `FAIT` Vérifier anti double-comptage dans les calculs financiers
+- [x] `FAIT` Vérifier permissions sur toutes les routes
+- [x] `FAIT` Vérifier navigation conditionnelle
+- [x] `FAIT` Vérifier mobile-first (360px) sur les composants UI
+- [x] `FAIT` Écrire `docs/reviews/review-sprint-18.md`
+
+**Critères d'acceptation :**
+- Toutes les règles R1-R9 respectées
+- Anti double-comptage validé
+- Rapport de review dans `docs/reviews/`

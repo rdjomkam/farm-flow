@@ -1,7 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { TrendingUp, TrendingDown, DollarSign, AlertCircle } from "lucide-react";
+import Link from "next/link";
+import { TrendingUp, TrendingDown, DollarSign, AlertCircle, Receipt } from "lucide-react";
 
 // Lazy loading Recharts — ssr: false obligatoire (no SSR, window/document deps)
 const ResponsiveContainer = dynamic(
@@ -163,6 +164,76 @@ export function FinancesDashboardClient({
           iconBgColor="bg-warning/10"
         />
       </div>
+
+      {/* Section Depenses (Sprint 18) */}
+      {resume.depensesTotales > 0 && (
+        <Card>
+          <CardHeader className="pb-0">
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Receipt className="h-4 w-4" />
+                Depenses (hors commandes)
+              </CardTitle>
+              <Link
+                href="/depenses"
+                className="text-xs text-primary hover:underline"
+              >
+                Voir tout
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Total</p>
+                <p className="text-lg font-bold">{formatCompact(resume.depensesTotales)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Payees</p>
+                <p className="text-lg font-bold text-success">{formatCompact(resume.depensesPayees)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Impayees</p>
+                <p className="text-lg font-bold text-warning">{formatCompact(resume.depensesImpayees)}</p>
+              </div>
+            </div>
+
+            {/* Repartition par categorie */}
+            {Object.keys(resume.depensesParCategorie).length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs text-muted-foreground mb-2">Repartition par categorie</p>
+                <div className="flex flex-col gap-1.5">
+                  {Object.entries(resume.depensesParCategorie)
+                    .sort(([, a], [, b]) => (b as number) - (a as number))
+                    .slice(0, 5)
+                    .map(([cat, montant]) => {
+                      const pct =
+                        resume.depensesTotales > 0
+                          ? Math.round(((montant as number) / resume.depensesTotales) * 100)
+                          : 0;
+                      return (
+                        <div key={cat} className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground w-24 truncate shrink-0">
+                            {cat}
+                          </span>
+                          <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-primary"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-muted-foreground w-10 text-right shrink-0">
+                            {pct}%
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Graphique evolution */}
       <Card>

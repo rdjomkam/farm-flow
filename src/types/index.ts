@@ -32,6 +32,12 @@ export {
   TypeActivite,
   StatutActivite,
   Recurrence,
+  // Sprint 16 — Depenses
+  CategorieDepense,
+  StatutDepense,
+  FrequenceRecurrence,
+  // Sprint 17 — Besoins
+  StatutBesoins,
 } from "./models";
 export type {
   Site,
@@ -80,6 +86,18 @@ export type {
   NotificationWithRelations,
   Activite,
   ActiviteWithRelations,
+  // Sprint 16 — Depenses
+  Depense,
+  DepenseWithRelations,
+  PaiementDepense,
+  // Sprint 17 — Besoins
+  ListeBesoins,
+  ListeBesoinsWithRelations,
+  LigneBesoin,
+  LigneBesoinWithRelations,
+  // Sprint 18 — Depenses Recurrentes
+  DepenseRecurrente,
+  DepenseRecurrenteWithRelations,
 } from "./models";
 
 // Types authentification et multi-tenancy (DTOs, session, contexte)
@@ -198,6 +216,39 @@ export type {
 export { ACTIVITE_RELEVE_TYPE_MAP } from "./api";
 // Sprint 14 — Completion types
 export { RELEVE_COMPATIBLE_TYPES } from "./api";
+// Sprint 15 — Upload Facture sur Commande
+export type { UploadFactureCommandeDTO, FactureCommandeResponse } from "./api";
+// Sprint 16 — Depenses
+export type {
+  CreateDepenseDTO,
+  UpdateDepenseDTO,
+  DepenseFilters,
+  CreatePaiementDepenseDTO,
+  DepenseListResponse,
+  DepenseDetailResponse,
+  PaiementDepenseResponse,
+} from "./api";
+// Sprint 17 — Besoins
+export type {
+  CreateLigneBesoinDTO,
+  CreateListeBesoinsDTO,
+  UpdateListeBesoinsDTO,
+  ListeBesoinsFilters,
+  TraiterLigneAction,
+  TraiterLigneDTO,
+  TraiterBesoinsDTO,
+  ClotureLigneDTO,
+  CloturerBesoinsDTO,
+  RejeterBesoinsDTO,
+  ListeBesoinsListResponse,
+  ListeBesoinsDetailResponse,
+} from "./api";
+// Sprint 18 — Depenses Recurrentes
+export type {
+  CreateDepenseRecurrenteDTO,
+  UpdateDepenseRecurrenteDTO,
+  GenererDepensesRecurrentesResponse,
+} from "./api";
 
 // Types pour les calculs et indicateurs
 export type {

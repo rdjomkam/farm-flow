@@ -99,6 +99,14 @@ export const PERMISSION_GROUPS = {
   planning: [Permission.PLANNING_VOIR, Permission.PLANNING_GERER],
   finances: [Permission.FINANCES_VOIR, Permission.FINANCES_GERER],
   alertes: [Permission.ALERTES_VOIR, Permission.ALERTES_CONFIGURER],
+  depenses: [
+    Permission.DEPENSES_VOIR,
+    Permission.DEPENSES_CREER,
+    Permission.DEPENSES_PAYER,
+    Permission.BESOINS_SOUMETTRE,
+    Permission.BESOINS_APPROUVER,
+    Permission.BESOINS_TRAITER,
+  ],
   general: [
     Permission.DASHBOARD_VOIR,
     Permission.EXPORT_DONNEES,
@@ -131,6 +139,10 @@ export const ITEM_VIEW_PERMISSIONS: Record<string, Permission> = {
   "/clients":            Permission.CLIENTS_VOIR,
   "/factures":           Permission.FACTURES_VOIR,
   "/finances":           Permission.FINANCES_VOIR,
+  // Depenses & Besoins (Sprint 18)
+  "/depenses":               Permission.DEPENSES_VOIR,
+  "/depenses/recurrentes":   Permission.DEPENSES_VOIR,
+  "/besoins":                Permission.BESOINS_SOUMETTRE,
   // Analyse & Pilotage (gate: DASHBOARD_VOIR)
   "/planning":           Permission.PLANNING_VOIR,
   "/planning/nouvelle":  Permission.PLANNING_GERER,

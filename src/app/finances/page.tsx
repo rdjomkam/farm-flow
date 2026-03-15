@@ -9,6 +9,7 @@ import {
   getRentabiliteParVague,
   getEvolutionFinanciere,
   getTopClients,
+  genererDepensesRecurrentes,
 } from "@/lib/queries";
 import { Permission } from "@/types";
 
@@ -21,6 +22,10 @@ export default async function FinancesPage() {
   if (!permissions) return <AccessDenied />;
 
   const siteId = session.activeSiteId;
+
+  // Lazy generation: trigger recurring expenses before loading financial data.
+  // Errors are silenced — generation failure must not break the dashboard.
+  await genererDepensesRecurrentes(siteId, session.userId).catch(() => null);
 
   const [resume, parVague, evolution, topClients] = await Promise.all([
     getResumeFinancier(siteId),

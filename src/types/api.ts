@@ -11,14 +11,18 @@
  */
 
 import {
+  CategorieDepense,
   CauseMortalite,
   CategorieProduit,
+  FrequenceRecurrence,
   MethodeComptage,
   ModePaiement,
   Recurrence,
   StatutActivite,
   StatutAlerte,
+  StatutBesoins,
   StatutCommande,
+  StatutDepense,
   StatutFacture,
   StatutLotAlevins,
   StatutPonte,
@@ -36,12 +40,18 @@ import type {
   Bac,
   Client,
   Commande,
+  Depense,
   Facture,
   Fournisseur,
   LigneCommande,
+  LigneBesoin,
+  LigneBesoinWithRelations,
+  ListeBesoins,
+  ListeBesoinsWithRelations,
   LotAlevins,
   MouvementStock,
   Paiement,
+  PaiementDepense,
   Ponte,
   Produit,
   Releve,
@@ -949,3 +959,234 @@ export const ACTIVITE_RELEVE_TYPE_MAP: Partial<Record<TypeActivite, TypeReleve>>
   [TypeActivite.QUALITE_EAU]: TypeReleve.QUALITE_EAU,
   [TypeActivite.COMPTAGE]: TypeReleve.COMPTAGE,
 };
+
+// ---------------------------------------------------------------------------
+// Sprint 15 — Upload Facture sur Commande
+// ---------------------------------------------------------------------------
+
+/**
+ * DTO pour uploader une facture fournisseur sur une commande existante.
+ * La facture est transmise via FormData (champ "file").
+ */
+export interface UploadFactureCommandeDTO {
+  /** ID de la commande a laquelle rattacher la facture */
+  commandeId: string;
+  /** Fichier facture (PDF, JPG, PNG — max 10 Mo) */
+  file: File;
+}
+
+/**
+ * Reponse apres upload ou recuperation de facture.
+ * Retourne une URL presignee (expire apres 1h).
+ */
+export interface FactureCommandeResponse {
+  /** URL presignee pour acceder au fichier (expire apres 1h) */
+  url: string;
+  /** Nom original du fichier */
+  fileName: string;
+}
+
+// ---------------------------------------------------------------------------
+// Sprint 16 — Depenses
+// ---------------------------------------------------------------------------
+
+/** DTO pour creer une depense */
+export interface CreateDepenseDTO {
+  /** Description de la depense */
+  description: string;
+  /** Categorie operationnelle */
+  categorieDepense: CategorieDepense;
+  /** Montant total en FCFA */
+  montantTotal: number;
+  /** Date de la depense (ISO 8601) */
+  date: string;
+  /** Date d'echeance de paiement (ISO 8601, optionnel) */
+  dateEcheance?: string;
+  /** Vague associee (optionnel) */
+  vagueId?: string;
+  /** Commande d'origine (optionnel, generalement rempli automatiquement) */
+  commandeId?: string;
+  /** Notes libres (optionnel) */
+  notes?: string;
+}
+
+/** DTO pour modifier une depense (champs tous optionnels) */
+export interface UpdateDepenseDTO {
+  description?: string;
+  categorieDepense?: CategorieDepense;
+  montantTotal?: number;
+  date?: string;
+  dateEcheance?: string | null;
+  vagueId?: string | null;
+  notes?: string | null;
+}
+
+/** Filtres pour lister les depenses */
+export interface DepenseFilters {
+  categorieDepense?: CategorieDepense;
+  statut?: StatutDepense;
+  dateFrom?: string;
+  dateTo?: string;
+  vagueId?: string;
+  commandeId?: string;
+}
+
+/** DTO pour creer un paiement sur une depense */
+export interface CreatePaiementDepenseDTO {
+  /** Montant du paiement en FCFA */
+  montant: number;
+  /** Mode de paiement */
+  mode: ModePaiement;
+  /** Reference de transaction (optionnel) */
+  reference?: string;
+}
+
+/** Reponse liste des depenses */
+export interface DepenseListResponse {
+  depenses: Depense[];
+  total: number;
+}
+
+/** Reponse detaillee d'une depense avec ses paiements */
+export interface DepenseDetailResponse {
+  depense: Depense;
+  paiements: PaiementDepense[];
+}
+
+/** Reponse creation d'un paiement depense */
+export interface PaiementDepenseResponse {
+  paiement: PaiementDepense;
+  /** Nouveau statut de la depense apres paiement */
+  statut: StatutDepense;
+  /** Nouveau montantPaye apres paiement */
+  montantPaye: number;
+}
+
+// ---------------------------------------------------------------------------
+// Sprint 17 — Besoins
+// ---------------------------------------------------------------------------
+
+/** DTO pour creer une ligne de besoin */
+export interface CreateLigneBesoinDTO {
+  /** Designation libre de l'article */
+  designation: string;
+  /** Produit en stock lie (optionnel) */
+  produitId?: string;
+  /** Quantite demandee */
+  quantite: number;
+  /** Unite libre (optionnel si produit avec unite definie) */
+  unite?: string;
+  /** Prix unitaire estime en FCFA */
+  prixEstime: number;
+}
+
+/** DTO pour creer une liste de besoins */
+export interface CreateListeBesoinsDTO {
+  /** Intitule de la demande */
+  titre: string;
+  /** Vague associee (optionnel) */
+  vagueId?: string;
+  /** Lignes de besoin */
+  lignes: CreateLigneBesoinDTO[];
+  /** Notes libres (optionnel) */
+  notes?: string;
+}
+
+/** DTO pour modifier une liste de besoins (seulement si SOUMISE) */
+export interface UpdateListeBesoinsDTO {
+  titre?: string;
+  vagueId?: string | null;
+  notes?: string | null;
+  lignes?: CreateLigneBesoinDTO[];
+}
+
+/** Filtres pour lister les listes de besoins */
+export interface ListeBesoinsFilters {
+  statut?: StatutBesoins;
+  demandeurId?: string;
+  vagueId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+/** Choix de traitement pour une ligne (COMMANDE = via commande fournisseur, LIBRE = achat direct) */
+export type TraiterLigneAction = "COMMANDE" | "LIBRE";
+
+/** Action de traitement pour une ligne de besoin */
+export interface TraiterLigneDTO {
+  /** ID de la ligne de besoin */
+  ligneBesoinId: string;
+  /** Action choisie pour cette ligne */
+  action: TraiterLigneAction;
+}
+
+/** DTO pour traiter une liste de besoins (APPROUVEE → TRAITEE) */
+export interface TraiterBesoinsDTO {
+  /** Actions choisies par ligne */
+  ligneActions: TraiterLigneDTO[];
+  /** Fournisseur a utiliser pour les lignes COMMANDE (si pas de produitId, utiliser ce fournisseur) */
+  fournisseurId?: string;
+}
+
+/** Ligne avec son prix reel lors de la cloture */
+export interface ClotureLigneDTO {
+  /** ID de la ligne de besoin */
+  ligneBesoinId: string;
+  /** Prix reel par unite en FCFA */
+  prixReel: number;
+}
+
+/** DTO pour cloturer une liste de besoins (TRAITEE → CLOTUREE) */
+export interface CloturerBesoinsDTO {
+  /** Prix reels par ligne */
+  lignesReelles: ClotureLigneDTO[];
+}
+
+/** DTO pour rejeter une liste de besoins (SOUMISE → REJETEE) */
+export interface RejeterBesoinsDTO {
+  /** Motif de rejet (optionnel) */
+  motif?: string;
+}
+
+/** Reponse liste des listes de besoins */
+export interface ListeBesoinsListResponse {
+  listesBesoins: ListeBesoinsWithRelations[];
+  total: number;
+}
+
+/** Reponse detaillee d'une liste de besoins */
+export interface ListeBesoinsDetailResponse {
+  listeBesoins: ListeBesoinsWithRelations;
+}
+
+// Re-export types used in Besoins context
+export type { LigneBesoin, LigneBesoinWithRelations, ListeBesoins, ListeBesoinsWithRelations };
+
+// Sprint 18 — Depenses Recurrentes
+
+/** DTO pour creer un template de depense recurrente */
+export interface CreateDepenseRecurrenteDTO {
+  description: string;
+  categorieDepense: CategorieDepense;
+  montantEstime: number;
+  frequence: FrequenceRecurrence;
+  /** Jour du mois (1-28, defaut 1) */
+  jourDuMois?: number;
+  isActive?: boolean;
+}
+
+/** DTO pour modifier un template de depense recurrente */
+export interface UpdateDepenseRecurrenteDTO {
+  description?: string;
+  categorieDepense?: CategorieDepense;
+  montantEstime?: number;
+  frequence?: FrequenceRecurrence;
+  jourDuMois?: number;
+  isActive?: boolean;
+}
+
+/** Reponse apres generation des depenses recurrentes */
+export interface GenererDepensesRecurrentesResponse {
+  generated: number;
+  depenses: { id: string; numero: string; description: string; montantTotal: number }[];
+}

@@ -28,6 +28,9 @@ import {
   ClipboardCheck,
   Settings,
   ChevronDown,
+  Receipt,
+  ClipboardList,
+  RefreshCw,
 } from "lucide-react";
 import { SiteSelector } from "./site-selector";
 import { NotificationBell } from "./notification-bell";
@@ -85,6 +88,9 @@ const modules: { label: string; icon: React.ComponentType<{ className?: string }
       { href: "/ventes", label: "Ventes", icon: Banknote },
       { href: "/factures", label: "Factures", icon: FileText },
       { href: "/finances", label: "Finances", icon: Wallet },
+      { href: "/depenses", label: "Depenses", icon: Receipt },
+      { href: "/depenses/recurrentes", label: "Recurrentes", icon: RefreshCw },
+      { href: "/besoins", label: "Besoins", icon: ClipboardList },
     ],
   },
   {

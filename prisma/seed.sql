@@ -8,6 +8,11 @@ DELETE FROM "Session";
 DELETE FROM "Activite";
 DELETE FROM "Notification";
 DELETE FROM "ConfigAlerte";
+DELETE FROM "PaiementDepense";
+DELETE FROM "LigneBesoin";
+DELETE FROM "DepenseRecurrente";
+DELETE FROM "Depense";
+DELETE FROM "ListeBesoins";
 DELETE FROM "Paiement";
 DELETE FROM "Facture";
 DELETE FROM "Vente";
@@ -262,10 +267,10 @@ VALUES
 -- Commandes (2 : 1 livree, 1 envoyee)
 -- ──────────────────────────────────────────
 
-INSERT INTO "Commande" (id, numero, "fournisseurId", statut, "dateCommande", "dateLivraison", "montantTotal", "userId", "siteId", "createdAt", "updatedAt")
+INSERT INTO "Commande" (id, numero, "fournisseurId", statut, "dateCommande", "dateLivraison", "montantTotal", "factureUrl", "userId", "siteId", "createdAt", "updatedAt")
 VALUES
-  ('cmd_01', 'CMD-2026-001', 'fourn_01', 'LIVREE', '2026-01-10', '2026-01-14', 157500, 'user_admin', 'site_01', NOW(), NOW()),
-  ('cmd_02', 'CMD-2026-002', 'fourn_02', 'ENVOYEE', '2026-02-20', NULL, 11250, 'user_gerant', 'site_01', NOW(), NOW());
+  ('cmd_01', 'CMD-2026-001', 'fourn_01', 'LIVREE', '2026-01-10', '2026-01-14', 157500, 'https://storage.hetzner.com/dkfarm-dev/factures/cmd_01/1736870400000-facture-CMD-2026-001.pdf', 'user_admin', 'site_01', NOW(), NOW()),
+  ('cmd_02', 'CMD-2026-002', 'fourn_02', 'ENVOYEE', '2026-02-20', NULL, 11250, NULL, 'user_gerant', 'site_01', NOW(), NOW());
 
 -- ──────────────────────────────────────────
 -- LignesCommande (4 lignes sur 2 commandes)
@@ -749,5 +754,231 @@ VALUES
     '2026-01-19 16:00:00',
     '2026-01-20 17:30:00'
   );
+
+-- ──────────────────────────────────────────────────────────────────────────────
+-- Sprint 16 — Dépenses (5 dépenses + 4 paiements)
+-- ──────────────────────────────────────────────────────────────────────────────
+
+-- 5 dépenses variées (catégories et statuts différents)
+INSERT INTO "Depense" (
+  "id", "numero", "description", "categorieDepense",
+  "montantTotal", "montantPaye", "statut",
+  "date", "dateEcheance", "factureUrl", "notes",
+  "commandeId", "vagueId", "userId", "siteId",
+  "createdAt", "updatedAt"
+) VALUES
+  -- dep_01: ALIMENT — auto-créée depuis cmd_01 (PAYEE complète)
+  (
+    'dep_01', 'DEP-2026-001',
+    'Commande CMD-2026-001',
+    'ALIMENT',
+    87500.0, 87500.0, 'PAYEE',
+    '2026-02-01 00:00:00', NULL, NULL,
+    'Aliment commercial Coppens — reçu avec commande',
+    'cmd_01', NULL,
+    'user_admin', 'site_01',
+    NOW(), NOW()
+  ),
+  -- dep_02: ELECTRICITE — NON_PAYEE, avec écheance
+  (
+    'dep_02', 'DEP-2026-002',
+    'Facture electricite — Fevrier 2026',
+    'ELECTRICITE',
+    45000.0, 0.0, 'NON_PAYEE',
+    '2026-02-05 00:00:00', '2026-02-28 00:00:00', NULL,
+    'Consommation des pompes et éclairage de la ferme',
+    NULL, NULL,
+    'user_admin', 'site_01',
+    NOW(), NOW()
+  ),
+  -- dep_03: SALAIRE — PAYEE_PARTIELLEMENT
+  (
+    'dep_03', 'DEP-2026-003',
+    'Salaire technicien — Mars 2026',
+    'SALAIRE',
+    120000.0, 60000.0, 'PAYEE_PARTIELLEMENT',
+    '2026-03-01 00:00:00', '2026-03-31 00:00:00', NULL,
+    'Paiement en deux tranches convenu avec le technicien',
+    NULL, NULL,
+    'user_admin', 'site_01',
+    NOW(), NOW()
+  ),
+  -- dep_04: REPARATION — PAYEE_PARTIELLEMENT (50%), liée à vague_01
+  (
+    'dep_04', 'DEP-2026-004',
+    'Reparation pompe bac 2 — Vague 2026-01',
+    'REPARATION',
+    25000.0, 12500.0, 'PAYEE_PARTIELLEMENT',
+    '2026-02-15 00:00:00', '2026-03-15 00:00:00', NULL,
+    'Remplacement joint et filtre',
+    NULL, 'vague_01',
+    'user_gerant', 'site_01',
+    NOW(), NOW()
+  ),
+  -- dep_05: LOYER — PAYEE complète
+  (
+    'dep_05', 'DEP-2026-005',
+    'Loyer terrain ferme — Fevrier 2026',
+    'LOYER',
+    80000.0, 80000.0, 'PAYEE',
+    '2026-02-01 00:00:00', '2026-02-05 00:00:00', NULL,
+    NULL,
+    NULL, NULL,
+    'user_admin', 'site_01',
+    NOW(), NOW()
+  );
+
+-- 4 paiements dépense
+INSERT INTO "PaiementDepense" (
+  "id", "depenseId", "montant", "mode", "reference",
+  "date", "userId", "siteId", "createdAt"
+) VALUES
+  -- dep_01 — paiement total (PAYEE)
+  (
+    'pdep_01', 'dep_01', 87500.0, 'MOBILE_MONEY', 'MOMO-2026-0201',
+    '2026-02-01 12:00:00', 'user_admin', 'site_01', NOW()
+  ),
+  -- dep_03 — premiere tranche (PAYEE_PARTIELLEMENT)
+  (
+    'pdep_02', 'dep_03', 60000.0, 'ESPECES', NULL,
+    '2026-03-05 09:00:00', 'user_admin', 'site_01', NOW()
+  ),
+  -- dep_05 — paiement total (PAYEE)
+  (
+    'pdep_03', 'dep_05', 80000.0, 'VIREMENT', 'VIR-2026-0201',
+    '2026-02-01 10:00:00', 'user_admin', 'site_01', NOW()
+  ),
+  -- dep_04 — acompte versé (50%)
+  (
+    'pdep_04', 'dep_04', 12500.0, 'ESPECES', NULL,
+    '2026-02-20 10:00:00', 'user_gerant', 'site_01', NOW()
+  );
+
+-- ──────────────────────────────────────────
+-- ListeBesoins (3 listes — statuts variés) + LigneBesoin (8 lignes)
+-- ──────────────────────────────────────────
+
+INSERT INTO "ListeBesoins" (
+  "id", "numero", "titre",
+  "demandeurId", "valideurId", "vagueId",
+  "statut", "montantEstime", "montantReel", "motifRejet", "notes",
+  "siteId", "createdAt", "updatedAt"
+) VALUES
+  -- bes_01: SOUMISE — en attente d'approbation
+  (
+    'bes_01', 'BES-2026-001',
+    'Besoins alimentation vague Mars 2026',
+    'user_gerant', NULL, 'vague_01',
+    'SOUMISE', 95000.0, NULL, NULL,
+    'Besoins pour le prochain cycle d''alimentation',
+    'site_01', NOW(), NOW()
+  ),
+  -- bes_02: APPROUVEE — validee, en attente de traitement
+  (
+    'bes_02', 'BES-2026-002',
+    'Equipements entretien bacs',
+    'user_gerant', 'user_admin', NULL,
+    'APPROUVEE', 45000.0, NULL, NULL,
+    'Materiel d''entretien prioritaire',
+    'site_01', NOW(), NOW()
+  ),
+  -- bes_03: CLOTUREE — completement traitee
+  (
+    'bes_03', 'BES-2026-003',
+    'Intrants traitement preventif',
+    'user_gerant', 'user_admin', 'vague_01',
+    'CLOTUREE', 30000.0, 28500.0, NULL,
+    'Traitement preventif realise en fevrier',
+    'site_01', NOW(), NOW()
+  );
+
+-- 8 lignes de besoin (réparties sur les 3 listes)
+INSERT INTO "LigneBesoin" (
+  "id", "listeBesoinsId",
+  "designation", "produitId", "quantite", "unite",
+  "prixEstime", "prixReel", "commandeId",
+  "createdAt"
+) VALUES
+  -- bes_01 (SOUMISE) — 3 lignes
+  (
+    'lb_01', 'bes_01',
+    'Aliment poisson granulés 3mm', 'prod_01',
+    50.0, NULL,
+    1200.0, NULL, NULL,
+    NOW()
+  ),
+  (
+    'lb_02', 'bes_01',
+    'Aliment poisson granulés 5mm', 'prod_02',
+    30.0, NULL,
+    1100.0, NULL, NULL,
+    NOW()
+  ),
+  (
+    'lb_03', 'bes_01',
+    'Vitamines et supplement', NULL,
+    5.0, 'flacons',
+    2000.0, NULL, NULL,
+    NOW()
+  ),
+  -- bes_02 (APPROUVEE) — 3 lignes
+  (
+    'lb_04', 'bes_02',
+    'Filet de protection bacs', NULL,
+    2.0, 'rouleaux',
+    8000.0, NULL, NULL,
+    NOW()
+  ),
+  (
+    'lb_05', 'bes_02',
+    'Tuyaux PVC 20mm', NULL,
+    10.0, 'metres',
+    500.0, NULL, NULL,
+    NOW()
+  ),
+  (
+    'lb_06', 'bes_02',
+    'Produit entretien filtres', 'prod_04',
+    3.0, NULL,
+    6000.0, NULL, NULL,
+    NOW()
+  ),
+  -- bes_03 (CLOTUREE) — 2 lignes
+  (
+    'lb_07', 'bes_03',
+    'Sel marin traitement eau', NULL,
+    20.0, 'kg',
+    600.0, 570.0, NULL,
+    NOW()
+  ),
+  (
+    'lb_08', 'bes_03',
+    'Antibiotique preventif', NULL,
+    2.0, 'boites',
+    9000.0, 8430.0, NULL,
+    NOW()
+  );
+
+-- ──────────────────────────────────────────
+-- DepenseRecurrente (3 templates — Sprint 18)
+-- ──────────────────────────────────────────
+
+INSERT INTO "DepenseRecurrente" (
+  id, description, "categorieDepense", "montantEstime", frequence,
+  "jourDuMois", "isActive", "derniereGeneration",
+  "userId", "siteId", "createdAt", "updatedAt"
+) VALUES
+  -- rec_01: Loyer mensuel — actif, derniereGeneration = mois precedent
+  ('rec_01', 'Loyer atelier pisciculture', 'LOYER', 150000, 'MENSUEL', 5, true,
+   '2026-02-05 00:00:00'::timestamp, 'user_admin', 'site_01',
+   NOW(), NOW()),
+  -- rec_02: Electricite mensuelle — actif, jamais generee
+  ('rec_02', 'Facture electricite mensuelle', 'ELECTRICITE', 35000, 'MENSUEL', 10, true,
+   NULL, 'user_admin', 'site_01',
+   NOW(), NOW()),
+  -- rec_03: Salaire mensuel — inactif
+  ('rec_03', 'Salaire employe pisciculture', 'SALAIRE', 80000, 'MENSUEL', 28, false,
+   NULL, 'user_admin', 'site_01',
+   NOW(), NOW());
 
 COMMIT;

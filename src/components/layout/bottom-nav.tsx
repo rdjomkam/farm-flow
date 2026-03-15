@@ -24,6 +24,8 @@ import {
   Calendar,
   Bell,
   ClipboardCheck,
+  Receipt,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Permission } from "@/types";
@@ -71,6 +73,8 @@ const ventesItems: NavItem[] = [
   { href: "/ventes", label: "Ventes", icon: Banknote },
   { href: "/factures", label: "Factures", icon: FileText },
   { href: "/finances", label: "Finances", icon: Wallet },
+  { href: "/depenses", label: "Depenses", icon: Receipt },
+  { href: "/besoins", label: "Besoins", icon: ClipboardList },
 ];
 
 const pilotageItems: NavItem[] = [
@@ -95,7 +99,9 @@ function getModuleForPath(pathname: string): string | null {
     pathname.startsWith("/ventes") ||
     pathname.startsWith("/clients") ||
     pathname.startsWith("/factures") ||
-    pathname.startsWith("/finances")
+    pathname.startsWith("/finances") ||
+    pathname.startsWith("/depenses") ||
+    pathname.startsWith("/besoins")
   ) return "Ventes";
   if (
     pathname === "/analytics" ||
@@ -127,7 +133,9 @@ export function BottomNav({ permissions }: { permissions: Permission[] }) {
     pathname.startsWith("/ventes") ||
     pathname.startsWith("/clients") ||
     pathname.startsWith("/factures") ||
-    pathname.startsWith("/finances");
+    pathname.startsWith("/finances") ||
+    pathname.startsWith("/depenses") ||
+    pathname.startsWith("/besoins");
   const isPilotage =
     pathname === "/analytics" ||
     pathname.startsWith("/planning") ||
@@ -181,8 +189,8 @@ export function BottomNav({ permissions }: { permissions: Permission[] }) {
       <div className="flex items-center justify-around">
         {navItems.map((item) => {
           const isActive =
-            item.href === "/" || item.href === "/stock" || item.href === "/alevins" || item.href === "/analytics" || item.href === "/planning" || item.href === "/finances" || item.href === "/mes-taches"
-              ? pathname === item.href
+            item.href === "/" || item.href === "/stock" || item.href === "/alevins" || item.href === "/analytics" || item.href === "/planning" || item.href === "/finances" || item.href === "/mes-taches" || item.href === "/depenses" || item.href === "/besoins"
+              ? pathname === item.href || pathname.startsWith(item.href + "/")
               : pathname.startsWith(item.href);
           const Icon = item.icon;
 

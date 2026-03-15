@@ -4,8 +4,8 @@
  * Ces types representent les modeles tels qu'ils sont stockes en base.
  * Ils servent de source de verite TypeScript pour le projet.
  *
- * 24 modeles : Site, SiteRole, SiteMember, User, Session, Bac, Vague, Releve, Fournisseur, Produit, MouvementStock, Commande, LigneCommande, ReleveConsommation, Client, Vente, Facture, Paiement, Reproducteur, Ponte, LotAlevins, ConfigAlerte, Notification, Activite
- * 22 enums : Role, Permission, StatutVague, TypeReleve, TypeAliment, CauseMortalite, MethodeComptage, CategorieProduit, UniteStock, TypeMouvement, StatutCommande, StatutFacture, ModePaiement, SexeReproducteur, StatutReproducteur, StatutPonte, StatutLotAlevins, TypeAlerte, StatutAlerte, TypeActivite, StatutActivite, Recurrence
+ * 29 modeles : Site, SiteRole, SiteMember, User, Session, Bac, Vague, Releve, Fournisseur, Produit, MouvementStock, Commande, LigneCommande, ReleveConsommation, Client, Vente, Facture, Paiement, Reproducteur, Ponte, LotAlevins, ConfigAlerte, Notification, Activite, Depense, PaiementDepense, DepenseRecurrente, ListeBesoins, LigneBesoin
+ * 26 enums : Role, Permission, StatutVague, TypeReleve, TypeAliment, CauseMortalite, MethodeComptage, CategorieProduit, UniteStock, TypeMouvement, StatutCommande, StatutFacture, ModePaiement, SexeReproducteur, StatutReproducteur, StatutPonte, StatutLotAlevins, TypeAlerte, StatutAlerte, TypeActivite, StatutActivite, Recurrence, CategorieDepense, StatutDepense, FrequenceRecurrence, StatutBesoins
  */
 
 // ---------------------------------------------------------------------------
@@ -66,6 +66,14 @@ export enum Permission {
   // General
   DASHBOARD_VOIR = "DASHBOARD_VOIR",
   EXPORT_DONNEES = "EXPORT_DONNEES",
+  // Depenses
+  DEPENSES_VOIR = "DEPENSES_VOIR",
+  DEPENSES_CREER = "DEPENSES_CREER",
+  DEPENSES_PAYER = "DEPENSES_PAYER",
+  // Besoins
+  BESOINS_SOUMETTRE = "BESOINS_SOUMETTRE",
+  BESOINS_APPROUVER = "BESOINS_APPROUVER",
+  BESOINS_TRAITER = "BESOINS_TRAITER",
 }
 
 // ---------------------------------------------------------------------------
@@ -530,6 +538,8 @@ export interface Commande {
   dateCommande: Date;
   dateLivraison: Date | null;
   montantTotal: number;
+  /** URL de la facture fournisseur sur Hetzner Object Storage (null si non uploadee) — Sprint 15 */
+  factureUrl: string | null;
   /** Utilisateur ayant cree la commande */
   userId: string;
   /** ID du site (ferme) — R8 */
@@ -1024,4 +1034,252 @@ export interface ActiviteWithRelations extends Activite {
   user?: User;
   /** Releve lie a cette activite (present si inclus par la query) */
   releve?: Releve | null;
+}
+
+// ---------------------------------------------------------------------------
+// Enums — Depenses (Sprint 16)
+// ---------------------------------------------------------------------------
+
+/** Categorie d'une depense operationnelle */
+export enum CategorieDepense {
+  ALIMENT = "ALIMENT",
+  INTRANT = "INTRANT",
+  EQUIPEMENT = "EQUIPEMENT",
+  ELECTRICITE = "ELECTRICITE",
+  EAU = "EAU",
+  LOYER = "LOYER",
+  SALAIRE = "SALAIRE",
+  TRANSPORT = "TRANSPORT",
+  VETERINAIRE = "VETERINAIRE",
+  REPARATION = "REPARATION",
+  INVESTISSEMENT = "INVESTISSEMENT",
+  AUTRE = "AUTRE",
+}
+
+/** Statut de paiement d'une depense */
+export enum StatutDepense {
+  NON_PAYEE = "NON_PAYEE",
+  PAYEE_PARTIELLEMENT = "PAYEE_PARTIELLEMENT",
+  PAYEE = "PAYEE",
+}
+
+/** Frequence de recurrence d'une depense periodique */
+export enum FrequenceRecurrence {
+  MENSUEL = "MENSUEL",
+  TRIMESTRIEL = "TRIMESTRIEL",
+  ANNUEL = "ANNUEL",
+}
+
+// ---------------------------------------------------------------------------
+// Enums — Besoins (Sprint 17)
+// ---------------------------------------------------------------------------
+
+/** Statut du workflow d'une liste de besoins */
+export enum StatutBesoins {
+  SOUMISE = "SOUMISE",
+  APPROUVEE = "APPROUVEE",
+  TRAITEE = "TRAITEE",
+  CLOTUREE = "CLOTUREE",
+  REJETEE = "REJETEE",
+}
+
+// ---------------------------------------------------------------------------
+// Modeles — Depenses (Sprint 16)
+// ---------------------------------------------------------------------------
+
+/**
+ * Depense — charge operationnelle de la ferme.
+ *
+ * Peut etre liee a une Commande (auto-creee a la reception),
+ * a une Vague (charges specifiques a un lot de poissons),
+ * ou etre autonome (loyer, salaire, electricite...).
+ *
+ * Le pattern de paiement partiel est identique a Facture/Paiement.
+ */
+export interface Depense {
+  id: string;
+  /** Numero auto-genere format DEP-YYYY-NNN */
+  numero: string;
+  /** Description de la depense */
+  description: string;
+  /** Categorie operationnelle */
+  categorieDepense: CategorieDepense;
+  /** Montant total de la depense */
+  montantTotal: number;
+  /** Montant deja paye (recalcule par aggregation) */
+  montantPaye: number;
+  /** Statut de paiement (NON_PAYEE → PAYEE_PARTIELLEMENT → PAYEE) */
+  statut: StatutDepense;
+  /** Date de la depense */
+  date: Date;
+  /** Date d'echeance de paiement (nullable) */
+  dateEcheance: Date | null;
+  /** URL facture fournisseur sur Hetzner Object Storage (nullable) */
+  factureUrl: string | null;
+  /** Notes libres */
+  notes: string | null;
+  /** Commande d'origine si auto-creee a la reception (nullable) */
+  commandeId: string | null;
+  /** Vague concernee (nullable) */
+  vagueId: string | null;
+  /** Liste de besoins d'origine (nullable) */
+  listeBesoinsId: string | null;
+  /** Utilisateur ayant cree la depense */
+  userId: string;
+  /** ID du site (ferme) — R8 */
+  siteId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** Depense avec ses relations chargees */
+export interface DepenseWithRelations extends Depense {
+  commande?: Commande | null;
+  vague?: Vague | null;
+  listeBesoins?: ListeBesoins | null;
+  user?: User;
+  paiements?: PaiementDepense[];
+}
+
+/**
+ * PaiementDepense — paiement partiel ou total d'une depense.
+ *
+ * Meme structure que Paiement (pour Facture), avec mode ModePaiement reutilise.
+ * La suppression d'une Depense supprime en cascade ses PaiementDepense.
+ */
+export interface PaiementDepense {
+  id: string;
+  /** Depense concernee */
+  depenseId: string;
+  /** Montant du paiement */
+  montant: number;
+  /** Mode de paiement */
+  mode: ModePaiement;
+  /** Reference de transaction (nullable) */
+  reference: string | null;
+  /** Date du paiement */
+  date: Date;
+  /** Utilisateur ayant enregistre le paiement */
+  userId: string;
+  /** ID du site (ferme) — R8 */
+  siteId: string;
+  createdAt: Date;
+}
+
+// ---------------------------------------------------------------------------
+// Modeles — Depenses Recurrentes (Sprint 18)
+// ---------------------------------------------------------------------------
+
+/**
+ * DepenseRecurrente — template pour la generation automatique de depenses.
+ *
+ * La generation est idempotente : une seule Depense est creee par periode
+ * (mois/trimestre/annee) en se basant sur derniereGeneration.
+ * jourDuMois est contraint entre 1 et 28 (evite les problemes fin de mois).
+ */
+export interface DepenseRecurrente {
+  id: string;
+  description: string;
+  categorieDepense: CategorieDepense;
+  montantEstime: number;
+  frequence: FrequenceRecurrence;
+  /** Jour du mois de generation (1-28) */
+  jourDuMois: number;
+  isActive: boolean;
+  derniereGeneration: Date | null;
+  userId: string;
+  siteId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** DepenseRecurrente avec ses relations chargees */
+export interface DepenseRecurrenteWithRelations extends DepenseRecurrente {
+  user: { id: string; name: string };
+}
+
+// ---------------------------------------------------------------------------
+// Modeles — Besoins (Sprint 17)
+// ---------------------------------------------------------------------------
+
+/**
+ * ListeBesoins — demande formelle de biens ou services par un agent de la ferme.
+ *
+ * Workflow : SOUMISE → APPROUVEE → TRAITEE → CLOTUREE
+ *                  └──────────────────────→ REJETEE
+ *
+ * Le demandeur soumet une liste, le valideur l'approuve ou la rejette.
+ * Le traitement genere des Commandes (pour les produits en stock) et des Depenses.
+ * La cloture enregistre les prix reels.
+ */
+export interface ListeBesoins {
+  id: string;
+  /** Numero auto-genere format BES-YYYY-NNN */
+  numero: string;
+  /** Intitule de la demande */
+  titre: string;
+  /** Utilisateur ayant soumis la demande */
+  demandeurId: string;
+  /** Utilisateur ayant approuve ou rejete la demande (nullable) */
+  valideurId: string | null;
+  /** Vague concernee (nullable) */
+  vagueId: string | null;
+  /** Statut du workflow */
+  statut: StatutBesoins;
+  /** Montant total estime (SUM quantite * prixEstime) */
+  montantEstime: number;
+  /** Montant total reel apres cloture (nullable) */
+  montantReel: number | null;
+  /** Motif de rejet (nullable, rempli si REJETEE) */
+  motifRejet: string | null;
+  /** Notes libres */
+  notes: string | null;
+  /** ID du site (ferme) — R8 */
+  siteId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** ListeBesoins avec ses relations chargees */
+export interface ListeBesoinsWithRelations extends ListeBesoins {
+  demandeur?: User;
+  valideur?: User | null;
+  vague?: Vague | null;
+  lignes?: LigneBesoin[];
+  depenses?: Depense[];
+  _count?: { lignes: number };
+}
+
+/**
+ * LigneBesoin — article individuel dans une liste de besoins.
+ *
+ * Peut etre lie a un produit en stock (produitId) ou libre (designation seule).
+ * commandeId est rempli lors du traitement si une commande a ete generee.
+ * prixReel est rempli lors de la cloture.
+ */
+export interface LigneBesoin {
+  id: string;
+  /** ID de la liste de besoins parente */
+  listeBesoinsId: string;
+  /** Designation libre de l'article */
+  designation: string;
+  /** Produit en stock lie (nullable — libre si null) */
+  produitId: string | null;
+  /** Quantite demandee */
+  quantite: number;
+  /** Unite libre (nullable si produit avec unite definie) */
+  unite: string | null;
+  /** Prix unitaire estime */
+  prixEstime: number;
+  /** Prix unitaire reel apres cloture (nullable) */
+  prixReel: number | null;
+  /** Commande generee lors du traitement (nullable) */
+  commandeId: string | null;
+  createdAt: Date;
+}
+
+/** LigneBesoin avec ses relations chargees */
+export interface LigneBesoinWithRelations extends LigneBesoin {
+  produit?: Produit | null;
+  commande?: Commande | null;
 }

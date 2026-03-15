@@ -1,7 +1,31 @@
 import { prisma } from "@/lib/db";
-import { StatutCommande, TypeMouvement } from "@/types";
+import {
+  CategorieDepense,
+  CategorieProduit,
+  StatutCommande,
+  TypeMouvement,
+} from "@/types";
 import type { CreateCommandeDTO, CommandeFilters } from "@/types";
 import { convertirQuantiteAchat } from "@/lib/calculs";
+
+/**
+ * Derive la CategorieDepense depuis la CategorieProduit dominante d'une commande.
+ * Utilisee lors de l'auto-creation de la depense a la reception.
+ */
+function categorieDepenseFromProduit(
+  categorie: CategorieProduit
+): CategorieDepense {
+  switch (categorie) {
+    case CategorieProduit.ALIMENT:
+      return CategorieDepense.ALIMENT;
+    case CategorieProduit.INTRANT:
+      return CategorieDepense.INTRANT;
+    case CategorieProduit.EQUIPEMENT:
+      return CategorieDepense.EQUIPEMENT;
+    default:
+      return CategorieDepense.AUTRE;
+  }
+}
 
 /** Liste les commandes d'un site avec filtres */
 export async function getCommandes(siteId: string, filters?: CommandeFilters) {
@@ -153,14 +177,14 @@ export async function recevoirCommande(
   dateLivraison?: string
 ) {
   return prisma.$transaction(async (tx) => {
-    // Get commande with lignes + product conversion info
+    // Get commande with lignes + product conversion info + product categorie
     const commande = await tx.commande.findFirst({
       where: { id, siteId },
       include: {
         lignes: {
           include: {
             produit: {
-              select: { uniteAchat: true, contenance: true },
+              select: { uniteAchat: true, contenance: true, categorie: true },
             },
           },
         },
@@ -202,7 +226,7 @@ export async function recevoirCommande(
     }
 
     // Update commande statut + date livraison
-    return tx.commande.update({
+    const commandeMiseAJour = await tx.commande.update({
       where: { id: commande.id },
       data: {
         statut: StatutCommande.LIVREE,
@@ -215,6 +239,50 @@ export async function recevoirCommande(
         },
       },
     });
+
+    // Auto-create Depense for this commande (one per commande, anti-doublon)
+    const depenseExistante = await tx.depense.findFirst({
+      where: { commandeId: commande.id },
+      select: { id: true },
+    });
+
+    let depense = null;
+    if (!depenseExistante && commande.montantTotal > 0) {
+      // Determine dominant category from lignes (most expensive)
+      const categoriesDominantes = commande.lignes.reduce(
+        (acc, ligne) => {
+          const cat = ligne.produit.categorie;
+          acc[cat] = (acc[cat] ?? 0) + ligne.quantite * ligne.prixUnitaire;
+          return acc;
+        },
+        {} as Record<string, number>
+      );
+      const categorieDominante = (
+        Object.entries(categoriesDominantes).sort(([, a], [, b]) => b - a)[0]?.[0] ?? CategorieProduit.ALIMENT
+      ) as CategorieProduit;
+
+      // Generate numero DEP-YYYY-NNN
+      const year = new Date().getFullYear();
+      const depCount = await tx.depense.count({
+        where: { siteId, numero: { startsWith: `DEP-${year}` } },
+      });
+      const depNumero = `DEP-${year}-${String(depCount + 1).padStart(3, "0")}`;
+
+      depense = await tx.depense.create({
+        data: {
+          numero: depNumero,
+          description: `Commande ${commande.numero}`,
+          categorieDepense: categorieDepenseFromProduit(categorieDominante),
+          montantTotal: commande.montantTotal,
+          date: livraisonDate,
+          commandeId: commande.id,
+          userId,
+          siteId,
+        },
+      });
+    }
+
+    return { commande: commandeMiseAJour, depense };
   });
 }
 

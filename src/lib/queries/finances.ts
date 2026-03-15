@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { CategorieProduit, TypeMouvement } from "@/types";
+import { CategorieProduit, CategorieDepense, TypeMouvement } from "@/types";
 import { getPrixParUniteBase } from "@/lib/calculs";
 
 // ---------------------------------------------------------------------------
@@ -19,6 +19,14 @@ export interface ResumeFinancier {
   prixMoyenVenteKg: number | null;
   nombreVentes: number;
   nombreFactures: number;
+  /** Total des depenses (hors commande — anti double-comptage) */
+  depensesTotales: number;
+  /** Depenses payees (hors commande) */
+  depensesPayees: number;
+  /** Depenses impayees ou partiellement payees (hors commande) */
+  depensesImpayees: number;
+  /** Repartition par categorie (hors commande) */
+  depensesParCategorie: Partial<Record<CategorieDepense, number>>;
 }
 
 export interface RentabiliteVague {
@@ -143,6 +151,7 @@ export async function getResumeFinancier(
     coutsAliments,
     coutsIntrants,
     coutsEquipements,
+    depensesHorsCommande,
   ] = await Promise.all([
     // Revenus : SUM et COUNT des ventes + SUM poids
     prisma.vente.aggregate({
@@ -175,6 +184,23 @@ export async function getResumeFinancier(
     sumCoutsParCategorie(siteId, CategorieProduit.ALIMENT, dateFilterStock),
     sumCoutsParCategorie(siteId, CategorieProduit.INTRANT, dateFilterStock),
     sumCoutsParCategorie(siteId, CategorieProduit.EQUIPEMENT, dateFilterStock),
+
+    // Depenses hors-commande : anti double-comptage
+    // Les depenses liees a une Commande sont deja comptees dans MouvementStock
+    // Seules les depenses sans commandeId sont ajoutees ici
+    prisma.depense.findMany({
+      where: {
+        siteId,
+        commandeId: null,
+        ...(dateFilterStock && { date: dateFilterStock }),
+      },
+      select: {
+        montantTotal: true,
+        montantPaye: true,
+        statut: true,
+        categorieDepense: true,
+      },
+    }),
   ]);
 
   const revenus = venteAgg._sum.montantTotal ?? 0;
@@ -183,7 +209,25 @@ export async function getResumeFinancier(
 
   const encaissements = paiementAgg._sum.montant ?? 0;
 
-  const coutsTotaux = coutsAliments + coutsIntrants + coutsEquipements;
+  // Agregation des depenses hors-commande
+  let depensesTotales = 0;
+  let depensesPayees = 0;
+  let depensesImpayees = 0;
+  const depensesParCategorie: Partial<Record<CategorieDepense, number>> = {};
+
+  for (const dep of depensesHorsCommande) {
+    depensesTotales += dep.montantTotal;
+    if (dep.statut === "PAYEE") {
+      depensesPayees += dep.montantTotal;
+    } else {
+      depensesImpayees += dep.montantTotal - dep.montantPaye;
+    }
+    const cat = dep.categorieDepense as CategorieDepense;
+    depensesParCategorie[cat] = (depensesParCategorie[cat] ?? 0) + dep.montantTotal;
+  }
+
+  const coutsStock = coutsAliments + coutsIntrants + coutsEquipements;
+  const coutsTotaux = coutsStock + depensesTotales;
   const margeBrute = revenus - coutsTotaux;
   const tauxMarge = revenus > 0 ? (margeBrute / revenus) * 100 : null;
   const creances = revenus - encaissements;
@@ -203,6 +247,12 @@ export async function getResumeFinancier(
       prixMoyenVenteKg !== null ? Math.round(prixMoyenVenteKg * 100) / 100 : null,
     nombreVentes,
     nombreFactures,
+    depensesTotales: Math.round(depensesTotales),
+    depensesPayees: Math.round(depensesPayees),
+    depensesImpayees: Math.round(depensesImpayees),
+    depensesParCategorie: Object.fromEntries(
+      Object.entries(depensesParCategorie).map(([k, v]) => [k, Math.round(v as number)])
+    ) as Partial<Record<CategorieDepense, number>>,
   };
 }
 
@@ -261,6 +311,16 @@ export async function getRentabiliteParVague(
     },
   });
 
+  // Charger les depenses directement liees a chaque vague (sans commandeId — anti double-comptage)
+  const depensesParVague = await prisma.depense.findMany({
+    where: {
+      siteId,
+      vagueId: { in: vagueIds },
+      commandeId: null,
+    },
+    select: { vagueId: true, montantTotal: true },
+  });
+
   // Agreger par vagueId en memoire
   const ventesByVague = new Map<
     string,
@@ -283,6 +343,12 @@ export async function getRentabiliteParVague(
     const vagueId = c.releve.vagueId;
     const coutLigne = c.quantite * getPrixParUniteBase(c.produit);
     coutsByVague.set(vagueId, (coutsByVague.get(vagueId) ?? 0) + coutLigne);
+  }
+
+  // Ajouter les depenses directes (sans commandeId) — anti double-comptage
+  for (const dep of depensesParVague) {
+    if (!dep.vagueId) continue;
+    coutsByVague.set(dep.vagueId, (coutsByVague.get(dep.vagueId) ?? 0) + dep.montantTotal);
   }
 
   // Construire le tableau de rentabilite
@@ -346,7 +412,7 @@ export async function getEvolutionFinanciere(
   const dateDebut = new Date(now.getFullYear(), now.getMonth() - (moisCount - 1), 1);
 
   // Charger toutes les donnees sur la periode en parallele
-  const [ventes, mouvements, paiements] = await Promise.all([
+  const [ventes, mouvements, paiements, depensesHorsCommande] = await Promise.all([
     prisma.vente.findMany({
       where: {
         siteId,
@@ -369,6 +435,15 @@ export async function getEvolutionFinanciere(
         date: { gte: dateDebut },
       },
       select: { date: true, montant: true },
+    }),
+    // Depenses hors-commande (anti double-comptage)
+    prisma.depense.findMany({
+      where: {
+        siteId,
+        commandeId: null,
+        date: { gte: dateDebut },
+      },
+      select: { date: true, montantTotal: true },
     }),
   ]);
 
@@ -405,6 +480,15 @@ export async function getEvolutionFinanciere(
     ).padStart(2, "0")}`;
     const agg = agregats.get(mois);
     if (agg) agg.couts += m.prixTotal ?? 0;
+  }
+
+  // Affecter les depenses hors-commande (anti double-comptage)
+  for (const d of depensesHorsCommande) {
+    const mois = `${d.date.getFullYear()}-${String(
+      d.date.getMonth() + 1
+    ).padStart(2, "0")}`;
+    const agg = agregats.get(mois);
+    if (agg) agg.couts += d.montantTotal;
   }
 
   // Affecter les paiements

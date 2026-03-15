@@ -182,3 +182,12 @@ export {
 // CreateActiviteDTO, UpdateActiviteDTO et ActiviteFilters sont dans @/types
 export type { CreateConfigAlerteDTO, UpdateConfigAlerteDTO } from "@/types";
 export type { CreateActiviteDTO, UpdateActiviteDTO, ActiviteFilters } from "@/types";
+
+export {
+  getDepensesRecurrentes,
+  getDepenseRecurrenteById,
+  createDepenseRecurrente,
+  updateDepenseRecurrente,
+  deleteDepenseRecurrente,
+  genererDepensesRecurrentes,
+} from "./depenses-recurrentes";

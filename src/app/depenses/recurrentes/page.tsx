@@ -1,0 +1,30 @@
+import { redirect } from "next/navigation";
+import { Header } from "@/components/layout/header";
+import { AccessDenied } from "@/components/ui/access-denied";
+import { getServerSession, checkPagePermission } from "@/lib/auth";
+import { getDepensesRecurrentes } from "@/lib/queries/depenses-recurrentes";
+import { Permission } from "@/types";
+import { RecurrentesListClient } from "@/components/depenses/recurrentes-list-client";
+
+export default async function DepensesRecurrentesPage() {
+  const session = await getServerSession();
+  if (!session) redirect("/login");
+  if (!session.activeSiteId) redirect("/sites");
+
+  const permissions = await checkPagePermission(session, Permission.DEPENSES_VOIR);
+  if (!permissions) return <AccessDenied />;
+
+  const templates = await getDepensesRecurrentes(session.activeSiteId);
+
+  const canManage = permissions.includes(Permission.DEPENSES_CREER);
+
+  return (
+    <>
+      <Header title="Depenses recurrentes" />
+      <RecurrentesListClient
+        templates={JSON.parse(JSON.stringify(templates))}
+        canManage={canManage}
+      />
+    </>
+  );
+}
