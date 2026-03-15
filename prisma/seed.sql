@@ -32,6 +32,10 @@ DELETE FROM "Bac";
 DELETE FROM "Vague";
 DELETE FROM "SiteMember";
 DELETE FROM "SiteRole";
+DELETE FROM "PackActivation";
+DELETE FROM "PackProduit";
+DELETE FROM "Pack";
+DELETE FROM "RegleActivite";
 DELETE FROM "Site";
 DELETE FROM "User";
 
@@ -1183,18 +1187,506 @@ VALUES
 
 -- Pack Produits (associer les produits existants aux packs)
 -- Pack Decouverte 100 : aliment de base + sel de cuisine
-INSERT INTO "PackProduit" (id, "packId", "produitId", quantite, "createdAt", "updatedAt")
+INSERT INTO "PackProduit" (id, "packId", "produitId", quantite)
 VALUES
-  ('pp_01_aliment', 'pack_01', 'prod_01', 25.0, NOW(), NOW()),
-  ('pp_01_sel', 'pack_01', 'prod_03', 2.0, NOW(), NOW()),
+  ('pp_01_aliment', 'pack_01', 'prod_01', 25.0),
+  ('pp_01_sel', 'pack_01', 'prod_03', 2.0),
   -- Pack Starter 300
-  ('pp_02_aliment', 'pack_02', 'prod_01', 75.0, NOW(), NOW()),
-  ('pp_02_sel', 'pack_02', 'prod_03', 5.0, NOW(), NOW()),
-  ('pp_02_vit', 'pack_02', 'prod_04', 1.0, NOW(), NOW()),
+  ('pp_02_aliment', 'pack_02', 'prod_01', 75.0),
+  ('pp_02_sel', 'pack_02', 'prod_03', 5.0),
+  ('pp_02_vit', 'pack_02', 'prod_04', 1.0),
   -- Pack Pro 500
-  ('pp_03_aliment', 'pack_03', 'prod_01', 120.0, NOW(), NOW()),
-  ('pp_03_sel', 'pack_03', 'prod_03', 8.0, NOW(), NOW()),
-  ('pp_03_vit', 'pack_03', 'prod_04', 2.0, NOW(), NOW()),
-  ('pp_03_aliment2', 'pack_03', 'prod_02', 50.0, NOW(), NOW());
+  ('pp_03_aliment', 'pack_03', 'prod_01', 120.0),
+  ('pp_03_sel', 'pack_03', 'prod_03', 8.0),
+  ('pp_03_vit', 'pack_03', 'prod_04', 2.0),
+  ('pp_03_aliment2', 'pack_03', 'prod_02', 50.0);
+
+-- ──────────────────────────────────────────
+-- SPRINT 21 : Catalogue de règles pré-définies globales
+-- siteId = NULL => règle globale DKFarm applicable à tous les sites
+-- ──────────────────────────────────────────
+
+INSERT INTO "RegleActivite" (
+  id, nom, description,
+  "typeActivite", "typeDeclencheur",
+  "conditionValeur", "conditionValeur2",
+  "phaseMin", "phaseMax",
+  "intervalleJours",
+  "titreTemplate", "descriptionTemplate", "instructionsTemplate",
+  priorite, "isActive", "firedOnce",
+  "siteId", "userId",
+  "createdAt", "updatedAt"
+) VALUES
+
+-- ──────────────────────────────────────────
+-- Activités quotidiennes récurrentes (priorité 5)
+-- ──────────────────────────────────────────
+
+(
+  'regle_01',
+  'Alimentation quotidienne',
+  'Distribution journalière d''aliment selon le poids moyen des poissons et le taux d''alimentation de la phase.',
+  'ALIMENTATION', 'RECURRENT',
+  NULL, NULL,
+  NULL, NULL,
+  1,
+  'Distribuer {quantite_calculee}g de granulé {taille}',
+  'Poids moyen estimé : {poids_moyen}g. Taux d''alimentation : {taux}% de la biomasse. Biomasse totale : {biomasse}kg.',
+  '1. Peser la quantité d''aliment calculée.
+2. Distribuer en 2 à 3 repas répartis sur la journée.
+3. Observer la consommation et noter les refus.
+4. Ajuster la quantité si refus > 10%.',
+  5, true, false,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+(
+  'regle_02',
+  'Vérification température eau',
+  'Mesure quotidienne de la température pour s''assurer qu''elle reste dans la plage optimale (25-32°C) pour Clarias gariepinus.',
+  'QUALITE_EAU', 'RECURRENT',
+  NULL, NULL,
+  NULL, NULL,
+  1,
+  'Mesurer la température de l''eau — Bac {bac}',
+  'Plage optimale : 25-32°C. Dernière valeur enregistrée : {valeur}°C.',
+  '1. Utiliser un thermomètre étalonné.
+2. Mesurer à 10 cm de profondeur, loin des entrées d''eau.
+3. Enregistrer dans le relevé qualité eau.
+4. Si < 25°C ou > 32°C : alerter le responsable.',
+  5, true, false,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+(
+  'regle_03',
+  'Observation comportement',
+  'Observation journalière du comportement des poissons pour détecter signes de stress, maladie ou mortalité.',
+  'AUTRE', 'RECURRENT',
+  NULL, NULL,
+  NULL, NULL,
+  1,
+  'Observer le comportement des poissons — Bac {bac}',
+  'Vague : {vague}. Effectif estimé : {effectif} individus.',
+  '1. Observer l''agitation, la nage en surface (manque O2), les lésions visibles.
+2. Retirer tout poisson mort immédiatement.
+3. Noter observations dans le relevé d''observation.
+4. Signaler tout comportement anormal.',
+  5, true, false,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+(
+  'regle_04',
+  'Nettoyage bac',
+  'Nettoyage quotidien du bac pour maintenir la qualité de l''eau et prévenir les maladies.',
+  'NETTOYAGE', 'RECURRENT',
+  NULL, NULL,
+  NULL, NULL,
+  1,
+  'Nettoyer le bac {bac}',
+  'Vague : {vague}. Retirer les déchets, fèces et aliments non consommés.',
+  '1. Retirer les fèces et déchets organiques au fond du bac.
+2. Vérifier et nettoyer les filtres si nécessaire.
+3. Vérifier le débit d''eau entrant.
+4. Noter l''état général dans le relevé d''observation.',
+  5, true, false,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+-- ──────────────────────────────────────────
+-- Activités hebdomadaires et bi-hebdomadaires récurrentes (priorité 5)
+-- ──────────────────────────────────────────
+
+(
+  'regle_05',
+  'Biométrie hebdomadaire',
+  'Pesée et mesure d''un échantillon représentatif pour calculer le poids moyen et ajuster la ration alimentaire.',
+  'BIOMETRIE', 'RECURRENT',
+  NULL, NULL,
+  'CROISSANCE_DEBUT', 'FINITION',
+  7,
+  'Biométrie hebdomadaire — Bac {bac}',
+  'Dernier poids moyen enregistré : {poids_moyen}g. Echantillonner au moins 10% de l''effectif.',
+  '1. Préparer balance et bassine graduée.
+2. Capturer un échantillon (min 10% effectif, max 30 individus).
+3. Peser chaque individu ou par lot.
+4. Calculer le poids moyen et saisir dans le relevé biométrie.
+5. Ajuster la ration alimentaire en conséquence.',
+  5, true, false,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+(
+  'regle_06',
+  'Qualité eau complète',
+  'Analyse complète de la qualité de l''eau incluant pH, ammoniaque, nitrites, turbidité et oxygène dissous.',
+  'QUALITE_EAU', 'RECURRENT',
+  NULL, NULL,
+  NULL, NULL,
+  7,
+  'Analyse qualité eau complète — Bac {bac}',
+  'Paramètres à mesurer : pH (6,5-8,5), NH3 (< 0,02 mg/L), NO2 (< 0,5 mg/L), O2 dissous (> 5 mg/L).',
+  '1. Utiliser le kit d''analyse multiparamètre.
+2. Mesurer pH, ammoniaque, nitrites, turbidité, O2 dissous.
+3. Enregistrer tous les paramètres dans le relevé qualité eau.
+4. Comparer aux seuils optimaux et alerter si dépassement.',
+  5, true, false,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+(
+  'regle_07',
+  'Comptage poissons',
+  'Comptage bi-mensuel pour mettre à jour l''effectif et calculer le taux de survie cumulé.',
+  'COMPTAGE', 'RECURRENT',
+  NULL, NULL,
+  NULL, NULL,
+  14,
+  'Comptage effectif — Bac {bac}',
+  'Effectif théorique : {effectif} individus. Dernier comptage : {dernier_comptage}.',
+  '1. Vider partiellement ou utiliser un filet de compartimentage.
+2. Compter par lots de 50 individus.
+3. Enregistrer le résultat dans le relevé de comptage.
+4. Calculer le taux de survie depuis le début de la vague.',
+  5, true, false,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+(
+  'regle_08',
+  'Nettoyage filtre',
+  'Nettoyage hebdomadaire des filtres pour maintenir un débit optimal et prévenir l''accumulation de matières organiques.',
+  'NETTOYAGE', 'RECURRENT',
+  NULL, NULL,
+  NULL, NULL,
+  7,
+  'Nettoyer les filtres — Bac {bac}',
+  'Vague : {vague}. Vérifier le colmatage et l''état des médias filtrants.',
+  '1. Arrêter temporairement la filtration (max 30 min).
+2. Rincer les médias filtrants à l''eau propre (pas de détergent).
+3. Vérifier l''intégrité des supports et tuyaux.
+4. Redémarrer et vérifier le débit.
+5. Consigner l''opération dans le relevé d''observation.',
+  5, true, false,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+-- ──────────────────────────────────────────
+-- Seuils de poids — changements de granulé (priorité 3)
+-- ──────────────────────────────────────────
+
+(
+  'regle_09',
+  'Changement granulé 0,5mm → 1mm',
+  'Transition de taille de granulé recommandée lorsque le poids moyen atteint 5g. La bouche du Clarias peut ingérer des granulés plus grands.',
+  'ALIMENTATION', 'SEUIL_POIDS',
+  5.0, NULL,
+  'ACCLIMATATION', NULL,
+  NULL,
+  'Changer le granulé : passer à 1mm — Bac {bac}',
+  'Poids moyen actuel : {poids_moyen}g (seuil : 5g). Produit recommandé : granulé 1mm.',
+  '1. Commander ou préparer le granulé 1mm.
+2. Effectuer la transition sur 3 jours en mélangeant les deux tailles (70%/30%, 50%/50%, 30%/70%).
+3. Observer l''acceptation et ajuster si refus.
+4. Mettre à jour le produit utilisé dans les relevés d''alimentation.',
+  3, true, false,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+(
+  'regle_10',
+  'Changement granulé 1mm → 2mm',
+  'Transition vers granulé 2mm recommandée à 20g de poids moyen. Améliore le FCR et réduit les pertes en suspension.',
+  'ALIMENTATION', 'SEUIL_POIDS',
+  20.0, NULL,
+  'CROISSANCE_DEBUT', NULL,
+  NULL,
+  'Changer le granulé : passer à 2mm — Bac {bac}',
+  'Poids moyen actuel : {poids_moyen}g (seuil : 20g). Produit recommandé : granulé 2mm.',
+  '1. Effectuer la transition sur 3 jours en mélangeant progressivement.
+2. Observer la consommation et l''absence de refus.
+3. Recalculer la ration sur la base du nouveau taux d''alimentation.
+4. Mettre à jour le produit dans les relevés.',
+  3, true, false,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+(
+  'regle_11',
+  'Changement granulé 2mm → 3mm',
+  'Transition vers granulé 3mm à 100g. Stade juvénile : le poisson peut ingérer des granulés plus denses, réduction des fines.',
+  'ALIMENTATION', 'SEUIL_POIDS',
+  100.0, NULL,
+  'JUVENILE', NULL,
+  NULL,
+  'Changer le granulé : passer à 3mm — Bac {bac}',
+  'Poids moyen actuel : {poids_moyen}g (seuil : 100g). Produit recommandé : granulé 3mm.',
+  '1. Effectuer la transition progressive sur 4 jours.
+2. Granulé 3mm : taux d''alimentation typique 3-4% biomasse.
+3. Vérifier l''absence de compétition alimentaire (tri si nécessaire).
+4. Mettre à jour le produit dans les relevés.',
+  3, true, false,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+(
+  'regle_12',
+  'Changement granulé 3mm → 4mm',
+  'Transition finale vers granulé 4mm à 300g. Phase de grossissement : granulé haute énergie pour maximiser la croissance.',
+  'ALIMENTATION', 'SEUIL_POIDS',
+  300.0, NULL,
+  'GROSSISSEMENT', NULL,
+  NULL,
+  'Changer le granulé : passer à 4mm — Bac {bac}',
+  'Poids moyen actuel : {poids_moyen}g (seuil : 300g). Produit recommandé : granulé 4mm haute énergie.',
+  '1. Effectuer la transition progressive sur 4 jours.
+2. Granulé 4mm haute énergie : taux d''alimentation 2,5-3% biomasse.
+3. Surveiller le FCR hebdomadairement.
+4. Mettre à jour le produit dans les relevés.',
+  3, true, false,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+(
+  'regle_13',
+  'Tri recommandé',
+  'Tri par tailles recommandé à 50g pour homogénéiser les bacs et réduire la compétition alimentaire et le cannibalisme.',
+  'TRI', 'SEUIL_POIDS',
+  50.0, NULL,
+  'JUVENILE', NULL,
+  NULL,
+  'Effectuer un tri par tailles — Bac {bac}',
+  'Poids moyen actuel : {poids_moyen}g (seuil : 50g). Hétérogénéité estimée : {heterogeneite}%.',
+  '1. Préparer 2 bacs de réception propres.
+2. Utiliser un trieur calibré (maille 2-3 cm).
+3. Séparer grands (> 60g), moyens (40-60g) et petits (< 40g).
+4. Redistribuer à densité égale dans les bacs disponibles.
+5. Mettre à jour les vagues et effectifs dans l''application.',
+  3, true, false,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+-- ──────────────────────────────────────────
+-- Alertes anomalies (priorité 1-2)
+-- ──────────────────────────────────────────
+
+(
+  'regle_14',
+  'Mortalité anormale',
+  'Alerte déclenchée lorsque le taux de mortalité journalier dépasse 2%, indicateur d''une pathologie ou d''un problème environnemental grave.',
+  'AUTRE', 'SEUIL_MORTALITE',
+  2.0, NULL,
+  NULL, NULL,
+  NULL,
+  'ALERTE : Mortalité anormale — Bac {bac}',
+  'Taux de mortalité journalier : {valeur}% (seuil critique : 2%). Morts aujourd''hui : {nb_morts} individus.',
+  '1. URGENCE : Identifier immédiatement la cause (qualité eau, maladie, cannibalisme).
+2. Mesurer pH, O2, NH3, NO2 immédiatement.
+3. Retirer tous les poissons morts.
+4. Contacter le responsable et/ou le vétérinaire si cause inconnue.
+5. Enregistrer dans le relevé de mortalité.',
+  1, true, false,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+(
+  'regle_15',
+  'pH hors norme',
+  'Alerte déclenchée lorsque le pH sort de la plage optimale (6,5-8,5). Un pH extrême est toxique pour Clarias gariepinus.',
+  'QUALITE_EAU', 'SEUIL_QUALITE',
+  6.5, 8.5,
+  NULL, NULL,
+  NULL,
+  'ALERTE : pH hors norme — Bac {bac}',
+  'pH mesuré : {valeur} (plage normale : 6,5-8,5). Action corrective requise immédiatement.',
+  '1. Vérifier la mesure avec un second instrument.
+2. Si pH < 6,5 : ajouter de la chaux agricole (CaCO3) progressivement.
+3. Si pH > 8,5 : augmenter le renouvellement d''eau, vérifier les algues.
+4. Contrôler toutes les 2h jusqu''au retour à la normale.
+5. Documenter dans le relevé qualité eau.',
+  1, true, false,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+(
+  'regle_16',
+  'Température hors norme',
+  'Alerte déclenchée lorsque la température sort de la plage optimale (25-32°C). Une température inadaptée ralentit la croissance et fragilise les poissons.',
+  'QUALITE_EAU', 'SEUIL_QUALITE',
+  25.0, 32.0,
+  NULL, NULL,
+  NULL,
+  'ALERTE : Température hors norme — Bac {bac}',
+  'Température mesurée : {valeur}°C (plage optimale : 25-32°C). Action corrective requise.',
+  '1. Si < 25°C : vérifier l''alimentation en eau chaude, envisager chauffage d''appoint.
+2. Si > 32°C : augmenter le débit d''eau froide, ombrager si bac extérieur.
+3. Surveiller toutes les 2h.
+4. Réduire la ration alimentaire de 20% si T° hors norme persistante.
+5. Documenter dans le relevé qualité eau.',
+  1, true, false,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+(
+  'regle_17',
+  'FCR élevé',
+  'Alerte déclenchée lorsque le FCR (Food Conversion Ratio) dépasse 2,0 sur la fenêtre glissante de 7 jours, indiquant une inefficacité alimentaire.',
+  'ALIMENTATION', 'FCR_ELEVE',
+  2.0, NULL,
+  NULL, NULL,
+  NULL,
+  'ALERTE : FCR élevé — Bac {bac}',
+  'FCR calculé sur 7 jours : {valeur} (seuil : 2,0). Vérifier la qualité de l''aliment et la distribution.',
+  '1. Vérifier la qualité et la fraîcheur de l''aliment (date de péremption, stockage).
+2. Revoir le taux d''alimentation : réduire si refus observés.
+3. Vérifier la santé des poissons (parasites, stress).
+4. Contrôler la température (< 25°C réduit l''appétit).
+5. Si FCR > 2,5 sur 14 jours : consultation technique recommandée.',
+  2, true, false,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+(
+  'regle_18',
+  'Stock aliment bas',
+  'Alerte déclenchée lorsque le stock restant d''aliment est inférieur à 7 jours de consommation au rythme actuel.',
+  'AUTRE', 'STOCK_BAS',
+  7.0, NULL,
+  NULL, NULL,
+  NULL,
+  'ALERTE : Stock aliment insuffisant',
+  'Stock restant : {stock_restant}kg. A ce rythme de consommation, rupture estimée dans {valeur} jours.',
+  '1. Vérifier le stock physique en entrepôt.
+2. Déclencher une commande de réapprovisionnement immédiatement.
+3. Contacter le fournisseur habituel.
+4. Si délai > 3 jours : envisager une source d''approvisionnement alternative.
+5. Enregistrer la commande dans le module stock.',
+  2, true, false,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+-- ──────────────────────────────────────────
+-- Jalons de production (priorité 7 sauf fin de cycle)
+-- ──────────────────────────────────────────
+
+(
+  'regle_19',
+  'Jalon 25% du cycle',
+  'Jalon de production : 25% de la durée du cycle écoulée. Point de contrôle intermédiaire pour évaluer la trajectoire de croissance.',
+  'AUTRE', 'JALON',
+  25.0, NULL,
+  NULL, NULL,
+  NULL,
+  'Jalon 25% — Bac {bac}',
+  'Le cycle a atteint 25% de sa durée planifiée. Durée écoulée : {jours_ecoules} jours / {duree_totale} jours prévus.',
+  '1. Comparer le poids moyen actuel à la courbe de croissance théorique.
+2. Calculer le taux de survie cumulé.
+3. Calculer le FCR depuis le début.
+4. Évaluer si des ajustements (densité, alimentation, traitement) sont nécessaires.
+5. Documenter le bilan dans un relevé d''observation.',
+  7, true, true,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+(
+  'regle_20',
+  'Jalon 50% du cycle',
+  'Jalon de production : mi-cycle. Bilan intermédiaire obligatoire pour évaluer la rentabilité prévisionnelle et ajuster le plan.',
+  'AUTRE', 'JALON',
+  50.0, NULL,
+  NULL, NULL,
+  NULL,
+  'Jalon 50% — Mi-cycle — Bac {bac}',
+  'Mi-cycle atteint. Durée écoulée : {jours_ecoules} jours. Poids moyen : {poids_moyen}g. Objectif mi-cycle : {objectif_poids}g.',
+  '1. Réaliser une biométrie complète (comptage + pesée).
+2. Calculer le FCR cumulé et le SGR.
+3. Comparer à la projection initiale.
+4. Si retard de croissance > 15% : revoir la ration ou la densité.
+5. Mettre à jour la date de récolte prévisionnelle.',
+  7, true, true,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+(
+  'regle_21',
+  'Jalon 75% du cycle',
+  'Jalon à 75% du cycle. Planification de la récolte : contacter les acheteurs, préparer la logistique.',
+  'AUTRE', 'JALON',
+  75.0, NULL,
+  NULL, NULL,
+  NULL,
+  'Jalon 75% — Préparer la récolte — Bac {bac}',
+  'Le cycle est à 75%. Date de récolte estimée : {date_recolte}. Poids moyen actuel : {poids_moyen}g.',
+  '1. Estimer la date de récolte avec ±2 semaines de précision.
+2. Contacter les acheteurs et confirmer les commandes.
+3. Planifier le jeûne pré-récolte (24-48h avant).
+4. Vérifier la disponibilité du matériel de récolte.
+5. Commencer la réduction progressive du stock d''aliment.',
+  7, true, true,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+(
+  'regle_22',
+  'Pré-récolte (90% du cycle)',
+  'Alerte pré-récolte à 90% du cycle. Actions urgentes pour préparer la commercialisation et la logistique de récolte.',
+  'RECOLTE', 'JALON',
+  90.0, NULL,
+  NULL, NULL,
+  NULL,
+  'Pré-récolte — Actions urgentes — Bac {bac}',
+  'Récolte imminente (90% du cycle). Poids moyen : {poids_moyen}g. Biomasse estimée : {biomasse}kg. Valeur marchande estimée : {valeur_marchande} FCFA.',
+  '1. URGENT : Confirmer les acheteurs et la date de livraison.
+2. Planifier le jeûne (arrêt alimentation 48h avant récolte).
+3. Préparer le matériel : épuisettes, bacs de transport, oxygène.
+4. Contacter le transporteur frigorifique si besoin.
+5. Préparer la facture proforma pour l''acheteur.',
+  3, true, true,
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+(
+  'regle_23',
+  'Fin de cycle — Récolte',
+  'Fin du cycle de production : déclenchement du processus de récolte. Bilan complet du cycle à réaliser.',
+  'RECOLTE', 'JALON',
+  100.0, NULL,
+  NULL, NULL,
+  NULL,
+  'Fin de cycle — Procéder à la récolte — Bac {bac}',
+  'Le cycle est terminé. Vague : {vague}. Durée totale : {jours_ecoules} jours. Biomasse finale estimée : {biomasse}kg.',
+  '1. Arrêter l''alimentation 48h avant (si pas déjà fait).
+2. Procéder à la récolte complète du bac.
+3. Peser et trier les poissons par calibre (< 400g, 400-600g, > 600g).
+4. Enregistrer la vente dans le module commercial.
+5. Nettoyer et désinfecter le bac avant la prochaine vague.
+6. Clôturer la vague dans l''application avec le bilan final.',
+  1, true, true,
+  NULL, NULL,
+  NOW(), NOW()
+);
 
 COMMIT;

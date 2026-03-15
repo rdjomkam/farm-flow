@@ -191,3 +191,12 @@ export {
   deleteDepenseRecurrente,
   genererDepensesRecurrentes,
 } from "./depenses-recurrentes";
+
+// Sprint 21 — Moteur de regles d'activites
+export {
+  getReglesActivites,
+  getRegleActiviteById,
+  createRegleActivite,
+  updateRegleActivite,
+  deleteRegleActivite,
+} from "./regles-activites";

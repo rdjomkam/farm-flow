@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getReleves, createReleve } from "@/lib/queries/releves";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { TypeReleve, CauseMortalite, TypeAliment, MethodeComptage, Permission } from "@/types";
+import { TypeReleve, CauseMortalite, TypeAliment, MethodeComptage, Permission, StatutVague, TypeDeclencheur } from "@/types";
 import type { CreateReleveDTO, ReleveFilters } from "@/types";
+import { prisma } from "@/lib/db";
+import {
+  buildEvaluationContext,
+  evaluateRules,
+  generateActivities,
+} from "@/lib/activity-engine";
 
 export async function GET(request: NextRequest) {
   try {
@@ -324,6 +330,16 @@ export async function POST(request: NextRequest) {
     }
 
     const releve = await createReleve(auth.activeSiteId, auth.userId, dto, activiteId);
+
+    // Hook asynchrone : evaluer les regles SEUIL_* pour la vague concernee.
+    // Ne bloque pas la reponse — erreurs loggees silencieusement.
+    const vagueId = dto.vagueId;
+    const siteId = auth.activeSiteId;
+    const userId = auth.userId;
+    triggerSeuilRulesAsync(siteId, vagueId, userId).catch((err) =>
+      console.error("[POST /api/releves] Erreur hook SEUIL:", err)
+    );
+
     return NextResponse.json(releve, { status: 201 });
   } catch (error) {
     console.error("[POST /api/releves] Error:", error);
@@ -349,4 +365,123 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Hook asynchrone — evaluation des regles SEUIL_* apres creation d'un releve
+// ---------------------------------------------------------------------------
+
+/**
+ * Evalue les regles de type SEUIL_* pour une vague donnee apres la creation
+ * d'un releve. Appele de facon asynchrone pour ne pas bloquer la reponse HTTP.
+ */
+async function triggerSeuilRulesAsync(
+  siteId: string,
+  vagueId: string,
+  userId: string
+): Promise<void> {
+  const vague = await prisma.vague.findFirst({
+    where: { id: vagueId, siteId, statut: StatutVague.EN_COURS },
+    include: {
+      releves: {
+        orderBy: { date: "asc" },
+        select: {
+          id: true,
+          typeReleve: true,
+          date: true,
+          poidsMoyen: true,
+          tailleMoyenne: true,
+          nombreMorts: true,
+          quantiteAliment: true,
+          temperature: true,
+          ph: true,
+          oxygene: true,
+          ammoniac: true,
+          nombreCompte: true,
+        },
+      },
+      configElevage: true,
+    },
+  });
+
+  if (!vague) return;
+
+  const produits = await prisma.produit.findMany({
+    where: { siteId, isActive: true },
+    select: {
+      id: true,
+      nom: true,
+      categorie: true,
+      unite: true,
+      seuilAlerte: true,
+      stockActuel: true,
+    },
+  });
+
+  const seuilTypes = [
+    TypeDeclencheur.SEUIL_POIDS,
+    TypeDeclencheur.SEUIL_QUALITE,
+    TypeDeclencheur.SEUIL_MORTALITE,
+    TypeDeclencheur.STOCK_BAS,
+    TypeDeclencheur.FCR_ELEVE,
+  ];
+
+  const regles = await prisma.regleActivite.findMany({
+    where: {
+      isActive: true,
+      firedOnce: false,
+      typeDeclencheur: { in: seuilTypes },
+      OR: [{ siteId }, { siteId: null }],
+    },
+  });
+
+  if (regles.length === 0) return;
+
+  const trenteDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const historique = await prisma.activite.findMany({
+    where: {
+      siteId,
+      vagueId,
+      regleId: { not: null },
+      createdAt: { gte: trenteDaysAgo },
+    },
+    select: {
+      id: true,
+      regleId: true,
+      vagueId: true,
+      dateDebut: true,
+      createdAt: true,
+    },
+  });
+
+  const context = buildEvaluationContext(
+    {
+      id: vague.id,
+      code: vague.code,
+      dateDebut: vague.dateDebut,
+      nombreInitial: vague.nombreInitial,
+      poidsMoyenInitial: vague.poidsMoyenInitial,
+      siteId: vague.siteId,
+    },
+    vague.releves as Parameters<typeof buildEvaluationContext>[1],
+    produits as Parameters<typeof buildEvaluationContext>[2],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (vague.configElevage ?? null) as any
+  );
+
+  const matches = evaluateRules(
+    [context],
+    regles as Parameters<typeof evaluateRules>[1],
+    historique as Parameters<typeof evaluateRules>[2]
+  );
+
+  if (matches.length === 0) return;
+
+  await generateActivities(
+    matches,
+    siteId,
+    userId,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (vague.configElevage ?? null) as any
+  );
 }

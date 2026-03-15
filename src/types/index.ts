@@ -42,6 +42,8 @@ export {
   PhaseElevage,
   // Sprint 20 — Packs & Provisioning
   StatutActivation,
+  // Sprint 21 — Moteur de regles d'activites
+  TypeDeclencheur,
 } from "./models";
 export type {
   Site,
@@ -114,6 +116,9 @@ export type {
   PackProduitWithProduit,
   PackActivation,
   PackActivationWithRelations,
+  // Sprint 21 — Moteur de regles d'activites
+  RegleActivite,
+  RegleActiviteWithRelations,
 } from "./models";
 
 // Types authentification et multi-tenancy (DTOs, session, contexte)
@@ -286,6 +291,20 @@ export type {
   PackActivationFilters,
   PackActivationListResponse,
 } from "./api";
+// Sprint 21 — Moteur de regles d'activites
+export type {
+  CreateRegleActiviteDTO,
+  UpdateRegleActiviteDTO,
+  RegleActiviteFilters,
+} from "./api";
+export type {
+  StockProduitContext,
+  IndicateursContext,
+  RuleEvaluationContext,
+  RuleMatch,
+  GeneratedActivity,
+  TemplatePlaceholders,
+} from "./activity-engine";
 
 // Types pour les calculs et indicateurs
 export type {

@@ -33,6 +33,7 @@ import {
   TypeActivite,
   TypeAlerte,
   TypeAliment,
+  TypeDeclencheur,
   TypeMouvement,
   TypeReleve,
   UniteStock,
@@ -1293,6 +1294,78 @@ export interface ConfigElevageDetailResponse {
 }
 
 // ConfigElevage types are imported at the top of this file and used inline above.
+
+// ---------------------------------------------------------------------------
+// Sprint 21 — Moteur de regles d'activites (RegleActivite)
+// ---------------------------------------------------------------------------
+
+/**
+ * DTO pour creer une regle d'activite.
+ *
+ * Les champs intervalleJours, jourDeclenchement, seuilDeclencheur et comparaison
+ * sont conditionnels selon typeDeclencheur :
+ * - RECURRENT => intervalleJours requis
+ * - CALENDRIER => jourDeclenchement requis
+ * - SEUIL_* / FCR_ELEVE => seuilDeclencheur + comparaison requis
+ * - STOCK_BAS / JALON => aucun parametre numerique requis
+ */
+export interface CreateRegleActiviteDTO {
+  /** Libelle de la regle */
+  nom: string;
+  /** Description optionnelle */
+  description?: string;
+  /** Type d'activite a generer */
+  typeActivite: TypeActivite;
+  /** Condition de declenchement */
+  typeDeclencheur: TypeDeclencheur;
+  /** Intervalle en jours (RECURRENT uniquement) */
+  intervalleJours?: number;
+  /** Jour relatif au debut de vague (CALENDRIER uniquement) */
+  jourDeclenchement?: number;
+  /** Valeur numerique du seuil (SEUIL_* et FCR_ELEVE) */
+  seuilDeclencheur?: number;
+  /** Operateur de comparaison : "gt" | "lt" | "gte" | "lte" (SEUIL_* et FCR_ELEVE) */
+  comparaison?: string;
+  /**
+   * Titre avec placeholders Mustache.
+   * Ex: "Biometrie semaine {{semaine}}"
+   * Voir TemplatePlaceholders dans activity-engine.ts pour la liste complete.
+   */
+  titreTemplate: string;
+  /** Instructions detaillees avec placeholders (optionnel) */
+  instructionsTemplate?: string;
+  /** ID du produit stock recommande (optionnel) */
+  produitRecommandeId?: string;
+  /** Quantite recommandee en unite du produit (optionnel) */
+  quantiteRecommandee?: number;
+  /** Priorite des activites generees : 1=basse, 2=normale, 3=critique (defaut : 1) */
+  priorite?: number;
+  /** Phases d'elevage cibles (null ou absent = toutes les phases) */
+  phasesCibles?: string[];
+  /** Jour du cycle a partir duquel la regle est active (defaut : 0) */
+  debutJour?: number;
+  /** Jour du cycle au-dela duquel la regle est inactive (null = pas de limite) */
+  finJour?: number;
+  /** Delai minimum en jours entre deux generations par la meme regle sur la meme vague (defaut : 0) */
+  cooldownJours?: number;
+  /** Regle active des la creation (defaut : true) */
+  isActive?: boolean;
+}
+
+/** DTO pour modifier partiellement une regle d'activite */
+export type UpdateRegleActiviteDTO = Partial<CreateRegleActiviteDTO>;
+
+/** Filtres pour lister les regles d'activite */
+export interface RegleActiviteFilters {
+  /** Filtrer par type d'activite generee */
+  typeActivite?: TypeActivite;
+  /** Filtrer par type de declencheur */
+  typeDeclencheur?: TypeDeclencheur;
+  /** Filtrer par etat d'activation */
+  isActive?: boolean;
+  /** Filtrer par site (pour queries admin cross-site) */
+  siteId?: string;
+}
 
 // ---------------------------------------------------------------------------
 // Sprint 20 — Packs & Provisioning (Phase 3)

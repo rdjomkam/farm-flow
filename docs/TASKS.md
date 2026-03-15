@@ -3615,3 +3615,86 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 - 1206/1206 tests passent ✅
 - Build OK ✅
 - Rapports produits ✅
+
+---
+
+## Sprint 21 — Moteur d'Activités (Activity Engine)
+
+**Objectif :** Moteur de regles qui evalue automatiquement les conditions d'elevage et genere des activites planifiees sans intervention manuelle.
+
+---
+
+### Story S15-1 — Schema Prisma : TypeDeclencheur + RegleActivite + Activite enrichie
+**Assigné à :** @db-specialist
+**Statut :** `FAIT`
+
+---
+
+### Story S15-2 — Types TypeScript : interfaces + DTOs + types moteur
+**Assigné à :** @architect
+**Statut :** `FAIT`
+
+---
+
+### Story S15-3 — Moteur d'evaluation des regles
+**Assigné à :** @developer
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Créer src/lib/activity-engine/context.ts — buildEvaluationContext()
+- [x] `FAIT` Créer src/lib/activity-engine/evaluator.ts — evaluateRules(), 8 types de declencheurs
+- [x] `FAIT` EC-3.9 : skip vagues sans vivants
+- [x] `FAIT` EC-3.5 : validation phaseMin <= phaseMax
+- [x] `FAIT` EC-3.12 : conditions null = match toujours
+- [x] `FAIT` Timezone UTC+1 pour les calculs de jours
+
+---
+
+### Story S15-4 — Template engine
+**Assigné à :** @developer
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Créer src/lib/activity-engine/template-engine.ts — resolveTemplate() + buildPlaceholders()
+- [x] `FAIT` EC-3.6 : placeholders non resolus → "[donnee non disponible]"
+- [x] `FAIT` Formatage nombres locale FR (1 234,5)
+
+---
+
+### Story S15-5 — Generation d'activites + deduplication
+**Assigné à :** @developer
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Créer src/lib/activity-engine/generator.ts — generateActivities()
+- [x] `FAIT` EC-3.1 : deduplication meme regle + vague + meme jour
+- [x] `FAIT` EC-3.2 : firedOnce atomique pour SEUIL_* (R4 : updateMany)
+- [x] `FAIT` EC-3.3 : priorite la plus basse = plus urgente
+- [x] `FAIT` Transactions Prisma pour chaque creation (R4)
+- [x] `FAIT` Créer src/lib/activity-engine/index.ts
+
+---
+
+### Story S15-6 — CRON API + Event-driven triggers
+**Assigné à :** @developer
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Créer src/app/api/activites/generer/route.ts (POST, token CRON_SECRET)
+- [x] `FAIT` Idempotent : double-run ne genere pas de doublons
+- [x] `FAIT` Modifier src/app/api/releves/route.ts — hook async SEUIL_* apres creation releve
+- [x] `FAIT` Créer vercel.json — cron 0 5 * * * (05:00 UTC = 06:00 WAT)
+
+---
+
+### Story S15-9 — Calcul automatique quantites d'aliment
+**Assigné à :** @developer
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Créer src/lib/activity-engine/feeding.ts — calculerQuantiteAliment()
+- [x] `FAIT` EC-4.1 : nombreVivants = dernierComptage - mortalitesCumulees
+- [x] `FAIT` EC-4.2 : projection poidsMoyen via SGR si biometrie > 7 jours
+- [x] `FAIT` EC-4.4 : poids = seuil exact → phase superieure
+- [x] `FAIT` `npx vitest run` — 1206/1206 tests passent
+- [x] `FAIT` `npm run build` — Build production OK

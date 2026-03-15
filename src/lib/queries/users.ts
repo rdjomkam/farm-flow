@@ -1,6 +1,34 @@
 import { prisma } from "@/lib/db";
 import type { Role } from "@/types";
 
+// ---------------------------------------------------------------------------
+// Utilisateur systeme
+// ---------------------------------------------------------------------------
+
+/** Email fixe de l'utilisateur systeme pour les activites auto-generees */
+const SYSTEM_USER_EMAIL = "system@dkfarm.internal";
+
+/**
+ * Retourne l'utilisateur systeme, le cree s'il n'existe pas encore.
+ *
+ * Utilise upsert pour etre idempotent et thread-safe.
+ * L'utilisateur systeme ne peut pas se connecter (passwordHash = "SYSTEM_NO_LOGIN",
+ * isSystem = true).
+ */
+export async function getOrCreateSystemUser(): Promise<{ id: string }> {
+  return prisma.user.upsert({
+    where: { email: SYSTEM_USER_EMAIL },
+    create: {
+      email: SYSTEM_USER_EMAIL,
+      name: "Systeme DKFarm",
+      passwordHash: "SYSTEM_NO_LOGIN",
+      isSystem: true,
+    },
+    update: {},
+    select: { id: true },
+  });
+}
+
 /** Find a user by email (for login) */
 export async function getUserByEmail(email: string) {
   return prisma.user.findUnique({
