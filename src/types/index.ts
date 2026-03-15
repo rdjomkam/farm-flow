@@ -44,6 +44,8 @@ export {
   StatutActivation,
   // Sprint 21 — Moteur de regles d'activites
   TypeDeclencheur,
+  // Sprint 23 — Monitoring Ingénieur
+  VisibiliteNote,
 } from "./models";
 export type {
   Site,
@@ -119,6 +121,9 @@ export type {
   // Sprint 21 — Moteur de regles d'activites
   RegleActivite,
   RegleActiviteWithRelations,
+  // Sprint 23 — Monitoring Ingénieur
+  NoteIngenieur,
+  NoteIngenieurWithRelations,
 } from "./models";
 
 // Types authentification et multi-tenancy (DTOs, session, contexte)
@@ -296,6 +301,13 @@ export type {
   CreateRegleActiviteDTO,
   UpdateRegleActiviteDTO,
   RegleActiviteFilters,
+} from "./api";
+// Sprint 23 — Monitoring Ingénieur
+export type {
+  CreateNoteIngenieurDTO,
+  UpdateNoteIngenieurDTO,
+  NoteIngenieurFilters,
+  NoteIngenieurListResponse,
 } from "./api";
 export type {
   StockProduitContext,

@@ -37,6 +37,7 @@ import {
   TypeMouvement,
   TypeReleve,
   UniteStock,
+  VisibiliteNote,
 } from "./models";
 import type {
   AlimentTailleEntree,
@@ -56,6 +57,8 @@ import type {
   ListeBesoinsWithRelations,
   LotAlevins,
   MouvementStock,
+  NoteIngenieur,
+  NoteIngenieurWithRelations,
   Pack,
   PackActivation,
   PackActivationWithRelations,
@@ -1466,5 +1469,61 @@ export interface PackActivationFilters {
 /** Reponse liste des PackActivations */
 export interface PackActivationListResponse {
   activations: PackActivationWithRelations[];
+  total: number;
+}
+
+// ---------------------------------------------------------------------------
+// NoteIngenieur — Monitoring Ingénieur (Sprint 23)
+// ---------------------------------------------------------------------------
+
+/** DTO pour creer une note ingenieur (POST /api/notes-ingenieur) */
+export interface CreateNoteIngenieurDTO {
+  /** Titre court de la note */
+  titre: string;
+  /** Contenu en Markdown */
+  contenu: string;
+  /** Visibilite : PUBLIC ou INTERNE */
+  visibility: VisibiliteNote;
+  /** Note urgente */
+  isUrgent?: boolean;
+  /** True si soumise par le client (observation) */
+  isFromClient?: boolean;
+  /** Texte de l'observation client (utilise si isFromClient=true) */
+  observationTexte?: string;
+  /** Site client destinataire */
+  clientSiteId: string;
+  /** Vague concernee (nullable) */
+  vagueId?: string;
+}
+
+/** DTO pour modifier une note ingenieur (PATCH /api/notes-ingenieur/[id]) */
+export interface UpdateNoteIngenieurDTO {
+  /** Nouveau titre */
+  titre?: string;
+  /** Nouveau contenu */
+  contenu?: string;
+  /** Nouvelle visibilite */
+  visibility?: VisibiliteNote;
+  /** Modifier le flag urgent */
+  isUrgent?: boolean;
+  /** Marquer comme lue */
+  isRead?: boolean;
+  /** Nouvelle vague associee (null pour dissocier) */
+  vagueId?: string | null;
+}
+
+/** Filtres pour lister les NoteIngenieur */
+export interface NoteIngenieurFilters {
+  clientSiteId?: string;
+  visibility?: VisibiliteNote;
+  isUrgent?: boolean;
+  isRead?: boolean;
+  isFromClient?: boolean;
+  vagueId?: string;
+}
+
+/** Reponse liste des NoteIngenieur */
+export interface NoteIngenieurListResponse {
+  notes: NoteIngenieurWithRelations[];
   total: number;
 }

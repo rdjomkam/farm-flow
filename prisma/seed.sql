@@ -3,12 +3,12 @@
 
 BEGIN;
 
--- Nettoyage (ordre respecte les FK)
+-- Nettoyage (ordre respecte les FK — du plus dependant au moins dependant)
 DELETE FROM "Session";
+DELETE FROM "NoteIngenieur";
 DELETE FROM "Activite";
 DELETE FROM "Notification";
 DELETE FROM "ConfigAlerte";
-DELETE FROM "ConfigElevage";
 DELETE FROM "PaiementDepense";
 DELETE FROM "LigneBesoin";
 DELETE FROM "DepenseRecurrente";
@@ -22,6 +22,12 @@ DELETE FROM "ReleveConsommation";
 DELETE FROM "LigneCommande";
 DELETE FROM "MouvementStock";
 DELETE FROM "Commande";
+-- PackProduit avant Produit (FK RESTRICT sur Produit)
+DELETE FROM "PackActivation";
+DELETE FROM "PackProduit";
+DELETE FROM "Pack";
+-- ConfigElevage apres Pack (Pack FK ConfigElevage)
+DELETE FROM "ConfigElevage";
 DELETE FROM "Produit";
 DELETE FROM "Fournisseur";
 DELETE FROM "LotAlevins";
@@ -32,9 +38,6 @@ DELETE FROM "Bac";
 DELETE FROM "Vague";
 DELETE FROM "SiteMember";
 DELETE FROM "SiteRole";
-DELETE FROM "PackActivation";
-DELETE FROM "PackProduit";
-DELETE FROM "Pack";
 DELETE FROM "RegleActivite";
 DELETE FROM "Site";
 DELETE FROM "User";
@@ -49,19 +52,26 @@ INSERT INTO "User" (id, email, phone, name, "passwordHash", role, "isActive", "i
 VALUES
   ('user_admin', 'admin@dkfarm.cm', '+237699000000', 'Administrateur', '$2b$10$VHWKPywPuVh/szJsFgpiyu3wrTZ00kNz9nBy91QF9FB5WZBdXQUOC', 'ADMIN', true, false, NOW(), NOW()),
   ('user_gerant', 'gerant@dkfarm.cm', '+237677000000', 'Jean Kamga', '$2b$10$VHWKPywPuVh/szJsFgpiyu3wrTZ00kNz9nBy91QF9FB5WZBdXQUOC', 'GERANT', true, false, NOW(), NOW()),
+  -- Ingenieur DKFarm — suit les clients et envoie des notes de monitoring
+  ('user_ingenieur', 'ingenieur@dkfarm.cm', '+237666000001', 'Paul Nkomo', '$2b$10$VHWKPywPuVh/szJsFgpiyu3wrTZ00kNz9nBy91QF9FB5WZBdXQUOC', 'INGENIEUR', true, false, NOW(), NOW()),
+  -- Client pisciculteur (site propre : site_client_01)
+  ('user_client_01', 'client01@ferme.cm', '+237655000001', 'Marcel Essomba', '$2b$10$VHWKPywPuVh/szJsFgpiyu3wrTZ00kNz9nBy91QF9FB5WZBdXQUOC', 'PISCICULTEUR', true, false, NOW(), NOW()),
   -- FarmFlow System user — utilise pour les entites auto-generees (provisioning, moteur activites)
   ('system_dkfarm', NULL, NULL, 'FarmFlow System', '$2b$10$SYSTEM_USER_CANNOT_LOGIN_HASH_PLACEHOLDER_XXXX', 'PISCICULTEUR', true, true, NOW(), NOW());
 
 -- ──────────────────────────────────────────
--- Sites (1 ferme principale)
+-- Sites (site_01 = DKFarm, site_client_01 = ferme client)
 -- ──────────────────────────────────────────
 
 INSERT INTO "Site" (id, name, address, "isActive", "createdAt", "updatedAt")
 VALUES
-  ('site_01', 'Ferme Douala', 'Douala, Littoral, Cameroun', true, NOW(), NOW());
+  ('site_01', 'Ferme Douala', 'Douala, Littoral, Cameroun', true, NOW(), NOW()),
+  -- Site client cree lors du provisioning d'un Pack (Sprint 20)
+  -- Utilise aussi pour les NoteIngenieur (clientSiteId = site_client_01)
+  ('site_client_01', 'Ferme Essomba', 'Yaoundé, Centre, Cameroun', true, NOW(), NOW());
 
 -- ──────────────────────────────────────────
--- SiteRole (3 roles systeme pour site_01)
+-- SiteRole (3 roles systeme pour site_01, 1 pour site_client_01)
 -- ──────────────────────────────────────────
 
 INSERT INTO "SiteRole" (id, name, description, permissions, "isSystem", "siteId", "createdAt", "updatedAt")
@@ -162,17 +172,37 @@ VALUES
     'site_01',
     NOW(),
     NOW()
+  ),
+  -- SiteRole pour le site client (Sprint 23 — NoteIngenieur)
+  (
+    'sr_pisci_client_01',
+    'Pisciculteur',
+    'Acces terrain — lecture vagues, saisie releves — non supprimable',
+    ARRAY[
+      'VAGUES_VOIR',
+      'RELEVES_VOIR',
+      'RELEVES_CREER',
+      'BACS_GERER',
+      'DASHBOARD_VOIR',
+      'ALERTES_VOIR'
+    ]::"Permission"[],
+    true,
+    'site_client_01',
+    NOW(),
+    NOW()
   );
 
 -- ──────────────────────────────────────────
--- SiteMember (admin + gerant sur site_01)
+-- SiteMember (admin + gerant sur site_01, ingenieur sur site_01, client sur site_client_01)
 -- Utilise siteRoleId au lieu de role + permissions
 -- ──────────────────────────────────────────
 
 INSERT INTO "SiteMember" (id, "userId", "siteId", "siteRoleId", "isActive", "createdAt", "updatedAt")
 VALUES
-  ('sm_01', 'user_admin',  'site_01', 'sr_admin_site_01',  true, NOW(), NOW()),
-  ('sm_02', 'user_gerant', 'site_01', 'sr_gerant_site_01', true, NOW(), NOW());
+  ('sm_01', 'user_admin',      'site_01',        'sr_admin_site_01',   true, NOW(), NOW()),
+  ('sm_02', 'user_gerant',     'site_01',        'sr_gerant_site_01',  true, NOW(), NOW()),
+  ('sm_03', 'user_ingenieur',  'site_01',        'sr_admin_site_01',   true, NOW(), NOW()),
+  ('sm_04', 'user_client_01',  'site_client_01', 'sr_pisci_client_01', true, NOW(), NOW());
 
 -- ──────────────────────────────────────────
 -- Vagues (2 : en cours + terminee)
@@ -1687,6 +1717,64 @@ INSERT INTO "RegleActivite" (
   1, true, true,
   NULL, NULL,
   NOW(), NOW()
+);
+
+-- ──────────────────────────────────────────
+-- SPRINT 23 : Notes Ingénieur (Monitoring)
+-- ingenieurId = user_ingenieur, siteId = site_01 (DKFarm, R8)
+-- clientSiteId = site_client_01 (ferme du client)
+-- vagueId = vague_01 (vague EN_COURS du client — ici on reutilise vague_01 pour la demo)
+-- ──────────────────────────────────────────
+
+INSERT INTO "NoteIngenieur" (
+  id, titre, contenu, visibility, "isUrgent", "isRead",
+  "isFromClient", "observationTexte",
+  "ingenieurId", "clientSiteId", "vagueId", "siteId",
+  "createdAt", "updatedAt"
+) VALUES
+
+-- Note 1 : note technique PUBLIC visible par le client, liee a la vague en cours
+(
+  'note_01',
+  'Bilan biométrique S8 — Croissance satisfaisante',
+  E'## Bilan biométrie — Semaine 8\n\nLe poids moyen des poissons atteint **55g**, ce qui correspond aux benchmarks FAO pour Clarias gariepinus à ce stade.\n\n### Points positifs\n- Croissance régulière (+6g/semaine)\n- Taux de survie estimé : 94%\n- FCR actuel : 1.8 (bon)\n\n### Recommandations\n1. Passer au granulé 2mm dès la semaine prochaine\n2. Augmenter la ration de 10% (phase juvenile)\n3. Effectuer un tri si l''écart de poids > 30%',
+  'PUBLIC', false, false,
+  false, NULL,
+  'user_ingenieur', 'site_client_01', 'vague_01', 'site_01',
+  NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days'
+),
+
+-- Note 2 : note INTERNE (usage DKFarm uniquement), urgente
+(
+  'note_02',
+  'INTERNE : Suspicion mycose — suivi renforcé requis',
+  E'## Note interne — Non visible par le client\n\nLors de la visite du 2026-03-08, observation de lésions cutanées suspectes sur 3 individus du Bac 1. Possible mycose à *Saprolegnia*.\n\n**Actions internes requises :**\n- Prélever 5 individus pour analyse laboratoire\n- Commander sulfate de cuivre (15kg) en urgence\n- Prévenir Dr. Biloa (vétérinaire partenaire)\n\n**NE PAS informer le client avant confirmation du diagnostic.**',
+  'INTERNE', true, false,
+  false, NULL,
+  'user_ingenieur', 'site_client_01', 'vague_01', 'site_01',
+  NOW() - INTERVAL '4 days', NOW() - INTERVAL '4 days'
+),
+
+-- Note 3 : observation soumise par le client (isFromClient=true)
+(
+  'note_03',
+  'Observation client : poissons en surface ce matin',
+  E'Le client a soumis une observation via l''application.\n\n**Observation originale :** "Ce matin j''ai vu beaucoup de poissons nager en surface, ils semblent chercher de l''air. Est-ce grave ?"\n\n**Analyse ingénieur :** Probable manque d''oxygène dissous. Vérifier le débit d''aération. Mesure urgente de l''O2 recommandée.',
+  'PUBLIC', true, true,
+  true, 'Ce matin j''ai vu beaucoup de poissons nager en surface, ils semblent chercher de l''air. Est-ce grave ?',
+  'user_ingenieur', 'site_client_01', 'vague_01', 'site_01',
+  NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'
+),
+
+-- Note 4 : note de suivi PUBLIC lue par le client, sans vague associee
+(
+  'note_04',
+  'Guide démarrage : conseils pratiques pour les 30 premiers jours',
+  E'## Guide de démarrage — 30 premiers jours\n\nBienvenue sur FarmFlow ! Voici les points clés pour réussir vos 30 premiers jours d''élevage.\n\n### Alimentation\n- Granulé **1mm** jusqu''à 10g de poids moyen\n- Taux : **5-8% de la biomasse/jour** en 3 repas\n\n### Qualité eau\n- Température idéale : **25-30°C**\n- Renouveler **30% du volume** tous les 2-3 jours\n- Mesurer O2, pH, température **chaque matin**\n\n### Biométrie\n- 1ère biométrie à J+7\n- Peser **10% de l''effectif** par bac\n\nN''hésitez pas à soumettre vos observations directement dans l''application.',
+  'PUBLIC', false, true,
+  false, NULL,
+  'user_ingenieur', 'site_client_01', NULL, 'site_01',
+  NOW() - INTERVAL '14 days', NOW() - INTERVAL '14 days'
 );
 
 COMMIT;

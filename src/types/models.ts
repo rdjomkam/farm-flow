@@ -4,8 +4,8 @@
  * Ces types representent les modeles tels qu'ils sont stockes en base.
  * Ils servent de source de verite TypeScript pour le projet.
  *
- * 30 modeles : Site, SiteRole, SiteMember, User, Session, Bac, Vague, Releve, Fournisseur, Produit, MouvementStock, Commande, LigneCommande, ReleveConsommation, Client, Vente, Facture, Paiement, Reproducteur, Ponte, LotAlevins, ConfigAlerte, Notification, Activite, Depense, PaiementDepense, DepenseRecurrente, ListeBesoins, LigneBesoin, RegleActivite
- * 28 enums : Role (+ INGENIEUR), Permission (+ 6 Phase 3), StatutVague, TypeReleve, TypeAliment, CauseMortalite, MethodeComptage, CategorieProduit, UniteStock, TypeMouvement, StatutCommande, StatutFacture, ModePaiement, SexeReproducteur, StatutReproducteur, StatutPonte, StatutLotAlevins, TypeAlerte, StatutAlerte, TypeActivite (+ TRI/MEDICATION), StatutActivite, Recurrence, CategorieDepense, StatutDepense, FrequenceRecurrence, StatutBesoins, StatutActivation, TypeDeclencheur
+ * 31 modeles : Site, SiteRole, SiteMember, User, Session, Bac, Vague, Releve, Fournisseur, Produit, MouvementStock, Commande, LigneCommande, ReleveConsommation, Client, Vente, Facture, Paiement, Reproducteur, Ponte, LotAlevins, ConfigAlerte, Notification, Activite, Depense, PaiementDepense, DepenseRecurrente, ListeBesoins, LigneBesoin, RegleActivite, NoteIngenieur
+ * 29 enums : Role (+ INGENIEUR), Permission (+ 6 Phase 3), StatutVague, TypeReleve, TypeAliment, CauseMortalite, MethodeComptage, CategorieProduit, UniteStock, TypeMouvement, StatutCommande, StatutFacture, ModePaiement, SexeReproducteur, StatutReproducteur, StatutPonte, StatutLotAlevins, TypeAlerte, StatutAlerte, TypeActivite (+ TRI/MEDICATION), StatutActivite, Recurrence, CategorieDepense, StatutDepense, FrequenceRecurrence, StatutBesoins, StatutActivation, TypeDeclencheur, VisibiliteNote
  */
 
 // ---------------------------------------------------------------------------
@@ -1693,4 +1693,67 @@ export interface PackActivationWithRelations extends PackActivation {
   user?: Pick<User, "id" | "name">;
   clientSite?: Pick<Site, "id" | "name">;
   vagues?: Pick<Vague, "id" | "code" | "statut">[];
+}
+
+// ---------------------------------------------------------------------------
+// Enums — Monitoring Ingénieur (Sprint 23)
+// ---------------------------------------------------------------------------
+
+/** Visibilite d'une note ingenieur : PUBLIC (visible client) ou INTERNE (DKFarm uniquement) */
+export enum VisibiliteNote {
+  PUBLIC = "PUBLIC",
+  INTERNE = "INTERNE",
+}
+
+// ---------------------------------------------------------------------------
+// Modeles — Monitoring Ingénieur (Sprint 23)
+// ---------------------------------------------------------------------------
+
+/**
+ * NoteIngenieur — note ou observation envoyee par un ingenieur DKFarm vers un site client.
+ *
+ * Deux usages :
+ * 1. Note de suivi (isFromClient=false) : l'ingenieur redige une note technique.
+ *    visibility=PUBLIC → visible par le client ; visibility=INTERNE → usage interne DKFarm.
+ * 2. Observation client (isFromClient=true) : le client remonte une observation
+ *    via observationTexte. L'ingenieur peut ensuite repondre.
+ *
+ * Deux FK vers Site :
+ * - siteId : site DKFarm de l'ingenieur (R8)
+ * - clientSiteId : site client destinataire
+ */
+export interface NoteIngenieur {
+  id: string;
+  /** Titre court de la note */
+  titre: string;
+  /** Contenu en Markdown */
+  contenu: string;
+  /** Visibilite : PUBLIC (visible client) ou INTERNE (DKFarm uniquement) */
+  visibility: VisibiliteNote;
+  /** Note marquee comme urgente */
+  isUrgent: boolean;
+  /** Note lue par le destinataire */
+  isRead: boolean;
+  /** True si soumise par le client (observation) */
+  isFromClient: boolean;
+  /** Texte de l'observation client (nullable, utilise si isFromClient=true) */
+  observationTexte: string | null;
+  /** Ingenieur auteur */
+  ingenieurId: string;
+  /** Site client destinataire */
+  clientSiteId: string;
+  /** Vague concernee (nullable) */
+  vagueId: string | null;
+  /** Site DKFarm de l'ingenieur — R8 */
+  siteId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** NoteIngenieur avec ses relations chargees */
+export interface NoteIngenieurWithRelations extends NoteIngenieur {
+  ingenieur?: Pick<User, "id" | "name">;
+  clientSite?: Pick<Site, "id" | "name">;
+  vague?: Pick<Vague, "id" | "code"> | null;
+  site?: Pick<Site, "id" | "name">;
 }

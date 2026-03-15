@@ -6,7 +6,7 @@ import { BottomNav } from "@/components/layout/bottom-nav";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Permission } from "@/types";
+import { Permission, Role } from "@/types";
 
 const allPermissions = Object.values(Permission);
 
@@ -24,23 +24,35 @@ vi.mock("next/navigation", () => ({
 
 describe("Responsive — Mobile first patterns", () => {
   it("BottomNav est visible sur mobile (md:hidden)", () => {
-    const { container } = render(<BottomNav permissions={allPermissions} />);
+    const { container } = render(<BottomNav permissions={allPermissions} role={null} />);
     const nav = container.querySelector("nav");
     expect(nav?.className).toContain("md:hidden");
   });
 
   it("BottomNav a une hauteur tactile suffisante (min-h-[56px])", () => {
-    const { container } = render(<BottomNav permissions={allPermissions} />);
+    const { container } = render(<BottomNav permissions={allPermissions} role={null} />);
     const links = container.querySelectorAll("a");
     links.forEach((link) => {
       expect(link.className).toContain("min-h-[56px]");
     });
   });
 
-  it("BottomNav a les 5 onglets de navigation (suivi par defaut)", () => {
-    const { container } = render(<BottomNav permissions={allPermissions} />);
+  it("BottomNav ADMIN/GERANT a 4 onglets par defaut", () => {
+    const { container } = render(<BottomNav permissions={allPermissions} role={null} />);
     const links = container.querySelectorAll("a");
-    expect(links).toHaveLength(5);
+    expect(links).toHaveLength(4);
+  });
+
+  it("BottomNav PISCICULTEUR a 4 onglets dedies", () => {
+    const { container } = render(<BottomNav permissions={allPermissions} role={Role.PISCICULTEUR} />);
+    const links = container.querySelectorAll("a");
+    expect(links).toHaveLength(4);
+  });
+
+  it("BottomNav INGENIEUR a 3 onglets dedies", () => {
+    const { container } = render(<BottomNav permissions={allPermissions} role={Role.INGENIEUR} />);
+    const links = container.querySelectorAll("a");
+    expect(links).toHaveLength(3);
   });
 });
 

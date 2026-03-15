@@ -4,7 +4,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { ToastProvider } from "@/components/ui/toast";
 import { getServerSession } from "@/lib/auth";
 import { getServerPermissions } from "@/lib/auth/permissions-server";
-import { Permission } from "@/types";
+import { Permission, Role } from "@/types";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -42,6 +42,7 @@ export default async function RootLayout({
 }>) {
   const session = await getServerSession();
   const permissions: Permission[] = session ? await getServerPermissions(session) : [];
+  const role: Role | null = session?.role ?? null;
 
   return (
     <html lang="fr">
@@ -50,7 +51,7 @@ export default async function RootLayout({
         suppressHydrationWarning
       >
         <ToastProvider>
-          <AppShell permissions={permissions}>{children}</AppShell>
+          <AppShell permissions={permissions} role={role}>{children}</AppShell>
         </ToastProvider>
       </body>
     </html>

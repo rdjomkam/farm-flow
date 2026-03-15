@@ -253,6 +253,15 @@ enum StatutActivation {
 }
 
 // ──────────────────────────────────────────
+// Enums — Phase 3 : Monitoring Ingénieur (Sprint 23)
+// ──────────────────────────────────────────
+
+enum VisibiliteNote {
+  PUBLIC
+  INTERNE
+}
+
+// ──────────────────────────────────────────
 // Enums — Phase 3 : Moteur d'activités (Sprint 21)
 // ──────────────────────────────────────────
 
@@ -349,6 +358,9 @@ model Site {
   packActivationsClient    PackActivation[]  @relation("PackActivationsClient")
   // Sprint 21 — Moteur d'activités
   reglesActivite       RegleActivite[]
+  // Sprint 23 — Monitoring Ingénieur
+  notesRecues          NoteIngenieur[]  @relation("NotesRecues")
+  notes                NoteIngenieur[]  @relation("NotesDKFarm")
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 }
@@ -566,6 +578,8 @@ model User {
   packActivationsCreees PackActivation[]
   // Sprint 21 — Moteur d'activités
   reglesActivite        RegleActivite[]
+  // Sprint 23 — Monitoring Ingénieur
+  notesEnvoyees         NoteIngenieur[]    @relation("NotesEnvoyees")
   isSystem              Boolean            @default(false)
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
@@ -633,6 +647,8 @@ model Vague {
   activites               Activite[]
   depenses                Depense[]
   listesBesoins           ListeBesoins[]
+  // Sprint 23 — Monitoring Ingénieur
+  notes                   NoteIngenieur[]
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
 
@@ -1389,4 +1405,66 @@ model PackActivation {
   @@index([userId])
   @@index([code])
   @@index([statut])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Monitoring Ingénieur (Sprint 23)
+// ──────────────────────────────────────────
+
+/**
+ * NoteIngenieur — note ou observation envoyee par un ingenieur DKFarm vers un site client.
+ *
+ * Deux usages :
+ * 1. Note de suivi (isFromClient=false) : l'ingenieur redige une note technique (PUBLIC ou INTERNE).
+ * 2. Observation client (isFromClient=true) : le client remonte une observation via observationTexte.
+ *
+ * Deux relations vers Site :
+ * - siteId : site DKFarm de l'ingenieur (R8 — chaque modele a un siteId)
+ * - clientSiteId : site client destinataire de la note
+ */
+model NoteIngenieur {
+  id               String         @id @default(cuid())
+  /** Titre court de la note */
+  titre            String
+  /** Contenu en Markdown */
+  contenu          String
+  /** Visibilite : PUBLIC (visible client) ou INTERNE (DKFarm uniquement) */
+  visibility       VisibiliteNote
+  /** Marquer la note comme urgente */
+  isUrgent         Boolean        @default(false)
+  /** Marquer la note comme lue par le destinataire */
+  isRead           Boolean        @default(false)
+  /** True si cette note est une observation soumise par le client */
+  isFromClient     Boolean        @default(false)
+  /** Texte libre de l'observation client (nullable, utilise si isFromClient=true) */
+  observationTexte String?
+
+  /** Ingenieur auteur de la note */
+  ingenieurId   String
+  ingenieur     User   @relation("NotesEnvoyees", fields: [ingenieurId], references: [id])
+
+  /** Site client destinataire */
+  clientSiteId  String
+  clientSite    Site   @relation("NotesRecues", fields: [clientSiteId], references: [id])
+
+  /** Vague concernee (nullable) */
+  vagueId       String?
+  vague         Vague? @relation(fields: [vagueId], references: [id], onDelete: SetNull)
+
+  /** Site DKFarm de l'ingenieur — R8 */
+  siteId        String
+  site          Site   @relation("NotesDKFarm", fields: [siteId], references: [id])
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([siteId])
+  @@index([clientSiteId])
+  @@index([ingenieurId])
+  @@index([vagueId])
+  @@index([visibility])
+  @@index([isFromClient])
+  @@index([isRead])
+  @@index([clientSiteId, isRead])
+  @@index([clientSiteId, visibility])
 }

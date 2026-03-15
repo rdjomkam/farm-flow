@@ -20,7 +20,9 @@ import {
   evaluateRules,
   generateActivities,
 } from "@/lib/activity-engine";
+import { runEngineerAlerts } from "@/lib/activity-engine/engineer-alerts";
 import { getOrCreateSystemUser } from "@/lib/queries/users";
+import { runLifecycle } from "@/lib/queries/lifecycle";
 
 // ---------------------------------------------------------------------------
 // Utilitaires
@@ -89,8 +91,18 @@ export async function POST(request: NextRequest) {
     let totalSkipped = 0;
     const allErrors: string[] = [];
 
+    // Compteurs pour les alertes ingenieur
+    let totalAlertesCreees = 0;
+    let totalAlertesSautees = 0;
+
+    // Compteurs pour le lifecycle
+    let totalExpirationsPackActivation = 0;
+    let totalSuspensionsPackActivation = 0;
+    let totalActivitesArchivees = 0;
+
     for (const site of sitesQuery) {
       try {
+        // ---- Generer les activites planifiees ----
         const siteResult = await runEngineForSite(
           site.id,
           systemUserId
@@ -98,6 +110,31 @@ export async function POST(request: NextRequest) {
         totalCreated += siteResult.created;
         totalSkipped += siteResult.skipped;
         allErrors.push(...siteResult.errors);
+
+        // ---- Generer les alertes ingenieur pour ce site ----
+        try {
+          const alertesResult = await runEngineerAlerts(site.id, systemUserId);
+          totalAlertesCreees += alertesResult.alertesCreees;
+          totalAlertesSautees += alertesResult.alertesSautees;
+          allErrors.push(...alertesResult.errors);
+        } catch (alertError) {
+          const msg = alertError instanceof Error ? alertError.message : String(alertError);
+          allErrors.push(`[Alertes ingenieur] Site ${site.id} : ${msg}`);
+          console.error(`[CRON] Erreur alertes ingenieur site ${site.id}:`, alertError);
+        }
+
+        // ---- Lifecycle PackActivation + archivage activites ----
+        try {
+          const lifecycleResult = await runLifecycle(site.id);
+          totalExpirationsPackActivation += lifecycleResult.expirationsPackActivation;
+          totalSuspensionsPackActivation += lifecycleResult.suspensionsPackActivation;
+          totalActivitesArchivees += lifecycleResult.activitesArchivees;
+          allErrors.push(...lifecycleResult.errors);
+        } catch (lifecycleError) {
+          const msg = lifecycleError instanceof Error ? lifecycleError.message : String(lifecycleError);
+          allErrors.push(`[Lifecycle] Site ${site.id} : ${msg}`);
+          console.error(`[CRON] Erreur lifecycle site ${site.id}:`, lifecycleError);
+        }
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         allErrors.push(`Site ${site.id} : ${msg}`);
@@ -112,6 +149,13 @@ export async function POST(request: NextRequest) {
         sitesTraites: sitesQuery.length,
         activitesCrees: totalCreated,
         activitesSautees: totalSkipped,
+        alertesIngenieurCreees: totalAlertesCreees,
+        alertesIngenieurSautees: totalAlertesSautees,
+        lifecycle: {
+          expirationsPackActivation: totalExpirationsPackActivation,
+          suspensionsPackActivation: totalSuspensionsPackActivation,
+          activitesArchivees: totalActivitesArchivees,
+        },
         erreurs: allErrors.length,
       },
       errors: allErrors.length > 0 ? allErrors : undefined,

@@ -201,3 +201,14 @@ export {
   updateRegleActivite,
   deleteRegleActivite,
 } from "./regles-activites";
+
+// Sprint 23 — Notes Ingenieur + Observations client (S17-8)
+export {
+  getNotes,
+  getNoteById,
+  createNote,
+  updateNote,
+  getNotesPourClient,
+  getObservationsClient,
+  createObservationClient,
+} from "./notes";

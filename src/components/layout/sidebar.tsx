@@ -31,11 +31,15 @@ import {
   Receipt,
   ClipboardList,
   RefreshCw,
+  NotebookPen,
+  UserCog,
+  Boxes,
+  Eye,
 } from "lucide-react";
 import { SiteSelector } from "./site-selector";
 import { NotificationBell } from "./notification-bell";
 import { cn } from "@/lib/utils";
-import { Permission } from "@/types";
+import { Permission, Role } from "@/types";
 import { MODULE_VIEW_PERMISSIONS, ITEM_VIEW_PERMISSIONS, SECONDARY_VIEW_PERMISSIONS } from "@/lib/permissions-constants";
 
 interface NavItem {
@@ -46,7 +50,11 @@ interface NavItem {
   disabled?: boolean;
 }
 
-const modules: { label: string; icon: React.ComponentType<{ className?: string }>; items: NavItem[] }[] = [
+// ---------------------------------------------------------------------------
+// Modules communs (ADMIN / GERANT)
+// ---------------------------------------------------------------------------
+
+const modulesAdminGerant: { label: string; icon: React.ComponentType<{ className?: string }>; items: NavItem[] }[] = [
   {
     label: "Reproduction",
     icon: Egg,
@@ -105,7 +113,89 @@ const modules: { label: string; icon: React.ComponentType<{ className?: string }
       { href: "/analytics/tendances", label: "Tendances", icon: TrendingUp, disabled: true },
     ],
   },
+  // Phase 3 — Packs & Provisioning (Sprint 20)
+  {
+    label: "Packs & Provisioning",
+    icon: Boxes,
+    items: [
+      { href: "/packs", label: "Packs", icon: Boxes },
+      { href: "/activations", label: "Activations", icon: ClipboardCheck },
+    ],
+  },
+  // Phase 3 — Config élevage (Sprint 19)
+  {
+    label: "Config. Elevage",
+    icon: Settings,
+    items: [
+      { href: "/settings/config-elevage", label: "Profils d'elevage", icon: Settings },
+    ],
+  },
+  // Phase 3 — Monitoring ingénieur (Sprint 23)
+  {
+    label: "Ingenieur",
+    icon: UserCog,
+    items: [
+      { href: "/ingenieur", label: "Dashboard clients", icon: LayoutDashboard },
+      { href: "/notes", label: "Notes", icon: NotebookPen },
+    ],
+  },
 ];
+
+// ---------------------------------------------------------------------------
+// Modules INGENIEUR — vue allégée centrée sur le suivi clients
+// ---------------------------------------------------------------------------
+
+const modulesIngenieur: { label: string; icon: React.ComponentType<{ className?: string }>; items: NavItem[] }[] = [
+  {
+    label: "Clients",
+    icon: Users,
+    items: [
+      { href: "/ingenieur", label: "Dashboard clients", icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: "Notes",
+    icon: NotebookPen,
+    items: [
+      { href: "/notes", label: "Mes notes", icon: NotebookPen },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Modules PISCICULTEUR — vue terrain simplifiée
+// ---------------------------------------------------------------------------
+
+const modulesPisciculteur: { label: string; icon: React.ComponentType<{ className?: string }>; items: NavItem[] }[] = [
+  {
+    label: "Elevage",
+    icon: Waves,
+    items: [
+      { href: "/vagues", label: "Vagues", icon: Waves },
+      { href: "/bacs", label: "Bacs", icon: Container },
+      { href: "/releves/nouveau", label: "Nouveau releve", icon: PlusCircle },
+    ],
+  },
+  {
+    label: "Mes activites",
+    icon: ClipboardCheck,
+    items: [
+      { href: "/mes-taches", label: "Mes taches", icon: ClipboardCheck },
+      { href: "/releves/nouveau", label: "Observations", icon: Eye },
+    ],
+  },
+  {
+    label: "Notes",
+    icon: NotebookPen,
+    items: [
+      { href: "/notes", label: "Mes notes", icon: NotebookPen },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Items secondaires
+// ---------------------------------------------------------------------------
 
 const secondaryItems: NavItem[] = [
   { href: "/sites", label: "Sites", icon: Building2 },
@@ -113,14 +203,35 @@ const secondaryItems: NavItem[] = [
   { href: "/settings/alertes", label: "Config. alertes", icon: Settings },
 ];
 
-export function Sidebar({ permissions }: { permissions: Permission[] }) {
+// ---------------------------------------------------------------------------
+// Permission gates Phase 3
+// ---------------------------------------------------------------------------
+
+const PHASE3_MODULE_PERMISSIONS: Record<string, Permission> = {
+  "Packs & Provisioning": Permission.ACTIVER_PACKS,
+  "Config. Elevage":      Permission.GERER_CONFIG_ELEVAGE,
+  "Ingenieur":            Permission.MONITORING_CLIENTS,
+};
+
+export function Sidebar({ permissions, role }: { permissions: Permission[]; role: Role | null }) {
   const pathname = usePathname();
 
-  // Filter modules by permission, then filter items within each module
+  // Sélectionner les modules selon le rôle
+  const allModules = useMemo(() => {
+    if (role === Role.INGENIEUR) return modulesIngenieur;
+    if (role === Role.PISCICULTEUR) return modulesPisciculteur;
+    return modulesAdminGerant;
+  }, [role]);
+
+  // Filtrer modules par permission, puis items dans chaque module
   const visibleModules = useMemo(
     () =>
-      modules
+      allModules
         .filter((mod) => {
+          // Gate Phase 3 spécifique
+          const phase3Required = PHASE3_MODULE_PERMISSIONS[mod.label];
+          if (phase3Required && !permissions.includes(phase3Required)) return false;
+          // Gate de module standard
           const required = MODULE_VIEW_PERMISSIONS[mod.label];
           return !required || permissions.includes(required);
         })
@@ -132,7 +243,7 @@ export function Sidebar({ permissions }: { permissions: Permission[] }) {
           }),
         }))
         .filter((mod) => mod.items.length > 0),
-    [permissions]
+    [permissions, allModules]
   );
 
   const visibleSecondary = useMemo(
@@ -143,12 +254,12 @@ export function Sidebar({ permissions }: { permissions: Permission[] }) {
     [permissions]
   );
 
-  const showDashboard = permissions.includes(Permission.DASHBOARD_VOIR);
+  const showDashboard = permissions.includes(Permission.DASHBOARD_VOIR) && role !== Role.INGENIEUR && role !== Role.PISCICULTEUR;
 
   function isActive(href: string) {
     // Pages racines : match exact uniquement
-    if (href === "/" || href === "/stock" || href === "/alevins" || href === "/analytics" || href === "/planning" || href === "/finances" || href === "/mes-taches")
-      return pathname === href;
+    if (href === "/" || href === "/stock" || href === "/alevins" || href === "/analytics" || href === "/planning" || href === "/finances" || href === "/mes-taches" || href === "/ingenieur" || href === "/notes" || href === "/packs" || href === "/activations")
+      return pathname === href || pathname.startsWith(href + "/");
     if (href === "/ventes")
       return pathname === "/ventes" || pathname.startsWith("/ventes/");
     return pathname.startsWith(href);
@@ -170,8 +281,8 @@ export function Sidebar({ permissions }: { permissions: Permission[] }) {
     for (const mod of visibleModules) {
       if (mod.items.some((item) => {
         const href = item.href;
-        if (href === "/" || href === "/stock" || href === "/alevins" || href === "/analytics" || href === "/planning" || href === "/finances" || href === "/mes-taches")
-          return pathname === href;
+        if (href === "/" || href === "/stock" || href === "/alevins" || href === "/analytics" || href === "/planning" || href === "/finances" || href === "/mes-taches" || href === "/ingenieur" || href === "/notes" || href === "/packs" || href === "/activations")
+          return pathname === href || pathname.startsWith(href + "/");
         if (href === "/ventes")
           return pathname === "/ventes" || pathname.startsWith("/ventes/");
         return pathname.startsWith(href);

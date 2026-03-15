@@ -161,12 +161,20 @@ export const ITEM_VIEW_PERMISSIONS: Record<string, Permission> = {
   "/planning/nouvelle":  Permission.PLANNING_GERER,
   "/mes-taches":         Permission.PLANNING_VOIR,
   "/analytics/finances": Permission.FINANCES_VOIR,
+  // Phase 3 — Packs & Provisioning (Sprint 20)
+  "/packs":              Permission.ACTIVER_PACKS,
+  "/activations":        Permission.ACTIVER_PACKS,
+  // Phase 3 — Ingénieur (Sprint 23)
+  "/ingenieur":          Permission.MONITORING_CLIENTS,
+  "/notes":              Permission.ENVOYER_NOTES,
 };
 
 export const SECONDARY_VIEW_PERMISSIONS: Record<string, Permission> = {
   "/sites": Permission.SITE_GERER,
   "/settings/alertes": Permission.ALERTES_CONFIGURER,
   "/notifications": Permission.ALERTES_VOIR,
+  // Phase 3 — Config élevage (Sprint 19)
+  "/settings/config-elevage": Permission.GERER_CONFIG_ELEVAGE,
 };
 
 export function hasPermission(permissions: Permission[], required: Permission): boolean {
