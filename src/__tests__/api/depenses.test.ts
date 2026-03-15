@@ -18,6 +18,7 @@ import { StatutDepense, StatutCommande, ModePaiement, CategorieDepense, Permissi
 const mockPrismaDepenseFindFirst = vi.fn();
 const mockPrismaDepenseCreate = vi.fn();
 const mockPrismaDepenseUpdateMany = vi.fn();
+const mockPrismaDepenseDeleteMany = vi.fn();
 const mockPrismaDepenseDelete = vi.fn();
 const mockPrismaDepenseFindMany = vi.fn();
 const mockPrismaDepenseCount = vi.fn();
@@ -32,6 +33,7 @@ vi.mock("@/lib/db", () => ({
       findMany: (...args: unknown[]) => mockPrismaDepenseFindMany(...args),
       create: (...args: unknown[]) => mockPrismaDepenseCreate(...args),
       updateMany: (...args: unknown[]) => mockPrismaDepenseUpdateMany(...args),
+      deleteMany: (...args: unknown[]) => mockPrismaDepenseDeleteMany(...args),
       delete: (...args: unknown[]) => mockPrismaDepenseDelete(...args),
       count: (...args: unknown[]) => mockPrismaDepenseCount(...args),
       update: (...args: unknown[]) => mockPrismaDepenseUpdate(...args),
@@ -46,6 +48,7 @@ vi.mock("@/lib/db", () => ({
       depense: {
         findFirst: mockPrismaDepenseFindFirst,
         create: mockPrismaDepenseCreate,
+        updateMany: mockPrismaDepenseUpdateMany,
         update: mockPrismaDepenseUpdate,
         count: mockPrismaDepenseCount,
       },
@@ -336,8 +339,8 @@ describe("DELETE /api/depenses/[id]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockPrismaDepenseFindFirst.mockResolvedValue({ id: "dep-1", statut: StatutDepense.NON_PAYEE });
-    mockPrismaDepenseDelete.mockResolvedValue({ id: "dep-1" });
+    // Par defaut : deleteMany reussit (NON_PAYEE supprimee)
+    mockPrismaDepenseDeleteMany.mockResolvedValue({ count: 1 });
   });
 
   it("retourne 200 et supprime la depense NON_PAYEE", async () => {
@@ -348,12 +351,16 @@ describe("DELETE /api/depenses/[id]", () => {
   });
 
   it("retourne 409 si depense a des paiements", async () => {
+    // deleteMany retourne count=0 (statut non NON_PAYEE), findFirst retourne la depense avec statut non supprimable
+    mockPrismaDepenseDeleteMany.mockResolvedValue({ count: 0 });
     mockPrismaDepenseFindFirst.mockResolvedValue({ id: "dep-1", statut: StatutDepense.PAYEE_PARTIELLEMENT });
     const response = await DELETE_DEPENSE(makeRequest("/api/depenses/dep-1", { method: "DELETE" }), { params: Promise.resolve({ id: "dep-1" }) });
     expect(response.status).toBe(409);
   });
 
   it("retourne 404 si depense introuvable", async () => {
+    // deleteMany retourne count=0 (introuvable), findFirst retourne null
+    mockPrismaDepenseDeleteMany.mockResolvedValue({ count: 0 });
     mockPrismaDepenseFindFirst.mockResolvedValue(null);
     const response = await DELETE_DEPENSE(makeRequest("/api/depenses/dep-xxx", { method: "DELETE" }), { params: Promise.resolve({ id: "dep-xxx" }) });
     expect(response.status).toBe(404);

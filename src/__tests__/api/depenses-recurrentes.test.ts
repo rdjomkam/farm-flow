@@ -68,6 +68,7 @@ vi.mock("@/lib/db", () => ({
       fn({
         depenseRecurrente: {
           update: mockDepenseRecurrenteUpdate,
+          updateMany: mockDepenseRecurrenteUpdateMany,
         },
         depense: {
           create: mockDepenseCreate,
@@ -159,7 +160,11 @@ import {
 } from "@/lib/queries/depenses-recurrentes";
 
 describe("genererDepensesRecurrentes — MENSUEL", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Verrou optimiste : updateMany conditionnel retourne count=1 par defaut (verrou acquis)
+    mockDepenseRecurrenteUpdateMany.mockResolvedValue({ count: 1 });
+  });
 
   it("genere une depense si derniereGeneration est null (jamais generee)", async () => {
     mockDepenseRecurrenteFindMany.mockResolvedValue([TEMPLATE_MENSUEL]);
@@ -213,7 +218,10 @@ describe("genererDepensesRecurrentes — MENSUEL", () => {
 });
 
 describe("genererDepensesRecurrentes — TRIMESTRIEL", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockDepenseRecurrenteUpdateMany.mockResolvedValue({ count: 1 });
+  });
 
   it("genere une depense si derniereGeneration < debut du trimestre courant", async () => {
     const now = new Date();
@@ -255,7 +263,10 @@ describe("genererDepensesRecurrentes — TRIMESTRIEL", () => {
 });
 
 describe("genererDepensesRecurrentes — ANNUEL", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockDepenseRecurrenteUpdateMany.mockResolvedValue({ count: 1 });
+  });
 
   it("genere une depense si derniereGeneration < debut de l'annee courante", async () => {
     const anneeDerniere = new Date(new Date().getFullYear() - 1, 5, 1);
@@ -580,6 +591,8 @@ describe("POST /api/depenses-recurrentes/generer", () => {
       montantTotal: 150000,
     });
     mockDepenseRecurrenteUpdate.mockResolvedValue({});
+    // Verrou optimiste : updateMany conditionnel retourne count=1 (verrou acquis)
+    mockDepenseRecurrenteUpdateMany.mockResolvedValue({ count: 1 });
 
     const req = makeRequest(
       "http://localhost:3000/api/depenses-recurrentes/generer",

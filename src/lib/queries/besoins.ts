@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { StatutBesoins, StatutCommande } from "@/types";
+import { StatutBesoins, StatutCommande, CategorieDepense } from "@/types";
 import type {
   CreateListeBesoinsDTO,
   UpdateListeBesoinsDTO,
@@ -408,7 +408,7 @@ export async function traiterBesoins(
       data: {
         numero: numeroDep,
         description: `Depense — ${liste.titre}`,
-        categorieDepense: "AUTRE",
+        categorieDepense: CategorieDepense.AUTRE,
         montantTotal: liste.montantEstime,
         date: new Date(),
         listeBesoinsId: liste.id,

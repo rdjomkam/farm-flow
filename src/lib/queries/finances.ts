@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { CategorieProduit, CategorieDepense, TypeMouvement } from "@/types";
+import { CategorieProduit, CategorieDepense, TypeMouvement, StatutDepense } from "@/types";
 import { getPrixParUniteBase } from "@/lib/calculs";
 
 // ---------------------------------------------------------------------------
@@ -217,7 +217,7 @@ export async function getResumeFinancier(
 
   for (const dep of depensesHorsCommande) {
     depensesTotales += dep.montantTotal;
-    if (dep.statut === "PAYEE") {
+    if (dep.statut === StatutDepense.PAYEE) {
       depensesPayees += dep.montantTotal;
     } else {
       depensesImpayees += dep.montantTotal - dep.montantPaye;

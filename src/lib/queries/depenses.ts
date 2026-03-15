@@ -128,43 +128,61 @@ export async function createDepense(
  *
  * Seules les depenses NON_PAYEE peuvent etre modifiees en montantTotal.
  * Les autres champs (description, notes, dateEcheance) sont toujours modifiables.
+ *
+ * Regle metier : montantTotal ne peut pas etre inferieur au montantPaye existant.
  */
 export async function updateDepense(
   id: string,
   siteId: string,
   data: UpdateDepenseDTO
 ) {
-  const result = await prisma.depense.updateMany({
-    where: { id, siteId },
-    data: {
-      ...(data.description !== undefined && { description: data.description }),
-      ...(data.categorieDepense !== undefined && {
-        categorieDepense: data.categorieDepense,
-      }),
-      ...(data.montantTotal !== undefined && {
-        montantTotal: data.montantTotal,
-      }),
-      ...(data.date !== undefined && { date: new Date(data.date) }),
-      ...(data.dateEcheance !== undefined && {
-        dateEcheance: data.dateEcheance ? new Date(data.dateEcheance) : null,
-      }),
-      ...(data.vagueId !== undefined && { vagueId: data.vagueId }),
-      ...(data.notes !== undefined && { notes: data.notes }),
-    },
-  });
+  return prisma.$transaction(async (tx) => {
+    // Si montantTotal est fourni, verifier qu'il est >= montantPaye existant
+    if (data.montantTotal !== undefined) {
+      const existing = await tx.depense.findFirst({
+        where: { id, siteId },
+        select: { montantPaye: true },
+      });
+      if (!existing) throw new Error("Depense introuvable");
+      if (data.montantTotal < existing.montantPaye) {
+        throw new Error(
+          "Le montant total ne peut pas etre inferieur au montant deja paye."
+        );
+      }
+    }
 
-  if (result.count === 0) {
-    throw new Error("Depense introuvable");
-  }
+    const result = await tx.depense.updateMany({
+      where: { id, siteId },
+      data: {
+        ...(data.description !== undefined && { description: data.description }),
+        ...(data.categorieDepense !== undefined && {
+          categorieDepense: data.categorieDepense,
+        }),
+        ...(data.montantTotal !== undefined && {
+          montantTotal: data.montantTotal,
+        }),
+        ...(data.date !== undefined && { date: new Date(data.date) }),
+        ...(data.dateEcheance !== undefined && {
+          dateEcheance: data.dateEcheance ? new Date(data.dateEcheance) : null,
+        }),
+        ...(data.vagueId !== undefined && { vagueId: data.vagueId }),
+        ...(data.notes !== undefined && { notes: data.notes }),
+      },
+    });
 
-  return prisma.depense.findFirst({
-    where: { id, siteId },
-    include: {
-      user: { select: { id: true, name: true } },
-      commande: { select: { id: true, numero: true } },
-      vague: { select: { id: true, code: true } },
-      paiements: { orderBy: { date: "desc" } },
-    },
+    if (result.count === 0) {
+      throw new Error("Depense introuvable");
+    }
+
+    return tx.depense.findFirst({
+      where: { id, siteId },
+      include: {
+        user: { select: { id: true, name: true } },
+        commande: { select: { id: true, numero: true } },
+        vague: { select: { id: true, code: true } },
+        paiements: { orderBy: { date: "desc" } },
+      },
+    });
   });
 }
 
@@ -173,24 +191,28 @@ export async function updateDepense(
  *
  * Regles metier :
  * - Seulement si statut NON_PAYEE (aucun paiement ne doit exister)
+ *
+ * R4 : utilise deleteMany atomique avec condition sur statut.
  */
 export async function deleteDepense(id: string, siteId: string) {
-  // Use updateMany for atomic check — will return count=0 if not found or wrong siteId
-  const depense = await prisma.depense.findFirst({
+  // Tentative atomique : supprime uniquement si NON_PAYEE et appartient au site (R4)
+  const result = await prisma.depense.deleteMany({
+    where: { id, siteId, statut: StatutDepense.NON_PAYEE },
+  });
+
+  if (result.count > 0) return { success: true };
+
+  // count === 0 : soit introuvable, soit statut non NON_PAYEE — distinguer les deux
+  const existing = await prisma.depense.findFirst({
     where: { id, siteId },
     select: { id: true, statut: true },
   });
 
-  if (!depense) throw new Error("Depense introuvable");
+  if (!existing) throw new Error("Depense introuvable");
 
-  if (depense.statut !== StatutDepense.NON_PAYEE) {
-    throw new Error(
-      "Impossible de supprimer une depense avec des paiements. Annulez les paiements d'abord."
-    );
-  }
-
-  await prisma.depense.delete({ where: { id } });
-  return { success: true };
+  throw new Error(
+    "Impossible de supprimer une depense avec des paiements. Annulez les paiements d'abord."
+  );
 }
 
 /**

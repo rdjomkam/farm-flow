@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { FrequenceRecurrence, CategorieDepense } from "@/types";
+import { FrequenceRecurrence, CategorieDepense, StatutDepense } from "@/types";
 import type {
   CreateDepenseRecurrenteDTO,
   UpdateDepenseRecurrenteDTO,
@@ -211,41 +211,52 @@ export async function genererDepensesRecurrentes(
 
     if (!due) continue;
 
-    // Generer dans une transaction
+    // Generer dans une transaction — verrou optimiste R4 :
+    // On tente d'abord d'acquerir le "verrou" en mettant a jour derniereGeneration
+    // uniquement si elle n'a pas change depuis la lecture (condition atomique).
+    // Si count === 0, un appel concurrent a deja traite ce template — on skip.
     const depense = await prisma.$transaction(async (tx) => {
+      const now = new Date();
+
+      // Verrou optimiste : updateMany conditionnel sur derniereGeneration courante
+      const locked = await tx.depenseRecurrente.updateMany({
+        where: {
+          id: template.id,
+          derniereGeneration: template.derniereGeneration,
+        },
+        data: { derniereGeneration: now },
+      });
+
+      // Si aucune ligne affectee, un concurrent a deja mis a jour — skip
+      if (locked.count === 0) return null;
+
       // Generer le numero
       const numero = await generateNumeroDepense(tx, siteId);
 
       // Creer la depense
-      const newDepense = await tx.depense.create({
+      return tx.depense.create({
         data: {
           numero,
           description: template.description,
           categorieDepense: template.categorieDepense as CategorieDepense,
           montantTotal: template.montantEstime,
           montantPaye: 0,
-          statut: "NON_PAYEE",
-          date: new Date(),
+          statut: StatutDepense.NON_PAYEE,
+          date: now,
           userId,
           siteId,
         },
       });
+    });
 
-      // Mettre a jour derniereGeneration sur le template
-      await tx.depenseRecurrente.update({
-        where: { id: template.id },
-        data: { derniereGeneration: new Date() },
+    if (depense !== null) {
+      generated.push({
+        id: depense.id,
+        numero: depense.numero,
+        description: depense.description,
+        montantTotal: depense.montantTotal,
       });
-
-      return newDepense;
-    });
-
-    generated.push({
-      id: depense.id,
-      numero: depense.numero,
-      description: depense.description,
-      montantTotal: depense.montantTotal,
-    });
+    }
   }
 
   return generated;

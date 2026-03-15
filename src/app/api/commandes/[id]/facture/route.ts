@@ -112,7 +112,7 @@ export async function POST(request: NextRequest, { params }: Params) {
  */
 export async function GET(request: NextRequest, { params }: Params) {
   try {
-    const auth = await requirePermission(request, Permission.APPROVISIONNEMENT_GERER);
+    const auth = await requirePermission(request, Permission.APPROVISIONNEMENT_VOIR);
     const { id } = await params;
 
     const commande = await prisma.commande.findFirst({

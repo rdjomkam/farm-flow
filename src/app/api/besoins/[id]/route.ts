@@ -70,6 +70,29 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
+    // Validation des lignes si fournies
+    if (Array.isArray(body.lignes)) {
+      for (const ligne of body.lignes) {
+        const designationValide =
+          typeof ligne.designation === "string" && ligne.designation.trim().length > 0;
+        const quantiteValide =
+          typeof ligne.quantite === "number" && ligne.quantite > 0;
+        const prixEstimeValide =
+          typeof ligne.prixEstime === "number" && ligne.prixEstime >= 0;
+
+        if (!designationValide || !quantiteValide || !prixEstimeValide) {
+          return NextResponse.json(
+            {
+              status: 400,
+              message:
+                "Ligne invalide : designation requise, quantite > 0, prixEstime >= 0.",
+            },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     const listeBesoins = await updateListeBesoins(id, auth.activeSiteId, {
       titre: body.titre,
       vagueId: body.vagueId,
