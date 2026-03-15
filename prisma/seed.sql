@@ -8,6 +8,7 @@ DELETE FROM "Session";
 DELETE FROM "Activite";
 DELETE FROM "Notification";
 DELETE FROM "ConfigAlerte";
+DELETE FROM "ConfigElevage";
 DELETE FROM "PaiementDepense";
 DELETE FROM "LigneBesoin";
 DELETE FROM "DepenseRecurrente";
@@ -980,5 +981,165 @@ INSERT INTO "DepenseRecurrente" (
   ('rec_03', 'Salaire employe pisciculture', 'SALAIRE', 80000, 'MENSUEL', 28, false,
    NULL, 'user_admin', 'site_01',
    NOW(), NOW());
+
+-- ──────────────────────────────────────────
+-- ConfigElevage (3 profils — Sprint 19)
+-- ──────────────────────────────────────────
+
+INSERT INTO "ConfigElevage" (
+  id, nom, description,
+  "poidsObjectif", "dureeEstimeeCycle", "tauxSurvieObjectif",
+  "seuilAcclimatation", "seuilCroissanceDebut", "seuilJuvenile", "seuilGrossissement", "seuilFinition",
+  "alimentTailleConfig", "alimentTauxConfig",
+  "fcrExcellentMax", "fcrBonMax", "fcrAcceptableMax",
+  "sgrExcellentMin", "sgrBonMin", "sgrAcceptableMin",
+  "survieExcellentMin", "survieBonMin", "survieAcceptableMin",
+  "densiteExcellentMax", "densiteBonMax", "densiteAcceptableMax",
+  "mortaliteExcellentMax", "mortaliteBonMax", "mortaliteAcceptableMax",
+  "phMin", "phMax", "phOptimalMin", "phOptimalMax",
+  "temperatureMin", "temperatureMax", "temperatureOptimalMin", "temperatureOptimalMax",
+  "oxygeneMin", "oxygeneAlerte", "oxygeneOptimal",
+  "ammoniacMax", "ammoniacAlerte", "ammoniacOptimal",
+  "nitriteMax", "nitriteAlerte",
+  "mortaliteQuotidienneAlerte", "mortaliteQuotidienneCritique",
+  "fcrAlerteMax", "stockJoursAlerte",
+  "triPoidsMin", "triPoidsMax", "triIntervalleJours",
+  "biometrieIntervalleDebut", "biometrieIntervalleFin", "biometrieEchantillonPct",
+  "eauChangementPct", "eauChangementIntervalleJours",
+  "densiteMaxPoissonsM3", "densiteOptimalePoissonsM3",
+  "recoltePartiellePoidsSeuil", "recolteJeuneAvantJours",
+  "isDefault", "isActive",
+  "siteId", "createdAt", "updatedAt"
+) VALUES
+  -- Profil 1 : Clarias Standard Cameroun (par defaut)
+  (
+    'cfg_01',
+    'Clarias Standard Cameroun',
+    'Profil standard pour Clarias gariepinus eleve au Cameroun. Objectif 800g en 180 jours. Benchmarks FAO.',
+    800.0, 180, 85.0,
+    15.0, 50.0, 150.0, 350.0, 700.0,
+    '[
+      {"poidsMin": 0, "poidsMax": 15, "tailleGranule": "1.2mm", "description": "Aliment demarrage", "proteines": 42},
+      {"poidsMin": 15, "poidsMax": 30, "tailleGranule": "1.5-2mm", "description": "Aliment croissance petit", "proteines": 38},
+      {"poidsMin": 30, "poidsMax": 80, "tailleGranule": "2-3mm", "description": "Aliment croissance", "proteines": 35},
+      {"poidsMin": 80, "poidsMax": 150, "tailleGranule": "3-4mm", "description": "Aliment grossissement petit", "proteines": 32},
+      {"poidsMin": 150, "poidsMax": 350, "tailleGranule": "4-6mm", "description": "Aliment grossissement", "proteines": 28},
+      {"poidsMin": 350, "poidsMax": 99999, "tailleGranule": "6-9mm", "description": "Aliment finition", "proteines": 25}
+    ]'::jsonb,
+    '[
+      {"phase": "ACCLIMATATION", "tauxMin": 8, "tauxMax": 10, "frequence": 4, "notes": "3-4 distributions/jour"},
+      {"phase": "CROISSANCE_DEBUT", "tauxMin": 5, "tauxMax": 6, "frequence": 3, "notes": "3 distributions/jour"},
+      {"phase": "JUVENILE", "tauxMin": 3, "tauxMax": 5, "frequence": 3, "notes": "2-3 distributions/jour"},
+      {"phase": "GROSSISSEMENT", "tauxMin": 2, "tauxMax": 3, "frequence": 2, "notes": "2 distributions/jour"},
+      {"phase": "FINITION", "tauxMin": 1.5, "tauxMax": 2, "frequence": 2, "notes": "1-2 distributions/jour"},
+      {"phase": "PRE_RECOLTE", "tauxMin": 1, "tauxMax": 1.5, "frequence": 1, "notes": "1 distribution/jour"}
+    ]'::jsonb,
+    1.5, 1.8, 2.2,
+    2.0, 1.5, 1.0,
+    90.0, 85.0, 80.0,
+    7.0, 10.0, 15.0,
+    3.0, 5.0, 10.0,
+    6.5, 8.5, 6.5, 7.5,
+    22.0, 36.0, 26.0, 32.0,
+    1.5, 4.0, 5.0,
+    0.5, 0.05, 0.02,
+    1.0, 0.5,
+    1.0, 3.0,
+    2.0, 5,
+    5.0, 150.0, 14,
+    7, 14, 10.0,
+    30.0, 3,
+    100.0, 50.0,
+    400.0, 2,
+    true, true,
+    'site_01', NOW(), NOW()
+  ),
+  -- Profil 2 : Clarias Express (croissance rapide 500g en 120 jours)
+  (
+    'cfg_02',
+    'Clarias Express',
+    'Profil pour production rapide. Objectif 500g en 120 jours. Taux alimentation eleve, densite faible.',
+    500.0, 120, 82.0,
+    15.0, 50.0, 150.0, 350.0, 600.0,
+    '[
+      {"poidsMin": 0, "poidsMax": 15, "tailleGranule": "1.2mm", "description": "Aliment demarrage haute proteine", "proteines": 45},
+      {"poidsMin": 15, "poidsMax": 30, "tailleGranule": "1.5-2mm", "description": "Aliment croissance", "proteines": 42},
+      {"poidsMin": 30, "poidsMax": 80, "tailleGranule": "2-3mm", "description": "Aliment croissance actif", "proteines": 40},
+      {"poidsMin": 80, "poidsMax": 200, "tailleGranule": "3-4mm", "description": "Aliment grossissement", "proteines": 36},
+      {"poidsMin": 200, "poidsMax": 400, "tailleGranule": "4-6mm", "description": "Aliment finition", "proteines": 30},
+      {"poidsMin": 400, "poidsMax": 99999, "tailleGranule": "5-7mm", "description": "Aliment pre-recolte", "proteines": 28}
+    ]'::jsonb,
+    '[
+      {"phase": "ACCLIMATATION", "tauxMin": 9, "tauxMax": 11, "frequence": 5, "notes": "4-5 distributions/jour"},
+      {"phase": "CROISSANCE_DEBUT", "tauxMin": 6, "tauxMax": 7, "frequence": 4, "notes": "4 distributions/jour"},
+      {"phase": "JUVENILE", "tauxMin": 4, "tauxMax": 6, "frequence": 3, "notes": "3 distributions/jour"},
+      {"phase": "GROSSISSEMENT", "tauxMin": 3, "tauxMax": 4, "frequence": 3, "notes": "3 distributions/jour"},
+      {"phase": "FINITION", "tauxMin": 2, "tauxMax": 3, "frequence": 2, "notes": "2 distributions/jour"},
+      {"phase": "PRE_RECOLTE", "tauxMin": 1.5, "tauxMax": 2, "frequence": 1, "notes": "1 distribution/jour"}
+    ]'::jsonb,
+    1.4, 1.7, 2.0,
+    2.2, 1.8, 1.2,
+    88.0, 83.0, 78.0,
+    6.0, 9.0, 13.0,
+    2.0, 4.0, 8.0,
+    6.5, 8.5, 6.5, 7.5,
+    22.0, 36.0, 26.0, 32.0,
+    1.5, 4.0, 5.0,
+    0.5, 0.05, 0.02,
+    1.0, 0.5,
+    1.0, 2.5,
+    1.8, 5,
+    5.0, 100.0, 10,
+    7, 14, 10.0,
+    30.0, 3,
+    80.0, 40.0,
+    300.0, 1,
+    false, true,
+    'site_01', NOW(), NOW()
+  ),
+  -- Profil 3 : Clarias Premium (gros calibre 1200g en 240 jours)
+  (
+    'cfg_03',
+    'Clarias Premium',
+    'Profil pour production haut de gamme. Objectif 1200g en 240 jours. Densite faible, qualite maximale.',
+    1200.0, 240, 88.0,
+    15.0, 50.0, 150.0, 400.0, 800.0,
+    '[
+      {"poidsMin": 0, "poidsMax": 15, "tailleGranule": "1.2mm", "description": "Aliment demarrage", "proteines": 42},
+      {"poidsMin": 15, "poidsMax": 30, "tailleGranule": "1.5-2mm", "description": "Aliment croissance", "proteines": 40},
+      {"poidsMin": 30, "poidsMax": 100, "tailleGranule": "2-3mm", "description": "Aliment croissance lente", "proteines": 36},
+      {"poidsMin": 100, "poidsMax": 250, "tailleGranule": "3-5mm", "description": "Aliment grossissement", "proteines": 32},
+      {"poidsMin": 250, "poidsMax": 600, "tailleGranule": "5-7mm", "description": "Aliment grossissement lent", "proteines": 28},
+      {"poidsMin": 600, "poidsMax": 1000, "tailleGranule": "6-9mm", "description": "Aliment finition", "proteines": 25},
+      {"poidsMin": 1000, "poidsMax": 99999, "tailleGranule": "8-12mm", "description": "Aliment pre-recolte premium", "proteines": 22}
+    ]'::jsonb,
+    '[
+      {"phase": "ACCLIMATATION", "tauxMin": 7, "tauxMax": 9, "frequence": 4, "notes": "3-4 distributions/jour"},
+      {"phase": "CROISSANCE_DEBUT", "tauxMin": 4, "tauxMax": 5, "frequence": 3, "notes": "3 distributions/jour"},
+      {"phase": "JUVENILE", "tauxMin": 2.5, "tauxMax": 4, "frequence": 2, "notes": "2-3 distributions/jour"},
+      {"phase": "GROSSISSEMENT", "tauxMin": 1.5, "tauxMax": 2.5, "frequence": 2, "notes": "2 distributions/jour"},
+      {"phase": "FINITION", "tauxMin": 1.2, "tauxMax": 1.8, "frequence": 1, "notes": "1-2 distributions/jour"},
+      {"phase": "PRE_RECOLTE", "tauxMin": 0.8, "tauxMax": 1.2, "frequence": 1, "notes": "1 distribution/jour"}
+    ]'::jsonb,
+    1.6, 2.0, 2.5,
+    1.8, 1.3, 0.9,
+    92.0, 87.0, 82.0,
+    5.0, 8.0, 12.0,
+    2.5, 4.5, 9.0,
+    6.5, 8.5, 6.5, 7.5,
+    22.0, 36.0, 26.0, 32.0,
+    1.5, 4.0, 5.0,
+    0.5, 0.05, 0.02,
+    1.0, 0.5,
+    0.8, 2.0,
+    2.5, 7,
+    5.0, 200.0, 21,
+    7, 14, 10.0,
+    25.0, 2,
+    60.0, 30.0,
+    600.0, 3,
+    false, true,
+    'site_01', NOW(), NOW()
+  );
 
 COMMIT;

@@ -3,10 +3,14 @@
  *
  * Chaque fonction verifie un type d'alerte et cree une Notification
  * si le seuil est franchi — sans doublons (une seule ACTIVE par type par jour).
+ *
+ * Phase 3 (Sprint 19) : Les seuils de qualite d'eau et mortalite sont maintenant
+ * configurables via ConfigElevage. Fallback vers les valeurs hardcodees si absent (EC-5.1).
  */
 
 import { prisma } from "@/lib/db";
 import { StatutAlerte, TypeAlerte, TypeReleve } from "@/generated/prisma/enums";
+import type { ConfigElevage } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Types locaux
@@ -98,14 +102,18 @@ async function creerNotificationSiAbsente(
 
 /**
  * MORTALITE_ELEVEE : cherche les releves MORTALITE des dernieres 24h.
- * Si nombreMorts > seuilValeur, cree une notification par bac concerne.
+ * Si nombreMorts > seuilValeur (ou mortaliteQuotidienneAlerte depuis ConfigElevage), cree une notification.
+ *
+ * @param configElevage - ConfigElevage optionnel pour les seuils (EC-5.1 fallback)
  */
 export async function verifierAlertesMortalite(
   siteId: string,
   userId: string,
-  config: ConfigAlerteType
+  config: ConfigAlerteType,
+  configElevage?: ConfigElevage | null
 ): Promise<void> {
-  const seuil = config.seuilValeur ?? 5;
+  // Priorite : seuilValeur de ConfigAlerte → mortaliteQuotidienneAlerte de ConfigElevage → 5 (hardcode)
+  const seuil = config.seuilValeur ?? configElevage?.mortaliteQuotidienneAlerte ?? 5;
   const depuis24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
   const relevesCritiques = await prisma.releve.findMany({
@@ -135,14 +143,26 @@ export async function verifierAlertesMortalite(
 
 /**
  * QUALITE_EAU : cherche les releves QUALITE_EAU des dernieres 24h.
- * Si pH hors [6.5, 8.5] ou temperature hors [25, 32] degres, cree une notification.
+ * Si pH hors [phMin, phMax] ou temperature hors [temperatureOptimalMin, temperatureOptimalMax], cree une notification.
+ *
+ * Seuils par defaut (hardcodes) : pH [6.5, 8.5], temperature [25, 32].
+ * Si configElevage est fourni, utilise ses seuils (EC-5.1 fallback si absent).
+ *
+ * @param configElevage - ConfigElevage optionnel pour les seuils configurables
  */
 export async function verifierAlertesQualiteEau(
   siteId: string,
   userId: string,
-  config: ConfigAlerteType
+  config: ConfigAlerteType,
+  configElevage?: ConfigElevage | null
 ): Promise<void> {
   const depuis24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  // Seuils : ConfigElevage > valeurs hardcodees (EC-5.1)
+  const phMin = configElevage?.phMin ?? 6.5;
+  const phMax = configElevage?.phMax ?? 8.5;
+  const tempMin = configElevage?.temperatureOptimalMin ?? 25;
+  const tempMax = configElevage?.temperatureOptimalMax ?? 32;
 
   const releves = await prisma.releve.findMany({
     where: {
@@ -160,18 +180,18 @@ export async function verifierAlertesQualiteEau(
     const problemes: string[] = [];
 
     if (releve.ph !== null) {
-      if (releve.ph < 6.5) {
-        problemes.push(`pH trop bas (${releve.ph} < 6.5)`);
-      } else if (releve.ph > 8.5) {
-        problemes.push(`pH trop eleve (${releve.ph} > 8.5)`);
+      if (releve.ph < phMin) {
+        problemes.push(`pH trop bas (${releve.ph} < ${phMin})`);
+      } else if (releve.ph > phMax) {
+        problemes.push(`pH trop eleve (${releve.ph} > ${phMax})`);
       }
     }
 
     if (releve.temperature !== null) {
-      if (releve.temperature < 25) {
-        problemes.push(`Temperature trop basse (${releve.temperature}°C < 25°C)`);
-      } else if (releve.temperature > 32) {
-        problemes.push(`Temperature trop elevee (${releve.temperature}°C > 32°C)`);
+      if (releve.temperature < tempMin) {
+        problemes.push(`Temperature trop basse (${releve.temperature}°C < ${tempMin}°C)`);
+      } else if (releve.temperature > tempMax) {
+        problemes.push(`Temperature trop elevee (${releve.temperature}°C > ${tempMax}°C)`);
       }
     }
 
@@ -308,10 +328,12 @@ export async function verifierRappelBiometrie(
  *
  * @param siteId - ID du site (R8)
  * @param userId - ID de l'utilisateur dont on verifie les configs
+ * @param configElevage - ConfigElevage optionnel pour seuils configurables (EC-5.1 fallback)
  */
 export async function verifierAlertes(
   siteId: string,
-  userId: string
+  userId: string,
+  configElevage?: ConfigElevage | null
 ): Promise<void> {
   const configs = await prisma.configAlerte.findMany({
     where: { siteId, userId, enabled: true },
@@ -321,11 +343,11 @@ export async function verifierAlertes(
     try {
       switch (config.typeAlerte) {
         case TypeAlerte.MORTALITE_ELEVEE:
-          await verifierAlertesMortalite(siteId, userId, config);
+          await verifierAlertesMortalite(siteId, userId, config, configElevage);
           break;
 
         case TypeAlerte.QUALITE_EAU:
-          await verifierAlertesQualiteEau(siteId, userId, config);
+          await verifierAlertesQualiteEau(siteId, userId, config, configElevage);
           break;
 
         case TypeAlerte.STOCK_BAS:

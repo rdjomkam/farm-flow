@@ -38,6 +38,8 @@ export {
   FrequenceRecurrence,
   // Sprint 17 — Besoins
   StatutBesoins,
+  // Sprint 19 — ConfigElevage
+  PhaseElevage,
 } from "./models";
 export type {
   Site,
@@ -98,6 +100,11 @@ export type {
   // Sprint 18 — Depenses Recurrentes
   DepenseRecurrente,
   DepenseRecurrenteWithRelations,
+  // Sprint 19 — ConfigElevage
+  ConfigElevage,
+  ConfigElevageWithRelations,
+  AlimentTailleEntree,
+  AlimentTauxEntree,
 } from "./models";
 
 // Types authentification et multi-tenancy (DTOs, session, contexte)
@@ -248,6 +255,14 @@ export type {
   CreateDepenseRecurrenteDTO,
   UpdateDepenseRecurrenteDTO,
   GenererDepensesRecurrentesResponse,
+} from "./api";
+// Sprint 19 — ConfigElevage
+export type {
+  CreateConfigElevageDTO,
+  UpdateConfigElevageDTO,
+  ConfigElevageFilters,
+  ConfigElevageListResponse,
+  ConfigElevageDetailResponse,
 } from "./api";
 
 // Types pour les calculs et indicateurs

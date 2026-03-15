@@ -37,9 +37,13 @@ import {
   UniteStock,
 } from "./models";
 import type {
+  AlimentTailleEntree,
+  AlimentTauxEntree,
   Bac,
   Client,
   Commande,
+  ConfigElevage,
+  ConfigElevageWithRelations,
   Depense,
   Facture,
   Fournisseur,
@@ -52,6 +56,7 @@ import type {
   MouvementStock,
   Paiement,
   PaiementDepense,
+  PhaseElevage,
   Ponte,
   Produit,
   Releve,
@@ -1190,3 +1195,92 @@ export interface GenererDepensesRecurrentesResponse {
   generated: number;
   depenses: { id: string; numero: string; description: string; montantTotal: number }[];
 }
+
+// Sprint 19 — ConfigElevage
+
+/** DTO pour creer un profil de configuration d'elevage */
+export interface CreateConfigElevageDTO {
+  nom: string;
+  description?: string;
+  poidsObjectif: number;
+  dureeEstimeeCycle: number;
+  tauxSurvieObjectif: number;
+  seuilAcclimatation?: number;
+  seuilCroissanceDebut?: number;
+  seuilJuvenile?: number;
+  seuilGrossissement?: number;
+  seuilFinition?: number;
+  alimentTailleConfig: AlimentTailleEntree[];
+  alimentTauxConfig: AlimentTauxEntree[];
+  fcrExcellentMax?: number;
+  fcrBonMax?: number;
+  fcrAcceptableMax?: number;
+  sgrExcellentMin?: number;
+  sgrBonMin?: number;
+  sgrAcceptableMin?: number;
+  survieExcellentMin?: number;
+  survieBonMin?: number;
+  survieAcceptableMin?: number;
+  densiteExcellentMax?: number;
+  densiteBonMax?: number;
+  densiteAcceptableMax?: number;
+  mortaliteExcellentMax?: number;
+  mortaliteBonMax?: number;
+  mortaliteAcceptableMax?: number;
+  phMin?: number;
+  phMax?: number;
+  phOptimalMin?: number;
+  phOptimalMax?: number;
+  temperatureMin?: number;
+  temperatureMax?: number;
+  temperatureOptimalMin?: number;
+  temperatureOptimalMax?: number;
+  oxygeneMin?: number;
+  oxygeneAlerte?: number;
+  oxygeneOptimal?: number;
+  ammoniacMax?: number;
+  ammoniacAlerte?: number;
+  ammoniacOptimal?: number;
+  nitriteMax?: number;
+  nitriteAlerte?: number;
+  mortaliteQuotidienneAlerte?: number;
+  mortaliteQuotidienneCritique?: number;
+  fcrAlerteMax?: number;
+  stockJoursAlerte?: number;
+  triPoidsMin?: number;
+  triPoidsMax?: number;
+  triIntervalleJours?: number;
+  biometrieIntervalleDebut?: number;
+  biometrieIntervalleFin?: number;
+  biometrieEchantillonPct?: number;
+  eauChangementPct?: number;
+  eauChangementIntervalleJours?: number;
+  densiteMaxPoissonsM3?: number;
+  densiteOptimalePoissonsM3?: number;
+  recoltePartiellePoidsSeuil?: number;
+  recolteJeuneAvantJours?: number;
+  isDefault?: boolean;
+  isActive?: boolean;
+}
+
+/** DTO pour modifier partiellement un profil de configuration d'elevage */
+export type UpdateConfigElevageDTO = Partial<CreateConfigElevageDTO>;
+
+/** Filtres pour lister les profils ConfigElevage */
+export interface ConfigElevageFilters {
+  isDefault?: boolean;
+  isActive?: boolean;
+}
+
+/** Reponse liste des profils ConfigElevage */
+export interface ConfigElevageListResponse {
+  configs: ConfigElevageWithRelations[];
+  total: number;
+}
+
+/** Reponse detaillee d'un profil ConfigElevage */
+export interface ConfigElevageDetailResponse {
+  config: ConfigElevageWithRelations;
+}
+
+// ConfigElevage types are imported at the top of this file and used inline above.

@@ -1283,3 +1283,171 @@ export interface LigneBesoinWithRelations extends LigneBesoin {
   produit?: Produit | null;
   commande?: Commande | null;
 }
+
+// ---------------------------------------------------------------------------
+// Enums — Phase 3 : ConfigElevage (Sprint 19)
+// ---------------------------------------------------------------------------
+
+/** Phase de croissance d'un lot de Clarias gariepinus */
+export enum PhaseElevage {
+  ACCLIMATATION = "ACCLIMATATION",
+  CROISSANCE_DEBUT = "CROISSANCE_DEBUT",
+  JUVENILE = "JUVENILE",
+  GROSSISSEMENT = "GROSSISSEMENT",
+  FINITION = "FINITION",
+  PRE_RECOLTE = "PRE_RECOLTE",
+}
+
+// ---------------------------------------------------------------------------
+// Types JSON — alimentTailleConfig et alimentTauxConfig
+// ---------------------------------------------------------------------------
+
+/** Une entree dans alimentTailleConfig : taille de granule pour une plage de poids */
+export interface AlimentTailleEntree {
+  /** Poids minimum (g, inclus) */
+  poidsMin: number;
+  /** Poids maximum (g, exclus sauf pour la derniere entree) */
+  poidsMax: number;
+  /** Taille du granule — ex: "1.2mm", "2-3mm" */
+  tailleGranule: string;
+  /** Description optionnelle — ex: "Aliment demarrage" */
+  description?: string;
+  /** Taux de proteines (%) — optionnel */
+  proteines?: number;
+}
+
+/** Une entree dans alimentTauxConfig : taux d'alimentation pour une phase */
+export interface AlimentTauxEntree {
+  /** Phase de croissance concernee */
+  phase: PhaseElevage;
+  /** Taux minimum (%BW/jour) */
+  tauxMin: number;
+  /** Taux maximum (%BW/jour) */
+  tauxMax: number;
+  /** Nombre de distributions par jour */
+  frequence: number;
+  /** Notes optionnelles — ex: "3-4 distributions/jour" */
+  notes?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Modeles — ConfigElevage (Sprint 19)
+// ---------------------------------------------------------------------------
+
+/**
+ * ConfigElevage — Parametres configurables par site pour piloter le moteur d'elevage.
+ *
+ * Miroir exact du modele Prisma ConfigElevage.
+ * Chaque site peut avoir plusieurs profils. Un seul peut etre isDefault=true par site.
+ * Les valeurs par defaut correspondent aux benchmarks FAO pour Clarias gariepinus.
+ */
+export interface ConfigElevage {
+  id: string;
+  /** Nom du profil — ex: "Clarias Standard Cameroun" */
+  nom: string;
+  description: string | null;
+
+  // Objectif de production
+  poidsObjectif: number;
+  dureeEstimeeCycle: number;
+  tauxSurvieObjectif: number;
+
+  // Seuils de phases (poids en g)
+  seuilAcclimatation: number;
+  seuilCroissanceDebut: number;
+  seuilJuvenile: number;
+  seuilGrossissement: number;
+  seuilFinition: number;
+
+  // JSON configs
+  alimentTailleConfig: AlimentTailleEntree[];
+  alimentTauxConfig: AlimentTauxEntree[];
+
+  // Benchmarks FCR (lower is better)
+  fcrExcellentMax: number;
+  fcrBonMax: number;
+  fcrAcceptableMax: number;
+
+  // Benchmarks SGR (higher is better)
+  sgrExcellentMin: number;
+  sgrBonMin: number;
+  sgrAcceptableMin: number;
+
+  // Benchmarks Survie (%)
+  survieExcellentMin: number;
+  survieBonMin: number;
+  survieAcceptableMin: number;
+
+  // Benchmarks Densite (lower is better)
+  densiteExcellentMax: number;
+  densiteBonMax: number;
+  densiteAcceptableMax: number;
+
+  // Benchmarks Mortalite cumulative (lower is better)
+  mortaliteExcellentMax: number;
+  mortaliteBonMax: number;
+  mortaliteAcceptableMax: number;
+
+  // Qualite eau
+  phMin: number;
+  phMax: number;
+  phOptimalMin: number;
+  phOptimalMax: number;
+  temperatureMin: number;
+  temperatureMax: number;
+  temperatureOptimalMin: number;
+  temperatureOptimalMax: number;
+  oxygeneMin: number;
+  oxygeneAlerte: number;
+  oxygeneOptimal: number;
+  ammoniacMax: number;
+  ammoniacAlerte: number;
+  ammoniacOptimal: number;
+  nitriteMax: number;
+  nitriteAlerte: number;
+
+  // Mortalite alertes
+  mortaliteQuotidienneAlerte: number;
+  mortaliteQuotidienneCritique: number;
+
+  // Alimentation alertes
+  fcrAlerteMax: number;
+  stockJoursAlerte: number;
+
+  // Tri
+  triPoidsMin: number;
+  triPoidsMax: number;
+  triIntervalleJours: number;
+
+  // Biometrie
+  biometrieIntervalleDebut: number;
+  biometrieIntervalleFin: number;
+  biometrieEchantillonPct: number;
+
+  // Changement d'eau
+  eauChangementPct: number;
+  eauChangementIntervalleJours: number;
+
+  // Densite d'elevage
+  densiteMaxPoissonsM3: number;
+  densiteOptimalePoissonsM3: number;
+
+  // Recolte
+  recoltePartiellePoidsSeuil: number;
+  recolteJeuneAvantJours: number;
+
+  // Metadonnees
+  /** Profil par defaut du site (un seul isDefault=true par site) */
+  isDefault: boolean;
+  isActive: boolean;
+
+  /** ID du site (ferme) — R8 */
+  siteId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** ConfigElevage avec ses relations chargees */
+export interface ConfigElevageWithRelations extends ConfigElevage {
+  site?: Pick<Site, "id" | "name">;
+}

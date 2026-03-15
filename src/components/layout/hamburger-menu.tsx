@@ -118,7 +118,7 @@ const modules: NavModule[] = [
     label: "Analyse & Pilotage",
     icon: BarChart3,
     href: "/analytics",
-    prefix: ["/analytics", "/planning", "/notifications", "/settings/alertes"],
+    prefix: ["/analytics", "/planning", "/notifications", "/settings/alertes", "/settings/config-elevage"],
     items: [
       { href: "/analytics", label: "Vue globale", icon: BarChart3 },
       { href: "/planning", label: "Calendrier", icon: Calendar },
@@ -132,6 +132,7 @@ const modules: NavModule[] = [
 const secondaryItems: { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { href: "/sites", label: "Sites", icon: Building2 },
   { href: "/notifications", label: "Notifications", icon: Bell },
+  { href: "/settings/config-elevage", label: "Configuration elevage", icon: Settings },
   { href: "/settings/alertes", label: "Configuration alertes", icon: Settings },
 ];
 

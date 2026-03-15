@@ -3,7 +3,16 @@
  *
  * Fonctions pures sans dependance DB — utilisees par les API routes
  * et les composants pour calculer les indicateurs d'une vague.
+ *
+ * Phase 3 (Sprint 19) : Ajout des fonctions configurables via ConfigElevage.
+ * - detecterPhase(poidsMoyen, config?) → PhaseElevage
+ * - getTauxAlimentation(poidsMoyen, config?) → number
+ * - getTailleAliment(poidsMoyen, config?) → string
+ * - convertirUniteStock(quantite, uniteSource, uniteDestination) → number
  */
+
+import type { ConfigElevage, AlimentTailleEntree, AlimentTauxEntree } from "@/types";
+import { PhaseElevage } from "@/types";
 
 /**
  * Calcule le taux de survie en pourcentage.
@@ -359,4 +368,194 @@ export function genererRecommandation(
   }
 
   return texte;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3 (Sprint 19) — Fonctions configurables via ConfigElevage
+// ---------------------------------------------------------------------------
+
+/** Seuils de phases par defaut (fallback EC-5.1) */
+const DEFAULT_SEUILS = {
+  acclimatation: 15,
+  croissanceDebut: 50,
+  juvenile: 150,
+  grossissement: 350,
+  finition: 700,
+};
+
+/** Table de taux d'alimentation par defaut (%BW/jour, moyenne) */
+const DEFAULT_TAUX_ALIMENTATION: Record<string, { tauxMin: number; tauxMax: number }> = {
+  ACCLIMATATION: { tauxMin: 8, tauxMax: 10 },
+  CROISSANCE_DEBUT: { tauxMin: 5, tauxMax: 6 },
+  JUVENILE: { tauxMin: 3, tauxMax: 5 },
+  GROSSISSEMENT: { tauxMin: 2, tauxMax: 3 },
+  FINITION: { tauxMin: 1.5, tauxMax: 2 },
+  PRE_RECOLTE: { tauxMin: 1, tauxMax: 1.5 },
+};
+
+/** Table de taille d'aliment par defaut */
+const DEFAULT_TAILLE_ALIMENT: AlimentTailleEntree[] = [
+  { poidsMin: 0, poidsMax: 15, tailleGranule: "1.2mm", description: "Aliment demarrage" },
+  { poidsMin: 15, poidsMax: 30, tailleGranule: "1.5-2mm", description: "Aliment croissance petit" },
+  { poidsMin: 30, poidsMax: 80, tailleGranule: "2-3mm", description: "Aliment croissance" },
+  { poidsMin: 80, poidsMax: 150, tailleGranule: "3-4mm", description: "Aliment grossissement petit" },
+  { poidsMin: 150, poidsMax: 350, tailleGranule: "4-6mm", description: "Aliment grossissement" },
+  { poidsMin: 350, poidsMax: 99999, tailleGranule: "6-9mm", description: "Aliment finition" },
+];
+
+/**
+ * Detecte la phase de croissance en fonction du poids moyen.
+ *
+ * Utilise les seuils du ConfigElevage si fourni, sinon les valeurs hardcodees (EC-5.1).
+ *
+ * @param poidsMoyen - Poids moyen du poisson en grammes
+ * @param config - ConfigElevage optionnel (fallback si absent)
+ * @returns Phase de croissance courante
+ */
+export function detecterPhase(
+  poidsMoyen: number | null,
+  config?: ConfigElevage | null
+): PhaseElevage {
+  if (poidsMoyen == null || poidsMoyen < 0) return PhaseElevage.ACCLIMATATION;
+
+  const seuils = config ?? DEFAULT_SEUILS;
+  const acclimatation = "seuilAcclimatation" in seuils ? seuils.seuilAcclimatation : DEFAULT_SEUILS.acclimatation;
+  const croissanceDebut = "seuilCroissanceDebut" in seuils ? seuils.seuilCroissanceDebut : DEFAULT_SEUILS.croissanceDebut;
+  const juvenile = "seuilJuvenile" in seuils ? seuils.seuilJuvenile : DEFAULT_SEUILS.juvenile;
+  const grossissement = "seuilGrossissement" in seuils ? seuils.seuilGrossissement : DEFAULT_SEUILS.grossissement;
+  const finition = "seuilFinition" in seuils ? seuils.seuilFinition : DEFAULT_SEUILS.finition;
+
+  if (poidsMoyen <= acclimatation) return PhaseElevage.ACCLIMATATION;
+  if (poidsMoyen <= croissanceDebut) return PhaseElevage.CROISSANCE_DEBUT;
+  if (poidsMoyen <= juvenile) return PhaseElevage.JUVENILE;
+  if (poidsMoyen <= grossissement) return PhaseElevage.GROSSISSEMENT;
+  if (poidsMoyen <= finition) return PhaseElevage.FINITION;
+  return PhaseElevage.PRE_RECOLTE;
+}
+
+/**
+ * Retourne le taux d'alimentation recommande (%BW/jour) pour un poids moyen donne.
+ *
+ * Retourne la moyenne de tauxMin et tauxMax de la phase correspondante.
+ * Utilise alimentTauxConfig du ConfigElevage si fourni, sinon les valeurs hardcodees.
+ *
+ * @param poidsMoyen - Poids moyen du poisson en grammes
+ * @param config - ConfigElevage optionnel (fallback si absent)
+ * @returns Taux d'alimentation en % du poids vif par jour (ex: 5 = 5%)
+ */
+export function getTauxAlimentation(
+  poidsMoyen: number | null,
+  config?: ConfigElevage | null
+): number {
+  const phase = detecterPhase(poidsMoyen, config);
+
+  if (config?.alimentTauxConfig) {
+    const tauxConfig = (config.alimentTauxConfig as AlimentTauxEntree[]).find(
+      (t) => t.phase === phase
+    );
+    if (tauxConfig) {
+      return (tauxConfig.tauxMin + tauxConfig.tauxMax) / 2;
+    }
+  }
+
+  const defaultTaux = DEFAULT_TAUX_ALIMENTATION[phase];
+  if (defaultTaux) {
+    return (defaultTaux.tauxMin + defaultTaux.tauxMax) / 2;
+  }
+
+  return 3; // Fallback ultime
+}
+
+/**
+ * Retourne la taille de granule recommandee pour un poids moyen donne.
+ *
+ * Utilise alimentTailleConfig du ConfigElevage si fourni, sinon les valeurs hardcodees.
+ *
+ * @param poidsMoyen - Poids moyen du poisson en grammes
+ * @param config - ConfigElevage optionnel (fallback si absent)
+ * @returns Taille du granule en string — ex: "2-3mm"
+ */
+export function getTailleAliment(
+  poidsMoyen: number | null,
+  config?: ConfigElevage | null
+): string {
+  if (poidsMoyen == null || poidsMoyen < 0) return "1.2mm";
+
+  const tailleConfig: AlimentTailleEntree[] = config?.alimentTailleConfig
+    ? (config.alimentTailleConfig as AlimentTailleEntree[])
+    : DEFAULT_TAILLE_ALIMENT;
+
+  const match = tailleConfig.find(
+    (a) => poidsMoyen >= a.poidsMin && poidsMoyen < a.poidsMax
+  );
+
+  return match?.tailleGranule ?? "6-9mm";
+}
+
+/**
+ * Convertit une quantite entre unites de stock.
+ *
+ * Conversions supportees (adresse EC-14.4) :
+ * - KG ↔ grammes : 1 KG = 1000 grammes
+ * - SACS → KG : depende de la contenance (parametre optionnel, defaut 25 kg/sac)
+ * - SACS → grammes : conversion via KG
+ * - Meme unite → retourne quantite inchangee
+ *
+ * @param quantite - Quantite a convertir
+ * @param uniteSource - Unite de depart (UniteStock ou string)
+ * @param uniteDestination - Unite cible (UniteStock ou string)
+ * @param contenanceSac - Poids d'un sac en kg (uniquement pour SACS, defaut 25)
+ * @returns Quantite convertie, ou null si conversion impossible
+ */
+export function convertirUniteStock(
+  quantite: number | null,
+  uniteSource: string,
+  uniteDestination: string,
+  contenanceSac: number = 25
+): number | null {
+  if (quantite == null) return null;
+  if (uniteSource === uniteDestination) return quantite;
+
+  // Normaliser: tout convertir en grammes d'abord
+  let quantiteEnGrammes: number | null = null;
+
+  switch (uniteSource.toUpperCase()) {
+    case "GRAMME":
+      quantiteEnGrammes = quantite;
+      break;
+    case "KG":
+      quantiteEnGrammes = quantite * 1000;
+      break;
+    case "SACS":
+      quantiteEnGrammes = quantite * contenanceSac * 1000;
+      break;
+    case "MILLILITRE":
+      quantiteEnGrammes = quantite; // Approximation : 1ml ≈ 1g pour les liquides
+      break;
+    case "LITRE":
+      quantiteEnGrammes = quantite * 1000;
+      break;
+    case "UNITE":
+      return null; // Unite incompatible avec les conversions ponderales
+    default:
+      return null;
+  }
+
+  if (quantiteEnGrammes == null) return null;
+
+  // Convertir depuis grammes vers la destination
+  switch (uniteDestination.toUpperCase()) {
+    case "GRAMME":
+      return quantiteEnGrammes;
+    case "KG":
+      return quantiteEnGrammes / 1000;
+    case "SACS":
+      return quantiteEnGrammes / (contenanceSac * 1000);
+    case "MILLILITRE":
+      return quantiteEnGrammes;
+    case "LITRE":
+      return quantiteEnGrammes / 1000;
+    default:
+      return null;
+  }
 }

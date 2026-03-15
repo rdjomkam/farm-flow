@@ -233,6 +233,19 @@ enum StatutBesoins {
 }
 
 // ──────────────────────────────────────────
+// Enums — Phase 3 : ConfigElevage (Sprint 19)
+// ──────────────────────────────────────────
+
+enum PhaseElevage {
+  ACCLIMATATION
+  CROISSANCE_DEBUT
+  JUVENILE
+  GROSSISSEMENT
+  FINITION
+  PRE_RECOLTE
+}
+
+// ──────────────────────────────────────────
 // Enums — Production Alevins
 // ──────────────────────────────────────────
 
@@ -294,8 +307,150 @@ model Site {
   paiementsDepense     PaiementDepense[]
   depensesRecurrentes  DepenseRecurrente[]
   listesBesoins        ListeBesoins[]
+  configsElevage       ConfigElevage[]
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
+}
+
+// ──────────────────────────────────────────
+// Modèles — ConfigElevage (Sprint 19)
+// ──────────────────────────────────────────
+
+/**
+ * ConfigElevage — Parametres configurables par site pour piloter le moteur d'elevage.
+ *
+ * Chaque site peut avoir plusieurs profils. Un seul peut etre isDefault=true par site.
+ * Les valeurs par defaut correspondent aux benchmarks FAO pour Clarias gariepinus.
+ */
+model ConfigElevage {
+  id          String  @id @default(cuid())
+  /** Nom du profil — ex: "Clarias Standard Cameroun" */
+  nom         String
+  description String?
+
+  // ── Objectif de production ──────────────────────
+  /** Poids cible par poisson a la recolte (g) — ex: 800 */
+  poidsObjectif        Float
+  /** Duree estimee du cycle en jours — ex: 180 */
+  dureeEstimeeCycle    Int
+  /** Taux de survie cible en % — ex: 85 */
+  tauxSurvieObjectif   Float
+
+  // ── Phases de croissance (seuils de poids en g) ─
+  /** 0 → seuilAcclimatation g */
+  seuilAcclimatation   Float @default(15)
+  /** seuilAcclimatation → seuilCroissanceDebut g */
+  seuilCroissanceDebut Float @default(50)
+  /** seuilCroissanceDebut → seuilJuvenile g */
+  seuilJuvenile        Float @default(150)
+  /** seuilJuvenile → seuilGrossissement g */
+  seuilGrossissement   Float @default(350)
+  /** seuilGrossissement → seuilFinition g */
+  seuilFinition        Float @default(700)
+  // Au-dela de seuilFinition → PRE_RECOLTE
+
+  // ── Alimentation : taille de granule par poids ──
+  /** JSON: [{poidsMin, poidsMax, tailleGranule, description, proteines}] */
+  alimentTailleConfig Json
+  /** JSON: [{phase, tauxMin, tauxMax, frequence, notes}] */
+  alimentTauxConfig   Json
+
+  // ── Benchmarks : FCR (lower is better) ──────────
+  fcrExcellentMax    Float @default(1.5)
+  fcrBonMax          Float @default(1.8)
+  fcrAcceptableMax   Float @default(2.2)
+
+  // ── Benchmarks : SGR (%/jour, higher is better) ─
+  sgrExcellentMin    Float @default(2.0)
+  sgrBonMin          Float @default(1.5)
+  sgrAcceptableMin   Float @default(1.0)
+
+  // ── Benchmarks : Taux de survie (%) ─────────────
+  survieExcellentMin    Float @default(90)
+  survieBonMin          Float @default(85)
+  survieAcceptableMin   Float @default(80)
+
+  // ── Benchmarks : Densite (kg/m3, lower is better)
+  densiteExcellentMax   Float @default(7)
+  densiteBonMax         Float @default(10)
+  densiteAcceptableMax  Float @default(15)
+
+  // ── Benchmarks : Mortalite cumulative (%) ───────
+  mortaliteExcellentMax   Float @default(3)
+  mortaliteBonMax         Float @default(5)
+  mortaliteAcceptableMax  Float @default(10)
+
+  // ── Qualite eau : seuils d'alerte ───────────────
+  phMin                Float @default(6.5)
+  phMax                Float @default(8.5)
+  phOptimalMin         Float @default(6.5)
+  phOptimalMax         Float @default(7.5)
+
+  temperatureMin       Float @default(22)
+  temperatureMax       Float @default(36)
+  temperatureOptimalMin Float @default(26)
+  temperatureOptimalMax Float @default(32)
+
+  oxygeneMin     Float @default(1.5)
+  oxygeneAlerte  Float @default(4.0)
+  oxygeneOptimal Float @default(5.0)
+
+  ammoniacMax     Float @default(0.5)
+  ammoniacAlerte  Float @default(0.05)
+  ammoniacOptimal Float @default(0.02)
+
+  nitriteMax    Float @default(1.0)
+  nitriteAlerte Float @default(0.5)
+
+  // ── Mortalite : seuils d'alerte quotidiens ──────
+  /** % morts/jour → investigation */
+  mortaliteQuotidienneAlerte   Float @default(1.0)
+  /** % morts/jour → urgence */
+  mortaliteQuotidienneCritique Float @default(3.0)
+
+  // ── Alimentation : seuils d'alerte ──────────────
+  /** FCR au-dela de ce seuil → reduire dose */
+  fcrAlerteMax       Float @default(2.0)
+  /** Jours restants de stock → alerte */
+  stockJoursAlerte   Int   @default(5)
+
+  // ── Tri / Grading ───────────────────────────────
+  triPoidsMin          Float @default(5)
+  triPoidsMax          Float @default(150)
+  triIntervalleJours   Int   @default(14)
+
+  // ── Biometrie ───────────────────────────────────
+  biometrieIntervalleDebut  Int   @default(7)
+  biometrieIntervalleFin    Int   @default(14)
+  biometrieEchantillonPct   Float @default(10)
+
+  // ── Changement d'eau ────────────────────────────
+  eauChangementPct               Float @default(30)
+  eauChangementIntervalleJours   Int   @default(3)
+
+  // ── Densite d'elevage ───────────────────────────
+  densiteMaxPoissonsM3       Float @default(100)
+  densiteOptimalePoissonsM3  Float @default(50)
+
+  // ── Recolte ─────────────────────────────────────
+  recoltePartiellePoidsSeuil Float @default(400)
+  recolteJeuneAvantJours     Int   @default(2)
+
+  // ── Metadonnees ─────────────────────────────────
+  /** Profil par defaut du site (un seul isDefault=true par site) */
+  isDefault Boolean @default(false)
+  isActive  Boolean @default(true)
+
+  /** ID du site (ferme) — R8 */
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteId])
+  @@index([siteId, isDefault])
+  @@index([siteId, isActive])
 }
 
 model SiteRole {

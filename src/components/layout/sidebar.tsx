@@ -109,6 +109,7 @@ const modules: { label: string; icon: React.ComponentType<{ className?: string }
 
 const secondaryItems: NavItem[] = [
   { href: "/sites", label: "Sites", icon: Building2 },
+  { href: "/settings/config-elevage", label: "Config. elevage", icon: Settings },
   { href: "/settings/alertes", label: "Config. alertes", icon: Settings },
 ];
 

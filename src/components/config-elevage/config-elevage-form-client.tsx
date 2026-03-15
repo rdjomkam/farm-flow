@@ -1,0 +1,572 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/toast";
+import type { ConfigElevage } from "@/types";
+
+// ---------------------------------------------------------------------------
+// Default values (FAO Clarias gariepinus benchmarks, mirrors CONFIG_ELEVAGE_DEFAULTS)
+// ---------------------------------------------------------------------------
+
+const FORM_DEFAULTS: Omit<ConfigElevage, "id" | "siteId" | "createdAt" | "updatedAt"> = {
+  nom: "",
+  description: null,
+  isDefault: false,
+  isActive: true,
+  // Objectif
+  poidsObjectif: 800,
+  dureeEstimeeCycle: 180,
+  tauxSurvieObjectif: 85,
+  // Phases
+  seuilAcclimatation: 15,
+  seuilCroissanceDebut: 50,
+  seuilJuvenile: 150,
+  seuilGrossissement: 350,
+  seuilFinition: 700,
+  // Aliment (JSON, kept as-is from defaults — not editable in this form)
+  alimentTailleConfig: [],
+  alimentTauxConfig: [],
+  // Benchmarks FCR
+  fcrExcellentMax: 1.2,
+  fcrBonMax: 1.5,
+  fcrAcceptableMax: 2.0,
+  // Benchmarks SGR
+  sgrExcellentMin: 3.5,
+  sgrBonMin: 2.5,
+  sgrAcceptableMin: 1.5,
+  // Benchmarks Survie
+  survieExcellentMin: 92,
+  survieBonMin: 85,
+  survieAcceptableMin: 75,
+  // Benchmarks Densite
+  densiteExcellentMax: 15,
+  densiteBonMax: 25,
+  densiteAcceptableMax: 40,
+  // Benchmarks Mortalite
+  mortaliteExcellentMax: 5,
+  mortaliteBonMax: 10,
+  mortaliteAcceptableMax: 20,
+  // Qualite eau — pH
+  phMin: 5.5,
+  phMax: 9.5,
+  phOptimalMin: 6.5,
+  phOptimalMax: 8.0,
+  // Qualite eau — Temperature
+  temperatureMin: 18,
+  temperatureMax: 35,
+  temperatureOptimalMin: 25,
+  temperatureOptimalMax: 30,
+  // Qualite eau — Oxygene
+  oxygeneMin: 3.0,
+  oxygeneAlerte: 4.0,
+  oxygeneOptimal: 6.0,
+  // Qualite eau — Ammoniac
+  ammoniacMax: 0.5,
+  ammoniacAlerte: 0.1,
+  ammoniacOptimal: 0.02,
+  // Qualite eau — Nitrite
+  nitriteMax: 0.5,
+  nitriteAlerte: 0.1,
+  // Alertes
+  mortaliteQuotidienneAlerte: 2,
+  mortaliteQuotidienneCritique: 5,
+  fcrAlerteMax: 2.5,
+  stockJoursAlerte: 7,
+  // Tri
+  triPoidsMin: 20,
+  triPoidsMax: 150,
+  triIntervalleJours: 21,
+  // Biometrie
+  biometrieIntervalleDebut: 7,
+  biometrieIntervalleFin: 14,
+  biometrieEchantillonPct: 10,
+  // Densite
+  densiteMaxPoissonsM3: 80,
+  densiteOptimalePoissonsM3: 50,
+  // Eau
+  eauChangementPct: 30,
+  eauChangementIntervalleJours: 3,
+  // Recolte
+  recoltePartiellePoidsSeuil: 500,
+  recolteJeuneAvantJours: 1,
+};
+
+// ---------------------------------------------------------------------------
+// Props
+// ---------------------------------------------------------------------------
+
+interface Props {
+  templates: ConfigElevage[];
+}
+
+// ---------------------------------------------------------------------------
+// Section definitions
+// ---------------------------------------------------------------------------
+
+interface Section {
+  id: string;
+  titre: string;
+  description: string;
+}
+
+const SECTIONS: Section[] = [
+  { id: "objectif", titre: "Objectif de production", description: "Poids cible, duree du cycle, taux de survie attendu" },
+  { id: "phases", titre: "Phases de croissance", description: "Seuils de poids pour chaque phase (en grammes)" },
+  { id: "benchmarks", titre: "Benchmarks de performance", description: "Seuils FCR, SGR, survie, densite, mortalite" },
+  { id: "qualite-eau", titre: "Qualite de l'eau", description: "Seuils pH, temperature, oxygene, ammoniac, nitrite" },
+  { id: "alertes-mortalite", titre: "Alertes mortalite", description: "Seuils de mortalite quotidienne" },
+  { id: "tri-biometrie", titre: "Tri et Biometrie", description: "Frequences et parametres de tri et de biometrie" },
+  { id: "densite", titre: "Densite d'elevage", description: "Poissons maximum par m³" },
+  { id: "recolte", titre: "Recolte", description: "Poids minimum pour recolte partielle" },
+];
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+function SectionCard({
+  section,
+  isOpen,
+  onToggle,
+  children,
+}: {
+  section: Section;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border border-border rounded-lg overflow-hidden">
+      <button
+        type="button"
+        className="w-full flex items-center justify-between p-4 bg-card hover:bg-muted/30 transition-colors text-left"
+        onClick={onToggle}
+      >
+        <div>
+          <p className="font-medium text-sm">{section.titre}</p>
+          <p className="text-xs text-muted-foreground">{section.description}</p>
+        </div>
+        {isOpen ? (
+          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+        ) : (
+          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+        )}
+      </button>
+      {isOpen && <div className="p-4 border-t border-border bg-card">{children}</div>}
+    </div>
+  );
+}
+
+function NumericField({
+  label,
+  name,
+  value,
+  onChange,
+  unit,
+  min,
+  max,
+  step,
+}: {
+  label: string;
+  name: string;
+  value: number;
+  onChange: (name: string, val: number) => void;
+  unit?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-foreground mb-1">
+        {label}{unit ? <span className="text-muted-foreground ml-1">({unit})</span> : null}
+      </label>
+      <input
+        type="number"
+        name={name}
+        value={value}
+        min={min}
+        max={max}
+        step={step ?? 0.1}
+        onChange={(e) => onChange(name, parseFloat(e.target.value) || 0)}
+        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
+type FormValues = Omit<ConfigElevage, "id" | "siteId" | "createdAt" | "updatedAt">;
+
+export function ConfigElevageFormClient({ templates }: Props) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [form, setForm] = useState<FormValues>({ ...FORM_DEFAULTS });
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set(["objectif"]));
+  const [submitting, setSubmitting] = useState(false);
+
+  // ---- Template pre-fill ----
+
+  const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const templateId = e.target.value;
+    if (!templateId) {
+      setForm({ ...FORM_DEFAULTS });
+      return;
+    }
+    const tpl = templates.find((t) => t.id === templateId);
+    if (!tpl) return;
+    setForm({
+      nom: `${tpl.nom} (copie)`,
+      description: tpl.description,
+      isDefault: false,
+      isActive: true,
+      poidsObjectif: tpl.poidsObjectif,
+      dureeEstimeeCycle: tpl.dureeEstimeeCycle,
+      tauxSurvieObjectif: tpl.tauxSurvieObjectif,
+      seuilAcclimatation: tpl.seuilAcclimatation,
+      seuilCroissanceDebut: tpl.seuilCroissanceDebut,
+      seuilJuvenile: tpl.seuilJuvenile,
+      seuilGrossissement: tpl.seuilGrossissement,
+      seuilFinition: tpl.seuilFinition,
+      alimentTailleConfig: tpl.alimentTailleConfig,
+      alimentTauxConfig: tpl.alimentTauxConfig,
+      fcrExcellentMax: tpl.fcrExcellentMax,
+      fcrBonMax: tpl.fcrBonMax,
+      fcrAcceptableMax: tpl.fcrAcceptableMax,
+      sgrExcellentMin: tpl.sgrExcellentMin,
+      sgrBonMin: tpl.sgrBonMin,
+      sgrAcceptableMin: tpl.sgrAcceptableMin,
+      survieExcellentMin: tpl.survieExcellentMin,
+      survieBonMin: tpl.survieBonMin,
+      survieAcceptableMin: tpl.survieAcceptableMin,
+      densiteExcellentMax: tpl.densiteExcellentMax,
+      densiteBonMax: tpl.densiteBonMax,
+      densiteAcceptableMax: tpl.densiteAcceptableMax,
+      mortaliteExcellentMax: tpl.mortaliteExcellentMax,
+      mortaliteBonMax: tpl.mortaliteBonMax,
+      mortaliteAcceptableMax: tpl.mortaliteAcceptableMax,
+      phMin: tpl.phMin,
+      phMax: tpl.phMax,
+      phOptimalMin: tpl.phOptimalMin,
+      phOptimalMax: tpl.phOptimalMax,
+      temperatureMin: tpl.temperatureMin,
+      temperatureMax: tpl.temperatureMax,
+      temperatureOptimalMin: tpl.temperatureOptimalMin,
+      temperatureOptimalMax: tpl.temperatureOptimalMax,
+      oxygeneMin: tpl.oxygeneMin,
+      oxygeneAlerte: tpl.oxygeneAlerte,
+      oxygeneOptimal: tpl.oxygeneOptimal,
+      ammoniacMax: tpl.ammoniacMax,
+      ammoniacAlerte: tpl.ammoniacAlerte,
+      ammoniacOptimal: tpl.ammoniacOptimal,
+      nitriteMax: tpl.nitriteMax,
+      nitriteAlerte: tpl.nitriteAlerte,
+      mortaliteQuotidienneAlerte: tpl.mortaliteQuotidienneAlerte,
+      mortaliteQuotidienneCritique: tpl.mortaliteQuotidienneCritique,
+      fcrAlerteMax: tpl.fcrAlerteMax,
+      stockJoursAlerte: tpl.stockJoursAlerte,
+      triPoidsMin: tpl.triPoidsMin,
+      triPoidsMax: tpl.triPoidsMax,
+      triIntervalleJours: tpl.triIntervalleJours,
+      biometrieIntervalleDebut: tpl.biometrieIntervalleDebut,
+      biometrieIntervalleFin: tpl.biometrieIntervalleFin,
+      biometrieEchantillonPct: tpl.biometrieEchantillonPct,
+      densiteMaxPoissonsM3: tpl.densiteMaxPoissonsM3,
+      densiteOptimalePoissonsM3: tpl.densiteOptimalePoissonsM3,
+      eauChangementPct: tpl.eauChangementPct,
+      eauChangementIntervalleJours: tpl.eauChangementIntervalleJours,
+      recoltePartiellePoidsSeuil: tpl.recoltePartiellePoidsSeuil,
+      recolteJeuneAvantJours: tpl.recolteJeuneAvantJours,
+    });
+  };
+
+  // ---- Section toggle ----
+
+  const toggleSection = (id: string) => {
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // ---- Field helpers ----
+
+  const handleNumeric = (name: string, val: number) => {
+    setForm((prev) => ({ ...prev, [name]: val }));
+  };
+
+  const handleBoolean = (name: string, val: boolean) => {
+    setForm((prev) => ({ ...prev, [name]: val }));
+  };
+
+  // ---- Submit ----
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.nom.trim()) {
+      toast({ title: "Erreur", description: "Le nom du profil est requis.", variant: "error" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/config-elevage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        toast({ title: "Erreur", description: data.message ?? "Erreur lors de la creation.", variant: "error" });
+        return;
+      }
+      toast({ title: "Profil cree", description: `Le profil "${form.nom}" a ete cree.` });
+      router.push("/settings/config-elevage");
+    } catch {
+      toast({ title: "Erreur", description: "Erreur reseau lors de la creation.", variant: "error" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Template selector */}
+      {templates.length > 0 && (
+        <div className="border border-border rounded-lg p-4 bg-muted/20">
+          <label className="block text-sm font-medium text-foreground mb-1">
+            Partir d&apos;un profil existant (optionnel)
+          </label>
+          <select
+            onChange={handleTemplateChange}
+            defaultValue=""
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <option value="">-- Valeurs par defaut FAO Clarias --</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.nom}{t.isDefault ? " (par defaut)" : ""}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground mt-1">
+            Selectionnez un profil pour pre-remplir le formulaire avec ses valeurs.
+          </p>
+        </div>
+      )}
+
+      {/* Nom et description */}
+      <div className="space-y-3">
+        <Input
+          label="Nom du profil"
+          value={form.nom}
+          onChange={(e) => setForm((prev) => ({ ...prev, nom: e.target.value }))}
+          placeholder="Ex: Clarias Standard Cameroun"
+          required
+        />
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Description (optionnel)</label>
+          <textarea
+            value={form.description ?? ""}
+            onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value || null }))}
+            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            placeholder="Description du profil..."
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.isDefault}
+              onChange={(e) => handleBoolean("isDefault", e.target.checked)}
+              className="rounded border-input"
+            />
+            <span className="text-sm">Profil par defaut</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.isActive}
+              onChange={(e) => handleBoolean("isActive", e.target.checked)}
+              className="rounded border-input"
+            />
+            <span className="text-sm">Actif</span>
+          </label>
+        </div>
+      </div>
+
+      {/* Sections repliables */}
+      <div className="space-y-2">
+        {SECTIONS.map((section) => (
+          <SectionCard
+            key={section.id}
+            section={section}
+            isOpen={openSections.has(section.id)}
+            onToggle={() => toggleSection(section.id)}
+          >
+            {section.id === "objectif" && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <NumericField label="Poids objectif" name="poidsObjectif" value={form.poidsObjectif} onChange={handleNumeric} unit="g" min={100} max={5000} step={50} />
+                <NumericField label="Duree estimee" name="dureeEstimeeCycle" value={form.dureeEstimeeCycle} onChange={handleNumeric} unit="jours" min={30} max={365} step={1} />
+                <NumericField label="Survie objectif" name="tauxSurvieObjectif" value={form.tauxSurvieObjectif} onChange={handleNumeric} unit="%" min={50} max={100} step={1} />
+              </div>
+            )}
+            {section.id === "phases" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <NumericField label="Acclimatation (fin)" name="seuilAcclimatation" value={form.seuilAcclimatation} onChange={handleNumeric} unit="g" min={5} max={50} step={1} />
+                <NumericField label="Croissance debut (fin)" name="seuilCroissanceDebut" value={form.seuilCroissanceDebut} onChange={handleNumeric} unit="g" min={20} max={100} step={1} />
+                <NumericField label="Juvenile (fin)" name="seuilJuvenile" value={form.seuilJuvenile} onChange={handleNumeric} unit="g" min={50} max={300} step={5} />
+                <NumericField label="Grossissement (fin)" name="seuilGrossissement" value={form.seuilGrossissement} onChange={handleNumeric} unit="g" min={150} max={600} step={10} />
+                <NumericField label="Finition (fin)" name="seuilFinition" value={form.seuilFinition} onChange={handleNumeric} unit="g" min={300} max={1500} step={25} />
+              </div>
+            )}
+            {section.id === "benchmarks" && (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">FCR (plus bas = meilleur)</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <NumericField label="Excellent &lt;" name="fcrExcellentMax" value={form.fcrExcellentMax} onChange={handleNumeric} min={0.5} max={3} step={0.1} />
+                    <NumericField label="Bon &lt;" name="fcrBonMax" value={form.fcrBonMax} onChange={handleNumeric} min={0.5} max={3} step={0.1} />
+                    <NumericField label="Acceptable &lt;" name="fcrAcceptableMax" value={form.fcrAcceptableMax} onChange={handleNumeric} min={0.5} max={5} step={0.1} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">SGR %/j (plus haut = meilleur)</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <NumericField label="Excellent &gt;" name="sgrExcellentMin" value={form.sgrExcellentMin} onChange={handleNumeric} min={0.5} max={5} step={0.1} />
+                    <NumericField label="Bon &gt;" name="sgrBonMin" value={form.sgrBonMin} onChange={handleNumeric} min={0.5} max={5} step={0.1} />
+                    <NumericField label="Acceptable &gt;" name="sgrAcceptableMin" value={form.sgrAcceptableMin} onChange={handleNumeric} min={0.1} max={3} step={0.1} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Survie % (plus haut = meilleur)</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <NumericField label="Excellent &gt;" name="survieExcellentMin" value={form.survieExcellentMin} onChange={handleNumeric} unit="%" min={50} max={100} step={1} />
+                    <NumericField label="Bon &gt;" name="survieBonMin" value={form.survieBonMin} onChange={handleNumeric} unit="%" min={50} max={100} step={1} />
+                    <NumericField label="Acceptable &gt;" name="survieAcceptableMin" value={form.survieAcceptableMin} onChange={handleNumeric} unit="%" min={40} max={100} step={1} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Densite poissons/m³ (plus bas = meilleur)</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <NumericField label="Excellent &lt;" name="densiteExcellentMax" value={form.densiteExcellentMax} onChange={handleNumeric} min={1} max={50} step={1} />
+                    <NumericField label="Bon &lt;" name="densiteBonMax" value={form.densiteBonMax} onChange={handleNumeric} min={1} max={100} step={1} />
+                    <NumericField label="Acceptable &lt;" name="densiteAcceptableMax" value={form.densiteAcceptableMax} onChange={handleNumeric} min={1} max={200} step={1} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Mortalite cumulative % (plus bas = meilleur)</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <NumericField label="Excellent &lt;" name="mortaliteExcellentMax" value={form.mortaliteExcellentMax} onChange={handleNumeric} unit="%" min={0} max={20} step={0.5} />
+                    <NumericField label="Bon &lt;" name="mortaliteBonMax" value={form.mortaliteBonMax} onChange={handleNumeric} unit="%" min={0} max={30} step={0.5} />
+                    <NumericField label="Acceptable &lt;" name="mortaliteAcceptableMax" value={form.mortaliteAcceptableMax} onChange={handleNumeric} unit="%" min={0} max={50} step={1} />
+                  </div>
+                </div>
+              </div>
+            )}
+            {section.id === "qualite-eau" && (
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">pH</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <NumericField label="Min lethal" name="phMin" value={form.phMin} onChange={handleNumeric} min={4} max={9} step={0.1} />
+                    <NumericField label="Max lethal" name="phMax" value={form.phMax} onChange={handleNumeric} min={6} max={14} step={0.1} />
+                    <NumericField label="Optimal min" name="phOptimalMin" value={form.phOptimalMin} onChange={handleNumeric} min={5} max={9} step={0.1} />
+                    <NumericField label="Optimal max" name="phOptimalMax" value={form.phOptimalMax} onChange={handleNumeric} min={6} max={10} step={0.1} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Temperature (°C)</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <NumericField label="Min lethal" name="temperatureMin" value={form.temperatureMin} onChange={handleNumeric} unit="°C" min={10} max={30} step={0.5} />
+                    <NumericField label="Max lethal" name="temperatureMax" value={form.temperatureMax} onChange={handleNumeric} unit="°C" min={25} max={45} step={0.5} />
+                    <NumericField label="Optimal min" name="temperatureOptimalMin" value={form.temperatureOptimalMin} onChange={handleNumeric} unit="°C" min={18} max={32} step={0.5} />
+                    <NumericField label="Optimal max" name="temperatureOptimalMax" value={form.temperatureOptimalMax} onChange={handleNumeric} unit="°C" min={22} max={38} step={0.5} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Oxygene dissous (mg/L)</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <NumericField label="Min lethal" name="oxygeneMin" value={form.oxygeneMin} onChange={handleNumeric} min={0.5} max={5} step={0.1} />
+                    <NumericField label="Alerte" name="oxygeneAlerte" value={form.oxygeneAlerte} onChange={handleNumeric} min={1} max={7} step={0.1} />
+                    <NumericField label="Optimal" name="oxygeneOptimal" value={form.oxygeneOptimal} onChange={handleNumeric} min={3} max={15} step={0.1} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Ammoniac (mg/L)</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <NumericField label="Lethal" name="ammoniacMax" value={form.ammoniacMax} onChange={handleNumeric} min={0.1} max={2} step={0.05} />
+                    <NumericField label="Alerte" name="ammoniacAlerte" value={form.ammoniacAlerte} onChange={handleNumeric} min={0.01} max={1} step={0.01} />
+                    <NumericField label="Optimal" name="ammoniacOptimal" value={form.ammoniacOptimal} onChange={handleNumeric} min={0.001} max={0.5} step={0.01} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Nitrite (mg/L)</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <NumericField label="Max lethal" name="nitriteMax" value={form.nitriteMax} onChange={handleNumeric} min={0.05} max={2} step={0.05} />
+                    <NumericField label="Alerte" name="nitriteAlerte" value={form.nitriteAlerte} onChange={handleNumeric} min={0.01} max={1} step={0.01} />
+                  </div>
+                </div>
+              </div>
+            )}
+            {section.id === "alertes-mortalite" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <NumericField label="Alerte mortalite quotidienne" name="mortaliteQuotidienneAlerte" value={form.mortaliteQuotidienneAlerte} onChange={handleNumeric} unit="%" min={0.1} max={10} step={0.1} />
+                <NumericField label="Critique mortalite quotidienne" name="mortaliteQuotidienneCritique" value={form.mortaliteQuotidienneCritique} onChange={handleNumeric} unit="%" min={0.5} max={20} step={0.1} />
+                <NumericField label="FCR alerte max" name="fcrAlerteMax" value={form.fcrAlerteMax} onChange={handleNumeric} min={1} max={5} step={0.1} />
+                <NumericField label="Stock jours restants (alerte)" name="stockJoursAlerte" value={form.stockJoursAlerte} onChange={handleNumeric} unit="jours" min={1} max={30} step={1} />
+              </div>
+            )}
+            {section.id === "tri-biometrie" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <NumericField label="Tri poids min" name="triPoidsMin" value={form.triPoidsMin} onChange={handleNumeric} unit="g" min={1} max={100} step={1} />
+                <NumericField label="Tri poids max" name="triPoidsMax" value={form.triPoidsMax} onChange={handleNumeric} unit="g" min={50} max={500} step={5} />
+                <NumericField label="Tri intervalle" name="triIntervalleJours" value={form.triIntervalleJours} onChange={handleNumeric} unit="jours" min={7} max={60} step={1} />
+                <NumericField label="Biometrie debut" name="biometrieIntervalleDebut" value={form.biometrieIntervalleDebut} onChange={handleNumeric} unit="jours" min={3} max={30} step={1} />
+                <NumericField label="Biometrie fin" name="biometrieIntervalleFin" value={form.biometrieIntervalleFin} onChange={handleNumeric} unit="jours" min={7} max={30} step={1} />
+                <NumericField label="Echantillon biometrie" name="biometrieEchantillonPct" value={form.biometrieEchantillonPct} onChange={handleNumeric} unit="%" min={5} max={30} step={1} />
+              </div>
+            )}
+            {section.id === "densite" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <NumericField label="Densite max" name="densiteMaxPoissonsM3" value={form.densiteMaxPoissonsM3} onChange={handleNumeric} unit="poissons/m³" min={10} max={300} step={5} />
+                <NumericField label="Densite optimale" name="densiteOptimalePoissonsM3" value={form.densiteOptimalePoissonsM3} onChange={handleNumeric} unit="poissons/m³" min={5} max={200} step={5} />
+                <NumericField label="Changement eau %" name="eauChangementPct" value={form.eauChangementPct} onChange={handleNumeric} unit="%" min={10} max={100} step={5} />
+                <NumericField label="Changement eau frequence" name="eauChangementIntervalleJours" value={form.eauChangementIntervalleJours} onChange={handleNumeric} unit="jours" min={1} max={14} step={1} />
+              </div>
+            )}
+            {section.id === "recolte" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <NumericField label="Poids min recolte partielle" name="recoltePartiellePoidsSeuil" value={form.recoltePartiellePoidsSeuil} onChange={handleNumeric} unit="g" min={100} max={2000} step={50} />
+                <NumericField label="Arret aliment avant recolte" name="recolteJeuneAvantJours" value={form.recolteJeuneAvantJours} onChange={handleNumeric} unit="jours" min={0} max={7} step={1} />
+              </div>
+            )}
+          </SectionCard>
+        ))}
+      </div>
+
+      {/* Boutons d'action */}
+      <div className="flex gap-3 pt-4 sticky bottom-0 bg-background pb-4">
+        <Button
+          type="button"
+          variant="outline"
+          className="flex-1"
+          onClick={() => router.push("/settings/config-elevage")}
+        >
+          Annuler
+        </Button>
+        <Button type="submit" className="flex-1" disabled={submitting}>
+          {submitting ? "Creation..." : "Creer le profil"}
+        </Button>
+      </div>
+    </form>
+  );
+}

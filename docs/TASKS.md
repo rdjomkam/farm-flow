@@ -3219,3 +3219,183 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 - Toutes les règles R1-R9 respectées
 - Anti double-comptage validé
 - Rapport de review dans `docs/reviews/`
+
+---
+
+## Sprint 19 — ConfigElevage & Refactoring Benchmarks (Phase 3)
+
+**Objectif :** Mettre en place le modèle ConfigElevage (paramètres configurables par site) et refactorer les modules existants (benchmarks.ts, alertes.ts, calculs.ts) pour les rendre configurables. C'est la fondation de toute la Phase 3.
+**Dépend de :** Sprint 18 FAIT
+**Source :** docs/sprints/SPRINT-PLAN-PHASE3.md (Sprint 13 renommé Sprint 19)
+
+---
+
+### Story 19.1 — Modèle Prisma ConfigElevage + Migration
+**Assigné à :** @db-specialist
+**Priorité :** Haute
+**Dépend de :** Aucune
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Ajouter l'enum `PhaseElevage` : ACCLIMATATION, CROISSANCE_DEBUT, JUVENILE, GROSSISSEMENT, FINITION, PRE_RECOLTE
+- [x] `FAIT` Créer le modèle `ConfigElevage` avec tous les champs (section 6.2 du REQ)
+- [x] `FAIT` Ajouter relation `Site.configs ConfigElevage[]`
+- [x] `FAIT` Index unique partiel pour isDefault (un seul isDefault=true par site — enforced application-level)
+- [x] `FAIT` Créer migration manuelle + `npx prisma migrate deploy`
+- [x] `FAIT` Vérifier `npx prisma generate` OK
+
+**Critères d'acceptation :**
+- Modèle ConfigElevage complet avec tous les champs ✅
+- Enum PhaseElevage créé ✅
+- Migration exécutée sans erreur ✅
+- Build OK ✅
+
+---
+
+### Story 19.2 — Interfaces TypeScript ConfigElevage + Schemas Zod
+**Assigné à :** @architect
+**Priorité :** Haute
+**Dépend de :** Story 19.1
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Interface `ConfigElevage` dans src/types/models.ts
+- [x] `FAIT` DTOs `CreateConfigElevageDTO`, `UpdateConfigElevageDTO` dans src/types/api.ts
+- [x] `FAIT` Schema Zod `alimentTailleConfigSchema` : valide poidsMin < poidsMax, pas de gaps
+- [x] `FAIT` Schema Zod `alimentTauxConfigSchema` : toutes les phases présentes, tauxMin <= tauxMax
+- [x] `FAIT` Validation seuils de phase monotoniquement croissants
+- [x] `FAIT` Validation benchmarks excellent > bon > acceptable
+- [x] `FAIT` Enum `PhaseElevage` exporté depuis src/types/index.ts
+- [x] `FAIT` Créer src/lib/validation/config-elevage.ts
+
+**Critères d'acceptation :**
+- Aucun `any` dans les types ✅
+- Schemas Zod valident/rejettent correctement ✅
+- Tous les exports à jour dans index.ts ✅
+
+---
+
+### Story 19.3 — Seed des profils ConfigElevage pré-définis
+**Assigné à :** @db-specialist
+**Priorité :** Moyenne
+**Dépend de :** Story 19.1
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Insérer 3 profils ConfigElevage dans prisma/seed.sql
+- [x] `FAIT` "Clarias Standard Cameroun" (800g, 180j, isDefault=true)
+- [x] `FAIT` "Clarias Express" (500g, 120j)
+- [x] `FAIT` "Clarias Premium" (1200g, 240j)
+- [x] `FAIT` Champs JSON alimentTailleConfig et alimentTauxConfig conformes sections 6.3/6.4
+
+**Critères d'acceptation :**
+- 3 profils insérés pour le site DKFarm ✅
+- Profil Standard a isDefault=true ✅
+- Seed sans erreur ✅
+
+---
+
+### Story 19.4 — API CRUD ConfigElevage
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** Stories 19.1, 19.2
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Créer src/lib/queries/config-elevage.ts
+- [x] `FAIT` Route GET/POST `/api/config-elevage`
+- [x] `FAIT` Route GET/PUT/DELETE `/api/config-elevage/[id]`
+- [x] `FAIT` Route GET `/api/config-elevage/defaut` (fallback valeurs hardcodées)
+- [x] `FAIT` Route POST `/api/config-elevage/[id]/dupliquer`
+- [x] `FAIT` Permissions : SITE_GERER pour écriture (enforced via requirePermission)
+- [x] `FAIT` Validation Zod entrante (schemas de 19.2)
+- [x] `FAIT` Empêcher suppression si isDefault (retour 409)
+
+**Critères d'acceptation :**
+- CRUD complet fonctionnel ✅
+- Fallback /defaut retourne valeurs par défaut si aucune config ✅
+- Permissions vérifiées ✅
+
+---
+
+### Story 19.5 — Refactoring benchmarks.ts
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** Story 19.2
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Ajouter getBenchmarkSurvie/Fcr/Sgr/Densite/Mortalite(config?) avec fallback
+- [x] `FAIT` Fallback vers constantes actuelles si config undefined
+- [x] `FAIT` Mapper les 15 champs benchmark de ConfigElevage
+- [x] `FAIT` Retrocompatible : evaluerBenchmark() inchangé, appels existants non modifiés
+
+**Critères d'acceptation :**
+- Paramètre config optionnel ✅
+- Fallback fonctionnel ✅
+- Tests existants passent toujours ✅
+
+---
+
+### Story 19.6 — Refactoring alertes.ts + calculs.ts
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** Story 19.2
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Refactorer `alertes.ts` : seuils pH, température, ammoniac, mortalité depuis ConfigElevage
+- [x] `FAIT` Fallback vers valeurs actuelles si aucune config
+- [x] `FAIT` Ajouter `detecterPhase(poidsMoyen, config?)` dans calculs.ts
+- [x] `FAIT` Ajouter `getTauxAlimentation(poidsMoyen, config?)` dans calculs.ts
+- [x] `FAIT` Ajouter `getTailleAliment(poidsMoyen, config?)` dans calculs.ts
+- [x] `FAIT` Ajouter `convertirUniteStock(quantite, uniteSource, uniteDestination, contenanceSac?)` dans calculs.ts
+
+**Critères d'acceptation :**
+- Toutes nouvelles fonctions avec paramètre config optionnel ✅
+- Fallback fonctionnel ✅
+- convertirUniteStock gère KG/SACS/grammes ✅
+
+---
+
+### Story 19.7 — UI Settings — Page ConfigElevage
+**Assigné à :** @developer
+**Priorité :** Moyenne
+**Dépend de :** Story 19.4
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Créer src/app/settings/config-elevage/page.tsx
+- [x] `FAIT` Créer src/app/settings/config-elevage/[id]/page.tsx
+- [x] `FAIT` Créer src/app/settings/config-elevage/nouveau/page.tsx
+- [x] `FAIT` Créer src/components/config-elevage/ (liste, édition, formulaire)
+- [x] `FAIT` Page liste avec cartes mobile-first (nom, objectif, durée, badge "Par défaut")
+- [x] `FAIT` Page édition avec 8 sections repliables (custom SectionCard)
+- [x] `FAIT` Création depuis template (pré-remplit les champs)
+- [x] `FAIT` Navigation ajoutée dans sidebar + hamburger-menu
+- [x] `FAIT` Mobile first
+
+**Critères d'acceptation :**
+- Pas de tableaux sur mobile, cartes empilées ✅
+- Sections repliables pour les 8 groupes ✅
+- Création depuis template (pré-remplit les champs) ✅
+
+---
+
+### Story 19.8 — Tests + Review Sprint 19
+**Assigné à :** @tester + @code-reviewer
+**Priorité :** Haute
+**Dépend de :** Stories 19.1 à 19.7
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Non-régression : 1175 tests existants passent (npx vitest run)
+- [x] `FAIT` `npx vitest run` — 41 fichiers, 1175 tests, tous passent
+- [x] `FAIT` `npm run build` — Build production OK (21 migrations, 0 erreurs TS)
+- [x] `FAIT` Écrire docs/reviews/review-sprint-19.md
+- [x] `FAIT` Écrire docs/tests/rapport-sprint-19.md
+
+**Critères d'acceptation :**
+- Tous les tests passent ✅
+- Build OK ✅
+- Rapports produits ✅
