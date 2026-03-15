@@ -1,7 +1,7 @@
 ---
 name: project-manager
 description: Chef de projet qui coordonne l'équipe, gère les tâches et synthétise l'avancement
-tools: Read, Glob, Grep, Agent, Edit
+tools: Read, Glob, Grep, Agent
 model: sonnet
 ---
 
