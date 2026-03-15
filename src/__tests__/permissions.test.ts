@@ -246,11 +246,11 @@ describe("canAssignRole (anti-escalation)", () => {
 // ===== PERMISSION_GROUPS ===================================================
 
 describe("PERMISSION_GROUPS", () => {
-  it("contient exactement 10 groupes", () => {
-    expect(Object.keys(PERMISSION_GROUPS)).toHaveLength(10);
+  it("contient exactement 11 groupes (Sprint 16 : ajout groupe depenses)", () => {
+    expect(Object.keys(PERMISSION_GROUPS)).toHaveLength(11);
   });
 
-  it("les 10 groupes attendus existent", () => {
+  it("les 11 groupes attendus existent", () => {
     const groupNames = Object.keys(PERMISSION_GROUPS);
     expect(groupNames).toContain("administration");
     expect(groupNames).toContain("elevage");
@@ -261,10 +261,11 @@ describe("PERMISSION_GROUPS", () => {
     expect(groupNames).toContain("planning");
     expect(groupNames).toContain("finances");
     expect(groupNames).toContain("alertes");
+    expect(groupNames).toContain("depenses");
     expect(groupNames).toContain("general");
   });
 
-  it("couvre exactement 27 permissions sans doublon", () => {
+  it("couvre exactement toutes les permissions sans doublon (33 depuis Sprint 16)", () => {
     const allGroupedPerms = Object.values(PERMISSION_GROUPS).flat();
     expect(allGroupedPerms).toHaveLength(ALL_PERMISSIONS.length);
     expect(new Set(allGroupedPerms).size).toBe(ALL_PERMISSIONS.length);
