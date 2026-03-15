@@ -5,6 +5,7 @@ import {
   PUT,
   DELETE,
 } from "@/app/api/activites/[id]/route";
+import { GET as GET_INSTRUCTIONS } from "@/app/api/activites/[id]/instructions/route";
 import { GET as GET_AUJOURDHUI } from "@/app/api/activites/aujourdhui/route";
 import { POST as POST_COMPLETE } from "@/app/api/activites/[id]/complete/route";
 import { GET as GET_MES_TACHES } from "@/app/api/activites/mes-taches/route";
@@ -463,7 +464,68 @@ describe("PUT /api/activites/[id]", () => {
     expect(data.titre).toBe("Nouveau titre");
   });
 
-  it("rejette la mise a jour du statut vers TERMINEE via PUT (doit utiliser POST /complete)", async () => {
+  it("complete une activite via PUT statut=TERMINEE avec noteCompletion", async () => {
+    const completed = {
+      ...FAKE_ACTIVITE,
+      typeActivite: TypeActivite.NETTOYAGE,
+      statut: StatutActivite.TERMINEE,
+      noteCompletion: "Nettoyage effectue avec soin.",
+      dateTerminee: new Date(),
+    };
+    mockCompleteActivite.mockResolvedValue(completed);
+
+    const response = await PUT(
+      makeRequest("/api/activites/activite-1", {
+        method: "PUT",
+        body: JSON.stringify({
+          statut: StatutActivite.TERMINEE,
+          noteCompletion: "Nettoyage effectue avec soin.",
+        }),
+      }),
+      { params: Promise.resolve({ id: "activite-1" }) }
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.statut).toBe(StatutActivite.TERMINEE);
+    expect(mockCompleteActivite).toHaveBeenCalledWith("site-1", "activite-1", {
+      noteCompletion: "Nettoyage effectue avec soin.",
+    });
+  });
+
+  it("complete une activite via PUT statut=TERMINEE avec releveId", async () => {
+    const completed = {
+      ...FAKE_ACTIVITE,
+      statut: StatutActivite.TERMINEE,
+      releveId: "releve-1",
+      dateTerminee: new Date(),
+    };
+    mockCompleteActivite.mockResolvedValue(completed);
+
+    const response = await PUT(
+      makeRequest("/api/activites/activite-1", {
+        method: "PUT",
+        body: JSON.stringify({
+          statut: StatutActivite.TERMINEE,
+          releveId: "releve-1",
+        }),
+      }),
+      { params: Promise.resolve({ id: "activite-1" }) }
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.statut).toBe(StatutActivite.TERMINEE);
+    expect(mockCompleteActivite).toHaveBeenCalledWith("site-1", "activite-1", {
+      releveId: "releve-1",
+    });
+  });
+
+  it("retourne 400 si completion requiert noteCompletion absente (type non-releve)", async () => {
+    mockCompleteActivite.mockRejectedValue(
+      new Error("Une note de completion (minimum 10 caracteres) est requise pour ce type d'activite")
+    );
+
     const response = await PUT(
       makeRequest("/api/activites/activite-1", {
         method: "PUT",
@@ -471,10 +533,24 @@ describe("PUT /api/activites/[id]", () => {
       }),
       { params: Promise.resolve({ id: "activite-1" }) }
     );
-    const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.message).toMatch(/complete/i);
+  });
+
+  it("retourne 400 si activite deja terminee lors d'une completion via PUT", async () => {
+    mockCompleteActivite.mockRejectedValue(
+      new Error("Seules les activites PLANIFIEE ou EN_RETARD peuvent etre completees")
+    );
+
+    const response = await PUT(
+      makeRequest("/api/activites/activite-1", {
+        method: "PUT",
+        body: JSON.stringify({ statut: StatutActivite.TERMINEE, noteCompletion: "test" }),
+      }),
+      { params: Promise.resolve({ id: "activite-1" }) }
+    );
+
+    expect(response.status).toBe(400);
   });
 
   it("retourne 400 si titre vide en update", async () => {
@@ -624,6 +700,104 @@ describe("DELETE /api/activites/[id]", () => {
       { params: Promise.resolve({ id: "activite-1" }) }
     );
     expect(response.status).toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/activites/[id]/instructions
+// ---------------------------------------------------------------------------
+describe("GET /api/activites/[id]/instructions", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
+  });
+
+  it("retourne les instructions detaillees d'une activite auto-generee", async () => {
+    const activiteAvecInstructions = {
+      ...FAKE_ACTIVITE,
+      instructionsDetaillees:
+        "## Instructions\n\nDistribuer **2,50 kg** d'aliment granules 3mm.\n\nVague : V-2026-001.",
+      conseilIA: "FCR élevé : réduire la ration de 10%.",
+      produitRecommandeId: "produit-1",
+      quantiteRecommandee: 2500,
+      priorite: 2,
+      phaseElevage: "GROSSISSEMENT",
+    };
+    mockGetActiviteById.mockResolvedValue(activiteAvecInstructions);
+
+    const response = await GET_INSTRUCTIONS(
+      makeRequest("/api/activites/activite-1/instructions"),
+      { params: Promise.resolve({ id: "activite-1" }) }
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.id).toBe("activite-1");
+    expect(data.titre).toBe("Distribution aliments matin");
+    expect(data.instructions).toContain("2,50 kg");
+    expect(data.conseilIA).toBe("FCR élevé : réduire la ration de 10%.");
+    expect(data.produitRecommandeId).toBe("produit-1");
+    expect(data.quantiteRecommandee).toBe(2500);
+    expect(data.priorite).toBe(2);
+    expect(data.phaseElevage).toBe("GROSSISSEMENT");
+    expect(mockGetActiviteById).toHaveBeenCalledWith("site-1", "activite-1");
+  });
+
+  it("retourne instructions=null pour une activite sans template", async () => {
+    mockGetActiviteById.mockResolvedValue(FAKE_ACTIVITE);
+
+    const response = await GET_INSTRUCTIONS(
+      makeRequest("/api/activites/activite-1/instructions"),
+      { params: Promise.resolve({ id: "activite-1" }) }
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.instructions).toBeNull();
+    expect(data.conseilIA).toBeNull();
+  });
+
+  it("retourne 404 si activite introuvable", async () => {
+    mockGetActiviteById.mockResolvedValue(null);
+
+    const response = await GET_INSTRUCTIONS(
+      makeRequest("/api/activites/inexistant/instructions"),
+      { params: Promise.resolve({ id: "inexistant" }) }
+    );
+
+    expect(response.status).toBe(404);
+  });
+
+  it("retourne 401 si non authentifie", async () => {
+    const { AuthError } = await import("@/lib/auth");
+    mockRequirePermission.mockRejectedValue(new AuthError("Non authentifie"));
+
+    const response = await GET_INSTRUCTIONS(
+      makeRequest("/api/activites/activite-1/instructions"),
+      { params: Promise.resolve({ id: "activite-1" }) }
+    );
+    expect(response.status).toBe(401);
+  });
+
+  it("retourne 403 si permission PLANNING_VOIR manquante", async () => {
+    const { ForbiddenError } = await import("@/lib/permissions");
+    mockRequirePermission.mockRejectedValue(new ForbiddenError("Acces refuse"));
+
+    const response = await GET_INSTRUCTIONS(
+      makeRequest("/api/activites/activite-1/instructions"),
+      { params: Promise.resolve({ id: "activite-1" }) }
+    );
+    expect(response.status).toBe(403);
+  });
+
+  it("retourne 500 en cas d'erreur serveur", async () => {
+    mockGetActiviteById.mockRejectedValue(new Error("DB error"));
+
+    const response = await GET_INSTRUCTIONS(
+      makeRequest("/api/activites/activite-1/instructions"),
+      { params: Promise.resolve({ id: "activite-1" }) }
+    );
+    expect(response.status).toBe(500);
   });
 });
 

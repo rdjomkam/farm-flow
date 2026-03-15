@@ -13,8 +13,37 @@
 
 import type { ConfigElevage } from "@/types";
 import type { RuleEvaluationContext } from "@/types/activity-engine";
-import { TypeReleve } from "@/types";
+import { TypeReleve, PhaseElevage } from "@/types";
 import { detecterPhase, getTauxAlimentation, getTailleAliment } from "@/lib/calculs";
+
+// ---------------------------------------------------------------------------
+// Types pour le calcul multi-bacs (EC-4.5)
+// ---------------------------------------------------------------------------
+
+/**
+ * Contexte d'un bac pour le calcul d'alimentation par bac.
+ *
+ * Quand une vague a plusieurs bacs et que des tris ont ete effectues,
+ * chaque bac peut avoir un poids moyen different.
+ */
+export interface BacAlimentationContext {
+  bacId: string;
+  bacNom: string;
+  /** Poids moyen des poissons dans ce bac (en grammes) — null si non mesure */
+  poidsMoyen: number | null;
+  /** Nombre de poissons vivants dans ce bac */
+  nombreVivants: number;
+}
+
+/**
+ * Recommandation d'alimentation pour un bac specifique (EC-4.5).
+ */
+export interface BacFeedingRecommendation {
+  bacId: string;
+  bacNom: string;
+  nombreVivants: number;
+  recommendation: FeedingRecommendation;
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -41,14 +70,18 @@ export interface FeedingRecommendation {
 // Constantes
 // ---------------------------------------------------------------------------
 
-/** Frequences d'alimentation par phase (distributions/jour) */
-const FREQUENCES_PAR_PHASE: Record<string, number> = {
-  ACCLIMATATION: 4,
-  CROISSANCE_DEBUT: 3,
-  JUVENILE: 3,
-  GROSSISSEMENT: 2,
-  FINITION: 2,
-  PRE_RECOLTE: 1,
+/**
+ * Frequences d'alimentation par phase (distributions/jour).
+ * Exporté pour être réutilisé dans feeding-recommendation.tsx — source unique.
+ * R2 : clés issues de l'enum PhaseElevage.
+ */
+export const FREQUENCES_PAR_PHASE: Record<PhaseElevage, number> = {
+  [PhaseElevage.ACCLIMATATION]: 4,
+  [PhaseElevage.CROISSANCE_DEBUT]: 3,
+  [PhaseElevage.JUVENILE]: 3,
+  [PhaseElevage.GROSSISSEMENT]: 2,
+  [PhaseElevage.FINITION]: 2,
+  [PhaseElevage.PRE_RECOLTE]: 1,
 };
 
 /** Duree maximale (jours) avant de projeter le poids via SGR (EC-4.2) */
@@ -131,7 +164,8 @@ export function calculerQuantiteAliment(
     (nombreVivants * poidsMoyenUtilise * taux) / 100;
 
   // ---- Frequence ----
-  const frequence = FREQUENCES_PAR_PHASE[String(phase)] ?? 2;
+  // phase est de type PhaseElevage (retour de detecterPhase)
+  const frequence = FREQUENCES_PAR_PHASE[phase] ?? 2;
 
   return {
     quantiteGrammes: Math.round(quantiteGrammes),
@@ -142,4 +176,82 @@ export function calculerQuantiteAliment(
     tauxUtilise: taux,
     estProjete,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Calcul multi-bacs (EC-4.5)
+// ---------------------------------------------------------------------------
+
+/**
+ * Calcule la recommandation d'alimentation pour chaque bac individuellement.
+ *
+ * Utilise quand une vague a plusieurs bacs avec des poissons de tailles
+ * differentes (ex: apres un tri). Chaque bac a son propre poids moyen
+ * et recoit une ration adaptee.
+ *
+ * @param bacs          - Tableau des bacs avec leurs poids moyens et effectifs
+ * @param configElevage - Configuration d'elevage pour les seuils de phase
+ * @returns             Tableau de recommandations par bac (null exclus si donnees insuffisantes)
+ */
+export function calculerQuantiteAlimentParBac(
+  bacs: BacAlimentationContext[],
+  configElevage: ConfigElevage | null
+): BacFeedingRecommendation[] {
+  const results: BacFeedingRecommendation[] = [];
+
+  for (const bac of bacs) {
+    if (bac.nombreVivants <= 0) continue;
+
+    const poidsMoyen = bac.poidsMoyen;
+    if (poidsMoyen == null || poidsMoyen <= 0) continue;
+
+    const phase = detecterPhase(poidsMoyen, configElevage);
+    const taux = getTauxAlimentation(poidsMoyen, configElevage);
+    const tailleGranule = getTailleAliment(poidsMoyen, configElevage);
+    const quantiteGrammes = (bac.nombreVivants * poidsMoyen * taux) / 100;
+    // phase est de type PhaseElevage (retour de detecterPhase)
+    const frequence = FREQUENCES_PAR_PHASE[phase] ?? 2;
+
+    results.push({
+      bacId: bac.bacId,
+      bacNom: bac.bacNom,
+      nombreVivants: bac.nombreVivants,
+      recommendation: {
+        quantiteGrammes: Math.round(quantiteGrammes),
+        tailleGranule,
+        frequence,
+        poidsMoyenUtilise: poidsMoyen,
+        nombreVivantsUtilise: bac.nombreVivants,
+        tauxUtilise: taux,
+        estProjete: false,
+      },
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Detecte si les bacs d'une vague ont des tailles significativement differentes.
+ *
+ * Critere : l'ecart entre le poids moyen max et min depasse 20% du poids max.
+ * Dans ce cas, EC-4.5 s'applique et on calcule par bac.
+ *
+ * @param bacs - Tableau des bacs avec poids moyens
+ * @returns True si calcul par bac recommande
+ */
+export function detecterTaillesDifferentes(
+  bacs: Pick<BacAlimentationContext, "poidsMoyen">[]
+): boolean {
+  const poidsValides = bacs
+    .map((b) => b.poidsMoyen)
+    .filter((p): p is number => p != null && p > 0);
+
+  if (poidsValides.length < 2) return false;
+
+  const poidsMax = Math.max(...poidsValides);
+  const poidsMin = Math.min(...poidsValides);
+
+  // Ecart > 20% du poids max = tailles significativement differentes
+  return (poidsMax - poidsMin) / poidsMax > 0.2;
 }

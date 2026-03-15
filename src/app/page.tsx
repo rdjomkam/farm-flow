@@ -5,11 +5,18 @@ import { StatsCards } from "@/components/dashboard/stats-cards";
 import { VagueSummaryCard } from "@/components/dashboard/vague-summary-card";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
+import { IndicateursPanel } from "@/components/dashboard/indicateurs-panel";
+import { Projections } from "@/components/dashboard/projections";
 import { EmptyState } from "@/components/ui/empty-state";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { Button } from "@/components/ui/button";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
-import { getDashboardData, getRecentActivity } from "@/lib/queries/dashboard";
+import {
+  getDashboardData,
+  getRecentActivity,
+  getDashboardIndicateurs,
+  getProjectionsDashboard,
+} from "@/lib/queries/dashboard";
 import { Permission } from "@/types";
 import Link from "next/link";
 
@@ -21,9 +28,11 @@ export default async function DashboardPage() {
   const permissions = await checkPagePermission(session, Permission.DASHBOARD_VOIR);
   if (!permissions) return <AccessDenied />;
 
-  const [data, recentReleves] = await Promise.all([
+  const [data, recentReleves, indicateurs, projections] = await Promise.all([
     getDashboardData(session.activeSiteId),
     getRecentActivity(session.activeSiteId),
+    getDashboardIndicateurs(session.activeSiteId),
+    getProjectionsDashboard(session.activeSiteId),
   ]);
 
   return (
@@ -72,6 +81,12 @@ export default async function DashboardPage() {
             </div>
           )}
         </section>
+
+        {indicateurs.length > 0 && (
+          <IndicateursPanel indicateurs={indicateurs} />
+        )}
+
+        <Projections projections={projections} />
 
         <RecentActivity releves={recentReleves} />
       </div>

@@ -330,6 +330,11 @@ export type {
   AnalyticsDashboard,
   IndicateursVagueComplet,
   ComparaisonVagues,
+  // Sprint 22 (S16-5) — Projections de performance
+  ProjectionVague,
+  CourbeCroissancePoint,
+  // Sprint 22 (S16-6) — Alertes graduees par benchmark
+  IndicateursBenchmarkVague,
 } from "./calculs";
 
 // Types export PDF/Excel — Sprint 12

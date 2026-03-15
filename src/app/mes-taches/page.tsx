@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { Header } from "@/components/layout/header";
-import { MesTachesClient } from "@/components/planning/mes-taches-client";
+import { ActiviteListClient } from "@/components/activites/activite-list-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
-import { getMyTasks, marquerActivitesEnRetard } from "@/lib/queries";
+import { getAllMyTasks, marquerActivitesEnRetard } from "@/lib/queries";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { Permission } from "@/types";
 
@@ -14,16 +14,17 @@ export default async function MesTachesPage() {
   const permissions = await checkPagePermission(session, Permission.PLANNING_VOIR);
   if (!permissions) return <AccessDenied />;
 
-  // Update overdue activities before loading
+  // Marquer les activites en retard avant le chargement
   await marquerActivitesEnRetard(session.activeSiteId);
 
-  const tasks = await getMyTasks(session.activeSiteId, session.userId);
+  // Charger toutes les activites assignees (tous statuts) pour les filtres client
+  const tasks = await getAllMyTasks(session.activeSiteId, session.userId);
 
   return (
     <>
       <Header title="Mes taches" />
       <div className="p-4">
-        <MesTachesClient
+        <ActiviteListClient
           activites={JSON.parse(JSON.stringify(tasks))}
           permissions={permissions}
         />

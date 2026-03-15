@@ -183,6 +183,94 @@ export interface VagueDashboardSummary {
   statut: StatutVague;
 }
 
+/**
+ * Indicateurs de benchmark pour une vague, utilises dans le panel du dashboard.
+ * Chaque metrique inclut sa valeur numerique et son niveau de benchmark evalue.
+ */
+export interface IndicateursBenchmarkVague {
+  vagueId: string;
+  vagueCode: string;
+  /** Taux de survie en % — null si donnees insuffisantes */
+  tauxSurvie: number | null;
+  /** FCR — null si donnees insuffisantes */
+  fcr: number | null;
+  /** SGR en %/jour — null si donnees insuffisantes */
+  sgr: number | null;
+  /** Taux de mortalite en % — null si donnees insuffisantes */
+  tauxMortalite: number | null;
+  /** Densite en poissons/m3 — null si volume de bac absent */
+  densite: number | null;
+  /** Nombre de poissons vivants estime */
+  nombreVivants: number | null;
+  /** ID de l'activite corrective la plus recente si niveau MAUVAIS */
+  activiteCorrectiveId: string | null;
+  /** Titre de l'activite corrective si niveau MAUVAIS */
+  activiteCorrectiveTitre: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Sprint 22 (S16-5) — Projections de performance
+// ---------------------------------------------------------------------------
+
+/**
+ * Point de donnee pour la courbe de croissance projetee.
+ * Combine les donnees reelles (passees) et projetees (futures) pour Recharts.
+ */
+export interface CourbeCroissancePoint {
+  /** Numero du jour depuis le debut de la vague */
+  jour: number;
+  /** Poids moyen reel en grammes (null pour les points futurs) */
+  poidsReel: number | null;
+  /** Poids moyen projete en grammes (null pour les points passes) */
+  poidsProjecte: number | null;
+}
+
+/**
+ * Projection de performance pour une vague active.
+ *
+ * Calculee a partir du poids moyen actuel, du SGR actuel et de la ConfigElevage.
+ */
+export interface ProjectionVague {
+  /** ID de la vague */
+  vagueId: string;
+  /** Code de la vague */
+  vagueCode: string;
+
+  // SGR
+  /** SGR actuel en %/jour (null si pas assez de donnees biometriques) */
+  sgrActuel: number | null;
+  /** SGR requis pour atteindre l'objectif en %/jour */
+  sgrRequis: number | null;
+  /** true si sgrActuel >= sgrRequis (en avance ou dans les temps) */
+  enAvance: boolean | null;
+
+  // Date recolte
+  /** Date de recolte estimee avec le SGR actuel */
+  dateRecolteEstimee: Date | null;
+  /** Nombre de jours restants projetes */
+  joursRestantsEstimes: number | null;
+
+  // Aliment
+  /** Aliment total restant estime en kg */
+  alimentRestantEstime: number | null;
+
+  // Revenu
+  /** Revenu attendu estime en CFA (null si prixVenteKg non renseigne) */
+  revenuAttendu: number | null;
+
+  // Graphique
+  /** Points pour la courbe de croissance (reelle + projetee) */
+  courbeProjection: CourbeCroissancePoint[];
+
+  // Contexte
+  /** Poids moyen actuel en grammes */
+  poidsMoyenActuel: number | null;
+  /** Poids objectif en grammes (depuis ConfigElevage) */
+  poidsObjectif: number;
+  /** Nombre de jours ecoules depuis le debut de la vague */
+  joursEcoules: number;
+}
+
 // ---------------------------------------------------------------------------
 // Analytiques par bac (CR-010)
 // ---------------------------------------------------------------------------

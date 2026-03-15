@@ -1065,8 +1065,11 @@ export interface ActiviteWithRelations extends Activite {
   releve?: Releve | null;
   /** Regle a l'origine de cette activite (presente si auto-generee) */
   regle?: RegleActivite | null;
-  /** Produit recommande (present si produitRecommandeId renseigne) */
-  produitRecommande?: Pick<Produit, "id" | "nom" | "unite"> | null;
+  /**
+   * Produit recommande (present si produitRecommandeId renseigne).
+   * Inclut stockActuel, uniteAchat et contenance pour les recommandations d'alimentation (S16-4).
+   */
+  produitRecommande?: Pick<Produit, "id" | "nom" | "unite" | "uniteAchat" | "contenance" | "stockActuel"> | null;
 }
 
 // ---------------------------------------------------------------------------

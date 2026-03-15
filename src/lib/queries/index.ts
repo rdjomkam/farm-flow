@@ -177,6 +177,7 @@ export {
   findMatchingActivite,
   completeActivite,
   getMyTasks,
+  getAllMyTasks,
   getPendingTaskCount,
 } from "./activites";
 // CreateActiviteDTO, UpdateActiviteDTO et ActiviteFilters sont dans @/types

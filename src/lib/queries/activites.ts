@@ -40,6 +40,16 @@ export async function getActivites(siteId: string, filters?: ActiviteFilters) {
       assigneA: { select: { id: true, name: true } },
       user: { select: { id: true, name: true } },
       releve: { select: { id: true, typeReleve: true, date: true } },
+      produitRecommande: {
+        select: {
+          id: true,
+          nom: true,
+          unite: true,
+          uniteAchat: true,
+          contenance: true,
+          stockActuel: true,
+        },
+      },
     },
     orderBy: { dateDebut: "asc" },
   });
@@ -60,6 +70,16 @@ export async function getActiviteById(siteId: string, id: string) {
       assigneA: { select: { id: true, name: true } },
       user: { select: { id: true, name: true } },
       releve: { select: { id: true, typeReleve: true, date: true } },
+      produitRecommande: {
+        select: {
+          id: true,
+          nom: true,
+          unite: true,
+          uniteAchat: true,
+          contenance: true,
+          stockActuel: true,
+        },
+      },
     },
   });
 }
@@ -445,6 +465,31 @@ export async function getPendingTaskCount(siteId: string, userId: string) {
       assigneAId: userId,
       statut: { in: [StatutActivite.PLANIFIEE, StatutActivite.EN_RETARD] },
     },
+  });
+}
+
+/**
+ * Retourne toutes les taches d'un utilisateur (tous statuts).
+ * Utilisee par la page "Mes taches" enrichie (S16-1) pour permettre
+ * le filtrage par statut cote client.
+ *
+ * @param siteId - ID du site (R8)
+ * @param userId - ID de l'utilisateur
+ */
+export async function getAllMyTasks(siteId: string, userId: string) {
+  return prisma.activite.findMany({
+    where: {
+      siteId,
+      assigneAId: userId,
+    },
+    include: {
+      vague: { select: { id: true, code: true } },
+      bac: { select: { id: true, nom: true } },
+      assigneA: { select: { id: true, name: true } },
+      user: { select: { id: true, name: true } },
+      regle: { select: { id: true, nom: true, typeActivite: true } },
+    },
+    orderBy: [{ priorite: "desc" }, { dateDebut: "asc" }],
   });
 }
 

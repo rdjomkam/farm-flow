@@ -24,6 +24,7 @@ import { ConsommationFields } from "./consommation-fields";
 import type { ConsommationLine, ProduitOption } from "./consommation-fields";
 import { TypeReleve, TypeActivite, StatutActivite, CategorieProduit, UniteStock, ACTIVITE_RELEVE_TYPE_MAP } from "@/types";
 import type { BacResponse } from "@/types";
+import { ClipboardCheck } from "lucide-react";
 
 /** Inverse de ACTIVITE_RELEVE_TYPE_MAP : TypeReleve → TypeActivite compatible */
 const RELEVE_ACTIVITE_TYPE_MAP: Partial<Record<string, TypeActivite>> = {};
@@ -69,9 +70,16 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
+  // Parametres pre-remplis depuis une activite (query params)
+  const initialActiviteId = searchParams.get("activiteId") ?? "";
+  const initialTypeReleve = searchParams.get("typeReleve") ?? "";
+  const initialBacId = searchParams.get("bacId") ?? "";
+  // Indique si le formulaire est pre-rempli depuis une activite (verrouiller certains champs)
+  const isFromActivite = Boolean(initialActiviteId);
+
   const [vagueId, setVagueId] = useState(searchParams.get("vagueId") ?? "");
-  const [bacId, setBacId] = useState("");
-  const [typeReleve, setTypeReleve] = useState("");
+  const [bacId, setBacId] = useState(initialBacId);
+  const [typeReleve, setTypeReleve] = useState(initialTypeReleve);
   const [notes, setNotes] = useState("");
   const [bacs, setBacs] = useState<BacResponse[]>([]);
   const [loadingBacs, setLoadingBacs] = useState(false);
@@ -79,8 +87,8 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [consommations, setConsommations] = useState<ConsommationLine[]>([]);
 
-  // Liaison activité planifiée (optionnelle)
-  const [activiteId, setActiviteId] = useState("");
+  // Liaison activité planifiée (optionnelle, ou pre-remplie depuis query param)
+  const [activiteId, setActiviteId] = useState(initialActiviteId);
   const [activitesPlanifiees, setActivitesPlanifiees] = useState<ActivitePlanifiee[]>([]);
   const [loadingActivites, setLoadingActivites] = useState(false);
 
@@ -95,11 +103,12 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
   useEffect(() => {
     if (!vagueId) {
       setBacs([]);
-      setBacId("");
+      if (!isFromActivite) setBacId("");
       return;
     }
     setLoadingBacs(true);
-    setBacId("");
+    // Ne pas reset bacId si pre-rempli depuis une activite
+    if (!isFromActivite) setBacId("");
     fetch(`/api/bacs?vagueId=${vagueId}`)
       .then((res) => res.json())
       .then((data) => {
@@ -110,13 +119,18 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
       })
       .catch(() => setBacs([]))
       .finally(() => setLoadingBacs(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vagueId]);
 
-  // Reset type-specific fields, consommations et activiteId quand le type change
+  // Reset type-specific fields et consommations quand le type change
+  // Ne pas reset activiteId si on vient d'une activite (pre-rempli)
   useEffect(() => {
     setFields({});
     setConsommations([]);
-    setActiviteId("");
+    if (!isFromActivite) {
+      setActiviteId("");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeReleve]);
 
   // Charger les activites planifiees compatibles quand vagueId ou typeReleve changent
@@ -256,9 +270,23 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
   return (
     <section>
       <h2 className="text-base font-semibold mb-4">Saisir un releve</h2>
+
+      {/* Bannière informative si pre-rempli depuis une activite */}
+      {isFromActivite && (
+        <div className="flex items-start gap-2.5 rounded-xl border border-primary/30 bg-primary/5 p-3 mb-4">
+          <ClipboardCheck className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+          <div>
+            <p className="text-xs font-semibold text-primary">Completion d'activite</p>
+            <p className="text-xs text-primary/80 mt-0.5">
+              Ce releve sera automatiquement lie a l'activite planifiee et la marquera comme terminee.
+            </p>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <FormSection title="Identification" description="Vague et bac concernés">
-            <Select value={vagueId} onValueChange={setVagueId}>
+            <Select value={vagueId} onValueChange={setVagueId} disabled={isFromActivite && Boolean(vagueId)}>
               <SelectTrigger label="Vague" error={errors.vagueId}>
                 <SelectValue placeholder="Sélectionner une vague" />
               </SelectTrigger>
@@ -271,7 +299,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
               </SelectContent>
             </Select>
 
-            <Select value={bacId} onValueChange={setBacId} disabled={!vagueId || loadingBacs}>
+            <Select value={bacId} onValueChange={setBacId} disabled={!vagueId || loadingBacs || (isFromActivite && Boolean(initialBacId))}>
               <SelectTrigger label="Bac" error={errors.bacId}>
                 <SelectValue
                   placeholder={
@@ -290,7 +318,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
           </FormSection>
 
           <FormSection title="Type de releve" description="Choisissez le type de mesure">
-            <Select value={typeReleve} onValueChange={setTypeReleve}>
+            <Select value={typeReleve} onValueChange={setTypeReleve} disabled={isFromActivite && Boolean(initialTypeReleve)}>
               <SelectTrigger label="Type de relevé" error={errors.typeReleve}>
                 <SelectValue placeholder="Sélectionner un type" />
               </SelectTrigger>
@@ -305,39 +333,50 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
 
             {/* Select activite planifiee — uniquement pour les types avec mapping */}
             {vagueId && typeReleve && RELEVE_ACTIVITE_TYPE_MAP[typeReleve] && (
-              <Select
-                value={activiteId || "__auto__"}
-                onValueChange={(val) => setActiviteId(val === "__auto__" ? "" : val)}
-                disabled={loadingActivites}
-              >
-                <SelectTrigger label="Activité planifiée (optionnel)">
-                  <SelectValue
-                    placeholder={
-                      loadingActivites
-                        ? "Chargement..."
-                        : activitesPlanifiees.length === 0
-                        ? "Auto-détection (aucune activité planifiée)"
-                        : "Auto-détection"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {activitesPlanifiees.length > 0 && (
-                    <SelectItem value="__auto__">Auto-détection</SelectItem>
-                  )}
-                  {activitesPlanifiees.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.titre}
-                      {" · "}
-                      {new Date(a.dateDebut).toLocaleDateString("fr-FR", {
-                        day: "numeric",
-                        month: "short",
-                      })}
-                      {a.statut === StatutActivite.EN_RETARD && " ⚠"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              isFromActivite ? (
+                /* Champ en lecture seule quand pre-rempli depuis une activite */
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-medium text-foreground">Activite liee</span>
+                  <div className="flex h-11 w-full items-center rounded-lg border border-border bg-muted px-3 text-sm text-muted-foreground cursor-not-allowed">
+                    <ClipboardCheck className="h-3.5 w-3.5 mr-2 text-primary shrink-0" />
+                    Activite selectionnee (liee automatiquement)
+                  </div>
+                </div>
+              ) : (
+                <Select
+                  value={activiteId || "__auto__"}
+                  onValueChange={(val) => setActiviteId(val === "__auto__" ? "" : val)}
+                  disabled={loadingActivites}
+                >
+                  <SelectTrigger label="Activité planifiée (optionnel)">
+                    <SelectValue
+                      placeholder={
+                        loadingActivites
+                          ? "Chargement..."
+                          : activitesPlanifiees.length === 0
+                          ? "Auto-détection (aucune activité planifiée)"
+                          : "Auto-détection"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activitesPlanifiees.length > 0 && (
+                      <SelectItem value="__auto__">Auto-détection</SelectItem>
+                    )}
+                    {activitesPlanifiees.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.titre}
+                        {" · "}
+                        {new Date(a.dateDebut).toLocaleDateString("fr-FR", {
+                          day: "numeric",
+                          month: "short",
+                        })}
+                        {a.statut === StatutActivite.EN_RETARD && " ⚠"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )
             )}
           </FormSection>
 

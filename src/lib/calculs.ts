@@ -492,6 +492,188 @@ export function getTailleAliment(
   return match?.tailleGranule ?? "6-9mm";
 }
 
+// ---------------------------------------------------------------------------
+// Sprint 22 (S16-5) — Fonctions de projection de performance
+// ---------------------------------------------------------------------------
+
+/**
+ * Calcule le SGR requis pour atteindre l'objectif de poids dans les jours restants.
+ *
+ * Formule : (ln(poidsObjectif) - ln(poidsMoyenActuel)) / joursRestants * 100
+ *
+ * @param poidsMoyenActuel - Poids moyen actuel en grammes
+ * @param poidsObjectif - Poids objectif en grammes
+ * @param joursRestants - Nombre de jours restants avant la recolte
+ * @returns SGR requis en %/jour, ou null si les donnees sont insuffisantes
+ */
+export function calculerSGRRequis(
+  poidsMoyenActuel: number | null,
+  poidsObjectif: number | null,
+  joursRestants: number | null
+): number | null {
+  if (
+    poidsMoyenActuel == null ||
+    poidsObjectif == null ||
+    joursRestants == null ||
+    poidsMoyenActuel <= 0 ||
+    poidsObjectif <= 0 ||
+    joursRestants <= 0
+  ) {
+    return null;
+  }
+  return (
+    ((Math.log(poidsObjectif) - Math.log(poidsMoyenActuel)) / joursRestants) *
+    100
+  );
+}
+
+/**
+ * Calcule la date de recolte estimee en fonction du SGR actuel.
+ *
+ * Si le SGR actuel est nul ou insuffisant, retourne null.
+ *
+ * Formule : joursNecessaires = (ln(poidsObjectif) - ln(poidsMoyenActuel)) / (sgrActuel / 100)
+ *
+ * @param poidsMoyenActuel - Poids moyen actuel en grammes
+ * @param poidsObjectif - Poids objectif en grammes
+ * @param sgrActuel - SGR actuel en %/jour
+ * @param dateReference - Date de reference pour le calcul (par defaut aujourd'hui)
+ * @returns Date estimee de recolte, ou null si les donnees sont insuffisantes
+ */
+export function calculerDateRecolteEstimee(
+  poidsMoyenActuel: number | null,
+  poidsObjectif: number | null,
+  sgrActuel: number | null,
+  dateReference?: Date
+): Date | null {
+  if (
+    poidsMoyenActuel == null ||
+    poidsObjectif == null ||
+    sgrActuel == null ||
+    poidsMoyenActuel <= 0 ||
+    poidsObjectif <= 0 ||
+    sgrActuel <= 0
+  ) {
+    return null;
+  }
+  const joursNecessaires =
+    (Math.log(poidsObjectif) - Math.log(poidsMoyenActuel)) / (sgrActuel / 100);
+  if (!isFinite(joursNecessaires) || joursNecessaires <= 0) return null;
+
+  const base = dateReference ?? new Date();
+  const dateRecolte = new Date(base);
+  dateRecolte.setDate(dateRecolte.getDate() + Math.round(joursNecessaires));
+  return dateRecolte;
+}
+
+/**
+ * Estime la quantite d'aliment restante necessaire jusqu'a la recolte.
+ *
+ * Formule simplifiee :
+ *   gainBiomasseRestant = (poidsObjectif - poidsMoyenActuel) * nombreVivants / 1000
+ *   alimentRestant = gainBiomasseRestant * fcrActuel
+ *
+ * @param poidsMoyenActuel - Poids moyen actuel en grammes
+ * @param poidsObjectif - Poids objectif en grammes
+ * @param nombreVivants - Nombre de poissons vivants estime
+ * @param fcrActuel - FCR actuel (ou FCR cible si actuel non disponible)
+ * @returns Quantite d'aliment restant estimee en kg, ou null
+ */
+export function calculerAlimentRestantEstime(
+  poidsMoyenActuel: number | null,
+  poidsObjectif: number | null,
+  nombreVivants: number | null,
+  fcrActuel: number | null
+): number | null {
+  if (
+    poidsMoyenActuel == null ||
+    poidsObjectif == null ||
+    nombreVivants == null ||
+    fcrActuel == null ||
+    poidsMoyenActuel <= 0 ||
+    poidsObjectif <= poidsMoyenActuel ||
+    nombreVivants <= 0 ||
+    fcrActuel <= 0
+  ) {
+    return null;
+  }
+  const gainBiomasseRestant =
+    ((poidsObjectif - poidsMoyenActuel) * nombreVivants) / 1000;
+  return gainBiomasseRestant * fcrActuel;
+}
+
+/**
+ * Estime le revenu attendu a la recolte.
+ *
+ * Formule : biomasseFinalePrevue(kg) * prixVenteKg * (tauxSurvie / 100)
+ *   ou biomasseFinalePrevue = poidsObjectif * nombreInitial / 1000
+ *
+ * @param poidsObjectif - Poids objectif en grammes
+ * @param nombreVivants - Nombre de poissons vivants estime
+ * @param prixVenteKg - Prix de vente en CFA/kg
+ * @returns Revenu estime en CFA, ou null si les donnees sont insuffisantes
+ */
+export function calculerRevenuAttendu(
+  poidsObjectif: number | null,
+  nombreVivants: number | null,
+  prixVenteKg: number | null
+): number | null {
+  if (
+    poidsObjectif == null ||
+    nombreVivants == null ||
+    prixVenteKg == null ||
+    poidsObjectif <= 0 ||
+    nombreVivants <= 0 ||
+    prixVenteKg <= 0
+  ) {
+    return null;
+  }
+  const biomasseFinalePrevue = (poidsObjectif * nombreVivants) / 1000;
+  return biomasseFinalePrevue * prixVenteKg;
+}
+
+/**
+ * Genere les points de courbe de croissance projetee pour un graphique Recharts.
+ *
+ * Projette le poids moyen jour par jour en utilisant le SGR actuel
+ * depuis la date actuelle jusqu'a la date recolte.
+ *
+ * @param poidsMoyenActuel - Poids moyen actuel en grammes
+ * @param sgrActuel - SGR actuel en %/jour
+ * @param joursProjection - Nombre de jours a projeter
+ * @param jourDepart - Numero du jour de depart (par rapport au debut de la vague)
+ * @returns Tableau de points { jour, poidsMoyen } pour Recharts
+ */
+export function genererCourbeProjection(
+  poidsMoyenActuel: number | null,
+  sgrActuel: number | null,
+  joursProjection: number,
+  jourDepart: number = 0
+): { jour: number; poidsProjecte: number }[] {
+  if (
+    poidsMoyenActuel == null ||
+    sgrActuel == null ||
+    poidsMoyenActuel <= 0 ||
+    sgrActuel <= 0 ||
+    joursProjection <= 0
+  ) {
+    return [];
+  }
+
+  const points: { jour: number; poidsProjecte: number }[] = [];
+  const sgr = sgrActuel / 100;
+
+  for (let i = 0; i <= joursProjection; i++) {
+    const poidsProjecte = poidsMoyenActuel * Math.exp(sgr * i);
+    points.push({
+      jour: jourDepart + i,
+      poidsProjecte: Math.round(poidsProjecte),
+    });
+  }
+
+  return points;
+}
+
 /**
  * Convertit une quantite entre unites de stock.
  *

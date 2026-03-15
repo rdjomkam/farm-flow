@@ -15,6 +15,12 @@ import {
   genererRecommandation,
   getPrixParUniteBase,
   convertirQuantiteAchat,
+  // Sprint 22 — fonctions de projection
+  calculerSGRRequis,
+  calculerDateRecolteEstimee,
+  calculerAlimentRestantEstime,
+  calculerRevenuAttendu,
+  genererCourbeProjection,
 } from "@/lib/calculs";
 
 // ---------------------------------------------------------------------------
@@ -720,5 +726,187 @@ describe("convertirQuantiteAchat", () => {
       contenance: 50,
     });
     expect(result).toBe(5000);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sprint 22 (S16-5) — Fonctions de projection de performance
+// ---------------------------------------------------------------------------
+
+describe("calculerSGRRequis", () => {
+  it("calcule correctement le SGR requis pour atteindre l'objectif", () => {
+    // Poids actuel 200g, objectif 800g, 60 jours restants
+    const sgr = calculerSGRRequis(200, 800, 60);
+    // SGR = (ln(800) - ln(200)) / 60 * 100 = ln(4) / 60 * 100 ≈ 2.31
+    expect(sgr).not.toBeNull();
+    expect(sgr!).toBeCloseTo(2.31, 1);
+  });
+
+  it("retourne null si poidsMoyenActuel est null", () => {
+    expect(calculerSGRRequis(null, 800, 60)).toBeNull();
+  });
+
+  it("retourne null si poidsObjectif est null", () => {
+    expect(calculerSGRRequis(200, null, 60)).toBeNull();
+  });
+
+  it("retourne null si joursRestants est null", () => {
+    expect(calculerSGRRequis(200, 800, null)).toBeNull();
+  });
+
+  it("retourne null si poidsMoyenActuel <= 0", () => {
+    expect(calculerSGRRequis(0, 800, 60)).toBeNull();
+    expect(calculerSGRRequis(-10, 800, 60)).toBeNull();
+  });
+
+  it("retourne null si joursRestants <= 0", () => {
+    expect(calculerSGRRequis(200, 800, 0)).toBeNull();
+    expect(calculerSGRRequis(200, 800, -5)).toBeNull();
+  });
+
+  it("retourne 0 si poids actuel == objectif", () => {
+    const sgr = calculerSGRRequis(800, 800, 60);
+    expect(sgr).toBeCloseTo(0, 5);
+  });
+});
+
+describe("calculerDateRecolteEstimee", () => {
+  it("retourne une date dans le futur avec un SGR positif", () => {
+    const now = new Date("2026-03-15");
+    const date = calculerDateRecolteEstimee(200, 800, 2.31, now);
+    expect(date).not.toBeNull();
+    expect(date!.getTime()).toBeGreaterThan(now.getTime());
+  });
+
+  it("retourne null si poidsMoyenActuel est null", () => {
+    expect(calculerDateRecolteEstimee(null, 800, 2.31)).toBeNull();
+  });
+
+  it("retourne null si sgrActuel est null", () => {
+    expect(calculerDateRecolteEstimee(200, 800, null)).toBeNull();
+  });
+
+  it("retourne null si sgrActuel <= 0", () => {
+    expect(calculerDateRecolteEstimee(200, 800, 0)).toBeNull();
+    expect(calculerDateRecolteEstimee(200, 800, -1)).toBeNull();
+  });
+
+  it("utilise la date courante si dateReference non fournie", () => {
+    const date = calculerDateRecolteEstimee(200, 800, 2.31);
+    expect(date).not.toBeNull();
+    expect(date!.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it("retourne null si poids actuel >= objectif (objectif deja atteint)", () => {
+    // Avec poids >= objectif, le logarithme sera <= 0, mais jours <= 0 pas capture dans la formule
+    // On teste que ca ne plante pas (resultat peut etre retourne ou null selon le signe)
+    const date = calculerDateRecolteEstimee(800, 800, 2.0);
+    // ln(800) - ln(800) = 0, donc jours = 0 → retourne null
+    expect(date).toBeNull();
+  });
+});
+
+describe("calculerAlimentRestantEstime", () => {
+  it("calcule correctement l'aliment restant", () => {
+    // poids actuel 200g, objectif 800g, 500 poissons, FCR 1.5
+    // gainBiomasse = (800-200) * 500 / 1000 = 300 kg
+    // aliment = 300 * 1.5 = 450 kg
+    const aliment = calculerAlimentRestantEstime(200, 800, 500, 1.5);
+    expect(aliment).not.toBeNull();
+    expect(aliment!).toBeCloseTo(450, 1);
+  });
+
+  it("retourne null si poidsMoyenActuel est null", () => {
+    expect(calculerAlimentRestantEstime(null, 800, 500, 1.5)).toBeNull();
+  });
+
+  it("retourne null si poidsObjectif est null", () => {
+    expect(calculerAlimentRestantEstime(200, null, 500, 1.5)).toBeNull();
+  });
+
+  it("retourne null si nombreVivants est null", () => {
+    expect(calculerAlimentRestantEstime(200, 800, null, 1.5)).toBeNull();
+  });
+
+  it("retourne null si fcrActuel est null", () => {
+    expect(calculerAlimentRestantEstime(200, 800, 500, null)).toBeNull();
+  });
+
+  it("retourne null si poidsObjectif <= poidsMoyenActuel (objectif deja atteint)", () => {
+    expect(calculerAlimentRestantEstime(800, 800, 500, 1.5)).toBeNull();
+    expect(calculerAlimentRestantEstime(900, 800, 500, 1.5)).toBeNull();
+  });
+
+  it("retourne null si nombreVivants <= 0", () => {
+    expect(calculerAlimentRestantEstime(200, 800, 0, 1.5)).toBeNull();
+  });
+});
+
+describe("calculerRevenuAttendu", () => {
+  it("calcule correctement le revenu attendu", () => {
+    // poids objectif 800g, 500 poissons, prix 2000 CFA/kg
+    // biomasse = 800 * 500 / 1000 = 400 kg
+    // revenu = 400 * 2000 = 800000 CFA
+    const revenu = calculerRevenuAttendu(800, 500, 2000);
+    expect(revenu).not.toBeNull();
+    expect(revenu!).toBeCloseTo(800000, 0);
+  });
+
+  it("retourne null si prixVenteKg est null", () => {
+    expect(calculerRevenuAttendu(800, 500, null)).toBeNull();
+  });
+
+  it("retourne null si poidsObjectif est null", () => {
+    expect(calculerRevenuAttendu(null, 500, 2000)).toBeNull();
+  });
+
+  it("retourne null si nombreVivants est null", () => {
+    expect(calculerRevenuAttendu(800, null, 2000)).toBeNull();
+  });
+
+  it("retourne null si prixVenteKg <= 0", () => {
+    expect(calculerRevenuAttendu(800, 500, 0)).toBeNull();
+    expect(calculerRevenuAttendu(800, 500, -100)).toBeNull();
+  });
+});
+
+describe("genererCourbeProjection", () => {
+  it("genere le bon nombre de points", () => {
+    // 10 jours de projection → 11 points (J0 inclus)
+    const points = genererCourbeProjection(200, 2.31, 10, 0);
+    expect(points).toHaveLength(11);
+  });
+
+  it("le premier point correspond au poids actuel", () => {
+    const points = genererCourbeProjection(200, 2.31, 10, 0);
+    expect(points[0].poidsProjecte).toBe(200);
+    expect(points[0].jour).toBe(0);
+  });
+
+  it("le poids augmente de jour en jour avec SGR positif", () => {
+    const points = genererCourbeProjection(200, 2.31, 10, 0);
+    for (let i = 1; i < points.length; i++) {
+      expect(points[i].poidsProjecte).toBeGreaterThan(points[i - 1].poidsProjecte);
+    }
+  });
+
+  it("prend en compte le jourDepart", () => {
+    const points = genererCourbeProjection(200, 2.31, 5, 30);
+    expect(points[0].jour).toBe(30);
+    expect(points[5].jour).toBe(35);
+  });
+
+  it("retourne un tableau vide si poidsMoyenActuel est null", () => {
+    expect(genererCourbeProjection(null, 2.31, 10, 0)).toHaveLength(0);
+  });
+
+  it("retourne un tableau vide si sgrActuel est null ou <= 0", () => {
+    expect(genererCourbeProjection(200, null, 10, 0)).toHaveLength(0);
+    expect(genererCourbeProjection(200, 0, 10, 0)).toHaveLength(0);
+    expect(genererCourbeProjection(200, -1, 10, 0)).toHaveLength(0);
+  });
+
+  it("retourne un tableau vide si joursProjection <= 0", () => {
+    expect(genererCourbeProjection(200, 2.31, 0, 0)).toHaveLength(0);
   });
 });

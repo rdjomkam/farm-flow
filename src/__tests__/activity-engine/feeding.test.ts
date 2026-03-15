@@ -9,7 +9,12 @@
  *   Frequences par phase
  */
 
-import { calculerQuantiteAliment } from "@/lib/activity-engine/feeding";
+import {
+  calculerQuantiteAliment,
+  calculerQuantiteAlimentParBac,
+  detecterTaillesDifferentes,
+} from "@/lib/activity-engine/feeding";
+import type { BacAlimentationContext } from "@/lib/activity-engine/feeding";
 import { TypeReleve } from "@/types";
 import type { RuleEvaluationContext } from "@/types/activity-engine";
 
@@ -288,5 +293,94 @@ describe("calculerQuantiteAliment — avec configElevage personnalisee", () => {
     expect(result).not.toBeNull();
     // La phase sera CROISSANCE_DEBUT avec ce config
     expect(result!.poidsMoyenUtilise).toBe(100);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests calcul multi-bacs (EC-4.5, Story S16-4)
+// ---------------------------------------------------------------------------
+
+describe("calculerQuantiteAlimentParBac — EC-4.5 : calcul par bac", () => {
+  it("retourne une recommandation par bac avec des donnees valides", () => {
+    const bacs: BacAlimentationContext[] = [
+      { bacId: "bac-1", bacNom: "Bac A", poidsMoyen: 100, nombreVivants: 200 },
+      { bacId: "bac-2", bacNom: "Bac B", poidsMoyen: 200, nombreVivants: 150 },
+    ];
+    const results = calculerQuantiteAlimentParBac(bacs, null);
+    expect(results).toHaveLength(2);
+    expect(results[0].bacId).toBe("bac-1");
+    expect(results[1].bacId).toBe("bac-2");
+  });
+
+  it("calcule des quantites differentes pour des poids differents", () => {
+    const bacs: BacAlimentationContext[] = [
+      { bacId: "bac-1", bacNom: "Bac A", poidsMoyen: 10, nombreVivants: 100 },
+      { bacId: "bac-2", bacNom: "Bac B", poidsMoyen: 300, nombreVivants: 100 },
+    ];
+    const results = calculerQuantiteAlimentParBac(bacs, null);
+    expect(results).toHaveLength(2);
+    // Bac A (10g, acclimatation, taux 9%) : 100 * 10 * 9 / 100 = 90g
+    // Bac B (300g, grossissement, taux 2.5%) : 100 * 300 * 2.5 / 100 = 750g
+    expect(results[0].recommendation.quantiteGrammes).toBe(90);
+    expect(results[1].recommendation.quantiteGrammes).toBe(750);
+  });
+
+  it("exclut les bacs sans poissons ou avec poids null", () => {
+    const bacs: BacAlimentationContext[] = [
+      { bacId: "bac-1", bacNom: "Bac A", poidsMoyen: 100, nombreVivants: 0 },
+      { bacId: "bac-2", bacNom: "Bac B", poidsMoyen: null, nombreVivants: 100 },
+      { bacId: "bac-3", bacNom: "Bac C", poidsMoyen: 200, nombreVivants: 50 },
+    ];
+    const results = calculerQuantiteAlimentParBac(bacs, null);
+    expect(results).toHaveLength(1);
+    expect(results[0].bacId).toBe("bac-3");
+  });
+
+  it("retourne un tableau vide si tous les bacs sont invalides", () => {
+    const bacs: BacAlimentationContext[] = [
+      { bacId: "bac-1", bacNom: "Bac A", poidsMoyen: 0, nombreVivants: 100 },
+    ];
+    const results = calculerQuantiteAlimentParBac(bacs, null);
+    expect(results).toHaveLength(0);
+  });
+
+  it("retourne les bonnes frequences par phase pour chaque bac", () => {
+    const bacs: BacAlimentationContext[] = [
+      { bacId: "bac-1", bacNom: "Bac A", poidsMoyen: 10, nombreVivants: 100 }, // ACCLIMATATION → 4
+      { bacId: "bac-2", bacNom: "Bac B", poidsMoyen: 200, nombreVivants: 100 }, // GROSSISSEMENT → 2
+    ];
+    const results = calculerQuantiteAlimentParBac(bacs, null);
+    expect(results[0].recommendation.frequence).toBe(4);
+    expect(results[1].recommendation.frequence).toBe(2);
+  });
+});
+
+describe("detecterTaillesDifferentes — EC-4.5 : detection de tailles heterogenes", () => {
+  it("retourne false si moins de 2 bacs", () => {
+    expect(detecterTaillesDifferentes([{ poidsMoyen: 100 }])).toBe(false);
+    expect(detecterTaillesDifferentes([])).toBe(false);
+  });
+
+  it("retourne false si les tailles sont similaires (ecart < 20%)", () => {
+    // 100g et 115g : ecart 15% → false
+    const bacs = [{ poidsMoyen: 100 }, { poidsMoyen: 115 }];
+    expect(detecterTaillesDifferentes(bacs)).toBe(false);
+  });
+
+  it("retourne true si les tailles sont tres differentes (ecart > 20%)", () => {
+    // 100g et 200g : ecart 50% → true
+    const bacs = [{ poidsMoyen: 100 }, { poidsMoyen: 200 }];
+    expect(detecterTaillesDifferentes(bacs)).toBe(true);
+  });
+
+  it("retourne true si 3 bacs dont un tres different", () => {
+    const bacs = [{ poidsMoyen: 100 }, { poidsMoyen: 110 }, { poidsMoyen: 500 }];
+    expect(detecterTaillesDifferentes(bacs)).toBe(true);
+  });
+
+  it("ignore les poids null pour le calcul", () => {
+    // Seulement un poids valide → moins de 2 valides → false
+    const bacs = [{ poidsMoyen: 100 }, { poidsMoyen: null }];
+    expect(detecterTaillesDifferentes(bacs)).toBe(false);
   });
 });
