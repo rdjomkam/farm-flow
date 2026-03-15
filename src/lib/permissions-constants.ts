@@ -111,6 +111,19 @@ export const PERMISSION_GROUPS = {
     Permission.DASHBOARD_VOIR,
     Permission.EXPORT_DONNEES,
   ],
+  // Phase 3 — Packs & Ingénieur (Sprint 20)
+  packs: [
+    Permission.GERER_PACKS,
+    Permission.ACTIVER_PACKS,
+  ],
+  configElevage: [
+    Permission.GERER_CONFIG_ELEVAGE,
+    Permission.GERER_REGLES_ACTIVITES,
+  ],
+  ingenieur: [
+    Permission.MONITORING_CLIENTS,
+    Permission.ENVOYER_NOTES,
+  ],
 } as const;
 
 // ---------------------------------------------------------------------------

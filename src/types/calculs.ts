@@ -196,8 +196,8 @@ export interface IndicateursBac {
   bacId: string;
   bacNom: string;
   vagueId: string;
-  /** Volume du bac en litres */
-  volume: number;
+  /** Volume du bac en litres (nullable pour les bacs provisionnés) */
+  volume: number | null;
   // Tier 1 — metriques essentielles
   /** Taux de survie en % */
   tauxSurvie: number | null;
@@ -265,7 +265,7 @@ export interface AlerteBac {
 export interface HistoriqueBac {
   bacId: string;
   bacNom: string;
-  volume: number;
+  volume: number | null;
   cycles: HistoriqueBacCycle[];
 }
 

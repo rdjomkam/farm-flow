@@ -46,6 +46,8 @@ const typeActiviteLabels: Record<TypeActivite, string> = {
   [TypeActivite.NETTOYAGE]: "Nettoyage",
   [TypeActivite.TRAITEMENT]: "Traitement",
   [TypeActivite.RECOLTE]: "Recolte",
+  [TypeActivite.TRI]: "Tri",
+  [TypeActivite.MEDICATION]: "Medication",
   [TypeActivite.AUTRE]: "Autre",
 };
 
@@ -57,6 +59,8 @@ const typeActiviteColors: Record<TypeActivite, string> = {
   [TypeActivite.NETTOYAGE]: "bg-accent-orange",
   [TypeActivite.TRAITEMENT]: "bg-accent-red",
   [TypeActivite.RECOLTE]: "bg-primary",
+  [TypeActivite.TRI]: "bg-accent-orange",
+  [TypeActivite.MEDICATION]: "bg-accent-red",
   [TypeActivite.AUTRE]: "bg-muted-foreground",
 };
 

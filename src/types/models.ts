@@ -5,7 +5,7 @@
  * Ils servent de source de verite TypeScript pour le projet.
  *
  * 29 modeles : Site, SiteRole, SiteMember, User, Session, Bac, Vague, Releve, Fournisseur, Produit, MouvementStock, Commande, LigneCommande, ReleveConsommation, Client, Vente, Facture, Paiement, Reproducteur, Ponte, LotAlevins, ConfigAlerte, Notification, Activite, Depense, PaiementDepense, DepenseRecurrente, ListeBesoins, LigneBesoin
- * 26 enums : Role, Permission, StatutVague, TypeReleve, TypeAliment, CauseMortalite, MethodeComptage, CategorieProduit, UniteStock, TypeMouvement, StatutCommande, StatutFacture, ModePaiement, SexeReproducteur, StatutReproducteur, StatutPonte, StatutLotAlevins, TypeAlerte, StatutAlerte, TypeActivite, StatutActivite, Recurrence, CategorieDepense, StatutDepense, FrequenceRecurrence, StatutBesoins
+ * 27 enums : Role (+ INGENIEUR), Permission (+ 6 Phase 3), StatutVague, TypeReleve, TypeAliment, CauseMortalite, MethodeComptage, CategorieProduit, UniteStock, TypeMouvement, StatutCommande, StatutFacture, ModePaiement, SexeReproducteur, StatutReproducteur, StatutPonte, StatutLotAlevins, TypeAlerte, StatutAlerte, TypeActivite (+ TRI/MEDICATION), StatutActivite, Recurrence, CategorieDepense, StatutDepense, FrequenceRecurrence, StatutBesoins, StatutActivation
  */
 
 // ---------------------------------------------------------------------------
@@ -17,6 +17,7 @@ export enum Role {
   ADMIN = "ADMIN",
   GERANT = "GERANT",
   PISCICULTEUR = "PISCICULTEUR",
+  INGENIEUR = "INGENIEUR",
 }
 
 /** Permissions granulaires */
@@ -74,6 +75,13 @@ export enum Permission {
   BESOINS_SOUMETTRE = "BESOINS_SOUMETTRE",
   BESOINS_APPROUVER = "BESOINS_APPROUVER",
   BESOINS_TRAITER = "BESOINS_TRAITER",
+  // Phase 3 — Packs & Ingénieur
+  GERER_PACKS = "GERER_PACKS",
+  ACTIVER_PACKS = "ACTIVER_PACKS",
+  GERER_CONFIG_ELEVAGE = "GERER_CONFIG_ELEVAGE",
+  GERER_REGLES_ACTIVITES = "GERER_REGLES_ACTIVITES",
+  MONITORING_CLIENTS = "MONITORING_CLIENTS",
+  ENVOYER_NOTES = "ENVOYER_NOTES",
 }
 
 // ---------------------------------------------------------------------------
@@ -307,8 +315,8 @@ export interface Bac {
   id: string;
   /** Nom d'affichage du bac (ex: "Bac 1", "Etang A") */
   nom: string;
-  /** Volume en litres */
-  volume: number;
+  /** Volume en litres (nullable — peut etre null pour les bacs provisionnés via Pack) */
+  volume: number | null;
   /** Nombre de poissons actuellement dans le bac (mis a jour via comptages) */
   nombrePoissons: number | null;
   /** ID de la vague assignee, null si le bac est libre */
@@ -900,6 +908,8 @@ export enum TypeActivite {
   NETTOYAGE = "NETTOYAGE",
   TRAITEMENT = "TRAITEMENT",
   RECOLTE = "RECOLTE",
+  TRI = "TRI",
+  MEDICATION = "MEDICATION",
   AUTRE = "AUTRE",
 }
 
@@ -1299,6 +1309,17 @@ export enum PhaseElevage {
 }
 
 // ---------------------------------------------------------------------------
+// Enums — Phase 3 : Packs & Provisioning (Sprint 20)
+// ---------------------------------------------------------------------------
+
+/** Statut d'une activation de pack pour un client */
+export enum StatutActivation {
+  ACTIVE = "ACTIVE",
+  EXPIREE = "EXPIREE",
+  SUSPENDUE = "SUSPENDUE",
+}
+
+// ---------------------------------------------------------------------------
 // Types JSON — alimentTailleConfig et alimentTauxConfig
 // ---------------------------------------------------------------------------
 
@@ -1450,4 +1471,94 @@ export interface ConfigElevage {
 /** ConfigElevage avec ses relations chargees */
 export interface ConfigElevageWithRelations extends ConfigElevage {
   site?: Pick<Site, "id" | "name">;
+}
+
+// ---------------------------------------------------------------------------
+// Modèles — Phase 3 : Packs & Provisioning (Sprint 20)
+// ---------------------------------------------------------------------------
+
+/**
+ * Pack — Kit de demarrage vendu aux clients pisciculteurs.
+ * Basé sur la section 3.2 du REQ-STARTER-PACKS.md.
+ */
+export interface Pack {
+  id: string;
+  /** Nom commercial du pack — ex: "Starter 300" */
+  nom: string;
+  description: string | null;
+  /** Nombre d'alevins fournis (> 0) */
+  nombreAlevins: number;
+  /** Poids moyen initial des alevins (g) */
+  poidsMoyenInitial: number;
+  /** Prix total du pack en FCFA (>= 0) */
+  prixTotal: number;
+  /** ConfigElevage recommandée pour ce pack (nullable) */
+  configElevageId: string | null;
+  isActive: boolean;
+  /** Créateur du pack (ADMIN DKFarm) */
+  userId: string;
+  /** Site DKFarm propriétaire du pack — R8 */
+  siteId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** Pack avec ses relations chargées */
+export interface PackWithRelations extends Pack {
+  configElevage?: Pick<ConfigElevage, "id" | "nom"> | null;
+  user?: Pick<User, "id" | "name">;
+  produits?: PackProduit[];
+  _count?: { activations: number };
+}
+
+/**
+ * PackProduit — Ligne de produit incluse dans un Pack.
+ * @@unique([packId, produitId])
+ */
+export interface PackProduit {
+  id: string;
+  packId: string;
+  produitId: string;
+  /** Quantité incluse dans le pack (> 0) */
+  quantite: number;
+}
+
+/** PackProduit avec le produit chargé */
+export interface PackProduitWithProduit extends PackProduit {
+  produit: Pick<Produit, "id" | "nom" | "categorie" | "unite" | "prixUnitaire" | "stockActuel">;
+}
+
+/**
+ * PackActivation — Enregistrement d'une vente de pack à un client.
+ *
+ * - siteId = site DKFarm vendeur (R8)
+ * - clientSiteId = site client créé lors du provisioning
+ * IMPORTANT : Pas d'unicité sur clientSiteId (un client peut acheter plusieurs packs — F-05)
+ * IMPORTANT : Pas d'unicité sur vagueId dans les vagues liées (F-06)
+ */
+export interface PackActivation {
+  id: string;
+  /** Code ACT-YYYY-NNN */
+  code: string;
+  packId: string;
+  /** Utilisateur ayant activé (ingénieur ou admin DKFarm) */
+  userId: string;
+  /** Site DKFarm vendeur — R8 */
+  siteId: string;
+  /** Site client créé lors du provisioning */
+  clientSiteId: string;
+  statut: StatutActivation;
+  dateActivation: Date;
+  dateExpiration: Date | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** PackActivation avec ses relations chargées */
+export interface PackActivationWithRelations extends PackActivation {
+  pack?: Pick<Pack, "id" | "nom" | "nombreAlevins" | "prixTotal">;
+  user?: Pick<User, "id" | "name">;
+  clientSite?: Pick<Site, "id" | "name">;
+  vagues?: Pick<Vague, "id" | "code" | "statut">[];
 }

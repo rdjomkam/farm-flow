@@ -3399,3 +3399,219 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 - Tous les tests passent ✅
 - Build OK ✅
 - Rapports produits ✅
+
+---
+
+## Sprint 20 — Packs & Provisioning Automatisé (Phase 3)
+
+**Objectif :** Mettre en place la gestion des packs (catalogue de kits de démarrage) et le provisioning automatique (création transactionnelle d'un site client complet lors de l'activation d'un pack). Résoudre les blockers F-03, F-05, F-06 de la review adversariale.
+**Dépend de :** Sprint 19 FAIT
+**Source :** docs/sprints/SPRINT-PLAN-PHASE3.md (Sprint 14 renommé Sprint 20)
+
+---
+
+### Story 20.1 — Nouveaux enums Phase 3 + rôle INGENIEUR
+**Assigné à :** @db-specialist
+**Priorité :** Haute
+**Dépend de :** Aucune
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Ajouter enum `StatutActivation` : ACTIVE, EXPIREE, SUSPENDUE
+- [x] `FAIT` Ajouter valeur `INGENIEUR` dans l'enum `Role`
+- [x] `FAIT` Ajouter 6 nouvelles permissions : GERER_PACKS, ACTIVER_PACKS, GERER_CONFIG_ELEVAGE, GERER_REGLES_ACTIVITES, MONITORING_CLIENTS, ENVOYER_NOTES
+- [x] `FAIT` Ajouter TypeActivite : + TRI, MEDICATION
+- [x] `FAIT` Créer migration manuelle + `npx prisma migrate deploy` (20260320100000_add_phase3_enums)
+- [x] `FAIT` Mettre à jour src/types/models.ts (enums TS miroirs + INGENIEUR)
+- [x] `FAIT` Mettre à jour src/types/index.ts (barrel export StatutActivation)
+- [x] `FAIT` Mettre à jour permissions-constants.ts (groupes packs/configElevage/ingenieur)
+- [x] `FAIT` Corriger Record<Role> dans hamburger-menu.tsx et user-menu.tsx
+- [x] `FAIT` Corriger Record<TypeActivite> dans planning-client.tsx et mes-taches-client.tsx
+- [x] `FAIT` `npx vitest run` — 1175/1175 tests passent
+- [x] `FAIT` `npm run build` — Build production OK
+
+**Critères d'acceptation :**
+- Enum StatutActivation avec 3 valeurs ✅
+- Enum Role avec valeur INGENIEUR ✅
+- Enum Permission avec 6 nouvelles valeurs ✅
+- Enum TypeActivite avec TRI et MEDICATION ✅
+- Migration exécutée sans erreur ✅
+- Build OK ✅
+
+---
+
+### Story 20.2 — Modèles Prisma Pack, PackProduit, PackActivation
+**Assigné à :** @db-specialist
+**Priorité :** Haute
+**Dépend de :** Story 20.1
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Modèle `Pack` avec configElevageId FK, relation ConfigElevage
+- [x] `FAIT` Modèle `PackProduit` avec @@unique([packId, produitId]), onDelete: Restrict sur produitId
+- [x] `FAIT` Modèle `PackActivation` SANS @unique sur clientSiteId (F-05) et vagueId (F-06)
+- [x] `FAIT` PackActivation.siteId = site DKFarm vendeur, clientSiteId = site client (F-04)
+- [x] `FAIT` Vague + configElevageId String? + packActivationId String?
+- [x] `FAIT` Bac.volume rendu Float? nullable (EC-2.4)
+- [x] `FAIT` Relations inverses sur Site, User, Produit, Vague
+- [x] `FAIT` Créer migration + `npx prisma migrate deploy`
+- [x] `FAIT` Mettre à jour src/types/models.ts + src/types/api.ts
+
+**Critères d'acceptation :**
+- 3 modèles créés avec toutes les relations correctes ✅
+- Pas de @unique sur clientSiteId/vagueId dans PackActivation ✅
+- Bac.volume nullable ✅
+- Migration sans erreur ✅
+- Build OK ✅
+
+---
+
+### Story 20.3 — Interfaces TypeScript + DTOs Packs
+**Assigné à :** @architect
+**Priorité :** Haute
+**Dépend de :** Story 20.2
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Interfaces Pack, PackProduit, PackActivation dans src/types/models.ts
+- [x] `FAIT` DTOs CreatePackDTO, ActivatePackDTO dans src/types/api.ts
+- [x] `FAIT` Type ProvisioningPayload décrivant les 6 entités à créer
+- [x] `FAIT` Documentation stratégie "system user" (isSystem Boolean sur User — F-03)
+- [x] `FAIT` Écrire docs/decisions/010-system-user.md
+- [x] `FAIT` Mettre à jour barrel export dans src/types/index.ts
+
+**Critères d'acceptation :**
+- Interfaces sans any ✅
+- ProvisioningPayload complet ✅
+- Barrel export à jour ✅
+- Build OK ✅
+
+---
+
+### Story 20.4 — Champ isSystem sur User + seed system user
+**Assigné à :** @db-specialist
+**Priorité :** Haute
+**Dépend de :** Story 20.3
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Ajouter champ `isSystem Boolean @default(false)` sur le modèle User
+- [x] `FAIT` Créer migration + `npx prisma migrate deploy`
+- [x] `FAIT` Insérer user système ("FarmFlow System", isSystem=true) dans prisma/seed.sql pour le site DKFarm
+
+**Critères d'acceptation :**
+- Champ isSystem sur User ✅
+- Migration sans erreur ✅
+- User système dans le seed ✅
+- Build OK ✅
+
+---
+
+### Story 20.5 — API CRUD Packs + PackProduit
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** Stories 20.2, 20.3
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Créer src/lib/queries/packs.ts
+- [x] `FAIT` Route GET/POST `/api/packs`
+- [x] `FAIT` Route GET/PUT/DELETE `/api/packs/[id]`
+- [x] `FAIT` Route GET/POST/DELETE `/api/packs/[id]/produits`
+- [x] `FAIT` Validation : nombreAlevins > 0 (EC-1.1), prixTotal >= 0 (EC-1.7), quantité > 0 (EC-1.3)
+- [x] `FAIT` Empêcher désactivation si activations ACTIVE existent (EC-1.5)
+- [x] `FAIT` Permission GERER_PACKS requise
+
+**Critères d'acceptation :**
+- CRUD complet packs + PackProduit ✅
+- Validations business EC-1.1, EC-1.3, EC-1.5, EC-1.7 ✅
+- Permission GERER_PACKS enforced ✅
+- Build OK ✅
+
+---
+
+### Story 20.6 — Logique de provisioning transactionnel
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** Stories 20.4, 20.5
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Créer src/lib/queries/provisioning.ts
+- [x] `FAIT` Route POST `/api/packs/[id]/activer`
+- [x] `FAIT` Transaction atomique : créer site client + SiteMember + copier ConfigElevage + créer vague + bac + copier produits + MouvementStock + PackActivation
+- [x] `FAIT` Code ACT-YYYY-NNN avec gestion overflow (EC-2.5)
+- [x] `FAIT` Empêcher double-activation même pack/même user (EC-2.1)
+- [x] `FAIT` userId des entités auto-générées = system user (F-03)
+- [x] `FAIT` Produits COPIÉS vers site client (F-14), fournisseurId=null
+- [x] `FAIT` Bac créé avec volume=null (EC-2.4)
+
+**Critères d'acceptation :**
+- Transaction rollback complet sur erreur (EC-2.3) ✅
+- Toutes les 6 entités créées en une transaction ✅
+- Double-activation bloquée ✅
+- Code ACT-YYYY-NNN unique ✅
+- Build OK ✅
+
+---
+
+### Story 20.7 — UI Admin — Gestion des Packs + Activation
+**Assigné à :** @developer
+**Priorité :** Moyenne
+**Dépend de :** Stories 20.5, 20.6
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Créer src/app/packs/page.tsx (liste packs mobile-first)
+- [x] `FAIT` Créer src/app/packs/[id]/page.tsx (détail/édition)
+- [x] `FAIT` Créer src/app/packs/[id]/activer/page.tsx (formulaire activation multi-étapes)
+- [x] `FAIT` Créer src/app/activations/page.tsx (liste activations filtrées par statut)
+- [x] `FAIT` Créer src/components/packs/ (4 composants réutilisables)
+- [x] `FAIT` Mobile first (360px) — cartes empilées
+
+**Critères d'acceptation :**
+- Cartes mobile-first (pas de tableaux) ✅
+- Formulaire activation avec sélection/création client ✅
+- Confirmation visuelle provisioning ✅
+- Build OK ✅
+
+---
+
+### Story 20.8 — Seed données Packs + Activations
+**Assigné à :** @db-specialist
+**Priorité :** Moyenne
+**Dépend de :** Stories 20.2, 20.4
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Ajouter 3 packs dans prisma/seed.sql (Découverte 100, Starter 300, Pro 500)
+- [x] `FAIT` Ajouter PackProduit pour chaque pack (2-4 produits par pack, 9 au total)
+- [x] `FAIT` User système présent dans le seed (isSystem=true, id='system_dkfarm')
+
+**Critères d'acceptation :**
+- 3 packs avec PackProduits ✅
+- User système dans le seed ✅
+- Build OK ✅
+
+---
+
+### Story 20.9 — Tests + Review Sprint 20
+**Assigné à :** @tester + @code-reviewer
+**Priorité :** Haute
+**Dépend de :** Stories 20.1 à 20.8
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Tests API packs : CRUD + PackProduit + activations (31 tests)
+- [x] `FAIT` Tests edge cases : EC-1.1, EC-1.3, EC-1.5, EC-2.1, EC-2.4
+- [x] `FAIT` Tests permissions : GERER_PACKS, ACTIVER_PACKS
+- [x] `FAIT` Non-régression : 1175 tests existants passent
+- [x] `FAIT` `npx vitest run` — 1206/1206 tests passent
+- [x] `FAIT` `npm run build` — Build production OK
+- [x] `FAIT` Écrire docs/reviews/review-sprint-20.md
+- [x] `FAIT` Écrire docs/tests/rapport-sprint-20.md
+
+**Critères d'acceptation :**
+- 1206/1206 tests passent ✅
+- Build OK ✅
+- Rapports produits ✅

@@ -11,6 +11,7 @@ const roleLabels: Record<Role, string> = {
   ADMIN: "Administrateur",
   GERANT: "Gerant",
   PISCICULTEUR: "Pisciculteur",
+  INGENIEUR: "Ingénieur",
 };
 
 export function UserMenu() {

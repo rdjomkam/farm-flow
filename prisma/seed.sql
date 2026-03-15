@@ -36,13 +36,17 @@ DELETE FROM "Site";
 DELETE FROM "User";
 
 -- ──────────────────────────────────────────
--- Users (2 : admin + gerant)
+-- Users (3 : admin + gerant + system user)
 -- ──────────────────────────────────────────
+-- Le system user (isSystem=true) est utilise pour les entites auto-generees lors du provisioning
+-- Son passwordHash est un hash impossible a utiliser pour se connecter
 
-INSERT INTO "User" (id, email, phone, name, "passwordHash", role, "isActive", "createdAt", "updatedAt")
+INSERT INTO "User" (id, email, phone, name, "passwordHash", role, "isActive", "isSystem", "createdAt", "updatedAt")
 VALUES
-  ('user_admin', 'admin@dkfarm.cm', '+237699000000', 'Administrateur', '$2b$10$VHWKPywPuVh/szJsFgpiyu3wrTZ00kNz9nBy91QF9FB5WZBdXQUOC', 'ADMIN', true, NOW(), NOW()),
-  ('user_gerant', 'gerant@dkfarm.cm', '+237677000000', 'Jean Kamga', '$2b$10$VHWKPywPuVh/szJsFgpiyu3wrTZ00kNz9nBy91QF9FB5WZBdXQUOC', 'GERANT', true, NOW(), NOW());
+  ('user_admin', 'admin@dkfarm.cm', '+237699000000', 'Administrateur', '$2b$10$VHWKPywPuVh/szJsFgpiyu3wrTZ00kNz9nBy91QF9FB5WZBdXQUOC', 'ADMIN', true, false, NOW(), NOW()),
+  ('user_gerant', 'gerant@dkfarm.cm', '+237677000000', 'Jean Kamga', '$2b$10$VHWKPywPuVh/szJsFgpiyu3wrTZ00kNz9nBy91QF9FB5WZBdXQUOC', 'GERANT', true, false, NOW(), NOW()),
+  -- FarmFlow System user — utilise pour les entites auto-generees (provisioning, moteur activites)
+  ('system_dkfarm', NULL, NULL, 'FarmFlow System', '$2b$10$SYSTEM_USER_CANNOT_LOGIN_HASH_PLACEHOLDER_XXXX', 'PISCICULTEUR', true, true, NOW(), NOW());
 
 -- ──────────────────────────────────────────
 -- Sites (1 ferme principale)
@@ -1141,5 +1145,56 @@ INSERT INTO "ConfigElevage" (
     false, true,
     'site_01', NOW(), NOW()
   );
+
+-- ============================================================
+-- SPRINT 20 : Packs & Provisioning
+-- ============================================================
+
+-- Packs
+INSERT INTO "Pack" (id, nom, description, "nombreAlevins", "poidsMoyenInitial", "prixTotal", "configElevageId", "isActive", "userId", "siteId", "createdAt", "updatedAt")
+VALUES
+  (
+    'pack_01',
+    'Pack Decouverte 100',
+    'Kit de demarrage pour 100 alevins. Ideal pour les pisciculteurs debutants. Inclut aliments et intrants pour 30 jours.',
+    100, 5.0, 85000.0,
+    'cfg_01',
+    true,
+    'user_admin', 'site_01', NOW(), NOW()
+  ),
+  (
+    'pack_02',
+    'Pack Starter 300',
+    'Kit standard pour 300 alevins. Production semi-intensive. Inclut aliments, intrants et materiel de base.',
+    300, 5.0, 220000.0,
+    'cfg_01',
+    true,
+    'user_admin', 'site_01', NOW(), NOW()
+  ),
+  (
+    'pack_03',
+    'Pack Pro 500',
+    'Kit professionnel pour 500 alevins. Production intensive optimisee. Config Clarias Express incluse.',
+    500, 5.0, 350000.0,
+    'cfg_02',
+    true,
+    'user_admin', 'site_01', NOW(), NOW()
+  );
+
+-- Pack Produits (associer les produits existants aux packs)
+-- Pack Decouverte 100 : aliment de base + sel de cuisine
+INSERT INTO "PackProduit" (id, "packId", "produitId", quantite, "createdAt", "updatedAt")
+VALUES
+  ('pp_01_aliment', 'pack_01', 'prod_01', 25.0, NOW(), NOW()),
+  ('pp_01_sel', 'pack_01', 'prod_03', 2.0, NOW(), NOW()),
+  -- Pack Starter 300
+  ('pp_02_aliment', 'pack_02', 'prod_01', 75.0, NOW(), NOW()),
+  ('pp_02_sel', 'pack_02', 'prod_03', 5.0, NOW(), NOW()),
+  ('pp_02_vit', 'pack_02', 'prod_04', 1.0, NOW(), NOW()),
+  -- Pack Pro 500
+  ('pp_03_aliment', 'pack_03', 'prod_01', 120.0, NOW(), NOW()),
+  ('pp_03_sel', 'pack_03', 'prod_03', 8.0, NOW(), NOW()),
+  ('pp_03_vit', 'pack_03', 'prod_04', 2.0, NOW(), NOW()),
+  ('pp_03_aliment2', 'pack_03', 'prod_02', 50.0, NOW(), NOW());
 
 COMMIT;

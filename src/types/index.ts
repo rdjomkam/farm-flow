@@ -40,6 +40,8 @@ export {
   StatutBesoins,
   // Sprint 19 — ConfigElevage
   PhaseElevage,
+  // Sprint 20 — Packs & Provisioning
+  StatutActivation,
 } from "./models";
 export type {
   Site,
@@ -105,6 +107,13 @@ export type {
   ConfigElevageWithRelations,
   AlimentTailleEntree,
   AlimentTauxEntree,
+  // Sprint 20 — Packs & Provisioning
+  Pack,
+  PackWithRelations,
+  PackProduit,
+  PackProduitWithProduit,
+  PackActivation,
+  PackActivationWithRelations,
 } from "./models";
 
 // Types authentification et multi-tenancy (DTOs, session, contexte)
@@ -263,6 +272,19 @@ export type {
   ConfigElevageFilters,
   ConfigElevageListResponse,
   ConfigElevageDetailResponse,
+} from "./api";
+// Sprint 20 — Packs & Provisioning
+export type {
+  CreatePackDTO,
+  UpdatePackDTO,
+  CreatePackProduitDTO,
+  ActivatePackDTO,
+  ProvisioningPayload,
+  PackActivationResponse,
+  PackFilters,
+  PackListResponse,
+  PackActivationFilters,
+  PackActivationListResponse,
 } from "./api";
 
 // Types pour les calculs et indicateurs

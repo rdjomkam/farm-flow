@@ -54,6 +54,12 @@ import type {
   ListeBesoinsWithRelations,
   LotAlevins,
   MouvementStock,
+  Pack,
+  PackActivation,
+  PackActivationWithRelations,
+  PackProduit,
+  PackProduitWithProduit,
+  PackWithRelations,
   Paiement,
   PaiementDepense,
   PhaseElevage,
@@ -61,6 +67,8 @@ import type {
   Produit,
   Releve,
   Reproducteur,
+  Site,
+  User,
   Vague,
   Vente,
 } from "./models";
@@ -1284,3 +1292,105 @@ export interface ConfigElevageDetailResponse {
 }
 
 // ConfigElevage types are imported at the top of this file and used inline above.
+
+// ---------------------------------------------------------------------------
+// Sprint 20 — Packs & Provisioning (Phase 3)
+// ---------------------------------------------------------------------------
+
+/** DTO pour creer un Pack */
+export interface CreatePackDTO {
+  /** Nom commercial du pack */
+  nom: string;
+  description?: string;
+  /** Nombre d'alevins fournis (> 0) */
+  nombreAlevins: number;
+  /** Poids moyen initial des alevins en grammes */
+  poidsMoyenInitial?: number;
+  /** Prix total en FCFA (>= 0) */
+  prixTotal?: number;
+  /** ConfigElevage recommandée (nullable) */
+  configElevageId?: string | null;
+  isActive?: boolean;
+}
+
+/** DTO pour modifier un Pack (tous les champs optionnels) */
+export type UpdatePackDTO = Partial<CreatePackDTO>;
+
+/** DTO pour ajouter un produit dans un Pack */
+export interface CreatePackProduitDTO {
+  produitId: string;
+  /** Quantite incluse (> 0) */
+  quantite: number;
+}
+
+/** DTO pour activer un Pack (provisionner un nouveau client) */
+export interface ActivatePackDTO {
+  /** Nom du site client a creer */
+  clientSiteName: string;
+  /** Adresse du site client (optionnel) */
+  clientSiteAddress?: string;
+  /** Nom de l'utilisateur client */
+  clientUserName: string;
+  /** Telephone de l'utilisateur client */
+  clientUserPhone: string;
+  /** Email de l'utilisateur client (optionnel) */
+  clientUserEmail?: string;
+  /** Mot de passe initial pour le client */
+  clientUserPassword: string;
+  /** Date d'expiration de l'activation (optionnel) */
+  dateExpiration?: string;
+  /** Notes libres */
+  notes?: string;
+}
+
+/**
+ * ProvisioningPayload — decrit les 6 entites crees lors du provisioning transactionnel.
+ *
+ * Toutes les entites sont crees dans une seule transaction Prisma (EC-2.3).
+ * En cas d'erreur, le rollback est total.
+ */
+export interface ProvisioningPayload {
+  /** 1. Site client cree */
+  site: Pick<Site, "id" | "name">;
+  /** 2. Utilisateur client cree */
+  user: Pick<User, "id" | "name" | "phone">;
+  /** 3. Vague pré-configuree creee */
+  vague: Pick<Vague, "id" | "code" | "nombreInitial">;
+  /** 4. Nombre de produits copies vers le stock client */
+  nombreProduitsInitialises: number;
+  /** 5. Nombre de mouvements stock ENTREE crees */
+  nombreMouvements: number;
+  /** 6. PackActivation creee avec son code */
+  activation: Pick<PackActivation, "id" | "code" | "statut">;
+}
+
+/** Reponse de l'activation d'un pack (provisioning termine) */
+export interface PackActivationResponse {
+  activation: PackActivationWithRelations;
+  provisioning: ProvisioningPayload;
+}
+
+/** Filtres pour lister les Packs */
+export interface PackFilters {
+  isActive?: boolean;
+  configElevageId?: string;
+}
+
+/** Reponse liste des Packs */
+export interface PackListResponse {
+  packs: PackWithRelations[];
+  total: number;
+}
+
+/** Filtres pour lister les PackActivations */
+export interface PackActivationFilters {
+  statut?: string;
+  packId?: string;
+  clientSiteId?: string;
+}
+
+/** Reponse liste des PackActivations */
+export interface PackActivationListResponse {
+  activations: PackActivationWithRelations[];
+  total: number;
+}

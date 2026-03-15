@@ -43,7 +43,7 @@ import {
  * Fonction interne partagee par getIndicateursBac et getComparaisonBacs.
  */
 function computeIndicateursBac(
-  bac: { id: string; nom: string; volume: number },
+  bac: { id: string; nom: string; volume: number | null },
   vagueId: string,
   nombreInitialVague: number,
   poidsMoyenInitialVague: number,

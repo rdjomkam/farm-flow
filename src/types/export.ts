@@ -175,8 +175,8 @@ export interface KPIsVaguePDF {
 export interface BacRapportPDF {
   /** Nom du bac */
   nom: string;
-  /** Volume en litres */
-  volume: number;
+  /** Volume en litres (nullable — peut etre null pour les bacs provisionnés) */
+  volume: number | null;
   /** Nombre de poissons dans le bac (nullable) */
   nombrePoissons: number | null;
 }

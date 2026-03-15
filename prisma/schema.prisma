@@ -52,6 +52,7 @@ enum Role {
   ADMIN
   GERANT
   PISCICULTEUR
+  INGENIEUR
 }
 
 enum CategorieProduit {
@@ -150,6 +151,13 @@ enum Permission {
   BESOINS_SOUMETTRE
   BESOINS_APPROUVER
   BESOINS_TRAITER
+  // Phase 3 — Packs & Ingénieur (6)
+  GERER_PACKS
+  ACTIVER_PACKS
+  GERER_CONFIG_ELEVAGE
+  GERER_REGLES_ACTIVITES
+  MONITORING_CLIENTS
+  ENVOYER_NOTES
 }
 
 // ──────────────────────────────────────────
@@ -179,6 +187,8 @@ enum TypeActivite {
   NETTOYAGE
   TRAITEMENT
   RECOLTE
+  TRI
+  MEDICATION
   AUTRE
 }
 
@@ -230,6 +240,16 @@ enum StatutBesoins {
   TRAITEE
   CLOTUREE
   REJETEE
+}
+
+// ──────────────────────────────────────────
+// Enums — Phase 3 : Packs & Provisioning (Sprint 20)
+// ──────────────────────────────────────────
+
+enum StatutActivation {
+  ACTIVE
+  EXPIREE
+  SUSPENDUE
 }
 
 // ──────────────────────────────────────────
@@ -308,6 +328,10 @@ model Site {
   depensesRecurrentes  DepenseRecurrente[]
   listesBesoins        ListeBesoins[]
   configsElevage       ConfigElevage[]
+  // Sprint 20 — Packs & Provisioning
+  packs                Pack[]
+  packActivationsVendeur   PackActivation[]  @relation("PackActivationsVendeur")
+  packActivationsClient    PackActivation[]  @relation("PackActivationsClient")
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 }
@@ -445,6 +469,11 @@ model ConfigElevage {
   siteId String
   site   Site   @relation(fields: [siteId], references: [id])
 
+  /** Vagues utilisant ce profil */
+  vagues Vague[]
+  /** Packs utilisant ce profil */
+  packs  Pack[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -515,6 +544,10 @@ model User {
   depensesRecurrentes   DepenseRecurrente[]
   listesBesoinsCreees   ListeBesoins[]     @relation("ListeBesoinsCreees")
   listesBesoinsValidees ListeBesoins[]     @relation("ListeBesoinsValidees")
+  // Sprint 20 — Packs & Provisioning
+  packsCreated          Pack[]
+  packActivationsCreees PackActivation[]
+  isSystem              Boolean            @default(false)
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
 }
@@ -540,7 +573,7 @@ model Session {
 model Bac {
   id              String   @id @default(cuid())
   nom             String
-  volume          Float
+  volume          Float?
   nombrePoissons  Int?
   vagueId         String?
   vague           Vague?   @relation(fields: [vagueId], references: [id])
@@ -567,6 +600,12 @@ model Vague {
   statut              StatutVague      @default(EN_COURS)
   siteId              String
   site                Site             @relation(fields: [siteId], references: [id])
+  /** Config d'elevage associee (nullable — liee lors du provisioning Pack ou manuellement) */
+  configElevageId     String?
+  configElevage       ConfigElevage?   @relation(fields: [configElevageId], references: [id], onDelete: SetNull)
+  /** PackActivation source (nullable — renseigné si vague créée via provisioning) */
+  packActivationId    String?
+  packActivation      PackActivation?  @relation(fields: [packActivationId], references: [id], onDelete: SetNull)
   bacs                    Bac[]
   releves                 Releve[]
   mouvements              MouvementStock[]
@@ -579,6 +618,8 @@ model Vague {
   updatedAt               DateTime         @updatedAt
 
   @@index([siteId])
+  @@index([configElevageId])
+  @@index([packActivationId])
 }
 
 model Releve {
@@ -675,6 +716,8 @@ model Produit {
   lignesCommande LigneCommande[]
   consommations  ReleveConsommation[]
   lignesBesoins  LigneBesoin[]
+  // Sprint 20 — Packs & Provisioning
+  packProduits   PackProduit[]
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
@@ -1152,4 +1195,111 @@ model LigneBesoin {
   @@index([listeBesoinsId])
   @@index([produitId])
   @@index([commandeId])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Phase 3 : Packs & Provisioning (Sprint 20)
+// ──────────────────────────────────────────
+
+/**
+ * Pack — Kit de démarrage vendu aux clients pisciculteurs.
+ *
+ * Un Pack regroupe une ConfigElevage + une liste de Produits (aliments, intrants)
+ * et configure la vague initiale (nombre d'alevins, poids initial).
+ * Basé sur la section 3.2 du REQ-STARTER-PACKS.md.
+ */
+model Pack {
+  id                  String         @id @default(cuid())
+  /** Nom commercial du pack — ex: "Starter 300" */
+  nom                 String
+  description         String?
+  /** Nombre d'alevins fournis (> 0) */
+  nombreAlevins       Int
+  /** Poids moyen initial des alevins (g) */
+  poidsMoyenInitial   Float          @default(5)
+  /** Prix total du pack en FCFA (>= 0) */
+  prixTotal           Float          @default(0)
+  /** ConfigElevage recommandée pour ce pack */
+  configElevageId     String?
+  configElevage       ConfigElevage? @relation(fields: [configElevageId], references: [id], onDelete: SetNull)
+  isActive            Boolean        @default(true)
+  /** Créateur du pack (ADMIN DKFarm) */
+  userId              String
+  user                User           @relation(fields: [userId], references: [id])
+  /** Site DKFarm propriétaire du pack — R8 */
+  siteId              String
+  site                Site           @relation(fields: [siteId], references: [id])
+
+  produits    PackProduit[]
+  activations PackActivation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteId])
+  @@index([configElevageId])
+  @@index([userId])
+}
+
+/**
+ * PackProduit — Ligne de produit incluse dans un Pack.
+ *
+ * Un même Produit ne peut figurer qu'une fois par Pack (contrainte unique).
+ * onDelete: Restrict sur Produit pour éviter les suppressions orphelines (EC-1.6).
+ */
+model PackProduit {
+  id        String  @id @default(cuid())
+  packId    String
+  pack      Pack    @relation(fields: [packId], references: [id], onDelete: Cascade)
+  produitId String
+  produit   Produit @relation(fields: [produitId], references: [id], onDelete: Restrict)
+  /** Quantité incluse dans le pack (> 0) */
+  quantite  Float
+
+  @@unique([packId, produitId])
+  @@index([packId])
+  @@index([produitId])
+}
+
+/**
+ * PackActivation — Enregistrement d'une vente de pack à un client.
+ *
+ * Créée lors du provisioning transactionnel.
+ * - siteId = site DKFarm vendeur (R8)
+ * - clientSiteId = site créé pour le client
+ * IMPORTANT : Pas de @unique sur clientSiteId (un client peut acheter plusieurs packs — F-05)
+ * IMPORTANT : Pas de @unique sur vagueId (une vague peut être splitée après tri — F-06)
+ */
+model PackActivation {
+  id            String           @id @default(cuid())
+  /** Code d'activation généré ACT-YYYY-NNN */
+  code          String           @unique
+  packId        String
+  pack          Pack             @relation(fields: [packId], references: [id], onDelete: Restrict)
+  /** Utilisateur ayant activé le pack (ingénieur ou admin DKFarm) */
+  userId        String
+  user          User             @relation(fields: [userId], references: [id])
+  /** Site DKFarm vendeur — R8 */
+  siteId        String
+  site          Site             @relation("PackActivationsVendeur", fields: [siteId], references: [id])
+  /** Site client créé lors du provisioning */
+  clientSiteId  String
+  clientSite    Site             @relation("PackActivationsClient", fields: [clientSiteId], references: [id])
+  statut        StatutActivation @default(ACTIVE)
+  dateActivation DateTime        @default(now())
+  dateExpiration DateTime?
+  notes         String?
+
+  /** Vagues créées lors du provisioning pour cette activation */
+  vagues        Vague[]
+
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([siteId])
+  @@index([clientSiteId])
+  @@index([packId])
+  @@index([userId])
+  @@index([code])
+  @@index([statut])
 }
