@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { StatutActivation } from "@/types";
 import type {
   CreatePackDTO,
   UpdatePackDTO,
@@ -125,7 +126,7 @@ export async function updatePack(id: string, siteId: string, data: UpdatePackDTO
   // EC-1.5 : empêcher la désactivation si des activations ACTIVE existent
   if (data.isActive === false && pack.isActive) {
     const activeActivations = await prisma.packActivation.count({
-      where: { packId: id, statut: "ACTIVE" },
+      where: { packId: id, statut: StatutActivation.ACTIVE },
     });
     if (activeActivations > 0) {
       throw new Error(
@@ -168,7 +169,7 @@ export async function deletePack(id: string, siteId: string): Promise<boolean> {
   if (!pack) return false;
 
   const activeActivations = await prisma.packActivation.count({
-    where: { packId: id, statut: "ACTIVE" },
+    where: { packId: id, statut: StatutActivation.ACTIVE },
   });
   if (activeActivations > 0) {
     throw new Error(

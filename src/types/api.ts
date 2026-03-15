@@ -18,6 +18,7 @@ import {
   MethodeComptage,
   ModePaiement,
   Recurrence,
+  StatutActivation,
   StatutActivite,
   StatutAlerte,
   StatutBesoins,
@@ -1384,7 +1385,7 @@ export interface PackListResponse {
 
 /** Filtres pour lister les PackActivations */
 export interface PackActivationFilters {
-  statut?: string;
+  statut?: StatutActivation;
   packId?: string;
   clientSiteId?: string;
 }

@@ -111,7 +111,7 @@ export function PackActiverClient({ pack }: Props) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-3">
-          <CheckCircle className="h-8 w-8 text-green-600" />
+          <CheckCircle className="h-8 w-8 text-primary" />
           <div>
             <h2 className="text-xl font-bold">Pack active avec succes !</h2>
             <p className="text-muted-foreground text-sm">Code d'activation : <span className="font-mono font-semibold">{result.activation.code}</span></p>

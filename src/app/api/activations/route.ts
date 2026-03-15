@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { Permission } from "@/types";
+import { Permission, StatutActivation } from "@/types";
 import { getPackActivations } from "@/lib/queries/packs";
 
 /**
@@ -18,8 +18,9 @@ export async function GET(request: NextRequest) {
     const packId = searchParams.get("packId");
     const clientSiteId = searchParams.get("clientSiteId");
 
+    const validStatuts = Object.values(StatutActivation) as string[];
     const filters = {
-      ...(statut && { statut }),
+      ...(statut && validStatuts.includes(statut) && { statut: statut as StatutActivation }),
       ...(packId && { packId }),
       ...(clientSiteId && { clientSiteId }),
     };

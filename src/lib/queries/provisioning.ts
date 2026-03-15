@@ -21,7 +21,7 @@ import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
 import { SYSTEM_ROLE_DEFINITIONS } from "@/lib/permissions-constants";
 import type { ActivatePackDTO, ProvisioningPayload } from "@/types";
-import { StatutVague, TypeMouvement, StatutActivation } from "@/types";
+import { Role, StatutVague, TypeMouvement, StatutActivation } from "@/types";
 
 // Le type du client transactionnel Prisma (sans les methodes de top-niveau)
 type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
@@ -69,7 +69,7 @@ async function checkDoubleActivation(
           some: { userId: existingUser.id },
         },
       },
-      statut: "ACTIVE",
+      statut: StatutActivation.ACTIVE,
     },
   });
 
@@ -191,7 +191,7 @@ export async function activerPack(
         phone: dto.clientUserPhone,
         email: dto.clientUserEmail ?? null,
         passwordHash,
-        role: "PISCICULTEUR",
+        role: Role.PISCICULTEUR,
         isActive: true,
         isSystem: false,
       },
@@ -386,7 +386,7 @@ export async function activerPack(
         userId: activateurUserId,
         siteId: vendeurSiteId,
         clientSiteId: clientSite.id,
-        statut: "ACTIVE",
+        statut: StatutActivation.ACTIVE,
         dateActivation: today,
         dateExpiration: dto.dateExpiration ? new Date(dto.dateExpiration) : null,
         notes: dto.notes ?? null,
