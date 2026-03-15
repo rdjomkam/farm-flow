@@ -9,6 +9,7 @@
  */
 
 import { prisma } from "@/lib/db";
+import { PhaseElevage } from "@/types";
 import type { CreateConfigElevageDTO, UpdateConfigElevageDTO } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -34,12 +35,12 @@ export const CONFIG_ELEVAGE_DEFAULTS = {
     { poidsMin: 350, poidsMax: 99999, tailleGranule: "6-9mm", description: "Aliment finition", proteines: 25 },
   ],
   alimentTauxConfig: [
-    { phase: "ACCLIMATATION", tauxMin: 8, tauxMax: 10, frequence: 4, notes: "3-4 distributions/jour" },
-    { phase: "CROISSANCE_DEBUT", tauxMin: 5, tauxMax: 6, frequence: 3, notes: "3 distributions/jour" },
-    { phase: "JUVENILE", tauxMin: 3, tauxMax: 5, frequence: 3, notes: "2-3 distributions/jour" },
-    { phase: "GROSSISSEMENT", tauxMin: 2, tauxMax: 3, frequence: 2, notes: "2 distributions/jour" },
-    { phase: "FINITION", tauxMin: 1.5, tauxMax: 2, frequence: 2, notes: "1-2 distributions/jour" },
-    { phase: "PRE_RECOLTE", tauxMin: 1, tauxMax: 1.5, frequence: 1, notes: "1 distribution/jour" },
+    { phase: PhaseElevage.ACCLIMATATION, tauxMin: 8, tauxMax: 10, frequence: 4, notes: "3-4 distributions/jour" },
+    { phase: PhaseElevage.CROISSANCE_DEBUT, tauxMin: 5, tauxMax: 6, frequence: 3, notes: "3 distributions/jour" },
+    { phase: PhaseElevage.JUVENILE, tauxMin: 3, tauxMax: 5, frequence: 3, notes: "2-3 distributions/jour" },
+    { phase: PhaseElevage.GROSSISSEMENT, tauxMin: 2, tauxMax: 3, frequence: 2, notes: "2 distributions/jour" },
+    { phase: PhaseElevage.FINITION, tauxMin: 1.5, tauxMax: 2, frequence: 2, notes: "1-2 distributions/jour" },
+    { phase: PhaseElevage.PRE_RECOLTE, tauxMin: 1, tauxMax: 1.5, frequence: 1, notes: "1 distribution/jour" },
   ],
   fcrExcellentMax: 1.5,
   fcrBonMax: 1.8,
@@ -193,14 +194,21 @@ export async function deleteConfigElevage(
   id: string,
   siteId: string
 ): Promise<"IS_DEFAULT" | "NOT_FOUND" | { id: string }> {
-  const existing = await prisma.configElevage.findFirst({ where: { id, siteId } });
-  if (!existing) return "NOT_FOUND";
-  if (existing.isDefault) return "IS_DEFAULT";
-
-  return prisma.configElevage.delete({
-    where: { id },
-    select: { id: true },
+  // Tentative de suppression atomique : ne supprime que si le profil existe,
+  // appartient au site ET n'est pas le defaut (R4 — pas de check-then-delete).
+  const { count } = await prisma.configElevage.deleteMany({
+    where: { id, siteId, isDefault: false },
   });
+
+  if (count > 0) return { id };
+
+  // count === 0 : distinguer NOT_FOUND vs IS_DEFAULT
+  const existing = await prisma.configElevage.findFirst({
+    where: { id, siteId },
+    select: { isDefault: true },
+  });
+  if (!existing) return "NOT_FOUND";
+  return "IS_DEFAULT";
 }
 
 /**
@@ -212,21 +220,23 @@ export async function dupliquerConfigElevage(
   siteId: string,
   nouveauNom: string
 ) {
-  const source = await prisma.configElevage.findFirst({ where: { id, siteId } });
-  if (!source) return null;
+  return prisma.$transaction(async (tx) => {
+    const source = await tx.configElevage.findFirst({ where: { id, siteId } });
+    if (!source) return null;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { id: _id, createdAt: _c, updatedAt: _u, isDefault: _d, nom: _n,
-    alimentTailleConfig, alimentTauxConfig, ...rest } = source;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id: _id, createdAt: _c, updatedAt: _u, isDefault: _d, nom: _n,
+      alimentTailleConfig, alimentTauxConfig, ...rest } = source;
 
-  return prisma.configElevage.create({
-    data: {
-      ...rest,
-      nom: nouveauNom,
-      isDefault: false, // le duplicat n'est jamais le defaut
-      // Cast JSON fields: Prisma returns JsonValue (nullable) but create expects InputJsonValue
-      alimentTailleConfig: alimentTailleConfig ?? [],
-      alimentTauxConfig: alimentTauxConfig ?? [],
-    },
+    return tx.configElevage.create({
+      data: {
+        ...rest,
+        nom: nouveauNom,
+        isDefault: false, // le duplicat n'est jamais le defaut
+        // Cast JSON fields: Prisma returns JsonValue (nullable) but create expects InputJsonValue
+        alimentTailleConfig: alimentTailleConfig ?? [],
+        alimentTauxConfig: alimentTauxConfig ?? [],
+      },
+    });
   });
 }
