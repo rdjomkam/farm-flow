@@ -19,6 +19,7 @@ CREATE TABLE "NoteIngenieur" (
     "vagueId" TEXT,
     "siteId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "replyToId" TEXT,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "NoteIngenieur_pkey" PRIMARY KEY ("id")
@@ -50,6 +51,13 @@ CREATE INDEX "NoteIngenieur_clientSiteId_isRead_idx" ON "NoteIngenieur"("clientS
 
 -- CreateIndex
 CREATE INDEX "NoteIngenieur_clientSiteId_visibility_idx" ON "NoteIngenieur"("clientSiteId", "visibility");
+
+-- CreateIndex (replyTo)
+CREATE INDEX "NoteIngenieur_replyToId_idx" ON "NoteIngenieur"("replyToId");
+
+-- AddForeignKey (replyTo self-relation)
+ALTER TABLE "NoteIngenieur" ADD CONSTRAINT "NoteIngenieur_replyToId_fkey"
+  FOREIGN KEY ("replyToId") REFERENCES "NoteIngenieur"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "NoteIngenieur" ADD CONSTRAINT "NoteIngenieur_ingenieurId_fkey" FOREIGN KEY ("ingenieurId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

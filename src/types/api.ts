@@ -11,13 +11,17 @@
  */
 
 import {
+  CategorieCalibrage,
   CategorieDepense,
   CauseMortalite,
   CategorieProduit,
   FrequenceRecurrence,
   MethodeComptage,
   ModePaiement,
+  PlaceholderFormat,
+  PlaceholderMode,
   Recurrence,
+  SiteModule,
   StatutActivation,
   StatutActivite,
   StatutAlerte,
@@ -43,7 +47,11 @@ import type {
   AlimentTailleEntree,
   AlimentTauxEntree,
   Bac,
+  CalibrageModificationWithUser,
+  CalibrageWithModifications,
   Client,
+  ReleveModificationWithUser,
+  ReleveWithModifications,
   Commande,
   ConfigElevage,
   ConfigElevageWithRelations,
@@ -207,6 +215,11 @@ interface CreateReleveBase {
   consommations?: CreateReleveConsommationDTO[];
   /** ID de l'activite planifiee a lier (optionnel — si absent, auto-match par type/vague/date) */
   activiteId?: string;
+  /** Date du releve (ISO 8601, optionnel — defaut : maintenant).
+   * Ne peut pas etre dans le futur.
+   * Ne peut pas etre anterieure a la dateDebut de la vague.
+   */
+  date?: string;
 }
 
 /** DTO pour creer un releve de biometrie */
@@ -214,8 +227,8 @@ export interface CreateReleveBiometrieDTO extends CreateReleveBase {
   typeReleve: TypeReleve.BIOMETRIE;
   /** Poids moyen en grammes */
   poidsMoyen: number;
-  /** Taille moyenne en cm */
-  tailleMoyenne: number;
+  /** Taille moyenne en cm (optionnel) */
+  tailleMoyenne?: number;
   /** Nombre de poissons echantillonnes */
   echantillonCount: number;
 }
@@ -295,6 +308,8 @@ export interface ReleveFilters {
   dateTo?: string;
   /** Exclure les releves deja lies a une activite */
   nonLie?: boolean;
+  /** Filtrer uniquement les releves modifies (ADR-014) */
+  modifie?: boolean;
 }
 
 /** Reponse liste des releves */
@@ -362,6 +377,70 @@ export interface UpdateReleveDTO {
   // --- Champs observation (typeReleve = OBSERVATION) ---
   /** Description de l'observation */
   description?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Sprint 26 — Modification de releve avec raison obligatoire (ADR-014)
+// ---------------------------------------------------------------------------
+
+/**
+ * Corps du PATCH /api/releves/[id]
+ *
+ * La raison est obligatoire (min 5 chars, max 500).
+ * Au moins un champ metier doit etre fourni (hors raison).
+ * Les champs structurels (id, vagueId, bacId, siteId, typeReleve, date, userId) ne sont pas modifiables.
+ */
+export interface PatchReleveBody {
+  /** Raison de la modification — obligatoire, min 5 chars, max 500 */
+  raison: string;
+
+  // --- Champs biometrie ---
+  poidsMoyen?: number;
+  tailleMoyenne?: number;
+  echantillonCount?: number;
+  // --- Champs mortalite ---
+  nombreMorts?: number;
+  causeMortalite?: CauseMortalite;
+  // --- Champs alimentation ---
+  quantiteAliment?: number;
+  typeAliment?: TypeAliment;
+  frequenceAliment?: number;
+  // --- Champs qualite eau ---
+  temperature?: number;
+  ph?: number;
+  oxygene?: number;
+  ammoniac?: number;
+  // --- Champs comptage ---
+  nombreCompte?: number;
+  methodeComptage?: MethodeComptage;
+  // --- Champs observation ---
+  description?: string;
+  // --- Commun ---
+  notes?: string | null;
+  /** Consommations : remplacement complet si fourni */
+  consommations?: { produitId: string; quantite: number }[];
+}
+
+/**
+ * DTO interne pour creer une trace de modification de releve.
+ * Utilise dans la couche query, jamais expose directement par l'API.
+ */
+export interface CreateReleveModificationDTO {
+  releveId:       string;
+  userId:         string;
+  raison:         string;
+  champModifie:   string;
+  ancienneValeur: string | null;
+  nouvelleValeur: string | null;
+  siteId:         string;
+}
+
+/**
+ * Reponse du PATCH /api/releves/[id]
+ */
+export interface PatchReleveResponse {
+  releve:        ReleveWithModifications;
+  modifications: ReleveModificationWithUser[];
 }
 
 // ---------------------------------------------------------------------------
@@ -1108,6 +1187,8 @@ export interface CreateListeBesoinsDTO {
   lignes: CreateLigneBesoinDTO[];
   /** Notes libres (optionnel) */
   notes?: string;
+  /** Date limite de traitement (ISO 8601, optionnelle, doit etre dans le futur) */
+  dateLimite?: string;
 }
 
 /** DTO pour modifier une liste de besoins (seulement si SOUMISE) */
@@ -1116,6 +1197,8 @@ export interface UpdateListeBesoinsDTO {
   vagueId?: string | null;
   notes?: string | null;
   lignes?: CreateLigneBesoinDTO[];
+  /** Modifier la date limite (null = supprimer) */
+  dateLimite?: string | null;
 }
 
 /** Filtres pour lister les listes de besoins */
@@ -1125,6 +1208,8 @@ export interface ListeBesoinsFilters {
   vagueId?: string;
   dateFrom?: string;
   dateTo?: string;
+  /** Filtrer les besoins dont la dateLimite est depassee et statut non terminal */
+  enRetard?: boolean;
 }
 
 /** Choix de traitement pour une ligne (COMMANDE = via commande fournisseur, LIBRE = achat direct) */
@@ -1299,75 +1384,94 @@ export interface ConfigElevageDetailResponse {
 // ConfigElevage types are imported at the top of this file and used inline above.
 
 // ---------------------------------------------------------------------------
-// Sprint 21 — Moteur de regles d'activites (RegleActivite)
+// Sprint 21/25 — Moteur de regles d'activites (RegleActivite)
 // ---------------------------------------------------------------------------
 
 /**
  * DTO pour creer une regle d'activite.
  *
- * Les champs intervalleJours, jourDeclenchement, seuilDeclencheur et comparaison
- * sont conditionnels selon typeDeclencheur :
- * - RECURRENT => intervalleJours requis
- * - CALENDRIER => jourDeclenchement requis
- * - SEUIL_* / FCR_ELEVE => seuilDeclencheur + comparaison requis
- * - STOCK_BAS / JALON => aucun parametre numerique requis
+ * Validations cote API (voir ADR-013) :
+ * - conditionValeur requis si typeDeclencheur est SEUIL_POIDS, SEUIL_QUALITE,
+ *   SEUIL_MORTALITE ou FCR_ELEVE
+ * - intervalleJours requis et > 0 si typeDeclencheur === RECURRENT
+ * - phaseMin doit preceder phaseMax dans PHASE_ELEVAGE_ORDER si les deux sont renseignes
+ * - conditionValeur2 > conditionValeur si les deux sont renseignes (SEUIL_QUALITE)
+ * - siteId est fourni par la session cote serveur — jamais null via API (pas de creation
+ *   de regle globale par cette route)
  */
 export interface CreateRegleActiviteDTO {
-  /** Libelle de la regle */
+  /** Libelle interne de la regle (3–100 chars) */
   nom: string;
-  /** Description optionnelle */
+  /** Description metier optionnelle (max 500 chars) */
   description?: string;
   /** Type d'activite a generer */
   typeActivite: TypeActivite;
   /** Condition de declenchement */
   typeDeclencheur: TypeDeclencheur;
-  /** Intervalle en jours (RECURRENT uniquement) */
-  intervalleJours?: number;
-  /** Jour relatif au debut de vague (CALENDRIER uniquement) */
-  jourDeclenchement?: number;
-  /** Valeur numerique du seuil (SEUIL_* et FCR_ELEVE) */
-  seuilDeclencheur?: number;
-  /** Operateur de comparaison : "gt" | "lt" | "gte" | "lte" (SEUIL_* et FCR_ELEVE) */
-  comparaison?: string;
   /**
-   * Titre avec placeholders Mustache.
-   * Ex: "Biometrie semaine {{semaine}}"
-   * Voir TemplatePlaceholders dans activity-engine.ts pour la liste complete.
+   * Valeur primaire du seuil.
+   * Semantique selon typeDeclencheur :
+   *   SEUIL_POIDS     → poids moyen en grammes
+   *   SEUIL_MORTALITE → taux de mortalite en %
+   *   SEUIL_QUALITE   → valeur basse (ex: pH min)
+   *   FCR_ELEVE       → seuil FCR
+   */
+  conditionValeur?: number;
+  /**
+   * Valeur secondaire du seuil — SEUIL_QUALITE uniquement (ex: pH max).
+   * Doit etre superieure a conditionValeur si renseignee.
+   */
+  conditionValeur2?: number;
+  /** Phase d'elevage minimale d'application (null = toutes phases depuis le debut) */
+  phaseMin?: PhaseElevage;
+  /** Phase d'elevage maximale d'application (null = borne haute non contrainte) */
+  phaseMax?: PhaseElevage;
+  /** Intervalle en jours entre declenchements — requis si RECURRENT, doit etre > 0 */
+  intervalleJours?: number;
+  /**
+   * Titre de l'activite generee avec placeholders {nom_placeholder}.
+   * Ex: "Distribuer {quantite_calculee}kg de granule {taille}"
+   * Voir KNOWN_PLACEHOLDERS dans regles-activites-constants.ts.
+   * Longueur : 5–200 chars.
    */
   titreTemplate: string;
-  /** Instructions detaillees avec placeholders (optionnel) */
+  /** Template de description courte (max 500 chars, placeholders autorises) */
+  descriptionTemplate?: string;
+  /** Template des instructions detaillees (max 5000 chars, Markdown, placeholders autorises) */
   instructionsTemplate?: string;
-  /** ID du produit stock recommande (optionnel) */
-  produitRecommandeId?: string;
-  /** Quantite recommandee en unite du produit (optionnel) */
-  quantiteRecommandee?: number;
-  /** Priorite des activites generees : 1=basse, 2=normale, 3=critique (defaut : 1) */
+  /** Priorite des activites generees : 1 (haute) a 10 (basse) — defaut 5 */
   priorite?: number;
-  /** Phases d'elevage cibles (null ou absent = toutes les phases) */
-  phasesCibles?: string[];
-  /** Jour du cycle a partir duquel la regle est active (defaut : 0) */
-  debutJour?: number;
-  /** Jour du cycle au-dela duquel la regle est inactive (null = pas de limite) */
-  finJour?: number;
-  /** Delai minimum en jours entre deux generations par la meme regle sur la meme vague (defaut : 0) */
-  cooldownJours?: number;
-  /** Regle active des la creation (defaut : true) */
+  /** Etat initial de la regle (defaut : true) */
   isActive?: boolean;
 }
 
-/** DTO pour modifier partiellement une regle d'activite */
-export type UpdateRegleActiviteDTO = Partial<CreateRegleActiviteDTO>;
+/**
+ * DTO pour modifier une regle d'activite existante.
+ *
+ * Tous les champs sont optionnels. siteId n'est pas modifiable apres creation.
+ */
+export type UpdateRegleActiviteDTO = Partial<
+  Omit<CreateRegleActiviteDTO, "typeActivite" | "typeDeclencheur">
+> & {
+  /** typeActivite peut etre modifie uniquement sur les regles site-specifiques */
+  typeActivite?: TypeActivite;
+  /** typeDeclencheur peut etre modifie uniquement sur les regles site-specifiques */
+  typeDeclencheur?: TypeDeclencheur;
+};
 
 /** Filtres pour lister les regles d'activite */
 export interface RegleActiviteFilters {
-  /** Filtrer par type d'activite generee */
-  typeActivite?: TypeActivite;
-  /** Filtrer par type de declencheur */
-  typeDeclencheur?: TypeDeclencheur;
   /** Filtrer par etat d'activation */
   isActive?: boolean;
-  /** Filtrer par site (pour queries admin cross-site) */
-  siteId?: string;
+  /** Filtrer par type de declencheur */
+  typeDeclencheur?: TypeDeclencheur;
+  /** Filtrer par type d'activite generee */
+  typeActivite?: TypeActivite;
+  /**
+   * Inclure les regles globales DKFarm (siteId = null) dans la liste.
+   * Defaut : true.
+   */
+  includeGlobal?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -1388,6 +1492,8 @@ export interface CreatePackDTO {
   /** ConfigElevage recommandée (nullable) */
   configElevageId?: string | null;
   isActive?: boolean;
+  /** Modules activés par ce pack */
+  enabledModules?: SiteModule[];
 }
 
 /** DTO pour modifier un Pack (tous les champs optionnels) */
@@ -1398,6 +1504,17 @@ export interface CreatePackProduitDTO {
   produitId: string;
   /** Quantite incluse (> 0) */
   quantite: number;
+  /** Unite choisie (optionnel — null = unite par defaut du produit) */
+  unite?: UniteStock;
+}
+
+/** DTO pour ajouter un bac pré-défini dans un Pack */
+export interface CreatePackBacDTO {
+  nom: string;
+  volume?: number | null;
+  nombreAlevins: number;
+  poidsMoyenInitial?: number;
+  position?: number;
 }
 
 /** DTO pour activer un Pack (provisionner un nouveau client) */
@@ -1439,6 +1556,8 @@ export interface ProvisioningPayload {
   nombreMouvements: number;
   /** 6. PackActivation creee avec son code */
   activation: Pick<PackActivation, "id" | "code" | "statut">;
+  /** 7. Bacs crees lors du provisioning */
+  bacs: { nom: string; nombreAlevins: number; volume: number | null }[];
 }
 
 /** Reponse de l'activation d'un pack (provisioning termine) */
@@ -1494,6 +1613,8 @@ export interface CreateNoteIngenieurDTO {
   clientSiteId: string;
   /** Vague concernee (nullable) */
   vagueId?: string;
+  /** ID de la note parente pour creer une reponse dans un thread */
+  replyToId?: string;
 }
 
 /** DTO pour modifier une note ingenieur (PATCH /api/notes-ingenieur/[id]) */
@@ -1526,4 +1647,217 @@ export interface NoteIngenieurFilters {
 export interface NoteIngenieurListResponse {
   notes: NoteIngenieurWithRelations[];
   total: number;
+}
+
+// ---------------------------------------------------------------------------
+// Sprint 24 — Calibrage
+// ---------------------------------------------------------------------------
+
+/** DTO pour un groupe issu du calibrage (un bac de destination + categorie de taille) */
+export interface CreateCalibrageGroupeDTO {
+  /** Categorie de taille de ce groupe */
+  categorie: CategorieCalibrage;
+  /** Bac de destination ou ce groupe est redistribue */
+  destinationBacId: string;
+  /** Nombre de poissons dans ce groupe */
+  nombrePoissons: number;
+  /** Poids moyen des poissons en grammes */
+  poidsMoyen: number;
+  /** Taille moyenne des poissons en cm (optionnel) */
+  tailleMoyenne?: number;
+}
+
+/** DTO pour creer un calibrage (POST /api/calibrages) */
+export interface CreateCalibrageDTO {
+  /** Vague concernee par le calibrage */
+  vagueId: string;
+  /** IDs des bacs sources d'ou les poissons sont sortis */
+  sourceBacIds: string[];
+  /** Nombre de morts constates lors du calibrage */
+  nombreMorts: number;
+  /** Notes libres (optionnel) */
+  notes?: string;
+  /** Groupes de redistribution (au moins 1 requis) */
+  groupes: CreateCalibrageGroupeDTO[];
+}
+
+// ---------------------------------------------------------------------------
+// Sprint 26 — Modification de releve (ADR-014)
+// ---------------------------------------------------------------------------
+
+/**
+ * Corps du PATCH /api/releves/[id]
+ *
+ * La raison est obligatoire (min 5 chars, max 500).
+ * Au moins un champ metier doit etre fourni.
+ */
+export interface PatchReleveBody {
+  /** Raison de la modification — obligatoire, min 5 chars, max 500 */
+  raison: string;
+  // Biometrie
+  poidsMoyen?:       number;
+  tailleMoyenne?:    number;
+  echantillonCount?: number;
+  // Mortalite
+  nombreMorts?:    number;
+  causeMortalite?: CauseMortalite;
+  // Alimentation
+  quantiteAliment?:  number;
+  typeAliment?:      TypeAliment;
+  frequenceAliment?: number;
+  // Qualite eau
+  temperature?: number;
+  ph?:          number;
+  oxygene?:     number;
+  ammoniac?:    number;
+  // Comptage
+  nombreCompte?:    number;
+  methodeComptage?: MethodeComptage;
+  // Observation
+  description?: string;
+  // Commun
+  notes?: string | null;
+  // Consommations (remplacement total si fourni)
+  consommations?: { produitId: string; quantite: number }[];
+}
+
+/**
+ * DTO interne pour creer une trace de modification de releve.
+ * Utilise dans la couche query, jamais expose directement par l'API.
+ */
+export interface CreateReleveModificationDTO {
+  releveId:       string;
+  userId:         string;
+  raison:         string;
+  champModifie:   string;
+  ancienneValeur: string | null;
+  nouvelleValeur: string | null;
+  siteId:         string;
+}
+
+/**
+ * Reponse du PATCH /api/releves/[id]
+ */
+export interface PatchReleveResponse {
+  releve:        ReleveWithModifications;
+  modifications: ReleveModificationWithUser[];
+}
+
+// ---------------------------------------------------------------------------
+// Sprint 26 — Modification de calibrage (ADR-015)
+// ---------------------------------------------------------------------------
+
+/**
+ * DTO pour un groupe dans un PATCH calibrage.
+ * Structure identique a CreateCalibrageGroupeDTO mais semantiquement distincte :
+ * si groupes est fourni dans PatchCalibrageBody, il remplace COMPLETEMENT les groupes existants.
+ */
+export interface UpdateCalibrageGroupeDTO {
+  /** Categorie de taille de ce groupe */
+  categorie: CategorieCalibrage;
+  /** Bac de destination (doit appartenir a la meme vague) */
+  destinationBacId: string;
+  /** Nombre de poissons dans ce groupe (>= 1) */
+  nombrePoissons: number;
+  /** Poids moyen en grammes (> 0) */
+  poidsMoyen: number;
+  /** Taille moyenne en cm (optionnel) */
+  tailleMoyenne?: number;
+}
+
+/**
+ * Corps du PATCH /api/calibrages/[id]
+ *
+ * La raison est obligatoire (min 5 chars, max 500).
+ * Au moins un champ metier parmi nombreMorts, notes, groupes doit etre fourni.
+ * Si groupes est fourni, il remplace COMPLETEMENT les groupes existants.
+ * La regle de conservation est verifiee cote serveur si nombreMorts ou groupes sont fournis.
+ */
+export interface PatchCalibrageBody {
+  /** Raison de la modification — obligatoire, min 5 chars, max 500 */
+  raison: string;
+  /** Nouvelle valeur du nombre de morts (>= 0) */
+  nombreMorts?: number;
+  /** Nouvelles notes libres (null pour effacer) */
+  notes?: string | null;
+  /**
+   * Remplacement complet des groupes.
+   * Si omis, les groupes existants sont conserves (seuls nombreMorts/notes peuvent changer).
+   * Doit respecter la regle de conservation :
+   *   sum(groupes.nombrePoissons) + nombreMorts === totalSourcePoissons (immuable)
+   */
+  groupes?: UpdateCalibrageGroupeDTO[];
+}
+
+/**
+ * DTO interne pour creer une trace de modification de calibrage.
+ * Utilise dans la couche query, jamais expose directement par l'API.
+ */
+export interface CreateCalibrageModificationDTO {
+  calibrageId:    string;
+  userId:         string;
+  raison:         string;
+  /** "nombreMorts" | "notes" | "groupes" */
+  champModifie:   string;
+  ancienneValeur: string | null;
+  nouvelleValeur: string | null;
+  siteId:         string;
+}
+
+/**
+ * Reponse du PATCH /api/calibrages/[id]
+ */
+export interface PatchCalibrageResponse {
+  calibrage:     CalibrageWithModifications;
+  modifications: CalibrageModificationWithUser[];
+}
+
+// ---------------------------------------------------------------------------
+// Sprint 26 — CustomPlaceholder
+// ---------------------------------------------------------------------------
+
+/** DTO pour creer un placeholder personnalise (POST /api/custom-placeholders) */
+export interface CreateCustomPlaceholderDTO {
+  /** Cle unique du placeholder — ex: "poids_moyen" */
+  key: string;
+  /** Libelle affiche dans l'editeur */
+  label: string;
+  /** Description de l'usage (optionnel) */
+  description?: string | null;
+  /** Exemple de valeur pour l'interface */
+  example: string;
+  /** Mode de resolution */
+  mode: PlaceholderMode;
+  /** Chemin vers le champ source (mode MAPPING, optionnel) */
+  sourcePath?: string | null;
+  /** Expression de calcul (mode FORMULA, optionnel) */
+  formula?: string | null;
+  /** Format de la valeur resolue (defaut NUMBER) */
+  format?: PlaceholderFormat;
+  /** Nombre de decimales pour le format NUMBER (defaut 2) */
+  decimals?: number;
+}
+
+/** DTO pour modifier un placeholder personnalise (PATCH /api/custom-placeholders/[id]) */
+export interface UpdateCustomPlaceholderDTO {
+  /** Nouvelle cle unique */
+  key?: string;
+  /** Nouveau libelle */
+  label?: string;
+  /** Nouvelle description (null pour effacer) */
+  description?: string | null;
+  /** Nouvel exemple */
+  example?: string;
+  /** Nouveau mode de resolution */
+  mode?: PlaceholderMode;
+  /** Nouveau chemin source (null pour effacer) */
+  sourcePath?: string | null;
+  /** Nouvelle formule (null pour effacer) */
+  formula?: string | null;
+  /** Nouveau format */
+  format?: PlaceholderFormat;
+  /** Nouveau nombre de decimales */
+  decimals?: number;
+  /** Activer / desactiver le placeholder */
+  isActive?: boolean;
 }

@@ -1,7 +1,19 @@
 import { prisma } from "@/lib/db";
-import { VisibiliteNote, StatutActivation } from "@/types";
+import { VisibiliteNote, StatutActivation, StatutVague } from "@/types";
 import type { CreateNoteIngenieurDTO, UpdateNoteIngenieurDTO, NoteIngenieurFilters } from "@/types";
 import { getOrCreateSystemUser } from "@/lib/queries/users";
+
+// ---------------------------------------------------------------------------
+// Shared include constant
+// ---------------------------------------------------------------------------
+
+const noteInclude = {
+  ingenieur: { select: { id: true, name: true } },
+  clientSite: { select: { id: true, name: true } },
+  vague: { select: { id: true, code: true } },
+  site: { select: { id: true, name: true } },
+  _count: { select: { replies: true } },
+};
 
 // ---------------------------------------------------------------------------
 // Queries NoteIngenieur
@@ -16,23 +28,26 @@ import { getOrCreateSystemUser } from "@/lib/queries/users";
  * @param filters - Filtres optionnels
  */
 export async function getNotes(siteId: string, filters?: NoteIngenieurFilters) {
-  const where: Record<string, unknown> = { siteId };
+  const where: Record<string, unknown> = {};
 
-  if (filters?.clientSiteId) where.clientSiteId = filters.clientSiteId;
+  // Quand on filtre par client, scoper par clientSiteId pour voir
+  // TOUTES les notes (ingenieur + observations client).
+  // Sans filtre client, scoper par siteId (vue globale DKFarm).
+  if (filters?.clientSiteId) {
+    where.clientSiteId = filters.clientSiteId;
+  } else {
+    where.siteId = siteId;
+  }
   if (filters?.visibility) where.visibility = filters.visibility;
   if (filters?.isUrgent !== undefined) where.isUrgent = filters.isUrgent;
   if (filters?.isRead !== undefined) where.isRead = filters.isRead;
   if (filters?.isFromClient !== undefined) where.isFromClient = filters.isFromClient;
   if (filters?.vagueId) where.vagueId = filters.vagueId;
+  where.replyToId = null;
 
   return prisma.noteIngenieur.findMany({
     where,
-    include: {
-      ingenieur: { select: { id: true, name: true } },
-      clientSite: { select: { id: true, name: true } },
-      vague: { select: { id: true, code: true } },
-      site: { select: { id: true, name: true } },
-    },
+    include: noteInclude,
     orderBy: [{ isUrgent: "desc" }, { createdAt: "desc" }],
   });
 }
@@ -47,10 +62,8 @@ export async function getNoteById(id: string, siteId: string) {
   return prisma.noteIngenieur.findFirst({
     where: { id, siteId },
     include: {
-      ingenieur: { select: { id: true, name: true } },
-      clientSite: { select: { id: true, name: true } },
-      vague: { select: { id: true, code: true } },
-      site: { select: { id: true, name: true } },
+      ...noteInclude,
+      replies: { include: noteInclude, orderBy: { createdAt: "asc" } },
     },
   });
 }
@@ -67,6 +80,60 @@ export async function createNote(
   ingenieurId: string,
   data: CreateNoteIngenieurDTO
 ) {
+  // --- Reply path ---
+  if (data.replyToId) {
+    const parent = await prisma.noteIngenieur.findFirst({
+      where: { id: data.replyToId },
+    });
+    if (!parent) {
+      throw new Error("La note parente est introuvable.");
+    }
+
+    return prisma.noteIngenieur.create({
+      data: {
+        titre: data.titre?.trim() ? data.titre.trim() : `Re: ${parent.titre}`,
+        contenu: data.contenu.trim(),
+        visibility: data.visibility,
+        isUrgent: data.isUrgent ?? false,
+        isFromClient: data.isFromClient ?? false,
+        observationTexte: data.observationTexte?.trim() ?? null,
+        ingenieurId,
+        clientSiteId: parent.clientSiteId,
+        vagueId: parent.vagueId,
+        siteId,
+        replyToId: data.replyToId,
+      },
+      include: noteInclude,
+    });
+  }
+
+  // --- Root note path ---
+  // Verify clientSiteId is supervised by this site (via active PackActivation)
+  const activation = await prisma.packActivation.findFirst({
+    where: {
+      siteId,
+      clientSiteId: data.clientSiteId,
+      statut: StatutActivation.ACTIVE,
+    },
+  });
+  if (!activation) {
+    throw new Error("Ce site client n'est pas supervise par votre site ou l'activation n'est plus active.");
+  }
+
+  // If vagueId provided, verify it belongs to the client site and is EN_COURS
+  if (data.vagueId) {
+    const vague = await prisma.vague.findFirst({
+      where: {
+        id: data.vagueId,
+        siteId: data.clientSiteId,
+        statut: StatutVague.EN_COURS,
+      },
+    });
+    if (!vague) {
+      throw new Error("La vague specifiee est introuvable, n'appartient pas a ce client, ou n'est plus en cours.");
+    }
+  }
+
   return prisma.noteIngenieur.create({
     data: {
       titre: data.titre.trim(),
@@ -79,14 +146,26 @@ export async function createNote(
       clientSiteId: data.clientSiteId,
       vagueId: data.vagueId ?? null,
       siteId,
+      replyToId: null,
     },
-    include: {
-      ingenieur: { select: { id: true, name: true } },
-      clientSite: { select: { id: true, name: true } },
-      vague: { select: { id: true, code: true } },
-      site: { select: { id: true, name: true } },
-    },
+    include: noteInclude,
   });
+}
+
+/**
+ * Marque une note comme lue en verifiant par ingenieurId (pas siteId).
+ * Permet a l'ingenieur de marquer comme lues les notes dont le siteId
+ * est celui du client (observations soumises par le client).
+ *
+ * @param noteId      - ID de la note
+ * @param ingenieurId - ID de l'ingenieur connecte
+ */
+export async function markNoteRead(noteId: string, ingenieurId: string): Promise<boolean> {
+  const updated = await prisma.noteIngenieur.updateMany({
+    where: { id: noteId, ingenieurId },
+    data: { isRead: true },
+  });
+  return updated.count > 0;
 }
 
 /**
@@ -121,12 +200,7 @@ export async function updateNote(
 
   return prisma.noteIngenieur.findFirst({
     where: { id, siteId },
-    include: {
-      ingenieur: { select: { id: true, name: true } },
-      clientSite: { select: { id: true, name: true } },
-      vague: { select: { id: true, code: true } },
-      site: { select: { id: true, name: true } },
-    },
+    include: noteInclude,
   });
 }
 
@@ -146,6 +220,7 @@ export async function getNotesPourClient(
   const where: Record<string, unknown> = {
     clientSiteId,
     visibility: VisibiliteNote.PUBLIC,
+    replyToId: null,
   };
 
   if (filters?.vagueId) where.vagueId = filters.vagueId;
@@ -156,6 +231,7 @@ export async function getNotesPourClient(
     include: {
       ingenieur: { select: { id: true, name: true } },
       vague: { select: { id: true, code: true } },
+      _count: { select: { replies: true } },
     },
     orderBy: [{ isUrgent: "desc" }, { createdAt: "desc" }],
   });
@@ -191,19 +267,49 @@ export async function getObservationsClient(clientSiteId: string) {
   return prisma.noteIngenieur.findMany({
     where: {
       clientSiteId,
+      replyToId: null,
       OR: [
         { isFromClient: true },
         { isFromClient: false, visibility: VisibiliteNote.PUBLIC },
       ],
     },
-    include: {
-      ingenieur: { select: { id: true, name: true } },
-      clientSite: { select: { id: true, name: true } },
-      vague: { select: { id: true, code: true } },
-      site: { select: { id: true, name: true } },
-    },
+    include: noteInclude,
     orderBy: { createdAt: "desc" },
   });
+}
+
+/**
+ * Fil unifie pour un site client : observations du client + notes PUBLIC de l'ingenieur.
+ * Combine getObservationsClient (meme WHERE/OR) + mark-as-read des notes ingenieur.
+ *
+ * @param clientSiteId - Site client
+ */
+export async function getClientFeed(clientSiteId: string) {
+  const notes = await prisma.noteIngenieur.findMany({
+    where: {
+      clientSiteId,
+      replyToId: null,
+      OR: [
+        { isFromClient: true },
+        { isFromClient: false, visibility: VisibiliteNote.PUBLIC },
+      ],
+    },
+    include: noteInclude,
+    orderBy: [{ isUrgent: "desc" }, { createdAt: "desc" }],
+  });
+
+  // Marquer comme lues les notes de l'ingenieur (pas les propres obs du client)
+  const unreadEngineerIds = notes
+    .filter((n) => !n.isRead && !n.isFromClient)
+    .map((n) => n.id);
+  if (unreadEngineerIds.length > 0) {
+    await prisma.noteIngenieur.updateMany({
+      where: { id: { in: unreadEngineerIds } },
+      data: { isRead: true },
+    });
+  }
+
+  return notes;
 }
 
 /**
@@ -228,6 +334,7 @@ export async function createObservationClient(
     contenu: string;
     observationTexte: string;
     vagueId?: string;
+    replyToId?: string;
   }
 ) {
   // Chercher l'ingenieur DKFarm assigné au site client via PackActivation active
@@ -245,6 +352,35 @@ export async function createObservationClient(
   const ingenieurId =
     packActivation?.userId ?? (await getOrCreateSystemUser()).id;
 
+  // --- Reply path ---
+  if (data.replyToId) {
+    const parent = await prisma.noteIngenieur.findFirst({
+      where: { id: data.replyToId },
+    });
+    if (!parent) {
+      throw new Error("La note parente est introuvable.");
+    }
+
+    return prisma.noteIngenieur.create({
+      data: {
+        titre: data.titre,
+        contenu: data.contenu,
+        observationTexte: data.observationTexte,
+        visibility: VisibiliteNote.PUBLIC,
+        isFromClient: true,
+        isUrgent: false,
+        isRead: false,
+        ingenieurId,
+        clientSiteId,
+        siteId: clientSiteId,
+        vagueId: parent.vagueId,
+        replyToId: data.replyToId,
+      },
+      include: noteInclude,
+    });
+  }
+
+  // --- Root observation path ---
   return prisma.noteIngenieur.create({
     data: {
       titre: data.titre,
@@ -261,11 +397,21 @@ export async function createObservationClient(
       // R8 : siteId = clientSiteId (le site du client est le site de l'observation)
       siteId: clientSiteId,
       vagueId: data.vagueId ?? null,
+      replyToId: null,
     },
-    include: {
-      ingenieur: { select: { id: true, name: true } },
-      clientSite: { select: { id: true, name: true } },
-      vague: { select: { id: true, code: true } },
-    },
+    include: noteInclude,
+  });
+}
+
+/**
+ * Marque comme lues toutes les reponses d'un thread pour un ingenieur.
+ *
+ * @param parentId    - ID de la note racine du thread
+ * @param ingenieurId - ID de l'ingenieur connecte
+ */
+export async function markThreadRepliesRead(parentId: string, ingenieurId: string) {
+  await prisma.noteIngenieur.updateMany({
+    where: { replyToId: parentId, ingenieurId, isRead: false },
+    data: { isRead: true },
   });
 }

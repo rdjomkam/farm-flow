@@ -135,6 +135,9 @@ export async function POST(request: NextRequest) {
     const shortText = (body.observationTexte as string).trim();
     const titre = `[${typeLabel}] — ${shortText.substring(0, 60)}${shortText.length > 60 ? "..." : ""}`;
 
+    const replyToId =
+      body.replyToId && typeof body.replyToId === "string" ? body.replyToId : undefined;
+
     const note = await createObservationClient(
       session.activeSiteId,
       session.userId,
@@ -144,6 +147,7 @@ export async function POST(request: NextRequest) {
         contenu: shortText,
         observationTexte: shortText,
         vagueId: body.vagueId ?? undefined,
+        replyToId,
       }
     );
 

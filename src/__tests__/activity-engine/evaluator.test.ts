@@ -70,6 +70,7 @@ function makeContext(overrides: Partial<RuleEvaluationContext> = {}): RuleEvalua
     configElevage: null,
     derniersReleves: [],
     phase: PhaseElevage.CROISSANCE_DEBUT,
+    bac: null,
     ...overrides,
   };
 }
@@ -78,9 +79,10 @@ function makeHistorique(overrides: Partial<{
   id: string;
   regleId: string;
   vagueId: string;
+  bacId: string | null;
   dateDebut: Date;
   createdAt: Date;
-}> = []) {
+}> = {}) {
   return [];
 }
 
@@ -138,6 +140,7 @@ describe("RECURRENT — evalRecurrent", () => {
       id: "act-1",
       regleId: "regle-1",
       vagueId: "vague-1",
+      bacId: null,
       dateDebut: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
       createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
     }];
@@ -152,6 +155,7 @@ describe("RECURRENT — evalRecurrent", () => {
       id: "act-1",
       regleId: "regle-1",
       vagueId: "vague-1",
+      bacId: null,
       dateDebut: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
       createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
     }];
@@ -166,6 +170,7 @@ describe("RECURRENT — evalRecurrent", () => {
       id: "act-1",
       regleId: "regle-1",
       vagueId: "vague-1",
+      bacId: null,
       dateDebut: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
       createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
     }];
@@ -583,6 +588,7 @@ describe("Regles de skip — EC-3.1 : deduplication meme jour", () => {
       id: "act-today",
       regleId: "regle-1",
       vagueId: "vague-1",
+      bacId: null,
       dateDebut: new Date(),
       createdAt: new Date(), // aujourd'hui
     }];
@@ -597,6 +603,7 @@ describe("Regles de skip — EC-3.1 : deduplication meme jour", () => {
       id: "act-yesterday",
       regleId: "regle-1",
       vagueId: "vague-1",
+      bacId: null,
       dateDebut: new Date(Date.now() - 25 * 60 * 60 * 1000),
       createdAt: new Date(Date.now() - 25 * 60 * 60 * 1000), // hier
     }];
@@ -672,5 +679,72 @@ describe("Filtre de phase", () => {
     const ctx = makeContext({ phase: null });
     const result = evaluateRules([ctx], [regle], []);
     expect(result).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Per-bac iteration
+// ---------------------------------------------------------------------------
+
+describe("Per-bac iteration", () => {
+  it("2 contextes bacs differents meme vague → 2 matches separes", () => {
+    const regle = makeRegle({ typeDeclencheur: TypeDeclencheur.CALENDRIER, conditionValeur: 0 });
+    const ctxBacA = makeContext({
+      bac: { id: "bac-a", nom: "Bac A", volume: 1000, nombrePoissons: 500, nombreInitial: 500, poidsMoyenInitial: 5 },
+    });
+    const ctxBacB = makeContext({
+      bac: { id: "bac-b", nom: "Bac B", volume: 2000, nombrePoissons: 500, nombreInitial: 500, poidsMoyenInitial: 5 },
+    });
+    const result = evaluateRules([ctxBacA, ctxBacB], [regle], []);
+    expect(result).toHaveLength(2);
+    expect(result[0].bacId).toBe("bac-a");
+    expect(result[1].bacId).toBe("bac-b");
+  });
+
+  it("dedup bac-aware : historique bac-A ne bloque pas bac-B", () => {
+    const regle = makeRegle({ typeDeclencheur: TypeDeclencheur.CALENDRIER, conditionValeur: 0 });
+    const ctxBacA = makeContext({
+      bac: { id: "bac-a", nom: "Bac A", volume: 1000, nombrePoissons: 500, nombreInitial: 500, poidsMoyenInitial: 5 },
+    });
+    const ctxBacB = makeContext({
+      bac: { id: "bac-b", nom: "Bac B", volume: 2000, nombrePoissons: 500, nombreInitial: 500, poidsMoyenInitial: 5 },
+    });
+    // Historique: bac-A fired today, bac-B not
+    const historique = [{
+      id: "act-bac-a",
+      regleId: "regle-1",
+      vagueId: "vague-1",
+      bacId: "bac-a",
+      dateDebut: new Date(),
+      createdAt: new Date(),
+    }];
+    const result = evaluateRules([ctxBacA, ctxBacB], [regle], historique);
+    // bac-A should be deduped (fired today), bac-B should match
+    expect(result).toHaveLength(1);
+    expect(result[0].bacId).toBe("bac-b");
+  });
+
+  it("STOCK_BAS avec bac null → 1 match vague-level (pas duplique par bac)", () => {
+    const regle = makeRegle({ typeDeclencheur: TypeDeclencheur.STOCK_BAS, conditionValeur: null });
+    const stockEnAlerte = {
+      produit: { id: "prod-1", nom: "Farine", categorie: "ALIMENT" as const, unite: "KG" as const, seuilAlerte: 50 },
+      quantiteActuelle: 20,
+      estEnAlerte: true,
+    };
+    // vague-level context (bac: null)
+    const ctx = makeContext({ stock: [stockEnAlerte], bac: null });
+    const result = evaluateRules([ctx], [regle], []);
+    expect(result).toHaveLength(1);
+    expect(result[0].bacId).toBeNull();
+  });
+
+  it("bacNom est renseigne dans le match", () => {
+    const regle = makeRegle({ typeDeclencheur: TypeDeclencheur.CALENDRIER, conditionValeur: 0 });
+    const ctx = makeContext({
+      bac: { id: "bac-x", nom: "Grand Bac", volume: 5000, nombrePoissons: 1000, nombreInitial: 1000, poidsMoyenInitial: 5 },
+    });
+    const result = evaluateRules([ctx], [regle], []);
+    expect(result).toHaveLength(1);
+    expect(result[0].bacNom).toBe("Grand Bac");
   });
 });

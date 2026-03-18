@@ -86,7 +86,7 @@ vi.mock("@/lib/auth", () => ({
 
 vi.mock("@/lib/storage", () => ({
   validateFile: vi.fn(),
-  generateFactureKey: vi.fn().mockReturnValue("dep-test/1234-facture.pdf"),
+  generateStorageKey: vi.fn().mockReturnValue("farm-flow/site-1/depenses/dep-test/1234-facture.pdf"),
   uploadFile: vi.fn().mockResolvedValue(undefined),
   deleteFile: vi.fn().mockResolvedValue(undefined),
   getSignedUrl: vi.fn().mockResolvedValue("https://storage.example.com/signed-url"),

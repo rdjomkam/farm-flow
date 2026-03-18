@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFournisseurs, createFournisseur } from "@/lib/queries/fournisseurs";
 import { AuthError } from "@/lib/auth";
+import { normalizePhone } from "@/lib/auth/phone";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission } from "@/types";
 import type { CreateFournisseurDTO } from "@/types";
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     const data: CreateFournisseurDTO = {
       nom: body.nom.trim(),
-      telephone: body.telephone?.trim() || undefined,
+      telephone: body.telephone?.trim() ? (normalizePhone(body.telephone.trim()) ?? body.telephone.trim()) : undefined,
       email: body.email?.trim() || undefined,
       adresse: body.adresse?.trim() || undefined,
     };

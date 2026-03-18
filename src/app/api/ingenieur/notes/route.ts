@@ -93,7 +93,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (!body.clientSiteId || typeof body.clientSiteId !== "string") {
+    // replyToId est optionnel — si fourni, clientSiteId est herite du parent
+    const replyToId =
+      body.replyToId && typeof body.replyToId === "string" ? body.replyToId : undefined;
+
+    // clientSiteId est obligatoire seulement si ce n'est pas une reponse a un thread
+    if (!replyToId && (!body.clientSiteId || typeof body.clientSiteId !== "string")) {
       errors.push({
         field: "clientSiteId",
         message: "Le site client destinataire est obligatoire.",
@@ -120,6 +125,7 @@ export async function POST(request: NextRequest) {
       clientSiteId: body.clientSiteId,
       vagueId:
         body.vagueId && typeof body.vagueId === "string" ? body.vagueId : undefined,
+      replyToId,
     };
 
     const note = await createNote(auth.activeSiteId, auth.userId, data);

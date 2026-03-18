@@ -10,6 +10,7 @@ import {
   Package,
   AlertTriangle,
   Clock,
+  Plus,
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { AccessDenied } from "@/components/ui/access-denied";
@@ -17,8 +18,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { IngenieurClientCharts } from "@/components/ingenieur/client-charts";
+import ReactMarkdown from "react-markdown";
+import { NoteDetailDialog } from "@/components/notes/note-detail-dialog";
+import { NouvelleNoteDialog } from "@/components/ingenieur/nouvelle-note-dialog";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getClientIngenieurDetail } from "@/lib/queries/ingenieur";
+import { getIndicateursVague } from "@/lib/queries/indicateurs";
 import { getNotes } from "@/lib/queries/notes";
 import { Permission, StatutAlerte, StatutActivation, StatutVague, TypeReleve } from "@/types";
 import { prisma } from "@/lib/db";
@@ -34,7 +39,7 @@ export default async function IngenieurClientDetailPage({
 }) {
   const session = await getServerSession();
   if (!session) redirect("/login");
-  if (!session.activeSiteId) redirect("/sites");
+  if (!session.activeSiteId) redirect("/settings/sites");
 
   const permissions = await checkPagePermission(session, Permission.MONITORING_CLIENTS);
   if (!permissions) return <AccessDenied />;
@@ -89,9 +94,15 @@ export default async function IngenieurClientDetailPage({
   const vaguesDetailSerialized = JSON.parse(JSON.stringify(vaguesDetail));
   const notesSerialized = JSON.parse(JSON.stringify(notes));
   const alertesSerialized = JSON.parse(JSON.stringify(alertesActives));
+  const vaguesPourNotes = vaguesDetail.map((v) => ({ id: v.id, code: v.code }));
+
+  // Fetch indicateurs complets par vague (SGR, FCR, biomasse, etc.)
+  const indicateursParVague = await Promise.all(
+    vaguesDetail.map((v) => getIndicateursVague(clientSiteId, v.id))
+  );
 
   // Calculer les indicateurs par vague pour affichage serveur
-  const vaguesAvecStats = vaguesDetail.map((vague) => {
+  const vaguesAvecStats = vaguesDetail.map((vague, i) => {
     const biometries = vague.releves.filter(
       (r) => r.typeReleve === TypeReleve.BIOMETRIE && r.poidsMoyen !== null
     );
@@ -120,6 +131,9 @@ export default async function IngenieurClientDetailPage({
       joursEcoules,
       nombreBacs: vague.bacs.length,
       nombreReleves: vague.releves.length,
+      sgr: indicateursParVague[i]?.sgr ?? null,
+      fcr: indicateursParVague[i]?.fcr ?? null,
+      biomasse: indicateursParVague[i]?.biomasse ?? null,
     };
   });
 
@@ -274,7 +288,7 @@ export default async function IngenieurClientDetailPage({
             </h2>
             <div className="flex flex-col gap-2">
               {alertesSerialized.map((alerte: (typeof alertesSerialized)[number]) => (
-                <Card key={alerte.id} className="border-l-4 border-l-danger">
+                <Card key={alerte.id}>
                   <CardContent className="p-3">
                     <div className="flex items-start gap-3">
                       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-danger bg-danger/10">
@@ -320,72 +334,92 @@ export default async function IngenieurClientDetailPage({
           ) : (
             <div className="flex flex-col gap-3">
               {vaguesAvecStats.map((vague) => (
-                <Card key={vague.id}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">{vague.code}</CardTitle>
-                      <Badge variant="en_cours">En cours</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="grid grid-cols-2 gap-2 sm:grid-cols-4 pt-0">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Debut</p>
-                      <p className="text-sm font-medium">
-                        {new Date(vague.dateDebut).toLocaleDateString("fr-FR")}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Jour</p>
-                      <p className="text-sm font-medium">J{vague.joursEcoules}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Vivants / Initial</p>
-                      <p className="text-sm font-medium">
-                        {vague.nombreVivants} / {vague.nombreInitial}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Survie</p>
-                      <p
-                        className={`text-sm font-bold ${
-                          vague.tauxSurvie === null
-                            ? "text-muted-foreground"
-                            : vague.tauxSurvie >= 90
-                            ? "text-success"
-                            : vague.tauxSurvie >= 80
-                            ? "text-accent-amber"
-                            : "text-danger"
-                        }`}
-                      >
-                        {vague.tauxSurvie !== null ? `${vague.tauxSurvie}%` : "—"}
-                      </p>
-                    </div>
-                    {vague.dernierePoidsMoyen !== null && (
-                      <div>
-                        <p className="text-xs text-muted-foreground">Poids moy.</p>
-                        <p className="text-sm font-medium">{vague.dernierePoidsMoyen} g</p>
+                <Link key={vague.id} href={`/ingenieur/${clientSiteId}/vagues/${vague.id}`}>
+                  <Card className="transition-colors hover:border-primary/40">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">{vague.code}</CardTitle>
+                        <Badge variant="en_cours">En cours</Badge>
                       </div>
-                    )}
-                    <div>
-                      <p className="text-xs text-muted-foreground">Releves</p>
-                      <p className="text-sm font-medium">{vague.nombreReleves}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Mortalites</p>
-                      <p
-                        className={`text-sm font-bold ${
-                          vague.totalMortalites > 0 ? "text-danger" : "text-muted-foreground"
-                        }`}
-                      >
-                        {vague.totalMortalites}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Bacs</p>
-                      <p className="text-sm font-medium">{vague.nombreBacs}</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-2 gap-2 sm:grid-cols-4 pt-0">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Debut</p>
+                        <p className="text-sm font-medium">
+                          {new Date(vague.dateDebut).toLocaleDateString("fr-FR")}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Jour</p>
+                        <p className="text-sm font-medium">J{vague.joursEcoules}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Vivants / Initial</p>
+                        <p className="text-sm font-medium">
+                          {vague.nombreVivants} / {vague.nombreInitial}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Survie</p>
+                        <p
+                          className={`text-sm font-bold ${
+                            vague.tauxSurvie === null
+                              ? "text-muted-foreground"
+                              : vague.tauxSurvie >= 90
+                              ? "text-success"
+                              : vague.tauxSurvie >= 80
+                              ? "text-accent-amber"
+                              : "text-danger"
+                          }`}
+                        >
+                          {vague.tauxSurvie !== null ? `${vague.tauxSurvie}%` : "—"}
+                        </p>
+                      </div>
+                      {vague.dernierePoidsMoyen !== null && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Poids moy.</p>
+                          <p className="text-sm font-medium">{vague.dernierePoidsMoyen} g</p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-xs text-muted-foreground">Biomasse</p>
+                        <p className="text-sm font-medium">
+                          {vague.biomasse !== null ? `${vague.biomasse} kg` : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">SGR</p>
+                        <p className="text-sm font-medium text-primary">
+                          {vague.sgr !== null ? `${vague.sgr}%/j` : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">FCR</p>
+                        <p className="text-sm font-medium text-accent-amber">
+                          {vague.fcr !== null ? `${vague.fcr}` : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Releves</p>
+                        <p className="text-sm font-medium">{vague.nombreReleves}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Mortalites</p>
+                        <p
+                          className={`text-sm font-bold ${
+                            vague.totalMortalites > 0 ? "text-danger" : "text-muted-foreground"
+                          }`}
+                        >
+                          {vague.totalMortalites}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Bacs</p>
+                        <p className="text-sm font-medium">{vague.nombreBacs}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
               ))}
             </div>
           )}
@@ -402,39 +436,85 @@ export default async function IngenieurClientDetailPage({
         )}
 
         {/* Notes recentes */}
-        {notesSerialized.length > 0 && (
-          <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Notes recentes ({notesSerialized.length})
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Notes recentes
             </h2>
+            <NouvelleNoteDialog
+              siteId={session.activeSiteId}
+              clientSiteId={clientSiteId}
+              vagues={vaguesPourNotes}
+            />
+          </div>
+
+          {notesSerialized.length > 0 ? (
             <div className="flex flex-col gap-2">
-              {notesSerialized.slice(0, 5).map((note: (typeof notesSerialized)[number]) => (
-                <Card
-                  key={note.id}
-                  className={note.isUrgent ? "border-l-4 border-l-danger" : ""}
-                >
-                  <CardContent className="p-3">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <p className="text-sm font-medium">{note.titre}</p>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {note.isUrgent && (
-                          <Badge variant="annulee">Urgent</Badge>
-                        )}
-                        {note.isFromClient && (
-                          <Badge variant="info">Client</Badge>
-                        )}
+              {notesSerialized.slice(0, 2).map((note: (typeof notesSerialized)[number]) => (
+                <NoteDetailDialog key={note.id} note={note}>
+                  <Card className={`cursor-pointer transition-colors hover:bg-accent/50 ${!note.isRead ? "border-primary/40 bg-primary/5" : ""}`}>
+                    <CardContent className="p-3">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {!note.isRead && (
+                            <span className="h-2 w-2 rounded-full bg-primary shrink-0" aria-label="Non lue" />
+                          )}
+                          <p className="text-sm font-medium">{note.titre}</p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {note.isUrgent && (
+                            <Badge variant="annulee">Urgent</Badge>
+                          )}
+                          {note.isFromClient && (
+                            <Badge variant="info">Client</Badge>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{note.contenu}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(note.createdAt).toLocaleDateString("fr-FR")}
-                    </p>
-                  </CardContent>
-                </Card>
+                      <div className="text-xs text-muted-foreground line-clamp-3 prose-compact">
+                        <ReactMarkdown
+                          components={{
+                            h1: ({ children }) => <strong>{children} </strong>,
+                            h2: ({ children }) => <strong>{children} </strong>,
+                            h3: ({ children }) => <strong>{children} </strong>,
+                            p: ({ children }) => <span>{children} </span>,
+                            ul: ({ children }) => <span>{children}</span>,
+                            ol: ({ children }) => <span>{children}</span>,
+                            li: ({ children }) => <span>• {children} </span>,
+                            strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+                            em: ({ children }) => <em>{children}</em>,
+                            code: ({ children }) => <code className="text-[10px]">{children}</code>,
+                            blockquote: ({ children }) => <span>{children}</span>,
+                            hr: () => null,
+                          }}
+                        >
+                          {note.contenu}
+                        </ReactMarkdown>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {new Date(note.createdAt).toLocaleDateString("fr-FR")}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </NoteDetailDialog>
               ))}
+              {notesSerialized.length > 0 && (
+                <Link
+                  href={`/ingenieur/${clientSiteId}/notes`}
+                  className="text-sm font-medium text-primary hover:underline text-center py-2"
+                >
+                  Voir plus ({notesSerialized.length})
+                </Link>
+              )}
             </div>
-          </section>
-        )}
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center p-4">
+                <MessageSquare className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                <p className="text-sm text-muted-foreground">Aucune note pour ce client.</p>
+              </CardContent>
+            </Card>
+          )}
+        </section>
 
         {/* Retour */}
         <div className="pb-4">

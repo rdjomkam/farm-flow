@@ -286,24 +286,13 @@ export interface IndicateursBac {
   vagueId: string;
   /** Volume du bac en litres (nullable pour les bacs provisionnés) */
   volume: number | null;
-  // Tier 1 — metriques essentielles
-  /** Taux de survie en % */
-  tauxSurvie: number | null;
-  /** FCR — indice de conversion alimentaire */
-  fcr: number | null;
-  /** SGR — taux de croissance specifique en %/jour */
-  sgr: number | null;
+  // Monitoring metrics (performance metrics like FCR/SGR/survie are tracked at vague level)
   /** Biomasse totale en kg */
   biomasse: number | null;
   /** Poids moyen actuel en grammes */
   poidsMoyen: number | null;
   /** Densite de biomasse en kg/m³ */
   densite: number | null;
-  /** Taux de mortalite en % */
-  tauxMortalite: number | null;
-  /** Gain de biomasse quotidien en kg/jour */
-  gainQuotidien: number | null;
-  // Aggregats bruts
   /** Nombre de poissons vivants estime */
   nombreVivants: number | null;
   /** Total mortalites enregistrees */
@@ -324,10 +313,6 @@ export interface ComparaisonBacs {
   vagueId: string;
   vagueCode: string;
   bacs: IndicateursBac[];
-  /** bacId du meilleur FCR (le plus bas) */
-  meilleurFCR: string | null;
-  /** bacId du meilleur taux de survie (le plus haut) */
-  meilleurSurvie: string | null;
   /** Alertes generees sur les bacs */
   alertes: AlerteBac[];
 }
@@ -338,7 +323,7 @@ export interface ComparaisonBacs {
 export interface AlerteBac {
   bacId: string;
   bacNom: string;
-  type: "SURVIE_BASSE" | "FCR_ELEVE" | "MORTALITE_HAUTE" | "DENSITE_ELEVEE";
+  type: "MORTALITE_HAUTE" | "DENSITE_ELEVEE";
   /** Message descriptif en francais */
   message: string;
   /** Valeur actuelle de l'indicateur */
@@ -365,12 +350,8 @@ export interface HistoriqueBacCycle {
   vagueCode: string;
   dateDebut: Date;
   dateFin: Date | null;
-  tauxSurvie: number | null;
-  fcr: number | null;
-  sgr: number | null;
   biomasse: number | null;
   poidsMoyen: number | null;
-  gainQuotidien: number | null;
   nombreReleves: number;
 }
 
@@ -494,14 +475,13 @@ export interface TendanceFCRPoint {
  */
 export interface AnalyticsDashboard {
   /**
-   * Bac ayant le meilleur FCR parmi toutes les vagues actives.
+   * Bac ayant la densite la plus basse parmi toutes les vagues actives.
    * Null si aucun bac n'a de donnees suffisantes.
    */
   meilleurBac: {
     id: string;
     nom: string;
-    fcr: number;
-    tauxSurvie: number;
+    densite: number;
   } | null;
 
   /**
@@ -514,7 +494,7 @@ export interface AnalyticsDashboard {
   } | null;
 
   /**
-   * Nombre total d'alertes de performance actives (FCR eleve, survie basse, etc.).
+   * Nombre total d'alertes de monitoring actives (densite elevee, mortalite haute).
    */
   alertesPerformance: number;
 

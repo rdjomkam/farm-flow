@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import {
   uploadFile,
   validateFile,
-  generateFactureKey,
+  generateStorageKey,
   deleteFile,
   getSignedUrl,
   extractFileNameFromKey,
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     // Upload new file
-    const key = generateFactureKey(`dep-${id}`, fileRaw.name);
+    const key = generateStorageKey(auth.activeSiteId, "depenses", id, fileRaw.name);
     const buffer = Buffer.from(await fileRaw.arrayBuffer());
     await uploadFile(key, buffer, fileRaw.type);
 

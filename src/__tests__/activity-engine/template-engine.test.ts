@@ -273,3 +273,36 @@ describe("Integration — resolveTemplate + buildPlaceholders", () => {
     expect(titre).toContain(UNAVAILABLE);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Per-bac placeholder {bac}
+// ---------------------------------------------------------------------------
+
+describe("Placeholder {bac} — per-bac iteration", () => {
+  const baseCtx = {
+    joursEcoules: 14,
+    semaine: 3,
+    vague: { code: "V2026-001" },
+    indicateurs: {
+      poidsMoyen: 80,
+      fcr: null,
+      sgr: null,
+      tauxSurvie: 97,
+      tauxMortaliteCumule: 3,
+      biomasse: 50,
+    },
+    derniersReleves: [] as { tailleMoyenne: number | null }[],
+  };
+
+  it("resout {bac} quand bacNom est fourni", () => {
+    const ph = buildPlaceholders(baseCtx, { bacNom: "Bac Principal" });
+    expect(ph.bac).toBe("Bac Principal");
+    const titre = resolveTemplate("Activite pour {bac} — S{semaine}", ph);
+    expect(titre).toBe("Activite pour Bac Principal — S3");
+  });
+
+  it("retourne UNAVAILABLE pour {bac} quand bacNom est null", () => {
+    const ph = buildPlaceholders(baseCtx, { bacNom: null });
+    expect(ph.bac).toBe(UNAVAILABLE);
+  });
+});

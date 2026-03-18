@@ -167,17 +167,19 @@ describe("SYSTEM_ROLE_DEFINITIONS", () => {
   describe("Pisciculteur", () => {
     const piscDef = SYSTEM_ROLE_DEFINITIONS.find((r) => r.name === "Pisciculteur")!;
 
-    it("a exactement 6 permissions", () => {
-      expect(piscDef.permissions).toHaveLength(6);
+    it("a exactement 8 permissions", () => {
+      expect(piscDef.permissions).toHaveLength(8);
     });
 
-    it("a les 6 permissions attendues", () => {
+    it("a les 8 permissions attendues", () => {
       expect(piscDef.permissions).toContain(Permission.VAGUES_VOIR);
       expect(piscDef.permissions).toContain(Permission.RELEVES_VOIR);
       expect(piscDef.permissions).toContain(Permission.RELEVES_CREER);
       expect(piscDef.permissions).toContain(Permission.BACS_GERER);
       expect(piscDef.permissions).toContain(Permission.DASHBOARD_VOIR);
       expect(piscDef.permissions).toContain(Permission.ALERTES_VOIR);
+      expect(piscDef.permissions).toContain(Permission.CALIBRAGES_VOIR);
+      expect(piscDef.permissions).toContain(Permission.REGLES_ACTIVITES_VOIR);
     });
 
     it("n'a pas VAGUES_CREER ni SITE_GERER ni MEMBRES_GERER", () => {
@@ -282,8 +284,8 @@ describe("PERMISSION_GROUPS", () => {
     expect(PERMISSION_GROUPS.administration).toHaveLength(2);
   });
 
-  it("elevage contient 8 permissions dont BACS_MODIFIER et RELEVES_MODIFIER", () => {
-    expect(PERMISSION_GROUPS.elevage).toHaveLength(8);
+  it("elevage contient 10 permissions dont BACS_MODIFIER et RELEVES_MODIFIER", () => {
+    expect(PERMISSION_GROUPS.elevage).toHaveLength(11);
     expect(PERMISSION_GROUPS.elevage).toContain(Permission.VAGUES_VOIR);
     expect(PERMISSION_GROUPS.elevage).toContain(Permission.RELEVES_CREER);
     expect(PERMISSION_GROUPS.elevage).toContain(Permission.BACS_MODIFIER);

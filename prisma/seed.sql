@@ -5,6 +5,8 @@ BEGIN;
 
 -- Nettoyage (ordre respecte les FK — du plus dependant au moins dependant)
 DELETE FROM "Session";
+DELETE FROM "CalibrageGroupe";
+DELETE FROM "Calibrage";
 DELETE FROM "NoteIngenieur";
 DELETE FROM "Activite";
 DELETE FROM "Notification";
@@ -22,8 +24,9 @@ DELETE FROM "ReleveConsommation";
 DELETE FROM "LigneCommande";
 DELETE FROM "MouvementStock";
 DELETE FROM "Commande";
--- PackProduit avant Produit (FK RESTRICT sur Produit)
+-- PackProduit et PackBac avant Pack (FK CASCADE sur Pack)
 DELETE FROM "PackActivation";
+DELETE FROM "PackBac";
 DELETE FROM "PackProduit";
 DELETE FROM "Pack";
 -- ConfigElevage apres Pack (Pack FK ConfigElevage)
@@ -54,8 +57,8 @@ VALUES
   ('user_gerant', 'gerant@dkfarm.cm', '+237677000000', 'Jean Kamga', '$2b$10$VHWKPywPuVh/szJsFgpiyu3wrTZ00kNz9nBy91QF9FB5WZBdXQUOC', 'GERANT', true, false, NOW(), NOW()),
   -- Ingenieur DKFarm — suit les clients et envoie des notes de monitoring
   ('user_ingenieur', 'ingenieur@dkfarm.cm', '+237666000001', 'Paul Nkomo', '$2b$10$VHWKPywPuVh/szJsFgpiyu3wrTZ00kNz9nBy91QF9FB5WZBdXQUOC', 'INGENIEUR', true, false, NOW(), NOW()),
-  -- Client pisciculteur (site propre : site_client_01)
-  ('user_client_01', 'client01@ferme.cm', '+237655000001', 'Marcel Essomba', '$2b$10$VHWKPywPuVh/szJsFgpiyu3wrTZ00kNz9nBy91QF9FB5WZBdXQUOC', 'PISCICULTEUR', true, false, NOW(), NOW()),
+  -- Client gerant de son propre site (site_client_01) — provisionne via Pack
+  ('user_client_01', 'client01@ferme.cm', '+237655000001', 'Marcel Essomba', '$2b$10$VHWKPywPuVh/szJsFgpiyu3wrTZ00kNz9nBy91QF9FB5WZBdXQUOC', 'GERANT', true, false, NOW(), NOW()),
   -- FarmFlow System user — utilise pour les entites auto-generees (provisioning, moteur activites)
   ('system_dkfarm', NULL, NULL, 'FarmFlow System', '$2b$10$SYSTEM_USER_CANNOT_LOGIN_HASH_PLACEHOLDER_XXXX', 'PISCICULTEUR', true, true, NOW(), NOW());
 
@@ -63,12 +66,11 @@ VALUES
 -- Sites (site_01 = DKFarm, site_client_01 = ferme client)
 -- ──────────────────────────────────────────
 
-INSERT INTO "Site" (id, name, address, "isActive", "createdAt", "updatedAt")
+INSERT INTO "Site" (id, name, address, "isActive", supervised, "enabledModules", "createdAt", "updatedAt")
 VALUES
-  ('site_01', 'Ferme Douala', 'Douala, Littoral, Cameroun', true, NOW(), NOW()),
-  -- Site client cree lors du provisioning d'un Pack (Sprint 20)
-  -- Utilise aussi pour les NoteIngenieur (clientSiteId = site_client_01)
-  ('site_client_01', 'Ferme Essomba', 'Yaoundé, Centre, Cameroun', true, NOW(), NOW());
+  ('site_01', 'Ferme Douala', 'Douala, Littoral, Cameroun', true, false, '{}', NOW(), NOW()),
+  -- Site client cree lors du provisioning d'un Pack (Sprint 20) — supervised avec modules limites
+  ('site_client_01', 'Ferme Essomba', 'Yaoundé, Centre, Cameroun', true, true, '{GROSSISSEMENT,ANALYSE_PILOTAGE,NOTES}', NOW(), NOW());
 
 -- ──────────────────────────────────────────
 -- SiteRole (3 roles systeme pour site_01, 1 pour site_client_01)
@@ -104,13 +106,33 @@ VALUES
       'PAIEMENTS_CREER',
       'ALEVINS_VOIR',
       'ALEVINS_GERER',
+      'ALEVINS_CREER',
+      'ALEVINS_MODIFIER',
+      'ALEVINS_SUPPRIMER',
       'PLANNING_VOIR',
       'PLANNING_GERER',
       'FINANCES_VOIR',
       'FINANCES_GERER',
       'DASHBOARD_VOIR',
       'ALERTES_VOIR',
-      'EXPORT_DONNEES'
+      'EXPORT_DONNEES',
+      'ALERTES_CONFIGURER',
+      'DEPENSES_VOIR',
+      'DEPENSES_CREER',
+      'DEPENSES_PAYER',
+      'BESOINS_SOUMETTRE',
+      'BESOINS_APPROUVER',
+      'BESOINS_TRAITER',
+      'GERER_PACKS',
+      'ACTIVER_PACKS',
+      'GERER_CONFIG_ELEVAGE',
+      'REGLES_ACTIVITES_VOIR',
+      'GERER_REGLES_ACTIVITES',
+      'MONITORING_CLIENTS',
+      'ENVOYER_NOTES',
+      'CALIBRAGES_VOIR',
+      'CALIBRAGES_CREER',
+      'GERER_REGLES_GLOBALES'
     ]::"Permission"[],
     true,
     'site_01',
@@ -143,13 +165,33 @@ VALUES
       'PAIEMENTS_CREER',
       'ALEVINS_VOIR',
       'ALEVINS_GERER',
+      'ALEVINS_CREER',
+      'ALEVINS_MODIFIER',
+      'ALEVINS_SUPPRIMER',
       'PLANNING_VOIR',
       'PLANNING_GERER',
       'FINANCES_VOIR',
       'FINANCES_GERER',
       'DASHBOARD_VOIR',
       'ALERTES_VOIR',
-      'EXPORT_DONNEES'
+      'EXPORT_DONNEES',
+      'ALERTES_CONFIGURER',
+      'DEPENSES_VOIR',
+      'DEPENSES_CREER',
+      'DEPENSES_PAYER',
+      'BESOINS_SOUMETTRE',
+      'BESOINS_APPROUVER',
+      'BESOINS_TRAITER',
+      'GERER_PACKS',
+      'ACTIVER_PACKS',
+      'GERER_CONFIG_ELEVAGE',
+      'REGLES_ACTIVITES_VOIR',
+      'GERER_REGLES_ACTIVITES',
+      'MONITORING_CLIENTS',
+      'ENVOYER_NOTES',
+      'CALIBRAGES_VOIR',
+      'CALIBRAGES_CREER',
+      'GERER_REGLES_GLOBALES'
     ]::"Permission"[],
     true,
     'site_01',
@@ -166,14 +208,76 @@ VALUES
       'RELEVES_CREER',
       'BACS_GERER',
       'DASHBOARD_VOIR',
-      'ALERTES_VOIR'
+      'ALERTES_VOIR',
+      'CALIBRAGES_VOIR',
+      'REGLES_ACTIVITES_VOIR'
     ]::"Permission"[],
     true,
     'site_01',
     NOW(),
     NOW()
   ),
-  -- SiteRole pour le site client (Sprint 23 — NoteIngenieur)
+  -- SiteRoles pour le site client (Sprint 25 — admin role pour le client provisionne)
+  (
+    'sr_admin_client_01',
+    'Administrateur',
+    'Acces complet au site — role assigne au client lors du provisioning',
+    ARRAY[
+      'SITE_GERER',
+      'MEMBRES_GERER',
+      'VAGUES_VOIR',
+      'VAGUES_CREER',
+      'VAGUES_MODIFIER',
+      'BACS_GERER',
+      'BACS_MODIFIER',
+      'RELEVES_VOIR',
+      'RELEVES_CREER',
+      'RELEVES_MODIFIER',
+      'STOCK_VOIR',
+      'STOCK_GERER',
+      'APPROVISIONNEMENT_VOIR',
+      'APPROVISIONNEMENT_GERER',
+      'CLIENTS_VOIR',
+      'CLIENTS_GERER',
+      'VENTES_VOIR',
+      'VENTES_CREER',
+      'FACTURES_VOIR',
+      'FACTURES_GERER',
+      'PAIEMENTS_CREER',
+      'ALEVINS_VOIR',
+      'ALEVINS_GERER',
+      'ALEVINS_CREER',
+      'ALEVINS_MODIFIER',
+      'ALEVINS_SUPPRIMER',
+      'PLANNING_VOIR',
+      'PLANNING_GERER',
+      'FINANCES_VOIR',
+      'FINANCES_GERER',
+      'DASHBOARD_VOIR',
+      'ALERTES_VOIR',
+      'EXPORT_DONNEES',
+      'ALERTES_CONFIGURER',
+      'DEPENSES_VOIR',
+      'DEPENSES_CREER',
+      'DEPENSES_PAYER',
+      'BESOINS_SOUMETTRE',
+      'BESOINS_APPROUVER',
+      'BESOINS_TRAITER',
+      'GERER_PACKS',
+      'ACTIVER_PACKS',
+      'GERER_CONFIG_ELEVAGE',
+      'REGLES_ACTIVITES_VOIR',
+      'GERER_REGLES_ACTIVITES',
+      'MONITORING_CLIENTS',
+      'ENVOYER_NOTES',
+      'CALIBRAGES_VOIR',
+      'CALIBRAGES_CREER'
+    ]::"Permission"[],
+    true,
+    'site_client_01',
+    NOW(),
+    NOW()
+  ),
   (
     'sr_pisci_client_01',
     'Pisciculteur',
@@ -184,7 +288,9 @@ VALUES
       'RELEVES_CREER',
       'BACS_GERER',
       'DASHBOARD_VOIR',
-      'ALERTES_VOIR'
+      'ALERTES_VOIR',
+      'CALIBRAGES_VOIR',
+      'REGLES_ACTIVITES_VOIR'
     ]::"Permission"[],
     true,
     'site_client_01',
@@ -202,7 +308,7 @@ VALUES
   ('sm_01', 'user_admin',      'site_01',        'sr_admin_site_01',   true, NOW(), NOW()),
   ('sm_02', 'user_gerant',     'site_01',        'sr_gerant_site_01',  true, NOW(), NOW()),
   ('sm_03', 'user_ingenieur',  'site_01',        'sr_admin_site_01',   true, NOW(), NOW()),
-  ('sm_04', 'user_client_01',  'site_client_01', 'sr_pisci_client_01', true, NOW(), NOW());
+  ('sm_04', 'user_client_01',  'site_client_01', 'sr_admin_client_01', true, NOW(), NOW());
 
 -- ──────────────────────────────────────────
 -- Vagues (2 : en cours + terminee)
@@ -212,6 +318,11 @@ INSERT INTO "Vague" (id, code, "dateDebut", "dateFin", "nombreInitial", "poidsMo
 VALUES
   ('vague_01', 'VAGUE-2026-01', '2026-01-15', NULL, 500, 8.5, 'Ecloserie Douala', 'EN_COURS', 'site_01', NOW(), NOW()),
   ('vague_02', 'VAGUE-2025-03', '2025-10-01', '2025-12-22', 300, 6.0, 'Ferme Mbalmayo', 'TERMINEE', 'site_01', NOW(), NOW());
+
+-- Vague client (site_client_01) — sera liée à PackActivation pa_01 après son INSERT
+INSERT INTO "Vague" (id, code, "dateDebut", "dateFin", "nombreInitial", "poidsMoyenInitial", "origineAlevins", statut, "siteId", "createdAt", "updatedAt")
+VALUES
+  ('vague_client_01', 'VAGUE-CLI-2026-01', '2026-02-15', NULL, 100, 5.0, 'Pack Decouverte 100', 'EN_COURS', 'site_client_01', NOW(), NOW());
 
 -- ──────────────────────────────────────────
 -- Bacs (3 pour vague en cours, 1 pour vague terminee)
@@ -1185,7 +1296,7 @@ INSERT INTO "ConfigElevage" (
 -- ============================================================
 
 -- Packs
-INSERT INTO "Pack" (id, nom, description, "nombreAlevins", "poidsMoyenInitial", "prixTotal", "configElevageId", "isActive", "userId", "siteId", "createdAt", "updatedAt")
+INSERT INTO "Pack" (id, nom, description, "nombreAlevins", "poidsMoyenInitial", "prixTotal", "configElevageId", "isActive", "enabledModules", "userId", "siteId", "createdAt", "updatedAt")
 VALUES
   (
     'pack_01',
@@ -1194,6 +1305,7 @@ VALUES
     100, 5.0, 85000.0,
     'cfg_01',
     true,
+    '{GROSSISSEMENT,ANALYSE_PILOTAGE,NOTES}',
     'user_admin', 'site_01', NOW(), NOW()
   ),
   (
@@ -1203,6 +1315,7 @@ VALUES
     300, 5.0, 220000.0,
     'cfg_01',
     true,
+    '{GROSSISSEMENT,ANALYSE_PILOTAGE,NOTES}',
     'user_admin', 'site_01', NOW(), NOW()
   ),
   (
@@ -1212,6 +1325,7 @@ VALUES
     500, 5.0, 350000.0,
     'cfg_02',
     true,
+    '{GROSSISSEMENT,ANALYSE_PILOTAGE,NOTES}',
     'user_admin', 'site_01', NOW(), NOW()
   );
 
@@ -1230,6 +1344,36 @@ VALUES
   ('pp_03_sel', 'pack_03', 'prod_03', 8.0),
   ('pp_03_vit', 'pack_03', 'prod_04', 2.0),
   ('pp_03_aliment2', 'pack_03', 'prod_02', 50.0);
+
+-- Pack Bacs (bacs modeles inclus dans chaque pack)
+-- Pack Decouverte 100 : 1 bac unique de 100 alevins
+INSERT INTO "PackBac" (id, "packId", nom, volume, "nombreAlevins", "poidsMoyenInitial", position)
+VALUES
+  ('pb_01_bac1', 'pack_01', 'Bac Unique', 1000.0, 100, 5.0, 0);
+
+-- Pack Starter 300 : 2 bacs (200 + 100 alevins)
+INSERT INTO "PackBac" (id, "packId", nom, volume, "nombreAlevins", "poidsMoyenInitial", position)
+VALUES
+  ('pb_02_bac1', 'pack_02', 'Bac Principal', 2000.0, 200, 5.0, 0),
+  ('pb_02_bac2', 'pack_02', 'Bac Secondaire', 1500.0, 100, 5.0, 1);
+
+-- Pack Pro 500 : 3 bacs (200 + 200 + 100 alevins)
+INSERT INTO "PackBac" (id, "packId", nom, volume, "nombreAlevins", "poidsMoyenInitial", position)
+VALUES
+  ('pb_03_bac1', 'pack_03', 'Bac A', 2000.0, 200, 5.0, 0),
+  ('pb_03_bac2', 'pack_03', 'Bac B', 2000.0, 200, 5.0, 1),
+  ('pb_03_bac3', 'pack_03', 'Bac C', 1500.0, 100, 5.0, 2);
+
+-- ──────────────────────────────────────────
+-- PackActivation (site_01 supervise site_client_01 via pack_01)
+-- ──────────────────────────────────────────
+
+INSERT INTO "PackActivation" (id, code, "packId", "userId", "siteId", "clientSiteId", statut, "dateActivation", "createdAt", "updatedAt")
+VALUES
+  ('pa_01', 'ACT-2026-001', 'pack_01', 'user_ingenieur', 'site_01', 'site_client_01', 'ACTIVE', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days', NOW());
+
+-- Link client vague to PackActivation
+UPDATE "Vague" SET "packActivationId" = 'pa_01' WHERE id = 'vague_client_01';
 
 -- ──────────────────────────────────────────
 -- SPRINT 21 : Catalogue de règles pré-définies globales
@@ -1740,7 +1884,7 @@ INSERT INTO "NoteIngenieur" (
   E'## Bilan biométrie — Semaine 8\n\nLe poids moyen des poissons atteint **55g**, ce qui correspond aux benchmarks FAO pour Clarias gariepinus à ce stade.\n\n### Points positifs\n- Croissance régulière (+6g/semaine)\n- Taux de survie estimé : 94%\n- FCR actuel : 1.8 (bon)\n\n### Recommandations\n1. Passer au granulé 2mm dès la semaine prochaine\n2. Augmenter la ration de 10% (phase juvenile)\n3. Effectuer un tri si l''écart de poids > 30%',
   'PUBLIC', false, false,
   false, NULL,
-  'user_ingenieur', 'site_client_01', 'vague_01', 'site_01',
+  'user_ingenieur', 'site_client_01', 'vague_client_01', 'site_01',
   NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days'
 ),
 
@@ -1751,7 +1895,7 @@ INSERT INTO "NoteIngenieur" (
   E'## Note interne — Non visible par le client\n\nLors de la visite du 2026-03-08, observation de lésions cutanées suspectes sur 3 individus du Bac 1. Possible mycose à *Saprolegnia*.\n\n**Actions internes requises :**\n- Prélever 5 individus pour analyse laboratoire\n- Commander sulfate de cuivre (15kg) en urgence\n- Prévenir Dr. Biloa (vétérinaire partenaire)\n\n**NE PAS informer le client avant confirmation du diagnostic.**',
   'INTERNE', true, false,
   false, NULL,
-  'user_ingenieur', 'site_client_01', 'vague_01', 'site_01',
+  'user_ingenieur', 'site_client_01', 'vague_client_01', 'site_01',
   NOW() - INTERVAL '4 days', NOW() - INTERVAL '4 days'
 ),
 
@@ -1762,7 +1906,7 @@ INSERT INTO "NoteIngenieur" (
   E'Le client a soumis une observation via l''application.\n\n**Observation originale :** "Ce matin j''ai vu beaucoup de poissons nager en surface, ils semblent chercher de l''air. Est-ce grave ?"\n\n**Analyse ingénieur :** Probable manque d''oxygène dissous. Vérifier le débit d''aération. Mesure urgente de l''O2 recommandée.',
   'PUBLIC', true, true,
   true, 'Ce matin j''ai vu beaucoup de poissons nager en surface, ils semblent chercher de l''air. Est-ce grave ?',
-  'user_ingenieur', 'site_client_01', 'vague_01', 'site_01',
+  'user_ingenieur', 'site_client_01', 'vague_client_01', 'site_01',
   NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'
 ),
 
@@ -1776,5 +1920,97 @@ INSERT INTO "NoteIngenieur" (
   'user_ingenieur', 'site_client_01', NULL, 'site_01',
   NOW() - INTERVAL '14 days', NOW() - INTERVAL '14 days'
 );
+
+-- ──────────────────────────────────────────
+-- Calibrages (2 : un complet sur vague_01, un partiel)
+-- ──────────────────────────────────────────
+
+INSERT INTO "Calibrage" (id, date, "vagueId", "sourceBacIds", "nombreMorts", notes, "siteId", "userId", "createdAt", "updatedAt")
+VALUES
+  (
+    'calib_01',
+    '2026-02-20',
+    'vague_01',
+    ARRAY['bac_01', 'bac_02', 'bac_03'],
+    4,
+    'Premier calibrage de la vague — tri par categorie de poids apres 5 semaines.',
+    'site_01',
+    'user_gerant',
+    NOW() - INTERVAL '24 days',
+    NOW() - INTERVAL '24 days'
+  ),
+  (
+    'calib_02',
+    '2026-03-05',
+    'vague_01',
+    ARRAY['bac_01', 'bac_02'],
+    1,
+    NULL,
+    'site_01',
+    'user_gerant',
+    NOW() - INTERVAL '11 days',
+    NOW() - INTERVAL '11 days'
+  );
+
+-- CalibrageGroupes pour calib_01 (3 categories, 1 bac destination chacune)
+INSERT INTO "CalibrageGroupe" (id, "calibrageId", categorie, "destinationBacId", "nombrePoissons", "poidsMoyen", "tailleMoyenne", "createdAt")
+VALUES
+  -- Petits (< 50 g) → bac_03
+  (
+    'cg_01_petit',
+    'calib_01',
+    'PETIT',
+    'bac_03',
+    85,
+    38.5,
+    14.2,
+    NOW() - INTERVAL '24 days'
+  ),
+  -- Moyens (50–150 g) → bac_02
+  (
+    'cg_01_moyen',
+    'calib_01',
+    'MOYEN',
+    'bac_02',
+    215,
+    87.0,
+    21.5,
+    NOW() - INTERVAL '24 days'
+  ),
+  -- Gros (150–350 g) → bac_01
+  (
+    'cg_01_gros',
+    'calib_01',
+    'GROS',
+    'bac_01',
+    122,
+    198.3,
+    32.0,
+    NOW() - INTERVAL '24 days'
+  );
+
+-- CalibrageGroupes pour calib_02 (2 categories)
+INSERT INTO "CalibrageGroupe" (id, "calibrageId", categorie, "destinationBacId", "nombrePoissons", "poidsMoyen", "tailleMoyenne", "createdAt")
+VALUES
+  (
+    'cg_02_moyen',
+    'calib_02',
+    'MOYEN',
+    'bac_02',
+    142,
+    112.0,
+    25.0,
+    NOW() - INTERVAL '11 days'
+  ),
+  (
+    'cg_02_gros',
+    'calib_02',
+    'GROS',
+    'bac_01',
+    190,
+    245.0,
+    36.5,
+    NOW() - INTERVAL '11 days'
+  );
 
 COMMIT;

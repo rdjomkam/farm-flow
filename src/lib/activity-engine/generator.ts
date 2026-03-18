@@ -12,7 +12,7 @@
  */
 
 import { prisma } from "@/lib/db";
-import type { RegleActivite, ConfigElevage } from "@/types";
+import type { RegleActivite, ConfigElevage, CustomPlaceholder } from "@/types";
 import {
   TypeDeclencheur,
   TypeActivite,
@@ -50,14 +50,15 @@ export interface GeneratorResult {
 // ---------------------------------------------------------------------------
 
 /**
- * Verifie si une activite avec le meme regleId + vagueId existe deja aujourd'hui.
+ * Verifie si une activite avec le meme regleId + vagueId + bacId existe deja aujourd'hui.
  * Utilise le client transactionnel pour la coherence.
  * EC-3.1
  */
 async function hasDuplicateToday(
   tx: Omit<typeof prisma, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">,
   regleId: string,
-  vagueId: string
+  vagueId: string,
+  bacId: string | null
 ): Promise<boolean> {
   const WAT_OFFSET_MS = 1 * 60 * 60 * 1000;
   const nowWAT = new Date(Date.now() + WAT_OFFSET_MS);
@@ -70,6 +71,7 @@ async function hasDuplicateToday(
     where: {
       regleId,
       vagueId,
+      bacId,
       createdAt: {
         gte: new Date(startOfDayWAT.getTime() - WAT_OFFSET_MS),
         lte: new Date(endOfDayWAT.getTime() - WAT_OFFSET_MS),
@@ -88,7 +90,9 @@ function buildGeneratedActivity(
   match: RuleMatch,
   siteId: string,
   systemUserId: string,
-  configElevage: ConfigElevage | null
+  configElevage: ConfigElevage | null,
+  defaultAssigneeId: string | null = null,
+  customPlaceholders?: CustomPlaceholder[]
 ): GeneratedActivity {
   const { regle, context } = match;
 
@@ -152,11 +156,12 @@ function buildGeneratedActivity(
       dureeEstimee,
       stockQte,
       tauxRationnement: null,
-      // bacNom : non disponible dans le contexte simplifie (pas de relation bac chargee)
-      bacNom: null,
+      bacNom: match.bacNom,
       // prixMarcheKg : non expose dans ConfigElevage → valeur marchande non calculee
       prixMarcheKg: null,
-    }
+    },
+    customPlaceholders,
+    context
   );
 
   // ---- Resoudre les templates ----
@@ -197,8 +202,8 @@ function buildGeneratedActivity(
     dateFin: null,
     recurrence: null,
     vagueId: context.vague.id,
-    bacId: null,
-    assigneAId: null,
+    bacId: match.bacId,
+    assigneAId: defaultAssigneeId,
     userId: systemUserId,
     siteId,
     regleId: regle.id,
@@ -232,21 +237,23 @@ export async function generateActivities(
   matches: RuleMatch[],
   siteId: string,
   systemUserId: string,
-  configElevage: ConfigElevage | null = null
+  configElevage: ConfigElevage | null = null,
+  defaultAssigneeId: string | null = null,
+  customPlaceholders?: CustomPlaceholder[]
 ): Promise<GeneratorResult> {
   const result: GeneratorResult = { created: 0, skipped: 0, errors: [] };
 
-  // Grouper les matches par vagueId pour appliquer EC-3.3
+  // Grouper les matches par vagueId|bacId pour appliquer EC-3.3
   // (conflits de priorite : la plus basse = plus urgent l'emporte)
-  const matchesByVague = new Map<string, RuleMatch[]>();
+  const matchesByGroup = new Map<string, RuleMatch[]>();
   for (const match of matches) {
-    const vagueId = match.vague.id;
-    const existing = matchesByVague.get(vagueId) ?? [];
+    const key = `${match.vague.id}|${match.bacId ?? ""}`;
+    const existing = matchesByGroup.get(key) ?? [];
     existing.push(match);
-    matchesByVague.set(vagueId, existing);
+    matchesByGroup.set(key, existing);
   }
 
-  for (const [, vagueMatches] of matchesByVague) {
+  for (const [, vagueMatches] of matchesByGroup) {
     // EC-3.3 : trier par priorite (plus basse = plus urgent = generer en premier)
     const sorted = [...vagueMatches].sort((a, b) => a.regle.priorite - b.regle.priorite);
 
@@ -256,7 +263,7 @@ export async function generateActivities(
 
         await prisma.$transaction(async (tx) => {
           // EC-3.1 : deduplication dans la transaction
-          const duplicate = await hasDuplicateToday(tx, regle.id, match.vague.id);
+          const duplicate = await hasDuplicateToday(tx, regle.id, match.vague.id, match.bacId);
           if (duplicate) {
             result.skipped++;
             return;
@@ -267,7 +274,9 @@ export async function generateActivities(
             match,
             siteId,
             systemUserId,
-            configElevage
+            configElevage,
+            defaultAssigneeId,
+            customPlaceholders
           );
 
           // Creer l'activite

@@ -7,7 +7,7 @@ import { Permission } from "@/types";
 import {
   uploadFile,
   validateFile,
-  generateFactureKey,
+  generateStorageKey,
 } from "@/lib/storage";
 
 type Params = { params: Promise<{ id: string }> };
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     // Si un fichier facture est fourni, l'uploader et sauvegarder l'URL
     if (file) {
       try {
-        const key = generateFactureKey(id, file.name);
+        const key = generateStorageKey(auth.activeSiteId, "factures", id, file.name);
         const buffer = Buffer.from(await file.arrayBuffer());
         await uploadFile(key, buffer, file.type);
 

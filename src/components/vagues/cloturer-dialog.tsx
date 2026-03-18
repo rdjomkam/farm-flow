@@ -19,12 +19,21 @@ import { useToast } from "@/components/ui/toast";
 interface CloturerDialogProps {
   vagueId: string;
   vagueCode: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function CloturerDialog({ vagueId, vagueCode }: CloturerDialogProps) {
+export function CloturerDialog({
+  vagueId,
+  vagueCode,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+}: CloturerDialogProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = controlledOnOpenChange ?? setInternalOpen;
   const [dateFin, setDateFin] = useState(new Date().toISOString().split("T")[0]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -55,13 +64,17 @@ export function CloturerDialog({ vagueId, vagueCode }: CloturerDialogProps) {
     }
   }
 
+  const isControlled = controlledOpen !== undefined;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="danger" size="sm">
-          Clôturer
-        </Button>
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button variant="danger" size="sm">
+            Clôturer
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Clôturer la vague {vagueCode}</DialogTitle>

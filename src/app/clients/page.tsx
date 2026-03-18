@@ -9,7 +9,7 @@ import { Permission } from "@/types";
 export default async function ClientsPage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
-  if (!session.activeSiteId) redirect("/sites");
+  if (!session.activeSiteId) redirect("/settings/sites");
 
   const permissions = await checkPagePermission(session, Permission.CLIENTS_VOIR);
   if (!permissions) return <AccessDenied />;

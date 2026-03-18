@@ -195,7 +195,7 @@ typeReleve: "BIOMETRIE",
     expect(data.errors.some((e: { field: string }) => e.field === "poidsMoyen")).toBe(true);
   });
 
-  it("retourne 400 si tailleMoyenne manquante pour biometrie", async () => {
+  it("accepte biometrie sans tailleMoyenne", async () => {
     const body = { ...validBiometrie, tailleMoyenne: undefined };
     const request = makeRequest("/api/releves", {
       method: "POST",
@@ -203,12 +203,8 @@ typeReleve: "BIOMETRIE",
     });
 
     const response = await POST(request);
-    const data = await response.json();
 
-    expect(response.status).toBe(400);
-    expect(data.errors.some((e: { field: string }) => e.field === "tailleMoyenne")).toBe(
-      true
-    );
+    expect(response.status).toBe(201);
   });
 
   it("retourne 400 si echantillonCount n'est pas un entier positif", async () => {

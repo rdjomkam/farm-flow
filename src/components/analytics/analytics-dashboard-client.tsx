@@ -18,8 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 interface DashboardMeilleurBac {
   id: string;
   nom: string;
-  fcr: number;
-  tauxSurvie: number | null;
+  densite: number;
 }
 
 interface DashboardData {
@@ -210,12 +209,9 @@ export function AnalyticsDashboardClient({ dashboard }: AnalyticsDashboardClient
             {meilleurBac ? (
               <>
                 <p className="text-base font-bold truncate">{meilleurBac.nom}</p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>FCR {meilleurBac.fcr}</span>
-                  {meilleurBac.tauxSurvie !== null && (
-                    <span>Survie {meilleurBac.tauxSurvie}%</span>
-                  )}
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  Densite {meilleurBac.densite} kg/m³
+                </p>
               </>
             ) : (
               <p className="text-sm text-muted-foreground">Aucune vague en cours</p>

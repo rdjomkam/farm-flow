@@ -139,6 +139,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validation dateLimite optionnelle
+    let dateLimite: string | undefined;
+    if (body.dateLimite != null) {
+      const parsed = new Date(body.dateLimite);
+      if (isNaN(parsed.getTime())) {
+        return NextResponse.json(
+          { status: 400, message: "Date limite invalide (format ISO 8601 attendu)." },
+          { status: 400 }
+        );
+      }
+      dateLimite = parsed.toISOString();
+    }
+
     const data: CreateListeBesoinsDTO = {
       titre: body.titre.trim(),
       vagueId: body.vagueId || undefined,
@@ -156,6 +169,7 @@ export async function POST(request: NextRequest) {
         unite: l.unite || undefined,
         prixEstime: l.prixEstime,
       })),
+      ...(dateLimite && { dateLimite }),
     };
 
     const listeBesoins = await createListeBesoins(

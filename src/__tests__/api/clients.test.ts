@@ -149,7 +149,7 @@ describe("POST /api/clients", () => {
     expect(data.nom).toBe("Nouveau Client");
     expect(mockCreateClient).toHaveBeenCalledWith("site-1", {
       nom: "Nouveau Client",
-      telephone: "655111222",
+      telephone: "+237655111222",
       email: "client@test.cm",
       adresse: undefined,
     });

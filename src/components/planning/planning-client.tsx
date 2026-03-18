@@ -10,22 +10,39 @@ import {
   Calendar,
   Trash2,
   ClipboardCheck,
+  AlertTriangle,
+  Info,
+  FileText,
+  Package,
+  User,
+  Bot,
+  Utensils,
+  Scale,
+  Droplets,
+  Hash,
+  Sparkles,
+  Wrench,
+  ShoppingCart,
+  ArrowLeftRight,
+  Pill,
+  MoreHorizontal,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { InstructionSteps } from "@/components/activites/instruction-steps";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { CompleterActiviteDialog } from "@/components/planning/completer-activite-dialog";
 import { ModifierActiviteDialog } from "@/components/planning/modifier-activite-dialog";
-import { TypeActivite, StatutActivite, TypeReleve, Permission } from "@/types";
+import { TypeActivite, StatutActivite, TypeReleve, Permission, Recurrence, PhaseElevage } from "@/types";
 import type { ActiviteWithRelations } from "@/types";
+import { typeActiviteLabels } from "@/lib/labels/activite";
 
 /** Labels abreges pour les types de releve (utilises dans le badge du dialog) */
 const typeReleveLabels: Record<TypeReleve, string> = {
@@ -35,20 +52,6 @@ const typeReleveLabels: Record<TypeReleve, string> = {
   [TypeReleve.QUALITE_EAU]: "Qualité eau",
   [TypeReleve.COMPTAGE]: "Comptage",
   [TypeReleve.OBSERVATION]: "Observation",
-};
-
-// Labels
-const typeActiviteLabels: Record<TypeActivite, string> = {
-  [TypeActivite.ALIMENTATION]: "Alimentation",
-  [TypeActivite.BIOMETRIE]: "Biometrie",
-  [TypeActivite.QUALITE_EAU]: "Qualite eau",
-  [TypeActivite.COMPTAGE]: "Comptage",
-  [TypeActivite.NETTOYAGE]: "Nettoyage",
-  [TypeActivite.TRAITEMENT]: "Traitement",
-  [TypeActivite.RECOLTE]: "Recolte",
-  [TypeActivite.TRI]: "Tri",
-  [TypeActivite.MEDICATION]: "Medication",
-  [TypeActivite.AUTRE]: "Autre",
 };
 
 const typeActiviteColors: Record<TypeActivite, string> = {
@@ -77,6 +80,80 @@ const statutVariants: Record<StatutActivite, "en_cours" | "terminee" | "annulee"
   [StatutActivite.ANNULEE]: "annulee",
   [StatutActivite.EN_RETARD]: "default",
 };
+
+// ---------------------------------------------------------------------------
+// Constants for the dialog redesign
+// ---------------------------------------------------------------------------
+
+const typeActiviteIcons: Record<TypeActivite, React.ReactNode> = {
+  [TypeActivite.ALIMENTATION]: <Utensils className="h-4 w-4" />,
+  [TypeActivite.BIOMETRIE]: <Scale className="h-4 w-4" />,
+  [TypeActivite.QUALITE_EAU]: <Droplets className="h-4 w-4" />,
+  [TypeActivite.COMPTAGE]: <Hash className="h-4 w-4" />,
+  [TypeActivite.NETTOYAGE]: <Sparkles className="h-4 w-4" />,
+  [TypeActivite.TRAITEMENT]: <Wrench className="h-4 w-4" />,
+  [TypeActivite.RECOLTE]: <ShoppingCart className="h-4 w-4" />,
+  [TypeActivite.TRI]: <ArrowLeftRight className="h-4 w-4" />,
+  [TypeActivite.MEDICATION]: <Pill className="h-4 w-4" />,
+  [TypeActivite.AUTRE]: <MoreHorizontal className="h-4 w-4" />,
+};
+
+const recurrenceLabels: Record<Recurrence, string> = {
+  [Recurrence.QUOTIDIEN]: "Quotidienne",
+  [Recurrence.HEBDOMADAIRE]: "Hebdomadaire",
+  [Recurrence.BIMENSUEL]: "Bimensuelle",
+  [Recurrence.MENSUEL]: "Mensuelle",
+  [Recurrence.PERSONNALISE]: "Personnalisee",
+};
+
+const phaseElevageLabels: Record<PhaseElevage, string> = {
+  [PhaseElevage.ACCLIMATATION]: "Acclimatation",
+  [PhaseElevage.CROISSANCE_DEBUT]: "Croissance debut",
+  [PhaseElevage.JUVENILE]: "Juvenile",
+  [PhaseElevage.GROSSISSEMENT]: "Grossissement",
+  [PhaseElevage.FINITION]: "Finition",
+  [PhaseElevage.PRE_RECOLTE]: "Pre-recolte",
+};
+
+interface PrioriteConfig {
+  iconBgClass: string;
+  iconTextClass: string;
+  badgeBgClass: string;
+  badgeTextClass: string;
+  dotClass: string;
+  label: string;
+}
+
+function getPrioriteConfig(priorite: number): PrioriteConfig {
+  if (priorite >= 3) {
+    return {
+      iconBgClass: "bg-danger/10",
+      iconTextClass: "text-danger",
+      badgeBgClass: "bg-danger/10",
+      badgeTextClass: "text-danger",
+      dotClass: "bg-danger",
+      label: "Urgente",
+    };
+  }
+  if (priorite === 2) {
+    return {
+      iconBgClass: "bg-warning/10",
+      iconTextClass: "text-warning",
+      badgeBgClass: "bg-warning/10",
+      badgeTextClass: "text-warning",
+      dotClass: "bg-warning",
+      label: "Moyenne",
+    };
+  }
+  return {
+    iconBgClass: "bg-accent-blue/10",
+    iconTextClass: "text-accent-blue",
+    badgeBgClass: "bg-accent-blue/10",
+    badgeTextClass: "text-accent-blue",
+    dotClass: "bg-accent-blue",
+    label: "Basse",
+  };
+}
 
 const DAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 const MONTHS = [
@@ -392,141 +469,320 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
       </div>
 
       {/* Dialog detail activite */}
-      {selectedActivite && (
-        <Dialog open={!!selectedActivite} onOpenChange={(open) => { if (!open) setSelectedActivite(null); }}>
-          <DialogContent>
-            <DialogTitle>{selectedActivite.titre}</DialogTitle>
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-2">
-                <Badge variant={statutVariants[selectedActivite.statut as StatutActivite] ?? "default"}>
-                  {statutLabels[selectedActivite.statut as StatutActivite] ?? selectedActivite.statut}
-                </Badge>
-                <span className="text-sm text-muted-foreground">
-                  {typeActiviteLabels[selectedActivite.typeActivite as TypeActivite] ?? selectedActivite.typeActivite}
-                </span>
-              </div>
+      {selectedActivite && (() => {
+        const a = selectedActivite;
+        const statut = a.statut as StatutActivite;
+        const typeActivite = a.typeActivite as TypeActivite;
+        const priorite = a.priorite ?? 1;
+        const config = getPrioriteConfig(priorite);
+        const icon = typeActiviteIcons[typeActivite] ?? <MoreHorizontal className="h-4 w-4" />;
+        const isTerminee = statut === StatutActivite.TERMINEE;
+        const isEnRetard = statut === StatutActivite.EN_RETARD;
+        const canManage = permissions.includes(Permission.PLANNING_GERER);
+        const canComplete = canManage && (statut === StatutActivite.PLANIFIEE || isEnRetard);
 
-              <div className="grid gap-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Date debut</span>
-                  <span className="font-medium">
-                    {new Date(selectedActivite.dateDebut).toLocaleDateString("fr-FR", {
-                      weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
-                    })}
-                  </span>
-                </div>
-                {selectedActivite.dateFin && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Date fin</span>
-                    <span className="font-medium">
-                      {new Date(selectedActivite.dateFin).toLocaleDateString("fr-FR", {
-                        weekday: "short", day: "numeric", month: "short",
-                      })}
+        return (
+          <Dialog open={!!selectedActivite} onOpenChange={(open) => { if (!open) setSelectedActivite(null); }}>
+            <DialogContent>
+              {/* Accessible title — visually hidden, Section 1 provides the visible title */}
+              <DialogTitle className="sr-only">{a.titre}</DialogTitle>
+              {/* Accessible description for screen readers */}
+              <DialogDescription className="sr-only">
+                {typeActiviteLabels[typeActivite] ?? typeActivite} — {statutLabels[statut] ?? statut}
+              </DialogDescription>
+
+              <div className="flex flex-col gap-4">
+
+                {/* Section 1 — Header Card */}
+                <div className="rounded-xl bg-surface-0 p-4">
+                  {/* pr-10 keeps badge clear of the dialog close button */}
+                  <div className="flex items-start justify-between gap-3 mb-3 pr-10">
+                    <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                      {/* Type icon with priority-colored background */}
+                      <div className={["rounded-md p-1.5 shrink-0", config.iconBgClass, config.iconTextClass].join(" ")}>
+                        {icon}
+                      </div>
+                      <div className="min-w-0">
+                        <h2 className="text-base font-semibold leading-snug break-words">{a.titre}</h2>
+                        {a.description && (
+                          <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{a.description}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="shrink-0">
+                      <Badge variant={statutVariants[statut] ?? "default"}>
+                        {isEnRetard && <AlertTriangle className="h-3 w-3 mr-1" />}
+                        {statutLabels[statut] ?? statut}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Meta pills */}
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span className="rounded-full bg-muted px-2 py-0.5">
+                      {typeActiviteLabels[typeActivite] ?? typeActivite}
                     </span>
+                    {a.vague && (
+                      <span className="rounded-full bg-muted px-2 py-0.5">{a.vague.code}</span>
+                    )}
+                    {a.bac && (
+                      <span className="rounded-full bg-muted px-2 py-0.5">{a.bac.nom}</span>
+                    )}
+                    {a.phaseElevage && (
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">
+                        {phaseElevageLabels[a.phaseElevage as PhaseElevage] ?? a.phaseElevage}
+                      </span>
+                    )}
+                    {a.isAutoGenerated && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-accent-purple/10 px-2 py-0.5 text-accent-purple">
+                        <Bot className="h-3 w-3" />
+                        Auto
+                      </span>
+                    )}
+                    {priorite >= 2 && (
+                      <span className={["inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", config.badgeBgClass, config.badgeTextClass].join(" ")}>
+                        <span className={["h-1.5 w-1.5 rounded-full", config.dotClass].join(" ")} />
+                        {config.label}
+                      </span>
+                    )}
                   </div>
-                )}
-                {selectedActivite.vague && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Vague</span>
-                    <span className="font-medium">{selectedActivite.vague.code}</span>
-                  </div>
-                )}
-                {selectedActivite.description && (
-                  <div>
-                    <p className="text-muted-foreground mb-1">Description</p>
-                    <p className="text-sm bg-muted rounded-lg p-3">{selectedActivite.description}</p>
+                </div>
+
+                {/* Section 2 — EN RETARD Banner */}
+                {isEnRetard && (
+                  <div className="rounded-xl bg-danger/10 p-3">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-danger shrink-0" />
+                      <p className="text-sm text-danger font-medium">
+                        Cette activite est en retard.
+                      </p>
+                    </div>
                   </div>
                 )}
 
-                {/* Releve lie */}
-                {selectedActivite.releve && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Relevé lié</span>
-                    <Link
-                      href={`/vagues/${selectedActivite.vagueId}#releve-${selectedActivite.releve.id}`}
-                      className="flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-                      onClick={() => setSelectedActivite(null)}
+                {/* Section 3 — Dates & Context */}
+                <div className="rounded-xl bg-surface-0 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Calendar className="h-4 w-4 text-primary shrink-0" />
+                    <h3 className="text-sm font-semibold text-foreground">Planification</h3>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Date debut</span>
+                      <span className="font-medium">
+                        {new Date(a.dateDebut).toLocaleDateString("fr-FR", {
+                          weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                    {a.dateFin && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Date fin</span>
+                        <span className="font-medium">
+                          {new Date(a.dateFin).toLocaleDateString("fr-FR", {
+                            weekday: "short", day: "numeric", month: "short",
+                          })}
+                        </span>
+                      </div>
+                    )}
+                    {a.recurrence && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">Recurrence</span>
+                        <Badge variant="info">
+                          {recurrenceLabels[a.recurrence as Recurrence] ?? a.recurrence}
+                        </Badge>
+                      </div>
+                    )}
+                    {a.vague && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Vague</span>
+                        <Link
+                          href={`/vagues/${a.vagueId}`}
+                          className="font-medium text-primary hover:underline"
+                          onClick={() => setSelectedActivite(null)}
+                        >
+                          {a.vague.code}
+                        </Link>
+                      </div>
+                    )}
+                    {a.bac && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Bac</span>
+                        <span className="font-medium">{a.bac.nom}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Section 4 — Conseil IA */}
+                {a.conseilIA && (
+                  <div className="rounded-xl bg-warning/10 p-4">
+                    <div className="flex items-start gap-2.5">
+                      <Info className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-xs font-semibold text-warning mb-1">Conseil IA</p>
+                        <p className="text-sm text-warning leading-relaxed">{a.conseilIA}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Section 5 — Instructions detaillees */}
+                {a.instructionsDetaillees && (
+                  <div className="rounded-xl bg-surface-0 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <FileText className="h-4 w-4 text-primary shrink-0" />
+                      <h3 className="text-sm font-semibold text-foreground">Instructions</h3>
+                    </div>
+                    <InstructionSteps text={a.instructionsDetaillees} />
+                  </div>
+                )}
+
+                {/* Section 6 — Produit recommande */}
+                {a.produitRecommande && (
+                  <div className="rounded-xl bg-surface-0 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Package className="h-4 w-4 text-primary shrink-0" />
+                      <h3 className="text-sm font-semibold text-foreground">Produit recommande</h3>
+                    </div>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{a.produitRecommande.nom}</p>
+                        {a.quantiteRecommandee != null && (
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            Quantite recommandee :{" "}
+                            <span className="font-semibold text-foreground">
+                              {a.quantiteRecommandee} {a.produitRecommande.unite}
+                            </span>
+                          </p>
+                        )}
+                        {a.produitRecommande.stockActuel != null && (
+                          <p className={[
+                            "text-xs mt-1",
+                            a.quantiteRecommandee != null && a.produitRecommande.stockActuel < a.quantiteRecommandee
+                              ? "text-danger font-medium"
+                              : "text-muted-foreground",
+                          ].join(" ")}>
+                            Stock actuel : {a.produitRecommande.stockActuel} {a.produitRecommande.unite}
+                            {a.quantiteRecommandee != null && a.produitRecommande.stockActuel < a.quantiteRecommandee && (
+                              <span className="ml-1 inline-flex items-center gap-0.5">
+                                <AlertTriangle className="h-3 w-3" />
+                                Stock insuffisant
+                              </span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                      <Link
+                        href={`/stock/${a.produitRecommande.id}`}
+                        className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-muted px-3 py-2 text-xs font-medium text-foreground hover:bg-muted/70 transition-colors min-h-[44px]"
+                        onClick={() => setSelectedActivite(null)}
+                      >
+                        Voir le stock
+                      </Link>
+                    </div>
+                  </div>
+                )}
+
+                {/* Section 7 — Releve lie */}
+                {a.releve && (
+                  <div className="rounded-xl bg-surface-0 p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ClipboardCheck className="h-4 w-4 text-primary shrink-0" />
+                        <span className="text-sm font-semibold text-foreground">Releve lie</span>
+                      </div>
+                      <Link
+                        href={`/vagues/${a.vagueId}#releve-${a.releve.id}`}
+                        className="flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                        onClick={() => setSelectedActivite(null)}
+                      >
+                        {typeReleveLabels[a.releve.typeReleve as TypeReleve] ?? a.releve.typeReleve}
+                        {" · "}
+                        {new Date(a.releve.date).toLocaleDateString("fr-FR", {
+                          day: "numeric", month: "short", year: "numeric",
+                        })}
+                      </Link>
+                    </div>
+                  </div>
+                )}
+
+                {/* Section 8 — Intervenants */}
+                {(a.user || a.assigneA) && (
+                  <div className="rounded-xl bg-surface-0 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <User className="h-4 w-4 text-primary shrink-0" />
+                      <h3 className="text-sm font-semibold text-foreground">Intervenants</h3>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {a.user && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Cree par</span>
+                          <span className="font-medium">{a.user.name}</span>
+                        </div>
+                      )}
+                      {a.assigneA && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Assigne a</span>
+                          <span className="font-medium">{a.assigneA.name}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Section 9 — Note de completion */}
+                {isTerminee && a.noteCompletion && (
+                  <div className="rounded-xl bg-success/10 p-4">
+                    <p className="text-xs font-semibold text-success mb-1">Note de completion</p>
+                    <p className="text-sm text-success leading-relaxed">{a.noteCompletion}</p>
+                    {a.dateTerminee && (
+                      <p className="text-xs text-success/70 mt-1.5">
+                        Terminee le{" "}
+                        {new Date(a.dateTerminee).toLocaleDateString("fr-FR", {
+                          day: "numeric", month: "long", year: "numeric",
+                        })}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Section 10 — Actions */}
+                {canManage && (
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {canComplete && (
+                      <div className="w-full sm:w-auto">
+                        <CompleterActiviteDialog
+                          activite={a}
+                          onCompleted={() => setSelectedActivite(null)}
+                        />
+                      </div>
+                    )}
+                    <ModifierActiviteDialog
+                      activite={a}
+                      permissions={permissions}
+                      vagues={vagues}
+                      bacs={bacs}
+                      members={members}
+                    />
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      className="gap-1.5 min-h-[44px]"
+                      onClick={() => supprimerActivite(a)}
+                      disabled={isPending}
                     >
-                      <ClipboardCheck className="h-3.5 w-3.5" />
-                      {typeReleveLabels[selectedActivite.releve.typeReleve as TypeReleve] ?? selectedActivite.releve.typeReleve}
-                      {" · "}
-                      {new Date(selectedActivite.releve.date).toLocaleDateString("fr-FR", {
-                        day: "numeric", month: "short", year: "numeric",
-                      })}
-                    </Link>
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Supprimer
+                    </Button>
                   </div>
                 )}
+
               </div>
-
-              {/* Creator info */}
-              {selectedActivite.user && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Cree par</span>
-                  <span className="font-medium">{selectedActivite.user.name}</span>
-                </div>
-              )}
-
-              {/* Assignee info */}
-              {selectedActivite.assigneA && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Assigne a</span>
-                  <span className="font-medium">{selectedActivite.assigneA.name}</span>
-                </div>
-              )}
-
-              {/* Note de completion */}
-              {selectedActivite.noteCompletion && (
-                <div>
-                  <p className="text-muted-foreground text-sm mb-1">Note de completion</p>
-                  <p className="text-sm bg-muted rounded-lg p-3">{selectedActivite.noteCompletion}</p>
-                </div>
-              )}
-
-              {/* Date completion */}
-              {selectedActivite.dateTerminee && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Completee le</span>
-                  <span className="font-medium">
-                    {new Date(selectedActivite.dateTerminee).toLocaleDateString("fr-FR", {
-                      day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
-                    })}
-                  </span>
-                </div>
-              )}
-
-              <div className="flex gap-2 pt-2">
-                {(selectedActivite.statut === StatutActivite.PLANIFIEE || selectedActivite.statut === StatutActivite.EN_RETARD) && permissions.includes(Permission.PLANNING_GERER) && (
-                  <CompleterActiviteDialog
-                    activite={selectedActivite}
-                    onCompleted={() => setSelectedActivite(null)}
-                  />
-                )}
-                {permissions.includes(Permission.PLANNING_GERER) && (
-                  <ModifierActiviteDialog
-                    activite={selectedActivite}
-                    permissions={permissions}
-                    vagues={vagues}
-                    bacs={bacs}
-                    members={members}
-                  />
-                )}
-                {permissions.includes(Permission.PLANNING_GERER) && (
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => supprimerActivite(selectedActivite)}
-                    disabled={isPending}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Supprimer
-                  </Button>
-                )}
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
     </div>
   );
 }

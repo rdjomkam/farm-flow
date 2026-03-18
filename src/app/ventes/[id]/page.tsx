@@ -13,7 +13,7 @@ export default async function VenteDetailPage({
 }) {
   const session = await getServerSession();
   if (!session) redirect("/login");
-  if (!session.activeSiteId) redirect("/sites");
+  if (!session.activeSiteId) redirect("/settings/sites");
 
   const permissions = await checkPagePermission(session, Permission.VENTES_VOIR);
   if (!permissions) return <AccessDenied />;

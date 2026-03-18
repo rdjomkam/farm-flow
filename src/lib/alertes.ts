@@ -10,6 +10,7 @@
 
 import { prisma } from "@/lib/db";
 import { StatutAlerte, TypeAlerte, TypeReleve } from "@/generated/prisma/enums";
+import { StatutBesoins } from "@/types";
 import type { ConfigElevage } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -316,6 +317,46 @@ export async function verifierRappelBiometrie(
   );
 }
 
+/**
+ * BESOIN_EN_RETARD : cherche les ListeBesoins avec dateLimite depassee
+ * et statut SOUMISE ou APPROUVEE. Cree une notification pour le demandeur
+ * si aucune notification active n'existe deja pour ce besoin aujourd'hui.
+ *
+ * Deduplication : une seule notification active par liste de besoins par jour.
+ * Statuts terminaux (TRAITEE, CLOTUREE, REJETEE) ne declenchent pas d'alerte.
+ * ADR-017.2
+ */
+export async function verifierBesoinsEnRetard(siteId: string): Promise<void> {
+  const maintenant = new Date();
+  const statutsActifs: StatutBesoins[] = [
+    StatutBesoins.SOUMISE,
+    StatutBesoins.APPROUVEE,
+  ];
+
+  const besoinsEnRetard = await prisma.listeBesoins.findMany({
+    where: {
+      siteId,
+      statut: { in: statutsActifs },
+      dateLimite: { lt: maintenant, not: null },
+    },
+    include: {
+      demandeur: { select: { id: true } },
+    },
+  });
+
+  for (const besoin of besoinsEnRetard) {
+    const dateLimiteFormatee = besoin.dateLimite!.toLocaleDateString("fr-FR");
+    await creerNotificationSiAbsente(
+      siteId,
+      besoin.demandeur.id,
+      TypeAlerte.BESOIN_EN_RETARD,
+      `Besoin en retard : ${besoin.numero}`,
+      `La liste de besoins "${besoin.titre}" (${besoin.numero}) n'a pas ete traitee avant la date limite du ${dateLimiteFormatee}.`,
+      `/besoins/${besoin.id}`
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Fonction principale
 // ---------------------------------------------------------------------------
@@ -360,6 +401,11 @@ export async function verifierAlertes(
 
         case TypeAlerte.RAPPEL_BIOMETRIE:
           await verifierRappelBiometrie(siteId, userId, config);
+          break;
+
+        case TypeAlerte.BESOIN_EN_RETARD:
+          // Verification globale par site (pas per-user-config) — appelee separement
+          // via verifierBesoinsEnRetard(siteId). Ignoree dans la boucle ConfigAlerte.
           break;
 
         case TypeAlerte.PERSONNALISEE:

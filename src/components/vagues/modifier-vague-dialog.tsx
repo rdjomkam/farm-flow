@@ -23,6 +23,8 @@ interface ModifierVagueDialogProps {
   poidsMoyenInitial: number;
   origineAlevins: string | null;
   permissions: Permission[];
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function ModifierVagueDialog({
@@ -31,10 +33,14 @@ export function ModifierVagueDialog({
   poidsMoyenInitial,
   origineAlevins,
   permissions,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: ModifierVagueDialogProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = controlledOnOpenChange ?? setInternalOpen;
   const [submitting, setSubmitting] = useState(false);
   const [nombre, setNombre] = useState(String(nombreInitial));
   const [poids, setPoids] = useState(String(poidsMoyenInitial));
@@ -88,14 +94,18 @@ export function ModifierVagueDialog({
 
   if (!permissions.includes(Permission.VAGUES_MODIFIER)) return null;
 
+  const isControlled = controlledOpen !== undefined;
+
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Pencil className="h-4 w-4" />
-          Modifier
-        </Button>
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <Pencil className="h-4 w-4" />
+            Modifier
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Modifier la vague</DialogTitle>

@@ -61,6 +61,7 @@ function makeContext(overrides: Partial<RuleEvaluationContext> = {}): RuleEvalua
       },
     ],
     phase: "JUVENILE",
+    bac: null,
     ...overrides,
   };
 }

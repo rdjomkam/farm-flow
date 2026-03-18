@@ -23,7 +23,7 @@ export default async function AnalyticsBacDetailPage({
 }) {
   const session = await getServerSession();
   if (!session) redirect("/login");
-  if (!session.activeSiteId) redirect("/sites");
+  if (!session.activeSiteId) redirect("/settings/sites");
 
   const permissions = await checkPagePermission(session, Permission.VAGUES_VOIR);
   if (!permissions) return <AccessDenied />;
@@ -65,6 +65,15 @@ export default async function AnalyticsBacDetailPage({
         {historique && (
           <BacHistoriqueChart cycles={historique.cycles} />
         )}
+
+        {/* Cross-reference to vague-level analytics */}
+        <p className="text-xs text-muted-foreground">
+          Pour FCR, SGR et survie,{" "}
+          <Link href="/analytics/vagues" className="text-primary hover:underline font-medium">
+            voir les indicateurs de performance par vague
+          </Link>
+          .
+        </p>
 
         {/* Retour */}
         <div className="pb-4">

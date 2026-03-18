@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getNoteById, updateNote } from "@/lib/queries/notes";
+import { getNoteById, updateNote, markNoteRead, markThreadRepliesRead } from "@/lib/queries/notes";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission, VisibiliteNote } from "@/types";
@@ -35,6 +35,9 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    // Marquer les reponses du thread comme lues quand l'ingenieur ouvre la note
+    await markThreadRepliesRead(id, auth.userId);
 
     return NextResponse.json(note);
   } catch (error) {
@@ -112,6 +115,20 @@ export async function PUT(
         { status: 400, message: "Erreurs de validation", errors },
         { status: 400 }
       );
+    }
+
+    // Fast path: isRead-only update (mark as read) — uses ingenieurId instead of siteId
+    // This handles client observations whose siteId is the client's farm, not DKFarm
+    const bodyKeys = Object.keys(body).filter(k => body[k] !== undefined);
+    if (bodyKeys.length === 1 && bodyKeys[0] === "isRead" && body.isRead === true) {
+      const success = await markNoteRead(id, auth.userId);
+      if (!success) {
+        return NextResponse.json(
+          { status: 404, message: "Note introuvable ou acces refuse." },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json({ status: 200, message: "Note marquee comme lue." });
     }
 
     const data: UpdateNoteIngenieurDTO = {

@@ -107,6 +107,15 @@ export interface RuleEvaluationContext {
    * Valeurs possibles : "ACCLIMATATION" | "CROISSANCE_DEBUT" | "JUVENILE" | "GROSSISSEMENT" | "FINITION"
    */
   phase: string | null;
+  /** Bac courant pour l'iteration per-bac. Null pour les evaluations vague-level (ex: STOCK_BAS). */
+  bac: {
+    id: string;
+    nom: string;
+    volume: number | null;
+    nombrePoissons: number | null;
+    nombreInitial: number | null;
+    poidsMoyenInitial: number | null;
+  } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -136,6 +145,10 @@ export interface RuleMatch {
    * Les regles CRITIQUE (priorite 3) sont generees en premier.
    */
   score: number;
+  /** ID du bac si evaluation per-bac, null pour vague-level */
+  bacId: string | null;
+  /** Nom du bac pour le placeholder {bac} */
+  bacNom: string | null;
 }
 
 // ---------------------------------------------------------------------------

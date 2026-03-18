@@ -5,6 +5,7 @@ import {
   deleteClient,
 } from "@/lib/queries/clients";
 import { AuthError } from "@/lib/auth";
+import { normalizePhone } from "@/lib/auth/phone";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission } from "@/types";
 import type { UpdateClientDTO } from "@/types";
@@ -47,7 +48,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
     const data: UpdateClientDTO = {};
     if (body.nom !== undefined) data.nom = body.nom.trim();
-    if (body.telephone !== undefined) data.telephone = body.telephone?.trim() || undefined;
+    if (body.telephone !== undefined) data.telephone = body.telephone?.trim() ? (normalizePhone(body.telephone.trim()) ?? body.telephone.trim()) : undefined;
     if (body.email !== undefined) data.email = body.email?.trim() || undefined;
     if (body.adresse !== undefined) data.adresse = body.adresse?.trim() || undefined;
     if (body.isActive !== undefined) data.isActive = body.isActive;

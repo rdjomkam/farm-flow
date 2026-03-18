@@ -11,6 +11,7 @@ import {
   Star,
   RefreshCw,
   Save,
+  CalendarClock,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,14 @@ const typeAlerteConfig: Record<
     hasSeuilPourcentage: true,
     labelSeuilValeur: "Seuil de valeur",
     labelSeuilPourcentage: "Seuil en pourcentage (%)",
+  },
+  [TypeAlerte.BESOIN_EN_RETARD]: {
+    label: "Besoin en retard",
+    description: "Alerte quand une liste de besoins depasse sa date limite sans etre traitee",
+    icon: CalendarClock,
+    color: "text-danger",
+    hasSeuilValeur: false,
+    hasSeuilPourcentage: false,
   },
 };
 

@@ -9,7 +9,7 @@ import { RecurrentesListClient } from "@/components/depenses/recurrentes-list-cl
 export default async function DepensesRecurrentesPage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
-  if (!session.activeSiteId) redirect("/sites");
+  if (!session.activeSiteId) redirect("/settings/sites");
 
   const permissions = await checkPagePermission(session, Permission.DEPENSES_VOIR);
   if (!permissions) return <AccessDenied />;

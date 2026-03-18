@@ -68,7 +68,7 @@ interface PrioriteConfig {
 function getPrioriteConfig(priorite: number): PrioriteConfig {
   if (priorite >= 3) {
     return {
-      borderClass: "border-l-4 border-l-danger",
+      borderClass: "",
       iconBgClass: "bg-danger/10",
       iconTextClass: "text-danger",
       badgeBgClass: "bg-danger/10",
@@ -79,7 +79,7 @@ function getPrioriteConfig(priorite: number): PrioriteConfig {
   }
   if (priorite === 2) {
     return {
-      borderClass: "border-l-4 border-l-warning",
+      borderClass: "",
       iconBgClass: "bg-warning/10",
       iconTextClass: "text-warning",
       badgeBgClass: "bg-warning/10",
@@ -89,7 +89,7 @@ function getPrioriteConfig(priorite: number): PrioriteConfig {
     };
   }
   return {
-    borderClass: "border-l-4 border-l-accent-blue",
+    borderClass: "",
     iconBgClass: "bg-accent-blue/10",
     iconTextClass: "text-accent-blue",
     badgeBgClass: "bg-accent-blue/10",

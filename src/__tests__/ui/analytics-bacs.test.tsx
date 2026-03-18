@@ -77,14 +77,9 @@ const fakeBac: IndicateursBac = {
   bacNom: "Bac A",
   vagueId: "vague-1",
   volume: 2000,
-  tauxSurvie: 92.5,
-  fcr: 1.3,
-  sgr: 1.8,
   biomasse: 45.2,
   poidsMoyen: 150,
   densite: 22.6,
-  tauxMortalite: 7.5,
-  gainQuotidien: 0.5,
   nombreVivants: 301,
   totalMortalites: 24,
   totalAliment: 38,
@@ -97,14 +92,9 @@ const fakeBac2: IndicateursBac = {
   bacNom: "Bac B",
   vagueId: "vague-1",
   volume: 1500,
-  tauxSurvie: 78,
-  fcr: 2.5,
-  sgr: 0.8,
   biomasse: 25,
   poidsMoyen: 100,
   densite: 16.7,
-  tauxMortalite: 22,
-  gainQuotidien: 0.3,
   nombreVivants: 250,
   totalMortalites: 70,
   totalAliment: 50,
@@ -122,11 +112,9 @@ describe("BacComparisonCards", () => {
       <BacComparisonCards
         bacs={[]}
         alertes={[]}
-        meilleurFCR={null}
-        meilleurSurvie={null}
       />
     );
-    expect(screen.getByText("Aucun bac assigne a cette vague.")).toBeInTheDocument();
+    expect(screen.getByText("Aucun bac assigné à cette vague.")).toBeInTheDocument();
   });
 
   it("affiche le nom de chaque bac", () => {
@@ -134,54 +122,39 @@ describe("BacComparisonCards", () => {
       <BacComparisonCards
         bacs={[fakeBac, fakeBac2]}
         alertes={[]}
-        meilleurFCR="bac-1"
-        meilleurSurvie="bac-1"
       />
     );
     expect(screen.getByText("Bac A")).toBeInTheDocument();
     expect(screen.getByText("Bac B")).toBeInTheDocument();
   });
 
-  it("affiche les labels de metriques", () => {
+  it("affiche les labels de metriques monitoring", () => {
     render(
       <BacComparisonCards
         bacs={[fakeBac]}
         alertes={[]}
-        meilleurFCR="bac-1"
-        meilleurSurvie="bac-1"
       />
     );
-    expect(screen.getByText("Survie")).toBeInTheDocument();
-    expect(screen.getByText("FCR")).toBeInTheDocument();
-    expect(screen.getByText("SGR")).toBeInTheDocument();
     expect(screen.getByText("Biomasse")).toBeInTheDocument();
-    expect(screen.getByText("Mortalite")).toBeInTheDocument();
     expect(screen.getByText("Densite")).toBeInTheDocument();
+    expect(screen.getByText("Poids moyen")).toBeInTheDocument();
+    expect(screen.getByText("Vivants")).toBeInTheDocument();
+    expect(screen.getByText("Aliment")).toBeInTheDocument();
+    expect(screen.getByText("Morts")).toBeInTheDocument();
   });
 
-  it("affiche le badge 'Meilleure survie' pour le bac gagnant", () => {
+  it("affiche le banner info avec lien vers analytiques par vague", () => {
     render(
       <BacComparisonCards
-        bacs={[fakeBac, fakeBac2]}
+        bacs={[fakeBac]}
         alertes={[]}
-        meilleurFCR="bac-1"
-        meilleurSurvie="bac-1"
       />
     );
-    expect(screen.getByText("Meilleure survie")).toBeInTheDocument();
-    expect(screen.getByText("Meilleur FCR")).toBeInTheDocument();
+    expect(screen.getByText("Voir les analytiques par vague")).toBeInTheDocument();
   });
 
   it("affiche les alertes quand il y en a", () => {
     const alertes: AlerteBac[] = [
-      {
-        bacId: "bac-2",
-        bacNom: "Bac B",
-        type: "SURVIE_BASSE",
-        message: "Survie critique (78%) dans Bac B",
-        valeur: 78,
-        seuil: 80,
-      },
       {
         bacId: "bac-2",
         bacNom: "Bac B",
@@ -190,20 +163,26 @@ describe("BacComparisonCards", () => {
         valeur: 22,
         seuil: 10,
       },
+      {
+        bacId: "bac-2",
+        bacNom: "Bac B",
+        type: "DENSITE_ELEVEE",
+        message: "Densite trop elevee (55 kg/m³) dans Bac B",
+        valeur: 55,
+        seuil: 50,
+      },
     ];
 
     render(
       <BacComparisonCards
         bacs={[fakeBac, fakeBac2]}
         alertes={alertes}
-        meilleurFCR="bac-1"
-        meilleurSurvie="bac-1"
       />
     );
 
     expect(screen.getByText("2 alertes")).toBeInTheDocument();
-    expect(screen.getByText("Survie critique (78%) dans Bac B")).toBeInTheDocument();
     expect(screen.getByText("Mortalite elevee (22%) dans Bac B")).toBeInTheDocument();
+    expect(screen.getByText("Densite trop elevee (55 kg/m³) dans Bac B")).toBeInTheDocument();
   });
 
   it("affiche le lien Detail pour chaque bac", () => {
@@ -211,8 +190,6 @@ describe("BacComparisonCards", () => {
       <BacComparisonCards
         bacs={[fakeBac]}
         alertes={[]}
-        meilleurFCR={null}
-        meilleurSurvie={null}
       />
     );
     const links = screen.getAllByText("Detail");
@@ -224,11 +201,9 @@ describe("BacComparisonCards", () => {
       <BacComparisonCards
         bacs={[fakeBac]}
         alertes={[]}
-        meilleurFCR={null}
-        meilleurSurvie={null}
       />
     );
     expect(screen.getByText("2000L")).toBeInTheDocument();
-    expect(screen.getByText("12 releves")).toBeInTheDocument();
+    expect(screen.getByText("12 relevés")).toBeInTheDocument();
   });
 });

@@ -57,7 +57,7 @@ export default function NewRolePage() {
       const data = await res.json();
       if (res.ok) {
         toast({ title: "Role cree avec succes", variant: "success" });
-        router.push(`/sites/${siteId}/roles`);
+        router.push(`/settings/sites/${siteId}/roles`);
       } else {
         toast({ title: data.message || "Erreur lors de la creation", variant: "error" });
       }
@@ -73,7 +73,7 @@ export default function NewRolePage() {
       <Header title="Nouveau role" />
       <div className="p-4 flex flex-col gap-4 max-w-lg mx-auto">
         <Link
-          href={`/sites/${siteId}/roles`}
+          href={`/settings/sites/${siteId}/roles`}
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -134,7 +134,7 @@ export default function NewRolePage() {
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Link href={`/sites/${siteId}/roles`} className="flex-1">
+            <Link href={`/settings/sites/${siteId}/roles`} className="flex-1">
               <Button type="button" variant="outline" className="w-full">
                 Annuler
               </Button>

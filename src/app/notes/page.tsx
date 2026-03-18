@@ -2,43 +2,60 @@ import { redirect } from "next/navigation";
 import { MessageSquare, Bell } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { NotesList } from "@/components/notes/notes-list";
+import { ObservationDialog } from "@/components/notes/observation-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { getServerSession } from "@/lib/auth";
-import { getNotesPourClient } from "@/lib/queries/notes";
+import { getServerSiteModules } from "@/lib/auth/permissions-server";
+import { getClientFeed, getNotes } from "@/lib/queries/notes";
+import { getVagues } from "@/lib/queries/vagues";
+import { SiteModule, StatutVague } from "@/types";
 import type { NoteIngenieurWithRelations } from "@/types";
 
 /**
- * Page /notes — Vue client des notes recues.
+ * Page /notes — Vue adaptee selon le contexte du site.
  *
- * - Affiche uniquement les notes avec visibility=PUBLIC destinees au site actif du client.
- * - Badge notification pour les notes non lues (compteur).
- * - Badge "Urgent" pour les notes urgentes.
- * - Marque automatiquement les notes comme lues lors de la consultation (via getNotesPourClient).
+ * - Site supervise (client) : notes recues de l'ingenieur DKFarm (PUBLIC uniquement).
+ * - Site DKFarm (admin/gerant/ingenieur) : apercu de toutes les notes envoyees aux clients.
  * - Mobile first (360px).
  * - Server Component : pas de "use client".
  */
 export default async function NotesPage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
-  if (!session.activeSiteId) redirect("/sites");
+  if (!session.activeSiteId) redirect("/settings/sites");
 
-  // Recupere les notes PUBLIC destinees au site actif du client.
-  // getNotesPourClient marque les notes non lues comme lues (R4 : atomique).
-  const notes = await getNotesPourClient(session.activeSiteId);
+  // Determiner si le site est supervise (client) via les modules actifs
+  const siteModules = await getServerSiteModules(session.activeSiteId);
+  const isSupervisedSite = !siteModules.includes(SiteModule.PACKS_PROVISIONING);
 
-  // Compter les notes non lues AVANT le marquage automatique
-  // (getNotesPourClient retourne l'etat avant mise a jour, isRead peut etre false)
-  const unreadCount = notes.filter((n) => !n.isRead).length;
+  if (isSupervisedSite) {
+    return <ClientNotesView siteId={session.activeSiteId} />;
+  }
+
+  return <DKFarmNotesView siteId={session.activeSiteId} />;
+}
+
+// ---------------------------------------------------------------------------
+// Vue client — notes recues
+// ---------------------------------------------------------------------------
+
+async function ClientNotesView({ siteId }: { siteId: string }) {
+  const [notes, allVagues] = await Promise.all([
+    getClientFeed(siteId),
+    getVagues(siteId, { statut: StatutVague.EN_COURS }),
+  ]);
+
+  const vagues = allVagues.map((v) => ({ id: v.id, code: v.code }));
+
+  const unreadCount = notes.filter((n) => !n.isRead && !n.isFromClient).length;
   const urgentCount = notes.filter((n) => n.isUrgent).length;
-
-  // Serialisation JSON pour les Client Components (Next.js App Router)
-  // Le cast est necessaire car getNotesPourClient n'inclut pas clientSite/site (non necessaire cote client)
+  const observationCount = notes.filter((n) => n.isFromClient).length;
   const notesJson = JSON.parse(JSON.stringify(notes)) as NoteIngenieurWithRelations[];
 
   return (
     <>
-      <Header title="Mes notes">
+      <Header title="Echanges">
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (
             <div className="relative" aria-label={`${unreadCount} note${unreadCount > 1 ? "s" : ""} non lue${unreadCount > 1 ? "s" : ""}`}>
@@ -55,11 +72,10 @@ export default async function NotesPage() {
       </Header>
 
       <div className="flex flex-col gap-4 p-4">
-        {/* Bandeau de resume */}
-        {(unreadCount > 0 || urgentCount > 0) && (
+        {(unreadCount > 0 || urgentCount > 0 || observationCount > 0) && (
           <section
             className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-4 py-3"
-            aria-label="Resume des notes"
+            aria-label="Resume des echanges"
           >
             {unreadCount > 0 && (
               <Badge variant="en_cours">
@@ -69,21 +85,76 @@ export default async function NotesPage() {
             {urgentCount > 0 && (
               <Badge variant="annulee" className="flex items-center gap-1">
                 <span aria-hidden="true">!</span>
-                {urgentCount} note{urgentCount > 1 ? "s" : ""} urgente{urgentCount > 1 ? "s" : ""}
+                {urgentCount} urgente{urgentCount > 1 ? "s" : ""}
+              </Badge>
+            )}
+            {observationCount > 0 && (
+              <Badge variant="default">
+                {observationCount} observation{observationCount > 1 ? "s" : ""}
               </Badge>
             )}
           </section>
         )}
 
-        {/* Liste des notes */}
+        <ObservationDialog vagues={vagues} />
+
         {notes.length === 0 ? (
           <EmptyState
             icon={<MessageSquare className="h-7 w-7" />}
-            title="Aucune note recue"
-            description="Votre ingenieur DKFarm n'a pas encore envoye de notes pour votre elevage."
+            title="Aucun echange"
+            description="Signalez un probleme pour commencer la conversation avec votre ingenieur DKFarm."
           />
         ) : (
           <NotesList notes={notesJson} isClientView={true} />
+        )}
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Vue DKFarm — notes envoyees aux clients
+// ---------------------------------------------------------------------------
+
+async function DKFarmNotesView({ siteId }: { siteId: string }) {
+  const notes = await getNotes(siteId);
+  const notesJson = JSON.parse(JSON.stringify(notes)) as NoteIngenieurWithRelations[];
+
+  const urgentCount = notes.filter((n) => n.isUrgent).length;
+  const unreadByClient = notes.filter((n) => !n.isRead && !n.isFromClient).length;
+
+  return (
+    <>
+      <Header title="Notes envoyees" />
+
+      <div className="flex flex-col gap-4 p-4">
+        {(unreadByClient > 0 || urgentCount > 0) && (
+          <section
+            className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-4 py-3"
+            aria-label="Resume des notes"
+          >
+            {unreadByClient > 0 && (
+              <Badge variant="en_cours">
+                {unreadByClient} non lue{unreadByClient > 1 ? "s" : ""} par les clients
+              </Badge>
+            )}
+            {urgentCount > 0 && (
+              <Badge variant="annulee" className="flex items-center gap-1">
+                <span aria-hidden="true">!</span>
+                {urgentCount} urgente{urgentCount > 1 ? "s" : ""}
+              </Badge>
+            )}
+          </section>
+        )}
+
+        {notes.length === 0 ? (
+          <EmptyState
+            icon={<MessageSquare className="h-7 w-7" />}
+            title="Aucune note envoyee"
+            description="Vous n'avez pas encore envoye de notes a vos clients. Rendez-vous sur la fiche d'un client pour envoyer une note."
+          />
+        ) : (
+          <NotesList notes={notesJson} isClientView={false} />
         )}
       </div>
     </>

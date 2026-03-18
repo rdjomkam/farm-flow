@@ -84,6 +84,7 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
   const [titre, setTitre] = useState("");
   const [vagueId, setVagueId] = useState("");
   const [notes, setNotes] = useState("");
+  const [dateLimite, setDateLimite] = useState("");
   const [lignes, setLignes] = useState<LigneForm[]>([emptyLigne()]);
   const [loading, setLoading] = useState(false);
 
@@ -168,6 +169,7 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
           titre: titre.trim(),
           vagueId: vagueId || undefined,
           notes: notes.trim() || undefined,
+          dateLimite: dateLimite || undefined,
           lignes: lignes.map((l) => ({
             designation: l.designation.trim(),
             produitId: l.produitId || undefined,
@@ -251,6 +253,20 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Informations complementaires..."
               rows={2}
+              className="mt-1"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Date limite</label>
+            <p className="text-xs text-muted-foreground mb-1">
+              Date jusqu'a laquelle la liste doit etre traitee (optionnel)
+            </p>
+            <Input
+              type="date"
+              value={dateLimite}
+              onChange={(e) => setDateLimite(e.target.value)}
+              min={new Date().toISOString().split("T")[0]}
               className="mt-1"
             />
           </div>

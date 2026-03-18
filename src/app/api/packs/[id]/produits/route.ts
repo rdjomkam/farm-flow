@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { Permission } from "@/types";
+import { Permission, UniteStock } from "@/types";
 import { getPackProduits, addPackProduit, removePackProduit } from "@/lib/queries/packs";
 
 interface RouteParams {
@@ -63,9 +63,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // Validate unite if provided
+    if (body.unite !== undefined && body.unite !== null) {
+      const validUnites = Object.values(UniteStock);
+      if (!validUnites.includes(body.unite)) {
+        return NextResponse.json(
+          { status: 400, message: "Unite invalide." },
+          { status: 400 }
+        );
+      }
+    }
+
     const packProduit = await addPackProduit(id, auth.activeSiteId, {
       produitId: body.produitId,
       quantite: body.quantite,
+      unite: body.unite || undefined,
     });
 
     if (packProduit === null) {

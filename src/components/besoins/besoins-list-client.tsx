@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, ClipboardList, Calendar, User } from "lucide-react";
+import { Plus, ClipboardList, Calendar, User, AlertCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +43,7 @@ interface ListeBesoinsData {
   statut: string;
   montantEstime: number;
   montantReel: number | null;
+  dateLimite: string | null;
   createdAt: string;
   demandeur: { id: string; name: string } | null;
   valideur: { id: string; name: string } | null;
@@ -74,6 +75,19 @@ function formatDate(dateStr: string) {
     month: "short",
     year: "numeric",
   });
+}
+
+const STATUTS_TERMINAUX = [StatutBesoins.TRAITEE, StatutBesoins.CLOTUREE, StatutBesoins.REJETEE];
+
+function getDateLimiteStatus(dateLimite: string | null, statut: string): "retard" | "proche" | "ok" | null {
+  if (!dateLimite) return null;
+  if (STATUTS_TERMINAUX.includes(statut as StatutBesoins)) return null;
+  const limite = new Date(dateLimite);
+  const now = new Date();
+  if (limite < now) return "retard";
+  const deuxJours = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
+  if (limite <= deuxJours) return "proche";
+  return "ok";
 }
 
 // ---------------------------------------------------------------------------
@@ -174,7 +188,7 @@ export function BesoinsListClient({
               <div className="space-y-3">
                 {filteredListes.map((lb) => (
                   <Link key={lb.id} href={`/besoins/${lb.id}`}>
-                    <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer my-4">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <div className="flex-1 min-w-0">
@@ -219,6 +233,32 @@ export function BesoinsListClient({
                             {lb._count.lignes !== 1 ? "s" : ""}
                           </span>
                         </div>
+
+                        {/* Date limite */}
+                        {lb.dateLimite && (() => {
+                          const dlStatus = getDateLimiteStatus(lb.dateLimite, lb.statut);
+                          if (!dlStatus) return null;
+                          return (
+                            <div className="mt-2 flex items-center gap-1.5">
+                              {dlStatus === "retard" ? (
+                                <span className="flex items-center gap-1 text-xs font-medium text-destructive">
+                                  <AlertCircle className="h-3.5 w-3.5" />
+                                  En retard — echance le {formatDate(lb.dateLimite)}
+                                </span>
+                              ) : dlStatus === "proche" ? (
+                                <span className="flex items-center gap-1 text-xs font-medium text-warning">
+                                  <Clock className="h-3.5 w-3.5" />
+                                  Echeance proche — {formatDate(lb.dateLimite)}
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <Clock className="h-3.5 w-3.5" />
+                                  Limite : {formatDate(lb.dateLimite)}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
 
                         {/* Montant */}
                         <div className="mt-3 flex items-center justify-between">

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, AuthError } from "@/lib/auth";
+import { normalizePhone } from "@/lib/auth/phone";
 import { getSiteById, getSiteMember, addMember } from "@/lib/queries/sites";
 import { getSiteRoleById } from "@/lib/queries/roles";
 import { getUserByIdentifier } from "@/lib/queries/users";
@@ -110,8 +111,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       throw new ForbiddenError("Vous ne pouvez pas assigner un role avec des permissions que vous ne possedez pas.");
     }
 
-    // Find target user
-    const targetUser = await getUserByIdentifier(body.identifier.trim());
+    // Normalize phone identifier before lookup (e.g. 699123456 → +237699123456)
+    const rawIdentifier = body.identifier.trim();
+    const normalizedIdentifier = normalizePhone(rawIdentifier) ?? rawIdentifier;
+    const targetUser = await getUserByIdentifier(normalizedIdentifier);
     if (!targetUser) {
       return NextResponse.json(
         { status: 404, message: "Aucun utilisateur trouve avec cet identifiant." },

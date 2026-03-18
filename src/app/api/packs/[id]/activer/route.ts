@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AuthError } from "@/lib/auth";
+import { AuthError, normalizePhone } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { activerPack } from "@/lib/queries/provisioning";
+import { runEngineForSite, generateOnboardingActivities } from "@/lib/activity-engine";
+import { getOrCreateSystemUser } from "@/lib/queries/users";
 import type { ActivatePackDTO } from "@/types";
 
 interface RouteParams {
@@ -43,6 +45,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { status: 400 }
       );
     }
+    const normalizedPhone = normalizePhone(body.clientUserPhone.trim());
+    if (!normalizedPhone) {
+      return NextResponse.json(
+        { status: 400, message: "Numero de telephone invalide (format attendu: 6XXXXXXXX ou 2XXXXXXXX)." },
+        { status: 400 }
+      );
+    }
     if (!body.clientUserPassword || typeof body.clientUserPassword !== "string" || body.clientUserPassword.length < 6) {
       return NextResponse.json(
         { status: 400, message: "Le mot de passe doit contenir au moins 6 caracteres." },
@@ -54,7 +63,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       clientSiteName: body.clientSiteName.trim(),
       clientSiteAddress: body.clientSiteAddress ?? null,
       clientUserName: body.clientUserName.trim(),
-      clientUserPhone: body.clientUserPhone.trim(),
+      clientUserPhone: normalizedPhone,
       clientUserEmail: body.clientUserEmail ?? null,
       clientUserPassword: body.clientUserPassword,
       dateExpiration: body.dateExpiration ?? null,
@@ -62,6 +71,27 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     };
 
     const payload = await activerPack(id, auth.activeSiteId, auth.userId, dto);
+
+    // Generate initial activities for the new client site (best-effort)
+    try {
+      const systemUser = await getOrCreateSystemUser();
+      // 1. Generate onboarding welcome activity
+      await generateOnboardingActivities(
+        payload.site.id,
+        payload.vague.id,
+        payload.user.id,
+        systemUser.id,
+        payload.vague.code,
+        payload.vague.nombreInitial
+      );
+      // 2. Run the activity engine (day-0 rule-based activities)
+      await runEngineForSite(payload.site.id, systemUser.id, {
+        defaultAssigneeId: payload.user.id,
+      });
+    } catch (error) {
+      // Non-blocking: pack activation already succeeded
+      console.error("[Pack activation] Failed to generate initial activities:", error);
+    }
 
     return NextResponse.json(payload, { status: 201 });
   } catch (error) {

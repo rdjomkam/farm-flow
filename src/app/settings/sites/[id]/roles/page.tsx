@@ -24,7 +24,7 @@ export default async function SiteRolesPage({
 
   const callerPerms = (member.siteRole?.permissions ?? []) as Permission[];
   if (!callerPerms.includes(Permission.SITE_GERER)) {
-    redirect(`/sites/${siteId}`);
+    redirect(`/settings/sites/${siteId}`);
   }
 
   const roles = await getSiteRoles(siteId);
@@ -35,13 +35,13 @@ export default async function SiteRolesPage({
       <div className="p-4 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <Link
-            href={`/sites/${siteId}`}
+            href={`/settings/sites/${siteId}`}
             className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
           >
             <ArrowLeft className="h-4 w-4" />
             Retour au site
           </Link>
-          <Link href={`/sites/${siteId}/roles/nouveau`}>
+          <Link href={`/settings/sites/${siteId}/roles/nouveau`}>
             <Button size="sm">
               <Plus className="h-4 w-4 mr-1" />
               Nouveau role
@@ -59,7 +59,7 @@ export default async function SiteRolesPage({
             {roles.map((role) => (
               <Link
                 key={role.id}
-                href={`/sites/${siteId}/roles/${role.id}`}
+                href={`/settings/sites/${siteId}/roles/${role.id}`}
                 className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 hover:bg-muted/50 transition-colors min-h-[60px]"
               >
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">

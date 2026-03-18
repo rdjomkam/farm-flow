@@ -39,8 +39,8 @@ export interface ReleveBiometrie extends ReleveBase {
   typeReleve: TypeReleve.BIOMETRIE;
   /** Poids moyen de l'echantillon en grammes */
   poidsMoyen: number;
-  /** Taille moyenne de l'echantillon en cm */
-  tailleMoyenne: number;
+  /** Taille moyenne de l'echantillon en cm (optionnel) */
+  tailleMoyenne: number | null;
   /** Nombre de poissons echantillonnes */
   echantillonCount: number;
 }

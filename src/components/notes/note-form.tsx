@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Send, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { MarkdownEditor } from "@/components/ui/markdown-editor";
 import {
   Select,
   SelectContent,
@@ -137,15 +137,14 @@ export function NoteForm({ siteId: _siteId, clientSiteId, vagues = [], onSuccess
           error={errors.titre}
         />
 
-        <Textarea
+        <MarkdownEditor
           id="contenu"
-          label="Contenu (Markdown accepte)"
+          label="Contenu"
           placeholder="Redigez le contenu de la note..."
           value={contenu}
-          onChange={(e) => setContenu(e.target.value)}
+          onChange={setContenu}
           error={errors.contenu}
           rows={6}
-          className="min-h-[140px]"
         />
       </FormSection>
 

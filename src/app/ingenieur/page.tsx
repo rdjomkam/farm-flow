@@ -47,7 +47,7 @@ const severiteOrder: Record<"critique" | "attention" | "info", number> = {
 export default async function IngenieurPage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
-  if (!session.activeSiteId) redirect("/sites");
+  if (!session.activeSiteId) redirect("/settings/sites");
 
   const permissions = await checkPagePermission(session, Permission.MONITORING_CLIENTS);
   if (!permissions) return <AccessDenied />;
@@ -106,13 +106,7 @@ export default async function IngenieurPage() {
                 return (
                   <Card
                     key={alerte.id}
-                    className={
-                      sev === "critique"
-                        ? "border-l-4 border-l-danger"
-                        : sev === "attention"
-                        ? "border-l-4 border-l-warning"
-                        : "border-l-4 border-l-accent-blue"
-                    }
+                    className=""
                   >
                     <CardContent className="p-3">
                       <div className="flex items-start gap-3">

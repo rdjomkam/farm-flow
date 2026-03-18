@@ -22,9 +22,9 @@ interface PageProps {
 export default async function ActiviteDetailPage({ params }: PageProps) {
   const session = await getServerSession();
   if (!session) redirect("/login");
-  if (!session.activeSiteId) redirect("/sites");
+  if (!session.activeSiteId) redirect("/settings/sites");
 
-  const permissions = await checkPagePermission(session, Permission.PLANNING_VOIR);
+  const permissions = await checkPagePermission(session, Permission.DASHBOARD_VOIR);
   if (!permissions) return <AccessDenied />;
 
   const { id } = await params;

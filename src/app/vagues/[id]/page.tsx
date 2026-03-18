@@ -1,23 +1,23 @@
 import { redirect } from "next/navigation";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Container, Calendar, Fish, Plus } from "lucide-react";
+import { ArrowLeft, Container, Calendar, Fish, Scissors } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExportButton } from "@/components/ui/export-button";
 import { IndicateursCards } from "@/components/vagues/indicateurs-cards";
 import { PoidsChart } from "@/components/vagues/poids-chart";
 import { RelevesList } from "@/components/vagues/releves-list";
-import { CloturerDialog } from "@/components/vagues/cloturer-dialog";
-import { ModifierVagueDialog } from "@/components/vagues/modifier-vague-dialog";
+import { VagueActionMenu } from "@/components/vagues/vague-action-menu";
 import { AccessDenied } from "@/components/ui/access-denied";
+import { CalibragesList } from "@/components/calibrage/calibrages-list";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getVagueById } from "@/lib/queries/vagues";
 import { getIndicateursVague } from "@/lib/queries/indicateurs";
+import { getCalibrages } from "@/lib/queries/calibrages";
 import { prisma } from "@/lib/db";
 import { StatutVague, TypeReleve, CategorieProduit, Permission } from "@/types";
-import type { Releve, EvolutionPoidsPoint, IndicateursVague as IndicateursType } from "@/types";
+import type { Releve, EvolutionPoidsPoint, IndicateursVague as IndicateursType, CalibrageWithRelations } from "@/types";
 import type { ProduitOption } from "@/components/releves/consommation-fields";
 
 const statutLabels: Record<StatutVague, string> = {
@@ -39,13 +39,13 @@ export default async function VagueDetailPage({
 }) {
   const session = await getServerSession();
   if (!session) redirect("/login");
-  if (!session.activeSiteId) redirect("/sites");
+  if (!session.activeSiteId) redirect("/settings/sites");
 
   const permissions = await checkPagePermission(session, Permission.VAGUES_VOIR);
   if (!permissions) return <AccessDenied />;
 
   const { id } = await params;
-  const [vague, indicateurs, produitsDb] = await Promise.all([
+  const [vague, indicateurs, produitsDb, calibragesDb] = await Promise.all([
     getVagueById(id, session.activeSiteId),
     getIndicateursVague(session.activeSiteId, id),
     prisma.produit.findMany({
@@ -57,6 +57,7 @@ export default async function VagueDetailPage({
       select: { id: true, nom: true, categorie: true, unite: true, stockActuel: true },
       orderBy: { nom: "asc" },
     }),
+    getCalibrages(session.activeSiteId, { vagueId: id }),
   ]);
 
   if (!vague) notFound();
@@ -93,42 +94,6 @@ export default async function VagueDetailPage({
   return (
     <>
       <Header title={vague.code} />
-      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-card px-4 py-2">
-        {isEnCours && (
-          <>
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/releves/nouveau?vagueId=${vague.id}`}>
-                <Plus className="h-4 w-4" />
-                Relevé
-              </Link>
-            </Button>
-            <ModifierVagueDialog
-              vagueId={vague.id}
-              nombreInitial={vague.nombreInitial}
-              poidsMoyenInitial={vague.poidsMoyenInitial}
-              origineAlevins={vague.origineAlevins}
-              permissions={permissions}
-            />
-            <CloturerDialog vagueId={vague.id} vagueCode={vague.code} />
-          </>
-        )}
-        {permissions.includes(Permission.EXPORT_DONNEES) && (
-          <div className="flex gap-2 ml-auto">
-            <ExportButton
-              href={`/api/export/vague/${vague.id}`}
-              filename={`rapport-vague-${vague.code}.pdf`}
-              label="Rapport PDF"
-              variant="outline"
-            />
-            <ExportButton
-              href={`/api/export/releves?vagueId=${vague.id}`}
-              filename={`releves-${vague.code}.xlsx`}
-              label="Export relevés"
-              variant="outline"
-            />
-          </div>
-        )}
-      </div>
 
       <div className="flex flex-col gap-4 p-4 min-w-0 overflow-hidden">
         {/* Info section */}
@@ -150,6 +115,19 @@ export default async function VagueDetailPage({
               {vague.bacs.length > 0 && ` (${vague.bacs.map((b) => b.nom).join(", ")})`}
             </span>
           </div>
+          {(isEnCours || permissions.includes(Permission.EXPORT_DONNEES)) && (
+            <VagueActionMenu
+              vagueId={vague.id}
+              vagueCode={vague.code}
+              nombreInitial={vague.nombreInitial}
+              poidsMoyenInitial={vague.poidsMoyenInitial}
+              origineAlevins={vague.origineAlevins}
+              permissions={permissions}
+              isEnCours={isEnCours}
+              canExport={permissions.includes(Permission.EXPORT_DONNEES)}
+              className="ml-auto"
+            />
+          )}
         </section>
 
         {/* Indicateurs */}
@@ -157,6 +135,24 @@ export default async function VagueDetailPage({
 
         {/* Chart */}
         <PoidsChart data={poidsData} />
+
+        {/* Calibrages */}
+        {permissions.includes(Permission.CALIBRAGES_VOIR) && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-semibold">Calibrages</h2>
+              {isEnCours && permissions.includes(Permission.CALIBRAGES_CREER) && (
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/vagues/${vague.id}/calibrage/nouveau`}>
+                    <Scissors className="h-4 w-4" />
+                    Nouveau
+                  </Link>
+                </Button>
+              )}
+            </div>
+            <CalibragesList calibrages={calibragesDb as CalibrageWithRelations[]} limit={2} vagueId={vague.id} />
+          </section>
+        )}
 
         {/* Relevés */}
         <RelevesList
@@ -169,6 +165,8 @@ export default async function VagueDetailPage({
             stockActuel: p.stockActuel,
           } satisfies ProduitOption))}
           permissions={permissions}
+          limit={2}
+          vagueId={vague.id}
         />
 
         {/* Retour */}

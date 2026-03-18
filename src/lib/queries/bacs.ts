@@ -14,6 +14,8 @@ export async function getBacs(siteId: string): Promise<BacResponse[]> {
     nom: b.nom,
     volume: b.volume,
     nombrePoissons: b.nombrePoissons,
+    nombreInitial: b.nombreInitial,
+    poidsMoyenInitial: b.poidsMoyenInitial,
     vagueId: b.vagueId,
     siteId: b.siteId,
     vagueCode: b.vague?.code ?? null,

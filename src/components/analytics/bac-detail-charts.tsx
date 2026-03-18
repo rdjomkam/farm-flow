@@ -6,10 +6,6 @@ import { ChartTooltip } from "@/components/ui/chart-tooltip";
 import { BenchmarkBadge } from "./benchmark-badge";
 import {
   evaluerBenchmark,
-  BENCHMARK_SURVIE,
-  BENCHMARK_FCR,
-  BENCHMARK_SGR,
-  BENCHMARK_MORTALITE,
   BENCHMARK_DENSITE,
 } from "@/lib/benchmarks";
 import type { IndicateursBac, HistoriqueBacCycle } from "@/types";
@@ -54,40 +50,40 @@ interface BacDetailSummaryProps {
 export function BacDetailSummary({ indicateurs }: BacDetailSummaryProps) {
   const metrics = [
     {
-      label: "Survie",
-      value: indicateurs.tauxSurvie,
-      unit: "%",
-      level: evaluerBenchmark(indicateurs.tauxSurvie, BENCHMARK_SURVIE),
-    },
-    {
-      label: "FCR",
-      value: indicateurs.fcr,
-      unit: "",
-      level: evaluerBenchmark(indicateurs.fcr, BENCHMARK_FCR),
-    },
-    {
-      label: "SGR",
-      value: indicateurs.sgr,
-      unit: "%/j",
-      level: evaluerBenchmark(indicateurs.sgr, BENCHMARK_SGR),
-    },
-    {
       label: "Biomasse",
       value: indicateurs.biomasse,
       unit: "kg",
       level: null,
     },
     {
-      label: "Mortalite",
-      value: indicateurs.tauxMortalite,
-      unit: "%",
-      level: evaluerBenchmark(indicateurs.tauxMortalite, BENCHMARK_MORTALITE),
-    },
-    {
       label: "Densite",
       value: indicateurs.densite,
       unit: "kg/m³",
       level: evaluerBenchmark(indicateurs.densite, BENCHMARK_DENSITE),
+    },
+    {
+      label: "Poids moyen",
+      value: indicateurs.poidsMoyen,
+      unit: "g",
+      level: null,
+    },
+    {
+      label: "Vivants",
+      value: indicateurs.nombreVivants,
+      unit: "",
+      level: null,
+    },
+    {
+      label: "Aliment total",
+      value: indicateurs.totalAliment,
+      unit: "kg",
+      level: null,
+    },
+    {
+      label: "Morts",
+      value: indicateurs.totalMortalites,
+      unit: "",
+      level: null,
     },
   ];
 
@@ -130,7 +126,7 @@ export function BacHistoriqueChart({ cycles }: BacHistoriqueChartProps) {
         </CardHeader>
         <CardContent>
           <p className="py-8 text-center text-sm text-muted-foreground">
-            Aucun cycle enregistre pour ce bac.
+            Aucun cycle enregistré pour ce bac.
           </p>
         </CardContent>
       </Card>
@@ -139,9 +135,8 @@ export function BacHistoriqueChart({ cycles }: BacHistoriqueChartProps) {
 
   const data = cycles.map((c) => ({
     name: c.vagueCode,
-    survie: c.tauxSurvie,
-    fcr: c.fcr,
     biomasse: c.biomasse,
+    poidsMoyen: c.poidsMoyen,
   }));
 
   return (
@@ -160,13 +155,13 @@ export function BacHistoriqueChart({ cycles }: BacHistoriqueChartProps) {
                 content={
                   <ChartTooltip
                     valueFormatter={(v, name) =>
-                      name === "Survie %" ? `${v}%` : `${v} kg`
+                      name === "Poids moyen g" ? `${v} g` : `${v} kg`
                     }
                   />
                 }
               />
-              <Bar dataKey="survie" name="Survie %" fill="var(--primary)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="biomasse" name="Biomasse kg" fill="hsl(var(--chart-2, 217 91% 60%))" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="biomasse" name="Biomasse kg" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="poidsMoyen" name="Poids moyen g" fill="var(--secondary)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -186,14 +181,11 @@ interface BacDetailMetaProps {
 export function BacDetailMeta({ indicateurs }: BacDetailMetaProps) {
   return (
     <section className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground border-b border-border pb-3">
-      <span>Volume : {indicateurs.volume}L</span>
+      <span>Volume : {indicateurs.volume !== null ? `${indicateurs.volume}L` : "—"}</span>
       <span>Vivants : {indicateurs.nombreVivants ?? "—"}</span>
       <span>Aliment : {indicateurs.totalAliment} kg</span>
       <span>Morts : {indicateurs.totalMortalites}</span>
-      <span>{indicateurs.nombreReleves} releve{indicateurs.nombreReleves > 1 ? "s" : ""}</span>
-      {indicateurs.gainQuotidien !== null && (
-        <span>Gain : {indicateurs.gainQuotidien} kg/j</span>
-      )}
+      <span>{indicateurs.nombreReleves} relevé{indicateurs.nombreReleves > 1 ? "s" : ""}</span>
     </section>
   );
 }

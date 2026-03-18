@@ -10,7 +10,7 @@ import { StatutVague, Permission } from "@/types";
 export default async function NouveauRelevePage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
-  if (!session.activeSiteId) redirect("/sites");
+  if (!session.activeSiteId) redirect("/settings/sites");
 
   const permissions = await checkPagePermission(session, Permission.RELEVES_CREER);
   if (!permissions) return <AccessDenied />;

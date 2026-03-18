@@ -46,6 +46,13 @@ export {
   TypeDeclencheur,
   // Sprint 23 — Monitoring Ingénieur
   VisibiliteNote,
+  // Sprint 24 — Calibrage
+  CategorieCalibrage,
+  // Sprint 25 — Module access control
+  SiteModule,
+  // Sprint 26 — CustomPlaceholder
+  PlaceholderMode,
+  PlaceholderFormat,
 } from "./models";
 export type {
   Site,
@@ -114,16 +121,32 @@ export type {
   // Sprint 20 — Packs & Provisioning
   Pack,
   PackWithRelations,
+  PackBac,
   PackProduit,
   PackProduitWithProduit,
   PackActivation,
   PackActivationWithRelations,
-  // Sprint 21 — Moteur de regles d'activites
+  // Sprint 21/25 — Moteur de regles d'activites
   RegleActivite,
   RegleActiviteWithRelations,
+  RegleActiviteWithCount,
   // Sprint 23 — Monitoring Ingénieur
   NoteIngenieur,
   NoteIngenieurWithRelations,
+  // Sprint 24 — Calibrage
+  Calibrage,
+  CalibrageGroupe,
+  CalibrageWithRelations,
+  // Sprint 26 — Modification de releve (ADR-014)
+  ReleveModification,
+  ReleveModificationWithUser,
+  ReleveWithModifications,
+  // Sprint 26 — Modification de calibrage (ADR-015)
+  CalibrageModification,
+  CalibrageModificationWithUser,
+  CalibrageWithModifications,
+  // Sprint 26 — CustomPlaceholder
+  CustomPlaceholder,
 } from "./models";
 
 // Types authentification et multi-tenancy (DTOs, session, contexte)
@@ -288,6 +311,7 @@ export type {
   CreatePackDTO,
   UpdatePackDTO,
   CreatePackProduitDTO,
+  CreatePackBacDTO,
   ActivatePackDTO,
   ProvisioningPayload,
   PackActivationResponse,
@@ -308,6 +332,29 @@ export type {
   UpdateNoteIngenieurDTO,
   NoteIngenieurFilters,
   NoteIngenieurListResponse,
+} from "./api";
+// Sprint 24 — Calibrage
+export type {
+  CreateCalibrageGroupeDTO,
+  CreateCalibrageDTO,
+} from "./api";
+// Sprint 26 — Modification de releve (ADR-014)
+export type {
+  PatchReleveBody,
+  CreateReleveModificationDTO,
+  PatchReleveResponse,
+} from "./api";
+// Sprint 26 — Modification de calibrage (ADR-015)
+export type {
+  UpdateCalibrageGroupeDTO,
+  PatchCalibrageBody,
+  CreateCalibrageModificationDTO,
+  PatchCalibrageResponse,
+} from "./api";
+// Sprint 26 — CustomPlaceholder
+export type {
+  CreateCustomPlaceholderDTO,
+  UpdateCustomPlaceholderDTO,
 } from "./api";
 export type {
   StockProduitContext,

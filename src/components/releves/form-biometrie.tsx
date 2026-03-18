@@ -21,7 +21,7 @@ export function FormBiometrie({ values, onChange, errors }: FormBiometrieProps) 
       />
       <Input
         id="tailleMoyenne"
-        label="Taille moyenne (cm)"
+        label="Taille moyenne (cm) — optionnel"
         type="number"
         min="0.1"
         step="0.1"

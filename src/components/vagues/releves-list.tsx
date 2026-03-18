@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Calendar, FileText } from "lucide-react";
+import Link from "next/link";
+import { Calendar, ChevronRight, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -34,7 +35,7 @@ function ReleveDetails({ releve }: { releve: Releve }) {
     case TypeReleve.BIOMETRIE:
       return (
         <div className="text-sm text-muted-foreground">
-          Poids : {releve.poidsMoyen}g | Taille : {releve.tailleMoyenne}cm | Éch. : {releve.echantillonCount}
+          Poids : {releve.poidsMoyen}g{releve.tailleMoyenne != null ? ` | Taille : ${releve.tailleMoyenne}cm` : ""} | Éch. : {releve.echantillonCount}
         </div>
       );
     case TypeReleve.MORTALITE:
@@ -75,21 +76,74 @@ interface RelevesListProps {
   releves: Releve[];
   produits?: ProduitOption[];
   permissions: Permission[];
+  limit?: number;
+  vagueId?: string;
 }
 
-export function RelevesList({ releves, produits = [], permissions }: RelevesListProps) {
+export function RelevesList({ releves, produits = [], permissions, limit, vagueId }: RelevesListProps) {
   const [tab, setTab] = useState("tous");
 
+  const isLimited = limit != null;
+  const hasMore = isLimited && releves.length > limit;
+
+  // In limited mode, show most recent N (already sorted by date desc from API)
+  const displayReleves = hasMore ? releves.slice(0, limit) : releves;
+
   const filtered = tab === "tous"
-    ? releves
-    : releves.filter((r) => r.typeReleve === tab);
+    ? displayReleves
+    : displayReleves.filter((r) => r.typeReleve === tab);
 
   const typeCounts = Object.values(TypeReleve).reduce(
     (acc, t) => {
-      acc[t] = releves.filter((r) => r.typeReleve === t).length;
+      acc[t] = displayReleves.filter((r) => r.typeReleve === t).length;
       return acc;
     },
     {} as Record<TypeReleve, number>
+  );
+
+  const releveItems = (items: Releve[]) => (
+    <div className="flex flex-col gap-2">
+      {items.map((r) => (
+        <div key={r.id} id={`releve-${r.id}`}>
+          <div className="flex flex-col gap-1 p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Badge variant={typeVariants[r.typeReleve as TypeReleve]}>
+                  {typeLabels[r.typeReleve as TypeReleve]}
+                </Badge>
+                {(r as { modifie?: boolean }).modifie && (
+                  <Badge variant="warning">Modifie</Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Calendar className="h-3 w-3" />
+                  {new Date(r.updatedAt).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })}
+                </span>
+                <ModifierReleveDialog releve={r} produits={produits} permissions={permissions} />
+              </div>
+            </div>
+            <ReleveDetails releve={r} />
+            {r.consommations && r.consommations.length > 0 && (
+              <div className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
+                {r.consommations.map((c) => (
+                  <span key={c.id} className="text-xs text-muted-foreground">
+                    <span className="font-medium">{c.produit.nom}</span>{" "}
+                    {c.quantite}{" "}
+                    {c.produit.unite.toLowerCase()}
+                  </span>
+                ))}
+              </div>
+            )}
+            {r.notes && (
+              <p className="text-xs italic text-muted-foreground">{r.notes}</p>
+            )}
+          </div>
+          {/* Separator */}
+          <div className="border-t border-border" />
+        </div>
+      ))}
+    </div>
   );
 
   return (
@@ -97,67 +151,56 @@ export function RelevesList({ releves, produits = [], permissions }: RelevesList
       <h2 className="mb-3 text-base font-semibold">
         Relevés ({releves.length})
       </h2>
-      <Tabs value={tab} onValueChange={setTab}>
-        <div className="overflow-x-auto -mx-4 px-4">
-          <TabsList className="w-max">
-            <TabsTrigger value="tous">Tous</TabsTrigger>
-            {Object.values(TypeReleve).map((t) =>
-              typeCounts[t] > 0 ? (
-                <TabsTrigger key={t} value={t}>
-                  {typeLabels[t]} ({typeCounts[t]})
-                </TabsTrigger>
-              ) : null
-            )}
-          </TabsList>
-        </div>
-        <TabsContent value={tab}>
-          {filtered.length === 0 ? (
+      {isLimited ? (
+        // Limited mode: no tabs, just show items + "Voir tout" link
+        <>
+          {displayReleves.length === 0 ? (
             <EmptyState
               icon={<FileText className="h-7 w-7" />}
-              title="Aucun releve"
-              description="Les releves apparaitront ici au fur et a mesure du suivi."
+              title="Aucun relevé"
+              description="Les relevés apparaîtront ici au fur et à mesure du suivi."
             />
           ) : (
-            <div className="flex flex-col gap-2">
-              {filtered.map((r) => (
-                <div key={r.id} id={`releve-${r.id}`}>
-                  <div className="flex flex-col gap-1 p-3">
-                    <div className="flex items-center justify-between">
-                      <Badge variant={typeVariants[r.typeReleve as TypeReleve]}>
-                        {typeLabels[r.typeReleve as TypeReleve]}
-                      </Badge>
-                      <div className="flex items-center gap-2">
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(r.date).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })}
-                        </span>
-                        <ModifierReleveDialog releve={r} produits={produits} permissions={permissions} />
-                      </div>
-                    </div>
-                    <ReleveDetails releve={r} />
-                    {r.consommations && r.consommations.length > 0 && (
-                      <div className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
-                        {r.consommations.map((c) => (
-                          <span key={c.id} className="text-xs text-muted-foreground">
-                            <span className="font-medium">{c.produit.nom}</span>{" "}
-                            {c.quantite}{" "}
-                            {c.produit.unite.toLowerCase()}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {r.notes && (
-                      <p className="text-xs italic text-muted-foreground">{r.notes}</p>
-                    )}
-                  </div>
-                  {/* Separator */}
-                  <div className="border-t border-border" />
-                </div>
-              ))}
-            </div>
+            releveItems(displayReleves)
           )}
-        </TabsContent>
-      </Tabs>
+          {hasMore && vagueId && (
+            <Link
+              href={`/vagues/${vagueId}/releves`}
+              className="mt-2 flex items-center justify-center gap-1 rounded-md border border-border py-2 text-sm font-medium text-primary hover:bg-accent transition-colors"
+            >
+              Voir tout ({releves.length})
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          )}
+        </>
+      ) : (
+        // Full mode: tabbed UI
+        <Tabs value={tab} onValueChange={setTab}>
+          <div className="overflow-x-auto -mx-4 px-4">
+            <TabsList className="w-max">
+              <TabsTrigger value="tous">Tous</TabsTrigger>
+              {Object.values(TypeReleve).map((t) =>
+                typeCounts[t] > 0 ? (
+                  <TabsTrigger key={t} value={t}>
+                    {typeLabels[t]} ({typeCounts[t]})
+                  </TabsTrigger>
+                ) : null
+              )}
+            </TabsList>
+          </div>
+          <TabsContent value={tab}>
+            {filtered.length === 0 ? (
+              <EmptyState
+                icon={<FileText className="h-7 w-7" />}
+                title="Aucun relevé"
+                description="Les relevés apparaîtront ici au fur et à mesure du suivi."
+              />
+            ) : (
+              releveItems(filtered)
+            )}
+          </TabsContent>
+        </Tabs>
+      )}
     </section>
   );
 }

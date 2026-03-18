@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Receipt, Calendar, ArrowUpRight } from "lucide-react";
+import { Plus, Receipt, Calendar, ArrowUpRight, RefreshCw, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +73,7 @@ interface Props {
   depenses: DepenseData[];
   canManage: boolean;
   canPay: boolean;
+  templatesActifsCount?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,7 +96,7 @@ function formatDate(dateStr: string): string {
 // Component
 // ---------------------------------------------------------------------------
 
-export function DepensesListClient({ depenses, canManage }: Props) {
+export function DepensesListClient({ depenses, canManage, templatesActifsCount = 0 }: Props) {
   const [categorieFilter, setCategorieFilter] = useState<string>("TOUTES");
 
   const depensesFiltrees =
@@ -115,6 +116,23 @@ export function DepensesListClient({ depenses, canManage }: Props) {
 
   return (
     <div className="flex flex-col gap-4 p-4">
+      {/* Acces rapide aux recurrentes */}
+      {templatesActifsCount > 0 && (
+        <Link href="/depenses/recurrentes">
+          <Card className="bg-muted/40 border-dashed cursor-pointer hover:bg-muted/60 transition-colors">
+            <CardContent className="p-3 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm">
+                <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                <span>
+                  {templatesActifsCount} depense{templatesActifsCount !== 1 ? "s" : ""} recurrente{templatesActifsCount !== 1 ? "s" : ""} configuree{templatesActifsCount !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </Link>
+      )}
+
       {/* Header actions */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1 max-w-xs">
@@ -135,14 +153,24 @@ export function DepensesListClient({ depenses, canManage }: Props) {
             </SelectContent>
           </Select>
         </div>
-        {canManage && (
-          <Link href="/depenses/nouvelle">
-            <Button size="sm" className="gap-1.5 shrink-0">
-              <Plus className="h-4 w-4" />
-              Nouvelle
-            </Button>
-          </Link>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {canManage && (
+            <Link href="/depenses/recurrentes">
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <RefreshCw className="h-4 w-4" />
+                <span className="hidden sm:inline">Recurrentes</span>
+              </Button>
+            </Link>
+          )}
+          {canManage && (
+            <Link href="/depenses/nouvelle">
+              <Button size="sm" className="gap-1.5">
+                <Plus className="h-4 w-4" />
+                Nouvelle
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Tabs par statut */}

@@ -1,22 +1,20 @@
 "use client";
 
 /**
- * InstructionViewer — Affichage des instructions Markdown d'une activite.
+ * InstructionViewer — Affichage des instructions d'une activite.
  *
  * Fonctionnalites :
- * - Rendu Markdown securise (react-markdown) avec typographie adaptee mobile
+ * - Rendu en step-cards via parseInstructions (pas de Markdown brut)
  * - Section "Produit recommande" si produitRecommandeId est renseigne
  * - Bouton "Marquer comme termine" (CompleterActiviteDialog)
  * - Mobile first : concu pour 360px
- *
- * Securite : react-markdown echappe le HTML par defaut — pas de XSS possible.
  *
  * R2 : imports depuis @/types
  * R5 : DialogTrigger asChild deja respecte dans CompleterActiviteDialog
  * R6 : CSS variables du theme
  */
 
-import ReactMarkdown from "react-markdown";
+import { InstructionSteps } from "@/components/activites/instruction-steps";
 import Link from "next/link";
 import {
   FileText,
@@ -63,72 +61,6 @@ const phaseElevageLabels: Record<PhaseElevage, string> = {
   [PhaseElevage.GROSSISSEMENT]: "Grossissement",
   [PhaseElevage.FINITION]: "Finition",
   [PhaseElevage.PRE_RECOLTE]: "Pre-recolte",
-};
-
-// ---------------------------------------------------------------------------
-// Styles Markdown — adaptes pour 360px, echappement HTML par defaut
-// ---------------------------------------------------------------------------
-
-/**
- * Composants de rendu Markdown personnalises.
- * react-markdown echappe le HTML brut par defaut, ce qui previent les XSS.
- */
-const markdownComponents = {
-  h1: ({ children }: { children?: React.ReactNode }) => (
-    <h1 className="text-lg font-bold leading-tight mt-4 mb-2 first:mt-0 text-foreground">
-      {children}
-    </h1>
-  ),
-  h2: ({ children }: { children?: React.ReactNode }) => (
-    <h2 className="text-base font-semibold leading-tight mt-3 mb-1.5 text-foreground">
-      {children}
-    </h2>
-  ),
-  h3: ({ children }: { children?: React.ReactNode }) => (
-    <h3 className="text-sm font-semibold mt-3 mb-1 text-foreground">
-      {children}
-    </h3>
-  ),
-  p: ({ children }: { children?: React.ReactNode }) => (
-    <p className="text-sm leading-relaxed mb-3 last:mb-0 text-foreground">
-      {children}
-    </p>
-  ),
-  ul: ({ children }: { children?: React.ReactNode }) => (
-    <ul className="list-disc list-inside space-y-1 mb-3 text-sm text-foreground pl-1">
-      {children}
-    </ul>
-  ),
-  ol: ({ children }: { children?: React.ReactNode }) => (
-    <ol className="list-decimal list-inside space-y-1 mb-3 text-sm text-foreground pl-1">
-      {children}
-    </ol>
-  ),
-  li: ({ children }: { children?: React.ReactNode }) => (
-    <li className="leading-relaxed">{children}</li>
-  ),
-  strong: ({ children }: { children?: React.ReactNode }) => (
-    <strong className="font-semibold text-foreground">{children}</strong>
-  ),
-  em: ({ children }: { children?: React.ReactNode }) => (
-    <em className="italic text-muted-foreground">{children}</em>
-  ),
-  blockquote: ({ children }: { children?: React.ReactNode }) => (
-    <blockquote className="border-l-2 border-primary pl-3 my-3 text-sm text-muted-foreground italic">
-      {children}
-    </blockquote>
-  ),
-  code: ({ children }: { children?: React.ReactNode }) => (
-    <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">
-      {children}
-    </code>
-  ),
-  pre: ({ children }: { children?: React.ReactNode }) => (
-    <pre className="rounded-lg bg-muted p-3 overflow-x-auto text-xs font-mono mb-3">
-      {children}
-    </pre>
-  ),
-  hr: () => <hr className="my-4 border-border" />,
 };
 
 // ---------------------------------------------------------------------------
@@ -268,12 +200,7 @@ export function InstructionViewer({
               Instructions
             </h3>
           </div>
-          {/* react-markdown echappe le HTML par defaut — securise contre XSS */}
-          <div className="prose-sm max-w-none">
-            <ReactMarkdown components={markdownComponents}>
-              {activite.instructionsDetaillees}
-            </ReactMarkdown>
-          </div>
+          <InstructionSteps text={activite.instructionsDetaillees} />
         </div>
       ) : (
         <div className="rounded-xl border border-dashed bg-card p-4">

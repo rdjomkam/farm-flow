@@ -10,7 +10,7 @@ import { DepenseFormClient } from "@/components/depenses/depense-form-client";
 export default async function NouvelleDepensePage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
-  if (!session.activeSiteId) redirect("/sites");
+  if (!session.activeSiteId) redirect("/settings/sites");
 
   const permissions = await checkPagePermission(
     session,

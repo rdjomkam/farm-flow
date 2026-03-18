@@ -102,10 +102,10 @@ export async function POST(request: NextRequest) {
           message: "Le poids moyen est obligatoire et doit etre superieur a 0.",
         });
       }
-      if (body.tailleMoyenne == null || typeof body.tailleMoyenne !== "number" || body.tailleMoyenne <= 0) {
+      if (body.tailleMoyenne && (typeof body.tailleMoyenne !== "number" || body.tailleMoyenne <= 0)) {
         errors.push({
           field: "tailleMoyenne",
-          message: "La taille moyenne est obligatoire et doit etre superieure a 0.",
+          message: "La taille moyenne doit etre superieure a 0.",
         });
       }
       if (
@@ -209,6 +209,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Validation date optionnelle
+    let releveDate: Date | undefined;
+    if (body.date != null) {
+      const parsed = new Date(body.date);
+      if (isNaN(parsed.getTime())) {
+        errors.push({ field: "date", message: "Date invalide (format ISO 8601 attendu)." });
+      } else if (parsed > new Date()) {
+        errors.push({ field: "date", message: "La date du releve ne peut pas etre dans le futur." });
+      } else {
+        releveDate = parsed;
+      }
+    }
+
     // Validate optional activiteId
     let activiteId: string | undefined;
     if (body.activiteId != null) {
@@ -266,6 +279,7 @@ export async function POST(request: NextRequest) {
       bacId: body.bacId,
       ...(body.notes != null && { notes: body.notes }),
       ...(consommations && { consommations }),
+      ...(releveDate && { date: releveDate.toISOString() }),
     };
 
     let dto!: CreateReleveDTO;
@@ -276,7 +290,7 @@ export async function POST(request: NextRequest) {
           ...base,
           typeReleve: TypeReleve.BIOMETRIE,
           poidsMoyen: body.poidsMoyen,
-          tailleMoyenne: body.tailleMoyenne,
+          tailleMoyenne: body.tailleMoyenne || null,
           echantillonCount: body.echantillonCount,
         };
         break;
@@ -383,6 +397,17 @@ async function triggerSeuilRulesAsync(
   const vague = await prisma.vague.findFirst({
     where: { id: vagueId, siteId, statut: StatutVague.EN_COURS },
     include: {
+      bacs: {
+        where: { vagueId: { not: null } },
+        select: {
+          id: true,
+          nom: true,
+          volume: true,
+          nombrePoissons: true,
+          nombreInitial: true,
+          poidsMoyenInitial: true,
+        },
+      },
       releves: {
         orderBy: { date: "asc" },
         select: {
@@ -398,6 +423,7 @@ async function triggerSeuilRulesAsync(
           oxygene: true,
           ammoniac: true,
           nombreCompte: true,
+          bacId: true,
         },
       },
       configElevage: true,
@@ -449,28 +475,38 @@ async function triggerSeuilRulesAsync(
       id: true,
       regleId: true,
       vagueId: true,
+      bacId: true,
       dateDebut: true,
       createdAt: true,
     },
   });
 
-  const context = buildEvaluationContext(
-    {
-      id: vague.id,
-      code: vague.code,
-      dateDebut: vague.dateDebut,
-      nombreInitial: vague.nombreInitial,
-      poidsMoyenInitial: vague.poidsMoyenInitial,
-      siteId: vague.siteId,
-    },
-    vague.releves as Parameters<typeof buildEvaluationContext>[1],
-    produits as Parameters<typeof buildEvaluationContext>[2],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (vague.configElevage ?? null) as any
-  );
+  const contexts: Parameters<typeof evaluateRules>[0] = [];
+  const vagueCtx = {
+    id: vague.id,
+    code: vague.code,
+    dateDebut: vague.dateDebut,
+    nombreInitial: vague.nombreInitial,
+    poidsMoyenInitial: vague.poidsMoyenInitial,
+    siteId: vague.siteId,
+  };
+  const relevesCast = vague.releves as Parameters<typeof buildEvaluationContext>[1];
+  const stockCast = produits as Parameters<typeof buildEvaluationContext>[2];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const configCast = (vague.configElevage ?? null) as any;
+
+  if (vague.bacs && vague.bacs.length > 0) {
+    for (const bac of vague.bacs) {
+      contexts.push(buildEvaluationContext(vagueCtx, relevesCast, stockCast, configCast, bac));
+    }
+    // Vague-level for STOCK_BAS
+    contexts.push(buildEvaluationContext(vagueCtx, relevesCast, stockCast, configCast, null));
+  } else {
+    contexts.push(buildEvaluationContext(vagueCtx, relevesCast, stockCast, configCast, null));
+  }
 
   const matches = evaluateRules(
-    [context],
+    contexts,
     regles as Parameters<typeof evaluateRules>[1],
     historique as Parameters<typeof evaluateRules>[2]
   );

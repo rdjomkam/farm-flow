@@ -5,7 +5,7 @@
  * Ils servent de source de verite TypeScript pour le projet.
  *
  * 31 modeles : Site, SiteRole, SiteMember, User, Session, Bac, Vague, Releve, Fournisseur, Produit, MouvementStock, Commande, LigneCommande, ReleveConsommation, Client, Vente, Facture, Paiement, Reproducteur, Ponte, LotAlevins, ConfigAlerte, Notification, Activite, Depense, PaiementDepense, DepenseRecurrente, ListeBesoins, LigneBesoin, RegleActivite, NoteIngenieur
- * 29 enums : Role (+ INGENIEUR), Permission (+ 6 Phase 3), StatutVague, TypeReleve, TypeAliment, CauseMortalite, MethodeComptage, CategorieProduit, UniteStock, TypeMouvement, StatutCommande, StatutFacture, ModePaiement, SexeReproducteur, StatutReproducteur, StatutPonte, StatutLotAlevins, TypeAlerte, StatutAlerte, TypeActivite (+ TRI/MEDICATION), StatutActivite, Recurrence, CategorieDepense, StatutDepense, FrequenceRecurrence, StatutBesoins, StatutActivation, TypeDeclencheur, VisibiliteNote
+ * 32 enums : Role (+ INGENIEUR), Permission (+ 6 Phase 3), StatutVague, TypeReleve, TypeAliment, CauseMortalite, MethodeComptage, CategorieProduit, UniteStock, TypeMouvement, StatutCommande, StatutFacture, ModePaiement, SiteModule, SexeReproducteur, StatutReproducteur, StatutPonte, StatutLotAlevins, TypeAlerte, StatutAlerte, TypeActivite (+ TRI/MEDICATION), StatutActivite, Recurrence, CategorieDepense, StatutDepense, FrequenceRecurrence, StatutBesoins, PhaseElevage, StatutActivation, TypeDeclencheur, VisibiliteNote, CategorieCalibrage
  */
 
 // ---------------------------------------------------------------------------
@@ -79,9 +79,15 @@ export enum Permission {
   GERER_PACKS = "GERER_PACKS",
   ACTIVER_PACKS = "ACTIVER_PACKS",
   GERER_CONFIG_ELEVAGE = "GERER_CONFIG_ELEVAGE",
+  REGLES_ACTIVITES_VOIR = "REGLES_ACTIVITES_VOIR",
   GERER_REGLES_ACTIVITES = "GERER_REGLES_ACTIVITES",
   MONITORING_CLIENTS = "MONITORING_CLIENTS",
   ENVOYER_NOTES = "ENVOYER_NOTES",
+  // Calibrage
+  CALIBRAGES_VOIR = "CALIBRAGES_VOIR",
+  CALIBRAGES_CREER = "CALIBRAGES_CREER",
+  CALIBRAGES_MODIFIER = "CALIBRAGES_MODIFIER",
+  GERER_REGLES_GLOBALES = "GERER_REGLES_GLOBALES",
 }
 
 // ---------------------------------------------------------------------------
@@ -196,11 +202,26 @@ export enum ModePaiement {
  * Chaque donnee metier (Bac, Vague, Releve) est scopee par siteId.
  * Un utilisateur accede a un site via SiteMember.
  */
+/** Modules fonctionnels activables par site */
+export enum SiteModule {
+  REPRODUCTION = "REPRODUCTION",
+  GROSSISSEMENT = "GROSSISSEMENT",
+  INTRANTS = "INTRANTS",
+  VENTES = "VENTES",
+  ANALYSE_PILOTAGE = "ANALYSE_PILOTAGE",
+  PACKS_PROVISIONING = "PACKS_PROVISIONING",
+  CONFIGURATION = "CONFIGURATION",
+  INGENIEUR = "INGENIEUR",
+  NOTES = "NOTES",
+}
+
 export interface Site {
   id: string;
   name: string;
   address: string | null;
   isActive: boolean;
+  supervised: boolean;
+  enabledModules: SiteModule[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -323,6 +344,10 @@ export interface Bac {
   nombrePoissons: number | null;
   /** ID de la vague assignee, null si le bac est libre */
   vagueId: string | null;
+  /** Nombre initial de poissons au demarrage du calibrage (nullable) */
+  nombreInitial: number | null;
+  /** Poids moyen initial des poissons en grammes au demarrage du calibrage (nullable) */
+  poidsMoyenInitial: number | null;
   /** ID du site (ferme) — R8 */
   siteId: string;
   createdAt: Date;
@@ -436,14 +461,51 @@ export interface Releve {
   createdAt: Date;
   updatedAt: Date;
 
+  /** Flag rapide : true si ce releve a ete modifie apres creation (ADR-014) */
+  modifie: boolean;
+
   /** Produits consommes lors de ce releve (present si la query inclut les consommations avec leur produit) */
   consommations?: ReleveConsommationWithRelations[];
+  /** Historique des modifications (present si la query inclut les modifications) */
+  modifications?: ReleveModificationWithUser[];
 }
 
 /** Releve avec ses relations vague et bac chargees */
 export interface ReleveWithRelations extends Releve {
   vague: Vague;
   bac: Bac;
+}
+
+/**
+ * Trace d'une modification de releve avec raison d'audit (ADR-014).
+ *
+ * Granularite : une ligne par champ modifie.
+ */
+export interface ReleveModification {
+  id:             string;
+  releveId:       string;
+  userId:         string;
+  raison:         string;
+  /** Nom du champ modifie : "poidsMoyen" | "nombreMorts" | etc. */
+  champModifie:   string;
+  ancienneValeur: string | null;
+  nouvelleValeur: string | null;
+  siteId:         string;
+  createdAt:      Date;
+}
+
+/** ReleveModification avec l'utilisateur denormalise (pour affichage) */
+export interface ReleveModificationWithUser extends ReleveModification {
+  user: {
+    id:   string;
+    name: string;
+  };
+}
+
+/** Releve avec consommations ET historique complet de modifications */
+export interface ReleveWithModifications extends Omit<Releve, "consommations"> {
+  consommations: (ReleveConsommation & { produit: Produit })[];
+  modifications: ReleveModificationWithUser[];
 }
 
 // ---------------------------------------------------------------------------
@@ -888,6 +950,8 @@ export enum TypeAlerte {
   RAPPEL_ALIMENTATION = "RAPPEL_ALIMENTATION",
   RAPPEL_BIOMETRIE = "RAPPEL_BIOMETRIE",
   PERSONNALISEE = "PERSONNALISEE",
+  /** Besoin en retard : dateLimite depassee avec statut SOUMISE ou APPROUVEE (ADR-017.2) */
+  BESOIN_EN_RETARD = "BESOIN_EN_RETARD",
 }
 
 /** Statut du cycle de vie d'une notification */
@@ -1178,6 +1242,18 @@ export interface RegleActiviteWithRelations extends RegleActivite {
   _count?: { activites: number };
 }
 
+/**
+ * RegleActivite avec le compteur d'activites generees.
+ *
+ * Utilise dans la liste des regles pour afficher le nombre d'activites
+ * generees sans charger toute la relation activites.
+ *
+ * Correspond au select Prisma `{ _count: { select: { activites: true } } }`.
+ */
+export interface RegleActiviteWithCount extends RegleActivite {
+  _count: { activites: number };
+}
+
 // ---------------------------------------------------------------------------
 // Enums — Depenses (Sprint 16)
 // ---------------------------------------------------------------------------
@@ -1376,6 +1452,8 @@ export interface ListeBesoins {
   motifRejet: string | null;
   /** Notes libres */
   notes: string | null;
+  /** Date limite de traitement (nullable — ADR-017.2) */
+  dateLimite: Date | null;
   /** ID du site (ferme) — R8 */
   siteId: string;
   createdAt: Date;
@@ -1627,6 +1705,8 @@ export interface Pack {
   /** ConfigElevage recommandée pour ce pack (nullable) */
   configElevageId: string | null;
   isActive: boolean;
+  /** Modules activés pour les sites provisionnés via ce pack */
+  enabledModules: SiteModule[];
   /** Créateur du pack (ADMIN DKFarm) */
   userId: string;
   /** Site DKFarm propriétaire du pack — R8 */
@@ -1640,7 +1720,22 @@ export interface PackWithRelations extends Pack {
   configElevage?: Pick<ConfigElevage, "id" | "nom"> | null;
   user?: Pick<User, "id" | "name">;
   produits?: PackProduit[];
+  bacs?: PackBac[];
   _count?: { activations: number };
+}
+
+/**
+ * PackBac — Configuration d'un bac pré-défini dans un Pack.
+ * Chaque bac sera créé lors du provisioning.
+ */
+export interface PackBac {
+  id: string;
+  packId: string;
+  nom: string;
+  volume: number | null;
+  nombreAlevins: number;
+  poidsMoyenInitial: number;
+  position: number;
 }
 
 /**
@@ -1653,6 +1748,7 @@ export interface PackProduit {
   produitId: string;
   /** Quantité incluse dans le pack (> 0) */
   quantite: number;
+  unite: UniteStock | null;
 }
 
 /** PackProduit avec le produit chargé */
@@ -1746,6 +1842,8 @@ export interface NoteIngenieur {
   vagueId: string | null;
   /** Site DKFarm de l'ingenieur — R8 */
   siteId: string;
+  /** ID de la note parente (thread one-level deep, nullable) */
+  replyToId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -1756,4 +1854,179 @@ export interface NoteIngenieurWithRelations extends NoteIngenieur {
   clientSite?: Pick<Site, "id" | "name">;
   vague?: Pick<Vague, "id" | "code"> | null;
   site?: Pick<Site, "id" | "name">;
+  replyTo?: Pick<NoteIngenieur, "id" | "titre"> | null;
+  replies?: NoteIngenieurWithRelations[];
+  _count?: { replies: number };
+}
+
+// ---------------------------------------------------------------------------
+// Enums — Calibrage (Sprint 24)
+// ---------------------------------------------------------------------------
+
+/** Categorie de taille attribuee lors d'un calibrage */
+export enum CategorieCalibrage {
+  PETIT = "PETIT",
+  MOYEN = "MOYEN",
+  GROS = "GROS",
+  TRES_GROS = "TRES_GROS",
+}
+
+// ---------------------------------------------------------------------------
+// Modeles — Calibrage (Sprint 24)
+// ---------------------------------------------------------------------------
+
+/**
+ * Calibrage — operation de tri et redistribution d'une vague dans plusieurs bacs.
+ *
+ * Les poissons sont sortis d'un ou plusieurs bacs sources, tries par taille/poids,
+ * puis redistribues dans des bacs de destination selon leur categorie.
+ * La mortalite constatee lors du calibrage est enregistree.
+ * siteId est requis (R8).
+ */
+export interface Calibrage {
+  id: string;
+  /** Date de l'operation de calibrage */
+  date: Date;
+  /** Vague concernee */
+  vagueId: string;
+  /** IDs des bacs sources d'ou les poissons sont sortis */
+  sourceBacIds: string[];
+  /** Nombre de morts constates lors du calibrage */
+  nombreMorts: number;
+  /** Notes libres (nullable) */
+  notes: string | null;
+  /** ID du site (ferme) — R8 */
+  siteId: string;
+  /** Utilisateur ayant effectue le calibrage */
+  userId: string;
+  /** Flag rapide : true si ce calibrage a ete modifie apres creation (ADR-015) */
+  modifie: boolean;
+  /** Historique des modifications (charge en option) */
+  modifications?: CalibrageModification[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * CalibrageGroupe — un groupe issu du calibrage, place dans un bac de destination.
+ *
+ * Chaque groupe correspond a une categorie de taille.
+ * La suppression d'un Calibrage supprime en cascade ses CalibrageGroupe.
+ */
+export interface CalibrageGroupe {
+  id: string;
+  /** Calibrage auquel appartient ce groupe */
+  calibrageId: string;
+  /** Categorie de taille de ce groupe */
+  categorie: CategorieCalibrage;
+  /** Bac de destination ou ce groupe est place */
+  destinationBacId: string;
+  /** Nombre de poissons dans ce groupe */
+  nombrePoissons: number;
+  /** Poids moyen des poissons en grammes */
+  poidsMoyen: number;
+  /** Taille moyenne des poissons en cm (nullable) */
+  tailleMoyenne: number | null;
+  createdAt: Date;
+}
+
+/** Calibrage avec ses relations chargees */
+export interface CalibrageWithRelations extends Calibrage {
+  vague: { id: string; code: string };
+  user: { id: string; name: string };
+  groupes: (CalibrageGroupe & {
+    destinationBac: { id: string; nom: string };
+  })[];
+}
+
+// ---------------------------------------------------------------------------
+// Modeles — Traçabilité modification de calibrage (Sprint 26, ADR-015)
+// ---------------------------------------------------------------------------
+
+/**
+ * Trace d'une modification de calibrage avec raison d'audit.
+ *
+ * Granularite : une ligne par champ modifie.
+ * Pour le champ "groupes" (complexe), ancienneValeur/nouvelleValeur contiennent du JSON serialise.
+ */
+export interface CalibrageModification {
+  id:             string;
+  calibrageId:    string;
+  userId:         string;
+  raison:         string;
+  /** Nom du champ modifie : "nombreMorts" | "notes" | "groupes" */
+  champModifie:   string;
+  /** Valeur avant modification (null si le champ etait null/absent) */
+  ancienneValeur: string | null;
+  /** Valeur apres modification (null si efface) */
+  nouvelleValeur: string | null;
+  siteId:         string;
+  createdAt:      Date;
+}
+
+/** CalibrageModification avec l'utilisateur denormalise (pour affichage) */
+export interface CalibrageModificationWithUser extends CalibrageModification {
+  user: {
+    id:   string;
+    name: string;
+  };
+}
+
+/** Calibrage avec groupes, relations et historique complet de modifications */
+export interface CalibrageWithModifications extends CalibrageWithRelations {
+  modifications: CalibrageModificationWithUser[];
+}
+
+// ---------------------------------------------------------------------------
+// Enums — CustomPlaceholder (Sprint 26)
+// ---------------------------------------------------------------------------
+
+/** Mode de resolution d'un placeholder : MAPPING (champ DB) ou FORMULA (calcul) */
+export enum PlaceholderMode {
+  MAPPING = "MAPPING",
+  FORMULA = "FORMULA",
+}
+
+/** Format de la valeur resolue par un placeholder */
+export enum PlaceholderFormat {
+  NUMBER = "NUMBER",
+  TEXT = "TEXT",
+}
+
+// ---------------------------------------------------------------------------
+// Modele — CustomPlaceholder (Sprint 26)
+// ---------------------------------------------------------------------------
+
+/**
+ * CustomPlaceholder — variable personnalisee utilisable dans les templates de regles d'activites.
+ *
+ * Deux modes :
+ * - MAPPING : le placeholder pointe vers un champ de la base via sourcePath
+ * - FORMULA : le placeholder est calcule via une expression mathematique (formula)
+ *
+ * Ces placeholders sont globaux (pas de siteId) — geres par DKFarm.
+ */
+export interface CustomPlaceholder {
+  id: string;
+  /** Cle unique — ex: "poids_moyen", "fcr_actuel" */
+  key: string;
+  /** Libelle affiche dans l'editeur de regles */
+  label: string;
+  /** Description de l'usage du placeholder (nullable) */
+  description: string | null;
+  /** Exemple de valeur affichee dans l'interface */
+  example: string;
+  /** Mode de resolution */
+  mode: PlaceholderMode;
+  /** Chemin vers le champ source (mode MAPPING) — ex: "vague.poidsMoyen" */
+  sourcePath: string | null;
+  /** Expression de calcul (mode FORMULA) — ex: "alimentation / biomasse" */
+  formula: string | null;
+  /** Format de la valeur resolue */
+  format: PlaceholderFormat;
+  /** Nombre de decimales pour le format NUMBER */
+  decimals: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }

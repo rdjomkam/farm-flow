@@ -10,7 +10,7 @@ import { StatutVague, Permission } from "@/types";
 export default async function NouvelleVentePage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
-  if (!session.activeSiteId) redirect("/sites");
+  if (!session.activeSiteId) redirect("/settings/sites");
 
   const permissions = await checkPagePermission(session, Permission.VENTES_CREER);
   if (!permissions) return <AccessDenied />;

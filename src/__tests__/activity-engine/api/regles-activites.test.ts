@@ -52,6 +52,14 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 
+vi.mock("@/lib/regles-activites-constants", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/regles-activites-constants")>();
+  return {
+    ...actual,
+    validateTemplatePlaceholders: vi.fn().mockReturnValue({ valid: true, unknown: [] }),
+  };
+});
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -379,7 +387,7 @@ describe("GET /api/regles-activites/[id]", () => {
     );
     expect(response.status).toBe(200);
     const data = await response.json();
-    expect(data.id).toBe("regle-1");
+    expect(data.regle.id).toBe("regle-1");
   });
 
   it("permet l'acces aux regles globales (siteId=null)", async () => {
@@ -451,7 +459,7 @@ describe("PUT /api/regles-activites/[id]", () => {
     );
     expect(response.status).toBe(403);
     const data = await response.json();
-    expect(data.message).toContain("globales");
+    expect(data.error).toContain("globales");
   });
 
   it("retourne 404 si regle introuvable pour ce site", async () => {
@@ -537,17 +545,15 @@ describe("DELETE /api/regles-activites/[id]", () => {
     expect(response.status).toBe(200);
   });
 
-  it("retourne 403 si la regle est globale (message contient 'globales')", async () => {
-    mockDeleteRegleActivite.mockRejectedValue(
-      new Error("Les regles globales DKFarm ne peuvent pas etre supprimees.")
-    );
+  it("retourne 409 si la regle est globale (message contient 'globales')", async () => {
+    mockDeleteRegleActivite.mockResolvedValue({ error: "global" });
     const response = await DELETE(
       makeRequest("/api/regles-activites/regle-global", { method: "DELETE" }),
       { params: Promise.resolve({ id: "regle-global" }) }
     );
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(409);
     const data = await response.json();
-    expect(data.message).toContain("globales");
+    expect(data.error).toContain("globales");
   });
 
   it("retourne 404 si regle introuvable", async () => {

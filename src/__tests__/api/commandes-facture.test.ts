@@ -28,7 +28,7 @@ const mockUploadFile = vi.fn();
 const mockDeleteFile = vi.fn();
 const mockGetSignedUrl = vi.fn();
 const mockValidateFile = vi.fn();
-const mockGenerateFactureKey = vi.fn();
+const mockGenerateStorageKey = vi.fn();
 const mockExtractFileNameFromKey = vi.fn();
 
 vi.mock("@/lib/storage", () => ({
@@ -36,7 +36,7 @@ vi.mock("@/lib/storage", () => ({
   deleteFile: (...args: unknown[]) => mockDeleteFile(...args),
   getSignedUrl: (...args: unknown[]) => mockGetSignedUrl(...args),
   validateFile: (...args: unknown[]) => mockValidateFile(...args),
-  generateFactureKey: (...args: unknown[]) => mockGenerateFactureKey(...args),
+  generateStorageKey: (...args: unknown[]) => mockGenerateStorageKey(...args),
   extractFileNameFromKey: (...args: unknown[]) => mockExtractFileNameFromKey(...args),
 }));
 
@@ -125,7 +125,7 @@ describe("POST /api/commandes/[id]/facture", () => {
     vi.clearAllMocks();
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
     mockValidateFile.mockImplementation(() => {/* no throw = valid */});
-    mockGenerateFactureKey.mockReturnValue(FAKE_KEY);
+    mockGenerateStorageKey.mockReturnValue(FAKE_KEY);
     mockUploadFile.mockResolvedValue(FAKE_KEY);
     mockPrismaCommandeUpdateMany.mockResolvedValue({ count: 1 });
     mockGetSignedUrl.mockResolvedValue(FAKE_SIGNED_URL);
@@ -362,7 +362,7 @@ describe("POST /api/commandes/[id]/recevoir — avec fichier facture", () => {
     // Sprint 16: recevoirCommande retourne { commande, depense }
     mockRecevoirCommande.mockResolvedValue({ commande: { id: "cmd-1", statut: "LIVREE" }, depense: null });
     mockValidateFile.mockImplementation(() => {/* no throw = valid */});
-    mockGenerateFactureKey.mockReturnValue(FAKE_KEY);
+    mockGenerateStorageKey.mockReturnValue(FAKE_KEY);
     mockUploadFile.mockResolvedValue(FAKE_KEY);
     mockPrismaCommandeUpdateMany.mockResolvedValue({ count: 1 });
   });

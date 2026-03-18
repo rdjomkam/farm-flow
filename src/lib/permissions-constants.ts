@@ -1,4 +1,4 @@
-import { Permission } from "@/types";
+import { Permission, SiteModule } from "@/types";
 
 // ---------------------------------------------------------------------------
 // System role definitions (used when creating a new site)
@@ -34,6 +34,8 @@ export const SYSTEM_ROLE_DEFINITIONS = [
       Permission.BACS_GERER,
       Permission.DASHBOARD_VOIR,
       Permission.ALERTES_VOIR,
+      Permission.CALIBRAGES_VOIR,
+      Permission.REGLES_ACTIVITES_VOIR,
     ],
   },
 ] as const;
@@ -74,6 +76,9 @@ export const PERMISSION_GROUPS = {
     Permission.RELEVES_VOIR,
     Permission.RELEVES_CREER,
     Permission.RELEVES_MODIFIER,
+    Permission.CALIBRAGES_VOIR,
+    Permission.CALIBRAGES_CREER,
+    Permission.CALIBRAGES_MODIFIER,
   ],
   stock: [
     Permission.STOCK_VOIR,
@@ -118,7 +123,9 @@ export const PERMISSION_GROUPS = {
   ],
   configElevage: [
     Permission.GERER_CONFIG_ELEVAGE,
+    Permission.REGLES_ACTIVITES_VOIR,
     Permission.GERER_REGLES_ACTIVITES,
+    Permission.GERER_REGLES_GLOBALES,
   ],
   ingenieur: [
     Permission.MONITORING_CLIENTS,
@@ -157,9 +164,9 @@ export const ITEM_VIEW_PERMISSIONS: Record<string, Permission> = {
   "/depenses/recurrentes":   Permission.DEPENSES_VOIR,
   "/besoins":                Permission.BESOINS_SOUMETTRE,
   // Analyse & Pilotage (gate: DASHBOARD_VOIR)
+  "/mes-taches":         Permission.DASHBOARD_VOIR,
   "/planning":           Permission.PLANNING_VOIR,
   "/planning/nouvelle":  Permission.PLANNING_GERER,
-  "/mes-taches":         Permission.PLANNING_VOIR,
   "/analytics/finances": Permission.FINANCES_VOIR,
   // Phase 3 — Packs & Provisioning (Sprint 20)
   "/packs":              Permission.ACTIVER_PACKS,
@@ -167,15 +174,33 @@ export const ITEM_VIEW_PERMISSIONS: Record<string, Permission> = {
   // Phase 3 — Ingénieur (Sprint 23)
   "/ingenieur":          Permission.MONITORING_CLIENTS,
   "/notes":              Permission.ENVOYER_NOTES,
+  // Configuration module items
+  "/settings/sites":     Permission.SITE_GERER,
+  "/settings/alertes":   Permission.ALERTES_CONFIGURER,
+  "/settings/config-elevage": Permission.GERER_CONFIG_ELEVAGE,
+  "/settings/regles-activites": Permission.REGLES_ACTIVITES_VOIR,
 };
 
-export const SECONDARY_VIEW_PERMISSIONS: Record<string, Permission> = {
-  "/sites": Permission.SITE_GERER,
-  "/settings/alertes": Permission.ALERTES_CONFIGURER,
-  "/notifications": Permission.ALERTES_VOIR,
-  // Phase 3 — Config élevage (Sprint 19)
-  "/settings/config-elevage": Permission.GERER_CONFIG_ELEVAGE,
+// ---------------------------------------------------------------------------
+// Module label → SiteModule mapping (for site-level module gating)
+// ---------------------------------------------------------------------------
+
+export const MODULE_LABEL_TO_SITE_MODULE: Record<string, SiteModule> = {
+  "Reproduction": SiteModule.REPRODUCTION,
+  "Grossissement": SiteModule.GROSSISSEMENT,
+  "Intrants": SiteModule.INTRANTS,
+  "Ventes": SiteModule.VENTES,
+  "Analyse & Pilotage": SiteModule.ANALYSE_PILOTAGE,
+  "Packs & Provisioning": SiteModule.PACKS_PROVISIONING,
+  "Configuration": SiteModule.CONFIGURATION,
+  "Ingenieur": SiteModule.INGENIEUR,
+  "Notes": SiteModule.NOTES,
+  // Pisciculteur aliases
+  "Elevage": SiteModule.GROSSISSEMENT,
+  "Clients": SiteModule.INGENIEUR,
 };
+
+export const SECONDARY_VIEW_PERMISSIONS: Record<string, Permission> = {};
 
 export function hasPermission(permissions: Permission[], required: Permission): boolean {
   return permissions.includes(required);

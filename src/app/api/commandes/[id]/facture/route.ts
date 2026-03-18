@@ -8,7 +8,7 @@ import {
   deleteFile,
   getSignedUrl,
   validateFile,
-  generateFactureKey,
+  generateStorageKey,
   extractFileNameFromKey,
 } from "@/lib/storage";
 
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     // Upload le nouveau fichier
-    const key = generateFactureKey(id, file.name);
+    const key = generateStorageKey(auth.activeSiteId, "factures", id, file.name);
     const buffer = Buffer.from(await file.arrayBuffer());
     await uploadFile(key, buffer, file.type);
 

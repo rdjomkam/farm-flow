@@ -1,0 +1,85 @@
+"use client";
+
+import Link from "next/link";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Scissors, Fish, AlertTriangle } from "lucide-react";
+import { CategorieCalibrage } from "@/types";
+import type { CalibrageWithRelations } from "@/types";
+
+const categorieLabels: Record<CategorieCalibrage, string> = {
+  [CategorieCalibrage.PETIT]: "Petit",
+  [CategorieCalibrage.MOYEN]: "Moyen",
+  [CategorieCalibrage.GROS]: "Gros",
+  [CategorieCalibrage.TRES_GROS]: "Tres gros",
+};
+
+interface CalibrageCardProps {
+  calibrage: CalibrageWithRelations;
+}
+
+export function CalibrageCard({ calibrage }: CalibrageCardProps) {
+  const totalPoissons = calibrage.groupes.reduce(
+    (sum, g) => sum + g.nombrePoissons,
+    0
+  );
+
+  return (
+    <Link href={`/vagues/${calibrage.vagueId}/calibrage/${calibrage.id}`}>
+      <Card className="hover:border-primary/30 transition-colors">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Scissors className="h-4 w-4 text-muted-foreground shrink-0" />
+              <p className="font-semibold text-sm">
+                Calibrage{" "}
+                {new Date(calibrage.date).toLocaleDateString("fr-FR", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {(calibrage as { modifie?: boolean }).modifie && (
+                <Badge variant="warning">Modifie</Badge>
+              )}
+              <Badge variant="info">
+                {calibrage.groupes.length} groupe
+                {calibrage.groupes.length > 1 ? "s" : ""}
+              </Badge>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-1 mb-2">
+            {calibrage.groupes.map((g, i) => (
+              <Badge key={i} variant="default">
+                {categorieLabels[g.categorie as CategorieCalibrage] ??
+                  g.categorie}
+                : {g.nombrePoissons}
+              </Badge>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Fish className="h-3 w-3" />
+              {totalPoissons} poissons redistribues
+            </span>
+            {calibrage.nombreMorts > 0 && (
+              <span className="flex items-center gap-1 text-danger">
+                <AlertTriangle className="h-3 w-3" />
+                {calibrage.nombreMorts} mort
+                {calibrage.nombreMorts > 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+
+          <p className="text-xs text-muted-foreground mt-1">
+            Par {calibrage.user.name}
+          </p>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}

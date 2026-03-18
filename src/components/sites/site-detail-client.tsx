@@ -133,7 +133,7 @@ export function SiteDetailClient({
   return (
     <div className="flex flex-col gap-3">
       <Link
-        href="/sites"
+        href="/settings/sites"
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -173,7 +173,7 @@ export function SiteDetailClient({
           <h3 className="text-sm font-semibold">Membres</h3>
           <div className="flex items-center gap-2">
             {canManageSite && (
-              <Link href={`/sites/${site.id}/roles`}>
+              <Link href={`/settings/sites/${site.id}/roles`}>
                 <Button variant="outline" size="sm" className="gap-1.5">
                   <ShieldCheck className="h-3.5 w-3.5" />
                   Roles

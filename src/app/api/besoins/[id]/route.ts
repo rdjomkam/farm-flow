@@ -93,11 +93,27 @@ export async function PUT(
       }
     }
 
+    // Validation dateLimite optionnelle
+    let dateLimite: string | null | undefined;
+    if (body.dateLimite === null) {
+      dateLimite = null; // suppression explicite
+    } else if (body.dateLimite != null) {
+      const parsed = new Date(body.dateLimite);
+      if (isNaN(parsed.getTime())) {
+        return NextResponse.json(
+          { status: 400, message: "Date limite invalide (format ISO 8601 attendu)." },
+          { status: 400 }
+        );
+      }
+      dateLimite = parsed.toISOString();
+    }
+
     const listeBesoins = await updateListeBesoins(id, auth.activeSiteId, {
       titre: body.titre,
       vagueId: body.vagueId,
       notes: body.notes,
       lignes: body.lignes,
+      ...(dateLimite !== undefined && { dateLimite }),
     });
 
     return NextResponse.json(listeBesoins);

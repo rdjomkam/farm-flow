@@ -3698,3 +3698,607 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 - [x] `FAIT` EC-4.4 : poids = seuil exact → phase superieure
 - [x] `FAIT` `npx vitest run` — 1206/1206 tests passent
 - [x] `FAIT` `npm run build` — Build production OK
+
+---
+
+## Sprint 23 — Monitoring Ingénieur & Polish
+
+### Story S17-2 — API Dashboard ingénieur + liste clients
+**Assigné à :** @developer
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Créer src/lib/queries/ingenieur.ts — getIngenieurDashboardMetrics() + getClientsIngenieur() + getClientIngenieurDetail()
+- [x] `FAIT` Créer src/app/api/ingenieur/dashboard/route.ts — GET, permission MONITORING_CLIENTS
+- [x] `FAIT` Créer src/app/api/ingenieur/clients/route.ts — GET paginé, tri par urgence, permission MONITORING_CLIENTS
+- [x] `FAIT` Créer src/__tests__/api/ingenieur.test.ts — 19 tests
+- [x] `FAIT` `npx vitest run` — 1508/1508 tests passent
+- [x] `FAIT` `npm run build` — Routes /api/ingenieur/dashboard et /api/ingenieur/clients buildées OK
+
+### Story S17-4 — UI Dashboard ingénieur
+**Assigné à :** @developer
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Créer src/app/ingenieur/page.tsx — Server Component, alertes actives + liste clients + stats globales
+- [x] `FAIT` Créer src/app/ingenieur/[siteId]/page.tsx — Server Component, détail client avec métriques + graphiques
+- [x] `FAIT` Créer src/components/ingenieur/client-card.tsx — carte client mobile-first, codes couleur critique/attention/ok
+- [x] `FAIT` Créer src/components/ingenieur/dashboard-stats.tsx — stats globales (packs, survie, alertes, clients)
+- [x] `FAIT` Créer src/components/ingenieur/client-charts.tsx — graphiques Recharts croissance + survie + mortalité
+- [x] `FAIT` `npx vitest run` — 1531/1531 tests passent
+- [x] `FAIT` `npx tsc --noEmit` — aucune erreur dans les nouveaux fichiers
+
+### Story S17-7 — Polish : Navigation Phase 3 + lifecycle PackActivation
+**Assigné à :** @developer
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Créer src/lib/queries/lifecycle.ts — expirePackActivations() + suspendPackActivations() + archiveOldActivities() + runLifecycle()
+- [x] `FAIT` Modifier src/app/api/activites/generer/route.ts — intégrer runLifecycle() dans le CRON loop
+- [x] `FAIT` Modifier src/app/layout.tsx — passer role en plus de permissions à AppShell
+- [x] `FAIT` Modifier src/components/layout/app-shell.tsx — accepter et transmettre role aux composants nav
+- [x] `FAIT` Modifier src/components/layout/bottom-nav.tsx — navigation conditionnelle par rôle (PISCICULTEUR/INGENIEUR/ADMIN/GERANT)
+- [x] `FAIT` Modifier src/components/layout/sidebar.tsx — modules Phase 3 (Packs & Provisioning, Config. Elevage, Ingenieur) avec gates permissions
+- [x] `FAIT` Modifier src/lib/permissions-constants.ts — ITEM_VIEW_PERMISSIONS + SECONDARY_VIEW_PERMISSIONS Phase 3
+- [x] `FAIT` Corriger src/__tests__/ui/responsive.test.tsx — adapter tests BottomNav avec nouveau prop role
+- [x] `FAIT` `npx vitest run` — 1533/1533 tests passent
+- [x] `FAIT` `npm run build` — Build production OK (Compiled successfully in 16.5s)
+
+---
+
+## Sprint 24 — Sites Supervisés & Contrôle de Modules
+
+**Objectif :** Ajouter un flag `supervised` et un tableau `enabledModules` sur les sites, permettre aux packs de définir les modules activés, donner aux clients un rôle admin sur leur site, et filtrer la navigation par modules site + permissions utilisateur.
+
+---
+
+### Story 24.1 — Schema Prisma : SiteModule enum + champs Site/Pack
+**Assigné à :** @db-specialist
+**Priorité :** Critique
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Ajouter l'enum `SiteModule` dans schema.prisma (9 valeurs : REPRODUCTION, GROSSISSEMENT, INTRANTS, VENTES, ANALYSE_PILOTAGE, PACKS_PROVISIONING, CONFIGURATION, INGENIEUR, NOTES)
+- [ ] `TODO` Ajouter `supervised Boolean @default(false)` au modèle Site
+- [ ] `TODO` Ajouter `enabledModules SiteModule[] @default([])` au modèle Site
+- [ ] `TODO` Ajouter `enabledModules SiteModule[] @default([])` au modèle Pack
+- [ ] `TODO` Créer la migration SQL (méthode manuelle : migrate diff + migrate deploy)
+- [ ] `TODO` Mettre à jour prisma/seed.sql (DKFarm site: supervised=false, enabledModules='{}' ; client site: supervised=true, enabledModules='{GROSSISSEMENT,ANALYSE_PILOTAGE,NOTES}' ; pack: enabledModules='{GROSSISSEMENT,ANALYSE_PILOTAGE,NOTES}')
+
+**Critères d'acceptation :**
+- Migration s'applique sans erreur
+- Seed fonctionne
+- Schema.prisma aligné avec les types TypeScript (R3)
+
+---
+
+### Story 24.2 — Types TypeScript & Mapping modules
+**Assigné à :** @architect
+**Priorité :** Critique
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Ajouter enum SiteModule dans src/types/models.ts
+- [ ] `TODO` Mettre à jour l'interface Site (supervised, enabledModules)
+- [ ] `TODO` Mettre à jour l'interface Pack (enabledModules)
+- [ ] `TODO` Exporter SiteModule depuis src/types/index.ts
+- [ ] `TODO` Ajouter MODULE_LABEL_TO_SITE_MODULE dans src/lib/permissions-constants.ts
+- [ ] `TODO` Ajouter ITEM_VIEW_PERMISSIONS pour "/mes-taches": Permission.DASHBOARD_VOIR
+- [ ] `TODO` Créer ADR docs/decisions/011-supervised-sites-modules.md
+
+**Critères d'acceptation :**
+- Enum SiteModule miroir exact du Prisma (R3)
+- ADR documenté avec contexte, décision, conséquences
+
+---
+
+### Story 24.3 — Server-side : chargement modules site + layout
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** Stories 24.1, 24.2
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer getServerSiteModules() dans src/lib/auth/permissions-server.ts (avec cache React)
+- [ ] `TODO` Mettre à jour src/app/layout.tsx pour charger siteModules et les passer à AppShell
+- [ ] `TODO` Mettre à jour AppShell (src/components/layout/app-shell.tsx) pour accepter et propager siteModules
+
+**Critères d'acceptation :**
+- siteModules chargé depuis la DB via getServerSiteModules
+- enabledModules vide = tous les modules (backward compat)
+- Props propagés à Sidebar, HamburgerMenu, BottomNav
+
+---
+
+### Story 24.4 — Navigation : filtrage par modules site
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** Story 24.3
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Sidebar (src/components/layout/sidebar.tsx) : ajouter prop siteModules, filtrer modules par MODULE_LABEL_TO_SITE_MODULE
+- [ ] `TODO` HamburgerMenu (src/components/layout/hamburger-menu.tsx) : même changement
+- [ ] `TODO` BottomNav (src/components/layout/bottom-nav.tsx) : ajouter prop siteModules, filtrer items par module
+- [ ] `TODO` Le filtrage s'insère entre le filtre permission existant et le filtre modules vides
+
+**Critères d'acceptation :**
+- Site supervisé avec [GROSSISSEMENT, ANALYSE_PILOTAGE, NOTES] : voit seulement ces 3 modules
+- Site DKFarm (enabledModules vide) : voit tous les modules (inchangé)
+- ADMIN bypass : voit tout
+
+---
+
+### Story 24.5 — Provisioning : site supervisé + rôle admin client
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** Stories 24.1, 24.2
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Modifier activerPack() dans src/lib/queries/provisioning.ts : site créé avec supervised=true, enabledModules du pack (ou défaut [GROSSISSEMENT, ANALYSE_PILOTAGE, NOTES])
+- [ ] `TODO` Changer client User.role = Role.GERANT (au lieu de PISCICULTEUR)
+- [ ] `TODO` Changer client SiteMember.siteRoleId = adminRole.id (au lieu de pisciculteurRole.id)
+- [ ] `TODO` Définir DEFAULT_SUPERVISED_MODULES constante
+- [ ] `TODO` S'assurer que pack.enabledModules est chargé dans la query
+
+**Critères d'acceptation :**
+- Pack activé → site supervisé avec bons modules
+- Client = GERANT + Administrateur SiteRole
+- DKFarm admin = toujours Administrateur SiteRole sur le site client
+
+---
+
+### Story 24.6 — Bug fixes : /observations bottom-nav + /mes-taches access
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** Story 24.2
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Ajouter { href: "/observations", label: "Observations", icon: Eye } aux items de "Analyse & Pilotage" dans src/lib/module-nav-items.ts (import Eye)
+- [ ] `TODO` Changer Permission.PLANNING_VOIR → Permission.DASHBOARD_VOIR dans src/app/mes-taches/page.tsx (ligne 14) et src/app/mes-taches/[id]/page.tsx
+
+**Critères d'acceptation :**
+- /observations visible dans le contextual bottom-nav du module "Analyse & Pilotage"
+- /mes-taches accessible pour un pisciculteur (DASHBOARD_VOIR suffit)
+
+---
+
+### Story 24.7 — Tests Sprint 24
+**Assigné à :** @tester
+**Priorité :** Haute
+**Dépend de :** Stories 24.3, 24.4, 24.5, 24.6
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Test unitaire : getServerSiteModules (empty = all, specific modules returned)
+- [ ] `TODO` Test unitaire : module filtering avec siteModules
+- [ ] `TODO` Test intégration : provisioning crée site supervisé avec bons modules
+- [ ] `TODO` Test : /mes-taches accessible avec DASHBOARD_VOIR
+- [ ] `TODO` `npm run build` — Build production OK
+- [ ] `TODO` `npx vitest run` — Tous les tests passent
+
+**Critères d'acceptation :**
+- Tous les tests passent
+- Build production OK
+
+---
+
+### Story 24.8 — Review Sprint 24
+**Assigné à :** @code-reviewer
+**Priorité :** Haute
+**Dépend de :** Story 24.7
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Checklist R1-R9
+- [ ] `TODO` Vérifier backward compatibility (sites existants non impactés)
+- [ ] `TODO` Vérifier que les 3 composants nav sont cohérents (Sidebar, HamburgerMenu, BottomNav)
+- [ ] `TODO` Rapport dans docs/reviews/review-sprint-24.md
+
+**Critères d'acceptation :**
+- Checklist R1-R9 validée
+- Backward compat confirmée
+- Rapport produit
+
+---
+
+## Sprint 25 — Gestion des Règles d'Activité (Rule Management)
+
+**Objectif :** Permettre au super-admin DKFarm de visualiser, modifier, activer/désactiver et créer des règles d'activité depuis une interface d'administration. Actuellement les 23 règles globales du moteur d'activités (Sprint 21) ne sont accessibles que via `prisma/seed.sql`.
+
+**Contexte métier :**
+- Le moteur d'activités évalue des règles (`RegleActivite`) pour générer automatiquement des activités planifiées
+- Chaque règle a des templates (`titreTemplate`, `descriptionTemplate`, `instructionsTemplate`) avec des placeholders résolus à la génération
+- 23 règles globales (`siteId = NULL`) couvrent 5 catégories : tâches RECURRENT quotidiennes/hebdo, seuils SEUIL_POIDS, alertes SEUIL_MORTALITE/SEUIL_QUALITE/FCR_ELEVE/STOCK_BAS, jalons JALON
+- La permission `GERER_REGLES_ACTIVITES` existe déjà dans l'enum (Sprint 20)
+- L'ADR complet est dans `docs/decisions/013-rule-management.md`
+
+**Dépend de :** Sprint 24 FAIT (ou en parallèle — pas de dépendance fonctionnelle)
+
+**Règles de protection :**
+- Règles globales (`siteId = null`) : non supprimables (DELETE → 409), modifiables par les admin DKFarm
+- Règles site-spécifiques : supprimables si aucune activité liée
+- `firedOnce` reset uniquement via route dédiée (audit trail implicite)
+
+---
+
+### Story 25.1 — Queries CRUD RegleActivite
+**Assigné à :** @db-specialist
+**Priorité :** Haute
+**Dépend de :** Aucune (modèle RegleActivite existe depuis Sprint 21)
+**Statut :** `FAIT`
+
+**Description :** Créer le fichier de queries CRUD pour `RegleActivite`. La logique de lecture/écriture est absente du code applicatif (le seed utilise du SQL brut, et l'orchestrateur charge les règles directement via Prisma sans passer par des fonctions utilitaires).
+
+**Tâches :**
+- [x] `FAIT` Créer `src/lib/queries/regles-activites.ts`
+- [x] `FAIT` `getReglesActivites(siteId?, filters?)` — liste avec filtres optionnels : `isActive`, `typeDeclencheur`, `typeActivite`, `includeGlobal`. Ordonné par typeDeclencheur ASC, priorite ASC
+- [x] `FAIT` `getRegleActiviteById(id, siteId?)` — détail avec count des activités liées (`_count: { activites: true }`)
+- [x] `FAIT` `createRegleActivite(siteId, userId, data)` — siteId obligatoire (siteId null réservé au seed DKFarm)
+- [x] `FAIT` `updateRegleActivite(id, siteId, data)` — mise à jour partielle des champs éditables : `nom`, `description`, `titreTemplate`, `descriptionTemplate`, `instructionsTemplate`, `priorite`, `isActive`, `intervalleJours`, `conditionValeur`, `conditionValeur2`, `phaseMin`, `phaseMax`
+- [x] `FAIT` `deleteRegleActivite(id, siteId)` — retourne `{ error: "global" }` si siteId null, `{ error: "linked" }` si activités liées, `{ success: true }` sinon
+- [x] `FAIT` `toggleRegleActivite(id)` — bascule isActive, réinitialise firedOnce si SEUIL_* lors de la réactivation, atomique R4
+- [x] `FAIT` `resetFiredOnce(id)` — remet firedOnce à false, updateMany conditionnel sur firedOnce=true, idempotent
+- [x] `FAIT` Exporter les 7 fonctions depuis `src/lib/queries/index.ts`
+
+**Critères d'acceptation :**
+- R4 : toggle et reset via `updateMany` avec condition (jamais check-then-update)
+- R8 : les règles site-spécifiques filtrent toujours par siteId dans le contexte d'un site
+- Aucun `any` dans les types de retour
+- Pattern référence : `src/lib/queries/activites.ts`
+
+---
+
+### Story 25.2 — Types TypeScript + DTOs RegleActivite
+**Assigné à :** @architect
+**Priorité :** Haute
+**Dépend de :** Story 25.1
+**Statut :** `FAIT`
+
+**Description :** L'interface `RegleActivite` existe dans `src/types/models.ts` (Sprint 21) mais les DTOs d'API manquent. Créer les DTOs et les constantes utilitaires nécessaires à l'UI (labels des enums, liste des placeholders valides).
+
+**Tâches :**
+- [x] `FAIT` Vérifier que l'interface `RegleActivite` dans `src/types/models.ts` est complète et alignée avec le schéma Prisma (R3) — tous les champs Sprint 21 : `id`, `nom`, `description`, `typeActivite`, `typeDeclencheur`, `conditionValeur`, `conditionValeur2`, `phaseMin`, `phaseMax`, `intervalleJours`, `titreTemplate`, `descriptionTemplate`, `instructionsTemplate`, `priorite`, `isActive`, `firedOnce`, `siteId`, `userId`, `createdAt`, `updatedAt`
+- [x] `FAIT` Ajouter interface `RegleActiviteWithCount` dans `src/types/models.ts` : extends `RegleActivite` avec `_count: { activites: number }`
+- [x] `FAIT` Créer `CreateRegleActiviteDTO` dans `src/types/api.ts` : `nom` (required), `typeActivite` (TypeActivite), `typeDeclencheur` (TypeDeclencheur), `titreTemplate` (required), `descriptionTemplate?`, `instructionsTemplate?`, `conditionValeur?`, `conditionValeur2?`, `phaseMin?`, `phaseMax?`, `intervalleJours?`, `priorite?` (1-10), `siteId` (required — pas de création de règle globale via API)
+- [x] `FAIT` Créer `UpdateRegleActiviteDTO` dans `src/types/api.ts` : tous les champs de `CreateRegleActiviteDTO` optionnels sauf `siteId` non modifiable
+- [x] `FAIT` Créer `RegleActiviteFilters` dans `src/types/api.ts` : `isActive?`, `typeDeclencheur?`, `typeActivite?`, `includeGlobal?` (boolean, default true)
+- [x] `FAIT` Créer `src/lib/regles-activites-constants.ts` avec :
+  - `KNOWN_PLACEHOLDERS: KnownPlaceholder[]` — liste exhaustive des 16 placeholders valides avec description et exemple (voir ADR 013)
+  - `TYPE_DECLENCHEUR_LABELS: Record<TypeDeclencheur, string>` — labels FR pour l'UI
+  - `TYPE_ACTIVITE_LABELS: Record<TypeActivite, string>` — labels FR pour l'UI
+  - `PHASE_ELEVAGE_LABELS: Record<PhaseElevage, string>` — labels FR pour l'UI
+  - `PHASE_ELEVAGE_ORDER: PhaseElevage[]` — ordre des phases pour validation
+  - `validateTemplatePlaceholders(template: string): { valid: boolean; unknown: string[] }` — fonction pure de validation
+- [x] `FAIT` Mettre à jour barrel export `src/types/index.ts` (RegleActiviteWithCount)
+- [x] `FAIT` Ajouter `/settings/regles-activites` dans `ITEM_VIEW_PERMISSIONS` (permissions-constants.ts)
+
+**Critères d'acceptation :**
+- R2 : utiliser les enums TypeScript importés (jamais de string literals)
+- R3 : `RegleActiviteWithCount` aligné avec la requête Prisma `_count`
+- Aucun `any`
+- `validateTemplatePlaceholders` testable unitairement (fonction pure)
+
+---
+
+### Story 25.3 — API Routes RegleActivite
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** Stories 25.1, 25.2
+**Statut :** `FAIT`
+
+**Description :** Créer les 7 routes API de gestion des règles. La permission `GERER_REGLES_ACTIVITES` est utilisée sur toutes les routes.
+
+**Tâches :**
+- [x] `FAIT` Créer `src/app/api/regles-activites/route.ts` :
+  - `GET` : liste des règles avec filtres query params (`isActive`, `typeDeclencheur`, `typeActivite`). Retourne règles globales + règles du site actif. Auth + `requirePermission(GERER_REGLES_ACTIVITES)`
+  - `POST` : création d'une règle site-spécifique. Valider body avec `CreateRegleActiviteDTO`. Appeler `validateTemplatePlaceholders()` sur les 3 templates — log avertissement si placeholder inconnu (ne pas rejeter). `siteId` = session.activeSiteId (jamais null). Auth + `requirePermission(GERER_REGLES_ACTIVITES)`
+- [x] `FAIT` Créer `src/app/api/regles-activites/[id]/route.ts` :
+  - `GET` : détail règle avec `_count.activites`. Auth + `requirePermission(GERER_REGLES_ACTIVITES)`
+  - `PUT` : mise à jour partielle. Valider body `UpdateRegleActiviteDTO`. Appeler `validateTemplatePlaceholders()`. Auth + `requirePermission(GERER_REGLES_ACTIVITES)`
+  - `DELETE` : supprimer règle. Déléguer à `deleteRegleActivite()` qui retourne 409 si règle globale ou activités liées. Auth + `requirePermission(GERER_REGLES_ACTIVITES)`
+- [x] `FAIT` Créer `src/app/api/regles-activites/[id]/toggle/route.ts` :
+  - `PATCH` : basculer isActive. Retourner `{ id, isActive: boolean }`. Auth + `requirePermission(GERER_REGLES_ACTIVITES)`
+- [x] `FAIT` Créer `src/app/api/regles-activites/[id]/reset/route.ts` :
+  - `POST` : remettre firedOnce à false. Retourner `{ id, firedOnce: false }`. Vérifier que `typeDeclencheur` est bien un SEUIL_* (SEUIL_POIDS, SEUIL_QUALITE, SEUIL_MORTALITE, FCR_ELEVE, STOCK_BAS) — 400 sinon. Auth + `requirePermission(GERER_REGLES_ACTIVITES)`
+- [x] `FAIT` Gestion d'erreurs cohérente : 400 (validation), 403 (permission), 404 (not found), 409 (contrainte métier), 500 (erreur serveur)
+- [x] `FAIT` Pattern référence : `src/app/api/config-elevage/[id]/route.ts`
+
+**Critères d'acceptation :**
+- R2 : utiliser `Permission.GERER_REGLES_ACTIVITES` (enum importé)
+- R8 : les règles globales sont accessibles en lecture par tout admin ; en écriture par admin DKFarm
+- Toutes les routes retournent des erreurs structurées `{ error: string }`
+- 409 clair quand on tente de supprimer une règle globale ou liée à des activités
+
+---
+
+### Story 25.4 — UI Liste des règles d'activité
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** Story 25.3
+**Statut :** `FAIT`
+
+**Description :** Créer la page de liste des règles, mobile-first, groupée par `typeDeclencheur`. Toggle actif/inactif directement depuis la carte. Lien vers le détail/édition.
+
+**Tâches :**
+- [x] `FAIT` Créer `src/app/settings/regles-activites/page.tsx` (Server Component) — charge la liste des règles via `getReglesActivites()`, protégé par `requirePermission(GERER_REGLES_ACTIVITES)`
+- [x] `FAIT` Créer `src/components/regles-activites/regles-list-client.tsx` (Client Component) :
+  - Tabs de filtrage : Toutes | Actives | Inactives
+  - Groupement par `typeDeclencheur` (sections collapsibles ou séparateurs visuels)
+  - Ordre dans chaque groupe : priorite ASC
+  - Carte par règle : nom, typeActivite badge, typeDeclencheur badge, priorite, intervalleJours? (si RECURRENT), conditionValeur? (si SEUIL_*), badge "Globale" vs "Site", badge "Déclenchée" si firedOnce=true
+  - Toggle switch actif/inactif sur chaque carte (PATCH /toggle, optimistic update)
+  - Lien "Modifier" vers /settings/regles-activites/[id]
+  - Bouton "Nouvelle règle" en haut (lien vers /settings/regles-activites/nouvelle), visible uniquement si GERER_REGLES_ACTIVITES
+- [x] `FAIT` Séparer visuellement les règles globales (badge "DKFarm" distinct) des règles site-spécifiques
+- [x] `FAIT` Mobile-first : cartes empilées, toggle accessible (min 44px), pas de tableau
+
+**Critères d'acceptation :**
+- Mobile 360px : cartes lisibles, toggle fonctionnel
+- R5 : pas de DialogTrigger imbriqué (toggle est un Switch Radix, pas un bouton dans un Dialog)
+- R6 : CSS variables du thème pour les badges
+- Groupement par typeDeclencheur visible et clair
+- Pattern référence : `src/components/config-elevage/configs-list-client.tsx`
+
+---
+
+### Story 25.5 — UI Détail + Édition règle
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** Story 25.4
+**Statut :** `FAIT`
+
+**Description :** Créer la page de détail et d'édition d'une règle. L'édition est inline (même page) avec un mode "lecture" / mode "édition". Afficher un aperçu des templates résolus avec des valeurs fictives.
+
+**Tâches :**
+- [x] `FAIT` Créer `src/app/settings/regles-activites/[id]/page.tsx` (Server Component) — charge la règle par id avec `_count.activites`
+- [x] `FAIT` Créer `src/components/regles-activites/regle-detail-client.tsx` (Client Component) :
+  - **Mode lecture** : affiche tous les champs avec labels FR, badge isActive, badge firedOnce (si SEUIL_*)
+  - **Mode édition** (bouton "Modifier") : formulaire inline avec les champs éditables
+  - **Section "Paramètres de déclenchement"** : conditionValeur, conditionValeur2 (si SEUIL_QUALITE), intervalleJours (si RECURRENT), phaseMin/phaseMax, priorite (1-10)
+  - **Section "Templates"** : titreTemplate, descriptionTemplate (textarea), instructionsTemplate (textarea — format "1. Step\n2. Step")
+  - **Aperçu template** : bouton "Aperçu" qui affiche le titre/description résolus avec des valeurs fictives (poids_moyen=150, bac="Bac A", vague="VAG-2026-001", etc.)
+  - **Avertissement placeholders inconnus** : si `validateTemplatePlaceholders()` détecte des placeholders inconnus, afficher un avertissement non-bloquant (pas d'erreur)
+  - **Action "Réinitialiser firedOnce"** : bouton visible si firedOnce=true, appelle POST /reset, avec dialog de confirmation ("Cette règle se déclenchera à nouveau au prochain cycle")
+  - **Action "Supprimer"** : bouton visible si siteId non-null ET `_count.activites = 0`. Dialog de confirmation. Redirect vers /settings/regles-activites après suppression
+  - **Indicateur activités liées** : afficher le nombre d'activités générées par cette règle (`_count.activites`)
+- [x] `FAIT` Mobile-first : textareas larges, boutons 44px min
+- [x] `FAIT` Créer `src/components/regles-activites/template-editor.tsx` — textarea augmentee avec chips placeholders
+- [x] `FAIT` Créer `src/components/regles-activites/template-preview.tsx` — apercu resolu client-side avec donnees fictives
+
+**Critères d'acceptation :**
+- R5 : DialogTrigger asChild pour les dialogs de confirmation
+- R6 : CSS variables du thème
+- Aperçu template fonctionnel avec valeurs fictives réalistes
+- Formulaire non modifiable pour les règles globales (siteId = null) — afficher un banner "Règle globale DKFarm — contact support pour modification"
+- Pattern référence : `src/app/settings/config-elevage/[id]/page.tsx`
+
+---
+
+### Story 25.6 — UI Formulaire création règle personnalisée
+**Assigné à :** @developer
+**Priorité :** Moyenne
+**Dépend de :** Story 25.3
+**Statut :** `FAIT`
+
+**Description :** Créer la page de création d'une règle site-spécifique. Permet aux ADMIN avancés de définir des règles supplémentaires pour leur site (par exemple une règle d'alimentation spécifique à leur espèce ou configuration).
+
+**Tâches :**
+- [x] `FAIT` Créer `src/app/settings/regles-activites/nouvelle/page.tsx` (Server Component + redirect si pas de permission)
+- [x] `FAIT` Créer `src/components/regles-activites/regle-form-client.tsx` (Client Component) :
+  - **Étape 1 — Déclencheur** : select `typeActivite` + select `typeDeclencheur`. Selon le typeDeclencheur sélectionné, afficher les champs conditionnels :
+    - RECURRENT → `intervalleJours` (number, required)
+    - SEUIL_POIDS → `conditionValeur` (poids en g, required)
+    - SEUIL_QUALITE → `conditionValeur` + `conditionValeur2` (min/max, required)
+    - SEUIL_MORTALITE / FCR_ELEVE / STOCK_BAS → `conditionValeur` (required)
+    - JALON → `conditionValeur` (% du cycle, required)
+  - **Étape 2 — Templates** : `nom`, `titreTemplate`, `descriptionTemplate` (optionnel), `instructionsTemplate` (optionnel, format "1. Étape\n2. Étape")
+  - **Étape 3 — Paramètres** : `priorite` (1-10, slider ou number input), `phaseMin?`, `phaseMax?`
+  - **Aperçu en temps réel** : afficher le titre résolu à droite (desktop) ou en bas (mobile) avec valeurs fictives
+  - **Liste des placeholders** : panneau d'aide affichant les placeholders disponibles avec description (cliquable pour insérer dans le champ actif)
+  - Validation client avant soumission : titreTemplate non vide, intervalleJours > 0 si RECURRENT, etc.
+  - Redirect vers /settings/regles-activites/[id] après création
+- [x] `FAIT` Mobile-first : formulaire multi-étapes en accordéon ou pages séquentielles
+
+**Critères d'acceptation :**
+- R2 : enums importés pour les selects (`TypeActivite`, `TypeDeclencheur`, `PhaseElevage`)
+- R6 : CSS variables du thème
+- Champs conditionnels affichés/masqués selon typeDeclencheur
+- Validation client complète avant envoi
+- Placeholder helper accessible sur mobile (modal ou section dépliable)
+
+---
+
+### Story 25.7 — Navigation : accès /settings/regles-activites
+**Assigné à :** @developer
+**Priorité :** Moyenne
+**Dépend de :** Story 25.4
+**Statut :** `FAIT`
+
+**Description :** Ajouter le lien vers la gestion des règles dans la navigation (sidebar, hamburger-menu). La règle d'activité est un item de configuration avancé, placé dans le module "Configuration" aux côtés de /settings/config-elevage.
+
+**Tâches :**
+- [x] `FAIT` Dans `src/lib/module-nav-items.ts` (ou `src/lib/permissions-constants.ts`) : ajouter `"/settings/regles-activites"` dans les items du module "Configuration" avec label "Règles d'activité" et icône `Zap` (lucide-react)
+- [x] `FAIT` Dans `src/lib/permissions-constants.ts` — `ITEM_VIEW_PERMISSIONS` : ajouter `"/settings/regles-activites": Permission.GERER_REGLES_ACTIVITES`
+- [x] `FAIT` Dans `src/components/layout/sidebar.tsx` : vérifier que le module "Configuration" inclut le nouvel item (si la sidebar est generée depuis `module-nav-items.ts`, aucun changement nécessaire)
+- [x] `FAIT` Dans `src/components/layout/hamburger-menu.tsx` : idem
+- [x] `FAIT` Vérifier que `MODULE_LABEL_TO_SITE_MODULE` couvre "Configuration" → `SiteModule.CONFIGURATION`
+
+**Critères d'acceptation :**
+- /settings/regles-activites accessible depuis sidebar et hamburger-menu
+- Item visible uniquement si l'utilisateur a `GERER_REGLES_ACTIVITES`
+- Cohérence sidebar / hamburger-menu
+- Pattern référence : traitement de `/settings/config-elevage` dans les mêmes fichiers
+
+---
+
+### Story 25.8 — Tests Sprint 25
+**Assigné à :** @tester
+**Priorité :** Haute
+**Dépend de :** Stories 25.1 à 25.7
+**Statut :** `FAIT`
+
+**Description :** Écrire les tests unitaires et d'intégration pour la gestion des règles. Vérifier la non-régression avec le moteur d'activités existant.
+
+**Tâches :**
+- [x] `FAIT` Créer `src/__tests__/api/regles-activites.test.ts` :
+  - `GET /api/regles-activites` — retourne la liste (200), filtre isActive, filtre typeDeclencheur
+  - `GET /api/regles-activites` — 403 sans `GERER_REGLES_ACTIVITES`
+  - `POST /api/regles-activites` — crée une règle site-spécifique (201)
+  - `POST /api/regles-activites` — refuse siteId=null (400)
+  - `GET /api/regles-activites/[id]` — retourne le détail avec `_count.activites` (200)
+  - `GET /api/regles-activites/[id]` — 404 si id inconnu
+  - `PUT /api/regles-activites/[id]` — met à jour les templates (200)
+  - `DELETE /api/regles-activites/[id]` — 409 si règle globale (siteId = null)
+  - `DELETE /api/regles-activites/[id]` — 409 si activités liées (count > 0)
+  - `DELETE /api/regles-activites/[id]` — 200 si règle site-spécifique sans activités
+  - `PATCH /api/regles-activites/[id]/toggle` — bascule isActive (200), retourne `{ id, isActive }`
+  - `POST /api/regles-activites/[id]/reset` — remet firedOnce=false (200) pour une règle SEUIL_*
+  - `POST /api/regles-activites/[id]/reset` — 400 si typeDeclencheur=RECURRENT (pas one-shot)
+- [x] `FAIT` Créer `src/__tests__/lib/regles-activites.test.ts` (tests unitaires) :
+  - `validateTemplatePlaceholders()` — placeholder connu → valid:true
+  - `validateTemplatePlaceholders()` — placeholder inconnu → valid:false, unknown:["{inconnu}"]
+  - `validateTemplatePlaceholders()` — template sans placeholder → valid:true
+  - `toggleRegleActivite()` — operation atomique (pas d'appel findById puis update)
+  - `resetFiredOnce()` — operation atomique
+  - `deleteRegleActivite()` — rejet si siteId=null
+  - `deleteRegleActivite()` — rejet si _count.activites > 0
+- [x] `FAIT` Non-régression moteur d'activités : vérifier que les tests existants du moteur (`evaluateRules`, `generateActivities`, `buildEvaluationContext`) passent toujours
+- [x] `FAIT` `npx vitest run` — 1764 tests passants, 8 échecs pré-existants (non introduits)
+- [x] `FAIT` `npm run build` — Build production OK
+- [x] `FAIT` Écrire `docs/tests/rapport-sprint-25.md`
+
+**Critères d'acceptation :**
+- R9 : tous les tests passent + build OK
+- Cas de la règle globale non supprimable couvert (409)
+- Cas du reset firedOnce sur mauvais type couvert (400)
+- Non-régression moteur d'activités confirmée
+- Rapport dans `docs/tests/`
+
+---
+
+### Story 25.9 — Review Sprint 25
+**Assigné à :** @code-reviewer
+**Priorité :** Haute
+**Dépend de :** Story 25.8
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Vérifier R1 — aucun nouvel enum (pas de nouveaux enums dans ce sprint)
+- [ ] `TODO` Vérifier R2 — `Permission.GERER_REGLES_ACTIVITES`, `TypeDeclencheur.*`, `TypeActivite.*` importés (pas de string literals)
+- [ ] `TODO` Vérifier R3 — `RegleActiviteWithCount` aligné avec la requête Prisma `_count`
+- [ ] `TODO` Vérifier R4 — toggle et reset via `updateMany` avec condition (atomique), pas de check-then-update
+- [ ] `TODO` Vérifier R5 — DialogTrigger asChild sur les dialogs de confirmation (suppression, reset)
+- [ ] `TODO` Vérifier R6 — pas de couleurs hardcodées dans les composants de ce sprint
+- [ ] `TODO` Vérifier R7 — pas de nouveaux champs non-nullable sans valeur par défaut
+- [ ] `TODO` Vérifier R8 — les règles globales (siteId=null) sont accessibles mais pas modifiables arbitrairement
+- [ ] `TODO` Vérifier R9 — `npx vitest run` + `npm run build` avant review
+- [ ] `TODO` Vérifier la protection des règles globales (DELETE → 409 systématique)
+- [ ] `TODO` Vérifier l'accessibilité mobile (360px) des textareas et du toggle switch
+- [ ] `TODO` Écrire `docs/reviews/review-sprint-25.md`
+
+**Critères d'acceptation :**
+- Toutes les règles R1-R9 vérifiées
+- Protection règles globales confirmée
+- Rapport de review dans `docs/reviews/`
+
+---
+
+## Sprint 26 — Modification Relevés & Calibrages (ADR-014 / ADR-015)
+
+**Objectif :** Permettre la modification de relevés et de calibrages existants avec une raison obligatoire et un historique d'audit complet.
+
+**Contexte métier :**
+- ADR-014 : Modification d'un relevé avec raison (min 5 chars) en premier champ, audit trail `ReleveModification`, badge "Modifié" dans les listes
+- ADR-015 : Modification d'un calibrage avec raison obligatoire, indicateur de conservation en temps réel, audit trail `CalibrageModification`, badge "Modifié" dans les listes
+- Permission `CALIBRAGES_MODIFIER` ajoutée (ADR-015)
+- Route PATCH (partiel) distincte du PUT (remplacement complet)
+- Fire-and-forget `runEngineForSite` après PATCH relevé pour re-évaluation des règles SEUIL_*
+
+**Dépend de :** Sprint 25 FAIT + migrations DB specialist (ReleveModification, CalibrageModification, modifie flag)
+
+---
+
+### Story 26.1 — PATCH API route relevés (ADR-014)
+**Assigné à :** @developer
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Ajouter export `PATCH` dans `src/app/api/releves/[id]/route.ts`
+- [x] `FAIT` Validation raison (min 5, max 500 chars), rejet champs non-modifiables
+- [x] `FAIT` Construction `UpdateReleveDTO` + appel `patchReleve()`
+- [x] `FAIT` Hook async fire-and-forget `runEngineForSite` après PATCH
+- [x] `FAIT` `Permission.RELEVES_MODIFIER` requis
+
+---
+
+### Story 26.2 — PATCH API route calibrages (ADR-015)
+**Assigné à :** @developer
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Ajouter export `PATCH` dans `src/app/api/calibrages/[id]/route.ts`
+- [x] `FAIT` Validation raison + nombreMorts + groupes (conservation invariant côté API)
+- [x] `FAIT` Fallback permission : `CALIBRAGES_MODIFIER` || `CALIBRAGES_CREER`
+- [x] `FAIT` Rejet champs non-modifiables (id, vagueId, sourceBacIds, siteId, userId, date, ...)
+
+---
+
+### Story 26.3 — Permission CALIBRAGES_MODIFIER
+**Assigné à :** @developer
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Ajouter `CALIBRAGES_MODIFIER` dans `Permission` enum (`src/types/models.ts`)
+- [x] `FAIT` Ajouter `CALIBRAGES_MODIFIER` dans `PERMISSION_GROUPS.elevage` (`src/lib/permissions-constants.ts`)
+
+---
+
+### Story 26.4 — UI Dialog modifier relevé (ADR-014)
+**Assigné à :** @developer
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Mettre à jour `src/components/releves/modifier-releve-dialog.tsx` — champ raison en premier, PATCH au lieu de PUT
+- [x] `FAIT` Créer `src/components/releves/releve-modifications-list.tsx` — historique groupé par raison+user+temps
+
+---
+
+### Story 26.5 — UI Dialog modifier calibrage (ADR-015)
+**Assigné à :** @developer
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Créer `src/components/calibrage/modifier-calibrage-dialog.tsx` — raison en premier, toggle groupes, indicateur conservation
+- [x] `FAIT` Créer `src/components/calibrage/calibrage-modifications-list.tsx` — historique groupé
+
+---
+
+### Story 26.6 — Badges "Modifié" et bouton "Modifier" sur pages détail
+**Assigné à :** @developer
+**Priorité :** Moyenne
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Ajouter badge `variant="warning"` dans `src/components/vagues/releves-list.tsx`
+- [x] `FAIT` Ajouter badge `variant="warning"` dans `src/components/calibrage/calibrage-card.tsx`
+- [x] `FAIT` Ajouter bouton "Modifier" + `<CalibrageModificationsList>` dans `src/app/vagues/[id]/calibrage/[calibrageId]/page.tsx`
+
+---
+
+### Story 26.7 — Types TypeScript ADR-014/015
+**Assigné à :** @developer
+**Priorité :** Haute
+**Statut :** `FAIT`
+
+**Tâches :**
+- [x] `FAIT` Ajouter `ReleveModification`, `ReleveModificationWithUser`, `ReleveWithModifications` dans `src/types/models.ts`
+- [x] `FAIT` Ajouter `PatchReleveBody`, `CreateReleveModificationDTO`, `PatchReleveResponse` dans `src/types/api.ts`
+- [x] `FAIT` Exports barrel dans `src/types/index.ts`

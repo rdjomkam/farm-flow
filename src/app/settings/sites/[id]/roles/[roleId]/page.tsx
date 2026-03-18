@@ -49,7 +49,7 @@ export default function EditRolePage() {
           setSelectedPerms(new Set(data.permissions));
         } else {
           toast({ title: data.message || "Role introuvable", variant: "error" });
-          router.push(`/sites/${siteId}/roles`);
+          router.push(`/settings/sites/${siteId}/roles`);
         }
       } catch {
         toast({ title: "Erreur reseau", variant: "error" });
@@ -100,7 +100,7 @@ export default function EditRolePage() {
       const data = await res.json();
       if (res.ok) {
         toast({ title: "Role mis a jour", variant: "success" });
-        router.push(`/sites/${siteId}/roles`);
+        router.push(`/settings/sites/${siteId}/roles`);
       } else {
         toast({ title: data.message || "Erreur lors de la mise a jour", variant: "error" });
       }
@@ -120,7 +120,7 @@ export default function EditRolePage() {
       const data = await res.json();
       if (res.ok) {
         toast({ title: "Role supprime", variant: "success" });
-        router.push(`/sites/${siteId}/roles`);
+        router.push(`/settings/sites/${siteId}/roles`);
       } else {
         toast({ title: data.message || "Erreur lors de la suppression", variant: "error" });
       }
@@ -152,7 +152,7 @@ export default function EditRolePage() {
       <Header title={role.name} />
       <div className="p-4 flex flex-col gap-4 max-w-lg mx-auto">
         <Link
-          href={`/sites/${siteId}/roles`}
+          href={`/settings/sites/${siteId}/roles`}
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -219,7 +219,7 @@ export default function EditRolePage() {
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Link href={`/sites/${siteId}/roles`} className="flex-1">
+            <Link href={`/settings/sites/${siteId}/roles`} className="flex-1">
               <Button type="button" variant="outline" className="w-full">
                 Annuler
               </Button>

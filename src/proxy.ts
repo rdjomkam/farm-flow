@@ -7,7 +7,7 @@ const PUBLIC_ROUTES = ["/login", "/register"];
 const PUBLIC_API_PREFIX = "/api/auth/";
 
 /** Routes accessible without an active site selected */
-const NO_SITE_ROUTES = ["/sites", "/select-site"];
+const NO_SITE_ROUTES = ["/settings/sites", "/select-site"];
 const NO_SITE_API_PREFIXES = ["/api/sites", "/api/auth/"];
 
 function isPublicRoute(pathname: string): boolean {
@@ -60,7 +60,7 @@ export function proxy(request: NextRequest) {
   // The middleware cannot enforce site selection (Edge runtime, no DB access).
   // Site membership and active site checks happen in:
   // - requirePermission() for API routes requiring site context
-  // - getServerSession() + redirect("/sites") for server component pages
+  // - getServerSession() + redirect("/settings/sites") for server component pages
   // Routes in NO_SITE_ROUTES/NO_SITE_API_PREFIXES work without active site.
   return NextResponse.next();
 }

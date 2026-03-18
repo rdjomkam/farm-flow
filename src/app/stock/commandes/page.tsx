@@ -11,7 +11,7 @@ import { Permission } from "@/types";
 export default async function CommandesPage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
-  if (!session.activeSiteId) redirect("/sites");
+  if (!session.activeSiteId) redirect("/settings/sites");
 
   const permissions = await checkPagePermission(session, Permission.APPROVISIONNEMENT_VOIR);
   if (!permissions) return <AccessDenied />;

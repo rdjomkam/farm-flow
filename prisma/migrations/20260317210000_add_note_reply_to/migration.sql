@@ -1,0 +1,3 @@
+-- This migration is intentionally empty.
+-- The replyToId column was merged into 20260323000000_add_note_ingenieur
+-- which creates the NoteIngenieur table (correct dependency order).

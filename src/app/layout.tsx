@@ -3,8 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { AppShell } from "@/components/layout/app-shell";
 import { ToastProvider } from "@/components/ui/toast";
 import { getServerSession } from "@/lib/auth";
-import { getServerPermissions } from "@/lib/auth/permissions-server";
-import { Permission, Role } from "@/types";
+import { getServerPermissions, getServerSiteModules } from "@/lib/auth/permissions-server";
+import { Permission, Role, SiteModule } from "@/types";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -32,6 +32,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  viewportFit: "cover",
   themeColor: "#0d9488",
 };
 
@@ -43,6 +44,9 @@ export default async function RootLayout({
   const session = await getServerSession();
   const permissions: Permission[] = session ? await getServerPermissions(session) : [];
   const role: Role | null = session?.role ?? null;
+  const siteModules: SiteModule[] = session?.activeSiteId
+    ? await getServerSiteModules(session.activeSiteId)
+    : [];
 
   return (
     <html lang="fr">
@@ -51,7 +55,7 @@ export default async function RootLayout({
         suppressHydrationWarning
       >
         <ToastProvider>
-          <AppShell permissions={permissions} role={role}>{children}</AppShell>
+          <AppShell permissions={permissions} role={role} userName={session?.name ?? null} siteModules={siteModules}>{children}</AppShell>
         </ToastProvider>
       </body>
     </html>

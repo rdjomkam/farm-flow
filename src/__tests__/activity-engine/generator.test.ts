@@ -91,12 +91,13 @@ function makeContext(vagueId = "vague-1"): RuleEvaluationContext {
     configElevage: null,
     derniersReleves: [],
     phase: "JUVENILE",
+    bac: null,
   };
 }
 
 function makeMatch(regle: RegleActivite, vagueId = "vague-1", score = 50): RuleMatch {
   const ctx = makeContext(vagueId);
-  return { regle, vague: ctx.vague, context: ctx, score };
+  return { regle, vague: ctx.vague, context: ctx, score, bacId: null, bacNom: null };
 }
 
 // ---------------------------------------------------------------------------

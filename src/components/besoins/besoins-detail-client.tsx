@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { StatutBesoins } from "@/types";
+import { ModifierBesoinDialog } from "./modifier-besoin-dialog";
 
 // ---------------------------------------------------------------------------
 // Labels & variants
@@ -87,6 +88,8 @@ interface ListeBesoinsDetailData {
   montantReel: number | null;
   motifRejet: string | null;
   notes: string | null;
+  dateLimite: string | null;
+  vagueId: string | null;
   createdAt: string;
   demandeur: { id: string; name: string } | null;
   valideur: { id: string; name: string } | null;
@@ -104,6 +107,7 @@ interface Props {
   listeBesoins: ListeBesoinsDetailData;
   canApprove: boolean;
   canProcess: boolean;
+  canEdit?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -133,6 +137,7 @@ export function BesoinsDetailClient({
   listeBesoins: initial,
   canApprove,
   canProcess,
+  canEdit = false,
 }: Props) {
   const router = useRouter();
   const { toast } = useToast();
@@ -348,10 +353,29 @@ export function BesoinsDetailClient({
                 {formatDate(liste.createdAt)}
               </p>
             </div>
+            {liste.dateLimite && (() => {
+              const limite = new Date(liste.dateLimite);
+              const now = new Date();
+              const enRetard = limite < now && ![StatutBesoins.TRAITEE, StatutBesoins.CLOTUREE, StatutBesoins.REJETEE].includes(statut);
+              return (
+                <div className="col-span-2">
+                  <p className="text-xs text-muted-foreground">Date limite</p>
+                  <p className={`flex items-center gap-1 text-sm font-medium ${enRetard ? "text-destructive" : ""}`}>
+                    <Calendar className="h-3 w-3" />
+                    {formatDate(liste.dateLimite)}
+                    {enRetard && (
+                      <span className="ml-1 text-xs bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-full">
+                        En retard
+                      </span>
+                    )}
+                  </p>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Montants */}
-          <div className="mt-3 pt-3 border-t flex gap-4">
+          <div className="mt-3 pt-3 flex gap-4">
             <div>
               <p className="text-xs text-muted-foreground">Montant estime</p>
               <p className="text-base font-semibold">
@@ -370,7 +394,7 @@ export function BesoinsDetailClient({
 
           {/* Motif rejet */}
           {liste.motifRejet && (
-            <div className="mt-3 pt-3 border-t">
+            <div className="mt-3 pt-3">
               <p className="text-xs text-muted-foreground mb-1">Motif de rejet</p>
               <p className="text-sm text-destructive">{liste.motifRejet}</p>
             </div>
@@ -378,13 +402,26 @@ export function BesoinsDetailClient({
 
           {/* Notes */}
           {liste.notes && (
-            <div className="mt-3 pt-3 border-t">
+            <div className="mt-3 pt-3">
               <p className="text-xs text-muted-foreground mb-1">Notes</p>
               <p className="text-sm">{liste.notes}</p>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Bouton Modifier — seulement si statut SOUMISE et canEdit */}
+      {canEdit && statut === StatutBesoins.SOUMISE && (
+        <div className="mb-4 flex justify-end">
+          <ModifierBesoinDialog
+            liste={liste}
+            onSuccess={(updated) => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              setListe(updated as any);
+            }}
+          />
+        </div>
+      )}
 
       {/* Actions workflow */}
       {canApprove && statut === StatutBesoins.SOUMISE && (
@@ -574,7 +611,7 @@ export function BesoinsDetailClient({
           ) : (
             <div className="space-y-2">
               {liste.lignes.map((l) => (
-                <div key={l.id} className="border rounded p-3">
+                <div key={l.id}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">{l.designation}</p>

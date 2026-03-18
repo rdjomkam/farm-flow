@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
       prixTotal: body.prixTotal,
       configElevageId: body.configElevageId ?? null,
       isActive: body.isActive ?? true,
+      enabledModules: body.enabledModules ?? [],
       userId: auth.userId,
       siteId: auth.activeSiteId,
     });

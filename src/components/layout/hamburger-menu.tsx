@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Menu,
   LayoutDashboard,
   Waves,
   PlusCircle,
@@ -27,48 +26,44 @@ import {
   Wallet,
   TrendingUp,
   Calendar,
+  ClipboardCheck,
   Settings,
-  Bell,
   LogOut,
-  ChevronDown,
+  Receipt,
+  ClipboardList,
+  NotebookPen,
+  UserCog,
+  Boxes,
+  Zap,
 } from "lucide-react";
-import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { NotificationBell } from "./notification-bell";
-import { SiteSelector } from "./site-selector";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { Permission, Role } from "@/types";
-import { MODULE_VIEW_PERMISSIONS, ITEM_VIEW_PERMISSIONS, SECONDARY_VIEW_PERMISSIONS } from "@/lib/permissions-constants";
-import type { UserSession } from "@/types";
+import { Permission, Role, SiteModule } from "@/types";
+import { MODULE_VIEW_PERMISSIONS, ITEM_VIEW_PERMISSIONS, MODULE_LABEL_TO_SITE_MODULE } from "@/lib/permissions-constants";
 
 const roleLabels: Record<Role, string> = {
   ADMIN: "Administrateur",
   GERANT: "Gerant",
   PISCICULTEUR: "Pisciculteur",
-  INGENIEUR: "Ingénieur",
+  INGENIEUR: "Ingenieur",
 };
 
-interface NavSubItem {
+interface NavItem {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
 }
 
-interface NavModule {
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  href: string;
-  prefix: string[];
-  items: NavSubItem[];
-}
+// ---------------------------------------------------------------------------
+// Modules ADMIN / GERANT (mirrors sidebar exactly)
+// ---------------------------------------------------------------------------
 
-const modules: NavModule[] = [
+const modulesAdminGerant: { label: string; primaryHref: string; icon: React.ComponentType<{ className?: string }>; items: NavItem[] }[] = [
   {
     label: "Reproduction",
+    primaryHref: "/alevins",
     icon: Egg,
-    href: "/alevins",
-    prefix: ["/alevins"],
     items: [
       { href: "/alevins", label: "Dashboard", icon: LayoutDashboard },
       { href: "/alevins/reproducteurs", label: "Reproducteurs", icon: Fish },
@@ -78,9 +73,8 @@ const modules: NavModule[] = [
   },
   {
     label: "Grossissement",
+    primaryHref: "/vagues",
     icon: Waves,
-    href: "/vagues",
-    prefix: ["/vagues", "/releves", "/bacs", "/analytics/bacs", "/analytics/vagues"],
     items: [
       { href: "/vagues", label: "Vagues", icon: Waves },
       { href: "/bacs", label: "Bacs", icon: Container },
@@ -91,9 +85,8 @@ const modules: NavModule[] = [
   },
   {
     label: "Intrants",
+    primaryHref: "/stock",
     icon: Package,
-    href: "/stock",
-    prefix: ["/stock", "/analytics/aliments"],
     items: [
       { href: "/stock", label: "Dashboard", icon: LayoutDashboard },
       { href: "/stock/produits", label: "Produits", icon: Tag },
@@ -105,63 +98,155 @@ const modules: NavModule[] = [
   },
   {
     label: "Ventes",
+    primaryHref: "/ventes",
     icon: ShoppingCart,
-    href: "/clients",
-    prefix: ["/clients", "/ventes", "/factures", "/finances"],
     items: [
       { href: "/clients", label: "Clients", icon: Users },
       { href: "/ventes", label: "Ventes", icon: Banknote },
       { href: "/factures", label: "Factures", icon: FileText },
       { href: "/finances", label: "Finances", icon: Wallet },
+      { href: "/depenses", label: "Depenses", icon: Receipt },
+      { href: "/besoins", label: "Besoins", icon: ClipboardList },
     ],
   },
   {
     label: "Analyse & Pilotage",
+    primaryHref: "/analytics",
     icon: BarChart3,
-    href: "/analytics",
-    prefix: ["/analytics", "/planning", "/notifications", "/settings/alertes", "/settings/config-elevage"],
     items: [
       { href: "/analytics", label: "Vue globale", icon: BarChart3 },
       { href: "/planning", label: "Calendrier", icon: Calendar },
       { href: "/planning/nouvelle", label: "Nouvelle activite", icon: PlusCircle },
+      { href: "/mes-taches", label: "Mes taches", icon: ClipboardCheck },
       { href: "/analytics/finances", label: "Finances", icon: Banknote, disabled: true },
       { href: "/analytics/tendances", label: "Tendances", icon: TrendingUp, disabled: true },
     ],
   },
+  {
+    label: "Packs & Provisioning",
+    primaryHref: "/packs",
+    icon: Boxes,
+    items: [
+      { href: "/packs", label: "Packs", icon: Boxes },
+      { href: "/activations", label: "Activations", icon: ClipboardCheck },
+    ],
+  },
+  {
+    label: "Ingenieur",
+    primaryHref: "/ingenieur",
+    icon: UserCog,
+    items: [
+      { href: "/ingenieur", label: "Dashboard clients", icon: LayoutDashboard },
+      { href: "/notes", label: "Notes", icon: NotebookPen },
+    ],
+  },
+  // Configuration — unified settings module
+  {
+    label: "Configuration",
+    primaryHref: "/settings/sites",
+    icon: Settings,
+    items: [
+      { href: "/settings/sites", label: "Sites", icon: Building2 },
+      { href: "/settings/config-elevage", label: "Profils d'elevage", icon: Settings },
+      { href: "/settings/alertes", label: "Config. alertes", icon: Settings },
+      { href: "/settings/regles-activites", label: "Regles d'activites", icon: Zap },
+    ],
+  },
 ];
 
-const secondaryItems: { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { href: "/sites", label: "Sites", icon: Building2 },
-  { href: "/notifications", label: "Notifications", icon: Bell },
-  { href: "/settings/config-elevage", label: "Configuration elevage", icon: Settings },
-  { href: "/settings/alertes", label: "Configuration alertes", icon: Settings },
+// ---------------------------------------------------------------------------
+// Modules INGENIEUR
+// ---------------------------------------------------------------------------
+
+const modulesIngenieur: { label: string; primaryHref: string; icon: React.ComponentType<{ className?: string }>; items: NavItem[] }[] = [
+  {
+    label: "Clients",
+    primaryHref: "/ingenieur",
+    icon: Users,
+    items: [
+      { href: "/ingenieur", label: "Dashboard clients", icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: "Notes",
+    primaryHref: "/notes",
+    icon: NotebookPen,
+    items: [
+      { href: "/notes", label: "Mes notes", icon: NotebookPen },
+    ],
+  },
 ];
 
-export function HamburgerMenu() {
-  const [open, setOpen] = useState(false);
+// ---------------------------------------------------------------------------
+// Modules PISCICULTEUR
+// ---------------------------------------------------------------------------
+
+const modulesPisciculteur: { label: string; primaryHref: string; icon: React.ComponentType<{ className?: string }>; items: NavItem[] }[] = [
+  {
+    label: "Elevage",
+    primaryHref: "/vagues",
+    icon: Waves,
+    items: [
+      { href: "/vagues", label: "Vagues", icon: Waves },
+      { href: "/bacs", label: "Bacs", icon: Container },
+      { href: "/releves/nouveau", label: "Nouveau releve", icon: PlusCircle },
+    ],
+  },
+  {
+    label: "Analyse & Pilotage",
+    primaryHref: "/analytics",
+    icon: BarChart3,
+    items: [
+      { href: "/analytics", label: "Vue globale", icon: BarChart3 },
+      { href: "/mes-taches", label: "Mes taches", icon: ClipboardCheck },
+      { href: "/notes", label: "Echanges", icon: NotebookPen },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Phase 3 permission gates
+// ---------------------------------------------------------------------------
+
+const PHASE3_MODULE_PERMISSIONS: Record<string, Permission> = {
+  "Packs & Provisioning": Permission.ACTIVER_PACKS,
+  "Ingenieur":            Permission.MONITORING_CLIENTS,
+};
+
+interface HamburgerMenuProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  permissions: Permission[];
+  role: Role | null;
+  userName: string | null;
+  siteModules: SiteModule[];
+}
+
+export function HamburgerMenu({ open, onOpenChange, permissions, role, userName, siteModules }: HamburgerMenuProps) {
   const [loading, setLoading] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<UserSession | null>(null);
-  const [permissions, setPermissions] = useState<Permission[]>([]);
 
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.user) setUser(data.user);
-        if (data?.permissions) setPermissions(data.permissions);
-      })
-      .catch(() => {});
-  }, []);
+  // Select modules by role (same logic as sidebar)
+  const allModules = useMemo(() => {
+    if (role === Role.INGENIEUR) return modulesIngenieur;
+    if (role === Role.PISCICULTEUR) return modulesPisciculteur;
+    return modulesAdminGerant;
+  }, [role]);
 
-  // Filter modules by permission, then filter items within each module
+  // Filter modules by permission + site modules, then items within each module
   const visibleModules = useMemo(
     () =>
-      modules
+      allModules
         .filter((mod) => {
+          const phase3Required = PHASE3_MODULE_PERMISSIONS[mod.label];
+          if (phase3Required && !permissions.includes(phase3Required)) return false;
           const required = MODULE_VIEW_PERMISSIONS[mod.label];
-          return !required || permissions.includes(required);
+          if (required && !permissions.includes(required)) return false;
+          // Gate par modules actifs du site
+          const siteModule = MODULE_LABEL_TO_SITE_MODULE[mod.label];
+          if (siteModule && !siteModules.includes(siteModule)) return false;
+          return true;
         })
         .map((mod) => ({
           ...mod,
@@ -171,18 +256,29 @@ export function HamburgerMenu() {
           }),
         }))
         .filter((mod) => mod.items.length > 0),
-    [permissions]
+    [permissions, allModules, siteModules]
   );
 
-  const visibleSecondary = useMemo(
-    () => secondaryItems.filter((item) => {
-      const required = SECONDARY_VIEW_PERMISSIONS[item.href];
-      return !required || permissions.includes(required);
-    }),
-    [permissions]
-  );
+  const showDashboard = permissions.includes(Permission.DASHBOARD_VOIR) && role !== Role.INGENIEUR && role !== Role.PISCICULTEUR;
 
-  const showDashboard = permissions.includes(Permission.DASHBOARD_VOIR);
+  function isActive(href: string) {
+    if (href === "/" || href === "/stock" || href === "/alevins" || href === "/analytics" || href === "/planning" || href === "/finances" || href === "/mes-taches" || href === "/ingenieur" || href === "/notes" || href === "/packs" || href === "/activations")
+      return pathname === href || pathname.startsWith(href + "/");
+    if (href === "/ventes")
+      return pathname === "/ventes" || pathname.startsWith("/ventes/");
+    return pathname.startsWith(href);
+  }
+
+  // Determine which module is active based on current pathname
+  const activeModuleLabel = useMemo(() => {
+    for (const mod of visibleModules) {
+      if (mod.items.some((item) => isActive(item.href))) {
+        return mod.label;
+      }
+    }
+    return null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, visibleModules]);
 
   async function handleLogout() {
     setLoading(true);
@@ -195,72 +291,8 @@ export function HamburgerMenu() {
     }
   }
 
-  function isActive(href: string) {
-    if (href === "/" || href === "/stock" || href === "/alevins" || href === "/analytics" || href === "/planning" || href === "/finances")
-      return pathname === href;
-    return pathname.startsWith(href);
-  }
-
-  function isModuleActive(prefix: string[]) {
-    return prefix.some((p) => (p === "/" || p === "/analytics" ? pathname === p : pathname.startsWith(p)));
-  }
-
-  // Determine which module is active based on current pathname
-  const activeModuleLabel = useMemo(() => {
-    for (const mod of visibleModules) {
-      if (isModuleActive(mod.prefix)) {
-        return mod.label;
-      }
-    }
-    return null;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, visibleModules]);
-
-  const [expanded, setExpanded] = useState<Set<string>>(() => {
-    // Initialize with the active module expanded
-    for (const mod of modules) {
-      if (mod.prefix.some((p) => (p === "/" || p === "/analytics" ? pathname === p : pathname.startsWith(p)))) {
-        return new Set([mod.label]);
-      }
-    }
-    return new Set(["Grossissement"]);
-  });
-
-  // Auto-expand the active module when pathname changes
-  useEffect(() => {
-    if (activeModuleLabel) {
-      setExpanded((prev) => {
-        if (prev.has(activeModuleLabel)) return prev;
-        const next = new Set(prev);
-        next.add(activeModuleLabel);
-        return next;
-      });
-    }
-  }, [activeModuleLabel]);
-
-  function toggleModule(label: string) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(label)) {
-        next.delete(label);
-      } else {
-        next.add(label);
-      }
-      return next;
-    });
-  }
-
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <div className="flex items-center gap-1">
-        <SheetTrigger asChild>
-          <Button variant="ghost" className="h-11 w-11 p-0">
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Menu</span>
-          </Button>
-        </SheetTrigger>
-        <NotificationBell />
-      </div>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent>
         <div className="flex h-full flex-col overflow-y-auto">
           {/* Logo header */}
@@ -269,25 +301,17 @@ export function HamburgerMenu() {
             <span className="text-lg font-bold">FarmFlow</span>
           </div>
 
-          {/* Site actif */}
-          <div className="px-3 pt-3 pb-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 mb-1.5">
-              Site actif
-            </p>
-            <SiteSelector fullWidth />
-          </div>
-
           {/* Modules */}
-          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+          <nav className="flex-1 p-3 space-y-2 overflow-y-auto">
             {showDashboard && (
               <Link
                 href="/"
-                onClick={() => setOpen(false)}
+                onClick={() => onOpenChange(false)}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg py-2 text-sm font-medium transition-colors",
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   pathname === "/"
-                    ? "bg-primary/10 text-primary border-l-2 border-primary pl-2.5"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground pl-3"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
                 <LayoutDashboard className="h-4 w-4" />
@@ -296,124 +320,37 @@ export function HamburgerMenu() {
             )}
             {visibleModules.map((mod) => {
               const ModIcon = mod.icon;
-              const isExpanded = expanded.has(mod.label);
               const isModActive = mod.label === activeModuleLabel;
               return (
-                <div key={mod.label}>
-                  <button
-                    onClick={() => toggleModule(mod.label)}
-                    className={cn(
-                      "flex w-full items-center gap-2 px-2 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-md transition-colors",
-                      isModActive
-                        ? "text-primary"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    <ModIcon className="h-3.5 w-3.5" />
-                    {mod.label}
-                    <span className="ml-auto flex items-center gap-1.5">
-                      <span className="text-[10px] font-normal normal-case tracking-normal text-muted-foreground">
-                        {mod.items.filter(i => !i.disabled).length}
-                      </span>
-                      <ChevronDown
-                        className={cn(
-                          "h-3.5 w-3.5 transition-transform duration-200",
-                          isExpanded && "rotate-180"
-                        )}
-                      />
-                    </span>
-                  </button>
-                  <div
-                    className={cn(
-                      "overflow-hidden transition-all duration-200",
-                      isExpanded
-                        ? "max-h-[500px] opacity-100"
-                        : "max-h-0 opacity-0"
-                    )}
-                  >
-                    <div className="space-y-0.5 pt-0.5">
-                      {mod.items.map((item) => {
-                        const Icon = item.icon;
-                        const itemActive = isActive(item.href);
-
-                        if (item.disabled) {
-                          return (
-                            <div
-                              key={item.href}
-                              className="flex items-center gap-3 rounded-lg pl-3 pr-3 py-2 text-sm font-medium text-muted-foreground/40 cursor-not-allowed"
-                            >
-                              <Icon className="h-4 w-4" />
-                              {item.label}
-                              <span className="ml-auto text-[9px] uppercase tracking-wide bg-muted rounded px-1">
-                                Bientot
-                              </span>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            onClick={() => setOpen(false)}
-                            className={cn(
-                              "flex items-center gap-3 rounded-lg py-2 text-sm font-medium transition-colors",
-                              itemActive
-                                ? "bg-primary/10 text-primary border-l-2 border-primary pl-2.5"
-                                : "text-muted-foreground hover:bg-muted hover:text-foreground pl-3"
-                            )}
-                          >
-                            <Icon className="h-4 w-4" />
-                            {item.label}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
+                <Link
+                  key={mod.label}
+                  href={mod.primaryHref}
+                  onClick={() => onOpenChange(false)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                    isModActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <ModIcon className="h-4 w-4" />
+                  {mod.label}
+                </Link>
               );
             })}
 
-            {/* Separator */}
-            <div className="border-t border-border" />
-
-            {/* Secondary */}
-            {visibleSecondary.length > 0 && (
-              <div className="space-y-0.5">
-                {visibleSecondary.map((item) => {
-                  const itemActive = isActive(item.href);
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setOpen(false)}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-colors",
-                        itemActive
-                          ? "bg-primary/10 text-primary border-l-2 border-primary pl-2.5"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground pl-3"
-                      )}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
           </nav>
 
           {/* Footer -- User info + Logout */}
           <div className="border-t border-border p-3 space-y-2">
-            {user && (
+            {userName && role && (
               <div className="flex items-center gap-3 px-3 py-2">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <User className="h-4 w-4" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{user.name}</p>
-                  <p className="text-xs text-muted-foreground">{roleLabels[user.role] ?? user.role}</p>
+                  <p className="text-sm font-medium truncate">{userName}</p>
+                  <p className="text-xs text-muted-foreground">{roleLabels[role] ?? role}</p>
                 </div>
               </div>
             )}

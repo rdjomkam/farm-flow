@@ -34,7 +34,7 @@ const PHASE_ORDER: Record<string, number> = {
 /** Activite minimale necessaire pour la verification cooldown/firedOnce */
 type ActiviteHistorique = Pick<
   Activite,
-  "id" | "regleId" | "vagueId" | "dateDebut" | "createdAt"
+  "id" | "regleId" | "vagueId" | "bacId" | "dateDebut" | "createdAt"
 >;
 
 // ---------------------------------------------------------------------------
@@ -78,16 +78,17 @@ function isPhaseInRange(
 }
 
 /**
- * Retourne la derniere activite generee par cette regle sur cette vague,
+ * Retourne la derniere activite generee par cette regle sur cette vague (et ce bac),
  * ou null si aucune.
  */
 function getLastFired(
   regleId: string,
   vagueId: string,
+  bacId: string | null,
   historique: ActiviteHistorique[]
 ): ActiviteHistorique | null {
   const matches = historique
-    .filter((a) => a.regleId === regleId && a.vagueId === vagueId)
+    .filter((a) => a.regleId === regleId && a.vagueId === vagueId && a.bacId === bacId)
     .sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -108,12 +109,13 @@ function joursSince(date: Date): number {
 }
 
 /**
- * Verifie si un doublon existe pour aujourd'hui (meme regle + vague + meme jour).
+ * Verifie si un doublon existe pour aujourd'hui (meme regle + vague + bac + meme jour).
  * EC-3.1
  */
 function hasTodayDuplicate(
   regleId: string,
   vagueId: string,
+  bacId: string | null,
   historique: ActiviteHistorique[]
 ): boolean {
   const WAT_OFFSET_MS = 1 * 60 * 60 * 1000;
@@ -121,7 +123,7 @@ function hasTodayDuplicate(
   const todayStr = todayWAT.toISOString().slice(0, 10); // YYYY-MM-DD
 
   return historique.some((a) => {
-    if (a.regleId !== regleId || a.vagueId !== vagueId) return false;
+    if (a.regleId !== regleId || a.vagueId !== vagueId || a.bacId !== bacId) return false;
     const aDateWAT = new Date(a.createdAt.getTime() + WAT_OFFSET_MS);
     return aDateWAT.toISOString().slice(0, 10) === todayStr;
   });
@@ -157,7 +159,7 @@ function evalRecurrent(
   const intervalleJours = regle.intervalleJours;
   if (intervalleJours == null) return true; // EC-3.12
 
-  const lastFired = getLastFired(regle.id, ctx.vague.id, historique);
+  const lastFired = getLastFired(regle.id, ctx.vague.id, ctx.bac?.id ?? null, historique);
   if (!lastFired) return true; // Jamais declenche → declencher
 
   const joursSinceLastFired = joursSince(new Date(lastFired.createdAt));
@@ -356,7 +358,7 @@ export function evaluateRules(
       }
 
       // EC-3.1 : deduplication meme jour
-      if (hasTodayDuplicate(regle.id, ctx.vague.id, historique)) {
+      if (hasTodayDuplicate(regle.id, ctx.vague.id, ctx.bac?.id ?? null, historique)) {
         continue;
       }
 
@@ -402,6 +404,8 @@ export function evaluateRules(
           vague: ctx.vague,
           context: ctx,
           score,
+          bacId: ctx.bac?.id ?? null,
+          bacNom: ctx.bac?.nom ?? null,
         });
       }
     }

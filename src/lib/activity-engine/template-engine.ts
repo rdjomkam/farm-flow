@@ -12,6 +12,10 @@
  */
 
 import type { TemplatePlaceholders } from "@/types/activity-engine";
+import type { CustomPlaceholder } from "@/types";
+import { resolveContextPath } from "./context-resolver";
+import { evaluateFormula } from "./formula-evaluator";
+import type { RuleEvaluationContext } from "@/types/activity-engine";
 
 // ---------------------------------------------------------------------------
 // Constantes
@@ -57,9 +61,9 @@ function formatNumber(
  */
 export function resolveTemplate(
   template: string,
-  placeholders: Partial<TemplatePlaceholders>
+  placeholders: Partial<TemplatePlaceholders> | Record<string, string>
 ): string {
-  return template.replace(/\{(\w+)\}/g, (match, key: string) => {
+  return template.replace(/\{(\w+)\}/g, (_match, key: string) => {
     const value = (placeholders as Record<string, string | undefined>)[key];
     if (value == null || value === "") return UNAVAILABLE;
     return value;
@@ -112,7 +116,7 @@ export function buildPlaceholders(ctx: {
   tauxRationnement?: number | null;
   bacNom?: string | null;
   prixMarcheKg?: number | null;
-}): Partial<TemplatePlaceholders> {
+}, customPlaceholders?: CustomPlaceholder[], fullCtx?: RuleEvaluationContext | null): Record<string, string> {
   const {
     quantiteCalculee,
     produitNom,
@@ -146,7 +150,7 @@ export function buildPlaceholders(ctx: {
       ? biomasse * prixMarcheKg
       : null;
 
-  return {
+  const staticResult: Record<string, string> = {
     quantite_calculee:
       quantiteCalculee != null
         ? formatNumber(quantiteCalculee / 1000, 2) // grammes → kg
@@ -190,4 +194,32 @@ export function buildPlaceholders(ctx: {
         ? formatNumber(valeurMarchande, 0)
         : UNAVAILABLE,
   };
+
+  // If no custom placeholders, return static result as before
+  if (!customPlaceholders?.length) return staticResult;
+
+  // Resolve custom placeholders
+  const merged = { ...staticResult };
+  for (const cp of customPlaceholders) {
+    if (!cp.isActive) continue;
+
+    let value: number | string | null = null;
+
+    if (cp.mode === "MAPPING" && cp.sourcePath) {
+      value = fullCtx ? resolveContextPath(cp.sourcePath, fullCtx) : null;
+    } else if (cp.mode === "FORMULA" && cp.formula) {
+      value = evaluateFormula(cp.formula, merged, fullCtx ?? null);
+    }
+
+    // Format and add to dictionary
+    if (cp.format === "NUMBER") {
+      merged[cp.key] = typeof value === "number"
+        ? formatNumber(value, cp.decimals)
+        : UNAVAILABLE;
+    } else {
+      merged[cp.key] = typeof value === "string" ? value : UNAVAILABLE;
+    }
+  }
+
+  return merged;
 }

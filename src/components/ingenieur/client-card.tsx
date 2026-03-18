@@ -30,19 +30,19 @@ function getStatusColor(client: ClientIngenieurSummary): "critique" | "attention
 
 const statusStyles = {
   critique: {
-    border: "border-l-4 border-l-danger",
+    border: "",
     icon: "text-danger bg-danger/10",
     badge: "bg-danger/15 text-danger",
     label: "Critique",
   },
   attention: {
-    border: "border-l-4 border-l-warning",
+    border: "",
     icon: "text-warning bg-warning/10",
     badge: "bg-accent-amber-muted text-accent-amber",
     label: "Attention",
   },
   ok: {
-    border: "border-l-4 border-l-success",
+    border: "",
     icon: "text-success bg-success/10",
     badge: "bg-success/15 text-success",
     label: "OK",

@@ -63,6 +63,16 @@ vi.mock("@/lib/auth", () => ({
       this.name = "AuthError";
     }
   },
+  normalizePhone: vi.fn().mockReturnValue("699000001"),
+}));
+
+vi.mock("@/lib/activity-engine", () => ({
+  runEngineForSite: vi.fn().mockResolvedValue(undefined),
+  generateOnboardingActivities: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@/lib/queries/users", () => ({
+  getOrCreateSystemUser: vi.fn().mockResolvedValue({ id: "system-user" }),
 }));
 
 const AUTH_ADMIN = {

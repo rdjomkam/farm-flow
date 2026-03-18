@@ -6,8 +6,22 @@ import Link from "next/link";
 import { ArrowLeft, CheckCircle, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SiteModule } from "@/types";
+
+const MODULE_LABELS: Record<SiteModule, string> = {
+  [SiteModule.REPRODUCTION]: "Reproduction",
+  [SiteModule.GROSSISSEMENT]: "Grossissement",
+  [SiteModule.INTRANTS]: "Intrants",
+  [SiteModule.VENTES]: "Ventes",
+  [SiteModule.ANALYSE_PILOTAGE]: "Analyse & Pilotage",
+  [SiteModule.PACKS_PROVISIONING]: "Packs & Provisioning",
+  [SiteModule.CONFIGURATION]: "Configuration",
+  [SiteModule.INGENIEUR]: "Ingenieur",
+  [SiteModule.NOTES]: "Notes",
+};
 
 interface PackInfo {
   id: string;
@@ -15,6 +29,7 @@ interface PackInfo {
   nombreAlevins: number;
   poidsMoyenInitial: number;
   prixTotal: number;
+  enabledModules: SiteModule[];
   produits: Array<{ id: string; quantite: number; produit: { nom: string; unite: string } }>;
 }
 
@@ -118,28 +133,30 @@ export function PackActiverClient({ pack }: Props) {
           </div>
         </div>
 
-        <Card>
+        <Card className="shadow-none">
           <CardHeader>
             <CardTitle className="text-base">Recapitulatif du provisioning</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h3 className="font-semibold text-sm mb-2">Site client cree</h3>
-              <p className="text-sm">{result.site.name}</p>
-            </div>
-            <div>
-              <h3 className="font-semibold text-sm mb-2">Pisciculteur cree</h3>
-              <p className="text-sm">{result.user.name} — {result.user.phone}</p>
-            </div>
-            <div>
-              <h3 className="font-semibold text-sm mb-2">Vague initialisee</h3>
-              <p className="text-sm font-mono">{result.vague.code}</p>
-              <p className="text-xs text-muted-foreground">{result.vague.nombreInitial.toLocaleString()} alevins</p>
-            </div>
-            <div>
-              <h3 className="font-semibold text-sm mb-2">Stock initialise</h3>
-              <p className="text-sm">{result.nombreProduitsInitialises} produit{result.nombreProduitsInitialises !== 1 ? "s" : ""} — {result.nombreMouvements} mouvement{result.nombreMouvements !== 1 ? "s" : ""} ENTREE</p>
-            </div>
+          <CardContent>
+            <dl className="space-y-0 text-sm divide-y divide-border">
+              <div className="py-3">
+                <dt className="text-muted-foreground text-xs">Site client cree</dt>
+                <dd className="font-medium">{result.site.name}</dd>
+              </div>
+              <div className="py-3">
+                <dt className="text-muted-foreground text-xs">Pisciculteur cree</dt>
+                <dd className="font-medium">{result.user.name} — {result.user.phone}</dd>
+              </div>
+              <div className="py-3">
+                <dt className="text-muted-foreground text-xs">Vague initialisee</dt>
+                <dd className="font-medium font-mono">{result.vague.code}</dd>
+                <dd className="text-xs text-muted-foreground">{result.vague.nombreInitial.toLocaleString()} alevins</dd>
+              </div>
+              <div className="py-3">
+                <dt className="text-muted-foreground text-xs">Stock initialise</dt>
+                <dd className="font-medium">{result.nombreProduitsInitialises} produit{result.nombreProduitsInitialises !== 1 ? "s" : ""} — {result.nombreMouvements} mouvement{result.nombreMouvements !== 1 ? "s" : ""} ENTREE</dd>
+              </div>
+            </dl>
           </CardContent>
         </Card>
 
@@ -168,7 +185,7 @@ export function PackActiverClient({ pack }: Props) {
       </div>
 
       {/* Pack summary */}
-      <Card className="bg-muted/50">
+      <Card className="shadow-none bg-muted/50">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
             <Package className="h-6 w-6 text-primary" />
@@ -182,13 +199,27 @@ export function PackActiverClient({ pack }: Props) {
                   {pack.produits.length} produit{pack.produits.length !== 1 ? "s" : ""} inclus dans le stock
                 </p>
               )}
+              <div className="mt-2">
+                <p className="text-xs text-muted-foreground mb-1">Modules activés sur le site client :</p>
+                {(!pack.enabledModules || pack.enabledModules.length === 0) ? (
+                  <span className="text-xs text-muted-foreground italic">Tous les modules</span>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {pack.enabledModules.map((mod) => (
+                      <Badge key={mod} variant="default" className="text-xs">
+                        {MODULE_LABELS[mod as SiteModule] ?? mod}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Client site */}
-      <Card>
+      <Card className="shadow-none">
         <CardHeader>
           <CardTitle className="text-base">1. Site du pisciculteur</CardTitle>
         </CardHeader>
@@ -215,7 +246,7 @@ export function PackActiverClient({ pack }: Props) {
       </Card>
 
       {/* Client user */}
-      <Card>
+      <Card className="shadow-none">
         <CardHeader>
           <CardTitle className="text-base">2. Compte pisciculteur</CardTitle>
         </CardHeader>
@@ -232,12 +263,14 @@ export function PackActiverClient({ pack }: Props) {
           <div>
             <label className="text-sm font-medium">Telephone *</label>
             <Input
+              type="tel"
               value={clientUserPhone}
               onChange={(e) => setClientUserPhone(e.target.value)}
-              placeholder="Ex: +237 699 000 000"
+              placeholder="Ex: 699 000 000"
               className="mt-1"
               inputMode="tel"
             />
+            <p className="text-xs text-muted-foreground mt-1">Le code pays (+237) sera ajoute automatiquement</p>
           </div>
           <div>
             <label className="text-sm font-medium">Email (optionnel)</label>
@@ -266,9 +299,9 @@ export function PackActiverClient({ pack }: Props) {
       </Card>
 
       {/* Optional settings */}
-      <Card>
+      <Card className="shadow-none">
         <CardHeader>
-          <CardTitle className="text-base">3. Options (optionnel)</CardTitle>
+          <CardTitle className="text-base text-muted-foreground">3. Options (optionnel)</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>

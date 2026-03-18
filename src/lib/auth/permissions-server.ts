@@ -1,6 +1,7 @@
 import { cache } from "react";
-import { Permission, Role } from "@/types";
+import { Permission, Role, SiteModule } from "@/types";
 import { getSiteMember } from "@/lib/queries/sites";
+import { prisma } from "@/lib/db";
 import type { UserSession } from "@/types";
 
 /** Load effective permissions for active site. Uses React cache() for dedup within a request. */
@@ -10,6 +11,19 @@ export const getServerPermissions = cache(async (session: UserSession): Promise<
   const member = await getSiteMember(session.activeSiteId, session.userId);
   if (!member?.siteRole) return [];
   return member.siteRole.permissions as Permission[];
+});
+
+/** Load enabled modules for active site. Empty array = all modules (backward compat). */
+export const getServerSiteModules = cache(async (activeSiteId: string | null): Promise<SiteModule[]> => {
+  if (!activeSiteId) return [];
+  const site = await prisma.site.findUnique({
+    where: { id: activeSiteId },
+    select: { enabledModules: true },
+  });
+  if (!site) return [];
+  // Empty = all modules (backward compat for non-supervised sites)
+  if (site.enabledModules.length === 0) return Object.values(SiteModule);
+  return site.enabledModules as SiteModule[];
 });
 
 /** Check page-level permission. Returns permissions if OK, null if denied. */

@@ -92,6 +92,7 @@ export async function getListeBesoins(
   siteId: string,
   filters?: ListeBesoinsFilters
 ) {
+  const maintenant = new Date();
   return prisma.listeBesoins.findMany({
     where: {
       siteId,
@@ -104,6 +105,13 @@ export async function getListeBesoins(
               ...(filters.dateFrom && { gte: new Date(filters.dateFrom) }),
               ...(filters.dateTo && { lte: new Date(filters.dateTo) }),
             },
+          }
+        : {}),
+      // Filtre enRetard : dateLimite depassee et statut non terminal (ADR-017.2)
+      ...(filters?.enRetard
+        ? {
+            dateLimite: { lt: maintenant, not: null },
+            statut: { in: [StatutBesoins.SOUMISE, StatutBesoins.APPROUVEE] },
           }
         : {}),
     },
@@ -150,6 +158,7 @@ export async function createListeBesoins(
         vagueId: data.vagueId ?? null,
         montantEstime,
         notes: data.notes ?? null,
+        dateLimite: data.dateLimite ? new Date(data.dateLimite) : null,
         siteId,
       },
     });
@@ -216,6 +225,10 @@ export async function updateListeBesoins(
         ...(data.titre !== undefined && { titre: data.titre }),
         ...(data.vagueId !== undefined && { vagueId: data.vagueId }),
         ...(data.notes !== undefined && { notes: data.notes }),
+        // dateLimite : null = supprimer, string = mettre a jour, undefined = inchange (ADR-017.2)
+        ...(data.dateLimite !== undefined && {
+          dateLimite: data.dateLimite ? new Date(data.dateLimite) : null,
+        }),
         montantEstime,
       },
       include: INCLUDE_LISTE_BESOINS,

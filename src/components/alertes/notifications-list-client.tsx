@@ -10,6 +10,7 @@ import {
   Clock,
   Activity,
   Star,
+  CalendarClock,
   CheckCircle2,
   Eye,
   CheckCheck,
@@ -30,6 +31,7 @@ const typeAlerteLabels: Record<TypeAlerte, string> = {
   [TypeAlerte.RAPPEL_ALIMENTATION]: "Rappel alimentation",
   [TypeAlerte.RAPPEL_BIOMETRIE]: "Rappel biometrie",
   [TypeAlerte.PERSONNALISEE]: "Personnalisee",
+  [TypeAlerte.BESOIN_EN_RETARD]: "Besoin en retard",
 };
 
 const typeAlerteIcons: Record<TypeAlerte, React.ComponentType<{ className?: string }>> = {
@@ -39,6 +41,7 @@ const typeAlerteIcons: Record<TypeAlerte, React.ComponentType<{ className?: stri
   [TypeAlerte.RAPPEL_ALIMENTATION]: Clock,
   [TypeAlerte.RAPPEL_BIOMETRIE]: Activity,
   [TypeAlerte.PERSONNALISEE]: Star,
+  [TypeAlerte.BESOIN_EN_RETARD]: CalendarClock,
 };
 
 const typeAlerteColors: Record<TypeAlerte, string> = {
@@ -48,6 +51,7 @@ const typeAlerteColors: Record<TypeAlerte, string> = {
   [TypeAlerte.RAPPEL_ALIMENTATION]: "text-primary bg-primary/10",
   [TypeAlerte.RAPPEL_BIOMETRIE]: "text-accent-purple bg-accent-purple-muted",
   [TypeAlerte.PERSONNALISEE]: "text-muted-foreground bg-muted",
+  [TypeAlerte.BESOIN_EN_RETARD]: "text-danger bg-danger/10",
 };
 
 const statutLabels: Record<StatutAlerte, string> = {

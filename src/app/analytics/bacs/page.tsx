@@ -17,7 +17,7 @@ export default async function AnalyticsBacsPage({
 }) {
   const session = await getServerSession();
   if (!session) redirect("/login");
-  if (!session.activeSiteId) redirect("/sites");
+  if (!session.activeSiteId) redirect("/settings/sites");
 
   const permissions = await checkPagePermission(session, Permission.VAGUES_VOIR);
   if (!permissions) return <AccessDenied />;
@@ -35,7 +35,7 @@ export default async function AnalyticsBacsPage({
         <Header title="Analytiques par bac" />
         <div className="flex flex-col gap-3 p-4">
           <p className="text-sm text-muted-foreground">
-            Selectionnez une vague pour voir la comparaison des bacs.
+            Sélectionnez une vague pour voir la comparaison des bacs.
           </p>
           {vagues.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
@@ -88,8 +88,6 @@ export default async function AnalyticsBacsPage({
         <BacComparisonCards
           bacs={comparaison.bacs}
           alertes={comparaison.alertes}
-          meilleurFCR={comparaison.meilleurFCR}
-          meilleurSurvie={comparaison.meilleurSurvie}
         />
 
         <div className="pb-4">

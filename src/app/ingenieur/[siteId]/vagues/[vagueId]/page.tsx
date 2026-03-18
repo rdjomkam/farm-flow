@@ -1,0 +1,148 @@
+import { redirect, notFound } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, Calendar, Fish, Container } from "lucide-react";
+import { Header } from "@/components/layout/header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { AccessDenied } from "@/components/ui/access-denied";
+import { IndicateursCards } from "@/components/vagues/indicateurs-cards";
+import { PoidsChart } from "@/components/vagues/poids-chart";
+import { RelevesList } from "@/components/vagues/releves-list";
+import { getServerSession, checkPagePermission } from "@/lib/auth";
+import { getClientIngenieurDetail } from "@/lib/queries/ingenieur";
+import { getIndicateursVague } from "@/lib/queries/indicateurs";
+import { prisma } from "@/lib/db";
+import { Permission, StatutVague, TypeReleve } from "@/types";
+import type { Releve, EvolutionPoidsPoint, IndicateursVague as IndicateursType } from "@/types";
+
+const statutLabels: Record<StatutVague, string> = {
+  [StatutVague.EN_COURS]: "En cours",
+  [StatutVague.TERMINEE]: "Terminee",
+  [StatutVague.ANNULEE]: "Annulee",
+};
+
+const statutVariants: Record<StatutVague, "en_cours" | "terminee" | "annulee"> = {
+  [StatutVague.EN_COURS]: "en_cours",
+  [StatutVague.TERMINEE]: "terminee",
+  [StatutVague.ANNULEE]: "annulee",
+};
+
+export default async function IngenieurVagueDetailPage({
+  params,
+}: {
+  params: Promise<{ siteId: string; vagueId: string }>;
+}) {
+  const session = await getServerSession();
+  if (!session) redirect("/login");
+  if (!session.activeSiteId) redirect("/settings/sites");
+
+  const permissions = await checkPagePermission(session, Permission.MONITORING_CLIENTS);
+  if (!permissions) return <AccessDenied />;
+
+  const { siteId: clientSiteId, vagueId } = await params;
+
+  // Verify the client site belongs to this ingenieur
+  const clientSummary = await getClientIngenieurDetail(session.activeSiteId, clientSiteId);
+  if (!clientSummary) notFound();
+
+  // Fetch vague with releves and bacs
+  const vague = await prisma.vague.findFirst({
+    where: { id: vagueId, siteId: clientSiteId },
+    include: {
+      releves: {
+        orderBy: { date: "asc" },
+      },
+      bacs: { select: { id: true, nom: true } },
+    },
+  });
+
+  if (!vague) notFound();
+
+  const indicateurs = await getIndicateursVague(clientSiteId, vagueId);
+
+  const statut = vague.statut as StatutVague;
+
+  const defaultIndicateurs: IndicateursType = {
+    tauxSurvie: null,
+    fcr: null,
+    sgr: null,
+    biomasse: null,
+    poidsMoyen: null,
+    tailleMoyenne: null,
+    nombreVivants: null,
+    totalMortalites: 0,
+    totalAliment: 0,
+    gainPoids: null,
+    joursEcoules: 0,
+  };
+
+  // Build chart data from biometrie releves
+  const poidsData: EvolutionPoidsPoint[] = vague.releves
+    .filter((r) => r.typeReleve === TypeReleve.BIOMETRIE && r.poidsMoyen !== null)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .map((r) => ({
+      date: new Date(r.date).toISOString(),
+      poidsMoyen: r.poidsMoyen!,
+      jour: Math.floor(
+        (new Date(r.date).getTime() - vague.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
+      ),
+    }));
+
+  return (
+    <>
+      <Header title={vague.code}>
+        <Link href={`/ingenieur/${clientSiteId}`}>
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="h-4 w-4" />
+            <span className="sr-only sm:not-sr-only">Retour</span>
+          </Button>
+        </Link>
+      </Header>
+
+      <div className="flex flex-col gap-4 p-4 min-w-0 overflow-hidden">
+        {/* Info section */}
+        <section className="flex flex-wrap items-center gap-2 border-b border-border pb-3 min-w-0">
+          <Badge variant={statutVariants[statut]}>{statutLabels[statut]}</Badge>
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <Calendar className="h-3.5 w-3.5" />
+            {new Date(vague.dateDebut).toLocaleDateString("fr-FR")}
+            {vague.dateFin && ` — ${new Date(vague.dateFin).toLocaleDateString("fr-FR")}`}
+          </div>
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <Fish className="h-3.5 w-3.5" />
+            {vague.nombreInitial} alevins ({vague.poidsMoyenInitial}g)
+          </div>
+          <div className="flex items-center gap-1 text-sm text-muted-foreground min-w-0">
+            <Container className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">
+              {vague.bacs.length} bac{vague.bacs.length > 1 ? "s" : ""}
+              {vague.bacs.length > 0 && ` (${vague.bacs.map((b) => b.nom).join(", ")})`}
+            </span>
+          </div>
+        </section>
+
+        {/* Indicateurs */}
+        <IndicateursCards indicateurs={indicateurs ?? defaultIndicateurs} />
+
+        {/* Chart */}
+        <PoidsChart data={poidsData} />
+
+        {/* Releves (read-only: empty permissions array disables edit actions) */}
+        <RelevesList
+          releves={vague.releves as Releve[]}
+          permissions={[]}
+        />
+
+        {/* Retour */}
+        <div className="pb-4">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href={`/ingenieur/${clientSiteId}`}>
+              <ArrowLeft className="h-4 w-4" />
+              Retour au client
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </>
+  );
+}

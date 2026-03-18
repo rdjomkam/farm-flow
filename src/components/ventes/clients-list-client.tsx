@@ -136,7 +136,7 @@ export function ClientsListClient({ clients, permissions }: Props) {
                 <Input
                   label="Telephone (optionnel)"
                   type="tel"
-                  placeholder="6XX XX XX XX"
+                  placeholder="6XX XX XX XX (+237 ajouté automatiquement)"
                   value={telephone}
                   onChange={(e) => setTelephone(e.target.value)}
                 />

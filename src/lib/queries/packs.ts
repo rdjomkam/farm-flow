@@ -4,6 +4,7 @@ import type {
   CreatePackDTO,
   UpdatePackDTO,
   CreatePackProduitDTO,
+  CreatePackBacDTO,
   PackFilters,
   PackActivationFilters,
 } from "@/types";
@@ -34,6 +35,7 @@ export async function getPacks(siteId: string, filters?: PackFilters) {
           },
         },
       },
+      bacs: { orderBy: { position: "asc" } },
       _count: { select: { activations: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -58,6 +60,7 @@ export async function getPackById(id: string, siteId: string) {
           },
         },
       },
+      bacs: { orderBy: { position: "asc" } },
       activations: {
         select: {
           id: true,
@@ -95,6 +98,7 @@ export async function createPack(data: CreatePackDTO & { userId: string; siteId:
       prixTotal: data.prixTotal ?? 0,
       configElevageId: data.configElevageId ?? null,
       isActive: data.isActive ?? true,
+      enabledModules: data.enabledModules ?? [],
       userId: data.userId,
       siteId: data.siteId,
     },
@@ -108,6 +112,7 @@ export async function createPack(data: CreatePackDTO & { userId: string; siteId:
           },
         },
       },
+      bacs: { orderBy: { position: "asc" } },
     },
   });
 }
@@ -135,6 +140,22 @@ export async function updatePack(id: string, siteId: string, data: UpdatePackDTO
     }
   }
 
+  // Guard: si nombreAlevins change, vérifier cohérence avec les bacs existants
+  if (data.nombreAlevins !== undefined) {
+    const bacs = await prisma.packBac.findMany({
+      where: { packId: id },
+      select: { nombreAlevins: true },
+    });
+    if (bacs.length > 0) {
+      const bacsSum = bacs.reduce((acc, b) => acc + b.nombreAlevins, 0);
+      if (data.nombreAlevins !== bacsSum) {
+        throw new Error(
+          `Le nombre d'alevins (${data.nombreAlevins}) doit correspondre a la somme des bacs (${bacsSum}).`
+        );
+      }
+    }
+  }
+
   return prisma.pack.update({
     where: { id },
     data: {
@@ -145,6 +166,7 @@ export async function updatePack(id: string, siteId: string, data: UpdatePackDTO
       ...(data.prixTotal !== undefined && { prixTotal: data.prixTotal }),
       ...(data.configElevageId !== undefined && { configElevageId: data.configElevageId }),
       ...(data.isActive !== undefined && { isActive: data.isActive }),
+      ...(data.enabledModules !== undefined && { enabledModules: data.enabledModules }),
     },
     include: {
       configElevage: { select: { id: true, nom: true } },
@@ -156,6 +178,7 @@ export async function updatePack(id: string, siteId: string, data: UpdatePackDTO
           },
         },
       },
+      bacs: { orderBy: { position: "asc" } },
     },
   });
 }
@@ -227,6 +250,7 @@ export async function addPackProduit(
       packId,
       produitId: data.produitId,
       quantite: data.quantite,
+      unite: data.unite ?? null,
     },
     include: {
       produit: {
@@ -254,6 +278,105 @@ export async function removePackProduit(
 
   await prisma.packProduit.delete({ where: { id: existing.id } });
   return true;
+}
+
+// ---------------------------------------------------------------------------
+// PackBac — CRUD queries
+// ---------------------------------------------------------------------------
+
+/**
+ * Recupere les bacs configures d'un Pack, tries par position.
+ */
+export async function getPackBacs(packId: string) {
+  return prisma.packBac.findMany({
+    where: { packId },
+    orderBy: { position: "asc" },
+  });
+}
+
+/**
+ * Remplace tous les bacs d'un Pack en une seule transaction.
+ * Invariant strict : sum(bacs.nombreAlevins) === pack.nombreAlevins
+ */
+export async function replacePackBacs(packId: string, bacs: CreatePackBacDTO[]) {
+  const pack = await prisma.pack.findUnique({
+    where: { id: packId },
+    select: { nombreAlevins: true },
+  });
+  if (!pack) {
+    throw new Error("Pack introuvable.");
+  }
+
+  // Validation des bacs individuels
+  for (const bac of bacs) {
+    if (!bac.nom || bac.nom.trim() === "") {
+      throw new Error("Le nom du bac est requis.");
+    }
+    if (bac.nombreAlevins <= 0) {
+      throw new Error("Le nombre d'alevins doit etre superieur a 0.");
+    }
+  }
+
+  // Vérifier noms uniques
+  const noms = bacs.map((b) => b.nom.trim().toLowerCase());
+  const nomsSet = new Set(noms);
+  if (nomsSet.size !== noms.length) {
+    throw new Error("Les noms de bacs doivent etre uniques.");
+  }
+
+  // Invariant strict : somme === total pack
+  const sum = bacs.reduce((acc, b) => acc + b.nombreAlevins, 0);
+  if (sum !== pack.nombreAlevins) {
+    throw new Error(
+      `La somme des alevins (${sum}) doit correspondre au total du pack (${pack.nombreAlevins}).`
+    );
+  }
+
+  // Transaction atomique : supprimer tous les anciens, créer les nouveaux
+  return prisma.$transaction(async (tx) => {
+    await tx.packBac.deleteMany({ where: { packId } });
+
+    const created = await Promise.all(
+      bacs.map((bac, index) =>
+        tx.packBac.create({
+          data: {
+            packId,
+            nom: bac.nom.trim(),
+            volume: bac.volume ?? null,
+            nombreAlevins: bac.nombreAlevins,
+            poidsMoyenInitial: bac.poidsMoyenInitial ?? 5,
+            position: bac.position ?? index,
+          },
+        })
+      )
+    );
+
+    return created;
+  });
+}
+
+/**
+ * Valide que la somme des nombreAlevins des bacs configures correspond au total du Pack.
+ */
+export async function validatePackBacsTotal(
+  packId: string
+): Promise<{ valid: boolean; sum: number; expected: number }> {
+  const pack = await prisma.pack.findUnique({
+    where: { id: packId },
+    select: { nombreAlevins: true },
+  });
+  if (!pack) {
+    return { valid: false, sum: 0, expected: 0 };
+  }
+
+  const bacs = await prisma.packBac.findMany({ where: { packId } });
+  const sum = bacs.reduce((acc, b) => acc + b.nombreAlevins, 0);
+
+  return {
+    valid: bacs.length === 0 || sum === pack.nombreAlevins,
+    sum,
+    expected: pack.nombreAlevins,
+  };
 }
 
 // ---------------------------------------------------------------------------

@@ -32,12 +32,16 @@ const mockGetNotes = vi.fn();
 const mockGetNoteById = vi.fn();
 const mockCreateNote = vi.fn();
 const mockUpdateNote = vi.fn();
+const mockMarkNoteRead = vi.fn();
+const mockMarkThreadRepliesRead = vi.fn();
 
 vi.mock("@/lib/queries/notes", () => ({
   getNotes: (...args: unknown[]) => mockGetNotes(...args),
   getNoteById: (...args: unknown[]) => mockGetNoteById(...args),
   createNote: (...args: unknown[]) => mockCreateNote(...args),
   updateNote: (...args: unknown[]) => mockUpdateNote(...args),
+  markNoteRead: (...args: unknown[]) => mockMarkNoteRead(...args),
+  markThreadRepliesRead: (...args: unknown[]) => mockMarkThreadRepliesRead(...args),
 }));
 
 const mockRequirePermission = vi.fn();
@@ -539,6 +543,7 @@ describe("GET /api/ingenieur/notes/[id]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRequirePermission.mockResolvedValue(AUTH_INGENIEUR);
+    mockMarkThreadRepliesRead.mockResolvedValue(undefined);
   });
 
   it("retourne la note si elle existe", async () => {
@@ -611,6 +616,7 @@ describe("PUT /api/ingenieur/notes/[id]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRequirePermission.mockResolvedValue(AUTH_INGENIEUR);
+    mockMarkNoteRead.mockResolvedValue(true);
   });
 
   it("met a jour le titre seul", async () => {
@@ -649,8 +655,7 @@ describe("PUT /api/ingenieur/notes/[id]", () => {
   });
 
   it("marque la note comme lue (isRead=true)", async () => {
-    const updated = { ...FAKE_NOTE_PUBLIC, isRead: true };
-    mockUpdateNote.mockResolvedValue(updated);
+    mockMarkNoteRead.mockResolvedValue(true);
 
     const req = makeJsonRequest(
       "http://localhost:3000/api/ingenieur/notes/note-pub-1",
@@ -660,11 +665,7 @@ describe("PUT /api/ingenieur/notes/[id]", () => {
     const res = await PUT_NOTE(req, { params: Promise.resolve({ id: "note-pub-1" }) });
 
     expect(res.status).toBe(200);
-    expect(mockUpdateNote).toHaveBeenCalledWith(
-      "note-pub-1",
-      "site-dkfarm",
-      expect.objectContaining({ isRead: true })
-    );
+    expect(mockMarkNoteRead).toHaveBeenCalledWith("note-pub-1", "user-ingenieur-1");
   });
 
   it("retourne 400 si titre fourni mais vide", async () => {

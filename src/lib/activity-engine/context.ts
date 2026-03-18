@@ -44,7 +44,18 @@ type ReleveCtx = Pick<
   | "oxygene"
   | "ammoniac"
   | "nombreCompte"
+  | "bacId"
 >;
+
+/** Bac minimal pour l'iteration per-bac */
+export type BacCtx = {
+  id: string;
+  nom: string;
+  volume: number | null;
+  nombrePoissons: number | null;
+  nombreInitial: number | null;
+  poidsMoyenInitial: number | null;
+};
 
 /** Stock produit minimal */
 type ProduitStockCtx = Pick<
@@ -73,13 +84,15 @@ const WAT_OFFSET_MS = 1 * 60 * 60 * 1000;
  * @param releves       - Tous les releves de la vague (tous types)
  * @param stock         - Produits en stock du site avec quantites
  * @param configElevage - Configuration d'elevage (nullable)
+ * @param bac           - Bac courant pour l'iteration per-bac (null = vague-level)
  * @returns             Contexte complet d'evaluation
  */
 export function buildEvaluationContext(
   vague: VagueCtx,
   releves: ReleveCtx[],
   stock: ProduitStockCtx[],
-  configElevage: ConfigElevage | null
+  configElevage: ConfigElevage | null,
+  bac?: BacCtx | null
 ): RuleEvaluationContext {
   // ---- Calcul du temps ecoule (UTC+1 = WAT) ----
   const nowWAT = new Date(Date.now() + WAT_OFFSET_MS);
@@ -97,10 +110,19 @@ export function buildEvaluationContext(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 
-  const biometries = sorted.filter((r) => r.typeReleve === TypeReleve.BIOMETRIE);
-  const mortalites = sorted.filter((r) => r.typeReleve === TypeReleve.MORTALITE);
-  const alimentations = sorted.filter((r) => r.typeReleve === TypeReleve.ALIMENTATION);
-  const comptages = sorted.filter((r) => r.typeReleve === TypeReleve.COMPTAGE);
+  // ---- Filtrer par bac si fourni ----
+  const relevesForCalc = bac
+    ? sorted.filter((r) => r.bacId === bac.id)
+    : sorted;
+
+  // ---- Nombre initial pour les calculs (bac-level ou vague-level) ----
+  const nombreInitialCalc = bac?.nombreInitial ?? vague.nombreInitial;
+  const poidsMoyenInitialCalc = bac?.poidsMoyenInitial ?? vague.poidsMoyenInitial;
+
+  const biometries = relevesForCalc.filter((r) => r.typeReleve === TypeReleve.BIOMETRIE);
+  const mortalites = relevesForCalc.filter((r) => r.typeReleve === TypeReleve.MORTALITE);
+  const alimentations = relevesForCalc.filter((r) => r.typeReleve === TypeReleve.ALIMENTATION);
+  const comptages = relevesForCalc.filter((r) => r.typeReleve === TypeReleve.COMPTAGE);
 
   // ---- Indicateurs de base ----
   const derniereBiometrie = biometries.at(-1) ?? null;
@@ -120,13 +142,13 @@ export function buildEvaluationContext(
   const nombreVivants =
     dernierComptage?.nombreCompte != null
       ? dernierComptage.nombreCompte
-      : Math.max(0, vague.nombreInitial - totalMortalites);
+      : Math.max(0, nombreInitialCalc - totalMortalites);
 
   // ---- FCR ----
   const biomasse = calculerBiomasse(poidsMoyen, nombreVivants);
   const biomasseInitiale = calculerBiomasse(
-    vague.poidsMoyenInitial,
-    vague.nombreInitial
+    poidsMoyenInitialCalc,
+    nombreInitialCalc
   );
   const gainBiomasse =
     biomasse !== null && biomasseInitiale !== null
@@ -135,13 +157,13 @@ export function buildEvaluationContext(
   const fcr = calculerFCR(totalAliment, gainBiomasse);
 
   // ---- SGR ----
-  const sgr = calculerSGR(vague.poidsMoyenInitial, poidsMoyen, joursEcoules);
+  const sgr = calculerSGR(poidsMoyenInitialCalc, poidsMoyen, joursEcoules);
 
   // ---- Taux survie et mortalite ----
-  const tauxSurvie = calculerTauxSurvie(nombreVivants, vague.nombreInitial);
+  const tauxSurvie = calculerTauxSurvie(nombreVivants, nombreInitialCalc);
   const tauxMortaliteCumule =
-    vague.nombreInitial > 0
-      ? (totalMortalites / vague.nombreInitial) * 100
+    nombreInitialCalc > 0
+      ? (totalMortalites / nombreInitialCalc) * 100
       : null;
 
   const indicateurs: IndicateursContext = {
@@ -177,7 +199,7 @@ export function buildEvaluationContext(
       : null;
 
   // ---- 5 derniers releves (tous types, du plus recent au plus ancien) ----
-  const derniersReleves = [...sorted]
+  const derniersReleves = [...relevesForCalc]
     .reverse()
     .slice(0, 5)
     .map((r) => ({
@@ -223,5 +245,6 @@ export function buildEvaluationContext(
     configElevage: configCtx,
     derniersReleves,
     phase,
+    bac: bac ?? null,
   };
 }

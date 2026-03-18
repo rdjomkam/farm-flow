@@ -10,7 +10,7 @@ import { ConfigElevageFormClient } from "@/components/config-elevage/config-elev
 export default async function ConfigElevageNouveauPage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
-  if (!session.activeSiteId) redirect("/sites");
+  if (!session.activeSiteId) redirect("/settings/sites");
 
   const permissions = await checkPagePermission(session, Permission.SITE_GERER);
   if (!permissions) return <AccessDenied />;

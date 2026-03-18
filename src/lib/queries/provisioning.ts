@@ -21,7 +21,14 @@ import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
 import { SYSTEM_ROLE_DEFINITIONS } from "@/lib/permissions-constants";
 import type { ActivatePackDTO, ProvisioningPayload } from "@/types";
-import { Role, StatutVague, TypeMouvement, StatutActivation } from "@/types";
+import { Role, StatutVague, TypeMouvement, StatutActivation, SiteModule } from "@/types";
+
+/** Modules par defaut pour les sites supervises (si le pack n'en definit pas) */
+const DEFAULT_SUPERVISED_MODULES: SiteModule[] = [
+  SiteModule.GROSSISSEMENT,
+  SiteModule.ANALYSE_PILOTAGE,
+  SiteModule.NOTES,
+];
 
 // Le type du client transactionnel Prisma (sans les methodes de top-niveau)
 type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
@@ -134,6 +141,7 @@ export async function activerPack(
           include: { produit: true },
         },
         configElevage: true,
+        bacs: { orderBy: { position: "asc" } },
       },
     });
     if (!pack) {
@@ -156,6 +164,10 @@ export async function activerPack(
         name: dto.clientSiteName,
         address: dto.clientSiteAddress ?? null,
         isActive: true,
+        supervised: true,
+        enabledModules: pack.enabledModules.length > 0
+          ? [...pack.enabledModules]
+          : DEFAULT_SUPERVISED_MODULES,
       },
     });
 
@@ -191,18 +203,18 @@ export async function activerPack(
         phone: dto.clientUserPhone,
         email: dto.clientUserEmail ?? null,
         passwordHash,
-        role: Role.PISCICULTEUR,
+        role: Role.GERANT,
         isActive: true,
         isSystem: false,
       },
     });
 
-    // Assigner le client comme PISCICULTEUR du site client
+    // Assigner le client comme admin de son propre site
     await tx.siteMember.create({
       data: {
         userId: clientUser.id,
         siteId: clientSite.id,
-        siteRoleId: pisciculteurRole.id,
+        siteRoleId: adminRole.id,
       },
     });
 
@@ -314,16 +326,47 @@ export async function activerPack(
     });
 
     // ──────────────────────────────────────────
-    // 5. Creer un bac initial (volume=null — EC-2.4)
+    // 5. Creer les bacs configures (ou 1 bac par defaut — EC-2.4)
     // ──────────────────────────────────────────
-    await tx.bac.create({
-      data: {
-        nom: "Bac 1",
-        volume: null, // Le client renseignera le volume (EC-2.4)
-        vagueId: vague.id,
-        siteId: clientSite.id,
-      },
-    });
+    const packBacs = pack.bacs;
+    const bacsCreated: { nom: string; nombreAlevins: number; volume: number | null }[] = [];
+
+    if (!packBacs || packBacs.length === 0) {
+      // Backward compat: create 1 default bac with pack-level data
+      await tx.bac.create({
+        data: {
+          nom: "Bac 1",
+          volume: null,
+          vagueId: vague.id,
+          siteId: clientSite.id,
+          nombrePoissons: pack.nombreAlevins,
+          nombreInitial: pack.nombreAlevins,
+          poidsMoyenInitial: pack.poidsMoyenInitial,
+        },
+      });
+      bacsCreated.push({ nom: "Bac 1", nombreAlevins: pack.nombreAlevins, volume: null });
+    } else {
+      // Validate sum
+      const sum = packBacs.reduce((acc, b) => acc + b.nombreAlevins, 0);
+      if (sum !== pack.nombreAlevins) {
+        throw new Error(`Config bacs invalide: somme (${sum}) != total (${pack.nombreAlevins}).`);
+      }
+      // Create each configured bac
+      for (const pb of packBacs) {
+        await tx.bac.create({
+          data: {
+            nom: pb.nom,
+            volume: pb.volume,
+            vagueId: vague.id,
+            siteId: clientSite.id,
+            nombrePoissons: pb.nombreAlevins,
+            nombreInitial: pb.nombreAlevins,
+            poidsMoyenInitial: pb.poidsMoyenInitial,
+          },
+        });
+        bacsCreated.push({ nom: pb.nom, nombreAlevins: pb.nombreAlevins, volume: pb.volume });
+      }
+    }
 
     // ──────────────────────────────────────────
     // 6. Copier les produits vers le stock client (F-14)
@@ -338,7 +381,7 @@ export async function activerPack(
         data: {
           nom: produitSource.nom,
           categorie: produitSource.categorie,
-          unite: produitSource.unite,
+          unite: packProduit.unite ?? produitSource.unite,
           uniteAchat: produitSource.uniteAchat,
           contenance: produitSource.contenance,
           prixUnitaire: produitSource.prixUnitaire,
@@ -408,6 +451,7 @@ export async function activerPack(
       site: { id: clientSite.id, name: clientSite.name },
       user: { id: clientUser.id, name: clientUser.name, phone: clientUser.phone ?? "" },
       vague: { id: vague.id, code: vague.code, nombreInitial: vague.nombreInitial },
+      bacs: bacsCreated,
       nombreProduitsInitialises: produitsCopies.length,
       nombreMouvements: mouvementsData.length,
       activation: {

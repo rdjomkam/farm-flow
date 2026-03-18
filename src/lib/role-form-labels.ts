@@ -10,7 +10,11 @@ export const groupLabels: Record<string, string> = {
   planning: "Planning",
   finances: "Finances",
   alertes: "Alertes",
+  depenses: "Depenses & Besoins",
   general: "General",
+  packs: "Packs & Provisioning",
+  configElevage: "Configuration Elevage",
+  ingenieur: "Ingenieur",
 };
 
 export const permissionLabels: Record<string, string> = {
@@ -48,4 +52,20 @@ export const permissionLabels: Record<string, string> = {
   [Permission.DASHBOARD_VOIR]: "Voir le dashboard",
   [Permission.ALERTES_VOIR]: "Voir les alertes",
   [Permission.EXPORT_DONNEES]: "Exporter les donnees",
+  // Phase 3
+  [Permission.GERER_PACKS]: "Gerer les packs",
+  [Permission.ACTIVER_PACKS]: "Activer les packs",
+  [Permission.GERER_CONFIG_ELEVAGE]: "Gerer la configuration d'elevage",
+  [Permission.REGLES_ACTIVITES_VOIR]: "Voir les regles d'activites",
+  [Permission.GERER_REGLES_ACTIVITES]: "Gerer les regles d'activites",
+  [Permission.MONITORING_CLIENTS]: "Monitoring clients",
+  [Permission.ENVOYER_NOTES]: "Envoyer des notes",
+  [Permission.CALIBRAGES_VOIR]: "Voir les calibrages",
+  [Permission.CALIBRAGES_CREER]: "Creer des calibrages",
+  [Permission.DEPENSES_VOIR]: "Voir les depenses",
+  [Permission.DEPENSES_CREER]: "Creer des depenses",
+  [Permission.DEPENSES_PAYER]: "Payer les depenses",
+  [Permission.BESOINS_SOUMETTRE]: "Soumettre des besoins",
+  [Permission.BESOINS_APPROUVER]: "Approuver des besoins",
+  [Permission.BESOINS_TRAITER]: "Traiter des besoins",
 };

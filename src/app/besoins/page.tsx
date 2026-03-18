@@ -9,7 +9,7 @@ import { BesoinsListClient } from "@/components/besoins/besoins-list-client";
 export default async function BesoinsPage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
-  if (!session.activeSiteId) redirect("/sites");
+  if (!session.activeSiteId) redirect("/settings/sites");
 
   const permissions = await checkPagePermission(
     session,

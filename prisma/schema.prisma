@@ -97,6 +97,18 @@ enum ModePaiement {
   CHEQUE
 }
 
+enum SiteModule {
+  REPRODUCTION
+  GROSSISSEMENT
+  INTRANTS
+  VENTES
+  ANALYSE_PILOTAGE
+  PACKS_PROVISIONING
+  CONFIGURATION
+  INGENIEUR
+  NOTES
+}
+
 enum Permission {
   // Administration (2)
   SITE_GERER
@@ -151,13 +163,19 @@ enum Permission {
   BESOINS_SOUMETTRE
   BESOINS_APPROUVER
   BESOINS_TRAITER
-  // Phase 3 — Packs & Ingénieur (6)
+  // Phase 3 — Packs & Ingénieur (7)
   GERER_PACKS
   ACTIVER_PACKS
   GERER_CONFIG_ELEVAGE
+  REGLES_ACTIVITES_VOIR
   GERER_REGLES_ACTIVITES
   MONITORING_CLIENTS
   ENVOYER_NOTES
+  // Calibrage (3)
+  CALIBRAGES_VOIR
+  CALIBRAGES_CREER
+  CALIBRAGES_MODIFIER
+  GERER_REGLES_GLOBALES
 }
 
 // ──────────────────────────────────────────
@@ -171,6 +189,7 @@ enum TypeAlerte {
   RAPPEL_ALIMENTATION
   RAPPEL_BIOMETRIE
   PERSONNALISEE
+  BESOIN_EN_RETARD
 }
 
 enum StatutAlerte {
@@ -262,6 +281,17 @@ enum VisibiliteNote {
 }
 
 // ──────────────────────────────────────────
+// Enums — Calibrage (Sprint 24)
+// ──────────────────────────────────────────
+
+enum CategorieCalibrage {
+  PETIT
+  MOYEN
+  GROS
+  TRES_GROS
+}
+
+// ──────────────────────────────────────────
 // Enums — Phase 3 : Moteur d'activités (Sprint 21)
 // ──────────────────────────────────────────
 
@@ -322,10 +352,12 @@ enum StatutLotAlevins {
 // ──────────────────────────────────────────
 
 model Site {
-  id           String           @id @default(cuid())
-  name         String
-  address      String?
-  isActive     Boolean          @default(true)
+  id             String           @id @default(cuid())
+  name           String
+  address        String?
+  isActive       Boolean          @default(true)
+  supervised     Boolean          @default(false)
+  enabledModules SiteModule[]     @default([])
   members      SiteMember[]
   roles        SiteRole[]
   bacs         Bac[]
@@ -361,6 +393,11 @@ model Site {
   // Sprint 23 — Monitoring Ingénieur
   notesRecues          NoteIngenieur[]  @relation("NotesRecues")
   notes                NoteIngenieur[]  @relation("NotesDKFarm")
+  // Sprint 24 — Calibrage
+  calibrages           Calibrage[]
+  // Sprint 26 — Modification tracking (ADR-014/ADR-015)
+  releveModifications  ReleveModification[]
+  calibrageModifications CalibrageModification[]
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 }
@@ -580,6 +617,11 @@ model User {
   reglesActivite        RegleActivite[]
   // Sprint 23 — Monitoring Ingénieur
   notesEnvoyees         NoteIngenieur[]    @relation("NotesEnvoyees")
+  // Sprint 24 — Calibrage
+  calibrages            Calibrage[]        @relation("CalibrageUser")
+  // Sprint 26 — Modification tracking (ADR-014/ADR-015)
+  releveModifications   ReleveModification[]
+  calibrageModifications CalibrageModification[]
   isSystem              Boolean            @default(false)
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
@@ -604,19 +646,22 @@ model Session {
 // ──────────────────────────────────────────
 
 model Bac {
-  id              String   @id @default(cuid())
-  nom             String
-  volume          Float?
-  nombrePoissons  Int?
-  vagueId         String?
-  vague           Vague?   @relation(fields: [vagueId], references: [id])
-  siteId          String
-  site            Site     @relation(fields: [siteId], references: [id])
-  releves         Releve[]
-  lotsAlevins     LotAlevins[]
-  activites       Activite[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  nom                 String
+  volume              Float?
+  nombrePoissons      Int?
+  nombreInitial       Int?
+  poidsMoyenInitial   Float?
+  vagueId             String?
+  vague               Vague?   @relation(fields: [vagueId], references: [id])
+  siteId              String
+  site                Site     @relation(fields: [siteId], references: [id])
+  releves             Releve[]
+  lotsAlevins         LotAlevins[]
+  activites           Activite[]
+  calibrageGroupesDst CalibrageGroupe[] @relation("GroupeDestBac")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@index([vagueId])
   @@index([siteId])
@@ -649,6 +694,8 @@ model Vague {
   listesBesoins           ListeBesoins[]
   // Sprint 23 — Monitoring Ingénieur
   notes                   NoteIngenieur[]
+  // Sprint 24 — Calibrage
+  calibrages              Calibrage[]
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
 
@@ -701,6 +748,10 @@ model Releve {
 
   // Relation inverse : un releve peut etre lie a au plus une activite (1:1 optionnelle)
   activite        Activite?
+
+  // Traçabilité modification (Sprint 26, ADR-014)
+  modifie         Boolean              @default(false)
+  modifications   ReleveModification[]
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -1261,6 +1312,8 @@ model ListeBesoins {
   /** Motif de rejet (nullable, rempli si REJETEE) */
   motifRejet     String?
   notes          String?
+  /** Date limite de traitement (optionnelle — R7 nullabilite explicite) */
+  dateLimite     DateTime?
   siteId         String
   site           Site           @relation(fields: [siteId], references: [id])
   lignes         LigneBesoin[]
@@ -1272,6 +1325,7 @@ model ListeBesoins {
   @@index([siteId, statut])
   @@index([demandeurId])
   @@index([vagueId])
+  @@index([dateLimite])
 }
 
 model LigneBesoin {
@@ -1333,7 +1387,11 @@ model Pack {
   siteId              String
   site                Site           @relation(fields: [siteId], references: [id])
 
+  /** Modules activés pour les sites provisionnés via ce pack */
+  enabledModules SiteModule[] @default([])
+
   produits    PackProduit[]
+  bacs        PackBac[]
   activations PackActivation[]
 
   createdAt DateTime @default(now())
@@ -1358,10 +1416,32 @@ model PackProduit {
   produit   Produit @relation(fields: [produitId], references: [id], onDelete: Restrict)
   /** Quantité incluse dans le pack (> 0) */
   quantite  Float
+  /** Unité choisie (NULL = unité par défaut du produit) */
+  unite     UniteStock?
 
   @@unique([packId, produitId])
   @@index([packId])
   @@index([produitId])
+}
+
+/**
+ * PackBac — Bac modele inclus dans un Pack.
+ *
+ * Decrit le nombre et la configuration des bacs fournis dans le pack.
+ * Un meme nom de bac ne peut figurer qu'une fois par Pack.
+ */
+model PackBac {
+  id                String  @id @default(cuid())
+  packId            String
+  pack              Pack    @relation(fields: [packId], references: [id], onDelete: Cascade)
+  nom               String
+  volume            Float?
+  nombreAlevins     Int
+  poidsMoyenInitial Float   @default(5)
+  position          Int     @default(0)
+
+  @@unique([packId, nom])
+  @@index([packId])
 }
 
 /**
@@ -1455,6 +1535,11 @@ model NoteIngenieur {
   siteId        String
   site          Site   @relation("NotesDKFarm", fields: [siteId], references: [id])
 
+  /** Reponse a une note parente (thread one-level deep) */
+  replyToId     String?
+  replyTo       NoteIngenieur?  @relation("NoteReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies       NoteIngenieur[] @relation("NoteReplies")
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -1467,4 +1552,159 @@ model NoteIngenieur {
   @@index([isRead])
   @@index([clientSiteId, isRead])
   @@index([clientSiteId, visibility])
+  @@index([replyToId])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Calibrage (Sprint 24)
+// ──────────────────────────────────────────
+
+model Calibrage {
+  id            String            @id @default(cuid())
+  date          DateTime          @default(now())
+  vagueId       String
+  vague         Vague             @relation(fields: [vagueId], references: [id])
+  sourceBacIds  String[]
+  nombreMorts   Int               @default(0)
+  notes         String?
+  siteId        String
+  site          Site              @relation(fields: [siteId], references: [id])
+  userId        String
+  user          User              @relation("CalibrageUser", fields: [userId], references: [id])
+  groupes       CalibrageGroupe[]
+
+  // Traçabilité modification (Sprint 26, ADR-015)
+  modifie       Boolean                @default(false)
+  modifications CalibrageModification[]
+
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([vagueId])
+  @@index([siteId])
+}
+
+model CalibrageGroupe {
+  id               String             @id @default(cuid())
+  calibrageId      String
+  calibrage        Calibrage          @relation(fields: [calibrageId], references: [id], onDelete: Cascade)
+  categorie        CategorieCalibrage
+  destinationBacId String
+  destinationBac   Bac                @relation("GroupeDestBac", fields: [destinationBacId], references: [id])
+  nombrePoissons   Int
+  poidsMoyen       Float
+  tailleMoyenne    Float?
+  createdAt        DateTime           @default(now())
+
+  @@index([calibrageId])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Traçabilité modification (Sprint 26, ADR-014/ADR-015)
+// ──────────────────────────────────────────
+
+/**
+ * ReleveModification — trace d'une modification de relevé avec raison d'audit.
+ *
+ * Une ligne par champ modifié.
+ * Cascade DELETE avec Releve (si un relevé est supprimé, ses traces le sont aussi).
+ */
+model ReleveModification {
+  id             String   @id @default(cuid())
+  releveId       String
+  releve         Releve   @relation(fields: [releveId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  raison         String
+  champModifie   String
+  ancienneValeur String?
+  nouvelleValeur String?
+  siteId         String
+  site           Site     @relation(fields: [siteId], references: [id])
+  createdAt      DateTime @default(now())
+
+  @@index([releveId])
+  @@index([userId])
+  @@index([siteId])
+}
+
+/**
+ * CalibrageModification — trace d'une modification de calibrage avec raison d'audit.
+ *
+ * Une ligne par champ modifié (nombreMorts, notes, groupes).
+ * Pour "groupes" : ancienneValeur/nouvelleValeur contiennent du JSON sérialisé.
+ * Cascade DELETE avec Calibrage.
+ */
+model CalibrageModification {
+  id             String    @id @default(cuid())
+  calibrageId    String
+  calibrage      Calibrage @relation(fields: [calibrageId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+  raison         String
+  champModifie   String
+  ancienneValeur String?
+  nouvelleValeur String?
+  siteId         String
+  site           Site      @relation(fields: [siteId], references: [id])
+  createdAt      DateTime  @default(now())
+
+  @@index([calibrageId])
+  @@index([userId])
+  @@index([siteId])
+}
+
+// ──────────────────────────────────────────
+// Enums — CustomPlaceholder (Sprint 26)
+// ──────────────────────────────────────────
+
+enum PlaceholderMode {
+  MAPPING
+  FORMULA
+}
+
+enum PlaceholderFormat {
+  NUMBER
+  TEXT
+}
+
+// ──────────────────────────────────────────
+// Modèle — CustomPlaceholder (Sprint 26)
+// ──────────────────────────────────────────
+
+/**
+ * CustomPlaceholder — variable personnalisee utilisable dans les templates de regles d'activites.
+ *
+ * Deux modes :
+ * - MAPPING : le placeholder pointe vers un champ de la base via sourcePath
+ * - FORMULA : le placeholder est calcule via une formule mathematique (formula)
+ *
+ * Ces placeholders sont globaux (pas de siteId) — geres par DKFarm.
+ */
+model CustomPlaceholder {
+  id          String            @id @default(cuid())
+  /** Cle unique du placeholder — ex: "poids_moyen", "fcr_actuel" */
+  key         String            @unique
+  /** Libelle affiche dans l'editeur de regles */
+  label       String
+  /** Description de l'usage du placeholder (nullable) */
+  description String?
+  /** Exemple de valeur affichee dans l'interface */
+  example     String
+
+  /** Mode de resolution : MAPPING (champ DB) ou FORMULA (calcul) */
+  mode        PlaceholderMode
+  /** Chemin vers le champ source (mode MAPPING) — ex: "vague.poidsMoyen" */
+  sourcePath  String?
+  /** Expression de calcul (mode FORMULA) — ex: "alimentation / biomasse" */
+  formula     String?
+
+  /** Format de la valeur resolue */
+  format      PlaceholderFormat @default(NUMBER)
+  /** Nombre de decimales pour le format NUMBER */
+  decimals    Int               @default(2)
+
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 }

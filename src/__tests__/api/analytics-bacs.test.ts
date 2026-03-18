@@ -77,14 +77,9 @@ describe("GET /api/analytics/bacs", () => {
           bacNom: "Bac 1",
           vagueId: "vague-1",
           volume: 1000,
-          tauxSurvie: 92.5,
-          fcr: 1.3,
-          sgr: 1.8,
           biomasse: 45.2,
           poidsMoyen: 150,
           densite: 45.2,
-          tauxMortalite: 7.5,
-          gainQuotidien: 0.5,
           nombreVivants: 301,
           totalMortalites: 24,
           totalAliment: 38,
@@ -92,8 +87,6 @@ describe("GET /api/analytics/bacs", () => {
           nombreReleves: 12,
         },
       ],
-      meilleurFCR: "bac-1",
-      meilleurSurvie: "bac-1",
       alertes: [],
     };
     mockGetComparaisonBacs.mockResolvedValue(fakeComparaison);
@@ -105,7 +98,6 @@ describe("GET /api/analytics/bacs", () => {
     expect(data.vagueCode).toBe("VAGUE-2026-001");
     expect(data.bacs).toHaveLength(1);
     expect(data.bacs[0].bacNom).toBe("Bac 1");
-    expect(data.meilleurFCR).toBe("bac-1");
   });
 
   it("passe siteId et vagueId aux queries", async () => {
@@ -113,8 +105,6 @@ describe("GET /api/analytics/bacs", () => {
       vagueId: "v-1",
       vagueCode: "V1",
       bacs: [],
-      meilleurFCR: null,
-      meilleurSurvie: null,
       alertes: [],
     });
 
@@ -167,14 +157,9 @@ describe("GET /api/analytics/bacs/[bacId]", () => {
       bacNom: "Bac 1",
       vagueId: "vague-1",
       volume: 1000,
-      tauxSurvie: 90,
-      fcr: 1.5,
-      sgr: 2.1,
       biomasse: 40,
       poidsMoyen: 120,
       densite: 40,
-      tauxMortalite: 10,
-      gainQuotidien: 0.8,
       nombreVivants: 333,
       totalMortalites: 37,
       totalAliment: 30,
@@ -191,8 +176,8 @@ describe("GET /api/analytics/bacs/[bacId]", () => {
 
     expect(response.status).toBe(200);
     expect(data.bacNom).toBe("Bac 1");
-    expect(data.tauxSurvie).toBe(90);
-    expect(data.fcr).toBe(1.5);
+    expect(data.biomasse).toBe(40);
+    expect(data.densite).toBe(40);
   });
 
   it("passe siteId, vagueId et bacId aux queries", async () => {
@@ -264,12 +249,8 @@ describe("GET /api/analytics/bacs/[bacId]/historique", () => {
           vagueCode: "VAGUE-2026-001",
           dateDebut: "2026-01-01",
           dateFin: "2026-02-28",
-          tauxSurvie: 88,
-          fcr: 1.6,
-          sgr: 1.9,
           biomasse: 35,
           poidsMoyen: 140,
-          gainQuotidien: 0.5,
           nombreReleves: 15,
         },
       ],

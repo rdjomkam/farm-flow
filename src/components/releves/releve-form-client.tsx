@@ -80,6 +80,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
   const [vagueId, setVagueId] = useState(searchParams.get("vagueId") ?? "");
   const [bacId, setBacId] = useState(initialBacId);
   const [typeReleve, setTypeReleve] = useState(initialTypeReleve);
+  const [releveDate, setReleveDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
   const [bacs, setBacs] = useState<BacResponse[]>([]);
   const [loadingBacs, setLoadingBacs] = useState(false);
@@ -167,8 +168,8 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
     if (typeReleve === TypeReleve.BIOMETRIE) {
       if (!fields.poidsMoyen || Number(fields.poidsMoyen) <= 0)
         errs.poidsMoyen = "Requis (> 0).";
-      if (!fields.tailleMoyenne || Number(fields.tailleMoyenne) <= 0)
-        errs.tailleMoyenne = "Requis (> 0).";
+      if (fields.tailleMoyenne && Number(fields.tailleMoyenne) <= 0)
+        errs.tailleMoyenne = "Doit etre > 0.";
       if (!fields.echantillonCount || Number(fields.echantillonCount) <= 0)
         errs.echantillonCount = "Requis (> 0).";
     }
@@ -212,6 +213,8 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
       typeReleve,
       ...(notes.trim() && { notes: notes.trim() }),
       ...(activiteId && { activiteId }),
+      // Toujours envoyer la date pour permettre la saisie retroactive
+      date: releveDate,
     };
 
     // Add type-specific numeric fields
@@ -315,6 +318,16 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
                 ))}
               </SelectContent>
             </Select>
+          </FormSection>
+
+          <FormSection title="Date du releve" description="Date d'observation (retroactive possible)">
+            <Input
+              type="date"
+              label="Date du releve"
+              value={releveDate}
+              onChange={(e) => setReleveDate(e.target.value)}
+              max={new Date().toISOString().split("T")[0]}
+            />
           </FormSection>
 
           <FormSection title="Type de releve" description="Choisissez le type de mesure">

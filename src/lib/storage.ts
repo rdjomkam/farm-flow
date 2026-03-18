@@ -98,17 +98,21 @@ export function validateFile(file: { size: number; type: string; name: string })
 // ---------------------------------------------------------------------------
 
 /**
- * Génère la clé S3 pour une facture de commande.
- * Format : factures/{commandeId}/{timestamp}-{nomFichierNettoyé}
+ * Génère la clé S3 pour un fichier, organisée par site.
+ * Format : farm-flow/{siteId}/{category}/{entityId}/{timestamp}-{nomFichierNettoyé}
  */
-export function generateFactureKey(commandeId: string, originalName: string): string {
+export function generateStorageKey(
+  siteId: string,
+  category: string,
+  entityId: string,
+  originalName: string
+): string {
   const timestamp = Date.now();
-  // Nettoyer le nom de fichier : remplacer les caractères spéciaux par des tirets
   const cleanName = originalName
     .toLowerCase()
     .replace(/[^a-z0-9.-]/g, "-")
     .replace(/-+/g, "-");
-  return `factures/${commandeId}/${timestamp}-${cleanName}`;
+  return `farm-flow/${siteId}/${category}/${entityId}/${timestamp}-${cleanName}`;
 }
 
 // ---------------------------------------------------------------------------

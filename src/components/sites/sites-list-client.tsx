@@ -224,7 +224,7 @@ export function SitesListClient({ sites, activeSiteId, canCreate }: Props) {
                         ? "Site actif"
                         : "Selectionner"}
                   </Button>
-                  <Link href={`/sites/${site.id}`}>
+                  <Link href={`/settings/sites/${site.id}`}>
                     <Button size="sm" variant="outline">
                       Gerer
                     </Button>

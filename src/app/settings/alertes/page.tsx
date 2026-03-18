@@ -10,7 +10,7 @@ import { Permission } from "@/types";
 export default async function AlertesConfigPage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
-  if (!session.activeSiteId) redirect("/sites");
+  if (!session.activeSiteId) redirect("/settings/sites");
 
   const permissions = await checkPagePermission(session, Permission.ALERTES_CONFIGURER);
   if (!permissions) return <AccessDenied />;

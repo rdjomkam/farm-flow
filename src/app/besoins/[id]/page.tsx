@@ -13,7 +13,7 @@ interface Props {
 export default async function BesoinsDetailPage({ params }: Props) {
   const session = await getServerSession();
   if (!session) redirect("/login");
-  if (!session.activeSiteId) redirect("/sites");
+  if (!session.activeSiteId) redirect("/settings/sites");
 
   const permissions = await checkPagePermission(
     session,
@@ -27,6 +27,10 @@ export default async function BesoinsDetailPage({ params }: Props) {
 
   const canApprove = permissions.includes(Permission.BESOINS_APPROUVER);
   const canProcess = permissions.includes(Permission.BESOINS_TRAITER);
+  // canEdit : demandeur OU approbateur, seulement si SOUMISE (la logique SOUMISE est dans le composant)
+  const canEdit =
+    permissions.includes(Permission.BESOINS_SOUMETTRE) &&
+    (listeBesoins.demandeurId === session.userId || canApprove);
 
   return (
     <>
@@ -35,6 +39,7 @@ export default async function BesoinsDetailPage({ params }: Props) {
         listeBesoins={JSON.parse(JSON.stringify(listeBesoins))}
         canApprove={canApprove}
         canProcess={canProcess}
+        canEdit={canEdit}
       />
     </>
   );

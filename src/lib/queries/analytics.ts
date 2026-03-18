@@ -11,6 +11,7 @@ import type {
   DetailAliment,
   DetailAlimentVague,
   SimulationResult,
+  AnalyticsDashboard,
 } from "@/types";
 import {
   calculerTauxSurvie,
@@ -19,7 +20,6 @@ import {
   calculerBiomasse,
   calculerDensite,
   calculerTauxMortalite,
-  calculerGainQuotidien,
   calculerFCRParAliment,
   calculerCoutParKgGain,
   calculerCoutParKg,
@@ -28,8 +28,6 @@ import {
   getPrixParUniteBase,
 } from "@/lib/calculs";
 import {
-  BENCHMARK_SURVIE,
-  BENCHMARK_FCR,
   BENCHMARK_MORTALITE,
   BENCHMARK_DENSITE,
 } from "@/lib/benchmarks";
@@ -83,16 +81,8 @@ function computeIndicateursBac(
     Math.floor((now.getTime() - dateDebutVague.getTime()) / (1000 * 60 * 60 * 24))
   );
 
-  const tauxSurvie = calculerTauxSurvie(nombreVivants, nombreInitialBac);
   const biomasse = calculerBiomasse(poidsMoyen, nombreVivants);
-  const sgr = calculerSGR(poidsMoyenInitialVague, poidsMoyen, joursEcoules);
-  const biomasseInitiale = calculerBiomasse(poidsMoyenInitialVague, nombreInitialBac);
-  const gainBiomasse =
-    biomasse !== null && biomasseInitiale !== null ? biomasse - biomasseInitiale : null;
-  const fcr = calculerFCR(totalAliment, gainBiomasse);
   const densite = calculerDensite(biomasse, bac.volume);
-  const tauxMortalite = calculerTauxMortalite(totalMortalites, nombreInitialBac);
-  const gainQuotidien = calculerGainQuotidien(biomasseInitiale, biomasse, joursEcoules);
 
   const dernierReleve = releves.length > 0 ? releves[releves.length - 1].date : null;
 
@@ -101,14 +91,9 @@ function computeIndicateursBac(
     bacNom: bac.nom,
     vagueId,
     volume: bac.volume,
-    tauxSurvie: tauxSurvie !== null ? Math.round(tauxSurvie * 100) / 100 : null,
-    fcr: fcr !== null ? Math.round(fcr * 100) / 100 : null,
-    sgr: sgr !== null ? Math.round(sgr * 100) / 100 : null,
     biomasse: biomasse !== null ? Math.round(biomasse * 100) / 100 : null,
     poidsMoyen,
     densite: densite !== null ? Math.round(densite * 100) / 100 : null,
-    tauxMortalite: tauxMortalite !== null ? Math.round(tauxMortalite * 100) / 100 : null,
-    gainQuotidien: gainQuotidien !== null ? Math.round(gainQuotidien * 1000) / 1000 : null,
     nombreVivants,
     totalMortalites,
     totalAliment: Math.round(totalAliment * 100) / 100,
@@ -120,44 +105,25 @@ function computeIndicateursBac(
 /**
  * Genere les alertes pour un bac en comparant ses indicateurs aux benchmarks.
  */
-function genererAlertes(indicateurs: IndicateursBac): AlerteBac[] {
+function genererAlertes(indicateurs: IndicateursBac, nombreInitialBac: number): AlerteBac[] {
   const alertes: AlerteBac[] = [];
 
-  if (
-    indicateurs.tauxSurvie !== null &&
-    indicateurs.tauxSurvie < BENCHMARK_SURVIE.acceptable.min
-  ) {
-    alertes.push({
-      bacId: indicateurs.bacId,
-      bacNom: indicateurs.bacNom,
-      type: "SURVIE_BASSE",
-      message: `Survie critique (${indicateurs.tauxSurvie}%) dans ${indicateurs.bacNom}`,
-      valeur: indicateurs.tauxSurvie,
-      seuil: BENCHMARK_SURVIE.acceptable.min,
-    });
-  }
-
-  if (indicateurs.fcr !== null && indicateurs.fcr > BENCHMARK_FCR.acceptable.max) {
-    alertes.push({
-      bacId: indicateurs.bacId,
-      bacNom: indicateurs.bacNom,
-      type: "FCR_ELEVE",
-      message: `FCR trop eleve (${indicateurs.fcr}) dans ${indicateurs.bacNom}`,
-      valeur: indicateurs.fcr,
-      seuil: BENCHMARK_FCR.acceptable.max,
-    });
-  }
+  // Compute mortality rate locally (performance metrics are tracked at vague level)
+  const tauxMortalite = nombreInitialBac > 0
+    ? calculerTauxMortalite(indicateurs.totalMortalites, nombreInitialBac)
+    : null;
 
   if (
-    indicateurs.tauxMortalite !== null &&
-    indicateurs.tauxMortalite > BENCHMARK_MORTALITE.acceptable.max
+    tauxMortalite !== null &&
+    tauxMortalite > BENCHMARK_MORTALITE.acceptable.max
   ) {
+    const tauxArrondi = Math.round(tauxMortalite * 100) / 100;
     alertes.push({
       bacId: indicateurs.bacId,
       bacNom: indicateurs.bacNom,
       type: "MORTALITE_HAUTE",
-      message: `Mortalite elevee (${indicateurs.tauxMortalite}%) dans ${indicateurs.bacNom}`,
-      valeur: indicateurs.tauxMortalite,
+      message: `Mortalite elevee (${tauxArrondi}%) dans ${indicateurs.bacNom}`,
+      valeur: tauxArrondi,
       seuil: BENCHMARK_MORTALITE.acceptable.max,
     });
   }
@@ -306,28 +272,14 @@ export async function getComparaisonBacs(
     );
   });
 
-  // Find best performers
-  const bacsWithFCR = bacs.filter((b) => b.fcr !== null);
-  const meilleurFCR =
-    bacsWithFCR.length > 0
-      ? bacsWithFCR.reduce((best, b) => (b.fcr! < best.fcr! ? b : best)).bacId
-      : null;
-
-  const bacsWithSurvie = bacs.filter((b) => b.tauxSurvie !== null);
-  const meilleurSurvie =
-    bacsWithSurvie.length > 0
-      ? bacsWithSurvie.reduce((best, b) => (b.tauxSurvie! > best.tauxSurvie! ? b : best)).bacId
-      : null;
-
-  // Generate alerts
-  const alertes: AlerteBac[] = bacs.flatMap(genererAlertes);
+  // Generate alerts (pass nombreInitialBac for local mortality rate computation)
+  const nombreInitialBac = Math.round(vague.nombreInitial / totalBacs);
+  const alertes: AlerteBac[] = bacs.flatMap((b) => genererAlertes(b, nombreInitialBac));
 
   return {
     vagueId,
     vagueCode: vague.code,
     bacs,
-    meilleurFCR,
-    meilleurSurvie,
     alertes,
   };
 }
@@ -416,12 +368,8 @@ export async function getHistoriqueBac(
       vagueCode: vague.code,
       dateDebut: vague.dateDebut,
       dateFin: vague.dateFin,
-      tauxSurvie: ind.tauxSurvie,
-      fcr: ind.fcr,
-      sgr: ind.sgr,
       biomasse: ind.biomasse,
       poidsMoyen: ind.poidsMoyen,
-      gainQuotidien: ind.gainQuotidien,
       nombreReleves: ind.nombreReleves,
     };
   });
@@ -889,21 +837,6 @@ export async function getSimulationChangementAliment(
 // Types locaux CR-012
 // ---------------------------------------------------------------------------
 
-interface AnalyticsDashboardStats {
-  vaguesEnCours: number;
-  bacsActifs: number;
-  totalReproducteurs: number;
-  totalLotsEnElevage: number;
-}
-
-interface AnalyticsDashboard {
-  meilleurBac: { id: string; nom: string; fcr: number; tauxSurvie: number | null } | null;
-  meilleurAliment: { nom: string; coutParKgGain: number } | null;
-  alertesPerformance: number;
-  tendanceFCR: { mois: string; fcr: number }[];
-  stats: AnalyticsDashboardStats;
-}
-
 interface IndicateursVagueComparaison {
   id: string;
   nom: string;
@@ -930,63 +863,13 @@ interface ComparaisonVagues {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers internes CR-012
-// ---------------------------------------------------------------------------
-
-/**
- * Calcule le FCR global d'une vague a partir de ses releves.
- * Somme toutes les quantites ALIMENTATION / gain biomasse BIOMETRIE.
- */
-function computeFCRVague(
-  releves: {
-    typeReleve: string;
-    poidsMoyen: number | null;
-    nombreMorts: number | null;
-    quantiteAliment: number | null;
-    nombreCompte: number | null;
-  }[],
-  nombreInitial: number,
-  poidsMoyenInitial: number
-): { fcr: number | null; tauxSurvie: number | null; sgr: number | null; biomasse: number | null } {
-  const biometries = releves.filter((r) => r.typeReleve === TypeReleve.BIOMETRIE);
-  const mortalites = releves.filter((r) => r.typeReleve === TypeReleve.MORTALITE);
-  const alimentations = releves.filter((r) => r.typeReleve === TypeReleve.ALIMENTATION);
-  const comptages = releves.filter((r) => r.typeReleve === TypeReleve.COMPTAGE);
-
-  const derniereBio = biometries.at(-1);
-  const poidsMoyen = derniereBio?.poidsMoyen ?? null;
-
-  const totalMorts = mortalites.reduce((s, r) => s + (r.nombreMorts ?? 0), 0);
-  const dernierComptage = comptages.at(-1);
-  const nombreVivants = dernierComptage?.nombreCompte ?? nombreInitial - totalMorts;
-
-  const totalAliment = alimentations.reduce((s, r) => s + (r.quantiteAliment ?? 0), 0);
-
-  const biomasse = calculerBiomasse(poidsMoyen, nombreVivants);
-  const biomasseInitiale = calculerBiomasse(poidsMoyenInitial, nombreInitial);
-  const gainBiomasse =
-    biomasse !== null && biomasseInitiale !== null ? biomasse - biomasseInitiale : null;
-
-  const fcr = calculerFCR(totalAliment, gainBiomasse);
-  const tauxSurvie = calculerTauxSurvie(nombreVivants, nombreInitial);
-  const sgr = null; // SGR vague-niveau necessite duree — calcule dans getComparaisonVagues
-
-  return {
-    fcr: fcr !== null ? Math.round(fcr * 100) / 100 : null,
-    tauxSurvie: tauxSurvie !== null ? Math.round(tauxSurvie * 100) / 100 : null,
-    sgr,
-    biomasse,
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Queries publiques CR-012
 // ---------------------------------------------------------------------------
 
 /**
  * Dashboard analytique global pour un site.
  *
- * Retourne le meilleur bac (FCR le plus bas parmi vagues EN_COURS),
+ * Retourne le meilleur bac (densite la plus basse parmi vagues EN_COURS),
  * le meilleur aliment (cout/kg gain le plus bas), les alertes de performance,
  * la tendance FCR mensuelle sur 3 mois et des statistiques generales.
  *
@@ -1001,7 +884,7 @@ export async function getAnalyticsDashboard(siteId: string): Promise<AnalyticsDa
     prisma.lotAlevins.count({ where: { siteId, statut: StatutLotAlevins.EN_ELEVAGE } }),
   ]);
 
-  // ---- 2. Meilleur bac (FCR le plus bas parmi vagues EN_COURS) ----
+  // ---- 2. Meilleur bac (densite la plus basse parmi vagues EN_COURS) ----
   const vaguesActives = await prisma.vague.findMany({
     where: { siteId, statut: StatutVague.EN_COURS },
     select: {
@@ -1028,7 +911,9 @@ export async function getAnalyticsDashboard(siteId: string): Promise<AnalyticsDa
         vagueId: true,
         bacId: true,
         typeReleve: true,
+        date: true,
         poidsMoyen: true,
+        tailleMoyenne: true,
         nombreMorts: true,
         quantiteAliment: true,
         nombreCompte: true,
@@ -1045,34 +930,35 @@ export async function getAnalyticsDashboard(siteId: string): Promise<AnalyticsDa
       relevesByVagueBac.set(key, existing);
     }
 
-    let meilleurFCR = Infinity;
+    let meilleurDensite = Infinity;
 
     for (const vague of vaguesActives) {
       const totalBacs = vague._count.bacs || 1;
+      const nombreInitialBac = Math.round(vague.nombreInitial / totalBacs);
+
       for (const bac of vague.bacs) {
         const key: ReleveKey = `${vague.id}:${bac.id}`;
         const bacReleves = relevesByVagueBac.get(key) ?? [];
 
-        // Repartition proportionnelle du nombreInitial par bac
-        const nombreInitialBac = Math.round(vague.nombreInitial / totalBacs);
-        const { fcr, tauxSurvie } = computeFCRVague(
+        const ind = computeIndicateursBac(
+          bac,
+          vague.id,
+          vague.nombreInitial,
+          vague.poidsMoyenInitial,
+          vague.dateDebut,
+          vague.dateFin,
           bacReleves,
-          nombreInitialBac,
-          vague.poidsMoyenInitial
+          totalBacs
         );
 
-        // Compter les alertes
-        if (fcr !== null && fcr > BENCHMARK_FCR.acceptable.max) {
-          alertesPerformance++;
-        }
-        if (tauxSurvie !== null && tauxSurvie < BENCHMARK_SURVIE.acceptable.min) {
-          alertesPerformance++;
-        }
+        // Count monitoring alerts (DENSITE_ELEVEE + MORTALITE_HAUTE only)
+        const bacAlertes = genererAlertes(ind, nombreInitialBac);
+        alertesPerformance += bacAlertes.length;
 
-        // Meilleur FCR global
-        if (fcr !== null && fcr < meilleurFCR) {
-          meilleurFCR = fcr;
-          meilleurBac = { id: bac.id, nom: bac.nom, fcr, tauxSurvie };
+        // Best bac = lowest density (operationally meaningful)
+        if (ind.densite !== null && ind.densite < meilleurDensite) {
+          meilleurDensite = ind.densite;
+          meilleurBac = { id: bac.id, nom: bac.nom, densite: ind.densite };
         }
       }
     }

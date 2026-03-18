@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { FileText, AlertTriangle, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
-import { useToast } from "@/components/ui/toast";
+import { NoteDetailDialog } from "@/components/notes/note-detail-dialog";
 import { VisibiliteNote } from "@/types";
 import type { NoteIngenieurWithRelations } from "@/types";
 
@@ -22,7 +22,6 @@ interface NotesListProps {
   /**
    * Active le mode vue client :
    * - masque les badges INTERNE
-   * - masque le bouton "Marquer comme lue"
    * @default false
    */
   isClientView?: boolean;
@@ -53,23 +52,31 @@ function formatDate(date: Date | string): string {
 function NoteCard({
   note,
   isClientView,
-  onMarkRead,
 }: {
   note: NoteIngenieurWithRelations;
   isClientView: boolean;
-  onMarkRead?: (id: string) => void;
 }) {
-  const isUnread = !note.isRead;
+  const [localRead, setLocalRead] = useState(note.isRead);
+  const isUnread = !localRead;
 
   return (
+    <NoteDetailDialog note={note} isClientView={isClientView} onRead={() => setLocalRead(true)}>
     <Card
-      className={`relative flex flex-col gap-0 transition-colors ${
+      className={`relative flex flex-col gap-0 transition-colors cursor-pointer hover:bg-accent/50 ${
         isUnread && !isClientView ? "border-primary/40 bg-primary/5" : ""
       }`}
     >
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+            {isClientView && (
+              <Badge
+                variant={note.isFromClient ? "default" : "en_cours"}
+                className="shrink-0"
+              >
+                {note.isFromClient ? "Mon observation" : "DKFarm"}
+              </Badge>
+            )}
             {note.isUrgent && (
               <Badge variant="annulee" className="flex items-center gap-1 shrink-0">
                 <AlertTriangle className="h-3 w-3" aria-hidden="true" />
@@ -102,31 +109,80 @@ function NoteCard({
             Vague : <span className="font-medium text-foreground">{note.vague.code}</span>
           </p>
         )}
+        {(note._count?.replies ?? 0) > 0 && (
+          <p className="text-xs text-muted-foreground">
+            {note._count!.replies} reponse{note._count!.replies > 1 ? "s" : ""}
+          </p>
+        )}
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-          {note.contenu}
-        </p>
+        <div className="prose-sm max-w-none">
+          <ReactMarkdown
+            components={{
+              h1: ({ children }) => (
+                <h1 className="text-base font-bold leading-tight mt-3 mb-1.5 first:mt-0 text-foreground">
+                  {children}
+                </h1>
+              ),
+              h2: ({ children }) => (
+                <h2 className="text-sm font-semibold leading-tight mt-2.5 mb-1 text-foreground">
+                  {children}
+                </h2>
+              ),
+              h3: ({ children }) => (
+                <h3 className="text-sm font-semibold mt-2 mb-1 text-foreground">
+                  {children}
+                </h3>
+              ),
+              p: ({ children }) => (
+                <p className="text-sm leading-relaxed mb-2 last:mb-0 text-muted-foreground">
+                  {children}
+                </p>
+              ),
+              ul: ({ children }) => (
+                <ul className="list-disc list-inside space-y-1 mb-2 text-sm text-muted-foreground pl-1">
+                  {children}
+                </ul>
+              ),
+              ol: ({ children }) => (
+                <ol className="list-decimal list-inside space-y-1 mb-2 text-sm text-muted-foreground pl-1">
+                  {children}
+                </ol>
+              ),
+              li: ({ children }) => (
+                <li className="leading-relaxed">{children}</li>
+              ),
+              strong: ({ children }) => (
+                <strong className="font-semibold text-foreground">{children}</strong>
+              ),
+              em: ({ children }) => (
+                <em className="italic text-muted-foreground">{children}</em>
+              ),
+              blockquote: ({ children }) => (
+                <blockquote className="border-l-2 border-primary pl-3 my-2 text-sm text-muted-foreground italic">
+                  {children}
+                </blockquote>
+              ),
+              code: ({ children }) => (
+                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">
+                  {children}
+                </code>
+              ),
+              hr: () => <hr className="my-3 border-border" />,
+            }}
+          >
+            {note.contenu}
+          </ReactMarkdown>
+        </div>
         {!isClientView && note.clientSite && (
           <p className="text-xs text-muted-foreground">
             Destine a :{" "}
             <span className="font-medium text-foreground">{note.clientSite.name}</span>
           </p>
         )}
-        {!isClientView && !note.isRead && onMarkRead && (
-          <div className="flex justify-end pt-1">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onMarkRead(note.id)}
-              className="text-xs"
-            >
-              Marquer comme lue
-            </Button>
-          </div>
-        )}
       </CardContent>
     </Card>
+    </NoteDetailDialog>
   );
 }
 
@@ -137,41 +193,9 @@ function NoteCard({
  * Mode client (isClientView) : notes PUBLIC uniquement, sans actions de gestion.
  */
 export function NotesList({ notes, isClientView = false, onRefresh }: NotesListProps) {
-  const router = useRouter();
-  const { toast } = useToast();
-  const [markingId, setMarkingId] = useState<string | null>(null);
-
   const urgentNotes = notes.filter((n) => n.isUrgent);
   const unreadNotes = notes.filter((n) => !n.isRead);
-
-  const handleMarkRead = useCallback(
-    async (id: string) => {
-      if (markingId) return;
-      setMarkingId(id);
-      try {
-        const res = await fetch(`/api/ingenieur/notes/${id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isRead: true }),
-        });
-        if (!res.ok) {
-          toast({ title: "Erreur lors du marquage de la note.", variant: "error" });
-          return;
-        }
-        toast({ title: "Note marquee comme lue.", variant: "success" });
-        if (onRefresh) {
-          onRefresh();
-        } else {
-          router.refresh();
-        }
-      } catch {
-        toast({ title: "Erreur reseau.", variant: "error" });
-      } finally {
-        setMarkingId(null);
-      }
-    },
-    [markingId, onRefresh, router, toast]
-  );
+  const myObservations = notes.filter((n) => n.isFromClient);
 
   function renderGrid(items: NoteIngenieurWithRelations[]) {
     if (items.length === 0) {
@@ -190,7 +214,6 @@ export function NotesList({ notes, isClientView = false, onRefresh }: NotesListP
             key={note.id}
             note={note}
             isClientView={isClientView}
-            onMarkRead={isClientView ? undefined : handleMarkRead}
           />
         ))}
       </div>
@@ -233,7 +256,11 @@ export function NotesList({ notes, isClientView = false, onRefresh }: NotesListP
           <TabsTrigger value="urgentes">
             Urgentes ({urgentNotes.length})
           </TabsTrigger>
-          {!isClientView && (
+          {isClientView ? (
+            <TabsTrigger value="mes_obs">
+              Mes obs. ({myObservations.length})
+            </TabsTrigger>
+          ) : (
             <TabsTrigger value="non_lues">
               Non lues ({unreadNotes.length})
             </TabsTrigger>
@@ -246,7 +273,11 @@ export function NotesList({ notes, isClientView = false, onRefresh }: NotesListP
         <TabsContent value="urgentes">
           {renderGrid(urgentNotes)}
         </TabsContent>
-        {!isClientView && (
+        {isClientView ? (
+          <TabsContent value="mes_obs">
+            {renderGrid(myObservations)}
+          </TabsContent>
+        ) : (
           <TabsContent value="non_lues">
             {renderGrid(unreadNotes)}
           </TabsContent>

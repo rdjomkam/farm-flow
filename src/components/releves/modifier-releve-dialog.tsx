@@ -28,19 +28,19 @@ import { ConsommationFields } from "@/components/releves/consommation-fields";
 import type { ConsommationLine, ProduitOption } from "@/components/releves/consommation-fields";
 
 const typeLabels: Record<TypeReleve, string> = {
-  [TypeReleve.BIOMETRIE]: "Biométrie",
-  [TypeReleve.MORTALITE]: "Mortalité",
+  [TypeReleve.BIOMETRIE]: "Biometrie",
+  [TypeReleve.MORTALITE]: "Mortalite",
   [TypeReleve.ALIMENTATION]: "Alimentation",
-  [TypeReleve.QUALITE_EAU]: "Qualité eau",
+  [TypeReleve.QUALITE_EAU]: "Qualite eau",
   [TypeReleve.COMPTAGE]: "Comptage",
   [TypeReleve.OBSERVATION]: "Observation",
 };
 
 const causeLabels: Record<CauseMortalite, string> = {
   [CauseMortalite.MALADIE]: "Maladie",
-  [CauseMortalite.QUALITE_EAU]: "Qualité eau",
+  [CauseMortalite.QUALITE_EAU]: "Qualite eau",
   [CauseMortalite.STRESS]: "Stress",
-  [CauseMortalite.PREDATION]: "Prédation",
+  [CauseMortalite.PREDATION]: "Predation",
   [CauseMortalite.CANNIBALISME]: "Cannibalisme",
   [CauseMortalite.INCONNUE]: "Inconnue",
   [CauseMortalite.AUTRE]: "Autre",
@@ -55,7 +55,7 @@ const alimentLabels: Record<TypeAliment, string> = {
 const comptageLabels: Record<MethodeComptage, string> = {
   [MethodeComptage.DIRECT]: "Direct",
   [MethodeComptage.ESTIMATION]: "Estimation",
-  [MethodeComptage.ECHANTILLONNAGE]: "Échantillonnage",
+  [MethodeComptage.ECHANTILLONNAGE]: "Echantillonnage",
 };
 
 interface ModifierReleveDialogProps {
@@ -72,6 +72,9 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Raison obligatoire (ADR-014) — premier champ visible
+  const [raison, setRaison] = useState("");
 
   // Type-specific fields
   const [poidsMoyen, setPoidsMoyen] = useState(String(releve.poidsMoyen ?? ""));
@@ -91,7 +94,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
   const [description, setDescription] = useState(releve.description ?? "");
   const [notes, setNotes] = useState(releve.notes ?? "");
 
-  // Types de releve qui supportent les consommations de produits
+  // Types de releve qui supportent les consommations
   const typesAvecConsommations = [TypeReleve.ALIMENTATION, TypeReleve.MORTALITE, TypeReleve.QUALITE_EAU];
   const categorieConsommation = type === TypeReleve.ALIMENTATION ? CategorieProduit.ALIMENT : CategorieProduit.INTRANT;
 
@@ -103,6 +106,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
   );
 
   function resetForm() {
+    setRaison("");
     setPoidsMoyen(String(releve.poidsMoyen ?? ""));
     setTailleMoyenne(String(releve.tailleMoyenne ?? ""));
     setEchantillonCount(String(releve.echantillonCount ?? ""));
@@ -130,28 +134,34 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
 
   function validate(): Record<string, string> {
     const errs: Record<string, string> = {};
+
+    // Validation de la raison (obligatoire, min 5)
+    if (!raison.trim() || raison.trim().length < 5) {
+      errs.raison = "La raison doit contenir au moins 5 caracteres.";
+    }
+
     switch (type) {
       case TypeReleve.BIOMETRIE:
-        if (!poidsMoyen || Number(poidsMoyen) <= 0) errs.poidsMoyen = "Supérieur à 0.";
-        if (!tailleMoyenne || Number(tailleMoyenne) <= 0) errs.tailleMoyenne = "Supérieur à 0.";
+        if (!poidsMoyen || Number(poidsMoyen) <= 0) errs.poidsMoyen = "Superieur a 0.";
+        if (tailleMoyenne && Number(tailleMoyenne) <= 0) errs.tailleMoyenne = "Superieur a 0.";
         if (!echantillonCount || Number(echantillonCount) <= 0 || !Number.isInteger(Number(echantillonCount)))
-          errs.echantillonCount = "Entier supérieur à 0.";
+          errs.echantillonCount = "Entier superieur a 0.";
         break;
       case TypeReleve.MORTALITE:
         if (nombreMorts === "" || Number(nombreMorts) < 0 || !Number.isInteger(Number(nombreMorts)))
-          errs.nombreMorts = "Entier positif ou zéro.";
-        if (!causeMortalite) errs.causeMortalite = "Sélectionnez une cause.";
+          errs.nombreMorts = "Entier positif ou zero.";
+        if (!causeMortalite) errs.causeMortalite = "Selectionnez une cause.";
         break;
       case TypeReleve.ALIMENTATION:
-        if (!quantiteAliment || Number(quantiteAliment) <= 0) errs.quantiteAliment = "Supérieur à 0.";
-        if (!typeAliment) errs.typeAliment = "Sélectionnez un type.";
+        if (!quantiteAliment || Number(quantiteAliment) <= 0) errs.quantiteAliment = "Superieur a 0.";
+        if (!typeAliment) errs.typeAliment = "Selectionnez un type.";
         if (!frequenceAliment || Number(frequenceAliment) <= 0 || !Number.isInteger(Number(frequenceAliment)))
-          errs.frequenceAliment = "Entier supérieur à 0.";
+          errs.frequenceAliment = "Entier superieur a 0.";
         break;
       case TypeReleve.COMPTAGE:
         if (!nombreCompte || Number(nombreCompte) <= 0 || !Number.isInteger(Number(nombreCompte)))
-          errs.nombreCompte = "Entier supérieur à 0.";
-        if (!methodeComptage) errs.methodeComptage = "Sélectionnez une méthode.";
+          errs.nombreCompte = "Entier superieur a 0.";
+        if (!methodeComptage) errs.methodeComptage = "Selectionnez une methode.";
         break;
       case TypeReleve.OBSERVATION:
         if (!description.trim()) errs.description = "La description est obligatoire.";
@@ -162,14 +172,15 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
   }
 
   function buildBody(): Record<string, unknown> {
-    const body: Record<string, unknown> = {};
+    const body: Record<string, unknown> = { raison: raison.trim() };
+
     if (notes.trim()) body.notes = notes.trim();
     else body.notes = null;
 
     switch (type) {
       case TypeReleve.BIOMETRIE:
         body.poidsMoyen = Number(poidsMoyen);
-        body.tailleMoyenne = Number(tailleMoyenne);
+        body.tailleMoyenne = tailleMoyenne ? Number(tailleMoyenne) : null;
         body.echantillonCount = Number(echantillonCount);
         break;
       case TypeReleve.MORTALITE:
@@ -196,7 +207,6 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
         break;
     }
 
-    // Inclure les consommations pour les types qui les supportent
     if (typesAvecConsommations.includes(type)) {
       body.consommations = consommationLignes
         .filter((l) => l.produitId && l.quantite && parseFloat(l.quantite) > 0)
@@ -216,7 +226,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
 
     try {
       const res = await fetch(`/api/releves/${releve.id}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildBody()),
       });
@@ -225,17 +235,20 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
         toast({ title: data.message || "Erreur lors de la modification.", variant: "error" });
         return;
       }
-      toast({ title: "Relevé modifié !", variant: "success" });
+      toast({ title: "Releve modifie avec succes.", variant: "success" });
       setOpen(false);
       router.refresh();
     } catch {
-      toast({ title: "Erreur réseau.", variant: "error" });
+      toast({ title: "Erreur reseau.", variant: "error" });
     } finally {
       setSubmitting(false);
     }
   }
 
   if (!permissions.includes(Permission.RELEVES_MODIFIER)) return null;
+
+  const raisonLength = raison.trim().length;
+  const raisonValid = raisonLength >= 5 && raisonLength <= 500;
 
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
@@ -244,15 +257,45 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
           <Pencil className="h-3.5 w-3.5" />
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Modifier le relevé</DialogTitle>
+          <DialogTitle>Modifier le releve</DialogTitle>
           <DialogDescription>
-            Type : {typeLabels[type]}
+            Type : {typeLabels[type]} — Toutes les modifications sont tracees pour l&apos;audit.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {/* Type-specific fields */}
+
+          {/* Section 1 — Raison obligatoire (EN PREMIER, ADR-014) */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor={`raison-${releve.id}`} className="text-sm font-medium text-foreground">
+              Raison de la modification <span className="text-danger">*</span>
+            </label>
+            <textarea
+              id={`raison-${releve.id}`}
+              className={`min-h-[88px] w-full rounded-lg border bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 ${
+                errors.raison ? "border-danger" : "border-border"
+              }`}
+              maxLength={500}
+              placeholder="Ex : Erreur de lecture de la balance lors de la pesee"
+              value={raison}
+              onChange={(e) => setRaison(e.target.value)}
+            />
+            <div className="flex items-center justify-between">
+              {errors.raison ? (
+                <p className="text-xs text-danger">{errors.raison}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  {raisonValid ? "Raison valide." : "Minimum 5 caracteres."}
+                </p>
+              )}
+              <span className={`text-xs ${raisonLength > 500 ? "text-danger" : "text-muted-foreground"}`}>
+                {raisonLength}/500
+              </span>
+            </div>
+          </div>
+
+          {/* Section 2 — Champs du type de releve */}
           {type === TypeReleve.BIOMETRIE && (
             <>
               <Input
@@ -277,7 +320,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
               />
               <Input
                 id={`echantillonCount-${releve.id}`}
-                label="Nombre d'échantillons"
+                label="Nombre d'echantillons"
                 type="number"
                 min="1"
                 value={echantillonCount}
@@ -293,14 +336,14 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
                 id={`nombreMorts-${releve.id}`}
                 label="Nombre de morts"
                 type="number"
-                min="1"
+                min="0"
                 value={nombreMorts}
                 onChange={(e) => setNombreMorts(e.target.value)}
                 error={errors.nombreMorts}
               />
               <Select value={causeMortalite} onValueChange={setCauseMortalite}>
-                <SelectTrigger label="Cause de mortalité" error={errors.causeMortalite}>
-                  <SelectValue placeholder="Sélectionnez..." />
+                <SelectTrigger label="Cause de mortalite" error={errors.causeMortalite}>
+                  <SelectValue placeholder="Selectionnez..." />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.values(CauseMortalite).map((c) => (
@@ -315,7 +358,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
             <>
               <Input
                 id={`quantiteAliment-${releve.id}`}
-                label="Quantité d'aliment (kg)"
+                label="Quantite d'aliment (kg)"
                 type="number"
                 min="0.1"
                 step="0.1"
@@ -325,7 +368,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
               />
               <Select value={typeAliment} onValueChange={setTypeAliment}>
                 <SelectTrigger label="Type d'aliment" error={errors.typeAliment}>
-                  <SelectValue placeholder="Sélectionnez..." />
+                  <SelectValue placeholder="Selectionnez..." />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.values(TypeAliment).map((t) => (
@@ -335,7 +378,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
               </Select>
               <Input
                 id={`frequenceAliment-${releve.id}`}
-                label="Fréquence (fois/jour)"
+                label="Frequence (fois/jour)"
                 type="number"
                 min="1"
                 value={frequenceAliment}
@@ -349,7 +392,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
             <>
               <Input
                 id={`temperature-${releve.id}`}
-                label="Température (°C)"
+                label="Temperature (C)"
                 type="number"
                 step="0.1"
                 value={temperature}
@@ -365,7 +408,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
               />
               <Input
                 id={`oxygene-${releve.id}`}
-                label="Oxygène dissous (mg/L)"
+                label="Oxygene dissous (mg/L)"
                 type="number"
                 step="0.1"
                 value={oxygene}
@@ -394,8 +437,8 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
                 error={errors.nombreCompte}
               />
               <Select value={methodeComptage} onValueChange={setMethodeComptage}>
-                <SelectTrigger label="Méthode de comptage" error={errors.methodeComptage}>
-                  <SelectValue placeholder="Sélectionnez..." />
+                <SelectTrigger label="Methode de comptage" error={errors.methodeComptage}>
+                  <SelectValue placeholder="Selectionnez..." />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.values(MethodeComptage).map((m) => (
@@ -421,7 +464,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
             </div>
           )}
 
-          {/* Consommations de produits (pour ALIMENTATION, MORTALITE, QUALITE_EAU) */}
+          {/* Consommations de produits */}
           {typesAvecConsommations.includes(type) && produits.length > 0 && (
             <ConsommationFields
               lignes={consommationLignes}
@@ -432,7 +475,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
             />
           )}
 
-          {/* Notes (common to all types) */}
+          {/* Notes (commun a tous les types) */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor={`notes-${releve.id}`} className="text-sm font-medium text-foreground">
               Notes (optionnel)
@@ -449,8 +492,8 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               Annuler
             </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? "Modification..." : "Enregistrer"}
+            <Button type="submit" disabled={submitting || !raisonValid}>
+              {submitting ? "Modification..." : "Enregistrer les modifications"}
             </Button>
           </DialogFooter>
         </form>
