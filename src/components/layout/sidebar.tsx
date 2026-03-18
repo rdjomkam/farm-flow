@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -27,20 +27,17 @@ import {
   Calendar,
   ClipboardCheck,
   Settings,
-  ChevronDown,
   Receipt,
   ClipboardList,
-  RefreshCw,
   NotebookPen,
   UserCog,
   Boxes,
-  Eye,
+  Zap,
 } from "lucide-react";
-import { SiteSelector } from "./site-selector";
 import { NotificationBell } from "./notification-bell";
 import { cn } from "@/lib/utils";
-import { Permission, Role } from "@/types";
-import { MODULE_VIEW_PERMISSIONS, ITEM_VIEW_PERMISSIONS, SECONDARY_VIEW_PERMISSIONS } from "@/lib/permissions-constants";
+import { Permission, Role, SiteModule } from "@/types";
+import { MODULE_VIEW_PERMISSIONS, ITEM_VIEW_PERMISSIONS, MODULE_LABEL_TO_SITE_MODULE } from "@/lib/permissions-constants";
 
 interface NavItem {
   href: string;
@@ -54,9 +51,10 @@ interface NavItem {
 // Modules communs (ADMIN / GERANT)
 // ---------------------------------------------------------------------------
 
-const modulesAdminGerant: { label: string; icon: React.ComponentType<{ className?: string }>; items: NavItem[] }[] = [
+const modulesAdminGerant: { label: string; primaryHref: string; icon: React.ComponentType<{ className?: string }>; items: NavItem[] }[] = [
   {
     label: "Reproduction",
+    primaryHref: "/alevins",
     icon: Egg,
     items: [
       { href: "/alevins", label: "Dashboard", icon: LayoutDashboard },
@@ -67,6 +65,7 @@ const modulesAdminGerant: { label: string; icon: React.ComponentType<{ className
   },
   {
     label: "Grossissement",
+    primaryHref: "/vagues",
     icon: Waves,
     items: [
       { href: "/vagues", label: "Vagues", icon: Waves },
@@ -78,6 +77,7 @@ const modulesAdminGerant: { label: string; icon: React.ComponentType<{ className
   },
   {
     label: "Intrants",
+    primaryHref: "/stock",
     icon: Package,
     items: [
       { href: "/stock", label: "Dashboard", icon: LayoutDashboard },
@@ -90,6 +90,7 @@ const modulesAdminGerant: { label: string; icon: React.ComponentType<{ className
   },
   {
     label: "Ventes",
+    primaryHref: "/ventes",
     icon: ShoppingCart,
     items: [
       { href: "/clients", label: "Clients", icon: Users },
@@ -97,12 +98,12 @@ const modulesAdminGerant: { label: string; icon: React.ComponentType<{ className
       { href: "/factures", label: "Factures", icon: FileText },
       { href: "/finances", label: "Finances", icon: Wallet },
       { href: "/depenses", label: "Depenses", icon: Receipt },
-      { href: "/depenses/recurrentes", label: "Recurrentes", icon: RefreshCw },
       { href: "/besoins", label: "Besoins", icon: ClipboardList },
     ],
   },
   {
     label: "Analyse & Pilotage",
+    primaryHref: "/analytics",
     icon: BarChart3,
     items: [
       { href: "/analytics", label: "Vue globale", icon: BarChart3 },
@@ -116,27 +117,33 @@ const modulesAdminGerant: { label: string; icon: React.ComponentType<{ className
   // Phase 3 — Packs & Provisioning (Sprint 20)
   {
     label: "Packs & Provisioning",
+    primaryHref: "/packs",
     icon: Boxes,
     items: [
       { href: "/packs", label: "Packs", icon: Boxes },
       { href: "/activations", label: "Activations", icon: ClipboardCheck },
     ],
   },
-  // Phase 3 — Config élevage (Sprint 19)
-  {
-    label: "Config. Elevage",
-    icon: Settings,
-    items: [
-      { href: "/settings/config-elevage", label: "Profils d'elevage", icon: Settings },
-    ],
-  },
   // Phase 3 — Monitoring ingénieur (Sprint 23)
   {
     label: "Ingenieur",
+    primaryHref: "/ingenieur",
     icon: UserCog,
     items: [
       { href: "/ingenieur", label: "Dashboard clients", icon: LayoutDashboard },
       { href: "/notes", label: "Notes", icon: NotebookPen },
+    ],
+  },
+  // Configuration — unified settings module
+  {
+    label: "Configuration",
+    primaryHref: "/settings/sites",
+    icon: Settings,
+    items: [
+      { href: "/settings/sites", label: "Sites", icon: Building2 },
+      { href: "/settings/config-elevage", label: "Profils d'elevage", icon: Settings },
+      { href: "/settings/alertes", label: "Config. alertes", icon: Settings },
+      { href: "/settings/regles-activites", label: "Regles d'activites", icon: Zap },
     ],
   },
 ];
@@ -145,9 +152,10 @@ const modulesAdminGerant: { label: string; icon: React.ComponentType<{ className
 // Modules INGENIEUR — vue allégée centrée sur le suivi clients
 // ---------------------------------------------------------------------------
 
-const modulesIngenieur: { label: string; icon: React.ComponentType<{ className?: string }>; items: NavItem[] }[] = [
+const modulesIngenieur: { label: string; primaryHref: string; icon: React.ComponentType<{ className?: string }>; items: NavItem[] }[] = [
   {
     label: "Clients",
+    primaryHref: "/ingenieur",
     icon: Users,
     items: [
       { href: "/ingenieur", label: "Dashboard clients", icon: LayoutDashboard },
@@ -155,6 +163,7 @@ const modulesIngenieur: { label: string; icon: React.ComponentType<{ className?:
   },
   {
     label: "Notes",
+    primaryHref: "/notes",
     icon: NotebookPen,
     items: [
       { href: "/notes", label: "Mes notes", icon: NotebookPen },
@@ -166,9 +175,10 @@ const modulesIngenieur: { label: string; icon: React.ComponentType<{ className?:
 // Modules PISCICULTEUR — vue terrain simplifiée
 // ---------------------------------------------------------------------------
 
-const modulesPisciculteur: { label: string; icon: React.ComponentType<{ className?: string }>; items: NavItem[] }[] = [
+const modulesPisciculteur: { label: string; primaryHref: string; icon: React.ComponentType<{ className?: string }>; items: NavItem[] }[] = [
   {
     label: "Elevage",
+    primaryHref: "/vagues",
     icon: Waves,
     items: [
       { href: "/vagues", label: "Vagues", icon: Waves },
@@ -177,30 +187,15 @@ const modulesPisciculteur: { label: string; icon: React.ComponentType<{ classNam
     ],
   },
   {
-    label: "Mes activites",
-    icon: ClipboardCheck,
+    label: "Analyse & Pilotage",
+    primaryHref: "/analytics",
+    icon: BarChart3,
     items: [
+      { href: "/analytics", label: "Vue globale", icon: BarChart3 },
       { href: "/mes-taches", label: "Mes taches", icon: ClipboardCheck },
-      { href: "/releves/nouveau", label: "Observations", icon: Eye },
+      { href: "/notes", label: "Echanges", icon: NotebookPen },
     ],
   },
-  {
-    label: "Notes",
-    icon: NotebookPen,
-    items: [
-      { href: "/notes", label: "Mes notes", icon: NotebookPen },
-    ],
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Items secondaires
-// ---------------------------------------------------------------------------
-
-const secondaryItems: NavItem[] = [
-  { href: "/sites", label: "Sites", icon: Building2 },
-  { href: "/settings/config-elevage", label: "Config. elevage", icon: Settings },
-  { href: "/settings/alertes", label: "Config. alertes", icon: Settings },
 ];
 
 // ---------------------------------------------------------------------------
@@ -209,11 +204,10 @@ const secondaryItems: NavItem[] = [
 
 const PHASE3_MODULE_PERMISSIONS: Record<string, Permission> = {
   "Packs & Provisioning": Permission.ACTIVER_PACKS,
-  "Config. Elevage":      Permission.GERER_CONFIG_ELEVAGE,
   "Ingenieur":            Permission.MONITORING_CLIENTS,
 };
 
-export function Sidebar({ permissions, role }: { permissions: Permission[]; role: Role | null }) {
+export function Sidebar({ permissions, role, siteModules }: { permissions: Permission[]; role: Role | null; siteModules: SiteModule[] }) {
   const pathname = usePathname();
 
   // Sélectionner les modules selon le rôle
@@ -223,7 +217,7 @@ export function Sidebar({ permissions, role }: { permissions: Permission[]; role
     return modulesAdminGerant;
   }, [role]);
 
-  // Filtrer modules par permission, puis items dans chaque module
+  // Filtrer modules par permission + site modules, puis items dans chaque module
   const visibleModules = useMemo(
     () =>
       allModules
@@ -233,7 +227,11 @@ export function Sidebar({ permissions, role }: { permissions: Permission[]; role
           if (phase3Required && !permissions.includes(phase3Required)) return false;
           // Gate de module standard
           const required = MODULE_VIEW_PERMISSIONS[mod.label];
-          return !required || permissions.includes(required);
+          if (required && !permissions.includes(required)) return false;
+          // Gate par modules actifs du site
+          const siteModule = MODULE_LABEL_TO_SITE_MODULE[mod.label];
+          if (siteModule && !siteModules.includes(siteModule)) return false;
+          return true;
         })
         .map((mod) => ({
           ...mod,
@@ -243,15 +241,7 @@ export function Sidebar({ permissions, role }: { permissions: Permission[]; role
           }),
         }))
         .filter((mod) => mod.items.length > 0),
-    [permissions, allModules]
-  );
-
-  const visibleSecondary = useMemo(
-    () => secondaryItems.filter((item) => {
-      const required = SECONDARY_VIEW_PERMISSIONS[item.href];
-      return !required || permissions.includes(required);
-    }),
-    [permissions]
+    [permissions, allModules, siteModules]
   );
 
   const showDashboard = permissions.includes(Permission.DASHBOARD_VOIR) && role !== Role.INGENIEUR && role !== Role.PISCICULTEUR;
@@ -276,47 +266,6 @@ export function Sidebar({ permissions, role }: { permissions: Permission[]; role
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, visibleModules]);
 
-  const [expanded, setExpanded] = useState<Set<string>>(() => {
-    // Initialize with the active module expanded
-    for (const mod of visibleModules) {
-      if (mod.items.some((item) => {
-        const href = item.href;
-        if (href === "/" || href === "/stock" || href === "/alevins" || href === "/analytics" || href === "/planning" || href === "/finances" || href === "/mes-taches" || href === "/ingenieur" || href === "/notes" || href === "/packs" || href === "/activations")
-          return pathname === href || pathname.startsWith(href + "/");
-        if (href === "/ventes")
-          return pathname === "/ventes" || pathname.startsWith("/ventes/");
-        return pathname.startsWith(href);
-      })) {
-        return new Set([mod.label]);
-      }
-    }
-    return new Set(visibleModules[0]?.label ? [visibleModules[0].label] : []);
-  });
-
-  // Auto-expand the active module when pathname changes
-  useEffect(() => {
-    if (activeModuleLabel) {
-      setExpanded((prev) => {
-        if (prev.has(activeModuleLabel)) return prev;
-        const next = new Set(prev);
-        next.add(activeModuleLabel);
-        return next;
-      });
-    }
-  }, [activeModuleLabel]);
-
-  function toggleModule(label: string) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(label)) {
-        next.delete(label);
-      } else {
-        next.add(label);
-      }
-      return next;
-    });
-  }
-
   return (
     <aside className="hidden md:flex md:w-60 md:flex-col md:border-r md:border-border md:bg-card">
       <div className="flex h-14 items-center gap-2 border-b border-border px-4">
@@ -326,22 +275,16 @@ export function Sidebar({ permissions, role }: { permissions: Permission[]; role
           <NotificationBell />
         </div>
       </div>
-      <div className="px-3 pt-3 pb-1 border-b border-border mb-1">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 mb-1.5">
-          Site actif
-        </p>
-        <SiteSelector fullWidth />
-      </div>
       <nav className="flex flex-1 flex-col p-2 overflow-y-auto">
-        <div className="space-y-1 flex-1">
+        <div className="space-y-2 flex-1">
           {showDashboard && (
             <Link
               href="/"
               className={cn(
-                "flex items-center gap-3 rounded-lg py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 pathname === "/"
-                  ? "bg-primary/10 text-primary border-l-2 border-primary pl-2.5"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground pl-3"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
               <LayoutDashboard className="h-4 w-4" />
@@ -350,110 +293,25 @@ export function Sidebar({ permissions, role }: { permissions: Permission[]; role
           )}
           {visibleModules.map((mod) => {
             const ModIcon = mod.icon;
-            const isExpanded = expanded.has(mod.label);
             const isModActive = mod.label === activeModuleLabel;
             return (
-              <div key={mod.label}>
-                <button
-                  onClick={() => toggleModule(mod.label)}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-2 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-md transition-colors",
-                    isModActive
-                      ? "text-primary"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <ModIcon className="h-3.5 w-3.5" />
-                  {mod.label}
-                  <span className="ml-auto flex items-center gap-1.5">
-                    <span className="text-[10px] font-normal normal-case tracking-normal text-muted-foreground">
-                      {mod.items.filter(i => !i.disabled).length}
-                    </span>
-                    <ChevronDown
-                      className={cn(
-                        "h-3.5 w-3.5 transition-transform duration-200",
-                        isExpanded && "rotate-180"
-                      )}
-                    />
-                  </span>
-                </button>
-                <div
-                  className={cn(
-                    "overflow-hidden transition-all duration-200",
-                    isExpanded
-                      ? "max-h-[500px] opacity-100"
-                      : "max-h-0 opacity-0"
-                  )}
-                >
-                  <div className="space-y-0.5 pt-0.5">
-                    {mod.items.map((item, itemIndex) => {
-                      const Icon = item.icon;
-                      const active = isActive(item.href);
-
-                      if (item.disabled) {
-                        return (
-                          <div
-                            key={item.href}
-                            className="animate-slide-in-left opacity-0 flex items-center gap-3 rounded-lg pl-3 pr-3 py-2 text-sm font-medium text-muted-foreground/40 cursor-not-allowed"
-                            style={{ animationDelay: `${itemIndex * 40}ms` }}
-                          >
-                            <Icon className="h-4 w-4" />
-                            {item.label}
-                            <span className="ml-auto text-[9px] uppercase tracking-wide bg-muted rounded px-1">
-                              Bientot
-                            </span>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          className={cn(
-                            "animate-slide-in-left opacity-0 flex items-center gap-3 rounded-lg py-2 text-sm font-medium transition-colors",
-                            active
-                              ? "bg-primary/10 text-primary border-l-2 border-primary pl-2.5"
-                              : "text-muted-foreground hover:bg-muted hover:text-foreground pl-3"
-                          )}
-                          style={{ animationDelay: `${itemIndex * 40}ms` }}
-                        >
-                          <Icon className="h-4 w-4" />
-                          {item.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
+              <Link
+                key={mod.label}
+                href={mod.primaryHref}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  isModActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <ModIcon className="h-4 w-4" />
+                {mod.label}
+              </Link>
             );
           })}
         </div>
 
-        {/* Secondary items at bottom */}
-        {visibleSecondary.length > 0 && (
-          <div className="border-t border-border pt-2 mt-2 space-y-0.5">
-            {visibleSecondary.map((item) => {
-              const Icon = item.icon;
-              const active = isActive(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg py-2 text-sm font-medium transition-colors",
-                    active
-                      ? "bg-primary/10 text-primary border-l-2 border-primary pl-2.5"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground pl-3"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-        )}
       </nav>
     </aside>
   );
