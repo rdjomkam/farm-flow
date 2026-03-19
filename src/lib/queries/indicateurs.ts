@@ -20,11 +20,13 @@ export async function getIndicateursVague(
   const vague = await prisma.vague.findFirst({
     where: { id: vagueId, siteId },
     include: {
+      bacs: { select: { id: true, nombrePoissons: true } },
       releves: {
         orderBy: { date: "asc" },
         select: {
           typeReleve: true,
           date: true,
+          bacId: true,
           poidsMoyen: true,
           tailleMoyenne: true,
           nombreMorts: true,
@@ -45,10 +47,47 @@ export async function getIndicateursVague(
   );
   const comptages = vague.releves.filter((r) => r.typeReleve === TypeReleve.COMPTAGE);
 
-  // Derniere biometrie
-  const derniereBiometrie = biometries.at(-1);
-  const poidsMoyen = derniereBiometrie?.poidsMoyen ?? null;
-  const tailleMoyenne = derniereBiometrie?.tailleMoyenne ?? null;
+  // Moyenne ponderee des biometries par bac
+  // Grouper par bac, garder la derniere par bac (releves tries par date asc)
+  const biometriesParBac = new Map<string, (typeof biometries)[0]>();
+  for (const b of biometries) {
+    if (b.bacId) biometriesParBac.set(b.bacId, b);
+  }
+
+  let poidsMoyen: number | null = null;
+  let tailleMoyenne: number | null = null;
+
+  if (biometriesParBac.size > 0) {
+    let totalPoids = 0;
+    let totalTaille = 0;
+    let totalPoissons = 0;
+    let hasTaille = false;
+
+    for (const [bacId, bio] of biometriesParBac) {
+      const bac = vague.bacs.find((b) => b.id === bacId);
+      const n = bac?.nombrePoissons ?? 1;
+      if (bio.poidsMoyen !== null) {
+        totalPoids += bio.poidsMoyen * n;
+        totalPoissons += n;
+      }
+      if (bio.tailleMoyenne !== null) {
+        totalTaille += bio.tailleMoyenne * n;
+        hasTaille = true;
+      }
+    }
+
+    if (totalPoissons > 0) {
+      poidsMoyen = Math.round((totalPoids / totalPoissons) * 100) / 100;
+      tailleMoyenne = hasTaille
+        ? Math.round((totalTaille / totalPoissons) * 100) / 100
+        : null;
+    }
+  } else if (biometries.length > 0) {
+    // Fallback: pas de bacId sur les releves, utiliser le dernier releve
+    const derniereBiometrie = biometries.at(-1);
+    poidsMoyen = derniereBiometrie?.poidsMoyen ?? null;
+    tailleMoyenne = derniereBiometrie?.tailleMoyenne ?? null;
+  }
 
   // Total mortalites
   const totalMortalites = mortalites.reduce(

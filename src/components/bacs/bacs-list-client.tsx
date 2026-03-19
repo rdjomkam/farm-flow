@@ -40,6 +40,9 @@ export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
   const [editBac, setEditBac] = useState<BacResponse | null>(null);
   const [editNom, setEditNom] = useState("");
   const [editVolume, setEditVolume] = useState("");
+  const [editNombrePoissons, setEditNombrePoissons] = useState("");
+  const [editNombreInitial, setEditNombreInitial] = useState("");
+  const [editPoidsMoyenInitial, setEditPoidsMoyenInitial] = useState("");
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [editSubmitting, setEditSubmitting] = useState(false);
 
@@ -91,6 +94,9 @@ export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
     setEditBac(bac);
     setEditNom(bac.nom);
     setEditVolume(String(bac.volume));
+    setEditNombrePoissons(bac.nombrePoissons != null ? String(bac.nombrePoissons) : "");
+    setEditNombreInitial(bac.nombreInitial != null ? String(bac.nombreInitial) : "");
+    setEditPoidsMoyenInitial(bac.poidsMoyenInitial != null ? String(bac.poidsMoyenInitial) : "");
     setEditErrors({});
     setEditOpen(true);
   }
@@ -108,7 +114,13 @@ export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
       const res = await fetch(`/api/bacs/${editBac!.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nom: editNom.trim(), volume: Number(editVolume) }),
+        body: JSON.stringify({
+          nom: editNom.trim(),
+          volume: Number(editVolume),
+          ...(editNombrePoissons !== "" && { nombrePoissons: Number(editNombrePoissons) }),
+          ...(editNombreInitial !== "" && { nombreInitial: Number(editNombreInitial) }),
+          ...(editPoidsMoyenInitial !== "" && { poidsMoyenInitial: Number(editPoidsMoyenInitial) }),
+        }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -196,6 +208,14 @@ export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
                   <div className="min-w-0">
                     <p className="font-medium">{bac.nom}</p>
                     <p className="text-sm text-muted-foreground">{bac.volume} L</p>
+                    {bac.nombrePoissons != null && (
+                      <p className="text-sm text-muted-foreground">{bac.nombrePoissons} poissons</p>
+                    )}
+                    {bac.nombreInitial != null && bac.poidsMoyenInitial != null && (
+                      <p className="text-xs text-muted-foreground">
+                        Initial : {bac.nombreInitial} ind. / {bac.poidsMoyenInitial} g
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {isOccupe ? (
@@ -241,6 +261,36 @@ export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
               value={editVolume}
               onChange={(e) => setEditVolume(e.target.value)}
               error={editErrors.volume}
+            />
+            <Input
+              id="edit-nombrePoissons"
+              label="Nombre de poissons actuel"
+              type="number"
+              min="0"
+              step="1"
+              value={editNombrePoissons}
+              onChange={(e) => setEditNombrePoissons(e.target.value)}
+              error={editErrors.nombrePoissons}
+            />
+            <Input
+              id="edit-nombreInitial"
+              label="Nombre initial"
+              type="number"
+              min="0"
+              step="1"
+              value={editNombreInitial}
+              onChange={(e) => setEditNombreInitial(e.target.value)}
+              error={editErrors.nombreInitial}
+            />
+            <Input
+              id="edit-poidsMoyenInitial"
+              label="Poids moyen initial (g)"
+              type="number"
+              min="0.1"
+              step="0.1"
+              value={editPoidsMoyenInitial}
+              onChange={(e) => setEditPoidsMoyenInitial(e.target.value)}
+              error={editErrors.poidsMoyenInitial}
             />
             <DialogFooter>
               <Button type="button" variant="secondary" onClick={() => setEditOpen(false)}>

@@ -54,6 +54,9 @@ export async function updateBac(id: string, siteId: string, data: UpdateBacDTO) 
     data: {
       ...(data.nom !== undefined && { nom: data.nom }),
       ...(data.volume !== undefined && { volume: data.volume }),
+      ...(data.nombrePoissons !== undefined && { nombrePoissons: data.nombrePoissons }),
+      ...(data.nombreInitial !== undefined && { nombreInitial: data.nombreInitial }),
+      ...(data.poidsMoyenInitial !== undefined && { poidsMoyenInitial: data.poidsMoyenInitial }),
     },
   });
 }

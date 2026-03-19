@@ -26,6 +26,8 @@ export async function GET(
       nom: bac.nom,
       volume: bac.volume,
       nombrePoissons: bac.nombrePoissons,
+      nombreInitial: bac.nombreInitial,
+      poidsMoyenInitial: bac.poidsMoyenInitial,
       vagueId: bac.vagueId,
       vagueCode: bac.vague?.code ?? null,
       siteId: bac.siteId,
@@ -68,6 +70,24 @@ export async function PUT(
       }
     }
 
+    if (body.nombrePoissons !== undefined) {
+      if (typeof body.nombrePoissons !== "number" || !Number.isInteger(body.nombrePoissons) || body.nombrePoissons < 0) {
+        errors.push({ field: "nombrePoissons", message: "Le nombre de poissons doit etre un entier >= 0." });
+      }
+    }
+
+    if (body.nombreInitial !== undefined) {
+      if (typeof body.nombreInitial !== "number" || !Number.isInteger(body.nombreInitial) || body.nombreInitial < 0) {
+        errors.push({ field: "nombreInitial", message: "Le nombre initial doit etre un entier >= 0." });
+      }
+    }
+
+    if (body.poidsMoyenInitial !== undefined) {
+      if (typeof body.poidsMoyenInitial !== "number" || body.poidsMoyenInitial <= 0) {
+        errors.push({ field: "poidsMoyenInitial", message: "Le poids moyen initial doit etre superieur a 0." });
+      }
+    }
+
     if (errors.length > 0) {
       return NextResponse.json(
         { status: 400, message: "Erreurs de validation", errors },
@@ -78,6 +98,9 @@ export async function PUT(
     const data: UpdateBacDTO = {};
     if (body.nom !== undefined) data.nom = body.nom.trim();
     if (body.volume !== undefined) data.volume = body.volume;
+    if (body.nombrePoissons !== undefined) data.nombrePoissons = body.nombrePoissons;
+    if (body.nombreInitial !== undefined) data.nombreInitial = body.nombreInitial;
+    if (body.poidsMoyenInitial !== undefined) data.poidsMoyenInitial = body.poidsMoyenInitial;
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json(

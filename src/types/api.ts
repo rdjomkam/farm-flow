@@ -108,6 +108,12 @@ export interface UpdateBacDTO {
   nom?: string;
   /** Nouveau volume en litres */
   volume?: number;
+  /** Nombre de poissons actuel */
+  nombrePoissons?: number;
+  /** Nombre initial de poissons */
+  nombreInitial?: number;
+  /** Poids moyen initial en grammes */
+  poidsMoyenInitial?: number;
 }
 
 /** Reponse d'un bac avec indication d'occupation */
@@ -327,6 +333,8 @@ export interface ReleveListResponse {
  * (vagueId, bacId, date, siteId) ne sont pas modifiables.
  */
 export interface UpdateReleveDTO {
+  /** Date du releve (ISO string) — modifiable pour corriger une erreur de saisie */
+  date?: Date;
   /** Notes libres (commun a tous les types) */
   notes?: string | null;
 
@@ -394,6 +402,8 @@ export interface UpdateReleveDTO {
 export interface PatchReleveBody {
   /** Raison de la modification — obligatoire, min 5 chars, max 500 */
   raison: string;
+  /** Date du releve (ISO date string) — modifiable pour corriger une erreur */
+  date?: string;
 
   // --- Champs biometrie ---
   poidsMoyen?: number;
@@ -1695,6 +1705,8 @@ export interface CreateCalibrageDTO {
 export interface PatchReleveBody {
   /** Raison de la modification — obligatoire, min 5 chars, max 500 */
   raison: string;
+  /** Date du releve (ISO date string) — modifiable pour corriger une erreur */
+  date?: string;
   // Biometrie
   poidsMoyen?:       number;
   tailleMoyenne?:    number;
