@@ -101,6 +101,7 @@ export default function EditRolePage() {
       if (res.ok) {
         toast({ title: "Role mis a jour", variant: "success" });
         router.push(`/settings/sites/${siteId}/roles`);
+        router.refresh();
       } else {
         toast({ title: data.message || "Erreur lors de la mise a jour", variant: "error" });
       }
@@ -121,6 +122,7 @@ export default function EditRolePage() {
       if (res.ok) {
         toast({ title: "Role supprime", variant: "success" });
         router.push(`/settings/sites/${siteId}/roles`);
+        router.refresh();
       } else {
         toast({ title: data.message || "Erreur lors de la suppression", variant: "error" });
       }

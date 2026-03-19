@@ -176,6 +176,13 @@ enum Permission {
   CALIBRAGES_CREER
   CALIBRAGES_MODIFIER
   GERER_REGLES_GLOBALES
+  // Utilisateurs (6)
+  UTILISATEURS_VOIR
+  UTILISATEURS_CREER
+  UTILISATEURS_MODIFIER
+  UTILISATEURS_SUPPRIMER
+  UTILISATEURS_GERER
+  UTILISATEURS_IMPERSONNER
 }
 
 // ──────────────────────────────────────────
@@ -623,22 +630,28 @@ model User {
   releveModifications   ReleveModification[]
   calibrageModifications CalibrageModification[]
   isSystem              Boolean            @default(false)
+  // Sprint — Impersonation
+  originalSessions      Session[]          @relation("OriginalUser")
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
 }
 
 model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  activeSiteId String?
-  activeSite   Site?    @relation(fields: [activeSiteId], references: [id])
-  expires      DateTime
-  createdAt    DateTime @default(now())
+  id             String   @id @default(cuid())
+  sessionToken   String   @unique
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeSiteId   String?
+  activeSite     Site?    @relation(fields: [activeSiteId], references: [id])
+  expires        DateTime
+  createdAt      DateTime @default(now())
+  // Impersonation — non null uniquement lors d'une session d'impersonation
+  originalUserId String?
+  originalUser   User?    @relation("OriginalUser", fields: [originalUserId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([activeSiteId])
+  @@index([originalUserId])
 }
 
 // ──────────────────────────────────────────

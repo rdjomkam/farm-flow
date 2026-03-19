@@ -31,7 +31,10 @@ export async function getSession(
 
   const session = await prisma.session.findUnique({
     where: { sessionToken: token },
-    include: { user: true },
+    include: {
+      user: true,
+      originalUser: true,
+    },
   });
 
   if (!session) return null;
@@ -53,6 +56,9 @@ export async function getSession(
     name: session.user.name,
     role: session.user.role as UserSession["role"],
     activeSiteId: session.activeSiteId,
+    isImpersonating: session.originalUserId !== null,
+    originalUserId: session.originalUserId,
+    originalUserName: session.originalUser?.name ?? null,
   };
 }
 
@@ -64,7 +70,10 @@ export async function getServerSession(): Promise<UserSession | null> {
 
   const session = await prisma.session.findUnique({
     where: { sessionToken: token },
-    include: { user: true },
+    include: {
+      user: true,
+      originalUser: true,
+    },
   });
 
   if (!session) return null;
@@ -83,7 +92,21 @@ export async function getServerSession(): Promise<UserSession | null> {
     name: session.user.name,
     role: session.user.role as UserSession["role"],
     activeSiteId: session.activeSiteId,
+    isImpersonating: session.originalUserId !== null,
+    originalUserId: session.originalUserId,
+    originalUserName: session.originalUser?.name ?? null,
   };
+}
+
+/** Get the raw session token from the request cookie */
+export function getSessionToken(request: NextRequest): string | null {
+  return request.cookies.get(COOKIE_NAME)?.value ?? null;
+}
+
+/** Get the raw session token from server cookies() */
+export async function getServerSessionToken(): Promise<string | null> {
+  const cookieStore = await cookies();
+  return cookieStore.get(COOKIE_NAME)?.value ?? null;
 }
 
 /** Validate session or throw a 401-style error */

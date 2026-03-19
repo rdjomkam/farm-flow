@@ -163,6 +163,12 @@ export type {
   CreateSiteRoleDTO,
   UpdateSiteRoleDTO,
   AuthResponse,
+  // Gestion utilisateurs admin
+  CreateUserAdminDTO,
+  UpdateUserAdminDTO,
+  ResetPasswordAdminDTO,
+  StartImpersonationResponse,
+  StopImpersonationResponse,
 } from "./auth";
 
 // Types discrimines pour les releves

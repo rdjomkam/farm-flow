@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/layout/header";
 import { getServerSession } from "@/lib/auth";
 import { getSiteMember } from "@/lib/queries/sites";
-import { getSiteRoles } from "@/lib/queries/roles";
+import { getSiteRoles, syncSystemRolePermissions } from "@/lib/queries/roles";
 import { Permission } from "@/types";
 
 export default async function SiteRolesPage({
@@ -27,6 +27,7 @@ export default async function SiteRolesPage({
     redirect(`/settings/sites/${siteId}`);
   }
 
+  await syncSystemRolePermissions(siteId);
   const roles = await getSiteRoles(siteId);
 
   return (

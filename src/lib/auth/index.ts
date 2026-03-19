@@ -8,6 +8,8 @@ export {
   deleteSession,
   setSessionCookie,
   clearSessionCookie,
+  getSessionToken,
+  getServerSessionToken,
   AuthError,
   SESSION_COOKIE_NAME,
 } from "./session";

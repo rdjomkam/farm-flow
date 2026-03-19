@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { getSiteMember } from "@/lib/queries/sites";
 import { Role, Permission } from "@/types";
-import type { AuthContext } from "@/types/auth";
+import type { AuthContext, UserSession } from "@/types/auth";
 
 // Re-export constants for server-side consumers
 export {
@@ -30,6 +30,48 @@ export class ForbiddenError extends Error {
 // ---------------------------------------------------------------------------
 // requirePermission — validates auth + site membership + permissions
 // ---------------------------------------------------------------------------
+
+/**
+ * requireHasPermission — validates auth and checks that the user has at least one of the given permissions.
+ *
+ * Unlike requirePermission (which requires ALL listed permissions on the active site),
+ * this helper passes if the user has ANY one of the given permissions.
+ * Global ADMIN role always passes.
+ *
+ * Used for platform-level user management routes that don't need an active site.
+ */
+export async function requireHasPermission(
+  request: NextRequest,
+  ...anyOf: Permission[]
+): Promise<UserSession> {
+  const session = await requireAuth(request);
+
+  // Global ADMIN always passes
+  if (session.role === Role.ADMIN) {
+    return session;
+  }
+
+  if (!session.activeSiteId) {
+    throw new ForbiddenError("Aucun site actif selectionne.");
+  }
+
+  const member = await getSiteMember(session.activeSiteId, session.userId);
+  if (!member || !member.isActive) {
+    throw new ForbiddenError("Vous n'etes pas membre de ce site.");
+  }
+
+  if (!member.siteRole) {
+    throw new ForbiddenError("Role de site introuvable.");
+  }
+
+  const memberPermissions = member.siteRole.permissions as Permission[];
+  const hasAny = anyOf.some((p) => memberPermissions.includes(p));
+  if (!hasAny) {
+    throw new ForbiddenError("Permission insuffisante.");
+  }
+
+  return session;
+}
 
 export async function requirePermission(
   request: NextRequest,

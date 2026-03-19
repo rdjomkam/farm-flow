@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requirePermission, ForbiddenError, canAssignRole } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
 import { getSiteRoleById, updateSiteRole, deleteSiteRole } from "@/lib/queries/roles";
@@ -66,6 +67,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       permissions: body.permissions,
     });
 
+    revalidatePath(`/settings/sites/${siteId}`);
+    revalidatePath(`/settings/sites/${siteId}/roles`);
     return NextResponse.json(updated);
   } catch (error) {
     if (error instanceof AuthError) {
@@ -103,6 +106,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     await deleteSiteRole(roleId, siteId);
 
+    revalidatePath(`/settings/sites/${siteId}`);
+    revalidatePath(`/settings/sites/${siteId}/roles`);
     return NextResponse.json({ success: true, reassignedMembers: role._count.members });
   } catch (error) {
     if (error instanceof AuthError) {

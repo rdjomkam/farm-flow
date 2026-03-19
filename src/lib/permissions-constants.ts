@@ -131,6 +131,14 @@ export const PERMISSION_GROUPS = {
     Permission.MONITORING_CLIENTS,
     Permission.ENVOYER_NOTES,
   ],
+  utilisateurs: [
+    Permission.UTILISATEURS_VOIR,
+    Permission.UTILISATEURS_CREER,
+    Permission.UTILISATEURS_MODIFIER,
+    Permission.UTILISATEURS_SUPPRIMER,
+    Permission.UTILISATEURS_GERER,
+    Permission.UTILISATEURS_IMPERSONNER,
+  ],
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -179,6 +187,9 @@ export const ITEM_VIEW_PERMISSIONS: Record<string, Permission> = {
   "/settings/alertes":   Permission.ALERTES_CONFIGURER,
   "/settings/config-elevage": Permission.GERER_CONFIG_ELEVAGE,
   "/settings/regles-activites": Permission.REGLES_ACTIVITES_VOIR,
+  // Utilisateurs module
+  "/users":              Permission.UTILISATEURS_VOIR,
+  "/users/nouveau":      Permission.UTILISATEURS_CREER,
 };
 
 // ---------------------------------------------------------------------------

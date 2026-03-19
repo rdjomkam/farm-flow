@@ -35,6 +35,7 @@ import {
   UserCog,
   Boxes,
   Zap,
+  UserPlus,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -152,6 +153,15 @@ const modulesAdminGerant: { label: string; primaryHref: string; icon: React.Comp
       { href: "/settings/regles-activites", label: "Regles d'activites", icon: Zap },
     ],
   },
+  {
+    label: "Utilisateurs",
+    primaryHref: "/users",
+    icon: Users,
+    items: [
+      { href: "/users", label: "Liste", icon: Users },
+      { href: "/users/nouveau", label: "Nouveau", icon: UserPlus },
+    ],
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -211,6 +221,7 @@ const modulesPisciculteur: { label: string; primaryHref: string; icon: React.Com
 const PHASE3_MODULE_PERMISSIONS: Record<string, Permission> = {
   "Packs & Provisioning": Permission.ACTIVER_PACKS,
   "Ingenieur":            Permission.MONITORING_CLIENTS,
+  "Utilisateurs":         Permission.UTILISATEURS_VOIR,
 };
 
 interface HamburgerMenuProps {
@@ -229,8 +240,6 @@ export function HamburgerMenu({ open, onOpenChange, permissions, role, userName,
 
   // Select modules by role (same logic as sidebar)
   const allModules = useMemo(() => {
-    if (role === Role.INGENIEUR) return modulesIngenieur;
-    if (role === Role.PISCICULTEUR) return modulesPisciculteur;
     return modulesAdminGerant;
   }, [role]);
 
@@ -262,7 +271,7 @@ export function HamburgerMenu({ open, onOpenChange, permissions, role, userName,
   const showDashboard = permissions.includes(Permission.DASHBOARD_VOIR) && role !== Role.INGENIEUR && role !== Role.PISCICULTEUR;
 
   function isActive(href: string) {
-    if (href === "/" || href === "/stock" || href === "/alevins" || href === "/analytics" || href === "/planning" || href === "/finances" || href === "/mes-taches" || href === "/ingenieur" || href === "/notes" || href === "/packs" || href === "/activations")
+    if (href === "/" || href === "/stock" || href === "/alevins" || href === "/analytics" || href === "/planning" || href === "/finances" || href === "/mes-taches" || href === "/ingenieur" || href === "/notes" || href === "/packs" || href === "/activations" || href === "/users")
       return pathname === href || pathname.startsWith(href + "/");
     if (href === "/ventes")
       return pathname === "/ventes" || pathname.startsWith("/ventes/");

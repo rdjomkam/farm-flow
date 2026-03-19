@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppShell } from "@/components/layout/app-shell";
 import { ToastProvider } from "@/components/ui/toast";
+import { ImpersonationBanner } from "@/components/users/impersonation-banner";
 import { getServerSession } from "@/lib/auth";
 import { getServerPermissions, getServerSiteModules } from "@/lib/auth/permissions-server";
 import { Permission, Role, SiteModule } from "@/types";
@@ -48,6 +49,8 @@ export default async function RootLayout({
     ? await getServerSiteModules(session.activeSiteId)
     : [];
 
+  const isImpersonating = session?.isImpersonating ?? false;
+
   return (
     <html lang="fr">
       <body
@@ -55,7 +58,16 @@ export default async function RootLayout({
         suppressHydrationWarning
       >
         <ToastProvider>
-          <AppShell permissions={permissions} role={role} userName={session?.name ?? null} siteModules={siteModules}>{children}</AppShell>
+          {isImpersonating && session && (
+            <ImpersonationBanner
+              targetUserName={session.name}
+              targetUserRole={session.role}
+              originalUserName={session.originalUserName ?? "Administrateur"}
+            />
+          )}
+          <div className={isImpersonating ? "pt-14 sm:pt-11" : ""}>
+            <AppShell permissions={permissions} role={role} userName={session?.name ?? null} siteModules={siteModules}>{children}</AppShell>
+          </div>
         </ToastProvider>
       </body>
     </html>

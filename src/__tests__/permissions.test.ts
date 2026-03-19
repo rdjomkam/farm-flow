@@ -248,11 +248,11 @@ describe("canAssignRole (anti-escalation)", () => {
 // ===== PERMISSION_GROUPS ===================================================
 
 describe("PERMISSION_GROUPS", () => {
-  it("contient exactement 14 groupes (Sprint 20 : ajout groupes packs/configElevage/ingenieur)", () => {
-    expect(Object.keys(PERMISSION_GROUPS)).toHaveLength(14);
+  it("contient exactement 15 groupes (Sprint 20 : ajout groupes packs/configElevage/ingenieur + utilisateurs)", () => {
+    expect(Object.keys(PERMISSION_GROUPS)).toHaveLength(15);
   });
 
-  it("les 14 groupes attendus existent", () => {
+  it("les 15 groupes attendus existent", () => {
     const groupNames = Object.keys(PERMISSION_GROUPS);
     expect(groupNames).toContain("administration");
     expect(groupNames).toContain("elevage");
@@ -269,6 +269,8 @@ describe("PERMISSION_GROUPS", () => {
     expect(groupNames).toContain("packs");
     expect(groupNames).toContain("configElevage");
     expect(groupNames).toContain("ingenieur");
+    // Module Utilisateurs
+    expect(groupNames).toContain("utilisateurs");
   });
 
   it("couvre exactement toutes les permissions sans doublon (39 depuis Sprint 20)", () => {

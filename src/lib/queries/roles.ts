@@ -1,5 +1,16 @@
 import { prisma } from "@/lib/db";
 import type { Permission } from "@/types";
+import { SYSTEM_ROLE_DEFINITIONS } from "@/lib/permissions-constants";
+
+/** Synchronise les permissions des roles systeme avec les definitions courantes */
+export async function syncSystemRolePermissions(siteId: string) {
+  for (const def of SYSTEM_ROLE_DEFINITIONS) {
+    await prisma.siteRole.updateMany({
+      where: { siteId, name: def.name, isSystem: true },
+      data: { permissions: [...def.permissions] },
+    });
+  }
+}
 
 /** Liste les roles d'un site avec compteur de membres */
 export async function getSiteRoles(siteId: string) {

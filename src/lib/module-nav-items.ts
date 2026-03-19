@@ -10,6 +10,7 @@ import {
   BarChart3,
   LineChart,
   Users,
+  UserPlus,
   FileText,
   Banknote,
   Egg,
@@ -117,6 +118,14 @@ export const MODULE_NAV: ModuleNavConfig[] = [
       { href: "/settings/config-elevage", label: "Profils", icon: Settings },
       { href: "/settings/alertes", label: "Alertes", icon: Settings },
       { href: "/settings/regles-activites", label: "Regles d'activites", icon: Zap },
+    ],
+  },
+  {
+    label: "Utilisateurs",
+    matchPaths: ["/users"],
+    items: [
+      { href: "/users", label: "Liste", icon: Users },
+      { href: "/users/nouveau", label: "Nouveau", icon: UserPlus },
     ],
   },
   {

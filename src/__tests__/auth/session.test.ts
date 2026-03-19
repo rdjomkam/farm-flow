@@ -63,6 +63,9 @@ const validSession = {
   userId: "user-1",
   expires: new Date(Date.now() + 1000 * 60 * 60 * 24),
   createdAt: new Date(),
+  activeSiteId: null,
+  originalUserId: null,
+  originalUser: null,
   user: validUser,
 };
 
@@ -170,6 +173,10 @@ describe("getSession", () => {
       phone: null,
       name: "Test User",
       role: "PISCICULTEUR",
+      activeSiteId: null,
+      isImpersonating: false,
+      originalUserId: null,
+      originalUserName: null,
     });
   });
 });
@@ -194,6 +201,10 @@ describe("requireAuth", () => {
       phone: null,
       name: "Test User",
       role: "PISCICULTEUR",
+      activeSiteId: null,
+      isImpersonating: false,
+      originalUserId: null,
+      originalUserName: null,
     });
   });
 

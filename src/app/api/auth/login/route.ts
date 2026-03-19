@@ -69,6 +69,9 @@ export async function POST(request: NextRequest) {
         name: user.name,
         role: user.role as Role,
         activeSiteId: null,
+        isImpersonating: false,
+        originalUserId: null,
+        originalUserName: null,
       },
     };
 

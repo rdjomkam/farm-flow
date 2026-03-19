@@ -17,6 +17,7 @@ import {
   BarChart3,
   LineChart,
   Users,
+  UserPlus,
   FileText,
   Banknote,
   Egg,
@@ -146,6 +147,16 @@ const modulesAdminGerant: { label: string; primaryHref: string; icon: React.Comp
       { href: "/settings/regles-activites", label: "Regles d'activites", icon: Zap },
     ],
   },
+  // Utilisateurs — ADMIN uniquement (filtre par role dans le composant)
+  {
+    label: "Utilisateurs",
+    primaryHref: "/users",
+    icon: Users,
+    items: [
+      { href: "/users", label: "Liste", icon: Users },
+      { href: "/users/nouveau", label: "Nouveau", icon: UserPlus },
+    ],
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -205,6 +216,7 @@ const modulesPisciculteur: { label: string; primaryHref: string; icon: React.Com
 const PHASE3_MODULE_PERMISSIONS: Record<string, Permission> = {
   "Packs & Provisioning": Permission.ACTIVER_PACKS,
   "Ingenieur":            Permission.MONITORING_CLIENTS,
+  "Utilisateurs":         Permission.UTILISATEURS_VOIR,
 };
 
 export function Sidebar({ permissions, role, siteModules }: { permissions: Permission[]; role: Role | null; siteModules: SiteModule[] }) {

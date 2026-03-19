@@ -2,7 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { getServerSession } from "@/lib/auth";
 import { getSiteById, getSiteMember } from "@/lib/queries/sites";
-import { getSiteRoles } from "@/lib/queries/roles";
+import { getSiteRoles, syncSystemRolePermissions } from "@/lib/queries/roles";
 import { SiteDetailClient } from "@/components/sites/site-detail-client";
 import { Permission } from "@/types";
 
@@ -23,6 +23,7 @@ export default async function SiteDetailPage({
   const canManageMembers = callerPermissions.includes(Permission.MEMBRES_GERER);
   const canManageSite = callerPermissions.includes(Permission.SITE_GERER);
 
+  await syncSystemRolePermissions(id);
   const siteRolesRaw = await getSiteRoles(id);
   const siteRoles = siteRolesRaw.map((r) => ({
     id: r.id,

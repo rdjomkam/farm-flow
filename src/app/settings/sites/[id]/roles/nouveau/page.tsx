@@ -58,6 +58,7 @@ export default function NewRolePage() {
       if (res.ok) {
         toast({ title: "Role cree avec succes", variant: "success" });
         router.push(`/settings/sites/${siteId}/roles`);
+        router.refresh();
       } else {
         toast({ title: data.message || "Erreur lors de la creation", variant: "error" });
       }

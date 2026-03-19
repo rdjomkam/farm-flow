@@ -21,6 +21,7 @@ import {
   PlaceholderFormat,
   PlaceholderMode,
   Recurrence,
+  Role,
   SiteModule,
   StatutActivation,
   StatutActivite,
@@ -1860,4 +1861,49 @@ export interface UpdateCustomPlaceholderDTO {
   decimals?: number;
   /** Activer / desactiver le placeholder */
   isActive?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// User Management Module — Reponses API
+// ---------------------------------------------------------------------------
+
+export interface UserSummaryResponse {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  role: Role;
+  isActive: boolean;
+  createdAt: Date;
+  sitesCount: number;
+}
+
+export interface UsersListResponse {
+  users: UserSummaryResponse[];
+  total: number;
+}
+
+export interface UserMembershipResponse {
+  siteId: string;
+  siteName: string;
+  siteRoleName: string;
+  isActive: boolean;
+  joinedAt: Date;
+}
+
+export interface UserDetailResponse {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  role: Role;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  memberships: UserMembershipResponse[];
+}
+
+export interface UserMembershipsResponse {
+  memberships: UserMembershipResponse[];
+  total: number;
 }

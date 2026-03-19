@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requirePermission, ForbiddenError, canAssignRole } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
 import { getSiteRoles, createSiteRole } from "@/lib/queries/roles";
@@ -64,6 +65,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       permissions: body.permissions,
     });
 
+    revalidatePath(`/settings/sites/${siteId}`);
+    revalidatePath(`/settings/sites/${siteId}/roles`);
     return NextResponse.json(role, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {

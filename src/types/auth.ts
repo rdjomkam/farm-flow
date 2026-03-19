@@ -27,6 +27,10 @@ export interface UserSession {
   name: string;
   role: Role;
   activeSiteId: string | null;
+  // Impersonation
+  isImpersonating: boolean;
+  originalUserId: string | null;
+  originalUserName: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -133,6 +137,52 @@ export interface UpdateSiteRoleDTO {
   name?: string;
   description?: string;
   permissions?: Permission[];
+}
+
+// ---------------------------------------------------------------------------
+// DTOs — Gestion utilisateurs (admin)
+// ---------------------------------------------------------------------------
+
+/** Corps de la requete POST /api/users — creation par un admin */
+export interface CreateUserAdminDTO {
+  name: string;
+  email?: string;
+  phone?: string;
+  password: string;
+  globalRole?: Role;
+}
+
+/** Corps de la requete PATCH /api/users/[id] */
+export interface UpdateUserAdminDTO {
+  name?: string;
+  email?: string;
+  phone?: string;
+  globalRole?: Role;
+  isActive?: boolean;
+}
+
+/** Corps de la requete POST /api/users/[id]/password */
+export interface ResetPasswordAdminDTO {
+  newPassword: string;
+}
+
+// ---------------------------------------------------------------------------
+// Types — Impersonation
+// ---------------------------------------------------------------------------
+
+/** Reponse POST /api/users/[id]/impersonate */
+export interface StartImpersonationResponse {
+  success: true;
+  targetUser: {
+    id: string;
+    name: string;
+    email: string | null;
+  };
+}
+
+/** Reponse DELETE /api/users/impersonate */
+export interface StopImpersonationResponse {
+  success: true;
 }
 
 // ---------------------------------------------------------------------------
