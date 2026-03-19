@@ -17,12 +17,14 @@ export function AppShell({
   role,
   userName,
   siteModules,
+  isImpersonating = false,
 }: {
   children: React.ReactNode;
   permissions: Permission[];
   role: Role | null;
   userName: string | null;
   siteModules: SiteModule[];
+  isImpersonating?: boolean;
 }) {
   const pathname = usePathname();
   const isAuthPage = AUTH_ROUTES.includes(pathname);
@@ -36,7 +38,7 @@ export function AppShell({
   }
 
   return (
-    <MobileMenuContext.Provider value={{ openMenu }}>
+    <MobileMenuContext.Provider value={{ openMenu, isImpersonating }}>
       <div className="flex min-h-dvh">
         <Sidebar permissions={permissions} role={role} siteModules={siteModules} />
         <main className="flex-1 overflow-x-hidden pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">{children}</main>

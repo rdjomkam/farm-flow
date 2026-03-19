@@ -11,7 +11,7 @@ import {
   TypeActivite,
 } from "@/types";
 import { ACTIVITE_RELEVE_TYPE_MAP } from "@/types/api";
-import type { CreateReleveDTO, UpdateReleveDTO, ReleveFilters, TypeReleve, PatchReleveBody } from "@/types";
+import type { CreateReleveDTO, UpdateReleveDTO, ReleveFilters, TypeReleve } from "@/types";
 import type { ReleveWithModifications, ReleveModificationWithUser } from "@/types";
 import { findMatchingActivite } from "@/lib/queries/activites";
 
@@ -268,7 +268,8 @@ export async function updateReleve(siteId: string, userId: string, id: string, d
     const allowed = champsParType[releve.typeReleve] ?? [];
     const updateData: Record<string, unknown> = {};
 
-    // notes est commun a tous les types
+    // date et notes sont communs a tous les types
+    if (data.date !== undefined) updateData.date = data.date;
     if (data.notes !== undefined) updateData.notes = data.notes;
 
     // Filtrer uniquement les champs autorisés pour ce type
@@ -413,7 +414,7 @@ export async function patchReleve(
   siteId: string,
   userId: string,
   id: string,
-  data: Omit<PatchReleveBody, "raison">,
+  data: UpdateReleveDTO,
   raison: string
 ): Promise<{ releve: ReleveWithModifications; modifications: ReleveModificationWithUser[] }> {
   return prisma.$transaction(async (tx) => {
@@ -432,6 +433,7 @@ export async function patchReleve(
     const allowed = champsParType[releve.typeReleve] ?? [];
     const updateData: Record<string, unknown> = {};
 
+    if (data.date !== undefined) updateData.date = data.date;
     if (data.notes !== undefined) updateData.notes = data.notes;
 
     for (const field of allowed) {
@@ -451,7 +453,7 @@ export async function patchReleve(
       siteId: string;
     }> = [];
 
-    const allFields = ["notes", ...allowed];
+    const allFields = ["date", "notes", ...allowed];
     for (const field of allFields) {
       const nouvelleValeur = updateData[field];
       if (nouvelleValeur === undefined) continue;

@@ -66,7 +66,7 @@ export default async function RootLayout({
             />
           )}
           <div className={isImpersonating ? "pt-14 sm:pt-11" : ""}>
-            <AppShell permissions={permissions} role={role} userName={session?.name ?? null} siteModules={siteModules}>{children}</AppShell>
+            <AppShell permissions={permissions} role={role} userName={session?.name ?? null} siteModules={siteModules} isImpersonating={isImpersonating}>{children}</AppShell>
           </div>
         </ToastProvider>
       </body>

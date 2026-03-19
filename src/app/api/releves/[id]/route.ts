@@ -63,12 +63,22 @@ export async function PUT(
     }
 
     // Structural fields are not modifiable
-    for (const field of ["vagueId", "bacId", "date", "siteId"]) {
+    for (const field of ["vagueId", "bacId", "siteId"]) {
       if (body[field] !== undefined) {
         errors.push({
           field,
           message: `Le champ '${field}' ne peut pas etre modifie.`,
         });
+      }
+    }
+
+    // Validate date if provided
+    if (body.date !== undefined) {
+      const d = new Date(body.date);
+      if (isNaN(d.getTime())) {
+        errors.push({ field: "date", message: "La date fournie est invalide." });
+      } else if (d > new Date()) {
+        errors.push({ field: "date", message: "La date ne peut pas etre dans le futur." });
       }
     }
 
@@ -133,6 +143,7 @@ export async function PUT(
 
     // Build clean DTO
     const data: UpdateReleveDTO = {};
+    if (body.date !== undefined) data.date = new Date(body.date);
     if (body.notes !== undefined) data.notes = body.notes;
     if (body.poidsMoyen !== undefined) data.poidsMoyen = body.poidsMoyen;
     if (body.tailleMoyenne !== undefined) data.tailleMoyenne = body.tailleMoyenne || null;
@@ -190,7 +201,7 @@ export async function PUT(
 // ---------------------------------------------------------------------------
 
 /** Champs structurels non modifiables via PATCH */
-const NON_MODIFIABLE_FIELDS = ["id", "vagueId", "bacId", "siteId", "typeReleve", "date", "userId", "createdAt"];
+const NON_MODIFIABLE_FIELDS = ["id", "vagueId", "bacId", "siteId", "typeReleve", "userId", "createdAt"];
 
 export async function PATCH(
   request: NextRequest,
@@ -225,7 +236,17 @@ export async function PATCH(
       return NextResponse.json({ status: 400, message: "Erreurs de validation", errors }, { status: 400 });
     }
 
-    // 3. Validation des champs metier (meme logique que PUT)
+    // 3. Validate date if provided
+    if (body.date !== undefined) {
+      const d = new Date(body.date);
+      if (isNaN(d.getTime())) {
+        errors.push({ field: "date", message: "La date fournie est invalide." });
+      } else if (d > new Date()) {
+        errors.push({ field: "date", message: "La date ne peut pas etre dans le futur." });
+      }
+    }
+
+    // 4. Validation des champs metier (meme logique que PUT)
     if (body.poidsMoyen !== undefined && (typeof body.poidsMoyen !== "number" || body.poidsMoyen <= 0)) {
       errors.push({ field: "poidsMoyen", message: "Le poids moyen doit etre superieur a 0." });
     }
@@ -281,8 +302,9 @@ export async function PATCH(
       return NextResponse.json({ status: 400, message: "Erreurs de validation", errors }, { status: 400 });
     }
 
-    // 4. Construire le DTO (champs metier uniquement, hors raison)
+    // 5. Construire le DTO (champs metier uniquement, hors raison)
     const data: UpdateReleveDTO = {};
+    if (body.date !== undefined) data.date = new Date(body.date);
     if (body.notes !== undefined) data.notes = body.notes;
     if (body.poidsMoyen !== undefined) data.poidsMoyen = body.poidsMoyen;
     if (body.tailleMoyenne !== undefined) data.tailleMoyenne = body.tailleMoyenne || null;
@@ -301,7 +323,7 @@ export async function PATCH(
     if (body.description !== undefined) data.description = body.description.trim();
     if (body.consommations !== undefined) data.consommations = body.consommations;
 
-    // 5. Verifier qu'au moins un champ metier est fourni (hors raison)
+    // 6. Verifier qu'au moins un champ metier est fourni (hors raison)
     if (Object.keys(data).length === 0) {
       return NextResponse.json(
         { status: 400, message: "Au moins un champ metier doit etre fourni (en dehors de la raison)." },
@@ -311,10 +333,10 @@ export async function PATCH(
 
     const raison = body.raison.trim();
 
-    // 6. Appeler patchReleve
+    // 7. Appeler patchReleve
     const result = await patchReleve(auth.activeSiteId, auth.userId, id, data, raison);
 
-    // 7. Reevaluation asynchrone des regles SEUIL_* (fire-and-forget)
+    // 8. Reevaluation asynchrone des regles SEUIL_* (fire-and-forget)
     const releveRecord = await prisma.releve.findFirst({ where: { id, siteId: auth.activeSiteId } });
     if (releveRecord) {
       const seuilTypes = [TypeReleve.BIOMETRIE, TypeReleve.MORTALITE, TypeReleve.ALIMENTATION, TypeReleve.QUALITE_EAU];

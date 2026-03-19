@@ -76,6 +76,11 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
   // Raison obligatoire (ADR-014) — premier champ visible
   const [raison, setRaison] = useState("");
 
+  // Date du releve (modifiable)
+  const formatDate = (d: string | Date) => new Date(d).toISOString().split("T")[0];
+  const [releveDate, setReleveDate] = useState(formatDate(releve.date));
+  const today = new Date().toISOString().split("T")[0];
+
   // Type-specific fields
   const [poidsMoyen, setPoidsMoyen] = useState(String(releve.poidsMoyen ?? ""));
   const [tailleMoyenne, setTailleMoyenne] = useState(String(releve.tailleMoyenne ?? ""));
@@ -107,6 +112,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
 
   function resetForm() {
     setRaison("");
+    setReleveDate(formatDate(releve.date));
     setPoidsMoyen(String(releve.poidsMoyen ?? ""));
     setTailleMoyenne(String(releve.tailleMoyenne ?? ""));
     setEchantillonCount(String(releve.echantillonCount ?? ""));
@@ -173,6 +179,11 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
 
   function buildBody(): Record<string, unknown> {
     const body: Record<string, unknown> = { raison: raison.trim() };
+
+    // Inclure la date seulement si elle a change
+    if (releveDate && releveDate !== formatDate(releve.date)) {
+      body.date = releveDate;
+    }
 
     if (notes.trim()) body.notes = notes.trim();
     else body.notes = null;
@@ -295,7 +306,18 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
             </div>
           </div>
 
-          {/* Section 2 — Champs du type de releve */}
+          {/* Section 2 — Date du releve */}
+          <Input
+            id={`date-${releve.id}`}
+            label="Date du releve"
+            type="date"
+            max={today}
+            value={releveDate}
+            onChange={(e) => setReleveDate(e.target.value)}
+            error={errors.date}
+          />
+
+          {/* Section 3 — Champs du type de releve */}
           {type === TypeReleve.BIOMETRIE && (
             <>
               <Input
