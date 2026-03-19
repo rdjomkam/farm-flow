@@ -47,64 +47,112 @@ export async function getIndicateursVague(
   );
   const comptages = vague.releves.filter((r) => r.typeReleve === TypeReleve.COMPTAGE);
 
-  // Moyenne ponderee des biometries par bac
-  // Grouper par bac, garder la derniere par bac (releves tries par date asc)
-  const biometriesParBac = new Map<string, (typeof biometries)[0]>();
-  for (const b of biometries) {
-    if (b.bacId) biometriesParBac.set(b.bacId, b);
-  }
-
-  let poidsMoyen: number | null = null;
-  let tailleMoyenne: number | null = null;
-
-  if (biometriesParBac.size > 0) {
-    let totalPoids = 0;
-    let totalTaille = 0;
-    let totalPoissons = 0;
-    let hasTaille = false;
-
-    for (const [bacId, bio] of biometriesParBac) {
-      const bac = vague.bacs.find((b) => b.id === bacId);
-      const n = bac?.nombrePoissons ?? 1;
-      if (bio.poidsMoyen !== null) {
-        totalPoids += bio.poidsMoyen * n;
-        totalPoissons += n;
-      }
-      if (bio.tailleMoyenne !== null) {
-        totalTaille += bio.tailleMoyenne * n;
-        hasTaille = true;
-      }
-    }
-
-    if (totalPoissons > 0) {
-      poidsMoyen = Math.round((totalPoids / totalPoissons) * 100) / 100;
-      tailleMoyenne = hasTaille
-        ? Math.round((totalTaille / totalPoissons) * 100) / 100
-        : null;
-    }
-  } else if (biometries.length > 0) {
-    // Fallback: pas de bacId sur les releves, utiliser le dernier releve
-    const derniereBiometrie = biometries.at(-1);
-    poidsMoyen = derniereBiometrie?.poidsMoyen ?? null;
-    tailleMoyenne = derniereBiometrie?.tailleMoyenne ?? null;
-  }
-
-  // Total mortalites
-  const totalMortalites = mortalites.reduce(
-    (sum, r) => sum + (r.nombreMorts ?? 0),
-    0
-  );
-
-  // Total aliment
+  // Total aliment (global, pas par bac)
   const totalAliment = alimentations.reduce(
     (sum, r) => sum + (r.quantiteAliment ?? 0),
     0
   );
 
-  // Nombre vivants : dernier comptage ou (initial - mortalites)
-  const dernierComptage = comptages.at(-1);
-  const nombreVivants =
-    dernierComptage?.nombreCompte ?? vague.nombreInitial - totalMortalites;
+  // Check if releves have bacId (per-bac calculation possible)
+  const hasPerBacReleves = vague.releves.some((r) => r.bacId !== null);
+
+  let poidsMoyen: number | null = null;
+  let tailleMoyenne: number | null = null;
+  let nombreVivants: number;
+  let totalMortalites: number;
+  let biomasse: number | null = null;
+
+  if (hasPerBacReleves && vague.bacs.length > 0) {
+    // --- Per-bac calculation: biomasse = SUM(biomasse_bac), poidsMoyen weighted by vivants ---
+    const nombreInitialParBac = Math.round(vague.nombreInitial / vague.bacs.length);
+
+    // Group mortalites by bacId
+    const mortsParBac = new Map<string, number>();
+    for (const r of mortalites) {
+      if (r.bacId) {
+        mortsParBac.set(r.bacId, (mortsParBac.get(r.bacId) ?? 0) + (r.nombreMorts ?? 0));
+      }
+    }
+
+    // Group comptages by bacId, keep last per bac (releves sorted by date asc)
+    const comptagesParBac = new Map<string, number>();
+    for (const r of comptages) {
+      if (r.bacId && r.nombreCompte !== null) {
+        comptagesParBac.set(r.bacId, r.nombreCompte);
+      }
+    }
+
+    // Group biometries by bacId, keep last per bac
+    const biometriesParBac = new Map<string, (typeof biometries)[0]>();
+    for (const b of biometries) {
+      if (b.bacId) biometriesParBac.set(b.bacId, b);
+    }
+
+    let totalBiomasse = 0;
+    let hasBiomasse = false;
+    let totalPoidsWeighted = 0;
+    let totalTailleWeighted = 0;
+    let totalVivantsForWeight = 0;
+    let hasTaille = false;
+    let totalVivantsAll = 0;
+    let totalMortsAll = 0;
+
+    for (const bac of vague.bacs) {
+      const mortsBac = mortsParBac.get(bac.id) ?? 0;
+      totalMortsAll += mortsBac;
+
+      // Vivants par bac: dernier comptage OU (stocking initial par bac - morts)
+      const comptage = comptagesParBac.get(bac.id);
+      const vivantsBac = comptage ?? (nombreInitialParBac - mortsBac);
+      totalVivantsAll += vivantsBac;
+
+      // Biomasse par bac
+      const bio = biometriesParBac.get(bac.id);
+      if (bio && bio.poidsMoyen !== null) {
+        const biomasseBac = bio.poidsMoyen * vivantsBac / 1000;
+        totalBiomasse += biomasseBac;
+        hasBiomasse = true;
+
+        // Accumulate for weighted average
+        totalPoidsWeighted += bio.poidsMoyen * vivantsBac;
+        totalVivantsForWeight += vivantsBac;
+
+        if (bio.tailleMoyenne !== null) {
+          totalTailleWeighted += bio.tailleMoyenne * vivantsBac;
+          hasTaille = true;
+        }
+      }
+    }
+
+    nombreVivants = totalVivantsAll;
+    totalMortalites = totalMortsAll;
+    biomasse = hasBiomasse ? Math.round(totalBiomasse * 100) / 100 : null;
+
+    if (totalVivantsForWeight > 0) {
+      poidsMoyen = Math.round((totalPoidsWeighted / totalVivantsForWeight) * 100) / 100;
+      tailleMoyenne = hasTaille
+        ? Math.round((totalTailleWeighted / totalVivantsForWeight) * 100) / 100
+        : null;
+    }
+  } else {
+    // --- Fallback: no bacId on releves, use global logic ---
+    totalMortalites = mortalites.reduce(
+      (sum, r) => sum + (r.nombreMorts ?? 0),
+      0
+    );
+
+    const dernierComptage = comptages.at(-1);
+    nombreVivants =
+      dernierComptage?.nombreCompte ?? vague.nombreInitial - totalMortalites;
+
+    if (biometries.length > 0) {
+      const derniereBiometrie = biometries.at(-1);
+      poidsMoyen = derniereBiometrie?.poidsMoyen ?? null;
+      tailleMoyenne = derniereBiometrie?.tailleMoyenne ?? null;
+    }
+
+    biomasse = calculerBiomasse(poidsMoyen, nombreVivants);
+  }
 
   // Jours ecoules
   const now = vague.dateFin ?? new Date();
@@ -115,7 +163,6 @@ export async function getIndicateursVague(
   // Indicateurs calcules via fonctions pures de calculs.ts
   const tauxSurvie = calculerTauxSurvie(nombreVivants, vague.nombreInitial);
   const gainPoids = calculerGainPoids(poidsMoyen, vague.poidsMoyenInitial);
-  const biomasse = calculerBiomasse(poidsMoyen, nombreVivants);
   const sgr = calculerSGR(vague.poidsMoyenInitial, poidsMoyen, joursEcoules);
   const biomasseInitiale = calculerBiomasse(vague.poidsMoyenInitial, vague.nombreInitial);
   const gainBiomasse = biomasse !== null && biomasseInitiale !== null
