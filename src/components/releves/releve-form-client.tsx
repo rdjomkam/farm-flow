@@ -80,7 +80,11 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
   const [vagueId, setVagueId] = useState(searchParams.get("vagueId") ?? "");
   const [bacId, setBacId] = useState(initialBacId);
   const [typeReleve, setTypeReleve] = useState(initialTypeReleve);
-  const [releveDate, setReleveDate] = useState(new Date().toISOString().split("T")[0]);
+  const [releveDate, setReleveDate] = useState(() => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  });
   const [notes, setNotes] = useState("");
   const [bacs, setBacs] = useState<BacResponse[]>([]);
   const [loadingBacs, setLoadingBacs] = useState(false);
@@ -322,11 +326,15 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
 
           <FormSection title="Date du releve" description="Date d'observation (retroactive possible)">
             <Input
-              type="date"
-              label="Date du releve"
+              type="datetime-local"
+              label="Date et heure du releve"
               value={releveDate}
               onChange={(e) => setReleveDate(e.target.value)}
-              max={new Date().toISOString().split("T")[0]}
+              max={(() => {
+                const now = new Date();
+                const pad = (n: number) => String(n).padStart(2, "0");
+                return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+              })()}
             />
           </FormSection>
 

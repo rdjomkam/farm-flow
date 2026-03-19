@@ -77,9 +77,17 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
   const [raison, setRaison] = useState("");
 
   // Date du releve (modifiable)
-  const formatDate = (d: string | Date) => new Date(d).toISOString().split("T")[0];
-  const [releveDate, setReleveDate] = useState(formatDate(releve.date));
-  const today = new Date().toISOString().split("T")[0];
+  const formatDatetime = (d: string | Date) => {
+    const dt = new Date(d);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+  };
+  const [releveDate, setReleveDate] = useState(formatDatetime(releve.date));
+  const now = new Date();
+  const todayDatetime = (() => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  })();
 
   // Type-specific fields
   const [poidsMoyen, setPoidsMoyen] = useState(String(releve.poidsMoyen ?? ""));
@@ -112,7 +120,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
 
   function resetForm() {
     setRaison("");
-    setReleveDate(formatDate(releve.date));
+    setReleveDate(formatDatetime(releve.date));
     setPoidsMoyen(String(releve.poidsMoyen ?? ""));
     setTailleMoyenne(String(releve.tailleMoyenne ?? ""));
     setEchantillonCount(String(releve.echantillonCount ?? ""));
@@ -181,7 +189,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
     const body: Record<string, unknown> = { raison: raison.trim() };
 
     // Inclure la date seulement si elle a change
-    if (releveDate && releveDate !== formatDate(releve.date)) {
+    if (releveDate && releveDate !== formatDatetime(releve.date)) {
       body.date = releveDate;
     }
 
@@ -310,8 +318,8 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
           <Input
             id={`date-${releve.id}`}
             label="Date du releve"
-            type="date"
-            max={today}
+            type="datetime-local"
+            max={todayDatetime}
             value={releveDate}
             onChange={(e) => setReleveDate(e.target.value)}
             error={errors.date}

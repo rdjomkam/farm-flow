@@ -20,7 +20,7 @@ export async function getIndicateursVague(
   const vague = await prisma.vague.findFirst({
     where: { id: vagueId, siteId },
     include: {
-      bacs: { select: { id: true, nombrePoissons: true } },
+      bacs: { select: { id: true, nombrePoissons: true, nombreInitial: true, poidsMoyenInitial: true } },
       releves: {
         orderBy: { date: "asc" },
         select: {
@@ -61,6 +61,8 @@ export async function getIndicateursVague(
   let nombreVivants: number;
   let totalMortalites: number;
   let biomasse: number | null = null;
+  let totalNombreInitialBacs = 0;
+  let totalPoidsInitialWeighted = 0;
 
   if (hasPerBacReleves && vague.bacs.length > 0) {
     // --- Per-bac calculation: biomasse = SUM(biomasse_bac), poidsMoyen weighted by vivants ---
@@ -101,9 +103,17 @@ export async function getIndicateursVague(
       const mortsBac = mortsParBac.get(bac.id) ?? 0;
       totalMortsAll += mortsBac;
 
+      // Nombre initial par bac: valeur per-bac si définie, sinon répartition uniforme
+      const initialBac = bac.nombreInitial ?? nombreInitialParBac;
+      totalNombreInitialBacs += initialBac;
+
+      // Poids moyen initial par bac: valeur per-bac si définie, sinon vague-level
+      const poidsInitialBac = bac.poidsMoyenInitial ?? vague.poidsMoyenInitial;
+      totalPoidsInitialWeighted += poidsInitialBac * initialBac;
+
       // Vivants par bac: dernier comptage OU (stocking initial par bac - morts)
       const comptage = comptagesParBac.get(bac.id);
-      const vivantsBac = comptage ?? (nombreInitialParBac - mortsBac);
+      const vivantsBac = comptage ?? (initialBac - mortsBac);
       totalVivantsAll += vivantsBac;
 
       // Biomasse par bac
@@ -161,10 +171,18 @@ export async function getIndicateursVague(
   );
 
   // Indicateurs calcules via fonctions pures de calculs.ts
-  const tauxSurvie = calculerTauxSurvie(nombreVivants, vague.nombreInitial);
-  const gainPoids = calculerGainPoids(poidsMoyen, vague.poidsMoyenInitial);
-  const sgr = calculerSGR(vague.poidsMoyenInitial, poidsMoyen, joursEcoules);
-  const biomasseInitiale = calculerBiomasse(vague.poidsMoyenInitial, vague.nombreInitial);
+  // Utiliser les totaux per-bac si disponibles, sinon vague-level
+  const nombreInitialEffectif = hasPerBacReleves && vague.bacs.length > 0
+    ? totalNombreInitialBacs
+    : vague.nombreInitial;
+  const poidsMoyenInitialEffectif = hasPerBacReleves && vague.bacs.length > 0 && totalNombreInitialBacs > 0
+    ? totalPoidsInitialWeighted / totalNombreInitialBacs
+    : vague.poidsMoyenInitial;
+
+  const tauxSurvie = calculerTauxSurvie(nombreVivants, nombreInitialEffectif);
+  const gainPoids = calculerGainPoids(poidsMoyen, poidsMoyenInitialEffectif);
+  const sgr = calculerSGR(poidsMoyenInitialEffectif, poidsMoyen, joursEcoules);
+  const biomasseInitiale = calculerBiomasse(poidsMoyenInitialEffectif, nombreInitialEffectif);
   const gainBiomasse = biomasse !== null && biomasseInitiale !== null
     ? biomasse - biomasseInitiale
     : null;
