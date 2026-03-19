@@ -79,17 +79,38 @@ export default async function VagueDetailPage({
     joursEcoules: 0,
   };
 
-  // Build chart data from biometrie releves
-  const poidsData: EvolutionPoidsPoint[] = vague.releves
-    .filter((r) => r.typeReleve === TypeReleve.BIOMETRIE && r.poidsMoyen !== null)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .map((r) => ({
-      date: new Date(r.date).toISOString(),
-      poidsMoyen: r.poidsMoyen!,
-      jour: Math.floor(
-        (new Date(r.date).getTime() - vague.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
-      ),
-    }));
+  // Build chart data from biometrie releves — aggregate by date (weighted avg across bacs)
+  const bacsMap = new Map(vague.bacs.map((b) => [b.id, b]));
+  const biometries = vague.releves.filter(
+    (r) => r.typeReleve === TypeReleve.BIOMETRIE && r.poidsMoyen !== null
+  );
+  const groupedByDate = new Map<string, typeof biometries>();
+  for (const r of biometries) {
+    const key = new Date(r.date).toISOString().slice(0, 10);
+    const group = groupedByDate.get(key);
+    if (group) group.push(r);
+    else groupedByDate.set(key, [r]);
+  }
+  const poidsData: EvolutionPoidsPoint[] = Array.from(groupedByDate.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([dateKey, releves]) => {
+      let sumWeighted = 0;
+      let sumWeights = 0;
+      for (const r of releves) {
+        const bac = r.bacId ? bacsMap.get(r.bacId) : undefined;
+        const weight = bac?.nombrePoissons ?? 1;
+        sumWeighted += r.poidsMoyen! * weight;
+        sumWeights += weight;
+      }
+      const dateObj = new Date(dateKey + "T00:00:00");
+      return {
+        date: dateObj.toISOString(),
+        poidsMoyen: Math.round((sumWeighted / sumWeights) * 100) / 100,
+        jour: Math.floor(
+          (dateObj.getTime() - vague.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
+        ),
+      };
+    });
 
   return (
     <>
