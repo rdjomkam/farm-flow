@@ -41,7 +41,7 @@ import {
  * Fonction interne partagee par getIndicateursBac et getComparaisonBacs.
  */
 function computeIndicateursBac(
-  bac: { id: string; nom: string; volume: number | null },
+  bac: { id: string; nom: string; volume: number | null; nombreInitial: number | null },
   vagueId: string,
   nombreInitialVague: number,
   poidsMoyenInitialVague: number,
@@ -58,8 +58,8 @@ function computeIndicateursBac(
   }[],
   totalBacsVague: number
 ): IndicateursBac {
-  // Repartition proportionnelle du nombre initial par bac
-  const nombreInitialBac = Math.round(nombreInitialVague / totalBacsVague);
+  // Utiliser le nombreInitial per-bac si disponible, sinon repartition uniforme
+  const nombreInitialBac = bac.nombreInitial ?? Math.round(nombreInitialVague / totalBacsVague);
 
   const biometries = releves.filter((r) => r.typeReleve === TypeReleve.BIOMETRIE);
   const mortalites = releves.filter((r) => r.typeReleve === TypeReleve.MORTALITE);
@@ -172,7 +172,7 @@ export async function getIndicateursBac(
     }),
     prisma.bac.findFirst({
       where: { id: bacId, siteId },
-      select: { id: true, nom: true, volume: true },
+      select: { id: true, nom: true, volume: true, nombreInitial: true },
     }),
   ]);
 
@@ -224,7 +224,7 @@ export async function getComparaisonBacs(
       dateDebut: true,
       dateFin: true,
       bacs: {
-        select: { id: true, nom: true, volume: true },
+        select: { id: true, nom: true, volume: true, nombreInitial: true },
       },
     },
   });
@@ -272,9 +272,12 @@ export async function getComparaisonBacs(
     );
   });
 
-  // Generate alerts (pass nombreInitialBac for local mortality rate computation)
-  const nombreInitialBac = Math.round(vague.nombreInitial / totalBacs);
-  const alertes: AlerteBac[] = bacs.flatMap((b) => genererAlertes(b, nombreInitialBac));
+  // Generate alerts (pass nombreInitialBac per-bac for local mortality rate computation)
+  const alertes: AlerteBac[] = bacs.flatMap((b) => {
+    const bacData = vague.bacs.find((vb) => vb.id === b.bacId);
+    const initBac = bacData?.nombreInitial ?? Math.round(vague.nombreInitial / totalBacs);
+    return genererAlertes(b, initBac);
+  });
 
   return {
     vagueId,
@@ -296,7 +299,7 @@ export async function getHistoriqueBac(
 ): Promise<HistoriqueBac | null> {
   const bac = await prisma.bac.findFirst({
     where: { id: bacId, siteId },
-    select: { id: true, nom: true, volume: true },
+    select: { id: true, nom: true, volume: true, nombreInitial: true },
   });
 
   if (!bac) return null;
@@ -893,7 +896,7 @@ export async function getAnalyticsDashboard(siteId: string): Promise<AnalyticsDa
       poidsMoyenInitial: true,
       dateDebut: true,
       dateFin: true,
-      bacs: { select: { id: true, nom: true, volume: true } },
+      bacs: { select: { id: true, nom: true, volume: true, nombreInitial: true } },
       _count: { select: { bacs: true } },
     },
   });
@@ -934,7 +937,6 @@ export async function getAnalyticsDashboard(siteId: string): Promise<AnalyticsDa
 
     for (const vague of vaguesActives) {
       const totalBacs = vague._count.bacs || 1;
-      const nombreInitialBac = Math.round(vague.nombreInitial / totalBacs);
 
       for (const bac of vague.bacs) {
         const key: ReleveKey = `${vague.id}:${bac.id}`;
@@ -952,7 +954,8 @@ export async function getAnalyticsDashboard(siteId: string): Promise<AnalyticsDa
         );
 
         // Count monitoring alerts (DENSITE_ELEVEE + MORTALITE_HAUTE only)
-        const bacAlertes = genererAlertes(ind, nombreInitialBac);
+        const initBac = bac.nombreInitial ?? Math.round(vague.nombreInitial / totalBacs);
+        const bacAlertes = genererAlertes(ind, initBac);
         alertesPerformance += bacAlertes.length;
 
         // Best bac = lowest density (operationally meaningful)
