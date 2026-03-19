@@ -7,6 +7,7 @@ import {
   calculerSGR,
   calculerFCR,
   calculerBiomasse,
+  computeVivantsByBac,
 } from "@/lib/calculs";
 
 /**
@@ -68,19 +69,13 @@ export async function getIndicateursVague(
     // --- Per-bac calculation: biomasse = SUM(biomasse_bac), poidsMoyen weighted by vivants ---
     const nombreInitialParBac = Math.round(vague.nombreInitial / vague.bacs.length);
 
-    // Group mortalites by bacId
+    const vivantsByBac = computeVivantsByBac(vague.bacs, vague.releves, vague.nombreInitial);
+
+    // Group mortalites by bacId (still needed for totalMortsAll)
     const mortsParBac = new Map<string, number>();
     for (const r of mortalites) {
       if (r.bacId) {
         mortsParBac.set(r.bacId, (mortsParBac.get(r.bacId) ?? 0) + (r.nombreMorts ?? 0));
-      }
-    }
-
-    // Group comptages by bacId, keep last per bac (releves sorted by date asc)
-    const comptagesParBac = new Map<string, number>();
-    for (const r of comptages) {
-      if (r.bacId && r.nombreCompte !== null) {
-        comptagesParBac.set(r.bacId, r.nombreCompte);
       }
     }
 
@@ -111,9 +106,8 @@ export async function getIndicateursVague(
       const poidsInitialBac = bac.poidsMoyenInitial ?? vague.poidsMoyenInitial;
       totalPoidsInitialWeighted += poidsInitialBac * initialBac;
 
-      // Vivants par bac: dernier comptage OU (stocking initial par bac - morts)
-      const comptage = comptagesParBac.get(bac.id);
-      const vivantsBac = comptage ?? (initialBac - mortsBac);
+      // Vivants par bac from shared function
+      const vivantsBac = vivantsByBac.get(bac.id) ?? 0;
       totalVivantsAll += vivantsBac;
 
       // Biomasse par bac

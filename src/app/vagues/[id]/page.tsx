@@ -16,6 +16,7 @@ import { getVagueById } from "@/lib/queries/vagues";
 import { getIndicateursVague } from "@/lib/queries/indicateurs";
 import { getCalibrages } from "@/lib/queries/calibrages";
 import { prisma } from "@/lib/db";
+import { computeVivantsByBac } from "@/lib/calculs";
 import { StatutVague, TypeReleve, CategorieProduit, Permission } from "@/types";
 import type { Releve, EvolutionPoidsPoint, IndicateursVague as IndicateursType, CalibrageWithRelations } from "@/types";
 import type { ProduitOption } from "@/components/releves/consommation-fields";
@@ -80,7 +81,7 @@ export default async function VagueDetailPage({
   };
 
   // Build chart data from biometrie releves — aggregate by date (weighted avg across bacs)
-  const bacsMap = new Map(vague.bacs.map((b) => [b.id, b]));
+  const vivantsByBac = computeVivantsByBac(vague.bacs, vague.releves, vague.nombreInitial);
   const biometries = vague.releves.filter(
     (r) => r.typeReleve === TypeReleve.BIOMETRIE && r.poidsMoyen !== null
   );
@@ -97,8 +98,7 @@ export default async function VagueDetailPage({
       let sumWeighted = 0;
       let sumWeights = 0;
       for (const r of releves) {
-        const bac = r.bacId ? bacsMap.get(r.bacId) : undefined;
-        const weight = bac?.nombrePoissons ?? 1;
+        const weight = (r.bacId ? vivantsByBac.get(r.bacId) : undefined) ?? 1;
         sumWeighted += r.poidsMoyen! * weight;
         sumWeights += weight;
       }

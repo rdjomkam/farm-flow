@@ -229,6 +229,55 @@ export function calculerROI(
 }
 
 // ---------------------------------------------------------------------------
+// Vivants par bac (shared between indicateurs.ts and page.tsx chart)
+// ---------------------------------------------------------------------------
+
+/**
+ * Calcule le nombre de vivants par bac a partir des releves.
+ *
+ * Pour chaque bac :
+ *   vivants = dernierComptage ?? (nombreInitialBac - totalMortsBac)
+ *   nombreInitialBac = bac.nombreInitial ?? Math.round(nombreInitialVague / totalBacs)
+ *
+ * @returns Map<bacId, vivants>
+ */
+export function computeVivantsByBac(
+  bacs: { id: string; nombreInitial: number | null }[],
+  releves: { bacId: string | null; typeReleve: string; nombreMorts: number | null; nombreCompte: number | null }[],
+  nombreInitialVague: number
+): Map<string, number> {
+  const nombreInitialParBac = bacs.length > 0
+    ? Math.round(nombreInitialVague / bacs.length)
+    : nombreInitialVague;
+
+  // Group mortalites by bacId
+  const mortsParBac = new Map<string, number>();
+  for (const r of releves) {
+    if (r.typeReleve === "MORTALITE" && r.bacId) {
+      mortsParBac.set(r.bacId, (mortsParBac.get(r.bacId) ?? 0) + (r.nombreMorts ?? 0));
+    }
+  }
+
+  // Group comptages by bacId, keep last (assumes releves sorted by date asc)
+  const comptagesParBac = new Map<string, number>();
+  for (const r of releves) {
+    if (r.typeReleve === "COMPTAGE" && r.bacId && r.nombreCompte !== null) {
+      comptagesParBac.set(r.bacId, r.nombreCompte);
+    }
+  }
+
+  const result = new Map<string, number>();
+  for (const bac of bacs) {
+    const initialBac = bac.nombreInitial ?? nombreInitialParBac;
+    const mortsBac = mortsParBac.get(bac.id) ?? 0;
+    const comptage = comptagesParBac.get(bac.id);
+    result.set(bac.id, comptage ?? (initialBac - mortsBac));
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // Conversion d'unites d'achat (Sprint 14)
 // ---------------------------------------------------------------------------
 
