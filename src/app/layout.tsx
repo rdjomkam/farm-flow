@@ -8,6 +8,7 @@ import { GlobalLoadingBar } from "@/components/ui/global-loading-bar";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
 import { getServerSession } from "@/lib/auth";
 import { getServerPermissions, getServerSiteModules } from "@/lib/auth/permissions-server";
+import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { Permission, Role, SiteModule } from "@/types";
 import "./globals.css";
 
@@ -70,6 +71,9 @@ export default async function RootLayout({
                 targetUserRole={session.role}
                 originalUserName={session.originalUserName ?? "Administrateur"}
               />
+            )}
+            {session?.activeSiteId && (
+              <SubscriptionBanner siteId={session.activeSiteId} />
             )}
             <div className={isImpersonating ? "pt-14 sm:pt-11" : ""}>
               <AppShell permissions={permissions} role={role} userName={session?.name ?? null} siteModules={siteModules} isImpersonating={isImpersonating}>{children}</AppShell>

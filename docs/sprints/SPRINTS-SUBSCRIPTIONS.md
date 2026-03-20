@@ -478,7 +478,7 @@ Les plans sont gérés par les admins DKFarm. Les abonnements sont créés par l
 **Assigné à :** @developer
 **Priorité :** Haute
 **Complexité :** Medium
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** CRUD complet pour les plans d'abonnement. La liste publique est accessible sans
 authentification pour la page marketing.
@@ -506,7 +506,7 @@ authentification pour la page marketing.
 **Priorité :** Critique
 **Complexité :** Complex
 **Dépend de :** Story 32.1, Sprint 31
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Routes pour créer et gérer les abonnements d'un site. La souscription déclenche
 automatiquement l'initiation du paiement.
@@ -537,7 +537,7 @@ automatiquement l'initiation du paiement.
 **Priorité :** Haute
 **Complexité :** Medium
 **Dépend de :** Story 32.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Routes pour consulter l'historique des paiements et vérifier manuellement
 le statut d'un paiement en attente.
@@ -560,7 +560,7 @@ le statut d'un paiement en attente.
 **Priorité :** Haute
 **Complexité :** Medium
 **Dépend de :** Stories 32.2, 30.4
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Implémenter la restriction de mode lecture seule pour les sites en `SUSPENDU`
 et le blocage pour les sites `EXPIRE`. Ce middleware s'applique dans les Server Components
@@ -592,7 +592,7 @@ et éventuellement dans les API routes critiques.
 **Priorité :** Haute
 **Complexité :** Medium
 **Dépend de :** Stories 32.1 à 32.4
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches @tester :**
 - [ ] `TODO` Créer `src/__tests__/api/plans.test.ts` (CRUD complet, toggle, 409 si abonnés actifs)
