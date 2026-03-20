@@ -26,6 +26,7 @@ import type { ConsommationLine, ProduitOption } from "./consommation-fields";
 import { TypeReleve, TypeActivite, StatutActivite, CategorieProduit, UniteStock, ACTIVITE_RELEVE_TYPE_MAP } from "@/types";
 import type { BacResponse } from "@/types";
 import { ClipboardCheck } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 
 /** Inverse de ACTIVITE_RELEVE_TYPE_MAP : TypeReleve → TypeActivite compatible */
 const RELEVE_ACTIVITE_TYPE_MAP: Partial<Record<string, TypeActivite>> = {};
@@ -557,7 +558,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
 
           {/* Submit */}
           <Button type="submit" disabled={submitting} className="mt-2">
-            {submitting ? "Enregistrement..." : "Enregistrer le relevé"}
+            {submitting ? <><FishLoader size="sm" /> Enregistrement...</> : "Enregistrer le relevé"}
           </Button>
         </form>
     </section>

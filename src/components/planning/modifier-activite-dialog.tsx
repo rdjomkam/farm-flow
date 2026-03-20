@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Lock } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -299,7 +300,7 @@ export function ModifierActiviteDialog({
               Annuler
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Modification..." : "Enregistrer"}
+              {submitting ? <><FishLoader size="sm" /> Modification...</> : "Enregistrer"}
             </Button>
           </DialogFooter>
         </form>

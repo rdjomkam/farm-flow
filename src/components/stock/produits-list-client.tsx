@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, Package, AlertTriangle, ArrowLeft } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -273,7 +274,7 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
                 <Button variant="outline">Annuler</Button>
               </DialogClose>
               <Button onClick={handleCreate} disabled={creating || !nom.trim()}>
-                {creating ? "Creation..." : "Creer"}
+                {creating ? <><FishLoader size="sm" /> Creation...</> : "Creer"}
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -11,9 +11,10 @@
  */
 
 import { useState } from "react";
-import { Download, Loader2 } from "lucide-react";
+import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { FishLoader } from "@/components/ui/fish-loader";
 
 interface ExportButtonProps {
   /** URL de l'API d'export */
@@ -88,7 +89,7 @@ export function ExportButton({
       aria-label={loading ? "Export en cours..." : label}
     >
       {loading ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <FishLoader size="sm" />
       ) : (
         icon ?? <Download className="h-4 w-4" />
       )}

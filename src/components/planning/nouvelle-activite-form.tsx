@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { TypeActivite, Recurrence } from "@/types";
+import { FishLoader } from "@/components/ui/fish-loader";
 
 const typeActiviteOptions: { value: TypeActivite; label: string }[] = [
   { value: TypeActivite.ALIMENTATION, label: "Alimentation" },
@@ -268,7 +269,7 @@ export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleAct
           disabled={isPending}
           className="flex-1"
         >
-          {isPending ? "Planification..." : "Planifier l'activite"}
+          {isPending ? <><FishLoader size="sm" /> Planification...</> : "Planifier l'activite"}
         </Button>
         <Button
           type="button"

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Plus, Trash2, Package, Users, Pencil, AlertTriangle, Settings, Check, X } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -451,7 +452,7 @@ export function PackDetailClient({ pack, produits, configElevages, permissions }
                       <Button variant="outline">Annuler</Button>
                     </DialogClose>
                     <Button onClick={handleEditPack} disabled={editSaving || !editNom.trim()}>
-                      {editSaving ? "Enregistrement..." : "Enregistrer"}
+                      {editSaving ? <><FishLoader size="sm" /> Enregistrement...</> : "Enregistrer"}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -654,7 +655,7 @@ export function PackDetailClient({ pack, produits, configElevages, permissions }
                 onClick={handleSaveConfigBacs}
                 disabled={configBacsSaving || !localBacsValid || !localBacsAllNamed || !localBacsNoDuplicates}
               >
-                {configBacsSaving ? "Enregistrement..." : "Enregistrer"}
+                {configBacsSaving ? <><FishLoader size="sm" /> Enregistrement...</> : "Enregistrer"}
               </Button>
             </DialogFooter>
           </DialogContent>

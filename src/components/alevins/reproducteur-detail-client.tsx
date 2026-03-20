@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Pencil, Trash2, Egg } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -241,7 +242,7 @@ export function ReproducteurDetailClient({ reproducteur, permissions }: Props) {
                   onClick={handleSave}
                   disabled={saving || !code.trim() || !poids}
                 >
-                  {saving ? "Enregistrement..." : "Enregistrer"}
+                  {saving ? <><FishLoader size="sm" /> Enregistrement...</> : "Enregistrer"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -273,7 +274,7 @@ export function ReproducteurDetailClient({ reproducteur, permissions }: Props) {
                   onClick={handleDelete}
                   disabled={deleting}
                 >
-                  {deleting ? "Suppression..." : "Supprimer"}
+                  {deleting ? <><FishLoader size="sm" /> Suppression...</> : "Supprimer"}
                 </Button>
               </DialogFooter>
             </DialogContent>

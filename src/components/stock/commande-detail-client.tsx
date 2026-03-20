@@ -16,6 +16,7 @@ import {
   Eye,
   Trash2,
 } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -495,7 +496,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
                     disabled={loading !== null}
                   >
                     <Eye className="h-4 w-4 mr-1" />
-                    {loading === "voir" ? "Chargement..." : "Voir la facture"}
+                    {loading === "voir" ? <><FishLoader size="sm" /> Chargement...</> : "Voir la facture"}
                   </Button>
                   <Button
                     variant="danger"
@@ -614,7 +615,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
               onClick={handleDeleteFacture}
               disabled={loading === "delete"}
             >
-              {loading === "delete" ? "Suppression..." : "Supprimer"}
+              {loading === "delete" ? <><FishLoader size="sm" /> Suppression...</> : "Supprimer"}
             </Button>
           </DialogFooter>
         </DialogContent>

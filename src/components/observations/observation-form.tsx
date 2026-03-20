@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
+import { FishLoader } from "@/components/ui/fish-loader";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -279,7 +280,7 @@ export function ObservationForm({ vagues = [], onSuccess }: Props) {
           disabled={loading}
           className="w-full h-12 text-base"
         >
-          {loading ? "Envoi en cours..." : "Envoyer l'observation"}
+          {loading ? <><FishLoader size="sm" /> Envoi en cours...</> : "Envoyer l'observation"}
         </Button>
       </form>
     </div>

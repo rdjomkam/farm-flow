@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Building2, Users, Container, Waves, Plus, Check } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -146,7 +147,7 @@ export function SitesListClient({ sites, activeSiteId, canCreate }: Props) {
                   <Button variant="outline">Annuler</Button>
                 </DialogClose>
                 <Button onClick={handleCreate} disabled={creating || !name.trim()}>
-                  {creating ? "Creation..." : "Creer"}
+                  {creating ? <><FishLoader size="sm" /> Creation...</> : "Creer"}
                 </Button>
               </DialogFooter>
             </DialogContent>

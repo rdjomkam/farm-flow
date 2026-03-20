@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, Egg, ArrowLeft } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -233,7 +234,7 @@ export function PontesListClient({ pontes, femelles, males, permissions }: Props
                 onClick={handleCreate}
                 disabled={creating || !code.trim() || !femelleId || !datePonte}
               >
-                {creating ? "Creation..." : "Creer"}
+                {creating ? <><FishLoader size="sm" /> Creation...</> : "Creer"}
               </Button>
             </DialogFooter>
           </DialogContent>

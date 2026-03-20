@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Trash2, CheckCircle2, XCircle } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -442,7 +443,7 @@ export function ModifierCalibrageDialog({
               Annuler
             </Button>
             <Button type="submit" disabled={!canSubmit}>
-              {submitting ? "Modification..." : "Enregistrer les modifications"}
+              {submitting ? <><FishLoader size="sm" /> Modification...</> : "Enregistrer les modifications"}
             </Button>
           </DialogFooter>
         </form>

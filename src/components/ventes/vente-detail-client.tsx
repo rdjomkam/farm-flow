@@ -11,6 +11,7 @@ import {
   FileText,
   ShoppingCart,
 } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -194,8 +195,7 @@ export function VenteDetailClient({ vente, permissions }: Props) {
         </Card>
       ) : permissions.includes(Permission.VENTES_CREER) ? (
         <Button onClick={handleCreateFacture} disabled={loading} className="w-full min-h-[48px]">
-          <FileText className="h-4 w-4 mr-2" />
-          {loading ? "Creation..." : "Generer la facture"}
+          {loading ? <><FishLoader size="sm" /> Creation...</> : <><FileText className="h-4 w-4 mr-2" /> Generer la facture</>}
         </Button>
       ) : null}
 

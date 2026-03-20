@@ -6,6 +6,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
+import { FishLoader } from "@/components/ui/fish-loader";
 import type { ConfigElevage } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -580,7 +581,7 @@ export function ConfigElevageFormClient({ templates }: Props) {
           Annuler
         </Button>
         <Button type="submit" className="flex-1" disabled={submitting}>
-          {submitting ? "Creation..." : "Creer le profil"}
+          {submitting ? <><FishLoader size="sm" /> Creation...</> : "Creer le profil"}
         </Button>
       </div>
     </form>

@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { TypeActivite, TypeReleve } from "@/types";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { RELEVE_COMPATIBLE_TYPES, ACTIVITE_RELEVE_TYPE_MAP } from "@/types/api";
 import type { ActiviteWithRelations } from "@/types";
 
@@ -177,8 +178,10 @@ export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActi
             <div className="flex flex-col gap-2">
               <p className="text-sm font-medium">Ou lier un releve existant</p>
               {loadingReleves ? (
-                <p className="text-sm text-muted-foreground">Chargement...</p>
-              ) : unlinkedReleves.length === 0 ? (
+                <div className="flex items-center justify-center py-4">
+                  <FishLoader size="md" text="Chargement..." />
+                </div>
+              ) :unlinkedReleves.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Aucun releve non lie disponible.</p>
               ) : (
                 <Select value={selectedReleveId} onValueChange={setSelectedReleveId}>
@@ -208,7 +211,7 @@ export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActi
                 onClick={handleComplete}
                 disabled={submitting || selectedReleveId === "__none__"}
               >
-                {submitting ? "Completion..." : "Completer"}
+                {submitting ? <><FishLoader size="sm" /> Completion...</> : "Completer"}
               </Button>
             </DialogFooter>
           </div>
@@ -231,7 +234,7 @@ export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActi
                 onClick={handleComplete}
                 disabled={submitting || noteCompletion.trim().length < 10}
               >
-                {submitting ? "Completion..." : "Completer"}
+                {submitting ? <><FishLoader size="sm" /> Completion...</> : "Completer"}
               </Button>
             </DialogFooter>
           </div>

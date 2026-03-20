@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { EmptyState } from "@/components/ui/empty-state";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Permission, TypeSystemeBac } from "@/types";
 import type { BacResponse } from "@/types";
 
@@ -198,7 +199,7 @@ export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
                     Annuler
                   </Button>
                   <Button type="submit" disabled={submitting}>
-                    {submitting ? "Création..." : "Créer le bac"}
+                    {submitting ? <><FishLoader size="sm" /> Création...</> : "Créer le bac"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -330,7 +331,7 @@ export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
                 Annuler
               </Button>
               <Button type="submit" disabled={editSubmitting}>
-                {editSubmitting ? "Modification..." : "Enregistrer"}
+                {editSubmitting ? <><FishLoader size="sm" /> Modification...</> : "Enregistrer"}
               </Button>
             </DialogFooter>
           </form>

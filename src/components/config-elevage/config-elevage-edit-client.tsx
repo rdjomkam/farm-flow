@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { FishLoader } from "@/components/ui/fish-loader";
 import type { ConfigElevage } from "@/types";
 
 interface Props {
@@ -335,7 +336,7 @@ export function ConfigElevageEditClient({ config }: Props) {
           Annuler
         </Button>
         <Button type="submit" className="flex-1" disabled={submitting}>
-          {submitting ? "Enregistrement..." : "Enregistrer"}
+          {submitting ? <><FishLoader size="sm" /> Enregistrement...</> : "Enregistrer"}
         </Button>
       </div>
     </form>

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FormSection } from "@/components/ui/form-section";
 import { useToast } from "@/components/ui/toast";
+import { FishLoader } from "@/components/ui/fish-loader";
 import {
   Dialog,
   DialogContent,
@@ -175,7 +176,7 @@ export function UserSecurityTab({
               error={passwordError}
             />
             <Button type="submit" disabled={savingPassword} className="w-full sm:w-auto">
-              {savingPassword ? "Enregistrement..." : "Changer le mot de passe"}
+              {savingPassword ? <><FishLoader size="sm" /> Enregistrement...</> : "Changer le mot de passe"}
             </Button>
           </form>
         </FormSection>

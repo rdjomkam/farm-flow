@@ -56,6 +56,7 @@ import {
 } from "@/lib/regles-activites-constants";
 import { ActionRegle, SeveriteAlerte, TypeDeclencheur, PhaseElevage, OperateurCondition, LogiqueCondition } from "@/types";
 import type { RegleActiviteWithRelations, ConditionRegle } from "@/types";
+import { FishLoader } from "@/components/ui/fish-loader";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -710,7 +711,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                       onClick={handleDelete}
                       disabled={deleting}
                     >
-                      {deleting ? "Suppression..." : "Supprimer"}
+                      {deleting ? <><FishLoader size="sm" /> Suppression...</> : "Supprimer"}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -1305,7 +1306,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                   onClick={handleDelete}
                   disabled={deleting}
                 >
-                  {deleting ? "Suppression..." : "Supprimer"}
+                  {deleting ? <><FishLoader size="sm" /> Suppression...</> : "Supprimer"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -1318,8 +1319,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           disabled={submitting}
           className="flex-1 sm:flex-none"
         >
-          <Check className="h-4 w-4" />
-          {submitting ? "Enregistrement..." : "Enregistrer"}
+          {submitting ? <><FishLoader size="sm" /> Enregistrement...</> : <><Check className="h-4 w-4" /> Enregistrer</>}
         </Button>
       </div>
     </form>

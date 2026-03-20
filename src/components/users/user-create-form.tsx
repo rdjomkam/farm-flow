@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Role } from "@/types";
+import { FishLoader } from "@/components/ui/fish-loader";
 
 const ROLE_OPTIONS = [
   { value: Role.PISCICULTEUR, label: "Pisciculteur" },
@@ -151,7 +152,7 @@ export function UserCreateForm() {
       </FormSection>
 
       <Button type="submit" disabled={submitting} className="w-full">
-        {submitting ? "Creation en cours..." : "Creer l'utilisateur"}
+        {submitting ? <><FishLoader size="sm" /> Creation en cours...</> : "Creer l'utilisateur"}
       </Button>
     </form>
   );

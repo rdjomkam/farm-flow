@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Users, Phone, Mail, MapPin, Pencil, ShoppingCart } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -160,7 +161,7 @@ export function ClientsListClient({ clients, permissions }: Props) {
                 </DialogClose>
                 <Button onClick={handleSubmit} disabled={creating || !nom.trim()}>
                   {creating
-                    ? editId ? "Enregistrement..." : "Creation..."
+                    ? editId ? <><FishLoader size="sm" /> Enregistrement...</> : <><FishLoader size="sm" /> Creation...</>
                     : editId ? "Enregistrer" : "Creer"}
                 </Button>
               </DialogFooter>

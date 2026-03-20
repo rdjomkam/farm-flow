@@ -12,6 +12,7 @@ import {
   FileText,
   Waves,
 } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { ExportButton } from "@/components/ui/export-button";
 import { Input } from "@/components/ui/input";
@@ -323,7 +324,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
                   onClick={handlePaiement}
                   disabled={loading || !montant || !mode}
                 >
-                  {loading ? "Enregistrement..." : "Confirmer"}
+                  {loading ? <><FishLoader size="sm" /> Enregistrement...</> : "Confirmer"}
                 </Button>
               </DialogFooter>
             </DialogContent>

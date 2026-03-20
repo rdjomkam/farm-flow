@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { UserRoleBadge } from "./user-role-badge";
 import { Role, Permission } from "@/types";
+import { FishLoader } from "@/components/ui/fish-loader";
 
 interface UserProfileTabProps {
   user: {
@@ -210,7 +211,7 @@ export function UserProfileTab({ user, callerPermissions }: UserProfileTabProps)
           {editing ? (
             <>
               <Button onClick={handleSave} disabled={submitting} className="flex-1">
-                {submitting ? "Enregistrement..." : "Enregistrer"}
+                {submitting ? <><FishLoader size="sm" /> Enregistrement...</> : "Enregistrer"}
               </Button>
               <Button
                 variant="secondary"
@@ -262,7 +263,7 @@ export function UserProfileTab({ user, callerPermissions }: UserProfileTabProps)
                 onClick={handleToggleActive}
                 disabled={deactivating}
               >
-                {deactivating ? "En cours..." : user.isActive ? "Desactiver" : "Reactiver"}
+                {deactivating ? <><FishLoader size="sm" /> En cours...</> : user.isActive ? "Desactiver" : "Reactiver"}
               </Button>
             </DialogFooter>
           </DialogContent>

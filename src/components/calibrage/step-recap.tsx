@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2 } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { CategorieCalibrage } from "@/types";
 import type { BacResponse } from "@/types";
 import type { GroupeForm } from "./calibrage-form-client";
@@ -166,7 +167,7 @@ export function StepRecap({
           disabled={!isBalanced || submitting}
           className="flex-1"
         >
-          {submitting ? "Enregistrement..." : "Confirmer"}
+          {submitting ? <><FishLoader size="sm" /> Enregistrement...</> : "Confirmer"}
         </Button>
       </div>
     </div>

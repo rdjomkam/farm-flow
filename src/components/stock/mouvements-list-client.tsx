@@ -11,6 +11,7 @@ import {
   Calendar,
   ArrowUpDown,
 } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -229,7 +230,7 @@ export function MouvementsListClient({ mouvements, produits, vagues, permissions
                 onClick={handleCreate}
                 disabled={creating || !produitId || !quantite}
               >
-                {creating ? "Enregistrement..." : "Enregistrer"}
+                {creating ? <><FishLoader size="sm" /> Enregistrement...</> : "Enregistrer"}
               </Button>
             </DialogFooter>
           </DialogContent>

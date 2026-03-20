@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Pencil, ArrowRightLeft, Waves } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -246,7 +247,7 @@ export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) 
                   <Button variant="outline">Annuler</Button>
                 </DialogClose>
                 <Button onClick={handleSave} disabled={saving}>
-                  {saving ? "Enregistrement..." : "Enregistrer"}
+                  {saving ? <><FishLoader size="sm" /> Enregistrement...</> : "Enregistrer"}
                 </Button>
               </DialogFooter>
             </DialogContent>

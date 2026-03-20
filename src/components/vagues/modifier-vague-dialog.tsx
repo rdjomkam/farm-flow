@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FishLoader } from "@/components/ui/fish-loader";
 import {
   Dialog,
   DialogTrigger,
@@ -145,7 +146,7 @@ export function ModifierVagueDialog({
               Annuler
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Modification..." : "Enregistrer"}
+              {submitting ? <><FishLoader size="sm" /> Modification...</> : "Enregistrer"}
             </Button>
           </DialogFooter>
         </form>

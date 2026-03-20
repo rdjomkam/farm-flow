@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { StatutVague } from "@/types";
 import {
   Dialog,
@@ -94,7 +95,7 @@ export function CloturerDialog({
             Annuler
           </Button>
           <Button variant="danger" onClick={handleCloturer} disabled={submitting}>
-            {submitting ? "Clôture..." : "Confirmer la clôture"}
+            {submitting ? <><FishLoader size="sm" /> Clôture...</> : "Confirmer la clôture"}
           </Button>
         </DialogFooter>
       </DialogContent>

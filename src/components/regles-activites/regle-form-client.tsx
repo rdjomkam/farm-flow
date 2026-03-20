@@ -36,6 +36,7 @@ import {
   OPERATEUR_CONDITION_LABELS,
   LOGIQUE_CONDITION_LABELS,
 } from "@/lib/regles-activites-constants";
+import { FishLoader } from "@/components/ui/fish-loader";
 
 // ---------------------------------------------------------------------------
 // Helpers — résolution du preview avec valeurs d'exemple
@@ -1138,7 +1139,7 @@ export function RegleFormClient() {
           className="w-full"
           disabled={submitting}
         >
-          {submitting ? "Enregistrement..." : "Creer la regle"}
+          {submitting ? <><FishLoader size="sm" /> Enregistrement...</> : "Creer la regle"}
         </Button>
       </div>
     </form>

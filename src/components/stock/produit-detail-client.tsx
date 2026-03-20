@@ -11,6 +11,7 @@ import {
   Calendar,
   Pencil,
 } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -272,7 +273,7 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
                     <Button variant="outline">Annuler</Button>
                   </DialogClose>
                   <Button onClick={handleSave} disabled={saving || !nom.trim()}>
-                    {saving ? "Enregistrement..." : "Enregistrer"}
+                    {saving ? <><FishLoader size="sm" /> Enregistrement...</> : "Enregistrer"}
                   </Button>
                 </DialogFooter>
               </DialogContent>

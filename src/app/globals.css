@@ -143,3 +143,22 @@ body {
 .animate-scale-in {
   animation: scale-in 0.2s ease-out forwards;
 }
+
+@keyframes fish-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-8deg); }
+  75% { transform: rotate(8deg); }
+}
+.animate-fish-wiggle {
+  animation: fish-wiggle 0.6s ease-in-out infinite;
+  display: inline-block;
+  transform-origin: center;
+}
+
+@keyframes fish-swim {
+  0%   { transform: translateX(-120%); }
+  100% { transform: translateX(220%); }
+}
+.animate-fish-swim {
+  animation: fish-swim 2s ease-in-out infinite;
+}

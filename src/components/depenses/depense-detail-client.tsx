@@ -13,6 +13,7 @@ import {
   Trash2,
   Plus,
 } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -505,7 +506,7 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                     onClick={handlePaiement}
                     disabled={paiementLoading || !paiementMontant}
                   >
-                    {paiementLoading ? "Enregistrement..." : "Confirmer"}
+                    {paiementLoading ? <><FishLoader size="sm" /> Enregistrement...</> : "Confirmer"}
                   </Button>
                 </DialogFooter>
               </DialogContent>

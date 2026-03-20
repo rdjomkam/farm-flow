@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ShoppingCart } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -199,8 +200,7 @@ export function VenteFormClient({ clients, vagues }: Props) {
           disabled={submitting || !isValid}
           className="w-full min-h-[48px]"
         >
-          <ShoppingCart className="h-4 w-4 mr-2" />
-          {submitting ? "Enregistrement..." : "Enregistrer la vente"}
+          {submitting ? <><FishLoader size="sm" /> Enregistrement...</> : <><ShoppingCart className="h-4 w-4 mr-2" /> Enregistrer la vente</>}
         </Button>
       </form>
     </div>

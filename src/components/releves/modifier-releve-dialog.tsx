@@ -26,6 +26,7 @@ import { TypeReleve, CauseMortalite, TypeAliment, MethodeComptage, CategorieProd
 import type { Releve } from "@/types";
 import { ConsommationFields } from "@/components/releves/consommation-fields";
 import type { ConsommationLine, ProduitOption } from "@/components/releves/consommation-fields";
+import { FishLoader } from "@/components/ui/fish-loader";
 
 const typeLabels: Record<TypeReleve, string> = {
   [TypeReleve.BIOMETRIE]: "Biometrie",
@@ -524,7 +525,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
               Annuler
             </Button>
             <Button type="submit" disabled={submitting || !raisonValid}>
-              {submitting ? "Modification..." : "Enregistrer les modifications"}
+              {submitting ? <><FishLoader size="sm" /> Modification...</> : "Enregistrer les modifications"}
             </Button>
           </DialogFooter>
         </form>

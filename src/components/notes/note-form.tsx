@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Send, AlertTriangle } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MarkdownEditor } from "@/components/ui/markdown-editor";
@@ -218,8 +219,7 @@ export function NoteForm({ siteId: _siteId, clientSiteId, vagues = [], onSuccess
           Reinitialiser
         </Button>
         <Button type="submit" disabled={submitting}>
-          <Send className="h-4 w-4" />
-          {submitting ? "Envoi en cours..." : "Envoyer la note"}
+          {submitting ? <><FishLoader size="sm" /> Envoi en cours...</> : <><Send className="h-4 w-4" /> Envoyer la note</>}
         </Button>
       </div>
     </form>

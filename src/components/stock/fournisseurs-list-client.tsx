@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, Truck, ArrowLeft, Phone, Mail, MapPin, Pencil } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -170,7 +171,7 @@ export function FournisseursListClient({ fournisseurs, permissions }: Props) {
                 </DialogClose>
                 <Button onClick={handleSubmit} disabled={creating || !nom.trim()}>
                   {creating
-                    ? editId ? "Enregistrement..." : "Creation..."
+                    ? editId ? <><FishLoader size="sm" /> Enregistrement...</> : <><FishLoader size="sm" /> Creation...</>
                     : editId ? "Enregistrer" : "Creer"}
                 </Button>
               </DialogFooter>

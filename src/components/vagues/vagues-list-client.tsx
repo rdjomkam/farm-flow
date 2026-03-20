@@ -18,6 +18,7 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FormSection } from "@/components/ui/form-section";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { VagueCard } from "./vague-card";
 import { StatutVague, Permission } from "@/types";
 import type { VagueSummaryResponse, BacResponse } from "@/types";
@@ -249,7 +250,7 @@ export function VaguesListClient({ vagues, bacsLibres, permissions }: VaguesList
                   Annuler
                 </Button>
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? "Création..." : "Créer la vague"}
+                  {submitting ? <><FishLoader size="sm" /> Création...</> : "Créer la vague"}
                 </Button>
               </DialogFooter>
             </form>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, RefreshCw, Clock, ToggleLeft, ToggleRight, Pencil, Trash2 } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -335,7 +336,7 @@ export function RecurrentesListClient({ templates: initial, canManage }: Props) 
                   </Button>
                 </DialogClose>
                 <Button onClick={handleCreate} disabled={createLoading}>
-                  {createLoading ? "Creation..." : "Creer"}
+                  {createLoading ? <><FishLoader size="sm" /> Creation...</> : "Creer"}
                 </Button>
               </DialogFooter>
             </DialogContent>

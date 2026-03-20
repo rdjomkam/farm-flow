@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
+import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -481,7 +482,7 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
             </Button>
           </DialogClose>
           <Button variant="primary" onClick={handleSubmit} disabled={loading}>
-            {loading ? "Enregistrement..." : "Enregistrer"}
+            {loading ? <><FishLoader size="sm" /> Enregistrement...</> : "Enregistrer"}
           </Button>
         </DialogFooter>
       </DialogContent>
