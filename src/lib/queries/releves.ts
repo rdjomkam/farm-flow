@@ -40,7 +40,7 @@ export async function getReleves(siteId: string, filters: ReleveFilters = {}) {
 
   const releves = await prisma.releve.findMany({
     where,
-    orderBy: { updatedAt: "desc" },
+    orderBy: { date: "desc" },
   });
 
   return { releves, total: releves.length };
@@ -391,7 +391,7 @@ export async function updateReleve(siteId: string, userId: string, id: string, d
 export async function getRelevesByType(siteId: string, vagueId: string, type: TypeReleve) {
   return prisma.releve.findMany({
     where: { siteId, vagueId, typeReleve: type },
-    orderBy: { updatedAt: "desc" },
+    orderBy: { date: "desc" },
   });
 }
 

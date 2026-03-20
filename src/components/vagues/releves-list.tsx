@@ -120,7 +120,7 @@ export function RelevesList({ releves, produits = [], permissions, limit, vagueI
               <div className="flex items-center gap-2">
                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Calendar className="h-3 w-3" />
-                  {new Date(r.updatedAt).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })}
+                  {new Date(r.date).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })}
                 </span>
                 <ModifierReleveDialog releve={r} produits={produits} permissions={permissions} />
               </div>
