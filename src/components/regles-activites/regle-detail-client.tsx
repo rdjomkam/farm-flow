@@ -43,6 +43,9 @@ import { TemplateEditor } from "@/components/regles-activites/template-editor";
 import { TemplatePreview } from "@/components/regles-activites/template-preview";
 import { InstructionSteps } from "@/components/activites/instruction-steps";
 import {
+  ACTION_PAYLOAD_TYPE_LABELS,
+  ACTION_REGLE_LABELS,
+  SEVERITE_ALERTE_LABELS,
   TYPE_ACTIVITE_LABELS,
   TYPE_DECLENCHEUR_LABELS,
   PHASE_ELEVAGE_LABELS,
@@ -51,7 +54,7 @@ import {
   OPERATEUR_CONDITION_LABELS,
   LOGIQUE_CONDITION_LABELS,
 } from "@/lib/regles-activites-constants";
-import { TypeDeclencheur, PhaseElevage, OperateurCondition, LogiqueCondition } from "@/types";
+import { ActionRegle, SeveriteAlerte, TypeDeclencheur, PhaseElevage, OperateurCondition, LogiqueCondition } from "@/types";
 import type { RegleActiviteWithRelations, ConditionRegle } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -89,6 +92,12 @@ interface EditForm {
   isActive: boolean;
   logique: LogiqueCondition;
   conditions: ConditionRow[];
+  // Action (Sprint 29)
+  actionType: ActionRegle;
+  severite: SeveriteAlerte | null;
+  titreNotificationTemplate: string;
+  descriptionNotificationTemplate: string;
+  actionPayloadType: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -174,6 +183,12 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
     isActive: regle.isActive,
     logique: (regle.logique as LogiqueCondition) ?? LogiqueCondition.ET,
     conditions: conditionsToRows(regle.conditions ?? []),
+    // Sprint 29
+    actionType: (regle.actionType as ActionRegle) ?? ActionRegle.ACTIVITE,
+    severite: (regle.severite as SeveriteAlerte) ?? null,
+    titreNotificationTemplate: regle.titreNotificationTemplate ?? "",
+    descriptionNotificationTemplate: regle.descriptionNotificationTemplate ?? "",
+    actionPayloadType: regle.actionPayloadType ?? "",
   });
 
   // ---------------------------------------------------------------------------
@@ -208,6 +223,12 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           conditionValeur2: c.conditionValeur2 !== "" ? Number(c.conditionValeur2) : null,
           ordre: idx,
         })),
+        // Sprint 29 — action fields
+        actionType: form.actionType,
+        severite: form.severite || null,
+        titreNotificationTemplate: form.titreNotificationTemplate.trim() || null,
+        descriptionNotificationTemplate: form.descriptionNotificationTemplate.trim() || null,
+        actionPayloadType: form.actionPayloadType || null,
       };
 
       const res = await fetch(`/api/regles-activites/${regle.id}`, {
@@ -327,6 +348,12 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
       isActive: regle.isActive,
       logique: (regle.logique as LogiqueCondition) ?? LogiqueCondition.ET,
       conditions: conditionsToRows(regle.conditions ?? []),
+      // Sprint 29
+      actionType: (regle.actionType as ActionRegle) ?? ActionRegle.ACTIVITE,
+      severite: (regle.severite as SeveriteAlerte) ?? null,
+      titreNotificationTemplate: regle.titreNotificationTemplate ?? "",
+      descriptionNotificationTemplate: regle.descriptionNotificationTemplate ?? "",
+      actionPayloadType: regle.actionPayloadType ?? "",
     });
     setEditMode(false);
   }
@@ -388,6 +415,24 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
             <Badge variant="en_cours">
               {TYPE_ACTIVITE_LABELS[regle.typeActivite as keyof typeof TYPE_ACTIVITE_LABELS] ?? regle.typeActivite}
             </Badge>
+          </InfoRow>
+          <InfoRow label="Action">
+            <span className="inline-flex items-center gap-1.5">
+              <Badge variant={
+                (regle.actionType as ActionRegle) === ActionRegle.NOTIFICATION ? "warning" :
+                (regle.actionType as ActionRegle) === ActionRegle.LES_DEUX ? "en_cours" : "default"
+              }>
+                {ACTION_REGLE_LABELS[(regle.actionType as ActionRegle) ?? ActionRegle.ACTIVITE] ?? regle.actionType}
+              </Badge>
+              {regle.severite && (
+                <Badge variant={
+                  regle.severite === SeveriteAlerte.CRITIQUE ? "annulee" :
+                  regle.severite === SeveriteAlerte.AVERTISSEMENT ? "warning" : "info"
+                }>
+                  {SEVERITE_ALERTE_LABELS[regle.severite as SeveriteAlerte] ?? regle.severite}
+                </Badge>
+              )}
+            </span>
           </InfoRow>
           <InfoRow label="Declencheur">
             <Badge variant="default">
@@ -497,33 +542,65 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           </SectionCard>
         )}
 
-        {/* Templates */}
-        <SectionCard title="Templates">
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Titre</p>
-              <p className="text-sm font-mono bg-muted/50 rounded-md px-3 py-2 break-all">
-                {regle.titreTemplate}
-              </p>
-            </div>
-            {regle.descriptionTemplate && (
+        {/* Templates activite — visibles si ACTIVITE ou LES_DEUX */}
+        {((regle.actionType as ActionRegle) === ActionRegle.ACTIVITE || (regle.actionType as ActionRegle) === ActionRegle.LES_DEUX || !regle.actionType) && (
+          <SectionCard title="Templates activite">
+            <div className="space-y-4">
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Description</p>
-                <p className="text-sm font-mono bg-muted/50 rounded-md px-3 py-2 break-all whitespace-pre-wrap">
-                  {regle.descriptionTemplate}
+                <p className="text-xs text-muted-foreground mb-1">Titre</p>
+                <p className="text-sm font-mono bg-muted/50 rounded-md px-3 py-2 break-all">
+                  {regle.titreTemplate}
                 </p>
               </div>
-            )}
-            {regle.instructionsTemplate && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Instructions</p>
-                <div className="bg-muted/50 rounded-md px-3 py-3">
-                  <InstructionSteps text={regle.instructionsTemplate} />
+              {regle.descriptionTemplate && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Description</p>
+                  <p className="text-sm font-mono bg-muted/50 rounded-md px-3 py-2 break-all whitespace-pre-wrap">
+                    {regle.descriptionTemplate}
+                  </p>
                 </div>
-              </div>
-            )}
-          </div>
-        </SectionCard>
+              )}
+              {regle.instructionsTemplate && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Instructions</p>
+                  <div className="bg-muted/50 rounded-md px-3 py-3">
+                    <InstructionSteps text={regle.instructionsTemplate} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </SectionCard>
+        )}
+
+        {/* Templates notification — visibles si NOTIFICATION ou LES_DEUX */}
+        {((regle.actionType as ActionRegle) === ActionRegle.NOTIFICATION || (regle.actionType as ActionRegle) === ActionRegle.LES_DEUX) && (
+          <SectionCard title="Templates alerte">
+            <div className="space-y-3">
+              {regle.titreNotificationTemplate && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Titre de l&apos;alerte</p>
+                  <p className="text-sm font-mono bg-muted/50 rounded-md px-3 py-2 break-all">
+                    {regle.titreNotificationTemplate}
+                  </p>
+                </div>
+              )}
+              {regle.descriptionNotificationTemplate && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Description de l&apos;alerte</p>
+                  <p className="text-sm font-mono bg-muted/50 rounded-md px-3 py-2 break-all whitespace-pre-wrap">
+                    {regle.descriptionNotificationTemplate}
+                  </p>
+                </div>
+              )}
+              {regle.actionPayloadType && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Bouton d&apos;action</p>
+                  <p className="text-sm">{ACTION_PAYLOAD_TYPE_LABELS[regle.actionPayloadType] ?? regle.actionPayloadType}</p>
+                </div>
+              )}
+            </div>
+          </SectionCard>
+        )}
 
         {/* Preview */}
         <TemplatePreview
@@ -1066,9 +1143,115 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
         </Button>
       </div>
 
-      {/* Section Templates */}
+      {/* Section Action */}
+      <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+        <h3 className="text-sm font-semibold text-foreground">Action au declenchement</h3>
+
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Type d&apos;action</label>
+          <Select
+            value={form.actionType}
+            onValueChange={(v) => setForm((f) => ({ ...f, actionType: v as ActionRegle }))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.values(ActionRegle).map((val) => (
+                <SelectItem key={val} value={val}>
+                  {ACTION_REGLE_LABELS[val]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Notification fields */}
+        {(form.actionType === ActionRegle.NOTIFICATION || form.actionType === ActionRegle.LES_DEUX) && (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-accent-amber/20 bg-accent-amber/5 p-3">
+              <p className="text-xs text-muted-foreground">
+                Configurez le contenu de l&apos;alerte qui sera envoyee aux utilisateurs.
+              </p>
+            </div>
+
+            {/* Severite */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Severite <span className="text-danger">*</span>
+              </label>
+              <Select
+                value={form.severite ?? "__none__"}
+                onValueChange={(v) => setForm((f) => ({ ...f, severite: v === "__none__" ? null : v as SeveriteAlerte }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(SeveriteAlerte).map((val) => (
+                    <SelectItem key={val} value={val}>
+                      {SEVERITE_ALERTE_LABELS[val]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* titreNotificationTemplate */}
+            <TemplateEditor
+              label="Titre de l'alerte"
+              name="titreNotificationTemplate"
+              value={form.titreNotificationTemplate}
+              onChange={(v) => setForm((f) => ({ ...f, titreNotificationTemplate: v }))}
+              required
+              maxLength={200}
+              rows={2}
+              placeholder="Ex: Densite elevee — Bac {bac}"
+              customPlaceholders={customPlaceholders}
+            />
+
+            {/* descriptionNotificationTemplate */}
+            <TemplateEditor
+              label="Description de l'alerte (optionnel)"
+              name="descriptionNotificationTemplate"
+              value={form.descriptionNotificationTemplate}
+              onChange={(v) => setForm((f) => ({ ...f, descriptionNotificationTemplate: v }))}
+              maxLength={500}
+              rows={3}
+              placeholder="Ex: Densite : {valeur} kg/m3 — Action requise"
+              customPlaceholders={customPlaceholders}
+            />
+
+            {/* actionPayloadType */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Bouton d&apos;action dans l&apos;alerte (optionnel)
+              </label>
+              <Select
+                value={form.actionPayloadType || "__none__"}
+                onValueChange={(v) => setForm((f) => ({ ...f, actionPayloadType: v === "__none__" ? "" : v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">{ACTION_PAYLOAD_TYPE_LABELS[""]}</SelectItem>
+                  {(["CREER_RELEVE", "MODIFIER_BAC", "VOIR_VAGUE", "VOIR_STOCK"] as const).map((val) => (
+                    <SelectItem key={val} value={val}>
+                      {ACTION_PAYLOAD_TYPE_LABELS[val]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Section Templates activite */}
+      {(form.actionType === ActionRegle.ACTIVITE || form.actionType === ActionRegle.LES_DEUX) && (
       <div className="rounded-xl border border-border bg-card p-4 space-y-5">
-        <h3 className="text-sm font-semibold text-foreground">Templates</h3>
+        <h3 className="text-sm font-semibold text-foreground">Templates activite</h3>
 
         <TemplateEditor
           label="Titre de l'activite"
@@ -1104,6 +1287,22 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           customPlaceholders={customPlaceholders}
         />
       </div>
+      )}
+
+      {/* Section Templates NOTIFICATION only — titre template = internal name */}
+      {form.actionType === ActionRegle.NOTIFICATION && (
+      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-foreground">Identite interne</h3>
+        <Input
+          label="Titre interne (pour les logs)"
+          value={form.titreTemplate}
+          onChange={(e) => setForm((f) => ({ ...f, titreTemplate: e.target.value }))}
+          placeholder="Ex: Alerte densite elevee"
+          required
+          maxLength={200}
+        />
+      </div>
+      )}
 
       {/* Template preview — updates in real time */}
       <TemplatePreview

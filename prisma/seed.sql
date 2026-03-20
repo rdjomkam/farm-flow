@@ -2040,11 +2040,15 @@ INSERT INTO "RegleActivite" (
   "titreTemplate", "descriptionTemplate", "instructionsTemplate",
   priorite, "isActive", "firedOnce",
   logique,
+  "actionType", severite,
+  "titreNotificationTemplate", "descriptionNotificationTemplate",
+  "actionPayloadType",
   "siteId", "userId",
   "createdAt", "updatedAt"
 ) VALUES
 
 -- ── R1 : Densité élevée + renouvellement insuffisant (50-100 kg/m3) ──────────
+-- actionType = NOTIFICATION, severite = AVERTISSEMENT
 (
   'rule_densite_renouv_50',
   'Densité élevée + renouvellement insuffisant (50-100 kg/m3)',
@@ -2062,11 +2066,16 @@ INSERT INTO "RegleActivite" (
 5. Si densité > 100 kg/m3 : renouveler à 75% minimum.',
   5, true, false,
   'ET',
+  'NOTIFICATION', 'AVERTISSEMENT',
+  'Renouvellement insuffisant — Bac {bac}',
+  'Densité : {valeur} kg/m3 (seuil 50). Taux de renouvellement insuffisant. Augmentez le débit ou la fréquence de renouvellement.',
+  'CREER_RELEVE',
   NULL, NULL,
   NOW(), NOW()
 ),
 
 -- ── R2 : Densité haute + renouvellement insuffisant (100-200 kg/m3) ──────────
+-- actionType = NOTIFICATION, severite = CRITIQUE
 (
   'rule_densite_renouv_100',
   'Densité haute + renouvellement insuffisant (100-200 kg/m3)',
@@ -2085,11 +2094,16 @@ INSERT INTO "RegleActivite" (
 6. Envisager une réduction de densité si situation persistante.',
   3, true, false,
   'ET',
+  'NOTIFICATION', 'CRITIQUE',
+  'URGENT — Renouvellement insuffisant — Bac {bac}',
+  'Densité {valeur} kg/m3 (> 100). Renouvellement insuffisant. Risque accumulation ammoniac. Renouveler 75% du volume immédiatement.',
+  'CREER_RELEVE',
   NULL, NULL,
   NOW(), NOW()
 ),
 
 -- ── R3 : Densité critique + renouvellement insuffisant (>200 kg/m3) ──────────
+-- actionType = NOTIFICATION, severite = CRITIQUE
 (
   'rule_densite_renouv_200',
   'Densité critique + renouvellement insuffisant (>200 kg/m3)',
@@ -2109,11 +2123,16 @@ INSERT INTO "RegleActivite" (
 7. Alerter le responsable technique.',
   1, true, false,
   'ET',
+  'NOTIFICATION', 'CRITIQUE',
+  'URGENCE — Eau stagnante — Bac {bac}',
+  'Densité {valeur} kg/m3 (> 200). Renouvellement critique. Risque mortalité massive. Renouveler 100% du volume IMMÉDIATEMENT.',
+  'MODIFIER_BAC',
   NULL, NULL,
   NOW(), NOW()
 ),
 
 -- ── R4 : Densité élevée + absence relevé qualité eau (> 3 jours) ─────────────
+-- actionType = LES_DEUX (activite + alerte), severite = CRITIQUE
 (
   'rule_densite_abs_qe',
   'Densité élevée + absence relevé qualité eau',
@@ -2131,11 +2150,16 @@ INSERT INTO "RegleActivite" (
 5. Considérer l''installation d''un kit de mesure multi-paramètre permanent.',
   2, true, false,
   'ET',
+  'LES_DEUX', 'CRITIQUE',
+  'Qualité eau non contrôlée — Bac {bac}',
+  'Densité {valeur} kg/m3 et aucun relevé qualité eau depuis 3+ jours. Effectuez un relevé immédiatement.',
+  'CREER_RELEVE',
   NULL, NULL,
   NOW(), NOW()
 ),
 
 -- ── R5 : Problème qualité eau (paramètre critique — logique OU) ───────────────
+-- actionType = NOTIFICATION, severite = CRITIQUE
 (
   'rule_qualite_critique',
   'Paramètre qualité eau critique (NH3 ou O2)',
@@ -2154,11 +2178,16 @@ INSERT INTO "RegleActivite" (
 6. Surveiller toutes les 2h jusqu''au retour à la normale.',
   1, true, false,
   'OU',
+  'NOTIFICATION', 'CRITIQUE',
+  'ALERTE — Paramètre qualité eau critique — Bac {bac}',
+  'NH3 > 1.0 mg/L OU O2 < 4.0 mg/L détecté. Risque de mortalité. Intervention immédiate requise.',
+  'CREER_RELEVE',
   NULL, NULL,
   NOW(), NOW()
 ),
 
 -- ── R6 : Densité critique + qualité eau dégradée (NH3 élevé) ─────────────────
+-- actionType = NOTIFICATION, severite = CRITIQUE
 (
   'rule_densite_nh3_critique',
   'Densité critique + NH3 élevé',
@@ -2179,6 +2208,10 @@ INSERT INTO "RegleActivite" (
 8. Évaluer une réduction de densité (transfert vers bac disponible).',
   1, true, false,
   'ET',
+  'NOTIFICATION', 'CRITIQUE',
+  'URGENCE ABSOLUE — Densité + NH3 — Bac {bac}',
+  'Densité {valeur} kg/m3 ET ammoniac élevé. Combinaison létale. Renouveler 100% du volume IMMÉDIATEMENT. Arrêter l''alimentation.',
+  'MODIFIER_BAC',
   NULL, NULL,
   NOW(), NOW()
 );

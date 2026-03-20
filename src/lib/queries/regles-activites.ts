@@ -181,6 +181,14 @@ export async function createRegleActivite(
       firedOnce: false,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       logique: (data.logique ?? "ET") as any,
+      // Sprint 29 — actionType & notification fields
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      actionType: (data.actionType ?? "ACTIVITE") as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      severite: (data.severite ?? null) as any,
+      titreNotificationTemplate: data.titreNotificationTemplate ?? null,
+      descriptionNotificationTemplate: data.descriptionNotificationTemplate ?? null,
+      actionPayloadType: data.actionPayloadType ?? null,
       siteId,
       userId,
       ...(data.conditions && data.conditions.length > 0 && {
@@ -297,6 +305,24 @@ export async function updateRegleActivite(
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             logique: data.logique as any,
           }),
+          // Sprint 29 — actionType & notification fields
+          ...(data.actionType !== undefined && {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            actionType: data.actionType as any,
+          }),
+          ...(data.severite !== undefined && {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            severite: (data.severite ?? null) as any,
+          }),
+          ...(data.titreNotificationTemplate !== undefined && {
+            titreNotificationTemplate: data.titreNotificationTemplate ?? null,
+          }),
+          ...(data.descriptionNotificationTemplate !== undefined && {
+            descriptionNotificationTemplate: data.descriptionNotificationTemplate ?? null,
+          }),
+          ...(data.actionPayloadType !== undefined && {
+            actionPayloadType: data.actionPayloadType ?? null,
+          }),
         },
       });
 
@@ -371,6 +397,24 @@ export async function updateRegleActivite(
       ...(data.logique !== undefined && {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         logique: data.logique as any,
+      }),
+      // Sprint 29 — actionType & notification fields
+      ...(data.actionType !== undefined && {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        actionType: data.actionType as any,
+      }),
+      ...(data.severite !== undefined && {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        severite: (data.severite ?? null) as any,
+      }),
+      ...(data.titreNotificationTemplate !== undefined && {
+        titreNotificationTemplate: data.titreNotificationTemplate ?? null,
+      }),
+      ...(data.descriptionNotificationTemplate !== undefined && {
+        descriptionNotificationTemplate: data.descriptionNotificationTemplate ?? null,
+      }),
+      ...(data.actionPayloadType !== undefined && {
+        actionPayloadType: data.actionPayloadType ?? null,
       }),
     },
   });

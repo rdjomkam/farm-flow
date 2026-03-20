@@ -95,6 +95,9 @@ export async function runEngineForSite(
       isActive: true,
       OR: [{ siteId }, { siteId: null }],
     },
+    include: {
+      conditions: { orderBy: { ordre: "asc" } },
+    },
   });
 
   if (regles.length === 0) {

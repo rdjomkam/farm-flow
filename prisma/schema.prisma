@@ -98,6 +98,12 @@ enum ModePaiement {
   CHEQUE
 }
 
+enum ActionRegle {
+  ACTIVITE
+  NOTIFICATION
+  LES_DEUX
+}
+
 enum SiteModule {
   REPRODUCTION
   GROSSISSEMENT
@@ -1278,6 +1284,16 @@ model RegleActivite {
   /** Logique d'évaluation des conditions composées : ET = toutes, OU = au moins une.
    *  N'a d'effet que si conditions.length > 0 (sinon evaluation legacy via typeDeclencheur). */
   logique      LogiqueCondition @default(ET)
+  /** Action à effectuer quand la règle se déclenche (Sprint 29) */
+  actionType   ActionRegle     @default(ACTIVITE)
+  /** Sévérité de la notification (requis si actionType = NOTIFICATION ou LES_DEUX) */
+  severite     SeveriteAlerte?
+  /** Template du titre de la notification (requis si actionType = NOTIFICATION ou LES_DEUX) */
+  titreNotificationTemplate         String?
+  /** Template de la description de la notification (optionnel) */
+  descriptionNotificationTemplate   String?
+  /** Type du CTA dans la notification : null = aucun bouton d'action */
+  actionPayloadType                 String?
   /** F-15 : null = règle globale DKFarm, non null = règle propre au site */
   siteId       String?
   site         Site?           @relation(fields: [siteId], references: [id], onDelete: Cascade)

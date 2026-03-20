@@ -5,8 +5,8 @@ import {
 } from "@/lib/queries/regles-activites";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { TypeActivite, TypeDeclencheur, OperateurCondition, LogiqueCondition, Permission } from "@/types";
-import { validateTemplatePlaceholders, SEUIL_TYPES_FIREDONCE } from "@/lib/regles-activites-constants";
+import { ActionRegle, SeveriteAlerte, TypeActivite, TypeDeclencheur, OperateurCondition, LogiqueCondition, Permission } from "@/types";
+import { validateTemplatePlaceholders, SEUIL_TYPES_FIREDONCE, VALID_ACTION_PAYLOAD_TYPES } from "@/lib/regles-activites-constants";
 import type { CreateRegleActiviteDTO, RegleActiviteFilters } from "@/types";
 
 const VALID_OPERATEUR = Object.values(OperateurCondition);
@@ -14,6 +14,8 @@ const VALID_LOGIQUE = Object.values(LogiqueCondition);
 
 const VALID_TYPE_ACTIVITE = Object.values(TypeActivite);
 const VALID_TYPE_DECLENCHEUR = Object.values(TypeDeclencheur);
+const VALID_ACTION_REGLE = Object.values(ActionRegle);
+const VALID_SEVERITE = Object.values(SeveriteAlerte);
 
 const SEUIL_TYPES = SEUIL_TYPES_FIREDONCE;
 
@@ -202,6 +204,47 @@ export async function POST(request: NextRequest) {
       errors.push({ field: "instructionsTemplate", message: "Le template d'instructions ne doit pas depasser 5000 caracteres." });
     }
 
+    // --- actionType validation ---
+    if (body.actionType !== undefined && !VALID_ACTION_REGLE.includes(body.actionType as ActionRegle)) {
+      errors.push({
+        field: "actionType",
+        message: `Valeur invalide. Valeurs valides : ${VALID_ACTION_REGLE.join(", ")}`,
+      });
+    }
+
+    const actionTypeValue: ActionRegle = (body.actionType as ActionRegle) ?? ActionRegle.ACTIVITE;
+    const needsNotification = actionTypeValue === ActionRegle.NOTIFICATION || actionTypeValue === ActionRegle.LES_DEUX;
+
+    if (needsNotification) {
+      if (!body.severite || !VALID_SEVERITE.includes(body.severite as SeveriteAlerte)) {
+        errors.push({
+          field: "severite",
+          message: `severite est requis pour les actions NOTIFICATION et LES_DEUX. Valeurs : ${VALID_SEVERITE.join(", ")}`,
+        });
+      }
+      if (!body.titreNotificationTemplate || typeof body.titreNotificationTemplate !== "string" || body.titreNotificationTemplate.trim().length < 5 || body.titreNotificationTemplate.length > 200) {
+        errors.push({
+          field: "titreNotificationTemplate",
+          message: "titreNotificationTemplate est requis (5 a 200 caracteres) pour les actions NOTIFICATION et LES_DEUX.",
+        });
+      }
+    }
+
+    if (body.descriptionNotificationTemplate !== undefined && body.descriptionNotificationTemplate !== null) {
+      if (typeof body.descriptionNotificationTemplate !== "string" || body.descriptionNotificationTemplate.length > 500) {
+        errors.push({ field: "descriptionNotificationTemplate", message: "descriptionNotificationTemplate ne doit pas depasser 500 caracteres." });
+      }
+    }
+
+    if (body.actionPayloadType !== undefined && body.actionPayloadType !== null && body.actionPayloadType !== "") {
+      if (!VALID_ACTION_PAYLOAD_TYPES.includes(body.actionPayloadType as typeof VALID_ACTION_PAYLOAD_TYPES[number])) {
+        errors.push({
+          field: "actionPayloadType",
+          message: `Valeur invalide. Valeurs valides : ${VALID_ACTION_PAYLOAD_TYPES.join(", ")} (ou null pour aucune action).`,
+        });
+      }
+    }
+
     if (errors.length > 0) {
       return NextResponse.json(
         { error: "Donnees invalides.", errors },
@@ -276,6 +319,12 @@ export async function POST(request: NextRequest) {
       ...(body.isActive !== undefined && { isActive: body.isActive }),
       ...(body.logique !== undefined && { logique: body.logique as LogiqueCondition }),
       ...(body.conditions !== undefined && { conditions: body.conditions }),
+      // Sprint 29 — actionType & notification fields
+      ...(body.actionType !== undefined && { actionType: body.actionType as ActionRegle }),
+      ...(body.severite !== undefined && { severite: body.severite as SeveriteAlerte }),
+      ...(body.titreNotificationTemplate !== undefined && { titreNotificationTemplate: body.titreNotificationTemplate }),
+      ...(body.descriptionNotificationTemplate !== undefined && { descriptionNotificationTemplate: body.descriptionNotificationTemplate }),
+      ...("actionPayloadType" in body && { actionPayloadType: body.actionPayloadType ?? null }),
     };
 
     const regle = await createRegleActivite(auth.activeSiteId, auth.userId, data);

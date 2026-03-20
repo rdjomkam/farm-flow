@@ -11,6 +11,7 @@
  */
 
 import {
+  ActionRegle,
   CategorieCalibrage,
   CategorieDepense,
   CauseMortalite,
@@ -24,6 +25,7 @@ import {
   PlaceholderMode,
   Recurrence,
   Role,
+  SeveriteAlerte,
   SiteModule,
   StatutActivation,
   StatutActivite,
@@ -1490,6 +1492,33 @@ export interface CreateRegleActiviteDTO {
     conditionValeur2: number | null;
     ordre: number;
   }[];
+  /**
+   * Type d'action execute au declenchement (Sprint 29).
+   * ACTIVITE (defaut) : cree une Activite planifiee.
+   * NOTIFICATION : cree une Notification (alerte).
+   * LES_DEUX : cree a la fois une Activite ET une Notification.
+   */
+  actionType?: ActionRegle;
+  /**
+   * Severite de la notification generee.
+   * Requis si actionType est NOTIFICATION ou LES_DEUX.
+   */
+  severite?: SeveriteAlerte;
+  /**
+   * Template du titre de la notification (avec placeholders {key}).
+   * Requis si actionType est NOTIFICATION ou LES_DEUX. Max 200 chars.
+   */
+  titreNotificationTemplate?: string;
+  /**
+   * Template de la description de la notification (optionnel). Max 500 chars.
+   */
+  descriptionNotificationTemplate?: string;
+  /**
+   * Type du CTA dans la notification.
+   * null / omis = pas de bouton d'action.
+   * Valeurs valides : "CREER_RELEVE" | "MODIFIER_BAC" | "VOIR_VAGUE" | "VOIR_STOCK"
+   */
+  actionPayloadType?: string | null;
 }
 
 /**

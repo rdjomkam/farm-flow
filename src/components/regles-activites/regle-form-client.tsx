@@ -15,6 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  ActionRegle,
+  SeveriteAlerte,
   TypeActivite,
   TypeDeclencheur,
   PhaseElevage,
@@ -23,7 +25,10 @@ import {
 } from "@/types";
 import type { CreateRegleActiviteDTO } from "@/types/api";
 import {
+  ACTION_REGLE_LABELS,
+  ACTION_PAYLOAD_TYPE_LABELS,
   KNOWN_PLACEHOLDERS,
+  SEVERITE_ALERTE_LABELS,
   TYPE_ACTIVITE_LABELS,
   TYPE_DECLENCHEUR_LABELS,
   PHASE_ELEVAGE_LABELS,
@@ -105,6 +110,12 @@ interface FormState {
   // Conditions composees
   logique: LogiqueCondition;
   conditions: ConditionRow[];
+  // Action (Sprint 29)
+  actionType: ActionRegle;
+  severite: SeveriteAlerte | "";
+  titreNotificationTemplate: string;
+  descriptionNotificationTemplate: string;
+  actionPayloadType: string;
 }
 
 interface FormErrors {
@@ -117,6 +128,8 @@ interface FormErrors {
   titreTemplate?: string;
   phaseMin?: string;
   phaseMax?: string;
+  severite?: string;
+  titreNotificationTemplate?: string;
 }
 
 const INITIAL_STATE: FormState = {
@@ -134,6 +147,12 @@ const INITIAL_STATE: FormState = {
   phaseMax: "",
   logique: LogiqueCondition.ET,
   conditions: [],
+  // Action (Sprint 29)
+  actionType: ActionRegle.ACTIVITE,
+  severite: "",
+  titreNotificationTemplate: "",
+  descriptionNotificationTemplate: "",
+  actionPayloadType: "",
 };
 
 // ---------------------------------------------------------------------------
@@ -340,6 +359,7 @@ export function RegleFormClient() {
   // Section accordeon state (open by default on desktop, closed on mobile handled via CSS)
   const [section1Open, setSection1Open] = useState(true);
   const [section2Open, setSection2Open] = useState(true);
+  const [sectionActionOpen, setSectionActionOpen] = useState(true);
   const [section3Open, setSection3Open] = useState(false);
   const [section4Open, setSection4Open] = useState(false);
   const [placeholderOpen, setPlaceholderOpen] = useState(false);
@@ -348,6 +368,8 @@ export function RegleFormClient() {
   const titreRef = useRef<HTMLTextAreaElement | null>(null);
   const descriptionRef = useRef<HTMLTextAreaElement | null>(null);
   const instructionsRef = useRef<HTMLTextAreaElement | null>(null);
+  const titreNotifRef = useRef<HTMLTextAreaElement | null>(null);
+  const descriptionNotifRef = useRef<HTMLTextAreaElement | null>(null);
   const activeTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Track which textarea is active for placeholder insertion
@@ -413,6 +435,10 @@ export function RegleFormClient() {
       setField("descriptionTemplate", newVal);
     } else if (textarea === instructionsRef.current) {
       setField("instructionsTemplate", newVal);
+    } else if (textarea === titreNotifRef.current) {
+      setField("titreNotificationTemplate", newVal);
+    } else if (textarea === descriptionNotifRef.current) {
+      setField("descriptionNotificationTemplate", newVal);
     }
 
     // Restore focus + cursor position
@@ -471,6 +497,19 @@ export function RegleFormClient() {
       const idxMax = PHASE_ELEVAGE_ORDER.indexOf(form.phaseMax as PhaseElevage);
       if (idxMin > idxMax) {
         errs.phaseMin = "La phase minimale doit preceder la phase maximale";
+      }
+    }
+
+    // Action notification validation
+    const needsNotif = form.actionType === ActionRegle.NOTIFICATION || form.actionType === ActionRegle.LES_DEUX;
+    if (needsNotif) {
+      if (!form.severite) {
+        errs.severite = "La severite est requise pour les alertes";
+      }
+      if (!form.titreNotificationTemplate || form.titreNotificationTemplate.trim().length < 5) {
+        errs.titreNotificationTemplate = "Minimum 5 caracteres requis";
+      } else if (form.titreNotificationTemplate.trim().length > 200) {
+        errs.titreNotificationTemplate = "Maximum 200 caracteres";
       }
     }
 
@@ -538,6 +577,16 @@ export function RegleFormClient() {
         ordre: idx,
       }));
     }
+
+    // Action (Sprint 29)
+    dto.actionType = form.actionType;
+    const needsNotif = form.actionType === ActionRegle.NOTIFICATION || form.actionType === ActionRegle.LES_DEUX;
+    if (needsNotif) {
+      if (form.severite) dto.severite = form.severite as SeveriteAlerte;
+      if (form.titreNotificationTemplate.trim()) dto.titreNotificationTemplate = form.titreNotificationTemplate.trim();
+      if (form.descriptionNotificationTemplate.trim()) dto.descriptionNotificationTemplate = form.descriptionNotificationTemplate.trim();
+    }
+    dto.actionPayloadType = form.actionPayloadType || null;
 
     try {
       const res = await fetch("/api/regles-activites", {
@@ -690,11 +739,135 @@ export function RegleFormClient() {
       </div>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Section 2 — Identite & Templates */}
+      {/* Section Action — Que faire quand la regle se declenche ?          */}
       {/* ------------------------------------------------------------------ */}
       <div className="flex flex-col gap-2">
         <SectionHeader
-          title="Identite et templates"
+          title="Action au declenchement"
+          open={sectionActionOpen}
+          onToggle={() => setSectionActionOpen(!sectionActionOpen)}
+          badge="requis"
+        />
+        {sectionActionOpen && (
+          <div className="flex flex-col gap-4 p-4 rounded-lg border border-border">
+            {/* actionType */}
+            <Select
+              value={form.actionType}
+              onValueChange={(v) => setField("actionType", v as ActionRegle)}
+            >
+              <SelectTrigger label="Type d'action">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(ActionRegle).map((val) => (
+                  <SelectItem key={val} value={val}>
+                    {ACTION_REGLE_LABELS[val]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Activite section — visible si ACTIVITE ou LES_DEUX */}
+            {(form.actionType === ActionRegle.ACTIVITE || form.actionType === ActionRegle.LES_DEUX) && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                <p className="text-xs font-medium text-primary mb-1">Section activite</p>
+                <p className="text-xs text-muted-foreground">
+                  Les templates d&apos;activite (titre, description, instructions) et la priorite sont configures dans la section ci-dessous.
+                </p>
+              </div>
+            )}
+
+            {/* Notification section — visible si NOTIFICATION ou LES_DEUX */}
+            {(form.actionType === ActionRegle.NOTIFICATION || form.actionType === ActionRegle.LES_DEUX) && (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-start gap-2 rounded-lg border border-accent-amber/20 bg-accent-amber/5 p-3">
+                  <Info className="h-4 w-4 text-accent-amber shrink-0 mt-0.5" />
+                  <p className="text-xs text-muted-foreground">
+                    Une alerte sera envoyee aux utilisateurs quand la regle se declenche.
+                    Configurez ici le contenu et la severite de l&apos;alerte.
+                  </p>
+                </div>
+
+                {/* Severite */}
+                <Select
+                  value={form.severite}
+                  onValueChange={(v) => {
+                    setField("severite", v as SeveriteAlerte);
+                    setErrors((prev) => ({ ...prev, severite: undefined }));
+                  }}
+                >
+                  <SelectTrigger
+                    label="Severite de l'alerte"
+                    error={errors.severite}
+                  >
+                    <SelectValue placeholder="Choisir une severite..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(SeveriteAlerte).map((val) => (
+                      <SelectItem key={val} value={val}>
+                        {SEVERITE_ALERTE_LABELS[val]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Titre notification template */}
+                <TemplateField
+                  id="titreNotificationTemplate"
+                  label="Titre de l'alerte"
+                  value={form.titreNotificationTemplate}
+                  onChange={(v) => setField("titreNotificationTemplate", v)}
+                  placeholder="Ex: Densite elevee — Bac {bac}"
+                  rows={2}
+                  required
+                  error={errors.titreNotificationTemplate}
+                  textareaRef={titreNotifRef}
+                  onFocus={() => setActive(titreNotifRef)}
+                />
+
+                {/* Description notification template */}
+                <TemplateField
+                  id="descriptionNotificationTemplate"
+                  label="Description de l'alerte (optionnel)"
+                  value={form.descriptionNotificationTemplate}
+                  onChange={(v) => setField("descriptionNotificationTemplate", v)}
+                  placeholder="Ex: Densite : {valeur} kg/m3 — Action requise"
+                  rows={3}
+                  textareaRef={descriptionNotifRef}
+                  onFocus={() => setActive(descriptionNotifRef)}
+                />
+
+                {/* actionPayloadType */}
+                <Select
+                  value={form.actionPayloadType}
+                  onValueChange={(v) => setField("actionPayloadType", v === "__none__" ? "" : v)}
+                >
+                  <SelectTrigger label="Bouton d'action dans l'alerte (optionnel)">
+                    <SelectValue placeholder="Aucune action" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">
+                      {ACTION_PAYLOAD_TYPE_LABELS[""]}
+                    </SelectItem>
+                    {(["CREER_RELEVE", "MODIFIER_BAC", "VOIR_VAGUE", "VOIR_STOCK"] as const).map((val) => (
+                      <SelectItem key={val} value={val}>
+                        {ACTION_PAYLOAD_TYPE_LABELS[val]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Section 2 — Identite & Templates (activite) */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="flex flex-col gap-2">
+        <SectionHeader
+          title={form.actionType === ActionRegle.NOTIFICATION ? "Identite de la regle" : "Identite et templates"}
           open={section2Open}
           onToggle={() => setSection2Open(!section2Open)}
           badge="requis"
@@ -712,67 +885,87 @@ export function RegleFormClient() {
               maxLength={100}
             />
 
-            {/* titreTemplate */}
-            <div className="flex flex-col gap-1.5">
-              <TemplateField
-                id="titreTemplate"
-                label="Titre de l'activite"
+            {/* Templates activite — visibles seulement si ACTIVITE ou LES_DEUX */}
+            {(form.actionType === ActionRegle.ACTIVITE || form.actionType === ActionRegle.LES_DEUX) && (
+              <>
+                {/* titreTemplate */}
+                <div className="flex flex-col gap-1.5">
+                  <TemplateField
+                    id="titreTemplate"
+                    label="Titre de l'activite"
+                    value={form.titreTemplate}
+                    onChange={(v) => setField("titreTemplate", v)}
+                    placeholder="Ex: Distribuer {quantite_calculee}kg de granule en {bac}"
+                    rows={2}
+                    required
+                    error={errors.titreTemplate}
+                    textareaRef={titreRef}
+                    onFocus={() => setActive(titreRef)}
+                  />
+                  {/* Preview titre */}
+                  <TitrePreview titreTemplate={form.titreTemplate} />
+                </div>
+
+                {/* descriptionTemplate */}
+                <TemplateField
+                  id="descriptionTemplate"
+                  label="Description de l'activite (optionnel)"
+                  value={form.descriptionTemplate}
+                  onChange={(v) => setField("descriptionTemplate", v)}
+                  placeholder="Ex: Poids moyen {poids_moyen}g — semaine {semaine} du cycle"
+                  rows={3}
+                  textareaRef={descriptionRef}
+                  onFocus={() => setActive(descriptionRef)}
+                />
+
+                {/* instructionsTemplate */}
+                <TemplateField
+                  id="instructionsTemplate"
+                  label="Instructions detaillees (optionnel)"
+                  value={form.instructionsTemplate}
+                  onChange={(v) => setField("instructionsTemplate", v)}
+                  placeholder={"1. Premiere etape\n2. Deuxieme etape\n3. Verifier le resultat"}
+                  rows={8}
+                  hint="Format recommande : 1. Premiere etape\n2. Deuxieme etape"
+                  textareaRef={instructionsRef}
+                  onFocus={() => setActive(instructionsRef)}
+                />
+              </>
+            )}
+
+            {/* titreTemplate minimal requis pour les notifications (utilise comme fallback) */}
+            {form.actionType === ActionRegle.NOTIFICATION && (
+              <Input
+                label="Nom interne de la regle (pour les logs)"
                 value={form.titreTemplate}
-                onChange={(v) => setField("titreTemplate", v)}
-                placeholder="Ex: Distribuer {quantite_calculee}kg de granule en {bac}"
-                rows={2}
-                required
+                onChange={(e) => setField("titreTemplate", e.target.value)}
+                placeholder="Ex: Alerte densite elevee"
                 error={errors.titreTemplate}
-                textareaRef={titreRef}
-                onFocus={() => setActive(titreRef)}
+                required
+                maxLength={200}
               />
-              {/* Preview titre */}
-              <TitrePreview titreTemplate={form.titreTemplate} />
-            </div>
-
-            {/* descriptionTemplate */}
-            <TemplateField
-              id="descriptionTemplate"
-              label="Description (optionnel)"
-              value={form.descriptionTemplate}
-              onChange={(v) => setField("descriptionTemplate", v)}
-              placeholder="Ex: Poids moyen {poids_moyen}g — semaine {semaine} du cycle"
-              rows={3}
-              textareaRef={descriptionRef}
-              onFocus={() => setActive(descriptionRef)}
-            />
-
-            {/* instructionsTemplate */}
-            <TemplateField
-              id="instructionsTemplate"
-              label="Instructions detaillees (optionnel)"
-              value={form.instructionsTemplate}
-              onChange={(v) => setField("instructionsTemplate", v)}
-              placeholder={"1. Premiere etape\n2. Deuxieme etape\n3. Verifier le resultat"}
-              rows={8}
-              hint="Format recommande : 1. Premiere etape\n2. Deuxieme etape"
-              textareaRef={instructionsRef}
-              onFocus={() => setActive(instructionsRef)}
-            />
+            )}
 
             {/* Placeholder helper panel (mobile: collapsible) */}
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => setPlaceholderOpen(!placeholderOpen)}
-                className="inline-flex items-center gap-2 text-sm text-primary hover:underline min-h-[44px]"
-              >
-                {placeholderOpen ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
+            {(form.actionType === ActionRegle.ACTIVITE || form.actionType === ActionRegle.LES_DEUX) && (
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPlaceholderOpen(!placeholderOpen)}
+                  className="inline-flex items-center gap-2 text-sm text-primary hover:underline min-h-[44px]"
+                >
+                  {placeholderOpen ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                  Afficher les placeholders disponibles
+                </button>
+                {placeholderOpen && (
+                  <PlaceholderPanel onInsert={insertPlaceholder} />
                 )}
-                Afficher les placeholders disponibles
-              </button>
-              {placeholderOpen && (
-                <PlaceholderPanel onInsert={insertPlaceholder} />
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
       </div>

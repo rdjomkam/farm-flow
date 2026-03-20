@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Lock, Globe, Building2, Activity } from "lucide-react";
+import { Lock, Globe, Building2, Activity, Bell, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { TypeDeclencheur, TypeActivite, LogiqueCondition } from "@/types";
+import { ActionRegle, TypeDeclencheur, TypeActivite, LogiqueCondition } from "@/types";
 import type { RegleActiviteWithCount } from "@/types";
 import {
+  ACTION_REGLE_LABELS,
   TYPE_ACTIVITE_LABELS,
   TYPE_DECLENCHEUR_LABELS,
   SEUIL_TYPES_FIREDONCE,
@@ -99,6 +100,23 @@ export function RegleCard({ regle, onToggle, isToggling, canManage, canManageGlo
                 regle.typeDeclencheur as TypeDeclencheur
               ] ?? regle.typeDeclencheur}
             </Badge>
+
+            {/* ActionRegle badge */}
+            {regle.actionType && regle.actionType !== ActionRegle.ACTIVITE && (
+              <span className={[
+                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+                regle.actionType === ActionRegle.NOTIFICATION
+                  ? "bg-accent-amber-muted text-accent-amber"
+                  : "bg-primary/10 text-primary",
+              ].join(" ")}>
+                {regle.actionType === ActionRegle.NOTIFICATION ? (
+                  <Bell className="h-3 w-3" />
+                ) : (
+                  <Zap className="h-3 w-3" />
+                )}
+                {ACTION_REGLE_LABELS[regle.actionType as ActionRegle] ?? regle.actionType}
+              </span>
+            )}
 
             {/* Scope */}
             {isGlobal ? (

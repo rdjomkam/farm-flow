@@ -1213,6 +1213,21 @@ export interface ActiviteWithRelations extends Activite {
 // ---------------------------------------------------------------------------
 
 /**
+ * ActionRegle — Type d'action executee lorsqu'une regle se declenche.
+ *
+ * - ACTIVITE     : cree une Activite planifiee (comportement historique)
+ * - NOTIFICATION : cree une Notification (alerte) a destination des utilisateurs
+ * - LES_DEUX     : cree a la fois une Activite ET une Notification
+ *
+ * Sprint 29 (ADR-action-regle)
+ */
+export enum ActionRegle {
+  ACTIVITE = "ACTIVITE",
+  NOTIFICATION = "NOTIFICATION",
+  LES_DEUX = "LES_DEUX",
+}
+
+/**
  * OperateurCondition — Operateur de comparaison utilise dans une ConditionRegle.
  *
  * Semantique :
@@ -1363,6 +1378,18 @@ export interface RegleActivite {
    * Ignoree si conditions est vide.
    */
   logique: LogiqueCondition;
+
+  // ---- Action executee au declenchement (Sprint 29) ----
+  /** Type d'action : ACTIVITE (defaut), NOTIFICATION ou LES_DEUX */
+  actionType: ActionRegle;
+  /** Severite de la notification (requis si actionType != ACTIVITE) */
+  severite: SeveriteAlerte | null;
+  /** Template du titre de la notification (requis si actionType != ACTIVITE) */
+  titreNotificationTemplate: string | null;
+  /** Template de la description de la notification (optionnel) */
+  descriptionNotificationTemplate: string | null;
+  /** Type du CTA dans la notification (null = pas de bouton d'action) */
+  actionPayloadType: string | null;
 
   createdAt: Date;
   updatedAt: Date;

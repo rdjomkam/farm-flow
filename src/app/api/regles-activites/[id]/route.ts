@@ -6,13 +6,15 @@ import {
 } from "@/lib/queries/regles-activites";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { TypeActivite, TypeDeclencheur, OperateurCondition, LogiqueCondition, Permission } from "@/types";
-import { validateTemplatePlaceholders } from "@/lib/regles-activites-constants";
+import { ActionRegle, SeveriteAlerte, TypeActivite, TypeDeclencheur, OperateurCondition, LogiqueCondition, Permission } from "@/types";
+import { validateTemplatePlaceholders, VALID_ACTION_PAYLOAD_TYPES } from "@/lib/regles-activites-constants";
 import type { UpdateRegleActiviteDTO } from "@/types";
 
 const VALID_OPERATEUR_PUT = Object.values(OperateurCondition);
 const VALID_LOGIQUE_PUT = Object.values(LogiqueCondition);
 const VALID_TYPE_DECLENCHEUR_PUT = Object.values(TypeDeclencheur);
+const VALID_ACTION_REGLE_PUT = Object.values(ActionRegle);
+const VALID_SEVERITE_PUT = Object.values(SeveriteAlerte);
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -153,6 +155,55 @@ export async function PUT(request: NextRequest, { params }: Params) {
       errors.push({ field: "logique", message: `Valeur invalide. Valeurs valides : ${VALID_LOGIQUE_PUT.join(", ")}` });
     }
 
+    // --- actionType & notification fields validation ---
+    if (body.actionType !== undefined && !VALID_ACTION_REGLE_PUT.includes(body.actionType as ActionRegle)) {
+      errors.push({
+        field: "actionType",
+        message: `Valeur invalide. Valeurs valides : ${VALID_ACTION_REGLE_PUT.join(", ")}`,
+      });
+    }
+
+    if (body.actionType !== undefined) {
+      const actionTypeValue = body.actionType as ActionRegle;
+      const needsNotification = actionTypeValue === ActionRegle.NOTIFICATION || actionTypeValue === ActionRegle.LES_DEUX;
+      if (needsNotification) {
+        if (body.severite !== undefined && !VALID_SEVERITE_PUT.includes(body.severite as SeveriteAlerte)) {
+          errors.push({ field: "severite", message: `Valeur invalide. Valeurs valides : ${VALID_SEVERITE_PUT.join(", ")}` });
+        }
+        if (body.severite === undefined || body.severite === null) {
+          errors.push({ field: "severite", message: "severite est requis pour les actions NOTIFICATION et LES_DEUX." });
+        }
+        if (!body.titreNotificationTemplate || typeof body.titreNotificationTemplate !== "string" || body.titreNotificationTemplate.trim().length < 5) {
+          errors.push({ field: "titreNotificationTemplate", message: "titreNotificationTemplate est requis (min 5 caracteres) pour les actions NOTIFICATION et LES_DEUX." });
+        }
+      }
+    }
+
+    if (body.severite !== undefined && body.severite !== null && !VALID_SEVERITE_PUT.includes(body.severite as SeveriteAlerte)) {
+      errors.push({ field: "severite", message: `Valeur invalide. Valeurs valides : ${VALID_SEVERITE_PUT.join(", ")}` });
+    }
+
+    if (body.titreNotificationTemplate !== undefined && body.titreNotificationTemplate !== null) {
+      if (typeof body.titreNotificationTemplate !== "string" || body.titreNotificationTemplate.length > 200) {
+        errors.push({ field: "titreNotificationTemplate", message: "titreNotificationTemplate ne doit pas depasser 200 caracteres." });
+      }
+    }
+
+    if (body.descriptionNotificationTemplate !== undefined && body.descriptionNotificationTemplate !== null) {
+      if (typeof body.descriptionNotificationTemplate !== "string" || body.descriptionNotificationTemplate.length > 500) {
+        errors.push({ field: "descriptionNotificationTemplate", message: "descriptionNotificationTemplate ne doit pas depasser 500 caracteres." });
+      }
+    }
+
+    if (body.actionPayloadType !== undefined && body.actionPayloadType !== null && body.actionPayloadType !== "") {
+      if (!VALID_ACTION_PAYLOAD_TYPES.includes(body.actionPayloadType as typeof VALID_ACTION_PAYLOAD_TYPES[number])) {
+        errors.push({
+          field: "actionPayloadType",
+          message: `Valeur invalide. Valeurs valides : ${VALID_ACTION_PAYLOAD_TYPES.join(", ")} (ou null pour aucune action).`,
+        });
+      }
+    }
+
     if (body.conditions !== undefined) {
       if (!Array.isArray(body.conditions)) {
         errors.push({ field: "conditions", message: "conditions doit etre un tableau." });
@@ -215,6 +266,12 @@ export async function PUT(request: NextRequest, { params }: Params) {
       ...(body.isActive !== undefined && { isActive: body.isActive }),
       ...(body.logique !== undefined && { logique: body.logique as LogiqueCondition }),
       ...(body.conditions !== undefined && { conditions: body.conditions }),
+      // Sprint 29 — actionType & notification fields
+      ...(body.actionType !== undefined && { actionType: body.actionType as ActionRegle }),
+      ...(body.severite !== undefined && { severite: body.severite as SeveriteAlerte }),
+      ...(body.titreNotificationTemplate !== undefined && { titreNotificationTemplate: body.titreNotificationTemplate }),
+      ...(body.descriptionNotificationTemplate !== undefined && { descriptionNotificationTemplate: body.descriptionNotificationTemplate }),
+      ...("actionPayloadType" in body && { actionPayloadType: body.actionPayloadType ?? null }),
     };
 
     const regle = await updateRegleActivite(id, auth.activeSiteId, data, {

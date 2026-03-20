@@ -58,6 +58,8 @@ export {
   OperateurCondition,
   LogiqueCondition,
   SeveriteAlerte,
+  // Sprint 29 — Action regle
+  ActionRegle,
 } from "./models";
 export type {
   Site,

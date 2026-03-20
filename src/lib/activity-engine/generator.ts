@@ -14,6 +14,10 @@
 import { prisma } from "@/lib/db";
 import type { RegleActivite, ConfigElevage, CustomPlaceholder } from "@/types";
 import {
+  ActionRegle,
+  SeveriteAlerte,
+  StatutAlerte,
+  TypeAlerte,
   TypeDeclencheur,
   TypeActivite,
   StatutActivite,
@@ -81,6 +85,82 @@ async function hasDuplicateToday(
   });
 
   return existing !== null;
+}
+
+/**
+ * Verifie si une notification avec le meme titre + siteId existe deja aujourd'hui.
+ * Simple deduplication pour les notifications generees par les regles.
+ */
+async function hasDuplicateNotificationToday(
+  tx: Omit<typeof prisma, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">,
+  titre: string,
+  siteId: string
+): Promise<boolean> {
+  const WAT_OFFSET_MS = 1 * 60 * 60 * 1000;
+  const nowWAT = new Date(Date.now() + WAT_OFFSET_MS);
+  const startOfDayWAT = new Date(nowWAT);
+  startOfDayWAT.setHours(0, 0, 0, 0);
+
+  const existing = await tx.notification.findFirst({
+    where: {
+      titre,
+      siteId,
+      createdAt: {
+        gte: new Date(startOfDayWAT.getTime() - WAT_OFFSET_MS),
+      },
+    },
+    select: { id: true },
+  });
+
+  return existing !== null;
+}
+
+/**
+ * Mappe un TypeDeclencheur vers un TypeAlerte pour les notifications.
+ */
+function mapDeclencheurToTypeAlerte(typeDeclencheur: TypeDeclencheur): TypeAlerte {
+  switch (typeDeclencheur) {
+    case TypeDeclencheur.SEUIL_MORTALITE:
+      return TypeAlerte.MORTALITE_ELEVEE;
+    case TypeDeclencheur.SEUIL_QUALITE:
+    case TypeDeclencheur.SEUIL_AMMONIAC:
+    case TypeDeclencheur.SEUIL_OXYGENE:
+    case TypeDeclencheur.SEUIL_PH:
+    case TypeDeclencheur.SEUIL_TEMPERATURE:
+      return TypeAlerte.QUALITE_EAU;
+    case TypeDeclencheur.STOCK_BAS:
+      return TypeAlerte.STOCK_BAS;
+    case TypeDeclencheur.SEUIL_DENSITE:
+      return TypeAlerte.DENSITE_ELEVEE;
+    case TypeDeclencheur.SEUIL_RENOUVELLEMENT:
+      return TypeAlerte.RENOUVELLEMENT_EAU_INSUFFISANT;
+    case TypeDeclencheur.ABSENCE_RELEVE:
+      return TypeAlerte.AUCUN_RELEVE_QUALITE_EAU;
+    default:
+      return TypeAlerte.PERSONNALISEE;
+  }
+}
+
+/**
+ * Construit le payload JSON du CTA de la notification.
+ */
+function buildActionPayload(
+  actionPayloadType: string | null | undefined,
+  context: { bacId: string | null; vagueId: string }
+): Record<string, unknown> | null {
+  if (!actionPayloadType) return null;
+  switch (actionPayloadType) {
+    case "CREER_RELEVE":
+      return { type: "CREER_RELEVE", bacId: context.bacId, vagueId: context.vagueId };
+    case "MODIFIER_BAC":
+      return { type: "MODIFIER_BAC", bacId: context.bacId };
+    case "VOIR_VAGUE":
+      return { type: "VOIR_VAGUE", vagueId: context.vagueId };
+    case "VOIR_STOCK":
+      return { type: "VOIR_STOCK" };
+    default:
+      return null;
+  }
 }
 
 /**
@@ -260,16 +340,22 @@ export async function generateActivities(
     for (const match of sorted) {
       try {
         const { regle } = match;
+        // Sprint 29 — read actionType (default ACTIVITE for backward compat)
+        const actionType: ActionRegle = (regle.actionType as ActionRegle) ?? ActionRegle.ACTIVITE;
+        const createActivite = actionType === ActionRegle.ACTIVITE || actionType === ActionRegle.LES_DEUX;
+        const createNotification = actionType === ActionRegle.NOTIFICATION || actionType === ActionRegle.LES_DEUX;
 
         await prisma.$transaction(async (tx) => {
-          // EC-3.1 : deduplication dans la transaction
-          const duplicate = await hasDuplicateToday(tx, regle.id, match.vague.id, match.bacId);
-          if (duplicate) {
-            result.skipped++;
-            return;
+          // EC-3.1 : deduplication activite
+          if (createActivite) {
+            const duplicate = await hasDuplicateToday(tx, regle.id, match.vague.id, match.bacId);
+            if (duplicate && !createNotification) {
+              result.skipped++;
+              return;
+            }
           }
 
-          // Construire le payload
+          // Construire le payload de l'activite (toujours, pour les placeholders)
           const payload = buildGeneratedActivity(
             match,
             siteId,
@@ -279,49 +365,138 @@ export async function generateActivities(
             customPlaceholders
           );
 
-          // Creer l'activite
-          await tx.activite.create({
-            data: {
-              titre: payload.titre,
-              description: payload.description,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              typeActivite: payload.typeActivite as any,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              statut: payload.statut as any,
-              dateDebut: payload.dateDebut,
-              dateFin: payload.dateFin,
-              recurrence: payload.recurrence,
-              vagueId: payload.vagueId,
-              bacId: payload.bacId,
-              assigneAId: payload.assigneAId,
-              userId: payload.userId,
-              siteId: payload.siteId,
-              regleId: payload.regleId,
-              instructionsDetaillees: payload.instructionsDetaillees,
-              conseilIA: payload.conseilIA,
-              produitRecommandeId: payload.produitRecommandeId,
-              quantiteRecommandee: payload.quantiteRecommandee,
-              priorite: payload.priorite,
-              isAutoGenerated: true,
-              // Cast: context.phase est string | null, Prisma attend PhaseElevage enum
-              // Les valeurs sont identiques au runtime (ex: "GROSSISSEMENT")
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              phaseElevage: (payload.phaseElevage as any) ?? null,
-            },
-          });
+          let createdSomething = false;
 
-          // EC-3.2 : marquer firedOnce=true pour les SEUIL_* (operation atomique R4)
-          if (FIRED_ONCE_TYPES.includes(regle.typeDeclencheur as TypeDeclencheur)) {
-            await tx.regleActivite.updateMany({
-              where: {
-                id: regle.id,
-                firedOnce: false, // Condition atomique — evite la race condition
-              },
-              data: { firedOnce: true },
-            });
+          // ---- Creer l'activite si applicable ----
+          if (createActivite) {
+            const dupActivite = await hasDuplicateToday(tx, regle.id, match.vague.id, match.bacId);
+            if (!dupActivite) {
+              await tx.activite.create({
+                data: {
+                  titre: payload.titre,
+                  description: payload.description,
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  typeActivite: payload.typeActivite as any,
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  statut: payload.statut as any,
+                  dateDebut: payload.dateDebut,
+                  dateFin: payload.dateFin,
+                  recurrence: payload.recurrence,
+                  vagueId: payload.vagueId,
+                  bacId: payload.bacId,
+                  assigneAId: payload.assigneAId,
+                  userId: payload.userId,
+                  siteId: payload.siteId,
+                  regleId: payload.regleId,
+                  instructionsDetaillees: payload.instructionsDetaillees,
+                  conseilIA: payload.conseilIA,
+                  produitRecommandeId: payload.produitRecommandeId,
+                  quantiteRecommandee: payload.quantiteRecommandee,
+                  priorite: payload.priorite,
+                  isAutoGenerated: true,
+                  // Cast: context.phase est string | null, Prisma attend PhaseElevage enum
+                  // Les valeurs sont identiques au runtime (ex: "GROSSISSEMENT")
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  phaseElevage: (payload.phaseElevage as any) ?? null,
+                },
+              });
+              createdSomething = true;
+            }
           }
 
-          result.created++;
+          // ---- Creer la notification si applicable ----
+          if (createNotification) {
+            // Resoudre les templates de notification via le meme moteur de placeholders
+            const { regle: r, context } = match;
+            const notifPlaceholders = buildPlaceholders(
+              {
+                joursEcoules: context.joursEcoules,
+                semaine: context.semaine,
+                vague: { code: context.vague.code },
+                indicateurs: {
+                  poidsMoyen: context.indicateurs.poidsMoyen,
+                  fcr: context.indicateurs.fcr,
+                  sgr: context.indicateurs.sgr,
+                  tauxSurvie: context.indicateurs.tauxSurvie,
+                  tauxMortaliteCumule: context.indicateurs.tauxMortaliteCumule,
+                  biomasse: context.indicateurs.biomasse,
+                },
+                derniersReleves: context.derniersReleves.map((rel) => ({
+                  typeReleve: rel.typeReleve,
+                  tailleMoyenne: rel.tailleMoyenne,
+                  date: rel.date,
+                })),
+              },
+              {
+                quantiteCalculee: null,
+                produitNom: null,
+                seuilValeur: r.conditionValeur,
+                quantiteRegle: null,
+                tailleGranule: null,
+                dureeEstimee: 180,
+                stockQte: null,
+                tauxRationnement: null,
+                bacNom: match.bacNom,
+                prixMarcheKg: null,
+              },
+              customPlaceholders,
+              context
+            );
+
+            const notifTitre = r.titreNotificationTemplate
+              ? resolveTemplate(r.titreNotificationTemplate, notifPlaceholders)
+              : payload.titre;
+
+            const notifMessage = r.descriptionNotificationTemplate
+              ? resolveTemplate(r.descriptionNotificationTemplate, notifPlaceholders)
+              : payload.description ?? notifTitre;
+
+            // Deduplication : pas deux fois le meme titre sur le meme site aujourd'hui
+            const dupNotif = await hasDuplicateNotificationToday(tx, notifTitre, siteId);
+            if (!dupNotif) {
+              const typeAlerte = mapDeclencheurToTypeAlerte(r.typeDeclencheur as TypeDeclencheur);
+              const severite: SeveriteAlerte = (r.severite as SeveriteAlerte) ?? SeveriteAlerte.INFO;
+
+              const actionPayload = buildActionPayload(r.actionPayloadType, {
+                bacId: match.bacId,
+                vagueId: match.vague.id,
+              });
+
+              await tx.notification.create({
+                data: {
+                  titre: notifTitre,
+                  message: notifMessage,
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  typeAlerte: typeAlerte as any,
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  severite: severite as any,
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  statut: StatutAlerte.ACTIVE as any,
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  actionPayload: (actionPayload ?? undefined) as any,
+                  siteId,
+                  userId: systemUserId,
+                },
+              });
+              createdSomething = true;
+            }
+          }
+
+          if (createdSomething) {
+            // EC-3.2 : marquer firedOnce=true pour les SEUIL_* (operation atomique R4)
+            if (FIRED_ONCE_TYPES.includes(regle.typeDeclencheur as TypeDeclencheur)) {
+              await tx.regleActivite.updateMany({
+                where: {
+                  id: regle.id,
+                  firedOnce: false, // Condition atomique — evite la race condition
+                },
+                data: { firedOnce: true },
+              });
+            }
+            result.created++;
+          } else {
+            result.skipped++;
+          }
         });
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);

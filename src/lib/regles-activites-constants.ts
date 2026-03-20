@@ -22,7 +22,7 @@
  * ```
  */
 
-import { LogiqueCondition, OperateurCondition, PhaseElevage, TypeActivite, TypeDeclencheur } from "@/types";
+import { ActionRegle, LogiqueCondition, OperateurCondition, PhaseElevage, SeveriteAlerte, TypeActivite, TypeDeclencheur } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Placeholders
@@ -291,6 +291,51 @@ export const OPERATEUR_CONDITION_LABELS: Record<OperateurCondition, string> = {
   [OperateurCondition.ENTRE]:     "Entre",
   [OperateurCondition.EGAL]:      "Egal a",
 };
+
+// ---------------------------------------------------------------------------
+// Labels FR — ActionRegle
+// ---------------------------------------------------------------------------
+
+/**
+ * Labels en francais pour l'affichage UI de chaque ActionRegle.
+ */
+export const ACTION_REGLE_LABELS: Record<ActionRegle, string> = {
+  [ActionRegle.ACTIVITE]:     "Creer une activite",
+  [ActionRegle.NOTIFICATION]: "Envoyer une alerte",
+  [ActionRegle.LES_DEUX]:    "Activite + Alerte",
+};
+
+// ---------------------------------------------------------------------------
+// Labels FR — SeveriteAlerte (dans le contexte des regles)
+// ---------------------------------------------------------------------------
+
+/**
+ * Labels en francais pour les niveaux de severite d'une notification.
+ */
+export const SEVERITE_ALERTE_LABELS: Record<SeveriteAlerte, string> = {
+  [SeveriteAlerte.INFO]:          "Information",
+  [SeveriteAlerte.AVERTISSEMENT]: "Avertissement",
+  [SeveriteAlerte.CRITIQUE]:      "Critique",
+};
+
+// ---------------------------------------------------------------------------
+// Labels FR — actionPayloadType
+// ---------------------------------------------------------------------------
+
+/**
+ * Options de CTA (Call-To-Action) dans une notification generee par une regle.
+ */
+export const ACTION_PAYLOAD_TYPE_LABELS: Record<string, string> = {
+  "":            "Aucune action (alerte simple)",
+  CREER_RELEVE:  "Creer un releve",
+  MODIFIER_BAC:  "Modifier le bac",
+  VOIR_VAGUE:    "Voir la vague",
+  VOIR_STOCK:    "Voir le stock",
+};
+
+/** Valeurs valides pour actionPayloadType */
+export const VALID_ACTION_PAYLOAD_TYPES = ["CREER_RELEVE", "MODIFIER_BAC", "VOIR_VAGUE", "VOIR_STOCK"] as const;
+export type ActionPayloadType = typeof VALID_ACTION_PAYLOAD_TYPES[number];
 
 // ---------------------------------------------------------------------------
 // Labels FR — LogiqueCondition
