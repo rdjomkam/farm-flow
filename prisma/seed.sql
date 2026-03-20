@@ -2247,5 +2247,37 @@ VALUES
 ('cond_r6_c1', 'rule_densite_nh3_critique','SEUIL_DENSITE',        'SUPERIEUR', 200.0, NULL, 0),
 ('cond_r6_c2', 'rule_densite_nh3_critique','SEUIL_AMMONIAC',       'SUPERIEUR', 0.05,  NULL, 1);
 
+-- ============================================================
+-- Sprint 30 — Abonnements & Plans (seed données de test)
+-- ============================================================
+
+-- Plans d'abonnement (4 plans)
+INSERT INTO "PlanAbonnement" (id, nom, "typePlan", description, "prixMensuel", "prixTrimestriel", "prixAnnuel", "limitesSites", "limitesBacs", "limitesVagues", "limitesIngFermes", "isActif", "isPublic", "createdAt", "updatedAt")
+VALUES
+  ('plan_decouverte', 'Découverte', 'DECOUVERTE', 'Plan gratuit pour démarrer', NULL, NULL, NULL, 1, 3, 1, NULL, true, true, NOW(), NOW()),
+  ('plan_eleveur', 'Éleveur', 'ELEVEUR', 'Pour les petits éleveurs', 3000, 7500, 25000, 1, 10, 3, NULL, true, true, NOW(), NOW()),
+  ('plan_professionnel', 'Professionnel', 'PROFESSIONNEL', 'Pour les éleveurs professionnels', 8000, 20000, 70000, 3, 30, 10, NULL, true, true, NOW(), NOW()),
+  ('plan_ing_pro', 'Ingénieur Pro', 'INGENIEUR_PRO', 'Pour les ingénieurs piscicoles supervisants', 15000, NULL, 135000, 1, 3, 1, 20, true, true, NOW(), NOW())
+ON CONFLICT ("typePlan") DO NOTHING;
+
+-- Remises (2 remises early adopter et bienvenue)
+INSERT INTO "Remise" (id, nom, code, type, valeur, "estPourcentage", "dateDebut", "dateFin", "limiteUtilisations", "nombreUtilisations", "isActif", "userId", "createdAt", "updatedAt")
+VALUES
+  ('remise_early', 'Early Adopter 2026', 'EARLY2026', 'EARLY_ADOPTER', 50, true, NOW(), NOW() + INTERVAL '6 months', 100, 0, true, 'user_admin', NOW(), NOW()),
+  ('remise_bienvenue', 'Bienvenue', 'BIENVENUE10', 'MANUELLE', 10, true, NOW(), NULL, NULL, 0, true, 'user_admin', NOW(), NOW())
+ON CONFLICT (code) DO NOTHING;
+
+-- Abonnement ACTIF pour le site de test (site_01)
+INSERT INTO "Abonnement" (id, "siteId", "planId", periode, statut, "dateDebut", "dateFin", "dateProchainRenouvellement", "prixPaye", "userId", "createdAt", "updatedAt")
+VALUES
+  ('abo_site_01', 'site_01', 'plan_eleveur', 'MENSUEL', 'ACTIF', NOW(), NOW() + INTERVAL '1 month', NOW() + INTERVAL '1 month', 3000, 'user_admin', NOW(), NOW())
+ON CONFLICT DO NOTHING;
+
+-- Paiement CONFIRME pour l''abonnement de test
+INSERT INTO "PaiementAbonnement" (id, "abonnementId", montant, fournisseur, statut, "initiePar", "dateInitiation", "dateConfirmation", "siteId", "createdAt", "updatedAt")
+VALUES
+  ('paie_abo_01', 'abo_site_01', 3000, 'MANUEL', 'CONFIRME', 'user_admin', NOW(), NOW(), 'site_01', NOW(), NOW())
+ON CONFLICT DO NOTHING;
+
 COMMIT;
 

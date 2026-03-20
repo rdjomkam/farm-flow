@@ -166,56 +166,6 @@ const modulesAdminGerant: { label: string; primaryHref: string; icon: React.Comp
 ];
 
 // ---------------------------------------------------------------------------
-// Modules INGENIEUR
-// ---------------------------------------------------------------------------
-
-const modulesIngenieur: { label: string; primaryHref: string; icon: React.ComponentType<{ className?: string }>; items: NavItem[] }[] = [
-  {
-    label: "Clients",
-    primaryHref: "/ingenieur",
-    icon: Users,
-    items: [
-      { href: "/ingenieur", label: "Dashboard clients", icon: LayoutDashboard },
-    ],
-  },
-  {
-    label: "Notes",
-    primaryHref: "/notes",
-    icon: NotebookPen,
-    items: [
-      { href: "/notes", label: "Mes notes", icon: NotebookPen },
-    ],
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Modules PISCICULTEUR
-// ---------------------------------------------------------------------------
-
-const modulesPisciculteur: { label: string; primaryHref: string; icon: React.ComponentType<{ className?: string }>; items: NavItem[] }[] = [
-  {
-    label: "Elevage",
-    primaryHref: "/vagues",
-    icon: Waves,
-    items: [
-      { href: "/vagues", label: "Vagues", icon: Waves },
-      { href: "/bacs", label: "Bacs", icon: Container },
-      { href: "/releves/nouveau", label: "Nouveau releve", icon: PlusCircle },
-    ],
-  },
-  {
-    label: "Analyse & Pilotage",
-    primaryHref: "/analytics",
-    icon: BarChart3,
-    items: [
-      { href: "/analytics", label: "Vue globale", icon: BarChart3 },
-      { href: "/mes-taches", label: "Mes taches", icon: ClipboardCheck },
-      { href: "/notes", label: "Echanges", icon: NotebookPen },
-    ],
-  },
-];
-
-// ---------------------------------------------------------------------------
 // Phase 3 permission gates
 // ---------------------------------------------------------------------------
 
@@ -295,10 +245,6 @@ export function HamburgerMenu({ open, onOpenChange, permissions, role, userName,
     router.push("/login");
     router.refresh();
   }
-
-  // Suppress unused variable warnings for unused module arrays
-  void modulesIngenieur;
-  void modulesPisciculteur;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

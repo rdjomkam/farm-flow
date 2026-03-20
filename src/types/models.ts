@@ -5,7 +5,9 @@
  * Ils servent de source de verite TypeScript pour le projet.
  *
  * 32 modeles : Site, SiteRole, SiteMember, User, Session, Bac, Vague, Releve, Fournisseur, Produit, MouvementStock, Commande, LigneCommande, ReleveConsommation, Client, Vente, Facture, Paiement, Reproducteur, Ponte, LotAlevins, ConfigAlerte, Notification, Activite, Depense, PaiementDepense, DepenseRecurrente, ListeBesoins, LigneBesoin, RegleActivite, ConditionRegle, NoteIngenieur
+ * + Sprint 30 : PlanAbonnement, Abonnement, PaiementAbonnement, Remise, RemiseApplication, CommissionIngenieur, PortefeuilleIngenieur, RetraitPortefeuille (8 modeles)
  * 36 enums : Role (+ INGENIEUR), Permission (+ 6 Phase 3), StatutVague, TypeReleve (+ RENOUVELLEMENT), TypeAliment, CauseMortalite, MethodeComptage, CategorieProduit, UniteStock, TypeMouvement, StatutCommande, StatutFacture, ModePaiement, SiteModule, SexeReproducteur, StatutReproducteur, StatutPonte, StatutLotAlevins, TypeAlerte (+ 4 density), StatutAlerte, TypeActivite (+ TRI/MEDICATION/RENOUVELLEMENT), StatutActivite, Recurrence, CategorieDepense, StatutDepense, FrequenceRecurrence, StatutBesoins, PhaseElevage, StatutActivation, TypeDeclencheur (+ 3 density), VisibiliteNote, CategorieCalibrage, TypeSystemeBac, OperateurCondition, LogiqueCondition, SeveriteAlerte
+ * + Sprint 30 : TypePlan, PeriodeFacturation, StatutAbonnement, StatutPaiementAbo, TypeRemise, StatutCommissionIng, FournisseurPaiement (7 enums) + 8 nouvelles permissions
  */
 
 // ---------------------------------------------------------------------------
@@ -95,6 +97,15 @@ export enum Permission {
   UTILISATEURS_SUPPRIMER = "UTILISATEURS_SUPPRIMER",
   UTILISATEURS_GERER = "UTILISATEURS_GERER",
   UTILISATEURS_IMPERSONNER = "UTILISATEURS_IMPERSONNER",
+  // Abonnements (Sprint 30)
+  ABONNEMENTS_VOIR = "ABONNEMENTS_VOIR",
+  ABONNEMENTS_GERER = "ABONNEMENTS_GERER",
+  PLANS_GERER = "PLANS_GERER",
+  REMISES_GERER = "REMISES_GERER",
+  COMMISSIONS_VOIR = "COMMISSIONS_VOIR",
+  COMMISSIONS_GERER = "COMMISSIONS_GERER",
+  PORTEFEUILLE_VOIR = "PORTEFEUILLE_VOIR",
+  PORTEFEUILLE_GERER = "PORTEFEUILLE_GERER",
 }
 
 // ---------------------------------------------------------------------------
@@ -2238,4 +2249,270 @@ export interface CustomPlaceholder {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// ---------------------------------------------------------------------------
+// Enums — Abonnements & Paiements (Sprint 30)
+// ---------------------------------------------------------------------------
+
+/** Catégorie de plan d'abonnement — R1 : MAJUSCULES */
+export enum TypePlan {
+  DECOUVERTE = "DECOUVERTE",
+  ELEVEUR = "ELEVEUR",
+  PROFESSIONNEL = "PROFESSIONNEL",
+  ENTREPRISE = "ENTREPRISE",
+  INGENIEUR_STARTER = "INGENIEUR_STARTER",
+  INGENIEUR_PRO = "INGENIEUR_PRO",
+  INGENIEUR_EXPERT = "INGENIEUR_EXPERT",
+}
+
+/** Période de facturation d'un abonnement — R1 : MAJUSCULES */
+export enum PeriodeFacturation {
+  MENSUEL = "MENSUEL",
+  TRIMESTRIEL = "TRIMESTRIEL",
+  ANNUEL = "ANNUEL",
+}
+
+/**
+ * Cycle de vie d'un abonnement — R1 : MAJUSCULES
+ * R2 : utiliser `StatutAbonnement.ACTIF`, jamais `"ACTIF"` directement.
+ */
+export enum StatutAbonnement {
+  ACTIF = "ACTIF",
+  EN_GRACE = "EN_GRACE",
+  SUSPENDU = "SUSPENDU",
+  EXPIRE = "EXPIRE",
+  ANNULE = "ANNULE",
+  EN_ATTENTE_PAIEMENT = "EN_ATTENTE_PAIEMENT",
+}
+
+/** Statut d'une transaction de paiement d'abonnement — R1 : MAJUSCULES */
+export enum StatutPaiementAbo {
+  EN_ATTENTE = "EN_ATTENTE",
+  INITIE = "INITIE",
+  CONFIRME = "CONFIRME",
+  ECHEC = "ECHEC",
+  REMBOURSE = "REMBOURSE",
+  EXPIRE = "EXPIRE",
+}
+
+/** Type de remise ou code promotionnel — R1 : MAJUSCULES */
+export enum TypeRemise {
+  EARLY_ADOPTER = "EARLY_ADOPTER",
+  SAISONNIERE = "SAISONNIERE",
+  PARRAINAGE = "PARRAINAGE",
+  COOPERATIVE = "COOPERATIVE",
+  VOLUME = "VOLUME",
+  MANUELLE = "MANUELLE",
+}
+
+/** Statut d'une commission ingénieur — R1 : MAJUSCULES */
+export enum StatutCommissionIng {
+  EN_ATTENTE = "EN_ATTENTE",
+  DISPONIBLE = "DISPONIBLE",
+  DEMANDEE = "DEMANDEE",
+  PAYEE = "PAYEE",
+  ANNULEE = "ANNULEE",
+}
+
+/** Fournisseur de paiement Mobile Money — R1 : MAJUSCULES */
+export enum FournisseurPaiement {
+  SMOBILPAY = "SMOBILPAY",
+  MTN_MOMO = "MTN_MOMO",
+  ORANGE_MONEY = "ORANGE_MONEY",
+  MANUEL = "MANUEL",
+}
+
+// ---------------------------------------------------------------------------
+// Modèles — Abonnements & Paiements (Sprint 30)
+// ---------------------------------------------------------------------------
+
+/**
+ * PlanAbonnement — Définition immuable d'un palier tarifaire.
+ * Global (non lié à un site spécifique) — pas de siteId (exception R8 documentée).
+ * R3 : miroir exact du modèle Prisma PlanAbonnement.
+ */
+export interface PlanAbonnement {
+  id: string;
+  nom: string;
+  /** TypePlan unique par plan — R2 : utiliser TypePlan.DECOUVERTE */
+  typePlan: TypePlan;
+  description: string | null;
+  /** Prix mensuel en FCFA (null = plan gratuit ou non disponible) */
+  prixMensuel: number | null;
+  /** Prix trimestriel en FCFA (null = non disponible) */
+  prixTrimestriel: number | null;
+  /** Prix annuel en FCFA (null = non disponible) */
+  prixAnnuel: number | null;
+  limitesSites: number;
+  limitesBacs: number;
+  limitesVagues: number;
+  /** Max fermes supervisées — null pour plans non-ingénieur ou illimité */
+  limitesIngFermes: number | null;
+  isActif: boolean;
+  isPublic: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Abonnement — Instance d'un abonnement liant un site à un PlanAbonnement.
+ * R3 : miroir exact du modèle Prisma Abonnement.
+ * R8 : siteId obligatoire.
+ */
+export interface Abonnement {
+  id: string;
+  siteId: string;
+  planId: string;
+  periode: PeriodeFacturation;
+  /** Statut courant — R2 : utiliser StatutAbonnement.ACTIF */
+  statut: StatutAbonnement;
+  dateDebut: Date;
+  dateFin: Date;
+  dateProchainRenouvellement: Date;
+  /** Date de fin de la période de grâce (null si pas en grâce) */
+  dateFinGrace: Date | null;
+  prixPaye: number;
+  /** ID de l'utilisateur souscripteur */
+  userId: string;
+  /** ID de la remise appliquée (null si aucune remise) */
+  remiseId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** Abonnement avec son plan chargé */
+export interface AbonnementWithPlan extends Abonnement {
+  plan: PlanAbonnement;
+}
+
+/**
+ * PaiementAbonnement — Transaction de paiement pour un abonnement.
+ * R3 : miroir exact du modèle Prisma PaiementAbonnement.
+ * R8 : siteId obligatoire.
+ */
+export interface PaiementAbonnement {
+  id: string;
+  abonnementId: string;
+  montant: number;
+  /** R2 : utiliser FournisseurPaiement.SMOBILPAY */
+  fournisseur: FournisseurPaiement;
+  /** R2 : utiliser StatutPaiementAbo.CONFIRME */
+  statut: StatutPaiementAbo;
+  /** Référence externe côté gateway (null avant initiation) */
+  referenceExterne: string | null;
+  phoneNumber: string | null;
+  /** Réponse brute de la gateway (JSON libre) */
+  metadata: Record<string, unknown> | null;
+  /** ID de l'utilisateur ayant initié le paiement */
+  initiePar: string;
+  dateInitiation: Date;
+  dateConfirmation: Date | null;
+  siteId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Remise — Définition d'une remise ou code promotionnel.
+ * R3 : miroir exact du modèle Prisma Remise.
+ * R8 : siteId nullable (remise globale possible).
+ */
+export interface Remise {
+  id: string;
+  nom: string;
+  code: string;
+  /** R2 : utiliser TypeRemise.EARLY_ADOPTER */
+  type: TypeRemise;
+  valeur: number;
+  estPourcentage: boolean;
+  dateDebut: Date;
+  dateFin: Date | null;
+  limiteUtilisations: number | null;
+  nombreUtilisations: number;
+  isActif: boolean;
+  /** null = remise globale DKFarm */
+  siteId: string | null;
+  /** ID de l'utilisateur créateur */
+  userId: string;
+  /** Plan auquel la remise s'applique (null = tous les plans) */
+  planId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * RemiseApplication — Enregistrement d'une remise appliquée à un abonnement.
+ * R3 : miroir exact du modèle Prisma RemiseApplication.
+ */
+export interface RemiseApplication {
+  id: string;
+  remiseId: string;
+  abonnementId: string;
+  montantReduit: number;
+  appliqueLe: Date;
+  userId: string;
+}
+
+/**
+ * CommissionIngenieur — Commission calculée pour un ingénieur.
+ * R3 : miroir exact du modèle Prisma CommissionIngenieur.
+ * R8 : siteId obligatoire.
+ */
+export interface CommissionIngenieur {
+  id: string;
+  /** ID de l'ingénieur percevant la commission */
+  ingenieurId: string;
+  /** ID du site client (ferme supervisée) */
+  siteClientId: string;
+  abonnementId: string;
+  paiementAbonnementId: string;
+  montant: number;
+  /** Taux appliqué (0.10 à 0.20) */
+  taux: number;
+  /** R2 : utiliser StatutCommissionIng.DISPONIBLE */
+  statut: StatutCommissionIng;
+  periodeDebut: Date;
+  periodeFin: Date;
+  siteId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * PortefeuilleIngenieur — Portefeuille financier de l'ingénieur.
+ * R3 : miroir exact du modèle Prisma PortefeuilleIngenieur.
+ * R8 : siteId obligatoire.
+ */
+export interface PortefeuilleIngenieur {
+  id: string;
+  ingenieurId: string;
+  solde: number;
+  soldePending: number;
+  totalGagne: number;
+  totalPaye: number;
+  siteId: string;
+  updatedAt: Date;
+}
+
+/**
+ * RetraitPortefeuille — Demande de virement du portefeuille ingénieur.
+ * R3 : miroir exact du modèle Prisma RetraitPortefeuille.
+ * R8 : siteId obligatoire.
+ */
+export interface RetraitPortefeuille {
+  id: string;
+  portefeuilleId: string;
+  montant: number;
+  /** R2 : utiliser FournisseurPaiement.MTN_MOMO */
+  fournisseur: FournisseurPaiement;
+  phoneNumber: string;
+  /** R2 : utiliser StatutPaiementAbo.CONFIRME */
+  statut: StatutPaiementAbo;
+  referenceExterne: string | null;
+  demandeLeBy: string;
+  traitePar: string | null;
+  dateTraitement: Date | null;
+  siteId: string;
+  createdAt: Date;
 }

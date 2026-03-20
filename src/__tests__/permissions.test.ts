@@ -248,11 +248,11 @@ describe("canAssignRole (anti-escalation)", () => {
 // ===== PERMISSION_GROUPS ===================================================
 
 describe("PERMISSION_GROUPS", () => {
-  it("contient exactement 15 groupes (Sprint 20 : ajout groupes packs/configElevage/ingenieur + utilisateurs)", () => {
-    expect(Object.keys(PERMISSION_GROUPS)).toHaveLength(15);
+  it("contient exactement 16 groupes (Sprint 30 : ajout groupe abonnements)", () => {
+    expect(Object.keys(PERMISSION_GROUPS)).toHaveLength(16);
   });
 
-  it("les 15 groupes attendus existent", () => {
+  it("les 16 groupes attendus existent (Sprint 30 : +abonnements)", () => {
     const groupNames = Object.keys(PERMISSION_GROUPS);
     expect(groupNames).toContain("administration");
     expect(groupNames).toContain("elevage");
@@ -271,9 +271,11 @@ describe("PERMISSION_GROUPS", () => {
     expect(groupNames).toContain("ingenieur");
     // Module Utilisateurs
     expect(groupNames).toContain("utilisateurs");
+    // Sprint 30 — Abonnements
+    expect(groupNames).toContain("abonnements");
   });
 
-  it("couvre exactement toutes les permissions sans doublon (39 depuis Sprint 20)", () => {
+  it("couvre exactement toutes les permissions sans doublon (47 depuis Sprint 30)", () => {
     const allGroupedPerms = Object.values(PERMISSION_GROUPS).flat();
     expect(allGroupedPerms).toHaveLength(ALL_PERMISSIONS.length);
     expect(new Set(allGroupedPerms).size).toBe(ALL_PERMISSIONS.length);

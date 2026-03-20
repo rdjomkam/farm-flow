@@ -139,6 +139,17 @@ export const PERMISSION_GROUPS = {
     Permission.UTILISATEURS_GERER,
     Permission.UTILISATEURS_IMPERSONNER,
   ],
+  // Sprint 30 — Abonnements & Commissions
+  abonnements: [
+    Permission.ABONNEMENTS_VOIR,
+    Permission.ABONNEMENTS_GERER,
+    Permission.PLANS_GERER,
+    Permission.REMISES_GERER,
+    Permission.COMMISSIONS_VOIR,
+    Permission.COMMISSIONS_GERER,
+    Permission.PORTEFEUILLE_VOIR,
+    Permission.PORTEFEUILLE_GERER,
+  ],
 } as const;
 
 // ---------------------------------------------------------------------------

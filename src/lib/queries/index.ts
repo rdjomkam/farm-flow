@@ -214,3 +214,49 @@ export {
   getObservationsClient,
   createObservationClient,
 } from "./notes";
+
+// Sprint 30 — Abonnements & Paiements
+export {
+  getPlansAbonnements,
+  getPlanAbonnementById,
+  createPlanAbonnement,
+  updatePlanAbonnement,
+  togglePlanAbonnement,
+} from "./plans-abonnements";
+
+export {
+  getAbonnements,
+  getAbonnementActif,
+  getAbonnementById,
+  createAbonnement,
+  activerAbonnement,
+  suspendreAbonnement,
+  expirerAbonnement,
+  getAbonnementsExpirantAvant,
+  getAbonnementsEnGraceExpires,
+} from "./abonnements";
+
+export {
+  createPaiementAbonnement,
+  confirmerPaiement,
+  getPaiementsByAbonnement,
+  getPaiementByReference,
+  updatePaiementApresInitiation,
+} from "./paiements-abonnements";
+
+export {
+  getRemises,
+  getRemiseByCode,
+  createRemise,
+  appliquerRemise,
+  verifierRemiseApplicable,
+} from "./remises";
+
+export {
+  getCommissionsIngenieur,
+  createCommission,
+  rendreCommissionsDisponibles,
+  getPortefeuille,
+  demanderRetrait,
+  traiterRetrait,
+} from "./commissions";

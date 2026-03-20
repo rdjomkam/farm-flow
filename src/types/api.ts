@@ -17,16 +17,19 @@ import {
   CauseMortalite,
   CategorieProduit,
   FrequenceRecurrence,
+  FournisseurPaiement,
   LogiqueCondition,
   MethodeComptage,
   ModePaiement,
   OperateurCondition,
+  PeriodeFacturation,
   PlaceholderFormat,
   PlaceholderMode,
   Recurrence,
   Role,
   SeveriteAlerte,
   SiteModule,
+  StatutAbonnement,
   StatutActivation,
   StatutActivite,
   StatutAlerte,
@@ -44,7 +47,9 @@ import {
   TypeAliment,
   TypeDeclencheur,
   TypeMouvement,
+  TypePlan,
   TypeReleve,
+  TypeRemise,
   UniteStock,
   VisibiliteNote,
 } from "./models";
@@ -1983,4 +1988,94 @@ export interface UserDetailResponse {
 export interface UserMembershipsResponse {
   memberships: UserMembershipResponse[];
   total: number;
+}
+
+// ---------------------------------------------------------------------------
+// DTOs — Abonnements & Paiements (Sprint 30)
+// ---------------------------------------------------------------------------
+
+/** DTO de création d'un abonnement (souscription à un plan) */
+export interface CreateAbonnementDTO {
+  planId: string;
+  periode: PeriodeFacturation;
+  phoneNumber?: string;
+  fournisseur: FournisseurPaiement;
+  /** Code de remise optionnel */
+  remiseCode?: string;
+}
+
+/** DTO de création d'un plan d'abonnement (ADMIN uniquement) */
+export interface CreatePlanAbonnementDTO {
+  nom: string;
+  typePlan: TypePlan;
+  description?: string;
+  prixMensuel?: number;
+  prixTrimestriel?: number;
+  prixAnnuel?: number;
+  limitesSites?: number;
+  limitesBacs?: number;
+  limitesVagues?: number;
+  limitesIngFermes?: number;
+  isActif?: boolean;
+  isPublic?: boolean;
+}
+
+/** DTO de mise à jour partielle d'un plan d'abonnement */
+export interface UpdatePlanAbonnementDTO {
+  nom?: string;
+  description?: string;
+  prixMensuel?: number;
+  prixTrimestriel?: number;
+  prixAnnuel?: number;
+  limitesSites?: number;
+  limitesBacs?: number;
+  limitesVagues?: number;
+  limitesIngFermes?: number;
+  isActif?: boolean;
+  isPublic?: boolean;
+}
+
+/** DTO pour initier un paiement Mobile Money */
+export interface InitierPaiementDTO {
+  abonnementId: string;
+  phoneNumber: string;
+  fournisseur: FournisseurPaiement;
+}
+
+/** DTO de création d'une remise (ADMIN uniquement) */
+export interface CreateRemiseDTO {
+  nom: string;
+  code: string;
+  type: TypeRemise;
+  valeur: number;
+  estPourcentage: boolean;
+  dateDebut: string;
+  dateFin?: string;
+  limiteUtilisations?: number;
+  planId?: string;
+}
+
+/** DTO de création d'une commission ingénieur */
+export interface CreateCommissionDTO {
+  ingenieurId: string;
+  siteClientId: string;
+  abonnementId: string;
+  /** Taux entre 0.10 et 0.20 */
+  taux: number;
+}
+
+/** DTO de demande de retrait du portefeuille */
+export interface DemandeRetraitDTO {
+  montant: number;
+  phoneNumber: string;
+  fournisseur: FournisseurPaiement;
+}
+
+/** Filtres pour la liste des abonnements */
+export interface AbonnementFilters {
+  statut?: StatutAbonnement;
+  planId?: string;
+  siteId?: string;
+  dateDebutAfter?: string;
+  dateFinBefore?: string;
 }

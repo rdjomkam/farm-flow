@@ -190,6 +190,15 @@ enum Permission {
   UTILISATEURS_SUPPRIMER
   UTILISATEURS_GERER
   UTILISATEURS_IMPERSONNER
+  // Abonnements (Sprint 30)
+  ABONNEMENTS_VOIR
+  ABONNEMENTS_GERER
+  PLANS_GERER
+  REMISES_GERER
+  COMMISSIONS_VOIR
+  COMMISSIONS_GERER
+  PORTEFEUILLE_VOIR
+  PORTEFEUILLE_GERER
 }
 
 // ──────────────────────────────────────────
@@ -452,6 +461,14 @@ model Site {
   // Sprint 26 — Modification tracking (ADR-014/ADR-015)
   releveModifications  ReleveModification[]
   calibrageModifications CalibrageModification[]
+  // Sprint 30 — Abonnements
+  abonnements          Abonnement[]              @relation("AbonnementsSite")
+  paiementsAbo         PaiementAbonnement[]      @relation("PaiementsAboSite")
+  remises              Remise[]                  @relation("RemisesSite")
+  commissions          CommissionIngenieur[]     @relation("CommissionsDKFarm")
+  commissionsClient    CommissionIngenieur[]     @relation("CommissionsSiteClient")
+  portefeuilles        PortefeuilleIngenieur[]   @relation("PortefeuillesSite")
+  retraits             RetraitPortefeuille[]     @relation("RetraitsSite")
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 }
@@ -697,6 +714,15 @@ model User {
   isSystem              Boolean            @default(false)
   // Sprint — Impersonation
   originalSessions      Session[]          @relation("OriginalUser")
+  // Sprint 30 — Abonnements
+  abonnementsUser         Abonnement[]              @relation("AbonnementsUser")
+  paiementsAboInities     PaiementAbonnement[]      @relation("PaiementsAboUser")
+  commissionsIngenieur    CommissionIngenieur[]     @relation("CommissionsIngenieur")
+  remisesCreees           Remise[]                  @relation("RemisesUser")
+  remisesApplications     RemiseApplication[]       @relation("RemisesApplicationsUser")
+  portefeuille            PortefeuilleIngenieur?    @relation("PortefeuilleIngenieur")
+  retraitsDemandes        RetraitPortefeuille[]     @relation("RetraitDemandeur")
+  retraitsTraites         RetraitPortefeuille[]     @relation("RetraitTraiteur")
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
 }
@@ -1808,6 +1834,68 @@ enum PlaceholderFormat {
 }
 
 // ──────────────────────────────────────────
+// Enums — Abonnements & Paiements (Sprint 30)
+// ──────────────────────────────────────────
+
+enum TypePlan {
+  DECOUVERTE
+  ELEVEUR
+  PROFESSIONNEL
+  ENTREPRISE
+  INGENIEUR_STARTER
+  INGENIEUR_PRO
+  INGENIEUR_EXPERT
+}
+
+enum PeriodeFacturation {
+  MENSUEL
+  TRIMESTRIEL
+  ANNUEL
+}
+
+enum StatutAbonnement {
+  ACTIF
+  EN_GRACE
+  SUSPENDU
+  EXPIRE
+  ANNULE
+  EN_ATTENTE_PAIEMENT
+}
+
+enum StatutPaiementAbo {
+  EN_ATTENTE
+  INITIE
+  CONFIRME
+  ECHEC
+  REMBOURSE
+  EXPIRE
+}
+
+enum TypeRemise {
+  EARLY_ADOPTER
+  SAISONNIERE
+  PARRAINAGE
+  COOPERATIVE
+  VOLUME
+  MANUELLE
+}
+
+enum StatutCommissionIng {
+  EN_ATTENTE
+  DISPONIBLE
+  DEMANDEE
+  PAYEE
+  ANNULEE
+}
+
+enum FournisseurPaiement {
+  SMOBILPAY
+  MTN_MOMO
+  ORANGE_MONEY
+  MANUEL
+}
+
+// ──────────────────────────────────────────
 // Modèle — CustomPlaceholder (Sprint 26)
 // ──────────────────────────────────────────
 
@@ -1846,4 +1934,272 @@ model CustomPlaceholder {
   isActive    Boolean           @default(true)
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
+}
+
+// ──────────────────────────────────────────
+// Modèle — PlanAbonnement (Sprint 30)
+// ──────────────────────────────────────────
+
+/**
+ * PlanAbonnement — Définition immuable d'un palier tarifaire.
+ * Global (non lié à un site spécifique) — pas de siteId (exception documentée R8).
+ * Prix null = plan gratuit ou période non disponible.
+ */
+model PlanAbonnement {
+  id               String             @id @default(cuid())
+  nom              String
+  typePlan         TypePlan           @unique
+  description      String?
+  prixMensuel      Decimal?
+  prixTrimestriel  Decimal?
+  prixAnnuel       Decimal?
+  limitesSites     Int                @default(1)
+  limitesBacs      Int                @default(3)
+  limitesVagues    Int                @default(1)
+  limitesIngFermes Int?
+  isActif          Boolean            @default(true)
+  isPublic         Boolean            @default(true)
+
+  abonnements      Abonnement[]
+  remises          Remise[]
+
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([typePlan])
+}
+
+// ──────────────────────────────────────────
+// Modèle — Abonnement (Sprint 30)
+// ──────────────────────────────────────────
+
+/**
+ * Abonnement — Instance d'un abonnement liant un site à un PlanAbonnement.
+ * R8 : siteId obligatoire.
+ * R7 : dateFinGrace nullable (absent pour plan gratuit).
+ */
+model Abonnement {
+  id                          String             @id @default(cuid())
+  siteId                      String
+  site                        Site               @relation("AbonnementsSite", fields: [siteId], references: [id])
+  planId                      String
+  plan                        PlanAbonnement     @relation(fields: [planId], references: [id])
+  periode                     PeriodeFacturation
+  statut                      StatutAbonnement   @default(EN_ATTENTE_PAIEMENT)
+  dateDebut                   DateTime
+  dateFin                     DateTime
+  dateProchainRenouvellement  DateTime
+  dateFinGrace                DateTime?
+  prixPaye                    Decimal
+  userId                      String
+  user                        User               @relation("AbonnementsUser", fields: [userId], references: [id])
+  remiseId                    String?
+  remise                      Remise?            @relation(fields: [remiseId], references: [id])
+
+  paiements                   PaiementAbonnement[]
+  remisesAppliquees           RemiseApplication[]
+  commissions                 CommissionIngenieur[]
+
+  createdAt                   DateTime           @default(now())
+  updatedAt                   DateTime           @updatedAt
+
+  @@index([siteId])
+  @@index([statut])
+  @@index([planId])
+  @@index([dateFin])
+}
+
+// ──────────────────────────────────────────
+// Modèle — PaiementAbonnement (Sprint 30)
+// ──────────────────────────────────────────
+
+/**
+ * PaiementAbonnement — Transaction de paiement pour un abonnement.
+ * Idempotence : referenceExterne (unique côté gateway).
+ * R8 : siteId obligatoire.
+ */
+model PaiementAbonnement {
+  id               String              @id @default(cuid())
+  abonnementId     String
+  abonnement       Abonnement          @relation(fields: [abonnementId], references: [id])
+  montant          Decimal
+  fournisseur      FournisseurPaiement
+  statut           StatutPaiementAbo   @default(EN_ATTENTE)
+  referenceExterne String?
+  phoneNumber      String?
+  metadata         Json?
+  initiePar        String
+  user             User                @relation("PaiementsAboUser", fields: [initiePar], references: [id])
+  dateInitiation   DateTime
+  dateConfirmation DateTime?
+  siteId           String
+  site             Site                @relation("PaiementsAboSite", fields: [siteId], references: [id])
+
+  commissions      CommissionIngenieur[]
+
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@index([abonnementId])
+  @@index([siteId])
+  @@index([statut])
+  @@index([referenceExterne])
+}
+
+// ──────────────────────────────────────────
+// Modèle — Remise (Sprint 30)
+// ──────────────────────────────────────────
+
+/**
+ * Remise — Définition d'une remise ou code promotionnel.
+ * R8 : siteId nullable car remise peut être globale (DKFarm).
+ * R7 : dateFin nullable pour remises sans expiration.
+ */
+model Remise {
+  id                 String          @id @default(cuid())
+  nom                String
+  code               String          @unique
+  type               TypeRemise
+  valeur             Decimal
+  estPourcentage     Boolean         @default(false)
+  dateDebut          DateTime
+  dateFin            DateTime?
+  limiteUtilisations Int?
+  nombreUtilisations Int             @default(0)
+  isActif            Boolean         @default(true)
+  siteId             String?
+  site               Site?           @relation("RemisesSite", fields: [siteId], references: [id])
+  userId             String
+  user               User            @relation("RemisesUser", fields: [userId], references: [id])
+  planId             String?
+  plan               PlanAbonnement? @relation(fields: [planId], references: [id])
+
+  abonnements        Abonnement[]
+  applications       RemiseApplication[]
+
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@index([siteId])
+  @@index([code])
+}
+
+// ──────────────────────────────────────────
+// Modèle — RemiseApplication (Sprint 30)
+// ──────────────────────────────────────────
+
+/**
+ * RemiseApplication — Enregistrement d'une remise appliquée à un abonnement.
+ * Contrainte unique : une remise ne peut être appliquée qu'une fois par abonnement.
+ */
+model RemiseApplication {
+  id            String     @id @default(cuid())
+  remiseId      String
+  remise        Remise     @relation(fields: [remiseId], references: [id])
+  abonnementId  String
+  abonnement    Abonnement @relation(fields: [abonnementId], references: [id])
+  montantReduit Decimal
+  appliqueLe    DateTime   @default(now())
+  userId        String
+  user          User       @relation("RemisesApplicationsUser", fields: [userId], references: [id])
+
+  @@unique([remiseId, abonnementId])
+  @@index([remiseId])
+  @@index([abonnementId])
+}
+
+// ──────────────────────────────────────────
+// Modèle — CommissionIngenieur (Sprint 30)
+// ──────────────────────────────────────────
+
+/**
+ * CommissionIngenieur — Commission calculée pour un ingénieur
+ * suite à la confirmation d'un paiement d'abonnement d'un site supervisé.
+ * R8 : siteId obligatoire.
+ */
+model CommissionIngenieur {
+  id                   String               @id @default(cuid())
+  ingenieurId          String
+  ingenieur            User                 @relation("CommissionsIngenieur", fields: [ingenieurId], references: [id])
+  siteClientId         String
+  siteClient           Site                 @relation("CommissionsSiteClient", fields: [siteClientId], references: [id])
+  abonnementId         String
+  abonnement           Abonnement           @relation(fields: [abonnementId], references: [id])
+  paiementAbonnementId String
+  paiementAbonnement   PaiementAbonnement   @relation(fields: [paiementAbonnementId], references: [id])
+  montant              Decimal
+  taux                 Decimal
+  statut               StatutCommissionIng  @default(EN_ATTENTE)
+  periodeDebut         DateTime
+  periodeFin           DateTime
+  siteId               String
+  site                 Site                 @relation("CommissionsDKFarm", fields: [siteId], references: [id])
+
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  @@index([ingenieurId])
+  @@index([abonnementId])
+  @@index([siteId])
+  @@index([statut])
+}
+
+// ──────────────────────────────────────────
+// Modèle — PortefeuilleIngenieur (Sprint 30)
+// ──────────────────────────────────────────
+
+/**
+ * PortefeuilleIngenieur — Portefeuille financier de l'ingénieur.
+ * Un ingénieur a exactement un portefeuille (@@unique sur ingenieurId).
+ * R8 : siteId obligatoire (site DKFarm gestionnaire).
+ */
+model PortefeuilleIngenieur {
+  id             String               @id @default(cuid())
+  ingenieurId    String               @unique
+  ingenieur      User                 @relation("PortefeuilleIngenieur", fields: [ingenieurId], references: [id])
+  solde          Decimal              @default(0)
+  soldePending   Decimal              @default(0)
+  totalGagne     Decimal              @default(0)
+  totalPaye      Decimal              @default(0)
+  siteId         String
+  site           Site                 @relation("PortefeuillesSite", fields: [siteId], references: [id])
+
+  retraits       RetraitPortefeuille[]
+
+  updatedAt      DateTime             @updatedAt
+
+  @@index([siteId])
+}
+
+// ──────────────────────────────────────────
+// Modèle — RetraitPortefeuille (Sprint 30)
+// ──────────────────────────────────────────
+
+/**
+ * RetraitPortefeuille — Demande de virement du portefeuille ingénieur vers Mobile Money.
+ * Traitée par ADMIN DKFarm. Seuil minimum : 5 000 FCFA.
+ * R8 : siteId obligatoire.
+ */
+model RetraitPortefeuille {
+  id               String               @id @default(cuid())
+  portefeuilleId   String
+  portefeuille     PortefeuilleIngenieur @relation(fields: [portefeuilleId], references: [id])
+  montant          Decimal
+  fournisseur      FournisseurPaiement
+  phoneNumber      String
+  statut           StatutPaiementAbo    @default(EN_ATTENTE)
+  referenceExterne String?
+  demandeLeBy      String
+  demandeur        User                 @relation("RetraitDemandeur", fields: [demandeLeBy], references: [id])
+  traitePar        String?
+  traiteur         User?                @relation("RetraitTraiteur", fields: [traitePar], references: [id])
+  dateTraitement   DateTime?
+  siteId           String
+  site             Site                 @relation("RetraitsSite", fields: [siteId], references: [id])
+
+  createdAt        DateTime             @default(now())
+
+  @@index([portefeuilleId])
+  @@index([siteId])
+  @@index([statut])
 }

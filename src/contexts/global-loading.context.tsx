@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useRef,
   useState,
 } from "react";
@@ -58,8 +59,13 @@ export function useGlobalLoading(): GlobalLoadingContextValue {
 export function GlobalLoadingProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const countRef = useRef(0);
+  const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const increment = useCallback(() => {
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
     countRef.current += 1;
     if (countRef.current === 1) {
       setIsLoading(true);
@@ -69,8 +75,19 @@ export function GlobalLoadingProvider({ children }: { children: React.ReactNode 
   const decrement = useCallback(() => {
     countRef.current = Math.max(0, countRef.current - 1);
     if (countRef.current === 0) {
-      setIsLoading(false);
+      hideTimerRef.current = setTimeout(() => {
+        hideTimerRef.current = null;
+        setIsLoading(false);
+      }, 300);
     }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+      }
+    };
   }, []);
 
   return (
