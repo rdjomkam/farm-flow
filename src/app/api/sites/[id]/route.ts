@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, AuthError } from "@/lib/auth";
 import { getSiteById, updateSite, getSiteMember } from "@/lib/queries/sites";
 import { ForbiddenError } from "@/lib/permissions";
-import { Permission } from "@/types";
+import { Permission, SiteModule } from "@/types";
+
+const VALID_MODULES = Object.values(SiteModule);
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -25,6 +27,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       name: site.name,
       address: site.address,
       isActive: site.isActive,
+      enabledModules: site.enabledModules,
       bacCount: site._count.bacs,
       vagueCount: site._count.vagues,
       members: site.members.map((m) => ({
@@ -83,9 +86,30 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    if (body.enabledModules !== undefined) {
+      if (!Array.isArray(body.enabledModules)) {
+        return NextResponse.json(
+          { status: 400, message: "enabledModules doit etre un tableau." },
+          { status: 400 }
+        );
+      }
+      const invalid = (body.enabledModules as unknown[]).filter(
+        (m) => !VALID_MODULES.includes(m as SiteModule)
+      );
+      if (invalid.length > 0) {
+        return NextResponse.json(
+          { status: 400, message: `Modules invalides : ${invalid.join(", ")}` },
+          { status: 400 }
+        );
+      }
+    }
+
     const updated = await updateSite(id, {
       ...(body.name !== undefined && { name: body.name.trim() }),
       ...(body.address !== undefined && { address: body.address?.trim() ?? null }),
+      ...(body.enabledModules !== undefined && {
+        enabledModules: body.enabledModules as SiteModule[],
+      }),
     });
 
     return NextResponse.json({
@@ -93,6 +117,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       name: updated.name,
       address: updated.address,
       isActive: updated.isActive,
+      enabledModules: updated.enabledModules,
       updatedAt: updated.updatedAt,
     });
   } catch (error) {

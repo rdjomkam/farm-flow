@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { SYSTEM_ROLE_DEFINITIONS } from "@/lib/permissions-constants";
+import { SiteModule } from "@/types";
 
 /** Liste les sites dont un utilisateur est membre actif */
 export async function getUserSites(userId: string) {
@@ -80,12 +81,16 @@ export async function createSite(
 }
 
 /** Met a jour un site */
-export async function updateSite(siteId: string, data: { name?: string; address?: string }) {
+export async function updateSite(
+  siteId: string,
+  data: { name?: string; address?: string; enabledModules?: SiteModule[] }
+) {
   return prisma.site.update({
     where: { id: siteId },
     data: {
       ...(data.name !== undefined && { name: data.name }),
       ...(data.address !== undefined && { address: data.address }),
+      ...(data.enabledModules !== undefined && { enabledModules: data.enabledModules }),
     },
   });
 }

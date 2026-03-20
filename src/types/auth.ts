@@ -98,6 +98,7 @@ export interface UpdateSiteDTO {
   name?: string;
   address?: string;
   isActive?: boolean;
+  enabledModules?: string[];
 }
 
 /** Corps de la requete PUT /api/auth/site (changer le site actif) */

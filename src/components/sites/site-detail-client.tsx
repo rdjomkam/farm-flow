@@ -11,6 +11,15 @@ import {
   Plus,
   ArrowLeft,
   ShieldCheck,
+  FlaskConical,
+  Fish,
+  Package,
+  ShoppingCart,
+  BarChart2,
+  Settings,
+  HardHat,
+  StickyNote,
+  Boxes,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,9 +42,31 @@ import {
 } from "@/components/ui/select";
 import { MemberActionsDialog } from "@/components/sites/member-actions-dialog";
 import { cn } from "@/lib/utils";
-import { Permission } from "@/types";
+import { Permission, SiteModule } from "@/types";
 import { canAssignRole } from "@/lib/permissions-constants";
 import { useUserService } from "@/services";
+
+// ---------------------------------------------------------------------------
+// Module config
+// ---------------------------------------------------------------------------
+
+interface ModuleConfig {
+  value: SiteModule;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const MODULE_CONFIG: ModuleConfig[] = [
+  { value: SiteModule.REPRODUCTION, label: "Reproduction", icon: FlaskConical },
+  { value: SiteModule.GROSSISSEMENT, label: "Grossissement", icon: Fish },
+  { value: SiteModule.INTRANTS, label: "Intrants", icon: Package },
+  { value: SiteModule.VENTES, label: "Ventes", icon: ShoppingCart },
+  { value: SiteModule.ANALYSE_PILOTAGE, label: "Analyse & Pilotage", icon: BarChart2 },
+  { value: SiteModule.PACKS_PROVISIONING, label: "Packs & Provisioning", icon: Boxes },
+  { value: SiteModule.CONFIGURATION, label: "Configuration", icon: Settings },
+  { value: SiteModule.INGENIEUR, label: "Ingenieur", icon: HardHat },
+  { value: SiteModule.NOTES, label: "Notes", icon: StickyNote },
+];
 
 interface SiteRoleOption {
   id: string;
@@ -62,6 +93,7 @@ interface Props {
     address: string | null;
     bacCount: number;
     vagueCount: number;
+    enabledModules: string[];
   };
   members: MemberData[];
   siteRoles: SiteRoleOption[];
@@ -82,6 +114,36 @@ export function SiteDetailClient({
 }: Props) {
   const router = useRouter();
   const userService = useUserService();
+
+  // Modules state (optimistic)
+  const [enabledModules, setEnabledModules] = useState<string[]>(site.enabledModules);
+  const [modulesLoading, setModulesLoading] = useState(false);
+
+  async function handleToggleModule(moduleValue: SiteModule) {
+    if (!canManageSite || modulesLoading) return;
+
+    const isEnabled = enabledModules.includes(moduleValue);
+    const nextModules = isEnabled
+      ? enabledModules.filter((m) => m !== moduleValue)
+      : [...enabledModules, moduleValue];
+
+    // Optimistic update
+    setEnabledModules(nextModules);
+    setModulesLoading(true);
+
+    try {
+      const { ok } = await userService.updateSite(site.id, {
+        enabledModules: nextModules,
+      });
+
+      if (!ok) {
+        // Revert on failure
+        setEnabledModules(enabledModules);
+      }
+    } finally {
+      setModulesLoading(false);
+    }
+  }
 
   // Add member dialog
   const [addOpen, setAddOpen] = useState(false);
@@ -149,6 +211,40 @@ export function SiteDetailClient({
           </span>
         </div>
       </section>
+
+      {/* Modules section — visible only to admins */}
+      {canManageSite && (
+        <section className="border-b border-border pb-3">
+          <h3 className="text-sm font-semibold mb-2">Modules</h3>
+          <div className="flex flex-wrap gap-2">
+            {MODULE_CONFIG.map(({ value, label, icon: Icon }) => {
+              const active = enabledModules.includes(value);
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => handleToggleModule(value)}
+                  disabled={modulesLoading}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                    "disabled:opacity-50 disabled:cursor-not-allowed",
+                    active
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                  )}
+                  aria-pressed={active}
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0" />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Cliquez pour activer ou desactiver un module sur ce site.
+          </p>
+        </section>
+      )}
 
       {/* Members section */}
       <section>

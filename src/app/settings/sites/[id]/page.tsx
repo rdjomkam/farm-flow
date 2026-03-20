@@ -4,7 +4,7 @@ import { getServerSession } from "@/lib/auth";
 import { getSiteById, getSiteMember } from "@/lib/queries/sites";
 import { getSiteRoles, syncSystemRolePermissions } from "@/lib/queries/roles";
 import { SiteDetailClient } from "@/components/sites/site-detail-client";
-import { Permission } from "@/types";
+import { Permission, SiteModule } from "@/types";
 
 export default async function SiteDetailPage({
   params,
@@ -56,6 +56,7 @@ export default async function SiteDetailPage({
             address: site.address,
             bacCount: site._count.bacs,
             vagueCount: site._count.vagues,
+            enabledModules: site.enabledModules as string[],
           }}
           members={members}
           siteRoles={siteRoles}
