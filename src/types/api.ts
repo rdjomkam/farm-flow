@@ -16,8 +16,10 @@ import {
   CauseMortalite,
   CategorieProduit,
   FrequenceRecurrence,
+  LogiqueCondition,
   MethodeComptage,
   ModePaiement,
+  OperateurCondition,
   PlaceholderFormat,
   PlaceholderMode,
   Recurrence,
@@ -1469,6 +1471,25 @@ export interface CreateRegleActiviteDTO {
   priorite?: number;
   /** Etat initial de la regle (defaut : true) */
   isActive?: boolean;
+  /**
+   * Logique de combinaison des conditions composees.
+   * ET (defaut) : toutes les conditions doivent matcher.
+   * OU : au moins une condition doit matcher.
+   * Ignoree si conditions est vide.
+   */
+  logique?: LogiqueCondition;
+  /**
+   * Conditions composees. Si present et non vide, le moteur utilise ces
+   * conditions a la place du legacy typeDeclencheur + conditionValeur.
+   * Chaque element represente une condition atomique.
+   */
+  conditions?: {
+    typeDeclencheur: TypeDeclencheur;
+    operateur: OperateurCondition;
+    conditionValeur: number | null;
+    conditionValeur2: number | null;
+    ordre: number;
+  }[];
 }
 
 /**

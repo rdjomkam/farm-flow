@@ -22,7 +22,7 @@
  * ```
  */
 
-import { PhaseElevage, TypeActivite, TypeDeclencheur } from "@/types";
+import { LogiqueCondition, OperateurCondition, PhaseElevage, TypeActivite, TypeDeclencheur } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Placeholders
@@ -277,6 +277,32 @@ export const PHASE_ELEVAGE_ORDER: PhaseElevage[] = [
   PhaseElevage.FINITION,
   PhaseElevage.PRE_RECOLTE,
 ];
+
+// ---------------------------------------------------------------------------
+// Labels FR — OperateurCondition
+// ---------------------------------------------------------------------------
+
+/**
+ * Labels en francais pour l'affichage UI de chaque OperateurCondition.
+ */
+export const OPERATEUR_CONDITION_LABELS: Record<OperateurCondition, string> = {
+  [OperateurCondition.SUPERIEUR]: "Superieur a",
+  [OperateurCondition.INFERIEUR]: "Inferieur a",
+  [OperateurCondition.ENTRE]:     "Entre",
+  [OperateurCondition.EGAL]:      "Egal a",
+};
+
+// ---------------------------------------------------------------------------
+// Labels FR — LogiqueCondition
+// ---------------------------------------------------------------------------
+
+/**
+ * Labels en francais pour l'affichage UI de chaque LogiqueCondition.
+ */
+export const LOGIQUE_CONDITION_LABELS: Record<LogiqueCondition, string> = {
+  [LogiqueCondition.ET]: "ET (toutes les conditions)",
+  [LogiqueCondition.OU]: "OU (au moins une condition)",
+};
 
 // ---------------------------------------------------------------------------
 // Types de declencheur a seuil (supportent firedOnce)

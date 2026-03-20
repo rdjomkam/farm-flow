@@ -5,9 +5,12 @@ import {
 } from "@/lib/queries/regles-activites";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { TypeActivite, TypeDeclencheur, Permission } from "@/types";
+import { TypeActivite, TypeDeclencheur, OperateurCondition, LogiqueCondition, Permission } from "@/types";
 import { validateTemplatePlaceholders, SEUIL_TYPES_FIREDONCE } from "@/lib/regles-activites-constants";
 import type { CreateRegleActiviteDTO, RegleActiviteFilters } from "@/types";
+
+const VALID_OPERATEUR = Object.values(OperateurCondition);
+const VALID_LOGIQUE = Object.values(LogiqueCondition);
 
 const VALID_TYPE_ACTIVITE = Object.values(TypeActivite);
 const VALID_TYPE_DECLENCHEUR = Object.values(TypeDeclencheur);
@@ -222,6 +225,40 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // --- Validate conditions if present ---
+    if (body.logique !== undefined && !VALID_LOGIQUE.includes(body.logique as LogiqueCondition)) {
+      errors.push({ field: "logique", message: `Valeur invalide. Valeurs valides : ${VALID_LOGIQUE.join(", ")}` });
+    }
+
+    if (body.conditions !== undefined) {
+      if (!Array.isArray(body.conditions)) {
+        errors.push({ field: "conditions", message: "conditions doit etre un tableau." });
+      } else {
+        body.conditions.forEach((c: unknown, idx: number) => {
+          const cond = c as Record<string, unknown>;
+          if (!cond.typeDeclencheur || !VALID_TYPE_DECLENCHEUR.includes(cond.typeDeclencheur as TypeDeclencheur)) {
+            errors.push({ field: `conditions[${idx}].typeDeclencheur`, message: "typeDeclencheur invalide." });
+          }
+          if (!cond.operateur || !VALID_OPERATEUR.includes(cond.operateur as OperateurCondition)) {
+            errors.push({ field: `conditions[${idx}].operateur`, message: "operateur invalide." });
+          }
+          if (cond.conditionValeur !== null && cond.conditionValeur !== undefined && typeof cond.conditionValeur !== "number") {
+            errors.push({ field: `conditions[${idx}].conditionValeur`, message: "conditionValeur doit etre un nombre ou null." });
+          }
+          if (cond.conditionValeur2 !== null && cond.conditionValeur2 !== undefined && typeof cond.conditionValeur2 !== "number") {
+            errors.push({ field: `conditions[${idx}].conditionValeur2`, message: "conditionValeur2 doit etre un nombre ou null." });
+          }
+        });
+      }
+    }
+
+    if (errors.length > 0) {
+      return NextResponse.json(
+        { error: "Donnees invalides.", errors },
+        { status: 400 }
+      );
+    }
+
     const data: CreateRegleActiviteDTO = {
       nom: body.nom.trim(),
       ...(body.description !== undefined && { description: body.description }),
@@ -237,6 +274,8 @@ export async function POST(request: NextRequest) {
       ...(body.instructionsTemplate !== undefined && { instructionsTemplate: body.instructionsTemplate }),
       ...(body.priorite !== undefined && { priorite: body.priorite }),
       ...(body.isActive !== undefined && { isActive: body.isActive }),
+      ...(body.logique !== undefined && { logique: body.logique as LogiqueCondition }),
+      ...(body.conditions !== undefined && { conditions: body.conditions }),
     };
 
     const regle = await createRegleActivite(auth.activeSiteId, auth.userId, data);

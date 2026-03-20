@@ -15,6 +15,7 @@ import {
   Globe,
   Building2,
   Zap,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,9 +48,11 @@ import {
   PHASE_ELEVAGE_LABELS,
   PHASE_ELEVAGE_ORDER,
   SEUIL_TYPES_FIREDONCE,
+  OPERATEUR_CONDITION_LABELS,
+  LOGIQUE_CONDITION_LABELS,
 } from "@/lib/regles-activites-constants";
-import { TypeDeclencheur, PhaseElevage } from "@/types";
-import type { RegleActiviteWithRelations } from "@/types";
+import { TypeDeclencheur, PhaseElevage, OperateurCondition, LogiqueCondition } from "@/types";
+import type { RegleActiviteWithRelations, ConditionRegle } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -63,6 +66,14 @@ interface Props {
 }
 
 // Edit form state
+interface ConditionRow {
+  id?: string;
+  typeDeclencheur: TypeDeclencheur | "";
+  operateur: OperateurCondition | "";
+  conditionValeur: string;
+  conditionValeur2: string;
+}
+
 interface EditForm {
   nom: string;
   description: string;
@@ -76,6 +87,8 @@ interface EditForm {
   descriptionTemplate: string;
   instructionsTemplate: string;
   isActive: boolean;
+  logique: LogiqueCondition;
+  conditions: ConditionRow[];
 }
 
 // ---------------------------------------------------------------------------
@@ -136,6 +149,16 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
   const canDelete = !isGlobal && activitesCount === 0;
   const showFiredOnce = regle.firedOnce && isSeuilType(regle.typeDeclencheur);
 
+  function conditionsToRows(conditions: ConditionRegle[]): ConditionRow[] {
+    return conditions.map((c) => ({
+      id: c.id,
+      typeDeclencheur: c.typeDeclencheur as TypeDeclencheur,
+      operateur: c.operateur as OperateurCondition,
+      conditionValeur: c.conditionValeur !== null ? String(c.conditionValeur) : "",
+      conditionValeur2: c.conditionValeur2 !== null ? String(c.conditionValeur2) : "",
+    }));
+  }
+
   const [form, setForm] = useState<EditForm>({
     nom: regle.nom,
     description: regle.description ?? "",
@@ -149,6 +172,8 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
     descriptionTemplate: regle.descriptionTemplate ?? "",
     instructionsTemplate: regle.instructionsTemplate ?? "",
     isActive: regle.isActive,
+    logique: (regle.logique as LogiqueCondition) ?? LogiqueCondition.ET,
+    conditions: conditionsToRows(regle.conditions ?? []),
   });
 
   // ---------------------------------------------------------------------------
@@ -158,6 +183,10 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
   async function handleSave() {
     setSubmitting(true);
     try {
+      const validConditions = form.conditions.filter(
+        (c) => c.typeDeclencheur !== "" && c.operateur !== ""
+      );
+
       const body = {
         nom: form.nom.trim(),
         description: form.description.trim() || null,
@@ -171,6 +200,14 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
         descriptionTemplate: form.descriptionTemplate.trim() || null,
         instructionsTemplate: form.instructionsTemplate.trim() || null,
         isActive: form.isActive,
+        logique: form.logique,
+        conditions: validConditions.map((c, idx) => ({
+          typeDeclencheur: c.typeDeclencheur as TypeDeclencheur,
+          operateur: c.operateur as OperateurCondition,
+          conditionValeur: c.conditionValeur !== "" ? Number(c.conditionValeur) : null,
+          conditionValeur2: c.conditionValeur2 !== "" ? Number(c.conditionValeur2) : null,
+          ordre: idx,
+        })),
       };
 
       const res = await fetch(`/api/regles-activites/${regle.id}`, {
@@ -288,6 +325,8 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
       descriptionTemplate: regle.descriptionTemplate ?? "",
       instructionsTemplate: regle.instructionsTemplate ?? "",
       isActive: regle.isActive,
+      logique: (regle.logique as LogiqueCondition) ?? LogiqueCondition.ET,
+      conditions: conditionsToRows(regle.conditions ?? []),
     });
     setEditMode(false);
   }
@@ -417,6 +456,46 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
             </InfoRow>
           )}
         </SectionCard>
+
+        {/* Conditions composees — affichees uniquement si presentes */}
+        {regle.conditions && regle.conditions.length > 0 && (
+          <SectionCard title={`Conditions composees (${regle.conditions.length})`}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs text-muted-foreground">Logique :</span>
+              <Badge variant="default">
+                {LOGIQUE_CONDITION_LABELS[(regle.logique as LogiqueCondition) ?? LogiqueCondition.ET]}
+              </Badge>
+            </div>
+            <div className="space-y-2">
+              {regle.conditions.map((c, idx) => (
+                <div
+                  key={c.id ?? idx}
+                  className="flex flex-col gap-0.5 rounded-md bg-muted/40 px-3 py-2 text-sm"
+                >
+                  <span className="text-xs text-muted-foreground font-medium">
+                    Condition {idx + 1}
+                  </span>
+                  <span className="text-foreground">
+                    <span className="font-medium">
+                      {TYPE_DECLENCHEUR_LABELS[c.typeDeclencheur as TypeDeclencheur] ?? c.typeDeclencheur}
+                    </span>
+                    {" "}
+                    <span className="text-muted-foreground">
+                      {OPERATEUR_CONDITION_LABELS[c.operateur as OperateurCondition] ?? c.operateur}
+                    </span>
+                    {" "}
+                    {c.conditionValeur !== null && (
+                      <span className="font-mono">{c.conditionValeur}</span>
+                    )}
+                    {c.operateur === OperateurCondition.ENTRE && c.conditionValeur2 !== null && (
+                      <span className="text-muted-foreground"> et <span className="font-mono text-foreground">{c.conditionValeur2}</span></span>
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        )}
 
         {/* Templates */}
         <SectionCard title="Templates">
@@ -811,6 +890,180 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
             </Select>
           </div>
         </div>
+      </div>
+
+      {/* Section Conditions composees */}
+      <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+        <h3 className="text-sm font-semibold text-foreground">Conditions composees</h3>
+
+        <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+          <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+          <p className="text-xs text-muted-foreground">
+            Si des conditions composees sont definies, elles remplacent le declencheur simple.
+            Laissez vide pour utiliser uniquement le declencheur principal.
+          </p>
+        </div>
+
+        {/* Logique */}
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">
+            Logique de combinaison
+          </label>
+          <Select
+            value={form.logique}
+            onValueChange={(v) => setForm((f) => ({ ...f, logique: v as LogiqueCondition }))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.values(LogiqueCondition).map((val) => (
+                <SelectItem key={val} value={val}>
+                  {LOGIQUE_CONDITION_LABELS[val]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Conditions list */}
+        {form.conditions.length > 0 && (
+          <div className="flex flex-col gap-3">
+            {form.conditions.map((cond, idx) => (
+              <div key={idx} className="flex flex-col gap-2 p-3 rounded-lg border border-border bg-muted/20">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">Condition {idx + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        conditions: f.conditions.filter((_, i) => i !== idx),
+                      }))
+                    }
+                    className="inline-flex items-center justify-center h-8 w-8 rounded-md text-danger hover:bg-danger/10 transition-colors"
+                    aria-label="Supprimer cette condition"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* TypeDeclencheur */}
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">
+                    Type de declencheur
+                  </label>
+                  <Select
+                    value={cond.typeDeclencheur}
+                    onValueChange={(v) =>
+                      setForm((f) => {
+                        const updated = [...f.conditions];
+                        updated[idx] = { ...updated[idx], typeDeclencheur: v as TypeDeclencheur };
+                        return { ...f, conditions: updated };
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choisir..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(TypeDeclencheur).map((val) => (
+                        <SelectItem key={val} value={val}>
+                          {TYPE_DECLENCHEUR_LABELS[val]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Operateur */}
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">
+                    Operateur
+                  </label>
+                  <Select
+                    value={cond.operateur}
+                    onValueChange={(v) =>
+                      setForm((f) => {
+                        const updated = [...f.conditions];
+                        updated[idx] = {
+                          ...updated[idx],
+                          operateur: v as OperateurCondition,
+                          conditionValeur2: v !== OperateurCondition.ENTRE ? "" : updated[idx].conditionValeur2,
+                        };
+                        return { ...f, conditions: updated };
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choisir..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(OperateurCondition).map((val) => (
+                        <SelectItem key={val} value={val}>
+                          {OPERATEUR_CONDITION_LABELS[val]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Valeur */}
+                <Input
+                  label="Valeur"
+                  type="number"
+                  step="any"
+                  value={cond.conditionValeur}
+                  onChange={(e) =>
+                    setForm((f) => {
+                      const updated = [...f.conditions];
+                      updated[idx] = { ...updated[idx], conditionValeur: e.target.value };
+                      return { ...f, conditions: updated };
+                    })
+                  }
+                  placeholder="Ex: 200"
+                />
+
+                {/* Valeur2 — ENTRE uniquement */}
+                {cond.operateur === OperateurCondition.ENTRE && (
+                  <Input
+                    label="Valeur maximale (borne haute)"
+                    type="number"
+                    step="any"
+                    value={cond.conditionValeur2}
+                    onChange={(e) =>
+                      setForm((f) => {
+                        const updated = [...f.conditions];
+                        updated[idx] = { ...updated[idx], conditionValeur2: e.target.value };
+                        return { ...f, conditions: updated };
+                      })
+                    }
+                    placeholder="Ex: 300"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Bouton ajouter */}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() =>
+            setForm((f) => ({
+              ...f,
+              conditions: [
+                ...f.conditions,
+                { typeDeclencheur: "", operateur: "", conditionValeur: "", conditionValeur2: "" },
+              ],
+            }))
+          }
+          className="w-full min-h-[44px]"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Ajouter une condition
+        </Button>
       </div>
 
       {/* Section Templates */}

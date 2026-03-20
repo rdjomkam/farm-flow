@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { Lock, Globe, Building2, Activity } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { TypeDeclencheur, TypeActivite } from "@/types";
+import { TypeDeclencheur, TypeActivite, LogiqueCondition } from "@/types";
 import type { RegleActiviteWithCount } from "@/types";
 import {
   TYPE_ACTIVITE_LABELS,
   TYPE_DECLENCHEUR_LABELS,
   SEUIL_TYPES_FIREDONCE,
+  LOGIQUE_CONDITION_LABELS,
 } from "@/lib/regles-activites-constants";
 
 // ---------------------------------------------------------------------------
@@ -59,7 +60,9 @@ export function RegleCard({ regle, onToggle, isToggling, canManage, canManageGlo
   const activiteBadgeVariant = getActiviteBadgeVariant(
     regle.typeActivite as TypeActivite
   );
+  const hasCompoundConditions = regle.conditions && regle.conditions.length > 0;
   const showCondition =
+    !hasCompoundConditions &&
     SEUIL_TYPES.has(regle.typeDeclencheur as TypeDeclencheur) &&
     regle.conditionValeur !== null;
   const showIntervalle =
@@ -186,6 +189,16 @@ export function RegleCard({ regle, onToggle, isToggling, canManage, canManageGlo
         {/* conditionValeur */}
         {showCondition && (
           <span>Seuil : {regle.conditionValeur}</span>
+        )}
+
+        {/* Conditions composees */}
+        {hasCompoundConditions && (
+          <span className="inline-flex items-center gap-1">
+            {regle.conditions!.length} condition{regle.conditions!.length > 1 ? "s" : ""}
+            <Badge variant="default" className="text-xs py-0 px-1.5">
+              {(regle.logique as LogiqueCondition) === LogiqueCondition.OU ? "OU" : "ET"}
+            </Badge>
+          </span>
         )}
       </div>
 

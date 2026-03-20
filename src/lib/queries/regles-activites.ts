@@ -98,6 +98,7 @@ export async function getReglesActivites(
       site: { select: { id: true, name: true } },
       user: { select: { id: true, name: true } },
       _count: { select: { activites: true } },
+      conditions: { orderBy: { ordre: "asc" } },
     },
     orderBy: [{ typeDeclencheur: "asc" }, { priorite: "asc" }],
   });
@@ -129,6 +130,7 @@ export async function getRegleActiviteById(id: string, siteId?: string) {
       site: { select: { id: true, name: true } },
       user: { select: { id: true, name: true } },
       _count: { select: { activites: true } },
+      conditions: { orderBy: { ordre: "asc" } },
       activites: {
         select: { id: true, titre: true, statut: true, dateDebut: true },
         orderBy: { dateDebut: "desc" },
@@ -177,12 +179,28 @@ export async function createRegleActivite(
       priorite: data.priorite ?? 5,
       isActive: data.isActive ?? true,
       firedOnce: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      logique: (data.logique ?? "ET") as any,
       siteId,
       userId,
+      ...(data.conditions && data.conditions.length > 0 && {
+        conditions: {
+          create: data.conditions.map((c) => ({
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            typeDeclencheur: c.typeDeclencheur as any,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            operateur: c.operateur as any,
+            conditionValeur: c.conditionValeur ?? null,
+            conditionValeur2: c.conditionValeur2 ?? null,
+            ordre: c.ordre,
+          })),
+        },
+      }),
     },
     include: {
       site: { select: { id: true, name: true } },
       user: { select: { id: true, name: true } },
+      conditions: { orderBy: { ordre: "asc" } },
     },
   });
 }
@@ -234,6 +252,85 @@ export async function updateRegleActivite(
 
   // R4 : atomic updateMany — use { id } for global rules, { id, siteId } for site rules
   const whereClause = existing.siteId === null ? { id } : { id, siteId };
+
+  // Handle conditions update atomically in a transaction
+  if (data.conditions !== undefined) {
+    return prisma.$transaction(async (tx) => {
+      const result = await tx.regleActivite.updateMany({
+        where: whereClause,
+        data: {
+          ...(data.nom !== undefined && { nom: data.nom }),
+          ...(data.description !== undefined && {
+            description: data.description ?? null,
+          }),
+          ...(data.typeActivite !== undefined && {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            typeActivite: data.typeActivite as any,
+          }),
+          ...(data.typeDeclencheur !== undefined && {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            typeDeclencheur: data.typeDeclencheur as any,
+          }),
+          ...(data.conditionValeur !== undefined && {
+            conditionValeur: data.conditionValeur ?? null,
+          }),
+          ...(data.conditionValeur2 !== undefined && {
+            conditionValeur2: data.conditionValeur2 ?? null,
+          }),
+          ...(data.phaseMin !== undefined && { phaseMin: data.phaseMin ?? null }),
+          ...(data.phaseMax !== undefined && { phaseMax: data.phaseMax ?? null }),
+          ...(data.intervalleJours !== undefined && {
+            intervalleJours: data.intervalleJours ?? null,
+          }),
+          ...(data.titreTemplate !== undefined && {
+            titreTemplate: data.titreTemplate,
+          }),
+          ...(data.descriptionTemplate !== undefined && {
+            descriptionTemplate: data.descriptionTemplate ?? null,
+          }),
+          ...(data.instructionsTemplate !== undefined && {
+            instructionsTemplate: data.instructionsTemplate ?? null,
+          }),
+          ...(data.priorite !== undefined && { priorite: data.priorite }),
+          ...(data.isActive !== undefined && { isActive: data.isActive }),
+          ...(data.logique !== undefined && {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            logique: data.logique as any,
+          }),
+        },
+      });
+
+      if (result.count === 0) throw new Error("Regle introuvable.");
+
+      // Delete all existing conditions then recreate (replace semantics)
+      await tx.conditionRegle.deleteMany({ where: { regleId: id } });
+
+      if (data.conditions!.length > 0) {
+        await tx.conditionRegle.createMany({
+          data: data.conditions!.map((c) => ({
+            regleId: id,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            typeDeclencheur: c.typeDeclencheur as any,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            operateur: c.operateur as any,
+            conditionValeur: c.conditionValeur ?? null,
+            conditionValeur2: c.conditionValeur2 ?? null,
+            ordre: c.ordre,
+          })),
+        });
+      }
+
+      return tx.regleActivite.findFirst({
+        where: whereClause,
+        include: {
+          site: { select: { id: true, name: true } },
+          user: { select: { id: true, name: true } },
+          conditions: { orderBy: { ordre: "asc" } },
+        },
+      });
+    });
+  }
+
   const result = await prisma.regleActivite.updateMany({
     where: whereClause,
     data: {
@@ -271,6 +368,10 @@ export async function updateRegleActivite(
       }),
       ...(data.priorite !== undefined && { priorite: data.priorite }),
       ...(data.isActive !== undefined && { isActive: data.isActive }),
+      ...(data.logique !== undefined && {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        logique: data.logique as any,
+      }),
     },
   });
 
@@ -281,6 +382,7 @@ export async function updateRegleActivite(
     include: {
       site: { select: { id: true, name: true } },
       user: { select: { id: true, name: true } },
+      conditions: { orderBy: { ordre: "asc" } },
     },
   });
 }
