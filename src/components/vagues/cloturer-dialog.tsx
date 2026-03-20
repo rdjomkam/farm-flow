@@ -4,8 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FishLoader } from "@/components/ui/fish-loader";
-import { StatutVague } from "@/types";
 import {
   Dialog,
   DialogTrigger,
@@ -15,7 +13,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/toast";
+import { useVagueService } from "@/services";
 
 interface CloturerDialogProps {
   vagueId: string;
@@ -31,37 +29,20 @@ export function CloturerDialog({
   onOpenChange: controlledOnOpenChange,
 }: CloturerDialogProps) {
   const router = useRouter();
-  const { toast } = useToast();
+  const vagueService = useVagueService();
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = controlledOnOpenChange ?? setInternalOpen;
   const [dateFin, setDateFin] = useState(new Date().toISOString().split("T")[0]);
-  const [submitting, setSubmitting] = useState(false);
 
   async function handleCloturer() {
     if (!dateFin) return;
-    setSubmitting(true);
 
-    try {
-      const res = await fetch(`/api/vagues/${vagueId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ statut: StatutVague.TERMINEE, dateFin }),
-      });
+    const result = await vagueService.cloture(vagueId, { dateFin });
 
-      if (!res.ok) {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur lors de la clôture.", variant: "error" });
-        return;
-      }
-
-      toast({ title: `Vague ${vagueCode} clôturée.`, variant: "success" });
+    if (result.ok) {
       setOpen(false);
       router.refresh();
-    } catch {
-      toast({ title: "Erreur réseau.", variant: "error" });
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -94,8 +75,8 @@ export function CloturerDialog({
           <Button variant="secondary" onClick={() => setOpen(false)}>
             Annuler
           </Button>
-          <Button variant="danger" onClick={handleCloturer} disabled={submitting}>
-            {submitting ? <><FishLoader size="sm" /> Clôture...</> : "Confirmer la clôture"}
+          <Button variant="danger" onClick={handleCloturer}>
+            Confirmer la clôture
           </Button>
         </DialogFooter>
       </DialogContent>

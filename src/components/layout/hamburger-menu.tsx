@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -41,6 +41,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { Permission, Role, SiteModule } from "@/types";
 import { MODULE_VIEW_PERMISSIONS, ITEM_VIEW_PERMISSIONS, MODULE_LABEL_TO_SITE_MODULE } from "@/lib/permissions-constants";
+import { useAuthService } from "@/services";
 
 const roleLabels: Record<Role, string> = {
   ADMIN: "Administrateur",
@@ -234,9 +235,9 @@ interface HamburgerMenuProps {
 }
 
 export function HamburgerMenu({ open, onOpenChange, permissions, role, userName, siteModules }: HamburgerMenuProps) {
-  const [loading, setLoading] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const authService = useAuthService();
 
   // Select modules by role (same logic as sidebar)
   const allModules = useMemo(() => {
@@ -290,15 +291,14 @@ export function HamburgerMenu({ open, onOpenChange, permissions, role, userName,
   }, [pathname, visibleModules]);
 
   async function handleLogout() {
-    setLoading(true);
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/login");
-      router.refresh();
-    } finally {
-      setLoading(false);
-    }
+    await authService.logout();
+    router.push("/login");
+    router.refresh();
   }
+
+  // Suppress unused variable warnings for unused module arrays
+  void modulesIngenieur;
+  void modulesPisciculteur;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -365,8 +365,7 @@ export function HamburgerMenu({ open, onOpenChange, permissions, role, userName,
             )}
             <button
               onClick={handleLogout}
-              disabled={loading}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
             >
               <LogOut className="h-4 w-4" />
               Se deconnecter

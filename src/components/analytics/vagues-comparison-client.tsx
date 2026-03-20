@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import { Loader2, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { StatutVague } from "@/types";
 import type { IndicateursVagueComplet, ComparaisonVagues } from "@/types";
+import { useAnalyticsService } from "@/services";
 
 // ---------------------------------------------------------------------------
 // Recharts (client-side only)
@@ -310,6 +311,7 @@ function VaguesRadarChart({ vagues }: { vagues: IndicateursVagueComplet[] }) {
         const minFCR = Math.min(...fcrValues);
         val = normalize(v.fcrGlobal !== null ? maxFCR + minFCR - v.fcrGlobal : null, minFCR, maxFCR);
       }
+      void vi; // used implicitly via v
       obj[v.code] = val;
     });
     return obj;
@@ -403,9 +405,8 @@ interface VaguesComparisonClientProps {
 }
 
 export function VaguesComparisonClient({ vagues }: VaguesComparisonClientProps) {
+  const analyticsService = useAnalyticsService();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ComparaisonVagues | null>(null);
   const [showSelector, setShowSelector] = useState(true);
 
@@ -421,30 +422,17 @@ export function VaguesComparisonClient({ vagues }: VaguesComparisonClientProps) 
     });
     // Reset results if selection changes
     setResult(null);
-    setError(null);
   }
 
   async function handleComparer() {
     if (selectedIds.size < 2) return;
 
-    setLoading(true);
-    setError(null);
+    const ids = Array.from(selectedIds);
+    const res = await analyticsService.getVagues({ vagueIds: ids });
 
-    try {
-      const ids = Array.from(selectedIds).join(",");
-      const res = await fetch(`/api/analytics/vagues?vagueIds=${ids}`);
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.message ?? "Erreur lors de la comparaison.");
-        return;
-      }
-      const data: ComparaisonVagues = await res.json();
-      setResult(data);
+    if (res.ok && res.data) {
+      setResult(res.data as unknown as ComparaisonVagues);
       setShowSelector(false);
-    } catch {
-      setError("Erreur reseau. Veuillez reessayer.");
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -530,27 +518,16 @@ export function VaguesComparisonClient({ vagues }: VaguesComparisonClientProps) 
               </div>
             )}
 
-            {error && (
-              <p className="mt-2 text-sm text-danger font-medium">{error}</p>
-            )}
-
             <div className="mt-4">
               <p className="text-xs text-muted-foreground mb-2">
                 {selectedIds.size} vague{selectedIds.size > 1 ? "s" : ""} selectionnee{selectedIds.size > 1 ? "s" : ""} / 4 maximum
               </p>
               <Button
                 onClick={handleComparer}
-                disabled={!canCompare || loading}
+                disabled={!canCompare}
                 className="w-full min-h-[48px]"
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Comparaison en cours...
-                  </>
-                ) : (
-                  "Comparer"
-                )}
+                Comparer
               </Button>
             </div>
           </>

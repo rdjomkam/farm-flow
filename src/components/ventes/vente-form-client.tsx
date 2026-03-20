@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ShoppingCart } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,7 +15,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
+import { useVenteService } from "@/services";
 
 interface ClientOption {
   id: string;
@@ -36,8 +35,7 @@ interface Props {
 
 export function VenteFormClient({ clients, vagues }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
-  const [submitting, setSubmitting] = useState(false);
+  const venteService = useVenteService();
 
   const [clientId, setClientId] = useState("");
   const [vagueId, setVagueId] = useState("");
@@ -54,34 +52,18 @@ export function VenteFormClient({ clients, vagues }: Props) {
     e.preventDefault();
     if (!clientId || !vagueId) return;
 
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/ventes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clientId,
-          vagueId,
-          quantitePoissons: parseInt(quantitePoissons),
-          poidsTotalKg: parseFloat(poidsTotalKg),
-          prixUnitaireKg: parseFloat(prixUnitaireKg),
-          ...(notes.trim() && { notes: notes.trim() }),
-        }),
-      });
+    const result = await venteService.createVente({
+      clientId,
+      vagueId,
+      quantitePoissons: parseInt(quantitePoissons),
+      poidsTotalKg: parseFloat(poidsTotalKg),
+      prixUnitaireKg: parseFloat(prixUnitaireKg),
+      ...(notes.trim() && { notes: notes.trim() }),
+    });
 
-      if (res.ok) {
-        const data = await res.json();
-        toast({ title: `Vente ${data.numero} creee`, variant: "success" });
-        router.push("/ventes");
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setSubmitting(false);
+    if (result.ok) {
+      router.push("/ventes");
+      router.refresh();
     }
   }
 
@@ -197,10 +179,11 @@ export function VenteFormClient({ clients, vagues }: Props) {
 
         <Button
           type="submit"
-          disabled={submitting || !isValid}
+          disabled={!isValid}
           className="w-full min-h-[48px]"
         >
-          {submitting ? <><FishLoader size="sm" /> Enregistrement...</> : <><ShoppingCart className="h-4 w-4 mr-2" /> Enregistrer la vente</>}
+          <ShoppingCart className="h-4 w-4 mr-2" />
+          Enregistrer la vente
         </Button>
       </form>
     </div>

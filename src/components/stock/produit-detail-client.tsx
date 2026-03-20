@@ -11,7 +11,6 @@ import {
   Calendar,
   Pencil,
 } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,8 +31,8 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
 import { CategorieProduit, UniteStock, TypeMouvement } from "@/types";
+import { useStockService } from "@/services";
 
 const categorieLabels: Record<CategorieProduit, string> = {
   [CategorieProduit.ALIMENT]: "Aliment",
@@ -81,9 +80,8 @@ interface Props {
 
 export function ProduitDetailClient({ produit, fournisseurs }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const stockService = useStockService();
   const [editOpen, setEditOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
 
   // Edit form
   const [nom, setNom] = useState(produit.nom);
@@ -101,35 +99,19 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
   const uniteLabel = uniteLabels[produit.unite as UniteStock] ?? produit.unite;
 
   async function handleSave() {
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/produits/${produit.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nom: nom.trim(),
-          categorie,
-          unite,
-          prixUnitaire: parseFloat(prixUnitaire) || 0,
-          seuilAlerte: parseFloat(seuilAlerte) || 0,
-          fournisseurId: fournisseurId || null,
-          uniteAchat: dualUnit && uniteAchat ? uniteAchat : null,
-          contenance: dualUnit && contenance ? parseFloat(contenance) : null,
-        }),
-      });
-
-      if (res.ok) {
-        toast({ title: "Produit mis a jour", variant: "success" });
-        setEditOpen(false);
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setSaving(false);
+    const result = await stockService.updateProduit(produit.id, {
+      nom: nom.trim(),
+      categorie: categorie as import("@/types").CategorieProduit,
+      unite: unite as import("@/types").UniteStock,
+      prixUnitaire: parseFloat(prixUnitaire) || 0,
+      seuilAlerte: parseFloat(seuilAlerte) || 0,
+      fournisseurId: fournisseurId || null,
+      uniteAchat: dualUnit && uniteAchat ? uniteAchat as import("@/types").UniteStock : null,
+      contenance: dualUnit && contenance ? parseFloat(contenance) : null,
+    });
+    if (result.ok) {
+      setEditOpen(false);
+      router.refresh();
     }
   }
 
@@ -272,8 +254,8 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
                   <DialogClose asChild>
                     <Button variant="outline">Annuler</Button>
                   </DialogClose>
-                  <Button onClick={handleSave} disabled={saving || !nom.trim()}>
-                    {saving ? <><FishLoader size="sm" /> Enregistrement...</> : "Enregistrer"}
+                  <Button onClick={handleSave} disabled={!nom.trim()}>
+                    Enregistrer
                   </Button>
                 </DialogFooter>
               </DialogContent>

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BacsListClient } from "@/components/bacs/bacs-list-client";
 import { Permission } from "@/types";
@@ -22,6 +23,20 @@ vi.mock("next/navigation", () => ({
 const mockToast = vi.fn();
 vi.mock("@/components/ui/toast", () => ({
   useToast: () => ({ toast: mockToast }),
+}));
+
+const mockCall = vi.fn().mockResolvedValue({ data: null, error: null, ok: true });
+vi.mock("@/contexts/global-loading.context", () => ({
+  useGlobalLoading: () => ({ isLoading: false, increment: vi.fn(), decrement: vi.fn() }),
+  GlobalLoadingProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+vi.mock("@/services", () => ({
+  useBacService: () => ({
+    list: mockCall,
+    listByVague: mockCall,
+    create: mockCall,
+    update: mockCall,
+  }),
 }));
 
 const fakeBacs: BacResponse[] = [
@@ -93,7 +108,6 @@ describe("BacsListClient — Affichage", () => {
 describe("BacsListClient — Formulaire de création", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn();
   });
 
   it("ouvre le dialogue de création au clic sur 'Nouveau bac'", async () => {
@@ -141,11 +155,6 @@ describe("BacsListClient — Formulaire de création", () => {
   });
 
   it("soumet le formulaire avec des données valides", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ id: "bac-new", nom: "Bac Test", volume: 1500 }),
-    });
-
     render(<BacsListClient bacs={fakeBacs} permissions={allPermissions} />);
     fireEvent.click(screen.getByText("Nouveau bac"));
 
@@ -162,13 +171,7 @@ describe("BacsListClient — Formulaire de création", () => {
     fireEvent.click(screen.getByText("Créer le bac"));
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith("/api/bacs", expect.objectContaining({
-        method: "POST",
-      }));
+      expect(mockCall).toHaveBeenCalled();
     });
-
-    expect(mockToast).toHaveBeenCalledWith(
-      expect.objectContaining({ variant: "success" })
-    );
   });
 });

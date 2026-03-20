@@ -37,7 +37,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/toast";
+import { useActiviteService } from "@/services";
 import { CompleterActiviteDialog } from "@/components/planning/completer-activite-dialog";
 import { ModifierActiviteDialog } from "@/components/planning/modifier-activite-dialog";
 import { TypeActivite, StatutActivite, TypeReleve, Permission, Recurrence, PhaseElevage } from "@/types";
@@ -187,7 +187,7 @@ interface PlanningClientProps {
 }
 
 export function PlanningClient({ activites, permissions, vagues = [], bacs = [], members = [] }: PlanningClientProps) {
-  const { toast } = useToast();
+  const activiteService = useActiviteService();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -260,17 +260,10 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
   }
 
   async function supprimerActivite(activite: ActiviteWithRelations) {
-    try {
-      const res = await fetch(`/api/activites/${activite.id}`, { method: "DELETE" });
-      if (res.ok) {
-        toast({ title: "Activite supprimee", variant: "success" });
-        startTransition(() => router.refresh());
-        setSelectedActivite(null);
-      } else {
-        toast({ title: "Erreur lors de la suppression", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
+    const result = await activiteService.remove(activite.id);
+    if (result.ok) {
+      startTransition(() => router.refresh());
+      setSelectedActivite(null);
     }
   }
 

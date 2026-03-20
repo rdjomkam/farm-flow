@@ -28,7 +28,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
+import { useConfigService } from "@/services";
 import {
   Dialog,
   DialogTrigger,
@@ -56,8 +56,6 @@ import {
 } from "@/lib/regles-activites-constants";
 import { ActionRegle, SeveriteAlerte, TypeDeclencheur, PhaseElevage, OperateurCondition, LogiqueCondition } from "@/types";
 import type { RegleActiviteWithRelations, ConditionRegle } from "@/types";
-import { FishLoader } from "@/components/ui/fish-loader";
-
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -147,12 +145,9 @@ function SectionCard({
 
 export function RegleDetailClient({ regle, canManage, canManageGlobal, customPlaceholders = [] }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const configService = useConfigService();
 
   const [editMode, setEditMode] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [resetting, setResetting] = useState(false);
 
   const isGlobal = regle.siteId === null;
   const activitesCount = regle._count?.activites ?? 0;
@@ -197,143 +192,62 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
   // ---------------------------------------------------------------------------
 
   async function handleSave() {
-    setSubmitting(true);
-    try {
-      const validConditions = form.conditions.filter(
-        (c) => c.typeDeclencheur !== "" && c.operateur !== ""
-      );
+    const validConditions = form.conditions.filter(
+      (c) => c.typeDeclencheur !== "" && c.operateur !== ""
+    );
 
-      // Derive typeDeclencheur from first valid condition (required by API schema)
-      const derivedTypeDeclencheur =
-        validConditions.length > 0
-          ? (validConditions[0].typeDeclencheur as TypeDeclencheur)
-          : regle.typeDeclencheur as TypeDeclencheur;
+    // Derive typeDeclencheur from first valid condition (required by API schema)
+    const derivedTypeDeclencheur =
+      validConditions.length > 0
+        ? (validConditions[0].typeDeclencheur as TypeDeclencheur)
+        : regle.typeDeclencheur as TypeDeclencheur;
 
-      const body = {
-        nom: form.nom.trim(),
-        description: form.description.trim() || null,
-        priorite: form.priorite,
-        intervalleJours: form.intervalleJours,
-        phaseMin: form.phaseMin,
-        phaseMax: form.phaseMax,
-        typeDeclencheur: derivedTypeDeclencheur,
-        titreTemplate: form.titreTemplate.trim(),
-        descriptionTemplate: form.descriptionTemplate.trim() || null,
-        instructionsTemplate: form.instructionsTemplate.trim() || null,
-        isActive: form.isActive,
-        logique: form.logique,
-        conditions: validConditions.map((c, idx) => ({
-          typeDeclencheur: c.typeDeclencheur as TypeDeclencheur,
-          operateur: c.operateur as OperateurCondition,
-          conditionValeur: c.conditionValeur !== "" ? Number(c.conditionValeur) : null,
-          conditionValeur2: c.conditionValeur2 !== "" ? Number(c.conditionValeur2) : null,
-          ordre: idx,
-        })),
-        // Sprint 29 — action fields
-        actionType: form.actionType,
-        severite: form.severite || null,
-        titreNotificationTemplate: form.titreNotificationTemplate.trim() || null,
-        descriptionNotificationTemplate: form.descriptionNotificationTemplate.trim() || null,
-        actionPayloadType: form.actionPayloadType || null,
-      };
+    const body = {
+      nom: form.nom.trim(),
+      description: form.description.trim() || null,
+      priorite: form.priorite,
+      intervalleJours: form.intervalleJours,
+      phaseMin: form.phaseMin,
+      phaseMax: form.phaseMax,
+      typeDeclencheur: derivedTypeDeclencheur,
+      titreTemplate: form.titreTemplate.trim(),
+      descriptionTemplate: form.descriptionTemplate.trim() || null,
+      instructionsTemplate: form.instructionsTemplate.trim() || null,
+      isActive: form.isActive,
+      logique: form.logique,
+      conditions: validConditions.map((c, idx) => ({
+        typeDeclencheur: c.typeDeclencheur as TypeDeclencheur,
+        operateur: c.operateur as OperateurCondition,
+        conditionValeur: c.conditionValeur !== "" ? Number(c.conditionValeur) : null,
+        conditionValeur2: c.conditionValeur2 !== "" ? Number(c.conditionValeur2) : null,
+        ordre: idx,
+      })),
+      // Sprint 29 — action fields
+      actionType: form.actionType,
+      severite: form.severite || null,
+      titreNotificationTemplate: form.titreNotificationTemplate.trim() || null,
+      descriptionNotificationTemplate: form.descriptionNotificationTemplate.trim() || null,
+      actionPayloadType: form.actionPayloadType || null,
+    };
 
-      const res = await fetch(`/api/regles-activites/${regle.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        toast({
-          title: "Erreur",
-          description: data.message ?? data.error ?? "Erreur lors de la mise a jour.",
-          variant: "error",
-        });
-        return;
-      }
-
-      toast({
-        title: "Regle mise a jour",
-        description: "Les modifications ont ete enregistrees.",
-      });
+    const result = await configService.updateRegle(regle.id, body as Parameters<typeof configService.updateRegle>[1]);
+    if (result.ok) {
       setEditMode(false);
       router.refresh();
-    } catch {
-      toast({
-        title: "Erreur",
-        description: "Erreur lors de la mise a jour.",
-        variant: "error",
-      });
-    } finally {
-      setSubmitting(false);
     }
   }
 
   async function handleDelete() {
-    setDeleting(true);
-    try {
-      const res = await fetch(`/api/regles-activites/${regle.id}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        toast({
-          title: "Erreur",
-          description: data.error ?? "Impossible de supprimer la regle.",
-          variant: "error",
-        });
-        return;
-      }
-
-      toast({
-        title: "Regle supprimee",
-        description: "La regle a ete supprimee avec succes.",
-      });
+    const result = await configService.deleteRegle(regle.id);
+    if (result.ok) {
       router.push("/settings/regles-activites");
-    } catch {
-      toast({
-        title: "Erreur",
-        description: "Erreur lors de la suppression.",
-        variant: "error",
-      });
-    } finally {
-      setDeleting(false);
     }
   }
 
   async function handleResetFiredOnce() {
-    setResetting(true);
-    try {
-      const res = await fetch(`/api/regles-activites/${regle.id}/reset`, {
-        method: "POST",
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        toast({
-          title: "Erreur",
-          description: data.error ?? "Impossible de reinitialiser firedOnce.",
-          variant: "error",
-        });
-        return;
-      }
-
-      toast({
-        title: "Reinitialise",
-        description: "La regle se declenchera a nouveau au prochain cycle.",
-      });
+    const result = await configService.resetRegle(regle.id);
+    if (result.ok) {
       router.refresh();
-    } catch {
-      toast({
-        title: "Erreur",
-        description: "Erreur lors de la reinitialisation.",
-        variant: "error",
-      });
-    } finally {
-      setResetting(false);
     }
   }
 
@@ -671,9 +585,8 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                     <Button
                       variant="primary"
                       onClick={handleResetFiredOnce}
-                      disabled={resetting}
                     >
-                      {resetting ? "Reinitialisation..." : "Confirmer"}
+                      Confirmer
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -709,9 +622,8 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                     <Button
                       variant="danger"
                       onClick={handleDelete}
-                      disabled={deleting}
                     >
-                      {deleting ? <><FishLoader size="sm" /> Suppression...</> : "Supprimer"}
+                      Supprimer
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -1304,9 +1216,8 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                 <Button
                   variant="danger"
                   onClick={handleDelete}
-                  disabled={deleting}
                 >
-                  {deleting ? <><FishLoader size="sm" /> Suppression...</> : "Supprimer"}
+                  Supprimer
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -1316,10 +1227,9 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
         <Button
           type="submit"
           variant="primary"
-          disabled={submitting}
           className="flex-1 sm:flex-none"
         >
-          {submitting ? <><FishLoader size="sm" /> Enregistrement...</> : <><Check className="h-4 w-4" /> Enregistrer</>}
+          <Check className="h-4 w-4" /> Enregistrer
         </Button>
       </div>
     </form>

@@ -6,7 +6,7 @@ import { ChevronDown, ChevronUp, Info, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/components/ui/toast";
+import { useConfigService } from "@/services";
 import {
   Select,
   SelectContent,
@@ -36,8 +36,6 @@ import {
   OPERATEUR_CONDITION_LABELS,
   LOGIQUE_CONDITION_LABELS,
 } from "@/lib/regles-activites-constants";
-import { FishLoader } from "@/components/ui/fish-loader";
-
 // ---------------------------------------------------------------------------
 // Helpers — résolution du preview avec valeurs d'exemple
 // ---------------------------------------------------------------------------
@@ -342,12 +340,11 @@ function TitrePreview({ titreTemplate }: { titreTemplate: string }) {
 
 export function RegleFormClient() {
   const router = useRouter();
-  const { toast } = useToast();
+  const configService = useConfigService();
 
   // Form state
   const [form, setForm] = useState<FormState>(INITIAL_STATE);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [submitting, setSubmitting] = useState(false);
 
   // Section accordeon state
   const [sectionTypeOpen, setSectionTypeOpen] = useState(true);
@@ -496,8 +493,6 @@ export function RegleFormClient() {
       return;
     }
 
-    setSubmitting(true);
-
     // Build valid conditions list
     const validConditions = form.conditions.filter(
       (c) => c.typeDeclencheur !== "" && c.operateur !== ""
@@ -553,38 +548,18 @@ export function RegleFormClient() {
     }
     dto.actionPayloadType = form.actionPayloadType || null;
 
-    try {
-      const res = await fetch("/api/regles-activites", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dto),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(
-          data.error ?? `Erreur ${res.status}`
-        );
+    const result = await configService.createRegle(dto);
+    if (result.ok && result.data) {
+      const created = result.data as { id?: string; regle?: { id: string } };
+      const id = created.id ?? (created.regle as { id: string } | undefined)?.id;
+      if (id) {
+        router.push(`/settings/regles-activites/${id}`);
+      } else {
+        router.push("/settings/regles-activites");
       }
-
-      const created = await res.json();
-      toast({
-        title: "Regle creee",
-        description: `"${dto.nom}" a ete enregistree avec succes.`,
-        variant: "success",
-      });
-      router.push(`/settings/regles-activites/${created.regle.id}`);
-    } catch (err) {
-      toast({
-        title: "Erreur",
-        description: err instanceof Error ? err.message : "Impossible de creer la regle.",
-        variant: "error",
-      });
-    } finally {
-      setSubmitting(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, validate, hasRecurrentCondition, router, toast]);
+  }, [form, validate, hasRecurrentCondition, router, configService]);
 
   // Re-run validation after errors change (to update section open state)
   useEffect(() => {
@@ -1137,9 +1112,8 @@ export function RegleFormClient() {
           variant="primary"
           size="lg"
           className="w-full"
-          disabled={submitting}
         >
-          {submitting ? <><FishLoader size="sm" /> Enregistrement...</> : "Creer la regle"}
+          Creer la regle
         </Button>
       </div>
     </form>

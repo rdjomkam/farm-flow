@@ -11,17 +11,18 @@ import { Header } from "@/components/layout/header";
 import { PERMISSION_GROUPS } from "@/lib/permissions-constants";
 import { groupLabels, permissionLabels } from "@/lib/role-form-labels";
 import { cn } from "@/lib/utils";
+import { useUserService } from "@/services";
 
 export default function NewRolePage() {
   const params = useParams<{ id: string }>();
   const siteId = params.id;
   const router = useRouter();
   const { toast } = useToast();
+  const userService = useUserService();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedPerms, setSelectedPerms] = useState<Set<string>>(new Set());
-  const [saving, setSaving] = useState(false);
 
   function togglePermission(perm: string) {
     setSelectedPerms((prev) => {
@@ -43,29 +44,15 @@ export default function NewRolePage() {
       return;
     }
 
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/sites/${siteId}/roles`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          description: description.trim() || undefined,
-          permissions: Array.from(selectedPerms),
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast({ title: "Role cree avec succes", variant: "success" });
-        router.push(`/settings/sites/${siteId}/roles`);
-        router.refresh();
-      } else {
-        toast({ title: data.message || "Erreur lors de la creation", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setSaving(false);
+    const { ok } = await userService.createRole(siteId, {
+      name: name.trim(),
+      description: description.trim() || undefined,
+      permissions: Array.from(selectedPerms) as import("@/types").Permission[],
+    });
+
+    if (ok) {
+      router.push(`/settings/sites/${siteId}/roles`);
+      router.refresh();
     }
   }
 
@@ -143,9 +130,9 @@ export default function NewRolePage() {
             <Button
               type="submit"
               className="flex-1"
-              disabled={saving || !name.trim() || selectedPerms.size === 0}
+              disabled={!name.trim() || selectedPerms.size === 0}
             >
-              {saving ? "Creation..." : "Creer le role"}
+              Creer le role
             </Button>
           </div>
         </form>

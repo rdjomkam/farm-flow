@@ -5,9 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/toast";
-import { cn } from "@/lib/utils";
-import { FishLoader } from "@/components/ui/fish-loader";
+import { useConfigService } from "@/services";
 import type { ConfigElevage } from "@/types";
 
 interface Props {
@@ -104,10 +102,9 @@ function NumericField({
 
 export function ConfigElevageEditClient({ config }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const configService = useConfigService();
   const [form, setForm] = useState<ConfigElevage>({ ...config });
   const [openSections, setOpenSections] = useState<Set<string>>(new Set(["objectif"]));
-  const [submitting, setSubmitting] = useState(false);
 
   const toggleSection = (id: string) => {
     setOpenSections((prev) => {
@@ -128,24 +125,10 @@ export function ConfigElevageEditClient({ config }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
-    try {
-      const res = await fetch(`/api/config-elevage/${config.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        toast({ title: "Erreur", description: data.message, variant: "error" });
-        return;
-      }
-      toast({ title: "Profil mis a jour", description: "Les modifications ont ete enregistrees." });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await configService.updateConfig(config.id, form as any);
+    if (result.ok) {
       router.push("/settings/config-elevage");
-    } catch {
-      toast({ title: "Erreur", description: "Erreur lors de la mise a jour.", variant: "error" });
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -335,8 +318,8 @@ export function ConfigElevageEditClient({ config }: Props) {
         >
           Annuler
         </Button>
-        <Button type="submit" className="flex-1" disabled={submitting}>
-          {submitting ? <><FishLoader size="sm" /> Enregistrement...</> : "Enregistrer"}
+        <Button type="submit" className="flex-1">
+          Enregistrer
         </Button>
       </div>
     </form>

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, Egg, ArrowLeft } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,8 +24,8 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
 import { StatutPonte, Permission } from "@/types";
+import { useAlevinsService } from "@/services";
 
 const statutLabels: Record<StatutPonte, string> = {
   [StatutPonte.EN_COURS]: "En cours",
@@ -61,11 +60,10 @@ interface Props {
 
 export function PontesListClient({ pontes, femelles, males, permissions }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const alevinsService = useAlevinsService();
   const [tab, setTab] = useState("tous");
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
 
   // Form state
   const [code, setCode] = useState("");
@@ -99,37 +97,19 @@ export function PontesListClient({ pontes, femelles, males, permissions }: Props
   async function handleCreate() {
     if (!code.trim() || !femelleId || !datePonte) return;
 
-    setCreating(true);
-    try {
-      const res = await fetch("/api/pontes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code: code.trim(),
-          femelleId,
-          ...(maleId && { maleId }),
-          datePonte,
-          ...(nombreOeufs && { nombreOeufs: parseInt(nombreOeufs, 10) }),
-          ...(tauxFecondation && {
-            tauxFecondation: parseFloat(tauxFecondation),
-          }),
-          ...(notes.trim() && { notes: notes.trim() }),
-        }),
-      });
-
-      if (res.ok) {
-        toast({ title: "Ponte creee", variant: "success" });
-        setDialogOpen(false);
-        resetForm();
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setCreating(false);
+    const result = await alevinsService.createPonte({
+      code: code.trim(),
+      femelleId,
+      ...(maleId && { maleId }),
+      datePonte,
+      ...(nombreOeufs && { nombreOeufs: parseInt(nombreOeufs, 10) }),
+      ...(tauxFecondation && { tauxFecondation: parseFloat(tauxFecondation) }),
+      ...(notes.trim() && { notes: notes.trim() }),
+    });
+    if (result.ok) {
+      setDialogOpen(false);
+      resetForm();
+      router.refresh();
     }
   }
 
@@ -232,9 +212,9 @@ export function PontesListClient({ pontes, femelles, males, permissions }: Props
               </DialogClose>
               <Button
                 onClick={handleCreate}
-                disabled={creating || !code.trim() || !femelleId || !datePonte}
+                disabled={!code.trim() || !femelleId || !datePonte}
               >
-                {creating ? <><FishLoader size="sm" /> Creation...</> : "Creer"}
+                Creer
               </Button>
             </DialogFooter>
           </DialogContent>

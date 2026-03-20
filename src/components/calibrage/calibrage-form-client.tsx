@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/components/ui/toast";
 import { CategorieCalibrage } from "@/types";
 import type { BacResponse, CreateCalibrageDTO } from "@/types";
 import { StepSources } from "./step-sources";
 import { StepGroupes } from "./step-groupes";
 import { StepMortalite } from "./step-mortalite";
 import { StepRecap } from "./step-recap";
+import { useCalibrageService } from "@/services";
 
 export interface GroupeForm {
   categorie: string;
@@ -54,14 +54,13 @@ export function CalibrageFormClient({
   onSuccess,
 }: CalibrageFormClientProps) {
   const router = useRouter();
-  const { toast } = useToast();
+  const calibrageService = useCalibrageService();
 
   const [step, setStep] = useState(1);
   const [selectedBacIds, setSelectedBacIds] = useState<string[]>([]);
   const [groupes, setGroupes] = useState<GroupeForm[]>(INITIAL_GROUPES);
   const [nombreMorts, setNombreMorts] = useState("0");
   const [notes, setNotes] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [sourceError, setSourceError] = useState("");
   const [groupeErrors, setGroupeErrors] = useState<Record<string, string>>({});
 
@@ -132,56 +131,36 @@ export function CalibrageFormClient({
   }
 
   async function handleSubmit() {
-    setSubmitting(true);
-    try {
-      const validGroupes = groupes.filter(
-        (g) =>
-          g.categorie &&
-          g.destinationBacId &&
-          Number(g.nombrePoissons) > 0 &&
-          Number(g.poidsMoyen) > 0
-      );
+    const validGroupes = groupes.filter(
+      (g) =>
+        g.categorie &&
+        g.destinationBacId &&
+        Number(g.nombrePoissons) > 0 &&
+        Number(g.poidsMoyen) > 0
+    );
 
-      const body: CreateCalibrageDTO = {
-        vagueId,
-        sourceBacIds: selectedBacIds,
-        nombreMorts: Number(nombreMorts) || 0,
-        notes: notes.trim() || undefined,
-        groupes: validGroupes.map((g) => ({
-          categorie: g.categorie as CategorieCalibrage,
-          destinationBacId: g.destinationBacId,
-          nombrePoissons: Number(g.nombrePoissons),
-          poidsMoyen: Number(g.poidsMoyen),
-          tailleMoyenne: g.tailleMoyenne ? Number(g.tailleMoyenne) : undefined,
-        })),
-      };
+    const dto: CreateCalibrageDTO = {
+      vagueId,
+      sourceBacIds: selectedBacIds,
+      nombreMorts: Number(nombreMorts) || 0,
+      notes: notes.trim() || undefined,
+      groupes: validGroupes.map((g) => ({
+        categorie: g.categorie as CategorieCalibrage,
+        destinationBacId: g.destinationBacId,
+        nombrePoissons: Number(g.nombrePoissons),
+        poidsMoyen: Number(g.poidsMoyen),
+        tailleMoyenne: g.tailleMoyenne ? Number(g.tailleMoyenne) : undefined,
+      })),
+    };
 
-      const res = await fetch("/api/calibrages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        toast({
-          title: data.message || "Erreur lors de la creation.",
-          variant: "error",
-        });
-        return;
-      }
-
-      toast({ title: "Calibrage enregistre !", variant: "success" });
+    const result = await calibrageService.create(dto);
+    if (result.ok) {
       if (onSuccess) {
         onSuccess();
       } else {
         router.push(`/vagues/${vagueId}`);
         router.refresh();
       }
-    } catch {
-      toast({ title: "Erreur reseau.", variant: "error" });
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -267,7 +246,7 @@ export function CalibrageFormClient({
           notes={notes}
           onBack={() => setStep(3)}
           onSubmit={handleSubmit}
-          submitting={submitting}
+          submitting={false}
         />
       )}
     </div>

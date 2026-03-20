@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, Package, CheckCircle, XCircle, Users } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,7 +18,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/toast";
+import { useConfigService } from "@/services";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Permission } from "@/types";
 
@@ -48,11 +47,10 @@ interface Props {
 
 export function PacksListClient({ packs, permissions }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const configService = useConfigService();
   const [tab, setTab] = useState("actifs");
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
 
   // Form state
   const [nom, setNom] = useState("");
@@ -79,76 +77,29 @@ export function PacksListClient({ packs, permissions }: Props) {
   }
 
   async function handleCreate() {
-    if (!nom.trim()) {
-      toast({ title: "Erreur", description: "Le nom du pack est requis.", variant: "error" });
-      return;
-    }
+    if (!nom.trim()) return;
     const nb = parseInt(nombreAlevins, 10);
-    if (isNaN(nb) || nb <= 0) {
-      toast({ title: "Erreur", description: "Le nombre d'alevins doit etre superieur a 0.", variant: "error" });
-      return;
-    }
+    if (isNaN(nb) || nb <= 0) return;
     const prix = parseFloat(prixTotal);
-    if (isNaN(prix) || prix < 0) {
-      toast({ title: "Erreur", description: "Le prix total ne peut pas etre negatif.", variant: "error" });
-      return;
-    }
+    if (isNaN(prix) || prix < 0) return;
 
-    setCreating(true);
-    try {
-      const res = await fetch("/api/packs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nom: nom.trim(),
-          description: description.trim() || null,
-          nombreAlevins: nb,
-          poidsMoyenInitial: parseFloat(poidsMoyen) || 5,
-          prixTotal: prix,
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Erreur lors de la creation du pack.");
-      }
-      toast({ title: "Pack cree", description: `Le pack "${nom}" a ete cree avec succes.` });
+    const result = await configService.createPack({
+      nom: nom.trim(),
+      description: description.trim() || undefined,
+      nombreAlevins: nb,
+      poidsMoyenInitial: parseFloat(poidsMoyen) || 5,
+      prixTotal: prix,
+    });
+    if (result.ok) {
       setDialogOpen(false);
       resetForm();
       router.refresh();
-    } catch (err) {
-      toast({
-        title: "Erreur",
-        description: err instanceof Error ? err.message : "Erreur inconnue.",
-        variant: "error",
-      });
-    } finally {
-      setCreating(false);
     }
   }
 
   async function handleToggleActive(pack: PackData) {
-    try {
-      const res = await fetch(`/api/packs/${pack.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: !pack.isActive }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Erreur lors de la mise a jour.");
-      }
-      toast({
-        title: pack.isActive ? "Pack desactive" : "Pack active",
-        description: `Le pack "${pack.nom}" a ete ${pack.isActive ? "desactive" : "active"}.`,
-      });
-      router.refresh();
-    } catch (err) {
-      toast({
-        title: "Erreur",
-        description: err instanceof Error ? err.message : "Erreur inconnue.",
-        variant: "error",
-      });
-    }
+    const result = await configService.updatePack(pack.id, { isActive: !pack.isActive });
+    if (result.ok) router.refresh();
   }
 
   return (
@@ -231,9 +182,7 @@ export function PacksListClient({ packs, permissions }: Props) {
                 <DialogClose asChild>
                   <Button variant="outline" onClick={resetForm}>Annuler</Button>
                 </DialogClose>
-                <Button onClick={handleCreate} disabled={creating}>
-                  {creating ? <><FishLoader size="sm" /> Creation...</> : "Creer"}
-                </Button>
+                <Button onClick={handleCreate}>Creer</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

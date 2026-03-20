@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/toast";
+import { useConfigService } from "@/services";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -69,21 +69,17 @@ export function PlaceholdersClient({ canManage }: Props) {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<CustomPlaceholderData | null>(null);
-  const { toast } = useToast();
+  const configService = useConfigService();
 
   const fetchPlaceholders = useCallback(async () => {
-    try {
-      const res = await fetch("/api/regles-activites/placeholders");
-      if (res.ok) {
-        const data = await res.json();
-        setPlaceholders(data.placeholders ?? data);
-      }
-    } catch {
-      toast({ title: "Erreur lors du chargement", variant: "error" });
-    } finally {
-      setLoading(false);
+    const result = await configService.listPlaceholders();
+    if (result.ok && result.data) {
+      const data = result.data as { placeholders?: CustomPlaceholderData[] };
+      setPlaceholders(data.placeholders ?? []);
     }
-  }, [toast]);
+    setLoading(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     fetchPlaceholders();
@@ -101,45 +97,25 @@ export function PlaceholdersClient({ canManage }: Props) {
 
   async function handleDelete(id: string) {
     if (!confirm("Supprimer ce placeholder personnalise ?")) return;
-    try {
-      const res = await fetch(`/api/regles-activites/placeholders/${id}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        toast({ title: "Placeholder supprime" });
-        fetchPlaceholders();
-      } else {
-        const data = await res.json();
-        toast({ title: data.error || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
+    const result = await configService.deletePlaceholder(id);
+    if (result.ok) {
+      fetchPlaceholders();
     }
   }
 
   async function handleSave(data: Omit<CustomPlaceholderData, "id" | "isActive">) {
-    try {
-      const url = editing
-        ? `/api/regles-activites/placeholders/${editing.id}`
-        : "/api/regles-activites/placeholders";
-      const method = editing ? "PUT" : "POST";
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (res.ok) {
-        toast({ title: editing ? "Placeholder modifie" : "Placeholder cree" });
-        setDialogOpen(false);
-        fetchPlaceholders();
-      } else {
-        const err = await res.json();
-        toast({ title: err.error || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
+    let result;
+    if (editing) {
+      result = await configService.updatePlaceholder(
+        editing.id,
+        data as Parameters<typeof configService.updatePlaceholder>[1]
+      );
+    } else {
+      result = await configService.createPlaceholder(data as Parameters<typeof configService.createPlaceholder>[0]);
+    }
+    if (result.ok) {
+      setDialogOpen(false);
+      fetchPlaceholders();
     }
   }
 

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Lock } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,7 +22,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/toast";
+import { useActiviteService } from "@/services";
 import { TypeActivite, Recurrence, StatutActivite, Permission } from "@/types";
 import type { ActiviteWithRelations } from "@/types";
 
@@ -63,9 +62,8 @@ export function ModifierActiviteDialog({
   members,
 }: ModifierActiviteDialogProps) {
   const router = useRouter();
-  const { toast } = useToast();
+  const activiteService = useActiviteService();
   const [open, setOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
 
   const isLocked =
     activite.statut === StatutActivite.TERMINEE ||
@@ -103,50 +101,33 @@ export function ModifierActiviteDialog({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSubmitting(true);
 
-    try {
-      const body: Record<string, unknown> = {};
+    const body: Record<string, unknown> = {};
 
-      if (isLocked) {
-        // Only description and noteCompletion editable
-        if (description !== (activite.description ?? "")) {
-          body.description = description.trim() || null;
-        }
-        if (noteCompletion !== (activite.noteCompletion ?? "")) {
-          body.noteCompletion = noteCompletion.trim() || null;
-        }
-      } else {
-        body.titre = titre.trim();
+    if (isLocked) {
+      // Only description and noteCompletion editable
+      if (description !== (activite.description ?? "")) {
         body.description = description.trim() || null;
-        body.typeActivite = typeAct;
-        body.dateDebut = new Date(dateDebut).toISOString();
-        body.dateFin = dateFin ? new Date(dateFin).toISOString() : null;
-        body.recurrence = recurrence !== "__none__" ? recurrence : null;
-        body.vagueId = vagueId !== "__none__" ? vagueId : null;
-        body.bacId = bacId !== "__none__" ? bacId : null;
-        body.assigneAId = assigneAId !== "__none__" ? assigneAId : null;
       }
-
-      const res = await fetch(`/api/activites/${activite.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur lors de la modification.", variant: "error" });
-        return;
+      if (noteCompletion !== (activite.noteCompletion ?? "")) {
+        body.noteCompletion = noteCompletion.trim() || null;
       }
+    } else {
+      body.titre = titre.trim();
+      body.description = description.trim() || null;
+      body.typeActivite = typeAct;
+      body.dateDebut = new Date(dateDebut).toISOString();
+      body.dateFin = dateFin ? new Date(dateFin).toISOString() : null;
+      body.recurrence = recurrence !== "__none__" ? recurrence : null;
+      body.vagueId = vagueId !== "__none__" ? vagueId : null;
+      body.bacId = bacId !== "__none__" ? bacId : null;
+      body.assigneAId = assigneAId !== "__none__" ? assigneAId : null;
+    }
 
-      toast({ title: "Activite modifiee", variant: "success" });
+    const result = await activiteService.update(activite.id, body);
+    if (result.ok) {
       setOpen(false);
       router.refresh();
-    } catch {
-      toast({ title: "Erreur reseau.", variant: "error" });
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -299,8 +280,8 @@ export function ModifierActiviteDialog({
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               Annuler
             </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? <><FishLoader size="sm" /> Modification...</> : "Enregistrer"}
+            <Button type="submit">
+              Enregistrer
             </Button>
           </DialogFooter>
         </form>

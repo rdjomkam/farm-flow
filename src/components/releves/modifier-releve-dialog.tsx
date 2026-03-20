@@ -21,12 +21,11 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
 import { TypeReleve, CauseMortalite, TypeAliment, MethodeComptage, CategorieProduit, Permission } from "@/types";
 import type { Releve } from "@/types";
 import { ConsommationFields } from "@/components/releves/consommation-fields";
 import type { ConsommationLine, ProduitOption } from "@/components/releves/consommation-fields";
-import { FishLoader } from "@/components/ui/fish-loader";
+import { useReleveService } from "@/services";
 
 const typeLabels: Record<TypeReleve, string> = {
   [TypeReleve.BIOMETRIE]: "Biometrie",
@@ -69,10 +68,9 @@ interface ModifierReleveDialogProps {
 
 export function ModifierReleveDialog({ releve, produits = [], permissions }: ModifierReleveDialogProps) {
   const router = useRouter();
-  const { toast } = useToast();
+  const releveService = useReleveService();
   const type = releve.typeReleve as TypeReleve;
   const [open, setOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Raison obligatoire (ADR-014) — premier champ visible
@@ -242,27 +240,13 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
-    setSubmitting(true);
     setErrors({});
 
-    try {
-      const res = await fetch(`/api/releves/${releve.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildBody()),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur lors de la modification.", variant: "error" });
-        return;
-      }
-      toast({ title: "Releve modifie avec succes.", variant: "success" });
+    const result = await releveService.update(releve.id, buildBody() as unknown as { raison: string; [key: string]: unknown });
+
+    if (result.ok) {
       setOpen(false);
       router.refresh();
-    } catch {
-      toast({ title: "Erreur reseau.", variant: "error" });
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -524,8 +508,8 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               Annuler
             </Button>
-            <Button type="submit" disabled={submitting || !raisonValid}>
-              {submitting ? <><FishLoader size="sm" /> Modification...</> : "Enregistrer les modifications"}
+            <Button type="submit" disabled={!raisonValid}>
+              Enregistrer les modifications
             </Button>
           </DialogFooter>
         </form>

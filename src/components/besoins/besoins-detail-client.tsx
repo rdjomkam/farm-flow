@@ -35,8 +35,8 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
 import { StatutBesoins } from "@/types";
+import { useDepenseService } from "@/services";
 import { ModifierBesoinDialog } from "./modifier-besoin-dialog";
 
 // ---------------------------------------------------------------------------
@@ -140,9 +140,8 @@ export function BesoinsDetailClient({
   canEdit = false,
 }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const depenseService = useDepenseService();
   const [liste, setListe] = useState(initial);
-  const [loading, setLoading] = useState(false);
 
   // Dialog states
   const [rejectOpen, setRejectOpen] = useState(false);
@@ -176,119 +175,55 @@ export function BesoinsDetailClient({
   const statut = liste.statut as StatutBesoins;
 
   async function handleApprouver() {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/besoins/${liste.id}/approuver`, {
-        method: "POST",
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message);
-      }
-      const data = await res.json();
-      setListe(data);
-      toast({ title: "Liste approuvee", variant: "success" });
+    const result = await depenseService.approuverBesoin(liste.id);
+    if (result.ok && result.data) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setListe(result.data as any);
       router.refresh();
-    } catch (err) {
-      toast({
-        title: "Erreur",
-        description: err instanceof Error ? err.message : "Erreur serveur.",
-        variant: "error",
-      });
-    } finally {
-      setLoading(false);
     }
   }
 
   async function handleRejeter() {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/besoins/${liste.id}/rejeter`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ motif: motifRejet }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message);
-      }
-      const data = await res.json();
-      setListe(data);
+    const result = await depenseService.rejeterBesoin(liste.id, {
+      motif: motifRejet,
+    });
+    if (result.ok && result.data) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setListe(result.data as any);
       setRejectOpen(false);
       setMotifRejet("");
-      toast({ title: "Liste rejetee", variant: "success" });
       router.refresh();
-    } catch (err) {
-      toast({
-        title: "Erreur",
-        description: err instanceof Error ? err.message : "Erreur serveur.",
-        variant: "error",
-      });
-    } finally {
-      setLoading(false);
     }
   }
 
   async function handleTraiter() {
-    setLoading(true);
-    try {
-      const ligneActionsArr = Object.entries(ligneActions).map(
-        ([ligneBesoinId, action]) => ({ ligneBesoinId, action })
-      );
-      const res = await fetch(`/api/besoins/${liste.id}/traiter`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ligneActions: ligneActionsArr }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message);
-      }
-      const data = await res.json();
-      setListe(data);
+    const ligneActionsArr = Object.entries(ligneActions).map(
+      ([ligneBesoinId, action]) => ({ ligneBesoinId, action })
+    );
+    const result = await depenseService.traiterBesoin(liste.id, {
+      ligneActions: ligneActionsArr,
+    });
+    if (result.ok && result.data) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setListe(result.data as any);
       setTraitOpen(false);
-      toast({ title: "Liste traitee, depense et commandes creees", variant: "success" });
       router.refresh();
-    } catch (err) {
-      toast({
-        title: "Erreur",
-        description: err instanceof Error ? err.message : "Erreur serveur.",
-        variant: "error",
-      });
-    } finally {
-      setLoading(false);
     }
   }
 
   async function handleCloturer() {
-    setLoading(true);
-    try {
-      const lignesReelles = liste.lignes.map((l) => ({
-        ligneBesoinId: l.id,
-        prixReel: parseFloat(lignesPrixReel[l.id] ?? String(l.prixEstime)) || 0,
-      }));
-      const res = await fetch(`/api/besoins/${liste.id}/cloturer`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lignesReelles }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message);
-      }
-      const data = await res.json();
-      setListe(data);
+    const lignesReelles = liste.lignes.map((l) => ({
+      ligneBesoinId: l.id,
+      prixReel: parseFloat(lignesPrixReel[l.id] ?? String(l.prixEstime)) || 0,
+    }));
+    const result = await depenseService.cloturerBesoin(liste.id, {
+      lignesReelles,
+    });
+    if (result.ok && result.data) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setListe(result.data as any);
       setClotureOpen(false);
-      toast({ title: "Liste cloturee", variant: "success" });
       router.refresh();
-    } catch (err) {
-      toast({
-        title: "Erreur",
-        description: err instanceof Error ? err.message : "Erreur serveur.",
-        variant: "error",
-      });
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -429,7 +364,6 @@ export function BesoinsDetailClient({
           <Button
             variant="primary"
             className="flex-1"
-            disabled={loading}
             onClick={handleApprouver}
           >
             <CheckCircle className="h-4 w-4 mr-1" />
@@ -437,7 +371,7 @@ export function BesoinsDetailClient({
           </Button>
           <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
             <DialogTrigger asChild>
-              <Button variant="danger" className="flex-1" disabled={loading}>
+              <Button variant="danger" className="flex-1">
                 <XCircle className="h-4 w-4 mr-1" />
                 Rejeter
               </Button>
@@ -467,7 +401,6 @@ export function BesoinsDetailClient({
                 <Button
                   variant="danger"
                   onClick={handleRejeter}
-                  disabled={loading}
                 >
                   Confirmer le rejet
                 </Button>
@@ -480,7 +413,7 @@ export function BesoinsDetailClient({
       {canProcess && statut === StatutBesoins.APPROUVEE && (
         <Dialog open={traitOpen} onOpenChange={setTraitOpen}>
           <DialogTrigger asChild>
-            <Button variant="primary" className="w-full mb-4" disabled={loading}>
+            <Button variant="primary" className="w-full mb-4">
               <Settings className="h-4 w-4 mr-1" />
               Traiter la liste
             </Button>
@@ -529,7 +462,6 @@ export function BesoinsDetailClient({
               <Button
                 variant="primary"
                 onClick={handleTraiter}
-                disabled={loading}
               >
                 Confirmer le traitement
               </Button>
@@ -541,7 +473,7 @@ export function BesoinsDetailClient({
       {canProcess && statut === StatutBesoins.TRAITEE && (
         <Dialog open={clotureOpen} onOpenChange={setClotureOpen}>
           <DialogTrigger asChild>
-            <Button variant="primary" className="w-full mb-4" disabled={loading}>
+            <Button variant="primary" className="w-full mb-4">
               <CheckCheck className="h-4 w-4 mr-1" />
               Cloturer la liste
             </Button>
@@ -587,7 +519,6 @@ export function BesoinsDetailClient({
               <Button
                 variant="primary"
                 onClick={handleCloturer}
-                disabled={loading}
               >
                 Confirmer la cloture
               </Button>

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, ShoppingCart, ArrowLeft, Calendar, Trash2 } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,8 +25,8 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
 import { StatutCommande, UniteStock, Permission } from "@/types";
+import { useStockService } from "@/services";
 
 const statutLabels: Record<StatutCommande, string> = {
   [StatutCommande.BROUILLON]: "Brouillon",
@@ -79,10 +78,9 @@ interface Props {
 
 export function CommandesListClient({ commandes, fournisseurs, produits, permissions }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const stockService = useStockService();
   const [tab, setTab] = useState("tous");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
 
   // Form state
   const [fournisseurId, setFournisseurId] = useState("");
@@ -140,35 +138,20 @@ export function CommandesListClient({ commandes, fournisseurs, produits, permiss
   async function handleCreate() {
     if (!isValid) return;
 
-    setCreating(true);
-    try {
-      const res = await fetch("/api/commandes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fournisseurId,
-          dateCommande,
-          lignes: lignes.map((l) => ({
-            produitId: l.produitId,
-            quantite: parseFloat(l.quantite),
-            prixUnitaire: parseFloat(l.prixUnitaire),
-          })),
-        }),
-      });
+    const result = await stockService.createCommande({
+      fournisseurId,
+      dateCommande,
+      lignes: lignes.map((l) => ({
+        produitId: l.produitId,
+        quantite: parseFloat(l.quantite),
+        prixUnitaire: parseFloat(l.prixUnitaire),
+      })),
+    });
 
-      if (res.ok) {
-        toast({ title: "Commande creee", variant: "success" });
-        setDialogOpen(false);
-        resetForm();
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setCreating(false);
+    if (result.ok) {
+      setDialogOpen(false);
+      resetForm();
+      router.refresh();
     }
   }
 
@@ -304,8 +287,8 @@ export function CommandesListClient({ commandes, fournisseurs, produits, permiss
               <DialogClose asChild>
                 <Button variant="outline">Annuler</Button>
               </DialogClose>
-              <Button onClick={handleCreate} disabled={creating || !isValid}>
-                {creating ? <><FishLoader size="sm" /> Creation...</> : "Creer"}
+              <Button onClick={handleCreate} disabled={!isValid}>
+                Creer
               </Button>
             </DialogFooter>
           </DialogContent>

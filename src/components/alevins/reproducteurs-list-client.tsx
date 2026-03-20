@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, Users, ArrowLeft } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,8 +25,8 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
 import { SexeReproducteur, StatutReproducteur, Permission } from "@/types";
+import { useAlevinsService } from "@/services";
 
 const sexeLabels: Record<SexeReproducteur, string> = {
   [SexeReproducteur.MALE]: "Male",
@@ -73,11 +72,10 @@ interface Props {
 
 export function ReproducteursListClient({ reproducteurs, permissions }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const alevinsService = useAlevinsService();
   const [tab, setTab] = useState("tous");
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
 
   // Form state
   const [code, setCode] = useState("");
@@ -117,35 +115,19 @@ export function ReproducteursListClient({ reproducteurs, permissions }: Props) {
   async function handleCreate() {
     if (!code.trim() || !poids) return;
 
-    setCreating(true);
-    try {
-      const res = await fetch("/api/reproducteurs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code: code.trim(),
-          sexe,
-          poids: parseFloat(poids),
-          ...(age.trim() && { age: parseInt(age, 10) }),
-          ...(origine.trim() && { origine: origine.trim() }),
-          ...(notes.trim() && { notes: notes.trim() }),
-          ...(dateAcquisition && { dateAcquisition }),
-        }),
-      });
-
-      if (res.ok) {
-        toast({ title: "Reproducteur cree", variant: "success" });
-        setDialogOpen(false);
-        resetForm();
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setCreating(false);
+    const result = await alevinsService.createReproducteur({
+      code: code.trim(),
+      sexe: sexe as Parameters<typeof alevinsService.createReproducteur>[0]["sexe"],
+      poids: parseFloat(poids),
+      ...(age.trim() && { age: parseInt(age, 10) }),
+      ...(origine.trim() && { origine: origine.trim() }),
+      ...(notes.trim() && { notes: notes.trim() }),
+      ...(dateAcquisition && { dateAcquisition }),
+    });
+    if (result.ok) {
+      setDialogOpen(false);
+      resetForm();
+      router.refresh();
     }
   }
 
@@ -241,9 +223,9 @@ export function ReproducteursListClient({ reproducteurs, permissions }: Props) {
               </DialogClose>
               <Button
                 onClick={handleCreate}
-                disabled={creating || !code.trim() || !poids}
+                disabled={!code.trim() || !poids}
               >
-                {creating ? <><FishLoader size="sm" /> Creation...</> : "Creer"}
+                Creer
               </Button>
             </DialogFooter>
           </DialogContent>

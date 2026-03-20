@@ -3,18 +3,16 @@
 /**
  * ExportButton — Bouton de téléchargement de fichier d'export.
  *
- * Gère l'appel fetch → blob → download automatique.
+ * Gère l'appel fetch → blob → download automatique via useApi.download.
  * Mobile-first : taille minimale 44px, variant outline par défaut.
  *
  * Usage :
  * <ExportButton href="/api/export/facture/123" filename="facture-FAC-2026-001.pdf" label="Télécharger PDF" />
  */
 
-import { useState } from "react";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/toast";
-import { FishLoader } from "@/components/ui/fish-loader";
+import { useApi } from "@/hooks/use-api";
 
 interface ExportButtonProps {
   /** URL de l'API d'export */
@@ -39,61 +37,21 @@ export function ExportButton({
   className = "",
   icon,
 }: ExportButtonProps) {
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  const { download } = useApi();
 
   async function handleExport() {
-    if (loading) return;
-    setLoading(true);
-
-    try {
-      const res = await fetch(href);
-
-      if (!res.ok) {
-        let errorMsg = "Erreur lors de l'export";
-        try {
-          const data = await res.json();
-          errorMsg = data.error ?? data.message ?? errorMsg;
-        } catch {
-          // Ignore JSON parse error
-        }
-        toast({ title: errorMsg, variant: "error" });
-        return;
-      }
-
-      // Créer un blob et déclencher le téléchargement
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast({ title: `${filename} téléchargé`, variant: "success" });
-    } catch {
-      toast({ title: "Erreur réseau lors de l'export", variant: "error" });
-    } finally {
-      setLoading(false);
-    }
+    await download(href, filename);
   }
 
   return (
     <Button
       variant={variant}
       onClick={handleExport}
-      disabled={loading}
       className={`min-h-[44px] ${className}`}
-      aria-label={loading ? "Export en cours..." : label}
+      aria-label={label}
     >
-      {loading ? (
-        <FishLoader size="sm" />
-      ) : (
-        icon ?? <Download className="h-4 w-4" />
-      )}
-      <span className="ml-1.5">{loading ? "Export..." : label}</span>
+      {icon ?? <Download className="h-4 w-4" />}
+      <span className="ml-1.5">{label}</span>
     </Button>
   );
 }

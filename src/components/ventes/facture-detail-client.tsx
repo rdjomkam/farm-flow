@@ -12,7 +12,6 @@ import {
   FileText,
   Waves,
 } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { ExportButton } from "@/components/ui/export-button";
 import { Input } from "@/components/ui/input";
@@ -34,8 +33,8 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
 import { StatutFacture, ModePaiement, Permission } from "@/types";
+import { useVenteService } from "@/services";
 
 const statutLabels: Record<StatutFacture, string> = {
   [StatutFacture.BROUILLON]: "Brouillon",
@@ -104,9 +103,8 @@ interface Props {
 
 export function FactureDetailClient({ facture, permissions }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const venteService = useVenteService();
   const [paiementOpen, setPaiementOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   const [montant, setMontant] = useState("");
   const [mode, setMode] = useState("");
@@ -125,55 +123,23 @@ export function FactureDetailClient({ facture, permissions }: Props) {
 
   async function handlePaiement() {
     if (!montant || !mode) return;
-    setLoading(true);
 
-    try {
-      const res = await fetch(`/api/factures/${facture.id}/paiements`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          montant: parseFloat(montant),
-          mode,
-          ...(reference.trim() && { reference: reference.trim() }),
-        }),
-      });
-
-      if (res.ok) {
-        toast({ title: "Paiement enregistre", variant: "success" });
-        setPaiementOpen(false);
-        resetPaiementForm();
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setLoading(false);
+    const result = await venteService.addPaiement(facture.id, {
+      montant: parseFloat(montant),
+      mode: mode as import("@/types").ModePaiement,
+      ...(reference.trim() && { reference: reference.trim() }),
+    });
+    if (result.ok) {
+      setPaiementOpen(false);
+      resetPaiementForm();
+      router.refresh();
     }
   }
 
   async function handleEnvoyer() {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/factures/${facture.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ statut: StatutFacture.ENVOYEE }),
-      });
-
-      if (res.ok) {
-        toast({ title: "Facture envoyee", variant: "success" });
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setLoading(false);
+    const result = await venteService.updateFacture(facture.id, { statut: StatutFacture.ENVOYEE });
+    if (result.ok) {
+      router.refresh();
     }
   }
 
@@ -264,10 +230,9 @@ export function FactureDetailClient({ facture, permissions }: Props) {
           <Button
             className="flex-1"
             onClick={handleEnvoyer}
-            disabled={loading}
           >
             <FileText className="h-4 w-4 mr-1" />
-            {loading ? "Envoi..." : "Envoyer"}
+            Envoyer
           </Button>
         )}
         {canAddPaiement && permissions.includes(Permission.PAIEMENTS_CREER) && (
@@ -322,9 +287,9 @@ export function FactureDetailClient({ facture, permissions }: Props) {
                 </DialogClose>
                 <Button
                   onClick={handlePaiement}
-                  disabled={loading || !montant || !mode}
+                  disabled={!montant || !mode}
                 >
-                  {loading ? <><FishLoader size="sm" /> Enregistrement...</> : "Confirmer"}
+                  Confirmer
                 </Button>
               </DialogFooter>
             </DialogContent>

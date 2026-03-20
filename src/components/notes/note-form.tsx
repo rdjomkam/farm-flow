@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Send, AlertTriangle } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MarkdownEditor } from "@/components/ui/markdown-editor";
@@ -15,9 +14,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FormSection } from "@/components/ui/form-section";
-import { useToast } from "@/components/ui/toast";
 import { VisibiliteNote } from "@/types";
 import type { CreateNoteIngenieurDTO } from "@/types";
+import { useNoteService } from "@/services";
 
 interface Vague {
   id: string;
@@ -49,7 +48,7 @@ interface NoteFormProps {
  */
 export function NoteForm({ siteId: _siteId, clientSiteId, vagues = [], onSuccess }: NoteFormProps) {
   const router = useRouter();
-  const { toast } = useToast();
+  const noteService = useNoteService();
 
   // Champs du formulaire
   const [titre, setTitre] = useState("");
@@ -58,7 +57,6 @@ export function NoteForm({ siteId: _siteId, clientSiteId, vagues = [], onSuccess
   const [vagueId, setVagueId] = useState<string>("");
   const [isUrgent, setIsUrgent] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [submitting, setSubmitting] = useState(false);
 
   function resetForm() {
     setTitre("");
@@ -82,44 +80,24 @@ export function NoteForm({ siteId: _siteId, clientSiteId, vagues = [], onSuccess
     e.preventDefault();
     if (!validate()) return;
 
-    setSubmitting(true);
-    try {
-      const payload: CreateNoteIngenieurDTO = {
-        titre: titre.trim(),
-        contenu: contenu.trim(),
-        visibility,
-        isUrgent,
-        isFromClient: false,
-        clientSiteId,
-        ...(vagueId ? { vagueId } : {}),
-      };
+    const payload: CreateNoteIngenieurDTO = {
+      titre: titre.trim(),
+      contenu: contenu.trim(),
+      visibility,
+      isUrgent,
+      isFromClient: false,
+      clientSiteId,
+      ...(vagueId ? { vagueId } : {}),
+    };
 
-      const res = await fetch("/api/ingenieur/notes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        toast({
-          title: data.message ?? "Erreur lors de l'envoi de la note.",
-          variant: "error",
-        });
-        return;
-      }
-
-      toast({ title: "Note envoyee avec succes.", variant: "success" });
+    const result = await noteService.createNote(payload);
+    if (result.ok) {
       resetForm();
       if (onSuccess) {
         onSuccess();
       } else {
         router.refresh();
       }
-    } catch {
-      toast({ title: "Erreur reseau. Verifiez votre connexion.", variant: "error" });
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -214,12 +192,11 @@ export function NoteForm({ siteId: _siteId, clientSiteId, vagues = [], onSuccess
           type="button"
           variant="secondary"
           onClick={resetForm}
-          disabled={submitting}
         >
           Reinitialiser
         </Button>
-        <Button type="submit" disabled={submitting}>
-          {submitting ? <><FishLoader size="sm" /> Envoi en cours...</> : <><Send className="h-4 w-4" /> Envoyer la note</>}
+        <Button type="submit">
+          <Send className="h-4 w-4" /> Envoyer la note
         </Button>
       </div>
     </form>

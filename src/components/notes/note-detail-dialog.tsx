@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { VisibiliteNote } from "@/types";
 import type { NoteIngenieurWithRelations } from "@/types";
+import { useNoteService } from "@/services";
 import { ReplyItem } from "./reply-item";
 import { ReplyForm } from "./reply-form";
 
@@ -111,26 +112,23 @@ export function NoteDetailDialog({
   children,
 }: NoteDetailDialogProps) {
   const router = useRouter();
+  const noteService = useNoteService();
   const [markedRead, setMarkedRead] = useState(false);
 
   const handleOpenChange = useCallback(
     async (open: boolean) => {
       if (open && !note.isRead && !isClientView && !markedRead) {
         setMarkedRead(true);
-        try {
-          await fetch(`/api/ingenieur/notes/${note.id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ isRead: true }),
-          });
+        const result = await noteService.markNoteRead(note.id);
+        if (result.ok) {
           onRead?.();
           router.refresh();
-        } catch {
+        } else {
           setMarkedRead(false);
         }
       }
     },
-    [note.id, note.isRead, isClientView, markedRead, router]
+    [note.id, note.isRead, isClientView, markedRead, noteService, router]
   );
 
   return (

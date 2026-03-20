@@ -11,7 +11,6 @@ import {
   Calendar,
   ArrowUpDown,
 } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,8 +32,8 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
 import { TypeMouvement, UniteStock, Permission } from "@/types";
+import { useStockService } from "@/services";
 
 const uniteLabels: Record<string, string> = {
   [UniteStock.GRAMME]: "g",
@@ -67,10 +66,9 @@ interface Props {
 
 export function MouvementsListClient({ mouvements, produits, vagues, permissions }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const stockService = useStockService();
   const [tab, setTab] = useState("tous");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
 
   // Form state
   const [produitId, setProduitId] = useState("");
@@ -99,35 +97,19 @@ export function MouvementsListClient({ mouvements, produits, vagues, permissions
   async function handleCreate() {
     if (!produitId || !quantite) return;
 
-    setCreating(true);
-    try {
-      const res = await fetch("/api/stock/mouvements", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          produitId,
-          type,
-          quantite: parseFloat(quantite),
-          date,
-          ...(prixTotal && { prixTotal: parseFloat(prixTotal) }),
-          ...(vagueId && { vagueId }),
-          ...(notes.trim() && { notes: notes.trim() }),
-        }),
-      });
-
-      if (res.ok) {
-        toast({ title: "Mouvement enregistre", variant: "success" });
-        setDialogOpen(false);
-        resetForm();
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setCreating(false);
+    const result = await stockService.createMouvement({
+      produitId,
+      type: type as import("@/types").TypeMouvement,
+      quantite: parseFloat(quantite),
+      date,
+      ...(prixTotal && { prixTotal: parseFloat(prixTotal) }),
+      ...(vagueId && { vagueId }),
+      ...(notes.trim() && { notes: notes.trim() }),
+    });
+    if (result.ok) {
+      setDialogOpen(false);
+      resetForm();
+      router.refresh();
     }
   }
 
@@ -228,9 +210,9 @@ export function MouvementsListClient({ mouvements, produits, vagues, permissions
               </DialogClose>
               <Button
                 onClick={handleCreate}
-                disabled={creating || !produitId || !quantite}
+                disabled={!produitId || !quantite}
               >
-                {creating ? <><FishLoader size="sm" /> Enregistrement...</> : "Enregistrer"}
+                Enregistrer
               </Button>
             </DialogFooter>
           </DialogContent>

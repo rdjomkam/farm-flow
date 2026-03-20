@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FormSection } from "@/components/ui/form-section";
-import { useToast } from "@/components/ui/toast";
 import {
   Select,
   SelectContent,
@@ -14,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Role } from "@/types";
-import { FishLoader } from "@/components/ui/fish-loader";
+import { useUserService } from "@/services";
 
 const ROLE_OPTIONS = [
   { value: Role.PISCICULTEUR, label: "Pisciculteur" },
@@ -25,7 +24,7 @@ const ROLE_OPTIONS = [
 
 export function UserCreateForm() {
   const router = useRouter();
-  const { toast } = useToast();
+  const userService = useUserService();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -33,7 +32,6 @@ export function UserCreateForm() {
   const [password, setPassword] = useState("");
   const [globalRole, setGlobalRole] = useState<Role>(Role.PISCICULTEUR);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,42 +52,30 @@ export function UserCreateForm() {
       return;
     }
 
-    setSubmitting(true);
     setErrors({});
 
-    try {
-      const res = await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim() || undefined,
-          phone: phone.trim() || undefined,
-          password,
-          globalRole,
-        }),
-      });
+    const { ok, data } = await userService.createUser({
+      name: name.trim(),
+      email: email.trim() || undefined,
+      phone: phone.trim() || undefined,
+      password,
+      globalRole,
+    });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        toast({ title: data.message || "Erreur lors de la creation.", variant: "error" });
-        if (data.errors) {
-          const fieldErrors: Record<string, string> = {};
-          for (const err of data.errors) {
-            fieldErrors[err.field] = err.message;
-          }
-          setErrors(fieldErrors);
+    if (!ok) {
+      const errorData = data as { errors?: { field: string; message: string }[] } | null;
+      if (errorData?.errors) {
+        const fieldErrors: Record<string, string> = {};
+        for (const err of errorData.errors) {
+          fieldErrors[err.field] = err.message;
         }
-        return;
+        setErrors(fieldErrors);
       }
+      return;
+    }
 
-      toast({ title: "Utilisateur cree avec succes !", variant: "success" });
-      router.push(`/users/${data.id}`);
-    } catch {
-      toast({ title: "Erreur reseau.", variant: "error" });
-    } finally {
-      setSubmitting(false);
+    if (data) {
+      router.push(`/users/${(data as { id: string }).id}`);
     }
   }
 
@@ -151,8 +137,8 @@ export function UserCreateForm() {
         />
       </FormSection>
 
-      <Button type="submit" disabled={submitting} className="w-full">
-        {submitting ? <><FishLoader size="sm" /> Creation en cours...</> : "Creer l'utilisateur"}
+      <Button type="submit" className="w-full">
+        Creer l'utilisateur
       </Button>
     </form>
   );

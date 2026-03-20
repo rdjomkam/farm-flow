@@ -13,8 +13,8 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
 import { CategorieDepense } from "@/types";
+import { useDepenseService } from "@/services";
 
 // ---------------------------------------------------------------------------
 // Labels
@@ -61,8 +61,7 @@ interface Props {
 
 export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const depenseService = useDepenseService();
 
   // Form fields
   const [description, setDescription] = useState("");
@@ -132,44 +131,21 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
     }
     setSubmitErrors([]);
 
-    setLoading(true);
-    try {
-      const res = await fetch("/api/depenses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          description: description.trim(),
-          categorieDepense: categorie,
-          montantTotal: montantNum,
-          date: new Date(date).toISOString(),
-          dateEcheance: dateEcheance
-            ? new Date(dateEcheance).toISOString()
-            : undefined,
-          vagueId: vagueId || undefined,
-          commandeId: commandeId || undefined,
-          notes: notes.trim() || undefined,
-        }),
-      });
+    const result = await depenseService.createDepense({
+      description: description.trim(),
+      categorieDepense: categorie as import("@/types").CategorieDepense,
+      montantTotal: montantNum,
+      date: new Date(date).toISOString(),
+      dateEcheance: dateEcheance
+        ? new Date(dateEcheance).toISOString()
+        : undefined,
+      vagueId: vagueId || undefined,
+      commandeId: commandeId || undefined,
+      notes: notes.trim() || undefined,
+    });
 
-      if (!res.ok) {
-        const err = await res.json();
-        if (err.errors) {
-          setSubmitErrors(err.errors);
-          return;
-        }
-        throw new Error(err.message ?? "Erreur");
-      }
-
-      const depense = await res.json();
-      toast({ title: `Depense ${depense.numero} creee avec succes` });
-      router.push(`/depenses/${depense.id}`);
-    } catch (err) {
-      toast({
-        title: err instanceof Error ? err.message : "Erreur serveur",
-        variant: "error",
-      });
-    } finally {
-      setLoading(false);
+    if (result.ok && result.data) {
+      router.push(`/depenses/${result.data.id}`);
     }
   }
 
@@ -390,8 +366,8 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
           )}
 
         {/* Submit */}
-        <Button type="submit" disabled={loading} className="w-full h-12 text-base">
-          {loading ? "Creation en cours..." : "Creer la depense"}
+        <Button type="submit" className="w-full h-12 text-base">
+          Creer la depense
         </Button>
       </form>
     </div>

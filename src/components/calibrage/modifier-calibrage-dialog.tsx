@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Trash2, CheckCircle2, XCircle } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,9 +21,9 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
 import { CategorieCalibrage, Permission } from "@/types";
 import type { CalibrageWithRelations } from "@/types";
+import { useCalibrageService } from "@/services";
 
 const categorieLabels: Record<CategorieCalibrage, string> = {
   [CategorieCalibrage.PETIT]: "Petit",
@@ -58,9 +57,8 @@ export function ModifierCalibrageDialog({
   permissions,
 }: ModifierCalibrageDialogProps) {
   const router = useRouter();
-  const { toast } = useToast();
+  const calibrageService = useCalibrageService();
   const [open, setOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Raison obligatoire (ADR-015) — premier champ
@@ -169,45 +167,32 @@ export function ModifierCalibrageDialog({
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
-    setSubmitting(true);
     setErrors({});
 
-    try {
-      const body: Record<string, unknown> = {
-        raison: raison.trim(),
-        nombreMorts: Number(nombreMorts),
-        notes: notes.trim() || null,
-      };
+    const body: Record<string, unknown> = {
+      raison: raison.trim(),
+      nombreMorts: Number(nombreMorts),
+      notes: notes.trim() || null,
+    };
 
-      if (modifierGroupes) {
-        body.groupes = groupes.map((g) => ({
-          categorie: g.categorie,
-          destinationBacId: g.destinationBacId,
-          nombrePoissons: Number(g.nombrePoissons),
-          poidsMoyen: Number(g.poidsMoyen),
-          ...(g.tailleMoyenne ? { tailleMoyenne: Number(g.tailleMoyenne) } : {}),
-        }));
-      }
+    if (modifierGroupes) {
+      body.groupes = groupes.map((g) => ({
+        categorie: g.categorie,
+        destinationBacId: g.destinationBacId,
+        nombrePoissons: Number(g.nombrePoissons),
+        poidsMoyen: Number(g.poidsMoyen),
+        ...(g.tailleMoyenne ? { tailleMoyenne: Number(g.tailleMoyenne) } : {}),
+      }));
+    }
 
-      const res = await fetch(`/api/calibrages/${calibrage.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+    const result = await calibrageService.update(
+      calibrage.id,
+      body as unknown as Parameters<typeof calibrageService.update>[1]
+    );
 
-      if (!res.ok) {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur lors de la modification.", variant: "error" });
-        return;
-      }
-
-      toast({ title: "Calibrage modifie avec succes.", variant: "success" });
+    if (result.ok) {
       setOpen(false);
       router.refresh();
-    } catch {
-      toast({ title: "Erreur reseau.", variant: "error" });
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -219,7 +204,7 @@ export function ModifierCalibrageDialog({
 
   const raisonLength = raison.trim().length;
   const raisonValid = raisonLength >= 5 && raisonLength <= 500;
-  const canSubmit = raisonValid && (!modifierGroupes || conservationOk) && !submitting;
+  const canSubmit = raisonValid && (!modifierGroupes || conservationOk);
 
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
@@ -443,7 +428,7 @@ export function ModifierCalibrageDialog({
               Annuler
             </Button>
             <Button type="submit" disabled={!canSubmit}>
-              {submitting ? <><FishLoader size="sm" /> Modification...</> : "Enregistrer les modifications"}
+              Enregistrer les modifications
             </Button>
           </DialogFooter>
         </form>

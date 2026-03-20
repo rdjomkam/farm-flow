@@ -12,8 +12,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
-import { FishLoader } from "@/components/ui/fish-loader";
+import { useNoteService } from "@/services";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -55,8 +54,7 @@ interface Props {
 
 export function ObservationForm({ vagues = [], onSuccess }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const noteService = useNoteService();
 
   // Champs du formulaire
   const [type, setType] = useState<TypeObservation | "">("");
@@ -102,33 +100,13 @@ export function ObservationForm({ vagues = [], onSuccess }: Props) {
     }
     setSubmitErrors([]);
 
-    setLoading(true);
-    try {
-      const res = await fetch("/api/mes-observations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type,
-          observationTexte: observationTexte.trim(),
-          vagueId: vagueId || undefined,
-        }),
-      });
+    const result = await noteService.createObservation({
+      type: type as string,
+      observationTexte: observationTexte.trim(),
+      vagueId: vagueId || undefined,
+    });
 
-      if (!res.ok) {
-        const err = await res.json();
-        if (err.errors) {
-          setSubmitErrors(err.errors);
-          return;
-        }
-        throw new Error(err.message ?? "Erreur serveur");
-      }
-
-      toast({
-        title: "Observation envoyee",
-        description: "Votre observation a ete transmise a l'equipe DKFarm.",
-      });
-
-      // Reinitialiser le formulaire
+    if (result.ok) {
       setType("");
       setObservationTexte("");
       setVagueId("");
@@ -138,13 +116,6 @@ export function ObservationForm({ vagues = [], onSuccess }: Props) {
       } else {
         router.refresh();
       }
-    } catch (err) {
-      toast({
-        title: err instanceof Error ? err.message : "Erreur serveur",
-        variant: "error",
-      });
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -277,10 +248,9 @@ export function ObservationForm({ vagues = [], onSuccess }: Props) {
         {/* Bouton de soumission */}
         <Button
           type="submit"
-          disabled={loading}
           className="w-full h-12 text-base"
         >
-          {loading ? <><FishLoader size="sm" /> Envoi en cours...</> : "Envoyer l'observation"}
+          Envoyer l'observation
         </Button>
       </form>
     </div>

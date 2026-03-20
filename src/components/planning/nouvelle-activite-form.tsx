@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,9 +13,8 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
 import { TypeActivite, Recurrence } from "@/types";
-import { FishLoader } from "@/components/ui/fish-loader";
+import { useActiviteService } from "@/services";
 
 const typeActiviteOptions: { value: TypeActivite; label: string }[] = [
   { value: TypeActivite.ALIMENTATION, label: "Alimentation" },
@@ -49,9 +49,9 @@ interface FormErrors {
 }
 
 export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleActiviteFormProps) {
-  const { toast } = useToast();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const activiteService = useActiviteService();
 
   // Valeur par defaut : aujourd'hui a 08h00 (locale)
   const now = new Date();
@@ -81,7 +81,7 @@ export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleAct
     e.preventDefault();
     if (!validate()) return;
 
-    const payload: Record<string, string | undefined> = {
+    const payload = {
       titre: titre.trim(),
       typeActivite,
       dateDebut: new Date(dateDebut).toISOString(),
@@ -93,28 +93,12 @@ export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleAct
       description: description.trim() || undefined,
     };
 
-    try {
-      const res = await fetch("/api/activites", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+    const result = await activiteService.create(payload as Parameters<typeof activiteService.create>[0]);
+    if (result.ok) {
+      startTransition(() => {
+        router.push("/planning");
+        router.refresh();
       });
-
-      if (res.ok) {
-        toast({ title: "Activite planifiee avec succes", variant: "success" });
-        startTransition(() => {
-          router.push("/planning");
-          router.refresh();
-        });
-      } else {
-        const err = await res.json();
-        toast({
-          title: err.message ?? "Erreur lors de la creation",
-          variant: "error",
-        });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
     }
   }
 
@@ -269,7 +253,7 @@ export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleAct
           disabled={isPending}
           className="flex-1"
         >
-          {isPending ? <><FishLoader size="sm" /> Planification...</> : "Planifier l'activite"}
+          {isPending ? "Planification..." : "Planifier l'activite"}
         </Button>
         <Button
           type="button"

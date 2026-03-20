@@ -4,21 +4,17 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNotificationService } from "@/services";
 
 export function NotificationBell() {
   const router = useRouter();
+  const notificationService = useNotificationService();
   const [count, setCount] = useState(0);
 
   const fetchCount = useCallback(async () => {
-    try {
-      const res = await fetch("/api/notifications/count");
-      if (res.ok) {
-        const data = await res.json();
-        setCount(data.count ?? 0);
-      }
-    } catch {
-      // Silently ignore errors (user may not be authenticated)
-    }
+    const { data } = await notificationService.getCount();
+    if (data) setCount(data.count ?? 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

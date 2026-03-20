@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -11,12 +10,11 @@ import {
   FileText,
   ShoppingCart,
 } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/components/ui/toast";
 import { StatutFacture, Permission } from "@/types";
+import { useVenteService } from "@/services";
 
 const statutLabels: Record<string, string> = {
   [StatutFacture.BROUILLON]: "Brouillon",
@@ -69,30 +67,12 @@ interface Props {
 
 export function VenteDetailClient({ vente, permissions }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const venteService = useVenteService();
 
   async function handleCreateFacture() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/factures", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ venteId: vente.id }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        toast({ title: `Facture ${data.numero} creee`, variant: "success" });
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setLoading(false);
+    const result = await venteService.createFacture(vente.id);
+    if (result.ok) {
+      router.refresh();
     }
   }
 
@@ -194,8 +174,8 @@ export function VenteDetailClient({ vente, permissions }: Props) {
           </CardContent>
         </Card>
       ) : permissions.includes(Permission.VENTES_CREER) ? (
-        <Button onClick={handleCreateFacture} disabled={loading} className="w-full min-h-[48px]">
-          {loading ? <><FishLoader size="sm" /> Creation...</> : <><FileText className="h-4 w-4 mr-2" /> Generer la facture</>}
+        <Button onClick={handleCreateFacture} className="w-full min-h-[48px]">
+          <FileText className="h-4 w-4 mr-2" /> Generer la facture
         </Button>
       ) : null}
 

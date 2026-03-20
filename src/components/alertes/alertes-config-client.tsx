@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -19,7 +19,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/toast";
+import { useConfigService } from "@/services";
 import { TypeAlerte } from "@/types";
 import type { ConfigAlerte } from "@/types";
 
@@ -145,10 +145,8 @@ interface AlertesConfigClientProps {
 }
 
 export function AlertesConfigClient({ configs }: AlertesConfigClientProps) {
-  const { toast } = useToast();
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [isChecking, setIsChecking] = useState(false);
+  const configService = useConfigService();
 
   // Construire la liste de tous les types avec leur config existante
   const allTypes = Object.values(TypeAlerte);
@@ -196,61 +194,28 @@ export function AlertesConfigClient({ configs }: AlertesConfigClientProps) {
     const item = items.find((i) => i.typeAlerte === typeAlerte);
     const existingId = item?.config?.id;
 
-    try {
-      let res: Response;
-      if (existingId) {
-        // Mise a jour
-        res = await fetch(`/api/alertes/config/${existingId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ enabled, seuilValeur, seuilPourcentage }),
-        });
-      } else {
-        // Creation
-        res = await fetch("/api/alertes/config", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            typeAlerte,
-            enabled,
-            seuilValeur,
-            seuilPourcentage,
-          }),
-        });
-      }
+    let result;
+    if (existingId) {
+      result = await configService.updateConfigAlerte(existingId, { enabled, seuilValeur, seuilPourcentage });
+    } else {
+      result = await configService.createConfigAlerte({ typeAlerte, enabled, seuilValeur, seuilPourcentage });
+    }
 
-      if (res.ok) {
-        const savedConfig = await res.json();
-        setItems((prev) =>
-          prev.map((i) =>
-            i.typeAlerte === typeAlerte ? { ...i, config: savedConfig } : i
-          )
-        );
-        toast({ title: "Configuration sauvegardee", variant: "success" });
-        startTransition(() => router.refresh());
-      } else {
-        const err = await res.json();
-        toast({ title: err.message ?? "Erreur lors de la sauvegarde", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
+    if (result.ok && result.data) {
+      const savedConfig = result.data as ConfigAlerte;
+      setItems((prev) =>
+        prev.map((i) =>
+          i.typeAlerte === typeAlerte ? { ...i, config: savedConfig } : i
+        )
+      );
+      router.refresh();
     }
   }
 
   async function checkAlertes() {
-    setIsChecking(true);
-    try {
-      const res = await fetch("/api/alertes/check");
-      if (res.ok) {
-        toast({ title: "Verification des alertes effectuee", variant: "success" });
-        startTransition(() => router.refresh());
-      } else {
-        toast({ title: "Erreur lors de la verification", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setIsChecking(false);
+    const result = await configService.checkAlertes();
+    if (result.ok) {
+      router.refresh();
     }
   }
 
@@ -261,10 +226,9 @@ export function AlertesConfigClient({ configs }: AlertesConfigClientProps) {
         <Button
           variant="outline"
           onClick={checkAlertes}
-          disabled={isChecking || isPending}
           className="gap-2"
         >
-          <RefreshCw className={`h-4 w-4 ${isChecking ? "animate-spin" : ""}`} />
+          <RefreshCw className="h-4 w-4" />
           Verifier maintenant
         </Button>
       </div>
@@ -339,7 +303,6 @@ export function AlertesConfigClient({ configs }: AlertesConfigClientProps) {
                 <Button
                   size="sm"
                   onClick={() => saveConfig(typeAlerte)}
-                  disabled={isPending}
                   className="gap-2 self-end"
                 >
                   <Save className="h-4 w-4" />
@@ -353,7 +316,6 @@ export function AlertesConfigClient({ configs }: AlertesConfigClientProps) {
                 <Button
                   size="sm"
                   onClick={() => saveConfig(typeAlerte)}
-                  disabled={isPending}
                   className="gap-2"
                 >
                   <Save className="h-4 w-4" />

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Pencil, ArrowRightLeft, Waves } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +23,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
+import { useAlevinsService } from "@/services";
 import { StatutLotAlevins, Permission } from "@/types";
 
 const statutLabels: Record<StatutLotAlevins, string> = {
@@ -85,11 +84,9 @@ interface Props {
 
 export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const alevinsService = useAlevinsService();
   const [editOpen, setEditOpen] = useState(false);
   const [transfertOpen, setTransfertOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [transferring, setTransferring] = useState(false);
 
   // Edit form state
   const [nombreActuel, setNombreActuel] = useState(String(lot.nombreActuel));
@@ -111,66 +108,29 @@ export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) 
   }
 
   async function handleSave() {
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/lots-alevins/${lot.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nombreActuel: parseInt(nombreActuel, 10),
-          ageJours: parseInt(ageJours, 10),
-          ...(poidsMoyen && { poidsMoyen: parseFloat(poidsMoyen) }),
-          statut,
-          notes: notes.trim() || undefined,
-        }),
-      });
-
-      if (res.ok) {
-        toast({ title: "Lot mis a jour", variant: "success" });
-        setEditOpen(false);
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setSaving(false);
+    const result = await alevinsService.updateLot(lot.id, {
+      nombreActuel: parseInt(nombreActuel, 10),
+      ageJours: parseInt(ageJours, 10),
+      ...(poidsMoyen && { poidsMoyen: parseFloat(poidsMoyen) }),
+      statut: statut as StatutLotAlevins,
+      notes: notes.trim() || undefined,
+    });
+    if (result.ok) {
+      setEditOpen(false);
+      router.refresh();
     }
   }
 
   async function handleTransfert() {
     if (!nomVague.trim() || selectedBacs.length === 0) return;
 
-    setTransferring(true);
-    try {
-      const res = await fetch(`/api/lots-alevins/${lot.id}/transferer`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nom: nomVague.trim(),
-          bacIds: selectedBacs,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        toast({
-          title: "Transfert effectue",
-          description: `Nouvelle vague : ${data.vague?.code ?? ""}`,
-          variant: "success",
-        });
-        setTransfertOpen(false);
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setTransferring(false);
+    const result = await alevinsService.transfererLot(lot.id, {
+      nom: nomVague.trim(),
+      bacIds: selectedBacs,
+    });
+    if (result.ok) {
+      setTransfertOpen(false);
+      router.refresh();
     }
   }
 
@@ -246,8 +206,8 @@ export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) 
                 <DialogClose asChild>
                   <Button variant="outline">Annuler</Button>
                 </DialogClose>
-                <Button onClick={handleSave} disabled={saving}>
-                  {saving ? <><FishLoader size="sm" /> Enregistrement...</> : "Enregistrer"}
+                <Button onClick={handleSave}>
+                  Enregistrer
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -334,12 +294,11 @@ export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) 
                   <Button
                     onClick={handleTransfert}
                     disabled={
-                      transferring ||
                       !nomVague.trim() ||
                       selectedBacs.length === 0
                     }
                   >
-                    {transferring ? "Transfert..." : "Confirmer le transfert"}
+                    Confirmer le transfert
                   </Button>
                 </DialogFooter>
               </DialogContent>

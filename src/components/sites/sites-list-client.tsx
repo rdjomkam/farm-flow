@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Building2, Users, Container, Waves, Plus, Check } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,8 +16,8 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { useUserService, useAuthService } from "@/services";
 
 interface SiteData {
   id: string;
@@ -39,50 +38,29 @@ interface Props {
 
 export function SitesListClient({ sites, activeSiteId, canCreate }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const userService = useUserService();
+  const authService = useAuthService();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
-  const [creating, setCreating] = useState(false);
   const [switching, setSwitching] = useState<string | null>(null);
 
   async function handleCreate() {
     if (!name.trim()) return;
 
-    setCreating(true);
-    try {
-      const res = await fetch("/api/sites", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          ...(address.trim() && { address: address.trim() }),
-        }),
-      });
+    const { ok, data } = await userService.createSite({
+      name: name.trim(),
+      ...(address.trim() && { address: address.trim() }),
+    });
 
-      if (res.ok) {
-        const site = await res.json();
-        toast({ title: "Site cree avec succes", variant: "success" });
-        setDialogOpen(false);
-        setName("");
-        setAddress("");
+    if (ok && data) {
+      setDialogOpen(false);
+      setName("");
+      setAddress("");
 
-        // Auto-select the new site
-        await fetch("/api/auth/site", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ siteId: site.id }),
-        });
-
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur lors de la creation", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setCreating(false);
+      // Auto-select the new site (silent — success toast already shown by createSite)
+      await authService.switchSite({ siteId: (data as { id: string }).id });
+      router.refresh();
     }
   }
 
@@ -90,23 +68,12 @@ export function SitesListClient({ sites, activeSiteId, canCreate }: Props) {
     if (siteId === activeSiteId) return;
 
     setSwitching(siteId);
-    try {
-      const res = await fetch("/api/auth/site", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ siteId }),
-      });
-
-      if (res.ok) {
-        toast({ title: "Site selectionne", variant: "success" });
-        router.push("/");
-        router.refresh();
-      }
-    } catch {
-      toast({ title: "Erreur lors de la selection", variant: "error" });
-    } finally {
-      setSwitching(null);
+    const { ok } = await authService.switchSite({ siteId });
+    if (ok) {
+      router.push("/");
+      router.refresh();
     }
+    setSwitching(null);
   }
 
   return (
@@ -146,8 +113,8 @@ export function SitesListClient({ sites, activeSiteId, canCreate }: Props) {
                 <DialogClose asChild>
                   <Button variant="outline">Annuler</Button>
                 </DialogClose>
-                <Button onClick={handleCreate} disabled={creating || !name.trim()}>
-                  {creating ? <><FishLoader size="sm" /> Creation...</> : "Creer"}
+                <Button onClick={handleCreate} disabled={!name.trim()}>
+                  Creer
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -219,11 +186,7 @@ export function SitesListClient({ sites, activeSiteId, canCreate }: Props) {
                     disabled={switching === site.id || site.id === activeSiteId}
                     className="flex-1"
                   >
-                    {switching === site.id
-                      ? "Selection..."
-                      : site.id === activeSiteId
-                        ? "Site actif"
-                        : "Selectionner"}
+                    {site.id === activeSiteId ? "Site actif" : "Selectionner"}
                   </Button>
                   <Link href={`/settings/sites/${site.id}`}>
                     <Button size="sm" variant="outline">

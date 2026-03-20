@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Plus, Zap } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/toast";
+import { useConfigService } from "@/services";
 import { TypeDeclencheur } from "@/types";
 import type { RegleActiviteWithCount } from "@/types";
 import { TYPE_DECLENCHEUR_LABELS } from "@/lib/regles-activites-constants";
@@ -108,7 +108,7 @@ export function ReglesListClient({ regles: initialRegles, canManage, canManageGl
   const [regles, setRegles] = useState(initialRegles);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
-  const { toast } = useToast();
+  const configService = useConfigService();
 
   // ---- Toggle handler with optimistic update ----
   const handleToggle = async (id: string) => {
@@ -121,51 +121,20 @@ export function ReglesListClient({ regles: initialRegles, canManage, canManageGl
     );
     setTogglingId(id);
 
-    try {
-      const res = await fetch(`/api/regles-activites/${id}/toggle`, {
-        method: "PATCH",
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        // Revert optimistic update on error
-        setRegles((prev) =>
-          prev.map((r) => (r.id === id ? { ...r, isActive: current.isActive } : r))
-        );
-        toast({
-          title: "Erreur",
-          description: data.error ?? "Impossible de modifier l'etat de la regle.",
-          variant: "error",
-        });
-        return;
-      }
-
-      const data = await res.json();
+    const result = await configService.toggleRegle(id);
+    if (result.ok && result.data) {
+      const data = result.data as { isActive: boolean };
       // Apply server response (source of truth)
       setRegles((prev) =>
         prev.map((r) => (r.id === id ? { ...r, isActive: data.isActive } : r))
       );
-      toast({
-        title: data.isActive ? "Regle activee" : "Regle desactivee",
-        description: `"${current.nom}" est maintenant ${
-          data.isActive ? "active" : "inactive"
-        }.`,
-      });
-    } catch {
-      // Revert on network error
+    } else {
+      // Revert optimistic update on error
       setRegles((prev) =>
-        prev.map((r) =>
-          r.id === id ? { ...r, isActive: current.isActive } : r
-        )
+        prev.map((r) => (r.id === id ? { ...r, isActive: current.isActive } : r))
       );
-      toast({
-        title: "Erreur reseau",
-        description: "Impossible de joindre le serveur. Reessayez.",
-        variant: "error",
-      });
-    } finally {
-      setTogglingId(null);
     }
+    setTogglingId(null);
   };
 
   // ---- Derived data ----

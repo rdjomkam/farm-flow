@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, Baby, ArrowLeft } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,7 +24,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
+import { useAlevinsService } from "@/services";
 import { StatutLotAlevins, Permission } from "@/types";
 
 const statutLabels: Record<StatutLotAlevins, string> = {
@@ -66,11 +65,10 @@ interface Props {
 
 export function LotsAlevinsListClient({ lots, pontes, permissions }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const alevinsService = useAlevinsService();
   const [tab, setTab] = useState("tous");
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
 
   // Form state
   const [code, setCode] = useState("");
@@ -103,35 +101,19 @@ export function LotsAlevinsListClient({ lots, pontes, permissions }: Props) {
   async function handleCreate() {
     if (!code.trim() || !ponteId || !nombreInitial || !nombreActuel) return;
 
-    setCreating(true);
-    try {
-      const res = await fetch("/api/lots-alevins", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code: code.trim(),
-          ponteId,
-          nombreInitial: parseInt(nombreInitial, 10),
-          nombreActuel: parseInt(nombreActuel, 10),
-          ...(ageJours && { ageJours: parseInt(ageJours, 10) }),
-          ...(poidsMoyen && { poidsMoyen: parseFloat(poidsMoyen) }),
-          ...(notes.trim() && { notes: notes.trim() }),
-        }),
-      });
-
-      if (res.ok) {
-        toast({ title: "Lot cree", variant: "success" });
-        setDialogOpen(false);
-        resetForm();
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setCreating(false);
+    const result = await alevinsService.createLot({
+      code: code.trim(),
+      ponteId,
+      nombreInitial: parseInt(nombreInitial, 10),
+      nombreActuel: parseInt(nombreActuel, 10),
+      ...(ageJours && { ageJours: parseInt(ageJours, 10) }),
+      ...(poidsMoyen && { poidsMoyen: parseFloat(poidsMoyen) }),
+      ...(notes.trim() && { notes: notes.trim() }),
+    });
+    if (result.ok) {
+      setDialogOpen(false);
+      resetForm();
+      router.refresh();
     }
   }
 
@@ -229,14 +211,13 @@ export function LotsAlevinsListClient({ lots, pontes, permissions }: Props) {
               <Button
                 onClick={handleCreate}
                 disabled={
-                  creating ||
                   !code.trim() ||
                   !ponteId ||
                   !nombreInitial ||
                   !nombreActuel
                 }
               >
-                {creating ? <><FishLoader size="sm" /> Creation...</> : "Creer"}
+                Creer
               </Button>
             </DialogFooter>
           </DialogContent>

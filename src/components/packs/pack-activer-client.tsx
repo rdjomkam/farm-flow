@@ -1,15 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/components/ui/toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SiteModule } from "@/types";
+import { useConfigService } from "@/services";
 
 const MODULE_LABELS: Record<SiteModule, string> = {
   [SiteModule.REPRODUCTION]: "Reproduction",
@@ -47,12 +46,10 @@ interface ProvisioningResult {
 }
 
 export function PackActiverClient({ pack }: Props) {
-  const router = useRouter();
-  const { toast } = useToast();
+  const configService = useConfigService();
 
   // Step state
   const [step, setStep] = useState<1 | 2>(1);
-  const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ProvisioningResult | null>(null);
 
   // Form state
@@ -66,58 +63,21 @@ export function PackActiverClient({ pack }: Props) {
   const [notes, setNotes] = useState("");
 
   async function handleActivation() {
-    // Validation
-    if (!clientSiteName.trim()) {
-      toast({ title: "Erreur", description: "Le nom du site client est requis.", variant: "error" });
-      return;
-    }
-    if (!clientUserName.trim()) {
-      toast({ title: "Erreur", description: "Le nom du pisciculteur est requis.", variant: "error" });
-      return;
-    }
-    if (!clientUserPhone.trim()) {
-      toast({ title: "Erreur", description: "Le telephone du pisciculteur est requis.", variant: "error" });
-      return;
-    }
-    if (!clientUserPassword || clientUserPassword.length < 6) {
-      toast({ title: "Erreur", description: "Le mot de passe doit contenir au moins 6 caracteres.", variant: "error" });
-      return;
-    }
+    if (!clientSiteName.trim() || !clientUserName.trim() || !clientUserPhone.trim() || !clientUserPassword || clientUserPassword.length < 6) return;
 
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/packs/${pack.id}/activer`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clientSiteName: clientSiteName.trim(),
-          clientSiteAddress: clientSiteAddress.trim() || null,
-          clientUserName: clientUserName.trim(),
-          clientUserPhone: clientUserPhone.trim(),
-          clientUserEmail: clientUserEmail.trim() || null,
-          clientUserPassword,
-          dateExpiration: dateExpiration || null,
-          notes: notes.trim() || null,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || "Erreur lors de l'activation.");
-      }
-
-      setResult(data as ProvisioningResult);
+    const apiResult = await configService.activerPack(pack.id, {
+      clientSiteName: clientSiteName.trim(),
+      clientSiteAddress: clientSiteAddress.trim() || null,
+      clientUserName: clientUserName.trim(),
+      clientUserPhone: clientUserPhone.trim(),
+      clientUserEmail: clientUserEmail.trim() || null,
+      clientUserPassword,
+      dateExpiration: dateExpiration || null,
+      notes: notes.trim() || null,
+    } as Parameters<typeof configService.activerPack>[1]);
+    if (apiResult.ok && apiResult.data) {
+      setResult(apiResult.data as unknown as ProvisioningResult);
       setStep(2);
-      toast({ title: "Activation reussie", description: `Code d'activation : ${data.activation.code}` });
-    } catch (err) {
-      toast({
-        title: "Erreur d'activation",
-        description: err instanceof Error ? err.message : "Erreur inconnue.",
-        variant: "error",
-      });
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -330,9 +290,8 @@ export function PackActiverClient({ pack }: Props) {
         className="w-full"
         size="lg"
         onClick={handleActivation}
-        disabled={loading}
       >
-        {loading ? "Activation en cours..." : "Activer le pack"}
+        Activer le pack
       </Button>
     </div>
   );

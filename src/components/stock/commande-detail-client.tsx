@@ -16,7 +16,6 @@ import {
   Eye,
   Trash2,
 } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { StatutCommande, UniteStock, Permission } from "@/types";
+import { useStockService } from "@/services";
 
 const statutLabels: Record<StatutCommande, string> = {
   [StatutCommande.BROUILLON]: "Brouillon",
@@ -106,6 +106,7 @@ function guessTypeFromName(name: string): string {
 export function CommandeDetailClient({ commande: initialCommande, permissions }: Props) {
   const router = useRouter();
   const { toast } = useToast();
+  const stockService = useStockService();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recuFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -118,154 +119,65 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
   );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [recuFile, setRecuFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState<string | null>(null);
 
   const statut = commande.statut as StatutCommande;
   const canManage = permissions.includes(Permission.APPROVISIONNEMENT_GERER);
 
   // ─── Actions commande (envoyer, annuler) ───────────────────────
   async function handleAction(action: string) {
-    setLoading(action);
-    try {
-      const url = `/api/commandes/${commande.id}/${action}`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-
-      if (res.ok) {
-        const messages: Record<string, string> = {
-          envoyer: "Commande envoyee",
-          annuler: "Commande annulee",
-        };
-        toast({ title: messages[action] || "Action effectuee", variant: "success" });
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setLoading(null);
+    if (action === "envoyer") {
+      const result = await stockService.envoyerCommande(commande.id);
+      if (result.ok) router.refresh();
+    } else if (action === "annuler") {
+      const result = await stockService.annulerCommande(commande.id);
+      if (result.ok) router.refresh();
     }
   }
 
   // ─── Réceptionner commande (avec fichier optionnel) ─────────────
   async function handleRecevoir() {
-    setLoading("recevoir");
-    try {
-      let res: Response;
-
-      if (recuFile) {
-        // Envoyer en FormData avec fichier
-        const formData = new FormData();
-        formData.set("dateLivraison", dateLivraison);
-        formData.set("file", recuFile);
-        res = await fetch(`/api/commandes/${commande.id}/recevoir`, {
-          method: "POST",
-          body: formData,
-        });
-      } else {
-        // Envoyer en JSON (comportement inchangé)
-        res = await fetch(`/api/commandes/${commande.id}/recevoir`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ dateLivraison }),
-        });
-      }
-
-      if (res.ok) {
-        toast({ title: "Commande receptionnee", variant: "success" });
-        setRecevoirOpen(false);
-        setRecuFile(null);
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setLoading(null);
+    const result = await stockService.recevoirCommande(
+      commande.id,
+      dateLivraison,
+      recuFile ?? undefined
+    );
+    if (result.ok) {
+      setRecevoirOpen(false);
+      setRecuFile(null);
+      router.refresh();
     }
   }
 
   // ─── Upload facture séparé (commande déjà LIVREE) ───────────────
   async function handleUploadFacture() {
     if (!selectedFile) return;
-    setLoading("upload");
-    try {
-      const formData = new FormData();
-      formData.set("file", selectedFile);
-
-      const res = await fetch(`/api/commandes/${commande.id}/facture`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (res.ok) {
-        toast({ title: "Facture uploadee avec succes", variant: "success" });
-        setUploadFactureOpen(false);
-        setSelectedFile(null);
-        // Mettre à jour localement le factureUrl pour éviter un refresh complet
-        setCommande((prev) => ({
-          ...prev,
-          factureUrl: `factures/${commande.id}/uploaded`,
-        }));
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur upload", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setLoading(null);
+    const result = await stockService.uploadFactureCommande(commande.id, selectedFile);
+    if (result.ok) {
+      setUploadFactureOpen(false);
+      setSelectedFile(null);
+      setCommande((prev) => ({
+        ...prev,
+        factureUrl: `factures/${commande.id}/uploaded`,
+      }));
+      router.refresh();
     }
   }
 
   // ─── Voir la facture (ouvre signed URL dans nouvel onglet) ───────
   async function handleVoirFacture() {
-    setLoading("voir");
-    try {
-      const res = await fetch(`/api/commandes/${commande.id}/facture`);
-      if (res.ok) {
-        const data = await res.json();
-        window.open(data.url, "_blank", "noopener,noreferrer");
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setLoading(null);
+    const result = await stockService.getFactureCommandeUrl(commande.id);
+    if (result.ok && result.data) {
+      window.open(result.data.url, "_blank", "noopener,noreferrer");
     }
   }
 
   // ─── Supprimer la facture ───────────────────────────────────────
   async function handleDeleteFacture() {
-    setLoading("delete");
-    try {
-      const res = await fetch(`/api/commandes/${commande.id}/facture`, {
-        method: "DELETE",
-      });
-
-      if (res.ok) {
-        toast({ title: "Facture supprimee", variant: "success" });
-        setDeleteFactureOpen(false);
-        setCommande((prev) => ({ ...prev, factureUrl: null }));
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setLoading(null);
+    const result = await stockService.deleteFactureCommande(commande.id);
+    if (result.ok) {
+      setDeleteFactureOpen(false);
+      setCommande((prev) => ({ ...prev, factureUrl: null }));
+      router.refresh();
     }
   }
 
@@ -363,10 +275,9 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
             <Button
               className="flex-1"
               onClick={() => handleAction("envoyer")}
-              disabled={loading !== null}
             >
               <Send className="h-4 w-4 mr-1" />
-              {loading === "envoyer" ? "Envoi..." : "Envoyer"}
+              Envoyer
             </Button>
           )}
           {statut === StatutCommande.ENVOYEE && (
@@ -374,7 +285,6 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
               <Button
                 className="flex-1"
                 onClick={() => setRecevoirOpen(true)}
-                disabled={loading !== null}
               >
                 <PackageCheck className="h-4 w-4 mr-1" />
                 Receptionner
@@ -447,11 +357,8 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
                         Annuler
                       </Button>
                     </DialogClose>
-                    <Button
-                      onClick={handleRecevoir}
-                      disabled={loading === "recevoir"}
-                    >
-                      {loading === "recevoir" ? "Reception..." : "Confirmer la reception"}
+                    <Button onClick={handleRecevoir}>
+                      Confirmer la reception
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -461,10 +368,9 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
           <Button
             variant="danger"
             onClick={() => handleAction("annuler")}
-            disabled={loading !== null}
           >
             <X className="h-4 w-4 mr-1" />
-            {loading === "annuler" ? "..." : "Annuler"}
+            Annuler
           </Button>
         </div>
       )}
@@ -493,15 +399,13 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
                     variant="outline"
                     className="flex-1"
                     onClick={handleVoirFacture}
-                    disabled={loading !== null}
                   >
                     <Eye className="h-4 w-4 mr-1" />
-                    {loading === "voir" ? <><FishLoader size="sm" /> Chargement...</> : "Voir la facture"}
+                    Voir la facture
                   </Button>
                   <Button
                     variant="danger"
                     onClick={() => setDeleteFactureOpen(true)}
-                    disabled={loading !== null}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -589,9 +493,9 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
             </DialogClose>
             <Button
               onClick={handleUploadFacture}
-              disabled={!selectedFile || loading === "upload"}
+              disabled={!selectedFile}
             >
-              {loading === "upload" ? "Upload..." : "Uploader la facture"}
+              Uploader la facture
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -613,9 +517,8 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
             <Button
               variant="danger"
               onClick={handleDeleteFacture}
-              disabled={loading === "delete"}
             >
-              {loading === "delete" ? <><FishLoader size="sm" /> Suppression...</> : "Supprimer"}
+              Supprimer
             </Button>
           </DialogFooter>
         </DialogContent>

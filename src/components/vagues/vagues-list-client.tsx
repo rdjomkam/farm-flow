@@ -15,13 +15,12 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/toast";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FormSection } from "@/components/ui/form-section";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { VagueCard } from "./vague-card";
 import { StatutVague, Permission } from "@/types";
 import type { VagueSummaryResponse, BacResponse } from "@/types";
+import { useVagueService } from "@/services";
 
 interface VaguesListClientProps {
   vagues: VagueSummaryResponse[];
@@ -31,9 +30,8 @@ interface VaguesListClientProps {
 
 export function VaguesListClient({ vagues, bacsLibres, permissions }: VaguesListClientProps) {
   const router = useRouter();
-  const { toast } = useToast();
+  const vagueService = useVagueService();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
 
   // Form state
   const [code, setCode] = useState("");
@@ -81,37 +79,21 @@ export function VaguesListClient({ vagues, bacsLibres, permissions }: VaguesList
       return;
     }
 
-    setSubmitting(true);
     setErrors({});
 
-    try {
-      const res = await fetch("/api/vagues", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code: code.trim(),
-          dateDebut,
-          nombreInitial: Number(nombreInitial),
-          poidsMoyenInitial: Number(poidsMoyenInitial),
-          origineAlevins: origineAlevins.trim() || undefined,
-          bacIds: selectedBacs,
-        }),
-      });
+    const result = await vagueService.create({
+      code: code.trim(),
+      dateDebut,
+      nombreInitial: Number(nombreInitial),
+      poidsMoyenInitial: Number(poidsMoyenInitial),
+      origineAlevins: origineAlevins.trim() || undefined,
+      bacIds: selectedBacs,
+    });
 
-      if (!res.ok) {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur lors de la création.", variant: "error" });
-        return;
-      }
-
-      toast({ title: "Vague créée avec succès !", variant: "success" });
+    if (result.ok) {
       setDialogOpen(false);
       resetForm();
       router.refresh();
-    } catch {
-      toast({ title: "Erreur réseau.", variant: "error" });
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -249,8 +231,8 @@ export function VaguesListClient({ vagues, bacsLibres, permissions }: VaguesList
                 >
                   Annuler
                 </Button>
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? <><FishLoader size="sm" /> Création...</> : "Créer la vague"}
+                <Button type="submit">
+                  Créer la vague
                 </Button>
               </DialogFooter>
             </form>

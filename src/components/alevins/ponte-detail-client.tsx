@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Pencil, Trash2, Baby } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +23,8 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
+import { useAlevinsService } from "@/services";
+import { useApi } from "@/hooks/use-api";
 import { StatutPonte, StatutLotAlevins, Permission } from "@/types";
 
 const statutPonteLabels: Record<StatutPonte, string> = {
@@ -88,11 +88,10 @@ interface Props {
 
 export function PonteDetailClient({ ponte, femelles, males, permissions }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const alevinsService = useAlevinsService();
+  const { call } = useApi();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   // Edit form state
   const [code, setCode] = useState(ponte.code);
@@ -111,58 +110,33 @@ export function PonteDetailClient({ ponte, femelles, males, permissions }: Props
 
   async function handleSave() {
     if (!code.trim() || !datePonte) return;
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/pontes/${ponte.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code: code.trim(),
-          maleId: maleId || null,
-          datePonte,
-          ...(nombreOeufs && { nombreOeufs: parseInt(nombreOeufs, 10) }),
-          ...(tauxFecondation && {
-            tauxFecondation: parseFloat(tauxFecondation),
-          }),
-          statut,
-          notes: notes.trim() || undefined,
-        }),
-      });
-
-      if (res.ok) {
-        toast({ title: "Ponte mise a jour", variant: "success" });
-        setEditOpen(false);
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setSaving(false);
+    const result = await alevinsService.updatePonte(ponte.id, {
+      code: code.trim(),
+      maleId: maleId || null,
+      datePonte,
+      ...(nombreOeufs && { nombreOeufs: parseInt(nombreOeufs, 10) }),
+      ...(tauxFecondation && {
+        tauxFecondation: parseFloat(tauxFecondation),
+      }),
+      statut: statut as StatutPonte,
+      notes: notes.trim() || undefined,
+    });
+    if (result.ok) {
+      setEditOpen(false);
+      router.refresh();
     }
   }
 
   async function handleDelete() {
-    setDeleting(true);
-    try {
-      const res = await fetch(`/api/pontes/${ponte.id}`, {
-        method: "DELETE",
-      });
-
-      if (res.ok) {
-        toast({ title: "Ponte supprimee", variant: "success" });
-        router.push("/alevins/pontes");
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-        setDeleteOpen(false);
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setDeleting(false);
+    const result = await call<{ message: string }>(
+      `/api/pontes/${ponte.id}`,
+      { method: "DELETE" },
+      { successMessage: "Ponte supprimee." }
+    );
+    if (result.ok) {
+      router.push("/alevins/pontes");
+    } else {
+      setDeleteOpen(false);
     }
   }
 
@@ -259,9 +233,9 @@ export function PonteDetailClient({ ponte, femelles, males, permissions }: Props
                 </DialogClose>
                 <Button
                   onClick={handleSave}
-                  disabled={saving || !code.trim() || !datePonte}
+                  disabled={!code.trim() || !datePonte}
                 >
-                  {saving ? <><FishLoader size="sm" /> Enregistrement...</> : "Enregistrer"}
+                  Enregistrer
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -290,9 +264,8 @@ export function PonteDetailClient({ ponte, femelles, males, permissions }: Props
                 <Button
                   variant="danger"
                   onClick={handleDelete}
-                  disabled={deleting}
                 >
-                  {deleting ? <><FishLoader size="sm" /> Suppression...</> : "Supprimer"}
+                  Supprimer
                 </Button>
               </DialogFooter>
             </DialogContent>

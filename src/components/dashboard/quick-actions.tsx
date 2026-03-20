@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PlusCircle, Waves, FileText, Package, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Permission } from "@/types";
+import { useActiviteService } from "@/services";
 
 interface QuickAction {
   href: string;
@@ -29,15 +30,16 @@ interface QuickActionsProps {
 }
 
 export function QuickActions({ permissions }: QuickActionsProps) {
+  const activiteService = useActiviteService();
   const [taskCount, setTaskCount] = useState(0);
 
   useEffect(() => {
     if (permissions.includes(Permission.PLANNING_VOIR)) {
-      fetch("/api/activites/mes-taches/count")
-        .then((res) => res.json())
-        .then((data) => setTaskCount(data.count ?? 0))
-        .catch(() => {});
+      activiteService.getMesTachesCount().then(({ data }) => {
+        setTaskCount(data?.count ?? 0);
+      });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [permissions]);
 
   const visibleActions = baseActions

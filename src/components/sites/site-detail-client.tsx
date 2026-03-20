@@ -31,11 +31,11 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
 import { MemberActionsDialog } from "@/components/sites/member-actions-dialog";
 import { cn } from "@/lib/utils";
 import { Permission } from "@/types";
 import { canAssignRole } from "@/lib/permissions-constants";
+import { useUserService } from "@/services";
 
 interface SiteRoleOption {
   id: string;
@@ -81,7 +81,7 @@ export function SiteDetailClient({
   canManageSite,
 }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const userService = useUserService();
 
   // Add member dialog
   const [addOpen, setAddOpen] = useState(false);
@@ -89,7 +89,6 @@ export function SiteDetailClient({
   const [memberSiteRoleId, setMemberSiteRoleId] = useState<string>(
     siteRoles.find((r) => r.name === "Pisciculteur")?.id ?? siteRoles[siteRoles.length - 1]?.id ?? ""
   );
-  const [adding, setAdding] = useState(false);
 
   // Roles the current user can assign (anti-escalation)
   const assignableRoles = siteRoles.filter((r) =>
@@ -99,34 +98,18 @@ export function SiteDetailClient({
   async function handleAddMember() {
     if (!identifier.trim()) return;
 
-    setAdding(true);
-    try {
-      const res = await fetch(`/api/sites/${site.id}/members`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          identifier: identifier.trim(),
-          siteRoleId: memberSiteRoleId,
-        }),
-      });
+    const { ok } = await userService.addMember(site.id, {
+      identifier: identifier.trim(),
+      siteRoleId: memberSiteRoleId,
+    } as unknown as import("@/types").AddMemberDTO);
 
-      const data = await res.json();
-
-      if (res.ok) {
-        toast({ title: "Membre ajoute avec succes", variant: "success" });
-        setAddOpen(false);
-        setIdentifier("");
-        setMemberSiteRoleId(
-          siteRoles.find((r) => r.name === "Pisciculteur")?.id ?? siteRoles[siteRoles.length - 1]?.id ?? ""
-        );
-        router.refresh();
-      } else {
-        toast({ title: data.message || "Erreur lors de l'ajout", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setAdding(false);
+    if (ok) {
+      setAddOpen(false);
+      setIdentifier("");
+      setMemberSiteRoleId(
+        siteRoles.find((r) => r.name === "Pisciculteur")?.id ?? siteRoles[siteRoles.length - 1]?.id ?? ""
+      );
+      router.refresh();
     }
   }
 
@@ -219,9 +202,9 @@ export function SiteDetailClient({
                     </DialogClose>
                     <Button
                       onClick={handleAddMember}
-                      disabled={adding || !identifier.trim()}
+                      disabled={!identifier.trim()}
                     >
-                      {adding ? "Ajout..." : "Ajouter"}
+                      Ajouter
                     </Button>
                   </DialogFooter>
                 </DialogContent>

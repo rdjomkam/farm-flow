@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, RefreshCw, Clock, ToggleLeft, ToggleRight, Pencil, Trash2 } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,9 +23,9 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
 import { CategorieDepense, FrequenceRecurrence } from "@/types";
 import type { CreateDepenseRecurrenteDTO } from "@/types";
+import { useDepenseService } from "@/services";
 
 // ---------------------------------------------------------------------------
 // Labels
@@ -96,13 +95,11 @@ function formatDate(dateStr: string) {
 
 export function RecurrentesListClient({ templates: initial, canManage }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const depenseService = useDepenseService();
   const [templates, setTemplates] = useState(initial);
-  const [generating, setGenerating] = useState(false);
 
   // Dialog creation
   const [createOpen, setCreateOpen] = useState(false);
-  const [createLoading, setCreateLoading] = useState(false);
   const [form, setForm] = useState<Partial<CreateDepenseRecurrenteDTO>>({
     frequence: FrequenceRecurrence.MENSUEL,
     jourDuMois: 1,
@@ -114,110 +111,46 @@ export function RecurrentesListClient({ templates: initial, canManage }: Props) 
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function handleGenerer() {
-    setGenerating(true);
-    try {
-      const res = await fetch("/api/depenses-recurrentes/generer", { method: "POST" });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message ?? "Erreur");
-      }
-      const data = await res.json();
-      if (data.generated === 0) {
-        toast({ title: "Aucune depense a generer pour cette periode." });
-      } else {
-        toast({
-          title: `${data.generated} depense${data.generated > 1 ? "s" : ""} generee${data.generated > 1 ? "s" : ""} avec succes`,
-          variant: "success",
-        });
-      }
+    const result = await depenseService.genererDepensesRecurrentes();
+    if (result.ok) {
       router.refresh();
-    } catch (err) {
-      toast({
-        title: err instanceof Error ? err.message : "Erreur",
-        variant: "error",
-      });
-    } finally {
-      setGenerating(false);
     }
   }
 
   async function handleToggleActive(template: TemplateData) {
-    try {
-      const res = await fetch(`/api/depenses-recurrentes/${template.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: !template.isActive }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message ?? "Erreur");
-      }
+    const result = await depenseService.updateDepenseRecurrente(template.id, {
+      isActive: !template.isActive,
+    });
+    if (result.ok) {
       setTemplates((prev) =>
         prev.map((t) =>
           t.id === template.id ? { ...t, isActive: !t.isActive } : t
         )
       );
-      toast({
-        title: template.isActive ? "Template desactive" : "Template active",
-      });
-    } catch (err) {
-      toast({
-        title: err instanceof Error ? err.message : "Erreur",
-        variant: "error",
-      });
     }
   }
 
   async function handleCreate() {
     if (!form.description || !form.categorieDepense || !form.montantEstime || !form.frequence) {
-      toast({ title: "Remplissez tous les champs obligatoires.", variant: "error" });
       return;
     }
-    setCreateLoading(true);
-    try {
-      const res = await fetch("/api/depenses-recurrentes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message ?? "Erreur");
-      }
-      const newTemplate = await res.json();
-      setTemplates((prev) => [newTemplate, ...prev]);
+    const result = await depenseService.createDepenseRecurrente(
+      form as CreateDepenseRecurrenteDTO
+    );
+    if (result.ok && result.data) {
+      setTemplates((prev) => [result.data! as unknown as TemplateData, ...prev]);
       setCreateOpen(false);
       setForm({ frequence: FrequenceRecurrence.MENSUEL, jourDuMois: 1, isActive: true });
-      toast({ title: "Template cree avec succes", variant: "success" });
-    } catch (err) {
-      toast({
-        title: err instanceof Error ? err.message : "Erreur",
-        variant: "error",
-      });
-    } finally {
-      setCreateLoading(false);
     }
   }
 
   async function handleDelete() {
     if (!deletingId) return;
-    try {
-      const res = await fetch(`/api/depenses-recurrentes/${deletingId}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message ?? "Erreur");
-      }
+    const result = await depenseService.deleteDepenseRecurrente(deletingId);
+    if (result.ok) {
       setTemplates((prev) => prev.filter((t) => t.id !== deletingId));
       setDeleteOpen(false);
       setDeletingId(null);
-      toast({ title: "Template supprime" });
-    } catch (err) {
-      toast({
-        title: err instanceof Error ? err.message : "Erreur",
-        variant: "error",
-      });
     }
   }
 
@@ -233,10 +166,9 @@ export function RecurrentesListClient({ templates: initial, canManage }: Props) 
           size="sm"
           className="gap-1.5"
           onClick={handleGenerer}
-          disabled={generating}
         >
-          <RefreshCw className={`h-4 w-4 ${generating ? "animate-spin" : ""}`} />
-          {generating ? "Generation..." : "Generer maintenant"}
+          <RefreshCw className="h-4 w-4" />
+          Generer maintenant
         </Button>
         {canManage && (
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -331,12 +263,12 @@ export function RecurrentesListClient({ templates: initial, canManage }: Props) 
               </div>
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button variant="outline" disabled={createLoading}>
+                  <Button variant="outline">
                     Annuler
                   </Button>
                 </DialogClose>
-                <Button onClick={handleCreate} disabled={createLoading}>
-                  {createLoading ? <><FishLoader size="sm" /> Creation...</> : "Creer"}
+                <Button onClick={handleCreate}>
+                  Creer
                 </Button>
               </DialogFooter>
             </DialogContent>

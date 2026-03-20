@@ -13,7 +13,6 @@ import {
   Trash2,
   Plus,
 } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,8 +33,8 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
 import { CategorieDepense, ModePaiement, StatutDepense } from "@/types";
+import { useDepenseService } from "@/services";
 
 // ---------------------------------------------------------------------------
 // Labels
@@ -139,7 +138,7 @@ function formatDate(dateStr: string): string {
 
 export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const depenseService = useDepenseService();
 
   const [currentDepense, setCurrentDepense] = useState(depense);
   const [paiements, setPaiements] = useState<PaiementDepenseData[]>(
@@ -153,12 +152,10 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
     ModePaiement.ESPECES
   );
   const [paiementRef, setPaiementRef] = useState("");
-  const [paiementLoading, setPaiementLoading] = useState(false);
 
   // Upload facture state
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploadLoading, setUploadLoading] = useState(false);
 
   // Delete facture
   const [deleteFactureOpen, setDeleteFactureOpen] = useState(false);
@@ -186,118 +183,52 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
 
   async function handlePaiement() {
     const montant = parseFloat(paiementMontant);
-    if (isNaN(montant) || montant <= 0) {
-      toast({ title: "Montant invalide", variant: "error" });
-      return;
-    }
-    if (montant > resteAPayer) {
-      toast({
-        title: `Montant trop eleve. Reste a payer : ${formatMontant(resteAPayer)}`,
-        variant: "error",
-      });
-      return;
-    }
+    if (isNaN(montant) || montant <= 0) return;
+    if (montant > resteAPayer) return;
 
-    setPaiementLoading(true);
-    try {
-      const res = await fetch(`/api/depenses/${currentDepense.id}/paiements`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          montant,
-          mode: paiementMode,
-          reference: paiementRef.trim() || undefined,
-        }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message ?? "Erreur");
-      }
-
-      const result = await res.json();
-      setPaiements((prev) => [result.paiement, ...prev]);
+    const result = await depenseService.addPaiementDepense(currentDepense.id, {
+      montant,
+      mode: paiementMode,
+      reference: paiementRef.trim() || undefined,
+    });
+    if (result.ok && result.data) {
+      setPaiements((prev) => [result.data!.paiement as unknown as PaiementDepenseData, ...prev]);
       setCurrentDepense((prev) => ({
         ...prev,
-        montantPaye: result.montantPaye,
-        statut: result.statut,
+        montantPaye: result.data!.montantPaye,
+        statut: result.data!.statut,
       }));
       setPaiementOpen(false);
       setPaiementMontant("");
       setPaiementRef("");
-      toast({ title: "Paiement enregistre avec succes" });
-    } catch (err) {
-      toast({
-        title: err instanceof Error ? err.message : "Erreur",
-        variant: "error",
-      });
-    } finally {
-      setPaiementLoading(false);
     }
   }
 
   async function handleUploadFacture() {
     if (!uploadFile) return;
-    setUploadLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", uploadFile);
-
-      const res = await fetch(`/api/depenses/${currentDepense.id}/upload`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message ?? "Erreur");
-      }
-
+    const result = await depenseService.uploadFactureDepense(currentDepense.id, uploadFile);
+    if (result.ok) {
       setCurrentDepense((prev) => ({
         ...prev,
-        factureUrl: "uploaded", // placeholder — actual key stored in DB
+        factureUrl: "uploaded",
       }));
       setUploadOpen(false);
       setUploadFile(null);
-      toast({ title: "Facture uploadee avec succes" });
-    } catch (err) {
-      toast({
-        title: err instanceof Error ? err.message : "Erreur upload",
-        variant: "error",
-      });
-    } finally {
-      setUploadLoading(false);
     }
   }
 
   async function handleVoirFacture() {
-    try {
-      const res = await fetch(`/api/depenses/${currentDepense.id}/upload`);
-      if (!res.ok) throw new Error("Impossible de recuperer la facture");
-      const { url } = await res.json();
-      window.open(url, "_blank");
-    } catch (err) {
-      toast({
-        title: err instanceof Error ? err.message : "Erreur",
-        variant: "error",
-      });
+    const result = await depenseService.getFactureDepenseUrl(currentDepense.id);
+    if (result.ok && result.data) {
+      window.open(result.data.url, "_blank");
     }
   }
 
   async function handleDeleteFacture() {
-    try {
-      const res = await fetch(`/api/depenses/${currentDepense.id}/upload`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Erreur lors de la suppression");
+    const result = await depenseService.deleteFactureDepense(currentDepense.id);
+    if (result.ok) {
       setCurrentDepense((prev) => ({ ...prev, factureUrl: null }));
       setDeleteFactureOpen(false);
-      toast({ title: "Facture supprimee" });
-    } catch (err) {
-      toast({
-        title: err instanceof Error ? err.message : "Erreur",
-        variant: "error",
-      });
     }
   }
 
@@ -498,15 +429,15 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                 </div>
                 <DialogFooter>
                   <DialogClose asChild>
-                    <Button variant="outline" disabled={paiementLoading}>
+                    <Button variant="outline">
                       Annuler
                     </Button>
                   </DialogClose>
                   <Button
                     onClick={handlePaiement}
-                    disabled={paiementLoading || !paiementMontant}
+                    disabled={!paiementMontant}
                   >
-                    {paiementLoading ? <><FishLoader size="sm" /> Enregistrement...</> : "Confirmer"}
+                    Confirmer
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -600,15 +531,15 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                   </div>
                   <DialogFooter>
                     <DialogClose asChild>
-                      <Button variant="outline" disabled={uploadLoading}>
+                      <Button variant="outline">
                         Annuler
                       </Button>
                     </DialogClose>
                     <Button
                       onClick={handleUploadFacture}
-                      disabled={uploadLoading || !uploadFile}
+                      disabled={!uploadFile}
                     >
-                      {uploadLoading ? "Upload en cours..." : "Envoyer"}
+                      Envoyer
                     </Button>
                   </DialogFooter>
                 </DialogContent>

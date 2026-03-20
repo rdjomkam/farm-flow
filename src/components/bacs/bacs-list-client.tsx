@@ -23,11 +23,10 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/toast";
 import { EmptyState } from "@/components/ui/empty-state";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Permission, TypeSystemeBac } from "@/types";
 import type { BacResponse } from "@/types";
+import { useBacService } from "@/services";
 
 const TYPE_SYSTEME_LABELS: Record<TypeSystemeBac, string> = {
   [TypeSystemeBac.BAC_BETON]: "Bac beton / plastique",
@@ -43,9 +42,8 @@ interface BacsListClientProps {
 
 export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
   const router = useRouter();
-  const { toast } = useToast();
+  const bacService = useBacService();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [nom, setNom] = useState("");
   const [volume, setVolume] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -60,7 +58,6 @@ export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
   const [editPoidsMoyenInitial, setEditPoidsMoyenInitial] = useState("");
   const [editTypeSysteme, setEditTypeSysteme] = useState<string>("");
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
-  const [editSubmitting, setEditSubmitting] = useState(false);
 
   function resetForm() {
     setNom("");
@@ -79,30 +76,14 @@ export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
       return;
     }
 
-    setSubmitting(true);
     setErrors({});
 
-    try {
-      const res = await fetch("/api/bacs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nom: nom.trim(), volume: Number(volume) }),
-      });
+    const result = await bacService.create({ nom: nom.trim(), volume: Number(volume) });
 
-      if (!res.ok) {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur lors de la création.", variant: "error" });
-        return;
-      }
-
-      toast({ title: "Bac créé avec succès !", variant: "success" });
+    if (result.ok) {
       setDialogOpen(false);
       resetForm();
       router.refresh();
-    } catch {
-      toast({ title: "Erreur réseau.", variant: "error" });
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -125,33 +106,20 @@ export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
     if (!editVolume || Number(editVolume) <= 0) errs.volume = "Le volume doit etre superieur a 0.";
     if (Object.keys(errs).length > 0) { setEditErrors(errs); return; }
 
-    setEditSubmitting(true);
     setEditErrors({});
-    try {
-      const res = await fetch(`/api/bacs/${editBac!.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nom: editNom.trim(),
-          volume: Number(editVolume),
-          ...(editNombrePoissons !== "" && { nombrePoissons: Number(editNombrePoissons) }),
-          ...(editNombreInitial !== "" && { nombreInitial: Number(editNombreInitial) }),
-          ...(editPoidsMoyenInitial !== "" && { poidsMoyenInitial: Number(editPoidsMoyenInitial) }),
-          ...(editTypeSysteme !== "" && { typeSysteme: editTypeSysteme }),
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur lors de la modification.", variant: "error" });
-        return;
-      }
-      toast({ title: "Bac modifie !", variant: "success" });
+
+    const result = await bacService.update(editBac!.id, {
+      nom: editNom.trim(),
+      volume: Number(editVolume),
+      ...(editNombrePoissons !== "" && { nombrePoissons: Number(editNombrePoissons) }),
+      ...(editNombreInitial !== "" && { nombreInitial: Number(editNombreInitial) }),
+      ...(editPoidsMoyenInitial !== "" && { poidsMoyenInitial: Number(editPoidsMoyenInitial) }),
+      ...(editTypeSysteme !== "" && { typeSysteme: editTypeSysteme }),
+    });
+
+    if (result.ok) {
       setEditOpen(false);
       router.refresh();
-    } catch {
-      toast({ title: "Erreur reseau.", variant: "error" });
-    } finally {
-      setEditSubmitting(false);
     }
   }
 
@@ -198,8 +166,8 @@ export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
                   <Button type="button" variant="secondary" onClick={() => setDialogOpen(false)}>
                     Annuler
                   </Button>
-                  <Button type="submit" disabled={submitting}>
-                    {submitting ? <><FishLoader size="sm" /> Création...</> : "Créer le bac"}
+                  <Button type="submit">
+                    Créer le bac
                   </Button>
                 </DialogFooter>
               </form>
@@ -330,8 +298,8 @@ export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
               <Button type="button" variant="secondary" onClick={() => setEditOpen(false)}>
                 Annuler
               </Button>
-              <Button type="submit" disabled={editSubmitting}>
-                {editSubmitting ? <><FishLoader size="sm" /> Modification...</> : "Enregistrer"}
+              <Button type="submit">
+                Enregistrer
               </Button>
             </DialogFooter>
           </form>

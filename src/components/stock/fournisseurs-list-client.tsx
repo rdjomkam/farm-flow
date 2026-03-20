@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, Truck, ArrowLeft, Phone, Mail, MapPin, Pencil } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,8 +16,8 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/toast";
 import { Permission } from "@/types";
+import { useStockService } from "@/services";
 
 interface FournisseurData {
   id: string;
@@ -36,10 +35,9 @@ interface Props {
 
 export function FournisseursListClient({ fournisseurs, permissions }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const stockService = useStockService();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
 
   // Form state
   const [nom, setNom] = useState("");
@@ -66,39 +64,25 @@ export function FournisseursListClient({ fournisseurs, permissions }: Props) {
 
   async function handleSubmit() {
     if (!nom.trim()) return;
-    setCreating(true);
 
-    try {
-      const url = editId ? `/api/fournisseurs/${editId}` : "/api/fournisseurs";
-      const method = editId ? "PUT" : "POST";
+    const dto = {
+      nom: nom.trim(),
+      ...(telephone.trim() && { telephone: telephone.trim() }),
+      ...(email.trim() && { email: email.trim() }),
+      ...(adresse.trim() && { adresse: adresse.trim() }),
+    };
 
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nom: nom.trim(),
-          ...(telephone.trim() && { telephone: telephone.trim() }),
-          ...(email.trim() && { email: email.trim() }),
-          ...(adresse.trim() && { adresse: adresse.trim() }),
-        }),
-      });
+    let result;
+    if (editId) {
+      result = await stockService.updateFournisseur(editId, dto);
+    } else {
+      result = await stockService.createFournisseur(dto);
+    }
 
-      if (res.ok) {
-        toast({
-          title: editId ? "Fournisseur mis a jour" : "Fournisseur cree",
-          variant: "success",
-        });
-        setDialogOpen(false);
-        resetForm();
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setCreating(false);
+    if (result.ok) {
+      setDialogOpen(false);
+      resetForm();
+      router.refresh();
     }
   }
 
@@ -169,10 +153,8 @@ export function FournisseursListClient({ fournisseurs, permissions }: Props) {
                 <DialogClose asChild>
                   <Button variant="outline">Annuler</Button>
                 </DialogClose>
-                <Button onClick={handleSubmit} disabled={creating || !nom.trim()}>
-                  {creating
-                    ? editId ? <><FishLoader size="sm" /> Enregistrement...</> : <><FishLoader size="sm" /> Creation...</>
-                    : editId ? "Enregistrer" : "Creer"}
+                <Button onClick={handleSubmit} disabled={!nom.trim()}>
+                  {editId ? "Enregistrer" : "Creer"}
                 </Button>
               </DialogFooter>
             </DialogContent>

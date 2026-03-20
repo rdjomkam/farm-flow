@@ -3,6 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { AppShell } from "@/components/layout/app-shell";
 import { ToastProvider } from "@/components/ui/toast";
 import { ImpersonationBanner } from "@/components/users/impersonation-banner";
+import { GlobalLoadingProvider } from "@/contexts/global-loading.context";
+import { GlobalLoadingBar } from "@/components/ui/global-loading-bar";
+import { LoadingOverlay } from "@/components/ui/loading-overlay";
 import { getServerSession } from "@/lib/auth";
 import { getServerPermissions, getServerSiteModules } from "@/lib/auth/permissions-server";
 import { Permission, Role, SiteModule } from "@/types";
@@ -58,16 +61,20 @@ export default async function RootLayout({
         suppressHydrationWarning
       >
         <ToastProvider>
-          {isImpersonating && session && (
-            <ImpersonationBanner
-              targetUserName={session.name}
-              targetUserRole={session.role}
-              originalUserName={session.originalUserName ?? "Administrateur"}
-            />
-          )}
-          <div className={isImpersonating ? "pt-14 sm:pt-11" : ""}>
-            <AppShell permissions={permissions} role={role} userName={session?.name ?? null} siteModules={siteModules} isImpersonating={isImpersonating}>{children}</AppShell>
-          </div>
+          <GlobalLoadingProvider>
+            <GlobalLoadingBar />
+            <LoadingOverlay />
+            {isImpersonating && session && (
+              <ImpersonationBanner
+                targetUserName={session.name}
+                targetUserRole={session.role}
+                originalUserName={session.originalUserName ?? "Administrateur"}
+              />
+            )}
+            <div className={isImpersonating ? "pt-14 sm:pt-11" : ""}>
+              <AppShell permissions={permissions} role={role} userName={session?.name ?? null} siteModules={siteModules} isImpersonating={isImpersonating}>{children}</AppShell>
+            </div>
+          </GlobalLoadingProvider>
         </ToastProvider>
       </body>
     </html>

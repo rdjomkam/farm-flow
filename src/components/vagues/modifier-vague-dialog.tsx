@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FishLoader } from "@/components/ui/fish-loader";
 import {
   Dialog,
   DialogTrigger,
@@ -15,8 +14,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/toast";
 import { Permission } from "@/types";
+import { useVagueService } from "@/services";
 
 interface ModifierVagueDialogProps {
   vagueId: string;
@@ -38,11 +37,10 @@ export function ModifierVagueDialog({
   onOpenChange: controlledOnOpenChange,
 }: ModifierVagueDialogProps) {
   const router = useRouter();
-  const { toast } = useToast();
+  const vagueService = useVagueService();
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = controlledOnOpenChange ?? setInternalOpen;
-  const [submitting, setSubmitting] = useState(false);
   const [nombre, setNombre] = useState(String(nombreInitial));
   const [poids, setPoids] = useState(String(poidsMoyenInitial));
   const [origine, setOrigine] = useState(origineAlevins ?? "");
@@ -64,32 +62,17 @@ export function ModifierVagueDialog({
       errs.poidsMoyenInitial = "Superieur a 0.";
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
-    setSubmitting(true);
     setErrors({});
 
-    try {
-      const body: Record<string, unknown> = {
-        nombreInitial: Number(nombre),
-        poidsMoyenInitial: Number(poids),
-        origineAlevins: origine.trim() || null,
-      };
-      const res = await fetch(`/api/vagues/${vagueId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur lors de la modification.", variant: "error" });
-        return;
-      }
-      toast({ title: "Vague modifiee !", variant: "success" });
+    const result = await vagueService.update(vagueId, {
+      nombreInitial: Number(nombre),
+      poidsMoyenInitial: Number(poids),
+      origineAlevins: origine.trim() || null,
+    });
+
+    if (result.ok) {
       setOpen(false);
       router.refresh();
-    } catch {
-      toast({ title: "Erreur reseau.", variant: "error" });
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -145,8 +128,8 @@ export function ModifierVagueDialog({
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               Annuler
             </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? <><FishLoader size="sm" /> Modification...</> : "Enregistrer"}
+            <Button type="submit">
+              Enregistrer
             </Button>
           </DialogFooter>
         </form>

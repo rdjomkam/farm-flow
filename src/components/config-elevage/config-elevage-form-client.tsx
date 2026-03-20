@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/toast";
-import { FishLoader } from "@/components/ui/fish-loader";
+import { useConfigService } from "@/services";
 import type { ConfigElevage } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -217,10 +216,9 @@ type FormValues = Omit<ConfigElevage, "id" | "siteId" | "createdAt" | "updatedAt
 
 export function ConfigElevageFormClient({ templates }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const configService = useConfigService();
   const [form, setForm] = useState<FormValues>({ ...FORM_DEFAULTS });
   const [openSections, setOpenSections] = useState<Set<string>>(new Set(["objectif"]));
-  const [submitting, setSubmitting] = useState(false);
 
   // ---- Template pre-fill ----
 
@@ -329,28 +327,11 @@ export function ConfigElevageFormClient({ templates }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nom.trim()) {
-      toast({ title: "Erreur", description: "Le nom du profil est requis.", variant: "error" });
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/config-elevage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        toast({ title: "Erreur", description: data.message ?? "Erreur lors de la creation.", variant: "error" });
-        return;
-      }
-      toast({ title: "Profil cree", description: `Le profil "${form.nom}" a ete cree.` });
+    if (!form.nom.trim()) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await configService.createConfig(form as any);
+    if (result.ok) {
       router.push("/settings/config-elevage");
-    } catch {
-      toast({ title: "Erreur", description: "Erreur reseau lors de la creation.", variant: "error" });
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -580,8 +561,8 @@ export function ConfigElevageFormClient({ templates }: Props) {
         >
           Annuler
         </Button>
-        <Button type="submit" className="flex-1" disabled={submitting}>
-          {submitting ? <><FishLoader size="sm" /> Creation...</> : "Creer le profil"}
+        <Button type="submit" className="flex-1">
+          Creer le profil
         </Button>
       </div>
     </form>

@@ -6,49 +6,32 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { AnalytiqueAliment, SimulationResult } from "@/types";
+import { useAnalyticsService } from "@/services";
 
 interface FeedSimulatorProps {
   aliments: AnalytiqueAliment[];
 }
 
 export function FeedSimulator({ aliments }: FeedSimulatorProps) {
+  const analyticsService = useAnalyticsService();
   const [ancienId, setAncienId] = useState("");
   const [nouveauId, setNouveauId] = useState("");
   const [production, setProduction] = useState("1000");
   const [result, setResult] = useState<SimulationResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   async function handleSimulate() {
     if (!ancienId || !nouveauId || !production) return;
 
-    setLoading(true);
-    setError(null);
     setResult(null);
 
-    try {
-      const res = await fetch("/api/analytics/aliments/simulation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ancienProduitId: ancienId,
-          nouveauProduitId: nouveauId,
-          productionCible: parseFloat(production),
-        }),
-      });
+    const res = await analyticsService.simulerChangementAliment({
+      ancienProduitId: ancienId,
+      nouveauProduitId: nouveauId,
+      productionCible: parseFloat(production),
+    });
 
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.message || "Erreur lors de la simulation.");
-        return;
-      }
-
-      const data: SimulationResult = await res.json();
-      setResult(data);
-    } catch {
-      setError("Erreur reseau. Verifiez votre connexion.");
-    } finally {
-      setLoading(false);
+    if (res.ok && res.data) {
+      setResult(res.data as unknown as SimulationResult);
     }
   }
 
@@ -123,13 +106,11 @@ export function FeedSimulator({ aliments }: FeedSimulatorProps) {
 
           <Button
             onClick={handleSimulate}
-            disabled={!canSimulate || loading}
+            disabled={!canSimulate}
             className="w-full"
           >
-            {loading ? "Calcul en cours..." : "Simuler le changement"}
+            Simuler le changement
           </Button>
-
-          {error && <p className="text-sm text-accent-red">{error}</p>}
         </CardContent>
       </Card>
 

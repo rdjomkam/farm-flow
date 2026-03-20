@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Bell,
@@ -19,7 +19,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/toast";
+import { useNotificationService } from "@/services";
 import { TypeAlerte, StatutAlerte } from "@/types";
 import type { Notification } from "@/types";
 
@@ -102,9 +102,8 @@ interface NotificationsListClientProps {
 }
 
 export function NotificationsListClient({ notifications }: NotificationsListClientProps) {
-  const { toast } = useToast();
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const notificationService = useNotificationService();
   const [localNotifications, setLocalNotifications] = useState<Notification[]>(notifications);
 
   async function markAsRead(notification: Notification) {
@@ -114,41 +113,27 @@ export function NotificationsListClient({ notifications }: NotificationsListClie
       return;
     }
 
-    try {
-      const res = await fetch(`/api/notifications/${notification.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ statut: StatutAlerte.LUE }),
-      });
-
-      if (res.ok) {
-        setLocalNotifications((prev) =>
-          prev.map((n) =>
-            n.id === notification.id ? { ...n, statut: StatutAlerte.LUE } : n
-          )
-        );
-      }
-    } catch {
-      // Ignore
+    const result = await notificationService.markRead(notification.id);
+    if (result.ok) {
+      setLocalNotifications((prev) =>
+        prev.map((n) =>
+          n.id === notification.id ? { ...n, statut: StatutAlerte.LUE } : n
+        )
+      );
     }
 
     if (notification.lien) router.push(notification.lien);
   }
 
   async function markAllRead() {
-    try {
-      const res = await fetch("/api/notifications/mark-all-read", { method: "POST" });
-      if (res.ok) {
-        setLocalNotifications((prev) =>
-          prev.map((n) =>
-            n.statut === StatutAlerte.ACTIVE ? { ...n, statut: StatutAlerte.LUE } : n
-          )
-        );
-        toast({ title: "Toutes les notifications ont ete marquees comme lues", variant: "success" });
-        startTransition(() => router.refresh());
-      }
-    } catch {
-      toast({ title: "Erreur lors de la mise a jour", variant: "error" });
+    const result = await notificationService.markAllRead();
+    if (result.ok) {
+      setLocalNotifications((prev) =>
+        prev.map((n) =>
+          n.statut === StatutAlerte.ACTIVE ? { ...n, statut: StatutAlerte.LUE } : n
+        )
+      );
+      router.refresh();
     }
   }
 
@@ -221,7 +206,6 @@ export function NotificationsListClient({ notifications }: NotificationsListClie
             variant="outline"
             size="sm"
             onClick={markAllRead}
-            disabled={isPending}
             className="min-h-[44px] gap-2"
           >
             <CheckCheck className="h-4 w-4" />

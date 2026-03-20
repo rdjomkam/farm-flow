@@ -11,6 +11,7 @@ import { Header } from "@/components/layout/header";
 import { PERMISSION_GROUPS } from "@/lib/permissions-constants";
 import { groupLabels, permissionLabels } from "@/lib/role-form-labels";
 import { cn } from "@/lib/utils";
+import { useUserService } from "@/services";
 
 interface RoleData {
   id: string;
@@ -27,37 +28,31 @@ export default function EditRolePage() {
   const roleId = params.roleId;
   const router = useRouter();
   const { toast } = useToast();
+  const userService = useUserService();
 
   const [role, setRole] = useState<RoleData | null>(null);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedPerms, setSelectedPerms] = useState<Set<string>>(new Set());
-  const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    async function fetchRole() {
-      try {
-        const res = await fetch(`/api/sites/${siteId}/roles/${roleId}`);
-        const data = await res.json();
-        if (res.ok) {
-          setRole(data);
-          setName(data.name);
-          setDescription(data.description ?? "");
-          setSelectedPerms(new Set(data.permissions));
+    userService.listRoles(siteId).then(({ data }) => {
+      if (data?.roles) {
+        const found = data.roles.find((r) => r.id === roleId) as RoleData | undefined;
+        if (found) {
+          setRole(found);
+          setName(found.name);
+          setDescription(found.description ?? "");
+          setSelectedPerms(new Set(found.permissions));
         } else {
-          toast({ title: data.message || "Role introuvable", variant: "error" });
+          toast({ title: "Role introuvable", variant: "error" });
           router.push(`/settings/sites/${siteId}/roles`);
         }
-      } catch {
-        toast({ title: "Erreur reseau", variant: "error" });
-      } finally {
-        setLoading(false);
       }
-    }
-    fetchRole();
+      setLoading(false);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId, roleId]);
 
@@ -81,57 +76,29 @@ export default function EditRolePage() {
       return;
     }
 
-    setSaving(true);
-    try {
-      const body: Record<string, unknown> = {
-        permissions: Array.from(selectedPerms),
-        description: description.trim() || null,
-      };
-      // System roles: name is readonly
-      if (!role?.isSystem) {
-        body.name = name.trim();
-      }
+    const body: Record<string, unknown> = {
+      permissions: Array.from(selectedPerms),
+      description: description.trim() || null,
+    };
+    // System roles: name is readonly
+    if (!role?.isSystem) {
+      body.name = name.trim();
+    }
 
-      const res = await fetch(`/api/sites/${siteId}/roles/${roleId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast({ title: "Role mis a jour", variant: "success" });
-        router.push(`/settings/sites/${siteId}/roles`);
-        router.refresh();
-      } else {
-        toast({ title: data.message || "Erreur lors de la mise a jour", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setSaving(false);
+    const { ok } = await userService.updateRole(siteId, roleId, body as Parameters<typeof userService.updateRole>[2]);
+    if (ok) {
+      router.push(`/settings/sites/${siteId}/roles`);
+      router.refresh();
     }
   }
 
   async function handleDelete() {
-    setDeleting(true);
-    try {
-      const res = await fetch(`/api/sites/${siteId}/roles/${roleId}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast({ title: "Role supprime", variant: "success" });
-        router.push(`/settings/sites/${siteId}/roles`);
-        router.refresh();
-      } else {
-        toast({ title: data.message || "Erreur lors de la suppression", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setDeleting(false);
-      setConfirmDelete(false);
+    const { ok } = await userService.deleteRole(siteId, roleId);
+    if (ok) {
+      router.push(`/settings/sites/${siteId}/roles`);
+      router.refresh();
     }
+    setConfirmDelete(false);
   }
 
   if (loading) {
@@ -229,9 +196,9 @@ export default function EditRolePage() {
             <Button
               type="submit"
               className="flex-1"
-              disabled={saving || !name.trim() || selectedPerms.size === 0}
+              disabled={!name.trim() || selectedPerms.size === 0}
             >
-              {saving ? "Enregistrement..." : "Enregistrer"}
+              Enregistrer
             </Button>
           </div>
 
@@ -275,9 +242,8 @@ export default function EditRolePage() {
                       variant="danger"
                       size="sm"
                       onClick={handleDelete}
-                      disabled={deleting}
                     >
-                      {deleting ? "Suppression..." : "Confirmer"}
+                      Confirmer
                     </Button>
                   </div>
                 </div>

@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/select";
 import { VisibiliteNote } from "@/types";
 import type { NoteIngenieurWithRelations } from "@/types";
+import { useNoteService } from "@/services";
+import { useApi } from "@/hooks/use-api";
 
 interface ReplyFormProps {
   parentNote: NoteIngenieurWithRelations;
@@ -26,23 +28,22 @@ export function ReplyForm({
   onSuccess,
 }: ReplyFormProps) {
   const router = useRouter();
+  const noteService = useNoteService();
+  const { call } = useApi();
   const [contenu, setContenu] = useState("");
   const [visibility, setVisibility] = useState<VisibiliteNote>(
     VisibiliteNote.PUBLIC
   );
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!contenu.trim()) return;
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      if (isClientView) {
-        const res = await fetch("/api/mes-observations", {
+    let result;
+    if (isClientView) {
+      result = await call<Record<string, unknown>>(
+        "/api/mes-observations",
+        {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -50,37 +51,25 @@ export function ReplyForm({
             observationTexte: contenu.trim(),
             type: "autre",
           }),
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error ?? "Erreur lors de l'envoi");
-        }
-      } else {
-        const res = await fetch("/api/ingenieur/notes", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            replyToId: parentNote.id,
-            titre: `Re: ${parentNote.titre}`,
-            contenu: contenu.trim(),
-            visibility,
-            clientSiteId: parentNote.clientSiteId,
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error ?? "Erreur lors de l'envoi");
-        }
-      }
+        },
+        { successMessage: "Reponse envoyee !" }
+      );
+    } else {
+      result = await noteService.createNote({
+        replyToId: parentNote.id,
+        titre: `Re: ${parentNote.titre}`,
+        contenu: contenu.trim(),
+        visibility,
+        isFromClient: false,
+        clientSiteId: parentNote.clientSiteId,
+      });
+    }
 
+    if (result.ok) {
       setContenu("");
       setVisibility(VisibiliteNote.PUBLIC);
       router.refresh();
       onSuccess?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Une erreur est survenue");
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -93,7 +82,6 @@ export function ReplyForm({
         onChange={(e) => setContenu(e.target.value)}
         rows={3}
         className="min-h-[80px] resize-none"
-        disabled={loading}
       />
 
       {!isClientView && (
@@ -111,17 +99,13 @@ export function ReplyForm({
         </Select>
       )}
 
-      {error && (
-        <p className="text-sm text-danger">{error}</p>
-      )}
-
       <Button
         type="submit"
-        disabled={loading || !contenu.trim()}
+        disabled={!contenu.trim()}
         className="self-end"
         size="sm"
       >
-        {loading ? "Envoi..." : "Repondre"}
+        Repondre
       </Button>
     </form>
   );

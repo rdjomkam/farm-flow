@@ -12,7 +12,6 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
 import { FormSection } from "@/components/ui/form-section";
 import { FormBiometrie } from "./form-biometrie";
 import { FormMortalite } from "./form-mortalite";
@@ -26,7 +25,7 @@ import type { ConsommationLine, ProduitOption } from "./consommation-fields";
 import { TypeReleve, TypeActivite, StatutActivite, CategorieProduit, UniteStock, ACTIVITE_RELEVE_TYPE_MAP } from "@/types";
 import type { BacResponse } from "@/types";
 import { ClipboardCheck } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
+import { useBacService, useActiviteService, useReleveService } from "@/services";
 
 /** Inverse de ACTIVITE_RELEVE_TYPE_MAP : TypeReleve → TypeActivite compatible */
 const RELEVE_ACTIVITE_TYPE_MAP: Partial<Record<string, TypeActivite>> = {};
@@ -71,7 +70,9 @@ interface ReleveFormClientProps {
 export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { toast } = useToast();
+  const bacService = useBacService();
+  const activiteService = useActiviteService();
+  const releveService = useReleveService();
 
   // Parametres pre-remplis depuis une activite (query params)
   const initialActiviteId = searchParams.get("activiteId") ?? "";
@@ -91,7 +92,6 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
   const [notes, setNotes] = useState("");
   const [bacs, setBacs] = useState<BacResponse[]>([]);
   const [loadingBacs, setLoadingBacs] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [consommations, setConsommations] = useState<ConsommationLine[]>([]);
 
@@ -117,16 +117,17 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
     setLoadingBacs(true);
     // Ne pas reset bacId si pre-rempli depuis une activite
     if (!isFromActivite) setBacId("");
-    fetch(`/api/bacs?vagueId=${vagueId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        const vagueBacs = (data.bacs ?? []).filter(
+    bacService.list({ vagueId }).then((result) => {
+      if (result.ok && result.data) {
+        const vagueBacs = (result.data.bacs ?? []).filter(
           (b: BacResponse) => b.vagueId === vagueId
         );
         setBacs(vagueBacs);
-      })
-      .catch(() => setBacs([]))
-      .finally(() => setLoadingBacs(false));
+      } else {
+        setBacs([]);
+      }
+      setLoadingBacs(false);
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vagueId]);
 
@@ -152,18 +153,20 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
     if (!typeActiviteCompat) return; // MORTALITE, OBSERVATION — pas de mapping
 
     setLoadingActivites(true);
-    fetch(`/api/activites?vagueId=${encodeURIComponent(vagueId)}&typeActivite=${encodeURIComponent(typeActiviteCompat)}`)
-      .then((res) => res.json())
-      .then((data) => {
-        const compatibles = (data.activites ?? []).filter(
+    activiteService.list({ vagueId, typeActivite: typeActiviteCompat }).then((result) => {
+      if (result.ok && result.data) {
+        const compatibles = (result.data.activites ?? []).filter(
           (a: ActivitePlanifiee) =>
             (a.statut === StatutActivite.PLANIFIEE || a.statut === StatutActivite.EN_RETARD) &&
             !a.releveId
         );
         setActivitesPlanifiees(compatibles);
-      })
-      .catch(() => setActivitesPlanifiees([]))
-      .finally(() => setLoadingActivites(false));
+      } else {
+        setActivitesPlanifiees([]);
+      }
+      setLoadingActivites(false);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vagueId, typeReleve]);
 
   function validate(): Record<string, string> {
@@ -224,7 +227,6 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
       return;
     }
 
-    setSubmitting(true);
     setErrors({});
 
     const body: Record<string, unknown> = {
@@ -268,26 +270,11 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
       }));
     }
 
-    try {
-      const res = await fetch("/api/releves", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+    const result = await releveService.create(body as unknown as Parameters<typeof releveService.create>[0]);
 
-      if (!res.ok) {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur lors de la création.", variant: "error" });
-        return;
-      }
-
-      toast({ title: "Relevé enregistré !", variant: "success" });
+    if (result.ok) {
       router.push(`/vagues/${vagueId}`);
       router.refresh();
-    } catch {
-      toast({ title: "Erreur réseau.", variant: "error" });
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -557,8 +544,8 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
           />
 
           {/* Submit */}
-          <Button type="submit" disabled={submitting} className="mt-2">
-            {submitting ? <><FishLoader size="sm" /> Enregistrement...</> : "Enregistrer le relevé"}
+          <Button type="submit" className="mt-2">
+            Enregistrer le relevé
           </Button>
         </form>
     </section>

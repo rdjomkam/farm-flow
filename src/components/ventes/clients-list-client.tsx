@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Users, Phone, Mail, MapPin, Pencil, ShoppingCart } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,8 +15,8 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/toast";
 import { Permission } from "@/types";
+import { useVenteService } from "@/services";
 
 interface ClientData {
   id: string;
@@ -35,10 +34,9 @@ interface Props {
 
 export function ClientsListClient({ clients, permissions }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const venteService = useVenteService();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
 
   const [nom, setNom] = useState("");
   const [telephone, setTelephone] = useState("");
@@ -64,39 +62,22 @@ export function ClientsListClient({ clients, permissions }: Props) {
 
   async function handleSubmit() {
     if (!nom.trim()) return;
-    setCreating(true);
 
-    try {
-      const url = editId ? `/api/clients/${editId}` : "/api/clients";
-      const method = editId ? "PUT" : "POST";
+    const dto = {
+      nom: nom.trim(),
+      ...(telephone.trim() && { telephone: telephone.trim() }),
+      ...(email.trim() && { email: email.trim() }),
+      ...(adresse.trim() && { adresse: adresse.trim() }),
+    };
 
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nom: nom.trim(),
-          ...(telephone.trim() && { telephone: telephone.trim() }),
-          ...(email.trim() && { email: email.trim() }),
-          ...(adresse.trim() && { adresse: adresse.trim() }),
-        }),
-      });
+    const result = editId
+      ? await venteService.updateClient(editId, dto)
+      : await venteService.createClient(dto);
 
-      if (res.ok) {
-        toast({
-          title: editId ? "Client mis a jour" : "Client cree",
-          variant: "success",
-        });
-        setDialogOpen(false);
-        resetForm();
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setCreating(false);
+    if (result.ok) {
+      setDialogOpen(false);
+      resetForm();
+      router.refresh();
     }
   }
 
@@ -159,10 +140,8 @@ export function ClientsListClient({ clients, permissions }: Props) {
                 <DialogClose asChild>
                   <Button variant="outline">Annuler</Button>
                 </DialogClose>
-                <Button onClick={handleSubmit} disabled={creating || !nom.trim()}>
-                  {creating
-                    ? editId ? <><FishLoader size="sm" /> Enregistrement...</> : <><FishLoader size="sm" /> Creation...</>
-                    : editId ? "Enregistrer" : "Creer"}
+                <Button onClick={handleSubmit} disabled={!nom.trim()}>
+                  {editId ? "Enregistrer" : "Creer"}
                 </Button>
               </DialogFooter>
             </DialogContent>

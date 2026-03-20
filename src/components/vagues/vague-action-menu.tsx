@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MoreVertical, Plus, Scissors, Pencil, FileText, FileSpreadsheet, XCircle, Loader2 } from "lucide-react";
+import { MoreVertical, Plus, Scissors, Pencil, FileText, FileSpreadsheet, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,8 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ModifierVagueDialog } from "./modifier-vague-dialog";
 import { CloturerDialog } from "./cloturer-dialog";
-import { useToast } from "@/components/ui/toast";
 import { Permission } from "@/types";
+import { useExportService } from "@/services";
 
 interface VagueActionMenuProps {
   vagueId: string;
@@ -40,41 +40,9 @@ export function VagueActionMenu({
   className,
 }: VagueActionMenuProps) {
   const router = useRouter();
-  const { toast } = useToast();
+  const exportService = useExportService();
   const [modifierOpen, setModifierOpen] = useState(false);
   const [cloturerOpen, setCloturerOpen] = useState(false);
-  const [exportingPdf, setExportingPdf] = useState(false);
-  const [exportingExcel, setExportingExcel] = useState(false);
-
-  async function handleExport(href: string, filename: string, setLoading: (v: boolean) => void) {
-    setLoading(true);
-    try {
-      const res = await fetch(href);
-      if (!res.ok) {
-        let errorMsg = "Erreur lors de l'export";
-        try {
-          const data = await res.json();
-          errorMsg = data.error ?? data.message ?? errorMsg;
-        } catch { /* ignore */ }
-        toast({ title: errorMsg, variant: "error" });
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast({ title: `${filename} téléchargé`, variant: "success" });
-    } catch {
-      toast({ title: "Erreur réseau lors de l'export", variant: "error" });
-    } finally {
-      setLoading(false);
-    }
-  }
 
   const canModifier = isEnCours && permissions.includes(Permission.VAGUES_MODIFIER);
   const canCalibrage = isEnCours && permissions.includes(Permission.CALIBRAGES_CREER);
@@ -114,31 +82,21 @@ export function VagueActionMenu({
           {canExport && (
             <>
               <DropdownMenuItem
-                disabled={exportingPdf}
                 onSelect={(e) => {
                   e.preventDefault();
-                  handleExport(
-                    `/api/export/vague/${vagueId}`,
-                    `rapport-vague-${vagueCode}.pdf`,
-                    setExportingPdf
-                  );
+                  exportService.vaguePdf(vagueId, vagueCode);
                 }}
               >
-                {exportingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                <FileText className="h-4 w-4" />
                 Rapport PDF
               </DropdownMenuItem>
               <DropdownMenuItem
-                disabled={exportingExcel}
                 onSelect={(e) => {
                   e.preventDefault();
-                  handleExport(
-                    `/api/export/releves?vagueId=${vagueId}`,
-                    `releves-${vagueCode}.xlsx`,
-                    setExportingExcel
-                  );
+                  exportService.vagueReleves(vagueId, vagueCode);
                 }}
               >
-                {exportingExcel ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+                <FileSpreadsheet className="h-4 w-4" />
                 Export relevés
               </DropdownMenuItem>
             </>

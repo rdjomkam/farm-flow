@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FormSection } from "@/components/ui/form-section";
 import { useToast } from "@/components/ui/toast";
-import { FishLoader } from "@/components/ui/fish-loader";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Permission, Role } from "@/types";
+import { useUserService, useAuthService } from "@/services";
 
 interface UserSecurityTabProps {
   userId: string;
@@ -37,6 +37,8 @@ export function UserSecurityTab({
 }: UserSecurityTabProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const userService = useUserService();
+  const authService = useAuthService();
 
   const canManage = callerPermissions.includes(Permission.UTILISATEURS_GERER);
   const canImpersonate = callerPermissions.includes(Permission.UTILISATEURS_IMPERSONNER);
@@ -45,15 +47,12 @@ export function UserSecurityTab({
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
-  const [savingPassword, setSavingPassword] = useState(false);
 
   // Force logout state
   const [logoutOpen, setLogoutOpen] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
 
   // Impersonation state
   const [impersonateOpen, setImpersonateOpen] = useState(false);
-  const [impersonating, setImpersonating] = useState(false);
 
   const impersonationDisabled =
     userRole === Role.ADMIN || isSystem || !isActive;
@@ -71,76 +70,35 @@ export function UserSecurityTab({
       return;
     }
 
-    setSavingPassword(true);
-    try {
-      const res = await fetch(`/api/users/${userId}/password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newPassword }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        toast({ title: data.message || "Erreur.", variant: "error" });
-        return;
-      }
-
-      toast({ title: "Mot de passe reinitialise.", variant: "success" });
+    const { ok } = await userService.resetPassword(userId, { newPassword });
+    if (ok) {
       setNewPassword("");
       setConfirmPassword("");
-    } catch {
-      toast({ title: "Erreur reseau.", variant: "error" });
-    } finally {
-      setSavingPassword(false);
     }
   }
 
   async function handleForceLogout() {
-    setLoggingOut(true);
-    try {
-      const res = await fetch(`/api/users/${userId}/sessions`, {
-        method: "POST",
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        toast({ title: data.message || "Erreur.", variant: "error" });
-        return;
+    const { ok, data } = await userService.deleteUserSessions(userId);
+    if (ok) {
+      const resultData = data as { deletedCount?: number } | null;
+      if (resultData?.deletedCount !== undefined) {
+        toast({
+          title: `${resultData.deletedCount} session(s) supprimee(s).`,
+          variant: "success",
+        });
       }
-
-      toast({
-        title: `${data.deletedCount} session(s) supprimee(s).`,
-        variant: "success",
-      });
       setLogoutOpen(false);
-    } catch {
-      toast({ title: "Erreur reseau.", variant: "error" });
-    } finally {
-      setLoggingOut(false);
     }
   }
 
   async function handleImpersonate() {
-    setImpersonating(true);
-    try {
-      const res = await fetch(`/api/users/${userId}/impersonate`, {
-        method: "POST",
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        toast({ title: data.message || "Erreur.", variant: "error" });
-        setImpersonateOpen(false);
-        return;
-      }
-
-      // Redirect to home as the impersonated user
+    const { ok } = await authService.impersonate(userId);
+    if (ok) {
+      setImpersonateOpen(false);
       router.push("/");
       router.refresh();
-    } catch {
-      toast({ title: "Erreur reseau.", variant: "error" });
-    } finally {
-      setImpersonating(false);
+    } else {
+      setImpersonateOpen(false);
     }
   }
 
@@ -175,8 +133,8 @@ export function UserSecurityTab({
               onChange={(e) => setConfirmPassword(e.target.value)}
               error={passwordError}
             />
-            <Button type="submit" disabled={savingPassword} className="w-full sm:w-auto">
-              {savingPassword ? <><FishLoader size="sm" /> Enregistrement...</> : "Changer le mot de passe"}
+            <Button type="submit" className="w-full sm:w-auto">
+              Changer le mot de passe
             </Button>
           </form>
         </FormSection>
@@ -202,11 +160,11 @@ export function UserSecurityTab({
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
-                <Button variant="secondary" onClick={() => setLogoutOpen(false)} disabled={loggingOut}>
+                <Button variant="secondary" onClick={() => setLogoutOpen(false)}>
                   Annuler
                 </Button>
-                <Button variant="danger" onClick={handleForceLogout} disabled={loggingOut}>
-                  {loggingOut ? "En cours..." : "Forcer la deconnexion"}
+                <Button variant="danger" onClick={handleForceLogout}>
+                  Forcer la deconnexion
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -243,11 +201,11 @@ export function UserSecurityTab({
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
-                  <Button variant="secondary" onClick={() => setImpersonateOpen(false)} disabled={impersonating}>
+                  <Button variant="secondary" onClick={() => setImpersonateOpen(false)}>
                     Annuler
                   </Button>
-                  <Button onClick={handleImpersonate} disabled={impersonating}>
-                    {impersonating ? "Connexion..." : "Continuer"}
+                  <Button onClick={handleImpersonate}>
+                    Continuer
                   </Button>
                 </DialogFooter>
               </DialogContent>

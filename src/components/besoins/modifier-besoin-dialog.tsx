@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,7 +22,8 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
+import { useDepenseService } from "@/services/depense.service";
+import { useStockService } from "@/services/stock.service";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -115,14 +115,14 @@ function emptyLigne(): LigneForm {
 // ---------------------------------------------------------------------------
 
 export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
-  const { toast } = useToast();
+  const depenseService = useDepenseService();
+  const stockService = useStockService();
 
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [produits, setProduits] = useState<ProduitOption[]>([]);
   const [produitsLoading, setProduitsLoading] = useState(false);
 
-  // Form state — initialisé depuis la liste courante
+  // Form state — initialise depuis la liste courante
   const [titre, setTitre] = useState(liste.titre);
   const [notes, setNotes] = useState(liste.notes ?? "");
   const [dateLimite, setDateLimite] = useState(
@@ -131,6 +131,7 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
   const [lignes, setLignes] = useState<LigneForm[]>(
     liste.lignes.length > 0 ? liste.lignes.map(toLigneForm) : [emptyLigne()]
   );
+  const [validationError, setValidationError] = useState("");
 
   const montantEstime = lignes.reduce((acc, l) => {
     const q = parseFloat(l.quantite) || 0;
@@ -165,7 +166,7 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
     );
   }
 
-  function handleOpenChange(isOpen: boolean) {
+  async function handleOpenChange(isOpen: boolean) {
     setOpen(isOpen);
     if (isOpen) {
       // Re-initialiser les valeurs quand on rouvre le dialog
@@ -175,14 +176,15 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
         liste.dateLimite ? new Date(liste.dateLimite).toISOString().split("T")[0] : ""
       );
       setLignes(liste.lignes.length > 0 ? liste.lignes.map(toLigneForm) : [emptyLigne()]);
-      // Fetch produits si pas encore charges
+      setValidationError("");
+      // Charger les produits si pas encore charges
       if (produits.length === 0) {
         setProduitsLoading(true);
-        fetch("/api/produits")
-          .then((res) => (res.ok ? res.json() : { produits: [] }))
-          .then((data) => setProduits(Array.isArray(data.produits) ? data.produits : []))
-          .catch(() => setProduits([]))
-          .finally(() => setProduitsLoading(false));
+        const result = await stockService.listProduits();
+        if (result.ok && result.data) {
+          setProduits(result.data.produits as ProduitOption[]);
+        }
+        setProduitsLoading(false);
       }
     }
   }
@@ -190,75 +192,47 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
   async function handleSubmit() {
     // Validation legere
     if (!titre.trim()) {
-      toast({ title: "Le titre est obligatoire.", variant: "error" });
+      setValidationError("Le titre est obligatoire.");
       return;
     }
     if (lignes.length === 0) {
-      toast({ title: "Au moins une ligne est requise.", variant: "error" });
+      setValidationError("Au moins une ligne est requise.");
       return;
     }
     for (let i = 0; i < lignes.length; i++) {
       const l = lignes[i];
       if (!l.designation.trim()) {
-        toast({
-          title: `La designation de la ligne ${i + 1} est obligatoire.`,
-          variant: "error",
-        });
+        setValidationError(`La designation de la ligne ${i + 1} est obligatoire.`);
         return;
       }
       if (!l.quantite || parseFloat(l.quantite) <= 0) {
-        toast({
-          title: `La quantite de la ligne ${i + 1} doit etre positive.`,
-          variant: "error",
-        });
+        setValidationError(`La quantite de la ligne ${i + 1} doit etre positive.`);
         return;
       }
       if (l.prixEstime === "" || parseFloat(l.prixEstime) < 0) {
-        toast({
-          title: `Le prix estime de la ligne ${i + 1} doit etre positif ou zero.`,
-          variant: "error",
-        });
+        setValidationError(`Le prix estime de la ligne ${i + 1} doit etre positif ou zero.`);
         return;
       }
     }
 
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/besoins/${liste.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          titre: titre.trim(),
-          notes: notes.trim() || null,
-          // dateLimite : null = supprimer, valeur = mettre a jour, undefined = ne pas changer
-          dateLimite: dateLimite || null,
-          lignes: lignes.map((l) => ({
-            designation: l.designation.trim(),
-            produitId: l.produitId || undefined,
-            quantite: parseFloat(l.quantite),
-            unite: l.unite.trim() || undefined,
-            prixEstime: parseFloat(l.prixEstime) || 0,
-          })),
-        }),
-      });
+    setValidationError("");
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Erreur serveur.");
-      }
+    const result = await depenseService.updateBesoin(liste.id, {
+      titre: titre.trim(),
+      notes: notes.trim() || null,
+      dateLimite: dateLimite || null,
+      lignes: lignes.map((l) => ({
+        designation: l.designation.trim(),
+        produitId: l.produitId || undefined,
+        quantite: parseFloat(l.quantite),
+        unite: l.unite.trim() || undefined,
+        prixEstime: parseFloat(l.prixEstime) || 0,
+      })),
+    });
 
-      const data = await res.json();
-      toast({ title: "Liste de besoins modifiee", variant: "success" });
+    if (result.ok && result.data) {
       setOpen(false);
-      onSuccess(data);
-    } catch (err) {
-      toast({
-        title: "Erreur",
-        description: err instanceof Error ? err.message : "Erreur serveur.",
-        variant: "error",
-      });
-    } finally {
-      setLoading(false);
+      onSuccess(result.data as unknown as ListeBesoinsEditData);
     }
   }
 
@@ -293,7 +267,7 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
           <div>
             <label className="text-sm font-medium">Date limite</label>
             <p className="text-xs text-muted-foreground mb-1">
-              Date jusqu'a laquelle la liste doit etre traitee (optionnel)
+              Date jusqu&apos;a laquelle la liste doit etre traitee (optionnel)
             </p>
             <Input
               type="date"
@@ -467,22 +441,29 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
               Ajouter une ligne
             </Button>
 
-            {/* Total estimé */}
+            {/* Total estime */}
             <div className="mt-3 flex items-center justify-between rounded-lg border border-border px-3 py-2">
               <span className="text-sm font-medium">Total estime</span>
               <span className="text-base font-bold">{formatMontant(montantEstime)} FCFA</span>
             </div>
           </div>
+
+          {/* Validation error */}
+          {validationError && (
+            <p className="text-sm text-destructive bg-destructive/10 rounded p-2">
+              {validationError}
+            </p>
+          )}
         </div>
 
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="ghost" disabled={loading}>
+            <Button variant="ghost">
               Annuler
             </Button>
           </DialogClose>
-          <Button variant="primary" onClick={handleSubmit} disabled={loading}>
-            {loading ? <><FishLoader size="sm" /> Enregistrement...</> : "Enregistrer"}
+          <Button variant="primary" onClick={handleSubmit}>
+            Enregistrer
           </Button>
         </DialogFooter>
       </DialogContent>

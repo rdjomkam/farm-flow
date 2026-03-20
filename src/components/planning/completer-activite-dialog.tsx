@@ -22,9 +22,9 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/toast";
 import { TypeActivite, TypeReleve } from "@/types";
-import { FishLoader } from "@/components/ui/fish-loader";
+import { useActiviteService } from "@/services";
+import { useApi } from "@/hooks/use-api";
 import { RELEVE_COMPATIBLE_TYPES, ACTIVITE_RELEVE_TYPE_MAP } from "@/types/api";
 import type { ActiviteWithRelations } from "@/types";
 
@@ -51,9 +51,9 @@ interface UnlinkedReleve {
 
 export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActiviteDialogProps) {
   const router = useRouter();
-  const { toast } = useToast();
+  const activiteService = useActiviteService();
+  const { call } = useApi();
   const [open, setOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
 
   const isReleveType = RELEVE_COMPATIBLE_TYPES.includes(activite.typeActivite as TypeActivite);
   const mappedReleveType = ACTIVITE_RELEVE_TYPE_MAP[activite.typeActivite as TypeActivite];
@@ -61,26 +61,24 @@ export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActi
   // For releve-compatible types: list of unlinked releves
   const [unlinkedReleves, setUnlinkedReleves] = useState<UnlinkedReleve[]>([]);
   const [selectedReleveId, setSelectedReleveId] = useState("__none__");
-  const [loadingReleves, setLoadingReleves] = useState(false);
 
   // For non-releve types: note
   const [noteCompletion, setNoteCompletion] = useState("");
 
   useEffect(() => {
     if (open && isReleveType && mappedReleveType) {
-      setLoadingReleves(true);
       const params = new URLSearchParams();
       if (mappedReleveType) params.set("typeReleve", mappedReleveType);
       if (activite.vagueId) params.set("vagueId", activite.vagueId);
       params.set("nonLie", "true");
 
-      fetch(`/api/releves?${params.toString()}`)
-        .then((res) => res.json())
-        .then((data) => {
-          setUnlinkedReleves(data.releves ?? []);
-        })
-        .catch(() => setUnlinkedReleves([]))
-        .finally(() => setLoadingReleves(false));
+      call<{ releves: UnlinkedReleve[] }>(
+        `/api/releves?${params.toString()}`,
+        undefined,
+        { silentLoading: true, silentError: true }
+      ).then((result) => {
+        setUnlinkedReleves(result.data?.releves ?? []);
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -92,44 +90,24 @@ export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActi
   }
 
   async function handleComplete() {
-    setSubmitting(true);
-    try {
-      const body: Record<string, string> = {};
-      if (isReleveType) {
-        if (selectedReleveId === "__none__") {
-          toast({ title: "Selectionnez un releve.", variant: "error" });
-          setSubmitting(false);
-          return;
-        }
-        body.releveId = selectedReleveId;
-      } else {
-        if (noteCompletion.trim().length < 10) {
-          toast({ title: "La note doit contenir au moins 10 caracteres.", variant: "error" });
-          setSubmitting(false);
-          return;
-        }
-        body.noteCompletion = noteCompletion.trim();
-      }
+    if (isReleveType) {
+      if (selectedReleveId === "__none__") return;
+    } else {
+      if (noteCompletion.trim().length < 10) return;
+    }
 
-      const res = await fetch(`/api/activites/${activite.id}/complete`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+    const body: Record<string, string> = {};
+    if (isReleveType) {
+      body.releveId = selectedReleveId;
+    } else {
+      body.noteCompletion = noteCompletion.trim();
+    }
 
-      if (res.ok) {
-        toast({ title: "Activite completee", variant: "success" });
-        setOpen(false);
-        onCompleted?.();
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur.", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau.", variant: "error" });
-    } finally {
-      setSubmitting(false);
+    const result = await activiteService.complete(activite.id, body);
+    if (result.ok) {
+      setOpen(false);
+      onCompleted?.();
+      router.refresh();
     }
   }
 
@@ -177,11 +155,7 @@ export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActi
             {/* Option B: Lier un releve existant */}
             <div className="flex flex-col gap-2">
               <p className="text-sm font-medium">Ou lier un releve existant</p>
-              {loadingReleves ? (
-                <div className="flex items-center justify-center py-4">
-                  <FishLoader size="md" text="Chargement..." />
-                </div>
-              ) :unlinkedReleves.length === 0 ? (
+              {unlinkedReleves.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Aucun releve non lie disponible.</p>
               ) : (
                 <Select value={selectedReleveId} onValueChange={setSelectedReleveId}>
@@ -209,9 +183,9 @@ export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActi
               <Button variant="secondary" onClick={() => setOpen(false)}>Annuler</Button>
               <Button
                 onClick={handleComplete}
-                disabled={submitting || selectedReleveId === "__none__"}
+                disabled={selectedReleveId === "__none__"}
               >
-                {submitting ? <><FishLoader size="sm" /> Completion...</> : "Completer"}
+                Completer
               </Button>
             </DialogFooter>
           </div>
@@ -232,9 +206,9 @@ export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActi
               <Button variant="secondary" onClick={() => setOpen(false)}>Annuler</Button>
               <Button
                 onClick={handleComplete}
-                disabled={submitting || noteCompletion.trim().length < 10}
+                disabled={noteCompletion.trim().length < 10}
               >
-                {submitting ? <><FishLoader size="sm" /> Completion...</> : "Completer"}
+                Completer
               </Button>
             </DialogFooter>
           </div>

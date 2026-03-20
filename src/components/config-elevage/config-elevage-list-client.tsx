@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Settings, Star, Copy, Trash2, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/components/ui/toast";
+import { useConfigService } from "@/services";
 import type { ConfigElevage } from "@/types";
 
 interface Props {
@@ -15,46 +15,24 @@ interface Props {
 export function ConfigElevageListClient({ configs: initialConfigs }: Props) {
   const [configs, setConfigs] = useState(initialConfigs);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const { toast } = useToast();
+  const configService = useConfigService();
 
   const handleDelete = async (id: string, nom: string) => {
     if (!confirm(`Supprimer le profil "${nom}" ?`)) return;
     setDeletingId(id);
-    try {
-      const res = await fetch(`/api/config-elevage/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const data = await res.json();
-        toast({ title: "Erreur", description: data.message, variant: "error" });
-        return;
-      }
+    const result = await configService.deleteConfig(id);
+    if (result.ok) {
       setConfigs((prev) => prev.filter((c) => c.id !== id));
-      toast({ title: "Profil supprime", description: `Le profil "${nom}" a ete supprime.` });
-    } catch {
-      toast({ title: "Erreur", description: "Erreur lors de la suppression.", variant: "error" });
-    } finally {
-      setDeletingId(null);
     }
+    setDeletingId(null);
   };
 
   const handleDupliquer = async (id: string, nom: string) => {
     const nouveauNom = prompt(`Nom du profil duplique :`, `${nom} (copie)`);
     if (!nouveauNom) return;
-    try {
-      const res = await fetch(`/api/config-elevage/${id}/dupliquer`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nom: nouveauNom }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        toast({ title: "Erreur", description: data.message, variant: "error" });
-        return;
-      }
-      const data = await res.json();
-      setConfigs((prev) => [...prev, data.config]);
-      toast({ title: "Profil duplique", description: `"${nouveauNom}" cree avec succes.` });
-    } catch {
-      toast({ title: "Erreur", description: "Erreur lors de la duplication.", variant: "error" });
+    const result = await configService.dupliquerConfig(id, { nom: nouveauNom });
+    if (result.ok && result.data) {
+      setConfigs((prev) => [...prev, result.data as ConfigElevage]);
     }
   };
 

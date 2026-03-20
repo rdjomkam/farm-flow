@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Plus, Trash2, Package, Users, Pencil, AlertTriangle, Settings, Check, X } from "lucide-react";
-import { FishLoader } from "@/components/ui/fish-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,7 +24,8 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
+import { useConfigService } from "@/services";
+import { useApi } from "@/hooks/use-api";
 import { Permission, SiteModule, StatutActivation, UniteStock } from "@/types";
 
 const MODULE_LABELS: Record<SiteModule, string> = {
@@ -111,9 +111,9 @@ interface Props {
 
 export function PackDetailClient({ pack, produits, configElevages, permissions }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const configService = useConfigService();
+  const { call } = useApi();
   const [ajoutOpen, setAjoutOpen] = useState(false);
-  const [ajoutLoading, setAjoutLoading] = useState(false);
   const [produitId, setProduitId] = useState("");
   const [quantite, setQuantite] = useState("");
   const [unite, setUnite] = useState("");
@@ -130,12 +130,10 @@ export function PackDetailClient({ pack, produits, configElevages, permissions }
     poidsMoyenInitial: string;
   }
   const [configBacsOpen, setConfigBacsOpen] = useState(false);
-  const [configBacsSaving, setConfigBacsSaving] = useState(false);
   const [localBacs, setLocalBacs] = useState<LocalBac[]>([]);
 
   // Edit dialog state
   const [editOpen, setEditOpen] = useState(false);
-  const [editSaving, setEditSaving] = useState(false);
   const [editNom, setEditNom] = useState(pack.nom);
   const [editDescription, setEditDescription] = useState(pack.description ?? "");
   const [editNombreAlevins, setEditNombreAlevins] = useState(String(pack.nombreAlevins));
@@ -197,9 +195,9 @@ export function PackDetailClient({ pack, produits, configElevages, permissions }
   async function handleSaveConfigBacs() {
     if (!localBacsValid || !localBacsAllNamed || !localBacsNoDuplicates) return;
 
-    setConfigBacsSaving(true);
-    try {
-      const res = await fetch(`/api/packs/${pack.id}/bacs`, {
+    const result = await call<unknown>(
+      `/api/packs/${pack.id}/bacs`,
+      {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -210,114 +208,57 @@ export function PackDetailClient({ pack, produits, configElevages, permissions }
             poidsMoyenInitial: b.poidsMoyenInitial ? parseFloat(b.poidsMoyenInitial) : undefined,
           })),
         }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Erreur lors de la sauvegarde.");
-      }
-      toast({ title: "Bacs configures", description: "La configuration des bacs a ete enregistree." });
+      },
+      { successMessage: "Bacs configures." }
+    );
+    if (result.ok) {
       setConfigBacsOpen(false);
       router.refresh();
-    } catch (err) {
-      toast({
-        title: "Erreur",
-        description: err instanceof Error ? err.message : "Erreur inconnue.",
-        variant: "error",
-      });
-    } finally {
-      setConfigBacsSaving(false);
     }
   }
 
   async function handleEditPack() {
-    setEditSaving(true);
-    try {
-      const res = await fetch(`/api/packs/${pack.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nom: editNom.trim(),
-          description: editDescription.trim() || null,
-          nombreAlevins: parseInt(editNombreAlevins) || 0,
-          poidsMoyenInitial: parseFloat(editPoidsMoyenInitial) || 0,
-          prixTotal: parseFloat(editPrixTotal) || 0,
-          configElevageId: editConfigElevageId === "none" ? null : editConfigElevageId,
-          enabledModules: editEnabledModules,
-        }),
-      });
-      if (res.ok) {
-        toast({ title: "Pack mis a jour", variant: "success" });
-        setEditOpen(false);
-        router.refresh();
-      } else {
-        const data = await res.json();
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur reseau", variant: "error" });
-    } finally {
-      setEditSaving(false);
+    const result = await configService.updatePack(pack.id, {
+      nom: editNom.trim(),
+      description: editDescription.trim() || undefined,
+      nombreAlevins: parseInt(editNombreAlevins) || 0,
+      poidsMoyenInitial: parseFloat(editPoidsMoyenInitial) || 0,
+      prixTotal: parseFloat(editPrixTotal) || 0,
+      configElevageId: editConfigElevageId === "none" ? null : editConfigElevageId,
+      enabledModules: editEnabledModules,
+    });
+    if (result.ok) {
+      setEditOpen(false);
+      router.refresh();
     }
   }
 
   async function handleAjoutProduit() {
-    if (!produitId) {
-      toast({ title: "Erreur", description: "Selectionnez un produit.", variant: "error" });
-      return;
-    }
     const qty = parseFloat(quantite);
-    if (isNaN(qty) || qty <= 0) {
-      toast({ title: "Erreur", description: "La quantite doit etre superieure a 0.", variant: "error" });
-      return;
-    }
-
-    setAjoutLoading(true);
-    try {
-      const res = await fetch(`/api/packs/${pack.id}/produits`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ produitId, quantite: qty, unite: unite || undefined }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Erreur lors de l'ajout.");
-      }
-      toast({ title: "Produit ajoute", description: "Le produit a ete ajoute au pack." });
+    const result = await configService.addPackProduit(pack.id, {
+      produitId,
+      quantite: qty,
+      unite: unite ? (unite as import("@/types").UniteStock) : undefined,
+    });
+    if (result.ok) {
       setAjoutOpen(false);
       resetAjoutForm();
       router.refresh();
-    } catch (err) {
-      toast({
-        title: "Erreur",
-        description: err instanceof Error ? err.message : "Erreur inconnue.",
-        variant: "error",
-      });
-    } finally {
-      setAjoutLoading(false);
     }
   }
 
   async function handleConfirmRetirer() {
     if (!retirerProduitId) return;
-    const nom = retirerProduitNom;
 
-    try {
-      const res = await fetch(`/api/packs/${pack.id}/produits?produitId=${retirerProduitId}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Erreur lors de la suppression.");
-      }
-      toast({ title: "Produit retire", description: `"${nom}" a ete retire du pack.` });
+    const result = await call<unknown>(
+      `/api/packs/${pack.id}/produits?produitId=${retirerProduitId}`,
+      { method: "DELETE" },
+      { successMessage: "Produit retire." }
+    );
+    if (result.ok) {
       setRetirerProduitId(null);
       router.refresh();
-    } catch (err) {
-      toast({
-        title: "Erreur",
-        description: err instanceof Error ? err.message : "Erreur inconnue.",
-        variant: "error",
-      });
+    } else {
       setRetirerProduitId(null);
     }
   }
@@ -451,8 +392,8 @@ export function PackDetailClient({ pack, produits, configElevages, permissions }
                     <DialogClose asChild>
                       <Button variant="outline">Annuler</Button>
                     </DialogClose>
-                    <Button onClick={handleEditPack} disabled={editSaving || !editNom.trim()}>
-                      {editSaving ? <><FishLoader size="sm" /> Enregistrement...</> : "Enregistrer"}
+                    <Button onClick={handleEditPack} disabled={!editNom.trim()}>
+                      Enregistrer
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -653,9 +594,9 @@ export function PackDetailClient({ pack, produits, configElevages, permissions }
               </DialogClose>
               <Button
                 onClick={handleSaveConfigBacs}
-                disabled={configBacsSaving || !localBacsValid || !localBacsAllNamed || !localBacsNoDuplicates}
+                disabled={!localBacsValid || !localBacsAllNamed || !localBacsNoDuplicates}
               >
-                {configBacsSaving ? <><FishLoader size="sm" /> Enregistrement...</> : "Enregistrer"}
+                Enregistrer
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -728,8 +669,8 @@ export function PackDetailClient({ pack, produits, configElevages, permissions }
                   <DialogClose asChild>
                     <Button variant="outline" onClick={resetAjoutForm}>Annuler</Button>
                   </DialogClose>
-                  <Button onClick={handleAjoutProduit} disabled={ajoutLoading}>
-                    {ajoutLoading ? "Ajout..." : "Ajouter"}
+                  <Button onClick={handleAjoutProduit}>
+                    Ajouter
                   </Button>
                 </DialogFooter>
               </DialogContent>

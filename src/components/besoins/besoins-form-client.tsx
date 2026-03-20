@@ -15,7 +15,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
+import { useDepenseService } from "@/services";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -79,14 +79,14 @@ function emptyLigne(): LigneForm {
 
 export function BesoinsFormClient({ vagues, produits }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
+  const depenseService = useDepenseService();
 
   const [titre, setTitre] = useState("");
   const [vagueId, setVagueId] = useState("");
   const [notes, setNotes] = useState("");
   const [dateLimite, setDateLimite] = useState("");
   const [lignes, setLignes] = useState<LigneForm[]>([emptyLigne()]);
-  const [loading, setLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Calculated montantEstime
   const montantEstime = lignes.reduce((acc, l) => {
@@ -152,50 +152,28 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
     }
 
     if (errors.length > 0) {
-      toast({
-        title: "Erreurs de validation",
-        description: errors.join(" "),
-        variant: "error",
-      });
+      setValidationErrors(errors);
       return;
     }
 
-    setLoading(true);
-    try {
-      const res = await fetch("/api/besoins", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          titre: titre.trim(),
-          vagueId: vagueId || undefined,
-          notes: notes.trim() || undefined,
-          dateLimite: dateLimite || undefined,
-          lignes: lignes.map((l) => ({
-            designation: l.designation.trim(),
-            produitId: l.produitId || undefined,
-            quantite: parseFloat(l.quantite),
-            unite: l.unite.trim() || undefined,
-            prixEstime: parseFloat(l.prixEstime) || 0,
-          })),
-        }),
-      });
+    setValidationErrors([]);
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Erreur serveur.");
-      }
+    const result = await depenseService.createBesoin({
+      titre: titre.trim(),
+      vagueId: vagueId || undefined,
+      notes: notes.trim() || undefined,
+      dateLimite: dateLimite || undefined,
+      lignes: lignes.map((l) => ({
+        designation: l.designation.trim(),
+        produitId: l.produitId || undefined,
+        quantite: parseFloat(l.quantite),
+        unite: l.unite.trim() || undefined,
+        prixEstime: parseFloat(l.prixEstime) || 0,
+      })),
+    });
 
-      const data = await res.json();
-      toast({ title: "Liste de besoins creee", variant: "success" });
-      router.push(`/besoins/${data.id}`);
-    } catch (err) {
-      toast({
-        title: "Erreur",
-        description: err instanceof Error ? err.message : "Erreur serveur.",
-        variant: "error",
-      });
-    } finally {
-      setLoading(false);
+    if (result.ok && result.data) {
+      router.push(`/besoins/${result.data.id}`);
     }
   }
 
@@ -260,7 +238,7 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
           <div>
             <label className="text-sm font-medium">Date limite</label>
             <p className="text-xs text-muted-foreground mb-1">
-              Date jusqu'a laquelle la liste doit etre traitee (optionnel)
+              Date jusqu&apos;a laquelle la liste doit etre traitee (optionnel)
             </p>
             <Input
               type="date"
@@ -423,7 +401,7 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
         Ajouter une ligne
       </Button>
 
-      {/* Total estimé */}
+      {/* Total estime */}
       <Card className="mb-6">
         <CardContent className="p-4 flex items-center justify-between">
           <span className="text-sm font-medium">Montant total estime</span>
@@ -433,14 +411,24 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
         </CardContent>
       </Card>
 
+      {/* Validation errors */}
+      {validationErrors.length > 0 && (
+        <div className="mb-4 rounded-lg bg-destructive/10 border border-destructive/20 p-3">
+          {validationErrors.map((err, i) => (
+            <p key={i} className="text-sm text-destructive">
+              {err}
+            </p>
+          ))}
+        </div>
+      )}
+
       {/* Submit */}
       <Button
         type="submit"
         variant="primary"
         className="w-full h-12 text-base"
-        disabled={loading}
       >
-        {loading ? "Creation en cours..." : "Soumettre la liste"}
+        Soumettre la liste
       </Button>
     </form>
   );

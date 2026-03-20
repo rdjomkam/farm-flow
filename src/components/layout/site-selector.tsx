@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuthService, useUserService } from "@/services";
 
 interface SiteInfo {
   id: string;
@@ -16,19 +17,21 @@ interface SiteSelectorProps {
 
 export function SiteSelector({ fullWidth }: SiteSelectorProps) {
   const router = useRouter();
+  const authService = useAuthService();
+  const userService = useUserService();
   const [sites, setSites] = useState<SiteInfo[]>([]);
   const [activeSiteId, setActiveSiteId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const [switching, setSwitching] = useState(false);
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/sites").then((r) => (r.ok ? r.json() : null)),
-      fetch("/api/auth/me").then((r) => (r.ok ? r.json() : null)),
-    ]).then(([sitesData, meData]) => {
-      if (sitesData?.sites) setSites(sitesData.sites);
-      if (meData?.user?.activeSiteId) setActiveSiteId(meData.user.activeSiteId);
+      userService.listSites(),
+      authService.getMe(),
+    ]).then(([sitesResult, meResult]) => {
+      if (sitesResult.data?.sites) setSites(sitesResult.data.sites);
+      if (meResult.data?.user?.activeSiteId) setActiveSiteId(meResult.data.user.activeSiteId);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleSwitch(siteId: string) {
@@ -37,21 +40,12 @@ export function SiteSelector({ fullWidth }: SiteSelectorProps) {
       return;
     }
 
-    setSwitching(true);
-    try {
-      const res = await fetch("/api/auth/site", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ siteId }),
-      });
-      if (res.ok) {
-        setActiveSiteId(siteId);
-        router.refresh();
-      }
-    } finally {
-      setSwitching(false);
-      setOpen(false);
+    const { ok } = await authService.switchSite({ siteId });
+    if (ok) {
+      setActiveSiteId(siteId);
+      router.refresh();
     }
+    setOpen(false);
   }
 
   const activeSite = sites.find((s) => s.id === activeSiteId);
@@ -62,12 +56,10 @@ export function SiteSelector({ fullWidth }: SiteSelectorProps) {
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        disabled={switching}
         className={cn(
           "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm",
           "hover:bg-muted transition-colors",
           "min-h-[36px]",
-          "disabled:opacity-50",
           fullWidth && "w-full"
         )}
       >

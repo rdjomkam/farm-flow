@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/components/ui/toast";
 import { Role } from "@/types";
+import { useAuthService } from "@/services";
 
 interface ImpersonationBannerProps {
   targetUserName: string;
@@ -24,28 +23,15 @@ export function ImpersonationBanner({
   originalUserName,
 }: ImpersonationBannerProps) {
   const router = useRouter();
-  const { toast } = useToast();
-  const [stopping, setStopping] = useState(false);
+  const authService = useAuthService();
 
   const roleLabel = ROLE_LABELS[targetUserRole] ?? targetUserRole;
 
   async function handleStopImpersonation() {
-    setStopping(true);
-    try {
-      const res = await fetch("/api/users/impersonate", { method: "DELETE" });
-      const data = await res.json();
-
-      if (!res.ok) {
-        toast({ title: data.message || "Erreur lors de la reprise de session.", variant: "error" });
-        return;
-      }
-
+    const { ok } = await authService.stopImpersonate();
+    if (ok) {
       router.push("/");
       router.refresh();
-    } catch {
-      toast({ title: "Erreur reseau.", variant: "error" });
-    } finally {
-      setStopping(false);
     }
   }
 
@@ -59,10 +45,9 @@ export function ImpersonationBanner({
         </p>
         <button
           onClick={handleStopImpersonation}
-          disabled={stopping}
-          className="shrink-0 rounded-lg border border-white/40 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20 active:bg-white/30 disabled:opacity-60 min-h-[40px]"
+          className="shrink-0 rounded-lg border border-white/40 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20 active:bg-white/30 min-h-[40px]"
         >
-          {stopping ? "Reprise en cours..." : "Reprendre ma session"}
+          Reprendre ma session
         </button>
       </div>
       {originalUserName && (

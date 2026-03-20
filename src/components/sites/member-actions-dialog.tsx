@@ -19,7 +19,6 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
 import { Permission } from "@/types";
 import {
   canAssignRole,
@@ -27,6 +26,7 @@ import {
 } from "@/lib/permissions-constants";
 import { groupLabels, permissionLabels } from "@/lib/role-form-labels";
 import { cn } from "@/lib/utils";
+import { useUserService } from "@/services";
 
 interface SiteRoleOption {
   id: string;
@@ -57,12 +57,10 @@ export function MemberActionsDialog({
   callerPermissions,
 }: MemberActionsDialogProps) {
   const router = useRouter();
-  const { toast } = useToast();
+  const userService = useUserService();
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<DialogView>("main");
-  const [changingRole, setChangingRole] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
-  const [removing, setRemoving] = useState(false);
 
   function resetDialog() {
     setView("main");
@@ -80,47 +78,19 @@ export function MemberActionsDialog({
 
   async function handleChangeSiteRole(newSiteRoleId: string) {
     if (newSiteRoleId === member.siteRoleId) return;
-    setChangingRole(true);
-    try {
-      const res = await fetch(`/api/sites/${siteId}/members/${member.userId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ siteRoleId: newSiteRoleId }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast({ title: "Rôle modifié", variant: "success" });
-        router.refresh();
-      } else {
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur réseau", variant: "error" });
-    } finally {
-      setChangingRole(false);
+    const { ok } = await userService.updateMember(siteId, member.userId, { siteRoleId: newSiteRoleId });
+    if (ok) {
+      router.refresh();
     }
   }
 
   async function handleRemove() {
-    setRemoving(true);
-    try {
-      const res = await fetch(`/api/sites/${siteId}/members/${member.userId}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast({ title: "Membre retiré", variant: "success" });
-        setOpen(false);
-        router.refresh();
-      } else {
-        toast({ title: data.message || "Erreur", variant: "error" });
-      }
-    } catch {
-      toast({ title: "Erreur réseau", variant: "error" });
-    } finally {
-      setRemoving(false);
-      setConfirmRemove(false);
+    const { ok } = await userService.removeMember(siteId, member.userId);
+    if (ok) {
+      setOpen(false);
+      router.refresh();
     }
+    setConfirmRemove(false);
   }
 
   return (
@@ -167,7 +137,7 @@ export function MemberActionsDialog({
               <Select
                 value={member.siteRoleId}
                 onValueChange={handleChangeSiteRole}
-                disabled={changingRole || assignableRoles.length === 0}
+                disabled={assignableRoles.length === 0}
               >
                 <SelectTrigger label="Role">
                   <SelectValue />
@@ -230,9 +200,8 @@ export function MemberActionsDialog({
                       variant="danger"
                       size="sm"
                       onClick={handleRemove}
-                      disabled={removing}
                     >
-                      {removing ? "Retrait..." : "Confirmer"}
+                      Confirmer
                     </Button>
                   </div>
                 </div>

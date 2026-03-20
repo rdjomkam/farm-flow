@@ -7,18 +7,17 @@ import { Fish, Waves, BarChart3, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { useToast } from "@/components/ui/toast";
+import { useAuthService } from "@/services";
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
-  const { toast } = useToast();
+  const authService = useAuthService();
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,43 +32,30 @@ export default function LoginPage() {
       return;
     }
 
-    setLoading(true);
-    try {
-      // Normaliser le numéro de téléphone camerounais : 6XXXXXXXX → +2376XXXXXXXX
-      let normalizedIdentifier = identifier.trim();
-      if (/^[67]\d{8}$/.test(normalizedIdentifier)) {
-        normalizedIdentifier = `+237${normalizedIdentifier}`;
-      }
-
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier: normalizedIdentifier, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        if (data.errors) {
-          const fieldErrors: Record<string, string> = {};
-          for (const err of data.errors) {
-            fieldErrors[err.field] = err.message;
-          }
-          setErrors(fieldErrors);
-        } else {
-          setErrors({ form: data.error || "Erreur de connexion." });
-        }
-        return;
-      }
-
-      toast({ title: "Connexion réussie", variant: "success" });
-      router.push(callbackUrl);
-      router.refresh();
-    } catch {
-      setErrors({ form: "Erreur réseau. Vérifiez votre connexion." });
-    } finally {
-      setLoading(false);
+    // Normaliser le numéro de téléphone camerounais : 6XXXXXXXX → +2376XXXXXXXX
+    let normalizedIdentifier = identifier.trim();
+    if (/^[67]\d{8}$/.test(normalizedIdentifier)) {
+      normalizedIdentifier = `+237${normalizedIdentifier}`;
     }
+
+    const { ok, data } = await authService.login({ identifier: normalizedIdentifier, password });
+
+    if (!ok) {
+      const errorData = data as { errors?: { field: string; message: string }[]; error?: string } | null;
+      if (errorData?.errors) {
+        const fieldErrors: Record<string, string> = {};
+        for (const err of errorData.errors) {
+          fieldErrors[err.field] = err.message;
+        }
+        setErrors(fieldErrors);
+      } else {
+        setErrors({ form: errorData?.error || "Erreur de connexion." });
+      }
+      return;
+    }
+
+    router.push(callbackUrl);
+    router.refresh();
   }
 
   return (
@@ -146,8 +132,8 @@ export default function LoginPage() {
               />
             </CardContent>
             <CardFooter className="flex flex-col gap-3">
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Connexion..." : "Se connecter"}
+              <Button type="submit" className="w-full">
+                Se connecter
               </Button>
               <p className="text-sm text-muted-foreground text-center">
                 Pas encore de compte ?{" "}
