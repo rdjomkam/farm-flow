@@ -68,7 +68,7 @@ export function useVagueService() {
       call<VagueDetailResponse>(
         `/api/vagues/${id}`,
         {
-          method: "PATCH",
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
@@ -82,7 +82,7 @@ export function useVagueService() {
       call<VagueDetailResponse>(
         `/api/vagues/${id}`,
         {
-          method: "PATCH",
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ statut: "TERMINEE", ...dto }),
         },

@@ -95,7 +95,7 @@ export function useNoteService() {
       call<NoteIngenieurWithRelations>(
         `/api/ingenieur/notes/${id}`,
         {
-          method: "PATCH",
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
@@ -109,7 +109,7 @@ export function useNoteService() {
       call<{ message: string }>(
         `/api/ingenieur/notes/${id}`,
         {
-          method: "PATCH",
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ isRead: true }),
         }

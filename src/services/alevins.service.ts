@@ -68,7 +68,7 @@ export function useAlevinsService() {
       call<LotAlevinsWithRelations>(
         `/api/lots-alevins/${id}`,
         {
-          method: "PATCH",
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
@@ -128,7 +128,7 @@ export function useAlevinsService() {
       call<PonteWithRelations>(
         `/api/pontes/${id}`,
         {
-          method: "PATCH",
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
@@ -184,7 +184,7 @@ export function useAlevinsService() {
       call<ReproducteurWithRelations>(
         `/api/reproducteurs/${id}`,
         {
-          method: "PATCH",
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },

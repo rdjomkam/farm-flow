@@ -97,7 +97,7 @@ export function useConfigService() {
       call<ConfigElevageWithRelations>(
         `/api/config-elevage/${id}`,
         {
-          method: "PATCH",
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
@@ -161,7 +161,7 @@ export function useConfigService() {
       call<RegleActiviteWithRelations>(
         `/api/regles-activites/${id}`,
         {
-          method: "PATCH",
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
@@ -232,7 +232,7 @@ export function useConfigService() {
       call<CustomPlaceholder>(
         `/api/regles-activites/placeholders/${id}`,
         {
-          method: "PATCH",
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
@@ -277,7 +277,7 @@ export function useConfigService() {
       call<ConfigAlerteWithRelations>(
         `/api/alertes/config/${id}`,
         {
-          method: "PATCH",
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
@@ -335,7 +335,7 @@ export function useConfigService() {
       call<Pack>(
         `/api/packs/${id}`,
         {
-          method: "PATCH",
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },

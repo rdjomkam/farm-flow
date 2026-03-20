@@ -49,7 +49,7 @@ export function useBacService() {
       call<BacResponse>(
         `/api/bacs/${id}`,
         {
-          method: "PATCH",
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },

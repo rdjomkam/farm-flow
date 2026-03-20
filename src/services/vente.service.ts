@@ -79,7 +79,7 @@ export function useVenteService() {
       call<FactureDetailResponse>(
         `/api/factures/${id}`,
         {
-          method: "PATCH",
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         },
