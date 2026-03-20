@@ -210,3 +210,31 @@ import type { Prisma } from "@/generated/prisma/client";
 Pour les champs `Json?` Prisma en update, toujours caster avec `as Prisma.InputJsonValue`.
 
 ---
+
+### ERR-012 — Cast enums Prisma généré vs @/types dans les Server Components
+**Sprint :** 33 | **Date :** 2026-03-21
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/app/*/page.tsx`, `src/generated/prisma/enums.ts`
+
+**Symptôme :**
+```
+Type '"DECOUVERTE"' is not assignable to type 'TypePlan'
+```
+Les enums Prisma générés dans `src/generated/prisma/enums.ts` ne sont pas compatibles avec les enums de `src/types/models.ts` même si les valeurs string sont identiques (R1 garantit l'identité).
+
+**Cause racine :**
+Prisma génère ses propres enums dans un namespace isolé. TypeScript refuse l'assignation directe même si les valeurs sont les mêmes.
+
+**Fix :**
+Utiliser le cast `as unknown as import("@/types").TypePlan` pour convertir les retours Prisma avant de les passer à des composants typés `@/types`.
+
+```typescript
+// Dans la Server Component page.tsx :
+statut: prismaResult.statut as unknown as import("@/types").StatutAbonnement,
+typePlan: prismaResult.plan.typePlan as unknown as import("@/types").TypePlan,
+```
+
+**Leçon / Règle :**
+Quand une Server Component lit depuis Prisma et passe les données à un composant avec des types `@/types`, toujours caster les enums Prisma via `as unknown as TypeCible`. Ce cast est sûr car R1 garantit que toutes les valeurs d'enum sont UPPERCASE et identiques entre Prisma et `@/types`.
+
+---

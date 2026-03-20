@@ -201,6 +201,10 @@ export const ITEM_VIEW_PERMISSIONS: Record<string, Permission> = {
   // Utilisateurs module
   "/users":              Permission.UTILISATEURS_VOIR,
   "/users/nouveau":      Permission.UTILISATEURS_CREER,
+  // Abonnements (Sprint 33)
+  "/mon-abonnement":     Permission.ABONNEMENTS_VOIR,
+  "/tarifs":             Permission.ABONNEMENTS_VOIR,
+  "/admin/abonnements":  Permission.ABONNEMENTS_GERER,
 };
 
 // ---------------------------------------------------------------------------

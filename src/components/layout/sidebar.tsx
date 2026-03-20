@@ -34,6 +34,8 @@ import {
   UserCog,
   Boxes,
   Zap,
+  CreditCard,
+  ShieldCheck,
 } from "lucide-react";
 import { NotificationBell } from "./notification-bell";
 import { cn } from "@/lib/utils";
@@ -147,6 +149,25 @@ const modulesAdminGerant: { label: string; primaryHref: string; icon: React.Comp
       { href: "/settings/regles-activites", label: "Regles d'activites", icon: Zap },
     ],
   },
+  // Abonnement — Sprint 33 (gate: ABONNEMENTS_VOIR)
+  {
+    label: "Abonnement",
+    primaryHref: "/mon-abonnement",
+    icon: CreditCard,
+    items: [
+      { href: "/mon-abonnement", label: "Mon abonnement", icon: CreditCard },
+      { href: "/tarifs", label: "Plans & tarifs", icon: Tag },
+    ],
+  },
+  // Admin Abonnements — Sprint 33 (gate: ABONNEMENTS_GERER)
+  {
+    label: "Admin Abonnements",
+    primaryHref: "/admin/abonnements",
+    icon: ShieldCheck,
+    items: [
+      { href: "/admin/abonnements", label: "Tous les abonnements", icon: ShieldCheck },
+    ],
+  },
   // Utilisateurs — ADMIN uniquement (filtre par role dans le composant)
   {
     label: "Utilisateurs",
@@ -164,9 +185,12 @@ const modulesAdminGerant: { label: string; primaryHref: string; icon: React.Comp
 // ---------------------------------------------------------------------------
 
 const PHASE3_MODULE_PERMISSIONS: Record<string, Permission> = {
-  "Packs & Provisioning": Permission.ACTIVER_PACKS,
-  "Ingenieur":            Permission.MONITORING_CLIENTS,
-  "Utilisateurs":         Permission.UTILISATEURS_VOIR,
+  "Packs & Provisioning":  Permission.ACTIVER_PACKS,
+  "Ingenieur":             Permission.MONITORING_CLIENTS,
+  "Utilisateurs":          Permission.UTILISATEURS_VOIR,
+  // Sprint 33 — Abonnements
+  "Abonnement":            Permission.ABONNEMENTS_VOIR,
+  "Admin Abonnements":     Permission.ABONNEMENTS_GERER,
 };
 
 export function Sidebar({ permissions, role, siteModules }: { permissions: Permission[]; role: Role | null; siteModules: SiteModule[] }) {

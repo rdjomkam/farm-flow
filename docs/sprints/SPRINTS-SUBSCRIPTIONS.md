@@ -606,7 +606,7 @@ confirmation) et la page "Mon Abonnement" pour les promoteurs. Mobile-first obli
 **Assigné à :** @developer
 **Priorité :** Haute
 **Complexité :** Medium
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Page publique présentant les plans disponibles avec leurs tarifs. Accessible
 sans authentification. Serveur Component pour le SEO.
@@ -635,7 +635,7 @@ sans authentification. Serveur Component pour le SEO.
 **Priorité :** Critique
 **Complexité :** Complex
 **Dépend de :** Story 33.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Formulaire de souscription en 3 étapes. Prérequis : utilisateur authentifié.
 Si non connecté, rediriger vers /connexion?redirect=/checkout?planId=...
@@ -663,7 +663,7 @@ Si non connecté, rediriger vers /connexion?redirect=/checkout?planId=...
 **Priorité :** Haute
 **Complexité :** Medium
 **Dépend de :** Story 33.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Page de gestion de l'abonnement actuel du promoteur. Affiche le plan actif,
 la date d'expiration, l'historique des paiements et les actions disponibles.
@@ -695,7 +695,7 @@ la date d'expiration, l'historique des paiements et les actions disponibles.
 **Priorité :** Moyenne
 **Complexité :** Medium
 **Dépend de :** Story 33.3
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Page d'administration listant tous les abonnements des sites supervisés.
 Accessible aux admins DKFarm (`Permission.ABONNEMENTS_GERER`).
@@ -722,7 +722,7 @@ Accessible aux admins DKFarm (`Permission.ABONNEMENTS_GERER`).
 **Priorité :** Haute
 **Complexité :** Simple
 **Dépend de :** Stories 33.1 à 33.4
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches @tester :**
 - [ ] `TODO` Test UI `checkout-form.tsx` : validation étape 1 (plan requis), validation étape 2 (numéro téléphone format), polling étape 3 (mock, arrêt après 10 tentatives)
