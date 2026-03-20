@@ -44,6 +44,7 @@ const typeActiviteFilterLabels: Record<TypeActivite | "TOUS", string> = {
   [TypeActivite.RECOLTE]: "Recolte",
   [TypeActivite.TRI]: "Tri",
   [TypeActivite.MEDICATION]: "Medication",
+  [TypeActivite.RENOUVELLEMENT]: "Renouvellement eau",
   [TypeActivite.AUTRE]: "Autre",
 };
 

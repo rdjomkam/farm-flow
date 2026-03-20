@@ -4,8 +4,8 @@
  * Ces types representent les modeles tels qu'ils sont stockes en base.
  * Ils servent de source de verite TypeScript pour le projet.
  *
- * 31 modeles : Site, SiteRole, SiteMember, User, Session, Bac, Vague, Releve, Fournisseur, Produit, MouvementStock, Commande, LigneCommande, ReleveConsommation, Client, Vente, Facture, Paiement, Reproducteur, Ponte, LotAlevins, ConfigAlerte, Notification, Activite, Depense, PaiementDepense, DepenseRecurrente, ListeBesoins, LigneBesoin, RegleActivite, NoteIngenieur
- * 32 enums : Role (+ INGENIEUR), Permission (+ 6 Phase 3), StatutVague, TypeReleve, TypeAliment, CauseMortalite, MethodeComptage, CategorieProduit, UniteStock, TypeMouvement, StatutCommande, StatutFacture, ModePaiement, SiteModule, SexeReproducteur, StatutReproducteur, StatutPonte, StatutLotAlevins, TypeAlerte, StatutAlerte, TypeActivite (+ TRI/MEDICATION), StatutActivite, Recurrence, CategorieDepense, StatutDepense, FrequenceRecurrence, StatutBesoins, PhaseElevage, StatutActivation, TypeDeclencheur, VisibiliteNote, CategorieCalibrage
+ * 32 modeles : Site, SiteRole, SiteMember, User, Session, Bac, Vague, Releve, Fournisseur, Produit, MouvementStock, Commande, LigneCommande, ReleveConsommation, Client, Vente, Facture, Paiement, Reproducteur, Ponte, LotAlevins, ConfigAlerte, Notification, Activite, Depense, PaiementDepense, DepenseRecurrente, ListeBesoins, LigneBesoin, RegleActivite, ConditionRegle, NoteIngenieur
+ * 36 enums : Role (+ INGENIEUR), Permission (+ 6 Phase 3), StatutVague, TypeReleve (+ RENOUVELLEMENT), TypeAliment, CauseMortalite, MethodeComptage, CategorieProduit, UniteStock, TypeMouvement, StatutCommande, StatutFacture, ModePaiement, SiteModule, SexeReproducteur, StatutReproducteur, StatutPonte, StatutLotAlevins, TypeAlerte (+ 4 density), StatutAlerte, TypeActivite (+ TRI/MEDICATION/RENOUVELLEMENT), StatutActivite, Recurrence, CategorieDepense, StatutDepense, FrequenceRecurrence, StatutBesoins, PhaseElevage, StatutActivation, TypeDeclencheur (+ 3 density), VisibiliteNote, CategorieCalibrage, TypeSystemeBac, OperateurCondition, LogiqueCondition, SeveriteAlerte
  */
 
 // ---------------------------------------------------------------------------
@@ -116,6 +116,8 @@ export enum TypeReleve {
   QUALITE_EAU = "QUALITE_EAU",
   COMPTAGE = "COMPTAGE",
   OBSERVATION = "OBSERVATION",
+  /** Evenement de renouvellement d'eau d'un bac — Sprint 27-28 (ADR-density-alerts) */
+  RENOUVELLEMENT = "RENOUVELLEMENT",
 }
 
 /** Type d'aliment distribue */
@@ -141,6 +143,21 @@ export enum MethodeComptage {
   DIRECT = "DIRECT",
   ESTIMATION = "ESTIMATION",
   ECHANTILLONNAGE = "ECHANTILLONNAGE",
+}
+
+/**
+ * TypeSystemeBac — Type de systeme d'elevage d'un bac.
+ *
+ * Determine les seuils de densite applicables (kg/m3) dans le moteur d'alertes
+ * et dans le composant bac-densite-badge.
+ * Null sur un bac existant = traite comme BAC_BETON par defaut (prudence).
+ * Sprint 27-28 (ADR-density-alerts)
+ */
+export enum TypeSystemeBac {
+  BAC_BETON = "BAC_BETON",
+  BAC_PLASTIQUE = "BAC_PLASTIQUE",
+  ETANG_TERRE = "ETANG_TERRE",
+  RAS = "RAS",
 }
 
 // ---------------------------------------------------------------------------
@@ -355,6 +372,12 @@ export interface Bac {
   nombreInitial: number | null;
   /** Poids moyen initial des poissons en grammes au demarrage du calibrage (nullable) */
   poidsMoyenInitial: number | null;
+  /**
+   * Type de systeme d'elevage — determine les seuils de densite applicables.
+   * Null pour les bacs existants = traite comme BAC_BETON par defaut dans le moteur d'alertes.
+   * Sprint 27-28 (ADR-density-alerts, section 5.2)
+   */
+  typeSysteme: TypeSystemeBac | null;
   /** ID du site (ferme) — R8 */
   siteId: string;
   createdAt: Date;
@@ -464,6 +487,12 @@ export interface Releve {
   // --- Champs observation ---
   /** Description de l'observation */
   description: string | null;
+
+  // --- Champs renouvellement eau (Sprint 27-28, ADR-density-alerts, section 5.3) ---
+  /** Pourcentage du volume du bac renouvelee (ex: 50 = 50%) — rempli si typeReleve = RENOUVELLEMENT */
+  pourcentageRenouvellement: number | null;
+  /** Volume reel en litres renouvele — alternative ou complement a pourcentageRenouvellement */
+  volumeRenouvele: number | null;
 
   createdAt: Date;
   updatedAt: Date;
@@ -959,6 +988,14 @@ export enum TypeAlerte {
   PERSONNALISEE = "PERSONNALISEE",
   /** Besoin en retard : dateLimite depassee avec statut SOUMISE ou APPROUVEE (ADR-017.2) */
   BESOIN_EN_RETARD = "BESOIN_EN_RETARD",
+  /** Densite biomasse/volume elevee pour ce type de systeme de bac — Sprint 27-28 (ADR-density-alerts) */
+  DENSITE_ELEVEE = "DENSITE_ELEVEE",
+  /** Taux de renouvellement effectif insuffisant pour la densite actuelle — Sprint 27-28 */
+  RENOUVELLEMENT_EAU_INSUFFISANT = "RENOUVELLEMENT_EAU_INSUFFISANT",
+  /** Aucun releve qualite eau depuis N jours avec densite elevee — Sprint 27-28 */
+  AUCUN_RELEVE_QUALITE_EAU = "AUCUN_RELEVE_QUALITE_EAU",
+  /** Combinaison : densite elevee ET qualite eau degradee simultanement — Sprint 27-28 */
+  DENSITE_CRITIQUE_QUALITE_EAU = "DENSITE_CRITIQUE_QUALITE_EAU",
 }
 
 /** Statut du cycle de vie d'une notification */
@@ -966,6 +1003,19 @@ export enum StatutAlerte {
   ACTIVE = "ACTIVE",
   LUE = "LUE",
   TRAITEE = "TRAITEE",
+}
+
+/**
+ * SeveriteAlerte — Niveau de gravite d'une notification pour le tri visuel.
+ *
+ * Stocke sur le champ Notification.severite.
+ * Permet au composant mobile d'afficher les couleurs et icones adaptes.
+ * Sprint 27-28 (ADR-density-alerts, section 5.9)
+ */
+export enum SeveriteAlerte {
+  INFO = "INFO",
+  AVERTISSEMENT = "AVERTISSEMENT",
+  CRITIQUE = "CRITIQUE",
 }
 
 // ---------------------------------------------------------------------------
@@ -983,6 +1033,8 @@ export enum TypeActivite {
   RECOLTE = "RECOLTE",
   TRI = "TRI",
   MEDICATION = "MEDICATION",
+  /** Renouvellement d'eau d'un bac — genere par les regles de densite — Sprint 27-28 (ADR-density-alerts) */
+  RENOUVELLEMENT = "RENOUVELLEMENT",
   AUTRE = "AUTRE",
 }
 
@@ -1052,6 +1104,19 @@ export interface Notification {
   statut: StatutAlerte;
   /** URL relative vers la ressource concernee (null si pas de lien) */
   lien: string | null;
+  /**
+   * Action directe recommandee — null si notification informative seulement.
+   * Stocke en JSON (type NotificationActionPayload dans src/types/notifications.ts).
+   * Le composant mobile l'utilise pour afficher un bouton CTA avec texte traduit.
+   * Sprint 27-28 (ADR-density-alerts, section 5.9)
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  actionPayload: Record<string, any> | null;
+  /**
+   * Severite de l'alerte pour le tri visuel et la priorite d'affichage.
+   * Defaut: INFO. Sprint 27-28 (ADR-density-alerts, section 5.9)
+   */
+  severite: SeveriteAlerte;
   /** Utilisateur destinataire */
   userId: string;
   /** ID du site (ferme) — R8 */
@@ -1144,8 +1209,39 @@ export interface ActiviteWithRelations extends Activite {
 }
 
 // ---------------------------------------------------------------------------
-// Enums & Modeles — Moteur de regles d'activites (Sprint 21)
+// Enums & Modeles — Moteur de regles d'activites (Sprint 21 + 27-28)
 // ---------------------------------------------------------------------------
+
+/**
+ * OperateurCondition — Operateur de comparaison utilise dans une ConditionRegle.
+ *
+ * Semantique :
+ * - SUPERIEUR : valeur > conditionValeur
+ * - INFERIEUR : valeur < conditionValeur
+ * - ENTRE     : conditionValeur <= valeur <= conditionValeur2
+ * - EGAL      : valeur == conditionValeur
+ *
+ * Sprint 27-28 (ADR-density-alerts, section 5.5)
+ */
+export enum OperateurCondition {
+  SUPERIEUR = "SUPERIEUR",
+  INFERIEUR = "INFERIEUR",
+  ENTRE = "ENTRE",
+  EGAL = "EGAL",
+}
+
+/**
+ * LogiqueCondition — Logique de combinaison des conditions d'une RegleActivite.
+ *
+ * - ET : TOUTES les ConditionRegle doivent matcher
+ * - OU : AU MOINS UNE ConditionRegle doit matcher
+ *
+ * Sprint 27-28 (ADR-density-alerts, section 5.5)
+ */
+export enum LogiqueCondition {
+  ET = "ET",
+  OU = "OU",
+}
 
 /**
  * TypeDeclencheur — Condition qui active une regle d'activite.
@@ -1172,6 +1268,20 @@ export enum TypeDeclencheur {
   FCR_ELEVE = "FCR_ELEVE",
   /** Declenchee a une etape cle du cycle d'elevage (ex: passage en phase GROSSISSEMENT) */
   JALON = "JALON",
+  /** Declenchee quand la biomasse kg/m3 du bac depasse conditionValeur — Sprint 27-28 (ADR-density-alerts) */
+  SEUIL_DENSITE = "SEUIL_DENSITE",
+  /** Declenchee quand le taux de renouvellement %/jour du bac est sous conditionValeur — Sprint 27-28 */
+  SEUIL_RENOUVELLEMENT = "SEUIL_RENOUVELLEMENT",
+  /** Declenchee quand aucun releve d'un type donne n'est enregistre depuis N jours — Sprint 27-28 */
+  ABSENCE_RELEVE = "ABSENCE_RELEVE",
+  /** Declenchee quand le taux d'ammoniac depasse conditionValeur (mg/L) */
+  SEUIL_AMMONIAC = "SEUIL_AMMONIAC",
+  /** Declenchee quand le taux d'oxygene dissous passe sous conditionValeur (mg/L) */
+  SEUIL_OXYGENE = "SEUIL_OXYGENE",
+  /** Declenchee quand le pH sort de la plage optimale selon conditionValeur (min) / conditionValeur2 (max) */
+  SEUIL_PH = "SEUIL_PH",
+  /** Declenchee quand la temperature sort de la plage optimale selon conditionValeur (min) / conditionValeur2 (max) */
+  SEUIL_TEMPERATURE = "SEUIL_TEMPERATURE",
 }
 
 /**
@@ -1237,8 +1347,52 @@ export interface RegleActivite {
   siteId: string | null;
   /** Utilisateur ayant cree la regle (nullable si regle systeme) */
   userId: string | null;
+
+  // ---- Conditions composees (Sprint 27-28, ADR-density-alerts, section 5.5) ----
+  /**
+   * Conditions composees de cette regle.
+   * Si vide (length == 0), le moteur utilise le legacy typeDeclencheur + conditionValeur.
+   * Si non vide, le moteur evalue les conditions avec la logique ET/OU.
+   * Backward compatible : les regles existantes ont conditions = [].
+   */
+  conditions: ConditionRegle[];
+  /**
+   * Logique de combinaison des conditions composees.
+   * ET (defaut) : toutes les conditions doivent matcher.
+   * OU : au moins une condition doit matcher.
+   * Ignoree si conditions est vide.
+   */
+  logique: LogiqueCondition;
+
   createdAt: Date;
   updatedAt: Date;
+}
+
+/**
+ * ConditionRegle — Condition atomique d'une RegleActivite.
+ *
+ * Une regle peut avoir plusieurs conditions evaluees collectivement
+ * selon la logique ET/OU definie sur la regle parente.
+ *
+ * Backward compatibility : les regles legacy (conditions=[]) continuent
+ * d'utiliser le champ typeDeclencheur de RegleActivite directement.
+ *
+ * Sprint 27-28 (ADR-density-alerts, section 5.5)
+ */
+export interface ConditionRegle {
+  id: string;
+  /** ID de la regle parente */
+  regleId: string;
+  /** Type de valeur contextuelle a evaluer */
+  typeDeclencheur: TypeDeclencheur;
+  /** Operateur de comparaison */
+  operateur: OperateurCondition;
+  /** Valeur primaire de la condition (null = match toujours pour ce type) */
+  conditionValeur: number | null;
+  /** Valeur secondaire — utilisee uniquement par l'operateur ENTRE comme borne haute */
+  conditionValeur2: number | null;
+  /** Ordre d'evaluation (ascendant) pour les conditions composees */
+  ordre: number;
 }
 
 /** RegleActivite avec ses relations chargees */
@@ -1669,6 +1823,27 @@ export interface ConfigElevage {
   // Densite d'elevage
   densiteMaxPoissonsM3: number;
   densiteOptimalePoissonsM3: number;
+
+  // Seuils de densite differencies par type de systeme (kg/m3) — Sprint 27-28 (ADR-density-alerts, 5.7)
+  // Utilises par le composant bac-densite-badge.tsx pour le coloriage vert/orange/rouge
+  /** Seuil d'alerte (orange) pour bacs beton et plastique — defaut: 150 kg/m3 */
+  densiteBacBetonAlerte: number;
+  /** Seuil critique (rouge) pour bacs beton et plastique — defaut: 200 kg/m3 */
+  densiteBacBetonCritique: number;
+  /** Seuil d'alerte (orange) pour etangs en terre — defaut: 30 kg/m3 */
+  densiteEtangAlerte: number;
+  /** Seuil critique (rouge) pour etangs en terre — defaut: 40 kg/m3 */
+  densiteEtangCritique: number;
+  /** Seuil d'alerte (orange) pour systemes RAS — defaut: 350 kg/m3 */
+  densiteRasAlerte: number;
+  /** Seuil critique (rouge) pour systemes RAS — defaut: 500 kg/m3 */
+  densiteRasCritique: number;
+  /**
+   * Fenetre temporelle en jours pour le calcul du taux de renouvellement effectif.
+   * Utilisee par le context builder pour calculer tauxRenouvellementPctJour.
+   * Defaut: 7 jours. Configurable par site selon l'intensite de l'elevage.
+   */
+  fenetreRenouvellementJours: number;
 
   // Recolte
   recoltePartiellePoidsSeuil: number;

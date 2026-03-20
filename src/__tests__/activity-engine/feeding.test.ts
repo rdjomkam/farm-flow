@@ -62,6 +62,9 @@ function makeContext(overrides: Partial<RuleEvaluationContext> = {}): RuleEvalua
     ],
     phase: "JUVENILE",
     bac: null,
+    densiteKgM3: null,
+    tauxRenouvellementPctJour: null,
+    joursDepuisDernierReleveQualiteEau: null,
     ...overrides,
   };
 }

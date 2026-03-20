@@ -87,6 +87,15 @@ const FORM_DEFAULTS: Omit<ConfigElevage, "id" | "siteId" | "createdAt" | "update
   // Densite
   densiteMaxPoissonsM3: 80,
   densiteOptimalePoissonsM3: 50,
+  // Seuils de densite par type de systeme (kg/m3)
+  densiteBacBetonAlerte: 150,
+  densiteBacBetonCritique: 200,
+  densiteEtangAlerte: 30,
+  densiteEtangCritique: 40,
+  densiteRasAlerte: 350,
+  densiteRasCritique: 500,
+  // Renouvellement
+  fenetreRenouvellementJours: 7,
   // Eau
   eauChangementPct: 30,
   eauChangementIntervalleJours: 3,
@@ -280,6 +289,13 @@ export function ConfigElevageFormClient({ templates }: Props) {
       biometrieEchantillonPct: tpl.biometrieEchantillonPct,
       densiteMaxPoissonsM3: tpl.densiteMaxPoissonsM3,
       densiteOptimalePoissonsM3: tpl.densiteOptimalePoissonsM3,
+      densiteBacBetonAlerte: tpl.densiteBacBetonAlerte,
+      densiteBacBetonCritique: tpl.densiteBacBetonCritique,
+      densiteEtangAlerte: tpl.densiteEtangAlerte,
+      densiteEtangCritique: tpl.densiteEtangCritique,
+      densiteRasAlerte: tpl.densiteRasAlerte,
+      densiteRasCritique: tpl.densiteRasCritique,
+      fenetreRenouvellementJours: tpl.fenetreRenouvellementJours,
       eauChangementPct: tpl.eauChangementPct,
       eauChangementIntervalleJours: tpl.eauChangementIntervalleJours,
       recoltePartiellePoidsSeuil: tpl.recoltePartiellePoidsSeuil,

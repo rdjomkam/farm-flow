@@ -17,5 +17,6 @@ export const typeActiviteLabels: Record<TypeActivite, string> = {
   [TypeActivite.RECOLTE]: "Recolte",
   [TypeActivite.TRI]: "Tri",
   [TypeActivite.MEDICATION]: "Medication",
+  [TypeActivite.RENOUVELLEMENT]: "Renouvellement eau",
   [TypeActivite.AUTRE]: "Autre",
 };

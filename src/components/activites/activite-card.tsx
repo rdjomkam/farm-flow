@@ -37,6 +37,7 @@ const typeActiviteIcons: Record<TypeActivite, React.ReactNode> = {
   [TypeActivite.RECOLTE]: <ShoppingCart className="h-4 w-4" />,
   [TypeActivite.TRI]: <ArrowLeftRight className="h-4 w-4" />,
   [TypeActivite.MEDICATION]: <Pill className="h-4 w-4" />,
+  [TypeActivite.RENOUVELLEMENT]: <Droplets className="h-4 w-4" />,
   [TypeActivite.AUTRE]: <MoreHorizontal className="h-4 w-4" />,
 };
 

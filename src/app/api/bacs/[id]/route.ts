@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getBacById, updateBac } from "@/lib/queries/bacs";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { Permission } from "@/types";
+import { Permission, TypeSystemeBac } from "@/types";
 import type { UpdateBacDTO } from "@/types";
 
 export async function GET(
@@ -28,6 +28,7 @@ export async function GET(
       nombrePoissons: bac.nombrePoissons,
       nombreInitial: bac.nombreInitial,
       poidsMoyenInitial: bac.poidsMoyenInitial,
+      typeSysteme: bac.typeSysteme ?? null,
       vagueId: bac.vagueId,
       vagueCode: bac.vague?.code ?? null,
       siteId: bac.siteId,
@@ -88,6 +89,15 @@ export async function PUT(
       }
     }
 
+    if (body.typeSysteme !== undefined && body.typeSysteme !== null) {
+      if (!Object.values(TypeSystemeBac).includes(body.typeSysteme as TypeSystemeBac)) {
+        errors.push({
+          field: "typeSysteme",
+          message: `Type de systeme invalide. Valeurs acceptees : ${Object.values(TypeSystemeBac).join(", ")}.`,
+        });
+      }
+    }
+
     if (errors.length > 0) {
       return NextResponse.json(
         { status: 400, message: "Erreurs de validation", errors },
@@ -101,6 +111,7 @@ export async function PUT(
     if (body.nombrePoissons !== undefined) data.nombrePoissons = body.nombrePoissons;
     if (body.nombreInitial !== undefined) data.nombreInitial = body.nombreInitial;
     if (body.poidsMoyenInitial !== undefined) data.poidsMoyenInitial = body.poidsMoyenInitial;
+    if (body.typeSysteme !== undefined) data.typeSysteme = body.typeSysteme ?? null;
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json(

@@ -24,6 +24,7 @@ enum TypeReleve {
   QUALITE_EAU
   COMPTAGE
   OBSERVATION
+  RENOUVELLEMENT
 }
 
 enum TypeAliment {
@@ -197,6 +198,10 @@ enum TypeAlerte {
   RAPPEL_BIOMETRIE
   PERSONNALISEE
   BESOIN_EN_RETARD
+  DENSITE_ELEVEE
+  RENOUVELLEMENT_EAU_INSUFFISANT
+  AUCUN_RELEVE_QUALITE_EAU
+  DENSITE_CRITIQUE_QUALITE_EAU
 }
 
 enum StatutAlerte {
@@ -299,6 +304,35 @@ enum CategorieCalibrage {
 }
 
 // ──────────────────────────────────────────
+// Enums — Densité & Alertes (Sprint 27-28)
+// ──────────────────────────────────────────
+
+enum TypeSystemeBac {
+  BAC_BETON
+  BAC_PLASTIQUE
+  ETANG_TERRE
+  RAS
+}
+
+enum SeveriteAlerte {
+  INFO
+  AVERTISSEMENT
+  CRITIQUE
+}
+
+enum OperateurCondition {
+  SUPERIEUR
+  INFERIEUR
+  ENTRE
+  EGAL
+}
+
+enum LogiqueCondition {
+  ET
+  OU
+}
+
+// ──────────────────────────────────────────
 // Enums — Phase 3 : Moteur d'activités (Sprint 21)
 // ──────────────────────────────────────────
 
@@ -311,6 +345,13 @@ enum TypeDeclencheur {
   STOCK_BAS
   FCR_ELEVE
   JALON
+  SEUIL_DENSITE
+  SEUIL_RENOUVELLEMENT
+  ABSENCE_RELEVE
+  SEUIL_AMMONIAC
+  SEUIL_OXYGENE
+  SEUIL_PH
+  SEUIL_TEMPERATURE
 }
 
 // ──────────────────────────────────────────
@@ -529,6 +570,24 @@ model ConfigElevage {
   densiteMaxPoissonsM3       Float @default(100)
   densiteOptimalePoissonsM3  Float @default(50)
 
+  // ── Seuils de densité par type de système (kg/m3) — utilisés par le UI badge ─
+  /** Bac béton / plastique — seuil alerte orange */
+  densiteBacBetonAlerte      Float @default(150)
+  /** Bac béton / plastique — seuil alerte rouge */
+  densiteBacBetonCritique    Float @default(200)
+  /** Étang en terre — seuil alerte orange */
+  densiteEtangAlerte         Float @default(30)
+  /** Étang en terre — seuil alerte rouge */
+  densiteEtangCritique       Float @default(40)
+  /** RAS — seuil alerte orange */
+  densiteRasAlerte           Float @default(350)
+  /** RAS — seuil alerte rouge */
+  densiteRasCritique         Float @default(500)
+
+  // ── Renouvellement ───────────────────────────────
+  /** Fenêtre temporelle pour le calcul du taux de renouvellement effectif (jours) */
+  fenetreRenouvellementJours Int @default(7)
+
   // ── Recolte ─────────────────────────────────────
   recoltePartiellePoidsSeuil Float @default(400)
   recolteJeuneAvantJours     Int   @default(2)
@@ -659,22 +718,25 @@ model Session {
 // ──────────────────────────────────────────
 
 model Bac {
-  id                  String   @id @default(cuid())
+  id                  String          @id @default(cuid())
   nom                 String
   volume              Float?
   nombrePoissons      Int?
   nombreInitial       Int?
   poidsMoyenInitial   Float?
   vagueId             String?
-  vague               Vague?   @relation(fields: [vagueId], references: [id])
+  vague               Vague?          @relation(fields: [vagueId], references: [id])
+  /** Type de système d'élevage — détermine les seuils de densité applicables.
+   *  Null = BAC_BETON par défaut dans le moteur d'alertes. */
+  typeSysteme         TypeSystemeBac?
   siteId              String
-  site                Site     @relation(fields: [siteId], references: [id])
+  site                Site            @relation(fields: [siteId], references: [id])
   releves             Releve[]
   lotsAlevins         LotAlevins[]
   activites           Activite[]
   calibrageGroupesDst CalibrageGroupe[] @relation("GroupeDestBac")
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
 
   @@index([vagueId])
   @@index([siteId])
@@ -755,6 +817,11 @@ model Releve {
 
   // Champs observation
   description       String?
+
+  // Champs renouvellement eau — remplis uniquement quand typeReleve = RENOUVELLEMENT
+  // L'un ou l'autre est renseigné (ou les deux si le formulaire calcule automatiquement)
+  pourcentageRenouvellement Float?  // % du volume du bac renouvelée (ex: 50 = 50%)
+  volumeRenouvele           Float?  // Volume réel en litres (alternative à pourcentageRenouvellement)
 
   consommations   ReleveConsommation[]
   mouvements      MouvementStock[]
@@ -1100,20 +1167,29 @@ model ConfigAlerte {
 }
 
 model Notification {
-  id         String       @id @default(cuid())
+  id         String         @id @default(cuid())
   typeAlerte TypeAlerte
   titre      String
   message    String
-  statut     StatutAlerte @default(ACTIVE)
+  statut     StatutAlerte   @default(ACTIVE)
   lien       String?
+  /** Severite de l'alerte pour le tri visuel */
+  severite   SeveriteAlerte @default(INFO)
+  /** Action directe recommandee (null si notification informative seulement)
+   *  Format : JSON { type: "CREER_RELEVE", typeReleve?, bacId?, vagueId? }
+   *         ou { type: "MODIFIER_BAC", bacId, champsAModifier? }
+   *         ou { type: "VOIR_VAGUE", vagueId }
+   *         ou { type: "VOIR_STOCK", produitId? } */
+  actionPayload Json?
   userId     String
-  user       User         @relation(fields: [userId], references: [id])
+  user       User           @relation(fields: [userId], references: [id])
   siteId     String
-  site       Site         @relation(fields: [siteId], references: [id])
-  createdAt  DateTime     @default(now())
+  site       Site           @relation(fields: [siteId], references: [id])
+  createdAt  DateTime       @default(now())
 
   @@index([userId, siteId, statut])
   @@index([siteId])
+  @@index([siteId, severite, statut])
 }
 
 model Activite {
@@ -1199,12 +1275,17 @@ model RegleActivite {
   isActive     Boolean         @default(true)
   /** EC-3.2 : one-shot pour les seuils — désactivé après premier déclenchement */
   firedOnce    Boolean         @default(false)
+  /** Logique d'évaluation des conditions composées : ET = toutes, OU = au moins une.
+   *  N'a d'effet que si conditions.length > 0 (sinon evaluation legacy via typeDeclencheur). */
+  logique      LogiqueCondition @default(ET)
   /** F-15 : null = règle globale DKFarm, non null = règle propre au site */
   siteId       String?
   site         Site?           @relation(fields: [siteId], references: [id], onDelete: Cascade)
   userId       String?
   user         User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   activites    Activite[]
+  /** Conditions composées (Sprint 27-28). Si vide, évaluation legacy via typeDeclencheur. */
+  conditions   ConditionRegle[]
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 
@@ -1212,6 +1293,35 @@ model RegleActivite {
   @@index([typeActivite])
   @@index([typeDeclencheur])
   @@index([isActive])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Densité & Conditions composées (Sprint 27-28)
+// ──────────────────────────────────────────
+
+/**
+ * ConditionRegle — Condition élémentaire d'une règle à conditions composées.
+ *
+ * Une RegleActivite peut avoir N ConditionRegle enfants.
+ * Si conditions.length > 0, l'évaluation utilise la logique ET/OU définie sur la règle.
+ * Si conditions.length == 0, l'évaluation legacy (typeDeclencheur + conditionValeur) s'applique.
+ *
+ * Backward compatible : toutes les règles existantes ont 0 conditions.
+ */
+model ConditionRegle {
+  id               String             @id @default(cuid())
+  regleId          String
+  regle            RegleActivite      @relation(fields: [regleId], references: [id], onDelete: Cascade)
+  typeDeclencheur  TypeDeclencheur
+  operateur        OperateurCondition @default(SUPERIEUR)
+  /** Seuil de déclenchement (ex: 50 pour 50 kg/m3, 3 pour 3 jours) */
+  conditionValeur  Float?
+  /** Seuil haut — utilisé uniquement par l'opérateur ENTRE */
+  conditionValeur2 Float?
+  /** Ordre d'évaluation dans la liste de conditions (0 = premier) */
+  ordre            Int                @default(0)
+
+  @@index([regleId])
 }
 
 // ──────────────────────────────────────────

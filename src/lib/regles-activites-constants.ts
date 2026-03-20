@@ -208,6 +208,15 @@ export const TYPE_DECLENCHEUR_LABELS: Record<TypeDeclencheur, string> = {
   [TypeDeclencheur.STOCK_BAS]:     "Stock bas",
   [TypeDeclencheur.FCR_ELEVE]:     "FCR eleve",
   [TypeDeclencheur.JALON]:         "Jalon de production",
+  // Sprint 27-28 — Conditions composees de densite (ADR-density-alerts)
+  [TypeDeclencheur.SEUIL_DENSITE]:        "Seuil de densite",
+  [TypeDeclencheur.SEUIL_RENOUVELLEMENT]: "Seuil de renouvellement eau",
+  [TypeDeclencheur.ABSENCE_RELEVE]:       "Absence de releve",
+  // Declencheurs qualite eau specifiques (FAIL-1 fix)
+  [TypeDeclencheur.SEUIL_AMMONIAC]:       "Seuil d'ammoniac",
+  [TypeDeclencheur.SEUIL_OXYGENE]:        "Seuil d'oxygene dissous",
+  [TypeDeclencheur.SEUIL_PH]:             "Seuil de pH",
+  [TypeDeclencheur.SEUIL_TEMPERATURE]:    "Seuil de temperature",
 };
 
 // ---------------------------------------------------------------------------
@@ -227,6 +236,8 @@ export const TYPE_ACTIVITE_LABELS: Record<TypeActivite, string> = {
   [TypeActivite.RECOLTE]:      "Recolte",
   [TypeActivite.TRI]:          "Tri",
   [TypeActivite.MEDICATION]:   "Medication",
+  // Sprint 27-28 — Renouvellement eau (ADR-density-alerts)
+  [TypeActivite.RENOUVELLEMENT]: "Renouvellement eau",
   [TypeActivite.AUTRE]:        "Autre",
 };
 

@@ -4,13 +4,15 @@
  * Evalue chaque RegleActivite contre le contexte de chaque vague active
  * et produit des RuleMatch quand les conditions sont remplies.
  *
- * Types de declencheurs implementes (8) :
+ * Types de declencheurs implementes (12) :
  *   CALENDRIER, RECURRENT, SEUIL_POIDS, SEUIL_QUALITE,
- *   SEUIL_MORTALITE, STOCK_BAS, FCR_ELEVE, JALON
+ *   SEUIL_MORTALITE, STOCK_BAS, FCR_ELEVE, JALON,
+ *   SEUIL_DENSITE, SEUIL_RENOUVELLEMENT, ABSENCE_RELEVE,
+ *   SEUIL_AMMONIAC, SEUIL_OXYGENE, SEUIL_PH, SEUIL_TEMPERATURE
  */
 
-import type { RegleActivite, Activite } from "@/types";
-import { TypeDeclencheur, PhaseElevage, TypeReleve } from "@/types";
+import type { RegleActivite, Activite, ConditionRegle } from "@/types";
+import { TypeDeclencheur, PhaseElevage, TypeReleve, OperateurCondition } from "@/types";
 import type { RuleEvaluationContext, RuleMatch } from "@/types/activity-engine";
 
 // ---------------------------------------------------------------------------
@@ -127,6 +129,106 @@ function hasTodayDuplicate(
     const aDateWAT = new Date(a.createdAt.getTime() + WAT_OFFSET_MS);
     return aDateWAT.toISOString().slice(0, 10) === todayStr;
   });
+}
+
+// ---------------------------------------------------------------------------
+// Compound condition evaluator (Sprint 27-28, ADR-density-alerts, section 6.2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Evalue une condition atomique (ConditionRegle) contre le contexte courant.
+ *
+ * Retourne false si la valeur contextuelle est null (condition non evaluable)
+ * ou si le type de declencheur n'est pas supporte en mode condition composee.
+ */
+function evalCondition(
+  cond: ConditionRegle,
+  ctx: RuleEvaluationContext
+): boolean {
+  let value: number | null = null;
+
+  switch (cond.typeDeclencheur as TypeDeclencheur) {
+    case TypeDeclencheur.SEUIL_DENSITE:
+      value = ctx.densiteKgM3;
+      break;
+    case TypeDeclencheur.SEUIL_RENOUVELLEMENT:
+      value = ctx.tauxRenouvellementPctJour;
+      break;
+    case TypeDeclencheur.ABSENCE_RELEVE:
+      value = ctx.joursDepuisDernierReleveQualiteEau;
+      break;
+    case TypeDeclencheur.SEUIL_POIDS:
+      value = ctx.indicateurs.poidsMoyen;
+      break;
+    case TypeDeclencheur.SEUIL_MORTALITE:
+      value = ctx.indicateurs.tauxMortaliteCumule;
+      break;
+    case TypeDeclencheur.FCR_ELEVE:
+      value = ctx.indicateurs.fcr;
+      break;
+    case TypeDeclencheur.SEUIL_QUALITE: {
+      // Cherche le dernier releve qualite eau parmi les 5 derniers
+      const dernierQualite = ctx.derniersReleves.find(
+        (r) => r.typeReleve === TypeReleve.QUALITE_EAU
+      );
+      // Prendre la valeur hors plage la plus marquee parmi les params
+      if (!dernierQualite) return false;
+      // Utiliser la temperature comme valeur representative (comportement legacy)
+      value = dernierQualite.temperature ?? dernierQualite.ph ?? dernierQualite.oxygene ?? dernierQualite.ammoniac ?? null;
+      break;
+    }
+    case TypeDeclencheur.SEUIL_AMMONIAC: {
+      const dernierQualite = ctx.derniersReleves.find(
+        (r) => r.typeReleve === TypeReleve.QUALITE_EAU
+      );
+      if (!dernierQualite) return false;
+      value = dernierQualite.ammoniac;
+      break;
+    }
+    case TypeDeclencheur.SEUIL_OXYGENE: {
+      const dernierQualite = ctx.derniersReleves.find(
+        (r) => r.typeReleve === TypeReleve.QUALITE_EAU
+      );
+      if (!dernierQualite) return false;
+      value = dernierQualite.oxygene;
+      break;
+    }
+    case TypeDeclencheur.SEUIL_PH: {
+      const dernierQualite = ctx.derniersReleves.find(
+        (r) => r.typeReleve === TypeReleve.QUALITE_EAU
+      );
+      if (!dernierQualite) return false;
+      value = dernierQualite.ph;
+      break;
+    }
+    case TypeDeclencheur.SEUIL_TEMPERATURE: {
+      const dernierQualite = ctx.derniersReleves.find(
+        (r) => r.typeReleve === TypeReleve.QUALITE_EAU
+      );
+      if (!dernierQualite) return false;
+      value = dernierQualite.temperature;
+      break;
+    }
+    default:
+      return false; // Type non supporte en mode condition composee
+  }
+
+  if (value === null) return false;
+
+  switch (cond.operateur as OperateurCondition) {
+    case OperateurCondition.SUPERIEUR:
+      return cond.conditionValeur !== null ? value > cond.conditionValeur : false;
+    case OperateurCondition.INFERIEUR:
+      return cond.conditionValeur !== null ? value < cond.conditionValeur : false;
+    case OperateurCondition.ENTRE:
+      return cond.conditionValeur !== null && cond.conditionValeur2 !== null
+        ? value >= cond.conditionValeur && value <= cond.conditionValeur2
+        : false;
+    case OperateurCondition.EGAL:
+      return cond.conditionValeur !== null ? value === cond.conditionValeur : false;
+    default:
+      return false;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -337,8 +439,11 @@ export function evaluateRules(
       // Skip regles inactives
       if (!regle.isActive) continue;
 
-      // EC-3.2 : skip pour SEUIL_* si firedOnce = true
-      const seuilTypes = [
+      // EC-3.2 : skip pour SEUIL_* si firedOnce = true.
+      // Note: SEUIL_DENSITE est intentionnellement exclu car la densite fluctue
+      // en permanence et doit re-alerter apres chaque amelioration (ADR-density-alerts §6.2).
+      // SEUIL_RENOUVELLEMENT et ABSENCE_RELEVE sont aussi exclus pour la meme raison.
+      const seuilTypesFiredOnce = [
         TypeDeclencheur.SEUIL_POIDS,
         TypeDeclencheur.SEUIL_QUALITE,
         TypeDeclencheur.SEUIL_MORTALITE,
@@ -346,7 +451,7 @@ export function evaluateRules(
         TypeDeclencheur.STOCK_BAS,
       ];
       if (
-        seuilTypes.includes(regle.typeDeclencheur as TypeDeclencheur) &&
+        seuilTypesFiredOnce.includes(regle.typeDeclencheur as TypeDeclencheur) &&
         regle.firedOnce
       ) {
         continue;
@@ -362,7 +467,31 @@ export function evaluateRules(
         continue;
       }
 
-      // Evaluation selon le type de declencheur
+      // Evaluation des conditions composees (Sprint 27-28, ADR-density-alerts §6.2)
+      // Si la regle a des conditions composees, les evaluer EN PREMIER.
+      // Backward compatible : les regles sans conditions (conditions=[]) utilisent
+      // le switch classique ci-dessous.
+      if (regle.conditions && regle.conditions.length > 0) {
+        const results = regle.conditions.map((c: ConditionRegle) => evalCondition(c, ctx));
+        const condMatch = regle.logique === "OU"
+          ? results.some(Boolean)
+          : results.every(Boolean);
+        if (!condMatch) continue; // Conditions composees non remplies → skip
+
+        // Conditions remplies → match immediat (les conditions remplacent le switch)
+        const score = (11 - regle.priorite) * 10;
+        matches.push({
+          regle,
+          vague: ctx.vague,
+          context: ctx,
+          score,
+          bacId: ctx.bac?.id ?? null,
+          bacNom: ctx.bac?.nom ?? null,
+        });
+        continue; // Passer a la regle suivante
+      }
+
+      // Evaluation selon le type de declencheur (regles legacy sans conditions composees)
       let triggered = false;
 
       switch (regle.typeDeclencheur as TypeDeclencheur) {
@@ -389,6 +518,23 @@ export function evaluateRules(
           break;
         case TypeDeclencheur.JALON:
           triggered = evalJalon(regle, ctx);
+          break;
+        // Sprint 27-28 (ADR-density-alerts) — nouveaux declencheurs via conditionValeur direct
+        // Ces types peuvent aussi etre utilises en mode legacy (sans conditions composees).
+        case TypeDeclencheur.SEUIL_DENSITE:
+          triggered = regle.conditionValeur == null
+            ? ctx.densiteKgM3 != null
+            : ctx.densiteKgM3 != null && ctx.densiteKgM3 > regle.conditionValeur;
+          break;
+        case TypeDeclencheur.SEUIL_RENOUVELLEMENT:
+          triggered = regle.conditionValeur == null
+            ? ctx.tauxRenouvellementPctJour != null
+            : ctx.tauxRenouvellementPctJour != null && ctx.tauxRenouvellementPctJour < regle.conditionValeur;
+          break;
+        case TypeDeclencheur.ABSENCE_RELEVE:
+          triggered = regle.conditionValeur == null
+            ? ctx.joursDepuisDernierReleveQualiteEau != null
+            : ctx.joursDepuisDernierReleveQualiteEau != null && ctx.joursDepuisDernierReleveQualiteEau >= regle.conditionValeur;
           break;
         default:
           triggered = false;

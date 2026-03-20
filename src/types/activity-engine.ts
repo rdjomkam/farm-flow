@@ -116,6 +116,49 @@ export interface RuleEvaluationContext {
     nombreInitial: number | null;
     poidsMoyenInitial: number | null;
   } | null;
+
+  // ---- Champs pour les conditions composees de densite (Sprint 27-28, ADR-density-alerts, 6.3) ----
+
+  /**
+   * Densite du bac courant en kg de biomasse par m3 d'eau.
+   *
+   * Calcul rigoureux via computeVivantsByBac() + derniere biometrie per-bac.
+   * Voir ADR-density-alerts section 6.3 pour l'algorithme complet.
+   *
+   * Null si :
+   * - bac est null (evaluation vague-level)
+   * - bac.volume est null ou <= 0
+   * - aucune biometrie disponible (poids moyen inconnu)
+   */
+  densiteKgM3: number | null;
+
+  /**
+   * Taux de renouvellement d'eau moyen en %/jour sur la fenetre configuree
+   * (configElevage.fenetreRenouvellementJours, defaut: 7 jours).
+   *
+   * Calcule depuis les releves RENOUVELLEMENT du bac dans la fenetre via
+   * computeTauxRenouvellement(). Si pourcentageRenouvellement est null mais
+   * volumeRenouvele est renseigne et bac.volume est connu, la conversion est
+   * effectuee automatiquement.
+   *
+   * Null si :
+   * - bac est null (evaluation vague-level)
+   * - aucun releve RENOUVELLEMENT dans la fenetre
+   * - bac.volume est null et seul volumeRenouvele est renseigne (conversion impossible)
+   */
+  tauxRenouvellementPctJour: number | null;
+
+  /**
+   * Nombre de jours ecoules depuis le dernier releve QUALITE_EAU pour ce bac.
+   *
+   * Utilise par le declencheur ABSENCE_RELEVE pour alerter sur l'absence de
+   * mesures qualite eau lors d'une densite elevee.
+   *
+   * Null si :
+   * - bac est null (evaluation vague-level)
+   * - aucun releve QUALITE_EAU n'a jamais ete enregistre pour ce bac
+   */
+  joursDepuisDernierReleveQualiteEau: number | null;
 }
 
 // ---------------------------------------------------------------------------

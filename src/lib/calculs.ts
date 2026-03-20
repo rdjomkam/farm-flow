@@ -723,6 +723,185 @@ export function genererCourbeProjection(
   return points;
 }
 
+// ---------------------------------------------------------------------------
+// Sprint 27-28 (ADR-density-alerts) — Calcul de densite par bac
+// ---------------------------------------------------------------------------
+
+/**
+ * Calcule la densite de biomasse pour un bac specifique en kg/m3.
+ *
+ * Algorithme :
+ *   1. Recuperer les vivants du bac via computeVivantsByBac()
+ *   2. Trouver la derniere biometrie filtree par bacId (per-bac)
+ *   3. Fallback vers la derniere biometrie globale (bacId == null) si aucune per-bac
+ *   4. densiteKgM3 = (poidsMoyenBac * vivantsBac / 1000) / (volume / 1000)
+ *
+ * @param bac                 - Bac dont on veut la densite
+ * @param bacs                - Tous les bacs de la vague (pour computeVivantsByBac)
+ * @param releves             - Tous les releves de la vague (tous types)
+ * @param nombreInitialVague  - Nombre initial de poissons pour la vague
+ * @returns Densite en kg/m3, ou null si donnees insuffisantes
+ */
+export function calculerDensiteBac(
+  bac: { id: string; volume: number | null; nombreInitial: number | null },
+  bacs: { id: string; nombreInitial: number | null }[],
+  releves: {
+    bacId: string | null;
+    typeReleve: string;
+    nombreMorts: number | null;
+    nombreCompte: number | null;
+    poidsMoyen: number | null;
+    date: Date;
+  }[],
+  nombreInitialVague: number
+): number | null {
+  if (bac.volume == null || bac.volume <= 0) return null;
+
+  // 1. Obtenir le nombre de vivants pour CE bac
+  const vivantsByBac = computeVivantsByBac(bacs, releves, nombreInitialVague);
+  const vivantsBac = vivantsByBac.get(bac.id) ?? 0;
+  if (vivantsBac <= 0) return null;
+
+  // 2. Trouver la derniere biometrie per-bac (triees par date croissante → derniere = la plus recente)
+  const biometriesParBac = releves
+    .filter((r) => r.typeReleve === "BIOMETRIE" && r.bacId === bac.id && r.poidsMoyen != null)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const derniereBiometrieParBac = biometriesParBac.at(-1) ?? null;
+
+  // 3. Fallback vers la derniere biometrie globale (bacId == null)
+  const biometriesGlobales = releves
+    .filter((r) => r.typeReleve === "BIOMETRIE" && r.bacId == null && r.poidsMoyen != null)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const derniereBiometrieGlobale = biometriesGlobales.at(-1) ?? null;
+
+  const poidsMoyenBac =
+    derniereBiometrieParBac?.poidsMoyen ??
+    derniereBiometrieGlobale?.poidsMoyen ??
+    null;
+
+  if (poidsMoyenBac == null) return null;
+
+  // 4. Calculer la densite : biomasse (kg) / volume (m3)
+  const biomasseBacKg = (poidsMoyenBac * vivantsBac) / 1000;
+  const volumeM3 = bac.volume / 1000;
+  return biomasseBacKg / volumeM3;
+}
+
+/**
+ * Calcule la densite de biomasse agregee d'une vague (somme des biomasses / somme des volumes).
+ *
+ * Utilisee pour l'affichage sur le dashboard uniquement.
+ * Pour les alertes per-bac, utiliser calculerDensiteBac().
+ *
+ * @param bacs    - Tous les bacs de la vague avec volume
+ * @param releves - Tous les releves de la vague
+ * @param nombreInitialVague - Nombre initial de poissons pour la vague
+ * @returns Densite agregee en kg/m3, ou null si donnees insuffisantes
+ */
+export function calculerDensiteVague(
+  bacs: { id: string; volume: number | null; nombreInitial: number | null }[],
+  releves: {
+    bacId: string | null;
+    typeReleve: string;
+    nombreMorts: number | null;
+    nombreCompte: number | null;
+    poidsMoyen: number | null;
+    date: Date;
+  }[],
+  nombreInitialVague: number
+): number | null {
+  if (bacs.length === 0) return null;
+
+  const vivantsByBac = computeVivantsByBac(bacs, releves, nombreInitialVague);
+
+  let totalBiomasseKg = 0;
+  let totalVolumeM3 = 0;
+
+  for (const bac of bacs) {
+    if (bac.volume == null || bac.volume <= 0) continue;
+
+    const vivantsBac = vivantsByBac.get(bac.id) ?? 0;
+    if (vivantsBac <= 0) continue;
+
+    // Derniere biometrie per-bac puis globale en fallback
+    const biometriesParBac = releves
+      .filter((r) => r.typeReleve === "BIOMETRIE" && r.bacId === bac.id && r.poidsMoyen != null)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const biometriesGlobales = releves
+      .filter((r) => r.typeReleve === "BIOMETRIE" && r.bacId == null && r.poidsMoyen != null)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const poidsMoyen =
+      biometriesParBac.at(-1)?.poidsMoyen ??
+      biometriesGlobales.at(-1)?.poidsMoyen ??
+      null;
+
+    if (poidsMoyen == null) continue;
+
+    totalBiomasseKg += (poidsMoyen * vivantsBac) / 1000;
+    totalVolumeM3 += bac.volume / 1000;
+  }
+
+  if (totalVolumeM3 <= 0) return null;
+  return totalBiomasseKg / totalVolumeM3;
+}
+
+/**
+ * Calcule le taux de renouvellement d'eau effectif en %/jour.
+ *
+ * Aggrege les releves RENOUVELLEMENT sur une fenetre glissante et calcule
+ * la moyenne quotidienne.
+ *
+ * @param relevesRenouvellement - Releves de type RENOUVELLEMENT (tous bacId confondus ou filtres)
+ * @param bacVolumeLitres       - Volume du bac en litres (pour convertir volumeRenouvele → %)
+ * @param periodeDays           - Fenetre en jours (defaut: 7)
+ * @returns Taux moyen en %/jour, ou null si aucun releve dans la fenetre
+ */
+export function computeTauxRenouvellement(
+  relevesRenouvellement: {
+    date: Date;
+    pourcentageRenouvellement: number | null;
+    volumeRenouvele: number | null;
+  }[],
+  bacVolumeLitres: number | null,
+  periodeDays: number = 7
+): number | null {
+  const now = Date.now();
+  const cutoff = now - periodeDays * 24 * 60 * 60 * 1000;
+
+  // Filtrer les releves dans la fenetre
+  const relevesDansFenetre = relevesRenouvellement.filter(
+    (r) => new Date(r.date).getTime() >= cutoff
+  );
+
+  if (relevesDansFenetre.length === 0) return null;
+
+  let totalPct = 0;
+  let count = 0;
+
+  for (const r of relevesDansFenetre) {
+    if (r.pourcentageRenouvellement != null) {
+      totalPct += r.pourcentageRenouvellement;
+      count++;
+    } else if (r.volumeRenouvele != null && bacVolumeLitres != null && bacVolumeLitres > 0) {
+      // Convertir volume en pourcentage
+      const pct = (r.volumeRenouvele / bacVolumeLitres) * 100;
+      totalPct += pct;
+      count++;
+    }
+    // Si ni pourcentage ni volume convertible → ignorer
+  }
+
+  if (count === 0) return null;
+
+  // Taux moyen sur la periode = somme des % / nombre de jours (pas de releves)
+  // Formule : sum(percentages) / periodeDays → %/jour
+  return totalPct / periodeDays;
+}
+
 /**
  * Convertit une quantite entre unites de stock.
  *

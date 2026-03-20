@@ -8,6 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogTrigger,
   DialogContent,
@@ -18,8 +25,15 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Permission } from "@/types";
+import { Permission, TypeSystemeBac } from "@/types";
 import type { BacResponse } from "@/types";
+
+const TYPE_SYSTEME_LABELS: Record<TypeSystemeBac, string> = {
+  [TypeSystemeBac.BAC_BETON]: "Bac beton / plastique",
+  [TypeSystemeBac.BAC_PLASTIQUE]: "Bac plastique",
+  [TypeSystemeBac.ETANG_TERRE]: "Etang en terre",
+  [TypeSystemeBac.RAS]: "Systeme RAS (recirculation)",
+};
 
 interface BacsListClientProps {
   bacs: BacResponse[];
@@ -43,6 +57,7 @@ export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
   const [editNombrePoissons, setEditNombrePoissons] = useState("");
   const [editNombreInitial, setEditNombreInitial] = useState("");
   const [editPoidsMoyenInitial, setEditPoidsMoyenInitial] = useState("");
+  const [editTypeSysteme, setEditTypeSysteme] = useState<string>("");
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [editSubmitting, setEditSubmitting] = useState(false);
 
@@ -97,6 +112,7 @@ export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
     setEditNombrePoissons(bac.nombrePoissons != null ? String(bac.nombrePoissons) : "");
     setEditNombreInitial(bac.nombreInitial != null ? String(bac.nombreInitial) : "");
     setEditPoidsMoyenInitial(bac.poidsMoyenInitial != null ? String(bac.poidsMoyenInitial) : "");
+    setEditTypeSysteme(bac.typeSysteme ?? "");
     setEditErrors({});
     setEditOpen(true);
   }
@@ -120,6 +136,7 @@ export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
           ...(editNombrePoissons !== "" && { nombrePoissons: Number(editNombrePoissons) }),
           ...(editNombreInitial !== "" && { nombreInitial: Number(editNombreInitial) }),
           ...(editPoidsMoyenInitial !== "" && { poidsMoyenInitial: Number(editPoidsMoyenInitial) }),
+          ...(editTypeSysteme !== "" && { typeSysteme: editTypeSysteme }),
         }),
       });
       if (!res.ok) {
@@ -292,6 +309,22 @@ export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
               onChange={(e) => setEditPoidsMoyenInitial(e.target.value)}
               error={editErrors.poidsMoyenInitial}
             />
+            <Select
+              value={editTypeSysteme || "__none__"}
+              onValueChange={(val) => setEditTypeSysteme(val === "__none__" ? "" : val)}
+            >
+              <SelectTrigger label="Type de systeme">
+                <SelectValue placeholder="Selectionner le type de systeme" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Non specifie</SelectItem>
+                {Object.values(TypeSystemeBac).map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {TYPE_SYSTEME_LABELS[t]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <DialogFooter>
               <Button type="button" variant="secondary" onClick={() => setEditOpen(false)}>
                 Annuler

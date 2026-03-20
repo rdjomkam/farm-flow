@@ -209,6 +209,37 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (body.typeReleve === TypeReleve.RENOUVELLEMENT) {
+      const hasPct = body.pourcentageRenouvellement != null;
+      const hasVol = body.volumeRenouvele != null;
+      if (!hasPct && !hasVol) {
+        errors.push({
+          field: "pourcentageRenouvellement",
+          message: "Au moins un champ est obligatoire : pourcentageRenouvellement ou volumeRenouvele.",
+        });
+      }
+      if (hasPct) {
+        if (
+          typeof body.pourcentageRenouvellement !== "number" ||
+          body.pourcentageRenouvellement < 0 ||
+          body.pourcentageRenouvellement > 100
+        ) {
+          errors.push({
+            field: "pourcentageRenouvellement",
+            message: "Le pourcentage de renouvellement doit etre compris entre 0 et 100.",
+          });
+        }
+      }
+      if (hasVol) {
+        if (typeof body.volumeRenouvele !== "number" || body.volumeRenouvele <= 0) {
+          errors.push({
+            field: "volumeRenouvele",
+            message: "Le volume renouvele doit etre superieur a 0.",
+          });
+        }
+      }
+    }
+
     // Validation date optionnelle
     let releveDate: Date | undefined;
     if (body.date != null) {
@@ -336,6 +367,14 @@ export async function POST(request: NextRequest) {
           description: body.description.trim(),
         };
         break;
+      case TypeReleve.RENOUVELLEMENT:
+        dto = {
+          ...base,
+          typeReleve: TypeReleve.RENOUVELLEMENT,
+          ...(body.pourcentageRenouvellement != null && { pourcentageRenouvellement: body.pourcentageRenouvellement }),
+          ...(body.volumeRenouvele != null && { volumeRenouvele: body.volumeRenouvele }),
+        };
+        break;
       default:
         return NextResponse.json(
           { status: 400, message: `Type de relevé non supporté: ${body.typeReleve}` },
@@ -424,6 +463,8 @@ async function triggerSeuilRulesAsync(
           ammoniac: true,
           nombreCompte: true,
           bacId: true,
+          pourcentageRenouvellement: true,
+          volumeRenouvele: true,
         },
       },
       configElevage: true,
@@ -496,8 +537,9 @@ async function triggerSeuilRulesAsync(
   const configCast = (vague.configElevage ?? null) as any;
 
   if (vague.bacs && vague.bacs.length > 0) {
+    const allBacsCast = vague.bacs as Parameters<typeof buildEvaluationContext>[5];
     for (const bac of vague.bacs) {
-      contexts.push(buildEvaluationContext(vagueCtx, relevesCast, stockCast, configCast, bac));
+      contexts.push(buildEvaluationContext(vagueCtx, relevesCast, stockCast, configCast, bac, allBacsCast));
     }
     // Vague-level for STOCK_BAS
     contexts.push(buildEvaluationContext(vagueCtx, relevesCast, stockCast, configCast, null));

@@ -114,6 +114,8 @@ export interface UpdateBacDTO {
   nombreInitial?: number;
   /** Poids moyen initial en grammes */
   poidsMoyenInitial?: number;
+  /** Type de systeme d'elevage — Sprint 27-28 (ADR-density-alerts, section 5.2) */
+  typeSysteme?: string;
 }
 
 /** Reponse d'un bac avec indication d'occupation */
@@ -289,6 +291,15 @@ export interface CreateReleveObservationDTO extends CreateReleveBase {
   description: string;
 }
 
+/** DTO pour creer un releve de renouvellement d'eau (Sprint 27-28, ADR-density-alerts) */
+export interface CreateReleveRenouvellementDTO extends CreateReleveBase {
+  typeReleve: TypeReleve.RENOUVELLEMENT;
+  /** Pourcentage du volume du bac renouvelee (0-100) — au moins un des deux est requis */
+  pourcentageRenouvellement?: number;
+  /** Volume reel en litres renouvele — alternative ou complement a pourcentageRenouvellement */
+  volumeRenouvele?: number;
+}
+
 /**
  * Union type pour la creation d'un releve.
  * Le typeReleve determine les champs requis.
@@ -299,7 +310,8 @@ export type CreateReleveDTO =
   | CreateReleveAlimentationDTO
   | CreateReleveQualiteEauDTO
   | CreateReleveComptageDTO
-  | CreateReleveObservationDTO;
+  | CreateReleveObservationDTO
+  | CreateReleveRenouvellementDTO;
 
 /** Filtres pour lister les releves (query params) */
 export interface ReleveFilters {
@@ -993,6 +1005,7 @@ export const RELEVE_COMPATIBLE_TYPES: TypeActivite[] = [
   TypeActivite.BIOMETRIE,
   TypeActivite.QUALITE_EAU,
   TypeActivite.COMPTAGE,
+  TypeActivite.RENOUVELLEMENT, // Sprint 27-28 — Renouvellement eau
 ];
 
 /** Filtres pour lister les activites du calendrier */
@@ -1066,6 +1079,8 @@ export const ACTIVITE_RELEVE_TYPE_MAP: Partial<Record<TypeActivite, TypeReleve>>
   [TypeActivite.BIOMETRIE]: TypeReleve.BIOMETRIE,
   [TypeActivite.QUALITE_EAU]: TypeReleve.QUALITE_EAU,
   [TypeActivite.COMPTAGE]: TypeReleve.COMPTAGE,
+  // Sprint 27-28 — Renouvellement eau
+  [TypeActivite.RENOUVELLEMENT]: TypeReleve.RENOUVELLEMENT,
 };
 
 // ---------------------------------------------------------------------------

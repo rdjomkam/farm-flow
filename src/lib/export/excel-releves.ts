@@ -30,6 +30,7 @@ const typeReleveLabels: Record<TypeReleve, string> = {
   [TypeReleve.QUALITE_EAU]: "QUALITE_EAU",
   [TypeReleve.COMPTAGE]: "COMPTAGE",
   [TypeReleve.OBSERVATION]: "OBSERVATION",
+  [TypeReleve.RENOUVELLEMENT]: "RENOUVELLEMENT",
 };
 
 // ---------------------------------------------------------------------------

@@ -5,7 +5,7 @@ import { AccessDenied } from "@/components/ui/access-denied";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getVagues } from "@/lib/queries/vagues";
 import { getBacsLibres } from "@/lib/queries/bacs";
-import { StatutVague, Permission } from "@/types";
+import { StatutVague, Permission, TypeSystemeBac } from "@/types";
 import type { VagueSummaryResponse, BacResponse } from "@/types";
 
 export default async function VaguesPage() {
@@ -48,6 +48,7 @@ export default async function VaguesPage() {
     nombrePoissons: b.nombrePoissons,
     nombreInitial: b.nombreInitial,
     poidsMoyenInitial: b.poidsMoyenInitial,
+    typeSysteme: (b.typeSysteme as TypeSystemeBac | null) ?? null,
     vagueId: b.vagueId,
     siteId: b.siteId,
     vagueCode: null,

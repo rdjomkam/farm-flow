@@ -11,7 +11,7 @@
  */
 
 import { evaluateRules } from "@/lib/activity-engine/evaluator";
-import { TypeDeclencheur, PhaseElevage, TypeActivite, StatutActivite } from "@/types";
+import { TypeDeclencheur, PhaseElevage, TypeActivite, StatutActivite, LogiqueCondition } from "@/types";
 import type { RuleEvaluationContext } from "@/types/activity-engine";
 import type { RegleActivite } from "@/types";
 
@@ -24,7 +24,7 @@ function makeRegle(overrides: Partial<RegleActivite> = {}): RegleActivite {
     id: "regle-1",
     nom: "Test Regle",
     description: null,
-    typeActivite: TypeActivite.CONTROLE,
+    typeActivite: TypeActivite.AUTRE,
     typeDeclencheur: TypeDeclencheur.CALENDRIER,
     conditionValeur: null,
     conditionValeur2: null,
@@ -39,6 +39,8 @@ function makeRegle(overrides: Partial<RegleActivite> = {}): RegleActivite {
     firedOnce: false,
     siteId: "site-1",
     userId: "user-1",
+    conditions: [],
+    logique: LogiqueCondition.ET,
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-01-01"),
     ...overrides,
@@ -71,6 +73,9 @@ function makeContext(overrides: Partial<RuleEvaluationContext> = {}): RuleEvalua
     derniersReleves: [],
     phase: PhaseElevage.CROISSANCE_DEBUT,
     bac: null,
+    densiteKgM3: null,
+    tauxRenouvellementPctJour: null,
+    joursDepuisDernierReleveQualiteEau: null,
     ...overrides,
   };
 }

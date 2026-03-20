@@ -34,6 +34,7 @@ const typeLabels: Record<TypeReleve, string> = {
   [TypeReleve.QUALITE_EAU]: "Qualite eau",
   [TypeReleve.COMPTAGE]: "Comptage",
   [TypeReleve.OBSERVATION]: "Observation",
+  [TypeReleve.RENOUVELLEMENT]: "Renouvellement",
 };
 
 const causeLabels: Record<CauseMortalite, string> = {

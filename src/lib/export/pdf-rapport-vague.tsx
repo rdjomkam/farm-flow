@@ -43,6 +43,7 @@ const typeReleveLabels: Record<TypeReleve, string> = {
   [TypeReleve.QUALITE_EAU]: "Qualité eau",
   [TypeReleve.COMPTAGE]: "Comptage",
   [TypeReleve.OBSERVATION]: "Observation",
+  [TypeReleve.RENOUVELLEMENT]: "Renouvellement",
 };
 
 const statutLabels: Record<StatutVague, string> = {

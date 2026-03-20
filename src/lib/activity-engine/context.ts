@@ -17,6 +17,8 @@ import {
   calculerTauxSurvie,
   calculerBiomasse,
   detecterPhase,
+  calculerDensiteBac,
+  computeTauxRenouvellement,
 } from "@/lib/calculs";
 
 // ---------------------------------------------------------------------------
@@ -45,6 +47,8 @@ type ReleveCtx = Pick<
   | "ammoniac"
   | "nombreCompte"
   | "bacId"
+  | "pourcentageRenouvellement"
+  | "volumeRenouvele"
 >;
 
 /** Bac minimal pour l'iteration per-bac */
@@ -85,6 +89,7 @@ const WAT_OFFSET_MS = 1 * 60 * 60 * 1000;
  * @param stock         - Produits en stock du site avec quantites
  * @param configElevage - Configuration d'elevage (nullable)
  * @param bac           - Bac courant pour l'iteration per-bac (null = vague-level)
+ * @param allBacs       - Tous les bacs de la vague (pour calculerDensiteBac — Sprint 27-28)
  * @returns             Contexte complet d'evaluation
  */
 export function buildEvaluationContext(
@@ -92,7 +97,8 @@ export function buildEvaluationContext(
   releves: ReleveCtx[],
   stock: ProduitStockCtx[],
   configElevage: ConfigElevage | null,
-  bac?: BacCtx | null
+  bac?: BacCtx | null,
+  allBacs?: BacCtx[]
 ): RuleEvaluationContext {
   // ---- Calcul du temps ecoule (UTC+1 = WAT) ----
   const nowWAT = new Date(Date.now() + WAT_OFFSET_MS);
@@ -226,8 +232,74 @@ export function buildEvaluationContext(
         seuilJuvenile: configElevage.seuilJuvenile,
         seuilGrossissement: configElevage.seuilGrossissement,
         seuilFinition: configElevage.seuilFinition,
+        // Seuils de densite differencies par type de systeme (Sprint 27-28)
+        densiteBacBetonAlerte: configElevage.densiteBacBetonAlerte,
+        densiteBacBetonCritique: configElevage.densiteBacBetonCritique,
+        densiteEtangAlerte: configElevage.densiteEtangAlerte,
+        densiteEtangCritique: configElevage.densiteEtangCritique,
+        densiteRasAlerte: configElevage.densiteRasAlerte,
+        densiteRasCritique: configElevage.densiteRasCritique,
+        fenetreRenouvellementJours: configElevage.fenetreRenouvellementJours,
       }
     : null;
+
+  // ---- Sprint 27-28 (ADR-density-alerts) — densiteKgM3 ----
+  // Calcul rigoureux via computeVivantsByBac() + biometrie filtree par bacId.
+  // Requires: bac non-null + volume connu + au moins une biometrie disponible.
+  let densiteKgM3: number | null = null;
+  if (bac != null) {
+    const bacsForDensity = allBacs ?? (bac ? [bac] : []);
+    // Adapter les releves au type attendu par calculerDensiteBac
+    const relevesAdaptes = sorted.map((r) => ({
+      bacId: r.bacId ?? null,
+      typeReleve: r.typeReleve,
+      nombreMorts: r.nombreMorts ?? null,
+      nombreCompte: r.nombreCompte ?? null,
+      poidsMoyen: r.poidsMoyen ?? null,
+      date: r.date,
+    }));
+    densiteKgM3 = calculerDensiteBac(
+      { id: bac.id, volume: bac.volume, nombreInitial: bac.nombreInitial },
+      bacsForDensity.map((b) => ({ id: b.id, nombreInitial: b.nombreInitial })),
+      relevesAdaptes,
+      vague.nombreInitial
+    );
+  }
+
+  // ---- Sprint 27-28 — tauxRenouvellementPctJour ----
+  // Filtre les releves RENOUVELLEMENT pour ce bac et calcule le taux moyen.
+  let tauxRenouvellementPctJour: number | null = null;
+  if (bac != null) {
+    const fenetreJours = configElevage?.fenetreRenouvellementJours ?? 7;
+    const relevesRenouvellement = sorted
+      .filter((r) => r.typeReleve === TypeReleve.RENOUVELLEMENT && r.bacId === bac.id)
+      .map((r) => ({
+        date: r.date,
+        pourcentageRenouvellement: r.pourcentageRenouvellement ?? null,
+        volumeRenouvele: r.volumeRenouvele ?? null,
+      }));
+    tauxRenouvellementPctJour = computeTauxRenouvellement(
+      relevesRenouvellement,
+      bac.volume,
+      fenetreJours
+    );
+  }
+
+  // ---- Sprint 27-28 — joursDepuisDernierReleveQualiteEau ----
+  // Cherche le dernier releve QUALITE_EAU pour ce bac et calcule les jours ecoules.
+  let joursDepuisDernierReleveQualiteEau: number | null = null;
+  if (bac != null) {
+    const derniereQualiteEau = sorted
+      .filter((r) => r.typeReleve === TypeReleve.QUALITE_EAU && r.bacId === bac.id)
+      .at(-1) ?? null;
+    if (derniereQualiteEau != null) {
+      const nowWATMs = Date.now() + WAT_OFFSET_MS;
+      const dateWATMs = new Date(derniereQualiteEau.date).getTime() + WAT_OFFSET_MS;
+      joursDepuisDernierReleveQualiteEau = Math.floor(
+        (nowWATMs - dateWATMs) / (1000 * 60 * 60 * 24)
+      );
+    }
+  }
 
   return {
     vague: {
@@ -246,5 +318,8 @@ export function buildEvaluationContext(
     derniersReleves,
     phase,
     bac: bac ?? null,
+    densiteKgM3,
+    tauxRenouvellementPctJour,
+    joursDepuisDernierReleveQualiteEau,
   };
 }

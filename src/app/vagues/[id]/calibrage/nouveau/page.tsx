@@ -7,7 +7,7 @@ import { AccessDenied } from "@/components/ui/access-denied";
 import { CalibrageFormClient } from "@/components/calibrage/calibrage-form-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getVagueById } from "@/lib/queries/vagues";
-import { Permission, StatutVague } from "@/types";
+import { Permission, StatutVague, TypeSystemeBac } from "@/types";
 import type { BacResponse } from "@/types";
 
 export default async function NouveauCalibragePage({
@@ -41,6 +41,7 @@ export default async function NouveauCalibragePage({
     nombrePoissons: b.nombrePoissons ?? 0,
     nombreInitial: b.nombreInitial ?? null,
     poidsMoyenInitial: b.poidsMoyenInitial ?? null,
+    typeSysteme: (b.typeSysteme as TypeSystemeBac | null) ?? null,
     vagueId: b.vagueId ?? null,
     siteId: b.siteId,
     createdAt: b.createdAt,

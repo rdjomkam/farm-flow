@@ -63,6 +63,8 @@ export async function runEngineForSite(
           ammoniac: true,
           nombreCompte: true,
           bacId: true,
+          pourcentageRenouvellement: true,
+          volumeRenouvele: true,
         },
       },
       configElevage: true,
@@ -150,10 +152,11 @@ export async function runEngineForSite(
     const configCast = (vague.configElevage ?? null) as unknown as Parameters<typeof buildEvaluationContext>[3];
 
     if (vague.bacs && vague.bacs.length > 0) {
+      const allBacsCast = vague.bacs as unknown as Parameters<typeof buildEvaluationContext>[5];
       // Per-bac contexts
       for (const bac of vague.bacs) {
         contextes.push(
-          buildEvaluationContext(vagueCtx, relevesCast, stockCast, configCast, bac)
+          buildEvaluationContext(vagueCtx, relevesCast, stockCast, configCast, bac, allBacsCast)
         );
       }
       // Also add a vague-level context (bac: null) for STOCK_BAS rules

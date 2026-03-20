@@ -132,6 +132,9 @@ export async function createReleve(siteId: string, userId: string, data: CreateR
         }),
         // Champs observation
         ...("description" in data && { description: data.description }),
+        // Champs renouvellement eau (Sprint 27-28, ADR-density-alerts)
+        ...("pourcentageRenouvellement" in data && { pourcentageRenouvellement: data.pourcentageRenouvellement }),
+        ...("volumeRenouvele" in data && { volumeRenouvele: data.volumeRenouvele }),
       },
     });
 

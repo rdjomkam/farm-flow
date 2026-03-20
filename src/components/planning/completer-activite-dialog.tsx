@@ -34,6 +34,7 @@ const typeReleveLabels: Record<TypeReleve, string> = {
   [TypeReleve.QUALITE_EAU]: "Qualite eau",
   [TypeReleve.COMPTAGE]: "Comptage",
   [TypeReleve.OBSERVATION]: "Observation",
+  [TypeReleve.RENOUVELLEMENT]: "Renouvellement",
 };
 
 interface CompleterActiviteDialogProps {

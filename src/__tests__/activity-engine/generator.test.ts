@@ -10,7 +10,7 @@
  * On mock prisma pour eviter une connexion DB reelle.
  */
 
-import { TypeDeclencheur, TypeActivite, StatutActivite } from "@/types";
+import { TypeDeclencheur, TypeActivite, StatutActivite, LogiqueCondition } from "@/types";
 import type { RegleActivite } from "@/types";
 import type { RuleMatch, RuleEvaluationContext } from "@/types/activity-engine";
 
@@ -60,6 +60,8 @@ function makeRegle(overrides: Partial<RegleActivite> = {}): RegleActivite {
     firedOnce: false,
     siteId: "site-1",
     userId: "user-1",
+    conditions: [],
+    logique: LogiqueCondition.ET,
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-01-01"),
     ...overrides,
@@ -92,6 +94,9 @@ function makeContext(vagueId = "vague-1"): RuleEvaluationContext {
     derniersReleves: [],
     phase: "JUVENILE",
     bac: null,
+    densiteKgM3: null,
+    tauxRenouvellementPctJour: null,
+    joursDepuisDernierReleveQualiteEau: null,
   };
 }
 

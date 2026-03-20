@@ -284,8 +284,10 @@ export async function generateActivities(
             data: {
               titre: payload.titre,
               description: payload.description,
-              typeActivite: payload.typeActivite,
-              statut: payload.statut,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              typeActivite: payload.typeActivite as any,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              statut: payload.statut as any,
               dateDebut: payload.dateDebut,
               dateFin: payload.dateFin,
               recurrence: payload.recurrence,

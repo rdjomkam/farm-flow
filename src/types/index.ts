@@ -53,6 +53,11 @@ export {
   // Sprint 26 — CustomPlaceholder
   PlaceholderMode,
   PlaceholderFormat,
+  // Sprint 27-28 — Alertes densite (ADR-density-alerts)
+  TypeSystemeBac,
+  OperateurCondition,
+  LogiqueCondition,
+  SeveriteAlerte,
 } from "./models";
 export type {
   Site,
@@ -130,6 +135,8 @@ export type {
   RegleActivite,
   RegleActiviteWithRelations,
   RegleActiviteWithCount,
+  // Sprint 27-28 — Conditions composees (ADR-density-alerts)
+  ConditionRegle,
   // Sprint 23 — Monitoring Ingénieur
   NoteIngenieur,
   NoteIngenieurWithRelations,
@@ -208,6 +215,7 @@ export type {
   CreateReleveQualiteEauDTO,
   CreateReleveComptageDTO,
   CreateReleveObservationDTO,
+  CreateReleveRenouvellementDTO,
   CreateReleveConsommationDTO,
   CreateReleveDTO,
   UpdateReleveDTO,
@@ -426,3 +434,12 @@ export type {
   VenteExcelRow,
   ExportVentesExcelDTO,
 } from "./export";
+
+// Sprint 27-28 — Actions recommandees dans les Notifications (ADR-density-alerts, section 7)
+export type {
+  NotificationActionPayload,
+  CreateReleveAction,
+  ModifyBacAction,
+  ViewVagueAction,
+  ViewStockAction,
+} from "./notifications";

@@ -2024,4 +2024,195 @@ VALUES
     NOW() - INTERVAL '11 days'
   );
 
+-- ──────────────────────────────────────────
+-- SPRINT 27-28 : Règles globales de densité avec conditions composées (R1-R6)
+-- siteId = NULL => règles globales DKFarm applicables à tous les sites
+-- Ces règles utilisent la logique de conditions composées (ConditionRegle)
+-- firedOnce = false : la densité fluctue, re-évaluer à chaque relevé
+-- ──────────────────────────────────────────
+
+INSERT INTO "RegleActivite" (
+  id, nom, description,
+  "typeActivite", "typeDeclencheur",
+  "conditionValeur", "conditionValeur2",
+  "phaseMin", "phaseMax",
+  "intervalleJours",
+  "titreTemplate", "descriptionTemplate", "instructionsTemplate",
+  priorite, "isActive", "firedOnce",
+  logique,
+  "siteId", "userId",
+  "createdAt", "updatedAt"
+) VALUES
+
+-- ── R1 : Densité élevée + renouvellement insuffisant (50-100 kg/m3) ──────────
+(
+  'rule_densite_renouv_50',
+  'Densité élevée + renouvellement insuffisant (50-100 kg/m3)',
+  'Alerte quand la densité dépasse 50 kg/m3 ET que le taux de renouvellement est inférieur à 50%/jour sur la fenêtre configurée. Correspond à la case ALERTE/EAU_NON_MESURÉE de la matrice densité × qualité eau.',
+  'QUALITE_EAU', 'SEUIL_DENSITE',
+  50.0, NULL,
+  NULL, NULL,
+  NULL,
+  'Renouvellement insuffisant — Bac {bac}',
+  'Densité actuelle : {valeur} kg/m3 (seuil : 50 kg/m3). Renouvellement moyen sur 7 jours : insuffisant. Augmenter le débit ou la fréquence de renouvellement.',
+  '1. Vérifier le débit d''eau entrant dans le bac.
+2. Effectuer un renouvellement de 50% du volume minimum.
+3. Enregistrer le renouvellement dans l''application (relevé type RENOUVELLEMENT).
+4. Mesurer la qualité de l''eau (O2, NH3, pH) après le renouvellement.
+5. Si densité > 100 kg/m3 : renouveler à 75% minimum.',
+  5, true, false,
+  'ET',
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+-- ── R2 : Densité haute + renouvellement insuffisant (100-200 kg/m3) ──────────
+(
+  'rule_densite_renouv_100',
+  'Densité haute + renouvellement insuffisant (100-200 kg/m3)',
+  'Alerte critique quand la densité dépasse 100 kg/m3 ET que le taux de renouvellement est inférieur à 75%/jour. À cette densité, un renouvellement insuffisant entraîne une accumulation rapide d''ammoniac.',
+  'QUALITE_EAU', 'SEUIL_DENSITE',
+  100.0, NULL,
+  NULL, NULL,
+  NULL,
+  'Renouvellement critique — Bac {bac} (densité {valeur} kg/m3)',
+  'Densité actuelle : {valeur} kg/m3 (seuil critique : 100 kg/m3). Renouvellement insuffisant. Risque d''accumulation d''ammoniac. Action urgente.',
+  '1. URGENT : Effectuer un renouvellement de 75% du volume minimum.
+2. Mesurer immédiatement NH3, O2 et pH.
+3. Si NH3 > 0.5 mg/L : renouvellement d''urgence à 100%.
+4. Enregistrer dans l''application (relevé RENOUVELLEMENT + relevé QUALITE_EAU).
+5. Réduire la ration alimentaire de 30% pour limiter les rejets azotés.
+6. Envisager une réduction de densité si situation persistante.',
+  3, true, false,
+  'ET',
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+-- ── R3 : Densité critique + renouvellement insuffisant (>200 kg/m3) ──────────
+(
+  'rule_densite_renouv_200',
+  'Densité critique + renouvellement insuffisant (>200 kg/m3)',
+  'Alerte urgente quand la densité dépasse 200 kg/m3 (seuil rouge bac béton/plastique) ET que le renouvellement est inférieur à 100%/jour. Risque sérieux de mortalité.',
+  'QUALITE_EAU', 'SEUIL_DENSITE',
+  200.0, NULL,
+  NULL, NULL,
+  NULL,
+  'URGENT — Eau stagnante — Bac {bac}',
+  'Densité actuelle : {valeur} kg/m3 (seuil urgence : 200 kg/m3). Renouvellement insuffisant. Risque de mortalité massive par asphyxie ou intoxication à l''ammoniac.',
+  '1. URGENCE ABSOLUE : Renouveler 100% du volume immédiatement.
+2. Mesurer O2 dissous (si < 4 mg/L : aération d''urgence).
+3. Mesurer NH3 (si > 1 mg/L : dilution massive obligatoire).
+4. Arrêter l''alimentation jusqu''à retour à la normale.
+5. Enregistrer le renouvellement et les mesures qualité eau.
+6. Si impossible de renouveler : envisager un transfert d''urgence des poissons.
+7. Alerter le responsable technique.',
+  1, true, false,
+  'ET',
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+-- ── R4 : Densité élevée + absence relevé qualité eau (> 3 jours) ─────────────
+(
+  'rule_densite_abs_qe',
+  'Densité élevée + absence relevé qualité eau',
+  'Alerte quand la densité dépasse 100 kg/m3 ET qu''aucun relevé de qualité eau n''a été enregistré depuis plus de 3 jours. À cette densité, un suivi quotidien de la qualité eau est impératif.',
+  'QUALITE_EAU', 'SEUIL_DENSITE',
+  100.0, NULL,
+  NULL, NULL,
+  NULL,
+  'Qualité eau non vérifiée — Bac {bac}',
+  'Densité actuelle : {valeur} kg/m3. Dernier relevé qualité eau : il y a plus de 3 jours. À cette densité, la qualité de l''eau doit être contrôlée quotidiennement.',
+  '1. Effectuer immédiatement un relevé de qualité eau complet.
+2. Mesurer : pH, O2 dissous, NH3, NO2, température.
+3. Si paramètres hors norme : suivre les instructions de l''alerte correspondante.
+4. Mettre en place un suivi quotidien (relevé QUALITE_EAU chaque matin).
+5. Considérer l''installation d''un kit de mesure multi-paramètre permanent.',
+  2, true, false,
+  'ET',
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+-- ── R5 : Problème qualité eau (paramètre critique — logique OU) ───────────────
+(
+  'rule_qualite_critique',
+  'Paramètre qualité eau critique (NH3 ou O2)',
+  'Alerte déclenchée si l''ammoniac dépasse 1.0 mg/L OU si l''oxygène dissous est inférieur à 4.0 mg/L. Correspond aux cases */CRITIQUE de la matrice densité × qualité eau.',
+  'QUALITE_EAU', 'SEUIL_QUALITE',
+  NULL, NULL,
+  NULL, NULL,
+  NULL,
+  'Paramètre critique — Bac {bac}',
+  'Un paramètre de qualité eau est dans la zone critique : NH3 > 1.0 mg/L OU O2 < 4.0 mg/L. Risque de mortalité sans intervention immédiate.',
+  '1. URGENCE : Identifier le paramètre critique (NH3 ou O2).
+2. Si O2 < 4 mg/L : aération d''urgence + renouvellement 50% du volume.
+3. Si NH3 > 1.0 mg/L : renouvellement 100% du volume, arrêt alimentation 24h.
+4. Mesurer à nouveau 1h après intervention.
+5. Enregistrer relevé QUALITE_EAU + relevé RENOUVELLEMENT.
+6. Surveiller toutes les 2h jusqu''au retour à la normale.',
+  1, true, false,
+  'OU',
+  NULL, NULL,
+  NOW(), NOW()
+),
+
+-- ── R6 : Densité critique + qualité eau dégradée (NH3 élevé) ─────────────────
+(
+  'rule_densite_nh3_critique',
+  'Densité critique + NH3 élevé',
+  'Alerte maximale quand la densité dépasse 200 kg/m3 ET que l''ammoniac dépasse 0.05 mg/L. Correspond à la case CRITIQUE/DÉGRADÉE ou CRITIQUE/CRITIQUE de la matrice. Risque de mortalité massive.',
+  'QUALITE_EAU', 'SEUIL_DENSITE',
+  200.0, NULL,
+  NULL, NULL,
+  NULL,
+  'URGENT — Densité + NH3 — Bac {bac}',
+  'SITUATION CRITIQUE : Densité {valeur} kg/m3 ET ammoniac élevé détecté. Combinaison létale pour Clarias gariepinus. Intervention immédiate obligatoire.',
+  '1. URGENCE ABSOLUE : Renouveler 100% du volume immédiatement.
+2. Arrêter l''alimentation pour les 24 prochaines heures.
+3. Si O2 < 5 mg/L : aération d''urgence en plus du renouvellement.
+4. Retirer tout poisson mort immédiatement.
+5. Enregistrer le renouvellement dans l''application.
+6. Mesurer NH3 toutes les 2h jusqu''à NH3 < 0.05 mg/L.
+7. Contacter immédiatement le responsable technique.
+8. Évaluer une réduction de densité (transfert vers bac disponible).',
+  1, true, false,
+  'ET',
+  NULL, NULL,
+  NOW(), NOW()
+);
+
+-- ──────────────────────────────────────────
+-- ConditionRegle pour les 6 règles de densité (R1-R6)
+-- ──────────────────────────────────────────
+
+INSERT INTO "ConditionRegle" (id, "regleId", "typeDeclencheur", operateur, "conditionValeur", "conditionValeur2", ordre)
+VALUES
+
+-- R1 : densité > 50 ET renouvellement < 50%/jour
+('cond_r1_c1', 'rule_densite_renouv_50',   'SEUIL_DENSITE',        'SUPERIEUR', 50.0,  NULL, 0),
+('cond_r1_c2', 'rule_densite_renouv_50',   'SEUIL_RENOUVELLEMENT', 'INFERIEUR', 50.0,  NULL, 1),
+
+-- R2 : densité > 100 ET renouvellement < 75%/jour
+('cond_r2_c1', 'rule_densite_renouv_100',  'SEUIL_DENSITE',        'SUPERIEUR', 100.0, NULL, 0),
+('cond_r2_c2', 'rule_densite_renouv_100',  'SEUIL_RENOUVELLEMENT', 'INFERIEUR', 75.0,  NULL, 1),
+
+-- R3 : densité > 200 ET renouvellement < 100%/jour
+('cond_r3_c1', 'rule_densite_renouv_200',  'SEUIL_DENSITE',        'SUPERIEUR', 200.0, NULL, 0),
+('cond_r3_c2', 'rule_densite_renouv_200',  'SEUIL_RENOUVELLEMENT', 'INFERIEUR', 100.0, NULL, 1),
+
+-- R4 : densité > 100 ET absence relevé qualité eau > 3 jours
+('cond_r4_c1', 'rule_densite_abs_qe',      'SEUIL_DENSITE',        'SUPERIEUR', 100.0, NULL, 0),
+('cond_r4_c2', 'rule_densite_abs_qe',      'ABSENCE_RELEVE',       'SUPERIEUR', 3.0,   NULL, 1),
+
+-- R5 : NH3 > 1.0 OU O2 < 4.0 (logique OU — declencheurs specifiques)
+('cond_r5_c1', 'rule_qualite_critique',    'SEUIL_AMMONIAC',       'SUPERIEUR', 1.0,   NULL, 0),
+('cond_r5_c2', 'rule_qualite_critique',    'SEUIL_OXYGENE',        'INFERIEUR', 4.0,   NULL, 1),
+
+-- R6 : densité > 200 ET NH3 > 0.05
+('cond_r6_c1', 'rule_densite_nh3_critique','SEUIL_DENSITE',        'SUPERIEUR', 200.0, NULL, 0),
+('cond_r6_c2', 'rule_densite_nh3_critique','SEUIL_AMMONIAC',       'SUPERIEUR', 0.05,  NULL, 1);
+
 COMMIT;
+

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { CreateBacDTO, UpdateBacDTO, BacResponse } from "@/types";
+import { TypeSystemeBac } from "@/types";
 
 /** Liste tous les bacs d'un site avec le code vague si assigne */
 export async function getBacs(siteId: string): Promise<BacResponse[]> {
@@ -16,6 +17,7 @@ export async function getBacs(siteId: string): Promise<BacResponse[]> {
     nombrePoissons: b.nombrePoissons,
     nombreInitial: b.nombreInitial,
     poidsMoyenInitial: b.poidsMoyenInitial,
+    typeSysteme: (b.typeSysteme as TypeSystemeBac | null) ?? null,
     vagueId: b.vagueId,
     siteId: b.siteId,
     vagueCode: b.vague?.code ?? null,
@@ -57,6 +59,7 @@ export async function updateBac(id: string, siteId: string, data: UpdateBacDTO) 
       ...(data.nombrePoissons !== undefined && { nombrePoissons: data.nombrePoissons }),
       ...(data.nombreInitial !== undefined && { nombreInitial: data.nombreInitial }),
       ...(data.poidsMoyenInitial !== undefined && { poidsMoyenInitial: data.poidsMoyenInitial }),
+      ...(data.typeSysteme !== undefined && { typeSysteme: data.typeSysteme as TypeSystemeBac | null }),
     },
   });
 }

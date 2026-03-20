@@ -117,8 +117,10 @@ export async function findMatchingActivite(
   return tx.activite.findFirst({
     where: {
       siteId,
-      typeActivite: typeReleve,
-      statut: { in: [StatutActivite.PLANIFIEE, StatutActivite.EN_RETARD] },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      typeActivite: typeReleve as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      statut: { in: [StatutActivite.PLANIFIEE as any, StatutActivite.EN_RETARD as any] },
       ...(vagueId && { vagueId }),
       dateDebut: { gte: dateMin, lte: dateMax },
       releveId: null,
@@ -160,8 +162,10 @@ export async function createActivite(
     data: {
       titre: data.titre,
       description: data.description ?? null,
-      typeActivite: data.typeActivite,
-      statut: StatutActivite.PLANIFIEE,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      typeActivite: data.typeActivite as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      statut: StatutActivite.PLANIFIEE as any,
       dateDebut: new Date(data.dateDebut),
       dateFin: data.dateFin ? new Date(data.dateFin) : null,
       recurrence: data.recurrence ?? null,

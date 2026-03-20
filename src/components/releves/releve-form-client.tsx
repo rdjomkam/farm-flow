@@ -20,6 +20,7 @@ import { FormAlimentation } from "./form-alimentation";
 import { FormQualiteEau } from "./form-qualite-eau";
 import { FormComptage } from "./form-comptage";
 import { FormObservation } from "./form-observation";
+import { FormRenouvellement } from "./form-renouvellement";
 import { ConsommationFields } from "./consommation-fields";
 import type { ConsommationLine, ProduitOption } from "./consommation-fields";
 import { TypeReleve, TypeActivite, StatutActivite, CategorieProduit, UniteStock, ACTIVITE_RELEVE_TYPE_MAP } from "@/types";
@@ -58,6 +59,7 @@ const typeLabels: Record<TypeReleve, string> = {
   [TypeReleve.QUALITE_EAU]: "Qualité de l'eau",
   [TypeReleve.COMPTAGE]: "Comptage",
   [TypeReleve.OBSERVATION]: "Observation",
+  [TypeReleve.RENOUVELLEMENT]: "Renouvellement eau",
 };
 
 interface ReleveFormClientProps {
@@ -197,6 +199,19 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
     if (typeReleve === TypeReleve.OBSERVATION) {
       if (!fields.description?.trim()) errs.description = "Requis.";
     }
+    if (typeReleve === TypeReleve.RENOUVELLEMENT) {
+      const hasPct = fields.pourcentageRenouvellement !== undefined && fields.pourcentageRenouvellement !== "";
+      const hasVol = fields.volumeRenouvele !== undefined && fields.volumeRenouvele !== "";
+      if (!hasPct && !hasVol) {
+        errs.pourcentageRenouvellement = "Au moins un champ est requis : pourcentage ou volume.";
+      }
+      if (hasPct && (Number(fields.pourcentageRenouvellement) < 0 || Number(fields.pourcentageRenouvellement) > 100)) {
+        errs.pourcentageRenouvellement = "Le pourcentage doit etre entre 0 et 100.";
+      }
+      if (hasVol && Number(fields.volumeRenouvele) <= 0) {
+        errs.volumeRenouvele = "Le volume doit etre superieur a 0.";
+      }
+    }
     return errs;
   }
 
@@ -226,6 +241,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
       "poidsMoyen", "tailleMoyenne", "echantillonCount",
       "nombreMorts", "quantiteAliment", "frequenceAliment",
       "nombreCompte", "temperature", "ph", "oxygene", "ammoniac",
+      "pourcentageRenouvellement", "volumeRenouvele",
     ];
     for (const f of numericFields) {
       if (fields[f] !== undefined && fields[f] !== "") {
@@ -515,6 +531,20 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
               />
             </FormSection>
           )}
+          {typeReleve === TypeReleve.RENOUVELLEMENT && (() => {
+            const selectedBac = bacs.find((b) => b.id === bacId);
+            return (
+              <FormRenouvellement
+                values={{
+                  pourcentageRenouvellement: fields.pourcentageRenouvellement ?? "",
+                  volumeRenouvele: fields.volumeRenouvele ?? "",
+                }}
+                onChange={updateField}
+                errors={errors}
+                bacVolumeLitres={selectedBac?.volume ?? null}
+              />
+            );
+          })()}
 
           {/* Notes */}
           <Input

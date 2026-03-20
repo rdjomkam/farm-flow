@@ -51,9 +51,9 @@ export const CONFIG_ELEVAGE_DEFAULTS = {
   survieExcellentMin: 90,
   survieBonMin: 85,
   survieAcceptableMin: 80,
-  densiteExcellentMax: 7,
-  densiteBonMax: 10,
-  densiteAcceptableMax: 15,
+  densiteExcellentMax: 100,
+  densiteBonMax: 150,
+  densiteAcceptableMax: 200,
   mortaliteExcellentMax: 3,
   mortaliteBonMax: 5,
   mortaliteAcceptableMax: 10,
@@ -85,10 +85,19 @@ export const CONFIG_ELEVAGE_DEFAULTS = {
   biometrieEchantillonPct: 10,
   eauChangementPct: 30,
   eauChangementIntervalleJours: 3,
-  densiteMaxPoissonsM3: 100,
-  densiteOptimalePoissonsM3: 50,
+  densiteMaxPoissonsM3: 300,
+  densiteOptimalePoissonsM3: 150,
   recoltePartiellePoidsSeuil: 400,
   recolteJeuneAvantJours: 2,
+  // Seuils de densite differencies par type de systeme (kg/m3) — Sprint 27-28 (ADR-density-alerts, 5.7)
+  densiteBacBetonAlerte: 150,
+  densiteBacBetonCritique: 200,
+  densiteEtangAlerte: 30,
+  densiteEtangCritique: 40,
+  densiteRasAlerte: 350,
+  densiteRasCritique: 500,
+  // Fenetre de calcul du taux de renouvellement (jours) — defaut 7
+  fenetreRenouvellementJours: 7,
 };
 
 // ---------------------------------------------------------------------------

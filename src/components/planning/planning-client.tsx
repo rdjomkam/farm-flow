@@ -52,6 +52,7 @@ const typeReleveLabels: Record<TypeReleve, string> = {
   [TypeReleve.QUALITE_EAU]: "Qualité eau",
   [TypeReleve.COMPTAGE]: "Comptage",
   [TypeReleve.OBSERVATION]: "Observation",
+  [TypeReleve.RENOUVELLEMENT]: "Renouvellement",
 };
 
 const typeActiviteColors: Record<TypeActivite, string> = {
@@ -64,6 +65,7 @@ const typeActiviteColors: Record<TypeActivite, string> = {
   [TypeActivite.RECOLTE]: "bg-primary",
   [TypeActivite.TRI]: "bg-accent-orange",
   [TypeActivite.MEDICATION]: "bg-accent-red",
+  [TypeActivite.RENOUVELLEMENT]: "bg-accent-cyan", // Sprint 27-28
   [TypeActivite.AUTRE]: "bg-muted-foreground",
 };
 
@@ -95,6 +97,7 @@ const typeActiviteIcons: Record<TypeActivite, React.ReactNode> = {
   [TypeActivite.RECOLTE]: <ShoppingCart className="h-4 w-4" />,
   [TypeActivite.TRI]: <ArrowLeftRight className="h-4 w-4" />,
   [TypeActivite.MEDICATION]: <Pill className="h-4 w-4" />,
+  [TypeActivite.RENOUVELLEMENT]: <Droplets className="h-4 w-4" />,
   [TypeActivite.AUTRE]: <MoreHorizontal className="h-4 w-4" />,
 };
 

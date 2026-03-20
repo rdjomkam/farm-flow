@@ -17,6 +17,7 @@ const typeActiviteLabels: Record<TypeActivite, string> = {
   [TypeActivite.RECOLTE]: "Recolte",
   [TypeActivite.TRI]: "Tri",
   [TypeActivite.MEDICATION]: "Medication",
+  [TypeActivite.RENOUVELLEMENT]: "Renouvellement eau",
   [TypeActivite.AUTRE]: "Autre",
 };
 
@@ -30,6 +31,7 @@ const typeActiviteColors: Record<TypeActivite, string> = {
   [TypeActivite.RECOLTE]: "bg-primary",
   [TypeActivite.TRI]: "bg-accent-orange",
   [TypeActivite.MEDICATION]: "bg-accent-red",
+  [TypeActivite.RENOUVELLEMENT]: "bg-accent-cyan",
   [TypeActivite.AUTRE]: "bg-muted-foreground",
 };
 

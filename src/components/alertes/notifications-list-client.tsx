@@ -32,6 +32,11 @@ const typeAlerteLabels: Record<TypeAlerte, string> = {
   [TypeAlerte.RAPPEL_BIOMETRIE]: "Rappel biometrie",
   [TypeAlerte.PERSONNALISEE]: "Personnalisee",
   [TypeAlerte.BESOIN_EN_RETARD]: "Besoin en retard",
+  // Sprint 27-28 — Densite
+  [TypeAlerte.DENSITE_ELEVEE]: "Densite elevee",
+  [TypeAlerte.RENOUVELLEMENT_EAU_INSUFFISANT]: "Renouvellement insuffisant",
+  [TypeAlerte.AUCUN_RELEVE_QUALITE_EAU]: "Qualite eau non verifiee",
+  [TypeAlerte.DENSITE_CRITIQUE_QUALITE_EAU]: "Densite + qualite eau critiques",
 };
 
 const typeAlerteIcons: Record<TypeAlerte, React.ComponentType<{ className?: string }>> = {
@@ -42,6 +47,11 @@ const typeAlerteIcons: Record<TypeAlerte, React.ComponentType<{ className?: stri
   [TypeAlerte.RAPPEL_BIOMETRIE]: Activity,
   [TypeAlerte.PERSONNALISEE]: Star,
   [TypeAlerte.BESOIN_EN_RETARD]: CalendarClock,
+  // Sprint 27-28 — Densite
+  [TypeAlerte.DENSITE_ELEVEE]: AlertTriangle,
+  [TypeAlerte.RENOUVELLEMENT_EAU_INSUFFISANT]: Droplets,
+  [TypeAlerte.AUCUN_RELEVE_QUALITE_EAU]: Clock,
+  [TypeAlerte.DENSITE_CRITIQUE_QUALITE_EAU]: AlertTriangle,
 };
 
 const typeAlerteColors: Record<TypeAlerte, string> = {
@@ -52,6 +62,11 @@ const typeAlerteColors: Record<TypeAlerte, string> = {
   [TypeAlerte.RAPPEL_BIOMETRIE]: "text-accent-purple bg-accent-purple-muted",
   [TypeAlerte.PERSONNALISEE]: "text-muted-foreground bg-muted",
   [TypeAlerte.BESOIN_EN_RETARD]: "text-danger bg-danger/10",
+  // Sprint 27-28 — Densite
+  [TypeAlerte.DENSITE_ELEVEE]: "text-warning bg-warning/10",
+  [TypeAlerte.RENOUVELLEMENT_EAU_INSUFFISANT]: "text-warning bg-warning/10",
+  [TypeAlerte.AUCUN_RELEVE_QUALITE_EAU]: "text-warning bg-warning/10",
+  [TypeAlerte.DENSITE_CRITIQUE_QUALITE_EAU]: "text-danger bg-danger/10",
 };
 
 const statutLabels: Record<StatutAlerte, string> = {

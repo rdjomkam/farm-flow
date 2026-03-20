@@ -18,6 +18,7 @@ const typeLabels: Record<TypeReleve, string> = {
   [TypeReleve.QUALITE_EAU]: "Qualité eau",
   [TypeReleve.COMPTAGE]: "Comptage",
   [TypeReleve.OBSERVATION]: "Observation",
+  [TypeReleve.RENOUVELLEMENT]: "Renouvellement",
 };
 
 const typeVariants: Record<TypeReleve, "info" | "warning" | "default"> = {
@@ -27,6 +28,7 @@ const typeVariants: Record<TypeReleve, "info" | "warning" | "default"> = {
   [TypeReleve.QUALITE_EAU]: "info",
   [TypeReleve.COMPTAGE]: "default",
   [TypeReleve.OBSERVATION]: "default",
+  [TypeReleve.RENOUVELLEMENT]: "default",
 };
 
 function ReleveDetails({ releve }: { releve: Releve }) {
