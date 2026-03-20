@@ -484,15 +484,9 @@ Les plans sont gérés par les admins DKFarm. Les abonnements sont créés par l
 authentification pour la page marketing.
 
 **Tâches :**
-- [ ] `TODO` Créer `src/app/api/plans/route.ts` :
-  - `GET` — liste des plans actifs publics. Sans auth si `?public=true`, sinon auth + `PLANS_GERER` pour voir les inactifs
-  - `POST` — créer un plan. Auth + `Permission.PLANS_GERER`
-- [ ] `TODO` Créer `src/app/api/plans/[id]/route.ts` :
-  - `GET` — détail d'un plan avec nombre d'abonnés actifs. Auth optionnelle
-  - `PUT` — modifier un plan. Auth + `Permission.PLANS_GERER`
-  - `DELETE` — désactiver un plan (jamais supprimer si abonnés actifs → 409). Auth + `Permission.PLANS_GERER`
-- [ ] `TODO` Créer `src/app/api/plans/[id]/toggle/route.ts` :
-  - `PATCH` — activer/désactiver. Auth + `Permission.PLANS_GERER`. R4 : atomique
+- [x] `FAIT` Créer `src/app/api/plans/route.ts` (GET public + GET auth + POST)
+- [x] `FAIT` Créer `src/app/api/plans/[id]/route.ts` (GET + PUT + DELETE avec 409)
+- [x] `FAIT` Créer `src/app/api/plans/[id]/toggle/route.ts` (PATCH atomique R4)
 
 **Critères d'acceptation :**
 - Liste publique accessible sans token (pour la page marketing)
@@ -512,17 +506,11 @@ authentification pour la page marketing.
 automatiquement l'initiation du paiement.
 
 **Tâches :**
-- [ ] `TODO` Créer `src/app/api/abonnements/route.ts` :
-  - `GET` — liste des abonnements du site actif. Auth + `Permission.ABONNEMENTS_VOIR`
-  - `POST` — souscrire à un plan : valider `CreateAbonnementDTO`, vérifier code remise, créer `Abonnement`, appeler `billingService.initierPaiement()`. Auth + `Permission.ABONNEMENTS_GERER`. Retourner `{ abonnement, paiement: { referenceExterne, statut } }`
-- [ ] `TODO` Créer `src/app/api/abonnements/[id]/route.ts` :
-  - `GET` — détail abonnement avec paiements. Auth + `Permission.ABONNEMENTS_VOIR`
-- [ ] `TODO` Créer `src/app/api/abonnements/[id]/renouveler/route.ts` :
-  - `POST` — renouveler un abonnement expiré ou en grâce. Crée un nouvel `Abonnement` (ou réactive l'existant selon le statut). Appelle `billingService.initierPaiement()`. Auth + `Permission.ABONNEMENTS_GERER`
-- [ ] `TODO` Créer `src/app/api/abonnements/[id]/annuler/route.ts` :
-  - `POST` — annuler un abonnement (fin à la date d'expiration, pas de remboursement). R4 : `updateMany` statut → ANNULE. Auth + `Permission.ABONNEMENTS_GERER`
-- [ ] `TODO` Créer `src/app/api/abonnements/actif/route.ts` :
-  - `GET` — abonnement actif ou en grâce du site actif (utilisé par le layout pour vérifier le statut). Auth requis
+- [x] `FAIT` Créer `src/app/api/abonnements/route.ts` (GET liste + POST souscription)
+- [x] `FAIT` Créer `src/app/api/abonnements/[id]/route.ts` (GET détail)
+- [x] `FAIT` Créer `src/app/api/abonnements/[id]/renouveler/route.ts` (POST)
+- [x] `FAIT` Créer `src/app/api/abonnements/[id]/annuler/route.ts` (POST R4 atomique)
+- [x] `FAIT` Créer `src/app/api/abonnements/actif/route.ts` (GET)
 
 **Critères d'acceptation :**
 - R2 : enums importés (`StatutAbonnement.ACTIF`, etc.)
@@ -543,11 +531,8 @@ automatiquement l'initiation du paiement.
 le statut d'un paiement en attente.
 
 **Tâches :**
-- [ ] `TODO` Créer `src/app/api/abonnements/[id]/paiements/route.ts` :
-  - `GET` — liste des paiements de cet abonnement, ordonnés par date DESC. Auth + `Permission.ABONNEMENTS_VOIR`
-  - `POST` — initier un nouveau paiement pour cet abonnement (cas : paiement précédent échoué). Appelle `billingService.initierPaiement()`. Auth + `Permission.ABONNEMENTS_GERER`
-- [ ] `TODO` Créer `src/app/api/paiements/[id]/verifier/route.ts` :
-  - `GET` — vérifier le statut actuel du paiement via `gateway.checkStatus(referenceExterne)`. Met à jour la DB si le statut a changé. Utile en polling depuis l'UI pendant l'attente de confirmation. Auth + `Permission.ABONNEMENTS_VOIR`
+- [x] `FAIT` Créer `src/app/api/abonnements/[id]/paiements/route.ts` (GET historique + POST initier)
+- [x] `FAIT` Créer `src/app/api/paiements/[id]/verifier/route.ts` (GET vérification idempotente)
 
 **Critères d'acceptation :**
 - Polling de statut ne crée pas de doublons
@@ -567,17 +552,10 @@ et le blocage pour les sites `EXPIRE`. Ce middleware s'applique dans les Server 
 et éventuellement dans les API routes critiques.
 
 **Tâches :**
-- [ ] `TODO` Créer `src/lib/abonnements/check-subscription.ts` :
-  - `getSubscriptionStatus(siteId): Promise<{ statut: StatutAbonnement | null, daysRemaining: number | null }>` — charge l'abonnement actif du site, calcule les jours restants
-  - `isSubscriptionValid(statut): boolean` — retourne true si ACTIF ou EN_GRACE
-  - `isReadOnlyMode(statut): boolean` — retourne true si SUSPENDU
-  - `isBlocked(statut): boolean` — retourne true si EXPIRE ou ANNULE (sans plan DECOUVERTE)
-- [ ] `TODO` Créer `src/components/subscription/subscription-banner.tsx` (Server Component) :
-  - Affiche un banner d'alerte en haut de page si le statut est EN_GRACE (avec les jours restants) ou SUSPENDU (lecture seule activée)
-  - Ne s'affiche pas si ACTIF ou si plan DECOUVERTE
-  - Lien "Renouveler mon abonnement" → /mon-abonnement/renouveler
-- [ ] `TODO` Intégrer `<SubscriptionBanner>` dans `src/app/layout.tsx` ou `src/components/layout/app-shell.tsx`
-- [ ] `TODO` Désactiver les boutons de création/modification dans les pages clés si `isReadOnlyMode()` : Nouvelle vague, Ajouter relevé, Créer bac — afficher tooltip "Mode lecture seule — renouvelez votre abonnement"
+- [x] `FAIT` Créer `src/lib/abonnements/check-subscription.ts` (getSubscriptionStatus, isSubscriptionValid, isReadOnlyMode, isBlocked)
+- [x] `FAIT` Créer `src/components/subscription/subscription-banner.tsx` (Server Component, mobile-first)
+- [x] `FAIT` Intégrer `<SubscriptionBanner>` dans `src/app/layout.tsx`
+- [x] `FAIT` Désactiver boutons en mode SUSPENDU (pages vagues, bacs, relevés)
 
 **Critères d'acceptation :**
 - Banner visible sur toutes les pages si EN_GRACE ou SUSPENDU
@@ -595,30 +573,23 @@ et éventuellement dans les API routes critiques.
 **Statut :** `FAIT`
 
 **Tâches @tester :**
-- [ ] `TODO` Créer `src/__tests__/api/plans.test.ts` (CRUD complet, toggle, 409 si abonnés actifs)
-- [ ] `TODO` Créer `src/__tests__/api/abonnements.test.ts` :
-  - POST /abonnements — crée abonnement + initie paiement
-  - POST /abonnements — code remise invalide → 400
-  - GET /abonnements/actif — retourne l'abonnement ACTIF
-  - POST /abonnements/[id]/renouveler — depuis EXPIRE → EN_ATTENTE_PAIEMENT
-  - POST /abonnements/[id]/annuler — statut → ANNULE (R4 atomique)
-- [ ] `TODO` Créer `src/__tests__/lib/check-subscription.test.ts` :
-  - `isSubscriptionValid()` — ACTIF → true, EN_GRACE → true, SUSPENDU → false
-  - `isReadOnlyMode()` — SUSPENDU → true, ACTIF → false
-  - `isBlocked()` — EXPIRE → true, ACTIF → false
-- [ ] `TODO` `npx vitest run` + `npm run build` — OK
-- [ ] `TODO` Écrire `docs/tests/rapport-sprint-32.md`
+- [x] `FAIT` Créer `src/__tests__/api/plans.test.ts` (15 tests)
+- [x] `FAIT` Créer `src/__tests__/api/abonnements.test.ts` (13 tests)
+- [x] `FAIT` Créer `src/__tests__/api/paiements-abonnements.test.ts` (13 tests — ajouté 2026-03-21)
+- [x] `FAIT` Créer `src/__tests__/lib/check-subscription.test.ts` (20 tests)
+- [x] `FAIT` `npx vitest run` — 61/61 PASS + `npm run build` — OK
+- [x] `FAIT` `docs/tests/rapport-sprint-32.md` produit
 
 **Tâches @code-reviewer :**
-- [ ] `TODO` Checklist R1-R9
-- [ ] `TODO` Vérifier que la liste publique des plans ne fuit pas les données sensibles (prix internes, etc.)
-- [ ] `TODO` Vérifier que le middleware de restriction n'impacte pas le plan DECOUVERTE
-- [ ] `TODO` Écrire `docs/reviews/review-sprint-32.md`
+- [x] `FAIT` Checklist R1-R9 — toutes PASS
+- [x] `FAIT` Liste publique des plans : pas de fuite de données sensibles
+- [x] `FAIT` Plan DECOUVERTE non impacté par les restrictions
+- [x] `FAIT` `docs/reviews/review-sprint-32.md` produit
 
 **Critères d'acceptation :**
-- Tests API complets + build OK
-- Plan DECOUVERTE non impacté par les restrictions (confirmé)
-- Rapport de review produit
+- Tests API complets + build OK — VALIDE
+- Plan DECOUVERTE non impacté par les restrictions — CONFIRMÉ
+- Rapport de review produit — VALIDE
 
 ---
 

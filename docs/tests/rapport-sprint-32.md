@@ -1,6 +1,6 @@
 # Rapport de Tests — Sprint 32 : API Abonnements + Plans
 
-**Date :** 2026-03-20
+**Date initiale :** 2026-03-20 | **Mise à jour :** 2026-03-21
 **Agent :** @tester (inline par @project-manager)
 **Sprint :** 32
 
@@ -10,12 +10,14 @@
 
 | Métrique | Valeur |
 |----------|--------|
-| Nouveaux tests Sprint 32 | **48 tests** |
-| Résultat nouveaux tests | **48/48 PASS** |
+| Nouveaux tests Sprint 32 | **61 tests** |
+| Résultat nouveaux tests | **61/61 PASS** |
 | Suite complète (avant Sprint 32) | 8 failed / 1978 passed |
-| Suite complète (après Sprint 32) | 8 failed / 1990 passed |
+| Suite complète (après Sprint 32) | 8 failed / 2003 passed |
 | Régressions introduites | **0** |
 | Build `npm run build` | **OK** |
+
+> Mise à jour 2026-03-21 : Ajout de 13 tests pour Story 32.3 (routes paiements — fichier créé `src/__tests__/api/paiements-abonnements.test.ts`).
 
 Les 8 tests échouants sont des tests pré-existants (benchmarks.test.ts, sprint22.test.ts, sites.test.ts) qui échouaient déjà avant le Sprint 32 — confirmé par `git stash`.
 
@@ -86,6 +88,24 @@ Les 8 tests échouants sont des tests pré-existants (benchmarks.test.ts, sprint
 | getSubscriptionStatus — aucun abonnement → null | PASS |
 | getSubscriptionStatus — expiré hier → daysRemaining = 0 | PASS |
 
+### `src/__tests__/api/paiements-abonnements.test.ts` — 13 tests (ajouté 2026-03-21)
+
+| Test | Résultat |
+|------|---------|
+| GET /abonnements/[id]/paiements — liste paiements (R8 vérifié) → 200 | PASS |
+| GET /abonnements/[id]/paiements — abonnement hors site → 404 | PASS |
+| GET /abonnements/[id]/paiements — sans auth → 401 | PASS |
+| POST /abonnements/[id]/paiements — fournisseur valide → 201 | PASS |
+| POST /abonnements/[id]/paiements — fournisseur absent → 400 | PASS |
+| POST /abonnements/[id]/paiements — fournisseur invalide → 400 | PASS |
+| POST /abonnements/[id]/paiements — abonnement hors site → 404 | PASS |
+| POST /abonnements/[id]/paiements — sans auth → 401 | PASS |
+| GET /paiements/[id]/verifier — INITIE → confirme=false → 200 | PASS |
+| GET /paiements/[id]/verifier — confirmé par gateway → confirme=true → 200 | PASS |
+| GET /paiements/[id]/verifier — sans referenceExterne → 200 (pas d'appel gateway) | PASS |
+| GET /paiements/[id]/verifier — introuvable → 404 | PASS |
+| GET /paiements/[id]/verifier — sans auth → 401 | PASS |
+
 ---
 
 ## Couverture des critères d'acceptation Story 32.5
@@ -93,7 +113,8 @@ Les 8 tests échouants sont des tests pré-existants (benchmarks.test.ts, sprint
 - [x] Tests API plans (CRUD complet, toggle, 409 si abonnés actifs)
 - [x] Tests API abonnements (souscription, code remise invalide, actif, renouveler, annuler)
 - [x] Tests lib check-subscription (isSubscriptionValid, isReadOnlyMode, isBlocked)
-- [x] `npx vitest run` — 48/48 nouveaux tests passent
+- [x] Tests API paiements abonnements (GET historique, POST initier, GET vérifier — 13 tests)
+- [x] `npx vitest run` — 61/61 nouveaux tests passent
 - [x] `npm run build` — OK
 - [x] Aucune régression sur les tests existants
 

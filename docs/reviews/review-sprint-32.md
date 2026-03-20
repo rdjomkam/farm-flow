@@ -1,8 +1,8 @@
 # Review Sprint 32 — API Abonnements + Plans
 
-**Date :** 2026-03-20
+**Date initiale :** 2026-03-20 | **Mise à jour :** 2026-03-21
 **Agent :** @code-reviewer (inline par @project-manager)
-**Stories couvertes :** 32.1, 32.2, 32.3, 32.4
+**Stories couvertes :** 32.1, 32.2, 32.3, 32.4, 32.5
 
 ---
 
@@ -24,7 +24,7 @@ Le Sprint 32 est conforme aux règles R1-R9. Aucun problème critique.
 | **R6** — CSS variables du thème | PASS | `subscription-banner.tsx` : classes Tailwind uniquement, pas de couleurs hardcodées |
 | **R7** — Nullabilité explicite | PASS | `??  undefined`, `?? null` utilisés correctement |
 | **R8** — siteId PARTOUT | PASS | Toutes les routes abonnements passent `auth.activeSiteId` aux queries. Exception PlanAbonnement (global, conforme ADR-020) |
-| **R9** — Tests avant review | PASS | 48 tests Sprint 32 passent. Build OK. |
+| **R9** — Tests avant review | PASS | 61 tests Sprint 32 passent (dont 13 ajoutés pour 32.3). Build OK. |
 
 ---
 
@@ -89,11 +89,22 @@ La route GET /plans/[id] retourne le plan public si `isActif && isPublic`. Si le
 | `src/components/subscription/subscription-banner.tsx` | UI | VALIDÉ |
 | `src/app/layout.tsx` | LAYOUT | VALIDÉ (ajout SubscriptionBanner) |
 | `src/__tests__/api/plans.test.ts` | TEST | VALIDÉ (15 tests) |
-| `src/__tests__/api/abonnements.test.ts` | TEST | VALIDÉ (12 tests) |
-| `src/__tests__/lib/check-subscription.test.ts` | TEST | VALIDÉ (21 tests) |
+| `src/__tests__/api/abonnements.test.ts` | TEST | VALIDÉ (13 tests) |
+| `src/__tests__/api/paiements-abonnements.test.ts` | TEST | VALIDÉ (13 tests — créé 2026-03-21) |
+| `src/__tests__/lib/check-subscription.test.ts` | TEST | VALIDÉ (20 tests) |
+
+---
+
+## Mise à jour 2026-03-21 — Complétion pipeline Story 32.3
+
+La pré-analyse de la Story 32.3 (manquante initialement) a été réalisée et produite dans `docs/analysis/pre-analysis-story-32-3.md` — verdict GO.
+
+Les tests de la Story 32.3 (routes paiements) ont été créés dans `src/__tests__/api/paiements-abonnements.test.ts` et passent tous (13/13).
+
+**Note mineure identifiée :** La route `/paiements/[id]/verifier` accède à `prisma.paiementAbonnement` directement au lieu d'utiliser une fonction de query dédiée. Ce n'est pas bloquant (R4 respecté, siteId filtré), mais signal à corriger lors du Sprint 36 (cycle de vie) en ajoutant `getPaiementAbonnementById(id, siteId)` dans `src/lib/queries/paiements-abonnements.ts`.
 
 ---
 
 ## Conclusion
 
-Le Sprint 32 est **VALIDÉ**. Les routes API sont correctes, les règles R1-R9 sont respectées, les tests couvrent les cas nominaux et les cas d'erreur. Le Sprint 33 (UI Checkout) peut démarrer.
+Le Sprint 32 est **VALIDÉ** avec pipeline complet. Toutes les stories ont été soumises à pré-analyse, tests et review. Les règles R1-R9 sont respectées. 61/61 tests passent, build propre. Le Sprint 33 (UI Checkout) peut démarrer.
