@@ -96,10 +96,7 @@ interface ConditionRow {
 
 interface FormState {
   typeActivite: TypeActivite | "";
-  typeDeclencheur: TypeDeclencheur | "";
   intervalleJours: string;
-  conditionValeur: string;
-  conditionValeur2: string;
   nom: string;
   titreTemplate: string;
   descriptionTemplate: string;
@@ -107,7 +104,7 @@ interface FormState {
   priorite: string;
   phaseMin: PhaseElevage | "";
   phaseMax: PhaseElevage | "";
-  // Conditions composees
+  // Conditions de declenchement (primaire)
   logique: LogiqueCondition;
   conditions: ConditionRow[];
   // Action (Sprint 29)
@@ -120,10 +117,8 @@ interface FormState {
 
 interface FormErrors {
   typeActivite?: string;
-  typeDeclencheur?: string;
+  conditions?: string;
   intervalleJours?: string;
-  conditionValeur?: string;
-  conditionValeur2?: string;
   nom?: string;
   titreTemplate?: string;
   phaseMin?: string;
@@ -134,10 +129,7 @@ interface FormErrors {
 
 const INITIAL_STATE: FormState = {
   typeActivite: "",
-  typeDeclencheur: "",
   intervalleJours: "",
-  conditionValeur: "",
-  conditionValeur2: "",
   nom: "",
   titreTemplate: "",
   descriptionTemplate: "",
@@ -356,12 +348,12 @@ export function RegleFormClient() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
 
-  // Section accordeon state (open by default on desktop, closed on mobile handled via CSS)
-  const [section1Open, setSection1Open] = useState(true);
-  const [section2Open, setSection2Open] = useState(true);
+  // Section accordeon state
+  const [sectionTypeOpen, setSectionTypeOpen] = useState(true);
+  const [sectionConditionsOpen, setSectionConditionsOpen] = useState(true);
   const [sectionActionOpen, setSectionActionOpen] = useState(true);
-  const [section3Open, setSection3Open] = useState(false);
-  const [section4Open, setSection4Open] = useState(false);
+  const [sectionIdentiteOpen, setSectionIdentiteOpen] = useState(true);
+  const [sectionAvancesOpen, setSectionAvancesOpen] = useState(false);
   const [placeholderOpen, setPlaceholderOpen] = useState(false);
 
   // Refs for textarea insertion
@@ -384,32 +376,10 @@ export function RegleFormClient() {
     setErrors((prev) => ({ ...prev, [key]: undefined }));
   }, []);
 
-  // Derived
-  const declencheur = form.typeDeclencheur as TypeDeclencheur | "";
-  const needsConditionValeur =
-    declencheur !== "" && NEEDS_CONDITION_VALEUR.has(declencheur);
-  const needsIntervalleJours = declencheur === TypeDeclencheur.RECURRENT;
-  const needsConditionValeur2 = declencheur === TypeDeclencheur.SEUIL_QUALITE;
-
-  // Labels for conditionValeur based on typeDeclencheur
-  const conditionValeurLabel = (() => {
-    switch (declencheur) {
-      case TypeDeclencheur.SEUIL_POIDS:
-        return "Poids moyen declencheur (g)";
-      case TypeDeclencheur.SEUIL_QUALITE:
-        return "Valeur minimale (ex: pH min)";
-      case TypeDeclencheur.SEUIL_MORTALITE:
-        return "Taux de mortalite declencheur (%)";
-      case TypeDeclencheur.FCR_ELEVE:
-        return "FCR declencheur";
-      case TypeDeclencheur.STOCK_BAS:
-        return "Quantite de stock minimal";
-      case TypeDeclencheur.JALON:
-        return "Seuil du jalon (% du cycle)";
-      default:
-        return "Valeur de seuil";
-    }
-  })();
+  // Derived — check if any condition uses RECURRENT trigger
+  const hasRecurrentCondition = form.conditions.some(
+    (c) => c.typeDeclencheur === TypeDeclencheur.RECURRENT
+  );
 
   // Insert placeholder at cursor in active textarea
   const insertPlaceholder = useCallback((key: string) => {
@@ -453,29 +423,20 @@ export function RegleFormClient() {
     const errs: FormErrors = {};
 
     if (!form.typeActivite) errs.typeActivite = "Requis";
-    if (!form.typeDeclencheur) errs.typeDeclencheur = "Requis";
 
-    if (needsIntervalleJours) {
+    // At least one valid condition required
+    const validConditions = form.conditions.filter(
+      (c) => c.typeDeclencheur !== "" && c.operateur !== ""
+    );
+    if (validConditions.length === 0) {
+      errs.conditions = "Au moins une condition de declenchement est requise";
+    }
+
+    // intervalleJours required when a RECURRENT condition exists
+    if (hasRecurrentCondition) {
       const val = Number(form.intervalleJours);
       if (!form.intervalleJours || isNaN(val) || val <= 0) {
-        errs.intervalleJours = "Doit etre un entier superieur a 0";
-      }
-    }
-
-    if (needsConditionValeur) {
-      const val = Number(form.conditionValeur);
-      if (!form.conditionValeur || isNaN(val)) {
-        errs.conditionValeur = "Requis";
-      }
-    }
-
-    if (needsConditionValeur2) {
-      const val1 = Number(form.conditionValeur);
-      const val2 = Number(form.conditionValeur2);
-      if (!form.conditionValeur2 || isNaN(val2)) {
-        errs.conditionValeur2 = "Requis";
-      } else if (!isNaN(val1) && val2 <= val1) {
-        errs.conditionValeur2 = "La valeur max doit etre superieure a la valeur min";
+        errs.intervalleJours = "Doit etre un entier superieur a 0 (requis pour le declencheur Recurrent)";
       }
     }
 
@@ -515,28 +476,42 @@ export function RegleFormClient() {
 
     setErrors(errs);
     return Object.keys(errs).length === 0;
-  }, [form, needsIntervalleJours, needsConditionValeur, needsConditionValeur2]);
+  }, [form, hasRecurrentCondition]);
 
   // Submit
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) {
       // Open sections with errors
-      if (errors.typeActivite || errors.typeDeclencheur || errors.intervalleJours || errors.conditionValeur || errors.conditionValeur2) {
-        setSection1Open(true);
+      if (errors.typeActivite) {
+        setSectionTypeOpen(true);
+      }
+      if (errors.conditions || errors.intervalleJours) {
+        setSectionConditionsOpen(true);
       }
       if (errors.nom || errors.titreTemplate) {
-        setSection2Open(true);
+        setSectionIdentiteOpen(true);
       }
       return;
     }
 
     setSubmitting(true);
 
+    // Build valid conditions list
+    const validConditions = form.conditions.filter(
+      (c) => c.typeDeclencheur !== "" && c.operateur !== ""
+    );
+
+    // Derive typeDeclencheur from first valid condition (required by API)
+    const derivedTypeDeclencheur =
+      validConditions.length > 0
+        ? (validConditions[0].typeDeclencheur as TypeDeclencheur)
+        : TypeDeclencheur.RECURRENT;
+
     const dto: CreateRegleActiviteDTO = {
       nom: form.nom.trim(),
       typeActivite: form.typeActivite as TypeActivite,
-      typeDeclencheur: form.typeDeclencheur as TypeDeclencheur,
+      typeDeclencheur: derivedTypeDeclencheur,
       titreTemplate: form.titreTemplate.trim(),
     };
 
@@ -546,14 +521,8 @@ export function RegleFormClient() {
     if (form.instructionsTemplate.trim()) {
       dto.instructionsTemplate = form.instructionsTemplate.trim();
     }
-    if (needsIntervalleJours && form.intervalleJours) {
+    if (hasRecurrentCondition && form.intervalleJours) {
       dto.intervalleJours = Number(form.intervalleJours);
-    }
-    if (needsConditionValeur && form.conditionValeur) {
-      dto.conditionValeur = Number(form.conditionValeur);
-    }
-    if (needsConditionValeur2 && form.conditionValeur2) {
-      dto.conditionValeur2 = Number(form.conditionValeur2);
     }
     if (form.phaseMin) dto.phaseMin = form.phaseMin as PhaseElevage;
     if (form.phaseMax) dto.phaseMax = form.phaseMax as PhaseElevage;
@@ -563,20 +532,15 @@ export function RegleFormClient() {
       dto.priorite = prioriteNum;
     }
 
-    // Conditions composees
-    const validConditions = form.conditions.filter(
-      (c) => c.typeDeclencheur !== "" && c.operateur !== ""
-    );
-    if (validConditions.length > 0) {
-      dto.logique = form.logique;
-      dto.conditions = validConditions.map((c, idx) => ({
-        typeDeclencheur: c.typeDeclencheur as TypeDeclencheur,
-        operateur: c.operateur as OperateurCondition,
-        conditionValeur: c.conditionValeur !== "" ? Number(c.conditionValeur) : null,
-        conditionValeur2: c.conditionValeur2 !== "" ? Number(c.conditionValeur2) : null,
-        ordre: idx,
-      }));
-    }
+    // Conditions de declenchement
+    dto.logique = form.logique;
+    dto.conditions = validConditions.map((c, idx) => ({
+      typeDeclencheur: c.typeDeclencheur as TypeDeclencheur,
+      operateur: c.operateur as OperateurCondition,
+      conditionValeur: c.conditionValeur !== "" ? Number(c.conditionValeur) : null,
+      conditionValeur2: c.conditionValeur2 !== "" ? Number(c.conditionValeur2) : null,
+      ordre: idx,
+    }));
 
     // Action (Sprint 29)
     dto.actionType = form.actionType;
@@ -619,7 +583,7 @@ export function RegleFormClient() {
       setSubmitting(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, validate, needsIntervalleJours, needsConditionValeur, needsConditionValeur2, router, toast]);
+  }, [form, validate, hasRecurrentCondition, router, toast]);
 
   // Re-run validation after errors change (to update section open state)
   useEffect(() => {
@@ -628,28 +592,18 @@ export function RegleFormClient() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 max-w-2xl">
-      {/* Banner info */}
-      <div className="flex items-start gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
-        <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-        <p className="text-sm text-muted-foreground">
-          Les types de declencheur sont definis par DKFarm. Contactez l&apos;equipe
-          technique pour ajouter un nouveau type.
-        </p>
-      </div>
-
       {/* ------------------------------------------------------------------ */}
-      {/* Section 1 — Type & Declencheur */}
+      {/* Section 1 — Type d'activite */}
       {/* ------------------------------------------------------------------ */}
       <div className="flex flex-col gap-2">
         <SectionHeader
-          title="Type et declencheur"
-          open={section1Open}
-          onToggle={() => setSection1Open(!section1Open)}
+          title="Type d'activite"
+          open={sectionTypeOpen}
+          onToggle={() => setSectionTypeOpen(!sectionTypeOpen)}
           badge="requis"
         />
-        {section1Open && (
+        {sectionTypeOpen && (
           <div className="flex flex-col gap-4 p-4 rounded-lg border border-border">
-            {/* typeActivite */}
             <Select
               value={form.typeActivite}
               onValueChange={(v) => setField("typeActivite", v as TypeActivite)}
@@ -668,78 +622,197 @@ export function RegleFormClient() {
                 ))}
               </SelectContent>
             </Select>
-
-            {/* typeDeclencheur */}
-            <Select
-              value={form.typeDeclencheur}
-              onValueChange={(v) => {
-                setField("typeDeclencheur", v as TypeDeclencheur);
-                // Reset conditional fields when trigger type changes
-                setField("intervalleJours", "");
-                setField("conditionValeur", "");
-                setField("conditionValeur2", "");
-              }}
-            >
-              <SelectTrigger
-                label="Type de declencheur"
-                error={errors.typeDeclencheur}
-              >
-                <SelectValue placeholder="Choisir un declencheur..." />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.values(TypeDeclencheur).map((val) => (
-                  <SelectItem key={val} value={val}>
-                    {TYPE_DECLENCHEUR_LABELS[val]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Conditional — RECURRENT */}
-            {needsIntervalleJours && (
-              <Input
-                label="Intervalle en jours"
-                type="number"
-                min={1}
-                step={1}
-                value={form.intervalleJours}
-                onChange={(e) => setField("intervalleJours", e.target.value)}
-                placeholder="Ex: 7"
-                error={errors.intervalleJours}
-              />
-            )}
-
-            {/* Conditional — conditionValeur (tous les SEUIL_* + FCR + STOCK + JALON) */}
-            {needsConditionValeur && (
-              <Input
-                label={conditionValeurLabel}
-                type="number"
-                step="any"
-                value={form.conditionValeur}
-                onChange={(e) => setField("conditionValeur", e.target.value)}
-                placeholder="Ex: 200"
-                error={errors.conditionValeur}
-              />
-            )}
-
-            {/* Conditional — conditionValeur2 (SEUIL_QUALITE uniquement) */}
-            {needsConditionValeur2 && (
-              <Input
-                label="Valeur maximale (ex: pH max)"
-                type="number"
-                step="any"
-                value={form.conditionValeur2}
-                onChange={(e) => setField("conditionValeur2", e.target.value)}
-                placeholder="Ex: 9"
-                error={errors.conditionValeur2}
-              />
-            )}
           </div>
         )}
       </div>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Section Action — Que faire quand la regle se declenche ?          */}
+      {/* Section 2 — Conditions de declenchement */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="flex flex-col gap-2">
+        <SectionHeader
+          title="Conditions de declenchement"
+          open={sectionConditionsOpen}
+          onToggle={() => setSectionConditionsOpen(!sectionConditionsOpen)}
+          badge="requis"
+        />
+        {sectionConditionsOpen && (
+          <div className="flex flex-col gap-4 p-4 rounded-lg border border-border">
+            {/* Info banner */}
+            <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+              <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground">
+                Definissez les conditions qui declencheront cette regle. Ajoutez une ou plusieurs conditions.
+              </p>
+            </div>
+
+            {/* Error message */}
+            {errors.conditions && (
+              <p className="text-sm text-danger">{errors.conditions}</p>
+            )}
+
+            {/* Logique ET/OU — visible seulement si plus d'une condition */}
+            {form.conditions.length > 1 && (
+              <Select
+                value={form.logique}
+                onValueChange={(v) => setField("logique", v as LogiqueCondition)}
+              >
+                <SelectTrigger label="Logique de combinaison">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(LogiqueCondition).map((val) => (
+                    <SelectItem key={val} value={val}>
+                      {LOGIQUE_CONDITION_LABELS[val]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {/* Liste des conditions */}
+            {form.conditions.length > 0 && (
+              <div className="flex flex-col gap-3">
+                {form.conditions.map((cond, idx) => (
+                  <div key={idx} className="flex flex-col gap-2 p-3 rounded-lg border border-border bg-muted/20">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Condition {idx + 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setField(
+                            "conditions",
+                            form.conditions.filter((_, i) => i !== idx)
+                          );
+                        }}
+                        className="inline-flex items-center justify-center h-8 w-8 rounded-md text-danger hover:bg-danger/10 transition-colors"
+                        aria-label="Supprimer cette condition"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    {/* TypeDeclencheur */}
+                    <Select
+                      value={cond.typeDeclencheur}
+                      onValueChange={(v) => {
+                        const updated = [...form.conditions];
+                        updated[idx] = { ...updated[idx], typeDeclencheur: v as TypeDeclencheur };
+                        setField("conditions", updated);
+                      }}
+                    >
+                      <SelectTrigger label="Type de declencheur">
+                        <SelectValue placeholder="Choisir..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.values(TypeDeclencheur).map((val) => (
+                          <SelectItem key={val} value={val}>
+                            {TYPE_DECLENCHEUR_LABELS[val]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Operateur */}
+                    <Select
+                      value={cond.operateur}
+                      onValueChange={(v) => {
+                        const updated = [...form.conditions];
+                        updated[idx] = {
+                          ...updated[idx],
+                          operateur: v as OperateurCondition,
+                          // Reset conditionValeur2 if no longer ENTRE
+                          conditionValeur2: v !== OperateurCondition.ENTRE ? "" : updated[idx].conditionValeur2,
+                        };
+                        setField("conditions", updated);
+                      }}
+                    >
+                      <SelectTrigger label="Operateur">
+                        <SelectValue placeholder="Choisir..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.values(OperateurCondition).map((val) => (
+                          <SelectItem key={val} value={val}>
+                            {OPERATEUR_CONDITION_LABELS[val]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Valeur primaire */}
+                    {cond.typeDeclencheur !== "" && NEEDS_CONDITION_VALEUR.has(cond.typeDeclencheur as TypeDeclencheur) && (
+                      <Input
+                        label={(() => {
+                          switch (cond.typeDeclencheur as TypeDeclencheur) {
+                            case TypeDeclencheur.SEUIL_POIDS: return "Poids moyen declencheur (g)";
+                            case TypeDeclencheur.SEUIL_QUALITE: return "Valeur minimale (ex: pH min)";
+                            case TypeDeclencheur.SEUIL_MORTALITE: return "Taux de mortalite declencheur (%)";
+                            case TypeDeclencheur.FCR_ELEVE: return "FCR declencheur";
+                            case TypeDeclencheur.STOCK_BAS: return "Quantite de stock minimal";
+                            case TypeDeclencheur.JALON: return "Seuil du jalon (% du cycle)";
+                            default: return "Valeur";
+                          }
+                        })()}
+                        type="number"
+                        step="any"
+                        value={cond.conditionValeur}
+                        onChange={(e) => {
+                          const updated = [...form.conditions];
+                          updated[idx] = { ...updated[idx], conditionValeur: e.target.value };
+                          setField("conditions", updated);
+                        }}
+                        placeholder="Ex: 200"
+                      />
+                    )}
+
+                    {/* Valeur secondaire — ENTRE uniquement */}
+                    {cond.operateur === OperateurCondition.ENTRE && (
+                      <Input
+                        label="Valeur maximale (borne haute)"
+                        type="number"
+                        step="any"
+                        value={cond.conditionValeur2}
+                        onChange={(e) => {
+                          const updated = [...form.conditions];
+                          updated[idx] = { ...updated[idx], conditionValeur2: e.target.value };
+                          setField("conditions", updated);
+                        }}
+                        placeholder="Ex: 300"
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Bouton ajouter */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setField("conditions", [
+                  ...form.conditions,
+                  {
+                    typeDeclencheur: "",
+                    operateur: "",
+                    conditionValeur: "",
+                    conditionValeur2: "",
+                  },
+                ]);
+              }}
+              className="w-full min-h-[44px]"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter une condition
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Section 3 — Action au declenchement */}
       {/* ------------------------------------------------------------------ */}
       <div className="flex flex-col gap-2">
         <SectionHeader
@@ -772,7 +845,7 @@ export function RegleFormClient() {
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
                 <p className="text-xs font-medium text-primary mb-1">Section activite</p>
                 <p className="text-xs text-muted-foreground">
-                  Les templates d&apos;activite (titre, description, instructions) et la priorite sont configures dans la section ci-dessous.
+                  Les templates d&apos;activite (titre, description, instructions) sont configures dans la section suivante.
                 </p>
               </div>
             )}
@@ -863,16 +936,16 @@ export function RegleFormClient() {
       </div>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Section 2 — Identite & Templates (activite) */}
+      {/* Section 4 — Identite & Templates */}
       {/* ------------------------------------------------------------------ */}
       <div className="flex flex-col gap-2">
         <SectionHeader
           title={form.actionType === ActionRegle.NOTIFICATION ? "Identite de la regle" : "Identite et templates"}
-          open={section2Open}
-          onToggle={() => setSection2Open(!section2Open)}
+          open={sectionIdentiteOpen}
+          onToggle={() => setSectionIdentiteOpen(!sectionIdentiteOpen)}
           badge="requis"
         />
-        {section2Open && (
+        {sectionIdentiteOpen && (
           <div className="flex flex-col gap-4 p-4 rounded-lg border border-border">
             {/* nom */}
             <Input
@@ -971,184 +1044,34 @@ export function RegleFormClient() {
       </div>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Section 4 — Conditions composees */}
-      {/* ------------------------------------------------------------------ */}
-      <div className="flex flex-col gap-2">
-        <SectionHeader
-          title="Conditions composees"
-          open={section4Open}
-          onToggle={() => setSection4Open(!section4Open)}
-          badge={form.conditions.length > 0 ? `${form.conditions.length} condition${form.conditions.length > 1 ? "s" : ""}` : "optionnel"}
-        />
-        {section4Open && (
-          <div className="flex flex-col gap-4 p-4 rounded-lg border border-border">
-            {/* Info hint */}
-            <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
-              <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-              <p className="text-xs text-muted-foreground">
-                Les conditions composees permettent de combiner plusieurs criteres de declenchement.
-                Si des conditions sont definies ici, elles remplacent le declencheur simple de la section 1.
-              </p>
-            </div>
-
-            {/* Logique ET/OU */}
-            <Select
-              value={form.logique}
-              onValueChange={(v) => setField("logique", v as LogiqueCondition)}
-            >
-              <SelectTrigger label="Logique de combinaison">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.values(LogiqueCondition).map((val) => (
-                  <SelectItem key={val} value={val}>
-                    {LOGIQUE_CONDITION_LABELS[val]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Liste des conditions */}
-            {form.conditions.length > 0 && (
-              <div className="flex flex-col gap-3">
-                {form.conditions.map((cond, idx) => (
-                  <div key={idx} className="flex flex-col gap-2 p-3 rounded-lg border border-border bg-muted/20">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground">
-                        Condition {idx + 1}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setField(
-                            "conditions",
-                            form.conditions.filter((_, i) => i !== idx)
-                          );
-                        }}
-                        className="inline-flex items-center justify-center h-8 w-8 rounded-md text-danger hover:bg-danger/10 transition-colors"
-                        aria-label="Supprimer cette condition"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-
-                    {/* TypeDeclencheur */}
-                    <Select
-                      value={cond.typeDeclencheur}
-                      onValueChange={(v) => {
-                        const updated = [...form.conditions];
-                        updated[idx] = { ...updated[idx], typeDeclencheur: v as TypeDeclencheur };
-                        setField("conditions", updated);
-                      }}
-                    >
-                      <SelectTrigger label="Type de declencheur">
-                        <SelectValue placeholder="Choisir..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.values(TypeDeclencheur).map((val) => (
-                          <SelectItem key={val} value={val}>
-                            {TYPE_DECLENCHEUR_LABELS[val]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {/* Operateur */}
-                    <Select
-                      value={cond.operateur}
-                      onValueChange={(v) => {
-                        const updated = [...form.conditions];
-                        updated[idx] = {
-                          ...updated[idx],
-                          operateur: v as OperateurCondition,
-                          // Reset conditionValeur2 if no longer ENTRE
-                          conditionValeur2: v !== OperateurCondition.ENTRE ? "" : updated[idx].conditionValeur2,
-                        };
-                        setField("conditions", updated);
-                      }}
-                    >
-                      <SelectTrigger label="Operateur">
-                        <SelectValue placeholder="Choisir..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.values(OperateurCondition).map((val) => (
-                          <SelectItem key={val} value={val}>
-                            {OPERATEUR_CONDITION_LABELS[val]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {/* Valeur primaire */}
-                    <Input
-                      label="Valeur"
-                      type="number"
-                      step="any"
-                      value={cond.conditionValeur}
-                      onChange={(e) => {
-                        const updated = [...form.conditions];
-                        updated[idx] = { ...updated[idx], conditionValeur: e.target.value };
-                        setField("conditions", updated);
-                      }}
-                      placeholder="Ex: 200"
-                    />
-
-                    {/* Valeur secondaire — ENTRE uniquement */}
-                    {cond.operateur === OperateurCondition.ENTRE && (
-                      <Input
-                        label="Valeur maximale (borne haute)"
-                        type="number"
-                        step="any"
-                        value={cond.conditionValeur2}
-                        onChange={(e) => {
-                          const updated = [...form.conditions];
-                          updated[idx] = { ...updated[idx], conditionValeur2: e.target.value };
-                          setField("conditions", updated);
-                        }}
-                        placeholder="Ex: 300"
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Bouton ajouter */}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setField("conditions", [
-                  ...form.conditions,
-                  {
-                    typeDeclencheur: "",
-                    operateur: "",
-                    conditionValeur: "",
-                    conditionValeur2: "",
-                  },
-                ]);
-              }}
-              className="w-full min-h-[44px]"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Ajouter une condition
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* Section 3 — Parametres */}
+      {/* Section 5 — Parametres avances */}
       {/* ------------------------------------------------------------------ */}
       <div className="flex flex-col gap-2">
         <SectionHeader
           title="Parametres avances"
-          open={section3Open}
-          onToggle={() => setSection3Open(!section3Open)}
+          open={sectionAvancesOpen}
+          onToggle={() => setSectionAvancesOpen(!sectionAvancesOpen)}
           badge="optionnel"
         />
-        {section3Open && (
+        {sectionAvancesOpen && (
           <div className="flex flex-col gap-4 p-4 rounded-lg border border-border">
+            {/* intervalleJours */}
+            <div className="flex flex-col gap-1">
+              <Input
+                label="Intervalle en jours"
+                type="number"
+                min={1}
+                step={1}
+                value={form.intervalleJours}
+                onChange={(e) => setField("intervalleJours", e.target.value)}
+                placeholder="Ex: 7"
+                error={errors.intervalleJours}
+              />
+              <p className="text-xs text-muted-foreground">
+                Uniquement pour les declencheurs de type Recurrent
+              </p>
+            </div>
+
             {/* priorite */}
             <Input
               label="Priorite (1=urgente, 10=basse)"

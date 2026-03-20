@@ -202,15 +202,20 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
         (c) => c.typeDeclencheur !== "" && c.operateur !== ""
       );
 
+      // Derive typeDeclencheur from first valid condition (required by API schema)
+      const derivedTypeDeclencheur =
+        validConditions.length > 0
+          ? (validConditions[0].typeDeclencheur as TypeDeclencheur)
+          : regle.typeDeclencheur as TypeDeclencheur;
+
       const body = {
         nom: form.nom.trim(),
         description: form.description.trim() || null,
         priorite: form.priorite,
         intervalleJours: form.intervalleJours,
-        conditionValeur: form.conditionValeur,
-        conditionValeur2: form.conditionValeur2,
         phaseMin: form.phaseMin,
         phaseMax: form.phaseMax,
+        typeDeclencheur: derivedTypeDeclencheur,
         titreTemplate: form.titreTemplate.trim(),
         descriptionTemplate: form.descriptionTemplate.trim() || null,
         instructionsTemplate: form.instructionsTemplate.trim() || null,
@@ -480,16 +485,6 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
               {regle.intervalleJours} jour{regle.intervalleJours > 1 ? "s" : ""}
             </InfoRow>
           )}
-          {regle.conditionValeur != null && (
-            <InfoRow label="Seuil (conditionValeur)">
-              {regle.conditionValeur}
-            </InfoRow>
-          )}
-          {regle.conditionValeur2 != null && (
-            <InfoRow label="Seuil 2 (conditionValeur2)">
-              {regle.conditionValeur2}
-            </InfoRow>
-          )}
           {regle.phaseMin && (
             <InfoRow label="Phase min">
               {PHASE_ELEVAGE_LABELS[regle.phaseMin as PhaseElevage]}
@@ -502,45 +497,51 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           )}
         </SectionCard>
 
-        {/* Conditions composees — affichees uniquement si presentes */}
-        {regle.conditions && regle.conditions.length > 0 && (
-          <SectionCard title={`Conditions composees (${regle.conditions.length})`}>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xs text-muted-foreground">Logique :</span>
-              <Badge variant="default">
-                {LOGIQUE_CONDITION_LABELS[(regle.logique as LogiqueCondition) ?? LogiqueCondition.ET]}
-              </Badge>
-            </div>
-            <div className="space-y-2">
-              {regle.conditions.map((c, idx) => (
-                <div
-                  key={c.id ?? idx}
-                  className="flex flex-col gap-0.5 rounded-md bg-muted/40 px-3 py-2 text-sm"
-                >
-                  <span className="text-xs text-muted-foreground font-medium">
-                    Condition {idx + 1}
-                  </span>
-                  <span className="text-foreground">
-                    <span className="font-medium">
-                      {TYPE_DECLENCHEUR_LABELS[c.typeDeclencheur as TypeDeclencheur] ?? c.typeDeclencheur}
-                    </span>
-                    {" "}
-                    <span className="text-muted-foreground">
-                      {OPERATEUR_CONDITION_LABELS[c.operateur as OperateurCondition] ?? c.operateur}
-                    </span>
-                    {" "}
-                    {c.conditionValeur !== null && (
-                      <span className="font-mono">{c.conditionValeur}</span>
-                    )}
-                    {c.operateur === OperateurCondition.ENTRE && c.conditionValeur2 !== null && (
-                      <span className="text-muted-foreground"> et <span className="font-mono text-foreground">{c.conditionValeur2}</span></span>
-                    )}
-                  </span>
+        {/* Conditions de declenchement */}
+        <SectionCard title={`Conditions de declenchement${regle.conditions && regle.conditions.length > 0 ? ` (${regle.conditions.length})` : ""}`}>
+          {regle.conditions && regle.conditions.length > 0 ? (
+            <>
+              {regle.conditions.length > 1 && (
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs text-muted-foreground">Logique :</span>
+                  <Badge variant="default">
+                    {LOGIQUE_CONDITION_LABELS[(regle.logique as LogiqueCondition) ?? LogiqueCondition.ET]}
+                  </Badge>
                 </div>
-              ))}
-            </div>
-          </SectionCard>
-        )}
+              )}
+              <div className="space-y-2">
+                {regle.conditions.map((c, idx) => (
+                  <div
+                    key={c.id ?? idx}
+                    className="flex flex-col gap-0.5 rounded-md bg-muted/40 px-3 py-2 text-sm"
+                  >
+                    <span className="text-xs text-muted-foreground font-medium">
+                      Condition {idx + 1}
+                    </span>
+                    <span className="text-foreground">
+                      <span className="font-medium">
+                        {TYPE_DECLENCHEUR_LABELS[c.typeDeclencheur as TypeDeclencheur] ?? c.typeDeclencheur}
+                      </span>
+                      {" "}
+                      <span className="text-muted-foreground">
+                        {OPERATEUR_CONDITION_LABELS[c.operateur as OperateurCondition] ?? c.operateur}
+                      </span>
+                      {" "}
+                      {c.conditionValeur !== null && (
+                        <span className="font-mono">{c.conditionValeur}</span>
+                      )}
+                      {c.operateur === OperateurCondition.ENTRE && c.conditionValeur2 !== null && (
+                        <span className="text-muted-foreground"> et <span className="font-mono text-foreground">{c.conditionValeur2}</span></span>
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">Aucune condition composee — declencheur simple : {TYPE_DECLENCHEUR_LABELS[regle.typeDeclencheur as keyof typeof TYPE_DECLENCHEUR_LABELS] ?? regle.typeDeclencheur}</p>
+          )}
+        </SectionCard>
 
         {/* Templates activite — visibles si ACTIVITE ou LES_DEUX */}
         {((regle.actionType as ActionRegle) === ActionRegle.ACTIVITE || (regle.actionType as ActionRegle) === ActionRegle.LES_DEUX || !regle.actionType) && (
@@ -733,12 +734,6 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
   // Edit mode
   // ---------------------------------------------------------------------------
 
-  const isRecurrent =
-    regle.typeDeclencheur === TypeDeclencheur.RECURRENT;
-  const isSeuilQualite =
-    regle.typeDeclencheur === TypeDeclencheur.SEUIL_QUALITE;
-  const hasConditionValeur = isSeuilType(regle.typeDeclencheur);
-
   return (
     <div className="space-y-4 max-w-3xl">
       <Link
@@ -848,69 +843,27 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           />
         </div>
 
-        {/* intervalleJours — RECURRENT only */}
-        {isRecurrent && (
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Intervalle (jours) <span className="text-danger">*</span>
-            </label>
-            <Input
-              type="number"
-              value={form.intervalleJours ?? ""}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  intervalleJours: parseInt(e.target.value) || null,
-                }))
-              }
-              min={1}
-              step={1}
-              required
-            />
-          </div>
-        )}
-
-        {/* conditionValeur — SEUIL types */}
-        {hasConditionValeur && (
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Seuil (conditionValeur){" "}
-              <span className="text-danger">*</span>
-            </label>
-            <Input
-              type="number"
-              value={form.conditionValeur ?? ""}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  conditionValeur: parseFloat(e.target.value) || null,
-                }))
-              }
-              step="any"
-              required
-            />
-          </div>
-        )}
-
-        {/* conditionValeur2 — SEUIL_QUALITE only */}
-        {isSeuilQualite && (
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Seuil haut (conditionValeur2)
-            </label>
-            <Input
-              type="number"
-              value={form.conditionValeur2 ?? ""}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  conditionValeur2: parseFloat(e.target.value) || null,
-                }))
-              }
-              step="any"
-            />
-          </div>
-        )}
+        {/* intervalleJours — toujours visible avec note RECURRENT */}
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">
+            Intervalle (jours)
+          </label>
+          <Input
+            type="number"
+            value={form.intervalleJours ?? ""}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                intervalleJours: parseInt(e.target.value) || null,
+              }))
+            }
+            min={1}
+            step={1}
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Uniquement pour les declencheurs de type Recurrent
+          </p>
+        </div>
 
         {/* phaseMin / phaseMax */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -969,15 +922,14 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
         </div>
       </div>
 
-      {/* Section Conditions composees */}
+      {/* Section Conditions de declenchement */}
       <div className="rounded-xl border border-border bg-card p-4 space-y-4">
-        <h3 className="text-sm font-semibold text-foreground">Conditions composees</h3>
+        <h3 className="text-sm font-semibold text-foreground">Conditions de declenchement</h3>
 
         <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
           <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
           <p className="text-xs text-muted-foreground">
-            Si des conditions composees sont definies, elles remplacent le declencheur simple.
-            Laissez vide pour utiliser uniquement le declencheur principal.
+            Definissez les conditions qui declencheront cette regle. Ajoutez une ou plusieurs conditions.
           </p>
         </div>
 

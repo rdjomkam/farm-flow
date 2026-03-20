@@ -113,10 +113,17 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // typeDeclencheur: optional if conditions are provided (derive from first condition)
+    if (!body.typeDeclencheur && Array.isArray(body.conditions) && body.conditions.length > 0) {
+      const firstCond = body.conditions[0] as Record<string, unknown>;
+      if (firstCond.typeDeclencheur && VALID_TYPE_DECLENCHEUR.includes(firstCond.typeDeclencheur as TypeDeclencheur)) {
+        body.typeDeclencheur = firstCond.typeDeclencheur;
+      }
+    }
     if (!body.typeDeclencheur || !VALID_TYPE_DECLENCHEUR.includes(body.typeDeclencheur as TypeDeclencheur)) {
       errors.push({
         field: "typeDeclencheur",
-        message: `Le type de declencheur est obligatoire. Valeurs valides : ${VALID_TYPE_DECLENCHEUR.join(", ")}`,
+        message: `Le type de declencheur est obligatoire (ou sera derive de la premiere condition). Valeurs valides : ${VALID_TYPE_DECLENCHEUR.join(", ")}`,
       });
     }
 
@@ -133,7 +140,11 @@ export async function POST(request: NextRequest) {
     }
 
     // --- Conditional required fields ---
+    // Only validate legacy conditionValeur / intervalleJours if no compound conditions are provided
+    const hasConditions = Array.isArray(body.conditions) && body.conditions.length > 0;
+
     if (
+      !hasConditions &&
       body.typeDeclencheur &&
       SEUIL_TYPES.includes(body.typeDeclencheur as TypeDeclencheur)
     ) {
@@ -145,7 +156,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (body.typeDeclencheur === TypeDeclencheur.RECURRENT) {
+    if (!hasConditions && body.typeDeclencheur === TypeDeclencheur.RECURRENT) {
       if (
         body.intervalleJours === undefined ||
         typeof body.intervalleJours !== "number" ||
