@@ -168,6 +168,24 @@ const modulesAdminGerant: { label: string; primaryHref: string; icon: React.Comp
       { href: "/admin/abonnements", label: "Tous les abonnements", icon: ShieldCheck },
     ],
   },
+  // Portefeuille Ingénieur — Sprint 34 (gate: PORTEFEUILLE_VOIR)
+  {
+    label: "Portefeuille",
+    primaryHref: "/mon-portefeuille",
+    icon: Wallet,
+    items: [
+      { href: "/mon-portefeuille", label: "Mon portefeuille", icon: Wallet },
+    ],
+  },
+  // Admin Commissions — Sprint 34 (gate: COMMISSIONS_GERER)
+  {
+    label: "Admin Commissions",
+    primaryHref: "/admin/commissions",
+    icon: TrendingUp,
+    items: [
+      { href: "/admin/commissions", label: "Toutes les commissions", icon: TrendingUp },
+    ],
+  },
   // Utilisateurs — ADMIN uniquement (filtre par role dans le composant)
   {
     label: "Utilisateurs",
@@ -191,6 +209,9 @@ const PHASE3_MODULE_PERMISSIONS: Record<string, Permission> = {
   // Sprint 33 — Abonnements
   "Abonnement":            Permission.ABONNEMENTS_VOIR,
   "Admin Abonnements":     Permission.ABONNEMENTS_GERER,
+  // Sprint 34 — Commissions & Portefeuille
+  "Portefeuille":          Permission.PORTEFEUILLE_VOIR,
+  "Admin Commissions":     Permission.COMMISSIONS_GERER,
 };
 
 export function Sidebar({ permissions, role, siteModules }: { permissions: Permission[]; role: Role | null; siteModules: SiteModule[] }) {

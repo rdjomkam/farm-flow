@@ -22,6 +22,7 @@ import {
   confirmerPaiement,
 } from "@/lib/queries/paiements-abonnements";
 import { activerAbonnement } from "@/lib/queries/abonnements";
+import { calculerEtCreerCommission } from "@/lib/services/commissions";
 import { prisma } from "@/lib/db";
 import { FournisseurPaiement, StatutAbonnement, StatutPaiementAbo } from "@/types";
 
@@ -114,7 +115,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       if (paiementApresConfirm?.abonnementId) {
         // R4 : activerAbonnement via updateMany conditionnel
         await activerAbonnement(paiementApresConfirm.abonnementId);
-        // TODO Sprint 34 : créer CommissionIngenieur si abonnement.ingenieurId défini
+
+        // Sprint 34 : calculer et créer la commission ingénieur si applicable
+        // Fire-and-forget : ne pas bloquer le webhook si erreur commission
+        calculerEtCreerCommission(
+          paiementApresConfirm.abonnementId,
+          paiementApresConfirm.id,
+          paiementApresConfirm.siteId
+        ).catch((commissionError) => {
+          console.error(
+            "[webhook/smobilpay] Erreur commission (non-bloquant) :",
+            commissionError instanceof Error ? commissionError.message : "Erreur inconnue"
+          );
+        });
       }
     } else if (
       statut === StatutPaiementAbo.ECHEC ||

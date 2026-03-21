@@ -147,6 +147,7 @@ export const PERMISSION_GROUPS = {
     Permission.REMISES_GERER,
     Permission.COMMISSIONS_VOIR,
     Permission.COMMISSIONS_GERER,
+    Permission.COMMISSION_PREMIUM,
     Permission.PORTEFEUILLE_VOIR,
     Permission.PORTEFEUILLE_GERER,
   ],
