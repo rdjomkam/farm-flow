@@ -85,7 +85,7 @@ fonctionnel avec un composant de demonstration.
 **Assigne a :** @db-specialist
 **Priorite :** Critique
 **Complexite :** Simple
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Ajouter le champ `locale` sur le modele `Session` pour persister la preference
 de langue de l'utilisateur connecte. Valeur par defaut : `"fr"`.
@@ -108,7 +108,7 @@ de langue de l'utilisateur connecte. Valeur par defaut : `"fr"`.
 **Priorite :** Critique
 **Complexite :** Medium
 **Depend de :** Story 39.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Installer `next-intl`, creer la configuration, le middleware de detection de locale
 et integrer dans le layout racine.
@@ -147,7 +147,7 @@ et integrer dans le layout racine.
 **Priorite :** Haute
 **Complexite :** Medium
 **Depend de :** Story 39.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Creer les premiers fichiers de messages avec le namespace `common` qui couvre
 les chaines transversales (boutons, etats vides, labels generiques, unites).
@@ -181,7 +181,7 @@ les chaines transversales (boutons, etats vides, labels generiques, unites).
 **Priorite :** Haute
 **Complexite :** Simple
 **Depend de :** Story 39.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Creer les hooks et utilitaires reutilisables pour acceder aux traductions
 dans les Server Components et Client Components.
@@ -212,7 +212,7 @@ dans les Server Components et Client Components.
 **Priorite :** Haute
 **Complexite :** Simple
 **Depend de :** Stories 39.1 a 39.4
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Taches @tester :**
 - [ ] `TODO` Tester que la migration Prisma s'applique sans erreur

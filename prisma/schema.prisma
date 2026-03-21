@@ -741,6 +741,7 @@ model Session {
   activeSite     Site?    @relation(fields: [activeSiteId], references: [id])
   expires        DateTime
   createdAt      DateTime @default(now())
+  locale         String   @default("fr")
   // Impersonation — non null uniquement lors d'une session d'impersonation
   originalUserId String?
   originalUser   User?    @relation("OriginalUser", fields: [originalUserId], references: [id], onDelete: SetNull)

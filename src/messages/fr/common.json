@@ -1,0 +1,59 @@
+{
+  "buttons": {
+    "add": "Ajouter",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "validate": "Valider",
+    "cancel": "Annuler",
+    "back": "Retour",
+    "save": "Enregistrer",
+    "create": "Créer",
+    "confirm": "Confirmer",
+    "close": "Fermer",
+    "loadMore": "Charger plus",
+    "export": "Exporter",
+    "print": "Imprimer",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "reset": "Réinitialiser"
+  },
+  "empty": {
+    "noResults": "Aucun résultat",
+    "noItems": "Aucun élément trouvé"
+  },
+  "status": {
+    "active": "Actif",
+    "inactive": "Inactif",
+    "inProgress": "En cours",
+    "completed": "Terminé",
+    "cancelled": "Annulé"
+  },
+  "labels": {
+    "date": "Date",
+    "name": "Nom",
+    "code": "Code",
+    "status": "Statut",
+    "actions": "Actions",
+    "description": "Description",
+    "total": "Total",
+    "quantity": "Quantité",
+    "price": "Prix",
+    "amount": "Montant",
+    "notes": "Notes",
+    "type": "Type",
+    "reference": "Référence"
+  },
+  "confirm": {
+    "areYouSure": "Êtes-vous sûr ?",
+    "irreversible": "Cette action est irréversible."
+  },
+  "errors": {
+    "generic": "Une erreur est survenue",
+    "required": "Champ obligatoire",
+    "invalid": "Valeur invalide",
+    "networkError": "Erreur de connexion",
+    "unauthorized": "Non autorisé",
+    "forbidden": "Accès refusé",
+    "notFound": "Introuvable"
+  }
+}

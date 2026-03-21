@@ -1,0 +1,25 @@
+{
+  "units": {
+    "g": "g",
+    "kg": "kg",
+    "mL": "mL",
+    "L": "L",
+    "unit": "unité",
+    "bags": "sacs",
+    "currency": "FCFA"
+  },
+  "periods": {
+    "monthly": "par mois",
+    "quarterly": "par trimestre",
+    "yearly": "par an"
+  },
+  "dates": {
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "daysAgo": "Il y a {count} jours"
+  },
+  "price": {
+    "free": "Gratuit",
+    "onRequest": "Sur devis"
+  }
+}

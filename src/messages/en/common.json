@@ -1,0 +1,59 @@
+{
+  "buttons": {
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "validate": "Validate",
+    "cancel": "Cancel",
+    "back": "Back",
+    "save": "Save",
+    "create": "Create",
+    "confirm": "Confirm",
+    "close": "Close",
+    "loadMore": "Load more",
+    "export": "Export",
+    "print": "Print",
+    "search": "Search",
+    "filter": "Filter",
+    "reset": "Reset"
+  },
+  "empty": {
+    "noResults": "No results",
+    "noItems": "No items found"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "inProgress": "In progress",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+  "labels": {
+    "date": "Date",
+    "name": "Name",
+    "code": "Code",
+    "status": "Status",
+    "actions": "Actions",
+    "description": "Description",
+    "total": "Total",
+    "quantity": "Quantity",
+    "price": "Price",
+    "amount": "Amount",
+    "notes": "Notes",
+    "type": "Type",
+    "reference": "Reference"
+  },
+  "confirm": {
+    "areYouSure": "Are you sure?",
+    "irreversible": "This action cannot be undone."
+  },
+  "errors": {
+    "generic": "Something went wrong",
+    "required": "This field is required",
+    "invalid": "Invalid value",
+    "networkError": "Connection error",
+    "unauthorized": "Unauthorized",
+    "forbidden": "Access denied",
+    "notFound": "Not found"
+  }
+}

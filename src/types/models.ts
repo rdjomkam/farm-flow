@@ -356,6 +356,8 @@ export interface Session {
   activeSiteId: string | null;
   expires: Date;
   createdAt: Date;
+  /** Code de locale BCP 47 (ex: "fr", "en"). Defaut : "fr". */
+  locale: string;
 }
 
 /** Session avec sa relation user chargee */

@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import { AppShell } from "@/components/layout/app-shell";
 import { ToastProvider } from "@/components/ui/toast";
 import { ImpersonationBanner } from "@/components/users/impersonation-banner";
@@ -55,31 +57,37 @@ export default async function RootLayout({
 
   const isImpersonating = session?.isImpersonating ?? false;
 
+  // Detect locale and load messages for next-intl
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="fr">
+    <html lang={locale}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        <ToastProvider>
-          <GlobalLoadingProvider>
-            <GlobalLoadingBar />
-            <LoadingOverlay />
-            {isImpersonating && session && (
-              <ImpersonationBanner
-                targetUserName={session.name}
-                targetUserRole={session.role}
-                originalUserName={session.originalUserName ?? "Administrateur"}
-              />
-            )}
-            {session?.activeSiteId && (
-              <SubscriptionBanner siteId={session.activeSiteId} />
-            )}
-            <div className={isImpersonating ? "pt-14 sm:pt-11" : ""}>
-              <AppShell permissions={permissions} role={role} userName={session?.name ?? null} siteModules={siteModules} isImpersonating={isImpersonating}>{children}</AppShell>
-            </div>
-          </GlobalLoadingProvider>
-        </ToastProvider>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <ToastProvider>
+            <GlobalLoadingProvider>
+              <GlobalLoadingBar />
+              <LoadingOverlay />
+              {isImpersonating && session && (
+                <ImpersonationBanner
+                  targetUserName={session.name}
+                  targetUserRole={session.role}
+                  originalUserName={session.originalUserName ?? "Administrateur"}
+                />
+              )}
+              {session?.activeSiteId && (
+                <SubscriptionBanner siteId={session.activeSiteId} />
+              )}
+              <div className={isImpersonating ? "pt-14 sm:pt-11" : ""}>
+                <AppShell permissions={permissions} role={role} userName={session?.name ?? null} siteModules={siteModules} isImpersonating={isImpersonating}>{children}</AppShell>
+              </div>
+            </GlobalLoadingProvider>
+          </ToastProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

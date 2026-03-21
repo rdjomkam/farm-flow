@@ -28,6 +28,10 @@ import {
   Building2,
   Settings,
   Zap,
+  CreditCard,
+  ShieldCheck,
+  LayoutList,
+  TrendingUp,
 } from "lucide-react";
 
 export interface SubNavItem {
@@ -134,6 +138,48 @@ export const MODULE_NAV: ModuleNavConfig[] = [
     items: [
       { href: "/ingenieur", label: "Clients", icon: UserCog },
       { href: "/notes", label: "Notes", icon: NotebookPen },
+    ],
+  },
+  // Sprint 33 — Abonnement (gate: ABONNEMENTS_VOIR)
+  {
+    label: "Abonnement",
+    matchPaths: ["/mon-abonnement", "/tarifs", "/checkout"],
+    items: [
+      { href: "/mon-abonnement", label: "Mon abonnement", icon: CreditCard },
+      { href: "/tarifs", label: "Plans & tarifs", icon: Tag },
+    ],
+  },
+  // Sprint 33 — Admin Abonnements (gate: ABONNEMENTS_GERER)
+  {
+    label: "Admin Abonnements",
+    matchPaths: ["/admin/abonnements", "/admin/plans"],
+    items: [
+      { href: "/admin/abonnements", label: "Abonnements", icon: ShieldCheck },
+      { href: "/admin/plans", label: "Gestion des plans", icon: LayoutList },
+    ],
+  },
+  // Sprint 34 — Portefeuille (gate: PORTEFEUILLE_VOIR)
+  {
+    label: "Portefeuille",
+    matchPaths: ["/mon-portefeuille"],
+    items: [
+      { href: "/mon-portefeuille", label: "Mon portefeuille", icon: Wallet },
+    ],
+  },
+  // Sprint 34 — Admin Commissions (gate: COMMISSIONS_GERER)
+  {
+    label: "Admin Commissions",
+    matchPaths: ["/admin/commissions"],
+    items: [
+      { href: "/admin/commissions", label: "Commissions", icon: TrendingUp },
+    ],
+  },
+  // Sprint 35 — Admin Remises (gate: REMISES_GERER)
+  {
+    label: "Admin Remises",
+    matchPaths: ["/admin/remises"],
+    items: [
+      { href: "/admin/remises", label: "Remises & promos", icon: Tag },
     ],
   },
 ];

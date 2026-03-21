@@ -1,0 +1,8 @@
+/**
+ * Available i18n namespaces.
+ * Each namespace maps to a JSON file under src/messages/{locale}/{namespace}.json.
+ * Add new namespaces here when new message files are created.
+ */
+export const namespaces = ["common", "format"] as const;
+
+export type Namespace = (typeof namespaces)[number];

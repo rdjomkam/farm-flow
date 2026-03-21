@@ -1,0 +1,25 @@
+{
+  "units": {
+    "g": "g",
+    "kg": "kg",
+    "mL": "mL",
+    "L": "L",
+    "unit": "unit",
+    "bags": "bags",
+    "currency": "FCFA"
+  },
+  "periods": {
+    "monthly": "per month",
+    "quarterly": "per quarter",
+    "yearly": "per year"
+  },
+  "dates": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "daysAgo": "{count} days ago"
+  },
+  "price": {
+    "free": "Free",
+    "onRequest": "On request"
+  }
+}
