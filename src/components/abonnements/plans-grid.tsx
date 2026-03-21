@@ -20,8 +20,6 @@ import { Badge } from "@/components/ui/badge";
 import { TypePlan, PeriodeFacturation } from "@/types";
 import type { PlanAbonnement } from "@/types";
 import {
-  PLAN_TARIFS,
-  PLAN_LIMITES,
   PLAN_LABELS,
   PERIODE_LABELS,
 } from "@/lib/abonnements-constants";
@@ -88,10 +86,18 @@ function formatPrix(montant: number | null | undefined): string {
   return formatXAFOrFree(montant);
 }
 
+function getTarifForPeriode(plan: PlanAbonnement, periode: PeriodeFacturation): number | null {
+  switch (periode) {
+    case PeriodeFacturation.MENSUEL: return plan.prixMensuel != null ? Number(plan.prixMensuel) : null;
+    case PeriodeFacturation.TRIMESTRIEL: return plan.prixTrimestriel != null ? Number(plan.prixTrimestriel) : null;
+    case PeriodeFacturation.ANNUEL: return plan.prixAnnuel != null ? Number(plan.prixAnnuel) : null;
+  }
+}
+
 function getEconomie(plan: PlanAbonnement, periode: PeriodeFacturation): string | null {
   if (periode === PeriodeFacturation.MENSUEL) return null;
-  const mensuel = PLAN_TARIFS[plan.typePlan]?.[PeriodeFacturation.MENSUEL];
-  const tarif = PLAN_TARIFS[plan.typePlan]?.[periode];
+  const mensuel = getTarifForPeriode(plan, PeriodeFacturation.MENSUEL);
+  const tarif = getTarifForPeriode(plan, periode);
   if (!mensuel || !tarif || mensuel === 0) return null;
   const mois = periode === PeriodeFacturation.TRIMESTRIEL ? 3 : 12;
   const economie = mensuel * mois - tarif;
@@ -110,10 +116,7 @@ export function PlansGrid({ plans, abonnementActifPlanId }: PlansGridProps) {
 
   // Périodes disponibles (au moins un plan les propose)
   const periodesDisponibles = PERIODES.filter((p) =>
-    plansPromoteurs.some((plan) => {
-      const tarif = PLAN_TARIFS[plan.typePlan]?.[p];
-      return tarif !== undefined && tarif !== null;
-    })
+    plansPromoteurs.some((plan) => getTarifForPeriode(plan, p) !== null)
   );
 
   return (
@@ -143,10 +146,9 @@ export function PlansGrid({ plans, abonnementActifPlanId }: PlansGridProps) {
       {/* Grille des plans */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {plansPromoteurs.map((plan) => {
-          const tarif = PLAN_TARIFS[plan.typePlan]?.[periode];
-          const tarifMensuel = PLAN_TARIFS[plan.typePlan]?.[PeriodeFacturation.MENSUEL];
+          const tarif = getTarifForPeriode(plan, periode);
           const economie = getEconomie(plan, periode);
-          const limites = PLAN_LIMITES[plan.typePlan];
+          const limites = { limitesBacs: plan.limitesBacs, limitesVagues: plan.limitesVagues, limitesSites: plan.limitesSites };
           const features = PLAN_FEATURES[plan.typePlan] ?? [];
           const isActif = plan.id === abonnementActifPlanId;
           const isPopulaire = plan.typePlan === TypePlan.PROFESSIONNEL;

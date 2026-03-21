@@ -13,8 +13,10 @@ import { PlanComparaisonTable } from "@/components/abonnements/plan-comparaison-
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { getServerSession } from "@/lib/auth";
 import { getAbonnementActif } from "@/lib/queries/abonnements";
+import { getPlansAbonnements } from "@/lib/queries/plans-abonnements";
 import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
+import type { PlanAbonnement } from "@/types";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("common.metadata");
@@ -30,20 +32,15 @@ export const dynamic = "force-dynamic";
 export default async function TarifsPage() {
   const t = await getTranslations("abonnements.tarifs");
 
-  // Charger les plans publics depuis l'API
-  const baseUrl = process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
-  let plans: import("@/types").PlanAbonnement[] = [];
-  try {
-    const res = await fetch(`${baseUrl}/api/plans?public=true`, {
-      cache: "no-store",
-    });
-    if (res.ok) {
-      const data = await res.json();
-      plans = data.plans ?? [];
-    }
-  } catch {
-    // Fallback silencieux — la page s'affiche sans plans si l'API est indisponible
-  }
+  // BUG-023 fix: appel direct à la query au lieu de fetch self-API
+  const rawPlans = await getPlansAbonnements();
+  // Sérialiser les Decimal Prisma en number pour le Client Component
+  const plans: PlanAbonnement[] = rawPlans.map((p) => ({
+    ...p,
+    prixMensuel: p.prixMensuel != null ? Number(p.prixMensuel) : null,
+    prixTrimestriel: p.prixTrimestriel != null ? Number(p.prixTrimestriel) : null,
+    prixAnnuel: p.prixAnnuel != null ? Number(p.prixAnnuel) : null,
+  })) as PlanAbonnement[];
 
   // Vérifier si l'utilisateur est connecté et quel est son abonnement actif
   const session = await getServerSession();
