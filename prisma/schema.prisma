@@ -114,6 +114,9 @@ enum SiteModule {
   CONFIGURATION
   INGENIEUR
   NOTES
+  ABONNEMENTS
+  COMMISSIONS
+  REMISES
 }
 
 enum Permission {

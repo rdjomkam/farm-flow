@@ -249,6 +249,9 @@ export enum SiteModule {
   CONFIGURATION = "CONFIGURATION",
   INGENIEUR = "INGENIEUR",
   NOTES = "NOTES",
+  ABONNEMENTS = "ABONNEMENTS",
+  COMMISSIONS = "COMMISSIONS",
+  REMISES = "REMISES",
 }
 
 export interface Site {

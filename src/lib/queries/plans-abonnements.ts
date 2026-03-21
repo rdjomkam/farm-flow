@@ -6,6 +6,7 @@
  * R8 : PlanAbonnement est global (pas de siteId) — exception documentée dans ADR-020
  */
 import { prisma } from "@/lib/db";
+import { StatutAbonnement } from "@/types";
 import type { CreatePlanAbonnementDTO, UpdatePlanAbonnementDTO } from "@/types";
 
 /** Liste les plans d'abonnement actifs et publics (page tarifs) */
@@ -16,7 +17,7 @@ export async function getPlansAbonnements(includeInactif = false) {
       _count: {
         select: {
           abonnements: {
-            where: { statut: { in: ["ACTIF", "EN_GRACE"] } },
+            where: { statut: { in: [StatutAbonnement.ACTIF, StatutAbonnement.EN_GRACE] as any } },
           },
         },
       },
@@ -33,7 +34,7 @@ export async function getPlanAbonnementById(id: string) {
       _count: {
         select: {
           abonnements: {
-            where: { statut: { in: ["ACTIF", "EN_GRACE"] } },
+            where: { statut: { in: [StatutAbonnement.ACTIF, StatutAbonnement.EN_GRACE] as any } },
           },
         },
       },
@@ -94,18 +95,39 @@ export async function updatePlanAbonnement(
 
 /**
  * Toggle l'état actif d'un plan — R4 : atomique via updateMany avec condition.
- * Retourne le nombre de plans modifiés (0 si non trouvé, 1 si trouvé).
+ * Retourne :
+ * - { count: 0 }           si le plan est introuvable
+ * - { count: -1 }          si désactivation bloquée par des abonnés actifs (code 409 côté API)
+ * - { count: 1, isActif }  si la mise à jour a réussi
  */
 export async function togglePlanAbonnement(id: string) {
-  const plan = await prisma.planAbonnement.findUnique({
-    where: { id },
-    select: { isActif: true },
-  });
-  if (!plan) return { count: 0 };
+  return prisma.$transaction(async (tx) => {
+    const plan = await tx.planAbonnement.findUnique({
+      where: { id },
+      select: {
+        isActif: true,
+        _count: {
+          select: {
+            abonnements: {
+              where: {
+                statut: { in: [StatutAbonnement.ACTIF, StatutAbonnement.EN_GRACE] as any },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!plan) return { count: 0 };
 
-  const result = await prisma.planAbonnement.updateMany({
-    where: { id, isActif: plan.isActif },
-    data: { isActif: !plan.isActif },
+    // Si on tente de désactiver un plan avec des abonnés actifs → bloquer
+    if (plan.isActif && plan._count.abonnements > 0) {
+      return { count: -1, abonnesActifs: plan._count.abonnements };
+    }
+
+    const result = await tx.planAbonnement.updateMany({
+      where: { id, isActif: plan.isActif },
+      data: { isActif: !plan.isActif },
+    });
+    return { count: result.count, isActif: !plan.isActif };
   });
-  return result;
 }

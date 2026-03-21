@@ -206,6 +206,8 @@ export const ITEM_VIEW_PERMISSIONS: Record<string, Permission> = {
   "/mon-abonnement":     Permission.ABONNEMENTS_VOIR,
   "/tarifs":             Permission.ABONNEMENTS_VOIR,
   "/admin/abonnements":  Permission.ABONNEMENTS_GERER,
+  // Plans (Sprint 38)
+  "/admin/plans":        Permission.PLANS_GERER,
 };
 
 // ---------------------------------------------------------------------------

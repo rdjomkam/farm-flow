@@ -11,15 +11,6 @@ import {
   Plus,
   ArrowLeft,
   ShieldCheck,
-  FlaskConical,
-  Fish,
-  Package,
-  ShoppingCart,
-  BarChart2,
-  Settings,
-  HardHat,
-  StickyNote,
-  Boxes,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,28 +36,8 @@ import { cn } from "@/lib/utils";
 import { Permission, SiteModule } from "@/types";
 import { canAssignRole } from "@/lib/permissions-constants";
 import { useUserService } from "@/services";
+import { SITE_TOGGLEABLE_MODULES } from "@/lib/site-modules-config";
 
-// ---------------------------------------------------------------------------
-// Module config
-// ---------------------------------------------------------------------------
-
-interface ModuleConfig {
-  value: SiteModule;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-const MODULE_CONFIG: ModuleConfig[] = [
-  { value: SiteModule.REPRODUCTION, label: "Reproduction", icon: FlaskConical },
-  { value: SiteModule.GROSSISSEMENT, label: "Grossissement", icon: Fish },
-  { value: SiteModule.INTRANTS, label: "Intrants", icon: Package },
-  { value: SiteModule.VENTES, label: "Ventes", icon: ShoppingCart },
-  { value: SiteModule.ANALYSE_PILOTAGE, label: "Analyse & Pilotage", icon: BarChart2 },
-  { value: SiteModule.PACKS_PROVISIONING, label: "Packs & Provisioning", icon: Boxes },
-  { value: SiteModule.CONFIGURATION, label: "Configuration", icon: Settings },
-  { value: SiteModule.INGENIEUR, label: "Ingenieur", icon: HardHat },
-  { value: SiteModule.NOTES, label: "Notes", icon: StickyNote },
-];
 
 interface SiteRoleOption {
   id: string;
@@ -217,7 +188,7 @@ export function SiteDetailClient({
         <section className="border-b border-border pb-3">
           <h3 className="text-sm font-semibold mb-2">Modules</h3>
           <div className="flex flex-wrap gap-2">
-            {MODULE_CONFIG.map(({ value, label, icon: Icon }) => {
+            {SITE_TOGGLEABLE_MODULES.map(({ value, labelKey: label, icon: Icon }) => {
               const active = enabledModules.includes(value);
               return (
                 <button

@@ -36,6 +36,7 @@ import {
   Zap,
   CreditCard,
   ShieldCheck,
+  LayoutList,
 } from "lucide-react";
 import { NotificationBell } from "./notification-bell";
 import { cn } from "@/lib/utils";
@@ -166,6 +167,7 @@ const modulesAdminGerant: { label: string; primaryHref: string; icon: React.Comp
     icon: ShieldCheck,
     items: [
       { href: "/admin/abonnements", label: "Tous les abonnements", icon: ShieldCheck },
+      { href: "/admin/plans", label: "Gestion des plans", icon: LayoutList },
     ],
   },
   // Portefeuille Ingénieur — Sprint 34 (gate: PORTEFEUILLE_VOIR)

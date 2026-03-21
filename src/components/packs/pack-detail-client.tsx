@@ -38,6 +38,9 @@ const MODULE_LABELS: Record<SiteModule, string> = {
   [SiteModule.CONFIGURATION]: "Configuration",
   [SiteModule.INGENIEUR]: "Ingenieur",
   [SiteModule.NOTES]: "Notes",
+  [SiteModule.ABONNEMENTS]: "Abonnements",
+  [SiteModule.COMMISSIONS]: "Commissions",
+  [SiteModule.REMISES]: "Remises",
 };
 
 const statutActivationLabels: Record<StatutActivation, string> = {

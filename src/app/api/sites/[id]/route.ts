@@ -3,8 +3,9 @@ import { requireAuth, AuthError } from "@/lib/auth";
 import { getSiteById, updateSite, getSiteMember } from "@/lib/queries/sites";
 import { ForbiddenError } from "@/lib/permissions";
 import { Permission, SiteModule } from "@/types";
+import { SITE_TOGGLEABLE_MODULES } from "@/lib/site-modules-config";
 
-const VALID_MODULES = Object.values(SiteModule);
+const VALID_MODULES = SITE_TOGGLEABLE_MODULES.map((m) => m.value);
 
 type RouteParams = { params: Promise<{ id: string }> };
 

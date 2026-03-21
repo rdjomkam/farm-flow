@@ -23,8 +23,8 @@
 | **Sprint 35** | Système de Remises & Promotions | 4 | Remises CRUD + application automatique | Sprint 32 |
 | **Sprint 36** | Cycle de Vie Abonnements | 5 | Rappels, grâce, suspension, réactivation | Sprints 31, 34, 35 |
 | **Sprint 37** | Tests, Polish & Review Finale | 4 | Tests intégration, UX, review R1-R9 | Sprint 36 |
-| **Sprint 38** | Admin CRUD Plans d'Abonnement (UI) + Bugfix Mobile Nav | 6 | Page admin plans, CRUD dialog, BUG-021 mobile nav, navigation | Sprints 32, 33 |
-| **Total** | | **44** | | |
+| **Sprint 38** | Admin CRUD Plans + SiteModule Platform + Bugfixes | 7 | Page admin plans, CRUD dialog, BUG-021 mobile nav, BUG-022 SiteModule platform/site, navigation | Sprints 32, 33 |
+| **Total** | | **45** | | |
 
 ---
 
@@ -1382,7 +1382,7 @@ activer/désactiver, consulter). Les API routes CRUD existent déjà (Sprint 32)
 **Assigné à :** @developer
 **Priorité :** Critique
 **Complexité :** Medium
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Créer la page d'administration listant tous les plans d'abonnement (actifs et inactifs).
 Accessible aux admins DKFarm avec `Permission.PLANS_GERER`. Suivre le pattern de `src/app/admin/abonnements/page.tsx`.
@@ -1416,7 +1416,7 @@ Accessible aux admins DKFarm avec `Permission.PLANS_GERER`. Suivre le pattern de
 **Priorité :** Critique
 **Complexité :** Medium
 **Dépend de :** Story 38.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Formulaire de création et de modification d'un plan d'abonnement via un dialog.
 Suivre le pattern de `src/components/remises/remise-form-dialog.tsx`.
@@ -1465,7 +1465,7 @@ Suivre le pattern de `src/components/remises/remise-form-dialog.tsx`.
 **Priorité :** Haute
 **Complexité :** Simple
 **Dépend de :** Story 38.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Implémenter les actions d'activation/désactivation et de suppression (soft delete)
 des plans depuis la liste admin. Inclure les protections contre la désactivation d'un plan avec abonnés actifs.
@@ -1491,7 +1491,7 @@ des plans depuis la liste admin. Inclure les protections contre la désactivatio
 **Assigné à :** @developer
 **Priorité :** Haute
 **Complexité :** Simple
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Les modules ajoutés dans les Sprints 33-35 (Abonnement, Admin Abonnements,
 Portefeuille, Admin Commissions, Admin Remises) sont présents dans la sidebar desktop mais absents
@@ -1522,12 +1522,106 @@ Voir `docs/bugs/BUG-021.md`.
 
 ---
 
-### Story 38.5 — Navigation admin plans + loading state
+### Story 38.5 — SiteModule : ajout modules abonnements + distinction platform/site-level (BUG-022)
+**Assigné à :** @db-specialist + @developer
+**Priorité :** Haute
+**Complexité :** Medium
+**Statut :** `FAIT`
+
+**Description :** Les modules ajoutés dans les Sprints 33-35 (Abonnement, Commissions, Remises)
+ne sont pas enregistrés dans l'enum `SiteModule`. De plus, il n'existe aucun moyen de distinguer
+les modules **platform-level** (toujours disponibles, gérés par DKFarm — ex: Abonnements) des
+modules **site-level** (activables/désactivables par l'admin du site — ex: Reproduction, Ventes).
+Voir `docs/bugs/BUG-022.md`.
+
+**Approche :** Plutôt que d'ajouter un champ `isPlatform` sur l'enum Prisma (les enums PostgreSQL
+ne supportent pas de metadata), on utilise une **config TypeScript** qui marque chaque module
+comme `platform` ou `site`. C'est cohérent avec l'approche existante (`MODULE_CONFIG`,
+`MODULE_VIEW_PERMISSIONS`, etc.).
+
+**Tâches @db-specialist :**
+- [ ] `TODO` Ajouter les valeurs `ABONNEMENTS`, `COMMISSIONS`, `REMISES` à l'enum `SiteModule` dans `prisma/schema.prisma`
+- [ ] `TODO` Créer la migration SQL (méthode manuelle — recréer l'enum, voir MEMORY pour la stratégie)
+- [ ] `TODO` Mettre à jour `prisma/seed.sql` : les sites existants n'ont PAS ces modules dans `enabledModules` (les modules platform ne sont pas dans `enabledModules`)
+
+**Tâches @developer :**
+- [ ] `TODO` Mettre à jour l'enum `SiteModule` dans `src/types/models.ts` :
+  ```
+  ABONNEMENTS = "ABONNEMENTS",
+  COMMISSIONS = "COMMISSIONS",
+  REMISES = "REMISES",
+  ```
+- [ ] `TODO` Créer `src/lib/site-modules-config.ts` — config centralisée des modules :
+  ```typescript
+  export interface SiteModuleConfig {
+    value: SiteModule;
+    labelKey: string;       // clé i18n (ou label brut pour l'instant)
+    icon: LucideIcon;
+    level: "site" | "platform";  // site = toggleable par admin, platform = toujours dispo
+  }
+
+  export const SITE_MODULES_CONFIG: SiteModuleConfig[] = [
+    // Site-level (toggleables)
+    { value: SiteModule.REPRODUCTION, labelKey: "Reproduction", icon: FlaskConical, level: "site" },
+    { value: SiteModule.GROSSISSEMENT, labelKey: "Grossissement", icon: Fish, level: "site" },
+    { value: SiteModule.INTRANTS, labelKey: "Intrants", icon: Package, level: "site" },
+    { value: SiteModule.VENTES, labelKey: "Ventes", icon: ShoppingCart, level: "site" },
+    { value: SiteModule.ANALYSE_PILOTAGE, labelKey: "Analyse & Pilotage", icon: BarChart2, level: "site" },
+    { value: SiteModule.PACKS_PROVISIONING, labelKey: "Packs & Provisioning", icon: Boxes, level: "site" },
+    { value: SiteModule.CONFIGURATION, labelKey: "Configuration", icon: Settings, level: "site" },
+    { value: SiteModule.INGENIEUR, labelKey: "Ingenieur", icon: HardHat, level: "site" },
+    { value: SiteModule.NOTES, labelKey: "Notes", icon: StickyNote, level: "site" },
+    // Platform-level (jamais toggleables, gérés par permissions uniquement)
+    { value: SiteModule.ABONNEMENTS, labelKey: "Abonnements", icon: CreditCard, level: "platform" },
+    { value: SiteModule.COMMISSIONS, labelKey: "Commissions", icon: TrendingUp, level: "platform" },
+    { value: SiteModule.REMISES, labelKey: "Remises", icon: Tag, level: "platform" },
+  ];
+
+  /** Modules affichés dans la page de configuration site (site-level uniquement) */
+  export const SITE_TOGGLEABLE_MODULES = SITE_MODULES_CONFIG.filter(m => m.level === "site");
+
+  /** Modules platform (toujours considérés comme actifs) */
+  export const PLATFORM_MODULES = SITE_MODULES_CONFIG.filter(m => m.level === "platform");
+
+  /** Vérifie si un module est actif pour un site (platform = toujours actif) */
+  export function isModuleActive(module: SiteModule, enabledModules: SiteModule[]): boolean {
+    const config = SITE_MODULES_CONFIG.find(m => m.value === module);
+    if (!config) return false;
+    if (config.level === "platform") return true;
+    return enabledModules.includes(module);
+  }
+  ```
+- [ ] `TODO` Modifier `src/components/sites/site-detail-client.tsx` :
+  - Remplacer `MODULE_CONFIG` par import de `SITE_TOGGLEABLE_MODULES` depuis `site-modules-config.ts`
+  - Les modules platform ne sont JAMAIS affichés dans le toggle admin
+- [ ] `TODO` Modifier `src/lib/permissions-constants.ts` — `MODULE_LABEL_TO_SITE_MODULE` :
+  - Ajouter `"Abonnement": SiteModule.ABONNEMENTS`
+  - Ajouter `"Admin Abonnements": SiteModule.ABONNEMENTS`
+  - Ajouter `"Portefeuille": SiteModule.COMMISSIONS`
+  - Ajouter `"Admin Commissions": SiteModule.COMMISSIONS`
+  - Ajouter `"Admin Remises": SiteModule.REMISES`
+- [ ] `TODO` Modifier `src/lib/auth/permissions-server.ts` — `getServerSiteModules()` :
+  - Retourner les modules platform en plus des `enabledModules` du site
+  - `return [...site.enabledModules, ...PLATFORM_MODULES.map(m => m.value)]`
+- [ ] `TODO` Modifier la sidebar et le hamburger : le filtrage par `MODULE_LABEL_TO_SITE_MODULE` doit fonctionner correctement avec `isModuleActive()` (les modules platform passent toujours le gate)
+- [ ] `TODO` Modifier `src/app/api/sites/[id]/route.ts` : la validation `VALID_MODULES` pour le PUT ne doit accepter QUE les modules site-level (pas les modules platform)
+
+**Critères d'acceptation :**
+- Les modules platform (Abonnements, Commissions, Remises) sont TOUJOURS visibles dans la sidebar (quand l'utilisateur a les permissions), indépendamment du `enabledModules` du site
+- Les modules platform ne sont PAS affichés dans le toggle de la page site admin
+- Les modules site-level fonctionnent comme avant (toggleables)
+- Un admin ne peut pas ajouter un module platform à `enabledModules` via l'API (rejeté par la validation)
+- Migration appliquée sans erreur
+- Build OK
+
+---
+
+### Story 38.6 — Navigation admin plans + loading state
 **Assigné à :** @developer
 **Priorité :** Moyenne
 **Complexité :** Simple
-**Dépend de :** Stories 38.1, 38.4
-**Statut :** `TODO`
+**Dépend de :** Stories 38.1, 38.4, 38.5
+**Statut :** `FAIT`
 
 **Description :** Ajouter la page admin/plans dans la navigation (sidebar + hamburger menu) et les états de chargement.
 
@@ -1544,12 +1638,12 @@ Voir `docs/bugs/BUG-021.md`.
 
 ---
 
-### Story 38.6 — Tests + Review Sprint 38
+### Story 38.7 — Tests + Review Sprint 38
 **Assigné à :** @tester + @code-reviewer
 **Priorité :** Haute
 **Complexité :** Simple
-**Dépend de :** Stories 38.1 à 38.5
-**Statut :** `TODO`
+**Dépend de :** Stories 38.1 à 38.6
+**Statut :** `FAIT`
 
 **Tâches @tester :**
 - [ ] `TODO` Créer `src/__tests__/components/plans-admin-list.test.tsx` :
@@ -1565,6 +1659,9 @@ Voir `docs/bugs/BUG-021.md`.
   - Toggle actif/inactif → PATCH appelé + optimistic update
   - Désactivation avec abonnés actifs → 409 → message d'erreur affiché
 - [ ] `TODO` Vérifier BUG-021 : les 5 modules sont accessibles depuis le menu hamburger mobile
+- [ ] `TODO` Vérifier BUG-022 : modules platform non affichés dans le toggle site, mais visibles dans la sidebar
+- [ ] `TODO` Tester `isModuleActive()` : modules platform retournent `true` sans être dans `enabledModules`
+- [ ] `TODO` Tester PUT /api/sites/[id] : rejet des modules platform dans `enabledModules`
 - [ ] `TODO` `npx vitest run` + `npm run build` — OK
 - [ ] `TODO` Test manuel mobile 360px : formulaire de création lisible et utilisable, navigation hamburger complète
 - [ ] `TODO` Écrire `docs/tests/rapport-sprint-38.md`
@@ -1576,6 +1673,7 @@ Voir `docs/bugs/BUG-021.md`.
 - [ ] `TODO` Vérifier R6 : aucune couleur hardcodée
 - [ ] `TODO` Vérifier que le formulaire respecte le mobile-first (min-h-[44px] sur les boutons, champs larges)
 - [ ] `TODO` Vérifier cohérence sidebar/hamburger (même modules, même ordre, mêmes permissions)
+- [ ] `TODO` Vérifier que les modules platform ne sont jamais dans `enabledModules` et toujours actifs
 - [ ] `TODO` Écrire `docs/reviews/review-sprint-38.md`
 
 **Critères d'acceptation :**
@@ -1583,4 +1681,5 @@ Voir `docs/bugs/BUG-021.md`.
 - Mobile-first vérifié à 360px
 - Permissions vérifiées (PLANS_GERER)
 - BUG-021 vérifié clos
+- BUG-022 vérifié clos
 - Rapport de review produit

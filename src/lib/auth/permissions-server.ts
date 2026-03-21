@@ -3,6 +3,7 @@ import { Permission, Role, SiteModule } from "@/types";
 import { getSiteMember } from "@/lib/queries/sites";
 import { prisma } from "@/lib/db";
 import type { UserSession } from "@/types";
+import { PLATFORM_MODULES } from "@/lib/site-modules-config";
 
 /** Load effective permissions for active site. Uses React cache() for dedup within a request. */
 export const getServerPermissions = cache(async (session: UserSession): Promise<Permission[]> => {
@@ -21,9 +22,10 @@ export const getServerSiteModules = cache(async (activeSiteId: string | null): P
     select: { enabledModules: true },
   });
   if (!site) return [];
+  const platformModuleValues = PLATFORM_MODULES.map((m) => m.value);
   // Empty = all modules (backward compat for non-supervised sites)
   if (site.enabledModules.length === 0) return Object.values(SiteModule);
-  return site.enabledModules as SiteModule[];
+  return [...new Set([...(site.enabledModules as SiteModule[]), ...platformModuleValues])];
 });
 
 /** Check page-level permission. Returns permissions if OK, null if denied. */

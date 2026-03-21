@@ -31,7 +31,23 @@ export async function PATCH(
       );
     }
 
-    return NextResponse.json({ message: "Statut du plan mis a jour." });
+    // count === -1 : désactivation bloquée par des abonnés actifs
+    if (result.count === -1) {
+      const nb = "abonnesActifs" in result ? result.abonnesActifs : 0;
+      return NextResponse.json(
+        {
+          status: 409,
+          message: `Impossible de désactiver un plan avec des abonnés actifs.`,
+          abonnesActifs: nb,
+        },
+        { status: 409 }
+      );
+    }
+
+    return NextResponse.json({
+      message: "Statut du plan mis à jour.",
+      isActif: "isActif" in result ? result.isActif : undefined,
+    });
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json(

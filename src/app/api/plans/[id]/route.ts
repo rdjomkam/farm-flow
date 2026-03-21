@@ -15,7 +15,7 @@ import {
   updatePlanAbonnement,
 } from "@/lib/queries/plans-abonnements";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { getSession, AuthError } from "@/lib/auth";
+import { AuthError } from "@/lib/auth";
 import { Permission } from "@/types";
 import type { UpdatePlanAbonnementDTO } from "@/types";
 
@@ -34,18 +34,9 @@ export async function GET(
       );
     }
 
-    // Vérifier si l'utilisateur a les permissions pour voir les plans inactifs
-    const session = await getSession(request);
+    // Plan non public ou inactif : exiger PLANS_GERER
     if (!plan.isActif || !plan.isPublic) {
-      // Plan non public ou inactif : vérifier les permissions
-      if (!session) {
-        return NextResponse.json(
-          { status: 404, message: "Plan introuvable." },
-          { status: 404 }
-        );
-      }
-      // L'auth est présente mais on ne vérifie pas PLANS_GERER ici pour simplifier
-      // Un utilisateur connecté peut voir les détails
+      await requirePermission(request, Permission.PLANS_GERER);
     }
 
     return NextResponse.json(plan);
