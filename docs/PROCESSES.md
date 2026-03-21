@@ -17,6 +17,7 @@
 | `@tester` | Tests unitaires, intégration, non-régression | OUI (tests only) |
 | `@code-reviewer` | Review qualité, R1-R9, rapport | NON |
 | `@knowledge-keeper` | Maintient ERRORS-AND-FIXES.md | NON (docs only) |
+| `@status-updater` | Met à jour les statuts dans docs/sprints/ et docs/TASKS.md | NON (statuts only) |
 
 ---
 
@@ -25,7 +26,7 @@
 | Fichier | Lu par | Écrit par |
 |---------|--------|-----------|
 | `docs/knowledge/ERRORS-AND-FIXES.md` | TOUS les agents (obligatoire avant de travailler) | `@knowledge-keeper` |
-| `docs/TASKS.md` / `docs/sprints/*.md` | TOUS | `@project-manager` |
+| `docs/TASKS.md` / `docs/sprints/*.md` | TOUS | `@status-updater` (spawné par `@project-manager`) |
 | `docs/analysis/pre-analysis-story-*.md` | `@project-manager` | `@pre-analyst` |
 | `docs/reviews/review-story-*.md` | `@project-manager`, `@knowledge-keeper` | `@code-reviewer` |
 | `docs/decisions/ADR-*.md` | TOUS | `@architect` |
@@ -239,6 +240,7 @@ Le @project-manager lit la story et lui assigne un type :
 3. Ne jamais sauter la pré-analyse pour les types SCHEMA, QUERIES, API, UI, INTEGRATION, BUGFIX, REFACTOR
 4. Toujours spawner @knowledge-keeper après un BUGFIX ou une REVIEW avec problèmes
 5. Ne jamais coder lui-même
+6. Spawner `@status-updater` pour toute mise à jour de statut (ne jamais éditer docs/sprints/ ou docs/TASKS.md directement)
 
 ### Parallélisation :
 - Deux stories de types différents SANS dépendance entre elles → pipelines en parallèle
