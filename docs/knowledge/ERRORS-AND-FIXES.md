@@ -120,6 +120,34 @@ Utiliser `head -3 migration.sql` et `tail -5 migration.sql` pour vérifier.
 
 ## Catégorie : Pattern
 
+### ERR-018 — String en dur comme clé d'accès à un objet constant indexé par enum (variante R2)
+**Sprint :** 37 | **Date :** 2026-03-21
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/services/abonnements.ts`, divers
+
+**Symptôme :**
+Un accès à un objet constant (`PLAN_LIMITES`) utilisait une string littérale comme clé d'index (`PLAN_LIMITES["DECOUVERTE"]`) au lieu de l'enum (`PLAN_LIMITES[TypePlan.DECOUVERTE]`). Pas d'erreur TypeScript immédiate si l'objet est typé `Record<string, ...>`, mais la valeur d'accès est découplée de l'enum : si l'enum change de nom, le compilateur ne détecte pas la régression.
+
+**Cause racine :**
+R2 est souvent appliqué aux comparaisons (`statut === "ACTIF"`) et aux paramètres Prisma, mais oublié pour les accès à des objets constants (`MAP[cle]`). L'accès par string en dur ressemble visuellement à un accès valide mais contourne le système de types.
+
+**Fix :**
+Utiliser l'enum comme clé d'index dans tous les accès à des objets constants indexés par des valeurs d'enum :
+
+```typescript
+// Incorrect (string en dur) :
+const limites = PLAN_LIMITES["DECOUVERTE"];
+
+// Correct (enum comme clé) :
+import { TypePlan } from "@/types";
+const limites = PLAN_LIMITES[TypePlan.DECOUVERTE];
+```
+
+**Leçon / Règle :**
+R2 ("Toujours importer les enums") s'applique partout où une valeur d'enum est utilisée comme identifiant : comparaisons, paramètres de fonction, clés d'objet/Map, switch-case. Si un objet constant est indexé par des valeurs d'enum, chaque accès à cet objet doit utiliser `Enum.VALEUR` comme clé, jamais `"VALEUR"` en dur.
+
+---
+
 ### ERR-017 — Tests existants cassés après refactoring de route API (régression silencieuse)
 **Sprint :** 36 | **Date :** 2026-03-21
 **Sévérité :** Haute
@@ -297,22 +325,39 @@ Quand une Server Component lit depuis Prisma et passe les données à un composa
 
 ---
 
-### ERR-015 — Double vérification redondante de déduplication avant une fonction qui déduplique déjà
-**Sprint :** 36 | **Date :** 2026-03-21
+### ERR-015 — Double vérification redondante avant une opération déjà conditionnelle
+**Sprint :** 36-37 | **Date :** 2026-03-21
 **Sévérité :** Moyenne
-**Fichier(s) :** `src/lib/services/rappels-abonnement.ts`
+**Fichier(s) :** `src/lib/services/rappels-abonnement.ts`, divers
 
 **Symptôme :**
-Le service effectuait une requête `COUNT` en base (`rappelExisteAujourdhui`) avant chaque appel à `creerNotificationSiAbsente`, entraînant une double requête DB par rappel traité.
+Deux formes observées :
+
+1. (Sprint 36) Le service effectuait une requête `COUNT` en base (`rappelExisteAujourdhui`) avant chaque appel à `creerNotificationSiAbsente`, entraînant une double requête DB par rappel traité.
+
+2. (Sprint 37) Un `findFirst` de vérification précédait un `updateMany` qui filtrait déjà par condition. Le `findFirst` était du code mort : si aucun enregistrement ne matchait la condition, le `updateMany` ne faisait rien de toute façon.
 
 **Cause racine :**
-`creerNotificationSiAbsente` inclut déjà une vérification interne d'unicité avant d'insérer. La pré-vérification externe dupliquait exactement cette logique sans apporter de valeur supplémentaire.
+Dans le cas 1 : `creerNotificationSiAbsente` inclut déjà une vérification interne d'unicité. La pré-vérification externe dupliquait cette logique.
+
+Dans le cas 2 : un `updateMany` avec clause `where` est par nature conditionnel — il ne met à jour que les lignes qui matchent et ne lève pas d'erreur si aucune ne matche. Un `findFirst` préalable n'ajoute aucune garantie.
 
 **Fix :**
-Supprimer la pré-vérification `rappelExisteAujourdhui`. Déléguer entièrement la déduplication à `creerNotificationSiAbsente` qui est conçue pour ça.
+Cas 1 : Supprimer la pré-vérification, déléguer entièrement la logique à la fonction appelée.
+
+Cas 2 : Supprimer le `findFirst`. Laisser le `updateMany` gérer seul la condition :
+```typescript
+// Inutile (code mort) :
+const existing = await prisma.foo.findFirst({ where: { id, siteId, statut: "ACTIF" } });
+if (!existing) return; // updateMany ferait de toute façon 0 lignes
+await prisma.foo.updateMany({ where: { id, siteId, statut: "ACTIF" }, data: { statut: "INACTIF" } });
+
+// Correct :
+await prisma.foo.updateMany({ where: { id, siteId, statut: "ACTIF" }, data: { statut: "INACTIF" } });
+```
 
 **Leçon / Règle :**
-Avant d'ajouter une vérification en amont d'un appel de fonction, lire ce que fait cette fonction. Si elle intègre déjà une déduplication ou un guard, ne pas en ajouter une couche supplémentaire à l'extérieur. Une double vérification identique double le nombre de requêtes DB sans garantie supplémentaire.
+Avant d'ajouter une vérification en amont d'un appel, se demander : "que se passe-t-il si cette vérification retourne faux/vide ?". Si la réponse est "l'opération suivante ne fait rien de toute façon", la pré-vérification est du code mort. Une double vérification identique double le nombre de requêtes DB sans garantie supplémentaire et donne une fausse impression de sécurité.
 
 ---
 
