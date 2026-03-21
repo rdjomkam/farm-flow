@@ -34,6 +34,7 @@ import {
   FOURNISSEUR_LABELS,
   calculerMontantRemise,
 } from "@/lib/abonnements-constants";
+import { formatXAF, formatXAFOrFree } from "@/lib/format";
 
 interface CheckoutFormProps {
   plan: PlanAbonnement;
@@ -68,11 +69,6 @@ function isValidPhone(phone: string): boolean {
   return /^\+2376[5-9]\d{7}$/.test(normalized) || /^6[5-9]\d{7}$/.test(normalized);
 }
 
-function formatPrix(montant: number): string {
-  if (montant === 0) return "Gratuit";
-  return `${montant.toLocaleString("fr-FR")} FCFA`;
-}
-
 // Barre de progression des étapes
 function StepProgress({ etape }: { etape: Etape }) {
   const steps = [
@@ -81,9 +77,18 @@ function StepProgress({ etape }: { etape: Etape }) {
     { num: 3, label: "Confirmation" },
   ];
   return (
-    <div className="flex items-center gap-2 mb-6" role="progressbar" aria-valuenow={etape} aria-valuemin={1} aria-valuemax={3}>
+    <ol
+      className="flex items-center gap-2 mb-6"
+      role="list"
+      aria-label="Étapes du paiement"
+    >
       {steps.map((step, i) => (
-        <div key={step.num} className="flex items-center flex-1">
+        <li
+          key={step.num}
+          role="listitem"
+          aria-current={step.num === etape ? "step" : undefined}
+          className="flex items-center flex-1"
+        >
           <div className="flex flex-col items-center flex-1">
             <div
               className={[
@@ -94,7 +99,7 @@ function StepProgress({ etape }: { etape: Etape }) {
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground",
               ].join(" ")}
-              aria-label={`Étape ${step.num}: ${step.label}`}
+              aria-label={`Étape ${step.num}: ${step.label}${step.num === etape ? " (étape en cours)" : step.num < etape ? " (terminée)" : ""}`}
             >
               {step.num < etape ? <Check className="h-4 w-4" /> : step.num}
             </div>
@@ -106,11 +111,12 @@ function StepProgress({ etape }: { etape: Etape }) {
                 "h-0.5 flex-1 mx-1 transition-colors",
                 step.num < etape ? "bg-success" : "bg-muted",
               ].join(" ")}
+              aria-hidden="true"
             />
           )}
-        </div>
+        </li>
       ))}
-    </div>
+    </ol>
   );
 }
 
@@ -357,7 +363,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
                         {PERIODE_LABELS[p]}
                       </span>
                       <span className="text-sm font-semibold text-foreground">
-                        {formatPrix(tarif)}
+                        {formatXAFOrFree(tarif)}
                       </span>
                     </div>
                   </label>
@@ -392,7 +398,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
             {remise && (
               <p className="text-xs text-success mt-1 flex items-center gap-1">
                 <Check className="h-3 w-3" />
-                {remise.nom} — {remise.estPourcentage ? `${remise.valeur}% de réduction` : `${formatPrix(remise.valeur)} de réduction`}
+                {remise.nom} — {remise.estPourcentage ? `${remise.valeur}% de réduction` : `${formatXAF(remise.valeur)} de réduction`}
               </p>
             )}
           </div>
@@ -402,15 +408,15 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
             <div className="bg-success/10 border border-success/20 rounded-lg p-3">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Prix de base</span>
-                <span className="line-through text-muted-foreground">{formatPrix(tarifBase)}</span>
+                <span className="line-through text-muted-foreground">{formatXAFOrFree(tarifBase)}</span>
               </div>
               <div className="flex justify-between text-sm mt-1">
                 <span className="text-muted-foreground">Réduction</span>
-                <span className="text-success">-{formatPrix(tarifBase - prixFinal)}</span>
+                <span className="text-success">-{formatXAF(tarifBase - prixFinal)}</span>
               </div>
               <div className="flex justify-between font-bold text-sm mt-2 pt-2 border-t border-success/20">
                 <span className="text-foreground">Total</span>
-                <span className="text-foreground">{formatPrix(prixFinal)}</span>
+                <span className="text-foreground">{formatXAFOrFree(prixFinal)}</span>
               </div>
             </div>
           )}
@@ -447,7 +453,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
             </div>
             <div className="flex justify-between text-sm mt-1 pt-1 border-t border-border">
               <span className="font-medium text-foreground">Total</span>
-              <span className="font-bold text-foreground">{formatPrix(prixFinal)}</span>
+              <span className="font-bold text-foreground">{formatXAFOrFree(prixFinal)}</span>
             </div>
           </div>
 
@@ -478,6 +484,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="tel"
+                inputMode="numeric"
                 placeholder="+237 6XX XX XX XX"
                 value={telephone}
                 onChange={(e) => {
@@ -608,7 +615,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
               <p className="text-xs text-muted-foreground">Numéro :</p>
               <p className="font-medium text-sm text-foreground">{telephone}</p>
               <p className="text-xs text-muted-foreground mt-2">Montant :</p>
-              <p className="font-bold text-sm text-foreground">{formatPrix(prixFinal)}</p>
+              <p className="font-bold text-sm text-foreground">{formatXAFOrFree(prixFinal)}</p>
             </div>
             <p className="text-xs text-muted-foreground">
               Vérification automatique en cours... ({pollingCountRef.current}/10)

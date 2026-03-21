@@ -82,7 +82,13 @@ export default async function MonPortefeuillePage() {
           <h2 className="text-base font-semibold text-foreground mb-3">
             Mes commissions
           </h2>
-          <CommissionsList commissions={commissionsFormatted} />
+          {commissionsFormatted.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              Aucune commission pour le moment.
+            </p>
+          ) : (
+            <CommissionsList commissions={commissionsFormatted} />
+          )}
         </section>
 
         {/* Historique des retraits */}

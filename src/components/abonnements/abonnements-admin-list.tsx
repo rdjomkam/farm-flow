@@ -30,6 +30,7 @@ import {
 import { StatutAbonnement, PeriodeFacturation } from "@/types";
 import type { PlanAbonnement } from "@/types";
 import { PLAN_LABELS, STATUT_ABONNEMENT_LABELS, PERIODE_LABELS } from "@/lib/abonnements-constants";
+import { formatXAF } from "@/lib/format";
 
 interface AbonnementAdminItem {
   id: string;
@@ -206,7 +207,10 @@ export function AbonnementsAdminList({
                 <td className="px-4 py-3 font-medium text-foreground">{a.site.name}</td>
                 <td className="px-4 py-3 text-foreground">{PLAN_LABELS[a.plan.typePlan]}</td>
                 <td className="px-4 py-3">
-                  <Badge variant={statutVariant(a.statut)}>
+                  <Badge
+                    variant={statutVariant(a.statut)}
+                    aria-label={`Statut : ${STATUT_ABONNEMENT_LABELS[a.statut]}`}
+                  >
                     {STATUT_ABONNEMENT_LABELS[a.statut]}
                   </Badge>
                 </td>
@@ -218,7 +222,7 @@ export function AbonnementsAdminList({
                   {new Date(a.dateFin).toLocaleDateString("fr-FR")}
                 </td>
                 <td className="px-4 py-3 text-right font-medium text-foreground">
-                  {a.prixPaye.toLocaleString("fr-FR")} FCFA
+                  {formatXAF(a.prixPaye)}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-center gap-1">
@@ -341,7 +345,10 @@ export function AbonnementsAdminList({
                 <p className="font-semibold text-foreground">{a.site.name}</p>
                 <p className="text-xs text-muted-foreground">{PLAN_LABELS[a.plan.typePlan]}</p>
               </div>
-              <Badge variant={statutVariant(a.statut)}>
+              <Badge
+                variant={statutVariant(a.statut)}
+                aria-label={`Statut : ${STATUT_ABONNEMENT_LABELS[a.statut]}`}
+              >
                 {STATUT_ABONNEMENT_LABELS[a.statut]}
               </Badge>
             </div>
@@ -352,7 +359,7 @@ export function AbonnementsAdminList({
               </div>
               <div>
                 <p className="text-muted-foreground">Montant</p>
-                <p className="font-medium text-foreground">{a.prixPaye.toLocaleString("fr-FR")} FCFA</p>
+                <p className="font-medium text-foreground">{formatXAF(a.prixPaye)}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Début</p>

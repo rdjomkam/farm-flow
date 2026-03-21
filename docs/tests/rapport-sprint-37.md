@@ -191,6 +191,48 @@ Ces échecs pré-existants sont hors du scope du Sprint 37.
 
 ---
 
+## Story 37.2 — Tests format.ts (Polish UX)
+
+**Fichier créé :** `src/__tests__/lib/format.test.ts`
+
+### Résultat
+
+| Indicateur | Valeur |
+|------------|--------|
+| Nouveaux tests créés | 15 |
+| Nouveaux tests passants | 15 (100%) |
+| Régressions introduites | 0 |
+| Build production | OK |
+
+### Cas couverts
+
+| Groupe | Tests | Statut |
+|--------|-------|--------|
+| formatXAF — séparateurs et suffixe FCFA | 7 | PASS |
+| formatXAFOrFree — cas "Gratuit" et délégation | 5 | PASS |
+| formatDate — format fr-FR | 3 | PASS |
+
+**Détail des assertions :**
+- `formatXAF(10000)` contient "10 000" (avec normalisation des espaces insécables ICU)
+- `formatXAF(10000)` contient "FCFA"
+- `formatXAF(0)` retourne exactement "0 FCFA"
+- `formatXAF(15000)` contient "15 000" et "FCFA"
+- `formatXAF(1000000)` contient "1 000 000" et "FCFA"
+- `formatXAF` ne produit jamais de décimales (`,` ou `.`)
+- `formatXAF(500)` retourne "500 FCFA" (pas de séparateur inférieur à 1000)
+- `formatXAFOrFree(0)` retourne exactement "Gratuit"
+- `formatXAFOrFree(5000)` contient "5 000" et "FCFA"
+- `formatXAFOrFree(3000)` est identique à `formatXAF(3000)` (délégation correcte)
+- `formatXAFOrFree(1)` ne retourne pas "Gratuit"
+- `formatDate` retourne le format `dd/mm/yyyy` pour un objet Date
+- `formatDate` accepte une chaîne ISO en entrée
+- `formatDate` contient le mois et l'année corrects pour une date connue
+
+### Note technique — espaces insécables
+`Intl.NumberFormat("fr-FR")` produit des espaces insécables (`\u202f` ou `\u00a0`) comme séparateurs de milliers selon l'environnement ICU. Les assertions normalisent via `.replace(/\s/g, " ")` pour garantir la portabilité cross-platform (Node 18/20/22).
+
+---
+
 ## Couverture des flows métier Sprint 37
 
 | Flow | Testé | Fichier |

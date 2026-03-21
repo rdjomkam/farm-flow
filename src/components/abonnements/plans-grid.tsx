@@ -24,6 +24,7 @@ import {
   PLAN_LABELS,
   PERIODE_LABELS,
 } from "@/lib/abonnements-constants";
+import { formatXAF, formatXAFOrFree } from "@/lib/format";
 
 interface PlansGridProps {
   plans: PlanAbonnement[];
@@ -83,8 +84,7 @@ const PLAN_FEATURES: Record<TypePlan, string[]> = {
 
 function formatPrix(montant: number | null | undefined): string {
   if (montant === null || montant === undefined) return "N/A";
-  if (montant === 0) return "Gratuit";
-  return `${montant.toLocaleString("fr-FR")} FCFA`;
+  return formatXAFOrFree(montant);
 }
 
 function getEconomie(plan: PlanAbonnement, periode: PeriodeFacturation): string | null {
@@ -95,7 +95,7 @@ function getEconomie(plan: PlanAbonnement, periode: PeriodeFacturation): string 
   const mois = periode === PeriodeFacturation.TRIMESTRIEL ? 3 : 12;
   const economie = mensuel * mois - tarif;
   if (economie <= 0) return null;
-  return `Économisez ${economie.toLocaleString("fr-FR")} FCFA`;
+  return `Économisez ${formatXAF(economie)}`;
 }
 
 export function PlansGrid({ plans, abonnementActifPlanId }: PlansGridProps) {

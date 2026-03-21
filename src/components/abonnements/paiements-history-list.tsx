@@ -13,6 +13,7 @@ import { StatutPaiementAbo, FournisseurPaiement } from "@/types";
 import type { PaiementAbonnement } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { FOURNISSEUR_LABELS } from "@/lib/abonnements-constants";
+import { formatXAF } from "@/lib/format";
 
 interface PaiementsHistoryListProps {
   paiements: PaiementAbonnement[];
@@ -82,9 +83,12 @@ export function PaiementsHistoryList({ paiements }: PaiementsHistoryListProps) {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-semibold text-foreground">
-                  {paiement.montant.toLocaleString("fr-FR")} FCFA
+                  {formatXAF(paiement.montant)}
                 </span>
-                <Badge variant={statutPaiementVariant(paiement.statut)}>
+                <Badge
+                  variant={statutPaiementVariant(paiement.statut)}
+                  aria-label={`Statut : ${statutPaiementLabel(paiement.statut)}`}
+                >
                   {statutPaiementLabel(paiement.statut)}
                 </Badge>
               </div>
