@@ -36,6 +36,8 @@ import {
   Boxes,
   Zap,
   UserPlus,
+  CreditCard,
+  ShieldCheck,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -154,6 +156,52 @@ const modulesAdminGerant: { label: string; primaryHref: string; icon: React.Comp
       { href: "/settings/regles-activites", label: "Regles d'activites", icon: Zap },
     ],
   },
+  // Abonnement — Sprint 33 (gate: ABONNEMENTS_VOIR)
+  {
+    label: "Abonnement",
+    primaryHref: "/mon-abonnement",
+    icon: CreditCard,
+    items: [
+      { href: "/mon-abonnement", label: "Mon abonnement", icon: CreditCard },
+      { href: "/tarifs", label: "Plans & tarifs", icon: Tag },
+    ],
+  },
+  // Admin Abonnements — Sprint 33 (gate: ABONNEMENTS_GERER)
+  {
+    label: "Admin Abonnements",
+    primaryHref: "/admin/abonnements",
+    icon: ShieldCheck,
+    items: [
+      { href: "/admin/abonnements", label: "Tous les abonnements", icon: ShieldCheck },
+    ],
+  },
+  // Portefeuille Ingénieur — Sprint 34 (gate: PORTEFEUILLE_VOIR)
+  {
+    label: "Portefeuille",
+    primaryHref: "/mon-portefeuille",
+    icon: Wallet,
+    items: [
+      { href: "/mon-portefeuille", label: "Mon portefeuille", icon: Wallet },
+    ],
+  },
+  // Admin Commissions — Sprint 34 (gate: COMMISSIONS_GERER)
+  {
+    label: "Admin Commissions",
+    primaryHref: "/admin/commissions",
+    icon: TrendingUp,
+    items: [
+      { href: "/admin/commissions", label: "Toutes les commissions", icon: TrendingUp },
+    ],
+  },
+  // Admin Remises — Sprint 35 (gate: REMISES_GERER)
+  {
+    label: "Admin Remises",
+    primaryHref: "/admin/remises",
+    icon: Tag,
+    items: [
+      { href: "/admin/remises", label: "Remises & promos", icon: Tag },
+    ],
+  },
   {
     label: "Utilisateurs",
     primaryHref: "/users",
@@ -173,6 +221,14 @@ const PHASE3_MODULE_PERMISSIONS: Record<string, Permission> = {
   "Packs & Provisioning": Permission.ACTIVER_PACKS,
   "Ingenieur":            Permission.MONITORING_CLIENTS,
   "Utilisateurs":         Permission.UTILISATEURS_VOIR,
+  // Sprint 33 — Abonnements
+  "Abonnement":           Permission.ABONNEMENTS_VOIR,
+  "Admin Abonnements":    Permission.ABONNEMENTS_GERER,
+  // Sprint 34 — Commissions & Portefeuille
+  "Portefeuille":         Permission.PORTEFEUILLE_VOIR,
+  "Admin Commissions":    Permission.COMMISSIONS_GERER,
+  // Sprint 35 — Remises
+  "Admin Remises":        Permission.REMISES_GERER,
 };
 
 interface HamburgerMenuProps {
