@@ -52,6 +52,7 @@ export async function setOfflineCredentials(
       loginIdentifier,
       pinAttempts: 0,
       pinLockoutUntil: null,
+      pinRetryAfter: null,
     });
   }
 }
@@ -121,6 +122,7 @@ export async function setupPIN(
       loginIdentifier: undefined,
       pinAttempts: 0,
       pinLockoutUntil: null,
+      pinRetryAfter: null,
     }),
     id,
     userId,
@@ -130,6 +132,7 @@ export async function setupPIN(
     wrappedDataKeyIv: meta.wrappedDataKeyIv,
     pinAttempts: 0,
     pinLockoutUntil: null,
+    pinRetryAfter: null,
   };
 
   await db.put("auth-meta", record);
@@ -138,19 +141,29 @@ export async function setupPIN(
 /**
  * Validate PIN and unlock the data key.
  * Returns true if PIN is correct and keys are unlocked.
- * Implements brute-force protection.
+ * Implements brute-force protection with exponential delay after 3 wrong attempts.
  */
 export async function validatePIN(
   pin: string,
   userId: string,
   siteId: string
-): Promise<{ success: boolean; lockoutUntil?: number; wiped?: boolean }> {
+): Promise<{
+  success: boolean;
+  lockoutUntil?: number;
+  wiped?: boolean;
+  retryAfter?: number;
+}> {
   const db = await getOfflineDB();
   const id = `${userId}:${siteId}`;
   const record = await db.get("auth-meta", id);
 
   if (!record || !record.wrappedDataKey.byteLength) {
     return { success: false };
+  }
+
+  // Check exponential delay (attempts 3-4 before full lockout)
+  if (record.pinRetryAfter && Date.now() < record.pinRetryAfter) {
+    return { success: false, retryAfter: record.pinRetryAfter };
   }
 
   // Check lockout
@@ -174,6 +187,7 @@ export async function validatePIN(
       ...record,
       pinAttempts: 0,
       pinLockoutUntil: null,
+      pinRetryAfter: null,
     });
     return { success: true };
   } catch {
@@ -187,18 +201,29 @@ export async function validatePIN(
       return { success: false, wiped: true };
     }
 
-    // 5 wrong attempts → lockout
+    // 5 wrong attempts → full lockout
     let lockoutUntil: number | null = null;
     if (attempts >= LOCKOUT_THRESHOLD) {
       lockoutUntil = Date.now() + LOCKOUT_DURATION_MS;
+    }
+
+    // 3-4 wrong attempts → exponential delay (2^(attempts-3) * 1000 ms: 1s, 2s)
+    let pinRetryAfter: number | null = null;
+    if (attempts >= 3 && attempts < LOCKOUT_THRESHOLD) {
+      pinRetryAfter = Date.now() + 2 ** (attempts - 3) * 1000;
     }
 
     await db.put("auth-meta", {
       ...record,
       pinAttempts: attempts,
       pinLockoutUntil: lockoutUntil,
+      pinRetryAfter,
     });
-    return { success: false, lockoutUntil: lockoutUntil ?? undefined };
+    return {
+      success: false,
+      lockoutUntil: lockoutUntil ?? undefined,
+      retryAfter: pinRetryAfter ?? undefined,
+    };
   }
 }
 

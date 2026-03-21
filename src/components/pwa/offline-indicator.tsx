@@ -21,7 +21,7 @@ export function OfflineIndicator({ siteId, session }: OfflineIndicatorProps) {
   if (isOnline && pendingCount === 0 && !isSyncing) return null;
 
   return (
-    <div className="flex items-center justify-center gap-2 bg-gray-900 px-3 py-1.5 text-xs text-white">
+    <div className="flex items-center justify-center gap-2 bg-foreground px-3 py-1.5 text-xs text-background">
       {!isOnline && (
         <>
           <WifiOff className="h-3.5 w-3.5 text-red-400" />
@@ -30,7 +30,7 @@ export function OfflineIndicator({ siteId, session }: OfflineIndicatorProps) {
       )}
       {isSyncing && (
         <>
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-teal-400" />
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
           <span>Synchronisation...</span>
         </>
       )}

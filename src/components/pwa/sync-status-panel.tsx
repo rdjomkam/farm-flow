@@ -20,7 +20,7 @@ const STATUS_ICONS = {
 
 const STATUS_COLORS = {
   pending: "text-amber-500",
-  syncing: "text-teal-500",
+  syncing: "text-primary",
   failed: "text-red-500",
 };
 
@@ -97,7 +97,7 @@ export function SyncStatusPanel({ open, onOpenChange, siteId, onSyncNow }: SyncS
             <button
               onClick={handleSync}
               disabled={loading || items.length === 0}
-              className="flex items-center gap-1.5 rounded-md bg-teal-600 px-3 py-1.5 text-sm text-white hover:bg-teal-700 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm text-white hover:bg-primary/90 disabled:opacity-50"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

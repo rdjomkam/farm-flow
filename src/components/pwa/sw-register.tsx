@@ -39,11 +39,16 @@ export function SwRegister() {
 
     // Handle controller change (after SKIP_WAITING)
     let refreshing = false;
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
+    const onControllerChange = () => {
       if (refreshing) return;
       refreshing = true;
       window.location.reload();
-    });
+    };
+    navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
+
+    return () => {
+      navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+    };
   }, []);
 
   const handleUpdate = () => {
@@ -56,18 +61,18 @@ export function SwRegister() {
 
   return (
     <div className="fixed bottom-20 left-4 right-4 z-50 sm:left-auto sm:right-4 sm:bottom-4 sm:w-80">
-      <div className="flex items-center gap-3 rounded-lg border bg-white p-3 shadow-lg">
-        <RefreshCw className="h-5 w-5 shrink-0 text-teal-600" />
+      <div className="flex items-center gap-3 rounded-lg border bg-card p-3 shadow-lg">
+        <RefreshCw className="h-5 w-5 shrink-0 text-primary" />
         <p className="flex-1 text-sm">Nouvelle version disponible</p>
         <button
           onClick={handleUpdate}
-          className="shrink-0 rounded-md bg-teal-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-700 transition-colors"
+          className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
         >
           Mettre à jour
         </button>
         <button
           onClick={() => setShowUpdate(false)}
-          className="shrink-0 p-1 text-gray-400 hover:text-gray-600"
+          className="shrink-0 p-1 text-muted-foreground hover:text-foreground"
           aria-label="Fermer"
         >
           <X className="h-4 w-4" />

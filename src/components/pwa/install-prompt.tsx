@@ -12,8 +12,8 @@ export function InstallPrompt() {
     <div className="fixed bottom-20 left-4 right-4 z-40 sm:left-auto sm:right-4 sm:bottom-4 sm:w-80">
       <div className="rounded-lg border bg-white p-4 shadow-lg">
         <div className="flex items-start gap-3">
-          <div className="shrink-0 rounded-lg bg-teal-50 p-2">
-            <Download className="h-5 w-5 text-teal-600" />
+          <div className="shrink-0 rounded-lg bg-primary/10 p-2">
+            <Download className="h-5 w-5 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium">Installer FarmFlow</p>
@@ -40,7 +40,7 @@ export function InstallPrompt() {
         {!isIOS && (
           <button
             onClick={promptInstall}
-            className="mt-3 w-full rounded-md bg-teal-600 px-3 py-2 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
+            className="mt-3 w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
           >
             Installer
           </button>

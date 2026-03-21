@@ -47,19 +47,13 @@ export async function enqueue(options: EnqueueOptions): Promise<string> {
 
   const db = await getOfflineDB();
 
-  // Check capacity
-  const count = await db.count("offline-queue");
-  if (count >= MAX_QUEUE_SIZE) {
-    throw new Error("QUEUE_FULL");
-  }
-
-  // Get encryption key
+  // Get encryption key before opening transaction
   const key = getKey(userId, siteId);
   if (!key) {
     throw new Error("NO_ENCRYPTION_KEY");
   }
 
-  // Encrypt the payload
+  // Encrypt the payload before the transaction (async crypto cannot run inside IDB tx)
   const { ciphertext, iv } = await encryptRecord({ body, headers }, key);
 
   const id = crypto.randomUUID();
@@ -78,12 +72,15 @@ export async function enqueue(options: EnqueueOptions): Promise<string> {
     idempotencyKey,
   };
 
-  await db.put("offline-queue", {
-    id,
-    meta,
-    payload: ciphertext,
-    iv,
-  });
+  // Atomic: check capacity + put in a single readwrite transaction
+  const tx = db.transaction("offline-queue", "readwrite");
+  const count = await tx.store.count();
+  if (count >= MAX_QUEUE_SIZE) {
+    await tx.done;
+    throw new Error("QUEUE_FULL");
+  }
+  await tx.store.put({ id, meta, payload: ciphertext, iv });
+  await tx.done;
 
   return id;
 }
@@ -166,6 +163,7 @@ export async function markFailed(id: string, error: string): Promise<void> {
   if (!record) return;
   record.meta.status = "failed";
   record.meta.retryCount += 1;
+  record.meta.lastAttemptAt = Date.now();
   record.meta.lastError = error;
   await db.put("offline-queue", record);
 }
@@ -175,10 +173,8 @@ export async function markFailed(id: string, error: string): Promise<void> {
  */
 export async function getPendingCount(siteId: string): Promise<number> {
   const db = await getOfflineDB();
-  const all = await db.getAll("offline-queue");
-  return all.filter(
-    (r) => r.meta.siteId === siteId && r.meta.status !== "syncing"
-  ).length;
+  const all = await db.getAllFromIndex("offline-queue", "by-site", siteId);
+  return all.filter((r) => r.meta.status !== "syncing").length;
 }
 
 /**
@@ -187,9 +183,8 @@ export async function getPendingCount(siteId: string): Promise<number> {
  */
 export async function getQueueItems(siteId: string): Promise<QueueMeta[]> {
   const db = await getOfflineDB();
-  const all = await db.getAll("offline-queue");
+  const all = await db.getAllFromIndex("offline-queue", "by-site", siteId);
   return all
-    .filter((r) => r.meta.siteId === siteId)
     .sort(
       (a, b) =>
         a.meta.priority - b.meta.priority ||

@@ -7,14 +7,9 @@ import { prisma } from "@/lib/db";
 
 const EXPIRY_HOURS = 48;
 
-interface IdempotencyResult {
-  /** True if this key was already processed — return cached response */
-  isDuplicate: boolean;
-  /** Cached response body (if duplicate) */
-  response?: unknown;
-  /** Cached status code (if duplicate) */
-  statusCode?: number;
-}
+type IdempotencyResult =
+  | { isDuplicate: false }
+  | { isDuplicate: true; response: unknown; statusCode: number };
 
 /**
  * Check if a request with this idempotency key has already been processed.

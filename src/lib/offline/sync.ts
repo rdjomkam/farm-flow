@@ -103,8 +103,9 @@ async function processItem(item: DequeuedItem): Promise<void> {
       RETRY_DELAYS.length - 1
     );
     const requiredDelay = RETRY_DELAYS[delayIndex];
-    const elapsed = Date.now() - item.meta.createdAt;
-    if (elapsed < requiredDelay * item.meta.retryCount) {
+    const lastAttempt = item.meta.lastAttemptAt ?? item.meta.createdAt;
+    const elapsed = Date.now() - lastAttempt;
+    if (elapsed < requiredDelay) {
       return; // Not time to retry yet
     }
   }

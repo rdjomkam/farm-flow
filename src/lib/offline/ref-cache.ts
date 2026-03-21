@@ -48,17 +48,23 @@ export async function refreshRefData(
 
   const db = await getOfflineDB();
 
-  // Clear existing data for this store
+  // Clear existing data for this site only
+  const existingRecords = await db.getAll(storeName);
   const clearTx = db.transaction(storeName, "readwrite");
-  await clearTx.store.clear();
+  for (const record of existingRecords) {
+    if (record.siteId === siteId) {
+      await clearTx.store.delete(record.id);
+    }
+  }
   await clearTx.done;
 
-  // Encrypt and store each item
+  // Encrypt and store each item (tagged with siteId)
   const tx = db.transaction(storeName, "readwrite");
   for (const item of items) {
     const { ciphertext, iv } = await encryptRecord(item, key);
     await tx.store.put({
       id: item.id ?? crypto.randomUUID(),
+      siteId,
       payload: ciphertext,
       iv,
     });
@@ -87,9 +93,11 @@ export async function getRefData<T>(
 
   const db = await getOfflineDB();
   const records = await db.getAll(storeName);
+  // Filter to only records belonging to this site
+  const siteRecords = records.filter((r) => r.siteId === siteId);
 
   const items: T[] = [];
-  for (const record of records) {
+  for (const record of siteRecords) {
     try {
       const decrypted = await decryptRecord<T>(record.payload, record.iv as Uint8Array<ArrayBuffer>, key);
       items.push(decrypted);
@@ -132,8 +140,13 @@ export async function clearSiteRefData(siteId: string): Promise<void> {
   ];
 
   for (const storeName of stores) {
+    const allRecords = await db.getAll(storeName);
     const clearTx = db.transaction(storeName, "readwrite");
-    await clearTx.store.clear();
+    for (const record of allRecords) {
+      if (record.siteId === siteId) {
+        await clearTx.store.delete(record.id);
+      }
+    }
     await clearTx.done;
   }
 

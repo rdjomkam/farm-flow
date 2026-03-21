@@ -56,8 +56,8 @@ export function PinSetupDialog({ open, onComplete }: PinSetupDialogProps) {
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-xl">
           <div className="flex flex-col items-center gap-4">
-            <div className="rounded-full bg-teal-50 p-3">
-              <Lock className="h-6 w-6 text-teal-600" />
+            <div className="rounded-full bg-primary/10 p-3">
+              <Lock className="h-6 w-6 text-primary" />
             </div>
 
             <Dialog.Title className="text-lg font-semibold text-center">
@@ -91,7 +91,7 @@ export function PinSetupDialog({ open, onComplete }: PinSetupDialogProps) {
                     step === "create" ? handleNext() : handleConfirm();
                   }
                 }}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 placeholder="······"
                 autoFocus
               />
@@ -129,7 +129,7 @@ export function PinSetupDialog({ open, onComplete }: PinSetupDialogProps) {
                   loading ||
                   (step === "create" ? pin.length !== 6 : confirmPin.length !== 6)
                 }
-                className="flex-1 rounded-lg bg-teal-600 px-4 py-3 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50 transition-colors"
+                className="flex-1 rounded-lg bg-primary px-4 py-3 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
               >
                 {loading
                   ? "Chiffrement en cours..."

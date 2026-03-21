@@ -26,6 +26,7 @@ export interface QueueMeta {
   siteId: string;
   createdAt: number; // timestamp ms
   retryCount: number;
+  lastAttemptAt?: number; // timestamp ms of the last sync attempt
   lastError?: string;
   idempotencyKey: string;
 }
@@ -57,11 +58,14 @@ export interface AuthMetaRecord {
   /** PIN brute-force protection */
   pinAttempts: number;
   pinLockoutUntil: number | null;
+  /** Exponential delay after 3+ wrong attempts (timestamp ms — must wait until this passes) */
+  pinRetryAfter: number | null;
 }
 
 /** Encrypted reference data record */
 export interface RefRecord {
   id: string;
+  siteId: string;
   /** AES-GCM encrypted JSON array */
   payload: ArrayBuffer;
   iv: Uint8Array;

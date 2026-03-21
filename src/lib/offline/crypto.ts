@@ -141,7 +141,7 @@ export async function unwrapDataKey(
 ): Promise<CryptoKey> {
   const rawArray = await decryptRecord<number[]>(wrappedKey, iv, unlockKey);
   const raw = new Uint8Array(rawArray).buffer;
-  return importKey(raw, true);
+  return importKey(raw, false);
 }
 
 /**
