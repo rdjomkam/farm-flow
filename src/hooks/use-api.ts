@@ -24,6 +24,14 @@ export interface ApiCallOptions {
    * Si absent, aucun toast de succès n'est affiché.
    */
   successMessage?: string;
+  /** Enable offline queue for this mutation (POST/PUT/PATCH/DELETE) */
+  offlineCapable?: boolean;
+  /** Entity type for queue categorization (e.g. "releve", "vente") */
+  entityType?: string;
+  /** Human-readable label for queue display (e.g. "Relevé mortalité 12/03") */
+  entityLabel?: string;
+  /** Queue priority: 1=Critical, 2=Standard, 3=Low */
+  priority?: 1 | 2 | 3;
 }
 
 export interface ApiResult<T> {
@@ -33,6 +41,10 @@ export interface ApiResult<T> {
   error: string | null;
   /** true si la requête a réussi (res.ok) */
   ok: boolean;
+  /** True if item was queued offline instead of sent */
+  offline?: boolean;
+  /** Temporary ID assigned to offline item */
+  tempId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -75,6 +87,10 @@ export function useApi() {
         silentError = false,
         silentLoading = false,
         successMessage,
+        offlineCapable = false,
+        entityType,
+        entityLabel,
+        priority,
       } = options ?? {};
 
       if (!silentLoading) increment();
@@ -114,6 +130,52 @@ export function useApi() {
 
         return { data, error: null, ok: true };
       } catch {
+        // Offline queue: if mutation + offlineCapable, queue instead of error
+        if (
+          offlineCapable &&
+          init?.method &&
+          ["POST", "PUT", "PATCH", "DELETE"].includes(init.method.toUpperCase())
+        ) {
+          try {
+            // Get session info from cookie or session mirror
+            const sessionRes = await fetch("/api/auth/session", { cache: "no-store" }).catch(() => null);
+            let userId = "";
+            let siteId = "";
+            if (sessionRes?.ok) {
+              const session = await sessionRes.json();
+              userId = session.userId ?? "";
+              siteId = session.activeSiteId ?? "";
+            }
+
+            if (userId && siteId) {
+              const { enqueue } = await import("@/lib/offline/queue");
+              const body = init.body ? JSON.parse(init.body as string) : null;
+              const tempId = crypto.randomUUID();
+              await enqueue({
+                url,
+                method: init.method,
+                body,
+                entityType: entityType ?? "unknown",
+                entityLabel: entityLabel ?? url,
+                priority: priority ?? 2,
+                userId,
+                siteId,
+              });
+
+              toast({ title: "Enregistré hors ligne", variant: "info" });
+              return {
+                data: { _offline: true, tempId } as T,
+                error: null,
+                ok: true,
+                offline: true,
+                tempId,
+              };
+            }
+          } catch (queueError) {
+            console.error("[Offline Queue] Failed to enqueue:", queueError);
+          }
+        }
+
         const message = "Erreur réseau. Vérifiez votre connexion.";
         if (!silentError) {
           toast({ title: message, variant: "error" });

@@ -63,6 +63,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.RELEVES_CREER);
+
+    // Idempotency check
+    const idempotencyKey = request.headers.get("X-Idempotency-Key");
+    if (idempotencyKey && auth.activeSiteId) {
+      const { checkIdempotency } = await import("@/lib/idempotency");
+      const check = await checkIdempotency(idempotencyKey, auth.activeSiteId);
+      if (check.isDuplicate) {
+        return NextResponse.json(check.response, { status: check.statusCode });
+      }
+    }
+
     const body = await request.json();
     const errors: { field: string; message: string }[] = [];
 
@@ -393,6 +404,12 @@ export async function POST(request: NextRequest) {
     triggerSeuilRulesAsync(siteId, vagueId, userId).catch((err) =>
       console.error("[POST /api/releves] Erreur hook SEUIL:", err)
     );
+
+    // Store idempotency record
+    if (idempotencyKey && auth.activeSiteId) {
+      const { storeIdempotency } = await import("@/lib/idempotency");
+      await storeIdempotency(idempotencyKey, auth.activeSiteId, releve, 201);
+    }
 
     return NextResponse.json(releve, { status: 201 });
   } catch (error) {

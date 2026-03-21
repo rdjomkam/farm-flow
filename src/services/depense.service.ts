@@ -68,7 +68,13 @@ export function useDepenseService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Depense enregistree !" }
+        {
+          successMessage: "Depense enregistree !",
+          offlineCapable: true,
+          entityType: "depense",
+          entityLabel: "Dépense",
+          priority: 2,
+        }
       ),
     [call]
   );

@@ -43,6 +43,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.VENTES_CREER);
+
+    // Idempotency check
+    const idempotencyKey = request.headers.get("X-Idempotency-Key");
+    if (idempotencyKey && auth.activeSiteId) {
+      const { checkIdempotency } = await import("@/lib/idempotency");
+      const check = await checkIdempotency(idempotencyKey, auth.activeSiteId);
+      if (check.isDuplicate) {
+        return NextResponse.json(check.response, { status: check.statusCode });
+      }
+    }
+
     const body = await request.json();
     const errors: { field: string; message: string }[] = [];
 
@@ -83,6 +94,13 @@ export async function POST(request: NextRequest) {
     };
 
     const vente = await createVente(auth.activeSiteId, auth.userId, data);
+
+    // Store idempotency record
+    if (idempotencyKey && auth.activeSiteId) {
+      const { storeIdempotency } = await import("@/lib/idempotency");
+      await storeIdempotency(idempotencyKey, auth.activeSiteId, vente, 201);
+    }
+
     return NextResponse.json(vente, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {

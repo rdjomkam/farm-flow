@@ -47,7 +47,13 @@ export function useVenteService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Vente enregistrée !" }
+        {
+          successMessage: "Vente enregistrée !",
+          offlineCapable: true,
+          entityType: "vente",
+          entityLabel: "Vente",
+          priority: 2,
+        }
       ),
     [call]
   );

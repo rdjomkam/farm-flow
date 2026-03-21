@@ -475,6 +475,8 @@ model Site {
   commissionsClient    CommissionIngenieur[]     @relation("CommissionsSiteClient")
   portefeuilles        PortefeuilleIngenieur[]   @relation("PortefeuillesSite")
   retraits             RetraitPortefeuille[]     @relation("RetraitsSite")
+  // Sprint 30.4 — Idempotency
+  idempotencyRecords   IdempotencyRecord[]
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 }
@@ -2214,4 +2216,28 @@ model RetraitPortefeuille {
   @@index([portefeuilleId])
   @@index([siteId])
   @@index([statut])
+}
+
+// ──────────────────────────────────────────
+// Modèle — IdempotencyRecord (Sprint 30.4)
+// ──────────────────────────────────────────
+
+/**
+ * IdempotencyRecord — Cache des réponses de mutations pour la protection contre les replays.
+ * Prevents duplicate mutations when an offline-queued request is retried after a network timeout.
+ * R8 : siteId obligatoire.
+ * R7 : expiresAt non-nullable (TTL 48h).
+ */
+model IdempotencyRecord {
+  id         String   @id @default(uuid())
+  key        String   @unique
+  siteId     String
+  site       Site     @relation(fields: [siteId], references: [id])
+  response   Json
+  statusCode Int
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+
+  @@index([siteId])
+  @@index([expiresAt])
 }

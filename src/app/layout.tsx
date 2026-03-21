@@ -12,6 +12,7 @@ import { getServerSession } from "@/lib/auth";
 import { getServerPermissions, getServerSiteModules } from "@/lib/auth/permissions-server";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { Permission, Role, SiteModule } from "@/types";
+import { SwRegister } from "@/components/pwa/sw-register";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -35,8 +36,11 @@ export async function generateMetadata(): Promise<Metadata> {
     manifest: "/manifest.json",
     appleWebApp: {
       capable: true,
-      statusBarStyle: "default",
+      statusBarStyle: "black-translucent",
       title: "FarmFlow",
+    },
+    icons: {
+      apple: "/apple-touch-icon.png",
     },
   };
 }
@@ -94,6 +98,7 @@ export default async function RootLayout({
             </GlobalLoadingProvider>
           </ToastProvider>
         </NextIntlClientProvider>
+        <SwRegister />
       </body>
     </html>
   );

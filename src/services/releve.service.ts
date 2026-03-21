@@ -49,7 +49,13 @@ export function useReleveService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Relevé enregistré !" }
+        {
+          successMessage: "Relevé enregistré !",
+          offlineCapable: true,
+          entityType: "releve",
+          entityLabel: `Relevé ${dto.typeReleve?.toLowerCase() ?? ""}`,
+          priority: dto.typeReleve === "MORTALITE" ? 1 : 2,
+        }
       ),
     [call]
   );
