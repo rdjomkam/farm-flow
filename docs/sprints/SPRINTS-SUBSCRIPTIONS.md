@@ -23,7 +23,8 @@
 | **Sprint 35** | Système de Remises & Promotions | 4 | Remises CRUD + application automatique | Sprint 32 |
 | **Sprint 36** | Cycle de Vie Abonnements | 5 | Rappels, grâce, suspension, réactivation | Sprints 31, 34, 35 |
 | **Sprint 37** | Tests, Polish & Review Finale | 4 | Tests intégration, UX, review R1-R9 | Sprint 36 |
-| **Total** | | **38** | | |
+| **Sprint 38** | Admin CRUD Plans d'Abonnement (UI) + Bugfix Mobile Nav | 6 | Page admin plans, CRUD dialog, BUG-021 mobile nav, navigation | Sprints 32, 33 |
+| **Total** | | **44** | | |
 
 ---
 
@@ -1056,7 +1057,7 @@ les notifications de renouvellement et la gestion de la période de grâce.
 **Assigné à :** @developer
 **Priorité :** Critique
 **Complexité :** Medium
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Implémenter le job quotidien qui fait évoluer les statuts d'abonnements.
 Utiliser l'approche des Route Handlers Next.js avec sécurisation par clé secrète CRON.
@@ -1085,7 +1086,7 @@ Utiliser l'approche des Route Handlers Next.js avec sécurisation par clé secr�
 **Priorité :** Haute
 **Complexité :** Medium
 **Dépend de :** Story 36.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Envoyer des rappels (notifications in-app) aux promoteurs avant l'expiration
 de leur abonnement (J-14, J-7, J-3, J-1).
@@ -1113,7 +1114,7 @@ de leur abonnement (J-14, J-7, J-3, J-1).
 **Priorité :** Haute
 **Complexité :** Simple
 **Dépend de :** Sprints 32, 33
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Gérer le cas où un promoteur accède à l'app avec un abonnement expiré ou suspendu.
 Afficher une page de blocage avec les options de renouvellement.
@@ -1144,7 +1145,7 @@ Afficher une page de blocage avec les options de renouvellement.
 **Priorité :** Moyenne
 **Complexité :** Medium
 **Dépend de :** Story 32.4
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Appliquer les limites définies par le plan (nombre de bacs, vagues, sites).
 Bloquer la création quand la limite est atteinte, afficher l'utilisation actuelle.
@@ -1178,7 +1179,7 @@ Bloquer la création quand la limite est atteinte, afficher l'utilisation actuel
 **Priorité :** Haute
 **Complexité :** Medium
 **Dépend de :** Stories 36.1 à 36.4
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches @tester :**
 - [ ] `TODO` Créer `src/__tests__/api/cron.test.ts` :
@@ -1226,7 +1227,7 @@ détectés, polish UX mobile et review finale de l'ensemble des Sprints 30-37.
 **Assigné à :** @tester
 **Priorité :** Critique
 **Complexité :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Écrire les tests d'intégration couvrant les parcours critiques complets.
 
@@ -1260,7 +1261,7 @@ détectés, polish UX mobile et review finale de l'ensemble des Sprints 30-37.
 **Priorité :** Moyenne
 **Complexité :** Simple
 **Dépend de :** Story 37.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Corrections UX identifiées lors des tests. Focus sur le mobile 360px et
 l'accessibilité des formulaires de paiement.
@@ -1289,7 +1290,7 @@ l'accessibilité des formulaires de paiement.
 **Priorité :** Haute
 **Complexité :** Simple
 **Dépend de :** Story 37.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Documenter les décisions finales, mettre à jour les fichiers partagés et
 compléter le fichier de migration seed.
@@ -1316,7 +1317,7 @@ compléter le fichier de migration seed.
 **Priorité :** Critique
 **Complexité :** Complex
 **Dépend de :** Stories 37.1, 37.2, 37.3
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Review complète de l'ensemble du système d'abonnements. Vérification de
 toutes les règles R1-R9 sur l'ensemble des nouveaux fichiers.
@@ -1345,3 +1346,241 @@ toutes les règles R1-R9 sur l'ensemble des nouveaux fichiers.
 - Aucune faille de sécurité identifiée (permissions, isolation des données)
 - Rapport de review finale produit dans `docs/reviews/`
 - Sprint validé → mise à jour de `docs/TASKS.md` pour marquer les Sprints 30-37 FAIT
+
+---
+
+## Sprint 38 — Admin CRUD Plans d'Abonnement (UI)
+
+**Objectif :** Créer l'interface d'administration pour gérer les plans d'abonnement (créer, modifier,
+activer/désactiver, consulter). Les API routes CRUD existent déjà (Sprint 32), il manque l'UI admin.
+
+**Contexte métier :**
+- Les admins DKFarm doivent pouvoir gérer les plans d'abonnement sans passer par des appels API directs
+- Actions nécessaires : créer un plan, modifier les prix/limites, activer/désactiver un plan, voir le nombre d'abonnés par plan
+- Permission requise : `Permission.PLANS_GERER`
+
+**Dépend de :** Sprint 32 FAIT (API CRUD plans disponible), Sprint 33 FAIT (patterns UI admin existants)
+
+**API existantes réutilisées :**
+- `GET /api/plans` — liste complète (incluant inactifs si auth + PLANS_GERER)
+- `POST /api/plans` — créer un plan
+- `GET /api/plans/[id]` — détail d'un plan
+- `PUT /api/plans/[id]` — modifier un plan
+- `DELETE /api/plans/[id]` — désactiver un plan (soft delete, 409 si abonnés actifs)
+- `PATCH /api/plans/[id]/toggle` — activer/désactiver
+
+**Fichiers de référence (patterns à réutiliser) :**
+- `src/app/admin/abonnements/page.tsx` — pattern page admin Server Component
+- `src/components/abonnements/abonnements-admin-list.tsx` — pattern liste admin Client Component (filtres, pagination, dialogs)
+- `src/components/remises/remise-form-dialog.tsx` — pattern formulaire CRUD en dialog
+- `src/lib/queries/plans-abonnements.ts` — queries Prisma existantes
+- `src/types/api.ts` — DTOs `CreatePlanAbonnementDTO`, `UpdatePlanAbonnementDTO`
+
+---
+
+### Story 38.1 — Page admin liste des plans
+**Assigné à :** @developer
+**Priorité :** Critique
+**Complexité :** Medium
+**Statut :** `TODO`
+
+**Description :** Créer la page d'administration listant tous les plans d'abonnement (actifs et inactifs).
+Accessible aux admins DKFarm avec `Permission.PLANS_GERER`. Suivre le pattern de `src/app/admin/abonnements/page.tsx`.
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/admin/plans/page.tsx` (Server Component) :
+  - Protégé par `Permission.PLANS_GERER` (même pattern que admin/abonnements)
+  - Charge tous les plans via `getPlansAbonnements(true)` (inclut inactifs)
+  - Sérialiser les Decimal (prixMensuel, prixTrimestriel, prixAnnuel) en Number
+  - Passer les plans à `<PlansAdminList>`
+  - Metadata : `title: "Gestion des plans — FarmFlow Admin"`
+- [ ] `TODO` Créer `src/components/abonnements/plans-admin-list.tsx` (Client Component) :
+  - Filtres : par type de plan (TypePlan), par statut (actif/inactif/tous)
+  - Mobile : cartes empilées — Desktop : tableau
+  - Colonnes/infos par plan : nom, type (badge), prix mensuel/trimestriel/annuel, limites (bacs, vagues, sites), nombre d'abonnés actifs (`_count.abonnements`), statut actif/inactif (badge), public/privé (badge)
+  - Actions par plan : "Modifier" (ouvre dialog), "Activer/Désactiver" (toggle avec confirmation si abonnés actifs)
+  - Bouton "Nouveau plan" en haut de la page → ouvre le dialog de création (Story 38.2)
+  - R6 : CSS variables du thème
+
+**Critères d'acceptation :**
+- Accessible uniquement avec `Permission.PLANS_GERER`
+- Tous les plans visibles (actifs et inactifs)
+- Nombre d'abonnés actifs affiché par plan
+- Mobile-first : cartes empilées à 360px, tableau desktop
+- R6 : aucune couleur hardcodée
+
+---
+
+### Story 38.2 — Dialog création/modification de plan
+**Assigné à :** @developer
+**Priorité :** Critique
+**Complexité :** Medium
+**Dépend de :** Story 38.1
+**Statut :** `TODO`
+
+**Description :** Formulaire de création et de modification d'un plan d'abonnement via un dialog.
+Suivre le pattern de `src/components/remises/remise-form-dialog.tsx`.
+
+**Tâches :**
+- [ ] `TODO` Créer `src/components/abonnements/plan-form-dialog.tsx` (Client Component) :
+  - Mode création (POST /api/plans) et mode édition (PUT /api/plans/[id])
+  - Champs :
+    - `nom` (text, obligatoire)
+    - `typePlan` (select TypePlan, obligatoire, désactivé en mode édition — le type ne change pas)
+    - `description` (textarea, optionnel)
+    - `prixMensuel` (number, optionnel, en XAF)
+    - `prixTrimestriel` (number, optionnel, en XAF)
+    - `prixAnnuel` (number, optionnel, en XAF)
+    - `limitesBacs` (number, défaut 3)
+    - `limitesVagues` (number, défaut 1)
+    - `limitesSites` (number, défaut 1)
+    - `limitesIngFermes` (number, optionnel — visible uniquement pour les types INGENIEUR_*)
+    - `isActif` (toggle/switch, défaut true)
+    - `isPublic` (toggle/switch, défaut true)
+  - Validation côté client :
+    - Nom obligatoire et non vide
+    - Prix >= 0 si renseigné
+    - Limites >= 1 (sauf limitesIngFermes qui peut être null)
+  - Afficher les erreurs retournées par l'API (409 "plan avec ce type existe déjà", etc.)
+  - R5 : DialogTrigger asChild
+  - Boutons larges, mobile-first (min-h-[44px])
+  - `useRouter().refresh()` après succès pour recharger la liste
+- [ ] `TODO` Intégrer le dialog dans `plans-admin-list.tsx` :
+  - Bouton "Nouveau plan" → ouvre en mode création
+  - Bouton "Modifier" sur chaque plan → ouvre en mode édition pré-rempli
+
+**Critères d'acceptation :**
+- Création d'un plan via le dialog → le plan apparaît dans la liste après refresh
+- Modification d'un plan → les changements sont visibles après refresh
+- Le champ `typePlan` est désactivé en mode édition (le type est immuable)
+- `limitesIngFermes` visible uniquement pour les types INGENIEUR_*
+- R5 : DialogTrigger asChild
+- Erreur 409 affichée si type de plan dupliqué
+- Formulaire utilisable à 360px
+
+---
+
+### Story 38.3 — Actions toggle et désactivation de plan
+**Assigné à :** @developer
+**Priorité :** Haute
+**Complexité :** Simple
+**Dépend de :** Story 38.1
+**Statut :** `TODO`
+
+**Description :** Implémenter les actions d'activation/désactivation et de suppression (soft delete)
+des plans depuis la liste admin. Inclure les protections contre la désactivation d'un plan avec abonnés actifs.
+
+**Tâches :**
+- [ ] `TODO` Ajouter dans `plans-admin-list.tsx` :
+  - Toggle actif/inactif : appel `PATCH /api/plans/[id]/toggle`, optimistic update avec rollback en cas d'erreur
+  - Bouton "Désactiver" (DELETE /api/plans/[id]) : dialog de confirmation, affiche le nombre d'abonnés actifs en avertissement
+  - Si l'API retourne 409 (abonnés actifs) : afficher un message d'erreur clair "Impossible de désactiver un plan avec des abonnés actifs"
+  - R5 : DialogTrigger asChild sur le dialog de confirmation
+- [ ] `TODO` Ajouter une indication visuelle pour les plans inactifs (opacité réduite ou badge "Inactif")
+- [ ] `TODO` Ajouter une indication pour les plans privés (badge "Privé" — non visible sur /tarifs)
+
+**Critères d'acceptation :**
+- Toggle actif/inactif fonctionne avec optimistic update
+- Désactivation impossible si abonnés actifs (409 géré avec message clair)
+- Plans inactifs visuellement distincts dans la liste
+- R5 : DialogTrigger asChild
+
+---
+
+### Story 38.4 — Bugfix : modules Sprints 33-35 absents du menu mobile (BUG-021)
+**Assigné à :** @developer
+**Priorité :** Haute
+**Complexité :** Simple
+**Statut :** `TODO`
+
+**Description :** Les modules ajoutés dans les Sprints 33-35 (Abonnement, Admin Abonnements,
+Portefeuille, Admin Commissions, Admin Remises) sont présents dans la sidebar desktop mais absents
+du menu hamburger mobile. Sur mobile (360px), ces pages sont inaccessibles via la navigation.
+Voir `docs/bugs/BUG-021.md`.
+
+**Tâches :**
+- [ ] `TODO` Ajouter les 5 modules manquants dans `modulesAdminGerant` de `src/components/layout/hamburger-menu.tsx` :
+  - Abonnement : `/mon-abonnement` + `/tarifs` (icon: `CreditCard`)
+  - Admin Abonnements : `/admin/abonnements` (icon: `ShieldCheck`)
+  - Portefeuille : `/mon-portefeuille` (icon: `Wallet`)
+  - Admin Commissions : `/admin/commissions` (icon: `TrendingUp`)
+  - Admin Remises : `/admin/remises` (icon: `Tag`)
+- [ ] `TODO` Ajouter les 5 permission gates manquantes dans `PHASE3_MODULE_PERMISSIONS` de `hamburger-menu.tsx` :
+  - `"Abonnement": Permission.ABONNEMENTS_VOIR`
+  - `"Admin Abonnements": Permission.ABONNEMENTS_GERER`
+  - `"Portefeuille": Permission.PORTEFEUILLE_VOIR`
+  - `"Admin Commissions": Permission.COMMISSIONS_GERER`
+  - `"Admin Remises": Permission.REMISES_GERER`
+- [ ] `TODO` Importer les icônes manquantes (`CreditCard`, `ShieldCheck`) dans `hamburger-menu.tsx`
+- [ ] `TODO` Vérifier que l'ordre des modules dans le hamburger est identique à la sidebar
+
+**Critères d'acceptation :**
+- Les 5 modules sont visibles dans le menu hamburger mobile (quand l'utilisateur a les permissions)
+- Les permission gates fonctionnent correctement (un promoteur ne voit pas Admin Commissions, etc.)
+- L'ordre des modules est cohérent entre sidebar et hamburger
+- Build OK
+
+---
+
+### Story 38.5 — Navigation admin plans + loading state
+**Assigné à :** @developer
+**Priorité :** Moyenne
+**Complexité :** Simple
+**Dépend de :** Stories 38.1, 38.4
+**Statut :** `TODO`
+
+**Description :** Ajouter la page admin/plans dans la navigation (sidebar + hamburger menu) et les états de chargement.
+
+**Tâches :**
+- [ ] `TODO` Ajouter `/admin/plans` dans le module "Admin Abonnements" de la sidebar (`sidebar.tsx`) et du hamburger menu (`hamburger-menu.tsx`), à côté de `/admin/abonnements`
+- [ ] `TODO` Créer `src/app/admin/plans/loading.tsx` — skeleton loading (même pattern que les autres loading.tsx existants)
+- [ ] `TODO` Vérifier que le lien n'est visible que pour les utilisateurs avec `Permission.PLANS_GERER`
+
+**Critères d'acceptation :**
+- Lien /admin/plans visible dans la navigation admin (sidebar ET hamburger)
+- Visible uniquement avec `PLANS_GERER`
+- Loading skeleton affiché pendant le chargement
+- Navigation cohérente entre sidebar et hamburger
+
+---
+
+### Story 38.6 — Tests + Review Sprint 38
+**Assigné à :** @tester + @code-reviewer
+**Priorité :** Haute
+**Complexité :** Simple
+**Dépend de :** Stories 38.1 à 38.5
+**Statut :** `TODO`
+
+**Tâches @tester :**
+- [ ] `TODO` Créer `src/__tests__/components/plans-admin-list.test.tsx` :
+  - Rendu de la liste avec plans actifs et inactifs
+  - Filtre par type de plan → liste filtrée
+  - Filtre par statut actif/inactif → liste filtrée
+- [ ] `TODO` Créer `src/__tests__/components/plan-form-dialog.test.tsx` :
+  - Mode création : soumission avec champs valides → POST /api/plans appelé
+  - Mode création : nom vide → erreur de validation affichée
+  - Mode édition : typePlan désactivé, champs pré-remplis
+  - Erreur 409 → message "Un plan avec ce type existe déjà" affiché
+- [ ] `TODO` Créer `src/__tests__/components/plan-toggle.test.tsx` :
+  - Toggle actif/inactif → PATCH appelé + optimistic update
+  - Désactivation avec abonnés actifs → 409 → message d'erreur affiché
+- [ ] `TODO` Vérifier BUG-021 : les 5 modules sont accessibles depuis le menu hamburger mobile
+- [ ] `TODO` `npx vitest run` + `npm run build` — OK
+- [ ] `TODO` Test manuel mobile 360px : formulaire de création lisible et utilisable, navigation hamburger complète
+- [ ] `TODO` Écrire `docs/tests/rapport-sprint-38.md`
+
+**Tâches @code-reviewer :**
+- [ ] `TODO` Checklist R1-R9
+- [ ] `TODO` Vérifier que `Permission.PLANS_GERER` est vérifié sur la page et dans la navigation
+- [ ] `TODO` Vérifier R5 : DialogTrigger asChild sur tous les dialogs
+- [ ] `TODO` Vérifier R6 : aucune couleur hardcodée
+- [ ] `TODO` Vérifier que le formulaire respecte le mobile-first (min-h-[44px] sur les boutons, champs larges)
+- [ ] `TODO` Vérifier cohérence sidebar/hamburger (même modules, même ordre, mêmes permissions)
+- [ ] `TODO` Écrire `docs/reviews/review-sprint-38.md`
+
+**Critères d'acceptation :**
+- Tests UI passent + build OK (R9)
+- Mobile-first vérifié à 360px
+- Permissions vérifiées (PLANS_GERER)
+- BUG-021 vérifié clos
+- Rapport de review produit
