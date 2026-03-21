@@ -1,7 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { UserRoleBadge } from "./user-role-badge";
 import { Role } from "@/types";
-import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 
 interface UserSummary {
   id: string;
@@ -34,8 +36,8 @@ function getInitials(name: string): string {
     .join("");
 }
 
-export async function UserCard({ user }: UserCardProps) {
-  const t = await getTranslations("users");
+export function UserCard({ user }: UserCardProps) {
+  const t = useTranslations("users");
   const avatarColor = ROLE_AVATAR_COLOR[user.globalRole] ?? "bg-gray-500";
   const initials = getInitials(user.name);
 
