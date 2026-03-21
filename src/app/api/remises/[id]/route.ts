@@ -23,11 +23,11 @@ import type { UpdateRemiseDTO } from "@/types";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requirePermission(request, Permission.REMISES_GERER);
-    const { id } = params;
+    const { id } = await params;
 
     const remise = await getRemiseById(id);
     if (!remise) {
@@ -60,11 +60,11 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requirePermission(request, Permission.REMISES_GERER);
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     // Vérifier que la remise existe
@@ -123,11 +123,11 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requirePermission(request, Permission.REMISES_GERER);
-    const { id } = params;
+    const { id } = await params;
 
     const existing = await getRemiseById(id);
     if (!existing) {

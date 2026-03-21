@@ -68,19 +68,25 @@ export async function transitionnerStatuts(): Promise<TransitionStatutsResult> {
 
   // Transition 2 : EN_GRACE → SUSPENDU
   // Abonnements dont la période de grâce est expirée
+  // R4 : Envelopper dans prisma.$transaction() pour garantir l'atomicité
+  // complète — un crash en milieu de boucle ne laisse plus d'état partiel.
   const abonnementsEnGraceExpires = await getAbonnementsEnGraceExpires();
   let suspendus = 0;
 
-  for (const abo of abonnementsEnGraceExpires) {
-    const { count } = await prisma.abonnement.updateMany({
-      where: {
-        id: abo.id,
-        statut: StatutAbonnement.EN_GRACE,
-        dateFinGrace: { lt: maintenant },
-      },
-      data: { statut: StatutAbonnement.SUSPENDU },
-    });
-    suspendus += count;
+  if (abonnementsEnGraceExpires.length > 0) {
+    const counts = await prisma.$transaction(
+      abonnementsEnGraceExpires.map((abo) =>
+        prisma.abonnement.updateMany({
+          where: {
+            id: abo.id,
+            statut: StatutAbonnement.EN_GRACE,
+            dateFinGrace: { lt: maintenant },
+          },
+          data: { statut: StatutAbonnement.SUSPENDU },
+        })
+      )
+    );
+    suspendus = counts.reduce((acc, result) => acc + result.count, 0);
   }
 
   // Transition 3 : SUSPENDU → EXPIRE

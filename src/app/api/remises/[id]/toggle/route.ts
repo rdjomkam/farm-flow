@@ -16,11 +16,11 @@ import { Permission } from "@/types";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requirePermission(request, Permission.REMISES_GERER);
-    const { id } = params;
+    const { id } = await params;
 
     // Récupérer l'état actuel
     const existing = await getRemiseById(id);

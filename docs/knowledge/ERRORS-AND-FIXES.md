@@ -239,6 +239,38 @@ Quand une Server Component lit depuis Prisma et passe les données à un composa
 
 ---
 
+### ERR-014 — Boucle de updateMany séquentiels sans $transaction (R4)
+**Sprint :** 36 | **Date :** 2026-03-21
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/services/abonnement-lifecycle.ts`
+
+**Symptôme :**
+Un CRON job exécutait une boucle `for` de plusieurs `updateMany` séquentiels sans transaction globale. Un crash ou une erreur en milieu de boucle laissait la base dans un état partiellement mis à jour (certains abonnements transitionnnés, d'autres non).
+
+**Cause racine :**
+Chaque `updateMany` est atomique individuellement, mais une séquence de `updateMany` dans une boucle sans `$transaction` n'est pas atomique globalement. Une interruption entre deux itérations produit une exécution partielle.
+
+**Fix :**
+Collecter toutes les opérations dans un tableau, puis les envelopper dans `prisma.$transaction([...])` (forme batch) :
+
+```typescript
+// Avant (non-atomique) :
+for (const operation of operations) {
+  await prisma.abonnement.updateMany({ where: operation.where, data: operation.data });
+}
+
+// Après (atomique) :
+const updates = operations.map((operation) =>
+  prisma.abonnement.updateMany({ where: operation.where, data: operation.data })
+);
+await prisma.$transaction(updates);
+```
+
+**Leçon / Règle :**
+R4 s'applique aussi aux boucles : quand plusieurs `updateMany` (ou autres opérations Prisma) doivent s'exécuter ensemble, toujours les regrouper dans `prisma.$transaction([...])`. L'atomicité individuelle de chaque opération ne suffit pas — c'est l'ensemble de la séquence qui doit être atomique.
+
+---
+
 ### ERR-013 — Rate limiting en mémoire non partagé entre instances serverless
 **Sprint :** 35 | **Date :** 2026-03-21
 **Sévérité :** Basse (dev/staging), Moyenne (production)

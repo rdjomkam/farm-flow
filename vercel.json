@@ -3,6 +3,10 @@
     {
       "path": "/api/activites/generer",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/subscription-lifecycle",
+      "schedule": "0 8 * * *"
     }
   ]
 }
