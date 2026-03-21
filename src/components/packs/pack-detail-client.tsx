@@ -26,22 +26,7 @@ import {
 } from "@/components/ui/select";
 import { useConfigService } from "@/services";
 import { useApi } from "@/hooks/use-api";
-import { Permission, SiteModule, StatutActivation, UniteStock } from "@/types";
-
-const MODULE_LABELS: Record<SiteModule, string> = {
-  [SiteModule.REPRODUCTION]: "Reproduction",
-  [SiteModule.GROSSISSEMENT]: "Grossissement",
-  [SiteModule.INTRANTS]: "Intrants",
-  [SiteModule.VENTES]: "Ventes",
-  [SiteModule.ANALYSE_PILOTAGE]: "Analyse & Pilotage",
-  [SiteModule.PACKS_PROVISIONING]: "Packs & Provisioning",
-  [SiteModule.CONFIGURATION]: "Configuration",
-  [SiteModule.INGENIEUR]: "Ingenieur",
-  [SiteModule.NOTES]: "Notes",
-  [SiteModule.ABONNEMENTS]: "Abonnements",
-  [SiteModule.COMMISSIONS]: "Commissions",
-  [SiteModule.REMISES]: "Remises",
-};
+import { Permission, StatutActivation, UniteStock } from "@/types";
 
 const statutActivationLabels: Record<StatutActivation, string> = {
   [StatutActivation.ACTIVE]: "Active",
@@ -97,7 +82,8 @@ interface PackDetailData {
   poidsMoyenInitial: number;
   prixTotal: number;
   isActive: boolean;
-  enabledModules: SiteModule[];
+  planId: string;
+  plan?: { id: string; nom: string } | null;
   configElevage: { id: string; nom: string } | null;
   user: { id: string; name: string };
   produits: PackProduitData[];
@@ -143,14 +129,6 @@ export function PackDetailClient({ pack, produits, configElevages, permissions }
   const [editPoidsMoyenInitial, setEditPoidsMoyenInitial] = useState(String(pack.poidsMoyenInitial));
   const [editPrixTotal, setEditPrixTotal] = useState(String(pack.prixTotal));
   const [editConfigElevageId, setEditConfigElevageId] = useState(pack.configElevage?.id ?? "none");
-  const [editEnabledModules, setEditEnabledModules] = useState<SiteModule[]>(pack.enabledModules ?? []);
-
-  function toggleModule(module: SiteModule) {
-    setEditEnabledModules((prev) =>
-      prev.includes(module) ? prev.filter((m) => m !== module) : [...prev, module]
-    );
-  }
-
   const canManage = permissions.includes(Permission.GERER_PACKS);
   const canActivate = permissions.includes(Permission.ACTIVER_PACKS);
 
@@ -228,7 +206,6 @@ export function PackDetailClient({ pack, produits, configElevages, permissions }
       poidsMoyenInitial: parseFloat(editPoidsMoyenInitial) || 0,
       prixTotal: parseFloat(editPrixTotal) || 0,
       configElevageId: editConfigElevageId === "none" ? null : editConfigElevageId,
-      enabledModules: editEnabledModules,
     });
     if (result.ok) {
       setEditOpen(false);
@@ -364,32 +341,6 @@ export function PackDetailClient({ pack, produits, configElevages, permissions }
                         ))}
                       </SelectContent>
                     </Select>
-                    <div>
-                      <label className="text-sm font-medium">Modules activés</label>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        Laisser vide = tous les modules accessibles
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {Object.values(SiteModule).map((mod) => {
-                          const checked = editEnabledModules.includes(mod);
-                          return (
-                            <button
-                              key={mod}
-                              type="button"
-                              onClick={() => toggleModule(mod)}
-                              className={[
-                                "px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
-                                checked
-                                  ? "bg-primary text-primary-foreground border-primary"
-                                  : "bg-muted text-muted-foreground border-border hover:border-primary/50",
-                              ].join(" ")}
-                            >
-                              {MODULE_LABELS[mod]}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
                   </div>
                   <DialogFooter>
                     <DialogClose asChild>
@@ -442,20 +393,12 @@ export function PackDetailClient({ pack, produits, configElevages, permissions }
           </div>
         </dl>
 
-        {/* Modules activés */}
+        {/* Plan associé */}
         <div className="mt-4">
-          <p className="text-sm text-muted-foreground mb-2">Modules activés</p>
-          {(!pack.enabledModules || pack.enabledModules.length === 0) ? (
-            <span className="text-sm text-muted-foreground italic">Tous les modules</span>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {pack.enabledModules.map((mod) => (
-                <Badge key={mod} variant="default" className="text-xs">
-                  {MODULE_LABELS[mod as SiteModule] ?? mod}
-                </Badge>
-              ))}
-            </div>
-          )}
+          <p className="text-sm text-muted-foreground mb-2">Plan d'abonnement</p>
+          <span className="text-sm font-medium">
+            {pack.plan?.nom ?? pack.planId}
+          </span>
         </div>
       </div>
 

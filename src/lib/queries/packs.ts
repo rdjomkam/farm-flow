@@ -60,6 +60,7 @@ export async function getPackById(id: string, siteId: string) {
           },
         },
       },
+      plan: { select: { id: true, nom: true } },
       bacs: { orderBy: { position: "asc" } },
       activations: {
         select: {
@@ -98,7 +99,7 @@ export async function createPack(data: CreatePackDTO & { userId: string; siteId:
       prixTotal: data.prixTotal ?? 0,
       configElevageId: data.configElevageId ?? null,
       isActive: data.isActive ?? true,
-      enabledModules: data.enabledModules ?? [],
+      planId: data.planId,
       userId: data.userId,
       siteId: data.siteId,
     },
@@ -166,7 +167,7 @@ export async function updatePack(id: string, siteId: string, data: UpdatePackDTO
       ...(data.prixTotal !== undefined && { prixTotal: data.prixTotal }),
       ...(data.configElevageId !== undefined && { configElevageId: data.configElevageId }),
       ...(data.isActive !== undefined && { isActive: data.isActive }),
-      ...(data.enabledModules !== undefined && { enabledModules: data.enabledModules }),
+      ...(data.planId !== undefined && { planId: data.planId }),
     },
     include: {
       configElevage: { select: { id: true, nom: true } },

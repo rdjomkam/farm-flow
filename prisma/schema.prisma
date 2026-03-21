@@ -1558,8 +1558,9 @@ model Pack {
   siteId              String
   site                Site           @relation(fields: [siteId], references: [id])
 
-  /** Modules activés pour les sites provisionnés via ce pack */
-  enabledModules SiteModule[] @default([])
+  /** Plan d'abonnement associé à ce pack */
+  planId              String
+  plan                PlanAbonnement @relation(fields: [planId], references: [id])
 
   produits    PackProduit[]
   bacs        PackBac[]
@@ -1571,6 +1572,7 @@ model Pack {
   @@index([siteId])
   @@index([configElevageId])
   @@index([userId])
+  @@index([planId])
 }
 
 /**
@@ -1970,6 +1972,7 @@ model PlanAbonnement {
 
   abonnements      Abonnement[]
   remises          Remise[]
+  packs            Pack[]
 
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt

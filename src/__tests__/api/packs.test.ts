@@ -103,11 +103,13 @@ const FAKE_PACK = {
   prixTotal: 85000,
   isActive: true,
   configElevageId: null,
+  planId: "plan-decouverte",
   userId: "user-admin",
   siteId: "site-dkfarm",
   createdAt: new Date(),
   updatedAt: new Date(),
   configElevage: null,
+  plan: { id: "plan-decouverte", nom: "Plan Decouverte", typePlan: "DECOUVERTE" },
   user: { id: "user-admin", name: "Admin DKFarm" },
   produits: [],
   _count: { activations: 0 },
@@ -187,6 +189,7 @@ describe("POST /api/packs", () => {
         nom: "Pack Decouverte 100",
         nombreAlevins: 100,
         prixTotal: 85000,
+        planId: "plan-decouverte",
       }),
     });
     const res = await POST(req);

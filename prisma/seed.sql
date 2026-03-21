@@ -1342,88 +1342,9 @@ INSERT INTO "ConfigElevage" (
   );
 
 -- ============================================================
--- SPRINT 20 : Packs & Provisioning
+-- SPRINT 20 : Packs & Provisioning (inserts déplacés après Sprint 30 — FK planId)
 -- ============================================================
-
--- Packs
-INSERT INTO "Pack" (id, nom, description, "nombreAlevins", "poidsMoyenInitial", "prixTotal", "configElevageId", "isActive", "enabledModules", "userId", "siteId", "createdAt", "updatedAt")
-VALUES
-  (
-    'pack_01',
-    'Pack Decouverte 100',
-    'Kit de demarrage pour 100 alevins. Ideal pour les pisciculteurs debutants. Inclut aliments et intrants pour 30 jours.',
-    100, 5.0, 85000.0,
-    'cfg_01',
-    true,
-    '{GROSSISSEMENT,ANALYSE_PILOTAGE,NOTES}',
-    'user_admin', 'site_01', NOW(), NOW()
-  ),
-  (
-    'pack_02',
-    'Pack Starter 300',
-    'Kit standard pour 300 alevins. Production semi-intensive. Inclut aliments, intrants et materiel de base.',
-    300, 5.0, 220000.0,
-    'cfg_01',
-    true,
-    '{GROSSISSEMENT,ANALYSE_PILOTAGE,NOTES}',
-    'user_admin', 'site_01', NOW(), NOW()
-  ),
-  (
-    'pack_03',
-    'Pack Pro 500',
-    'Kit professionnel pour 500 alevins. Production intensive optimisee. Config Clarias Express incluse.',
-    500, 5.0, 350000.0,
-    'cfg_02',
-    true,
-    '{GROSSISSEMENT,ANALYSE_PILOTAGE,NOTES}',
-    'user_admin', 'site_01', NOW(), NOW()
-  );
-
--- Pack Produits (associer les produits existants aux packs)
--- Pack Decouverte 100 : aliment de base + sel de cuisine
-INSERT INTO "PackProduit" (id, "packId", "produitId", quantite)
-VALUES
-  ('pp_01_aliment', 'pack_01', 'prod_01', 25.0),
-  ('pp_01_sel', 'pack_01', 'prod_03', 2.0),
-  -- Pack Starter 300
-  ('pp_02_aliment', 'pack_02', 'prod_01', 75.0),
-  ('pp_02_sel', 'pack_02', 'prod_03', 5.0),
-  ('pp_02_vit', 'pack_02', 'prod_04', 1.0),
-  -- Pack Pro 500
-  ('pp_03_aliment', 'pack_03', 'prod_01', 120.0),
-  ('pp_03_sel', 'pack_03', 'prod_03', 8.0),
-  ('pp_03_vit', 'pack_03', 'prod_04', 2.0),
-  ('pp_03_aliment2', 'pack_03', 'prod_02', 50.0);
-
--- Pack Bacs (bacs modeles inclus dans chaque pack)
--- Pack Decouverte 100 : 1 bac unique de 100 alevins
-INSERT INTO "PackBac" (id, "packId", nom, volume, "nombreAlevins", "poidsMoyenInitial", position)
-VALUES
-  ('pb_01_bac1', 'pack_01', 'Bac Unique', 1000.0, 100, 5.0, 0);
-
--- Pack Starter 300 : 2 bacs (200 + 100 alevins)
-INSERT INTO "PackBac" (id, "packId", nom, volume, "nombreAlevins", "poidsMoyenInitial", position)
-VALUES
-  ('pb_02_bac1', 'pack_02', 'Bac Principal', 2000.0, 200, 5.0, 0),
-  ('pb_02_bac2', 'pack_02', 'Bac Secondaire', 1500.0, 100, 5.0, 1);
-
--- Pack Pro 500 : 3 bacs (200 + 200 + 100 alevins)
-INSERT INTO "PackBac" (id, "packId", nom, volume, "nombreAlevins", "poidsMoyenInitial", position)
-VALUES
-  ('pb_03_bac1', 'pack_03', 'Bac A', 2000.0, 200, 5.0, 0),
-  ('pb_03_bac2', 'pack_03', 'Bac B', 2000.0, 200, 5.0, 1),
-  ('pb_03_bac3', 'pack_03', 'Bac C', 1500.0, 100, 5.0, 2);
-
--- ──────────────────────────────────────────
--- PackActivation (site_01 supervise site_client_01 via pack_01)
--- ──────────────────────────────────────────
-
-INSERT INTO "PackActivation" (id, code, "packId", "userId", "siteId", "clientSiteId", statut, "dateActivation", "createdAt", "updatedAt")
-VALUES
-  ('pa_01', 'ACT-2026-001', 'pack_01', 'user_ingenieur', 'site_01', 'site_client_01', 'ACTIVE', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days', NOW());
-
--- Link client vague to PackActivation
-UPDATE "Vague" SET "packActivationId" = 'pa_01' WHERE id = 'vague_client_01';
+-- Note: Pack INSERT est dans la section Sprint 30 (après PlanAbonnement) car Pack.planId FK PlanAbonnement
 
 -- ──────────────────────────────────────────
 -- SPRINT 21 : Catalogue de règles pré-définies globales
@@ -2305,6 +2226,89 @@ ON CONFLICT ("typePlan") DO UPDATE SET
   "modulesInclus" = EXCLUDED."modulesInclus",
   "updatedAt"     = NOW();
 
+-- ============================================================
+-- SPRINT 20 (suite) : Packs & Provisioning
+-- Placé ici car Pack.planId FK PlanAbonnement (Story 44.1)
+-- ============================================================
+
+-- Packs (planId remplace enabledModules depuis Story 44.1)
+INSERT INTO "Pack" (id, nom, description, "nombreAlevins", "poidsMoyenInitial", "prixTotal", "configElevageId", "isActive", "planId", "userId", "siteId", "createdAt", "updatedAt")
+VALUES
+  (
+    'pack_01',
+    'Pack Decouverte 100',
+    'Kit de demarrage pour 100 alevins. Ideal pour les pisciculteurs debutants. Inclut aliments et intrants pour 30 jours.',
+    100, 5.0, 85000.0,
+    'cfg_01',
+    true,
+    'plan_decouverte',
+    'user_admin', 'site_01', NOW(), NOW()
+  ),
+  (
+    'pack_02',
+    'Pack Starter 300',
+    'Kit standard pour 300 alevins. Production semi-intensive. Inclut aliments, intrants et materiel de base.',
+    300, 5.0, 220000.0,
+    'cfg_01',
+    true,
+    'plan_eleveur',
+    'user_admin', 'site_01', NOW(), NOW()
+  ),
+  (
+    'pack_03',
+    'Pack Pro 500',
+    'Kit professionnel pour 500 alevins. Production intensive optimisee. Config Clarias Express incluse.',
+    500, 5.0, 350000.0,
+    'cfg_02',
+    true,
+    'plan_professionnel',
+    'user_admin', 'site_01', NOW(), NOW()
+  );
+
+-- Pack Produits (associer les produits existants aux packs)
+-- Pack Decouverte 100 : aliment de base + sel de cuisine
+INSERT INTO "PackProduit" (id, "packId", "produitId", quantite)
+VALUES
+  ('pp_01_aliment', 'pack_01', 'prod_01', 25.0),
+  ('pp_01_sel', 'pack_01', 'prod_03', 2.0),
+  -- Pack Starter 300
+  ('pp_02_aliment', 'pack_02', 'prod_01', 75.0),
+  ('pp_02_sel', 'pack_02', 'prod_03', 5.0),
+  ('pp_02_vit', 'pack_02', 'prod_04', 1.0),
+  -- Pack Pro 500
+  ('pp_03_aliment', 'pack_03', 'prod_01', 120.0),
+  ('pp_03_sel', 'pack_03', 'prod_03', 8.0),
+  ('pp_03_vit', 'pack_03', 'prod_04', 2.0),
+  ('pp_03_aliment2', 'pack_03', 'prod_02', 50.0);
+
+-- Pack Bacs (bacs modeles inclus dans chaque pack)
+-- Pack Decouverte 100 : 1 bac unique de 100 alevins
+INSERT INTO "PackBac" (id, "packId", nom, volume, "nombreAlevins", "poidsMoyenInitial", position)
+VALUES
+  ('pb_01_bac1', 'pack_01', 'Bac Unique', 1000.0, 100, 5.0, 0);
+
+-- Pack Starter 300 : 2 bacs (200 + 100 alevins)
+INSERT INTO "PackBac" (id, "packId", nom, volume, "nombreAlevins", "poidsMoyenInitial", position)
+VALUES
+  ('pb_02_bac1', 'pack_02', 'Bac Principal', 2000.0, 200, 5.0, 0),
+  ('pb_02_bac2', 'pack_02', 'Bac Secondaire', 1500.0, 100, 5.0, 1);
+
+-- Pack Pro 500 : 3 bacs (200 + 200 + 100 alevins)
+INSERT INTO "PackBac" (id, "packId", nom, volume, "nombreAlevins", "poidsMoyenInitial", position)
+VALUES
+  ('pb_03_bac1', 'pack_03', 'Bac A', 2000.0, 200, 5.0, 0),
+  ('pb_03_bac2', 'pack_03', 'Bac B', 2000.0, 200, 5.0, 1),
+  ('pb_03_bac3', 'pack_03', 'Bac C', 1500.0, 100, 5.0, 2);
+
+-- PackActivation (site_01 supervise site_client_01 via pack_01)
+INSERT INTO "PackActivation" (id, code, "packId", "userId", "siteId", "clientSiteId", statut, "dateActivation", "createdAt", "updatedAt")
+VALUES
+  ('pa_01', 'ACT-2026-001', 'pack_01', 'user_ingenieur', 'site_01', 'site_client_01', 'ACTIVE', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days', NOW());
+
+-- Link client vague to PackActivation
+UPDATE "Vague" SET "packActivationId" = 'pa_01' WHERE id = 'vague_client_01';
+
+-- ============================================================
 -- Remises (3 remises : early adopter fixe, early adopter %, bienvenue)
 -- Story 35.2 : EARLY2026 = remise fixe 2000 XAF pour les early adopters (premier abonnement)
 INSERT INTO "Remise" (id, nom, code, type, valeur, "estPourcentage", "dateDebut", "dateFin", "limiteUtilisations", "nombreUtilisations", "isActif", "userId", "createdAt", "updatedAt")

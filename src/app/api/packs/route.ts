@@ -68,6 +68,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (!body.planId || typeof body.planId !== "string" || body.planId.trim() === "") {
+      return NextResponse.json(
+        { status: 400, message: "L'identifiant du plan d'abonnement est requis." },
+        { status: 400 }
+      );
+    }
 
     const pack = await createPack({
       nom: body.nom.trim(),
@@ -77,7 +83,7 @@ export async function POST(request: NextRequest) {
       prixTotal: body.prixTotal,
       configElevageId: body.configElevageId ?? null,
       isActive: body.isActive ?? true,
-      enabledModules: body.enabledModules ?? [],
+      planId: body.planId,
       userId: auth.userId,
       siteId: auth.activeSiteId,
     });

@@ -40,12 +40,19 @@ interface PackData {
   _count: { activations: number };
 }
 
+interface PlanOption {
+  id: string;
+  nom: string;
+  typePlan: string;
+}
+
 interface Props {
   packs: PackData[];
   permissions: Permission[];
+  plans?: PlanOption[];
 }
 
-export function PacksListClient({ packs, permissions }: Props) {
+export function PacksListClient({ packs, permissions, plans = [] }: Props) {
   const router = useRouter();
   const configService = useConfigService();
   const [tab, setTab] = useState("actifs");
@@ -58,6 +65,7 @@ export function PacksListClient({ packs, permissions }: Props) {
   const [nombreAlevins, setNombreAlevins] = useState("");
   const [poidsMoyen, setPoidsMoyen] = useState("5");
   const [prixTotal, setPrixTotal] = useState("0");
+  const [planId, setPlanId] = useState("");
 
   const canManage = permissions.includes(Permission.GERER_PACKS);
   const canActivate = permissions.includes(Permission.ACTIVER_PACKS);
@@ -74,10 +82,12 @@ export function PacksListClient({ packs, permissions }: Props) {
     setNombreAlevins("");
     setPoidsMoyen("5");
     setPrixTotal("0");
+    setPlanId("");
   }
 
   async function handleCreate() {
     if (!nom.trim()) return;
+    if (!planId.trim()) return;
     const nb = parseInt(nombreAlevins, 10);
     if (isNaN(nb) || nb <= 0) return;
     const prix = parseFloat(prixTotal);
@@ -89,6 +99,7 @@ export function PacksListClient({ packs, permissions }: Props) {
       nombreAlevins: nb,
       poidsMoyenInitial: parseFloat(poidsMoyen) || 5,
       prixTotal: prix,
+      planId: planId.trim(),
     });
     if (result.ok) {
       setDialogOpen(false);
@@ -176,6 +187,21 @@ export function PacksListClient({ packs, permissions }: Props) {
                     placeholder="0"
                     className="mt-1"
                   />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Plan d&apos;abonnement *</label>
+                  <select
+                    value={planId}
+                    onChange={(e) => setPlanId(e.target.value)}
+                    className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <option value="">Sélectionner un plan...</option>
+                    {plans.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nom} ({p.typePlan})
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <DialogFooter>

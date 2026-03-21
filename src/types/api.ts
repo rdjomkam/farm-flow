@@ -1573,8 +1573,8 @@ export interface CreatePackDTO {
   /** ConfigElevage recommandée (nullable) */
   configElevageId?: string | null;
   isActive?: boolean;
-  /** Modules activés par ce pack */
-  enabledModules?: SiteModule[];
+  /** Plan d'abonnement associé à ce pack */
+  planId: string;
 }
 
 /** DTO pour modifier un Pack (tous les champs optionnels) */

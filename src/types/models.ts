@@ -1933,8 +1933,8 @@ export interface Pack {
   /** ConfigElevage recommandée pour ce pack (nullable) */
   configElevageId: string | null;
   isActive: boolean;
-  /** Modules activés pour les sites provisionnés via ce pack */
-  enabledModules: SiteModule[];
+  /** Plan d'abonnement associé à ce pack */
+  planId: string;
   /** Créateur du pack (ADMIN DKFarm) */
   userId: string;
   /** Site DKFarm propriétaire du pack — R8 */
@@ -1947,6 +1947,7 @@ export interface Pack {
 export interface PackWithRelations extends Pack {
   configElevage?: Pick<ConfigElevage, "id" | "nom"> | null;
   user?: Pick<User, "id" | "name">;
+  plan?: Pick<PlanAbonnement, "id" | "nom" | "typePlan">;
   produits?: PackProduit[];
   bacs?: PackBac[];
   _count?: { activations: number };

@@ -5,25 +5,8 @@ import Link from "next/link";
 import { ArrowLeft, CheckCircle, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SiteModule } from "@/types";
 import { useConfigService } from "@/services";
-
-const MODULE_LABELS: Record<SiteModule, string> = {
-  [SiteModule.REPRODUCTION]: "Reproduction",
-  [SiteModule.GROSSISSEMENT]: "Grossissement",
-  [SiteModule.INTRANTS]: "Intrants",
-  [SiteModule.VENTES]: "Ventes",
-  [SiteModule.ANALYSE_PILOTAGE]: "Analyse & Pilotage",
-  [SiteModule.PACKS_PROVISIONING]: "Packs & Provisioning",
-  [SiteModule.CONFIGURATION]: "Configuration",
-  [SiteModule.INGENIEUR]: "Ingenieur",
-  [SiteModule.NOTES]: "Notes",
-  [SiteModule.ABONNEMENTS]: "Abonnements",
-  [SiteModule.COMMISSIONS]: "Commissions",
-  [SiteModule.REMISES]: "Remises",
-};
 
 interface PackInfo {
   id: string;
@@ -31,7 +14,7 @@ interface PackInfo {
   nombreAlevins: number;
   poidsMoyenInitial: number;
   prixTotal: number;
-  enabledModules: SiteModule[];
+  plan?: { id: string; nom: string };
   produits: Array<{ id: string; quantite: number; produit: { nom: string; unite: string } }>;
 }
 
@@ -162,20 +145,13 @@ export function PackActiverClient({ pack }: Props) {
                   {pack.produits.length} produit{pack.produits.length !== 1 ? "s" : ""} inclus dans le stock
                 </p>
               )}
-              <div className="mt-2">
-                <p className="text-xs text-muted-foreground mb-1">Modules activés sur le site client :</p>
-                {(!pack.enabledModules || pack.enabledModules.length === 0) ? (
-                  <span className="text-xs text-muted-foreground italic">Tous les modules</span>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {pack.enabledModules.map((mod) => (
-                      <Badge key={mod} variant="default" className="text-xs">
-                        {MODULE_LABELS[mod as SiteModule] ?? mod}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
+              {pack.plan && (
+                <div className="mt-2">
+                  <p className="text-xs text-muted-foreground">
+                    Plan : <span className="font-medium">{pack.plan.nom}</span>
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>

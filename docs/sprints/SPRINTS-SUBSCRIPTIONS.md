@@ -1893,7 +1893,7 @@ devenu redondant sur `Pack`, et créer automatiquement un `Abonnement` quand un 
 **Assigné à :** @db-specialist
 **Priorité :** Critique
 **Complexité :** Medium
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Modifier le modèle `Pack` pour ajouter `planId` (FK vers `PlanAbonnement`) et
 supprimer `enabledModules` qui devient redondant (les modules viennent du plan via `modulesInclus`).
@@ -1929,7 +1929,7 @@ supprimer `enabledModules` qui devient redondant (les modules viennent du plan v
 **Priorité :** Haute
 **Complexité :** Simple
 **Dépend de :** Story 44.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Mettre à jour les routes API CRUD de Pack pour utiliser `planId` au lieu de `enabledModules`.
 
@@ -1952,7 +1952,7 @@ supprimer `enabledModules` qui devient redondant (les modules viennent du plan v
 **Priorité :** Haute
 **Complexité :** Medium
 **Dépend de :** Story 44.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Mettre à jour les composants UI qui affichent les Packs pour montrer le plan lié
 et ses modules au lieu de l'ancien `enabledModules`.
@@ -1981,7 +1981,7 @@ et ses modules au lieu de l'ancien `enabledModules`.
 **Priorité :** Critique
 **Complexité :** Complex
 **Dépend de :** Stories 44.1, 43.5
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Quand un pack est activé sur un site (provisioning), créer automatiquement un
 `Abonnement` lié au plan du pack. Cela unifie le cycle de vie : pack → abonnement → modules.
@@ -2021,7 +2021,7 @@ et ses modules au lieu de l'ancien `enabledModules`.
 **Priorité :** Haute
 **Complexité :** Simple
 **Dépend de :** Stories 44.2, 44.3
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Rechercher et supprimer toutes les références résiduelles à `Pack.enabledModules`
 dans le codebase (imports, types, composants, utilitaires).
@@ -2044,7 +2044,7 @@ dans le codebase (imports, types, composants, utilitaires).
 **Priorité :** Moyenne
 **Complexité :** Simple
 **Dépend de :** Stories 44.1, 44.4
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Mettre à jour les données de seed pour refléter la nouvelle architecture :
 packs liés aux plans, abonnements créés à l'activation.
@@ -2069,7 +2069,7 @@ packs liés aux plans, abonnements créés à l'activation.
 **Priorité :** Haute
 **Complexité :** Medium
 **Dépend de :** Stories 44.1 à 44.6
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches @tester :**
 - [ ] `TODO` Test unitaire `createAbonnementFromPack` : pack DECOUVERTE → abonnement gratuit ACTIF

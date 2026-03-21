@@ -12,6 +12,7 @@
  * 8. Les produits copiés vers le stock client (F-14)
  * 9. Les mouvements stock ENTREE pour chaque produit copié
  * 10. La PackActivation avec code ACT-YYYY-NNN (EC-2.5)
+ * 11. L'Abonnement ACTIF pour le site client + application des modules (Story 44.4)
  *
  * Adresse : EC-2.3 (atomicité), F-03 (system user), F-04 (siteId/clientSiteId),
  *           F-05 (pas d'@unique sur clientSiteId), F-14 (copier produits), EC-2.1 (anti-double-activation)
@@ -20,8 +21,18 @@
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
 import { SYSTEM_ROLE_DEFINITIONS } from "@/lib/permissions-constants";
+import { applyPlanModulesTx } from "@/lib/abonnements/apply-plan-modules";
 import type { ActivatePackDTO, ProvisioningPayload } from "@/types";
-import { Role, StatutVague, TypeMouvement, StatutActivation, SiteModule } from "@/types";
+import {
+  Role,
+  StatutVague,
+  TypeMouvement,
+  StatutActivation,
+  SiteModule,
+  PeriodeFacturation,
+  StatutAbonnement,
+  TypePlan,
+} from "@/types";
 
 /** Modules par defaut pour les sites supervises (si le pack n'en definit pas) */
 const DEFAULT_SUPERVISED_MODULES: SiteModule[] = [
@@ -142,6 +153,16 @@ export async function activerPack(
         },
         configElevage: true,
         bacs: { orderBy: { position: "asc" } },
+        plan: {
+          select: {
+            id: true,
+            modulesInclus: true,
+            typePlan: true,
+            prixMensuel: true,
+            prixTrimestriel: true,
+            prixAnnuel: true,
+          },
+        },
       },
     });
     if (!pack) {
@@ -165,8 +186,8 @@ export async function activerPack(
         address: dto.clientSiteAddress ?? null,
         isActive: true,
         supervised: true,
-        enabledModules: pack.enabledModules.length > 0
-          ? [...pack.enabledModules]
+        enabledModules: pack.plan.modulesInclus.length > 0
+          ? [...pack.plan.modulesInclus]
           : DEFAULT_SUPERVISED_MODULES,
       },
     });
@@ -443,6 +464,41 @@ export async function activerPack(
       where: { id: vague.id },
       data: { packActivationId: activation.id },
     });
+
+    // ──────────────────────────────────────────
+    // 10. Créer l'abonnement pour le site client
+    // ──────────────────────────────────────────
+    const periodeAbo = PeriodeFacturation.MENSUEL;
+    const now2 = new Date();
+
+    // Calcul de la date de fin (1 mois par défaut)
+    const dateFin = new Date(now2);
+    dateFin.setMonth(dateFin.getMonth() + 1);
+
+    // R7 : prixMensuel peut être null (DECOUVERTE = gratuit)
+    let prixPaye = 0;
+    if (pack.plan.typePlan !== TypePlan.DECOUVERTE && pack.plan.prixMensuel != null) {
+      prixPaye = Number(pack.plan.prixMensuel);
+    }
+
+    await tx.abonnement.create({
+      data: {
+        siteId: clientSite.id,
+        planId: pack.plan.id,
+        periode: periodeAbo,
+        statut: StatutAbonnement.ACTIF,
+        dateDebut: now2,
+        dateFin,
+        dateProchainRenouvellement: dateFin,
+        dateFinGrace: null,
+        prixPaye,
+        userId: activateurUserId,
+        remiseId: null,
+      },
+    });
+
+    // Appliquer les modules du plan sur le site client
+    await applyPlanModulesTx(tx, clientSite.id, pack.plan.id);
 
     // ──────────────────────────────────────────
     // Retourner le payload de provisioning
