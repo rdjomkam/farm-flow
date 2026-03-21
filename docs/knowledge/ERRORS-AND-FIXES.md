@@ -421,3 +421,315 @@ const ratelimit = new Ratelimit({
 Le rate limiting in-memory est acceptable en Phase 2 (dev/staging). Pour la production, migrer vers un store partagé avant le déploiement final.
 
 ---
+
+### ERR-019 — R6 : couleurs Tailwind hardcodées dans les composants PWA (pattern systémique)
+**Sprint :** 27, 29, 30, 31 | **Date :** 2026-03-21
+**Sévérité :** Haute
+**Fichier(s) :** `src/app/~offline/page.tsx`, `src/components/sw-register.tsx`, `src/components/install-prompt.tsx`, `src/components/sync-status-panel.tsx`, `src/components/offline-indicator.tsx`
+
+**Symptôme :**
+Les composants PWA utilisent des classes Tailwind avec des couleurs en dur : `bg-teal-600`, `text-teal-600`, `bg-white`, `text-gray-400`. Le thème dark mode et toute modification de la palette de couleurs ne se propagent pas à ces composants.
+
+**Cause racine :**
+Lors de la création de nouveaux composants standalone (page offline, bannière SW, indicateurs sync), les développeurs ont utilisé les couleurs Tailwind directes au lieu des classes de thème. Ce pattern se répète sur tous les sprints PWA (27, 29, 30, 31), indiquant que la règle R6 n'est pas consultée lors de l'écriture des nouveaux composants.
+
+**Fix :**
+Remplacer systématiquement les couleurs Tailwind directes par leurs équivalents de thème :
+- `bg-teal-600` → `bg-primary`
+- `text-teal-600` → `text-primary`
+- `bg-white` → `bg-background`
+- `text-gray-400` → `text-muted-foreground`
+- `text-gray-600` → `text-foreground`
+- `border-gray-200` → `border-border`
+
+**Leçon / Règle :**
+R6 : Jamais de couleurs Tailwind directes (teal-*, gray-*, white, black) dans les composants. Toujours utiliser les classes de thème (`bg-primary`, `bg-background`, `text-foreground`, `text-muted-foreground`, `border-border`, etc.). Les composants PWA (offline, SW, install prompt, sync panel) sont des composants UI comme les autres et soumis aux mêmes règles. Pendant la creation d'un nouveau composant, chercher toute occurrence de `-teal-`, `-gray-`, `bg-white`, `text-white` avant de terminer.
+
+---
+
+### ERR-020 — R2 : string literal "MORTALITE" au lieu de TypeReleve.MORTALITE dans un service
+**Sprint :** 29 | **Date :** 2026-03-21
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/services/releve.service.ts` (ligne 57)
+
+**Symptôme :**
+Le service utilise la string `"MORTALITE"` en dur pour filtrer les relevés de mortalité. Si la valeur de l'enum TypeReleve change ou est renommée, TypeScript ne détecte pas la régression dans ce fichier.
+
+**Cause racine :**
+R2 est souvent respecté dans les routes API et les requêtes Prisma, mais oublié dans les services métier où les comparaisons de type sont moins visibles. Les services reçoivent souvent des données typées depuis Prisma et comparent avec des strings en dur sans importer l'enum.
+
+**Fix :**
+```typescript
+// Incorrect :
+if (releve.typeReleve === "MORTALITE") { ... }
+
+// Correct :
+import { TypeReleve } from "@/types";
+if (releve.typeReleve === TypeReleve.MORTALITE) { ... }
+```
+
+**Leçon / Règle :**
+R2 s'applique dans TOUS les fichiers sans exception : routes API, services, queries, hooks, composants. Dans les services métier en particulier, auditer systématiquement les comparaisons `=== "VALEUR"` sur des champs qui correspondent à des enums. Utiliser `TypeReleve.MORTALITE`, jamais `"MORTALITE"`.
+
+---
+
+### ERR-021 — Securite crypto : unwrapDataKey retourne une cle extractable
+**Sprint :** 28 | **Date :** 2026-03-21
+**Sévérité :** Haute (securite)
+**Fichier(s) :** `src/lib/offline/crypto.ts`
+
+**Symptôme :**
+La fonction `unwrapDataKey` appelle `crypto.subtle.unwrapKey` avec `extractable: true`. Cela signifie que la cle dechiffree peut etre exportee hors du contexte WebCrypto par n'importe quel code JavaScript ayant acces a l'objet `CryptoKey`, y compris du code malveillant injecte (XSS).
+
+**Cause racine :**
+La valeur par defaut ou une copie depuis un exemple d'unwrap a conserve `extractable: true`. La difference entre `true` et `false` est subtile visuellement mais critique pour la securite.
+
+**Fix :**
+```typescript
+// Incorrect (cle exportable hors WebCrypto) :
+const dataKey = await crypto.subtle.unwrapKey(
+  "raw", wrappedKey, kek,
+  { name: "AES-KW" },
+  { name: "AES-GCM" },
+  true,        // extractable — DANGEREUX
+  ["encrypt", "decrypt"]
+);
+
+// Correct (cle confinee dans WebCrypto) :
+const dataKey = await crypto.subtle.unwrapKey(
+  "raw", wrappedKey, kek,
+  { name: "AES-KW" },
+  { name: "AES-GCM" },
+  false,       // extractable: false — cle non exportable
+  ["encrypt", "decrypt"]
+);
+```
+
+**Leçon / Règle :**
+Dans toute utilisation de `crypto.subtle.importKey`, `crypto.subtle.unwrapKey` ou `crypto.subtle.generateKey`, poser `extractable: false` sauf si l'export explicite de la cle est necessaire (ex: sauvegarde). Les cles de chiffrement de donnees utilisateur ne doivent jamais etre exportables. Auditer tous les appels WebCrypto lors de chaque code review de la couche crypto.
+
+---
+
+### ERR-022 — Securite : delai exponentiel absent apres echecs de PIN (tentatives 3 a 5)
+**Sprint :** 28 | **Date :** 2026-03-21
+**Sévérité :** Haute (securite)
+**Fichier(s) :** `src/lib/offline/auth-cache.ts`
+
+**Symptôme :**
+La validation du PIN offline n'applique pas de delai exponentiel entre les tentatives 3 et 5. Un attaquant peut bruteforcer un PIN a 4 chiffres (10 000 combinaisons) sans contrainte de temps apres 2 echecs.
+
+**Cause racine :**
+L'ADR definissait ce comportement (blocage progressif des tentatives 3-5) mais l'implementation dans `auth-cache.ts` ne l'a pas inclus. Le compteur d'echecs est maintenu mais le delai correspondant n'est pas applique.
+
+**Fix :**
+Apres verification du nombre d'echecs, appliquer un delai avant de retourner la reponse :
+```typescript
+const DELAYS_MS = [0, 0, 0, 2_000, 5_000, 10_000]; // index = nb echecs
+
+async function verifyPin(pin: string): Promise<boolean> {
+  const meta = await getAuthMeta();
+  const failCount = meta.failedAttempts ?? 0;
+  const delay = DELAYS_MS[Math.min(failCount, DELAYS_MS.length - 1)];
+  if (delay > 0) await new Promise(r => setTimeout(r, delay));
+  // ... verification PBKDF2 ...
+}
+```
+
+**Leçon / Règle :**
+Toute interface de validation de secret (PIN, code, mot de passe) doit implementer un delai exponentiel cote serveur/service — pas uniquement cote UI. Si l'ADR specifie un comportement de securite, l'implementation doit l'inclure explicitement. Lors de la review d'une couche d'authentification, verifier que chaque spec de securite de l'ADR a un test de non-regression correspondant.
+
+---
+
+### ERR-023 — R8 : RefRecord sans siteId dans la couche de cache offline (fuite multi-tenant)
+**Sprint :** 28 | **Date :** 2026-03-21
+**Sévérité :** Haute (multi-tenancy)
+**Fichier(s) :** `src/lib/offline/ref-cache.ts`, `src/lib/offline/db.ts`
+
+**Symptôme :**
+Le modele `RefRecord` (donnees de reference mises en cache dans IndexedDB) ne possede pas de champ `siteId`. Un utilisateur membre de plusieurs sites peut lire les donnees de reference d'un site dans le contexte d'un autre site. La fonction `clearSiteRefData` efface tous les sites faute de filtre.
+
+**Cause racine :**
+R8 ("siteId PARTOUT") est bien applique aux modeles Prisma mais pas aux interfaces TypeScript des structures IndexedDB offline. Les structures de cache cote client sont des "modeles" au sens large et doivent aussi isoler les donnees par site.
+
+**Fix :**
+Ajouter `siteId: string` au type `RefRecord` et a tous les stores IndexedDB contenant des donnees multi-tenant. Toutes les fonctions de lecture/ecriture doivent filtrer par `siteId`. La fonction `clearSiteRefData` doit accepter un `siteId` en parametre et ne supprimer que les entrees correspondantes :
+```typescript
+interface RefRecord {
+  id: string;
+  siteId: string;   // OBLIGATOIRE — R8
+  type: string;
+  data: unknown;
+  cachedAt: number;
+}
+
+async function clearSiteRefData(siteId: string): Promise<void> {
+  const db = await getDb();
+  const tx = db.transaction("refData", "readwrite");
+  const index = tx.store.index("by-site");
+  const keys = await index.getAllKeys(siteId);
+  await Promise.all(keys.map(k => tx.store.delete(k)));
+}
+```
+
+**Leçon / Règle :**
+R8 s'applique a TOUTES les structures de donnees qui stockent des informations metier : modeles Prisma, interfaces TypeScript, stores IndexedDB, caches locaux, fichiers JSON. Toute structure contenant des donnees qui appartiennent a un site doit avoir `siteId`. Le mode offline ne fait pas exception : les donnees isolees en base doivent l'etre aussi en cache local.
+
+---
+
+### ERR-024 — R4 : count + put non atomique dans la queue offline (race condition)
+**Sprint :** 28 | **Date :** 2026-03-21
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/offline/queue.ts`
+
+**Symptôme :**
+La fonction `enqueue` effectue un `count` des items en attente puis un `put` pour ajouter le nouvel item en deux operations IndexedDB separees. Sous acces concurrent (deux onglets, deux requetes simultanees), deux `count` peuvent retourner la meme valeur avant que l'un des `put` ne soit execute, permettant de depasser la limite de la queue.
+
+**Cause racine :**
+R4 ("operations atomiques") est applique aux mutations Prisma mais oublié pour les operations IndexedDB. La transaction IndexedDB existe pour exactement ce cas : grouper count + put dans une seule transaction garantit l'atomicite.
+
+**Fix :**
+Encapsuler `count` et `put` dans la meme transaction IndexedDB :
+```typescript
+async function enqueue(item: QueueItem): Promise<void> {
+  const db = await getDb();
+  const tx = db.transaction("queue", "readwrite");
+  const count = await tx.store.count();
+  if (count >= MAX_QUEUE_SIZE) {
+    tx.abort();
+    throw new Error("QUEUE_FULL");
+  }
+  await tx.store.put(item);
+  await tx.done;
+}
+```
+
+**Leçon / Règle :**
+R4 s'applique aussi aux operations IndexedDB : count + put, get + put, et tout pattern check-then-write doit s'executer dans la meme transaction IndexedDB. IndexedDB dispose de transactions pour cette raison. Ne pas confondre "base de donnees locale" avec "pas besoin d'atomicite".
+
+---
+
+### ERR-025 — Sync : delai de retry calcule depuis createdAt au lieu de lastAttemptAt
+**Sprint :** 29-30 | **Date :** 2026-03-21
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/offline/sync.ts` (ligne 106), `src/lib/offline/db.ts`, `src/lib/offline/queue.ts`
+
+**Symptôme :**
+Le calcul du delai de backoff exponentiel entre les tentatives de synchronisation utilise `createdAt` (date de creation de l'item dans la queue) au lieu de `lastAttemptAt` (date de la derniere tentative). Un item cree il y a plusieurs heures mais avec une seule tentative recente peut se voir attribuer un delai incorrect, causant soit des retries trop frequents soit des retries indefiniment bloques.
+
+**Cause racine :**
+Le champ `lastAttemptAt` n'existe pas dans le schema `QueueItem` dans `db.ts`. La logique de retry dans `sync.ts` utilise le seul timestamp disponible (`createdAt`) faute d'alternative. C'est a la fois un bug de schema et un bug de logique.
+
+**Fix :**
+1. Ajouter `lastAttemptAt: number | null` au type `QueueItem` dans `db.ts`.
+2. Mettre a jour `lastAttemptAt` a chaque tentative dans `sync.ts` (via un `put` avant de tenter la requete).
+3. Calculer le delai de retry depuis `lastAttemptAt` (ou `createdAt` si `lastAttemptAt` est null pour la premiere tentative) :
+```typescript
+const baseTime = item.lastAttemptAt ?? item.createdAt;
+const delay = Math.min(BASE_DELAY_MS * 2 ** item.retryCount, MAX_DELAY_MS);
+if (Date.now() - baseTime < delay) continue; // pas encore le moment
+```
+
+**Leçon / Règle :**
+Dans tout systeme de retry avec backoff, le delai doit etre calcule depuis le dernier echec (`lastAttemptAt`), pas depuis la creation (`createdAt`). Ces deux timestamps ont des semantiques differentes. Lors de la conception d'un schema de queue, toujours inclure `lastAttemptAt`, `retryCount` et `status` comme champs obligatoires.
+
+---
+
+### ERR-026 — TypeScript : IdempotencyResult non discrimine — statusCode potentiellement undefined
+**Sprint :** 29-30 | **Date :** 2026-03-21
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/offline/idempotency.ts`
+
+**Symptôme :**
+Le type `IdempotencyResult` n'est pas une union discriminante. Le champ `statusCode` peut etre `undefined` meme dans les branches ou il est attendu. TypeScript ne peut pas affiner le type dans les switch/if, forcant des assertions non nulles (`!`) ou des verifications redondantes.
+
+**Cause racine :**
+Le type a ete defini comme une interface plate avec des champs optionnels au lieu d'une union discriminante avec un champ litterale commun (`kind` ou `type`).
+
+**Fix :**
+Refactoriser en union discriminante :
+```typescript
+// Incorrect (interface plate) :
+interface IdempotencyResult {
+  found: boolean;
+  statusCode?: number;
+  body?: unknown;
+}
+
+// Correct (union discriminante) :
+type IdempotencyResult =
+  | { kind: "HIT"; statusCode: number; body: unknown }
+  | { kind: "MISS" };
+
+// Usage :
+if (result.kind === "HIT") {
+  return new Response(JSON.stringify(result.body), { status: result.statusCode });
+  // TypeScript sait que statusCode est number ici
+}
+```
+
+**Leçon / Règle :**
+Toute interface representant un resultat a plusieurs etats mutuellement exclusifs (trouve/non trouve, succes/echec, ok/erreur) doit etre une union discriminante TypeScript avec un champ litterale (`kind`, `type`, `status`). Les interfaces plates avec champs optionnels forcent des verifications defensives a chaque usage et masquent les etats invalides. Lors de la creation d'un type de resultat, se demander : "tous les champs ont-ils du sens dans tous les etats ?" Si non, utiliser une union discriminante.
+
+---
+
+### ERR-027 — API deprecie : navigator.platform au lieu de navigator.userAgentData
+**Sprint :** 29-31 | **Date :** 2026-03-21
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/hooks/use-install-prompt.ts` (ligne 48)
+
+**Symptôme :**
+Le hook utilise `navigator.platform` pour detecter iOS et ainsi conditionner l'affichage du prompt d'installation PWA. `navigator.platform` est marque comme deprecie dans les specs et peut retourner des valeurs incorrectes ou vides sur les navigateurs recents.
+
+**Cause racine :**
+`navigator.platform` etait la solution standard pour la detection de plateforme avant l'introduction de `navigator.userAgentData`. Son utilisation persiste par habitude ou copie d'exemples anciens.
+
+**Fix :**
+Utiliser `navigator.userAgentData` avec fallback sur `navigator.platform` pour la compatibilite :
+```typescript
+function isIOS(): boolean {
+  // Priorite a l'API moderne (Chrome 90+, Edge 90+)
+  if ("userAgentData" in navigator) {
+    return (navigator as Navigator & { userAgentData: { platform: string } })
+      .userAgentData.platform === "iOS";
+  }
+  // Fallback legacy
+  return /iPhone|iPad|iPod/.test(navigator.platform);
+}
+```
+
+**Leçon / Règle :**
+Ne pas utiliser `navigator.platform` dans le nouveau code. Utiliser `navigator.userAgentData.platform` (avec fallback) pour la detection de plateforme. Plus generalement, avant d'utiliser une API navigateur, verifier son statut de depreciation sur MDN. Les APIs deprecated peuvent disparaitre silencieusement dans les mises a jour navigateur.
+
+---
+
+### ERR-028 — SW : listener controllerchange non retire au cleanup du composant React
+**Sprint :** 27 | **Date :** 2026-03-21
+**Sévérité :** Basse (fuite memoire)
+**Fichier(s) :** `src/components/sw-register.tsx`
+
+**Symptôme :**
+Le `useEffect` qui enregistre le Service Worker ajoute un listener `controllerchange` sur `navigator.serviceWorker` mais ne le retire pas dans la fonction de cleanup. En mode strict React (double montage/demontage en dev) ou lors de la navigation, le listener s'accumule et peut declencher des rappels multiples lors d'un changement de controleur.
+
+**Cause racine :**
+Le pattern `addEventListener` sans `removeEventListener` correspondant dans le return du `useEffect` est une fuite memoire classique. Particulierement impactant ici car `navigator.serviceWorker` est un objet global — le listener persiste apres le demontage du composant.
+
+**Fix :**
+```typescript
+useEffect(() => {
+  if (!("serviceWorker" in navigator)) return;
+
+  const handleControllerChange = () => {
+    window.location.reload();
+  };
+
+  navigator.serviceWorker.addEventListener("controllerchange", handleControllerChange);
+
+  // Cleanup obligatoire — evite les fuites et les doubles declenchements
+  return () => {
+    navigator.serviceWorker.removeEventListener("controllerchange", handleControllerChange);
+  };
+}, []);
+```
+
+**Leçon / Règle :**
+Tout `addEventListener` dans un `useEffect` React doit avoir son `removeEventListener` correspondant dans le return du cleanup. Cette regle s'applique a tous les objets globaux (window, document, navigator.serviceWorker, etc.). Les objets globaux ne sont pas garbage collectes avec le composant — leurs listeners survivent au demontage. Verifier systematiquement chaque `useEffect` contenant un `addEventListener` lors de la review de composants PWA/SW.
