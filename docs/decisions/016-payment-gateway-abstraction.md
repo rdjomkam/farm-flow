@@ -1,7 +1,7 @@
 # ADR-016 — Abstraction des Passerelles de Paiement
 
 **Date :** 2026-03-20
-**Statut :** Acceptée
+**Statut :** Acceptée — Implémentation conforme (Sprints 31-36)
 **Auteur :** @architect
 **Sprint :** Sprint 30
 
@@ -171,3 +171,34 @@ SMOBILPAY_WEBHOOK_SECRET=...
 - Phase 2 : MtnMomoGateway et OrangeMoneyGateway si nécessaire
 
 Les gateways vivront dans `src/lib/payment-gateways/`.
+
+---
+
+## Note d'implémentation — Sprints 31-36
+
+**Confirmé — implémentation conforme à l'ADR**, avec les précisions suivantes :
+
+### Écart de chemin
+- ADR prévu : `src/lib/payment-gateways/`
+- Chemin réel : `src/lib/payment/`
+- Raison : organisation plus standard avec `index.ts` + `factory.ts` + `types.ts` séparés.
+
+### Fichiers créés
+| Fichier | Rôle |
+|---------|------|
+| `src/lib/payment/types.ts` | Interface `PaymentGateway`, `InitiatePaymentParams`, `InitiatePaymentResult`, `CheckStatusResult` |
+| `src/lib/payment/factory.ts` | `getPaymentGateway(fournisseur)` — factory pattern ADR-016 |
+| `src/lib/payment/smobilpay-gateway.ts` | Implémentation Smobilpay (Phase 1) |
+| `src/lib/payment/manual-gateway.ts` | Implémentation MANUEL (paiements offline) |
+| `src/lib/payment/__mocks__/smobilpay-gateway.ts` | Mock pour tests unitaires |
+| `src/lib/payment/index.ts` | Barrel export |
+| `src/app/api/webhooks/smobilpay/route.ts` | Endpoint webhook Smobilpay avec vérification signature |
+| `src/app/api/webhooks/manuel/route.ts` | Endpoint confirmation manuelle |
+
+### Sécurité : conforme
+- Vérification `timingSafeEqual` sur le secret webhook (voir ADR-019)
+- Idempotence garantie via `referenceExterne` unique sur `PaiementAbonnement`
+- Réponses brutes stockées dans le champ `metadata Json?`
+
+### Phase 2 : toujours en attente
+`MtnMomoGateway` et `OrangeMoneyGateway` non implémentées — Smobilpay couvre MTN + OM via agrégation.

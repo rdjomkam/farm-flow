@@ -42,6 +42,15 @@ DELETE FROM "Vague";
 DELETE FROM "SiteMember";
 DELETE FROM "SiteRole";
 DELETE FROM "RegleActivite";
+-- Sprint 30 — Abonnements (ordre FK : du plus dependant au moins dependant)
+DELETE FROM "RetraitPortefeuille";
+DELETE FROM "PortefeuilleIngenieur";
+DELETE FROM "CommissionIngenieur";
+DELETE FROM "RemiseApplication";
+DELETE FROM "PaiementAbonnement";
+DELETE FROM "Abonnement";
+DELETE FROM "Remise";
+DELETE FROM "PlanAbonnement";
 DELETE FROM "Site";
 DELETE FROM "User";
 
@@ -2269,16 +2278,32 @@ VALUES
   ('remise_bienvenue', 'Bienvenue', 'BIENVENUE10', 'MANUELLE', 10, true, NOW(), NULL, NULL, 0, true, 'user_admin', NOW(), NOW())
 ON CONFLICT (code) DO NOTHING;
 
--- Abonnement ACTIF pour le site de test (site_01)
+-- Abonnements : 1 ACTIF (site_01) + 1 EN_GRACE (site_client_01)
 INSERT INTO "Abonnement" (id, "siteId", "planId", periode, statut, "dateDebut", "dateFin", "dateProchainRenouvellement", "prixPaye", "userId", "createdAt", "updatedAt")
 VALUES
-  ('abo_site_01', 'site_01', 'plan_eleveur', 'MENSUEL', 'ACTIF', NOW(), NOW() + INTERVAL '1 month', NOW() + INTERVAL '1 month', 3000, 'user_admin', NOW(), NOW())
+  -- Abonnement ACTIF — site principal DKFarm (plan Eleveur, mensuel)
+  ('abo_site_01', 'site_01', 'plan_eleveur', 'MENSUEL', 'ACTIF', NOW() - INTERVAL '1 month', NOW() + INTERVAL '1 month', NOW() + INTERVAL '1 month', 3000, 'user_admin', NOW() - INTERVAL '1 month', NOW()),
+  -- Abonnement EN_GRACE — site client Essomba (plan Découverte, mensuel, expiré depuis 3j)
+  ('abo_client_01', 'site_client_01', 'plan_decouverte', 'MENSUEL', 'EN_GRACE', NOW() - INTERVAL '33 days', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days', 0, 'user_client_01', NOW() - INTERVAL '33 days', NOW())
 ON CONFLICT DO NOTHING;
 
--- Paiement CONFIRME pour l''abonnement de test
+-- Paiements : 1 CONFIRME pour abo_site_01
 INSERT INTO "PaiementAbonnement" (id, "abonnementId", montant, fournisseur, statut, "initiePar", "dateInitiation", "dateConfirmation", "siteId", "createdAt", "updatedAt")
 VALUES
-  ('paie_abo_01', 'abo_site_01', 3000, 'MANUEL', 'CONFIRME', 'user_admin', NOW(), NOW(), 'site_01', NOW(), NOW())
+  ('paie_abo_01', 'abo_site_01', 3000, 'MANUEL', 'CONFIRME', 'user_admin', NOW() - INTERVAL '1 month', NOW() - INTERVAL '1 month', 'site_01', NOW() - INTERVAL '1 month', NOW())
+ON CONFLICT DO NOTHING;
+
+-- Commission ingénieur (pour user_ingenieur, sur l''abonnement abo_site_01)
+-- L''ingénieur suit site_client_01 ; la commission est rattachée au site DKFarm (site_01)
+INSERT INTO "CommissionIngenieur" (id, "ingenieurId", "siteClientId", "abonnementId", "paiementAbonnementId", montant, taux, statut, "periodeDebut", "periodeFin", "siteId", "createdAt", "updatedAt")
+VALUES
+  ('comm_ing_01', 'user_ingenieur', 'site_client_01', 'abo_site_01', 'paie_abo_01', 300, 0.10, 'DISPONIBLE', NOW() - INTERVAL '1 month', NOW(), 'site_01', NOW(), NOW())
+ON CONFLICT DO NOTHING;
+
+-- Portefeuille ingénieur (1 par ingénieur — @@unique sur ingenieurId)
+INSERT INTO "PortefeuilleIngenieur" (id, "ingenieurId", solde, "soldePending", "totalGagne", "totalPaye", "siteId", "updatedAt")
+VALUES
+  ('portefeuille_ing', 'user_ingenieur', 300, 0, 300, 0, 'site_01', NOW())
 ON CONFLICT DO NOTHING;
 
 COMMIT;

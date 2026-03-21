@@ -390,6 +390,14 @@ export type {
   CreateCustomPlaceholderDTO,
   UpdateCustomPlaceholderDTO,
 } from "./api";
+// User Management Module — réponses API (Sprint 25+)
+export type {
+  UserSummaryResponse,
+  UsersListResponse,
+  UserMembershipResponse,
+  UserDetailResponse,
+  UserMembershipsResponse,
+} from "./api";
 // Sprint 30 — Abonnements
 export type {
   CreateAbonnementDTO,
