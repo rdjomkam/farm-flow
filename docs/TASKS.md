@@ -3755,15 +3755,15 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ### Story 24.1 — Schema Prisma : SiteModule enum + champs Site/Pack
 **Assigné à :** @db-specialist
 **Priorité :** Critique
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Ajouter l'enum `SiteModule` dans schema.prisma (9 valeurs : REPRODUCTION, GROSSISSEMENT, INTRANTS, VENTES, ANALYSE_PILOTAGE, PACKS_PROVISIONING, CONFIGURATION, INGENIEUR, NOTES)
-- [ ] `TODO` Ajouter `supervised Boolean @default(false)` au modèle Site
-- [ ] `TODO` Ajouter `enabledModules SiteModule[] @default([])` au modèle Site
-- [ ] `TODO` Ajouter `enabledModules SiteModule[] @default([])` au modèle Pack
-- [ ] `TODO` Créer la migration SQL (méthode manuelle : migrate diff + migrate deploy)
-- [ ] `TODO` Mettre à jour prisma/seed.sql (DKFarm site: supervised=false, enabledModules='{}' ; client site: supervised=true, enabledModules='{GROSSISSEMENT,ANALYSE_PILOTAGE,NOTES}' ; pack: enabledModules='{GROSSISSEMENT,ANALYSE_PILOTAGE,NOTES}')
+- [x] `FAIT` Ajouter l'enum `SiteModule` dans schema.prisma (12 valeurs incluant platform modules)
+- [x] `FAIT` Ajouter `supervised Boolean @default(false)` au modèle Site
+- [x] `FAIT` Ajouter `enabledModules SiteModule[] @default([])` au modèle Site
+- [x] `FAIT` Pack utilise désormais planId (FK PlanAbonnement) — enabledModules supprimé (Sprint 44)
+- [x] `FAIT` Migrations appliquées (Sprint 38 + 44)
+- [x] `FAIT` Seed mis à jour
 
 **Critères d'acceptation :**
 - Migration s'applique sans erreur
@@ -3775,7 +3775,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ### Story 24.2 — Types TypeScript & Mapping modules
 **Assigné à :** @architect
 **Priorité :** Critique
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Ajouter enum SiteModule dans src/types/models.ts
@@ -3796,7 +3796,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** Stories 24.1, 24.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Créer getServerSiteModules() dans src/lib/auth/permissions-server.ts (avec cache React)
@@ -3814,7 +3814,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** Story 24.3
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Sidebar (src/components/layout/sidebar.tsx) : ajouter prop siteModules, filtrer modules par MODULE_LABEL_TO_SITE_MODULE
@@ -3833,7 +3833,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** Stories 24.1, 24.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Modifier activerPack() dans src/lib/queries/provisioning.ts : site créé avec supervised=true, enabledModules du pack (ou défaut [GROSSISSEMENT, ANALYSE_PILOTAGE, NOTES])
@@ -3853,7 +3853,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** Story 24.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Ajouter { href: "/observations", label: "Observations", icon: Eye } aux items de "Analyse & Pilotage" dans src/lib/module-nav-items.ts (import Eye)
@@ -3869,7 +3869,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @tester
 **Priorité :** Haute
 **Dépend de :** Stories 24.3, 24.4, 24.5, 24.6
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Test unitaire : getServerSiteModules (empty = all, specific modules returned)
@@ -3889,7 +3889,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @code-reviewer
 **Priorité :** Haute
 **Dépend de :** Story 24.7
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Checklist R1-R9
@@ -4183,7 +4183,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @code-reviewer
 **Priorité :** Haute
 **Dépend de :** Story 25.8
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Vérifier R1 — aucun nouvel enum (pas de nouveaux enums dans ce sprint)
@@ -4302,3 +4302,14 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 - [x] `FAIT` Ajouter `ReleveModification`, `ReleveModificationWithUser`, `ReleveWithModifications` dans `src/types/models.ts`
 - [x] `FAIT` Ajouter `PatchReleveBody`, `CreateReleveModificationDTO`, `PatchReleveResponse` dans `src/types/api.ts`
 - [x] `FAIT` Exports barrel dans `src/types/index.ts`
+
+---
+
+## Bugs — Sprint 33
+
+| Bug | Titre | Sévérité | Fichier | Statut |
+|-----|-------|----------|---------|--------|
+| [BUG-023](../bugs/BUG-023.md) | Page Tarifs : fetch self-API échoue en SSR → plans vides | Critique | src/app/tarifs/page.tsx | OUVERT |
+| [BUG-024](../bugs/BUG-024.md) | PlansGrid utilise des prix hardcodés au lieu des prix DB | Haute | src/components/abonnements/plans-grid.tsx | OUVERT |
+
+> @project-manager : BUG-023 est Critique — la page /tarifs est totalement cassée (0 plans affichés). Fix : remplacer fetch() par appel direct à getPlansAbonnements(). BUG-024 dépend de BUG-023 (les plans doivent arriver avant de corriger l'affichage des prix).
