@@ -120,6 +120,25 @@ Utiliser `head -3 migration.sql` et `tail -5 migration.sql` pour vérifier.
 
 ## Catégorie : Pattern
 
+### ERR-017 — Tests existants cassés après refactoring de route API (régression silencieuse)
+**Sprint :** 36 | **Date :** 2026-03-21
+**Sévérité :** Haute
+**Fichier(s) :** `src/__tests__/api/vagues.test.ts`, `src/app/api/vagues/route.ts`
+
+**Symptôme :**
+4 tests de la suite `vagues.test.ts` passent en régression après le refactoring R4 de la route `POST /api/vagues`. Le build CI détecte des échecs que le développeur n'a pas vus car il n'a relancé que les nouveaux tests.
+
+**Cause racine :**
+Le refactoring R4 a déplacé le check quota et la création dans une `$transaction()`, changeant le flow interne de la route (plus d'appel direct à `getQuotasUsage()`, erreur levée différemment via `throw` dans la transaction). Les mocks dans les tests existants ciblaient l'ancien flow et n'ont pas été mis à jour en même temps que le code.
+
+**Fix :**
+Après le refactoring, mettre à jour les mocks de la suite de tests correspondante pour refléter le nouveau flow : retirer le mock de `getQuotasUsage`, adapter les stubs de `prisma.$transaction` pour simuler le reject ou resolve selon les cas.
+
+**Leçon / Règle :**
+Après tout refactoring de route API qui change le flow interne (ordre des appels, encapsulation dans une transaction, remplacement d'une fonction par une autre), toujours relancer `npx vitest run` sur la suite de tests de cette route spécifiquement avant de déclarer le refactoring terminé. Si des mocks ne correspondent plus au nouveau flow, les mettre à jour dans le même commit que le refactoring.
+
+---
+
 ### ERR-016 — Race condition check-then-create sur les quotas de plan (R4)
 **Sprint :** 36 | **Date :** 2026-03-21
 **Sévérité :** Haute
@@ -154,6 +173,8 @@ const bac = await prisma.$transaction(async (tx) => {
 
 **Leçon / Règle :**
 R4 s'applique aussi aux créations conditionnelles : quand une création dépend d'un comptage de limite (quotas, stock, places disponibles, etc.), toujours mettre le count + create dans la même transaction. Le pattern check-then-create hors transaction est toujours vulnérable aux race conditions sous charge.
+
+**Complément Sprint 36 :** Quand on refactorise une route pour appliquer R4, identifier toutes les routes similaires dans le même fichier ou dans des fichiers parallèles (ex : `/api/bacs` ET `/api/vagues` traitent toutes les deux des quotas de plan). Corriger le pattern sur TOUTES ces routes en même temps. Un fix partiel laisse une surface d'attaque résiduelle.
 
 ---
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET, POST } from "@/app/api/bacs/route";
 import { NextRequest } from "next/server";
-import { Permission } from "@/types";
+import { Permission, TypePlan } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -15,13 +15,34 @@ vi.mock("@/lib/queries/bacs", () => ({
   createBac: (...args: unknown[]) => mockCreateBac(...args),
 }));
 
-// Mock check-quotas : quota non atteint par défaut
-const mockGetQuotasUsage = vi.fn();
+// Mock check-quotas : normaliseLimite et isQuotaAtteint réels, getQuotasUsage mocké
 vi.mock("@/lib/abonnements/check-quotas", () => ({
-  getQuotasUsage: (...args: unknown[]) => mockGetQuotasUsage(...args),
+  normaliseLimite: (valeur: number) => (valeur >= 999 ? null : valeur),
   isQuotaAtteint: (ressource: { actuel: number; limite: number | null }) => {
     if (ressource.limite === null) return false;
     return ressource.actuel >= ressource.limite;
+  },
+  getQuotasUsage: vi.fn(),
+}));
+
+// Mock getAbonnementActif — utilisé dans la transaction POST
+const mockGetAbonnementActif = vi.fn();
+vi.mock("@/lib/queries/abonnements", () => ({
+  getAbonnementActif: (...args: unknown[]) => mockGetAbonnementActif(...args),
+}));
+
+// Mock prisma.$transaction + tx.bac.count + tx.bac.create
+const mockBacCount = vi.fn();
+const mockBacCreate = vi.fn();
+const mockPrismaTransaction = vi.fn();
+
+vi.mock("@/lib/db", () => ({
+  prisma: {
+    $transaction: (...args: unknown[]) => mockPrismaTransaction(...args),
+    bac: {
+      count: (...args: unknown[]) => mockBacCount(...args),
+      create: (...args: unknown[]) => mockBacCreate(...args),
+    },
   },
 }));
 
@@ -61,6 +82,39 @@ const AUTH_CONTEXT = {
 
 function makeRequest(url: string, init?: RequestInit) {
   return new NextRequest(new URL(url, "http://localhost:3000"), init);
+}
+
+/**
+ * Simule prisma.$transaction(async (tx) => { ... }) en exécutant le callback
+ * avec un objet "tx" dont les méthodes sont mockées.
+ * Capture les erreurs internes (ex: QUOTA_DEPASSE) et les propage via .catch().
+ */
+function setupTransactionMock(
+  bacCountResult: number,
+  bacCreateResult: unknown,
+  abonnementPlan?: string
+) {
+  // Configurer getAbonnementActif selon le plan souhaité
+  if (abonnementPlan) {
+    mockGetAbonnementActif.mockResolvedValue({
+      id: "abo-1",
+      plan: { typePlan: abonnementPlan },
+    });
+  } else {
+    mockGetAbonnementActif.mockResolvedValue(null);
+  }
+
+  mockPrismaTransaction.mockImplementation(
+    async (callback: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        bac: {
+          count: vi.fn().mockResolvedValue(bacCountResult),
+          create: vi.fn().mockResolvedValue(bacCreateResult),
+        },
+      };
+      return callback(tx);
+    }
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -146,12 +200,6 @@ describe("POST /api/bacs", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    // Quota non atteint par défaut (limites non atteintes)
-    mockGetQuotasUsage.mockResolvedValue({
-      bacs: { actuel: 1, limite: 3 },
-      vagues: { actuel: 0, limite: 1 },
-      sites: { actuel: 1, limite: 1 },
-    });
   });
 
   it("cree un bac avec des donnees valides", async () => {
@@ -165,7 +213,8 @@ describe("POST /api/bacs", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    mockCreateBac.mockResolvedValue(newBac);
+    // Plan ELEVEUR avec 1 bac existant sur 10 → quota non atteint
+    setupTransactionMock(1, newBac, TypePlan.ELEVEUR);
 
     const request = makeRequest("/api/bacs", {
       method: "POST",
@@ -178,10 +227,6 @@ describe("POST /api/bacs", () => {
     expect(response.status).toBe(201);
     expect(data.nom).toBe("Bac 5");
     expect(data.volume).toBe(2000);
-    expect(mockCreateBac).toHaveBeenCalledWith("site-1", {
-      nom: "Bac 5",
-      volume: 2000,
-    });
   });
 
   it("cree un bac avec nombrePoissons optionnel", async () => {
@@ -195,7 +240,8 @@ describe("POST /api/bacs", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    mockCreateBac.mockResolvedValue(newBac);
+    // Plan ELEVEUR avec 2 bacs existants → quota non atteint
+    setupTransactionMock(2, newBac, TypePlan.ELEVEUR);
 
     const request = makeRequest("/api/bacs", {
       method: "POST",
@@ -207,6 +253,87 @@ describe("POST /api/bacs", () => {
 
     expect(response.status).toBe(201);
     expect(data.nombrePoissons).toBe(200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Test d'intégration Sprint 36 : quota DECOUVERTE + 3 bacs existants → 402
+  // ---------------------------------------------------------------------------
+
+  it("plan DECOUVERTE avec 3 bacs existants → 402 QUOTA_DEPASSE", async () => {
+    // Plan DECOUVERTE : limitesBacs = 3. Avec 3 bacs → quota plein.
+    setupTransactionMock(3, null, TypePlan.DECOUVERTE);
+    // La transaction doit lever QUOTA_DEPASSE avant tx.bac.create
+
+    const request = makeRequest("/api/bacs", {
+      method: "POST",
+      body: JSON.stringify({ nom: "Bac 4", volume: 1000 }),
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(402);
+    expect(data.error).toBe("QUOTA_DEPASSE");
+    expect(data.ressource).toBe("bacs");
+    expect(data.limite).toBe(3);
+    expect(data.message).toContain("3");
+  });
+
+  it("plan ELEVEUR avec 10 bacs existants → 402 QUOTA_DEPASSE", async () => {
+    // Plan ELEVEUR : limitesBacs = 10. Avec 10 bacs → quota plein.
+    setupTransactionMock(10, null, TypePlan.ELEVEUR);
+
+    const request = makeRequest("/api/bacs", {
+      method: "POST",
+      body: JSON.stringify({ nom: "Bac 11", volume: 500 }),
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(402);
+    expect(data.error).toBe("QUOTA_DEPASSE");
+    expect(data.limite).toBe(10);
+  });
+
+  it("plan ENTREPRISE (limite 999 = illimite) → creation autorisee", async () => {
+    const newBac = {
+      id: "bac-ent",
+      nom: "Bac Entreprise",
+      volume: 5000,
+      nombrePoissons: null,
+      vagueId: null,
+      siteId: "site-1",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    // Plan ENTREPRISE : limitesBacs = 999 → normaliseLimite → null → pas de quota
+    setupTransactionMock(500, newBac, TypePlan.ENTREPRISE);
+
+    const request = makeRequest("/api/bacs", {
+      method: "POST",
+      body: JSON.stringify({ nom: "Bac Entreprise", volume: 5000 }),
+    });
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(201);
+  });
+
+  it("sans abonnement actif → limites DECOUVERTE appliquees (3 bacs → 402)", async () => {
+    // Pas d'abonnement → DECOUVERTE par défaut → limitesBacs = 3
+    setupTransactionMock(3, null, undefined); // undefined = pas d'abonnement
+
+    const request = makeRequest("/api/bacs", {
+      method: "POST",
+      body: JSON.stringify({ nom: "Bac X", volume: 1000 }),
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(402);
+    expect(data.error).toBe("QUOTA_DEPASSE");
   });
 
   it("retourne 400 si le nom est manquant", async () => {

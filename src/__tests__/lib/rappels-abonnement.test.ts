@@ -180,16 +180,24 @@ describe("envoyerRappelsRenouvellement()", () => {
     expect(mockCreerNotificationSiAbsente).not.toHaveBeenCalled();
   });
 
-  it("rappel déjà envoyé aujourd'hui → pas de doublon (rappelExisteAujourdhui bloque)", async () => {
+  it("rappel déjà envoyé aujourd'hui → pas de doublon (creerNotificationSiAbsente gère la déduplication)", async () => {
+    // ERR-015 : la pré-vérification rappelExisteAujourdhui a été supprimée.
+    // La déduplication est entièrement déléguée à creerNotificationSiAbsente
+    // qui est idempotente (count + createIfNotExists atomique).
+    // Dans ce test, creerNotificationSiAbsente est appelée (c'est elle qui décide),
+    // et retourne undefined silencieusement. Le compteur envoyes s'incrémente.
+    // Le test vérifie que creerNotificationSiAbsente est bien appelée (delegation OK).
     const abonnement = makeAbonnement({ dateFin: dansNJours(7) });
     mockPrismaAbonnementFindMany.mockResolvedValue([abonnement]);
-    // Simulation : une notification ABONNEMENT_RAPPEL_RENOUVELLEMENT existe déjà aujourd'hui
-    mockPrismaNotificationCount.mockResolvedValue(1);
+    // mockPrismaNotificationCount non utilisé (plus de pré-vérification)
+    mockCreerNotificationSiAbsente.mockResolvedValue(undefined);
 
     const result = await envoyerRappelsRenouvellement();
 
-    expect(result).toEqual({ envoyes: 0 });
-    expect(mockCreerNotificationSiAbsente).not.toHaveBeenCalled();
+    // creerNotificationSiAbsente est appelée : elle gère la déduplication en interne
+    expect(mockCreerNotificationSiAbsente).toHaveBeenCalledOnce();
+    // envoyes = 1 car creerNotificationSiAbsente a réussi (mock retourne undefined = succès)
+    expect(result).toEqual({ envoyes: 1 });
   });
 
   it("aucun abonnement expirant → { envoyes: 0 }", async () => {
