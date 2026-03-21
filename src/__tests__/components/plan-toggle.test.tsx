@@ -37,6 +37,24 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/admin/plans",
 }));
 
+const translations: Record<string, string> = {
+  "admin.active": "Actif",
+  "admin.inactive": "Inactif",
+  "admin.unlimited": "Illimité",
+  "admin.onQuote": "Sur devis",
+  "admin.noModules": "Aucun",
+  "admin.public": "Public",
+  "admin.private": "Privé",
+  "admin.newPlan": "Nouveau plan",
+  "admin.allTypes": "Tous les types",
+  "admin.allStatuses": "Tous les statuts",
+  "admin.reset": "Réinitialiser",
+};
+
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => translations[key] ?? key,
+}));
+
 const mockFetch = vi.fn();
 
 // ---------------------------------------------------------------------------
@@ -58,6 +76,7 @@ const planActifSansAbonnes = {
   limitesIngFermes: null,
   isActif: true,
   isPublic: true,
+  modulesInclus: [],
   _count: { abonnements: 0 },
 };
 
@@ -76,6 +95,7 @@ const planInactifSansAbonnes = {
   limitesIngFermes: null,
   isActif: false,
   isPublic: true,
+  modulesInclus: [],
   _count: { abonnements: 0 },
 };
 
@@ -94,6 +114,7 @@ const planActifAvecAbonnes = {
   limitesIngFermes: null,
   isActif: true,
   isPublic: true,
+  modulesInclus: [],
   _count: { abonnements: 3 },
 };
 
@@ -112,6 +133,7 @@ const planActifAvec1Abonne = {
   limitesIngFermes: null,
   isActif: true,
   isPublic: true,
+  modulesInclus: [],
   _count: { abonnements: 1 },
 };
 

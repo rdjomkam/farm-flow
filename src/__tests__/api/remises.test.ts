@@ -40,6 +40,14 @@ vi.mock("@/lib/queries/remises", () => ({
   getAllRemises: (...args: unknown[]) => mockGetAllRemises(...args),
 }));
 
+// BUG-029 : mock des helpers platform site
+const mockIsPlatformSite = vi.fn();
+const mockGetPlatformSite = vi.fn();
+vi.mock("@/lib/queries/sites", () => ({
+  isPlatformSite: (...args: unknown[]) => mockIsPlatformSite(...args),
+  getPlatformSite: (...args: unknown[]) => mockGetPlatformSite(...args),
+}));
+
 const mockRequirePermission = vi.fn();
 vi.mock("@/lib/permissions", () => ({
   requirePermission: (...args: unknown[]) => mockRequirePermission(...args),
@@ -49,6 +57,8 @@ vi.mock("@/lib/permissions", () => ({
 vi.mock("@/lib/auth", () => ({
   AuthError: class AuthError extends Error {},
 }));
+
+const PLATFORM_SITE = { id: "platform-site-1", name: "DKFarm", isPlatform: true, isActive: true };
 
 // ---------------------------------------------------------------------------
 // Données de test
@@ -195,6 +205,9 @@ describe("POST /api/remises", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
+    // BUG-029 : simuler le contexte plateforme par défaut pour les tests POST
+    mockIsPlatformSite.mockResolvedValue(true);
+    mockGetPlatformSite.mockResolvedValue(PLATFORM_SITE);
   });
 
   it("retourne 409 si le code est déjà utilisé", async () => {

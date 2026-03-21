@@ -75,11 +75,11 @@ VALUES
 -- Sites (site_01 = DKFarm, site_client_01 = ferme client)
 -- ──────────────────────────────────────────
 
-INSERT INTO "Site" (id, name, address, "isActive", supervised, "enabledModules", "createdAt", "updatedAt")
+INSERT INTO "Site" (id, name, address, "isActive", "isPlatform", supervised, "enabledModules", "createdAt", "updatedAt")
 VALUES
-  ('site_01', 'Ferme Douala', 'Douala, Littoral, Cameroun', true, false, '{}', NOW(), NOW()),
+  ('site_01', 'Ferme Douala', 'Douala, Littoral, Cameroun', true, true, false, '{}', NOW(), NOW()),
   -- Site client cree lors du provisioning d'un Pack (Sprint 20) — supervised avec modules limites
-  ('site_client_01', 'Ferme Essomba', 'Yaoundé, Centre, Cameroun', true, true, '{GROSSISSEMENT,ANALYSE_PILOTAGE,NOTES}', NOW(), NOW());
+  ('site_client_01', 'Ferme Essomba', 'Yaoundé, Centre, Cameroun', true, false, true, '{GROSSISSEMENT,ANALYSE_PILOTAGE,NOTES}', NOW(), NOW());
 
 -- ──────────────────────────────────────────
 -- SiteRole (3 roles systeme pour site_01, 1 pour site_client_01)

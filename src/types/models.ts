@@ -259,6 +259,8 @@ export interface Site {
   name: string;
   address: string | null;
   isActive: boolean;
+  /** True si ce site est le site plateforme DKFarm (un seul possible, garanti par index partiel unique) */
+  isPlatform: boolean;
   supervised: boolean;
   enabledModules: SiteModule[];
   createdAt: Date;

@@ -86,8 +86,8 @@ describe("S16-3 — RELEVE_COMPATIBLE_TYPES : types d'activite necessitant un re
     expect(RELEVE_COMPATIBLE_TYPES).not.toContain(TypeActivite.AUTRE);
   });
 
-  it("contient exactement 4 types", () => {
-    expect(RELEVE_COMPATIBLE_TYPES).toHaveLength(4);
+  it("contient exactement 5 types", () => {
+    expect(RELEVE_COMPATIBLE_TYPES).toHaveLength(5);
   });
 });
 

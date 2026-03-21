@@ -47,7 +47,7 @@ export function FeedComparisonCards({
   if (aliments.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
-        {tVagues("comparison.noVagues")}
+        {tAnalytics("aliments.noAliments")}
       </p>
     );
   }
@@ -86,7 +86,7 @@ export function FeedComparisonCards({
                   href={`/analytics/aliments/${aliment.produitId}`}
                   className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0"
                 >
-                  {tAnalytics("bacs.detail")}
+                  {tAnalytics("aliments.detail")}
                   <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
@@ -96,17 +96,17 @@ export function FeedComparisonCards({
                 {isBestCout && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-accent-green-muted px-1.5 py-0.5 text-[10px] font-medium text-accent-green">
                     <Trophy className="h-2.5 w-2.5" />
-                    {tVagues("comparison.metrics.coutAliment")}
+                    {tAnalytics("aliments.meilleurCoutKg")}
                   </span>
                 )}
                 {isBestFCR && (
                   <span className="rounded-full bg-accent-blue-muted px-1.5 py-0.5 text-[10px] font-medium text-accent-blue">
-                    {tAnalytics("benchmarks.fcr.label")}
+                    {tAnalytics("aliments.meilleurFCR")}
                   </span>
                 )}
                 {isBestSGR && (
                   <span className="rounded-full bg-accent-purple-muted px-1.5 py-0.5 text-[10px] font-medium text-accent-purple">
-                    {tAnalytics("benchmarks.sgr.label")}
+                    {tAnalytics("aliments.meilleurSGR")}
                   </span>
                 )}
               </div>
@@ -118,7 +118,7 @@ export function FeedComparisonCards({
                   value={aliment.fcrMoyen !== null ? `${aliment.fcrMoyen}` : "—"}
                 />
                 <MetricItem
-                  label={tVagues("comparison.metrics.coutAliment")}
+                  label={tAnalytics("aliments.coutKgLabel")}
                   value={aliment.coutParKgGain !== null ? `${aliment.coutParKgGain.toLocaleString("fr-FR")}` : "—"}
                   unit="CFA"
                 />

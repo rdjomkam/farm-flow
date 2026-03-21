@@ -16,6 +16,57 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
+const relevesTranslations: Record<string, string> = {
+  "form.title": "Saisir un releve",
+  "form.fields.submit": "Enregistrer le relevé",
+  "form.fields.notes": "Notes (optionnel)",
+  "form.fields.notesPlaceholder": "Observations, remarques...",
+  "form.errors.vagueId": "Sélectionnez une vague.",
+  "form.errors.bacId": "Sélectionnez un bac.",
+  "form.errors.typeReleve": "Sélectionnez un type de relevé.",
+  "form.errors.poidsMoyen": "Le poids moyen est requis.",
+  "form.errors.tailleMoyenne": "La taille moyenne est requise.",
+  "form.errors.echantillonCount": "Le nombre d'échantillons est requis.",
+  "form.errors.nombreMorts": "Le nombre de morts est requis.",
+  "form.errors.causeMortalite": "La cause de mortalité est requise.",
+  "form.errors.quantiteAliment": "La quantité d'aliment est requise.",
+  "form.errors.typeAliment": "Le type d'aliment est requis.",
+  "form.errors.frequenceAliment": "La fréquence d'alimentation est requise.",
+  "form.errors.nombreCompte": "Le nombre compté est requis.",
+  "form.errors.methodeComptage": "La méthode de comptage est requise.",
+  "form.errors.description": "La description est requise.",
+  "form.errors.renouvellementRequis": "Le pourcentage de renouvellement est requis.",
+  "form.errors.pourcentageRange": "Le pourcentage doit être entre 1 et 100.",
+  "form.errors.volumePositif": "Le volume renouvellement doit être positif.",
+  "form.activiteNotice.title": "Activité planifiée",
+  "form.activiteNotice.description": "Ce relevé est lié à une activité planifiée.",
+  "form.sections.identification.title": "Identification",
+  "form.sections.identification.description": "Vague et bac concernés",
+  "form.sections.date.title": "Date et heure",
+  "form.sections.date.description": "Date du relevé",
+  "form.sections.type.title": "Type de relevé",
+  "form.sections.type.description": "Sélectionnez le type",
+  "form.sections.biometrie.title": "Biométrie",
+  "form.sections.biometrie.description": "Mesures des poissons",
+  "form.sections.mortalite.title": "Mortalité",
+  "form.sections.mortalite.description": "Mortalités constatées",
+  "form.sections.alimentation.title": "Alimentation",
+  "form.sections.alimentation.description": "Ration alimentaire",
+  "form.sections.qualiteEau.title": "Qualité de l'eau",
+  "form.sections.qualiteEau.description": "Paramètres physico-chimiques",
+  "form.sections.comptage.title": "Comptage",
+  "form.sections.comptage.description": "Dénombrement des poissons",
+  "form.sections.observation.title": "Observation",
+  "form.sections.observation.description": "Observations générales",
+  "form.sections.consommationStock.title": "Consommation de stock",
+  "form.sections.consommationStock.descriptionIntrant": "Intrants utilisés",
+  "form.sections.consommationStock.descriptionAliment": "Aliments utilisés",
+};
+
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => relevesTranslations[key] ?? key,
+}));
+
 const mockToast = vi.fn();
 vi.mock("@/components/ui/toast", () => ({
   useToast: () => ({ toast: mockToast }),

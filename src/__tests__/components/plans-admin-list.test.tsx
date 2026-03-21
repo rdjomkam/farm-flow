@@ -60,6 +60,31 @@ vi.mock("next-intl", () => ({
       "providers.MTN_MOMO": "MTN Mobile Money",
       "providers.ORANGE_MONEY": "Orange Money",
       "providers.MANUEL": "Paiement manuel",
+      "admin.allTypes": "Tous les types",
+      "admin.allStatuses": "Tous les statuts",
+      "admin.active": "Actif",
+      "admin.inactive": "Inactif",
+      "admin.reset": "Réinitialiser",
+      "admin.newPlan": "Nouveau plan",
+      "admin.unlimited": "Illimité",
+      "admin.onQuote": "Sur devis",
+      "admin.noModules": "Aucun module",
+      "admin.public": "Public",
+      "admin.private": "Privé",
+      "admin.columns.plan": "Plan",
+      "admin.columns.type": "Type",
+      "admin.columns.price": "Prix",
+      "admin.columns.sites": "Sites",
+      "admin.columns.tanks": "Bacs",
+      "admin.columns.waves": "Vagues",
+      "admin.columns.engineer": "Ingénieur",
+      "admin.columns.subscribers": "Abonnés",
+      "admin.columns.status": "Statut",
+      "admin.columns.visibility": "Visibilité",
+      "admin.columns.modules": "Modules",
+      "admin.columns.actions": "Actions",
+      "admin.modulesInclus": "Modules inclus",
+      "admin.modulesHelp": "Modules disponibles",
     };
     return translations[key] ?? key;
   },
@@ -84,6 +109,7 @@ const planDecouverteActifPublic = {
   limitesIngFermes: null,
   isActif: true,
   isPublic: true,
+  modulesInclus: [],
   _count: { abonnements: 42 },
 };
 
@@ -101,6 +127,7 @@ const planEleveurInactifPrive = {
   limitesIngFermes: null,
   isActif: false,
   isPublic: false,
+  modulesInclus: [],
   _count: { abonnements: 0 },
 };
 
@@ -118,6 +145,7 @@ const planEntrepriseActifPublic = {
   limitesIngFermes: null,
   isActif: true,
   isPublic: true,
+  modulesInclus: [],
   _count: { abonnements: 5 },
 };
 
@@ -135,6 +163,7 @@ const planIngenieurProActifPrive = {
   limitesIngFermes: 20,
   isActif: true,
   isPublic: false,
+  modulesInclus: [],
   _count: { abonnements: 8 },
 };
 

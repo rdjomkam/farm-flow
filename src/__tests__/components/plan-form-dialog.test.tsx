@@ -33,6 +33,10 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/admin/plans",
 }));
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => key,
+}));
+
 // Mock global fetch
 const mockFetch = vi.fn();
 

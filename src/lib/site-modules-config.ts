@@ -29,7 +29,7 @@ export const SITE_MODULES_CONFIG: SiteModuleConfig[] = [
   { value: SiteModule.INTRANTS, labelKey: "Intrants", icon: Package, level: "site" },
   { value: SiteModule.VENTES, labelKey: "Ventes", icon: ShoppingCart, level: "site" },
   { value: SiteModule.ANALYSE_PILOTAGE, labelKey: "Analyse & Pilotage", icon: BarChart2, level: "site" },
-  { value: SiteModule.PACKS_PROVISIONING, labelKey: "Packs & Provisioning", icon: Boxes, level: "site" },
+  { value: SiteModule.PACKS_PROVISIONING, labelKey: "Packs & Provisioning", icon: Boxes, level: "platform" },
   { value: SiteModule.CONFIGURATION, labelKey: "Configuration", icon: Settings, level: "site" },
   { value: SiteModule.INGENIEUR, labelKey: "Ingenieur", icon: HardHat, level: "site" },
   { value: SiteModule.NOTES, labelKey: "Notes", icon: StickyNote, level: "site" },
@@ -42,9 +42,9 @@ export const SITE_MODULES_CONFIG: SiteModuleConfig[] = [
 export const SITE_TOGGLEABLE_MODULES = SITE_MODULES_CONFIG.filter((m) => m.level === "site");
 export const PLATFORM_MODULES = SITE_MODULES_CONFIG.filter((m) => m.level === "platform");
 
-export function isModuleActive(module: SiteModule, enabledModules: SiteModule[]): boolean {
+export function isModuleActive(module: SiteModule, enabledModules: SiteModule[], isPlatform?: boolean): boolean {
   const config = SITE_MODULES_CONFIG.find((m) => m.value === module);
   if (!config) return false;
-  if (config.level === "platform") return true;
+  if (config.level === "platform") return isPlatform === true;
   return enabledModules.includes(module);
 }

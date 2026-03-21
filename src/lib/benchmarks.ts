@@ -56,11 +56,11 @@ export const BENCHMARK_SGR: BenchmarkRange = {
 
 export const BENCHMARK_DENSITE: BenchmarkRange = {
   label: "densite",
-  unit: "kg/m\u00B3",
-  // Lower density is better for Clarias — seuils en kg/m3 (ADR-density-alerts)
-  excellent: { min: 0, max: 100 },
-  bon: { min: 100, max: 150 },
-  acceptable: { min: 150, max: 200 },
+  unit: "poissons/m\u00B3",
+  // Lower density is better for Clarias — seuils en poissons/m3
+  excellent: { min: 0, max: 7 },
+  bon: { min: 7, max: 10 },
+  acceptable: { min: 10, max: 15 },
 };
 
 export const BENCHMARK_MORTALITE: BenchmarkRange = {

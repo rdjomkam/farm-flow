@@ -296,7 +296,6 @@ describe("PUT /api/sites/[id] — modules site-level valides acceptés", () => {
       SiteModule.INTRANTS,
       SiteModule.VENTES,
       SiteModule.ANALYSE_PILOTAGE,
-      SiteModule.PACKS_PROVISIONING,
       SiteModule.CONFIGURATION,
       SiteModule.INGENIEUR,
       SiteModule.NOTES,

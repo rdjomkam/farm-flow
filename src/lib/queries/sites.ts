@@ -130,6 +130,24 @@ export async function getSiteMembers(siteId: string) {
   });
 }
 
+// ──────────────────────────────────────────
+// Helpers — Platform site (BUG-025)
+// ──────────────────────────────────────────
+
+/** Recupere le site plateforme (DKFarm). Il ne peut en exister qu'un seul (index partiel unique). */
+export async function getPlatformSite() {
+  return prisma.site.findFirst({ where: { isPlatform: true } });
+}
+
+/** Retourne true si le site donne est le site plateforme. */
+export async function isPlatformSite(siteId: string): Promise<boolean> {
+  const site = await prisma.site.findUnique({
+    where: { id: siteId },
+    select: { isPlatform: true },
+  });
+  return site?.isPlatform === true;
+}
+
 /** Recupere le membership d'un utilisateur pour un site (avec siteRole inclus) */
 export async function getSiteMember(siteId: string, userId: string) {
   return prisma.siteMember.findUnique({

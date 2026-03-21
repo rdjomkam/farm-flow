@@ -460,7 +460,6 @@ describe("PUT /api/plans/[id] — modulesInclus (Sprint 43)", () => {
       SiteModule.INTRANTS,
       SiteModule.VENTES,
       SiteModule.ANALYSE_PILOTAGE,
-      SiteModule.PACKS_PROVISIONING,
       SiteModule.CONFIGURATION,
       SiteModule.INGENIEUR,
       SiteModule.NOTES,

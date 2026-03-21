@@ -1,20 +1,20 @@
 /**
- * Tests d'intégration — Route GET /api/remises/verifier (Sprint 33)
+ * Tests d'intégration — Route GET /api/remises/verifier (Sprint 35)
  *
  * Couvre :
  * - 200 avec valide: true — code promo valide
- * - 200 avec valide: false — code promo invalide (message d'erreur)
+ * - 200 avec valide: false — code promo invalide (messageErreur)
  * - 400 — paramètre code manquant
- * - 401 — non authentifié
+ * - 429 — rate limit dépassé
  *
- * Story 33.5 — Sprint 33
- * R2 : enums Permission importés depuis @/types
+ * Story 35.1 — Sprint 35 (route publique sans auth)
+ * R2 : enums TypeRemise importés depuis @/types
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET } from "@/app/api/remises/verifier/route";
 import { NextRequest } from "next/server";
-import { Permission, TypeRemise } from "@/types";
+import { TypeRemise } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -25,34 +25,6 @@ const mockVerifierRemiseApplicable = vi.fn();
 vi.mock("@/lib/queries/remises", () => ({
   verifierRemiseApplicable: (...args: unknown[]) => mockVerifierRemiseApplicable(...args),
 }));
-
-const mockRequirePermission = vi.fn();
-
-vi.mock("@/lib/permissions", () => ({
-  requirePermission: (...args: unknown[]) => mockRequirePermission(...args),
-  ForbiddenError: class ForbiddenError extends Error {
-    constructor(msg = "Forbidden") {
-      super(msg);
-      this.name = "ForbiddenError";
-    }
-  },
-}));
-
-vi.mock("@/lib/auth", () => ({
-  AuthError: class AuthError extends Error {
-    constructor(msg = "Non autorisé") {
-      super(msg);
-      this.name = "AuthError";
-    }
-  },
-  getSession: vi.fn(),
-}));
-
-const mockAuth = {
-  userId: "user-1",
-  activeSiteId: "site-1",
-  role: "ADMIN",
-};
 
 const mockRemise = {
   id: "remise-1",
@@ -73,17 +45,18 @@ const mockRemise = {
   updatedAt: new Date(),
 };
 
-function makeRequest(code?: string): NextRequest {
-  const url = code
-    ? `http://localhost/api/remises/verifier?code=${encodeURIComponent(code)}`
-    : "http://localhost/api/remises/verifier";
+function makeRequest(code?: string, siteId?: string): NextRequest {
+  let url = "http://localhost/api/remises/verifier";
+  const params: string[] = [];
+  if (code !== undefined) params.push(`code=${encodeURIComponent(code)}`);
+  if (siteId !== undefined) params.push(`siteId=${encodeURIComponent(siteId)}`);
+  if (params.length > 0) url += "?" + params.join("&");
   return new NextRequest(url);
 }
 
 describe("GET /api/remises/verifier", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockRequirePermission.mockResolvedValue(mockAuth);
   });
 
   it("retourne 400 si le paramètre code est manquant", async () => {
@@ -91,7 +64,7 @@ describe("GET /api/remises/verifier", () => {
     const res = await GET(req);
     expect(res.status).toBe(400);
     const data = await res.json();
-    expect(data.message).toContain("code");
+    expect(data.messageErreur).toContain("code");
   });
 
   it("retourne 400 si le paramètre code est vide", async () => {
@@ -110,7 +83,7 @@ describe("GET /api/remises/verifier", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.valide).toBe(false);
-    expect(data.message).toBeTruthy();
+    expect(data.messageErreur).toBeTruthy();
   });
 
   it("retourne valide: false si le code est expiré", async () => {
@@ -123,7 +96,7 @@ describe("GET /api/remises/verifier", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.valide).toBe(false);
-    expect(data.message).toContain("expiré");
+    expect(data.messageErreur).toContain("expiré");
   });
 
   it("retourne valide: true avec les détails de la remise", async () => {
@@ -147,23 +120,26 @@ describe("GET /api/remises/verifier", () => {
     });
     const req = makeRequest("early2026");
     await GET(req);
-    expect(mockVerifierRemiseApplicable).toHaveBeenCalledWith("EARLY2026", "site-1");
+    expect(mockVerifierRemiseApplicable).toHaveBeenCalledWith("EARLY2026", undefined);
   });
 
-  it("retourne 401 si non authentifié", async () => {
-    const { AuthError } = await import("@/lib/auth");
-    mockRequirePermission.mockRejectedValue(new AuthError("Non autorisé"));
+  it("retourne 401 si non authentifié — route publique, pas de 401", async () => {
+    // La route est publique — elle ne vérifie pas l'authentification
+    mockVerifierRemiseApplicable.mockResolvedValue({
+      remise: mockRemise,
+    });
     const req = makeRequest("EARLY2026");
     const res = await GET(req);
-    expect(res.status).toBe(401);
+    // Route publique → pas de 401, toujours 200 si le code est valide
+    expect(res.status).not.toBe(401);
   });
 
-  it("vérifie la remise avec le siteId de l'utilisateur connecté", async () => {
+  it("vérifie la remise avec le siteId du query param", async () => {
     mockVerifierRemiseApplicable.mockResolvedValue({ remise: null, erreur: "Invalide" });
-    const req = makeRequest("TEST");
+    const req = makeRequest("TEST", "site-1");
     await GET(req);
     expect(mockVerifierRemiseApplicable).toHaveBeenCalledWith(
-      expect.any(String),
+      "TEST",
       "site-1"
     );
   });

@@ -22,6 +22,72 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/vagues",
 }));
 
+const vaguesTranslations: Record<string, string | ((p: Record<string, unknown>) => string)> = {
+  "list.countPlural": (p) => `${p.count} vagues`,
+  "list.count": (p) => `${p.count} vague`,
+  "list.newButton": "Nouvelle vague",
+  "list.emptyTitle": "Aucune vague",
+  "list.emptyDescription": "Créez votre première vague",
+  "list.tabs.enCours": (p) => `En cours (${p.count})`,
+  "list.tabs.terminees": (p) => `Terminées (${p.count})`,
+  "list.tabs.annulees": (p) => `Annulées (${p.count})`,
+  "form.create.title": "Nouvelle vague",
+  "form.create.description": "Créez une nouvelle vague de poissons",
+  "form.create.submit": "Créer la vague",
+  "form.cancel": "Annuler",
+  "form.errors.code": "Le code est obligatoire.",
+  "form.errors.dateDebut": "La date de début est obligatoire.",
+  "form.errors.nombreInitial": "Le nombre initial est requis.",
+  "form.errors.poidsMoyenInitial": "Le poids moyen initial est requis.",
+  "form.errors.bacIds": "Sélectionnez au moins un bac.",
+  "form.sections.identification.title": "Identification",
+  "form.sections.identification.description": "Informations de la vague",
+  "form.sections.population.title": "Population initiale",
+  "form.sections.population.description": "Données initiales",
+  "form.sections.bacs.title": "Bacs assignés",
+  "form.sections.bacs.description": "Sélectionnez les bacs",
+  "form.fields.code": "Code de la vague",
+  "form.fields.codePlaceholder": "Ex: VAGUE-2026-001",
+  "form.fields.dateDebut": "Date de mise en eau",
+  "form.fields.nombreInitial": "Nombre d'alevins",
+  "form.fields.poidsMoyenInitial": "Poids moyen initial (g)",
+  "form.fields.origineAlevins": "Origine des alevins",
+  "form.fields.origineAlevinsFr": "Ex: Écloserie Douala",
+  "form.fields.aucunBacLibre": "Aucun bac libre disponible.",
+  "statuts.EN_COURS": "En cours",
+  "statuts.TERMINEE": "Terminée",
+  "statuts.ANNULEE": "Annulée",
+  "card.bacs": (p) => `${p.count} bacs`,
+  "card.bac": (p) => `${p.count} bac`,
+  "card.alevins": (p) => `${p.count} alevins`,
+  "indicateurs.tauxSurvie": "Taux de survie",
+  "indicateurs.biomasse": "Biomasse",
+  "indicateurs.poidsMoyen": "Poids moyen",
+};
+
+const analyticsTranslations: Record<string, string> = {
+  "benchmarks.sgr.label": "SGR",
+  "benchmarks.fcr.label": "FCR",
+  "labels.sgrUnit": "%/j",
+};
+
+function makeTFn(namespace: string) {
+  return (key: string, params?: Record<string, unknown>) => {
+    const ns = namespace === "vagues" ? vaguesTranslations : analyticsTranslations;
+    const val = ns[key];
+    if (typeof val === "function") return val(params ?? {});
+    return (val as string) ?? key;
+  };
+}
+
+vi.mock("next-intl", () => ({
+  useTranslations: (namespace: string) => makeTFn(namespace),
+}));
+
+vi.mock("next-intl/server", () => ({
+  getTranslations: vi.fn().mockImplementation(async (namespace: string) => makeTFn(namespace)),
+}));
+
 const mockToast = vi.fn();
 vi.mock("@/components/ui/toast", () => ({
   useToast: () => ({ toast: mockToast }),

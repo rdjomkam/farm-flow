@@ -10,11 +10,12 @@
  * Story 34.2 — Sprint 34
  * R2 : enums importés depuis @/types
  * R4 : atomicité via demanderRetrait (transaction Prisma)
- * R8 : siteId = auth.activeSiteId
+ * R8 : siteId = platformSite.id (BUG-029 : entité plateforme)
  */
 import { NextRequest, NextResponse } from "next/server";
 import { demanderRetrait } from "@/lib/queries/commissions";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { getPlatformSite, isPlatformSite } from "@/lib/queries/sites";
 import { AuthError } from "@/lib/auth";
 import { Permission, FournisseurPaiement } from "@/types";
 import type { DemandeRetraitDTO } from "@/types";
@@ -24,6 +25,24 @@ const VALID_FOURNISSEURS = Object.values(FournisseurPaiement);
 export async function POST(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.PORTEFEUILLE_VOIR);
+
+    // BUG-029 : RetraitPortefeuille est une entité plateforme.
+    // L'utilisateur DOIT être connecté au site plateforme pour demander un retrait.
+    const isPlat = await isPlatformSite(auth.activeSiteId);
+    if (!isPlat) {
+      return NextResponse.json(
+        { status: 403, message: "Opération réservée au site plateforme." },
+        { status: 403 }
+      );
+    }
+    const platformSite = await getPlatformSite();
+    if (!platformSite) {
+      return NextResponse.json(
+        { status: 500, message: "Site plateforme introuvable." },
+        { status: 500 }
+      );
+    }
+
     const body = await request.json() as Partial<DemandeRetraitDTO>;
 
     // Validation des champs requis
@@ -52,7 +71,8 @@ export async function POST(request: NextRequest) {
       fournisseur: body.fournisseur!,
     };
 
-    const retrait = await demanderRetrait(auth.userId, dto, auth.activeSiteId);
+    // BUG-029 : utiliser platformSite.id comme siteId (entité plateforme)
+    const retrait = await demanderRetrait(auth.userId, dto, platformSite.id);
     return NextResponse.json({ retrait }, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {

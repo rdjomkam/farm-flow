@@ -23,31 +23,51 @@ import { SiteModule } from "@/types";
 // isModuleActive — modules platform
 // ---------------------------------------------------------------------------
 
-describe("isModuleActive — modules platform (toujours actifs)", () => {
-  it("ABONNEMENTS retourne true avec enabledModules vide", () => {
-    expect(isModuleActive(SiteModule.ABONNEMENTS, [])).toBe(true);
+describe("isModuleActive — modules platform (actifs uniquement sur site plateforme)", () => {
+  it("ABONNEMENTS retourne true avec isPlatform=true et enabledModules vide", () => {
+    expect(isModuleActive(SiteModule.ABONNEMENTS, [], true)).toBe(true);
   });
 
-  it("COMMISSIONS retourne true avec enabledModules vide", () => {
-    expect(isModuleActive(SiteModule.COMMISSIONS, [])).toBe(true);
+  it("COMMISSIONS retourne true avec isPlatform=true et enabledModules vide", () => {
+    expect(isModuleActive(SiteModule.COMMISSIONS, [], true)).toBe(true);
   });
 
-  it("REMISES retourne true avec enabledModules vide", () => {
-    expect(isModuleActive(SiteModule.REMISES, [])).toBe(true);
+  it("REMISES retourne true avec isPlatform=true et enabledModules vide", () => {
+    expect(isModuleActive(SiteModule.REMISES, [], true)).toBe(true);
   });
 
-  it("ABONNEMENTS retourne true même si ABONNEMENTS est absent de enabledModules", () => {
+  it("ABONNEMENTS retourne true avec isPlatform=true même si absent de enabledModules", () => {
     const enabledModules = [SiteModule.GROSSISSEMENT, SiteModule.VENTES];
-    expect(isModuleActive(SiteModule.ABONNEMENTS, enabledModules)).toBe(true);
+    expect(isModuleActive(SiteModule.ABONNEMENTS, enabledModules, true)).toBe(true);
   });
 
-  it("COMMISSIONS retourne true même si COMMISSIONS est absent de enabledModules", () => {
+  it("COMMISSIONS retourne true avec isPlatform=true même si absent de enabledModules", () => {
     const enabledModules = [SiteModule.GROSSISSEMENT];
-    expect(isModuleActive(SiteModule.COMMISSIONS, enabledModules)).toBe(true);
+    expect(isModuleActive(SiteModule.COMMISSIONS, enabledModules, true)).toBe(true);
   });
 
-  it("REMISES retourne true même si REMISES est absent de enabledModules", () => {
-    expect(isModuleActive(SiteModule.REMISES, [SiteModule.VENTES])).toBe(true);
+  it("REMISES retourne true avec isPlatform=true même si absent de enabledModules", () => {
+    expect(isModuleActive(SiteModule.REMISES, [SiteModule.VENTES], true)).toBe(true);
+  });
+
+  it("ABONNEMENTS retourne false sur un site non-plateforme (isPlatform=false)", () => {
+    expect(isModuleActive(SiteModule.ABONNEMENTS, [], false)).toBe(false);
+  });
+
+  it("COMMISSIONS retourne false sur un site non-plateforme (isPlatform=false)", () => {
+    expect(isModuleActive(SiteModule.COMMISSIONS, [SiteModule.GROSSISSEMENT], false)).toBe(false);
+  });
+
+  it("REMISES retourne false quand isPlatform est omis", () => {
+    expect(isModuleActive(SiteModule.REMISES, [])).toBe(false);
+  });
+
+  it("PACKS_PROVISIONING retourne false sur un site non-plateforme", () => {
+    expect(isModuleActive(SiteModule.PACKS_PROVISIONING, [SiteModule.PACKS_PROVISIONING], false)).toBe(false);
+  });
+
+  it("PACKS_PROVISIONING retourne true sur le site plateforme", () => {
+    expect(isModuleActive(SiteModule.PACKS_PROVISIONING, [], true)).toBe(true);
   });
 });
 
@@ -82,12 +102,6 @@ describe("isModuleActive — modules site (dépendent de enabledModules)", () =>
 
   it("ANALYSE_PILOTAGE retourne false quand enabledModules ne le contient pas", () => {
     expect(isModuleActive(SiteModule.ANALYSE_PILOTAGE, [SiteModule.GROSSISSEMENT, SiteModule.VENTES])).toBe(false);
-  });
-
-  it("PACKS_PROVISIONING retourne true quand il est dans enabledModules", () => {
-    expect(
-      isModuleActive(SiteModule.PACKS_PROVISIONING, [SiteModule.PACKS_PROVISIONING])
-    ).toBe(true);
   });
 
   it("CONFIGURATION retourne false quand absent de enabledModules", () => {
@@ -138,12 +152,17 @@ describe("SITE_TOGGLEABLE_MODULES — uniquement des modules site-level", () => 
     expect(values).not.toContain(SiteModule.REMISES);
   });
 
+  it("ne contient pas PACKS_PROVISIONING (platform)", () => {
+    const values = SITE_TOGGLEABLE_MODULES.map((m) => m.value);
+    expect(values).not.toContain(SiteModule.PACKS_PROVISIONING);
+  });
+
   it("tous les éléments ont level === 'site'", () => {
     expect(SITE_TOGGLEABLE_MODULES.every((m) => m.level === "site")).toBe(true);
   });
 
-  it("contient exactement 9 modules site-level", () => {
-    expect(SITE_TOGGLEABLE_MODULES).toHaveLength(9);
+  it("contient exactement 8 modules site-level", () => {
+    expect(SITE_TOGGLEABLE_MODULES).toHaveLength(8);
   });
 
   it("contient GROSSISSEMENT", () => {
@@ -177,8 +196,8 @@ describe("SITE_TOGGLEABLE_MODULES — uniquement des modules site-level", () => 
 // ---------------------------------------------------------------------------
 
 describe("PLATFORM_MODULES — modules platform-level", () => {
-  it("contient exactement 3 modules", () => {
-    expect(PLATFORM_MODULES).toHaveLength(3);
+  it("contient exactement 4 modules", () => {
+    expect(PLATFORM_MODULES).toHaveLength(4);
   });
 
   it("contient ABONNEMENTS", () => {
@@ -196,6 +215,11 @@ describe("PLATFORM_MODULES — modules platform-level", () => {
     expect(values).toContain(SiteModule.REMISES);
   });
 
+  it("contient PACKS_PROVISIONING", () => {
+    const values = PLATFORM_MODULES.map((m) => m.value);
+    expect(values).toContain(SiteModule.PACKS_PROVISIONING);
+  });
+
   it("tous les éléments ont level === 'platform'", () => {
     expect(PLATFORM_MODULES.every((m) => m.level === "platform")).toBe(true);
   });
@@ -210,18 +234,18 @@ describe("PLATFORM_MODULES — modules platform-level", () => {
 // ---------------------------------------------------------------------------
 
 describe("SITE_MODULES_CONFIG — configuration complète des modules", () => {
-  it("contient exactement 12 modules (9 site + 3 platform)", () => {
+  it("contient exactement 12 modules (8 site + 4 platform)", () => {
     expect(SITE_MODULES_CONFIG).toHaveLength(12);
   });
 
-  it("contient 9 modules site-level", () => {
+  it("contient 8 modules site-level", () => {
     const siteModules = SITE_MODULES_CONFIG.filter((m) => m.level === "site");
-    expect(siteModules).toHaveLength(9);
+    expect(siteModules).toHaveLength(8);
   });
 
-  it("contient 3 modules platform-level", () => {
+  it("contient 4 modules platform-level", () => {
     const platformModules = SITE_MODULES_CONFIG.filter((m) => m.level === "platform");
-    expect(platformModules).toHaveLength(3);
+    expect(platformModules).toHaveLength(4);
   });
 
   it("chaque entrée possède les propriétés value, labelKey, icon et level", () => {

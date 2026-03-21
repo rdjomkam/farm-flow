@@ -15,6 +15,33 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/analytics/bacs",
 }));
 
+const analyticsBacsTranslations: Record<string, string> = {
+  noBacs: "Aucun bac assigné à cette vague.",
+  biomass: "Biomasse",
+  density: "Densite",
+  avgWeight: "Poids moyen",
+  alive: "Vivants",
+  totalFeed: "Aliment",
+  deaths: "Morts",
+  viewVagueAnalytics: "Voir les analytiques par vague",
+  vagueTracking: "Les indicateurs de performance (FCR, SGR...) sont calculés au niveau de la vague.",
+  detail: "Detail",
+};
+
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string, params?: Record<string, unknown>) => {
+    if (key === "alertCount") {
+      const count = params?.count ?? 0;
+      return `${count} alerte${Number(count) > 1 ? "s" : ""}`;
+    }
+    if (key === "releves") {
+      const count = params?.count ?? 0;
+      return `${count} relevé${Number(count) > 1 ? "s" : ""}`;
+    }
+    return analyticsBacsTranslations[key] ?? key;
+  },
+}));
+
 // ---------------------------------------------------------------------------
 // BenchmarkBadge
 // ---------------------------------------------------------------------------

@@ -14,6 +14,7 @@
 import { prisma } from "@/lib/db";
 import { Role, Permission, StatutCommissionIng } from "@/types";
 import { createCommission, rendreCommissionsDisponibles } from "@/lib/queries/commissions";
+import { getPlatformSite } from "@/lib/queries/sites";
 import { COMMISSION_TAUX_DEFAULT, COMMISSION_TAUX_PREMIUM } from "@/lib/abonnements-constants";
 
 // ---------------------------------------------------------------------------
@@ -125,10 +126,14 @@ export async function calculerEtCreerCommission(
     // Étape 5 : Calculer le montant de la commission
     const montant = Number(paiement.montant) * taux;
 
-    // Étape 6 : Récupérer le siteId DKFarm de l'ingénieur (premier site Admin/DKFarm)
-    // Le siteId pour R8 est le site DKFarm de l'ingénieur — on utilise paiement.siteId comme site gestionnaire DKFarm
-    // (le paiement a été initié par le site DKFarm vendeur)
-    const ingenieurSiteId = paiement.siteId;
+    // Étape 6 : BUG-029 — CommissionIngenieur est une entité plateforme.
+    // Le siteId DOIT être celui du site plateforme DKFarm, pas le site client.
+    const platformSite = await getPlatformSite();
+    if (!platformSite) {
+      console.error("[commissions.service] Site plateforme introuvable — impossible de créer la commission.");
+      return null;
+    }
+    const ingenieurSiteId = platformSite.id;
 
     // Étape 7 : Créer la commission EN_ATTENTE
     const commission = await createCommission({

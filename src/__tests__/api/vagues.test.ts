@@ -33,6 +33,30 @@ vi.mock("@/lib/abonnements/check-quotas", () => ({
     if (ressource.limite === null) return false;
     return ressource.actuel >= ressource.limite;
   },
+  normaliseLimite: (val: number) => {
+    if (val >= 999) return null;
+    return val;
+  },
+}));
+
+// Mock prisma for transaction
+const mockPrismaVagueCount = vi.fn();
+const mockPrismaTransaction = vi.fn();
+
+vi.mock("@/lib/db", () => ({
+  prisma: {
+    vague: {
+      count: (...args: unknown[]) => mockPrismaVagueCount(...args),
+    },
+    $transaction: (fn: (tx: unknown) => Promise<unknown>) => mockPrismaTransaction(fn),
+  },
+}));
+
+// Mock abonnements queries
+const mockGetAbonnementActif = vi.fn();
+vi.mock("@/lib/queries/abonnements", () => ({
+  getAbonnementActif: (...args: unknown[]) => mockGetAbonnementActif(...args),
+  getAbonnements: vi.fn(),
 }));
 
 const mockRequirePermission = vi.fn();
@@ -178,6 +202,17 @@ describe("POST /api/vagues", () => {
       bacs: { actuel: 2, limite: 10 },
       vagues: { actuel: 0, limite: 3 },
       sites: { actuel: 1, limite: 1 },
+    });
+    // No active subscription (uses default DECOUVERTE plan limits)
+    mockGetAbonnementActif.mockResolvedValue(null);
+    // Quota: 0 vagues EN_COURS
+    mockPrismaVagueCount.mockResolvedValue(0);
+    // Transaction exécute le callback avec un tx mock qui expose vague.count
+    mockPrismaTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const txMock = {
+        vague: { count: (...args: unknown[]) => mockPrismaVagueCount(...args) },
+      };
+      return fn(txMock);
     });
   });
 

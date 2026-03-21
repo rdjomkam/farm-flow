@@ -51,6 +51,11 @@ vi.mock("@/lib/queries/commissions", () => ({
   rendreCommissionsDisponibles: (...args: unknown[]) => mockRendreCommissionsDisponibles(...args),
 }));
 
+vi.mock("@/lib/queries/sites", () => ({
+  getPlatformSite: vi.fn().mockResolvedValue({ id: "site-platform", name: "DKFarm", isPlatform: true }),
+  isPlatformSite: vi.fn().mockResolvedValue(true),
+}));
+
 // ---------------------------------------------------------------------------
 // Données de test
 // ---------------------------------------------------------------------------

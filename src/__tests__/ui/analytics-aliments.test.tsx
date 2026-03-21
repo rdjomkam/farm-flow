@@ -15,6 +15,40 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/analytics/aliments",
 }));
 
+const analyticsTranslations: Record<string, string> = {
+  "benchmarks.fcr.label": "FCR",
+  "benchmarks.sgr.label": "SGR",
+  "labels.sgrUnit": "%/j",
+  "aliments.kgUtilises": "kg utilises",
+  "aliments.noAliments": "Aucun aliment utilise sur ce site.",
+  "aliments.meilleurCoutKg": "Meilleur cout/kg",
+  "aliments.meilleurFCR": "Meilleur FCR",
+  "aliments.meilleurSGR": "Meilleur SGR",
+  "aliments.coutKgLabel": "Cout/kg",
+  "aliments.detail": "Detail",
+  "bacs.detail": "Detail",
+};
+
+const vaguesTranslations: Record<string, string | ((params: Record<string, unknown>) => string)> = {
+  "comparison.noVagues": "Aucun aliment utilise sur ce site.",
+  "comparison.metrics.coutAliment": "Meilleur cout/kg",
+  "comparison.metrics.survie": "Survie",
+  "list.count": "1 vague",
+  "list.countPlural": "{{count}} vagues",
+};
+
+vi.mock("next-intl", () => ({
+  useTranslations: (namespace: string) => (key: string, params?: Record<string, unknown>) => {
+    const ns = namespace === "analytics" ? analyticsTranslations : vaguesTranslations;
+    const val = ns[key];
+    if (typeof val === "function") return val(params ?? {});
+    if (typeof val === "string" && params) {
+      return val.replace(/\{\{(\w+)\}\}/g, (_, k) => String(params[k] ?? k));
+    }
+    return val ?? key;
+  },
+}));
+
 // ---------------------------------------------------------------------------
 // Test data
 // ---------------------------------------------------------------------------

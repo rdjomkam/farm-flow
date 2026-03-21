@@ -1,15 +1,17 @@
+"use client";
+
 import { HeartPulse, TrendingUp, Weight, Activity, Scale } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import type { IndicateursVague } from "@/types";
-import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 
 interface IndicateursCardsProps {
   indicateurs: IndicateursVague;
 }
 
-export async function IndicateursCards({ indicateurs }: IndicateursCardsProps) {
-  const tAnalytics = await getTranslations("analytics");
-  const t = await getTranslations("vagues");
+export function IndicateursCards({ indicateurs }: IndicateursCardsProps) {
+  const tAnalytics = useTranslations("analytics");
+  const t = useTranslations("vagues");
 
   const items = [
     {

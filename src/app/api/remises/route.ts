@@ -7,11 +7,12 @@
  * Story 35.1 — Sprint 35
  * R2 : enums importés depuis @/types
  * R4 : opérations atomiques via les fonctions query
- * R8 : siteId = auth.activeSiteId
+ * R8 : siteId = platformSite.id pour les remises globales (BUG-029)
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getAllRemises, createRemise, getRemiseByCode } from "@/lib/queries/remises";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { getPlatformSite, isPlatformSite } from "@/lib/queries/sites";
 import { AuthError } from "@/lib/auth";
 import { Permission, TypeRemise } from "@/types";
 import type { CreateRemiseDTO } from "@/types";
@@ -55,6 +56,24 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.REMISES_GERER);
+
+    // BUG-029 : les remises (notamment globales) sont des entités plateforme.
+    // L'utilisateur DOIT être connecté au site plateforme pour les créer.
+    const isPlat = await isPlatformSite(auth.activeSiteId);
+    if (!isPlat) {
+      return NextResponse.json(
+        { status: 403, message: "Opération réservée au site plateforme." },
+        { status: 403 }
+      );
+    }
+    const platformSite = await getPlatformSite();
+    if (!platformSite) {
+      return NextResponse.json(
+        { status: 500, message: "Site plateforme introuvable." },
+        { status: 500 }
+      );
+    }
+
     const body = await request.json();
     const errors: { field: string; message: string }[] = [];
 
@@ -130,12 +149,14 @@ export async function POST(request: NextRequest) {
       planId: body.planId,
     };
 
-    // siteId : si ABONNEMENTS_GERER et siteId fourni → utiliser ce siteId, sinon activeSiteId, sinon null (globale)
+    // BUG-029 : siteId est toujours le site plateforme pour les remises.
+    // Les remises globales (isGlobale=true) ont siteId=null (visibles de tous les sites).
+    // Les remises non-globales sont rattachées au site plateforme (platformSite.id).
     let siteId: string | undefined;
     if (body.isGlobale === true && auth.permissions.includes(Permission.ABONNEMENTS_GERER)) {
-      siteId = undefined; // globale
+      siteId = undefined; // globale — siteId null en base
     } else {
-      siteId = auth.activeSiteId;
+      siteId = platformSite.id; // rattachée au site plateforme (pas à l'activeSiteId)
     }
 
     const remise = await createRemise(auth.userId, data, siteId);

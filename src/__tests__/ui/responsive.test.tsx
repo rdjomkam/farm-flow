@@ -19,6 +19,10 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/",
 }));
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => key,
+}));
+
 // ---------------------------------------------------------------------------
 // Mobile-first responsive patterns
 // ---------------------------------------------------------------------------

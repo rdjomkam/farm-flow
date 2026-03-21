@@ -44,6 +44,11 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+vi.mock("@/lib/queries/sites", () => ({
+  isPlatformSite: vi.fn().mockResolvedValue(true),
+  getPlatformSite: vi.fn().mockResolvedValue({ id: "site-platform", name: "DKFarm", isPlatform: true }),
+}));
+
 const mockRequirePermission = vi.fn();
 
 vi.mock("@/lib/permissions", () => ({
