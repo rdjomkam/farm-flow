@@ -72,8 +72,9 @@ async function notificationActiveExiste(
 
 /**
  * Cree une notification si elle n'existe pas encore pour ce type aujourd'hui.
+ * Exportee pour etre reutilisee par d'autres services (ex: rappels-abonnement.ts).
  */
-async function creerNotificationSiAbsente(
+export async function creerNotificationSiAbsente(
   siteId: string,
   userId: string,
   typeAlerte: TypeAlerte,

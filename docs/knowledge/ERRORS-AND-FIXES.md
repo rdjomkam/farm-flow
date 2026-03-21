@@ -239,6 +239,25 @@ Quand une Server Component lit depuis Prisma et passe les données à un composa
 
 ---
 
+### ERR-015 — Double vérification redondante de déduplication avant une fonction qui déduplique déjà
+**Sprint :** 36 | **Date :** 2026-03-21
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/services/rappels-abonnement.ts`
+
+**Symptôme :**
+Le service effectuait une requête `COUNT` en base (`rappelExisteAujourdhui`) avant chaque appel à `creerNotificationSiAbsente`, entraînant une double requête DB par rappel traité.
+
+**Cause racine :**
+`creerNotificationSiAbsente` inclut déjà une vérification interne d'unicité avant d'insérer. La pré-vérification externe dupliquait exactement cette logique sans apporter de valeur supplémentaire.
+
+**Fix :**
+Supprimer la pré-vérification `rappelExisteAujourdhui`. Déléguer entièrement la déduplication à `creerNotificationSiAbsente` qui est conçue pour ça.
+
+**Leçon / Règle :**
+Avant d'ajouter une vérification en amont d'un appel de fonction, lire ce que fait cette fonction. Si elle intègre déjà une déduplication ou un guard, ne pas en ajouter une couche supplémentaire à l'extérieur. Une double vérification identique double le nombre de requêtes DB sans garantie supplémentaire.
+
+---
+
 ### ERR-014 — Boucle de updateMany séquentiels sans $transaction (R4)
 **Sprint :** 36 | **Date :** 2026-03-21
 **Sévérité :** Haute

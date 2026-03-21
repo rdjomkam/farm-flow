@@ -15,6 +15,7 @@ import {
   Waves,
   Eye,
   Zap,
+  Bell,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -130,6 +131,14 @@ const typeAlerteConfig: Record<
     description: "Alerte combinee : densite elevee ET qualite eau critique simultanement",
     icon: Zap,
     color: "text-danger",
+    hasSeuilValeur: false,
+    hasSeuilPourcentage: false,
+  },
+  [TypeAlerte.ABONNEMENT_RAPPEL_RENOUVELLEMENT]: {
+    label: "Rappel renouvellement abonnement",
+    description: "Rappel automatique quand l'abonnement expire dans 14, 7, 3 ou 1 jour(s)",
+    icon: Bell,
+    color: "text-primary",
     hasSeuilValeur: false,
     hasSeuilPourcentage: false,
   },

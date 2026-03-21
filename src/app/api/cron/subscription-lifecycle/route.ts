@@ -23,6 +23,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as crypto from "crypto";
 import { transitionnerStatuts } from "@/lib/services/abonnement-lifecycle";
 import { rendreCommissionsDisponiblesCron } from "@/lib/services/commissions";
+import { envoyerRappelsRenouvellement } from "@/lib/services/rappels-abonnement";
 
 // ---------------------------------------------------------------------------
 // Utilitaires
@@ -72,6 +73,9 @@ export async function GET(request: NextRequest) {
     // ---- Commissions disponibles (J+30) ----
     const commissionsDisponibles = await rendreCommissionsDisponiblesCron();
 
+    // ---- Rappels de renouvellement (J-14, J-7, J-3, J-1) ----
+    const { envoyes: rappelsEnvoyes } = await envoyerRappelsRenouvellement();
+
     return NextResponse.json({
       status: 200,
       message: "Lifecycle traite avec succes.",
@@ -80,6 +84,7 @@ export async function GET(request: NextRequest) {
         suspendus: transitions.suspendus,
         expires: transitions.expires,
         commissionsDisponibles,
+        rappelsRenouvellement: rappelsEnvoyes,
       },
     });
   } catch (error) {

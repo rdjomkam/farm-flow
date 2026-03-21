@@ -1008,6 +1008,8 @@ export enum TypeAlerte {
   AUCUN_RELEVE_QUALITE_EAU = "AUCUN_RELEVE_QUALITE_EAU",
   /** Combinaison : densite elevee ET qualite eau degradee simultanement — Sprint 27-28 */
   DENSITE_CRITIQUE_QUALITE_EAU = "DENSITE_CRITIQUE_QUALITE_EAU",
+  /** Rappel de renouvellement d'abonnement (J-14, J-7, J-3, J-1) — Sprint 36 */
+  ABONNEMENT_RAPPEL_RENOUVELLEMENT = "ABONNEMENT_RAPPEL_RENOUVELLEMENT",
 }
 
 /** Statut du cycle de vie d'une notification */

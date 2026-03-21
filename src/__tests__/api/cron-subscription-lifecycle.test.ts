@@ -4,11 +4,11 @@
  * Couvre :
  * - GET sans header Authorization → 401
  * - GET avec CRON_SECRET invalide → 401
- * - GET avec CRON_SECRET valide → 200 + structure { processed: { graces, suspendus, expires, commissionsDisponibles } }
+ * - GET avec CRON_SECRET valide → 200 + structure { processed: { graces, suspendus, expires, commissionsDisponibles, rappelsRenouvellement } }
  * - GET quand CRON_SECRET non configuré en env → 500
  * - GET avec erreur service → 500
  *
- * Story 36.1 — Sprint 36
+ * Story 36.1 + 36.2 — Sprint 36
  * R2 : enums importés depuis @/types (aucun enum direct ici, mais on respecte le pattern)
  */
 
@@ -21,6 +21,7 @@ import { NextRequest } from "next/server";
 
 const mockTransitionnerStatuts = vi.fn();
 const mockRendreCommissionsDisponiblesCron = vi.fn();
+const mockEnvoyerRappelsRenouvellement = vi.fn();
 
 vi.mock("@/lib/services/abonnement-lifecycle", () => ({
   transitionnerStatuts: (...args: unknown[]) =>
@@ -30,6 +31,11 @@ vi.mock("@/lib/services/abonnement-lifecycle", () => ({
 vi.mock("@/lib/services/commissions", () => ({
   rendreCommissionsDisponiblesCron: (...args: unknown[]) =>
     mockRendreCommissionsDisponiblesCron(...args),
+}));
+
+vi.mock("@/lib/services/rappels-abonnement", () => ({
+  envoyerRappelsRenouvellement: (...args: unknown[]) =>
+    mockEnvoyerRappelsRenouvellement(...args),
 }));
 
 // Import après les mocks
@@ -67,6 +73,8 @@ describe("GET /api/cron/subscription-lifecycle", () => {
     vi.clearAllMocks();
     // Configurer CRON_SECRET par défaut pour chaque test
     process.env = { ...originalEnv, CRON_SECRET: VALID_SECRET };
+    // Valeur par défaut pour envoyerRappelsRenouvellement
+    mockEnvoyerRappelsRenouvellement.mockResolvedValue({ envoyes: 0 });
   });
 
   afterEach(() => {
@@ -129,13 +137,14 @@ describe("GET /api/cron/subscription-lifecycle", () => {
 
   // ---- Succès ----
 
-  it("retourne 200 avec { processed: { graces, suspendus, expires, commissionsDisponibles } } pour un token valide", async () => {
+  it("retourne 200 avec { processed: { graces, suspendus, expires, commissionsDisponibles, rappelsRenouvellement } } pour un token valide", async () => {
     mockTransitionnerStatuts.mockResolvedValue({
       graces: 3,
       suspendus: 1,
       expires: 2,
     });
     mockRendreCommissionsDisponiblesCron.mockResolvedValue(5);
+    mockEnvoyerRappelsRenouvellement.mockResolvedValue({ envoyes: 4 });
 
     const req = makeRequest(`Bearer ${VALID_SECRET}`);
     const res = await GET(req);
@@ -149,6 +158,7 @@ describe("GET /api/cron/subscription-lifecycle", () => {
     expect(data.processed.suspendus).toBe(1);
     expect(data.processed.expires).toBe(2);
     expect(data.processed.commissionsDisponibles).toBe(5);
+    expect(data.processed.rappelsRenouvellement).toBe(4);
   });
 
   it("retourne des counts à zéro quand aucune transition n'est nécessaire", async () => {
@@ -158,6 +168,7 @@ describe("GET /api/cron/subscription-lifecycle", () => {
       expires: 0,
     });
     mockRendreCommissionsDisponiblesCron.mockResolvedValue(0);
+    mockEnvoyerRappelsRenouvellement.mockResolvedValue({ envoyes: 0 });
 
     const req = makeRequest(`Bearer ${VALID_SECRET}`);
     const res = await GET(req);
@@ -168,21 +179,24 @@ describe("GET /api/cron/subscription-lifecycle", () => {
     expect(data.processed.suspendus).toBe(0);
     expect(data.processed.expires).toBe(0);
     expect(data.processed.commissionsDisponibles).toBe(0);
+    expect(data.processed.rappelsRenouvellement).toBe(0);
   });
 
-  it("appelle transitionnerStatuts et rendreCommissionsDisponiblesCron avec un token valide", async () => {
+  it("appelle transitionnerStatuts, rendreCommissionsDisponiblesCron et envoyerRappelsRenouvellement avec un token valide", async () => {
     mockTransitionnerStatuts.mockResolvedValue({
       graces: 1,
       suspendus: 0,
       expires: 0,
     });
     mockRendreCommissionsDisponiblesCron.mockResolvedValue(2);
+    mockEnvoyerRappelsRenouvellement.mockResolvedValue({ envoyes: 1 });
 
     const req = makeRequest(`Bearer ${VALID_SECRET}`);
     await GET(req);
 
     expect(mockTransitionnerStatuts).toHaveBeenCalledTimes(1);
     expect(mockRendreCommissionsDisponiblesCron).toHaveBeenCalledTimes(1);
+    expect(mockEnvoyerRappelsRenouvellement).toHaveBeenCalledTimes(1);
   });
 
   it("ne doit pas appeler les services si le token est invalide", async () => {
@@ -191,6 +205,7 @@ describe("GET /api/cron/subscription-lifecycle", () => {
 
     expect(mockTransitionnerStatuts).not.toHaveBeenCalled();
     expect(mockRendreCommissionsDisponiblesCron).not.toHaveBeenCalled();
+    expect(mockEnvoyerRappelsRenouvellement).not.toHaveBeenCalled();
   });
 
   // ---- Gestion des erreurs ----
@@ -229,13 +244,14 @@ describe("GET /api/cron/subscription-lifecycle", () => {
 
   // ---- Structure de réponse ----
 
-  it("la réponse 200 contient exactement les 4 clés attendues dans processed", async () => {
+  it("la réponse 200 contient exactement les 5 clés attendues dans processed", async () => {
     mockTransitionnerStatuts.mockResolvedValue({
       graces: 10,
       suspendus: 5,
       expires: 2,
     });
     mockRendreCommissionsDisponiblesCron.mockResolvedValue(7);
+    mockEnvoyerRappelsRenouvellement.mockResolvedValue({ envoyes: 3 });
 
     const req = makeRequest(`Bearer ${VALID_SECRET}`);
     const res = await GET(req);
@@ -243,7 +259,7 @@ describe("GET /api/cron/subscription-lifecycle", () => {
 
     const processedKeys = Object.keys(data.processed).sort();
     expect(processedKeys).toEqual(
-      ["commissionsDisponibles", "expires", "graces", "suspendus"]
+      ["commissionsDisponibles", "expires", "graces", "rappelsRenouvellement", "suspendus"]
     );
   });
 });
