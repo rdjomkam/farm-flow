@@ -1,0 +1,186 @@
+{
+  "title": "Stock",
+  "categories": {
+    "ALIMENT": "Aliment",
+    "INTRANT": "Intrant",
+    "EQUIPEMENT": "Equipement"
+  },
+  "unites": {
+    "GRAMME": "g",
+    "KG": "kg",
+    "MILLILITRE": "mL",
+    "LITRE": "L",
+    "UNITE": "unite",
+    "SACS": "sacs"
+  },
+  "statuts": {
+    "BROUILLON": "Brouillon",
+    "ENVOYEE": "Envoyee",
+    "LIVREE": "Livree",
+    "ANNULEE": "Annulee"
+  },
+  "types": {
+    "ENTREE": "Entree",
+    "SORTIE": "Sortie"
+  },
+  "produits": {
+    "title": "Produits",
+    "count": "{count, plural, one {# produit} other {# produits}}",
+    "add": "Ajouter un produit",
+    "edit": "Modifier le produit",
+    "new": "Nouveau",
+    "empty": "Aucun produit",
+    "emptyDescription": "Ajoutez un produit pour gerer votre stock.",
+    "tabs": {
+      "all": "Tous",
+      "alerts": "Alertes ({count})"
+    },
+    "fields": {
+      "name": "Nom du produit",
+      "namePlaceholder": "Ex: Aliment Raanan 3mm",
+      "categorie": "Categorie",
+      "uniteBase": "Unite de base",
+      "uniteAchat": "Unite d'achat",
+      "dualUnit": "Unite d'achat differente",
+      "contenance": "Contenance ({baseUnit} par {achatUnit})",
+      "contenanceUnit": "unite d'achat",
+      "prixUnitaire": "Prix unitaire (FCFA)",
+      "seuilAlerte": "Seuil d'alerte",
+      "fournisseur": "Fournisseur (optionnel)",
+      "fournisseurRequired": "Fournisseur",
+      "fournisseurNone": "Aucun"
+    },
+    "detail": {
+      "inStock": "{unit} en stock",
+      "alerteMessage": "Stock en dessous du seuil d'alerte ({seuil} {unit})",
+      "derniersMovements": "Derniers mouvements",
+      "noMovement": "Aucun mouvement",
+      "voirMovements": "Voir tous les mouvements",
+      "contenanceNotEditable": "Non modifiable (stock > 0)"
+    }
+  },
+  "fournisseurs": {
+    "title": "Fournisseurs",
+    "count": "{count, plural, one {# fournisseur} other {# fournisseurs}}",
+    "add": "Ajouter un fournisseur",
+    "edit": "Modifier le fournisseur",
+    "new": "Nouveau",
+    "empty": "Aucun fournisseur",
+    "emptyDescription": "Ajoutez vos fournisseurs pour gerer les approvisionnements.",
+    "save": "Enregistrer",
+    "create": "Creer",
+    "fields": {
+      "nom": "Nom",
+      "nomPlaceholder": "Ex: Raanan Fish Feed",
+      "telephone": "Telephone (optionnel)",
+      "telephonePlaceholder": "6XX XX XX XX (+237 ajoute automatiquement)",
+      "email": "Email (optionnel)",
+      "emailPlaceholder": "contact@fournisseur.com",
+      "adresse": "Adresse (optionnel)",
+      "adressePlaceholder": "Douala, Cameroun"
+    },
+    "stats": {
+      "produits": "{count, plural, one {# produit} other {# produits}}",
+      "commandes": "{count, plural, one {# commande} other {# commandes}}"
+    }
+  },
+  "commandes": {
+    "title": "Commandes",
+    "count": "{count, plural, one {# commande} other {# commandes}}",
+    "add": "Nouvelle commande",
+    "new": "Commande",
+    "empty": "Aucune commande",
+    "tabs": {
+      "all": "Toutes"
+    },
+    "fields": {
+      "fournisseur": "Fournisseur",
+      "choix": "Choisir",
+      "date": "Date de commande",
+      "lignes": "Lignes de commande",
+      "ligne": "Ligne {n}",
+      "produit": "Produit",
+      "total": "Total : {montant} FCFA",
+      "montantTotal": "Montant total"
+    },
+    "lignes": {
+      "add": "Ajouter une ligne",
+      "qtePlaceholder": "Qte",
+      "qteWithUnit": "Qte ({unit})",
+      "prixPlaceholder": "Prix unit."
+    },
+    "detail": {
+      "commande": "Commande : {date}",
+      "livraison": "Livraison : {date}",
+      "factureFournisseur": "Facture fournisseur",
+      "factureAttachee": "Facture attachee",
+      "voirFacture": "Voir la facture",
+      "ajouterFacture": "Ajouter la facture",
+      "aucuneFacture": "Aucune facture attachee a cette commande.",
+      "uploadFacture": "Ajouter une facture",
+      "uploadDescription": "Uploadez la facture fournisseur pour cette commande (PDF, JPG ou PNG — max 10 Mo).",
+      "choisirFichier": "Choisir un fichier",
+      "changerFichier": "Changer le fichier",
+      "uploader": "Uploader la facture",
+      "supprimerFacture": "Supprimer la facture",
+      "supprimerConfirm": "Cette action est irreversible. Le fichier sera definitivement supprime.",
+      "factureOptionnelle": "Facture fournisseur (optionnel)",
+      "factureFormat": "PDF, JPG ou PNG — max 10 Mo",
+      "envoyer": "Envoyer",
+      "receptionner": "Receptionner",
+      "annuler": "Annuler",
+      "confirmerReception": "Confirmer la reception",
+      "receptionDescription": "Cette action va creer des mouvements d'entree et mettre a jour le stock.",
+      "dateLivraison": "Date de livraison",
+      "creePar": "Cree par {name}",
+      "lignes": "Lignes ({count})"
+    },
+    "formatNonAutorise": "Format non autorise. Utiliser PDF, JPG ou PNG.",
+    "fichierTropVolumineux": "Fichier trop volumineux ({taille} Mo). Max 10 Mo."
+  },
+  "mouvements": {
+    "title": "Mouvements",
+    "count": "{count, plural, one {# mouvement} other {# mouvements}}",
+    "add": "Nouveau mouvement",
+    "new": "Mouvement",
+    "empty": "Aucun mouvement",
+    "save": "Enregistrer",
+    "tabs": {
+      "all": "Tous",
+      "entrees": "Entrees",
+      "sorties": "Sorties"
+    },
+    "fields": {
+      "produit": "Produit",
+      "produitPlaceholder": "Choisir un produit",
+      "type": "Type",
+      "quantite": "Quantite",
+      "quantiteWithUnit": "Quantite ({unit})",
+      "prixTotal": "Prix total (FCFA, optionnel)",
+      "date": "Date",
+      "vague": "Vague (optionnel)",
+      "vagueNone": "Aucune",
+      "notes": "Notes (optionnel)",
+      "notesPlaceholder": "Ex: Alimentation semaine 3"
+    }
+  },
+  "alertes": {
+    "title": "Alertes stock ({count})",
+    "voirTout": "Voir les {count} alertes"
+  },
+  "sections": {
+    "produits": "Produits",
+    "produitsDesc": "{count, plural, one {# produit} other {# produits}} en stock",
+    "fournisseurs": "Fournisseurs",
+    "fournisseursDesc": "{count, plural, one {# fournisseur} other {# fournisseurs}}",
+    "commandes": "Commandes",
+    "commandesDesc": "{count} en cours"
+  },
+  "actions": {
+    "create": "Creer",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "new": "Nouveau",
+    "back": "Stock"
+  }
+}

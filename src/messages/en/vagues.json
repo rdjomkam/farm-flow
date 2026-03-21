@@ -1,0 +1,144 @@
+{
+  "page": {
+    "title": "Batches"
+  },
+  "list": {
+    "count": "{count} batch",
+    "countPlural": "{count} batches",
+    "newButton": "New batch",
+    "emptyTitle": "No batches",
+    "emptyDescription": "No batches match this filter.",
+    "tabs": {
+      "enCours": "Active ({count})",
+      "terminees": "Completed ({count})",
+      "annulees": "Cancelled ({count})"
+    }
+  },
+  "card": {
+    "bac": "{count} tank",
+    "bacs": "{count} tanks",
+    "alevins": "{count} fry"
+  },
+  "statuts": {
+    "EN_COURS": "Active",
+    "TERMINEE": "Completed",
+    "ANNULEE": "Cancelled"
+  },
+  "indicateurs": {
+    "tauxSurvie": "Survival rate",
+    "biomasse": "Biomass",
+    "poidsMoyen": "Avg. weight",
+    "sgr": "SGR",
+    "fcr": "FCR"
+  },
+  "detail": {
+    "alevins": "{count} fry ({poids}g)",
+    "bac": "{count} tank",
+    "bacs": "{count} tanks",
+    "retourVagues": "Back to batches",
+    "sections": {
+      "calibrages": "Gradings",
+      "nouveau": "New",
+      "releves": "Records ({count})"
+    }
+  },
+  "form": {
+    "create": {
+      "title": "New batch",
+      "description": "Create a new fish lot to track.",
+      "submit": "Create batch"
+    },
+    "edit": {
+      "title": "Edit batch",
+      "description": "Update the initial parameters of the batch.",
+      "trigger": "Edit",
+      "submit": "Save"
+    },
+    "close": {
+      "title": "Close batch {code}",
+      "description": "This action is irreversible. Tanks will be released and the batch will be marked as Completed.",
+      "trigger": "Close",
+      "submit": "Confirm closure",
+      "dateLabel": "End date of cycle"
+    },
+    "cancel": "Cancel",
+    "sections": {
+      "identification": {
+        "title": "Identification",
+        "description": "Batch code and start date"
+      },
+      "population": {
+        "title": "Initial population",
+        "description": "Information about the fry"
+      },
+      "bacs": {
+        "title": "Tanks",
+        "description": "Select tanks to assign"
+      }
+    },
+    "fields": {
+      "code": "Batch code",
+      "codePlaceholder": "E.g.: BATCH-2026-001",
+      "dateDebut": "Start date",
+      "nombreInitial": "Number of fry",
+      "poidsMoyenInitial": "Initial average weight (g)",
+      "origineAlevins": "Fry origin (optional)",
+      "origineAlevinsFr": "E.g.: Local hatchery",
+      "aucunBacLibre": "No free tanks available."
+    },
+    "errors": {
+      "code": "Code is required.",
+      "dateDebut": "Start date is required.",
+      "nombreInitial": "Initial count must be greater than 0.",
+      "poidsMoyenInitial": "Average weight must be greater than 0.",
+      "bacIds": "Select at least one tank.",
+      "nombreInitialEdit": "Must be an integer greater than 0.",
+      "poidsMoyenInitialEdit": "Must be greater than 0."
+    }
+  },
+  "actionMenu": {
+    "actions": "Actions",
+    "nouveauReleve": "New record",
+    "calibrage": "Grading",
+    "modifier": "Edit",
+    "rapportPdf": "PDF Report",
+    "exportReleves": "Export records",
+    "cloturer": "Close"
+  },
+  "poidsChart": {
+    "title": "Average weight evolution",
+    "noData": "No biometric data available.",
+    "tooltipLabel": "Day {label}",
+    "seriesName": "Avg. weight"
+  },
+  "comparison": {
+    "selectTitle": "Select 2 to 4 batches",
+    "hide": "Hide",
+    "modify": "Edit",
+    "noVagues": "No batches available on this site.",
+    "selectedCount": "{count} batch selected / 4 max",
+    "selectedCountPlural": "{count} batches selected / 4 max",
+    "alevins": "{count} fry",
+    "releve": "{count} record",
+    "releves": "{count} records",
+    "compareButton": "Compare",
+    "resultsTitle": "Results — {count} batches",
+    "sectionZootechnique": "Zootechnics",
+    "sectionFinancier": "Financial",
+    "sectionRadar": "Performance radar",
+    "sectionComparaisonFinanciere": "Financial comparison",
+    "metrics": {
+      "survie": "Survival",
+      "biomasse": "Biomass",
+      "coutAliment": "Feed cost",
+      "revenuVentes": "Sales revenue",
+      "margeBrute": "Gross margin",
+      "roi": "ROI"
+    },
+    "financialChart": {
+      "coutAliment": "Feed cost",
+      "revenuVentes": "Sales revenue",
+      "margeBrute": "Gross margin"
+    }
+  }
+}

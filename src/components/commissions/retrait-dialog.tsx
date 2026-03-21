@@ -22,6 +22,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { FournisseurPaiement } from "@/types";
+import { useTranslations } from "next-intl";
 
 interface RetraitDialogProps {
   soldeDisponible: number;
@@ -43,6 +44,7 @@ function formatXAF(amount: number) {
 }
 
 export function RetraitDialog({ soldeDisponible }: RetraitDialogProps) {
+  const t = useTranslations("commissions");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"form" | "confirm">("form");
@@ -72,19 +74,19 @@ export function RetraitDialog({ soldeDisponible }: RetraitDialogProps) {
     setError(null);
     const montantNum = Number(montant);
     if (!montant || isNaN(montantNum) || montantNum <= 0) {
-      setError("Veuillez entrer un montant valide.");
+      setError(t("retraits.dialog.errors.montantInvalide"));
       return;
     }
     if (montantNum < 5000) {
-      setError("Le montant minimum est de 5 000 FCFA.");
+      setError(t("retraits.dialog.errors.montantMinimum"));
       return;
     }
     if (montantNum > soldeDisponible) {
-      setError(`Le montant dépasse votre solde disponible (${formatXAF(soldeDisponible)}).`);
+      setError(t("retraits.dialog.errors.montantDepasse", { amount: formatXAF(soldeDisponible) }));
       return;
     }
     if (!phoneNumber.trim()) {
-      setError("Veuillez entrer un numéro de téléphone.");
+      setError(t("retraits.dialog.errors.telephoneRequis"));
       return;
     }
     setStep("confirm");
@@ -105,14 +107,14 @@ export function RetraitDialog({ soldeDisponible }: RetraitDialogProps) {
       });
       const data = await response.json() as { status?: number; message?: string };
       if (!response.ok) {
-        setError(data.message ?? "Erreur lors de la demande de retrait.");
+        setError(data.message ?? t("retraits.dialog.errors.erreurRetrait"));
         setStep("form");
         return;
       }
       setOpen(false);
       router.refresh();
     } catch {
-      setError("Erreur réseau. Veuillez réessayer.");
+      setError(t("retraits.dialog.errors.erreurReseau"));
       setStep("form");
     } finally {
       setLoading(false);
@@ -129,7 +131,7 @@ export function RetraitDialog({ soldeDisponible }: RetraitDialogProps) {
           className="w-full mt-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors"
           type="button"
         >
-          Demander un retrait
+          {t("portefeuille.demanderRetrait")}
         </button>
       </DialogTrigger>
 
@@ -137,9 +139,9 @@ export function RetraitDialog({ soldeDisponible }: RetraitDialogProps) {
         {step === "form" && (
           <>
             <DialogHeader>
-              <DialogTitle>Demande de retrait</DialogTitle>
+              <DialogTitle>{t("retraits.dialog.title")}</DialogTitle>
               <DialogDescription>
-                Solde disponible : {formatXAF(soldeDisponible)}
+                {t("retraits.dialog.soldeDisponible", { amount: formatXAF(soldeDisponible) })}
               </DialogDescription>
             </DialogHeader>
 
@@ -152,7 +154,7 @@ export function RetraitDialog({ soldeDisponible }: RetraitDialogProps) {
 
               <div className="space-y-1">
                 <label className="text-sm font-medium text-foreground" htmlFor="montant-retrait">
-                  Montant (FCFA)
+                  {t("retraits.dialog.montant")}
                 </label>
                 <input
                   id="montant-retrait"
@@ -161,28 +163,28 @@ export function RetraitDialog({ soldeDisponible }: RetraitDialogProps) {
                   max={soldeDisponible}
                   value={montant}
                   onChange={(e) => setMontant(e.target.value)}
-                  placeholder="Ex: 10000"
+                  placeholder={t("retraits.dialog.montantPlaceholder")}
                   className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
 
               <div className="space-y-1">
                 <label className="text-sm font-medium text-foreground" htmlFor="phone-retrait">
-                  Numéro de téléphone Mobile Money
+                  {t("retraits.dialog.telephone")}
                 </label>
                 <input
                   id="phone-retrait"
                   type="tel"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="Ex: +237690000000"
+                  placeholder={t("retraits.dialog.telephonePlaceholder")}
                   className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
 
               <div className="space-y-1">
                 <label className="text-sm font-medium text-foreground" htmlFor="fournisseur-retrait">
-                  Fournisseur
+                  {t("retraits.dialog.fournisseur")}
                 </label>
                 <select
                   id="fournisseur-retrait"
@@ -205,14 +207,14 @@ export function RetraitDialog({ soldeDisponible }: RetraitDialogProps) {
                 onClick={() => handleOpenChange(false)}
                 className="px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors"
               >
-                Annuler
+                {t("retraits.dialog.annuler")}
               </button>
               <button
                 type="button"
                 onClick={handleNext}
                 className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
               >
-                Suivant
+                {t("retraits.dialog.suivant")}
               </button>
             </DialogFooter>
           </>
@@ -221,9 +223,9 @@ export function RetraitDialog({ soldeDisponible }: RetraitDialogProps) {
         {step === "confirm" && (
           <>
             <DialogHeader>
-              <DialogTitle>Confirmer le retrait</DialogTitle>
+              <DialogTitle>{t("retraits.dialog.confirmTitle")}</DialogTitle>
               <DialogDescription>
-                Vérifiez les informations avant de confirmer.
+                {t("retraits.dialog.confirmDescription")}
               </DialogDescription>
             </DialogHeader>
 
@@ -235,20 +237,20 @@ export function RetraitDialog({ soldeDisponible }: RetraitDialogProps) {
               )}
               <div className="rounded-lg border border-border bg-muted/50 p-4 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Montant</span>
+                  <span className="text-muted-foreground">{t("retraits.dialog.confirmMontant")}</span>
                   <span className="font-semibold text-foreground">{formatXAF(Number(montant))}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Numéro</span>
+                  <span className="text-muted-foreground">{t("retraits.dialog.confirmNumero")}</span>
                   <span className="font-medium text-foreground">{phoneNumber}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Via</span>
+                  <span className="text-muted-foreground">{t("retraits.dialog.confirmVia")}</span>
                   <span className="font-medium text-foreground">{fournisseurLabel}</span>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                Le virement sera effectué par l&apos;équipe DKFarm dans les 48h ouvrées.
+                {t("retraits.dialog.virementInfo")}
               </p>
             </div>
 
@@ -259,7 +261,7 @@ export function RetraitDialog({ soldeDisponible }: RetraitDialogProps) {
                 disabled={loading}
                 className="px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50"
               >
-                Retour
+                {t("retraits.dialog.retour")}
               </button>
               <button
                 type="button"
@@ -267,7 +269,7 @@ export function RetraitDialog({ soldeDisponible }: RetraitDialogProps) {
                 disabled={loading}
                 className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
-                {loading ? "Envoi..." : "Confirmer"}
+                {loading ? t("retraits.dialog.envoi") : t("retraits.dialog.confirmer")}
               </button>
             </DialogFooter>
           </>

@@ -1,0 +1,120 @@
+{
+  "list": {
+    "title": "Utilisateurs",
+    "ajouter": "Ajouter",
+    "total": "{count} utilisateur au total",
+    "totalPlural": "{count} utilisateurs au total",
+    "count": "{count} utilisateur",
+    "countPlural": "{count} utilisateurs",
+    "aucun": "Aucun utilisateur",
+    "aucunDescription": "Aucun utilisateur ne correspond a ce filtre.",
+    "search": "Rechercher",
+    "searchPlaceholder": "Nom, email ou telephone...",
+    "role": "Role",
+    "allRoles": "Tous les roles",
+    "actif": "Actif",
+    "desactive": "Desactive",
+    "sites": "{count} site",
+    "sitesPlural": "{count} sites"
+  },
+  "form": {
+    "title": "Nouvel utilisateur",
+    "identite": "Identite",
+    "identiteDescription": "Informations de base de l'utilisateur",
+    "nomComplet": "Nom complet",
+    "nomCompletPlaceholder": "Ex : Jean Dupont",
+    "email": "Adresse email (optionnel si telephone renseigne)",
+    "emailPlaceholder": "jean@example.com",
+    "telephone": "Telephone (optionnel si email renseigne)",
+    "telephonePlaceholder": "+237 6XX XX XX XX",
+    "acces": "Acces",
+    "accesDescription": "Role et mot de passe de connexion",
+    "roleGlobal": "Role global",
+    "motDePasse": "Mot de passe (min. 6 caracteres)",
+    "motDePassePlaceholder": "••••••••",
+    "creerUtilisateur": "Creer l'utilisateur",
+    "errors": {
+      "nomObligatoire": "Le nom est obligatoire.",
+      "emailOuTelephone": "Email ou telephone est requis.",
+      "motDePasseTropCourt": "Le mot de passe doit contenir au moins 6 caracteres."
+    }
+  },
+  "roles": {
+    "ADMIN": "Administrateur global",
+    "GERANT": "Gerant",
+    "PISCICULTEUR": "Pisciculteur",
+    "INGENIEUR": "Ingenieur"
+  },
+  "detail": {
+    "tabProfil": "Profil",
+    "tabSecurite": "Securite",
+    "tabSites": "Sites"
+  },
+  "profile": {
+    "modifierProfil": "Modifier le profil",
+    "modifierDescription": "Mettez a jour les informations",
+    "nom": "Nom",
+    "email": "Email",
+    "telephone": "Telephone",
+    "roleGlobal": "Role global",
+    "statut": "Statut",
+    "nonRenseigne": "Non renseigne",
+    "enregistrer": "Enregistrer",
+    "annuler": "Annuler",
+    "modifier": "Modifier le profil",
+    "compteSysteme": "Cet utilisateur est un compte systeme. Il ne peut pas etre modifie.",
+    "compteDesactive": "Ce compte est desactive. L'utilisateur ne peut pas se connecter.",
+    "desactiverCompte": "Desactiver le compte",
+    "reactiverCompte": "Reactiver le compte",
+    "desactiverDescription": "L'utilisateur {name} ne pourra plus se connecter. Vous pouvez reactiver le compte a tout moment.",
+    "reactiverDescription": "L'utilisateur {name} pourra a nouveau se connecter.",
+    "desactiver": "Desactiver",
+    "reactiver": "Reactiver"
+  },
+  "security": {
+    "reinitialiserMotDePasse": "Reinitialiser le mot de passe",
+    "reinitialiserDescription": "Definissez un nouveau mot de passe pour cet utilisateur",
+    "nouveauMotDePasse": "Nouveau mot de passe",
+    "confirmerMotDePasse": "Confirmer le mot de passe",
+    "changerMotDePasse": "Changer le mot de passe",
+    "deconnexionForcee": "Deconnexion forcee",
+    "deconnexionForceeDescription": "Supprime toutes les sessions actives de cet utilisateur. Il devra se reconnecter.",
+    "forcerDeconnexion": "Forcer la deconnexion",
+    "forcerDeconnexionConfirmTitle": "Forcer la deconnexion",
+    "forcerDeconnexionConfirmDescription": "Toutes les sessions actives de {name} seront supprimees. Cette action ne peut pas etre annulee.",
+    "annuler": "Annuler",
+    "compteSysteme": "Cet utilisateur est un compte systeme. Les actions de securite ne sont pas disponibles.",
+    "errors": {
+      "motDePasseTropCourt": "Le mot de passe doit contenir au moins 6 caracteres.",
+      "motDePasseNonCorrespondant": "Les mots de passe ne correspondent pas."
+    }
+  },
+  "impersonation": {
+    "sectionTitle": "Impersonation",
+    "sectionDescription": "Se connecter en tant que cet utilisateur pour voir l'application a sa place.",
+    "button": "Se connecter en tant que cet utilisateur",
+    "confirmTitle": "Confirmer l'impersonation",
+    "confirmDescription": "Vous allez vous connecter en tant que {name}. Vous verrez l'application exactement comme cet utilisateur. Un bandeau vous permettra de reprendre votre session.",
+    "continuer": "Continuer",
+    "annuler": "Annuler",
+    "disabled": {
+      "admin": "Impossible d'impersonner un administrateur.",
+      "desactive": "Impossible d'impersonner un compte desactive.",
+      "default": "L'impersonation n'est pas disponible pour cet utilisateur."
+    },
+    "banner": {
+      "viewingAs": "Vous consultez l'application en tant que",
+      "reprendreSession": "Reprendre ma session",
+      "sessionAdmin": "Session admin"
+    }
+  },
+  "memberships": {
+    "aucunSite": "Aucun site",
+    "aucunSiteDescription": "Cet utilisateur n'est membre d'aucun site.",
+    "count": "{count} site",
+    "countPlural": "{count} sites",
+    "actif": "Actif",
+    "inactif": "Inactif",
+    "gererCeSite": "Gerer ce site"
+  }
+}

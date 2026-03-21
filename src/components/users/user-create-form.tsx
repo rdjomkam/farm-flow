@@ -14,15 +14,10 @@ import {
 } from "@/components/ui/select";
 import { Role } from "@/types";
 import { useUserService } from "@/services";
-
-const ROLE_OPTIONS = [
-  { value: Role.PISCICULTEUR, label: "Pisciculteur" },
-  { value: Role.GERANT, label: "Gerant" },
-  { value: Role.INGENIEUR, label: "Ingenieur" },
-  { value: Role.ADMIN, label: "Administrateur global" },
-];
+import { useTranslations } from "next-intl";
 
 export function UserCreateForm() {
+  const t = useTranslations("users");
   const router = useRouter();
   const userService = useUserService();
 
@@ -33,18 +28,25 @@ export function UserCreateForm() {
   const [globalRole, setGlobalRole] = useState<Role>(Role.PISCICULTEUR);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const ROLE_OPTIONS = [
+    { value: Role.PISCICULTEUR, label: t("roles.PISCICULTEUR") },
+    { value: Role.GERANT, label: t("roles.GERANT") },
+    { value: Role.INGENIEUR, label: t("roles.INGENIEUR") },
+    { value: Role.ADMIN, label: t("roles.ADMIN") },
+  ];
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
 
     if (!name.trim()) {
-      newErrors.name = "Le nom est obligatoire.";
+      newErrors.name = t("form.errors.nomObligatoire");
     }
     if (!email.trim() && !phone.trim()) {
-      newErrors.email = "Email ou telephone est requis.";
+      newErrors.email = t("form.errors.emailOuTelephone");
     }
     if (!password || password.length < 6) {
-      newErrors.password = "Le mot de passe doit contenir au moins 6 caracteres.";
+      newErrors.password = t("form.errors.motDePasseTropCourt");
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -81,11 +83,11 @@ export function UserCreateForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-      <FormSection title="Identite" description="Informations de base de l'utilisateur">
+      <FormSection title={t("form.identite")} description={t("form.identiteDescription")}>
         <Input
           id="name"
-          label="Nom complet"
-          placeholder="Ex : Jean Dupont"
+          label={t("form.nomComplet")}
+          placeholder={t("form.nomCompletPlaceholder")}
           value={name}
           onChange={(e) => setName(e.target.value)}
           error={errors.name}
@@ -93,27 +95,27 @@ export function UserCreateForm() {
         />
         <Input
           id="email"
-          label="Adresse email (optionnel si telephone renseigne)"
+          label={t("form.email")}
           type="email"
-          placeholder="jean@example.com"
+          placeholder={t("form.emailPlaceholder")}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           error={errors.email}
         />
         <Input
           id="phone"
-          label="Telephone (optionnel si email renseigne)"
+          label={t("form.telephone")}
           type="tel"
-          placeholder="+237 6XX XX XX XX"
+          placeholder={t("form.telephonePlaceholder")}
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           error={errors.phone}
         />
       </FormSection>
 
-      <FormSection title="Acces" description="Role et mot de passe de connexion">
+      <FormSection title={t("form.acces")} description={t("form.accesDescription")}>
         <Select value={globalRole} onValueChange={(v) => setGlobalRole(v as Role)}>
-          <SelectTrigger label="Role global">
+          <SelectTrigger label={t("form.roleGlobal")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -127,9 +129,9 @@ export function UserCreateForm() {
 
         <Input
           id="password"
-          label="Mot de passe (min. 6 caracteres)"
+          label={t("form.motDePasse")}
           type="password"
-          placeholder="••••••••"
+          placeholder={t("form.motDePassePlaceholder")}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           error={errors.password}
@@ -138,7 +140,7 @@ export function UserCreateForm() {
       </FormSection>
 
       <Button type="submit" className="w-full">
-        Creer l'utilisateur
+        {t("form.creerUtilisateur")}
       </Button>
     </form>
   );

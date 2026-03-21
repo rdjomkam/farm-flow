@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { Textarea } from "@/components/ui/textarea";
 
 interface FormObservationProps {
@@ -7,12 +10,14 @@ interface FormObservationProps {
 }
 
 export function FormObservation({ values, onChange, errors }: FormObservationProps) {
+  const t = useTranslations("releves");
+
   return (
     <Textarea
       id="description"
-      label="Description"
+      label={t("form.observation.description")}
       rows={4}
-      placeholder="Décrivez votre observation..."
+      placeholder={t("form.observation.placeholder")}
       value={values.description}
       onChange={(e) => onChange("description", e.target.value)}
       error={errors.description}

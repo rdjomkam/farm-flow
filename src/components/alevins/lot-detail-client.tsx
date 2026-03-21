@@ -25,13 +25,7 @@ import {
 } from "@/components/ui/select";
 import { useAlevinsService } from "@/services";
 import { StatutLotAlevins, Permission } from "@/types";
-
-const statutLabels: Record<StatutLotAlevins, string> = {
-  [StatutLotAlevins.EN_INCUBATION]: "En incubation",
-  [StatutLotAlevins.EN_ELEVAGE]: "En elevage",
-  [StatutLotAlevins.TRANSFERE]: "Transfere",
-  [StatutLotAlevins.PERDU]: "Perdu",
-};
+import { useTranslations } from "next-intl";
 
 function statutBadgeClass(statut: string): string {
   if (statut === StatutLotAlevins.EN_INCUBATION)
@@ -83,6 +77,7 @@ interface Props {
 }
 
 export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) {
+  const t = useTranslations("alevins");
   const router = useRouter();
   const alevinsService = useAlevinsService();
   const [editOpen, setEditOpen] = useState(false);
@@ -100,6 +95,13 @@ export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) 
   // Transfert form state
   const [nomVague, setNomVague] = useState("");
   const [selectedBacs, setSelectedBacs] = useState<string[]>([]);
+
+  const statutLabels: Record<StatutLotAlevins, string> = {
+    [StatutLotAlevins.EN_INCUBATION]: t("lots.statuts.EN_INCUBATION"),
+    [StatutLotAlevins.EN_ELEVAGE]: t("lots.statuts.EN_ELEVAGE"),
+    [StatutLotAlevins.TRANSFERE]: t("lots.statuts.TRANSFERE"),
+    [StatutLotAlevins.PERDU]: t("lots.statuts.PERDU"),
+  };
 
   function toggleBac(bacId: string) {
     setSelectedBacs((prev) =>
@@ -141,7 +143,7 @@ export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) 
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
       >
         <ArrowLeft className="h-4 w-4" />
-        Lots d&apos;alevins
+        {t("lots.backToLots")}
       </Link>
 
       {/* Header actions */}
@@ -157,35 +159,35 @@ export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) 
             <DialogTrigger asChild>
               <Button size="sm" variant="outline">
                 <Pencil className="h-4 w-4 mr-1" />
-                Modifier
+                {t("lots.form.enregistrer")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Modifier le lot</DialogTitle>
+                <DialogTitle>{t("lots.modifierLot")}</DialogTitle>
               </DialogHeader>
               <div className="flex flex-col gap-4 py-2">
                 <Input
-                  label="Nombre actuel"
+                  label={t("lots.form.nombreActuel")}
                   type="number"
                   value={nombreActuel}
                   onChange={(e) => setNombreActuel(e.target.value)}
                   autoFocus
                 />
                 <Input
-                  label="Age en jours"
+                  label={t("lots.form.ageJours")}
                   type="number"
                   value={ageJours}
                   onChange={(e) => setAgeJours(e.target.value)}
                 />
                 <Input
-                  label="Poids moyen (g) (optionnel)"
+                  label={t("lots.form.poidsMoyen")}
                   type="number"
                   value={poidsMoyen}
                   onChange={(e) => setPoidsMoyen(e.target.value)}
                 />
                 <Select value={statut} onValueChange={setStatut}>
-                  <SelectTrigger label="Statut">
+                  <SelectTrigger label={t("lots.form.statut")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -197,17 +199,17 @@ export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) 
                   </SelectContent>
                 </Select>
                 <Input
-                  label="Notes (optionnel)"
+                  label={t("lots.form.notes")}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                 />
               </div>
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button variant="outline">Annuler</Button>
+                  <Button variant="outline">{t("lots.form.annuler")}</Button>
                 </DialogClose>
                 <Button onClick={handleSave}>
-                  Enregistrer
+                  {t("lots.form.enregistrer")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -228,37 +230,36 @@ export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) 
               <DialogTrigger asChild>
                 <Button size="sm">
                   <ArrowRightLeft className="h-4 w-4 mr-1" />
-                  Transferer
+                  {t("lots.transfert.button")}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Transferer vers une vague</DialogTitle>
+                  <DialogTitle>{t("lots.transfert.title")}</DialogTitle>
                 </DialogHeader>
                 <div className="flex flex-col gap-4 py-2">
                   <p className="text-sm text-muted-foreground">
-                    Un transfert va creer une nouvelle vague de grossissement
-                    avec {lot.nombreActuel} alevins.
+                    {t("lots.transfert.description", { count: lot.nombreActuel })}
                   </p>
                   <Input
-                    label="Nom de la nouvelle vague"
-                    placeholder="Ex: Vague Alevins Mars 2026"
+                    label={t("lots.form.nomVague")}
+                    placeholder={t("lots.form.nomVaguePlaceholder")}
                     value={nomVague}
                     onChange={(e) => setNomVague(e.target.value)}
                     autoFocus
                   />
                   <div className="flex flex-col gap-2">
                     <p className="text-sm font-medium">
-                      Bacs a assigner{" "}
+                      {t("lots.form.bacsAssigner")}{" "}
                       <span className="text-muted-foreground font-normal">
-                        ({bacsLibres.length} disponible
-                        {bacsLibres.length > 1 ? "s" : ""})
+                        ({bacsLibres.length === 1
+                          ? t("lots.form.bacsDisponibles", { count: bacsLibres.length })
+                          : t("lots.form.bacsDisponiblesPlural", { count: bacsLibres.length })})
                       </span>
                     </p>
                     {bacsLibres.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
-                        Aucun bac libre disponible. Liberez des bacs avant de
-                        transferer.
+                        {t("lots.form.aucunBacLibre")}
                       </p>
                     ) : (
                       <div className="flex flex-col gap-2 max-h-48 overflow-y-auto border border-border rounded-lg p-2">
@@ -280,16 +281,16 @@ export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) 
                     )}
                     {selectedBacs.length > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        {selectedBacs.length} bac
-                        {selectedBacs.length > 1 ? "s" : ""} selectionne
-                        {selectedBacs.length > 1 ? "s" : ""}
+                        {selectedBacs.length === 1
+                          ? t("lots.form.bacsSelectionnes", { count: selectedBacs.length })
+                          : t("lots.form.bacsSelectionnesPlural", { count: selectedBacs.length })}
                       </p>
                     )}
                   </div>
                 </div>
                 <DialogFooter>
                   <DialogClose asChild>
-                    <Button variant="outline">Annuler</Button>
+                    <Button variant="outline">{t("lots.transfert.annuler")}</Button>
                   </DialogClose>
                   <Button
                     onClick={handleTransfert}
@@ -298,7 +299,7 @@ export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) 
                       selectedBacs.length === 0
                     }
                   >
-                    Confirmer le transfert
+                    {t("lots.transfert.confirm")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -310,38 +311,38 @@ export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) 
       {/* Infos principales */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Informations</CardTitle>
+          <CardTitle className="text-base">{t("lots.detail.informations")}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Code</span>
+            <span className="text-muted-foreground">{t("lots.detail.code")}</span>
             <span className="font-medium">{lot.code}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Alevins</span>
+            <span className="text-muted-foreground">{t("lots.detail.alevins")}</span>
             <span>
-              {lot.nombreActuel} / {lot.nombreInitial} (initial)
+              {lot.nombreActuel} / {lot.nombreInitial} ({t("lots.detail.initial")})
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Age</span>
-            <span>{lot.ageJours} jours</span>
+            <span className="text-muted-foreground">{t("lots.detail.age")}</span>
+            <span>{lot.ageJours} {t("lots.detail.jourUnit")}</span>
           </div>
           {lot.poidsMoyen !== null && (
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Poids moyen</span>
-              <span>{lot.poidsMoyen} g</span>
+              <span className="text-muted-foreground">{t("lots.detail.poidsMoyen")}</span>
+              <span>{lot.poidsMoyen} {t("lots.detail.grammesUnit")}</span>
             </div>
           )}
           {lot.bac && (
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Bac actuel</span>
+              <span className="text-muted-foreground">{t("lots.detail.bacActuel")}</span>
               <span>{lot.bac.nom}</span>
             </div>
           )}
           {lot.dateTransfert && (
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Date transfert</span>
+              <span className="text-muted-foreground">{t("lots.detail.dateTransfert")}</span>
               <span>
                 {new Date(lot.dateTransfert).toLocaleDateString("fr-FR")}
               </span>
@@ -349,7 +350,7 @@ export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) 
           )}
           {lot.notes && (
             <div className="flex flex-col gap-1 pt-1 border-t border-border">
-              <span className="text-muted-foreground">Notes</span>
+              <span className="text-muted-foreground">{t("lots.detail.notes")}</span>
               <p className="text-sm">{lot.notes}</p>
             </div>
           )}
@@ -359,7 +360,7 @@ export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) 
       {/* Ponte parente */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Ponte d&apos;origine</CardTitle>
+          <CardTitle className="text-base">{t("lots.detail.ponteOrigine")}</CardTitle>
         </CardHeader>
         <CardContent className="text-sm">
           <Link
@@ -368,8 +369,8 @@ export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) 
           >
             <span className="font-medium text-primary">{lot.ponte.code}</span>
             <div className="text-xs text-muted-foreground">
-              <span>Femelle : {lot.ponte.femelle.code}</span>
-              {lot.ponte.male && <span> — Male : {lot.ponte.male.code}</span>}
+              <span>{t("pontes.card.femelle")} : {lot.ponte.femelle.code}</span>
+              {lot.ponte.male && <span> — {t("pontes.card.male")} : {lot.ponte.male.code}</span>}
             </div>
           </Link>
         </CardContent>
@@ -381,7 +382,7 @@ export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) 
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Waves className="h-4 w-4 text-primary" />
-              Vague de destination
+              {t("lots.detail.vagueDestination")}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm">
@@ -393,7 +394,7 @@ export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) 
                 {lot.vagueDestination.code}
               </span>
               <span className="text-xs text-muted-foreground">
-                {lot.vagueDestination.bacs.length} bac
+                {lot.vagueDestination.bacs.length} {t("lots.card.bac")}
                 {lot.vagueDestination.bacs.length > 1 ? "s" : ""}
               </span>
             </Link>

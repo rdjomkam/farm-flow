@@ -26,12 +26,7 @@ import {
 } from "@/components/ui/select";
 import { StatutPonte, Permission } from "@/types";
 import { useAlevinsService } from "@/services";
-
-const statutLabels: Record<StatutPonte, string> = {
-  [StatutPonte.EN_COURS]: "En cours",
-  [StatutPonte.TERMINEE]: "Terminee",
-  [StatutPonte.ECHOUEE]: "Echouee",
-};
+import { useTranslations } from "next-intl";
 
 function statutBadgeClass(statut: string): string {
   if (statut === StatutPonte.EN_COURS) return "bg-accent-green-muted text-accent-green";
@@ -59,6 +54,7 @@ interface Props {
 }
 
 export function PontesListClient({ pontes, femelles, males, permissions }: Props) {
+  const t = useTranslations("alevins");
   const router = useRouter();
   const alevinsService = useAlevinsService();
   const [tab, setTab] = useState("tous");
@@ -73,6 +69,12 @@ export function PontesListClient({ pontes, femelles, males, permissions }: Props
   const [nombreOeufs, setNombreOeufs] = useState("");
   const [tauxFecondation, setTauxFecondation] = useState("");
   const [notes, setNotes] = useState("");
+
+  const statutLabels: Record<StatutPonte, string> = {
+    [StatutPonte.EN_COURS]: t("pontes.statuts.EN_COURS"),
+    [StatutPonte.TERMINEE]: t("pontes.statuts.TERMINEE"),
+    [StatutPonte.ECHOUEE]: t("pontes.statuts.ECHOUEE"),
+  };
 
   const filtered = pontes.filter((p) => {
     const matchTab =
@@ -120,12 +122,14 @@ export function PontesListClient({ pontes, femelles, males, permissions }: Props
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
       >
         <ArrowLeft className="h-4 w-4" />
-        Alevins
+        {t("pontes.backToAlevins")}
       </Link>
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {pontes.length} ponte{pontes.length > 1 ? "s" : ""}
+          {pontes.length === 1
+            ? t("pontes.count", { count: pontes.length })
+            : t("pontes.countPlural", { count: pontes.length })}
         </p>
         {permissions.includes(Permission.ALEVINS_CREER) && (
           <Dialog
@@ -138,24 +142,24 @@ export function PontesListClient({ pontes, femelles, males, permissions }: Props
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-1" />
-                Nouvelle
+                {t("pontes.nouvelle")}
               </Button>
             </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Nouvelle ponte</DialogTitle>
+              <DialogTitle>{t("pontes.nouvellePonte")}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-4 py-2">
               <Input
-                label="Code"
-                placeholder="Ex: PONTE-2026-001"
+                label={t("pontes.form.code")}
+                placeholder={t("pontes.form.codePlaceholder")}
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 autoFocus
               />
               <Select value={femelleId} onValueChange={setFemelleId}>
-                <SelectTrigger label="Femelle">
-                  <SelectValue placeholder="Selectionnez une femelle" />
+                <SelectTrigger label={t("pontes.form.femelle")}>
+                  <SelectValue placeholder={t("pontes.form.femellePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {femelles.map((f) => (
@@ -166,8 +170,8 @@ export function PontesListClient({ pontes, femelles, males, permissions }: Props
                 </SelectContent>
               </Select>
               <Select value={maleId} onValueChange={setMaleId}>
-                <SelectTrigger label="Male (optionnel)">
-                  <SelectValue placeholder="Aucun male identifie" />
+                <SelectTrigger label={t("pontes.form.male")}>
+                  <SelectValue placeholder={t("pontes.form.malePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {males.map((m) => (
@@ -178,43 +182,43 @@ export function PontesListClient({ pontes, femelles, males, permissions }: Props
                 </SelectContent>
               </Select>
               <Input
-                label="Date de ponte"
+                label={t("pontes.form.datePonte")}
                 type="date"
                 value={datePonte}
                 onChange={(e) => setDatePonte(e.target.value)}
               />
               <Input
-                label="Nombre d'oeufs (optionnel)"
+                label={t("pontes.form.nombreOeufs")}
                 type="number"
-                placeholder="Ex: 5000"
+                placeholder={t("pontes.form.nombreOeufsPlaceholder")}
                 value={nombreOeufs}
                 onChange={(e) => setNombreOeufs(e.target.value)}
               />
               <Input
-                label="Taux de fecondation % (optionnel)"
+                label={t("pontes.form.tauxFecondation")}
                 type="number"
-                placeholder="Ex: 75"
+                placeholder={t("pontes.form.tauxFecondationPlaceholder")}
                 min="0"
                 max="100"
                 value={tauxFecondation}
                 onChange={(e) => setTauxFecondation(e.target.value)}
               />
               <Input
-                label="Notes (optionnel)"
-                placeholder="Observations..."
+                label={t("pontes.form.notes")}
+                placeholder={t("pontes.form.notesPlaceholder")}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
             </div>
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="outline">Annuler</Button>
+                <Button variant="outline">{t("pontes.form.annuler")}</Button>
               </DialogClose>
               <Button
                 onClick={handleCreate}
                 disabled={!code.trim() || !femelleId || !datePonte}
               >
-                Creer
+                {t("pontes.form.creer")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -223,7 +227,7 @@ export function PontesListClient({ pontes, femelles, males, permissions }: Props
       </div>
 
       <Input
-        placeholder="Rechercher par code ou femelle..."
+        placeholder={t("pontes.search")}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
@@ -231,7 +235,7 @@ export function PontesListClient({ pontes, femelles, males, permissions }: Props
       <Tabs value={tab} onValueChange={setTab}>
         <div className="overflow-x-auto -mx-4 px-4">
           <TabsList className="w-max">
-            <TabsTrigger value="tous">Toutes</TabsTrigger>
+            <TabsTrigger value="tous">{t("pontes.tabs.toutes")}</TabsTrigger>
             {Object.entries(statutLabels).map(([val, label]) => (
               <TabsTrigger key={val} value={val}>
                 {label}
@@ -243,7 +247,7 @@ export function PontesListClient({ pontes, femelles, males, permissions }: Props
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Egg className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Aucune ponte</p>
+              <p className="text-muted-foreground">{t("pontes.aucune")}</p>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
@@ -262,19 +266,19 @@ export function PontesListClient({ pontes, femelles, males, permissions }: Props
                             </span>
                           </div>
                           <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-muted-foreground">
-                            <span>Femelle : {p.femelle.code}</span>
+                            <span>{t("pontes.card.femelle")} : {p.femelle.code}</span>
                             <span>
-                              Male : {p.male ? p.male.code : "—"}
+                              {t("pontes.card.male")} : {p.male ? p.male.code : "—"}
                             </span>
                           </div>
                           {(p.nombreOeufs !== null ||
                             p.tauxFecondation !== null) && (
                             <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted-foreground">
                               {p.nombreOeufs !== null && (
-                                <span>{p.nombreOeufs.toLocaleString("fr-FR")} oeufs</span>
+                                <span>{p.nombreOeufs.toLocaleString("fr-FR")} {t("pontes.card.oeufs")}</span>
                               )}
                               {p.tauxFecondation !== null && (
-                                <span>{p.tauxFecondation}% fecondation</span>
+                                <span>{p.tauxFecondation}% {t("pontes.card.fecondation")}</span>
                               )}
                             </div>
                           )}
@@ -283,7 +287,7 @@ export function PontesListClient({ pontes, femelles, males, permissions }: Props
                           <p>
                             {new Date(p.datePonte).toLocaleDateString("fr-FR")}
                           </p>
-                          <p className="mt-0.5">{p._count.lots} lot(s)</p>
+                          <p className="mt-0.5">{p._count.lots} {t("pontes.card.lots")}</p>
                         </div>
                       </div>
                     </CardContent>

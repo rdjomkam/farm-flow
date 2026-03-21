@@ -9,6 +9,7 @@
  * R6 : CSS variables du thème
  */
 import { StatutPaiementAbo } from "@/types";
+import { useTranslations } from "next-intl";
 
 interface Retrait {
   id: string;
@@ -32,13 +33,6 @@ const STATUT_COLORS: Record<string, string> = {
   [StatutPaiementAbo.EXPIRE]: "bg-muted text-muted-foreground",
 };
 
-const STATUT_LABELS: Record<string, string> = {
-  [StatutPaiementAbo.EN_ATTENTE]: "En attente",
-  [StatutPaiementAbo.CONFIRME]: "Confirmé",
-  [StatutPaiementAbo.ECHEC]: "Échoué",
-  [StatutPaiementAbo.EXPIRE]: "Expiré",
-};
-
 function formatXAF(amount: number) {
   return new Intl.NumberFormat("fr-CM", {
     style: "currency",
@@ -59,10 +53,19 @@ function formatDate(date: Date | string) {
 }
 
 export function RetraitsList({ retraits }: RetraitsListProps) {
+  const t = useTranslations("commissions");
+
+  const STATUT_LABELS: Record<string, string> = {
+    [StatutPaiementAbo.EN_ATTENTE]: t("retraits.statuts.EN_ATTENTE"),
+    [StatutPaiementAbo.CONFIRME]: t("retraits.statuts.CONFIRME"),
+    [StatutPaiementAbo.ECHEC]: t("retraits.statuts.ECHEC"),
+    [StatutPaiementAbo.EXPIRE]: t("retraits.statuts.EXPIRE"),
+  };
+
   if (retraits.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground text-sm">
-        Aucun retrait effectué pour le moment.
+        {t("retraits.aucun")}
       </div>
     );
   }
@@ -84,15 +87,15 @@ export function RetraitsList({ retraits }: RetraitsListProps) {
               </p>
               {retrait.referenceExterne && (
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Réf. : {retrait.referenceExterne}
+                  {t("retraits.reference", { ref: retrait.referenceExterne })}
                 </p>
               )}
               <p className="text-xs text-muted-foreground mt-1">
-                Demandé le {formatDate(retrait.createdAt)}
+                {t("retraits.demandeLE", { date: formatDate(retrait.createdAt) })}
               </p>
               {retrait.dateTraitement && (
                 <p className="text-xs text-muted-foreground">
-                  Traité le {formatDate(retrait.dateTraitement)}
+                  {t("retraits.traiteLe", { date: formatDate(retrait.dateTraitement) })}
                 </p>
               )}
             </div>

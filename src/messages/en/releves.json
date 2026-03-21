@@ -1,0 +1,265 @@
+{
+  "page": {
+    "nouveau": "New record",
+    "retourVague": "Back to batch",
+    "nouveau_btn": "New"
+  },
+  "types": {
+    "BIOMETRIE": "Biometrics",
+    "MORTALITE": "Mortality",
+    "ALIMENTATION": "Feeding",
+    "QUALITE_EAU": "Water quality",
+    "COMPTAGE": "Counting",
+    "OBSERVATION": "Observation",
+    "RENOUVELLEMENT": "Water renewal"
+  },
+  "list": {
+    "title": "Records ({count})",
+    "tous": "All",
+    "emptyTitle": "No records",
+    "emptyDescription": "Records will appear here as monitoring progresses.",
+    "voirTout": "View all ({count})",
+    "modified": "Modified"
+  },
+  "details": {
+    "poids": "Weight: {value}g",
+    "taille": "Length: {value}cm",
+    "ech": "Samples: {count}",
+    "mort": "{count} death",
+    "morts": "{count} deaths",
+    "poissons": "{count} fish",
+    "xParJour": "{count}x/day"
+  },
+  "form": {
+    "title": "Enter a record",
+    "activiteNotice": {
+      "title": "Activity completion",
+      "description": "This record will be automatically linked to the planned activity and mark it as completed."
+    },
+    "sections": {
+      "identification": {
+        "title": "Identification",
+        "description": "Batch and tank"
+      },
+      "date": {
+        "title": "Record date",
+        "description": "Observation date (retroactive allowed)"
+      },
+      "type": {
+        "title": "Record type",
+        "description": "Choose the measurement type"
+      },
+      "biometrie": {
+        "title": "Biometric measurements",
+        "description": "Weight, length and sample"
+      },
+      "mortalite": {
+        "title": "Mortality",
+        "description": "Count and cause"
+      },
+      "alimentation": {
+        "title": "Feeding",
+        "description": "Quantity and feed type"
+      },
+      "qualiteEau": {
+        "title": "Water quality",
+        "description": "Physico-chemical parameters"
+      },
+      "comptage": {
+        "title": "Counting",
+        "description": "Count and method"
+      },
+      "observation": {
+        "title": "Observation",
+        "description": "Free-form description"
+      },
+      "consommationStock": {
+        "title": "Stock consumption",
+        "descriptionIntrant": "Products used (optional)",
+        "descriptionAliment": "Products consumed"
+      }
+    },
+    "fields": {
+      "vague": "Batch",
+      "vaguePlaceholder": "Select a batch",
+      "bac": "Tank",
+      "bacPlaceholder": "Select a tank",
+      "bacChargement": "Loading...",
+      "bacSelectVagueFirst": "Select a batch first",
+      "dateHeure": "Record date and time",
+      "typeReleve": "Record type",
+      "typeRelevePlaceholder": "Select a type",
+      "activitePlanifiee": "Planned activity (optional)",
+      "activiteLiee": "Linked activity",
+      "activiteSelectionnee": "Selected activity (linked automatically)",
+      "autoDetection": "Auto-detect",
+      "autoDetectionNone": "Auto-detect (no planned activity)",
+      "notes": "Notes (optional)",
+      "notesPlaceholder": "Additional remarks...",
+      "submit": "Save record"
+    },
+    "errors": {
+      "vagueId": "Select a batch.",
+      "bacId": "Select a tank.",
+      "typeReleve": "Select a record type.",
+      "poidsMoyen": "Required (> 0).",
+      "tailleMoyenne": "Must be > 0.",
+      "echantillonCount": "Required (> 0).",
+      "nombreMorts": "Required (>= 0).",
+      "causeMortalite": "Required.",
+      "quantiteAliment": "Required (> 0).",
+      "typeAliment": "Required.",
+      "frequenceAliment": "Required (> 0).",
+      "nombreCompte": "Required (>= 0).",
+      "methodeComptage": "Required.",
+      "description": "Required.",
+      "renouvellementRequis": "At least one field is required: percentage or volume.",
+      "pourcentageRange": "Percentage must be between 0 and 100.",
+      "volumePositif": "Volume must be greater than 0."
+    },
+    "biometrie": {
+      "poidsMoyen": "Average weight (g)",
+      "tailleMoyenne": "Average length (cm) — optional",
+      "echantillonCount": "Number of samples"
+    },
+    "mortalite": {
+      "nombreMorts": "Number of deaths",
+      "causeMortalite": "Mortality cause",
+      "causePlaceholder": "Select a cause",
+      "causes": {
+        "MALADIE": "Disease",
+        "QUALITE_EAU": "Water quality",
+        "STRESS": "Stress",
+        "PREDATION": "Predation",
+        "CANNIBALISME": "Cannibalism",
+        "INCONNUE": "Unknown",
+        "AUTRE": "Other"
+      }
+    },
+    "alimentation": {
+      "quantiteAliment": "Feed quantity ({unite})",
+      "typeAliment": "Feed type",
+      "typeAlimentPlaceholder": "Select a type",
+      "frequenceAliment": "Frequency (times/day)",
+      "types": {
+        "ARTISANAL": "Artisanal",
+        "COMMERCIAL": "Commercial",
+        "MIXTE": "Mixed"
+      }
+    },
+    "qualiteEau": {
+      "temperature": "Temperature (°C)",
+      "ph": "pH",
+      "oxygene": "Dissolved oxygen (mg/L)",
+      "ammoniac": "Ammonia (mg/L)"
+    },
+    "comptage": {
+      "nombreCompte": "Number of fish counted",
+      "methodeComptage": "Counting method",
+      "methodePlaceholder": "Select a method",
+      "methodes": {
+        "DIRECT": "Direct",
+        "ESTIMATION": "Estimation",
+        "ECHANTILLONNAGE": "Sampling"
+      }
+    },
+    "observation": {
+      "description": "Description",
+      "placeholder": "Describe your observation..."
+    },
+    "renouvellement": {
+      "title": "Water renewal",
+      "description": "Volume or percentage of tank renewed",
+      "pourcentage": "Percentage renewed (%)",
+      "volume": "Volume renewed (L)",
+      "volumeAvecBac": "Volume renewed (L) — tank {volume} L",
+      "hint": "At least one field is required.",
+      "hintLinked": " Both fields are linked automatically."
+    },
+    "consommation": {
+      "alimentsConsommes": "Feed consumed",
+      "intrantsUtilises": "Inputs used",
+      "optionnel": "(optional)",
+      "produitPlaceholder": "Product",
+      "stockDispo": "Available: {stock} {unite}",
+      "ajouterProduit": "Add a product"
+    }
+  },
+  "modify": {
+    "title": "Edit record",
+    "description": "Type: {type} — All changes are tracked for audit.",
+    "raison": {
+      "label": "Reason for modification",
+      "required": "*",
+      "placeholder": "E.g.: Scale reading error during weighing",
+      "valid": "Valid reason.",
+      "min": "Minimum 5 characters.",
+      "error": "The reason must contain at least 5 characters."
+    },
+    "dateLabel": "Record date",
+    "notesLabel": "Notes (optional)",
+    "descriptionLabel": "Description",
+    "cancel": "Cancel",
+    "submit": "Save changes",
+    "causeLabel": "Mortality cause",
+    "causePlaceholder": "Select...",
+    "typeAlimentLabel": "Feed type",
+    "typeAlimentPlaceholder": "Select...",
+    "methodeLabel": "Counting method",
+    "methodePlaceholder": "Select...",
+    "fields": {
+      "poidsMoyen": "Average weight (g)",
+      "tailleMoyenne": "Average length (cm)",
+      "echantillonCount": "Number of samples",
+      "nombreMorts": "Number of deaths",
+      "quantiteAliment": "Feed quantity (kg)",
+      "frequenceAliment": "Frequency (times/day)",
+      "temperature": "Temperature (°C)",
+      "ph": "pH",
+      "oxygene": "Dissolved oxygen (mg/L)",
+      "ammoniac": "Ammonia (mg/L)",
+      "nombreCompte": "Number of fish"
+    },
+    "errors": {
+      "poidsMoyen": "Must be greater than 0.",
+      "tailleMoyenne": "Must be greater than 0.",
+      "echantillonCount": "Must be an integer greater than 0.",
+      "nombreMorts": "Must be a positive integer or zero.",
+      "causeMortalite": "Select a cause.",
+      "quantiteAliment": "Must be greater than 0.",
+      "typeAliment": "Select a type.",
+      "frequenceAliment": "Must be an integer greater than 0.",
+      "nombreCompte": "Must be an integer greater than 0.",
+      "methodeComptage": "Select a method.",
+      "description": "Description is required."
+    }
+  },
+  "modifications": {
+    "historyTitle": "Modification history",
+    "reason": "Reason",
+    "instant": "just now",
+    "minutesAgo": "{count} min ago",
+    "hoursAgo": "{count}h ago",
+    "yesterday": "yesterday",
+    "daysAgo": "{count} days ago",
+    "fields": {
+      "poidsMoyen": "Average weight (g)",
+      "tailleMoyenne": "Average length (cm)",
+      "echantillonCount": "Samples",
+      "nombreMorts": "Number of deaths",
+      "causeMortalite": "Mortality cause",
+      "quantiteAliment": "Feed quantity (kg)",
+      "typeAliment": "Feed type",
+      "frequenceAliment": "Feed frequency",
+      "temperature": "Temperature (°C)",
+      "ph": "pH",
+      "oxygene": "Oxygen (mg/L)",
+      "ammoniac": "Ammonia (mg/L)",
+      "nombreCompte": "Count",
+      "methodeComptage": "Counting method",
+      "description": "Description",
+      "notes": "Notes",
+      "consommations": "Consumptions"
+    }
+  }
+}

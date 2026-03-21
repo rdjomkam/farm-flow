@@ -10,6 +10,7 @@ import {
   evaluateRules,
   generateActivities,
 } from "@/lib/activity-engine";
+import { ErrorKeys } from "@/lib/api-error-keys";
 
 export async function GET(request: NextRequest) {
   try {
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
     }
     return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation des releves." },
+      { status: 500, message: "Erreur serveur lors de la recuperation des releves.", errorKey: ErrorKeys.SERVER_GET_RELEVES },
       { status: 500 }
     );
   }
@@ -414,7 +415,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la creation du releve." },
+      { status: 500, message: "Erreur serveur lors de la creation du releve.", errorKey: ErrorKeys.SERVER_CREATE_RELEVE },
       { status: 500 }
     );
   }

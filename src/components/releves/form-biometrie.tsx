@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 
 interface FormBiometrieProps {
@@ -7,11 +10,13 @@ interface FormBiometrieProps {
 }
 
 export function FormBiometrie({ values, onChange, errors }: FormBiometrieProps) {
+  const t = useTranslations("releves");
+
   return (
     <>
       <Input
         id="poidsMoyen"
-        label="Poids moyen (g)"
+        label={t("form.biometrie.poidsMoyen")}
         type="number"
         min="0.1"
         step="0.1"
@@ -21,7 +26,7 @@ export function FormBiometrie({ values, onChange, errors }: FormBiometrieProps) 
       />
       <Input
         id="tailleMoyenne"
-        label="Taille moyenne (cm) — optionnel"
+        label={t("form.biometrie.tailleMoyenne")}
         type="number"
         min="0.1"
         step="0.1"
@@ -31,7 +36,7 @@ export function FormBiometrie({ values, onChange, errors }: FormBiometrieProps) 
       />
       <Input
         id="echantillonCount"
-        label="Nombre d'échantillons"
+        label={t("form.biometrie.echantillonCount")}
         type="number"
         min="1"
         value={values.echantillonCount}

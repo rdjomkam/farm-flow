@@ -1,0 +1,265 @@
+{
+  "page": {
+    "nouveau": "Nouveau releve",
+    "retourVague": "Retour à la vague",
+    "nouveau_btn": "Nouveau"
+  },
+  "types": {
+    "BIOMETRIE": "Biométrie",
+    "MORTALITE": "Mortalité",
+    "ALIMENTATION": "Alimentation",
+    "QUALITE_EAU": "Qualité eau",
+    "COMPTAGE": "Comptage",
+    "OBSERVATION": "Observation",
+    "RENOUVELLEMENT": "Renouvellement eau"
+  },
+  "list": {
+    "title": "Relevés ({count})",
+    "tous": "Tous",
+    "emptyTitle": "Aucun relevé",
+    "emptyDescription": "Les relevés apparaîtront ici au fur et à mesure du suivi.",
+    "voirTout": "Voir tout ({count})",
+    "modified": "Modifie"
+  },
+  "details": {
+    "poids": "Poids : {value}g",
+    "taille": "Taille : {value}cm",
+    "ech": "Éch. : {count}",
+    "mort": "{count} mort",
+    "morts": "{count} morts",
+    "poissons": "{count} poissons",
+    "xParJour": "{count}x/jour"
+  },
+  "form": {
+    "title": "Saisir un releve",
+    "activiteNotice": {
+      "title": "Completion d'activite",
+      "description": "Ce releve sera automatiquement lie a l'activite planifiee et la marquera comme terminee."
+    },
+    "sections": {
+      "identification": {
+        "title": "Identification",
+        "description": "Vague et bac concernés"
+      },
+      "date": {
+        "title": "Date du releve",
+        "description": "Date d'observation (retroactive possible)"
+      },
+      "type": {
+        "title": "Type de releve",
+        "description": "Choisissez le type de mesure"
+      },
+      "biometrie": {
+        "title": "Mesures biométriques",
+        "description": "Poids, taille et échantillon"
+      },
+      "mortalite": {
+        "title": "Mortalité",
+        "description": "Nombre et cause"
+      },
+      "alimentation": {
+        "title": "Alimentation",
+        "description": "Quantité et type d'aliment"
+      },
+      "qualiteEau": {
+        "title": "Qualité de l'eau",
+        "description": "Paramètres physico-chimiques"
+      },
+      "comptage": {
+        "title": "Comptage",
+        "description": "Nombre et méthode"
+      },
+      "observation": {
+        "title": "Observation",
+        "description": "Description libre"
+      },
+      "consommationStock": {
+        "title": "Consommation de stock",
+        "descriptionIntrant": "Produits utilisés (optionnel)",
+        "descriptionAliment": "Produits consommés"
+      }
+    },
+    "fields": {
+      "vague": "Vague",
+      "vaguePlaceholder": "Sélectionner une vague",
+      "bac": "Bac",
+      "bacPlaceholder": "Sélectionner un bac",
+      "bacChargement": "Chargement...",
+      "bacSelectVagueFirst": "Sélectionnez d'abord une vague",
+      "dateHeure": "Date et heure du releve",
+      "typeReleve": "Type de relevé",
+      "typeRelevePlaceholder": "Sélectionner un type",
+      "activitePlanifiee": "Activité planifiée (optionnel)",
+      "activiteLiee": "Activite liee",
+      "activiteSelectionnee": "Activite selectionnee (liee automatiquement)",
+      "autoDetection": "Auto-détection",
+      "autoDetectionNone": "Auto-détection (aucune activité planifiée)",
+      "notes": "Notes (optionnel)",
+      "notesPlaceholder": "Remarques complémentaires...",
+      "submit": "Enregistrer le relevé"
+    },
+    "errors": {
+      "vagueId": "Sélectionnez une vague.",
+      "bacId": "Sélectionnez un bac.",
+      "typeReleve": "Sélectionnez un type de relevé.",
+      "poidsMoyen": "Requis (> 0).",
+      "tailleMoyenne": "Doit etre > 0.",
+      "echantillonCount": "Requis (> 0).",
+      "nombreMorts": "Requis (>= 0).",
+      "causeMortalite": "Requis.",
+      "quantiteAliment": "Requis (> 0).",
+      "typeAliment": "Requis.",
+      "frequenceAliment": "Requis (> 0).",
+      "nombreCompte": "Requis (>= 0).",
+      "methodeComptage": "Requis.",
+      "description": "Requis.",
+      "renouvellementRequis": "Au moins un champ est requis : pourcentage ou volume.",
+      "pourcentageRange": "Le pourcentage doit etre entre 0 et 100.",
+      "volumePositif": "Le volume doit etre superieur a 0."
+    },
+    "biometrie": {
+      "poidsMoyen": "Poids moyen (g)",
+      "tailleMoyenne": "Taille moyenne (cm) — optionnel",
+      "echantillonCount": "Nombre d'échantillons"
+    },
+    "mortalite": {
+      "nombreMorts": "Nombre de morts",
+      "causeMortalite": "Cause de mortalité",
+      "causePlaceholder": "Sélectionner une cause",
+      "causes": {
+        "MALADIE": "Maladie",
+        "QUALITE_EAU": "Qualité de l'eau",
+        "STRESS": "Stress",
+        "PREDATION": "Prédation",
+        "CANNIBALISME": "Cannibalisme",
+        "INCONNUE": "Inconnue",
+        "AUTRE": "Autre"
+      }
+    },
+    "alimentation": {
+      "quantiteAliment": "Quantité d'aliment ({unite})",
+      "typeAliment": "Type d'aliment",
+      "typeAlimentPlaceholder": "Sélectionner un type",
+      "frequenceAliment": "Fréquence (fois/jour)",
+      "types": {
+        "ARTISANAL": "Artisanal",
+        "COMMERCIAL": "Commercial",
+        "MIXTE": "Mixte"
+      }
+    },
+    "qualiteEau": {
+      "temperature": "Température (°C)",
+      "ph": "pH",
+      "oxygene": "Oxygène dissous (mg/L)",
+      "ammoniac": "Ammoniac (mg/L)"
+    },
+    "comptage": {
+      "nombreCompte": "Nombre de poissons comptés",
+      "methodeComptage": "Méthode de comptage",
+      "methodePlaceholder": "Sélectionner une méthode",
+      "methodes": {
+        "DIRECT": "Direct",
+        "ESTIMATION": "Estimation",
+        "ECHANTILLONNAGE": "Échantillonnage"
+      }
+    },
+    "observation": {
+      "description": "Description",
+      "placeholder": "Décrivez votre observation..."
+    },
+    "renouvellement": {
+      "title": "Renouvellement d'eau",
+      "description": "Volume ou pourcentage du bac renouvelee",
+      "pourcentage": "Pourcentage renouvelee (%)",
+      "volume": "Volume renouvelee (L)",
+      "volumeAvecBac": "Volume renouvelee (L) — bac {volume} L",
+      "hint": "Au moins un des deux champs est obligatoire.",
+      "hintLinked": " Les deux champs sont lies automatiquement."
+    },
+    "consommation": {
+      "alimentsConsommes": "Aliments consommes",
+      "intrantsUtilises": "Intrants utilises",
+      "optionnel": "(optionnel)",
+      "produitPlaceholder": "Produit",
+      "stockDispo": "Stock dispo : {stock} {unite}",
+      "ajouterProduit": "Ajouter un produit"
+    }
+  },
+  "modify": {
+    "title": "Modifier le releve",
+    "description": "Type : {type} — Toutes les modifications sont tracees pour l'audit.",
+    "raison": {
+      "label": "Raison de la modification",
+      "required": "*",
+      "placeholder": "Ex : Erreur de lecture de la balance lors de la pesee",
+      "valid": "Raison valide.",
+      "min": "Minimum 5 caracteres.",
+      "error": "La raison doit contenir au moins 5 caracteres."
+    },
+    "dateLabel": "Date du releve",
+    "notesLabel": "Notes (optionnel)",
+    "descriptionLabel": "Description",
+    "cancel": "Annuler",
+    "submit": "Enregistrer les modifications",
+    "causeLabel": "Cause de mortalite",
+    "causePlaceholder": "Selectionnez...",
+    "typeAlimentLabel": "Type d'aliment",
+    "typeAlimentPlaceholder": "Selectionnez...",
+    "methodeLabel": "Methode de comptage",
+    "methodePlaceholder": "Selectionnez...",
+    "fields": {
+      "poidsMoyen": "Poids moyen (g)",
+      "tailleMoyenne": "Taille moyenne (cm)",
+      "echantillonCount": "Nombre d'echantillons",
+      "nombreMorts": "Nombre de morts",
+      "quantiteAliment": "Quantite d'aliment (kg)",
+      "frequenceAliment": "Frequence (fois/jour)",
+      "temperature": "Temperature (C)",
+      "ph": "pH",
+      "oxygene": "Oxygene dissous (mg/L)",
+      "ammoniac": "Ammoniac (mg/L)",
+      "nombreCompte": "Nombre de poissons"
+    },
+    "errors": {
+      "poidsMoyen": "Superieur a 0.",
+      "tailleMoyenne": "Superieur a 0.",
+      "echantillonCount": "Entier superieur a 0.",
+      "nombreMorts": "Entier positif ou zero.",
+      "causeMortalite": "Selectionnez une cause.",
+      "quantiteAliment": "Superieur a 0.",
+      "typeAliment": "Selectionnez un type.",
+      "frequenceAliment": "Entier superieur a 0.",
+      "nombreCompte": "Entier superieur a 0.",
+      "methodeComptage": "Selectionnez une methode.",
+      "description": "La description est obligatoire."
+    }
+  },
+  "modifications": {
+    "historyTitle": "Historique des modifications",
+    "reason": "Raison",
+    "instant": "a l'instant",
+    "minutesAgo": "il y a {count} min",
+    "hoursAgo": "il y a {count}h",
+    "yesterday": "hier",
+    "daysAgo": "il y a {count} jours",
+    "fields": {
+      "poidsMoyen": "Poids moyen (g)",
+      "tailleMoyenne": "Taille moyenne (cm)",
+      "echantillonCount": "Echantillons",
+      "nombreMorts": "Nombre de morts",
+      "causeMortalite": "Cause mortalite",
+      "quantiteAliment": "Quantite aliment (kg)",
+      "typeAliment": "Type aliment",
+      "frequenceAliment": "Frequence aliment",
+      "temperature": "Temperature (C)",
+      "ph": "pH",
+      "oxygene": "Oxygene (mg/L)",
+      "ammoniac": "Ammoniac (mg/L)",
+      "nombreCompte": "Nombre compte",
+      "methodeComptage": "Methode comptage",
+      "description": "Description",
+      "notes": "Notes",
+      "consommations": "Consommations"
+    }
+  }
+}

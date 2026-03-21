@@ -22,6 +22,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { StatutPaiementAbo } from "@/types";
+import { useTranslations } from "next-intl";
 
 interface RetraitAdmin {
   id: string;
@@ -78,6 +79,7 @@ interface TraiterDialogProps {
 }
 
 function TraiterDialog({ retrait }: TraiterDialogProps) {
+  const t = useTranslations("commissions");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -96,7 +98,7 @@ function TraiterDialog({ retrait }: TraiterDialogProps) {
 
   async function handleTraiter() {
     if (!reference.trim()) {
-      setError("La référence de virement est obligatoire.");
+      setError(t("admin.traiterDialog.errors.referenceObligatoire"));
       return;
     }
     setLoading(true);
@@ -109,13 +111,13 @@ function TraiterDialog({ retrait }: TraiterDialogProps) {
       });
       const data = await response.json() as { status?: number; message?: string };
       if (!response.ok) {
-        setError(data.message ?? "Erreur lors du traitement.");
+        setError(data.message ?? t("admin.traiterDialog.errors.erreurTraitement"));
         return;
       }
       setOpen(false);
       router.refresh();
     } catch {
-      setError("Erreur réseau. Veuillez réessayer.");
+      setError(t("admin.traiterDialog.errors.erreurReseau"));
     } finally {
       setLoading(false);
     }
@@ -129,13 +131,13 @@ function TraiterDialog({ retrait }: TraiterDialogProps) {
           type="button"
           className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
         >
-          Traiter
+          {t("admin.traiter")}
         </button>
       </DialogTrigger>
 
       <DialogContent className="max-w-sm mx-auto">
         <DialogHeader>
-          <DialogTitle>Traiter le retrait</DialogTitle>
+          <DialogTitle>{t("admin.traiterDialog.title")}</DialogTitle>
           <DialogDescription>
             {retrait.portefeuille.ingenieur.name} — {formatXAF(retrait.montant)}
           </DialogDescription>
@@ -151,23 +153,23 @@ function TraiterDialog({ retrait }: TraiterDialogProps) {
           {/* Récapitulatif du retrait */}
           <div className="rounded-lg border border-border bg-muted/50 p-3 space-y-1.5 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Ingénieur</span>
+              <span className="text-muted-foreground">{t("admin.traiterDialog.ingenieur")}</span>
               <span className="font-medium">{retrait.portefeuille.ingenieur.name}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Montant</span>
+              <span className="text-muted-foreground">{t("admin.traiterDialog.montant")}</span>
               <span className="font-semibold">{formatXAF(retrait.montant)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Vers</span>
+              <span className="text-muted-foreground">{t("admin.traiterDialog.vers")}</span>
               <span className="font-medium">{retrait.phoneNumber}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Via</span>
+              <span className="text-muted-foreground">{t("admin.traiterDialog.via")}</span>
               <span className="font-medium">{retrait.fournisseur.replace("_", " ")}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Demandé le</span>
+              <span className="text-muted-foreground">{t("admin.traiterDialog.demandeLe")}</span>
               <span>{formatDate(retrait.createdAt)}</span>
             </div>
           </div>
@@ -175,7 +177,7 @@ function TraiterDialog({ retrait }: TraiterDialogProps) {
           {/* Statut */}
           <div className="space-y-1">
             <label className="text-sm font-medium" htmlFor="statut-traitement">
-              Résultat du traitement
+              {t("admin.traiterDialog.resultat")}
             </label>
             <select
               id="statut-traitement"
@@ -183,22 +185,22 @@ function TraiterDialog({ retrait }: TraiterDialogProps) {
               onChange={(e) => setStatut(e.target.value as "CONFIRME" | "ECHEC")}
               className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
-              <option value="CONFIRME">Confirmé (virement effectué)</option>
-              <option value="ECHEC">Échoué (rembourser le solde)</option>
+              <option value="CONFIRME">{t("admin.traiterDialog.confirme")}</option>
+              <option value="ECHEC">{t("admin.traiterDialog.echec")}</option>
             </select>
           </div>
 
           {/* Référence de virement */}
           <div className="space-y-1">
             <label className="text-sm font-medium" htmlFor="reference-virement">
-              Référence de virement <span className="text-destructive">*</span>
+              {t("admin.traiterDialog.referenceRequired")}
             </label>
             <input
               id="reference-virement"
               type="text"
               value={reference}
               onChange={(e) => setReference(e.target.value)}
-              placeholder="Ex: MTN20260328XXXXX"
+              placeholder={t("admin.traiterDialog.referencePlaceholder")}
               className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
@@ -211,7 +213,7 @@ function TraiterDialog({ retrait }: TraiterDialogProps) {
             disabled={loading}
             className="px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50"
           >
-            Annuler
+            {t("admin.traiterDialog.annuler")}
           </button>
           <button
             type="button"
@@ -219,7 +221,7 @@ function TraiterDialog({ retrait }: TraiterDialogProps) {
             disabled={loading}
             className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
-            {loading ? "Traitement..." : "Confirmer"}
+            {loading ? t("admin.traiterDialog.traitement") : t("admin.traiterDialog.confirmer")}
           </button>
         </DialogFooter>
       </DialogContent>
@@ -237,23 +239,25 @@ const STATUT_COLORS: Record<string, string> = {
   [StatutPaiementAbo.ECHEC]: "bg-destructive/10 text-destructive",
 };
 
-const STATUT_LABELS: Record<string, string> = {
-  [StatutPaiementAbo.EN_ATTENTE]: "En attente",
-  [StatutPaiementAbo.CONFIRME]: "Confirmé",
-  [StatutPaiementAbo.ECHEC]: "Échoué",
-};
-
 export function AdminRetraitsList({ retraitsDemandes, retraitsTraites }: AdminRetraitsListProps) {
+  const t = useTranslations("commissions");
+
+  const STATUT_LABELS: Record<string, string> = {
+    [StatutPaiementAbo.EN_ATTENTE]: t("retraits.statuts.EN_ATTENTE"),
+    [StatutPaiementAbo.CONFIRME]: t("retraits.statuts.CONFIRME"),
+    [StatutPaiementAbo.ECHEC]: t("retraits.statuts.ECHEC"),
+  };
+
   return (
     <div className="space-y-6">
       {/* Section : Retraits en attente */}
       <section>
         <h2 className="text-base font-semibold text-foreground mb-3">
-          Retraits en attente ({retraitsDemandes.length})
+          {t("admin.retraitsTitle")} ({retraitsDemandes.length})
         </h2>
         {retraitsDemandes.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground text-sm rounded-xl border border-border bg-card">
-            Aucun retrait en attente de traitement.
+            {t("admin.aucunEnAttente")}
           </div>
         ) : (
           <div className="space-y-3">
@@ -273,10 +277,10 @@ export function AdminRetraitsList({ retraitsDemandes, retraitsTraites }: AdminRe
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground mt-1">
-                      Vers : {retrait.phoneNumber} ({retrait.fournisseur.replace("_", " ")})
+                      {t("admin.vers", { phone: retrait.phoneNumber, provider: retrait.fournisseur.replace("_", " ") })}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Demandé le {formatDate(retrait.createdAt)}
+                      {t("admin.demandeLe", { date: formatDate(retrait.createdAt) })}
                     </p>
                   </div>
                   <div className="text-right flex-shrink-0 space-y-2">
@@ -295,11 +299,11 @@ export function AdminRetraitsList({ retraitsDemandes, retraitsTraites }: AdminRe
       {/* Section : Historique des retraits traités */}
       <section>
         <h2 className="text-base font-semibold text-foreground mb-3">
-          Historique des retraits traités
+          {t("admin.retraitsHistorique")}
         </h2>
         {retraitsTraites.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground text-sm rounded-xl border border-border bg-card">
-            Aucun retrait traité pour le moment.
+            {t("admin.aucunTraite")}
           </div>
         ) : (
           <div className="space-y-3">
@@ -314,21 +318,21 @@ export function AdminRetraitsList({ retraitsDemandes, retraitsTraites }: AdminRe
                       {retrait.portefeuille.ingenieur.name}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Vers : {retrait.phoneNumber}
+                      {t("admin.vers", { phone: retrait.phoneNumber, provider: retrait.fournisseur.replace("_", " ") })}
                     </p>
                     {retrait.referenceExterne && (
                       <p className="text-xs text-muted-foreground">
-                        Réf. : {retrait.referenceExterne}
+                        {t("admin.reference", { ref: retrait.referenceExterne })}
                       </p>
                     )}
                     {retrait.traiteur && (
                       <p className="text-xs text-muted-foreground">
-                        Traité par {retrait.traiteur.name}
+                        {t("admin.traiteParLe", { name: retrait.traiteur.name })}
                       </p>
                     )}
                     {retrait.dateTraitement && (
                       <p className="text-xs text-muted-foreground">
-                        Le {formatDate(retrait.dateTraitement)}
+                        {t("admin.leLe", { date: formatDate(retrait.dateTraitement) })}
                       </p>
                     )}
                   </div>

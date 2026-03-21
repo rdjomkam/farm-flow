@@ -26,17 +26,7 @@ import {
 import { useAlevinsService } from "@/services";
 import { useApi } from "@/hooks/use-api";
 import { SexeReproducteur, StatutReproducteur, Permission } from "@/types";
-
-const sexeLabels: Record<SexeReproducteur, string> = {
-  [SexeReproducteur.MALE]: "Male",
-  [SexeReproducteur.FEMELLE]: "Femelle",
-};
-
-const statutLabels: Record<StatutReproducteur, string> = {
-  [StatutReproducteur.ACTIF]: "Actif",
-  [StatutReproducteur.REFORME]: "Reforme",
-  [StatutReproducteur.MORT]: "Mort",
-};
+import { useTranslations } from "next-intl";
 
 function statutBadgeClass(statut: string): string {
   if (statut === StatutReproducteur.ACTIF) return "bg-accent-green-muted text-accent-green";
@@ -75,6 +65,7 @@ interface Props {
 }
 
 export function ReproducteurDetailClient({ reproducteur, permissions }: Props) {
+  const t = useTranslations("alevins");
   const router = useRouter();
   const alevinsService = useAlevinsService();
   const { call } = useApi();
@@ -88,6 +79,17 @@ export function ReproducteurDetailClient({ reproducteur, permissions }: Props) {
   const [origine, setOrigine] = useState(reproducteur.origine ?? "");
   const [statut, setStatut] = useState(reproducteur.statut);
   const [notes, setNotes] = useState(reproducteur.notes ?? "");
+
+  const sexeLabels: Record<SexeReproducteur, string> = {
+    [SexeReproducteur.MALE]: t("reproducteurs.sexe.MALE"),
+    [SexeReproducteur.FEMELLE]: t("reproducteurs.sexe.FEMELLE"),
+  };
+
+  const statutLabels: Record<StatutReproducteur, string> = {
+    [StatutReproducteur.ACTIF]: t("reproducteurs.statuts.ACTIF"),
+    [StatutReproducteur.REFORME]: t("reproducteurs.statuts.REFORME"),
+    [StatutReproducteur.MORT]: t("reproducteurs.statuts.MORT"),
+  };
 
   async function handleSave() {
     if (!code.trim() || !poids) return;
@@ -109,7 +111,7 @@ export function ReproducteurDetailClient({ reproducteur, permissions }: Props) {
     const result = await call<{ message: string }>(
       `/api/reproducteurs/${reproducteur.id}`,
       { method: "DELETE" },
-      { successMessage: "Reproducteur supprime." }
+      { successMessage: t("reproducteurs.detail.deleteSuccess") }
     );
     if (result.ok) {
       router.push("/alevins/reproducteurs");
@@ -130,7 +132,7 @@ export function ReproducteurDetailClient({ reproducteur, permissions }: Props) {
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
       >
         <ArrowLeft className="h-4 w-4" />
-        Reproducteurs
+        {t("reproducteurs.title")}
       </Link>
 
       {/* Header actions */}
@@ -159,39 +161,39 @@ export function ReproducteurDetailClient({ reproducteur, permissions }: Props) {
             <DialogTrigger asChild>
               <Button size="sm" variant="outline">
                 <Pencil className="h-4 w-4 mr-1" />
-                Modifier
+                {t("reproducteurs.form.modifier")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Modifier le reproducteur</DialogTitle>
+                <DialogTitle>{t("reproducteurs.modifierReproducteur")}</DialogTitle>
               </DialogHeader>
               <div className="flex flex-col gap-4 py-2">
                 <Input
-                  label="Code"
+                  label={t("reproducteurs.form.code")}
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   autoFocus
                 />
                 <Input
-                  label="Poids (g)"
+                  label={t("reproducteurs.form.poids")}
                   type="number"
                   value={poids}
                   onChange={(e) => setPoids(e.target.value)}
                 />
                 <Input
-                  label="Age en mois (optionnel)"
+                  label={t("reproducteurs.form.age")}
                   type="number"
                   value={age}
                   onChange={(e) => setAge(e.target.value)}
                 />
                 <Input
-                  label="Origine (optionnel)"
+                  label={t("reproducteurs.form.origine")}
                   value={origine}
                   onChange={(e) => setOrigine(e.target.value)}
                 />
                 <Select value={statut} onValueChange={setStatut}>
-                  <SelectTrigger label="Statut">
+                  <SelectTrigger label={t("reproducteurs.form.statut")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -203,20 +205,20 @@ export function ReproducteurDetailClient({ reproducteur, permissions }: Props) {
                   </SelectContent>
                 </Select>
                 <Input
-                  label="Notes (optionnel)"
+                  label={t("reproducteurs.form.notes")}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                 />
               </div>
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button variant="outline">Annuler</Button>
+                  <Button variant="outline">{t("reproducteurs.form.annuler")}</Button>
                 </DialogClose>
                 <Button
                   onClick={handleSave}
                   disabled={!code.trim() || !poids}
                 >
-                  Enregistrer
+                  {t("reproducteurs.form.enregistrer")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -232,22 +234,20 @@ export function ReproducteurDetailClient({ reproducteur, permissions }: Props) {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Supprimer le reproducteur</DialogTitle>
+                <DialogTitle>{t("reproducteurs.supprimerReproducteur")}</DialogTitle>
               </DialogHeader>
               <p className="text-sm text-muted-foreground py-2">
-                Etes-vous sur de vouloir supprimer{" "}
-                <strong>{reproducteur.code}</strong> ? Cette action est
-                irreversible.
+                {t("reproducteurs.detail.confirmDelete", { code: reproducteur.code })}
               </p>
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button variant="outline">Annuler</Button>
+                  <Button variant="outline">{t("reproducteurs.form.annuler")}</Button>
                 </DialogClose>
                 <Button
                   variant="danger"
                   onClick={handleDelete}
                 >
-                  Supprimer
+                  {t("reproducteurs.form.supprimer")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -259,38 +259,38 @@ export function ReproducteurDetailClient({ reproducteur, permissions }: Props) {
       {/* Infos principales */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Informations</CardTitle>
+          <CardTitle className="text-base">{t("reproducteurs.detail.informations")}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Code</span>
+            <span className="text-muted-foreground">{t("reproducteurs.detail.code")}</span>
             <span className="font-medium">{reproducteur.code}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Sexe</span>
+            <span className="text-muted-foreground">{t("reproducteurs.detail.sexe")}</span>
             <span>
               {sexeLabels[reproducteur.sexe as SexeReproducteur] ??
                 reproducteur.sexe}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Poids</span>
-            <span>{reproducteur.poids} g</span>
+            <span className="text-muted-foreground">{t("reproducteurs.detail.poids")}</span>
+            <span>{reproducteur.poids} {t("reproducteurs.detail.grammesUnit")}</span>
           </div>
           {reproducteur.age !== null && (
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Age</span>
-              <span>{reproducteur.age} mois</span>
+              <span className="text-muted-foreground">{t("reproducteurs.detail.age")}</span>
+              <span>{reproducteur.age} {t("reproducteurs.detail.moisUnit")}</span>
             </div>
           )}
           {reproducteur.origine && (
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Origine</span>
+              <span className="text-muted-foreground">{t("reproducteurs.detail.origine")}</span>
               <span>{reproducteur.origine}</span>
             </div>
           )}
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Acquisition</span>
+            <span className="text-muted-foreground">{t("reproducteurs.detail.acquisition")}</span>
             <span>
               {new Date(reproducteur.dateAcquisition).toLocaleDateString(
                 "fr-FR"
@@ -299,7 +299,7 @@ export function ReproducteurDetailClient({ reproducteur, permissions }: Props) {
           </div>
           {reproducteur.notes && (
             <div className="flex flex-col gap-1 pt-1 border-t border-border">
-              <span className="text-muted-foreground">Notes</span>
+              <span className="text-muted-foreground">{t("reproducteurs.detail.notes")}</span>
               <p className="text-sm">{reproducteur.notes}</p>
             </div>
           )}
@@ -310,14 +310,14 @@ export function ReproducteurDetailClient({ reproducteur, permissions }: Props) {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">
-            Pontes ({pontes.length})
+            {t("reproducteurs.pontes")} ({pontes.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {pontes.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <Egg className="h-8 w-8 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">Aucune ponte</p>
+              <p className="text-sm text-muted-foreground">{t("reproducteurs.aucunePonte")}</p>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
@@ -328,7 +328,7 @@ export function ReproducteurDetailClient({ reproducteur, permissions }: Props) {
                       <p className="font-medium text-sm">{p.code}</p>
                       <p className="text-xs text-muted-foreground">
                         {new Date(p.datePonte).toLocaleDateString("fr-FR")} —{" "}
-                        {p._count.lots} lot(s)
+                        {p._count.lots} {t("pontes.card.lots")}
                       </p>
                     </div>
                     <span
@@ -341,10 +341,10 @@ export function ReproducteurDetailClient({ reproducteur, permissions }: Props) {
                       }`}
                     >
                       {p.statut === "EN_COURS"
-                        ? "En cours"
+                        ? t("pontes.statuts.EN_COURS")
                         : p.statut === "TERMINEE"
-                          ? "Terminee"
-                          : "Echouee"}
+                          ? t("pontes.statuts.TERMINEE")
+                          : t("pontes.statuts.ECHOUEE")}
                     </span>
                   </div>
                 </Link>

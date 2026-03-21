@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { VaguesListClient } from "@/components/vagues/vagues-list-client";
 import { AccessDenied } from "@/components/ui/access-denied";
@@ -10,6 +11,7 @@ import { StatutVague, Permission, TypeSystemeBac } from "@/types";
 import type { VagueSummaryResponse, BacResponse } from "@/types";
 
 export default async function VaguesPage() {
+  const t = await getTranslations("vagues");
   const session = await getServerSession();
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
@@ -59,7 +61,7 @@ export default async function VaguesPage() {
 
   return (
     <>
-      <Header title="Vagues" />
+      <Header title={t("page.title")} />
       <div className="px-4 pt-4">
         <QuotasUsageBar siteId={session.activeSiteId} />
       </div>

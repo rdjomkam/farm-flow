@@ -17,6 +17,7 @@ import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { getSession, AuthError } from "@/lib/auth";
 import { Permission, TypePlan } from "@/types";
 import type { CreatePlanAbonnementDTO } from "@/types";
+import { ErrorKeys } from "@/lib/api-error-keys";
 
 const VALID_TYPE_PLANS = Object.values(TypePlan);
 
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
       );
     }
     return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation des plans." },
+      { status: 500, message: "Erreur serveur lors de la recuperation des plans.", errorKey: ErrorKeys.SERVER_GET_PLANS },
       { status: 500 }
     );
   }
@@ -148,12 +149,13 @@ export async function POST(request: NextRequest) {
         {
           status: 409,
           message: "Un plan avec ce type existe deja.",
+          errorKey: ErrorKeys.CONFLICT_PLAN_TYPE_EXISTS,
         },
         { status: 409 }
       );
     }
     return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la creation du plan." },
+      { status: 500, message: "Erreur serveur lors de la creation du plan.", errorKey: ErrorKeys.SERVER_CREATE_PLAN },
       { status: 500 }
     );
   }

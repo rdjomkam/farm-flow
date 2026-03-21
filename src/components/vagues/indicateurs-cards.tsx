@@ -9,24 +9,25 @@ interface IndicateursCardsProps {
 
 export async function IndicateursCards({ indicateurs }: IndicateursCardsProps) {
   const tAnalytics = await getTranslations("analytics");
+  const t = await getTranslations("vagues");
 
   const items = [
     {
-      label: "Taux de survie",
+      label: t("indicateurs.tauxSurvie"),
       value: indicateurs.tauxSurvie !== null ? `${indicateurs.tauxSurvie}%` : "—",
       icon: HeartPulse,
       color: "text-success",
       bgColor: "bg-success/10",
     },
     {
-      label: "Biomasse",
+      label: t("indicateurs.biomasse"),
       value: indicateurs.biomasse !== null ? `${indicateurs.biomasse} kg` : "—",
       icon: Weight,
       color: "text-accent-blue",
       bgColor: "bg-accent-blue-muted",
     },
     {
-      label: "Poids moyen",
+      label: t("indicateurs.poidsMoyen"),
       value: indicateurs.poidsMoyen !== null ? `${indicateurs.poidsMoyen} g` : "—",
       icon: Scale,
       color: "text-accent-purple",

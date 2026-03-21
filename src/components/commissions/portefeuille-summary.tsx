@@ -11,6 +11,7 @@
  */
 import { Wallet, Clock, TrendingUp } from "lucide-react";
 import { RetraitDialog } from "./retrait-dialog";
+import { useTranslations } from "next-intl";
 
 interface PortefeuilleSummaryProps {
   solde: number;
@@ -33,6 +34,8 @@ export function PortefeuilleSummary({
   soldePending,
   totalGagne,
 }: PortefeuilleSummaryProps) {
+  const t = useTranslations("commissions");
+
   return (
     <div className="space-y-4">
       {/* Solde disponible — carte principale */}
@@ -43,7 +46,7 @@ export function PortefeuilleSummary({
           </div>
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
-              Solde disponible
+              {t("portefeuille.soldeDisponible")}
             </p>
             <p className="text-2xl font-bold text-foreground">
               {formatXAF(solde)}
@@ -53,7 +56,7 @@ export function PortefeuilleSummary({
         {solde > 0 && <RetraitDialog soldeDisponible={solde} />}
         {solde === 0 && (
           <p className="text-xs text-muted-foreground">
-            Aucun montant disponible pour le moment.
+            {t("portefeuille.aucunMontant")}
           </p>
         )}
       </div>
@@ -64,14 +67,14 @@ export function PortefeuilleSummary({
           <div className="flex items-center gap-2 mb-1">
             <Clock className="h-4 w-4 text-warning" />
             <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
-              En attente
+              {t("portefeuille.enAttente")}
             </p>
           </div>
           <p className="text-lg font-semibold text-foreground">
             {formatXAF(soldePending)}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            Disponible dans 30 jours
+            {t("portefeuille.disponibleDans30Jours")}
           </p>
         </div>
 
@@ -79,14 +82,14 @@ export function PortefeuilleSummary({
           <div className="flex items-center gap-2 mb-1">
             <TrendingUp className="h-4 w-4 text-success" />
             <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
-              Total gagné
+              {t("portefeuille.totalGagne")}
             </p>
           </div>
           <p className="text-lg font-semibold text-foreground">
             {formatXAF(totalGagne)}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            Depuis le début
+            {t("portefeuille.depuisLeDebut")}
           </p>
         </div>
       </div>

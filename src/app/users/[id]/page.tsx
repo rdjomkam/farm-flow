@@ -8,6 +8,7 @@ import { UserProfileTab } from "@/components/users/user-profile-tab";
 import { UserSecurityTab } from "@/components/users/user-security-tab";
 import { UserMembershipsTab } from "@/components/users/user-memberships-tab";
 import { Permission } from "@/types";
+import { getTranslations } from "next-intl/server";
 
 export default async function UserDetailPage({
   params,
@@ -32,6 +33,7 @@ export default async function UserDetailPage({
   if (!user) notFound();
 
   const memberships = await getUserMemberships(id);
+  const t = await getTranslations("users");
 
   const serializedMemberships = memberships.map((m) => ({
     id: m.id,
@@ -49,10 +51,10 @@ export default async function UserDetailPage({
       <div className="p-4">
         <Tabs defaultValue="profil">
           <TabsList>
-            <TabsTrigger value="profil">Profil</TabsTrigger>
-            <TabsTrigger value="securite">Securite</TabsTrigger>
+            <TabsTrigger value="profil">{t("detail.tabProfil")}</TabsTrigger>
+            <TabsTrigger value="securite">{t("detail.tabSecurite")}</TabsTrigger>
             <TabsTrigger value="sites">
-              Sites ({serializedMemberships.length})
+              {t("detail.tabSites")} ({serializedMemberships.length})
             </TabsTrigger>
           </TabsList>
 

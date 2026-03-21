@@ -1,0 +1,186 @@
+{
+  "title": "Stock",
+  "categories": {
+    "ALIMENT": "Feed",
+    "INTRANT": "Input",
+    "EQUIPEMENT": "Equipment"
+  },
+  "unites": {
+    "GRAMME": "g",
+    "KG": "kg",
+    "MILLILITRE": "mL",
+    "LITRE": "L",
+    "UNITE": "unit",
+    "SACS": "bags"
+  },
+  "statuts": {
+    "BROUILLON": "Draft",
+    "ENVOYEE": "Sent",
+    "LIVREE": "Delivered",
+    "ANNULEE": "Cancelled"
+  },
+  "types": {
+    "ENTREE": "Inflow",
+    "SORTIE": "Outflow"
+  },
+  "produits": {
+    "title": "Products",
+    "count": "{count, plural, one {# product} other {# products}}",
+    "add": "Add a product",
+    "edit": "Edit product",
+    "new": "New",
+    "empty": "No products",
+    "emptyDescription": "Add a product to manage your stock.",
+    "tabs": {
+      "all": "All",
+      "alerts": "Alerts ({count})"
+    },
+    "fields": {
+      "name": "Product name",
+      "namePlaceholder": "E.g. Raanan 3mm Feed",
+      "categorie": "Category",
+      "uniteBase": "Base unit",
+      "uniteAchat": "Purchase unit",
+      "dualUnit": "Different purchase unit",
+      "contenance": "Content ({baseUnit} per {achatUnit})",
+      "contenanceUnit": "purchase unit",
+      "prixUnitaire": "Unit price (FCFA)",
+      "seuilAlerte": "Alert threshold",
+      "fournisseur": "Supplier (optional)",
+      "fournisseurRequired": "Supplier",
+      "fournisseurNone": "None"
+    },
+    "detail": {
+      "inStock": "{unit} in stock",
+      "alerteMessage": "Stock below alert threshold ({seuil} {unit})",
+      "derniersMovements": "Recent movements",
+      "noMovement": "No movements",
+      "voirMovements": "View all movements",
+      "contenanceNotEditable": "Cannot be edited (stock > 0)"
+    }
+  },
+  "fournisseurs": {
+    "title": "Suppliers",
+    "count": "{count, plural, one {# supplier} other {# suppliers}}",
+    "add": "Add a supplier",
+    "edit": "Edit supplier",
+    "new": "New",
+    "empty": "No suppliers",
+    "emptyDescription": "Add your suppliers to manage supply orders.",
+    "save": "Save",
+    "create": "Create",
+    "fields": {
+      "nom": "Name",
+      "nomPlaceholder": "E.g. Raanan Fish Feed",
+      "telephone": "Phone (optional)",
+      "telephonePlaceholder": "6XX XX XX XX (+237 added automatically)",
+      "email": "Email (optional)",
+      "emailPlaceholder": "contact@supplier.com",
+      "adresse": "Address (optional)",
+      "adressePlaceholder": "Douala, Cameroon"
+    },
+    "stats": {
+      "produits": "{count, plural, one {# product} other {# products}}",
+      "commandes": "{count, plural, one {# order} other {# orders}}"
+    }
+  },
+  "commandes": {
+    "title": "Orders",
+    "count": "{count, plural, one {# order} other {# orders}}",
+    "add": "New order",
+    "new": "Order",
+    "empty": "No orders",
+    "tabs": {
+      "all": "All"
+    },
+    "fields": {
+      "fournisseur": "Supplier",
+      "choix": "Select",
+      "date": "Order date",
+      "lignes": "Order lines",
+      "ligne": "Line {n}",
+      "produit": "Product",
+      "total": "Total: {montant} FCFA",
+      "montantTotal": "Total amount"
+    },
+    "lignes": {
+      "add": "Add a line",
+      "qtePlaceholder": "Qty",
+      "qteWithUnit": "Qty ({unit})",
+      "prixPlaceholder": "Unit price"
+    },
+    "detail": {
+      "commande": "Order: {date}",
+      "livraison": "Delivery: {date}",
+      "factureFournisseur": "Supplier invoice",
+      "factureAttachee": "Invoice attached",
+      "voirFacture": "View invoice",
+      "ajouterFacture": "Add invoice",
+      "aucuneFacture": "No invoice attached to this order.",
+      "uploadFacture": "Add an invoice",
+      "uploadDescription": "Upload the supplier invoice for this order (PDF, JPG or PNG — max 10 MB).",
+      "choisirFichier": "Choose a file",
+      "changerFichier": "Change file",
+      "uploader": "Upload invoice",
+      "supprimerFacture": "Delete invoice",
+      "supprimerConfirm": "This action is irreversible. The file will be permanently deleted.",
+      "factureOptionnelle": "Supplier invoice (optional)",
+      "factureFormat": "PDF, JPG or PNG — max 10 MB",
+      "envoyer": "Send",
+      "receptionner": "Receive",
+      "annuler": "Cancel",
+      "confirmerReception": "Confirm reception",
+      "receptionDescription": "This will create inflow movements and update stock levels.",
+      "dateLivraison": "Delivery date",
+      "creePar": "Created by {name}",
+      "lignes": "Lines ({count})"
+    },
+    "formatNonAutorise": "Format not allowed. Use PDF, JPG or PNG.",
+    "fichierTropVolumineux": "File too large ({taille} MB). Max 10 MB."
+  },
+  "mouvements": {
+    "title": "Movements",
+    "count": "{count, plural, one {# movement} other {# movements}}",
+    "add": "New movement",
+    "new": "Movement",
+    "empty": "No movements",
+    "save": "Save",
+    "tabs": {
+      "all": "All",
+      "entrees": "Inflows",
+      "sorties": "Outflows"
+    },
+    "fields": {
+      "produit": "Product",
+      "produitPlaceholder": "Choose a product",
+      "type": "Type",
+      "quantite": "Quantity",
+      "quantiteWithUnit": "Quantity ({unit})",
+      "prixTotal": "Total price (FCFA, optional)",
+      "date": "Date",
+      "vague": "Batch (optional)",
+      "vagueNone": "None",
+      "notes": "Notes (optional)",
+      "notesPlaceholder": "E.g. Week 3 feeding"
+    }
+  },
+  "alertes": {
+    "title": "Stock alerts ({count})",
+    "voirTout": "View all {count} alerts"
+  },
+  "sections": {
+    "produits": "Products",
+    "produitsDesc": "{count, plural, one {# product} other {# products}} in stock",
+    "fournisseurs": "Suppliers",
+    "fournisseursDesc": "{count, plural, one {# supplier} other {# suppliers}}",
+    "commandes": "Orders",
+    "commandesDesc": "{count} in progress"
+  },
+  "actions": {
+    "create": "Create",
+    "save": "Save",
+    "cancel": "Cancel",
+    "new": "New",
+    "back": "Stock"
+  }
+}

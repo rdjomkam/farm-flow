@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Permission, Role } from "@/types";
 import { useUserService, useAuthService } from "@/services";
+import { useTranslations } from "next-intl";
 
 interface UserSecurityTabProps {
   userId: string;
@@ -35,6 +36,7 @@ export function UserSecurityTab({
   isSystem,
   callerPermissions,
 }: UserSecurityTabProps) {
+  const t = useTranslations("users");
   const router = useRouter();
   const { toast } = useToast();
   const userService = useUserService();
@@ -62,11 +64,11 @@ export function UserSecurityTab({
     setPasswordError("");
 
     if (!newPassword || newPassword.length < 6) {
-      setPasswordError("Le mot de passe doit contenir au moins 6 caracteres.");
+      setPasswordError(t("security.errors.motDePasseTropCourt"));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError("Les mots de passe ne correspondent pas.");
+      setPasswordError(t("security.errors.motDePasseNonCorrespondant"));
       return;
     }
 
@@ -105,7 +107,7 @@ export function UserSecurityTab({
   if (isSystem) {
     return (
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-        Cet utilisateur est un compte systeme. Les actions de securite ne sont pas disponibles.
+        {t("security.compteSysteme")}
       </div>
     );
   }
@@ -114,11 +116,11 @@ export function UserSecurityTab({
     <div className="flex flex-col gap-8">
       {/* Password reset */}
       {canManage && (
-        <FormSection title="Reinitialiser le mot de passe" description="Definissez un nouveau mot de passe pour cet utilisateur">
+        <FormSection title={t("security.reinitialiserMotDePasse")} description={t("security.reinitialiserDescription")}>
           <form onSubmit={handlePasswordReset} className="flex flex-col gap-3">
             <Input
               id="newPassword"
-              label="Nouveau mot de passe"
+              label={t("security.nouveauMotDePasse")}
               type="password"
               placeholder="••••••••"
               value={newPassword}
@@ -126,7 +128,7 @@ export function UserSecurityTab({
             />
             <Input
               id="confirmPassword"
-              label="Confirmer le mot de passe"
+              label={t("security.confirmerMotDePasse")}
               type="password"
               placeholder="••••••••"
               value={confirmPassword}
@@ -134,7 +136,7 @@ export function UserSecurityTab({
               error={passwordError}
             />
             <Button type="submit" className="w-full sm:w-auto">
-              Changer le mot de passe
+              {t("security.changerMotDePasse")}
             </Button>
           </form>
         </FormSection>
@@ -143,28 +145,28 @@ export function UserSecurityTab({
       {/* Force logout */}
       {canManage && (
         <FormSection
-          title="Deconnexion forcee"
-          description="Supprime toutes les sessions actives de cet utilisateur. Il devra se reconnecter."
+          title={t("security.deconnexionForcee")}
+          description={t("security.deconnexionForceeDescription")}
         >
           <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
             <DialogTrigger asChild>
               <Button variant="secondary" className="w-full sm:w-auto">
-                Forcer la deconnexion
+                {t("security.forcerDeconnexion")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Forcer la deconnexion</DialogTitle>
+                <DialogTitle>{t("security.forcerDeconnexionConfirmTitle")}</DialogTitle>
                 <DialogDescription>
-                  Toutes les sessions actives de {userName} seront supprimees. Cette action ne peut pas etre annulee.
+                  {t("security.forcerDeconnexionConfirmDescription", { name: userName })}
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <Button variant="secondary" onClick={() => setLogoutOpen(false)}>
-                  Annuler
+                  {t("security.annuler")}
                 </Button>
                 <Button variant="danger" onClick={handleForceLogout}>
-                  Forcer la deconnexion
+                  {t("security.forcerDeconnexion")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -175,37 +177,37 @@ export function UserSecurityTab({
       {/* Impersonation */}
       {canImpersonate && (
         <FormSection
-          title="Impersonation"
-          description="Se connecter en tant que cet utilisateur pour voir l'application a sa place."
+          title={t("impersonation.sectionTitle")}
+          description={t("impersonation.sectionDescription")}
         >
           {impersonationDisabled ? (
             <p className="text-sm text-muted-foreground">
               {userRole === Role.ADMIN
-                ? "Impossible d'impersonner un administrateur."
+                ? t("impersonation.disabled.admin")
                 : !isActive
-                ? "Impossible d'impersonner un compte desactive."
-                : "L'impersonation n'est pas disponible pour cet utilisateur."}
+                ? t("impersonation.disabled.desactive")
+                : t("impersonation.disabled.default")}
             </p>
           ) : (
             <Dialog open={impersonateOpen} onOpenChange={setImpersonateOpen}>
               <DialogTrigger asChild>
                 <Button variant="secondary" className="w-full sm:w-auto">
-                  Se connecter en tant que cet utilisateur
+                  {t("impersonation.button")}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Confirmer l'impersonation</DialogTitle>
+                  <DialogTitle>{t("impersonation.confirmTitle")}</DialogTitle>
                   <DialogDescription>
-                    Vous allez vous connecter en tant que {userName}. Vous verrez l'application exactement comme cet utilisateur. Un bandeau vous permettra de reprendre votre session.
+                    {t("impersonation.confirmDescription", { name: userName })}
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
                   <Button variant="secondary" onClick={() => setImpersonateOpen(false)}>
-                    Annuler
+                    {t("impersonation.annuler")}
                   </Button>
                   <Button onClick={handleImpersonate}>
-                    Continuer
+                    {t("impersonation.continuer")}
                   </Button>
                 </DialogFooter>
               </DialogContent>

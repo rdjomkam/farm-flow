@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { ClientsListClient } from "@/components/ventes/clients-list-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -14,11 +15,12 @@ export default async function ClientsPage() {
   const permissions = await checkPagePermission(session, Permission.CLIENTS_VOIR);
   if (!permissions) return <AccessDenied />;
 
+  const t = await getTranslations("ventes");
   const clients = await getClients(session.activeSiteId);
 
   return (
     <>
-      <Header title="Clients" />
+      <Header title={t("clients.title")} />
       <div className="p-4">
         <ClientsListClient
           clients={JSON.parse(JSON.stringify(clients))}

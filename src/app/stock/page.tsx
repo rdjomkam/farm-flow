@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Package, AlertTriangle, Truck, ShoppingCart } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +20,8 @@ export default async function StockPage() {
   const permissions = await checkPagePermission(session, Permission.STOCK_VOIR);
   if (!permissions) return <AccessDenied />;
 
+  const t = await getTranslations("stock");
+
   const [produits, alertes, fournisseurs, commandes] = await Promise.all([
     getProduits(session.activeSiteId),
     getProduitsEnAlerte(session.activeSiteId),
@@ -33,24 +36,24 @@ export default async function StockPage() {
   const sections = [
     {
       href: "/stock/produits",
-      label: "Produits",
-      description: `${produits.length} produit${produits.length > 1 ? "s" : ""} en stock`,
+      label: t("sections.produits"),
+      description: t("sections.produitsDesc", { count: produits.length }),
       icon: Package,
       color: "text-accent-blue",
       bgColor: "bg-accent-blue-muted",
     },
     {
       href: "/stock/fournisseurs",
-      label: "Fournisseurs",
-      description: `${fournisseurs.length} fournisseur${fournisseurs.length > 1 ? "s" : ""}`,
+      label: t("sections.fournisseurs"),
+      description: t("sections.fournisseursDesc", { count: fournisseurs.length }),
       icon: Truck,
       color: "text-accent-purple",
       bgColor: "bg-accent-purple-muted",
     },
     {
       href: "/stock/commandes",
-      label: "Commandes",
-      description: `${commandesEnCours.length} en cours`,
+      label: t("sections.commandes"),
+      description: t("sections.commandesDesc", { count: commandesEnCours.length }),
       icon: ShoppingCart,
       color: "text-primary",
       bgColor: "bg-primary/10",
@@ -59,16 +62,16 @@ export default async function StockPage() {
 
   return (
     <>
-      <Header title="Stock" />
+      <Header title={t("title")} />
       <div className="flex flex-col gap-4 p-4">
-        {/* Alertes stock */}
+        {/* Stock alerts */}
         {alertes.length > 0 && (
           <Card className="border-warning/50 bg-warning/5">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <AlertTriangle className="h-5 w-5 text-warning" />
                 <h2 className="font-semibold text-sm">
-                  Alertes stock ({alertes.length})
+                  {t("alertes.title", { count: alertes.length })}
                 </h2>
               </div>
               <div className="flex flex-col gap-2">
@@ -89,7 +92,7 @@ export default async function StockPage() {
                     href="/stock/produits?alerte=true"
                     className="text-xs text-primary hover:underline"
                   >
-                    Voir les {alertes.length} alertes
+                    {t("alertes.voirTout", { count: alertes.length })}
                   </Link>
                 )}
               </div>

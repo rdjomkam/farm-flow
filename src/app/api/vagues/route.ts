@@ -9,6 +9,7 @@ import { normaliseLimite, isQuotaAtteint } from "@/lib/abonnements/check-quotas"
 import { getAbonnementActif } from "@/lib/queries/abonnements";
 import { PLAN_LIMITES } from "@/lib/abonnements-constants";
 import type { QuotaRessource } from "@/lib/abonnements/check-quotas";
+import { ErrorKeys } from "@/lib/api-error-keys";
 
 export async function GET(request: NextRequest) {
   try {
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
     }
     return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation des vagues." },
+      { status: 500, message: "Erreur serveur lors de la recuperation des vagues.", errorKey: ErrorKeys.SERVER_GET_VAGUES },
       { status: 500 }
     );
   }
@@ -182,7 +183,7 @@ export async function POST(request: NextRequest) {
 
     if (!vague) {
       return NextResponse.json(
-        { status: 500, message: "Erreur lors de la creation de la vague." },
+        { status: 500, message: "Erreur lors de la creation de la vague.", errorKey: ErrorKeys.SERVER_CREATE_VAGUE },
         { status: 500 }
       );
     }
@@ -227,7 +228,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la creation de la vague." },
+      { status: 500, message: "Erreur serveur lors de la creation de la vague.", errorKey: ErrorKeys.SERVER_CREATE_VAGUE },
       { status: 500 }
     );
   }

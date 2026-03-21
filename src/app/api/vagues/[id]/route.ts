@@ -5,6 +5,7 @@ import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { StatutVague, Permission } from "@/types";
 import type { UpdateVagueDTO } from "@/types";
+import { ErrorKeys } from "@/lib/api-error-keys";
 
 export async function GET(
   request: NextRequest,
@@ -17,7 +18,7 @@ export async function GET(
 
     if (!vague) {
       return NextResponse.json(
-        { status: 404, message: "Vague introuvable." },
+        { status: 404, message: "Vague introuvable.", errorKey: ErrorKeys.NOT_FOUND_VAGUE },
         { status: 404 }
       );
     }
@@ -61,7 +62,7 @@ export async function GET(
       return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
     }
     return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation de la vague." },
+      { status: 500, message: "Erreur serveur lors de la recuperation de la vague.", errorKey: ErrorKeys.SERVER_GET_VAGUE },
       { status: 500 }
     );
   }
@@ -191,7 +192,7 @@ export async function PUT(
     }
 
     return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la mise a jour de la vague." },
+      { status: 500, message: "Erreur serveur lors de la mise a jour de la vague.", errorKey: ErrorKeys.SERVER_UPDATE_VAGUE },
       { status: 500 }
     );
   }

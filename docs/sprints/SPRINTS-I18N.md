@@ -423,7 +423,7 @@ utilisateurs) et les messages d'erreur API. Ceci couvre le gros du volume (~350 
 **Assigne a :** @developer
 **Priorite :** Critique
 **Complexite :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Extraire les ~140 chaines des modules Vagues et Releves — les plus gros modules en volume.
 
@@ -456,7 +456,7 @@ utilisateurs) et les messages d'erreur API. Ceci couvre le gros du volume (~350 
 **Assigne a :** @developer
 **Priorite :** Haute
 **Complexite :** Medium
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Extraire les chaines des modules Stock/Intrants et Ventes/Facturation.
 
@@ -483,7 +483,7 @@ utilisateurs) et les messages d'erreur API. Ceci couvre le gros du volume (~350 
 **Assigne a :** @developer
 **Priorite :** Haute
 **Complexite :** Medium
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Extraire les chaines des modules restants.
 
@@ -511,7 +511,7 @@ utilisateurs) et les messages d'erreur API. Ceci couvre le gros du volume (~350 
 **Assigne a :** @developer
 **Priorite :** Haute
 **Complexite :** Medium
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Remplacer les messages d'erreur hardcodes dans les ~146 routes API par des cles
 d'erreur standardisees. La traduction des erreurs se fait cote client.
@@ -547,7 +547,7 @@ d'erreur standardisees. La traduction des erreurs se fait cote client.
 **Priorite :** Haute
 **Complexite :** Medium
 **Depend de :** Stories 41.1 a 41.4
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Taches @tester :**
 - [ ] `TODO` Tester chaque module en anglais : vagues, releves, stock, ventes, alevins, users, commissions

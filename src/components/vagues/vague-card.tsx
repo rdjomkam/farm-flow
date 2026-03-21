@@ -1,15 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { Calendar, Container, Clock } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatutVague } from "@/types";
 import type { VagueSummaryResponse } from "@/types";
-
-const statutLabels: Record<StatutVague, string> = {
-  [StatutVague.EN_COURS]: "En cours",
-  [StatutVague.TERMINEE]: "Terminée",
-  [StatutVague.ANNULEE]: "Annulée",
-};
 
 const statutVariants: Record<StatutVague, "en_cours" | "terminee" | "annulee"> = {
   [StatutVague.EN_COURS]: "en_cours",
@@ -22,6 +19,7 @@ interface VagueCardProps {
 }
 
 export function VagueCard({ vague }: VagueCardProps) {
+  const t = useTranslations("vagues");
   const statut = vague.statut as StatutVague;
 
   return (
@@ -29,7 +27,7 @@ export function VagueCard({ vague }: VagueCardProps) {
       <Card className="transition-shadow hover:shadow-md">
         <CardHeader className="flex-row items-center justify-between gap-2 pb-2">
           <CardTitle className="text-base">{vague.code}</CardTitle>
-          <Badge variant={statutVariants[statut]}>{statutLabels[statut]}</Badge>
+          <Badge variant={statutVariants[statut]}>{t(`statuts.${statut}`)}</Badge>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-y-2 text-sm">
@@ -43,10 +41,10 @@ export function VagueCard({ vague }: VagueCardProps) {
             </div>
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Container className="h-3.5 w-3.5" />
-              <span>{vague.nombreBacs} bac{vague.nombreBacs > 1 ? "s" : ""}</span>
+              <span>{vague.nombreBacs > 1 ? t("card.bacs", { count: vague.nombreBacs }) : t("card.bac", { count: vague.nombreBacs })}</span>
             </div>
             <div className="text-muted-foreground">
-              <span>{vague.nombreInitial} alevins</span>
+              <span>{t("card.alevins", { count: vague.nombreInitial })}</span>
             </div>
           </div>
         </CardContent>

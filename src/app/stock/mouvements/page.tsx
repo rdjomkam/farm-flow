@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { MouvementsListClient } from "@/components/stock/mouvements-list-client";
 import { ExportButton } from "@/components/ui/export-button";
@@ -17,6 +18,7 @@ export default async function MouvementsPage() {
   const permissions = await checkPagePermission(session, Permission.STOCK_VOIR);
   if (!permissions) return <AccessDenied />;
 
+  const t = await getTranslations("stock");
   const [mouvements, produits, vagues] = await Promise.all([
     getMouvements(session.activeSiteId),
     getProduits(session.activeSiteId),
@@ -38,7 +40,7 @@ export default async function MouvementsPage() {
 
   return (
     <>
-      <Header title="Mouvements">
+      <Header title={t("mouvements.title")}>
         {canExport && (
           <ExportButton
             href="/api/export/stock"

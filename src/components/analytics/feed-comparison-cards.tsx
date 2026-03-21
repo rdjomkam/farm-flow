@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { ArrowRight, Trophy } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { BenchmarkBadge } from "./benchmark-badge";
 import { evaluerBenchmark, BENCHMARK_FCR } from "@/lib/benchmarks";
 import { cn } from "@/lib/utils";
 import type { AnalytiqueAliment } from "@/types";
-import { useTranslations } from "next-intl";
 
 interface FeedComparisonCardsProps {
   aliments: AnalytiqueAliment[];
@@ -42,11 +42,12 @@ export function FeedComparisonCards({
   meilleurSGR,
 }: FeedComparisonCardsProps) {
   const tAnalytics = useTranslations("analytics");
+  const tVagues = useTranslations("vagues");
 
   if (aliments.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
-        Aucun aliment utilise sur ce site.
+        {tVagues("comparison.noVagues")}
       </p>
     );
   }
@@ -85,7 +86,7 @@ export function FeedComparisonCards({
                   href={`/analytics/aliments/${aliment.produitId}`}
                   className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0"
                 >
-                  Detail
+                  {tAnalytics("bacs.detail")}
                   <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
@@ -95,17 +96,17 @@ export function FeedComparisonCards({
                 {isBestCout && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-accent-green-muted px-1.5 py-0.5 text-[10px] font-medium text-accent-green">
                     <Trophy className="h-2.5 w-2.5" />
-                    Meilleur cout/kg
+                    {tVagues("comparison.metrics.coutAliment")}
                   </span>
                 )}
                 {isBestFCR && (
                   <span className="rounded-full bg-accent-blue-muted px-1.5 py-0.5 text-[10px] font-medium text-accent-blue">
-                    Meilleur {tAnalytics("benchmarks.fcr.label")}
+                    {tAnalytics("benchmarks.fcr.label")}
                   </span>
                 )}
                 {isBestSGR && (
                   <span className="rounded-full bg-accent-purple-muted px-1.5 py-0.5 text-[10px] font-medium text-accent-purple">
-                    Meilleur {tAnalytics("benchmarks.sgr.label")}
+                    {tAnalytics("benchmarks.sgr.label")}
                   </span>
                 )}
               </div>
@@ -117,7 +118,7 @@ export function FeedComparisonCards({
                   value={aliment.fcrMoyen !== null ? `${aliment.fcrMoyen}` : "—"}
                 />
                 <MetricItem
-                  label="Cout/kg"
+                  label={tVagues("comparison.metrics.coutAliment")}
                   value={aliment.coutParKgGain !== null ? `${aliment.coutParKgGain.toLocaleString("fr-FR")}` : "—"}
                   unit="CFA"
                 />
@@ -131,10 +132,10 @@ export function FeedComparisonCards({
               {/* Footer metadata */}
               <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                 <span>{aliment.prixUnitaire.toLocaleString("fr-FR")} CFA/kg</span>
-                <span>{aliment.quantiteTotale} kg utilises</span>
-                <span>{aliment.nombreVagues} vague{aliment.nombreVagues > 1 ? "s" : ""}</span>
+                <span>{aliment.quantiteTotale} {tAnalytics("aliments.kgUtilises")}</span>
+                <span>{aliment.nombreVagues > 1 ? tVagues("list.countPlural", { count: aliment.nombreVagues }) : tVagues("list.count", { count: aliment.nombreVagues })}</span>
                 {aliment.tauxSurvieAssocie !== null && (
-                  <span>Survie : {aliment.tauxSurvieAssocie}%</span>
+                  <span>{tVagues("comparison.metrics.survie")} : {aliment.tauxSurvieAssocie}%</span>
                 )}
               </div>
 

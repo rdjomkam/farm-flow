@@ -1,0 +1,170 @@
+{
+  "clients": {
+    "title": "Clients",
+    "count": "{count, plural, one {# client} other {# clients}}",
+    "add": "Add a client",
+    "edit": "Edit client",
+    "new": "New",
+    "empty": "No clients",
+    "emptyDescription": "Add your clients to record sales.",
+    "save": "Save",
+    "create": "Create",
+    "fields": {
+      "nom": "Name",
+      "nomPlaceholder": "E.g. Le Mboa Restaurant",
+      "telephone": "Phone (optional)",
+      "telephonePlaceholder": "6XX XX XX XX (+237 added automatically)",
+      "email": "Email (optional)",
+      "emailPlaceholder": "contact@client.com",
+      "adresse": "Address (optional)",
+      "adressePlaceholder": "Douala, Cameroon"
+    },
+    "stats": {
+      "ventes": "{count, plural, one {# sale} other {# sales}}"
+    }
+  },
+  "ventes": {
+    "title": "Sales",
+    "count": "{count, plural, one {# sale} other {# sales}}",
+    "new": "New sale",
+    "empty": "No sales",
+    "emptyDescription": "Record a fish sale.",
+    "sansFature": "No invoice",
+    "filters": {
+      "tousClients": "All clients",
+      "toutesVagues": "All batches"
+    },
+    "form": {
+      "clientEtVague": "Client and batch",
+      "quantitesPrix": "Quantities and price",
+      "client": "Client",
+      "clientPlaceholder": "Select a client",
+      "vague": "Batch",
+      "vaguePlaceholder": "Select a batch",
+      "vagueOption": "{code} ({count} fish)",
+      "poissonsDisponibles": "Available fish: {count}",
+      "nombrePoissons": "Number of fish",
+      "nombrePoissonsPlaceholder": "E.g. 50",
+      "poidsTotalKg": "Total weight (kg)",
+      "poidsTotalKgPlaceholder": "E.g. 42.5",
+      "prixUnitaireKg": "Unit price (FCFA/kg)",
+      "prixUnitaireKgPlaceholder": "E.g. 2500",
+      "montantTotal": "Total amount",
+      "notes": "Notes (optional)",
+      "notesPlaceholder": "Additional information...",
+      "submit": "Record sale",
+      "back": "Sales"
+    },
+    "detail": {
+      "poissons": "Fish",
+      "poidsTotalKg": "Total weight",
+      "prixKg": "Price/kg",
+      "montantTotal": "Total amount",
+      "detailVente": "Sale details",
+      "client": "Client",
+      "factureAssociee": "Linked invoice",
+      "payeLabel": "Paid: {paye} / {total} F",
+      "genererFacture": "Generate invoice",
+      "creePar": "Created by {name}",
+      "back": "Sales"
+    }
+  },
+  "factures": {
+    "title": "Invoices",
+    "count": "{count, plural, one {# invoice} other {# invoices}}",
+    "empty": "No invoices",
+    "emptyDescription": "Invoices are generated from sales.",
+    "statuts": {
+      "BROUILLON": "Draft",
+      "ENVOYEE": "Sent",
+      "PAYEE_PARTIELLEMENT": "Partial",
+      "PAYEE": "Paid",
+      "ANNULEE": "Cancelled"
+    },
+    "filters": {
+      "tousStatuts": "All statuses",
+      "statut": "Status"
+    },
+    "detail": {
+      "emission": "Issued: {date}",
+      "echeance": "Due: {date}",
+      "total": "Total",
+      "paye": "Paid",
+      "resteAPayer": "Remaining",
+      "detailVente": "Sale details",
+      "poissons": "Fish",
+      "poidsTotalKg": "Total weight",
+      "prixKg": "Price/kg",
+      "paiements": "Payments ({count})",
+      "aucunPaiement": "No payments recorded.",
+      "envoyer": "Send",
+      "back": "Invoices",
+      "creePar": "Created by {name}"
+    },
+    "resteAPayer": "Remaining: {montant} F"
+  },
+  "paiements": {
+    "add": "Add a payment",
+    "register": "Record a payment",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "modes": {
+      "ESPECES": "Cash",
+      "MOBILE_MONEY": "Mobile Money",
+      "VIREMENT": "Transfer",
+      "CHEQUE": "Cheque"
+    },
+    "fields": {
+      "montant": "Amount (max {max} F)",
+      "montantPlaceholder": "E.g. 50000",
+      "mode": "Payment method",
+      "modePlaceholder": "Select",
+      "reference": "Reference (optional)",
+      "referencePlaceholder": "E.g. MTN-20260310-001"
+    }
+  },
+  "finances": {
+    "title": "Finances",
+    "kpis": {
+      "revenusTotal": "Total revenue",
+      "revenusSub": "{count, plural, one {# sale} other {# sales}}",
+      "coutsTotal": "Total costs",
+      "coutsSub": "Feed: {montant}",
+      "margeBrute": "Gross margin",
+      "margeSub": "Rate: {taux}%",
+      "creances": "Receivables",
+      "creancesSub": "Collections: {montant}"
+    },
+    "depenses": {
+      "title": "Expenses (excl. orders)",
+      "voirTout": "View all",
+      "total": "Total",
+      "payees": "Paid",
+      "impayees": "Unpaid",
+      "repartition": "Breakdown by category"
+    },
+    "evolution": {
+      "title": "Financial trend (last 12 months)",
+      "aucuneDonnee": "No data available",
+      "moisLabel": "Month {label}"
+    },
+    "rentabilite": {
+      "title": "Profitability by batch (ROI %)"
+    },
+    "topClients": {
+      "title": "Top clients",
+      "ventes": "{count, plural, one {# sale} other {# sales}}",
+      "paye": "{montant} paid"
+    },
+    "stats": {
+      "factures": "Invoices",
+      "prixMoyenKg": "Avg price /kg",
+      "aliments": "Feed"
+    },
+    "exports": {
+      "rapportPdf": "PDF Report",
+      "ventesExcel": "Export sales Excel",
+      "stockExcel": "Export stock Excel"
+    }
+  }
+}

@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-// Card removed for density (CR-003)
 import {
   Select,
   SelectTrigger,
@@ -22,7 +22,7 @@ import { FormObservation } from "./form-observation";
 import { FormRenouvellement } from "./form-renouvellement";
 import { ConsommationFields } from "./consommation-fields";
 import type { ConsommationLine, ProduitOption } from "./consommation-fields";
-import { TypeReleve, TypeActivite, StatutActivite, CategorieProduit, UniteStock, ACTIVITE_RELEVE_TYPE_MAP } from "@/types";
+import { TypeReleve, TypeActivite, StatutActivite, CategorieProduit, ACTIVITE_RELEVE_TYPE_MAP } from "@/types";
 import type { BacResponse } from "@/types";
 import { ClipboardCheck } from "lucide-react";
 import { useBacService, useActiviteService, useReleveService } from "@/services";
@@ -43,24 +43,6 @@ interface ActivitePlanifiee {
   releveId: string | null;
 }
 
-const uniteLabels: Record<string, string> = {
-  [UniteStock.GRAMME]: "g",
-  [UniteStock.KG]: "kg",
-  [UniteStock.MILLILITRE]: "mL",
-  [UniteStock.LITRE]: "L",
-  [UniteStock.UNITE]: "unite",
-  [UniteStock.SACS]: "sacs",
-};
-
-const typeLabels: Record<TypeReleve, string> = {
-  [TypeReleve.BIOMETRIE]: "Biométrie",
-  [TypeReleve.MORTALITE]: "Mortalité",
-  [TypeReleve.ALIMENTATION]: "Alimentation",
-  [TypeReleve.QUALITE_EAU]: "Qualité de l'eau",
-  [TypeReleve.COMPTAGE]: "Comptage",
-  [TypeReleve.OBSERVATION]: "Observation",
-  [TypeReleve.RENOUVELLEMENT]: "Renouvellement eau",
-};
 
 interface ReleveFormClientProps {
   vagues: { id: string; code: string }[];
@@ -73,6 +55,8 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
   const bacService = useBacService();
   const activiteService = useActiviteService();
   const releveService = useReleveService();
+  const t = useTranslations("releves");
+  const tStock = useTranslations("stock");
 
   // Parametres pre-remplis depuis une activite (query params)
   const initialActiviteId = searchParams.get("activiteId") ?? "";
@@ -171,49 +155,49 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
 
   function validate(): Record<string, string> {
     const errs: Record<string, string> = {};
-    if (!vagueId) errs.vagueId = "Sélectionnez une vague.";
-    if (!bacId) errs.bacId = "Sélectionnez un bac.";
-    if (!typeReleve) errs.typeReleve = "Sélectionnez un type de relevé.";
+    if (!vagueId) errs.vagueId = t("form.errors.vagueId");
+    if (!bacId) errs.bacId = t("form.errors.bacId");
+    if (!typeReleve) errs.typeReleve = t("form.errors.typeReleve");
 
     if (typeReleve === TypeReleve.BIOMETRIE) {
       if (!fields.poidsMoyen || Number(fields.poidsMoyen) <= 0)
-        errs.poidsMoyen = "Requis (> 0).";
+        errs.poidsMoyen = t("form.errors.poidsMoyen");
       if (fields.tailleMoyenne && Number(fields.tailleMoyenne) <= 0)
-        errs.tailleMoyenne = "Doit etre > 0.";
+        errs.tailleMoyenne = t("form.errors.tailleMoyenne");
       if (!fields.echantillonCount || Number(fields.echantillonCount) <= 0)
-        errs.echantillonCount = "Requis (> 0).";
+        errs.echantillonCount = t("form.errors.echantillonCount");
     }
     if (typeReleve === TypeReleve.MORTALITE) {
       if (fields.nombreMorts == null || fields.nombreMorts === "" || Number(fields.nombreMorts) < 0)
-        errs.nombreMorts = "Requis (>= 0).";
-      if (!fields.causeMortalite) errs.causeMortalite = "Requis.";
+        errs.nombreMorts = t("form.errors.nombreMorts");
+      if (!fields.causeMortalite) errs.causeMortalite = t("form.errors.causeMortalite");
     }
     if (typeReleve === TypeReleve.ALIMENTATION) {
       if (!fields.quantiteAliment || Number(fields.quantiteAliment) <= 0)
-        errs.quantiteAliment = "Requis (> 0).";
-      if (!fields.typeAliment) errs.typeAliment = "Requis.";
+        errs.quantiteAliment = t("form.errors.quantiteAliment");
+      if (!fields.typeAliment) errs.typeAliment = t("form.errors.typeAliment");
       if (!fields.frequenceAliment || Number(fields.frequenceAliment) <= 0)
-        errs.frequenceAliment = "Requis (> 0).";
+        errs.frequenceAliment = t("form.errors.frequenceAliment");
     }
     if (typeReleve === TypeReleve.COMPTAGE) {
       if (fields.nombreCompte == null || fields.nombreCompte === "" || Number(fields.nombreCompte) < 0)
-        errs.nombreCompte = "Requis (>= 0).";
-      if (!fields.methodeComptage) errs.methodeComptage = "Requis.";
+        errs.nombreCompte = t("form.errors.nombreCompte");
+      if (!fields.methodeComptage) errs.methodeComptage = t("form.errors.methodeComptage");
     }
     if (typeReleve === TypeReleve.OBSERVATION) {
-      if (!fields.description?.trim()) errs.description = "Requis.";
+      if (!fields.description?.trim()) errs.description = t("form.errors.description");
     }
     if (typeReleve === TypeReleve.RENOUVELLEMENT) {
       const hasPct = fields.pourcentageRenouvellement !== undefined && fields.pourcentageRenouvellement !== "";
       const hasVol = fields.volumeRenouvele !== undefined && fields.volumeRenouvele !== "";
       if (!hasPct && !hasVol) {
-        errs.pourcentageRenouvellement = "Au moins un champ est requis : pourcentage ou volume.";
+        errs.pourcentageRenouvellement = t("form.errors.renouvellementRequis");
       }
       if (hasPct && (Number(fields.pourcentageRenouvellement) < 0 || Number(fields.pourcentageRenouvellement) > 100)) {
-        errs.pourcentageRenouvellement = "Le pourcentage doit etre entre 0 et 100.";
+        errs.pourcentageRenouvellement = t("form.errors.pourcentageRange");
       }
       if (hasVol && Number(fields.volumeRenouvele) <= 0) {
-        errs.volumeRenouvele = "Le volume doit etre superieur a 0.";
+        errs.volumeRenouvele = t("form.errors.volumePositif");
       }
     }
     return errs;
@@ -280,26 +264,26 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
 
   return (
     <section>
-      <h2 className="text-base font-semibold mb-4">Saisir un releve</h2>
+      <h2 className="text-base font-semibold mb-4">{t("form.title")}</h2>
 
       {/* Bannière informative si pre-rempli depuis une activite */}
       {isFromActivite && (
         <div className="flex items-start gap-2.5 rounded-xl border border-primary/30 bg-primary/5 p-3 mb-4">
           <ClipboardCheck className="h-4 w-4 text-primary mt-0.5 shrink-0" />
           <div>
-            <p className="text-xs font-semibold text-primary">Completion d'activite</p>
+            <p className="text-xs font-semibold text-primary">{t("form.activiteNotice.title")}</p>
             <p className="text-xs text-primary/80 mt-0.5">
-              Ce releve sera automatiquement lie a l'activite planifiee et la marquera comme terminee.
+              {t("form.activiteNotice.description")}
             </p>
           </div>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <FormSection title="Identification" description="Vague et bac concernés">
+          <FormSection title={t("form.sections.identification.title")} description={t("form.sections.identification.description")}>
             <Select value={vagueId} onValueChange={setVagueId} disabled={isFromActivite && Boolean(vagueId)}>
-              <SelectTrigger label="Vague" error={errors.vagueId}>
-                <SelectValue placeholder="Sélectionner une vague" />
+              <SelectTrigger label={t("form.fields.vague")} error={errors.vagueId}>
+                <SelectValue placeholder={t("form.fields.vaguePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {vagues.map((v) => (
@@ -311,10 +295,10 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
             </Select>
 
             <Select value={bacId} onValueChange={setBacId} disabled={!vagueId || loadingBacs || (isFromActivite && Boolean(initialBacId))}>
-              <SelectTrigger label="Bac" error={errors.bacId}>
+              <SelectTrigger label={t("form.fields.bac")} error={errors.bacId}>
                 <SelectValue
                   placeholder={
-                    loadingBacs ? "Chargement..." : !vagueId ? "Sélectionnez d'abord une vague" : "Sélectionner un bac"
+                    loadingBacs ? t("form.fields.bacChargement") : !vagueId ? t("form.fields.bacSelectVagueFirst") : t("form.fields.bacPlaceholder")
                   }
                 />
               </SelectTrigger>
@@ -328,10 +312,10 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
             </Select>
           </FormSection>
 
-          <FormSection title="Date du releve" description="Date d'observation (retroactive possible)">
+          <FormSection title={t("form.sections.date.title")} description={t("form.sections.date.description")}>
             <Input
               type="datetime-local"
-              label="Date et heure du releve"
+              label={t("form.fields.dateHeure")}
               value={releveDate}
               onChange={(e) => setReleveDate(e.target.value)}
               max={(() => {
@@ -342,15 +326,15 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
             />
           </FormSection>
 
-          <FormSection title="Type de releve" description="Choisissez le type de mesure">
+          <FormSection title={t("form.sections.type.title")} description={t("form.sections.type.description")}>
             <Select value={typeReleve} onValueChange={setTypeReleve} disabled={isFromActivite && Boolean(initialTypeReleve)}>
-              <SelectTrigger label="Type de relevé" error={errors.typeReleve}>
-                <SelectValue placeholder="Sélectionner un type" />
+              <SelectTrigger label={t("form.fields.typeReleve")} error={errors.typeReleve}>
+                <SelectValue placeholder={t("form.fields.typeRelevePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                {Object.values(TypeReleve).map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {typeLabels[t]}
+                {Object.values(TypeReleve).map((tp) => (
+                  <SelectItem key={tp} value={tp}>
+                    {t(`types.${tp}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -361,10 +345,10 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
               isFromActivite ? (
                 /* Champ en lecture seule quand pre-rempli depuis une activite */
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs font-medium text-foreground">Activite liee</span>
+                  <span className="text-xs font-medium text-foreground">{t("form.fields.activiteLiee")}</span>
                   <div className="flex h-11 w-full items-center rounded-lg border border-border bg-muted px-3 text-sm text-muted-foreground cursor-not-allowed">
                     <ClipboardCheck className="h-3.5 w-3.5 mr-2 text-primary shrink-0" />
-                    Activite selectionnee (liee automatiquement)
+                    {t("form.fields.activiteSelectionnee")}
                   </div>
                 </div>
               ) : (
@@ -373,20 +357,20 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
                   onValueChange={(val) => setActiviteId(val === "__auto__" ? "" : val)}
                   disabled={loadingActivites}
                 >
-                  <SelectTrigger label="Activité planifiée (optionnel)">
+                  <SelectTrigger label={t("form.fields.activitePlanifiee")}>
                     <SelectValue
                       placeholder={
                         loadingActivites
-                          ? "Chargement..."
+                          ? t("form.fields.bacChargement")
                           : activitesPlanifiees.length === 0
-                          ? "Auto-détection (aucune activité planifiée)"
-                          : "Auto-détection"
+                          ? t("form.fields.autoDetectionNone")
+                          : t("form.fields.autoDetection")
                       }
                     />
                   </SelectTrigger>
                   <SelectContent>
                     {activitesPlanifiees.length > 0 && (
-                      <SelectItem value="__auto__">Auto-détection</SelectItem>
+                      <SelectItem value="__auto__">{t("form.fields.autoDetection")}</SelectItem>
                     )}
                     {activitesPlanifiees.map((a) => (
                       <SelectItem key={a.id} value={a.id}>
@@ -406,7 +390,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
           </FormSection>
 
           {typeReleve === TypeReleve.BIOMETRIE && (
-            <FormSection title="Mesures biométriques" description="Poids, taille et échantillon">
+            <FormSection title={t("form.sections.biometrie.title")} description={t("form.sections.biometrie.description")}>
               <FormBiometrie
                 values={{
                   poidsMoyen: fields.poidsMoyen ?? "",
@@ -420,7 +404,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
           )}
           {typeReleve === TypeReleve.MORTALITE && (
             <>
-              <FormSection title="Mortalité" description="Nombre et cause">
+              <FormSection title={t("form.sections.mortalite.title")} description={t("form.sections.mortalite.description")}>
                 <FormMortalite
                   values={{
                     nombreMorts: fields.nombreMorts ?? "",
@@ -430,7 +414,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
                   errors={errors}
                 />
               </FormSection>
-              <FormSection title="Consommation de stock" description="Produits utilisés (optionnel)">
+              <FormSection title={t("form.sections.consommationStock.title")} description={t("form.sections.consommationStock.descriptionIntrant")}>
                 <ConsommationFields
                   lignes={consommations}
                   onChange={setConsommations}
@@ -447,11 +431,11 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
               ? produits.find((p) => p.id === firstAlimentLine.produitId && p.categorie === CategorieProduit.ALIMENT)
               : undefined;
             const uniteAliment = firstProduit
-              ? (uniteLabels[firstProduit.unite] ?? firstProduit.unite)
+              ? tStock(`unites.${firstProduit.unite as "GRAMME" | "KG" | "MILLILITRE" | "LITRE" | "UNITE" | "SACS"}`)
               : undefined;
             return (
             <>
-              <FormSection title="Alimentation" description="Quantité et type d'aliment">
+              <FormSection title={t("form.sections.alimentation.title")} description={t("form.sections.alimentation.description")}>
                 <FormAlimentation
                   values={{
                     quantiteAliment: fields.quantiteAliment ?? "",
@@ -463,7 +447,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
                   uniteAliment={uniteAliment}
                 />
               </FormSection>
-              <FormSection title="Consommation de stock" description="Produits consommés">
+              <FormSection title={t("form.sections.consommationStock.title")} description={t("form.sections.consommationStock.descriptionAliment")}>
                 <ConsommationFields
                   lignes={consommations}
                   onChange={setConsommations}
@@ -476,7 +460,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
           })()}
           {typeReleve === TypeReleve.QUALITE_EAU && (
             <>
-              <FormSection title="Qualité de l'eau" description="Paramètres physico-chimiques">
+              <FormSection title={t("form.sections.qualiteEau.title")} description={t("form.sections.qualiteEau.description")}>
                 <FormQualiteEau
                   values={{
                     temperature: fields.temperature ?? "",
@@ -487,7 +471,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
                   onChange={updateField}
                 />
               </FormSection>
-              <FormSection title="Consommation de stock" description="Produits utilisés (optionnel)">
+              <FormSection title={t("form.sections.consommationStock.title")} description={t("form.sections.consommationStock.descriptionIntrant")}>
                 <ConsommationFields
                   lignes={consommations}
                   onChange={setConsommations}
@@ -499,7 +483,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
             </>
           )}
           {typeReleve === TypeReleve.COMPTAGE && (
-            <FormSection title="Comptage" description="Nombre et méthode">
+            <FormSection title={t("form.sections.comptage.title")} description={t("form.sections.comptage.description")}>
               <FormComptage
                 values={{
                   nombreCompte: fields.nombreCompte ?? "",
@@ -511,7 +495,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
             </FormSection>
           )}
           {typeReleve === TypeReleve.OBSERVATION && (
-            <FormSection title="Observation" description="Description libre">
+            <FormSection title={t("form.sections.observation.title")} description={t("form.sections.observation.description")}>
               <FormObservation
                 values={{ description: fields.description ?? "" }}
                 onChange={updateField}
@@ -537,15 +521,15 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
           {/* Notes */}
           <Input
             id="notes"
-            label="Notes (optionnel)"
-            placeholder="Remarques complémentaires..."
+            label={t("form.fields.notes")}
+            placeholder={t("form.fields.notesPlaceholder")}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
 
           {/* Submit */}
           <Button type="submit" className="mt-2">
-            Enregistrer le relevé
+            {t("form.fields.submit")}
           </Button>
         </form>
     </section>

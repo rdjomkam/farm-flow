@@ -1,15 +1,10 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Calendar, Weight, HeartPulse, Container } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatutVague } from "@/types";
 import type { VagueDashboardSummary } from "@/types";
-
-const statutLabels: Record<StatutVague, string> = {
-  [StatutVague.EN_COURS]: "En cours",
-  [StatutVague.TERMINEE]: "Terminee",
-  [StatutVague.ANNULEE]: "Annulee",
-};
 
 const statutVariants: Record<StatutVague, "en_cours" | "terminee" | "annulee"> = {
   [StatutVague.EN_COURS]: "en_cours",
@@ -22,7 +17,9 @@ interface VagueSummaryCardProps {
   index?: number;
 }
 
-export function VagueSummaryCard({ vague, index = 0 }: VagueSummaryCardProps) {
+export async function VagueSummaryCard({ vague, index = 0 }: VagueSummaryCardProps) {
+  const t = await getTranslations("vagues");
+
   return (
     <Link href={`/vagues/${vague.id}`}>
       <Card
@@ -32,7 +29,9 @@ export function VagueSummaryCard({ vague, index = 0 }: VagueSummaryCardProps) {
       >
         <CardHeader className="flex-row items-center justify-between gap-2 pb-2">
           <CardTitle className="text-base">{vague.code}</CardTitle>
-          <Badge variant={statutVariants[vague.statut]}>{statutLabels[vague.statut]}</Badge>
+          <Badge variant={statutVariants[vague.statut]}>
+            {t(`statuts.${vague.statut as "EN_COURS" | "TERMINEE" | "ANNULEE"}`)}
+          </Badge>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-y-2 text-sm">
@@ -42,7 +41,11 @@ export function VagueSummaryCard({ vague, index = 0 }: VagueSummaryCardProps) {
             </div>
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Container className="h-3.5 w-3.5" />
-              <span>{vague.nombreBacs} bac{vague.nombreBacs > 1 ? "s" : ""}</span>
+              <span>
+                {vague.nombreBacs > 1
+                  ? t("card.bacs", { count: vague.nombreBacs })
+                  : t("card.bac", { count: vague.nombreBacs })}
+              </span>
             </div>
             <div className="flex items-center gap-1.5">
               <Weight className="h-3.5 w-3.5 text-accent-blue" />
@@ -59,7 +62,7 @@ export function VagueSummaryCard({ vague, index = 0 }: VagueSummaryCardProps) {
           </div>
           {vague.poidsMoyen !== null && (
             <p className="mt-2 text-xs text-muted-foreground">
-              Poids moyen : {vague.poidsMoyen} g
+              {t("indicateurs.poidsMoyen")} : {vague.poidsMoyen} g
             </p>
           )}
         </CardContent>

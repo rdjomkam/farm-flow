@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -8,12 +11,6 @@ import {
 } from "@/components/ui/select";
 import { TypeAliment } from "@/types";
 
-const alimentLabels: Record<TypeAliment, string> = {
-  [TypeAliment.ARTISANAL]: "Artisanal",
-  [TypeAliment.COMMERCIAL]: "Commercial",
-  [TypeAliment.MIXTE]: "Mixte",
-};
-
 interface FormAlimentationProps {
   values: { quantiteAliment: string; typeAliment: string; frequenceAliment: string };
   onChange: (field: string, value: string) => void;
@@ -22,11 +19,13 @@ interface FormAlimentationProps {
 }
 
 export function FormAlimentation({ values, onChange, errors, uniteAliment }: FormAlimentationProps) {
+  const t = useTranslations("releves");
+
   return (
     <>
       <Input
         id="quantiteAliment"
-        label={`Quantité d'aliment (${uniteAliment ?? "kg"})`}
+        label={t("form.alimentation.quantiteAliment", { unite: uniteAliment ?? "kg" })}
         type="number"
         min="0.01"
         step="0.01"
@@ -35,20 +34,20 @@ export function FormAlimentation({ values, onChange, errors, uniteAliment }: For
         error={errors.quantiteAliment}
       />
       <Select value={values.typeAliment} onValueChange={(v) => onChange("typeAliment", v)}>
-        <SelectTrigger label="Type d'aliment" error={errors.typeAliment}>
-          <SelectValue placeholder="Sélectionner un type" />
+        <SelectTrigger label={t("form.alimentation.typeAliment")} error={errors.typeAliment}>
+          <SelectValue placeholder={t("form.alimentation.typeAlimentPlaceholder")} />
         </SelectTrigger>
         <SelectContent>
-          {Object.values(TypeAliment).map((t) => (
-            <SelectItem key={t} value={t}>
-              {alimentLabels[t]}
+          {Object.values(TypeAliment).map((tp) => (
+            <SelectItem key={tp} value={tp}>
+              {t(`form.alimentation.types.${tp}`)}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
       <Input
         id="frequenceAliment"
-        label="Fréquence (fois/jour)"
+        label={t("form.alimentation.frequenceAliment")}
         type="number"
         min="1"
         value={values.frequenceAliment}

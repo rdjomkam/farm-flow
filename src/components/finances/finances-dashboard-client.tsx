@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { TrendingUp, TrendingDown, DollarSign, AlertCircle, Receipt } from "lucide-react";
 
 // Lazy loading Recharts — ssr: false obligatoire (no SSR, window/document deps)
@@ -59,7 +60,7 @@ import type {
   TopClients,
 } from "@/lib/queries/finances";
 
-// Formateur de nombres FCFA
+// FCFA number formatter
 function formatFCFA(amount: number): string {
   return new Intl.NumberFormat("fr-FR").format(Math.round(amount)) + " FCFA";
 }
@@ -89,7 +90,9 @@ export function FinancesDashboardClient({
   evolution,
   topClients,
 }: FinancesDashboardClientProps) {
-  // Formater les donnees evolution pour Recharts
+  const t = useTranslations("ventes");
+
+  // Format evolution data for Recharts
   const evolutionData = evolution.evolution.map((m) => ({
     name: m.mois.replace(/^\d{4}-/, ""), // "2026-01" → "01"
     Revenus: m.revenus,
@@ -98,7 +101,7 @@ export function FinancesDashboardClient({
     Encaissements: m.encaissements,
   }));
 
-  // Formater les donnees rentabilite par vague
+  // Format profitability data by vague
   const vagueData = parVague.vagues.map((v) => ({
     name: v.code.length > 15 ? v.code.slice(0, 15) + "..." : v.code,
     roi: v.roi ?? 0,
@@ -107,24 +110,24 @@ export function FinancesDashboardClient({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Boutons d'export */}
+      {/* Export buttons */}
       <div className="flex flex-wrap gap-2">
         <ExportButton
           href="/api/export/finances"
           filename={`rapport-financier-${new Date().toISOString().slice(0, 10)}.pdf`}
-          label="Rapport PDF"
+          label={t("finances.exports.rapportPdf")}
           variant="outline"
         />
         <ExportButton
           href="/api/export/ventes"
           filename={`ventes-${new Date().toISOString().slice(0, 10)}.xlsx`}
-          label="Export ventes Excel"
+          label={t("finances.exports.ventesExcel")}
           variant="outline"
         />
         <ExportButton
           href="/api/export/stock"
           filename={`stock-${new Date().toISOString().slice(0, 10)}.xlsx`}
-          label="Export stock Excel"
+          label={t("finances.exports.stockExcel")}
           variant="outline"
         />
       </div>
@@ -132,76 +135,86 @@ export function FinancesDashboardClient({
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KPICard
-          title="Revenus totaux"
+          title={t("finances.kpis.revenusTotal")}
           value={formatCompact(resume.revenus)}
-          subtitle={`${resume.nombreVentes} vente${resume.nombreVentes > 1 ? "s" : ""}`}
+          subtitle={t("finances.kpis.revenusSub", { count: resume.nombreVentes })}
           icon={TrendingUp}
           iconColor="text-success"
           iconBgColor="bg-success/10"
         />
         <KPICard
-          title="Couts totaux"
+          title={t("finances.kpis.coutsTotal")}
           value={formatCompact(resume.coutsTotaux)}
-          subtitle={`Aliments: ${formatCompact(resume.coutsAliments)}`}
+          subtitle={t("finances.kpis.coutsSub", { montant: formatCompact(resume.coutsAliments) })}
           icon={TrendingDown}
           iconColor="text-danger"
           iconBgColor="bg-danger/10"
         />
         <KPICard
-          title="Marge brute"
+          title={t("finances.kpis.margeBrute")}
           value={formatCompact(resume.margeBrute)}
-          subtitle={resume.tauxMarge !== null ? `Taux: ${resume.tauxMarge.toFixed(1)}%` : undefined}
+          subtitle={resume.tauxMarge !== null
+            ? t("finances.kpis.margeSub", { taux: resume.tauxMarge.toFixed(1) })
+            : undefined}
           icon={DollarSign}
           iconColor={resume.margeBrute >= 0 ? "text-primary" : "text-danger"}
           iconBgColor="bg-primary/10"
         />
         <KPICard
-          title="Creances"
+          title={t("finances.kpis.creances")}
           value={formatCompact(resume.creances)}
-          subtitle={`Encaissements: ${formatCompact(resume.encaissements)}`}
+          subtitle={t("finances.kpis.creancesSub", { montant: formatCompact(resume.encaissements) })}
           icon={AlertCircle}
           iconColor="text-warning"
           iconBgColor="bg-warning/10"
         />
       </div>
 
-      {/* Section Depenses (Sprint 18) */}
+      {/* Expenses section (Sprint 18) */}
       {resume.depensesTotales > 0 && (
         <Card>
           <CardHeader className="pb-0">
             <div className="flex items-center justify-between gap-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <Receipt className="h-4 w-4" />
-                Depenses (hors commandes)
+                {t("finances.depenses.title")}
               </CardTitle>
               <Link
                 href="/depenses"
                 className="text-xs text-primary hover:underline"
               >
-                Voir tout
+                {t("finances.depenses.voirTout")}
               </Link>
             </div>
           </CardHeader>
           <CardContent className="pt-4">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Total</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                  {t("finances.depenses.total")}
+                </p>
                 <p className="text-lg font-bold">{formatCompact(resume.depensesTotales)}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Payees</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                  {t("finances.depenses.payees")}
+                </p>
                 <p className="text-lg font-bold text-success">{formatCompact(resume.depensesPayees)}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Impayees</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                  {t("finances.depenses.impayees")}
+                </p>
                 <p className="text-lg font-bold text-warning">{formatCompact(resume.depensesImpayees)}</p>
               </div>
             </div>
 
-            {/* Repartition par categorie */}
+            {/* Category breakdown */}
             {Object.keys(resume.depensesParCategorie).length > 0 && (
               <div className="mt-4">
-                <p className="text-xs text-muted-foreground mb-2">Repartition par categorie</p>
+                <p className="text-xs text-muted-foreground mb-2">
+                  {t("finances.depenses.repartition")}
+                </p>
                 <div className="flex flex-col gap-1.5">
                   {Object.entries(resume.depensesParCategorie)
                     .sort(([, a], [, b]) => (b as number) - (a as number))
@@ -235,15 +248,15 @@ export function FinancesDashboardClient({
         </Card>
       )}
 
-      {/* Graphique evolution */}
+      {/* Evolution chart */}
       <Card>
         <CardHeader className="pb-0">
-          <CardTitle className="text-base">Evolution financiere (12 derniers mois)</CardTitle>
+          <CardTitle className="text-base">{t("finances.evolution.title")}</CardTitle>
         </CardHeader>
         <CardContent className="pt-4">
           {evolutionData.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
-              Aucune donnee disponible
+              {t("finances.evolution.aucuneDonnee")}
             </p>
           ) : (
             <ResponsiveContainer width="100%" height={240}>
@@ -282,7 +295,7 @@ export function FinancesDashboardClient({
                 <Tooltip
                   content={
                     <ChartTooltip
-                      labelFormatter={(label) => `Mois ${label}`}
+                      labelFormatter={(label) => t("finances.evolution.moisLabel", { label })}
                       valueFormatter={(v) => formatFCFA(v)}
                     />
                   }
@@ -317,11 +330,11 @@ export function FinancesDashboardClient({
         </CardContent>
       </Card>
 
-      {/* Rentabilite par vague */}
+      {/* Profitability by vague */}
       {vagueData.length > 0 && (
         <Card>
           <CardHeader className="pb-0">
-            <CardTitle className="text-base">Rentabilite par vague (ROI %)</CardTitle>
+            <CardTitle className="text-base">{t("finances.rentabilite.title")}</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             <ResponsiveContainer width="100%" height={Math.max(160, vagueData.length * 40)}>
@@ -371,7 +384,7 @@ export function FinancesDashboardClient({
       {topClients.clients.length > 0 && (
         <Card>
           <CardHeader className="pb-0">
-            <CardTitle className="text-base">Top clients</CardTitle>
+            <CardTitle className="text-base">{t("finances.topClients.title")}</CardTitle>
           </CardHeader>
           <CardContent className="pt-4 flex flex-col gap-3">
             {topClients.clients.map((client) => {
@@ -384,20 +397,20 @@ export function FinancesDashboardClient({
                     <div className="min-w-0">
                       <p className="font-medium text-sm truncate">{client.nom}</p>
                       <p className="text-xs text-muted-foreground">
-                        {client.nombreVentes} vente{client.nombreVentes > 1 ? "s" : ""} &middot;{" "}
+                        {t("finances.topClients.ventes", { count: client.nombreVentes })} &middot;{" "}
                         {formatFCFA(client.totalVentes)}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-xs font-medium text-success">
-                        {formatCompact(client.totalPaye)} paye
+                        {t("finances.topClients.paye", { montant: formatCompact(client.totalPaye) })}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {ratioPaye.toFixed(0)}%
                       </p>
                     </div>
                   </div>
-                  {/* Barre de progression */}
+                  {/* Progress bar */}
                   <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                     <div
                       className="h-full rounded-full bg-success transition-all"
@@ -411,18 +424,22 @@ export function FinancesDashboardClient({
         </Card>
       )}
 
-      {/* Statistiques supplementaires */}
+      {/* Additional stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Factures</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+              {t("finances.stats.factures")}
+            </p>
             <p className="text-xl font-bold">{resume.nombreFactures}</p>
           </CardContent>
         </Card>
         {resume.prixMoyenVenteKg !== null && (
           <Card>
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Prix moy. /kg</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                {t("finances.stats.prixMoyenKg")}
+              </p>
               <p className="text-xl font-bold">
                 {new Intl.NumberFormat("fr-FR").format(Math.round(resume.prixMoyenVenteKg))} F
               </p>
@@ -431,7 +448,9 @@ export function FinancesDashboardClient({
         )}
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Aliments</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+              {t("finances.stats.aliments")}
+            </p>
             <p className="text-xl font-bold">{formatCompact(resume.coutsAliments)}</p>
           </CardContent>
         </Card>

@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 
 interface FormQualiteEauProps {
@@ -6,11 +9,13 @@ interface FormQualiteEauProps {
 }
 
 export function FormQualiteEau({ values, onChange }: FormQualiteEauProps) {
+  const t = useTranslations("releves");
+
   return (
     <>
       <Input
         id="temperature"
-        label="Température (°C)"
+        label={t("form.qualiteEau.temperature")}
         type="number"
         step="0.1"
         value={values.temperature}
@@ -18,7 +23,7 @@ export function FormQualiteEau({ values, onChange }: FormQualiteEauProps) {
       />
       <Input
         id="ph"
-        label="pH"
+        label={t("form.qualiteEau.ph")}
         type="number"
         step="0.01"
         min="0"
@@ -28,7 +33,7 @@ export function FormQualiteEau({ values, onChange }: FormQualiteEauProps) {
       />
       <Input
         id="oxygene"
-        label="Oxygène dissous (mg/L)"
+        label={t("form.qualiteEau.oxygene")}
         type="number"
         step="0.1"
         value={values.oxygene}
@@ -36,7 +41,7 @@ export function FormQualiteEau({ values, onChange }: FormQualiteEauProps) {
       />
       <Input
         id="ammoniac"
-        label="Ammoniac (mg/L)"
+        label={t("form.qualiteEau.ammoniac")}
         type="number"
         step="0.01"
         value={values.ammoniac}

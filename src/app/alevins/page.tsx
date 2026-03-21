@@ -15,6 +15,7 @@ import {
   StatutLotAlevins,
   Permission,
 } from "@/types";
+import { getTranslations } from "next-intl/server";
 
 export default async function AlevinsPage() {
   const session = await getServerSession();
@@ -23,6 +24,8 @@ export default async function AlevinsPage() {
 
   const permissions = await checkPagePermission(session, Permission.ALEVINS_VOIR);
   if (!permissions) return <AccessDenied />;
+
+  const t = await getTranslations("alevins");
 
   const [reproducteurs, pontes, lots] = await Promise.all([
     getReproducteurs(session.activeSiteId),
@@ -57,7 +60,7 @@ export default async function AlevinsPage() {
     bgColor: string;
   }[] = [
     {
-      label: "Reproducteurs actifs",
+      label: t("kpis.reproducteursActifs"),
       value: reproducteursActifs.length,
       total: reproducteurs.length,
       icon: Users,
@@ -65,7 +68,7 @@ export default async function AlevinsPage() {
       bgColor: "bg-accent-green-muted",
     },
     {
-      label: "Pontes en cours",
+      label: t("kpis.pontesEnCours"),
       value: pontesEnCours.length,
       total: pontes.length,
       icon: Egg,
@@ -73,7 +76,7 @@ export default async function AlevinsPage() {
       bgColor: "bg-accent-yellow-muted",
     },
     {
-      label: "Lots en elevage",
+      label: t("kpis.lotsEnElevage"),
       value: lotsEnElevage.length,
       total: lots.length,
       icon: Baby,
@@ -81,7 +84,7 @@ export default async function AlevinsPage() {
       bgColor: "bg-accent-blue-muted",
     },
     {
-      label: "Dernier transfert",
+      label: t("kpis.dernierTransfert"),
       value: dernierTransfert
         ? new Date(dernierTransfert.updatedAt).toLocaleDateString("fr-FR")
         : "—",
@@ -94,24 +97,30 @@ export default async function AlevinsPage() {
   const sections = [
     {
       href: "/alevins/reproducteurs",
-      label: "Reproducteurs",
-      description: `${reproducteurs.length} reproducteur${reproducteurs.length > 1 ? "s" : ""}`,
+      label: t("reproducteurs.title"),
+      description: reproducteurs.length === 1
+        ? t("reproducteurs.count", { count: reproducteurs.length })
+        : t("reproducteurs.countPlural", { count: reproducteurs.length }),
       icon: Users,
       color: "text-accent-green",
       bgColor: "bg-accent-green-muted",
     },
     {
       href: "/alevins/pontes",
-      label: "Pontes",
-      description: `${pontes.length} ponte${pontes.length > 1 ? "s" : ""}`,
+      label: t("pontes.title"),
+      description: pontes.length === 1
+        ? t("pontes.count", { count: pontes.length })
+        : t("pontes.countPlural", { count: pontes.length }),
       icon: Egg,
       color: "text-accent-yellow",
       bgColor: "bg-accent-yellow-muted",
     },
     {
       href: "/alevins/lots",
-      label: "Lots d'alevins",
-      description: `${lots.length} lot${lots.length > 1 ? "s" : ""}`,
+      label: t("lots.title"),
+      description: lots.length === 1
+        ? t("lots.count", { count: lots.length })
+        : t("lots.countPlural", { count: lots.length }),
       icon: Baby,
       color: "text-accent-blue",
       bgColor: "bg-accent-blue-muted",
@@ -120,7 +129,7 @@ export default async function AlevinsPage() {
 
   return (
     <>
-      <Header title="Production Alevins" />
+      <Header title={t("page.title")} />
       <div className="flex flex-col gap-4 p-4">
         {/* KPIs */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

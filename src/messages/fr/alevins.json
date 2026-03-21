@@ -1,0 +1,229 @@
+{
+  "page": {
+    "title": "Production Alevins",
+    "tabs": {
+      "reproducteurs": "Reproducteurs",
+      "pontes": "Pontes",
+      "lots": "Lots d'alevins"
+    }
+  },
+  "kpis": {
+    "reproducteursActifs": "Reproducteurs actifs",
+    "pontesEnCours": "Pontes en cours",
+    "lotsEnElevage": "Lots en élevage",
+    "dernierTransfert": "Dernier transfert"
+  },
+  "reproducteurs": {
+    "title": "Reproducteurs",
+    "nouveau": "Nouveau",
+    "ajouterReproducteur": "Ajouter un reproducteur",
+    "modifierReproducteur": "Modifier le reproducteur",
+    "supprimerReproducteur": "Supprimer le reproducteur",
+    "count": "{count} reproducteur",
+    "countPlural": "{count} reproducteurs",
+    "aucun": "Aucun reproducteur",
+    "aucunePonte": "Aucune ponte",
+    "backToAlevins": "Alevins",
+    "pontes": "Pontes",
+    "tabs": {
+      "tous": "Tous",
+      "femelles": "Femelles",
+      "males": "Males",
+      "actifs": "Actifs",
+      "reformes": "Reformes"
+    },
+    "search": "Rechercher par code ou origine...",
+    "form": {
+      "code": "Code",
+      "codePlaceholder": "Ex: REP-F-001",
+      "sexe": "Sexe",
+      "poids": "Poids (g)",
+      "poidsPlaceholder": "Ex: 1500",
+      "age": "Age en mois (optionnel)",
+      "agePlaceholder": "Ex: 18",
+      "origine": "Origine (optionnel)",
+      "originePlaceholder": "Ex: Ecloserie Yaounde",
+      "dateAcquisition": "Date d'acquisition (optionnel)",
+      "notes": "Notes (optionnel)",
+      "notesPlaceholder": "Observations...",
+      "creer": "Creer",
+      "annuler": "Annuler",
+      "enregistrer": "Enregistrer",
+      "supprimer": "Supprimer",
+      "modifier": "Modifier",
+      "statut": "Statut",
+      "ageMonths": "Age en mois (optionnel)"
+    },
+    "detail": {
+      "informations": "Informations",
+      "code": "Code",
+      "sexe": "Sexe",
+      "poids": "Poids",
+      "age": "Age",
+      "origine": "Origine",
+      "acquisition": "Acquisition",
+      "notes": "Notes",
+      "grammesUnit": "g",
+      "moisUnit": "mois",
+      "confirmDelete": "Etes-vous sur de vouloir supprimer {code} ? Cette action est irreversible.",
+      "deleteSuccess": "Reproducteur supprime."
+    },
+    "sexe": {
+      "MALE": "Male",
+      "FEMELLE": "Femelle"
+    },
+    "statuts": {
+      "ACTIF": "Actif",
+      "REFORME": "Reforme",
+      "MORT": "Mort"
+    }
+  },
+  "pontes": {
+    "title": "Pontes",
+    "nouvelle": "Nouvelle",
+    "nouvellePonte": "Nouvelle ponte",
+    "modifierPonte": "Modifier la ponte",
+    "supprimerPonte": "Supprimer la ponte",
+    "count": "{count} ponte",
+    "countPlural": "{count} pontes",
+    "aucune": "Aucune ponte",
+    "backToAlevins": "Alevins",
+    "backToPontes": "Pontes",
+    "tabs": {
+      "toutes": "Toutes"
+    },
+    "search": "Rechercher par code ou femelle...",
+    "form": {
+      "code": "Code",
+      "codePlaceholder": "Ex: PONTE-2026-001",
+      "femelle": "Femelle",
+      "femellePlaceholder": "Selectionnez une femelle",
+      "male": "Male (optionnel)",
+      "malePlaceholder": "Aucun male identifie",
+      "datePonte": "Date de ponte",
+      "nombreOeufs": "Nombre d'oeufs (optionnel)",
+      "nombreOeufsPlaceholder": "Ex: 5000",
+      "tauxFecondation": "Taux de fecondation % (optionnel)",
+      "tauxFecondationPlaceholder": "Ex: 75",
+      "notes": "Notes (optionnel)",
+      "notesPlaceholder": "Observations...",
+      "creer": "Creer",
+      "annuler": "Annuler",
+      "enregistrer": "Enregistrer",
+      "supprimer": "Supprimer",
+      "modifier": "Modifier",
+      "statut": "Statut"
+    },
+    "detail": {
+      "informations": "Informations",
+      "code": "Code",
+      "date": "Date",
+      "femelle": "Femelle",
+      "male": "Male",
+      "oeufs": "Oeufs",
+      "tauxFecondation": "Taux fecondation",
+      "notes": "Notes",
+      "lotsAlevins": "Lots d'alevins",
+      "confirmDelete": "Etes-vous sur de vouloir supprimer {code} ? Cette action est irreversible.",
+      "deleteSuccess": "Ponte supprimee."
+    },
+    "card": {
+      "femelle": "Femelle",
+      "male": "Male",
+      "oeufs": "oeufs",
+      "fecondation": "fecondation",
+      "lots": "lot(s)"
+    },
+    "statuts": {
+      "EN_COURS": "En cours",
+      "TERMINEE": "Terminee",
+      "ECHOUEE": "Echouee"
+    }
+  },
+  "lots": {
+    "title": "Lots d'alevins",
+    "nouveau": "Nouveau",
+    "nouveauLot": "Nouveau lot d'alevins",
+    "modifierLot": "Modifier le lot",
+    "count": "{count} lot",
+    "countPlural": "{count} lots",
+    "aucun": "Aucun lot d'alevins",
+    "backToAlevins": "Alevins",
+    "backToLots": "Lots d'alevins",
+    "tabs": {
+      "tous": "Tous"
+    },
+    "search": "Rechercher par code ou ponte...",
+    "form": {
+      "code": "Code",
+      "codePlaceholder": "Ex: LOT-2026-001",
+      "ponteOrigine": "Ponte d'origine",
+      "pontePlaceholder": "Selectionnez une ponte",
+      "nombreInitial": "Nombre initial",
+      "nombreInitialPlaceholder": "Ex: 1000",
+      "nombreActuel": "Nombre actuel",
+      "nombreActuelPlaceholder": "Ex: 980",
+      "ageJours": "Age en jours (optionnel)",
+      "ageJoursPlaceholder": "Ex: 5",
+      "poidsMoyen": "Poids moyen (g) (optionnel)",
+      "poidsMoyenPlaceholder": "Ex: 0.5",
+      "notes": "Notes (optionnel)",
+      "notesPlaceholder": "Observations...",
+      "creer": "Creer",
+      "annuler": "Annuler",
+      "enregistrer": "Enregistrer",
+      "statut": "Statut",
+      "nomVague": "Nom de la nouvelle vague",
+      "nomVaguePlaceholder": "Ex: Vague Alevins Mars 2026",
+      "bacsAssigner": "Bacs a assigner",
+      "bacsDisponibles": "{count} disponible",
+      "bacsDisponiblesPlural": "{count} disponibles",
+      "aucunBacLibre": "Aucun bac libre disponible. Liberez des bacs avant de transferer.",
+      "bacsSelectionnes": "{count} bac selectionne",
+      "bacsSelectionnesPlural": "{count} bacs selectionnes"
+    },
+    "detail": {
+      "informations": "Informations",
+      "code": "Code",
+      "alevins": "Alevins",
+      "age": "Age",
+      "poidsMoyen": "Poids moyen",
+      "bacActuel": "Bac actuel",
+      "dateTransfert": "Date transfert",
+      "notes": "Notes",
+      "ponteOrigine": "Ponte d'origine",
+      "vagueDestination": "Vague de destination",
+      "jourUnit": "jours",
+      "grammesUnit": "g",
+      "initial": "initial"
+    },
+    "transfert": {
+      "button": "Transferer",
+      "title": "Transferer vers une vague",
+      "description": "Un transfert va creer une nouvelle vague de grossissement avec {count} alevins.",
+      "confirm": "Confirmer le transfert",
+      "annuler": "Annuler"
+    },
+    "card": {
+      "ponte": "Ponte",
+      "bac": "Bac",
+      "vague": "Vague",
+      "alevins": "alevins"
+    },
+    "statuts": {
+      "EN_INCUBATION": "En incubation",
+      "EN_ELEVAGE": "En elevage",
+      "TRANSFERE": "Transfere",
+      "PERDU": "Perdu"
+    }
+  },
+  "common": {
+    "modifier": "Modifier",
+    "supprimer": "Supprimer",
+    "annuler": "Annuler",
+    "enregistrer": "Enregistrer",
+    "creer": "Creer",
+    "nouveau": "Nouveau",
+    "nouvelle": "Nouvelle"
+  }
+}

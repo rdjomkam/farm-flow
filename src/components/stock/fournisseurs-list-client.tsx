@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Plus, Truck, ArrowLeft, Phone, Mail, MapPin, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,7 @@ interface Props {
 }
 
 export function FournisseursListClient({ fournisseurs, permissions }: Props) {
+  const t = useTranslations("stock");
   const router = useRouter();
   const stockService = useStockService();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -93,12 +95,12 @@ export function FournisseursListClient({ fournisseurs, permissions }: Props) {
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
       >
         <ArrowLeft className="h-4 w-4" />
-        Stock
+        {t("actions.back")}
       </Link>
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {fournisseurs.length} fournisseur{fournisseurs.length > 1 ? "s" : ""}
+          {t("fournisseurs.count", { count: fournisseurs.length })}
         </p>
         {permissions.includes(Permission.APPROVISIONNEMENT_GERER) && (
           <Dialog
@@ -111,50 +113,50 @@ export function FournisseursListClient({ fournisseurs, permissions }: Props) {
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-1" />
-                Nouveau
+                {t("fournisseurs.new")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>
-                  {editId ? "Modifier le fournisseur" : "Ajouter un fournisseur"}
+                  {editId ? t("fournisseurs.edit") : t("fournisseurs.add")}
                 </DialogTitle>
               </DialogHeader>
               <div className="flex flex-col gap-4 py-2">
                 <Input
-                  label="Nom"
-                  placeholder="Ex: Raanan Fish Feed"
+                  label={t("fournisseurs.fields.nom")}
+                  placeholder={t("fournisseurs.fields.nomPlaceholder")}
                   value={nom}
                   onChange={(e) => setNom(e.target.value)}
                   autoFocus
                 />
                 <Input
-                  label="Telephone (optionnel)"
+                  label={t("fournisseurs.fields.telephone")}
                   type="tel"
-                  placeholder="6XX XX XX XX (+237 ajouté automatiquement)"
+                  placeholder={t("fournisseurs.fields.telephonePlaceholder")}
                   value={telephone}
                   onChange={(e) => setTelephone(e.target.value)}
                 />
                 <Input
-                  label="Email (optionnel)"
+                  label={t("fournisseurs.fields.email")}
                   type="email"
-                  placeholder="contact@fournisseur.com"
+                  placeholder={t("fournisseurs.fields.emailPlaceholder")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
                 <Input
-                  label="Adresse (optionnel)"
-                  placeholder="Douala, Cameroun"
+                  label={t("fournisseurs.fields.adresse")}
+                  placeholder={t("fournisseurs.fields.adressePlaceholder")}
                   value={adresse}
                   onChange={(e) => setAdresse(e.target.value)}
                 />
               </div>
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button variant="outline">Annuler</Button>
+                  <Button variant="outline">{t("actions.cancel")}</Button>
                 </DialogClose>
                 <Button onClick={handleSubmit} disabled={!nom.trim()}>
-                  {editId ? "Enregistrer" : "Creer"}
+                  {editId ? t("fournisseurs.save") : t("fournisseurs.create")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -165,9 +167,9 @@ export function FournisseursListClient({ fournisseurs, permissions }: Props) {
       {fournisseurs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <Truck className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground mb-2">Aucun fournisseur</p>
+          <p className="text-muted-foreground mb-2">{t("fournisseurs.empty")}</p>
           <p className="text-sm text-muted-foreground">
-            Ajoutez vos fournisseurs pour gerer les approvisionnements.
+            {t("fournisseurs.emptyDescription")}
           </p>
         </div>
       ) : (
@@ -211,8 +213,8 @@ export function FournisseursListClient({ fournisseurs, permissions }: Props) {
                   </Button>
                 </div>
                 <div className="flex items-center gap-4 text-xs text-muted-foreground border-t border-border pt-2 mt-2">
-                  <span>{f._count.produits} produit{f._count.produits > 1 ? "s" : ""}</span>
-                  <span>{f._count.commandes} commande{f._count.commandes > 1 ? "s" : ""}</span>
+                  <span>{t("fournisseurs.stats.produits", { count: f._count.produits })}</span>
+                  <span>{t("fournisseurs.stats.commandes", { count: f._count.commandes })}</span>
                 </div>
               </CardContent>
             </Card>

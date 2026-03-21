@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { VenteFormClient } from "@/components/ventes/vente-form-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -15,6 +16,7 @@ export default async function NouvelleVentePage() {
   const permissions = await checkPagePermission(session, Permission.VENTES_CREER);
   if (!permissions) return <AccessDenied />;
 
+  const t = await getTranslations("ventes");
   const [clients, vagues] = await Promise.all([
     getClients(session.activeSiteId),
     prisma.vague.findMany({
@@ -41,7 +43,7 @@ export default async function NouvelleVentePage() {
 
   return (
     <>
-      <Header title="Nouvelle vente" />
+      <Header title={t("ventes.new")} />
       <div className="p-4">
         <VenteFormClient
           clients={clientOptions}

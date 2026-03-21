@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, PlusCircle } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { AccessDenied } from "@/components/ui/access-denied";
@@ -25,6 +26,9 @@ export default async function VagueRelevesPage({
   const permissions = await checkPagePermission(session, Permission.VAGUES_VOIR);
   if (!permissions) return <AccessDenied />;
 
+  const t = await getTranslations("releves");
+  const tVagues = await getTranslations("vagues");
+
   const { id } = await params;
   const [vague, produitsDb] = await Promise.all([
     getVagueById(id, session.activeSiteId),
@@ -45,7 +49,7 @@ export default async function VagueRelevesPage({
 
   return (
     <>
-      <Header title={`Relevés — ${vague.code}`} />
+      <Header title={`${t("list.title", { count: vague.releves.length })} — ${vague.code}`} />
 
       <div className="flex flex-col gap-4 p-4">
         {isEnCours && permissions.includes(Permission.RELEVES_CREER) && (
@@ -53,7 +57,7 @@ export default async function VagueRelevesPage({
             <Button size="sm" asChild>
               <Link href={`/releves/nouveau?vagueId=${id}`}>
                 <PlusCircle className="h-4 w-4" />
-                Nouveau
+                {t("page.nouveau_btn")}
               </Link>
             </Button>
           </div>
@@ -75,7 +79,7 @@ export default async function VagueRelevesPage({
           <Button variant="ghost" size="sm" asChild>
             <Link href={`/vagues/${id}`}>
               <ArrowLeft className="h-4 w-4" />
-              Retour à la vague
+              {tVagues("detail.retourVagues")}
             </Link>
           </Button>
         </div>

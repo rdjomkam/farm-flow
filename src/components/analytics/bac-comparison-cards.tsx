@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ArrowRight, AlertTriangle, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { BenchmarkBadge } from "./benchmark-badge";
@@ -44,10 +45,12 @@ export function BacComparisonCards({
   bacs,
   alertes,
 }: BacComparisonCardsProps) {
+  const t = useTranslations("analytics.bacs");
+
   if (bacs.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
-        Aucun bac assigné à cette vague.
+        {t("noBacs")}
       </p>
     );
   }
@@ -59,9 +62,9 @@ export function BacComparisonCards({
         <CardContent className="p-3 flex items-start gap-2">
           <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
           <p className="text-xs text-muted-foreground">
-            FCR, SGR et survie sont suivis au niveau de la vague.{" "}
+            {t("vagueTracking")}{" "}
             <Link href="/analytics/vagues" className="text-primary hover:underline font-medium">
-              Voir les analytiques par vague
+              {t("viewVagueAnalytics")}
             </Link>
           </p>
         </CardContent>
@@ -74,7 +77,7 @@ export function BacComparisonCards({
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="h-4 w-4 text-accent-red" />
               <span className="text-sm font-semibold text-accent-red">
-                {alertes.length} alerte{alertes.length > 1 ? "s" : ""}
+                {t("alertCount", { count: alertes.length })}
               </span>
             </div>
             <ul className="space-y-1">
@@ -98,43 +101,43 @@ export function BacComparisonCards({
                 href={`/analytics/bacs/${bac.bacId}?vagueId=${bac.vagueId}`}
                 className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0"
               >
-                Detail
+                {t("detail")}
                 <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
 
             <div className="space-y-1.5">
               <MetricRow
-                label="Biomasse"
+                label={t("biomass")}
                 value={bac.biomasse !== null ? `${bac.biomasse}` : "—"}
                 unit="kg"
                 level={null}
               />
               <MetricRow
-                label="Densite"
+                label={t("density")}
                 value={bac.densite !== null ? `${bac.densite}` : "—"}
                 unit="kg/m³"
                 level={evaluerBenchmark(bac.densite, BENCHMARK_DENSITE)}
               />
               <MetricRow
-                label="Poids moyen"
+                label={t("avgWeight")}
                 value={bac.poidsMoyen !== null ? `${bac.poidsMoyen}` : "—"}
                 unit="g"
                 level={null}
               />
               <MetricRow
-                label="Vivants"
+                label={t("alive")}
                 value={bac.nombreVivants !== null ? `${bac.nombreVivants}` : "—"}
                 level={null}
               />
               <MetricRow
-                label="Aliment"
+                label={t("totalFeed")}
                 value={`${bac.totalAliment}`}
                 unit="kg"
                 level={null}
               />
               <MetricRow
-                label="Morts"
+                label={t("deaths")}
                 value={`${bac.totalMortalites}`}
                 level={null}
               />
@@ -142,7 +145,7 @@ export function BacComparisonCards({
 
             <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
               <span>{bac.volume !== null ? `${bac.volume}L` : "—"}</span>
-              <span>{bac.nombreReleves} relevé{bac.nombreReleves > 1 ? "s" : ""}</span>
+              <span>{t("releves", { count: bac.nombreReleves })}</span>
             </div>
           </CardContent>
         </Card>

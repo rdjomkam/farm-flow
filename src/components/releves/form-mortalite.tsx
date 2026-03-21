@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -8,16 +11,6 @@ import {
 } from "@/components/ui/select";
 import { CauseMortalite } from "@/types";
 
-const causeLabels: Record<CauseMortalite, string> = {
-  [CauseMortalite.MALADIE]: "Maladie",
-  [CauseMortalite.QUALITE_EAU]: "Qualité de l'eau",
-  [CauseMortalite.STRESS]: "Stress",
-  [CauseMortalite.PREDATION]: "Prédation",
-  [CauseMortalite.CANNIBALISME]: "Cannibalisme",
-  [CauseMortalite.INCONNUE]: "Inconnue",
-  [CauseMortalite.AUTRE]: "Autre",
-};
-
 interface FormMortaliteProps {
   values: { nombreMorts: string; causeMortalite: string };
   onChange: (field: string, value: string) => void;
@@ -25,11 +18,13 @@ interface FormMortaliteProps {
 }
 
 export function FormMortalite({ values, onChange, errors }: FormMortaliteProps) {
+  const t = useTranslations("releves");
+
   return (
     <>
       <Input
         id="nombreMorts"
-        label="Nombre de morts"
+        label={t("form.mortalite.nombreMorts")}
         type="number"
         min="0"
         value={values.nombreMorts}
@@ -37,13 +32,13 @@ export function FormMortalite({ values, onChange, errors }: FormMortaliteProps) 
         error={errors.nombreMorts}
       />
       <Select value={values.causeMortalite} onValueChange={(v) => onChange("causeMortalite", v)}>
-        <SelectTrigger label="Cause de mortalité" error={errors.causeMortalite}>
-          <SelectValue placeholder="Sélectionner une cause" />
+        <SelectTrigger label={t("form.mortalite.causeMortalite")} error={errors.causeMortalite}>
+          <SelectValue placeholder={t("form.mortalite.causePlaceholder")} />
         </SelectTrigger>
         <SelectContent>
           {Object.values(CauseMortalite).map((c) => (
             <SelectItem key={c} value={c}>
-              {causeLabels[c]}
+              {t(`form.mortalite.causes.${c}`)}
             </SelectItem>
           ))}
         </SelectContent>

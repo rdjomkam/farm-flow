@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Role } from "@/types";
 import { useAuthService } from "@/services";
+import { useTranslations } from "next-intl";
 
 interface ImpersonationBannerProps {
   targetUserName: string;
@@ -10,20 +11,21 @@ interface ImpersonationBannerProps {
   originalUserName: string;
 }
 
-const ROLE_LABELS: Record<Role, string> = {
-  [Role.ADMIN]: "Administrateur global",
-  [Role.GERANT]: "Gerant",
-  [Role.PISCICULTEUR]: "Pisciculteur",
-  [Role.INGENIEUR]: "Ingenieur",
-};
-
 export function ImpersonationBanner({
   targetUserName,
   targetUserRole,
   originalUserName,
 }: ImpersonationBannerProps) {
+  const t = useTranslations("users");
   const router = useRouter();
   const authService = useAuthService();
+
+  const ROLE_LABELS: Record<Role, string> = {
+    [Role.ADMIN]: t("roles.ADMIN"),
+    [Role.GERANT]: t("roles.GERANT"),
+    [Role.PISCICULTEUR]: t("roles.PISCICULTEUR"),
+    [Role.INGENIEUR]: t("roles.INGENIEUR"),
+  };
 
   const roleLabel = ROLE_LABELS[targetUserRole] ?? targetUserRole;
 
@@ -39,7 +41,7 @@ export function ImpersonationBanner({
     <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 text-white shadow-md">
       <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm font-medium truncate">
-          Vous consultez l'application en tant que{" "}
+          {t("impersonation.banner.viewingAs")}{" "}
           <span className="font-bold">{targetUserName}</span>{" "}
           <span className="opacity-80">({roleLabel})</span>
         </p>
@@ -47,12 +49,12 @@ export function ImpersonationBanner({
           onClick={handleStopImpersonation}
           className="shrink-0 rounded-lg border border-white/40 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20 active:bg-white/30 min-h-[40px]"
         >
-          Reprendre ma session
+          {t("impersonation.banner.reprendreSession")}
         </button>
       </div>
       {originalUserName && (
         <p className="px-4 pb-2 text-xs opacity-70">
-          Session admin : {originalUserName}
+          {t("impersonation.banner.sessionAdmin")} : {originalUserName}
         </p>
       )}
     </div>

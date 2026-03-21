@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,38 +28,6 @@ import { ConsommationFields } from "@/components/releves/consommation-fields";
 import type { ConsommationLine, ProduitOption } from "@/components/releves/consommation-fields";
 import { useReleveService } from "@/services";
 
-const typeLabels: Record<TypeReleve, string> = {
-  [TypeReleve.BIOMETRIE]: "Biometrie",
-  [TypeReleve.MORTALITE]: "Mortalite",
-  [TypeReleve.ALIMENTATION]: "Alimentation",
-  [TypeReleve.QUALITE_EAU]: "Qualite eau",
-  [TypeReleve.COMPTAGE]: "Comptage",
-  [TypeReleve.OBSERVATION]: "Observation",
-  [TypeReleve.RENOUVELLEMENT]: "Renouvellement",
-};
-
-const causeLabels: Record<CauseMortalite, string> = {
-  [CauseMortalite.MALADIE]: "Maladie",
-  [CauseMortalite.QUALITE_EAU]: "Qualite eau",
-  [CauseMortalite.STRESS]: "Stress",
-  [CauseMortalite.PREDATION]: "Predation",
-  [CauseMortalite.CANNIBALISME]: "Cannibalisme",
-  [CauseMortalite.INCONNUE]: "Inconnue",
-  [CauseMortalite.AUTRE]: "Autre",
-};
-
-const alimentLabels: Record<TypeAliment, string> = {
-  [TypeAliment.ARTISANAL]: "Artisanal",
-  [TypeAliment.COMMERCIAL]: "Commercial",
-  [TypeAliment.MIXTE]: "Mixte",
-};
-
-const comptageLabels: Record<MethodeComptage, string> = {
-  [MethodeComptage.DIRECT]: "Direct",
-  [MethodeComptage.ESTIMATION]: "Estimation",
-  [MethodeComptage.ECHANTILLONNAGE]: "Echantillonnage",
-};
-
 interface ModifierReleveDialogProps {
   releve: Releve;
   /** Liste des produits disponibles pour les consommations (ALIMENT + INTRANT) */
@@ -69,6 +38,7 @@ interface ModifierReleveDialogProps {
 export function ModifierReleveDialog({ releve, produits = [], permissions }: ModifierReleveDialogProps) {
   const router = useRouter();
   const releveService = useReleveService();
+  const t = useTranslations("releves");
   const type = releve.typeReleve as TypeReleve;
   const [open, setOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -151,34 +121,34 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
 
     // Validation de la raison (obligatoire, min 5)
     if (!raison.trim() || raison.trim().length < 5) {
-      errs.raison = "La raison doit contenir au moins 5 caracteres.";
+      errs.raison = t("modify.raison.error");
     }
 
     switch (type) {
       case TypeReleve.BIOMETRIE:
-        if (!poidsMoyen || Number(poidsMoyen) <= 0) errs.poidsMoyen = "Superieur a 0.";
-        if (tailleMoyenne && Number(tailleMoyenne) <= 0) errs.tailleMoyenne = "Superieur a 0.";
+        if (!poidsMoyen || Number(poidsMoyen) <= 0) errs.poidsMoyen = t("modify.errors.poidsMoyen");
+        if (tailleMoyenne && Number(tailleMoyenne) <= 0) errs.tailleMoyenne = t("modify.errors.tailleMoyenne");
         if (!echantillonCount || Number(echantillonCount) <= 0 || !Number.isInteger(Number(echantillonCount)))
-          errs.echantillonCount = "Entier superieur a 0.";
+          errs.echantillonCount = t("modify.errors.echantillonCount");
         break;
       case TypeReleve.MORTALITE:
         if (nombreMorts === "" || Number(nombreMorts) < 0 || !Number.isInteger(Number(nombreMorts)))
-          errs.nombreMorts = "Entier positif ou zero.";
-        if (!causeMortalite) errs.causeMortalite = "Selectionnez une cause.";
+          errs.nombreMorts = t("modify.errors.nombreMorts");
+        if (!causeMortalite) errs.causeMortalite = t("modify.errors.causeMortalite");
         break;
       case TypeReleve.ALIMENTATION:
-        if (!quantiteAliment || Number(quantiteAliment) <= 0) errs.quantiteAliment = "Superieur a 0.";
-        if (!typeAliment) errs.typeAliment = "Selectionnez un type.";
+        if (!quantiteAliment || Number(quantiteAliment) <= 0) errs.quantiteAliment = t("modify.errors.quantiteAliment");
+        if (!typeAliment) errs.typeAliment = t("modify.errors.typeAliment");
         if (!frequenceAliment || Number(frequenceAliment) <= 0 || !Number.isInteger(Number(frequenceAliment)))
-          errs.frequenceAliment = "Entier superieur a 0.";
+          errs.frequenceAliment = t("modify.errors.frequenceAliment");
         break;
       case TypeReleve.COMPTAGE:
         if (!nombreCompte || Number(nombreCompte) <= 0 || !Number.isInteger(Number(nombreCompte)))
-          errs.nombreCompte = "Entier superieur a 0.";
-        if (!methodeComptage) errs.methodeComptage = "Selectionnez une methode.";
+          errs.nombreCompte = t("modify.errors.nombreCompte");
+        if (!methodeComptage) errs.methodeComptage = t("modify.errors.methodeComptage");
         break;
       case TypeReleve.OBSERVATION:
-        if (!description.trim()) errs.description = "La description est obligatoire.";
+        if (!description.trim()) errs.description = t("modify.errors.description");
         break;
       // QUALITE_EAU: all fields optional
     }
@@ -264,9 +234,9 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
       </DialogTrigger>
       <DialogContent className="w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Modifier le releve</DialogTitle>
+          <DialogTitle>{t("modify.title")}</DialogTitle>
           <DialogDescription>
-            Type : {typeLabels[type]} — Toutes les modifications sont tracees pour l&apos;audit.
+            {t("modify.description", { type: t(`types.${type}`) })}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -274,7 +244,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
           {/* Section 1 — Raison obligatoire (EN PREMIER, ADR-014) */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor={`raison-${releve.id}`} className="text-sm font-medium text-foreground">
-              Raison de la modification <span className="text-danger">*</span>
+              {t("modify.raison.label")} <span className="text-danger">{t("modify.raison.required")}</span>
             </label>
             <textarea
               id={`raison-${releve.id}`}
@@ -282,7 +252,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
                 errors.raison ? "border-danger" : "border-border"
               }`}
               maxLength={500}
-              placeholder="Ex : Erreur de lecture de la balance lors de la pesee"
+              placeholder={t("modify.raison.placeholder")}
               value={raison}
               onChange={(e) => setRaison(e.target.value)}
             />
@@ -291,7 +261,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
                 <p className="text-xs text-danger">{errors.raison}</p>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  {raisonValid ? "Raison valide." : "Minimum 5 caracteres."}
+                  {raisonValid ? t("modify.raison.valid") : t("modify.raison.min")}
                 </p>
               )}
               <span className={`text-xs ${raisonLength > 500 ? "text-danger" : "text-muted-foreground"}`}>
@@ -303,7 +273,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
           {/* Section 2 — Date du releve */}
           <Input
             id={`date-${releve.id}`}
-            label="Date du releve"
+            label={t("modify.dateLabel")}
             type="datetime-local"
             max={todayDatetime}
             value={releveDate}
@@ -316,7 +286,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
             <>
               <Input
                 id={`poidsMoyen-${releve.id}`}
-                label="Poids moyen (g)"
+                label={t("modify.fields.poidsMoyen")}
                 type="number"
                 min="0.1"
                 step="0.1"
@@ -326,7 +296,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
               />
               <Input
                 id={`tailleMoyenne-${releve.id}`}
-                label="Taille moyenne (cm)"
+                label={t("modify.fields.tailleMoyenne")}
                 type="number"
                 min="0.1"
                 step="0.1"
@@ -336,7 +306,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
               />
               <Input
                 id={`echantillonCount-${releve.id}`}
-                label="Nombre d'echantillons"
+                label={t("modify.fields.echantillonCount")}
                 type="number"
                 min="1"
                 value={echantillonCount}
@@ -350,7 +320,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
             <>
               <Input
                 id={`nombreMorts-${releve.id}`}
-                label="Nombre de morts"
+                label={t("modify.fields.nombreMorts")}
                 type="number"
                 min="0"
                 value={nombreMorts}
@@ -358,12 +328,12 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
                 error={errors.nombreMorts}
               />
               <Select value={causeMortalite} onValueChange={setCauseMortalite}>
-                <SelectTrigger label="Cause de mortalite" error={errors.causeMortalite}>
-                  <SelectValue placeholder="Selectionnez..." />
+                <SelectTrigger label={t("modify.causeLabel")} error={errors.causeMortalite}>
+                  <SelectValue placeholder={t("modify.causePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.values(CauseMortalite).map((c) => (
-                    <SelectItem key={c} value={c}>{causeLabels[c]}</SelectItem>
+                    <SelectItem key={c} value={c}>{t(`form.mortalite.causes.${c}`)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -374,7 +344,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
             <>
               <Input
                 id={`quantiteAliment-${releve.id}`}
-                label="Quantite d'aliment (kg)"
+                label={t("modify.fields.quantiteAliment")}
                 type="number"
                 min="0.1"
                 step="0.1"
@@ -383,18 +353,18 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
                 error={errors.quantiteAliment}
               />
               <Select value={typeAliment} onValueChange={setTypeAliment}>
-                <SelectTrigger label="Type d'aliment" error={errors.typeAliment}>
-                  <SelectValue placeholder="Selectionnez..." />
+                <SelectTrigger label={t("modify.typeAlimentLabel")} error={errors.typeAliment}>
+                  <SelectValue placeholder={t("modify.typeAlimentPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(TypeAliment).map((t) => (
-                    <SelectItem key={t} value={t}>{alimentLabels[t]}</SelectItem>
+                  {Object.values(TypeAliment).map((tp) => (
+                    <SelectItem key={tp} value={tp}>{t(`form.alimentation.types.${tp}`)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <Input
                 id={`frequenceAliment-${releve.id}`}
-                label="Frequence (fois/jour)"
+                label={t("modify.fields.frequenceAliment")}
                 type="number"
                 min="1"
                 value={frequenceAliment}
@@ -408,7 +378,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
             <>
               <Input
                 id={`temperature-${releve.id}`}
-                label="Temperature (C)"
+                label={t("modify.fields.temperature")}
                 type="number"
                 step="0.1"
                 value={temperature}
@@ -416,7 +386,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
               />
               <Input
                 id={`ph-${releve.id}`}
-                label="pH"
+                label={t("modify.fields.ph")}
                 type="number"
                 step="0.1"
                 value={ph}
@@ -424,7 +394,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
               />
               <Input
                 id={`oxygene-${releve.id}`}
-                label="Oxygene dissous (mg/L)"
+                label={t("modify.fields.oxygene")}
                 type="number"
                 step="0.1"
                 value={oxygene}
@@ -432,7 +402,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
               />
               <Input
                 id={`ammoniac-${releve.id}`}
-                label="Ammoniac (mg/L)"
+                label={t("modify.fields.ammoniac")}
                 type="number"
                 step="0.01"
                 value={ammoniac}
@@ -445,7 +415,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
             <>
               <Input
                 id={`nombreCompte-${releve.id}`}
-                label="Nombre de poissons"
+                label={t("modify.fields.nombreCompte")}
                 type="number"
                 min="1"
                 value={nombreCompte}
@@ -453,12 +423,12 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
                 error={errors.nombreCompte}
               />
               <Select value={methodeComptage} onValueChange={setMethodeComptage}>
-                <SelectTrigger label="Methode de comptage" error={errors.methodeComptage}>
-                  <SelectValue placeholder="Selectionnez..." />
+                <SelectTrigger label={t("modify.methodeLabel")} error={errors.methodeComptage}>
+                  <SelectValue placeholder={t("modify.methodePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.values(MethodeComptage).map((m) => (
-                    <SelectItem key={m} value={m}>{comptageLabels[m]}</SelectItem>
+                    <SelectItem key={m} value={m}>{t(`form.comptage.methodes.${m}`)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -468,7 +438,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
           {type === TypeReleve.OBSERVATION && (
             <div className="flex flex-col gap-1.5">
               <label htmlFor={`description-${releve.id}`} className="text-sm font-medium text-foreground">
-                Description
+                {t("modify.descriptionLabel")}
               </label>
               <textarea
                 id={`description-${releve.id}`}
@@ -494,7 +464,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
           {/* Notes (commun a tous les types) */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor={`notes-${releve.id}`} className="text-sm font-medium text-foreground">
-              Notes (optionnel)
+              {t("modify.notesLabel")}
             </label>
             <textarea
               id={`notes-${releve.id}`}
@@ -506,10 +476,10 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
 
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-              Annuler
+              {t("modify.cancel")}
             </Button>
             <Button type="submit" disabled={!raisonValid}>
-              Enregistrer les modifications
+              {t("modify.submit")}
             </Button>
           </DialogFooter>
         </form>

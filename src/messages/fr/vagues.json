@@ -1,0 +1,144 @@
+{
+  "page": {
+    "title": "Vagues"
+  },
+  "list": {
+    "count": "{count} vague",
+    "countPlural": "{count} vagues",
+    "newButton": "Nouvelle vague",
+    "emptyTitle": "Aucune vague",
+    "emptyDescription": "Aucune vague ne correspond a ce filtre.",
+    "tabs": {
+      "enCours": "En cours ({count})",
+      "terminees": "Terminées ({count})",
+      "annulees": "Annulées ({count})"
+    }
+  },
+  "card": {
+    "bac": "{count} bac",
+    "bacs": "{count} bacs",
+    "alevins": "{count} alevins"
+  },
+  "statuts": {
+    "EN_COURS": "En cours",
+    "TERMINEE": "Terminée",
+    "ANNULEE": "Annulée"
+  },
+  "indicateurs": {
+    "tauxSurvie": "Taux de survie",
+    "biomasse": "Biomasse",
+    "poidsMoyen": "Poids moyen",
+    "sgr": "TCS",
+    "fcr": "ICA"
+  },
+  "detail": {
+    "alevins": "{count} alevins ({poids}g)",
+    "bac": "{count} bac",
+    "bacs": "{count} bacs",
+    "retourVagues": "Retour aux vagues",
+    "sections": {
+      "calibrages": "Calibrages",
+      "nouveau": "Nouveau",
+      "releves": "Relevés ({count})"
+    }
+  },
+  "form": {
+    "create": {
+      "title": "Nouvelle vague",
+      "description": "Créez un nouveau lot de poissons à suivre.",
+      "submit": "Créer la vague"
+    },
+    "edit": {
+      "title": "Modifier la vague",
+      "description": "Modifiez les parametres initiaux de la vague.",
+      "trigger": "Modifier",
+      "submit": "Enregistrer"
+    },
+    "close": {
+      "title": "Clôturer la vague {code}",
+      "description": "Cette action est irréversible. Les bacs seront libérés et la vague passera en statut \"Terminée\".",
+      "trigger": "Clôturer",
+      "submit": "Confirmer la clôture",
+      "dateLabel": "Date de fin du cycle"
+    },
+    "cancel": "Annuler",
+    "sections": {
+      "identification": {
+        "title": "Identification",
+        "description": "Code et date de la vague"
+      },
+      "population": {
+        "title": "Population initiale",
+        "description": "Informations sur les alevins"
+      },
+      "bacs": {
+        "title": "Bacs",
+        "description": "Sélectionnez les bacs à assigner"
+      }
+    },
+    "fields": {
+      "code": "Code de la vague",
+      "codePlaceholder": "Ex : VAGUE-2026-001",
+      "dateDebut": "Date de mise en eau",
+      "nombreInitial": "Nombre d'alevins",
+      "poidsMoyenInitial": "Poids moyen initial (g)",
+      "origineAlevins": "Origine des alevins (optionnel)",
+      "origineAlevinsFr": "Ex : Écloserie locale",
+      "aucunBacLibre": "Aucun bac libre disponible."
+    },
+    "errors": {
+      "code": "Le code est obligatoire.",
+      "dateDebut": "La date de début est obligatoire.",
+      "nombreInitial": "Le nombre initial doit être supérieur à 0.",
+      "poidsMoyenInitial": "Le poids moyen doit être supérieur à 0.",
+      "bacIds": "Sélectionnez au moins un bac.",
+      "nombreInitialEdit": "Entier superieur a 0.",
+      "poidsMoyenInitialEdit": "Superieur a 0."
+    }
+  },
+  "actionMenu": {
+    "actions": "Actions",
+    "nouveauReleve": "Nouveau relevé",
+    "calibrage": "Calibrage",
+    "modifier": "Modifier",
+    "rapportPdf": "Rapport PDF",
+    "exportReleves": "Export relevés",
+    "cloturer": "Clôturer"
+  },
+  "poidsChart": {
+    "title": "Evolution du poids moyen",
+    "noData": "Aucune donnee biometrique disponible.",
+    "tooltipLabel": "Jour {label}",
+    "seriesName": "Poids moyen"
+  },
+  "comparison": {
+    "selectTitle": "Selectionnez 2 a 4 vagues",
+    "hide": "Masquer",
+    "modify": "Modifier",
+    "noVagues": "Aucune vague disponible sur ce site.",
+    "selectedCount": "{count} vague selectionnee / 4 maximum",
+    "selectedCountPlural": "{count} vagues selectionnees / 4 maximum",
+    "alevins": "{count} alevins",
+    "releve": "{count} relevé",
+    "releves": "{count} relevés",
+    "compareButton": "Comparer",
+    "resultsTitle": "Resultats — {count} vagues",
+    "sectionZootechnique": "Zootechnique",
+    "sectionFinancier": "Financier",
+    "sectionRadar": "Radar de performance",
+    "sectionComparaisonFinanciere": "Comparaison financiere",
+    "metrics": {
+      "survie": "Survie",
+      "biomasse": "Biomasse",
+      "coutAliment": "Cout aliment",
+      "revenuVentes": "Revenu ventes",
+      "margeBrute": "Marge brute",
+      "roi": "ROI"
+    },
+    "financialChart": {
+      "coutAliment": "Cout aliment",
+      "revenuVentes": "Revenu ventes",
+      "margeBrute": "Marge brute"
+    }
+  }
+}

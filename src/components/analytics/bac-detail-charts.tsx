@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartTooltip } from "@/components/ui/chart-tooltip";
 import { BenchmarkBadge } from "./benchmark-badge";
@@ -48,39 +49,47 @@ interface BacDetailSummaryProps {
 }
 
 export function BacDetailSummary({ indicateurs }: BacDetailSummaryProps) {
+  const t = useTranslations("analytics.bacs");
+
   const metrics = [
     {
-      label: "Biomasse",
+      key: "biomass",
+      label: t("biomass"),
       value: indicateurs.biomasse,
       unit: "kg",
       level: null,
     },
     {
-      label: "Densite",
+      key: "density",
+      label: t("density"),
       value: indicateurs.densite,
       unit: "kg/m³",
       level: evaluerBenchmark(indicateurs.densite, BENCHMARK_DENSITE),
     },
     {
-      label: "Poids moyen",
+      key: "avgWeight",
+      label: t("avgWeight"),
       value: indicateurs.poidsMoyen,
       unit: "g",
       level: null,
     },
     {
-      label: "Vivants",
+      key: "alive",
+      label: t("alive"),
       value: indicateurs.nombreVivants,
       unit: "",
       level: null,
     },
     {
-      label: "Aliment total",
+      key: "totalFeed",
+      label: t("totalFeed"),
       value: indicateurs.totalAliment,
       unit: "kg",
       level: null,
     },
     {
-      label: "Morts",
+      key: "deaths",
+      label: t("deaths"),
       value: indicateurs.totalMortalites,
       unit: "",
       level: null,
@@ -91,7 +100,7 @@ export function BacDetailSummary({ indicateurs }: BacDetailSummaryProps) {
     <Card>
       <CardContent className="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3">
         {metrics.map((m) => (
-          <div key={m.label} className="flex flex-col gap-0.5">
+          <div key={m.key} className="flex flex-col gap-0.5">
             <span className="text-xs text-muted-foreground">{m.label}</span>
             <div className="flex items-center gap-1.5">
               <span className="text-lg font-bold leading-tight">
@@ -118,20 +127,25 @@ interface BacHistoriqueChartProps {
 }
 
 export function BacHistoriqueChart({ cycles }: BacHistoriqueChartProps) {
+  const t = useTranslations("analytics.bacs");
+
   if (cycles.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Historique des cycles</CardTitle>
+          <CardTitle className="text-base">{t("historique")}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="py-8 text-center text-sm text-muted-foreground">
-            Aucun cycle enregistré pour ce bac.
+            {t("noCycles")}
           </p>
         </CardContent>
       </Card>
     );
   }
+
+  const biomassKgLabel = t("biomassKg");
+  const avgWeightGLabel = t("avgWeightG");
 
   const data = cycles.map((c) => ({
     name: c.vagueCode,
@@ -142,7 +156,7 @@ export function BacHistoriqueChart({ cycles }: BacHistoriqueChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Historique des cycles</CardTitle>
+        <CardTitle className="text-base">{t("historique")}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[250px] w-full">
@@ -155,13 +169,13 @@ export function BacHistoriqueChart({ cycles }: BacHistoriqueChartProps) {
                 content={
                   <ChartTooltip
                     valueFormatter={(v, name) =>
-                      name === "Poids moyen g" ? `${v} g` : `${v} kg`
+                      name === avgWeightGLabel ? `${v} g` : `${v} kg`
                     }
                   />
                 }
               />
-              <Bar dataKey="biomasse" name="Biomasse kg" fill="var(--primary)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="poidsMoyen" name="Poids moyen g" fill="var(--secondary)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="biomasse" name={biomassKgLabel} fill="var(--primary)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="poidsMoyen" name={avgWeightGLabel} fill="var(--secondary)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -179,13 +193,15 @@ interface BacDetailMetaProps {
 }
 
 export function BacDetailMeta({ indicateurs }: BacDetailMetaProps) {
+  const t = useTranslations("analytics.bacs");
+
   return (
     <section className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground border-b border-border pb-3">
-      <span>Volume : {indicateurs.volume !== null ? `${indicateurs.volume}L` : "—"}</span>
-      <span>Vivants : {indicateurs.nombreVivants ?? "—"}</span>
-      <span>Aliment : {indicateurs.totalAliment} kg</span>
-      <span>Morts : {indicateurs.totalMortalites}</span>
-      <span>{indicateurs.nombreReleves} relevé{indicateurs.nombreReleves > 1 ? "s" : ""}</span>
+      <span>{t("volume")} : {indicateurs.volume !== null ? `${indicateurs.volume}L` : "—"}</span>
+      <span>{t("alive")} : {indicateurs.nombreVivants ?? "—"}</span>
+      <span>{t("aliment")} : {indicateurs.totalAliment} kg</span>
+      <span>{t("deaths")} : {indicateurs.totalMortalites}</span>
+      <span>{t("releves", { count: indicateurs.nombreReleves })}</span>
     </section>
   );
 }

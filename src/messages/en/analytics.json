@@ -72,6 +72,30 @@
     "growthCurve": "Growth curve",
     "chartLegend": "Solid line = actual measurements · Dashed = current SGR projection"
   },
+  "bacs": {
+    "noBacs": "No tanks assigned to this batch.",
+    "vagueTracking": "FCR, SGR and survival are tracked at batch level.",
+    "viewVagueAnalytics": "View batch analytics",
+    "alertCount": "{count} alert(s)",
+    "detail": "Detail",
+    "biomass": "Biomass",
+    "density": "Density",
+    "avgWeight": "Average weight",
+    "alive": "Alive",
+    "totalFeed": "Total feed",
+    "deaths": "Deaths",
+    "historique": "Cycle history",
+    "noCycles": "No cycles recorded for this tank.",
+    "volume": "Volume",
+    "aliment": "Feed",
+    "releves": "{count} reading(s)",
+    "biomassKg": "Biomass kg",
+    "avgWeightG": "Avg weight g"
+  },
+  "aliments": {
+    "kgUtilises": "kg used",
+    "detail": "Detail"
+  },
   "simulation": {
     "title": "Feed change simulator",
     "oldFeed": "Current feed",

@@ -1,0 +1,120 @@
+{
+  "list": {
+    "title": "Users",
+    "ajouter": "Add",
+    "total": "{count} user total",
+    "totalPlural": "{count} users total",
+    "count": "{count} user",
+    "countPlural": "{count} users",
+    "aucun": "No users",
+    "aucunDescription": "No user matches this filter.",
+    "search": "Search",
+    "searchPlaceholder": "Name, email or phone...",
+    "role": "Role",
+    "allRoles": "All roles",
+    "actif": "Active",
+    "desactive": "Deactivated",
+    "sites": "{count} site",
+    "sitesPlural": "{count} sites"
+  },
+  "form": {
+    "title": "New user",
+    "identite": "Identity",
+    "identiteDescription": "Basic user information",
+    "nomComplet": "Full name",
+    "nomCompletPlaceholder": "e.g. John Doe",
+    "email": "Email address (optional if phone provided)",
+    "emailPlaceholder": "john@example.com",
+    "telephone": "Phone (optional if email provided)",
+    "telephonePlaceholder": "+237 6XX XX XX XX",
+    "acces": "Access",
+    "accesDescription": "Role and login password",
+    "roleGlobal": "Global role",
+    "motDePasse": "Password (min. 6 characters)",
+    "motDePassePlaceholder": "••••••••",
+    "creerUtilisateur": "Create user",
+    "errors": {
+      "nomObligatoire": "Name is required.",
+      "emailOuTelephone": "Email or phone is required.",
+      "motDePasseTropCourt": "Password must be at least 6 characters."
+    }
+  },
+  "roles": {
+    "ADMIN": "Global Administrator",
+    "GERANT": "Manager",
+    "PISCICULTEUR": "Fish Farmer",
+    "INGENIEUR": "Engineer"
+  },
+  "detail": {
+    "tabProfil": "Profile",
+    "tabSecurite": "Security",
+    "tabSites": "Sites"
+  },
+  "profile": {
+    "modifierProfil": "Edit profile",
+    "modifierDescription": "Update information",
+    "nom": "Name",
+    "email": "Email",
+    "telephone": "Phone",
+    "roleGlobal": "Global role",
+    "statut": "Status",
+    "nonRenseigne": "Not provided",
+    "enregistrer": "Save",
+    "annuler": "Cancel",
+    "modifier": "Edit profile",
+    "compteSysteme": "This user is a system account. It cannot be modified.",
+    "compteDesactive": "This account is deactivated. The user cannot log in.",
+    "desactiverCompte": "Deactivate account",
+    "reactiverCompte": "Reactivate account",
+    "desactiverDescription": "User {name} will no longer be able to log in. You can reactivate the account at any time.",
+    "reactiverDescription": "User {name} will be able to log in again.",
+    "desactiver": "Deactivate",
+    "reactiver": "Reactivate"
+  },
+  "security": {
+    "reinitialiserMotDePasse": "Reset password",
+    "reinitialiserDescription": "Set a new password for this user",
+    "nouveauMotDePasse": "New password",
+    "confirmerMotDePasse": "Confirm password",
+    "changerMotDePasse": "Change password",
+    "deconnexionForcee": "Force logout",
+    "deconnexionForceeDescription": "Deletes all active sessions for this user. They will need to log in again.",
+    "forcerDeconnexion": "Force logout",
+    "forcerDeconnexionConfirmTitle": "Force logout",
+    "forcerDeconnexionConfirmDescription": "All active sessions of {name} will be deleted. This action cannot be undone.",
+    "annuler": "Cancel",
+    "compteSysteme": "This user is a system account. Security actions are not available.",
+    "errors": {
+      "motDePasseTropCourt": "Password must be at least 6 characters.",
+      "motDePasseNonCorrespondant": "Passwords do not match."
+    }
+  },
+  "impersonation": {
+    "sectionTitle": "Impersonation",
+    "sectionDescription": "Log in as this user to see the application from their perspective.",
+    "button": "Log in as this user",
+    "confirmTitle": "Confirm impersonation",
+    "confirmDescription": "You are about to log in as {name}. You will see the application exactly as this user does. A banner will allow you to return to your session.",
+    "continuer": "Continue",
+    "annuler": "Cancel",
+    "disabled": {
+      "admin": "Cannot impersonate an administrator.",
+      "desactive": "Cannot impersonate a deactivated account.",
+      "default": "Impersonation is not available for this user."
+    },
+    "banner": {
+      "viewingAs": "You are viewing the application as",
+      "reprendreSession": "Return to my session",
+      "sessionAdmin": "Admin session"
+    }
+  },
+  "memberships": {
+    "aucunSite": "No site",
+    "aucunSiteDescription": "This user is not a member of any site.",
+    "count": "{count} site",
+    "countPlural": "{count} sites",
+    "actif": "Active",
+    "inactif": "Inactive",
+    "gererCeSite": "Manage this site"
+  }
+}

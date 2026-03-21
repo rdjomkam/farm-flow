@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { FacturesListClient } from "@/components/ventes/factures-list-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -14,11 +15,12 @@ export default async function FacturesPage() {
   const permissions = await checkPagePermission(session, Permission.FACTURES_VOIR);
   if (!permissions) return <AccessDenied />;
 
+  const t = await getTranslations("ventes");
   const factures = await getFactures(session.activeSiteId);
 
   return (
     <>
-      <Header title="Factures" />
+      <Header title={t("factures.title")} />
       <div className="p-4">
         <FacturesListClient
           factures={JSON.parse(JSON.stringify(factures))}

@@ -201,4 +201,6 @@ export interface AuthResponse {
   user?: UserSession;
   permissions?: Permission[];
   error?: string;
+  /** i18n error key for client-side translation (e.g. "auth.unauthorized"). Backward-compatible — optional. */
+  errorKey?: string;
 }

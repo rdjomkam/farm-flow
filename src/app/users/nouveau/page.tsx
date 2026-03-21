@@ -4,6 +4,7 @@ import { getServerSession } from "@/lib/auth";
 import { getServerPermissions } from "@/lib/auth/permissions-server";
 import { UserCreateForm } from "@/components/users/user-create-form";
 import { Permission } from "@/types";
+import { getTranslations } from "next-intl/server";
 
 export default async function UserNewPage() {
   const session = await getServerSession();
@@ -19,9 +20,11 @@ export default async function UserNewPage() {
     redirect("/users");
   }
 
+  const t = await getTranslations("users");
+
   return (
     <>
-      <Header title="Nouvel utilisateur" />
+      <Header title={t("form.title")} />
       <div className="p-4">
         <div className="mx-auto max-w-lg">
           <UserCreateForm />

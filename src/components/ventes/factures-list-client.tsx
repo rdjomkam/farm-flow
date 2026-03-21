@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { FileText, Filter } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,14 +15,6 @@ import {
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatutFacture, Permission } from "@/types";
-
-const statutLabels: Record<StatutFacture, string> = {
-  [StatutFacture.BROUILLON]: "Brouillon",
-  [StatutFacture.ENVOYEE]: "Envoyee",
-  [StatutFacture.PAYEE_PARTIELLEMENT]: "Partielle",
-  [StatutFacture.PAYEE]: "Payee",
-  [StatutFacture.ANNULEE]: "Annulee",
-};
 
 const statutVariants: Record<StatutFacture, "default" | "info" | "warning" | "terminee" | "annulee"> = {
   [StatutFacture.BROUILLON]: "default",
@@ -55,6 +48,7 @@ interface Props {
 }
 
 export function FacturesListClient({ factures, permissions: _permissions }: Props) {
+  const t = useTranslations("ventes");
   const [filterStatut, setFilterStatut] = useState<string>("all");
 
   const filtered = factures.filter((f) => {
@@ -62,11 +56,14 @@ export function FacturesListClient({ factures, permissions: _permissions }: Prop
     return true;
   });
 
+  const statutLabel = (s: string) =>
+    t(`factures.statuts.${s}` as Parameters<typeof t>[0]) || s;
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {filtered.length} facture{filtered.length > 1 ? "s" : ""}
+          {t("factures.count", { count: filtered.length })}
         </p>
       </div>
 
@@ -76,12 +73,12 @@ export function FacturesListClient({ factures, permissions: _permissions }: Prop
         <div className="flex-1">
           <Select value={filterStatut} onValueChange={setFilterStatut}>
             <SelectTrigger>
-              <SelectValue placeholder="Statut" />
+              <SelectValue placeholder={t("factures.filters.statut")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous les statuts</SelectItem>
-              {Object.entries(statutLabels).map(([value, label]) => (
-                <SelectItem key={value} value={value}>{label}</SelectItem>
+              <SelectItem value="all">{t("factures.filters.tousStatuts")}</SelectItem>
+              {Object.values(StatutFacture).map((value) => (
+                <SelectItem key={value} value={value}>{statutLabel(value)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -91,8 +88,8 @@ export function FacturesListClient({ factures, permissions: _permissions }: Prop
       {filtered.length === 0 ? (
         <EmptyState
           icon={<FileText className="h-7 w-7" />}
-          title="Aucune facture"
-          description="Les factures sont generees depuis les ventes."
+          title={t("factures.empty")}
+          description={t("factures.emptyDescription")}
         />
       ) : (
         <div className="flex flex-col gap-2">
@@ -111,7 +108,7 @@ export function FacturesListClient({ factures, permissions: _permissions }: Prop
                         </p>
                       </div>
                       <Badge variant={statutVariants[statut]}>
-                        {statutLabels[statut]}
+                        {statutLabel(statut)}
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between text-sm">
@@ -124,7 +121,7 @@ export function FacturesListClient({ factures, permissions: _permissions }: Prop
                     </div>
                     {resteAPayer > 0 && statut !== StatutFacture.ANNULEE && (
                       <p className="text-xs text-accent-amber mt-1">
-                        Reste a payer : {resteAPayer.toLocaleString("fr-FR")} F
+                        {t("factures.resteAPayer", { montant: resteAPayer.toLocaleString("fr-FR") })}
                       </p>
                     )}
                   </CardContent>

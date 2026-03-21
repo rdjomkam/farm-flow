@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ArrowLeft, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,7 @@ interface Props {
 }
 
 export function VenteFormClient({ clients, vagues }: Props) {
+  const t = useTranslations("ventes");
   const router = useRouter();
   const venteService = useVenteService();
 
@@ -81,19 +83,19 @@ export function VenteFormClient({ clients, vagues }: Props) {
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
       >
         <ArrowLeft className="h-4 w-4" />
-        Ventes
+        {t("ventes.form.back")}
       </Link>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {/* Step 1: Client + Vague */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Client et vague</CardTitle>
+            <CardTitle className="text-sm">{t("ventes.form.clientEtVague")}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <Select value={clientId} onValueChange={setClientId}>
-              <SelectTrigger label="Client">
-                <SelectValue placeholder="Selectionner un client" />
+              <SelectTrigger label={t("ventes.form.client")}>
+                <SelectValue placeholder={t("ventes.form.clientPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {clients.map((c) => (
@@ -103,13 +105,13 @@ export function VenteFormClient({ clients, vagues }: Props) {
             </Select>
 
             <Select value={vagueId} onValueChange={setVagueId}>
-              <SelectTrigger label="Vague">
-                <SelectValue placeholder="Selectionner une vague" />
+              <SelectTrigger label={t("ventes.form.vague")}>
+                <SelectValue placeholder={t("ventes.form.vaguePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {vagues.map((v) => (
                   <SelectItem key={v.id} value={v.id}>
-                    {v.code} ({v.poissonsDisponibles} poissons)
+                    {t("ventes.form.vagueOption", { code: v.code, count: v.poissonsDisponibles })}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -117,7 +119,7 @@ export function VenteFormClient({ clients, vagues }: Props) {
 
             {selectedVague && (
               <p className="text-xs text-muted-foreground">
-                Poissons disponibles : {selectedVague.poissonsDisponibles}
+                {t("ventes.form.poissonsDisponibles", { count: selectedVague.poissonsDisponibles })}
               </p>
             )}
           </CardContent>
@@ -126,32 +128,32 @@ export function VenteFormClient({ clients, vagues }: Props) {
         {/* Step 2: Quantities */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Quantites et prix</CardTitle>
+            <CardTitle className="text-sm">{t("ventes.form.quantitesPrix")}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <Input
-              label="Nombre de poissons"
+              label={t("ventes.form.nombrePoissons")}
               type="number"
               min="1"
               max={selectedVague?.poissonsDisponibles ?? undefined}
-              placeholder="Ex: 50"
+              placeholder={t("ventes.form.nombrePoissonsPlaceholder")}
               value={quantitePoissons}
               onChange={(e) => setQuantitePoissons(e.target.value)}
             />
             <Input
-              label="Poids total (kg)"
+              label={t("ventes.form.poidsTotalKg")}
               type="number"
               min="0.1"
               step="0.1"
-              placeholder="Ex: 42.5"
+              placeholder={t("ventes.form.poidsTotalKgPlaceholder")}
               value={poidsTotalKg}
               onChange={(e) => setPoidsTotalKg(e.target.value)}
             />
             <Input
-              label="Prix unitaire (FCFA/kg)"
+              label={t("ventes.form.prixUnitaireKg")}
               type="number"
               min="1"
-              placeholder="Ex: 2500"
+              placeholder={t("ventes.form.prixUnitaireKgPlaceholder")}
               value={prixUnitaireKg}
               onChange={(e) => setPrixUnitaireKg(e.target.value)}
             />
@@ -164,14 +166,14 @@ export function VenteFormClient({ clients, vagues }: Props) {
             <p className="text-2xl font-bold">
               {montantTotal.toLocaleString("fr-FR")} FCFA
             </p>
-            <p className="text-xs text-muted-foreground">Montant total</p>
+            <p className="text-xs text-muted-foreground">{t("ventes.form.montantTotal")}</p>
           </div>
         )}
 
         {/* Notes */}
         <Textarea
-          label="Notes (optionnel)"
-          placeholder="Informations complementaires..."
+          label={t("ventes.form.notes")}
+          placeholder={t("ventes.form.notesPlaceholder")}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={2}
@@ -183,7 +185,7 @@ export function VenteFormClient({ clients, vagues }: Props) {
           className="w-full min-h-[48px]"
         >
           <ShoppingCart className="h-4 w-4 mr-2" />
-          Enregistrer la vente
+          {t("ventes.form.submit")}
         </Button>
       </form>
     </div>

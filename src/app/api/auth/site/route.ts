@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, AuthError, SESSION_COOKIE_NAME } from "@/lib/auth";
 import { getSiteMember } from "@/lib/queries/sites";
 import { prisma } from "@/lib/db";
+import { ErrorKeys } from "@/lib/api-error-keys";
 
 /** PUT /api/auth/site — change the active site for the current session */
 export async function PUT(request: NextRequest) {
@@ -20,7 +21,7 @@ export async function PUT(request: NextRequest) {
     const member = await getSiteMember(body.siteId, session.userId);
     if (!member || !member.isActive) {
       return NextResponse.json(
-        { status: 403, message: "Vous n'etes pas membre de ce site." },
+        { status: 403, message: "Vous n'etes pas membre de ce site.", errorKey: ErrorKeys.AUTH_NOT_MEMBER },
         { status: 403 }
       );
     }
@@ -51,7 +52,7 @@ export async function PUT(request: NextRequest) {
       );
     }
     return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors du changement de site." },
+      { status: 500, message: "Erreur serveur lors du changement de site.", errorKey: ErrorKeys.SERVER_CHANGE_SITE },
       { status: 500 }
     );
   }

@@ -1,0 +1,69 @@
+{
+  "validation": {
+    "required": "Champ obligatoire",
+    "invalidValue": "Valeur invalide",
+    "fieldRequired": "Le champ {field} est obligatoire",
+    "noFieldToModify": "Aucun champ a modifier",
+    "validationErrors": "Erreurs de validation"
+  },
+  "notFound": {
+    "generic": "Ressource introuvable",
+    "plan": "Plan introuvable",
+    "vague": "Vague introuvable",
+    "bac": "Bac introuvable",
+    "releve": "Releve introuvable",
+    "client": "Client introuvable",
+    "user": "Utilisateur introuvable",
+    "member": "Membre introuvable",
+    "site": "Site introuvable",
+    "facture": "Facture introuvable",
+    "vente": "Vente introuvable",
+    "produit": "Produit introuvable",
+    "commande": "Commande introuvable",
+    "fournisseur": "Fournisseur introuvable"
+  },
+  "conflict": {
+    "planTypeExists": "Un plan avec ce type existe deja",
+    "cannotDeactivateWithSubscribers": "Impossible de desactiver un plan avec des abonnes actifs",
+    "bacAlreadyAssigned": "Ce bac est deja assigne a une vague",
+    "emailAlreadyUsed": "Cette adresse email est deja utilisee",
+    "phoneAlreadyUsed": "Ce numero de telephone est deja utilise"
+  },
+  "auth": {
+    "unauthorized": "Non autorise",
+    "forbidden": "Permission insuffisante",
+    "notMember": "Vous n'etes pas membre de ce site",
+    "accountDeactivated": "Ce compte a ete desactive",
+    "invalidCredentials": "Identifiant ou mot de passe incorrect"
+  },
+  "server": {
+    "generic": "Erreur serveur",
+    "unexpected": "Une erreur inattendue est survenue",
+    "getVagues": "Erreur serveur lors de la recuperation des vagues",
+    "createVague": "Erreur serveur lors de la creation de la vague",
+    "getVague": "Erreur serveur lors de la recuperation de la vague",
+    "updateVague": "Erreur serveur lors de la mise a jour de la vague",
+    "getBacs": "Erreur serveur lors de la recuperation des bacs",
+    "createBac": "Erreur serveur lors de la creation du bac",
+    "getBac": "Erreur serveur lors de la recuperation du bac",
+    "updateBac": "Erreur serveur lors de la mise a jour du bac",
+    "getReleves": "Erreur serveur lors de la recuperation des releves",
+    "createReleve": "Erreur serveur lors de la creation du releve",
+    "getReleve": "Erreur serveur lors de la recuperation du releve",
+    "updateReleve": "Erreur serveur lors de la mise a jour du releve",
+    "getPlans": "Erreur serveur lors de la recuperation des plans",
+    "createPlan": "Erreur serveur lors de la creation du plan",
+    "getPlan": "Erreur serveur lors de la recuperation du plan",
+    "updatePlan": "Erreur serveur lors de la modification du plan",
+    "deletePlan": "Erreur serveur lors de la desactivation du plan",
+    "login": "Erreur serveur lors de la connexion",
+    "register": "Erreur serveur lors de l'inscription",
+    "logout": "Erreur serveur lors de la deconnexion",
+    "changeSite": "Erreur serveur lors du changement de site"
+  },
+  "quota": {
+    "exceeded": "Quota depasse",
+    "vaguesLimit": "Vous avez atteint la limite de vagues en cours autorisees par votre plan",
+    "bacsLimit": "Vous avez atteint la limite de bacs autorises par votre plan"
+  }
+}

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { CommandesListClient } from "@/components/stock/commandes-list-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -13,6 +14,7 @@ export default async function CommandesPage() {
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
+  const t = await getTranslations("stock");
   const permissions = await checkPagePermission(session, Permission.APPROVISIONNEMENT_VOIR);
   if (!permissions) return <AccessDenied />;
 
@@ -38,7 +40,7 @@ export default async function CommandesPage() {
 
   return (
     <>
-      <Header title="Commandes" />
+      <Header title={t("commandes.title")} />
       <div className="p-4">
         <CommandesListClient
           commandes={JSON.parse(JSON.stringify(commandes))}

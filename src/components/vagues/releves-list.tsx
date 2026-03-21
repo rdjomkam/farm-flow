@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Calendar, ChevronRight, FileText } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -10,16 +11,6 @@ import { ModifierReleveDialog } from "@/components/releves/modifier-releve-dialo
 import { TypeReleve, Permission } from "@/types";
 import type { Releve } from "@/types";
 import type { ProduitOption } from "@/components/releves/consommation-fields";
-
-const typeLabels: Record<TypeReleve, string> = {
-  [TypeReleve.BIOMETRIE]: "Biométrie",
-  [TypeReleve.MORTALITE]: "Mortalité",
-  [TypeReleve.ALIMENTATION]: "Alimentation",
-  [TypeReleve.QUALITE_EAU]: "Qualité eau",
-  [TypeReleve.COMPTAGE]: "Comptage",
-  [TypeReleve.OBSERVATION]: "Observation",
-  [TypeReleve.RENOUVELLEMENT]: "Renouvellement",
-};
 
 const typeVariants: Record<TypeReleve, "info" | "warning" | "default"> = {
   [TypeReleve.BIOMETRIE]: "info",
@@ -32,24 +23,25 @@ const typeVariants: Record<TypeReleve, "info" | "warning" | "default"> = {
 };
 
 function ReleveDetails({ releve }: { releve: Releve }) {
+  const t = useTranslations("releves");
   const type = releve.typeReleve as TypeReleve;
   switch (type) {
     case TypeReleve.BIOMETRIE:
       return (
         <div className="text-sm text-muted-foreground">
-          Poids : {releve.poidsMoyen}g{releve.tailleMoyenne != null ? ` | Taille : ${releve.tailleMoyenne}cm` : ""} | Éch. : {releve.echantillonCount}
+          {t("details.poids", { value: releve.poidsMoyen ?? 0 })}{releve.tailleMoyenne != null ? ` | ${t("details.taille", { value: releve.tailleMoyenne })}` : ""} | {t("details.ech", { count: releve.echantillonCount ?? 0 })}
         </div>
       );
     case TypeReleve.MORTALITE:
       return (
         <div className="text-sm text-muted-foreground">
-          {releve.nombreMorts} mort{(releve.nombreMorts ?? 0) > 1 ? "s" : ""} — {releve.causeMortalite}
+          {(releve.nombreMorts ?? 0) > 1 ? t("details.morts", { count: releve.nombreMorts ?? 0 }) : t("details.mort", { count: releve.nombreMorts ?? 0 })} — {releve.causeMortalite}
         </div>
       );
     case TypeReleve.ALIMENTATION:
       return (
         <div className="text-sm text-muted-foreground">
-          {releve.quantiteAliment}kg ({releve.typeAliment}) | {releve.frequenceAliment}x/jour
+          {releve.quantiteAliment}kg ({releve.typeAliment}) | {t("details.xParJour", { count: releve.frequenceAliment ?? 0 })}
         </div>
       );
     case TypeReleve.QUALITE_EAU:
@@ -64,7 +56,7 @@ function ReleveDetails({ releve }: { releve: Releve }) {
     case TypeReleve.COMPTAGE:
       return (
         <div className="text-sm text-muted-foreground">
-          {releve.nombreCompte} poissons ({releve.methodeComptage})
+          {t("details.poissons", { count: releve.nombreCompte ?? 0 })} ({releve.methodeComptage})
         </div>
       );
     case TypeReleve.OBSERVATION:
@@ -83,6 +75,7 @@ interface RelevesListProps {
 }
 
 export function RelevesList({ releves, produits = [], permissions, limit, vagueId }: RelevesListProps) {
+  const t = useTranslations("releves");
   const [tab, setTab] = useState("tous");
 
   const isLimited = limit != null;
@@ -96,8 +89,8 @@ export function RelevesList({ releves, produits = [], permissions, limit, vagueI
     : displayReleves.filter((r) => r.typeReleve === tab);
 
   const typeCounts = Object.values(TypeReleve).reduce(
-    (acc, t) => {
-      acc[t] = displayReleves.filter((r) => r.typeReleve === t).length;
+    (acc, tp) => {
+      acc[tp] = displayReleves.filter((r) => r.typeReleve === tp).length;
       return acc;
     },
     {} as Record<TypeReleve, number>
@@ -111,10 +104,10 @@ export function RelevesList({ releves, produits = [], permissions, limit, vagueI
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <Badge variant={typeVariants[r.typeReleve as TypeReleve]}>
-                  {typeLabels[r.typeReleve as TypeReleve]}
+                  {t(`types.${r.typeReleve as TypeReleve}`)}
                 </Badge>
                 {(r as { modifie?: boolean }).modifie && (
-                  <Badge variant="warning">Modifie</Badge>
+                  <Badge variant="warning">{t("list.modified")}</Badge>
                 )}
               </div>
               <div className="flex items-center gap-2">
@@ -151,7 +144,7 @@ export function RelevesList({ releves, produits = [], permissions, limit, vagueI
   return (
     <section>
       <h2 className="mb-3 text-base font-semibold">
-        Relevés ({releves.length})
+        {t("list.title", { count: releves.length })}
       </h2>
       {isLimited ? (
         // Limited mode: no tabs, just show items + "Voir tout" link
@@ -159,8 +152,8 @@ export function RelevesList({ releves, produits = [], permissions, limit, vagueI
           {displayReleves.length === 0 ? (
             <EmptyState
               icon={<FileText className="h-7 w-7" />}
-              title="Aucun relevé"
-              description="Les relevés apparaîtront ici au fur et à mesure du suivi."
+              title={t("list.emptyTitle")}
+              description={t("list.emptyDescription")}
             />
           ) : (
             releveItems(displayReleves)
@@ -170,7 +163,7 @@ export function RelevesList({ releves, produits = [], permissions, limit, vagueI
               href={`/vagues/${vagueId}/releves`}
               className="mt-2 flex items-center justify-center gap-1 rounded-md border border-border py-2 text-sm font-medium text-primary hover:bg-accent transition-colors"
             >
-              Voir tout ({releves.length})
+              {t("list.voirTout", { count: releves.length })}
               <ChevronRight className="h-4 w-4" />
             </Link>
           )}
@@ -180,11 +173,11 @@ export function RelevesList({ releves, produits = [], permissions, limit, vagueI
         <Tabs value={tab} onValueChange={setTab}>
           <div className="overflow-x-auto -mx-4 px-4">
             <TabsList className="w-max">
-              <TabsTrigger value="tous">Tous</TabsTrigger>
-              {Object.values(TypeReleve).map((t) =>
-                typeCounts[t] > 0 ? (
-                  <TabsTrigger key={t} value={t}>
-                    {typeLabels[t]} ({typeCounts[t]})
+              <TabsTrigger value="tous">{t("list.tous")}</TabsTrigger>
+              {Object.values(TypeReleve).map((tp) =>
+                typeCounts[tp] > 0 ? (
+                  <TabsTrigger key={tp} value={tp}>
+                    {t(`types.${tp}`)} ({typeCounts[tp]})
                   </TabsTrigger>
                 ) : null
               )}
@@ -194,8 +187,8 @@ export function RelevesList({ releves, produits = [], permissions, limit, vagueI
             {filtered.length === 0 ? (
               <EmptyState
                 icon={<FileText className="h-7 w-7" />}
-                title="Aucun relevé"
-                description="Les relevés apparaîtront ici au fur et à mesure du suivi."
+                title={t("list.emptyTitle")}
+                description={t("list.emptyDescription")}
               />
             ) : (
               releveItems(filtered)

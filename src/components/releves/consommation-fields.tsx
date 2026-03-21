@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Trash2, AlertTriangle, ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -51,6 +52,7 @@ export function ConsommationFields({
   categorie,
   optional,
 }: ConsommationFieldsProps) {
+  const t = useTranslations("releves");
   const [expanded, setExpanded] = useState(!optional || lignes.length > 0);
 
   const filtered = produits.filter((p) => p.categorie === categorie);
@@ -72,7 +74,9 @@ export function ConsommationFields({
 
   if (filtered.length === 0) return null;
 
-  const label = categorie === "ALIMENT" ? "Aliments consommes" : "Intrants utilises";
+  const label = categorie === "ALIMENT"
+    ? t("form.consommation.alimentsConsommes")
+    : t("form.consommation.intrantsUtilises");
 
   return (
     <div className="space-y-2">
@@ -89,7 +93,7 @@ export function ConsommationFields({
         >
           <ChevronDown className={cn("h-4 w-4 transition-transform", !expanded && "-rotate-90")} />
           {label}
-          <span className="text-xs">(optionnel)</span>
+          <span className="text-xs">{t("form.consommation.optionnel")}</span>
         </button>
       ) : (
         <p className="text-sm font-medium">{label}</p>
@@ -111,7 +115,7 @@ export function ConsommationFields({
                     onValueChange={(v) => updateLine(i, "produitId", v)}
                   >
                     <SelectTrigger className="text-sm">
-                      <SelectValue placeholder="Produit" />
+                      <SelectValue placeholder={t("form.consommation.produitPlaceholder")} />
                     </SelectTrigger>
                     <SelectContent>
                       {filtered.map((p) => (
@@ -131,7 +135,7 @@ export function ConsommationFields({
                   {overStock && (
                     <p className="flex items-center gap-1 text-xs text-warning">
                       <AlertTriangle className="h-3 w-3" />
-                      Stock dispo : {produit.stockActuel} {unite}
+                      {t("form.consommation.stockDispo", { stock: produit.stockActuel, unite })}
                     </p>
                   )}
                 </div>
@@ -155,7 +159,7 @@ export function ConsommationFields({
             className="w-full text-xs"
           >
             <Plus className="h-3.5 w-3.5 mr-1" />
-            Ajouter un produit
+            {t("form.consommation.ajouterProduit")}
           </Button>
         </div>
       )}

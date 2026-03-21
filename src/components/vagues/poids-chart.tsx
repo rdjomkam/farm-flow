@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ChartTooltip } from "@/components/ui/chart-tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,15 +41,17 @@ interface PoidsChartProps {
 }
 
 export function PoidsChart({ data }: PoidsChartProps) {
+  const t = useTranslations("vagues");
+
   if (data.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Evolution du poids moyen</CardTitle>
+          <CardTitle className="text-base">{t("poidsChart.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="py-8 text-center text-sm text-muted-foreground">
-            Aucune donnee biometrique disponible.
+            {t("poidsChart.noData")}
           </p>
         </CardContent>
       </Card>
@@ -58,7 +61,7 @@ export function PoidsChart({ data }: PoidsChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Evolution du poids moyen</CardTitle>
+        <CardTitle className="text-base">{t("poidsChart.title")}</CardTitle>
       </CardHeader>
       <CardContent className="overflow-hidden">
         <div className="h-[220px] w-full max-w-full">
@@ -81,7 +84,7 @@ export function PoidsChart({ data }: PoidsChartProps) {
               <Tooltip
                 content={
                   <ChartTooltip
-                    labelFormatter={(label) => `Jour ${label}`}
+                    labelFormatter={(label) => t("poidsChart.tooltipLabel", { label })}
                     valueFormatter={(v) => `${v} g`}
                   />
                 }
@@ -89,7 +92,7 @@ export function PoidsChart({ data }: PoidsChartProps) {
               <Line
                 type="monotone"
                 dataKey="poidsMoyen"
-                name="Poids moyen"
+                name={t("poidsChart.seriesName")}
                 stroke="var(--primary)"
                 strokeWidth={2}
                 dot={{ r: 3 }}

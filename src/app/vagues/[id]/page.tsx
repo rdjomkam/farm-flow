@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Container, Calendar, Fish, Scissors } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,12 +22,6 @@ import { StatutVague, TypeReleve, CategorieProduit, Permission } from "@/types";
 import type { Releve, EvolutionPoidsPoint, IndicateursVague as IndicateursType, CalibrageWithRelations } from "@/types";
 import type { ProduitOption } from "@/components/releves/consommation-fields";
 
-const statutLabels: Record<StatutVague, string> = {
-  [StatutVague.EN_COURS]: "En cours",
-  [StatutVague.TERMINEE]: "Terminée",
-  [StatutVague.ANNULEE]: "Annulée",
-};
-
 const statutVariants: Record<StatutVague, "en_cours" | "terminee" | "annulee"> = {
   [StatutVague.EN_COURS]: "en_cours",
   [StatutVague.TERMINEE]: "terminee",
@@ -44,6 +39,8 @@ export default async function VagueDetailPage({
 
   const permissions = await checkPagePermission(session, Permission.VAGUES_VOIR);
   if (!permissions) return <AccessDenied />;
+
+  const t = await getTranslations("vagues");
 
   const { id } = await params;
   const [vague, indicateurs, produitsDb, calibragesDb] = await Promise.all([
@@ -112,6 +109,8 @@ export default async function VagueDetailPage({
       };
     });
 
+  const nombreBacs = vague.bacs.length;
+
   return (
     <>
       <Header title={vague.code} />
@@ -119,7 +118,7 @@ export default async function VagueDetailPage({
       <div className="flex flex-col gap-4 p-4 min-w-0 overflow-hidden">
         {/* Info section */}
         <section className="flex flex-wrap items-center gap-2 border-b border-border pb-3 min-w-0">
-          <Badge variant={statutVariants[statut]}>{statutLabels[statut]}</Badge>
+          <Badge variant={statutVariants[statut]}>{t(`statuts.${statut}`)}</Badge>
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Calendar className="h-3.5 w-3.5" />
             {new Date(vague.dateDebut).toLocaleDateString("fr-FR")}
@@ -127,13 +126,13 @@ export default async function VagueDetailPage({
           </div>
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Fish className="h-3.5 w-3.5" />
-            {vague.nombreInitial} alevins ({vague.poidsMoyenInitial}g)
+            {t("detail.alevins", { count: vague.nombreInitial, poids: vague.poidsMoyenInitial })}
           </div>
           <div className="flex items-center gap-1 text-sm text-muted-foreground min-w-0">
             <Container className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">
-              {vague.bacs.length} bac{vague.bacs.length > 1 ? "s" : ""}
-              {vague.bacs.length > 0 && ` (${vague.bacs.map((b) => b.nom).join(", ")})`}
+              {nombreBacs > 1 ? t("detail.bacs", { count: nombreBacs }) : t("detail.bac", { count: nombreBacs })}
+              {nombreBacs > 0 && ` (${vague.bacs.map((b) => b.nom).join(", ")})`}
             </span>
           </div>
           {(isEnCours || permissions.includes(Permission.EXPORT_DONNEES)) && (
@@ -161,12 +160,12 @@ export default async function VagueDetailPage({
         {permissions.includes(Permission.CALIBRAGES_VOIR) && (
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-semibold">Calibrages</h2>
+              <h2 className="text-base font-semibold">{t("detail.sections.calibrages")}</h2>
               {isEnCours && permissions.includes(Permission.CALIBRAGES_CREER) && (
                 <Button variant="outline" size="sm" asChild>
                   <Link href={`/vagues/${vague.id}/calibrage/nouveau`}>
                     <Scissors className="h-4 w-4" />
-                    Nouveau
+                    {t("detail.sections.nouveau")}
                   </Link>
                 </Button>
               )}
@@ -195,7 +194,7 @@ export default async function VagueDetailPage({
           <Button variant="ghost" size="sm" asChild>
             <Link href="/vagues">
               <ArrowLeft className="h-4 w-4" />
-              Retour aux vagues
+              {t("detail.retourVagues")}
             </Link>
           </Button>
         </div>

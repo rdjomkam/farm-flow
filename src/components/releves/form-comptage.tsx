@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -8,12 +11,6 @@ import {
 } from "@/components/ui/select";
 import { MethodeComptage } from "@/types";
 
-const methodeLabels: Record<MethodeComptage, string> = {
-  [MethodeComptage.DIRECT]: "Direct",
-  [MethodeComptage.ESTIMATION]: "Estimation",
-  [MethodeComptage.ECHANTILLONNAGE]: "Échantillonnage",
-};
-
 interface FormComptageProps {
   values: { nombreCompte: string; methodeComptage: string };
   onChange: (field: string, value: string) => void;
@@ -21,11 +18,13 @@ interface FormComptageProps {
 }
 
 export function FormComptage({ values, onChange, errors }: FormComptageProps) {
+  const t = useTranslations("releves");
+
   return (
     <>
       <Input
         id="nombreCompte"
-        label="Nombre de poissons comptés"
+        label={t("form.comptage.nombreCompte")}
         type="number"
         min="0"
         value={values.nombreCompte}
@@ -33,13 +32,13 @@ export function FormComptage({ values, onChange, errors }: FormComptageProps) {
         error={errors.nombreCompte}
       />
       <Select value={values.methodeComptage} onValueChange={(v) => onChange("methodeComptage", v)}>
-        <SelectTrigger label="Méthode de comptage" error={errors.methodeComptage}>
-          <SelectValue placeholder="Sélectionner une méthode" />
+        <SelectTrigger label={t("form.comptage.methodeComptage")} error={errors.methodeComptage}>
+          <SelectValue placeholder={t("form.comptage.methodePlaceholder")} />
         </SelectTrigger>
         <SelectContent>
           {Object.values(MethodeComptage).map((m) => (
             <SelectItem key={m} value={m}>
-              {methodeLabels[m]}
+              {t(`form.comptage.methodes.${m}`)}
             </SelectItem>
           ))}
         </SelectContent>

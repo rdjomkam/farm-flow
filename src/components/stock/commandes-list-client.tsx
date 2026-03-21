@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Plus, ShoppingCart, ArrowLeft, Calendar, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,27 +29,11 @@ import {
 import { StatutCommande, UniteStock, Permission } from "@/types";
 import { useStockService } from "@/services";
 
-const statutLabels: Record<StatutCommande, string> = {
-  [StatutCommande.BROUILLON]: "Brouillon",
-  [StatutCommande.ENVOYEE]: "Envoyee",
-  [StatutCommande.LIVREE]: "Livree",
-  [StatutCommande.ANNULEE]: "Annulee",
-};
-
 const statutVariants: Record<StatutCommande, "default" | "info" | "en_cours" | "warning"> = {
   [StatutCommande.BROUILLON]: "default",
   [StatutCommande.ENVOYEE]: "info",
   [StatutCommande.LIVREE]: "en_cours",
   [StatutCommande.ANNULEE]: "warning",
-};
-
-const uniteLabels: Record<string, string> = {
-  [UniteStock.GRAMME]: "g",
-  [UniteStock.KG]: "kg",
-  [UniteStock.MILLILITRE]: "mL",
-  [UniteStock.LITRE]: "L",
-  [UniteStock.UNITE]: "unite",
-  [UniteStock.SACS]: "sacs",
 };
 
 interface CommandeData {
@@ -77,6 +62,7 @@ interface Props {
 }
 
 export function CommandesListClient({ commandes, fournisseurs, produits, permissions }: Props) {
+  const t = useTranslations("stock");
   const router = useRouter();
   const stockService = useStockService();
   const [tab, setTab] = useState("tous");
@@ -155,6 +141,9 @@ export function CommandesListClient({ commandes, fournisseurs, produits, permiss
     }
   }
 
+  const uniteLabel = (u: string) => t(`unites.${u}` as Parameters<typeof t>[0]) || u;
+  const statutLabel = (s: string) => t(`statuts.${s}` as Parameters<typeof t>[0]) || s;
+
   return (
     <div className="flex flex-col gap-4">
       <Link
@@ -162,29 +151,29 @@ export function CommandesListClient({ commandes, fournisseurs, produits, permiss
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
       >
         <ArrowLeft className="h-4 w-4" />
-        Stock
+        {t("actions.back")}
       </Link>
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {commandes.length} commande{commandes.length > 1 ? "s" : ""}
+          {t("commandes.count", { count: commandes.length })}
         </p>
         {permissions.includes(Permission.APPROVISIONNEMENT_GERER) && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-1" />
-                Commande
+                {t("commandes.new")}
               </Button>
             </DialogTrigger>
           <DialogContent className="max-h-[90dvh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Nouvelle commande</DialogTitle>
+              <DialogTitle>{t("commandes.add")}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-4 py-2">
               <Select value={fournisseurId} onValueChange={setFournisseurId}>
-                <SelectTrigger label="Fournisseur">
-                  <SelectValue placeholder="Choisir" />
+                <SelectTrigger label={t("commandes.fields.fournisseur")}>
+                  <SelectValue placeholder={t("commandes.fields.choix")} />
                 </SelectTrigger>
                 <SelectContent>
                   {fournisseurs.map((f) => (
@@ -195,29 +184,29 @@ export function CommandesListClient({ commandes, fournisseurs, produits, permiss
                 </SelectContent>
               </Select>
               <Input
-                label="Date de commande"
+                label={t("commandes.fields.date")}
                 type="date"
                 value={dateCommande}
                 onChange={(e) => setDateCommande(e.target.value)}
               />
 
               <div className="space-y-3">
-                <p className="text-sm font-medium">Lignes de commande</p>
+                <p className="text-sm font-medium">{t("commandes.fields.lignes")}</p>
                 {lignes.map((ligne, i) => {
                   const selectedProduit = produits.find(
                     (p) => p.id === ligne.produitId
                   );
                   const unite = selectedProduit
                     ? (selectedProduit.uniteAchat
-                        ? (uniteLabels[selectedProduit.uniteAchat] ?? selectedProduit.uniteAchat)
-                        : (uniteLabels[selectedProduit.unite] ?? selectedProduit.unite))
+                        ? uniteLabel(selectedProduit.uniteAchat)
+                        : uniteLabel(selectedProduit.unite))
                     : "";
                   return (
                     <Card key={i}>
                       <CardContent className="p-3 flex flex-col gap-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-muted-foreground">
-                            Ligne {i + 1}
+                            {t("commandes.fields.ligne", { n: i + 1 })}
                           </span>
                           {lignes.length > 1 && (
                             <Button
@@ -234,7 +223,7 @@ export function CommandesListClient({ commandes, fournisseurs, produits, permiss
                           onValueChange={(v) => updateLigne(i, "produitId", v)}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Produit" />
+                            <SelectValue placeholder={t("commandes.fields.produit")} />
                           </SelectTrigger>
                           <SelectContent>
                             {produits.map((p) => (
@@ -247,7 +236,9 @@ export function CommandesListClient({ commandes, fournisseurs, produits, permiss
                         <div className="grid grid-cols-2 gap-2">
                           <Input
                             type="number"
-                            placeholder={`Qte${unite ? ` (${unite})` : ""}`}
+                            placeholder={unite
+                              ? t("commandes.lignes.qteWithUnit", { unit: unite })
+                              : t("commandes.lignes.qtePlaceholder")}
                             value={ligne.quantite}
                             onChange={(e) =>
                               updateLigne(i, "quantite", e.target.value)
@@ -255,7 +246,7 @@ export function CommandesListClient({ commandes, fournisseurs, produits, permiss
                           />
                           <Input
                             type="number"
-                            placeholder="Prix unit."
+                            placeholder={t("commandes.lignes.prixPlaceholder")}
                             value={ligne.prixUnitaire}
                             onChange={(e) =>
                               updateLigne(i, "prixUnitaire", e.target.value)
@@ -273,22 +264,22 @@ export function CommandesListClient({ commandes, fournisseurs, produits, permiss
                   className="w-full"
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  Ajouter une ligne
+                  {t("commandes.lignes.add")}
                 </Button>
               </div>
 
               {montantTotal > 0 && (
                 <div className="text-right font-semibold">
-                  Total : {montantTotal.toLocaleString("fr-FR")} FCFA
+                  {t("commandes.fields.total", { montant: montantTotal.toLocaleString("fr-FR") })}
                 </div>
               )}
             </div>
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="outline">Annuler</Button>
+                <Button variant="outline">{t("actions.cancel")}</Button>
               </DialogClose>
               <Button onClick={handleCreate} disabled={!isValid}>
-                Creer
+                {t("actions.create")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -299,10 +290,10 @@ export function CommandesListClient({ commandes, fournisseurs, produits, permiss
       <Tabs value={tab} onValueChange={setTab}>
         <div className="overflow-x-auto -mx-4 px-4">
           <TabsList className="w-max">
-            <TabsTrigger value="tous">Toutes</TabsTrigger>
-            {Object.entries(statutLabels).map(([val, label]) => (
+            <TabsTrigger value="tous">{t("commandes.tabs.all")}</TabsTrigger>
+            {Object.values(StatutCommande).map((val) => (
               <TabsTrigger key={val} value={val}>
-                {label}
+                {statutLabel(val)}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -311,7 +302,7 @@ export function CommandesListClient({ commandes, fournisseurs, produits, permiss
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <ShoppingCart className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Aucune commande</p>
+              <p className="text-muted-foreground">{t("commandes.empty")}</p>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
@@ -322,7 +313,7 @@ export function CommandesListClient({ commandes, fournisseurs, produits, permiss
                       <div className="flex items-center justify-between mb-2">
                         <p className="font-medium text-sm">{c.numero}</p>
                         <Badge variant={statutVariants[c.statut as StatutCommande]}>
-                          {statutLabels[c.statut as StatutCommande]}
+                          {statutLabel(c.statut)}
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between text-sm">

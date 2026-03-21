@@ -28,7 +28,7 @@ export interface BenchmarkRange {
 // ---------------------------------------------------------------------------
 
 export const BENCHMARK_SURVIE: BenchmarkRange = {
-  label: "Taux de survie",
+  label: "survie",
   unit: "%",
   excellent: { min: 90, max: 100 },
   bon: { min: 85, max: 90 },
@@ -55,7 +55,7 @@ export const BENCHMARK_SGR: BenchmarkRange = {
 };
 
 export const BENCHMARK_DENSITE: BenchmarkRange = {
-  label: "Densite",
+  label: "densite",
   unit: "kg/m\u00B3",
   // Lower density is better for Clarias — seuils en kg/m3 (ADR-density-alerts)
   excellent: { min: 0, max: 100 },
@@ -64,7 +64,7 @@ export const BENCHMARK_DENSITE: BenchmarkRange = {
 };
 
 export const BENCHMARK_MORTALITE: BenchmarkRange = {
-  label: "Mortalite",
+  label: "mortalite",
   unit: "%",
   // Lower mortality is better
   excellent: { min: 0, max: 3 },
@@ -97,7 +97,7 @@ export type BenchmarkKey = keyof typeof BENCHMARKS;
 export function getBenchmarkSurvie(config?: ConfigElevage | null): BenchmarkRange {
   if (!config) return BENCHMARK_SURVIE;
   return {
-    label: "Taux de survie",
+    label: "survie",
     unit: "%",
     excellent: { min: config.survieExcellentMin, max: 100 },
     bon: { min: config.survieBonMin, max: config.survieExcellentMin },
@@ -142,7 +142,7 @@ export function getBenchmarkSgr(config?: ConfigElevage | null): BenchmarkRange {
 export function getBenchmarkDensite(config?: ConfigElevage | null): BenchmarkRange {
   if (!config) return BENCHMARK_DENSITE;
   return {
-    label: "Densite",
+    label: "densite",
     unit: "poissons/m\u00B3",
     excellent: { min: 0, max: config.densiteExcellentMax },
     bon: { min: config.densiteExcellentMax, max: config.densiteBonMax },
@@ -157,7 +157,7 @@ export function getBenchmarkDensite(config?: ConfigElevage | null): BenchmarkRan
 export function getBenchmarkMortalite(config?: ConfigElevage | null): BenchmarkRange {
   if (!config) return BENCHMARK_MORTALITE;
   return {
-    label: "Mortalite",
+    label: "mortalite",
     unit: "%",
     excellent: { min: 0, max: config.mortaliteExcellentMax },
     bon: { min: config.mortaliteExcellentMax, max: config.mortaliteBonMax },

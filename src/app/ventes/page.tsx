@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { VentesListClient } from "@/components/ventes/ventes-list-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -16,6 +17,7 @@ export default async function VentesPage() {
   const permissions = await checkPagePermission(session, Permission.VENTES_VOIR);
   if (!permissions) return <AccessDenied />;
 
+  const t = await getTranslations("ventes");
   const [ventes, clients, vagues] = await Promise.all([
     getVentes(session.activeSiteId),
     getClients(session.activeSiteId),
@@ -27,7 +29,7 @@ export default async function VentesPage() {
 
   return (
     <>
-      <Header title="Ventes" />
+      <Header title={t("ventes.title")} />
       <div className="p-4">
         <VentesListClient
           ventes={JSON.parse(JSON.stringify(ventes))}

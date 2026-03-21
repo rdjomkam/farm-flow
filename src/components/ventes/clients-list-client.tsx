@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Plus, Users, Phone, Mail, MapPin, Pencil, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,7 @@ interface Props {
 }
 
 export function ClientsListClient({ clients, permissions }: Props) {
+  const t = useTranslations("ventes");
   const router = useRouter();
   const venteService = useVenteService();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -85,7 +87,7 @@ export function ClientsListClient({ clients, permissions }: Props) {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {clients.length} client{clients.length > 1 ? "s" : ""}
+          {t("clients.count", { count: clients.length })}
         </p>
         {permissions.includes(Permission.CLIENTS_GERER) && (
           <Dialog
@@ -98,50 +100,50 @@ export function ClientsListClient({ clients, permissions }: Props) {
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-1" />
-                Nouveau
+                {t("clients.new")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>
-                  {editId ? "Modifier le client" : "Ajouter un client"}
+                  {editId ? t("clients.edit") : t("clients.add")}
                 </DialogTitle>
               </DialogHeader>
               <div className="flex flex-col gap-4 py-2">
                 <Input
-                  label="Nom"
-                  placeholder="Ex: Restaurant Le Mboa"
+                  label={t("clients.fields.nom")}
+                  placeholder={t("clients.fields.nomPlaceholder")}
                   value={nom}
                   onChange={(e) => setNom(e.target.value)}
                   autoFocus
                 />
                 <Input
-                  label="Telephone (optionnel)"
+                  label={t("clients.fields.telephone")}
                   type="tel"
-                  placeholder="6XX XX XX XX (+237 ajouté automatiquement)"
+                  placeholder={t("clients.fields.telephonePlaceholder")}
                   value={telephone}
                   onChange={(e) => setTelephone(e.target.value)}
                 />
                 <Input
-                  label="Email (optionnel)"
+                  label={t("clients.fields.email")}
                   type="email"
-                  placeholder="contact@client.com"
+                  placeholder={t("clients.fields.emailPlaceholder")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
                 <Input
-                  label="Adresse (optionnel)"
-                  placeholder="Douala, Cameroun"
+                  label={t("clients.fields.adresse")}
+                  placeholder={t("clients.fields.adressePlaceholder")}
                   value={adresse}
                   onChange={(e) => setAdresse(e.target.value)}
                 />
               </div>
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button variant="outline">Annuler</Button>
+                  <Button variant="outline">{t("paiements.cancel")}</Button>
                 </DialogClose>
                 <Button onClick={handleSubmit} disabled={!nom.trim()}>
-                  {editId ? "Enregistrer" : "Creer"}
+                  {editId ? t("clients.save") : t("clients.create")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -152,9 +154,9 @@ export function ClientsListClient({ clients, permissions }: Props) {
       {clients.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <Users className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground mb-2">Aucun client</p>
+          <p className="text-muted-foreground mb-2">{t("clients.empty")}</p>
           <p className="text-sm text-muted-foreground">
-            Ajoutez vos clients pour enregistrer des ventes.
+            {t("clients.emptyDescription")}
           </p>
         </div>
       ) : (
@@ -200,7 +202,7 @@ export function ClientsListClient({ clients, permissions }: Props) {
                 <div className="flex items-center gap-4 text-xs text-muted-foreground border-t border-border pt-2 mt-2">
                   <div className="flex items-center gap-1">
                     <ShoppingCart className="h-3 w-3" />
-                    <span>{c._count.ventes} vente{c._count.ventes > 1 ? "s" : ""}</span>
+                    <span>{t("clients.stats.ventes", { count: c._count.ventes })}</span>
                   </div>
                 </div>
               </CardContent>

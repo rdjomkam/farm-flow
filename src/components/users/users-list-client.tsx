@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Users } from "lucide-react";
 import { Role } from "@/types";
+import { useTranslations } from "next-intl";
 
 interface UserSummary {
   id: string;
@@ -31,17 +32,18 @@ interface UsersListClientProps {
   currentUserId: string;
 }
 
-const ROLE_OPTIONS: { value: string; label: string }[] = [
-  { value: "all", label: "Tous les roles" },
-  { value: Role.ADMIN, label: "Administrateur global" },
-  { value: Role.GERANT, label: "Gerant" },
-  { value: Role.PISCICULTEUR, label: "Pisciculteur" },
-  { value: Role.INGENIEUR, label: "Ingenieur" },
-];
-
 export function UsersListClient({ users, currentUserId }: UsersListClientProps) {
+  const t = useTranslations("users");
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+
+  const ROLE_OPTIONS: { value: string; label: string }[] = [
+    { value: "all", label: t("list.allRoles") },
+    { value: Role.ADMIN, label: t("roles.ADMIN") },
+    { value: Role.GERANT, label: t("roles.GERANT") },
+    { value: Role.PISCICULTEUR, label: t("roles.PISCICULTEUR") },
+    { value: Role.INGENIEUR, label: t("roles.INGENIEUR") },
+  ];
 
   const filtered = users.filter((u) => {
     if (u.id === currentUserId) return false; // optionally keep current user visible
@@ -68,16 +70,16 @@ export function UsersListClient({ users, currentUserId }: UsersListClientProps) 
         <div className="flex-1">
           <Input
             id="search-users"
-            label="Rechercher"
-            placeholder="Nom, email ou telephone..."
+            label={t("list.search")}
+            placeholder={t("list.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <div className="w-full sm:w-52">
           <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger label="Role">
-              <SelectValue placeholder="Tous les roles" />
+            <SelectTrigger label={t("list.role")}>
+              <SelectValue placeholder={t("list.allRoles")} />
             </SelectTrigger>
             <SelectContent>
               {ROLE_OPTIONS.map((opt) => (
@@ -92,15 +94,17 @@ export function UsersListClient({ users, currentUserId }: UsersListClientProps) 
 
       {/* Count */}
       <p className="text-sm text-muted-foreground">
-        {filtered.length} utilisateur{filtered.length !== 1 ? "s" : ""}
+        {filtered.length === 1
+          ? t("list.count", { count: filtered.length })
+          : t("list.countPlural", { count: filtered.length })}
       </p>
 
       {/* List */}
       {filtered.length === 0 ? (
         <EmptyState
           icon={<Users className="h-7 w-7" />}
-          title="Aucun utilisateur"
-          description="Aucun utilisateur ne correspond a ce filtre."
+          title={t("list.aucun")}
+          description={t("list.aucunDescription")}
         />
       ) : (
         <div className="grid gap-3 md:grid-cols-2">

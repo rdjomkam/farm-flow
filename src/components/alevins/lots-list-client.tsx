@@ -26,13 +26,7 @@ import {
 } from "@/components/ui/select";
 import { useAlevinsService } from "@/services";
 import { StatutLotAlevins, Permission } from "@/types";
-
-const statutLabels: Record<StatutLotAlevins, string> = {
-  [StatutLotAlevins.EN_INCUBATION]: "En incubation",
-  [StatutLotAlevins.EN_ELEVAGE]: "En elevage",
-  [StatutLotAlevins.TRANSFERE]: "Transfere",
-  [StatutLotAlevins.PERDU]: "Perdu",
-};
+import { useTranslations } from "next-intl";
 
 function statutBadgeClass(statut: string): string {
   if (statut === StatutLotAlevins.EN_INCUBATION)
@@ -64,6 +58,7 @@ interface Props {
 }
 
 export function LotsAlevinsListClient({ lots, pontes, permissions }: Props) {
+  const t = useTranslations("alevins");
   const router = useRouter();
   const alevinsService = useAlevinsService();
   const [tab, setTab] = useState("tous");
@@ -78,6 +73,13 @@ export function LotsAlevinsListClient({ lots, pontes, permissions }: Props) {
   const [ageJours, setAgeJours] = useState("");
   const [poidsMoyen, setPoidsMoyen] = useState("");
   const [notes, setNotes] = useState("");
+
+  const statutLabels: Record<StatutLotAlevins, string> = {
+    [StatutLotAlevins.EN_INCUBATION]: t("lots.statuts.EN_INCUBATION"),
+    [StatutLotAlevins.EN_ELEVAGE]: t("lots.statuts.EN_ELEVAGE"),
+    [StatutLotAlevins.TRANSFERE]: t("lots.statuts.TRANSFERE"),
+    [StatutLotAlevins.PERDU]: t("lots.statuts.PERDU"),
+  };
 
   const filtered = lots.filter((l) => {
     const matchTab = tab === "tous" ? true : l.statut === tab;
@@ -124,12 +126,14 @@ export function LotsAlevinsListClient({ lots, pontes, permissions }: Props) {
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
       >
         <ArrowLeft className="h-4 w-4" />
-        Alevins
+        {t("lots.backToAlevins")}
       </Link>
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {lots.length} lot{lots.length > 1 ? "s" : ""}
+          {lots.length === 1
+            ? t("lots.count", { count: lots.length })
+            : t("lots.countPlural", { count: lots.length })}
         </p>
         {permissions.includes(Permission.ALEVINS_GERER) && (
           <Dialog
@@ -142,24 +146,24 @@ export function LotsAlevinsListClient({ lots, pontes, permissions }: Props) {
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-1" />
-                Nouveau
+                {t("lots.nouveau")}
               </Button>
             </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Nouveau lot d&apos;alevins</DialogTitle>
+              <DialogTitle>{t("lots.nouveauLot")}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-4 py-2">
               <Input
-                label="Code"
-                placeholder="Ex: LOT-2026-001"
+                label={t("lots.form.code")}
+                placeholder={t("lots.form.codePlaceholder")}
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 autoFocus
               />
               <Select value={ponteId} onValueChange={setPonteId}>
-                <SelectTrigger label="Ponte d'origine">
-                  <SelectValue placeholder="Selectionnez une ponte" />
+                <SelectTrigger label={t("lots.form.ponteOrigine")}>
+                  <SelectValue placeholder={t("lots.form.pontePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {pontes.map((p) => (
@@ -170,43 +174,43 @@ export function LotsAlevinsListClient({ lots, pontes, permissions }: Props) {
                 </SelectContent>
               </Select>
               <Input
-                label="Nombre initial"
+                label={t("lots.form.nombreInitial")}
                 type="number"
-                placeholder="Ex: 1000"
+                placeholder={t("lots.form.nombreInitialPlaceholder")}
                 value={nombreInitial}
                 onChange={(e) => setNombreInitial(e.target.value)}
               />
               <Input
-                label="Nombre actuel"
+                label={t("lots.form.nombreActuel")}
                 type="number"
-                placeholder="Ex: 980"
+                placeholder={t("lots.form.nombreActuelPlaceholder")}
                 value={nombreActuel}
                 onChange={(e) => setNombreActuel(e.target.value)}
               />
               <Input
-                label="Age en jours (optionnel)"
+                label={t("lots.form.ageJours")}
                 type="number"
-                placeholder="Ex: 5"
+                placeholder={t("lots.form.ageJoursPlaceholder")}
                 value={ageJours}
                 onChange={(e) => setAgeJours(e.target.value)}
               />
               <Input
-                label="Poids moyen (g) (optionnel)"
+                label={t("lots.form.poidsMoyen")}
                 type="number"
-                placeholder="Ex: 0.5"
+                placeholder={t("lots.form.poidsMoyenPlaceholder")}
                 value={poidsMoyen}
                 onChange={(e) => setPoidsMoyen(e.target.value)}
               />
               <Input
-                label="Notes (optionnel)"
-                placeholder="Observations..."
+                label={t("lots.form.notes")}
+                placeholder={t("lots.form.notesPlaceholder")}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
             </div>
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="outline">Annuler</Button>
+                <Button variant="outline">{t("lots.form.annuler")}</Button>
               </DialogClose>
               <Button
                 onClick={handleCreate}
@@ -217,7 +221,7 @@ export function LotsAlevinsListClient({ lots, pontes, permissions }: Props) {
                   !nombreActuel
                 }
               >
-                Creer
+                {t("lots.form.creer")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -226,7 +230,7 @@ export function LotsAlevinsListClient({ lots, pontes, permissions }: Props) {
       </div>
 
       <Input
-        placeholder="Rechercher par code ou ponte..."
+        placeholder={t("lots.search")}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
@@ -234,7 +238,7 @@ export function LotsAlevinsListClient({ lots, pontes, permissions }: Props) {
       <Tabs value={tab} onValueChange={setTab}>
         <div className="overflow-x-auto -mx-4 px-4">
           <TabsList className="w-max">
-            <TabsTrigger value="tous">Tous</TabsTrigger>
+            <TabsTrigger value="tous">{t("lots.tabs.tous")}</TabsTrigger>
             {Object.entries(statutLabels).map(([val, label]) => (
               <TabsTrigger key={val} value={val}>
                 {label}
@@ -246,7 +250,7 @@ export function LotsAlevinsListClient({ lots, pontes, permissions }: Props) {
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Baby className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Aucun lot d&apos;alevins</p>
+              <p className="text-muted-foreground">{t("lots.aucun")}</p>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
@@ -267,18 +271,18 @@ export function LotsAlevinsListClient({ lots, pontes, permissions }: Props) {
                           </div>
                           <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-muted-foreground">
                             <span>
-                              {l.nombreActuel}/{l.nombreInitial} alevins
+                              {l.nombreActuel}/{l.nombreInitial} {t("lots.card.alevins")}
                             </span>
                             <span>{l.ageJours}j</span>
                             {l.poidsMoyen !== null && (
-                              <span>{l.poidsMoyen}g/alevins</span>
+                              <span>{l.poidsMoyen}{t("lots.detail.grammesUnit")}/{t("lots.card.alevins")}</span>
                             )}
                           </div>
                           <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted-foreground">
-                            <span>Ponte : {l.ponte.code}</span>
-                            {l.bac && <span>Bac : {l.bac.nom}</span>}
+                            <span>{t("lots.card.ponte")} : {l.ponte.code}</span>
+                            {l.bac && <span>{t("lots.card.bac")} : {l.bac.nom}</span>}
                             {l.vagueDestination && (
-                              <span>Vague : {l.vagueDestination.code}</span>
+                              <span>{t("lots.card.vague")} : {l.vagueDestination.code}</span>
                             )}
                           </div>
                         </div>

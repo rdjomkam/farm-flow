@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
   Calendar,
@@ -36,27 +37,12 @@ import {
 import { StatutFacture, ModePaiement, Permission } from "@/types";
 import { useVenteService } from "@/services";
 
-const statutLabels: Record<StatutFacture, string> = {
-  [StatutFacture.BROUILLON]: "Brouillon",
-  [StatutFacture.ENVOYEE]: "Envoyee",
-  [StatutFacture.PAYEE_PARTIELLEMENT]: "Partielle",
-  [StatutFacture.PAYEE]: "Payee",
-  [StatutFacture.ANNULEE]: "Annulee",
-};
-
 const statutVariants: Record<StatutFacture, "default" | "info" | "warning" | "terminee" | "annulee"> = {
   [StatutFacture.BROUILLON]: "default",
   [StatutFacture.ENVOYEE]: "info",
   [StatutFacture.PAYEE_PARTIELLEMENT]: "warning",
   [StatutFacture.PAYEE]: "terminee",
   [StatutFacture.ANNULEE]: "annulee",
-};
-
-const modeLabels: Record<ModePaiement, string> = {
-  [ModePaiement.ESPECES]: "Especes",
-  [ModePaiement.MOBILE_MONEY]: "Mobile Money",
-  [ModePaiement.VIREMENT]: "Virement",
-  [ModePaiement.CHEQUE]: "Cheque",
 };
 
 interface PaiementData {
@@ -102,6 +88,7 @@ interface Props {
 }
 
 export function FactureDetailClient({ facture, permissions }: Props) {
+  const t = useTranslations("ventes");
   const router = useRouter();
   const venteService = useVenteService();
   const [paiementOpen, setPaiementOpen] = useState(false);
@@ -114,6 +101,11 @@ export function FactureDetailClient({ facture, permissions }: Props) {
   const resteAPayer = facture.montantTotal - facture.montantPaye;
   const canAddPaiement =
     statut !== StatutFacture.PAYEE && statut !== StatutFacture.ANNULEE;
+
+  const statutLabel = (s: string) =>
+    t(`factures.statuts.${s}` as Parameters<typeof t>[0]) || s;
+  const modeLabel = (m: string) =>
+    t(`paiements.modes.${m}` as Parameters<typeof t>[0]) || m;
 
   function resetPaiementForm() {
     setMontant("");
@@ -150,7 +142,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
       >
         <ArrowLeft className="h-4 w-4" />
-        Factures
+        {t("factures.detail.back")}
       </Link>
 
       {/* Header */}
@@ -159,7 +151,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-lg">{facture.numero}</h2>
             <Badge variant={statutVariants[statut]}>
-              {statutLabels[statut]}
+              {statutLabel(statut)}
             </Badge>
           </div>
 
@@ -175,14 +167,18 @@ export function FactureDetailClient({ facture, permissions }: Props) {
             <div className="flex items-center gap-2 text-muted-foreground">
               <Calendar className="h-4 w-4 shrink-0" />
               <span>
-                Emission : {new Date(facture.dateEmission).toLocaleDateString("fr-FR")}
+                {t("factures.detail.emission", {
+                  date: new Date(facture.dateEmission).toLocaleDateString("fr-FR"),
+                })}
               </span>
             </div>
             {facture.dateEcheance && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Calendar className="h-4 w-4 shrink-0" />
                 <span>
-                  Echeance : {new Date(facture.dateEcheance).toLocaleDateString("fr-FR")}
+                  {t("factures.detail.echeance", {
+                    date: new Date(facture.dateEcheance).toLocaleDateString("fr-FR"),
+                  })}
                 </span>
               </div>
             )}
@@ -194,13 +190,13 @@ export function FactureDetailClient({ facture, permissions }: Props) {
               <p className="text-lg font-bold">
                 {facture.montantTotal.toLocaleString("fr-FR")} F
               </p>
-              <p className="text-xs text-muted-foreground">Total</p>
+              <p className="text-xs text-muted-foreground">{t("factures.detail.total")}</p>
             </div>
             <div className="rounded-lg bg-muted/50 p-3 text-center">
               <p className="text-lg font-bold">
                 {facture.montantPaye.toLocaleString("fr-FR")} F
               </p>
-              <p className="text-xs text-muted-foreground">Paye</p>
+              <p className="text-xs text-muted-foreground">{t("factures.detail.paye")}</p>
             </div>
           </div>
 
@@ -209,7 +205,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
               <p className="text-lg font-bold text-accent-amber">
                 {resteAPayer.toLocaleString("fr-FR")} F
               </p>
-              <p className="text-xs text-accent-amber">Reste a payer</p>
+              <p className="text-xs text-accent-amber">{t("factures.detail.resteAPayer")}</p>
             </div>
           )}
         </CardContent>
@@ -217,7 +213,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
 
       {/* Actions */}
       <div className="flex flex-wrap gap-2">
-        {/* Bouton export PDF */}
+        {/* PDF export button */}
         {permissions.includes(Permission.EXPORT_DONNEES) && (
           <ExportButton
             href={`/api/export/facture/${facture.id}`}
@@ -232,7 +228,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
             onClick={handleEnvoyer}
           >
             <FileText className="h-4 w-4 mr-1" />
-            Envoyer
+            {t("factures.detail.envoyer")}
           </Button>
         )}
         {canAddPaiement && permissions.includes(Permission.PAIEMENTS_CREER) && (
@@ -246,50 +242,50 @@ export function FactureDetailClient({ facture, permissions }: Props) {
             <DialogTrigger asChild>
               <Button className="flex-1" variant={statut === StatutFacture.BROUILLON ? "outline" : "primary"}>
                 <Plus className="h-4 w-4 mr-1" />
-                Ajouter un paiement
+                {t("paiements.add")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Enregistrer un paiement</DialogTitle>
+                <DialogTitle>{t("paiements.register")}</DialogTitle>
               </DialogHeader>
               <div className="flex flex-col gap-4 py-2">
                 <Input
-                  label={`Montant (max ${resteAPayer.toLocaleString("fr-FR")} F)`}
+                  label={t("paiements.fields.montant", { max: resteAPayer.toLocaleString("fr-FR") })}
                   type="number"
                   min="1"
                   max={resteAPayer}
-                  placeholder="Ex: 50000"
+                  placeholder={t("paiements.fields.montantPlaceholder")}
                   value={montant}
                   onChange={(e) => setMontant(e.target.value)}
                   autoFocus
                 />
                 <Select value={mode} onValueChange={setMode}>
-                  <SelectTrigger label="Mode de paiement">
-                    <SelectValue placeholder="Selectionner" />
+                  <SelectTrigger label={t("paiements.fields.mode")}>
+                    <SelectValue placeholder={t("paiements.fields.modePlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(modeLabels).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    {Object.values(ModePaiement).map((value) => (
+                      <SelectItem key={value} value={value}>{modeLabel(value)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <Input
-                  label="Reference (optionnel)"
-                  placeholder="Ex: MTN-20260310-001"
+                  label={t("paiements.fields.reference")}
+                  placeholder={t("paiements.fields.referencePlaceholder")}
                   value={reference}
                   onChange={(e) => setReference(e.target.value)}
                 />
               </div>
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button variant="outline">Annuler</Button>
+                  <Button variant="outline">{t("paiements.cancel")}</Button>
                 </DialogClose>
                 <Button
                   onClick={handlePaiement}
                   disabled={!montant || !mode}
                 >
-                  Confirmer
+                  {t("paiements.confirm")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -297,40 +293,40 @@ export function FactureDetailClient({ facture, permissions }: Props) {
         )}
       </div>
 
-      {/* Vente details */}
+      {/* Sale details */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Detail de la vente</CardTitle>
+          <CardTitle className="text-sm">{t("factures.detail.detailVente")}</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <div className="flex flex-col gap-1 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Poissons</span>
+              <span className="text-muted-foreground">{t("factures.detail.poissons")}</span>
               <span>{facture.vente.quantitePoissons}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Poids total</span>
+              <span className="text-muted-foreground">{t("factures.detail.poidsTotalKg")}</span>
               <span>{facture.vente.poidsTotalKg} kg</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Prix/kg</span>
+              <span className="text-muted-foreground">{t("factures.detail.prixKg")}</span>
               <span>{facture.vente.prixUnitaireKg.toLocaleString("fr-FR")} F</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Paiements */}
+      {/* Payments */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">
-            Paiements ({facture.paiements.length})
+            {t("factures.detail.paiements", { count: facture.paiements.length })}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {facture.paiements.length === 0 ? (
             <p className="text-sm text-muted-foreground px-4 pb-4">
-              Aucun paiement enregistre.
+              {t("factures.detail.aucunPaiement")}
             </p>
           ) : (
             <div className="divide-y divide-border">
@@ -340,7 +336,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
                     <div className="flex items-center gap-2">
                       <CreditCard className="h-4 w-4 text-accent-green shrink-0" />
                       <span className="text-sm font-medium">
-                        {modeLabels[p.mode as ModePaiement] ?? p.mode}
+                        {modeLabel(p.mode)}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -363,7 +359,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
       )}
 
       <p className="text-xs text-muted-foreground text-center">
-        Cree par {facture.user.name}
+        {t("factures.detail.creePar", { name: facture.user.name })}
       </p>
     </div>
   );

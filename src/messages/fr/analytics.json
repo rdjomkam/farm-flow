@@ -72,6 +72,30 @@
     "growthCurve": "Courbe de croissance",
     "chartLegend": "Ligne continue = mesures reelles · Pointilles = projection SGR actuel"
   },
+  "bacs": {
+    "noBacs": "Aucun bac assigné à cette vague.",
+    "vagueTracking": "FCR, SGR et survie sont suivis au niveau de la vague.",
+    "viewVagueAnalytics": "Voir les analytiques par vague",
+    "alertCount": "{count} alerte(s)",
+    "detail": "Détail",
+    "biomass": "Biomasse",
+    "density": "Densité",
+    "avgWeight": "Poids moyen",
+    "alive": "Vivants",
+    "totalFeed": "Aliment total",
+    "deaths": "Morts",
+    "historique": "Historique des cycles",
+    "noCycles": "Aucun cycle enregistré pour ce bac.",
+    "volume": "Volume",
+    "aliment": "Aliment",
+    "releves": "{count} relevé(s)",
+    "biomassKg": "Biomasse kg",
+    "avgWeightG": "Poids moyen g"
+  },
+  "aliments": {
+    "kgUtilises": "kg utilisés",
+    "detail": "Détail"
+  },
   "simulation": {
     "title": "Simulateur de changement d'aliment",
     "oldFeed": "Aliment actuel",

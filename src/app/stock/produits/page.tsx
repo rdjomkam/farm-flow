@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { ProduitsListClient } from "@/components/stock/produits-list-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -15,6 +16,7 @@ export default async function ProduitsPage() {
   const permissions = await checkPagePermission(session, Permission.STOCK_VOIR);
   if (!permissions) return <AccessDenied />;
 
+  const t = await getTranslations("stock");
   const [produits, fournisseurs] = await Promise.all([
     getProduits(session.activeSiteId),
     getFournisseurs(session.activeSiteId),
@@ -27,7 +29,7 @@ export default async function ProduitsPage() {
 
   return (
     <>
-      <Header title="Produits" />
+      <Header title={t("produits.title")} />
       <div className="p-4">
         <ProduitsListClient
           produits={JSON.parse(JSON.stringify(produits))}

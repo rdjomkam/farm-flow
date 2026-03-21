@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
   Calendar,
@@ -30,30 +31,14 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
-import { StatutCommande, UniteStock, Permission } from "@/types";
+import { StatutCommande, Permission } from "@/types";
 import { useStockService } from "@/services";
-
-const statutLabels: Record<StatutCommande, string> = {
-  [StatutCommande.BROUILLON]: "Brouillon",
-  [StatutCommande.ENVOYEE]: "Envoyee",
-  [StatutCommande.LIVREE]: "Livree",
-  [StatutCommande.ANNULEE]: "Annulee",
-};
 
 const statutVariants: Record<StatutCommande, "default" | "info" | "en_cours" | "warning"> = {
   [StatutCommande.BROUILLON]: "default",
   [StatutCommande.ENVOYEE]: "info",
   [StatutCommande.LIVREE]: "en_cours",
   [StatutCommande.ANNULEE]: "warning",
-};
-
-const uniteLabels: Record<string, string> = {
-  [UniteStock.GRAMME]: "g",
-  [UniteStock.KG]: "kg",
-  [UniteStock.MILLILITRE]: "mL",
-  [UniteStock.LITRE]: "L",
-  [UniteStock.UNITE]: "unite",
-  [UniteStock.SACS]: "sacs",
 };
 
 interface LigneData {
@@ -86,7 +71,7 @@ interface Props {
   permissions: Permission[];
 }
 
-/** Icône selon le type de fichier (PDF vs image) */
+/** Icon by file type (PDF vs image) */
 function FileIcon({ mimeOrName }: { mimeOrName: string }) {
   const isPdf =
     mimeOrName.includes("pdf") || mimeOrName.toLowerCase().endsWith(".pdf");
@@ -94,7 +79,7 @@ function FileIcon({ mimeOrName }: { mimeOrName: string }) {
   return <ImageIcon className="h-5 w-5 text-primary" />;
 }
 
-/** Détermine le type depuis le nom de fichier */
+/** Guess type from filename */
 function guessTypeFromName(name: string): string {
   const lower = name.toLowerCase();
   if (lower.endsWith(".pdf")) return "application/pdf";
@@ -104,6 +89,7 @@ function guessTypeFromName(name: string): string {
 }
 
 export function CommandeDetailClient({ commande: initialCommande, permissions }: Props) {
+  const t = useTranslations("stock");
   const router = useRouter();
   const { toast } = useToast();
   const stockService = useStockService();
@@ -123,7 +109,10 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
   const statut = commande.statut as StatutCommande;
   const canManage = permissions.includes(Permission.APPROVISIONNEMENT_GERER);
 
-  // ─── Actions commande (envoyer, annuler) ───────────────────────
+  const uniteLabel = (u: string) => t(`unites.${u}` as Parameters<typeof t>[0]) || u;
+  const statutLabel = (s: string) => t(`statuts.${s}` as Parameters<typeof t>[0]) || s;
+
+  // Order actions (send, cancel)
   async function handleAction(action: string) {
     if (action === "envoyer") {
       const result = await stockService.envoyerCommande(commande.id);
@@ -134,7 +123,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
     }
   }
 
-  // ─── Réceptionner commande (avec fichier optionnel) ─────────────
+  // Receive order (with optional file)
   async function handleRecevoir() {
     const result = await stockService.recevoirCommande(
       commande.id,
@@ -148,7 +137,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
     }
   }
 
-  // ─── Upload facture séparé (commande déjà LIVREE) ───────────────
+  // Upload invoice separately (already LIVREE)
   async function handleUploadFacture() {
     if (!selectedFile) return;
     const result = await stockService.uploadFactureCommande(commande.id, selectedFile);
@@ -163,7 +152,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
     }
   }
 
-  // ─── Voir la facture (ouvre signed URL dans nouvel onglet) ───────
+  // View invoice (opens signed URL in new tab)
   async function handleVoirFacture() {
     const result = await stockService.getFactureCommandeUrl(commande.id);
     if (result.ok && result.data) {
@@ -171,7 +160,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
     }
   }
 
-  // ─── Supprimer la facture ───────────────────────────────────────
+  // Delete invoice
   async function handleDeleteFacture() {
     const result = await stockService.deleteFactureCommande(commande.id);
     if (result.ok) {
@@ -181,7 +170,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
     }
   }
 
-  // ─── Validation fichier côté client (UX rapide avant envoi) ────
+  // Client-side file validation (quick UX before submit)
   function handleFileChange(
     e: React.ChangeEvent<HTMLInputElement>,
     setter: (f: File | null) => void
@@ -197,7 +186,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
 
     if (!ALLOWED.includes(file.type)) {
       toast({
-        title: "Format non autorise. Utiliser PDF, JPG ou PNG.",
+        title: t("commandes.formatNonAutorise"),
         variant: "error",
       });
       e.target.value = "";
@@ -207,7 +196,9 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
 
     if (file.size > MAX) {
       toast({
-        title: `Fichier trop volumineux (${(file.size / (1024 * 1024)).toFixed(1)} Mo). Max 10 Mo.`,
+        title: t("commandes.fichierTropVolumineux", {
+          taille: (file.size / (1024 * 1024)).toFixed(1),
+        }),
         variant: "error",
       });
       e.target.value = "";
@@ -225,7 +216,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
       >
         <ArrowLeft className="h-4 w-4" />
-        Commandes
+        {t("commandes.title")}
       </Link>
 
       {/* Header info */}
@@ -234,7 +225,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-lg">{commande.numero}</h2>
             <Badge variant={statutVariants[statut]}>
-              {statutLabels[statut]}
+              {statutLabel(statut)}
             </Badge>
           </div>
 
@@ -246,14 +237,18 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
             <div className="flex items-center gap-2 text-muted-foreground">
               <Calendar className="h-4 w-4 shrink-0" />
               <span>
-                Commande : {new Date(commande.dateCommande).toLocaleDateString("fr-FR")}
+                {t("commandes.detail.commande", {
+                  date: new Date(commande.dateCommande).toLocaleDateString("fr-FR"),
+                })}
               </span>
             </div>
             {commande.dateLivraison && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <PackageCheck className="h-4 w-4 shrink-0" />
                 <span>
-                  Livraison : {new Date(commande.dateLivraison).toLocaleDateString("fr-FR")}
+                  {t("commandes.detail.livraison", {
+                    date: new Date(commande.dateLivraison).toLocaleDateString("fr-FR"),
+                  })}
                 </span>
               </div>
             )}
@@ -263,12 +258,12 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
             <p className="text-2xl font-bold">
               {commande.montantTotal.toLocaleString("fr-FR")} FCFA
             </p>
-            <p className="text-xs text-muted-foreground">Montant total</p>
+            <p className="text-xs text-muted-foreground">{t("commandes.fields.montantTotal")}</p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Actions commande */}
+      {/* Order actions */}
       {canManage && (statut === StatutCommande.BROUILLON || statut === StatutCommande.ENVOYEE) && (
         <div className="flex gap-2">
           {statut === StatutCommande.BROUILLON && (
@@ -277,7 +272,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
               onClick={() => handleAction("envoyer")}
             >
               <Send className="h-4 w-4 mr-1" />
-              Envoyer
+              {t("commandes.detail.envoyer")}
             </Button>
           )}
           {statut === StatutCommande.ENVOYEE && (
@@ -287,34 +282,34 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
                 onClick={() => setRecevoirOpen(true)}
               >
                 <PackageCheck className="h-4 w-4 mr-1" />
-                Receptionner
+                {t("commandes.detail.receptionner")}
               </Button>
 
-              {/* Dialog réception avec upload optionnel */}
+              {/* Reception dialog with optional upload */}
               <Dialog open={recevoirOpen} onOpenChange={setRecevoirOpen}>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Receptionner la commande</DialogTitle>
+                    <DialogTitle>{t("commandes.detail.receptionner")}</DialogTitle>
                     <DialogDescription>
-                      Cette action va creer des mouvements d&apos;entree et mettre a jour le stock.
+                      {t("commandes.detail.receptionDescription")}
                     </DialogDescription>
                   </DialogHeader>
 
                   <div className="flex flex-col gap-3">
                     <Input
-                      label="Date de livraison"
+                      label={t("commandes.detail.dateLivraison")}
                       type="date"
                       value={dateLivraison}
                       onChange={(e) => setDateLivraison(e.target.value)}
                     />
 
-                    {/* Champ file optionnel */}
+                    {/* Optional file field */}
                     <div>
                       <p className="text-sm font-medium mb-1">
-                        Facture fournisseur (optionnel)
+                        {t("commandes.detail.factureOptionnelle")}
                       </p>
                       <p className="text-xs text-muted-foreground mb-2">
-                        PDF, JPG ou PNG — max 10 Mo
+                        {t("commandes.detail.factureFormat")}
                       </p>
                       <input
                         ref={recuFileInputRef}
@@ -330,7 +325,9 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
                         onClick={() => recuFileInputRef.current?.click()}
                       >
                         <Upload className="h-4 w-4 mr-2" />
-                        {recuFile ? "Changer le fichier" : "Choisir un fichier"}
+                        {recuFile
+                          ? t("commandes.detail.changerFichier")
+                          : t("commandes.detail.choisirFichier")}
                       </Button>
                       {recuFile && (
                         <div className="flex items-center gap-2 mt-2 p-2 rounded-md bg-muted/50">
@@ -354,11 +351,11 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
                   <DialogFooter>
                     <DialogClose asChild>
                       <Button variant="outline" onClick={() => setRecuFile(null)}>
-                        Annuler
+                        {t("commandes.detail.annuler")}
                       </Button>
                     </DialogClose>
                     <Button onClick={handleRecevoir}>
-                      Confirmer la reception
+                      {t("commandes.detail.confirmerReception")}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -370,28 +367,28 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
             onClick={() => handleAction("annuler")}
           >
             <X className="h-4 w-4 mr-1" />
-            Annuler
+            {t("commandes.detail.annuler")}
           </Button>
         </div>
       )}
 
-      {/* Section Facture fournisseur */}
+      {/* Supplier invoice section */}
       {canManage && statut === StatutCommande.LIVREE && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              Facture fournisseur
+              {t("commandes.detail.factureFournisseur")}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4">
             {commande.factureUrl ? (
-              /* Facture existante : afficher avec boutons Voir + Supprimer */
+              /* Existing invoice: show with View + Delete buttons */
               <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
                   <FileIcon mimeOrName={commande.factureUrl} />
                   <p className="text-sm text-muted-foreground flex-1 truncate">
-                    Facture attachee
+                    {t("commandes.detail.factureAttachee")}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -401,7 +398,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
                     onClick={handleVoirFacture}
                   >
                     <Eye className="h-4 w-4 mr-1" />
-                    Voir la facture
+                    {t("commandes.detail.voirFacture")}
                   </Button>
                   <Button
                     variant="danger"
@@ -412,10 +409,10 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
                 </div>
               </div>
             ) : (
-              /* Pas de facture : afficher bouton Ajouter */
+              /* No invoice: show Add button */
               <div className="flex flex-col gap-2">
                 <p className="text-sm text-muted-foreground">
-                  Aucune facture attachee a cette commande.
+                  {t("commandes.detail.aucuneFacture")}
                 </p>
                 <Button
                   variant="outline"
@@ -423,7 +420,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
                   onClick={() => setUploadFactureOpen(true)}
                 >
                   <Upload className="h-4 w-4 mr-2" />
-                  Ajouter la facture
+                  {t("commandes.detail.ajouterFacture")}
                 </Button>
               </div>
             )}
@@ -431,13 +428,13 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
         </Card>
       )}
 
-      {/* Dialog upload facture séparé */}
+      {/* Upload invoice dialog */}
       <Dialog open={uploadFactureOpen} onOpenChange={setUploadFactureOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ajouter une facture</DialogTitle>
+            <DialogTitle>{t("commandes.detail.uploadFacture")}</DialogTitle>
             <DialogDescription>
-              Uploadez la facture fournisseur pour cette commande (PDF, JPG ou PNG — max 10 Mo).
+              {t("commandes.detail.uploadDescription")}
             </DialogDescription>
           </DialogHeader>
 
@@ -456,7 +453,9 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload className="h-4 w-4 mr-2" />
-              {selectedFile ? "Changer le fichier" : "Choisir un fichier"}
+              {selectedFile
+                ? t("commandes.detail.changerFichier")
+                : t("commandes.detail.choisirFichier")}
             </Button>
             {selectedFile && (
               <div className="flex items-center gap-2 mt-3 p-3 rounded-lg bg-muted/50">
@@ -488,47 +487,47 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
                   if (fileInputRef.current) fileInputRef.current.value = "";
                 }}
               >
-                Annuler
+                {t("commandes.detail.annuler")}
               </Button>
             </DialogClose>
             <Button
               onClick={handleUploadFacture}
               disabled={!selectedFile}
             >
-              Uploader la facture
+              {t("commandes.detail.uploader")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog confirmation suppression facture */}
+      {/* Delete invoice confirmation dialog */}
       <Dialog open={deleteFactureOpen} onOpenChange={setDeleteFactureOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Supprimer la facture</DialogTitle>
+            <DialogTitle>{t("commandes.detail.supprimerFacture")}</DialogTitle>
             <DialogDescription>
-              Cette action est irreversible. Le fichier sera definitivement supprime.
+              {t("commandes.detail.supprimerConfirm")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Annuler</Button>
+              <Button variant="outline">{t("commandes.detail.annuler")}</Button>
             </DialogClose>
             <Button
               variant="danger"
               onClick={handleDeleteFacture}
             >
-              Supprimer
+              {t("commandes.detail.supprimerFacture")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Lignes */}
+      {/* Lines */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">
-            Lignes ({commande.lignes.length})
+            {t("commandes.detail.lignes", { count: commande.lignes.length })}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -536,8 +535,8 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
             {commande.lignes.map((ligne) => {
               const hasAchat = ligne.produit.uniteAchat;
               const displayUnite = hasAchat
-                ? (uniteLabels[ligne.produit.uniteAchat!] ?? ligne.produit.uniteAchat!)
-                : (uniteLabels[ligne.produit.unite] ?? ligne.produit.unite);
+                ? uniteLabel(ligne.produit.uniteAchat!)
+                : uniteLabel(ligne.produit.unite);
               const sousTotal = ligne.quantite * ligne.prixUnitaire;
               return (
                 <div key={ligne.id} className="flex items-center justify-between px-4 py-3">
@@ -560,7 +559,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
       </Card>
 
       <p className="text-xs text-muted-foreground text-center">
-        Cree par {commande.user.name}
+        {t("commandes.detail.creePar", { name: commande.user.name })}
       </p>
     </div>
   );

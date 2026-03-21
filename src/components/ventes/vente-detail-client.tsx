@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
   Users,
@@ -15,14 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatutFacture, Permission } from "@/types";
 import { useVenteService } from "@/services";
-
-const statutLabels: Record<string, string> = {
-  [StatutFacture.BROUILLON]: "Brouillon",
-  [StatutFacture.ENVOYEE]: "Envoyee",
-  [StatutFacture.PAYEE_PARTIELLEMENT]: "Partielle",
-  [StatutFacture.PAYEE]: "Payee",
-  [StatutFacture.ANNULEE]: "Annulee",
-};
 
 const statutVariants: Record<string, "default" | "info" | "warning" | "terminee" | "annulee"> = {
   [StatutFacture.BROUILLON]: "default",
@@ -66,8 +59,12 @@ interface Props {
 }
 
 export function VenteDetailClient({ vente, permissions }: Props) {
+  const t = useTranslations("ventes");
   const router = useRouter();
   const venteService = useVenteService();
+
+  const statutLabel = (s: string) =>
+    t(`factures.statuts.${s}` as Parameters<typeof t>[0]) || s;
 
   async function handleCreateFacture() {
     const result = await venteService.createFacture(vente.id);
@@ -83,7 +80,7 @@ export function VenteDetailClient({ vente, permissions }: Props) {
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
       >
         <ArrowLeft className="h-4 w-4" />
-        Ventes
+        {t("ventes.detail.back")}
       </Link>
 
       {/* Header */}
@@ -93,10 +90,10 @@ export function VenteDetailClient({ vente, permissions }: Props) {
             <h2 className="font-semibold text-lg">{vente.numero}</h2>
             {vente.facture ? (
               <Badge variant={statutVariants[vente.facture.statut] ?? "default"}>
-                {statutLabels[vente.facture.statut] ?? vente.facture.statut}
+                {statutLabel(vente.facture.statut)}
               </Badge>
             ) : (
-              <Badge variant="default">Sans facture</Badge>
+              <Badge variant="default">{t("ventes.sansFature")}</Badge>
             )}
           </div>
 
@@ -122,20 +119,20 @@ export function VenteDetailClient({ vente, permissions }: Props) {
       {/* Details */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Detail de la vente</CardTitle>
+          <CardTitle className="text-sm">{t("ventes.detail.detailVente")}</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <div className="flex flex-col gap-1 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Poissons</span>
+              <span className="text-muted-foreground">{t("ventes.detail.poissons")}</span>
               <span>{vente.quantitePoissons}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Poids total</span>
+              <span className="text-muted-foreground">{t("ventes.detail.poidsTotalKg")}</span>
               <span>{vente.poidsTotalKg} kg</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Prix/kg</span>
+              <span className="text-muted-foreground">{t("ventes.detail.prixKg")}</span>
               <span>{vente.prixUnitaireKg.toLocaleString("fr-FR")} F</span>
             </div>
           </div>
@@ -147,14 +144,14 @@ export function VenteDetailClient({ vente, permissions }: Props) {
         <p className="text-2xl font-bold">
           {vente.montantTotal.toLocaleString("fr-FR")} FCFA
         </p>
-        <p className="text-xs text-muted-foreground">Montant total</p>
+        <p className="text-xs text-muted-foreground">{t("ventes.detail.montantTotal")}</p>
       </div>
 
       {/* Facture section */}
       {vente.facture ? (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Facture associee</CardTitle>
+            <CardTitle className="text-sm">{t("ventes.detail.factureAssociee")}</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
             <Link
@@ -164,25 +161,28 @@ export function VenteDetailClient({ vente, permissions }: Props) {
               <div>
                 <p className="font-semibold text-sm">{vente.facture.numero}</p>
                 <p className="text-xs text-muted-foreground">
-                  Paye : {vente.facture.montantPaye.toLocaleString("fr-FR")} / {vente.facture.montantTotal.toLocaleString("fr-FR")} F
+                  {t("ventes.detail.payeLabel", {
+                    paye: vente.facture.montantPaye.toLocaleString("fr-FR"),
+                    total: vente.facture.montantTotal.toLocaleString("fr-FR"),
+                  })}
                 </p>
               </div>
               <Badge variant={statutVariants[vente.facture.statut] ?? "default"}>
-                {statutLabels[vente.facture.statut] ?? vente.facture.statut}
+                {statutLabel(vente.facture.statut)}
               </Badge>
             </Link>
           </CardContent>
         </Card>
       ) : permissions.includes(Permission.VENTES_CREER) ? (
         <Button onClick={handleCreateFacture} className="w-full min-h-[48px]">
-          <FileText className="h-4 w-4 mr-2" /> Generer la facture
+          <FileText className="h-4 w-4 mr-2" /> {t("ventes.detail.genererFacture")}
         </Button>
       ) : null}
 
       {/* Client info */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Client</CardTitle>
+          <CardTitle className="text-sm">{t("ventes.detail.client")}</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <div className="flex flex-col gap-1 text-sm">
@@ -205,7 +205,7 @@ export function VenteDetailClient({ vente, permissions }: Props) {
       )}
 
       <p className="text-xs text-muted-foreground text-center">
-        Cree par {vente.user.name}
+        {t("ventes.detail.creePar", { name: vente.user.name })}
       </p>
     </div>
   );

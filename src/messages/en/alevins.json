@@ -1,0 +1,229 @@
+{
+  "page": {
+    "title": "Fry Production",
+    "tabs": {
+      "reproducteurs": "Broodstock",
+      "pontes": "Spawnings",
+      "lots": "Fry Batches"
+    }
+  },
+  "kpis": {
+    "reproducteursActifs": "Active broodstock",
+    "pontesEnCours": "Ongoing spawnings",
+    "lotsEnElevage": "Batches in rearing",
+    "dernierTransfert": "Last transfer"
+  },
+  "reproducteurs": {
+    "title": "Broodstock",
+    "nouveau": "New",
+    "ajouterReproducteur": "Add broodstock",
+    "modifierReproducteur": "Edit broodstock",
+    "supprimerReproducteur": "Delete broodstock",
+    "count": "{count} broodstock",
+    "countPlural": "{count} broodstocks",
+    "aucun": "No broodstock",
+    "aucunePonte": "No spawning",
+    "backToAlevins": "Fry Production",
+    "pontes": "Spawnings",
+    "tabs": {
+      "tous": "All",
+      "femelles": "Females",
+      "males": "Males",
+      "actifs": "Active",
+      "reformes": "Retired"
+    },
+    "search": "Search by code or origin...",
+    "form": {
+      "code": "Code",
+      "codePlaceholder": "e.g. REP-F-001",
+      "sexe": "Sex",
+      "poids": "Weight (g)",
+      "poidsPlaceholder": "e.g. 1500",
+      "age": "Age in months (optional)",
+      "agePlaceholder": "e.g. 18",
+      "origine": "Origin (optional)",
+      "originePlaceholder": "e.g. Yaoundé Hatchery",
+      "dateAcquisition": "Acquisition date (optional)",
+      "notes": "Notes (optional)",
+      "notesPlaceholder": "Observations...",
+      "creer": "Create",
+      "annuler": "Cancel",
+      "enregistrer": "Save",
+      "supprimer": "Delete",
+      "modifier": "Edit",
+      "statut": "Status",
+      "ageMonths": "Age in months (optional)"
+    },
+    "detail": {
+      "informations": "Information",
+      "code": "Code",
+      "sexe": "Sex",
+      "poids": "Weight",
+      "age": "Age",
+      "origine": "Origin",
+      "acquisition": "Acquisition",
+      "notes": "Notes",
+      "grammesUnit": "g",
+      "moisUnit": "months",
+      "confirmDelete": "Are you sure you want to delete {code}? This action is irreversible.",
+      "deleteSuccess": "Broodstock deleted."
+    },
+    "sexe": {
+      "MALE": "Male",
+      "FEMELLE": "Female"
+    },
+    "statuts": {
+      "ACTIF": "Active",
+      "REFORME": "Retired",
+      "MORT": "Dead"
+    }
+  },
+  "pontes": {
+    "title": "Spawnings",
+    "nouvelle": "New",
+    "nouvellePonte": "New spawning",
+    "modifierPonte": "Edit spawning",
+    "supprimerPonte": "Delete spawning",
+    "count": "{count} spawning",
+    "countPlural": "{count} spawnings",
+    "aucune": "No spawning",
+    "backToAlevins": "Fry Production",
+    "backToPontes": "Spawnings",
+    "tabs": {
+      "toutes": "All"
+    },
+    "search": "Search by code or female...",
+    "form": {
+      "code": "Code",
+      "codePlaceholder": "e.g. SPAWNING-2026-001",
+      "femelle": "Female",
+      "femellePlaceholder": "Select a female",
+      "male": "Male (optional)",
+      "malePlaceholder": "No identified male",
+      "datePonte": "Spawning date",
+      "nombreOeufs": "Number of eggs (optional)",
+      "nombreOeufsPlaceholder": "e.g. 5000",
+      "tauxFecondation": "Fertilization rate % (optional)",
+      "tauxFecondationPlaceholder": "e.g. 75",
+      "notes": "Notes (optional)",
+      "notesPlaceholder": "Observations...",
+      "creer": "Create",
+      "annuler": "Cancel",
+      "enregistrer": "Save",
+      "supprimer": "Delete",
+      "modifier": "Edit",
+      "statut": "Status"
+    },
+    "detail": {
+      "informations": "Information",
+      "code": "Code",
+      "date": "Date",
+      "femelle": "Female",
+      "male": "Male",
+      "oeufs": "Eggs",
+      "tauxFecondation": "Fertilization rate",
+      "notes": "Notes",
+      "lotsAlevins": "Fry batches",
+      "confirmDelete": "Are you sure you want to delete {code}? This action is irreversible.",
+      "deleteSuccess": "Spawning deleted."
+    },
+    "card": {
+      "femelle": "Female",
+      "male": "Male",
+      "oeufs": "eggs",
+      "fecondation": "fertilization",
+      "lots": "batch(es)"
+    },
+    "statuts": {
+      "EN_COURS": "Ongoing",
+      "TERMINEE": "Completed",
+      "ECHOUEE": "Failed"
+    }
+  },
+  "lots": {
+    "title": "Fry Batches",
+    "nouveau": "New",
+    "nouveauLot": "New fry batch",
+    "modifierLot": "Edit batch",
+    "count": "{count} batch",
+    "countPlural": "{count} batches",
+    "aucun": "No fry batch",
+    "backToAlevins": "Fry Production",
+    "backToLots": "Fry Batches",
+    "tabs": {
+      "tous": "All"
+    },
+    "search": "Search by code or spawning...",
+    "form": {
+      "code": "Code",
+      "codePlaceholder": "e.g. BATCH-2026-001",
+      "ponteOrigine": "Origin spawning",
+      "pontePlaceholder": "Select a spawning",
+      "nombreInitial": "Initial count",
+      "nombreInitialPlaceholder": "e.g. 1000",
+      "nombreActuel": "Current count",
+      "nombreActuelPlaceholder": "e.g. 980",
+      "ageJours": "Age in days (optional)",
+      "ageJoursPlaceholder": "e.g. 5",
+      "poidsMoyen": "Average weight (g) (optional)",
+      "poidsMoyenPlaceholder": "e.g. 0.5",
+      "notes": "Notes (optional)",
+      "notesPlaceholder": "Observations...",
+      "creer": "Create",
+      "annuler": "Cancel",
+      "enregistrer": "Save",
+      "statut": "Status",
+      "nomVague": "New wave name",
+      "nomVaguePlaceholder": "e.g. Fry Wave March 2026",
+      "bacsAssigner": "Tanks to assign",
+      "bacsDisponibles": "{count} available",
+      "bacsDisponiblesPlural": "{count} available",
+      "aucunBacLibre": "No free tank available. Free up tanks before transferring.",
+      "bacsSelectionnes": "{count} tank selected",
+      "bacsSelectionnesPlural": "{count} tanks selected"
+    },
+    "detail": {
+      "informations": "Information",
+      "code": "Code",
+      "alevins": "Fry",
+      "age": "Age",
+      "poidsMoyen": "Average weight",
+      "bacActuel": "Current tank",
+      "dateTransfert": "Transfer date",
+      "notes": "Notes",
+      "ponteOrigine": "Origin spawning",
+      "vagueDestination": "Destination wave",
+      "jourUnit": "days",
+      "grammesUnit": "g",
+      "initial": "initial"
+    },
+    "transfert": {
+      "button": "Transfer",
+      "title": "Transfer to a wave",
+      "description": "A transfer will create a new grow-out wave with {count} fry.",
+      "confirm": "Confirm transfer",
+      "annuler": "Cancel"
+    },
+    "card": {
+      "ponte": "Spawning",
+      "bac": "Tank",
+      "vague": "Wave",
+      "alevins": "fry"
+    },
+    "statuts": {
+      "EN_INCUBATION": "Incubating",
+      "EN_ELEVAGE": "In rearing",
+      "TRANSFERE": "Transferred",
+      "PERDU": "Lost"
+    }
+  },
+  "common": {
+    "modifier": "Edit",
+    "supprimer": "Delete",
+    "annuler": "Cancel",
+    "enregistrer": "Save",
+    "creer": "Create",
+    "nouveau": "New",
+    "nouvelle": "New"
+  }
+}

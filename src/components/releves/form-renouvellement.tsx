@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { FormSection } from "@/components/ui/form-section";
 import { useEffect } from "react";
@@ -33,6 +34,7 @@ export function FormRenouvellement({
   errors,
   bacVolumeLitres,
 }: FormRenouvellementProps) {
+  const t = useTranslations("releves");
   const hasVolume = bacVolumeLitres != null && bacVolumeLitres > 0;
 
   function handlePctChange(rawValue: string) {
@@ -59,12 +61,12 @@ export function FormRenouvellement({
 
   return (
     <FormSection
-      title="Renouvellement d'eau"
-      description="Volume ou pourcentage du bac renouvelee"
+      title={t("form.renouvellement.title")}
+      description={t("form.renouvellement.description")}
     >
       <Input
         id="pourcentageRenouvellement"
-        label="Pourcentage renouvelee (%)"
+        label={t("form.renouvellement.pourcentage")}
         type="number"
         min="0"
         max="100"
@@ -76,7 +78,7 @@ export function FormRenouvellement({
       />
       <Input
         id="volumeRenouvele"
-        label={hasVolume ? `Volume renouvelee (L) — bac ${bacVolumeLitres} L` : "Volume renouvelee (L)"}
+        label={hasVolume ? t("form.renouvellement.volumeAvecBac", { volume: bacVolumeLitres }) : t("form.renouvellement.volume")}
         type="number"
         min="1"
         step="1"
@@ -87,8 +89,8 @@ export function FormRenouvellement({
       />
       {!errors.pourcentageRenouvellement && !errors.volumeRenouvele && (
         <p className="text-xs text-muted-foreground">
-          Au moins un des deux champs est obligatoire.
-          {hasVolume && " Les deux champs sont lies automatiquement."}
+          {t("form.renouvellement.hint")}
+          {hasVolume && t("form.renouvellement.hintLinked")}
         </p>
       )}
     </FormSection>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Plus, ShoppingCart, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,14 +16,6 @@ import {
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatutFacture, Permission } from "@/types";
-
-const statutLabels: Record<string, string> = {
-  [StatutFacture.BROUILLON]: "Brouillon",
-  [StatutFacture.ENVOYEE]: "Envoyee",
-  [StatutFacture.PAYEE_PARTIELLEMENT]: "Partielle",
-  [StatutFacture.PAYEE]: "Payee",
-  [StatutFacture.ANNULEE]: "Annulee",
-};
 
 const statutVariants: Record<string, "default" | "info" | "en_cours" | "terminee" | "warning" | "annulee"> = {
   [StatutFacture.BROUILLON]: "default",
@@ -55,6 +48,7 @@ interface Props {
 }
 
 export function VentesListClient({ ventes, clients, vagues, permissions }: Props) {
+  const t = useTranslations("ventes");
   const [filterClient, setFilterClient] = useState<string>("all");
   const [filterVague, setFilterVague] = useState<string>("all");
 
@@ -64,17 +58,20 @@ export function VentesListClient({ ventes, clients, vagues, permissions }: Props
     return true;
   });
 
+  const statutLabel = (s: string) =>
+    t(`factures.statuts.${s}` as Parameters<typeof t>[0]) || s;
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {filtered.length} vente{filtered.length > 1 ? "s" : ""}
+          {t("ventes.count", { count: filtered.length })}
         </p>
         {permissions.includes(Permission.VENTES_CREER) && (
           <Link href="/ventes/nouvelle">
             <Button size="sm">
               <Plus className="h-4 w-4 mr-1" />
-              Nouvelle vente
+              {t("ventes.new")}
             </Button>
           </Link>
         )}
@@ -87,10 +84,10 @@ export function VentesListClient({ ventes, clients, vagues, permissions }: Props
           <div className="flex-1">
             <Select value={filterClient} onValueChange={setFilterClient}>
               <SelectTrigger>
-                <SelectValue placeholder="Client" />
+                <SelectValue placeholder={t("clients.title")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous les clients</SelectItem>
+                <SelectItem value="all">{t("ventes.filters.tousClients")}</SelectItem>
                 {clients.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.nom}</SelectItem>
                 ))}
@@ -103,7 +100,7 @@ export function VentesListClient({ ventes, clients, vagues, permissions }: Props
                 <SelectValue placeholder="Vague" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Toutes les vagues</SelectItem>
+                <SelectItem value="all">{t("ventes.filters.toutesVagues")}</SelectItem>
                 {vagues.map((v) => (
                   <SelectItem key={v.id} value={v.id}>{v.code}</SelectItem>
                 ))}
@@ -116,8 +113,8 @@ export function VentesListClient({ ventes, clients, vagues, permissions }: Props
       {filtered.length === 0 ? (
         <EmptyState
           icon={<ShoppingCart className="h-7 w-7" />}
-          title="Aucune vente"
-          description="Enregistrez une vente de poissons."
+          title={t("ventes.empty")}
+          description={t("ventes.emptyDescription")}
         />
       ) : (
         <div className="flex flex-col gap-2">
@@ -134,15 +131,15 @@ export function VentesListClient({ ventes, clients, vagues, permissions }: Props
                     </div>
                     {v.facture ? (
                       <Badge variant={statutVariants[v.facture.statut] ?? "default"}>
-                        {statutLabels[v.facture.statut] ?? v.facture.statut}
+                        {statutLabel(v.facture.statut)}
                       </Badge>
                     ) : (
-                      <Badge variant="default">Sans facture</Badge>
+                      <Badge variant="default">{t("ventes.sansFature")}</Badge>
                     )}
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">
-                      {v.quantitePoissons} poissons — {v.poidsTotalKg} kg
+                      {v.quantitePoissons} {t("ventes.detail.poissons")} — {v.poidsTotalKg} kg
                     </span>
                     <span className="font-semibold">
                       {v.montantTotal.toLocaleString("fr-FR")} F

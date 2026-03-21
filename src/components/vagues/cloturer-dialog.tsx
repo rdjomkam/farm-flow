@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,6 +31,7 @@ export function CloturerDialog({
 }: CloturerDialogProps) {
   const router = useRouter();
   const vagueService = useVagueService();
+  const t = useTranslations("vagues");
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = controlledOnOpenChange ?? setInternalOpen;
@@ -53,30 +55,30 @@ export function CloturerDialog({
       {!isControlled && (
         <DialogTrigger asChild>
           <Button variant="danger" size="sm">
-            Clôturer
+            {t("form.close.trigger")}
           </Button>
         </DialogTrigger>
       )}
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Clôturer la vague {vagueCode}</DialogTitle>
+          <DialogTitle>{t("form.close.title", { code: vagueCode })}</DialogTitle>
           <DialogDescription>
-            Cette action est irréversible. Les bacs seront libérés et la vague passera en statut "Terminée".
+            {t("form.close.description")}
           </DialogDescription>
         </DialogHeader>
         <Input
           id="dateFin"
-          label="Date de fin du cycle"
+          label={t("form.close.dateLabel")}
           type="date"
           value={dateFin}
           onChange={(e) => setDateFin(e.target.value)}
         />
         <DialogFooter>
           <Button variant="secondary" onClick={() => setOpen(false)}>
-            Annuler
+            {t("form.cancel")}
           </Button>
           <Button variant="danger" onClick={handleCloturer}>
-            Confirmer la clôture
+            {t("form.close.submit")}
           </Button>
         </DialogFooter>
       </DialogContent>

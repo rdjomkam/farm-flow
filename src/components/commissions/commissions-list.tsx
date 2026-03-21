@@ -10,6 +10,7 @@
  */
 import { useState } from "react";
 import { StatutCommissionIng } from "@/types";
+import { useTranslations } from "next-intl";
 
 interface Commission {
   id: string;
@@ -34,27 +35,12 @@ interface CommissionsListProps {
   commissions: Commission[];
 }
 
-const TABS = [
-  { label: "En attente", value: StatutCommissionIng.EN_ATTENTE },
-  { label: "Disponibles", value: StatutCommissionIng.DISPONIBLE },
-  { label: "Payées", value: StatutCommissionIng.PAYEE },
-  { label: "Toutes", value: "ALL" },
-] as const;
-
 const STATUT_COLORS: Record<string, string> = {
   [StatutCommissionIng.EN_ATTENTE]: "bg-warning/10 text-warning",
   [StatutCommissionIng.DISPONIBLE]: "bg-success/10 text-success",
   [StatutCommissionIng.DEMANDEE]: "bg-primary/10 text-primary",
   [StatutCommissionIng.PAYEE]: "bg-muted text-muted-foreground",
   [StatutCommissionIng.ANNULEE]: "bg-destructive/10 text-destructive",
-};
-
-const STATUT_LABELS: Record<string, string> = {
-  [StatutCommissionIng.EN_ATTENTE]: "En attente",
-  [StatutCommissionIng.DISPONIBLE]: "Disponible",
-  [StatutCommissionIng.DEMANDEE]: "Demandée",
-  [StatutCommissionIng.PAYEE]: "Payée",
-  [StatutCommissionIng.ANNULEE]: "Annulée",
 };
 
 function formatXAF(amount: number) {
@@ -75,7 +61,23 @@ function formatDate(date: Date | string) {
 }
 
 export function CommissionsList({ commissions }: CommissionsListProps) {
+  const t = useTranslations("commissions");
   const [activeTab, setActiveTab] = useState<string>("ALL");
+
+  const TABS = [
+    { label: t("commissions.tabs.enAttente"), value: StatutCommissionIng.EN_ATTENTE },
+    { label: t("commissions.tabs.disponibles"), value: StatutCommissionIng.DISPONIBLE },
+    { label: t("commissions.tabs.payees"), value: StatutCommissionIng.PAYEE },
+    { label: t("commissions.tabs.toutes"), value: "ALL" },
+  ] as const;
+
+  const STATUT_LABELS: Record<string, string> = {
+    [StatutCommissionIng.EN_ATTENTE]: t("commissions.statuts.EN_ATTENTE"),
+    [StatutCommissionIng.DISPONIBLE]: t("commissions.statuts.DISPONIBLE"),
+    [StatutCommissionIng.DEMANDEE]: t("commissions.statuts.DEMANDEE"),
+    [StatutCommissionIng.PAYEE]: t("commissions.statuts.PAYEE"),
+    [StatutCommissionIng.ANNULEE]: t("commissions.statuts.ANNULEE"),
+  };
 
   const filtered = activeTab === "ALL"
     ? commissions
@@ -109,7 +111,7 @@ export function CommissionsList({ commissions }: CommissionsListProps) {
       {/* Liste */}
       {filtered.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground text-sm">
-          Aucune commission dans cette catégorie.
+          {t("commissions.aucune")}
         </div>
       ) : (
         <div className="space-y-3">
@@ -121,7 +123,7 @@ export function CommissionsList({ commissions }: CommissionsListProps) {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-foreground text-sm truncate">
-                    {commission.siteClient?.name ?? "Ferme inconnue"}
+                    {commission.siteClient?.name ?? t("commissions.fermeInconnue")}
                   </p>
                   {commission.abonnement?.plan?.nom && (
                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -137,7 +139,7 @@ export function CommissionsList({ commissions }: CommissionsListProps) {
                     {formatXAF(commission.montant)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Taux {(commission.taux * 100).toFixed(0)}%
+                    {t("commissions.taux", { rate: (commission.taux * 100).toFixed(0) })}
                   </p>
                 </div>
               </div>
@@ -151,9 +153,11 @@ export function CommissionsList({ commissions }: CommissionsListProps) {
                 </span>
                 {commission.statut === StatutCommissionIng.EN_ATTENTE && (
                   <span className="text-xs text-muted-foreground">
-                    Disponible le {formatDate(
-                      new Date(new Date(commission.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000)
-                    )}
+                    {t("commissions.disponibleLe", {
+                      date: formatDate(
+                        new Date(new Date(commission.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000)
+                      )
+                    })}
                   </span>
                 )}
               </div>

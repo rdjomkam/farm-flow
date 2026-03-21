@@ -1,0 +1,107 @@
+{
+  "portefeuille": {
+    "title": "Mon portefeuille",
+    "soldeDisponible": "Solde disponible",
+    "aucunMontant": "Aucun montant disponible pour le moment.",
+    "enAttente": "En attente",
+    "disponibleDans30Jours": "Disponible dans 30 jours",
+    "totalGagne": "Total gagné",
+    "depuisLeDebut": "Depuis le début",
+    "demanderRetrait": "Demander un retrait"
+  },
+  "commissions": {
+    "title": "Mes commissions",
+    "aucune": "Aucune commission dans cette catégorie.",
+    "fermeInconnue": "Ferme inconnue",
+    "taux": "Taux {rate}%",
+    "disponibleLe": "Disponible le {date}",
+    "tabs": {
+      "enAttente": "En attente",
+      "disponibles": "Disponibles",
+      "payees": "Payées",
+      "toutes": "Toutes"
+    },
+    "statuts": {
+      "EN_ATTENTE": "En attente",
+      "DISPONIBLE": "Disponible",
+      "DEMANDEE": "Demandée",
+      "PAYEE": "Payée",
+      "ANNULEE": "Annulée"
+    }
+  },
+  "retraits": {
+    "title": "Historique des retraits",
+    "aucun": "Aucun retrait effectué pour le moment.",
+    "reference": "Réf. : {ref}",
+    "demandeLE": "Demandé le {date}",
+    "traiteLe": "Traité le {date}",
+    "statuts": {
+      "EN_ATTENTE": "En attente",
+      "CONFIRME": "Confirmé",
+      "ECHEC": "Échoué",
+      "EXPIRE": "Expiré"
+    },
+    "dialog": {
+      "title": "Demande de retrait",
+      "soldeDisponible": "Solde disponible : {amount}",
+      "montant": "Montant (FCFA)",
+      "montantPlaceholder": "Ex: 10000",
+      "telephone": "Numéro de téléphone Mobile Money",
+      "telephonePlaceholder": "Ex: +237690000000",
+      "fournisseur": "Fournisseur",
+      "suivant": "Suivant",
+      "annuler": "Annuler",
+      "confirmTitle": "Confirmer le retrait",
+      "confirmDescription": "Vérifiez les informations avant de confirmer.",
+      "confirmMontant": "Montant",
+      "confirmNumero": "Numéro",
+      "confirmVia": "Via",
+      "retour": "Retour",
+      "confirmer": "Confirmer",
+      "envoi": "Envoi...",
+      "virementInfo": "Le virement sera effectué par l'équipe DKFarm dans les 48h ouvrées.",
+      "errors": {
+        "montantInvalide": "Veuillez entrer un montant valide.",
+        "montantMinimum": "Le montant minimum est de 5 000 FCFA.",
+        "montantDepasse": "Le montant dépasse votre solde disponible ({amount}).",
+        "telephoneRequis": "Veuillez entrer un numéro de téléphone.",
+        "erreurReseau": "Erreur réseau. Veuillez réessayer.",
+        "erreurRetrait": "Erreur lors de la demande de retrait."
+      }
+    }
+  },
+  "admin": {
+    "retraitsTitle": "Retraits en attente",
+    "retraitsHistorique": "Historique des retraits traités",
+    "aucunEnAttente": "Aucun retrait en attente de traitement.",
+    "aucunTraite": "Aucun retrait traité pour le moment.",
+    "traiter": "Traiter",
+    "vers": "Vers : {phone} ({provider})",
+    "demandeLe": "Demandé le {date}",
+    "traiteParLe": "Traité par {name}",
+    "leLe": "Le {date}",
+    "reference": "Réf. : {ref}",
+    "traiterDialog": {
+      "title": "Traiter le retrait",
+      "ingenieur": "Ingénieur",
+      "montant": "Montant",
+      "vers": "Vers",
+      "via": "Via",
+      "demandeLe": "Demandé le",
+      "resultat": "Résultat du traitement",
+      "confirme": "Confirmé (virement effectué)",
+      "echec": "Échoué (rembourser le solde)",
+      "reference": "Référence de virement",
+      "referenceRequired": "Référence de virement *",
+      "referencePlaceholder": "Ex: MTN20260328XXXXX",
+      "annuler": "Annuler",
+      "confirmer": "Confirmer",
+      "traitement": "Traitement...",
+      "errors": {
+        "referenceObligatoire": "La référence de virement est obligatoire.",
+        "erreurTraitement": "Erreur lors du traitement.",
+        "erreurReseau": "Erreur réseau. Veuillez réessayer."
+      }
+    }
+  }
+}

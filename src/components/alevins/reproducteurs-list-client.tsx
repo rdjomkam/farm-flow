@@ -7,7 +7,6 @@ import { Plus, Users, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -27,17 +26,12 @@ import {
 } from "@/components/ui/select";
 import { SexeReproducteur, StatutReproducteur, Permission } from "@/types";
 import { useAlevinsService } from "@/services";
+import { useTranslations } from "next-intl";
 
-const sexeLabels: Record<SexeReproducteur, string> = {
-  [SexeReproducteur.MALE]: "Male",
-  [SexeReproducteur.FEMELLE]: "Femelle",
-};
-
-const statutLabels: Record<StatutReproducteur, string> = {
-  [StatutReproducteur.ACTIF]: "Actif",
-  [StatutReproducteur.REFORME]: "Reforme",
-  [StatutReproducteur.MORT]: "Mort",
-};
+function sexeBadgeClass(sexe: string): string {
+  if (sexe === SexeReproducteur.FEMELLE) return "bg-accent-pink-muted text-accent-pink";
+  return "bg-accent-indigo-muted text-accent-indigo";
+}
 
 function statutBadgeClass(statut: string): string {
   if (statut === StatutReproducteur.ACTIF)
@@ -45,11 +39,6 @@ function statutBadgeClass(statut: string): string {
   if (statut === StatutReproducteur.REFORME)
     return "bg-accent-blue-muted text-accent-blue";
   return "bg-accent-red-muted text-accent-red";
-}
-
-function sexeBadgeClass(sexe: string): string {
-  if (sexe === SexeReproducteur.FEMELLE) return "bg-accent-pink-muted text-accent-pink";
-  return "bg-accent-indigo-muted text-accent-indigo";
 }
 
 interface ReproducteurData {
@@ -71,6 +60,7 @@ interface Props {
 }
 
 export function ReproducteursListClient({ reproducteurs, permissions }: Props) {
+  const t = useTranslations("alevins");
   const router = useRouter();
   const alevinsService = useAlevinsService();
   const [tab, setTab] = useState("tous");
@@ -85,6 +75,17 @@ export function ReproducteursListClient({ reproducteurs, permissions }: Props) {
   const [origine, setOrigine] = useState("");
   const [notes, setNotes] = useState("");
   const [dateAcquisition, setDateAcquisition] = useState("");
+
+  const sexeLabels: Record<SexeReproducteur, string> = {
+    [SexeReproducteur.MALE]: t("reproducteurs.sexe.MALE"),
+    [SexeReproducteur.FEMELLE]: t("reproducteurs.sexe.FEMELLE"),
+  };
+
+  const statutLabels: Record<StatutReproducteur, string> = {
+    [StatutReproducteur.ACTIF]: t("reproducteurs.statuts.ACTIF"),
+    [StatutReproducteur.REFORME]: t("reproducteurs.statuts.REFORME"),
+    [StatutReproducteur.MORT]: t("reproducteurs.statuts.MORT"),
+  };
 
   const filtered = reproducteurs.filter((r) => {
     const matchTab =
@@ -138,13 +139,14 @@ export function ReproducteursListClient({ reproducteurs, permissions }: Props) {
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
       >
         <ArrowLeft className="h-4 w-4" />
-        Alevins
+        {t("reproducteurs.backToAlevins")}
       </Link>
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {reproducteurs.length} reproducteur
-          {reproducteurs.length > 1 ? "s" : ""}
+          {reproducteurs.length === 1
+            ? t("reproducteurs.count", { count: reproducteurs.length })
+            : t("reproducteurs.countPlural", { count: reproducteurs.length })}
         </p>
         {permissions.includes(Permission.ALEVINS_GERER) && (
           <Dialog
@@ -157,23 +159,23 @@ export function ReproducteursListClient({ reproducteurs, permissions }: Props) {
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-1" />
-                Nouveau
+                {t("reproducteurs.nouveau")}
               </Button>
             </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Ajouter un reproducteur</DialogTitle>
+              <DialogTitle>{t("reproducteurs.ajouterReproducteur")}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-4 py-2">
               <Input
-                label="Code"
-                placeholder="Ex: REP-F-001"
+                label={t("reproducteurs.form.code")}
+                placeholder={t("reproducteurs.form.codePlaceholder")}
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 autoFocus
               />
               <Select value={sexe} onValueChange={setSexe}>
-                <SelectTrigger label="Sexe">
+                <SelectTrigger label={t("reproducteurs.form.sexe")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -185,47 +187,47 @@ export function ReproducteursListClient({ reproducteurs, permissions }: Props) {
                 </SelectContent>
               </Select>
               <Input
-                label="Poids (g)"
+                label={t("reproducteurs.form.poids")}
                 type="number"
-                placeholder="Ex: 1500"
+                placeholder={t("reproducteurs.form.poidsPlaceholder")}
                 value={poids}
                 onChange={(e) => setPoids(e.target.value)}
               />
               <Input
-                label="Age en mois (optionnel)"
+                label={t("reproducteurs.form.age")}
                 type="number"
-                placeholder="Ex: 18"
+                placeholder={t("reproducteurs.form.agePlaceholder")}
                 value={age}
                 onChange={(e) => setAge(e.target.value)}
               />
               <Input
-                label="Origine (optionnel)"
-                placeholder="Ex: Ecloserie Yaounde"
+                label={t("reproducteurs.form.origine")}
+                placeholder={t("reproducteurs.form.originePlaceholder")}
                 value={origine}
                 onChange={(e) => setOrigine(e.target.value)}
               />
               <Input
-                label="Date d'acquisition (optionnel)"
+                label={t("reproducteurs.form.dateAcquisition")}
                 type="date"
                 value={dateAcquisition}
                 onChange={(e) => setDateAcquisition(e.target.value)}
               />
               <Input
-                label="Notes (optionnel)"
-                placeholder="Observations..."
+                label={t("reproducteurs.form.notes")}
+                placeholder={t("reproducteurs.form.notesPlaceholder")}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
             </div>
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="outline">Annuler</Button>
+                <Button variant="outline">{t("reproducteurs.form.annuler")}</Button>
               </DialogClose>
               <Button
                 onClick={handleCreate}
                 disabled={!code.trim() || !poids}
               >
-                Creer
+                {t("reproducteurs.form.creer")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -234,7 +236,7 @@ export function ReproducteursListClient({ reproducteurs, permissions }: Props) {
       </div>
 
       <Input
-        placeholder="Rechercher par code ou origine..."
+        placeholder={t("reproducteurs.search")}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
@@ -242,12 +244,12 @@ export function ReproducteursListClient({ reproducteurs, permissions }: Props) {
       <Tabs value={tab} onValueChange={setTab}>
         <div className="overflow-x-auto -mx-4 px-4">
           <TabsList className="w-max">
-            <TabsTrigger value="tous">Tous</TabsTrigger>
-            <TabsTrigger value="femelles">Femelles</TabsTrigger>
-            <TabsTrigger value="males">Males</TabsTrigger>
-            <TabsTrigger value={StatutReproducteur.ACTIF}>Actifs</TabsTrigger>
+            <TabsTrigger value="tous">{t("reproducteurs.tabs.tous")}</TabsTrigger>
+            <TabsTrigger value="femelles">{t("reproducteurs.tabs.femelles")}</TabsTrigger>
+            <TabsTrigger value="males">{t("reproducteurs.tabs.males")}</TabsTrigger>
+            <TabsTrigger value={StatutReproducteur.ACTIF}>{t("reproducteurs.tabs.actifs")}</TabsTrigger>
             <TabsTrigger value={StatutReproducteur.REFORME}>
-              Reformes
+              {t("reproducteurs.tabs.reformes")}
             </TabsTrigger>
           </TabsList>
         </div>
@@ -255,7 +257,7 @@ export function ReproducteursListClient({ reproducteurs, permissions }: Props) {
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Users className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Aucun reproducteur</p>
+              <p className="text-muted-foreground">{t("reproducteurs.aucun")}</p>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
@@ -280,9 +282,9 @@ export function ReproducteursListClient({ reproducteurs, permissions }: Props) {
                             </span>
                           </div>
                           <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-muted-foreground">
-                            <span>{r.poids} g</span>
+                            <span>{r.poids} {t("reproducteurs.detail.grammesUnit")}</span>
                             {r.age !== null && (
-                              <span>{r.age} mois</span>
+                              <span>{r.age} {t("reproducteurs.detail.moisUnit")}</span>
                             )}
                             {r.origine && (
                               <span className="truncate">{r.origine}</span>
@@ -298,7 +300,7 @@ export function ReproducteursListClient({ reproducteurs, permissions }: Props) {
                           <p className="mt-0.5">
                             {r._count.pontesAsFemelle +
                               r._count.pontesAsMale}{" "}
-                            ponte(s)
+                            {t("reproducteurs.pontes")}
                           </p>
                         </div>
                       </div>

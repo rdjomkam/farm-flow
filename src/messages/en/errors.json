@@ -1,0 +1,69 @@
+{
+  "validation": {
+    "required": "Required field",
+    "invalidValue": "Invalid value",
+    "fieldRequired": "The field {field} is required",
+    "noFieldToModify": "No field to modify",
+    "validationErrors": "Validation errors"
+  },
+  "notFound": {
+    "generic": "Resource not found",
+    "plan": "Plan not found",
+    "vague": "Batch not found",
+    "bac": "Tank not found",
+    "releve": "Record not found",
+    "client": "Client not found",
+    "user": "User not found",
+    "member": "Member not found",
+    "site": "Site not found",
+    "facture": "Invoice not found",
+    "vente": "Sale not found",
+    "produit": "Product not found",
+    "commande": "Order not found",
+    "fournisseur": "Supplier not found"
+  },
+  "conflict": {
+    "planTypeExists": "A plan with this type already exists",
+    "cannotDeactivateWithSubscribers": "Cannot deactivate a plan with active subscribers",
+    "bacAlreadyAssigned": "This tank is already assigned to a batch",
+    "emailAlreadyUsed": "This email address is already in use",
+    "phoneAlreadyUsed": "This phone number is already in use"
+  },
+  "auth": {
+    "unauthorized": "Unauthorized",
+    "forbidden": "Insufficient permission",
+    "notMember": "You are not a member of this site",
+    "accountDeactivated": "This account has been deactivated",
+    "invalidCredentials": "Invalid identifier or password"
+  },
+  "server": {
+    "generic": "Server error",
+    "unexpected": "An unexpected error occurred",
+    "getVagues": "Server error while fetching batches",
+    "createVague": "Server error while creating batch",
+    "getVague": "Server error while fetching batch",
+    "updateVague": "Server error while updating batch",
+    "getBacs": "Server error while fetching tanks",
+    "createBac": "Server error while creating tank",
+    "getBac": "Server error while fetching tank",
+    "updateBac": "Server error while updating tank",
+    "getReleves": "Server error while fetching records",
+    "createReleve": "Server error while creating record",
+    "getReleve": "Server error while fetching record",
+    "updateReleve": "Server error while updating record",
+    "getPlans": "Server error while fetching plans",
+    "createPlan": "Server error while creating plan",
+    "getPlan": "Server error while fetching plan",
+    "updatePlan": "Server error while updating plan",
+    "deletePlan": "Server error while deactivating plan",
+    "login": "Server error during login",
+    "register": "Server error during registration",
+    "logout": "Server error during logout",
+    "changeSite": "Server error while changing site"
+  },
+  "quota": {
+    "exceeded": "Quota exceeded",
+    "vaguesLimit": "You have reached the maximum number of active batches allowed by your plan",
+    "bacsLimit": "You have reached the maximum number of tanks allowed by your plan"
+  }
+}

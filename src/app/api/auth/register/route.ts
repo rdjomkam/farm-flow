@@ -3,6 +3,7 @@ import { hashPassword, createSession, setSessionCookie, normalizePhone } from "@
 import { getUserByEmail, getUserByPhone, createUser } from "@/lib/queries/users";
 import { Role } from "@/types";
 import type { AuthResponse } from "@/types";
+import { ErrorKeys } from "@/lib/api-error-keys";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_MIN_LENGTH = 6;
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
       const existingByEmail = await getUserByEmail(email);
       if (existingByEmail) {
         return NextResponse.json(
-          { success: false, error: "Cette adresse email est deja utilisee." } satisfies AuthResponse,
+          { success: false, error: "Cette adresse email est deja utilisee.", errorKey: ErrorKeys.CONFLICT_EMAIL_ALREADY_USED } satisfies AuthResponse,
           { status: 409 }
         );
       }
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
       const existingByPhone = await getUserByPhone(phone);
       if (existingByPhone) {
         return NextResponse.json(
-          { success: false, error: "Ce numero de telephone est deja utilise." } satisfies AuthResponse,
+          { success: false, error: "Ce numero de telephone est deja utilise.", errorKey: ErrorKeys.CONFLICT_PHONE_ALREADY_USED } satisfies AuthResponse,
           { status: 409 }
         );
       }
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
     return response;
   } catch {
     return NextResponse.json(
-      { success: false, error: "Erreur serveur lors de l'inscription." } satisfies AuthResponse,
+      { success: false, error: "Erreur serveur lors de l'inscription.", errorKey: ErrorKeys.SERVER_REGISTER } satisfies AuthResponse,
       { status: 500 }
     );
   }

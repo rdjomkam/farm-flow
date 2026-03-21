@@ -3,6 +3,7 @@ import { verifyPassword, createSession, setSessionCookie, normalizePhone } from 
 import { getUserByIdentifier } from "@/lib/queries/users";
 import { Role } from "@/types";
 import type { AuthResponse } from "@/types";
+import { ErrorKeys } from "@/lib/api-error-keys";
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     // Check if user is active
     if (!user.isActive) {
       return NextResponse.json(
-        { success: false, error: "Ce compte a ete desactive." } satisfies AuthResponse,
+        { success: false, error: "Ce compte a ete desactive.", errorKey: ErrorKeys.AUTH_ACCOUNT_DEACTIVATED } satisfies AuthResponse,
         { status: 403 }
       );
     }
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
     return response;
   } catch {
     return NextResponse.json(
-      { success: false, error: "Erreur serveur lors de la connexion." } satisfies AuthResponse,
+      { success: false, error: "Erreur serveur lors de la connexion.", errorKey: ErrorKeys.SERVER_LOGIN } satisfies AuthResponse,
       { status: 500 }
     );
   }

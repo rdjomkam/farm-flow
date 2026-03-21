@@ -18,6 +18,7 @@ import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
 import { Permission } from "@/types";
 import type { UpdatePlanAbonnementDTO } from "@/types";
+import { ErrorKeys } from "@/lib/api-error-keys";
 
 export async function GET(
   request: NextRequest,
@@ -29,7 +30,7 @@ export async function GET(
 
     if (!plan) {
       return NextResponse.json(
-        { status: 404, message: "Plan introuvable." },
+        { status: 404, message: "Plan introuvable.", errorKey: ErrorKeys.NOT_FOUND_PLAN },
         { status: 404 }
       );
     }
@@ -48,7 +49,7 @@ export async function GET(
       );
     }
     return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation du plan." },
+      { status: 500, message: "Erreur serveur lors de la recuperation du plan.", errorKey: ErrorKeys.SERVER_GET_PLAN },
       { status: 500 }
     );
   }
@@ -65,7 +66,7 @@ export async function PUT(
     const plan = await getPlanAbonnementById(id);
     if (!plan) {
       return NextResponse.json(
-        { status: 404, message: "Plan introuvable." },
+        { status: 404, message: "Plan introuvable.", errorKey: ErrorKeys.NOT_FOUND_PLAN },
         { status: 404 }
       );
     }
@@ -147,7 +148,7 @@ export async function PUT(
       );
     }
     return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la modification du plan." },
+      { status: 500, message: "Erreur serveur lors de la modification du plan.", errorKey: ErrorKeys.SERVER_UPDATE_PLAN },
       { status: 500 }
     );
   }
@@ -164,7 +165,7 @@ export async function DELETE(
     const plan = await getPlanAbonnementById(id);
     if (!plan) {
       return NextResponse.json(
-        { status: 404, message: "Plan introuvable." },
+        { status: 404, message: "Plan introuvable.", errorKey: ErrorKeys.NOT_FOUND_PLAN },
         { status: 404 }
       );
     }
@@ -175,6 +176,7 @@ export async function DELETE(
         {
           status: 409,
           message: "Impossible de desactiver un plan avec des abonnes actifs.",
+          errorKey: ErrorKeys.CONFLICT_CANNOT_DEACTIVATE_WITH_SUBSCRIBERS,
         },
         { status: 409 }
       );
@@ -197,7 +199,7 @@ export async function DELETE(
       );
     }
     return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la desactivation du plan." },
+      { status: 500, message: "Erreur serveur lors de la desactivation du plan.", errorKey: ErrorKeys.SERVER_DELETE_PLAN },
       { status: 500 }
     );
   }

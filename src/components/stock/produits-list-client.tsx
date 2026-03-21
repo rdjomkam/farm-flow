@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Plus, Package, AlertTriangle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,21 +30,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { CategorieProduit, UniteStock, Permission } from "@/types";
 import { useStockService } from "@/services";
 
-const categorieLabels: Record<CategorieProduit, string> = {
-  [CategorieProduit.ALIMENT]: "Aliment",
-  [CategorieProduit.INTRANT]: "Intrant",
-  [CategorieProduit.EQUIPEMENT]: "Equipement",
-};
-
-const uniteLabels: Record<UniteStock, string> = {
-  [UniteStock.GRAMME]: "g",
-  [UniteStock.KG]: "kg",
-  [UniteStock.MILLILITRE]: "mL",
-  [UniteStock.LITRE]: "L",
-  [UniteStock.UNITE]: "unite",
-  [UniteStock.SACS]: "sacs",
-};
-
 interface ProduitData {
   id: string;
   nom: string;
@@ -65,6 +51,7 @@ interface Props {
 }
 
 export function ProduitsListClient({ produits, fournisseurs, permissions }: Props) {
+  const t = useTranslations("stock");
   const router = useRouter();
   const stockService = useStockService();
   const [tab, setTab] = useState("tous");
@@ -124,6 +111,9 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
     }
   }
 
+  const uniteLabel = (u: string) => t(`unites.${u}` as Parameters<typeof t>[0]) || u;
+  const categorieLabel = (c: string) => t(`categories.${c}` as Parameters<typeof t>[0]) || c;
+
   return (
     <div className="flex flex-col gap-4">
       <Link
@@ -131,53 +121,53 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
       >
         <ArrowLeft className="h-4 w-4" />
-        Stock
+        {t("actions.back")}
       </Link>
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {produits.length} produit{produits.length > 1 ? "s" : ""}
+          {t("produits.count", { count: produits.length })}
         </p>
         {permissions.includes(Permission.STOCK_GERER) && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-1" />
-                Nouveau
+                {t("produits.new")}
               </Button>
             </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Ajouter un produit</DialogTitle>
+              <DialogTitle>{t("produits.add")}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-4 py-2">
               <Input
-                label="Nom du produit"
-                placeholder="Ex: Aliment Raanan 3mm"
+                label={t("produits.fields.name")}
+                placeholder={t("produits.fields.namePlaceholder")}
                 value={nom}
                 onChange={(e) => setNom(e.target.value)}
                 autoFocus
               />
               <Select value={categorie} onValueChange={setCategorie}>
-                <SelectTrigger label="Categorie">
+                <SelectTrigger label={t("produits.fields.categorie")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(categorieLabels).map(([val, label]) => (
+                  {Object.values(CategorieProduit).map((val) => (
                     <SelectItem key={val} value={val}>
-                      {label}
+                      {categorieLabel(val)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <Select value={unite} onValueChange={setUnite}>
-                <SelectTrigger label="Unite de base">
+                <SelectTrigger label={t("produits.fields.uniteBase")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(uniteLabels).map(([val, label]) => (
+                  {Object.values(UniteStock).map((val) => (
                     <SelectItem key={val} value={val}>
-                      {label}
+                      {uniteLabel(val)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -195,26 +185,29 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
                   }}
                   className="rounded border-border"
                 />
-                Unite d&apos;achat differente
+                {t("produits.fields.dualUnit")}
               </label>
               {dualUnit && (
                 <>
                   <Select value={uniteAchat} onValueChange={setUniteAchat}>
-                    <SelectTrigger label="Unite d'achat">
-                      <SelectValue placeholder="Choisir" />
+                    <SelectTrigger label={t("produits.fields.uniteAchat")}>
+                      <SelectValue placeholder={t("commandes.fields.choix")} />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(uniteLabels)
-                        .filter(([val]) => val !== unite)
-                        .map(([val, label]) => (
+                      {Object.values(UniteStock)
+                        .filter((val) => val !== unite)
+                        .map((val) => (
                           <SelectItem key={val} value={val}>
-                            {label}
+                            {uniteLabel(val)}
                           </SelectItem>
                         ))}
                     </SelectContent>
                   </Select>
                   <Input
-                    label={`Contenance (${uniteLabels[unite as UniteStock] ?? unite} par ${uniteAchat ? (uniteLabels[uniteAchat as UniteStock] ?? uniteAchat) : "unite d'achat"})`}
+                    label={t("produits.fields.contenance", {
+                      baseUnit: uniteLabel(unite),
+                      achatUnit: uniteAchat ? uniteLabel(uniteAchat) : t("produits.fields.contenanceUnit"),
+                    })}
                     type="number"
                     placeholder="Ex: 25"
                     value={contenance}
@@ -223,14 +216,14 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
                 </>
               )}
               <Input
-                label="Prix unitaire (FCFA)"
+                label={t("produits.fields.prixUnitaire")}
                 type="number"
                 placeholder="0"
                 value={prixUnitaire}
                 onChange={(e) => setPrixUnitaire(e.target.value)}
               />
               <Input
-                label="Seuil d'alerte"
+                label={t("produits.fields.seuilAlerte")}
                 type="number"
                 placeholder="0"
                 value={seuilAlerte}
@@ -238,8 +231,8 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
               />
               {fournisseurs.length > 0 && (
                 <Select value={fournisseurId} onValueChange={setFournisseurId}>
-                  <SelectTrigger label="Fournisseur (optionnel)">
-                    <SelectValue placeholder="Aucun" />
+                  <SelectTrigger label={t("produits.fields.fournisseur")}>
+                    <SelectValue placeholder={t("produits.fields.fournisseurNone")} />
                   </SelectTrigger>
                   <SelectContent>
                     {fournisseurs.map((f) => (
@@ -253,10 +246,10 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
             </div>
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="outline">Annuler</Button>
+                <Button variant="outline">{t("actions.cancel")}</Button>
               </DialogClose>
               <Button onClick={handleCreate} disabled={!nom.trim()}>
-                Creer
+                {t("actions.create")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -267,15 +260,15 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
       <Tabs value={tab} onValueChange={setTab}>
         <div className="overflow-x-auto -mx-4 px-4">
           <TabsList className="w-max">
-            <TabsTrigger value="tous">Tous</TabsTrigger>
-            {Object.entries(categorieLabels).map(([val, label]) => (
+            <TabsTrigger value="tous">{t("produits.tabs.all")}</TabsTrigger>
+            {Object.values(CategorieProduit).map((val) => (
               <TabsTrigger key={val} value={val}>
-                {label}
+                {categorieLabel(val)}
               </TabsTrigger>
             ))}
             {alerteCount > 0 && (
               <TabsTrigger value="alerte">
-                Alertes ({alerteCount})
+                {t("produits.tabs.alerts", { count: alerteCount })}
               </TabsTrigger>
             )}
           </TabsList>
@@ -284,8 +277,8 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
           {filtered.length === 0 ? (
             <EmptyState
               icon={<Package className="h-7 w-7" />}
-              title="Aucun produit"
-              description="Ajoutez un produit pour gerer votre stock."
+              title={t("produits.empty")}
+              description={t("produits.emptyDescription")}
             />
           ) : (
             <div className="flex flex-col gap-2">
@@ -304,7 +297,7 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
                           </div>
                           <div className="flex items-center gap-2 mt-1">
                             <Badge variant="default">
-                              {categorieLabels[p.categorie as CategorieProduit] ?? p.categorie}
+                              {categorieLabel(p.categorie)}
                             </Badge>
                             {p.fournisseur && (
                               <span className="text-xs text-muted-foreground truncate">
@@ -315,11 +308,11 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
                         </div>
                         <div className="text-right shrink-0">
                           <p className="font-bold">
-                            {p.stockActuel} {uniteLabels[p.unite as UniteStock] ?? p.unite}
+                            {p.stockActuel} {uniteLabel(p.unite)}
                           </p>
                           {p.uniteAchat && p.contenance && p.contenance > 0 && (
                             <p className="text-xs text-muted-foreground">
-                              1 {uniteLabels[p.uniteAchat as UniteStock] ?? p.uniteAchat} = {p.contenance} {uniteLabels[p.unite as UniteStock] ?? p.unite}
+                              1 {uniteLabel(p.uniteAchat)} = {p.contenance} {uniteLabel(p.unite)}
                             </p>
                           )}
                           <p className="text-xs text-muted-foreground">

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { ReleveFormClient } from "@/components/releves/releve-form-client";
 import { AccessDenied } from "@/components/ui/access-denied";
@@ -14,6 +15,8 @@ export default async function NouveauRelevePage() {
 
   const permissions = await checkPagePermission(session, Permission.RELEVES_CREER);
   if (!permissions) return <AccessDenied />;
+
+  const t = await getTranslations("releves");
 
   const [vaguesRaw, produitsRaw] = await Promise.all([
     getVagues(session.activeSiteId, { statut: StatutVague.EN_COURS }),
@@ -35,7 +38,7 @@ export default async function NouveauRelevePage() {
 
   return (
     <>
-      <Header title="Nouveau releve" />
+      <Header title={t("page.nouveau")} />
       <div className="p-4">
         <ReleveFormClient vagues={vagues} produits={produits} />
       </div>

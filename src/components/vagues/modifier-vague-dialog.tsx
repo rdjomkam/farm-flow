@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -38,6 +39,7 @@ export function ModifierVagueDialog({
 }: ModifierVagueDialogProps) {
   const router = useRouter();
   const vagueService = useVagueService();
+  const t = useTranslations("vagues");
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = controlledOnOpenChange ?? setInternalOpen;
@@ -57,9 +59,9 @@ export function ModifierVagueDialog({
     e.preventDefault();
     const errs: Record<string, string> = {};
     if (!nombre || Number(nombre) <= 0 || !Number.isInteger(Number(nombre)))
-      errs.nombreInitial = "Entier superieur a 0.";
+      errs.nombreInitial = t("form.errors.nombreInitialEdit");
     if (!poids || Number(poids) <= 0)
-      errs.poidsMoyenInitial = "Superieur a 0.";
+      errs.poidsMoyenInitial = t("form.errors.poidsMoyenInitialEdit");
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
     setErrors({});
@@ -86,21 +88,21 @@ export function ModifierVagueDialog({
         <DialogTrigger asChild>
           <Button variant="outline" size="sm">
             <Pencil className="h-4 w-4" />
-            Modifier
+            {t("form.edit.trigger")}
           </Button>
         </DialogTrigger>
       )}
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Modifier la vague</DialogTitle>
+          <DialogTitle>{t("form.edit.title")}</DialogTitle>
           <DialogDescription>
-            Modifiez les parametres initiaux de la vague.
+            {t("form.edit.description")}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input
             id="nombreInitial"
-            label="Nombre initial d'alevins"
+            label={t("form.fields.nombreInitial")}
             type="number"
             min="1"
             value={nombre}
@@ -109,7 +111,7 @@ export function ModifierVagueDialog({
           />
           <Input
             id="poidsMoyenInitial"
-            label="Poids moyen initial (g)"
+            label={t("form.fields.poidsMoyenInitial")}
             type="number"
             min="0.1"
             step="0.1"
@@ -119,17 +121,17 @@ export function ModifierVagueDialog({
           />
           <Input
             id="origineAlevins"
-            label="Origine des alevins (optionnel)"
-            placeholder="Ex : Ecloserie locale"
+            label={t("form.fields.origineAlevins")}
+            placeholder={t("form.fields.origineAlevinsFr")}
             value={origine}
             onChange={(e) => setOrigine(e.target.value)}
           />
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-              Annuler
+              {t("form.cancel")}
             </Button>
             <Button type="submit">
-              Enregistrer
+              {t("form.edit.submit")}
             </Button>
           </DialogFooter>
         </form>

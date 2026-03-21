@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { FournisseursListClient } from "@/components/stock/fournisseurs-list-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -14,11 +15,12 @@ export default async function FournisseursPage() {
   const permissions = await checkPagePermission(session, Permission.APPROVISIONNEMENT_VOIR);
   if (!permissions) return <AccessDenied />;
 
+  const t = await getTranslations("stock");
   const fournisseurs = await getFournisseurs(session.activeSiteId);
 
   return (
     <>
-      <Header title="Fournisseurs" />
+      <Header title={t("fournisseurs.title")} />
       <div className="p-4">
         <FournisseursListClient
           fournisseurs={JSON.parse(JSON.stringify(fournisseurs))}

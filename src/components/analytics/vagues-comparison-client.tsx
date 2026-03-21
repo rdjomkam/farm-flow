@@ -3,13 +3,13 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { ChevronDown } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { StatutVague } from "@/types";
 import type { IndicateursVagueComplet, ComparaisonVagues } from "@/types";
 import { useAnalyticsService } from "@/services";
-import { useTranslations } from "next-intl";
 
 // ---------------------------------------------------------------------------
 // Recharts (client-side only)
@@ -87,13 +87,6 @@ type VagueSummary = {
   _count: { bacs: number; releves: number };
 };
 
-function statutLabel(statut: string): string {
-  if (statut === StatutVague.EN_COURS) return "En cours";
-  if (statut === StatutVague.TERMINEE) return "Terminee";
-  if (statut === StatutVague.ANNULEE) return "Annulee";
-  return statut;
-}
-
 function statutClass(statut: string): string {
   if (statut === StatutVague.EN_COURS)
     return "bg-accent-green-muted text-accent-green";
@@ -161,9 +154,11 @@ function MetricRow({
 
 function VagueResultCard({ vague, color, allVagues }: VagueResultCardProps) {
   const tAnalytics = useTranslations("analytics");
+  const tVagues = useTranslations("vagues");
+  const locale = useLocale();
   const formatDate = (d: Date | null | string) => {
     if (!d) return "—";
-    return new Date(d).toLocaleDateString("fr-FR", {
+    return new Date(d).toLocaleDateString(locale, {
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -181,7 +176,7 @@ function VagueResultCard({ vague, color, allVagues }: VagueResultCardProps) {
           />
           <h3 className="text-sm font-bold truncate">{vague.code}</h3>
           <span className={cn("shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium", statutClass(vague.statut))}>
-            {statutLabel(vague.statut)}
+            {tVagues(`statuts.${vague.statut as "EN_COURS" | "TERMINEE" | "ANNULEE"}`)}
           </span>
         </div>
 
@@ -192,7 +187,7 @@ function VagueResultCard({ vague, color, allVagues }: VagueResultCardProps) {
 
         {/* Indicateurs zootechniques */}
         <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-          Zootechnique
+          {tVagues("comparison.sectionZootechnique")}
         </p>
         <div className="mb-3">
           <MetricRow
@@ -207,7 +202,7 @@ function VagueResultCard({ vague, color, allVagues }: VagueResultCardProps) {
             }
           />
           <MetricRow
-            label="Survie"
+            label={tVagues("comparison.metrics.survie")}
             value={vague.tauxSurvie !== null ? `${vague.tauxSurvie}` : "—"}
             unit="%"
             best={isBest(vague, allVagues, "tauxSurvie", true)}
@@ -225,7 +220,7 @@ function VagueResultCard({ vague, color, allVagues }: VagueResultCardProps) {
             best={isBest(vague, allVagues, "sgrMoyen", true)}
           />
           <MetricRow
-            label="Biomasse"
+            label={tVagues("comparison.metrics.biomasse")}
             value={vague.biomasseProduite !== null ? `${vague.biomasseProduite}` : "—"}
             unit="kg"
             best={isBest(vague, allVagues, "biomasseProduite", true)}
@@ -234,22 +229,22 @@ function VagueResultCard({ vague, color, allVagues }: VagueResultCardProps) {
 
         {/* Indicateurs financiers */}
         <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-          Financier
+          {tVagues("comparison.sectionFinancier")}
         </p>
         <div>
           <MetricRow
-            label="Cout aliment"
+            label={tVagues("comparison.metrics.coutAliment")}
             value={vague.coutTotalAliment.toLocaleString("fr-FR")}
             unit="CFA"
           />
           <MetricRow
-            label="Revenu ventes"
+            label={tVagues("comparison.metrics.revenuVentes")}
             value={vague.revenuVentes.toLocaleString("fr-FR")}
             unit="CFA"
             best={isBest(vague, allVagues, "revenuVentes", true)}
           />
           <MetricRow
-            label="Marge brute"
+            label={tVagues("comparison.metrics.margeBrute")}
             value={vague.margeBrute !== null ? vague.margeBrute.toLocaleString("fr-FR") : "—"}
             unit="CFA"
             best={isBest(vague, allVagues, "margeBrute", true)}
@@ -261,7 +256,7 @@ function VagueResultCard({ vague, color, allVagues }: VagueResultCardProps) {
             }
           />
           <MetricRow
-            label="ROI"
+            label={tVagues("comparison.metrics.roi")}
             value={vague.roi !== null ? `${vague.roi}` : "—"}
             unit="%"
             best={isBest(vague, allVagues, "roi", true)}
@@ -350,17 +345,18 @@ function VaguesRadarChart({ vagues }: { vagues: IndicateursVagueComplet[] }) {
 // ---------------------------------------------------------------------------
 
 function VaguesFinancialChart({ vagues }: { vagues: IndicateursVagueComplet[] }) {
+  const tVagues = useTranslations("vagues");
   const data = [
     {
-      name: "Cout aliment",
+      name: tVagues("comparison.financialChart.coutAliment"),
       ...Object.fromEntries(vagues.map((v) => [v.code, v.coutTotalAliment])),
     },
     {
-      name: "Revenu ventes",
+      name: tVagues("comparison.financialChart.revenuVentes"),
       ...Object.fromEntries(vagues.map((v) => [v.code, v.revenuVentes])),
     },
     {
-      name: "Marge brute",
+      name: tVagues("comparison.financialChart.margeBrute"),
       ...Object.fromEntries(vagues.map((v) => [v.code, v.margeBrute ?? 0])),
     },
   ];
@@ -409,6 +405,7 @@ interface VaguesComparisonClientProps {
 
 export function VaguesComparisonClient({ vagues }: VaguesComparisonClientProps) {
   const analyticsService = useAnalyticsService();
+  const tVagues = useTranslations("vagues");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [result, setResult] = useState<ComparaisonVagues | null>(null);
   const [showSelector, setShowSelector] = useState(true);
@@ -447,14 +444,14 @@ export function VaguesComparisonClient({ vagues }: VaguesComparisonClientProps) 
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Selectionnez 2 a 4 vagues
+            {tVagues("comparison.selectTitle")}
           </h2>
           {result && (
             <button
               onClick={() => setShowSelector(!showSelector)}
               className="flex items-center gap-1 text-xs text-primary hover:underline"
             >
-              {showSelector ? "Masquer" : "Modifier"}
+              {showSelector ? tVagues("comparison.hide") : tVagues("comparison.modify")}
               <ChevronDown
                 className={cn("h-3 w-3 transition-transform", showSelector && "rotate-180")}
               />
@@ -466,7 +463,7 @@ export function VaguesComparisonClient({ vagues }: VaguesComparisonClientProps) 
           <>
             {vagues.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
-                Aucune vague disponible sur ce site.
+                {tVagues("comparison.noVagues")}
               </p>
             ) : (
               <div className="flex flex-col gap-2">
@@ -503,7 +500,7 @@ export function VaguesComparisonClient({ vagues }: VaguesComparisonClientProps) 
                         <div>
                           <p className="text-sm font-semibold">{v.code}</p>
                           <p className="text-xs text-muted-foreground">
-                            {v.nombreInitial} alevins — {v._count.bacs} bac{v._count.bacs > 1 ? "s" : ""} — {v._count.releves} releve{v._count.releves > 1 ? "s" : ""}
+                            {tVagues("comparison.alevins", { count: v.nombreInitial })} — {v._count.bacs > 1 ? tVagues("card.bacs", { count: v._count.bacs }) : tVagues("card.bac", { count: v._count.bacs })} — {v._count.releves > 1 ? tVagues("comparison.releves", { count: v._count.releves }) : tVagues("comparison.releve", { count: v._count.releves })}
                           </p>
                         </div>
                       </div>
@@ -513,7 +510,7 @@ export function VaguesComparisonClient({ vagues }: VaguesComparisonClientProps) 
                           statutClass(v.statut)
                         )}
                       >
-                        {statutLabel(v.statut)}
+                        {tVagues(`statuts.${v.statut as "EN_COURS" | "TERMINEE" | "ANNULEE"}`)}
                       </span>
                     </button>
                   );
@@ -523,14 +520,16 @@ export function VaguesComparisonClient({ vagues }: VaguesComparisonClientProps) 
 
             <div className="mt-4">
               <p className="text-xs text-muted-foreground mb-2">
-                {selectedIds.size} vague{selectedIds.size > 1 ? "s" : ""} selectionnee{selectedIds.size > 1 ? "s" : ""} / 4 maximum
+                {selectedIds.size > 1
+                  ? tVagues("comparison.selectedCountPlural", { count: selectedIds.size })
+                  : tVagues("comparison.selectedCount", { count: selectedIds.size })}
               </p>
               <Button
                 onClick={handleComparer}
                 disabled={!canCompare}
                 className="w-full min-h-[48px]"
               >
-                Comparer
+                {tVagues("comparison.compareButton")}
               </Button>
             </div>
           </>
@@ -543,7 +542,7 @@ export function VaguesComparisonClient({ vagues }: VaguesComparisonClientProps) 
           {/* Cartes comparatives */}
           <section>
             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-              Resultats — {result.vagues.length} vagues
+              {tVagues("comparison.resultsTitle", { count: result.vagues.length })}
             </h2>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
               {result.vagues.map((v, i) => (
@@ -560,7 +559,7 @@ export function VaguesComparisonClient({ vagues }: VaguesComparisonClientProps) 
           {/* Graphique radar */}
           <section>
             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-              Radar de performance
+              {tVagues("comparison.sectionRadar")}
             </h2>
             <Card>
               <CardContent className="p-3">
@@ -573,7 +572,7 @@ export function VaguesComparisonClient({ vagues }: VaguesComparisonClientProps) 
           {result.vagues.some((v) => v.coutTotalAliment > 0 || v.revenuVentes > 0) && (
             <section>
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                Comparaison financiere
+                {tVagues("comparison.sectionComparaisonFinanciere")}
               </h2>
               <Card>
                 <CardContent className="p-3">

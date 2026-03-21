@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
   AlertTriangle,
@@ -34,21 +35,6 @@ import {
 import { CategorieProduit, UniteStock, TypeMouvement } from "@/types";
 import { useStockService } from "@/services";
 
-const categorieLabels: Record<CategorieProduit, string> = {
-  [CategorieProduit.ALIMENT]: "Aliment",
-  [CategorieProduit.INTRANT]: "Intrant",
-  [CategorieProduit.EQUIPEMENT]: "Equipement",
-};
-
-const uniteLabels: Record<UniteStock, string> = {
-  [UniteStock.GRAMME]: "g",
-  [UniteStock.KG]: "kg",
-  [UniteStock.MILLILITRE]: "mL",
-  [UniteStock.LITRE]: "L",
-  [UniteStock.UNITE]: "unite",
-  [UniteStock.SACS]: "sacs",
-};
-
 interface MouvementData {
   id: string;
   type: string;
@@ -79,6 +65,7 @@ interface Props {
 }
 
 export function ProduitDetailClient({ produit, fournisseurs }: Props) {
+  const t = useTranslations("stock");
   const router = useRouter();
   const stockService = useStockService();
   const [editOpen, setEditOpen] = useState(false);
@@ -96,7 +83,9 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
   const contenanceDisabled = produit.stockActuel > 0;
 
   const isAlerte = produit.stockActuel <= produit.seuilAlerte;
-  const uniteLabel = uniteLabels[produit.unite as UniteStock] ?? produit.unite;
+  const uniteLabel = (u: string) => t(`unites.${u}` as Parameters<typeof t>[0]) || u;
+  const categorieLabel = (c: string) => t(`categories.${c}` as Parameters<typeof t>[0]) || c;
+  const baseUniteLabel = uniteLabel(produit.unite);
 
   async function handleSave() {
     const result = await stockService.updateProduit(produit.id, {
@@ -122,7 +111,7 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
       >
         <ArrowLeft className="h-4 w-4" />
-        Produits
+        {t("produits.title")}
       </Link>
 
       {/* Info card */}
@@ -136,7 +125,7 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
               </div>
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant="default">
-                  {categorieLabels[produit.categorie as CategorieProduit]}
+                  {categorieLabel(produit.categorie)}
                 </Badge>
                 {produit.fournisseur && (
                   <span className="text-sm text-muted-foreground">
@@ -153,31 +142,31 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Modifier le produit</DialogTitle>
+                  <DialogTitle>{t("produits.edit")}</DialogTitle>
                 </DialogHeader>
                 <div className="flex flex-col gap-4 py-2">
                   <Input
-                    label="Nom"
+                    label={t("produits.fields.name")}
                     value={nom}
                     onChange={(e) => setNom(e.target.value)}
                   />
                   <Select value={categorie} onValueChange={setCategorie}>
-                    <SelectTrigger label="Categorie">
+                    <SelectTrigger label={t("produits.fields.categorie")}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(categorieLabels).map(([val, label]) => (
-                        <SelectItem key={val} value={val}>{label}</SelectItem>
+                      {Object.values(CategorieProduit).map((val) => (
+                        <SelectItem key={val} value={val}>{categorieLabel(val)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   <Select value={unite} onValueChange={setUnite}>
-                    <SelectTrigger label="Unite de base">
+                    <SelectTrigger label={t("produits.fields.uniteBase")}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(uniteLabels).map(([val, label]) => (
-                        <SelectItem key={val} value={val}>{label}</SelectItem>
+                      {Object.values(UniteStock).map((val) => (
+                        <SelectItem key={val} value={val}>{uniteLabel(val)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -194,25 +183,28 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
                       }}
                       className="rounded border-border"
                     />
-                    Unite d&apos;achat differente
+                    {t("produits.fields.dualUnit")}
                   </label>
                   {dualUnit && (
                     <>
                       <Select value={uniteAchat} onValueChange={setUniteAchat}>
-                        <SelectTrigger label="Unite d'achat">
-                          <SelectValue placeholder="Choisir" />
+                        <SelectTrigger label={t("produits.fields.uniteAchat")}>
+                          <SelectValue placeholder={t("commandes.fields.choix")} />
                         </SelectTrigger>
                         <SelectContent>
-                          {Object.entries(uniteLabels)
-                            .filter(([val]) => val !== unite)
-                            .map(([val, label]) => (
-                              <SelectItem key={val} value={val}>{label}</SelectItem>
+                          {Object.values(UniteStock)
+                            .filter((val) => val !== unite)
+                            .map((val) => (
+                              <SelectItem key={val} value={val}>{uniteLabel(val)}</SelectItem>
                             ))}
                         </SelectContent>
                       </Select>
                       <div>
                         <Input
-                          label={`Contenance (${uniteLabels[unite as UniteStock] ?? unite} par ${uniteAchat ? (uniteLabels[uniteAchat as UniteStock] ?? uniteAchat) : "unite d'achat"})`}
+                          label={t("produits.fields.contenance", {
+                            baseUnit: uniteLabel(unite),
+                            achatUnit: uniteAchat ? uniteLabel(uniteAchat) : t("produits.fields.contenanceUnit"),
+                          })}
                           type="number"
                           placeholder="Ex: 25"
                           value={contenance}
@@ -221,27 +213,27 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
                         />
                         {contenanceDisabled && (
                           <p className="text-xs text-warning mt-1">
-                            Non modifiable (stock &gt; 0)
+                            {t("produits.detail.contenanceNotEditable")}
                           </p>
                         )}
                       </div>
                     </>
                   )}
                   <Input
-                    label="Prix unitaire (FCFA)"
+                    label={t("produits.fields.prixUnitaire")}
                     type="number"
                     value={prixUnitaire}
                     onChange={(e) => setPrixUnitaire(e.target.value)}
                   />
                   <Input
-                    label="Seuil d'alerte"
+                    label={t("produits.fields.seuilAlerte")}
                     type="number"
                     value={seuilAlerte}
                     onChange={(e) => setSeuilAlerte(e.target.value)}
                   />
                   <Select value={fournisseurId} onValueChange={setFournisseurId}>
-                    <SelectTrigger label="Fournisseur">
-                      <SelectValue placeholder="Aucun" />
+                    <SelectTrigger label={t("produits.fields.fournisseurRequired")}>
+                      <SelectValue placeholder={t("produits.fields.fournisseurNone")} />
                     </SelectTrigger>
                     <SelectContent>
                       {fournisseurs.map((f) => (
@@ -252,10 +244,10 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
                 </div>
                 <DialogFooter>
                   <DialogClose asChild>
-                    <Button variant="outline">Annuler</Button>
+                    <Button variant="outline">{t("actions.cancel")}</Button>
                   </DialogClose>
                   <Button onClick={handleSave} disabled={!nom.trim()}>
-                    Enregistrer
+                    {t("actions.save")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -267,10 +259,12 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
               <p className="text-2xl font-bold">
                 {produit.stockActuel}
               </p>
-              <p className="text-xs text-muted-foreground">{uniteLabel} en stock</p>
+              <p className="text-xs text-muted-foreground">
+                {t("produits.detail.inStock", { unit: baseUniteLabel })}
+              </p>
               {produit.uniteAchat && produit.contenance && produit.contenance > 0 && (
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {"\u2248 "}{Math.round((produit.stockActuel / produit.contenance) * 10) / 10} {uniteLabels[produit.uniteAchat as UniteStock] ?? produit.uniteAchat}
+                  {"\u2248 "}{Math.round((produit.stockActuel / produit.contenance) * 10) / 10} {uniteLabel(produit.uniteAchat)}
                 </p>
               )}
             </div>
@@ -278,14 +272,14 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
               <p className="text-2xl font-bold">
                 {produit.prixUnitaire.toLocaleString("fr-FR")}
               </p>
-              <p className="text-xs text-muted-foreground">FCFA / {uniteLabel}</p>
+              <p className="text-xs text-muted-foreground">FCFA / {baseUniteLabel}</p>
             </div>
           </div>
 
           {isAlerte && (
             <div className="mt-3 flex items-center gap-2 rounded-lg bg-warning/10 p-2 text-sm text-warning">
               <AlertTriangle className="h-4 w-4 shrink-0" />
-              Stock en dessous du seuil d&apos;alerte ({produit.seuilAlerte} {uniteLabel})
+              {t("produits.detail.alerteMessage", { seuil: produit.seuilAlerte, unit: baseUniteLabel })}
             </div>
           )}
         </CardContent>
@@ -294,12 +288,12 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
       {/* Mouvements recents */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Derniers mouvements</CardTitle>
+          <CardTitle className="text-sm">{t("produits.detail.derniersMovements")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {produit.mouvements.length === 0 ? (
             <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-              Aucun mouvement
+              {t("produits.detail.noMovement")}
             </p>
           ) : (
             <div className="divide-y divide-border">
@@ -318,7 +312,7 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">
-                        {isEntree ? "+" : "-"}{m.quantite} {uniteLabel}
+                        {isEntree ? "+" : "-"}{m.quantite} {baseUniteLabel}
                       </p>
                       {m.notes && (
                         <p className="text-xs text-muted-foreground truncate">
@@ -343,7 +337,7 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
 
       <Link href="/stock/mouvements" className="w-full">
         <Button variant="outline" className="w-full">
-          Voir tous les mouvements
+          {t("produits.detail.voirMovements")}
         </Button>
       </Link>
     </div>

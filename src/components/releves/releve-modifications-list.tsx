@@ -1,26 +1,8 @@
-import { Pencil } from "lucide-react";
-import type { ReleveModificationWithUser } from "@/types";
+"use client";
 
-/** Labels lisibles pour les noms de champs techniques */
-const champLabels: Record<string, string> = {
-  poidsMoyen:       "Poids moyen (g)",
-  tailleMoyenne:    "Taille moyenne (cm)",
-  echantillonCount: "Echantillons",
-  nombreMorts:      "Nombre de morts",
-  causeMortalite:   "Cause mortalite",
-  quantiteAliment:  "Quantite aliment (kg)",
-  typeAliment:      "Type aliment",
-  frequenceAliment: "Frequence aliment",
-  temperature:      "Temperature (C)",
-  ph:               "pH",
-  oxygene:          "Oxygene (mg/L)",
-  ammoniac:         "Ammoniac (mg/L)",
-  nombreCompte:     "Nombre compte",
-  methodeComptage:  "Methode comptage",
-  description:      "Description",
-  notes:            "Notes",
-  consommations:    "Consommations",
-};
+import { Pencil } from "lucide-react";
+import { useTranslations } from "next-intl";
+import type { ReleveModificationWithUser } from "@/types";
 
 function formatDate(date: Date | string): string {
   const d = new Date(date);
@@ -33,27 +15,50 @@ function formatDate(date: Date | string): string {
   });
 }
 
-function formatRelativeDate(date: Date | string): string {
-  const d = new Date(date);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffMinutes = Math.floor(diffMs / 60000);
-
-  if (diffMinutes < 1) return "a l'instant";
-  if (diffMinutes < 60) return `il y a ${diffMinutes} min`;
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `il y a ${diffHours}h`;
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays === 1) return "hier";
-  if (diffDays < 7) return `il y a ${diffDays} jours`;
-  return formatDate(date);
-}
-
 interface ReleveModificationsListProps {
   modifications: ReleveModificationWithUser[];
 }
 
 export function ReleveModificationsList({ modifications }: ReleveModificationsListProps) {
+  const t = useTranslations("releves");
+
+  /** Labels lisibles pour les noms de champs techniques */
+  const champLabels: Record<string, string> = {
+    poidsMoyen:       t("modifications.fields.poidsMoyen"),
+    tailleMoyenne:    t("modifications.fields.tailleMoyenne"),
+    echantillonCount: t("modifications.fields.echantillonCount"),
+    nombreMorts:      t("modifications.fields.nombreMorts"),
+    causeMortalite:   t("modifications.fields.causeMortalite"),
+    quantiteAliment:  t("modifications.fields.quantiteAliment"),
+    typeAliment:      t("modifications.fields.typeAliment"),
+    frequenceAliment: t("modifications.fields.frequenceAliment"),
+    temperature:      t("modifications.fields.temperature"),
+    ph:               t("modifications.fields.ph"),
+    oxygene:          t("modifications.fields.oxygene"),
+    ammoniac:         t("modifications.fields.ammoniac"),
+    nombreCompte:     t("modifications.fields.nombreCompte"),
+    methodeComptage:  t("modifications.fields.methodeComptage"),
+    description:      t("modifications.fields.description"),
+    notes:            t("modifications.fields.notes"),
+    consommations:    t("modifications.fields.consommations"),
+  };
+
+  function formatRelativeDate(date: Date | string): string {
+    const d = new Date(date);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMinutes = Math.floor(diffMs / 60000);
+
+    if (diffMinutes < 1) return t("modifications.instant");
+    if (diffMinutes < 60) return t("modifications.minutesAgo", { count: diffMinutes });
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return t("modifications.hoursAgo", { count: diffHours });
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) return t("modifications.yesterday");
+    if (diffDays < 7) return t("modifications.daysAgo", { count: diffDays });
+    return formatDate(date);
+  }
+
   if (modifications.length === 0) return null;
 
   // Grouper par raison + createdAt proche (meme operation de modification)
@@ -85,7 +90,7 @@ export function ReleveModificationsList({ modifications }: ReleveModificationsLi
     <section className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-center gap-2 mb-3">
         <Pencil className="h-4 w-4 text-muted-foreground" />
-        <h3 className="text-sm font-semibold">Historique des modifications</h3>
+        <h3 className="text-sm font-semibold">{t("modifications.historyTitle")}</h3>
       </div>
       <div className="flex flex-col gap-3">
         {groupes.map((groupe, idx) => (
@@ -100,7 +105,7 @@ export function ReleveModificationsList({ modifications }: ReleveModificationsLi
 
             {/* Raison */}
             <p className="text-xs text-muted-foreground italic mb-2">
-              Raison : &ldquo;{groupe.raison}&rdquo;
+              {t("modifications.reason")} : &ldquo;{groupe.raison}&rdquo;
             </p>
 
             {/* Champs modifies */}

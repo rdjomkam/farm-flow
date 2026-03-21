@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MoreVertical, Plus, Scissors, Pencil, FileText, FileSpreadsheet, XCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -41,6 +42,7 @@ export function VagueActionMenu({
 }: VagueActionMenuProps) {
   const router = useRouter();
   const exportService = useExportService();
+  const t = useTranslations("vagues");
   const [modifierOpen, setModifierOpen] = useState(false);
   const [cloturerOpen, setCloturerOpen] = useState(false);
 
@@ -54,26 +56,26 @@ export function VagueActionMenu({
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="sm" className={`h-9 w-9 p-0${className ? ` ${className}` : ""}`}>
             <MoreVertical className="h-5 w-5" />
-            <span className="sr-only">Actions</span>
+            <span className="sr-only">{t("actionMenu.actions")}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           {isEnCours && (
             <DropdownMenuItem onSelect={() => router.push(`/releves/nouveau?vagueId=${vagueId}`)}>
               <Plus className="h-4 w-4" />
-              Nouveau relevé
+              {t("actionMenu.nouveauReleve")}
             </DropdownMenuItem>
           )}
           {canCalibrage && (
             <DropdownMenuItem onSelect={() => router.push(`/vagues/${vagueId}/calibrage/nouveau`)}>
               <Scissors className="h-4 w-4" />
-              Calibrage
+              {t("actionMenu.calibrage")}
             </DropdownMenuItem>
           )}
           {canModifier && (
             <DropdownMenuItem onSelect={() => setModifierOpen(true)}>
               <Pencil className="h-4 w-4" />
-              Modifier
+              {t("actionMenu.modifier")}
             </DropdownMenuItem>
           )}
 
@@ -88,7 +90,7 @@ export function VagueActionMenu({
                 }}
               >
                 <FileText className="h-4 w-4" />
-                Rapport PDF
+                {t("actionMenu.rapportPdf")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={(e) => {
@@ -97,7 +99,7 @@ export function VagueActionMenu({
                 }}
               >
                 <FileSpreadsheet className="h-4 w-4" />
-                Export relevés
+                {t("actionMenu.exportReleves")}
               </DropdownMenuItem>
             </>
           )}
@@ -110,7 +112,7 @@ export function VagueActionMenu({
               onSelect={() => setCloturerOpen(true)}
             >
               <XCircle className="h-4 w-4" />
-              Clôturer
+              {t("actionMenu.cloturer")}
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>

@@ -8,6 +8,7 @@ import { UsersListClient } from "@/components/users/users-list-client";
 import { Permission } from "@/types";
 import { getServerPermissions } from "@/lib/auth/permissions-server";
 import { Plus } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export default async function UsersPage() {
   const session = await getServerSession();
@@ -28,6 +29,7 @@ export default async function UsersPage() {
     permissions.includes(Permission.UTILISATEURS_GERER);
 
   const { users, total } = await listUsers({ page: 1, limit: 100 });
+  const t = await getTranslations("users");
 
   const serializedUsers = users.map((u) => ({
     id: u.id,
@@ -43,19 +45,21 @@ export default async function UsersPage() {
 
   return (
     <>
-      <Header title="Utilisateurs">
+      <Header title={t("list.title")}>
         {canCreate && (
           <Button asChild size="sm">
             <Link href="/users/nouveau">
               <Plus className="h-4 w-4" />
-              Ajouter
+              {t("list.ajouter")}
             </Link>
           </Button>
         )}
       </Header>
       <div className="p-4">
         <p className="mb-4 text-sm text-muted-foreground">
-          {total} utilisateur{total !== 1 ? "s" : ""} au total
+          {total === 1
+            ? t("list.total", { count: total })
+            : t("list.totalPlural", { count: total })}
         </p>
         <UsersListClient users={serializedUsers} currentUserId={session.userId} />
       </div>

@@ -1,0 +1,170 @@
+{
+  "clients": {
+    "title": "Clients",
+    "count": "{count, plural, one {# client} other {# clients}}",
+    "add": "Ajouter un client",
+    "edit": "Modifier le client",
+    "new": "Nouveau",
+    "empty": "Aucun client",
+    "emptyDescription": "Ajoutez vos clients pour enregistrer des ventes.",
+    "save": "Enregistrer",
+    "create": "Creer",
+    "fields": {
+      "nom": "Nom",
+      "nomPlaceholder": "Ex: Restaurant Le Mboa",
+      "telephone": "Telephone (optionnel)",
+      "telephonePlaceholder": "6XX XX XX XX (+237 ajoute automatiquement)",
+      "email": "Email (optionnel)",
+      "emailPlaceholder": "contact@client.com",
+      "adresse": "Adresse (optionnel)",
+      "adressePlaceholder": "Douala, Cameroun"
+    },
+    "stats": {
+      "ventes": "{count, plural, one {# vente} other {# ventes}}"
+    }
+  },
+  "ventes": {
+    "title": "Ventes",
+    "count": "{count, plural, one {# vente} other {# ventes}}",
+    "new": "Nouvelle vente",
+    "empty": "Aucune vente",
+    "emptyDescription": "Enregistrez une vente de poissons.",
+    "sansFature": "Sans facture",
+    "filters": {
+      "tousClients": "Tous les clients",
+      "toutesVagues": "Toutes les vagues"
+    },
+    "form": {
+      "clientEtVague": "Client et vague",
+      "quantitesPrix": "Quantites et prix",
+      "client": "Client",
+      "clientPlaceholder": "Selectionner un client",
+      "vague": "Vague",
+      "vaguePlaceholder": "Selectionner une vague",
+      "vagueOption": "{code} ({count} poissons)",
+      "poissonsDisponibles": "Poissons disponibles : {count}",
+      "nombrePoissons": "Nombre de poissons",
+      "nombrePoissonsPlaceholder": "Ex: 50",
+      "poidsTotalKg": "Poids total (kg)",
+      "poidsTotalKgPlaceholder": "Ex: 42.5",
+      "prixUnitaireKg": "Prix unitaire (FCFA/kg)",
+      "prixUnitaireKgPlaceholder": "Ex: 2500",
+      "montantTotal": "Montant total",
+      "notes": "Notes (optionnel)",
+      "notesPlaceholder": "Informations complementaires...",
+      "submit": "Enregistrer la vente",
+      "back": "Ventes"
+    },
+    "detail": {
+      "poissons": "Poissons",
+      "poidsTotalKg": "Poids total",
+      "prixKg": "Prix/kg",
+      "montantTotal": "Montant total",
+      "detailVente": "Detail de la vente",
+      "client": "Client",
+      "factureAssociee": "Facture associee",
+      "payeLabel": "Paye : {paye} / {total} F",
+      "genererFacture": "Generer la facture",
+      "creePar": "Cree par {name}",
+      "back": "Ventes"
+    }
+  },
+  "factures": {
+    "title": "Factures",
+    "count": "{count, plural, one {# facture} other {# factures}}",
+    "empty": "Aucune facture",
+    "emptyDescription": "Les factures sont generees depuis les ventes.",
+    "statuts": {
+      "BROUILLON": "Brouillon",
+      "ENVOYEE": "Envoyee",
+      "PAYEE_PARTIELLEMENT": "Partielle",
+      "PAYEE": "Payee",
+      "ANNULEE": "Annulee"
+    },
+    "filters": {
+      "tousStatuts": "Tous les statuts",
+      "statut": "Statut"
+    },
+    "detail": {
+      "emission": "Emission : {date}",
+      "echeance": "Echeance : {date}",
+      "total": "Total",
+      "paye": "Paye",
+      "resteAPayer": "Reste a payer",
+      "detailVente": "Detail de la vente",
+      "poissons": "Poissons",
+      "poidsTotalKg": "Poids total",
+      "prixKg": "Prix/kg",
+      "paiements": "Paiements ({count})",
+      "aucunPaiement": "Aucun paiement enregistre.",
+      "envoyer": "Envoyer",
+      "back": "Factures",
+      "creePar": "Cree par {name}"
+    },
+    "resteAPayer": "Reste a payer : {montant} F"
+  },
+  "paiements": {
+    "add": "Ajouter un paiement",
+    "register": "Enregistrer un paiement",
+    "confirm": "Confirmer",
+    "cancel": "Annuler",
+    "modes": {
+      "ESPECES": "Especes",
+      "MOBILE_MONEY": "Mobile Money",
+      "VIREMENT": "Virement",
+      "CHEQUE": "Cheque"
+    },
+    "fields": {
+      "montant": "Montant (max {max} F)",
+      "montantPlaceholder": "Ex: 50000",
+      "mode": "Mode de paiement",
+      "modePlaceholder": "Selectionner",
+      "reference": "Reference (optionnel)",
+      "referencePlaceholder": "Ex: MTN-20260310-001"
+    }
+  },
+  "finances": {
+    "title": "Finances",
+    "kpis": {
+      "revenusTotal": "Revenus totaux",
+      "revenusSub": "{count, plural, one {# vente} other {# ventes}}",
+      "coutsTotal": "Couts totaux",
+      "coutsSub": "Aliments: {montant}",
+      "margeBrute": "Marge brute",
+      "margeSub": "Taux: {taux}%",
+      "creances": "Creances",
+      "creancesSub": "Encaissements: {montant}"
+    },
+    "depenses": {
+      "title": "Depenses (hors commandes)",
+      "voirTout": "Voir tout",
+      "total": "Total",
+      "payees": "Payees",
+      "impayees": "Impayees",
+      "repartition": "Repartition par categorie"
+    },
+    "evolution": {
+      "title": "Evolution financiere (12 derniers mois)",
+      "aucuneDonnee": "Aucune donnee disponible",
+      "moisLabel": "Mois {label}"
+    },
+    "rentabilite": {
+      "title": "Rentabilite par vague (ROI %)"
+    },
+    "topClients": {
+      "title": "Top clients",
+      "ventes": "{count, plural, one {# vente} other {# ventes}}",
+      "paye": "{montant} paye"
+    },
+    "stats": {
+      "factures": "Factures",
+      "prixMoyenKg": "Prix moy. /kg",
+      "aliments": "Aliments"
+    },
+    "exports": {
+      "rapportPdf": "Rapport PDF",
+      "ventesExcel": "Export ventes Excel",
+      "stockExcel": "Export stock Excel"
+    }
+  }
+}

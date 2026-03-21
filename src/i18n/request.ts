@@ -40,7 +40,7 @@ async function detectLocale(): Promise<Locale> {
  * If a file doesn't exist yet, it is silently skipped.
  */
 async function loadMessages(locale: Locale): Promise<Record<string, unknown>> {
-  const namespaces = ["common", "format", "navigation", "permissions", "abonnements", "settings", "analytics"];
+  const namespaces = ["common", "format", "navigation", "permissions", "abonnements", "settings", "analytics", "errors", "stock", "ventes", "vagues", "releves", "alevins", "users", "commissions"];
   const messages: Record<string, unknown> = {};
 
   for (const ns of namespaces) {

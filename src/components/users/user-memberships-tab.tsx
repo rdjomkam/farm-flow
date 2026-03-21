@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 interface MembershipItem {
   id: string;
@@ -15,13 +16,15 @@ interface UserMembershipsTabProps {
   memberships: MembershipItem[];
 }
 
-export function UserMembershipsTab({ memberships }: UserMembershipsTabProps) {
+export async function UserMembershipsTab({ memberships }: UserMembershipsTabProps) {
+  const t = await getTranslations("users");
+
   if (memberships.length === 0) {
     return (
       <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 py-10 text-center">
-        <p className="text-sm font-medium text-muted-foreground">Aucun site</p>
+        <p className="text-sm font-medium text-muted-foreground">{t("memberships.aucunSite")}</p>
         <p className="text-xs text-muted-foreground">
-          Cet utilisateur n'est membre d'aucun site.
+          {t("memberships.aucunSiteDescription")}
         </p>
       </div>
     );
@@ -30,7 +33,9 @@ export function UserMembershipsTab({ memberships }: UserMembershipsTabProps) {
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-muted-foreground">
-        {memberships.length} site{memberships.length !== 1 ? "s" : ""}
+        {memberships.length === 1
+          ? t("memberships.count", { count: memberships.length })
+          : t("memberships.countPlural", { count: memberships.length })}
       </p>
 
       {memberships.map((m) => (
@@ -50,7 +55,7 @@ export function UserMembershipsTab({ memberships }: UserMembershipsTabProps) {
                 <span
                   className={`h-1.5 w-1.5 rounded-full ${m.isActive ? "bg-green-500" : "bg-gray-400"}`}
                 />
-                {m.isActive ? "Actif" : "Inactif"}
+                {m.isActive ? t("memberships.actif") : t("memberships.inactif")}
               </span>
             </div>
           </div>
@@ -59,7 +64,7 @@ export function UserMembershipsTab({ memberships }: UserMembershipsTabProps) {
             href={`/settings/sites/${m.siteId}`}
             className="flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
           >
-            Gerer ce site
+            {t("memberships.gererCeSite")}
             <ExternalLink className="h-3.5 w-3.5" />
           </Link>
         </div>

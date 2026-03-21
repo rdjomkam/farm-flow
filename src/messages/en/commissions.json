@@ -1,0 +1,107 @@
+{
+  "portefeuille": {
+    "title": "My wallet",
+    "soldeDisponible": "Available balance",
+    "aucunMontant": "No amount available at the moment.",
+    "enAttente": "Pending",
+    "disponibleDans30Jours": "Available in 30 days",
+    "totalGagne": "Total earned",
+    "depuisLeDebut": "Since the beginning",
+    "demanderRetrait": "Request withdrawal"
+  },
+  "commissions": {
+    "title": "My commissions",
+    "aucune": "No commission in this category.",
+    "fermeInconnue": "Unknown farm",
+    "taux": "Rate {rate}%",
+    "disponibleLe": "Available on {date}",
+    "tabs": {
+      "enAttente": "Pending",
+      "disponibles": "Available",
+      "payees": "Paid",
+      "toutes": "All"
+    },
+    "statuts": {
+      "EN_ATTENTE": "Pending",
+      "DISPONIBLE": "Available",
+      "DEMANDEE": "Requested",
+      "PAYEE": "Paid",
+      "ANNULEE": "Cancelled"
+    }
+  },
+  "retraits": {
+    "title": "Withdrawal history",
+    "aucun": "No withdrawal made yet.",
+    "reference": "Ref: {ref}",
+    "demandeLE": "Requested on {date}",
+    "traiteLe": "Processed on {date}",
+    "statuts": {
+      "EN_ATTENTE": "Pending",
+      "CONFIRME": "Confirmed",
+      "ECHEC": "Failed",
+      "EXPIRE": "Expired"
+    },
+    "dialog": {
+      "title": "Withdrawal request",
+      "soldeDisponible": "Available balance: {amount}",
+      "montant": "Amount (FCFA)",
+      "montantPlaceholder": "e.g. 10000",
+      "telephone": "Mobile Money phone number",
+      "telephonePlaceholder": "e.g. +237690000000",
+      "fournisseur": "Provider",
+      "suivant": "Next",
+      "annuler": "Cancel",
+      "confirmTitle": "Confirm withdrawal",
+      "confirmDescription": "Please verify the information before confirming.",
+      "confirmMontant": "Amount",
+      "confirmNumero": "Number",
+      "confirmVia": "Via",
+      "retour": "Back",
+      "confirmer": "Confirm",
+      "envoi": "Sending...",
+      "virementInfo": "The transfer will be processed by the DKFarm team within 48 business hours.",
+      "errors": {
+        "montantInvalide": "Please enter a valid amount.",
+        "montantMinimum": "Minimum amount is 5,000 FCFA.",
+        "montantDepasse": "Amount exceeds your available balance ({amount}).",
+        "telephoneRequis": "Please enter a phone number.",
+        "erreurReseau": "Network error. Please try again.",
+        "erreurRetrait": "Error processing withdrawal request."
+      }
+    }
+  },
+  "admin": {
+    "retraitsTitle": "Pending withdrawals",
+    "retraitsHistorique": "Processed withdrawals history",
+    "aucunEnAttente": "No withdrawal pending processing.",
+    "aucunTraite": "No withdrawal processed yet.",
+    "traiter": "Process",
+    "vers": "To: {phone} ({provider})",
+    "demandeLe": "Requested on {date}",
+    "traiteParLe": "Processed by {name}",
+    "leLe": "On {date}",
+    "reference": "Ref: {ref}",
+    "traiterDialog": {
+      "title": "Process withdrawal",
+      "ingenieur": "Engineer",
+      "montant": "Amount",
+      "vers": "To",
+      "via": "Via",
+      "demandeLe": "Requested on",
+      "resultat": "Processing result",
+      "confirme": "Confirmed (transfer done)",
+      "echec": "Failed (refund balance)",
+      "reference": "Transfer reference",
+      "referenceRequired": "Transfer reference *",
+      "referencePlaceholder": "e.g. MTN20260328XXXXX",
+      "annuler": "Cancel",
+      "confirmer": "Confirm",
+      "traitement": "Processing...",
+      "errors": {
+        "referenceObligatoire": "Transfer reference is required.",
+        "erreurTraitement": "Error during processing.",
+        "erreurReseau": "Network error. Please try again."
+      }
+    }
+  }
+}

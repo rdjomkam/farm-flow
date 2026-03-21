@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   Plus,
   ArrowLeft,
@@ -32,17 +33,8 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { TypeMouvement, UniteStock, Permission } from "@/types";
+import { TypeMouvement, Permission } from "@/types";
 import { useStockService } from "@/services";
-
-const uniteLabels: Record<string, string> = {
-  [UniteStock.GRAMME]: "g",
-  [UniteStock.KG]: "kg",
-  [UniteStock.MILLILITRE]: "mL",
-  [UniteStock.LITRE]: "L",
-  [UniteStock.UNITE]: "unite",
-  [UniteStock.SACS]: "sacs",
-};
 
 interface MouvementData {
   id: string;
@@ -65,6 +57,7 @@ interface Props {
 }
 
 export function MouvementsListClient({ mouvements, produits, vagues, permissions }: Props) {
+  const t = useTranslations("stock");
   const router = useRouter();
   const stockService = useStockService();
   const [tab, setTab] = useState("tous");
@@ -114,6 +107,7 @@ export function MouvementsListClient({ mouvements, produits, vagues, permissions
   }
 
   const selectedProduit = produits.find((p) => p.id === produitId);
+  const uniteLabel = (u: string) => t(`unites.${u}` as Parameters<typeof t>[0]) || u;
 
   return (
     <div className="flex flex-col gap-4">
@@ -122,29 +116,29 @@ export function MouvementsListClient({ mouvements, produits, vagues, permissions
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
       >
         <ArrowLeft className="h-4 w-4" />
-        Stock
+        {t("actions.back")}
       </Link>
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {mouvements.length} mouvement{mouvements.length > 1 ? "s" : ""}
+          {t("mouvements.count", { count: mouvements.length })}
         </p>
         {permissions.includes(Permission.STOCK_GERER) && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-1" />
-                Mouvement
+                {t("mouvements.new")}
               </Button>
             </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Nouveau mouvement</DialogTitle>
+              <DialogTitle>{t("mouvements.add")}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-4 py-2">
               <Select value={produitId} onValueChange={setProduitId}>
-                <SelectTrigger label="Produit">
-                  <SelectValue placeholder="Choisir un produit" />
+                <SelectTrigger label={t("mouvements.fields.produit")}>
+                  <SelectValue placeholder={t("mouvements.fields.produitPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {produits.map((p) => (
@@ -155,38 +149,40 @@ export function MouvementsListClient({ mouvements, produits, vagues, permissions
                 </SelectContent>
               </Select>
               <Select value={type} onValueChange={setType}>
-                <SelectTrigger label="Type">
+                <SelectTrigger label={t("mouvements.fields.type")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={TypeMouvement.ENTREE}>Entree</SelectItem>
-                  <SelectItem value={TypeMouvement.SORTIE}>Sortie</SelectItem>
+                  <SelectItem value={TypeMouvement.ENTREE}>{t("types.ENTREE")}</SelectItem>
+                  <SelectItem value={TypeMouvement.SORTIE}>{t("types.SORTIE")}</SelectItem>
                 </SelectContent>
               </Select>
               <Input
-                label={`Quantite${selectedProduit ? ` (${uniteLabels[selectedProduit.unite] ?? selectedProduit.unite})` : ""}`}
+                label={selectedProduit
+                  ? t("mouvements.fields.quantiteWithUnit", { unit: uniteLabel(selectedProduit.unite) })
+                  : t("mouvements.fields.quantite")}
                 type="number"
                 placeholder="0"
                 value={quantite}
                 onChange={(e) => setQuantite(e.target.value)}
               />
               <Input
-                label="Prix total (FCFA, optionnel)"
+                label={t("mouvements.fields.prixTotal")}
                 type="number"
                 placeholder="0"
                 value={prixTotal}
                 onChange={(e) => setPrixTotal(e.target.value)}
               />
               <Input
-                label="Date"
+                label={t("mouvements.fields.date")}
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
               />
               {vagues.length > 0 && (
                 <Select value={vagueId} onValueChange={setVagueId}>
-                  <SelectTrigger label="Vague (optionnel)">
-                    <SelectValue placeholder="Aucune" />
+                  <SelectTrigger label={t("mouvements.fields.vague")}>
+                    <SelectValue placeholder={t("mouvements.fields.vagueNone")} />
                   </SelectTrigger>
                   <SelectContent>
                     {vagues.map((v) => (
@@ -198,21 +194,21 @@ export function MouvementsListClient({ mouvements, produits, vagues, permissions
                 </Select>
               )}
               <Input
-                label="Notes (optionnel)"
-                placeholder="Ex: Alimentation semaine 3"
+                label={t("mouvements.fields.notes")}
+                placeholder={t("mouvements.fields.notesPlaceholder")}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
             </div>
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="outline">Annuler</Button>
+                <Button variant="outline">{t("actions.cancel")}</Button>
               </DialogClose>
               <Button
                 onClick={handleCreate}
                 disabled={!produitId || !quantite}
               >
-                Enregistrer
+                {t("mouvements.save")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -222,24 +218,24 @@ export function MouvementsListClient({ mouvements, produits, vagues, permissions
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="tous">Tous</TabsTrigger>
-          <TabsTrigger value={TypeMouvement.ENTREE}>Entrees</TabsTrigger>
-          <TabsTrigger value={TypeMouvement.SORTIE}>Sorties</TabsTrigger>
+          <TabsTrigger value="tous">{t("mouvements.tabs.all")}</TabsTrigger>
+          <TabsTrigger value={TypeMouvement.ENTREE}>{t("mouvements.tabs.entrees")}</TabsTrigger>
+          <TabsTrigger value={TypeMouvement.SORTIE}>{t("mouvements.tabs.sorties")}</TabsTrigger>
         </TabsList>
         <TabsContent value={tab}>
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <ArrowUpDown className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Aucun mouvement</p>
+              <p className="text-muted-foreground">{t("mouvements.empty")}</p>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
               {filtered.map((m) => {
                 const isEntree = m.type === TypeMouvement.ENTREE;
-                const uniteBase = uniteLabels[m.produit.unite] ?? m.produit.unite;
+                const uniteBase = uniteLabel(m.produit.unite);
                 const hasAchat = isEntree && m.produit.uniteAchat && m.produit.contenance;
                 const displayUnite = hasAchat
-                  ? (uniteLabels[m.produit.uniteAchat!] ?? m.produit.uniteAchat!)
+                  ? uniteLabel(m.produit.uniteAchat!)
                   : uniteBase;
                 const equivalence = hasAchat
                   ? `${m.quantite * m.produit.contenance!} ${uniteBase}`
