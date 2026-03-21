@@ -2260,10 +2260,12 @@ VALUES
   ('plan_ing_pro', 'Ingénieur Pro', 'INGENIEUR_PRO', 'Pour les ingénieurs piscicoles supervisants', 15000, NULL, 135000, 1, 3, 1, 20, true, true, NOW(), NOW())
 ON CONFLICT ("typePlan") DO NOTHING;
 
--- Remises (2 remises early adopter et bienvenue)
+-- Remises (3 remises : early adopter fixe, early adopter %, bienvenue)
+-- Story 35.2 : EARLY2026 = remise fixe 2000 XAF pour les early adopters (premier abonnement)
 INSERT INTO "Remise" (id, nom, code, type, valeur, "estPourcentage", "dateDebut", "dateFin", "limiteUtilisations", "nombreUtilisations", "isActif", "userId", "createdAt", "updatedAt")
 VALUES
-  ('remise_early', 'Early Adopter 2026', 'EARLY2026', 'EARLY_ADOPTER', 50, true, NOW(), NOW() + INTERVAL '6 months', 100, 0, true, 'user_admin', NOW(), NOW()),
+  ('remise_early_xaf', 'Early Adopter 2000 XAF', 'EARLY2026', 'EARLY_ADOPTER', 2000, false, NOW(), '2026-12-31 23:59:59', NULL, 0, true, 'user_admin', NOW(), NOW()),
+  ('remise_early_pct', 'Early Adopter 50%', 'EARLYBIRD50', 'EARLY_ADOPTER', 50, true, NOW(), NOW() + INTERVAL '6 months', 100, 0, true, 'user_admin', NOW(), NOW()),
   ('remise_bienvenue', 'Bienvenue', 'BIENVENUE10', 'MANUELLE', 10, true, NOW(), NULL, NULL, 0, true, 'user_admin', NOW(), NOW())
 ON CONFLICT (code) DO NOTHING;
 

@@ -186,6 +186,15 @@ const modulesAdminGerant: { label: string; primaryHref: string; icon: React.Comp
       { href: "/admin/commissions", label: "Toutes les commissions", icon: TrendingUp },
     ],
   },
+  // Admin Remises — Sprint 35 (gate: REMISES_GERER)
+  {
+    label: "Admin Remises",
+    primaryHref: "/admin/remises",
+    icon: Tag,
+    items: [
+      { href: "/admin/remises", label: "Remises & promos", icon: Tag },
+    ],
+  },
   // Utilisateurs — ADMIN uniquement (filtre par role dans le composant)
   {
     label: "Utilisateurs",
@@ -212,6 +221,8 @@ const PHASE3_MODULE_PERMISSIONS: Record<string, Permission> = {
   // Sprint 34 — Commissions & Portefeuille
   "Portefeuille":          Permission.PORTEFEUILLE_VOIR,
   "Admin Commissions":     Permission.COMMISSIONS_GERER,
+  // Sprint 35 — Remises
+  "Admin Remises":         Permission.REMISES_GERER,
 };
 
 export function Sidebar({ permissions, role, siteModules }: { permissions: Permission[]; role: Role | null; siteModules: SiteModule[] }) {

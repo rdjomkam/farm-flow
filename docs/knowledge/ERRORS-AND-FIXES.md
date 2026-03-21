@@ -238,3 +238,32 @@ typePlan: prismaResult.plan.typePlan as unknown as import("@/types").TypePlan,
 Quand une Server Component lit depuis Prisma et passe les données à un composant avec des types `@/types`, toujours caster les enums Prisma via `as unknown as TypeCible`. Ce cast est sûr car R1 garantit que toutes les valeurs d'enum sont UPPERCASE et identiques entre Prisma et `@/types`.
 
 ---
+
+### ERR-013 — Rate limiting en mémoire non partagé entre instances serverless
+**Sprint :** 35 | **Date :** 2026-03-21
+**Sévérité :** Basse (dev/staging), Moyenne (production)
+**Fichier(s) :** `src/app/api/remises/verifier/route.ts`
+
+**Symptôme :**
+En production avec plusieurs instances serverless (Vercel), le rate limiting via `Map` en mémoire n'est pas partagé entre les instances. Un même utilisateur peut dépasser la limite en envoyant des requêtes sur des instances différentes.
+
+**Cause racine :**
+Chaque instance serverless a sa propre mémoire. La `Map` est locale à l'instance.
+
+**Fix pour production :**
+Utiliser un store partagé comme Redis (Upstash) ou le middleware Vercel pour le rate limiting.
+
+```typescript
+// Alternative avec Upstash Redis :
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(10, "1 m"),
+});
+```
+
+**Leçon / Règle :**
+Le rate limiting in-memory est acceptable en Phase 2 (dev/staging). Pour la production, migrer vers un store partagé avant le déploiement final.
+
+---

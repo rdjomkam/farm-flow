@@ -6,7 +6,7 @@
  * R8 : siteId filtrage (nullable pour remises globales)
  */
 import { prisma } from "@/lib/db";
-import type { CreateRemiseDTO } from "@/types";
+import type { CreateRemiseDTO, UpdateRemiseDTO } from "@/types";
 
 /**
  * Liste les remises actives d'un site et/ou les remises globales.
@@ -86,6 +86,61 @@ export async function appliquerRemise(
         appliqueLe: new Date(),
       },
     });
+  });
+}
+
+/** Récupère une remise par son ID */
+export async function getRemiseById(id: string) {
+  return prisma.remise.findUnique({ where: { id } });
+}
+
+/** Liste TOUTES les remises (actives + inactives) — pour admin */
+export async function getAllRemises(siteId?: string) {
+  return prisma.remise.findMany({
+    where: {
+      OR: [
+        ...(siteId ? [{ siteId }] : []),
+        { siteId: null }, // globales toujours incluses
+      ],
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+/** Met à jour une remise (champs modifiables uniquement — code et type sont immutables) */
+export async function updateRemise(id: string, data: UpdateRemiseDTO) {
+  return prisma.remise.update({
+    where: { id },
+    data: {
+      ...(data.nom !== undefined && { nom: data.nom }),
+      ...(data.valeur !== undefined && { valeur: data.valeur }),
+      ...(data.estPourcentage !== undefined && { estPourcentage: data.estPourcentage }),
+      ...(data.dateDebut !== undefined && { dateDebut: new Date(data.dateDebut) }),
+      ...(data.dateFin !== undefined && { dateFin: data.dateFin ? new Date(data.dateFin) : null }),
+      ...(data.limiteUtilisations !== undefined && { limiteUtilisations: data.limiteUtilisations }),
+      ...(data.isActif !== undefined && { isActif: data.isActif }),
+    },
+  });
+}
+
+/** Supprime une remise par son ID (seulement si nombreUtilisations = 0) */
+export async function deleteRemise(id: string) {
+  return prisma.remise.delete({ where: { id } });
+}
+
+/** Désactive une remise — R4 : updateMany pour atomicité */
+export async function desactiverRemise(id: string) {
+  return prisma.remise.updateMany({
+    where: { id },
+    data: { isActif: false },
+  });
+}
+
+/** Toggle atomique isActif d'une remise — R4 : updateMany */
+export async function toggleRemise(id: string, isActif: boolean) {
+  return prisma.remise.updateMany({
+    where: { id },
+    data: { isActif },
   });
 }
 

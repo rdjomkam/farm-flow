@@ -397,6 +397,8 @@ export type {
   UpdatePlanAbonnementDTO,
   InitierPaiementDTO,
   CreateRemiseDTO,
+  UpdateRemiseDTO,
+  RemiseFilters,
   CreateCommissionDTO,
   DemandeRetraitDTO,
   AbonnementFilters,

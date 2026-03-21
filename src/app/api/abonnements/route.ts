@@ -20,6 +20,7 @@ import {
   appliquerRemise,
 } from "@/lib/queries/remises";
 import { initierPaiement } from "@/lib/services/billing";
+import { verifierEtAppliquerRemiseAutomatique } from "@/lib/services/remises-automatiques";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
 import { Permission, StatutAbonnement, PeriodeFacturation, FournisseurPaiement } from "@/types";
@@ -184,6 +185,16 @@ export async function POST(request: NextRequest) {
     if (remise) {
       await appliquerRemise(remise.id, abonnement.id, auth.userId, prixBase as number - prixFinal);
     }
+
+    // Appliquer la remise automatique Early Adopter si applicable (fire-and-forget)
+    // Ne bloque pas la souscription en cas d'erreur
+    verifierEtAppliquerRemiseAutomatique(
+      auth.activeSiteId,
+      abonnement.id,
+      auth.userId
+    ).catch((err) => {
+      console.error("[abonnements] Erreur remise automatique (ignorée) :", err);
+    });
 
     // Initier le paiement
     const paiement = await initierPaiement(abonnement.id, auth.userId, auth.activeSiteId, {

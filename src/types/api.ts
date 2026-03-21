@@ -2055,6 +2055,24 @@ export interface CreateRemiseDTO {
   planId?: string;
 }
 
+/** DTO de mise à jour d'une remise (champs modifiables — code et type sont immutables) */
+export interface UpdateRemiseDTO {
+  nom?: string;
+  valeur?: number;
+  estPourcentage?: boolean;
+  dateDebut?: string;
+  dateFin?: string | null;
+  limiteUtilisations?: number | null;
+  isActif?: boolean;
+}
+
+/** Filtres pour la liste des remises */
+export interface RemiseFilters {
+  siteId?: string;
+  includeGlobales?: boolean;
+  includeInactives?: boolean;
+}
+
 /** DTO de création d'une commission ingénieur */
 export interface CreateCommissionDTO {
   ingenieurId: string;

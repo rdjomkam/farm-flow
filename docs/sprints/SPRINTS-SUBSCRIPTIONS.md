@@ -759,7 +759,7 @@ le tableau de bord des commissions pour l'ingénieur et le workflow de retrait.
 **Assigné à :** @developer
 **Priorité :** Haute
 **Complexité :** Medium
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Lors de la confirmation d'un paiement (webhook Sprint 31), calculer et créer
 automatiquement la commission de l'ingénieur superviseur si applicable.
@@ -790,7 +790,7 @@ automatiquement la commission de l'ingénieur superviseur si applicable.
 **Priorité :** Haute
 **Complexité :** Medium
 **Dépend de :** Story 34.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Exposer les données de commissions et de portefeuille via des routes API
 sécurisées. Les ingénieurs voient leurs propres données, les admins DKFarm voient tout.
@@ -820,7 +820,7 @@ sécurisées. Les ingénieurs voient leurs propres données, les admins DKFarm v
 **Priorité :** Haute
 **Complexité :** Medium
 **Dépend de :** Story 34.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Tableau de bord des commissions pour l'ingénieur. Affiche le solde disponible,
 les commissions en attente, et l'historique des retraits.
@@ -856,7 +856,7 @@ les commissions en attente, et l'historique des retraits.
 **Priorité :** Moyenne
 **Complexité :** Simple
 **Dépend de :** Story 34.3
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Vue admin pour les commissions et les demandes de retrait. Accessible aux
 admins DKFarm pour traiter les virements.
@@ -881,7 +881,7 @@ admins DKFarm pour traiter les virements.
 **Priorité :** Haute
 **Complexité :** Simple
 **Dépend de :** Stories 34.1 à 34.4
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches @tester :**
 - [ ] `TODO` Créer `src/__tests__/lib/commissions.test.ts` :
@@ -925,7 +925,7 @@ automatique des remises early adopter, et la page admin de gestion des promotion
 **Assigné à :** @developer
 **Priorité :** Haute
 **Complexité :** Medium
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** CRUD complet des remises avec validation des codes promo publique.
 
@@ -955,7 +955,7 @@ automatique des remises early adopter, et la page admin de gestion des promotion
 **Priorité :** Moyenne
 **Complexité :** Simple
 **Dépend de :** Story 35.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Appliquer automatiquement une remise "Early Adopter" lors de la première
 souscription d'un site (si une remise EARLY_ADOPTER active et globale existe).
@@ -982,7 +982,7 @@ souscription d'un site (si une remise EARLY_ADOPTER active et globale existe).
 **Priorité :** Moyenne
 **Complexité :** Medium
 **Dépend de :** Story 35.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Pages admin pour créer et gérer les codes promo et remises.
 
@@ -1013,7 +1013,7 @@ souscription d'un site (si une remise EARLY_ADOPTER active et globale existe).
 **Priorité :** Haute
 **Complexité :** Simple
 **Dépend de :** Stories 35.1 à 35.3
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches @tester :**
 - [ ] `TODO` Créer `src/__tests__/api/remises.test.ts` :
