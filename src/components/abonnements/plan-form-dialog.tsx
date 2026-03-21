@@ -11,8 +11,9 @@
  * R5 : DialogTrigger asChild — OBLIGATOIRE
  * R6 : CSS variables du thème
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -62,11 +63,6 @@ interface PlanFormDialogProps {
 // Constantes
 // ---------------------------------------------------------------------------
 
-const TYPE_PLAN_OPTIONS = Object.values(TypePlan).map((t) => ({
-  value: t,
-  label: PLAN_LABELS[t],
-}));
-
 /** Types de plans où limitesIngFermes est pertinente */
 const INGENIEUR_TYPES: TypePlan[] = [
   TypePlan.INGENIEUR_STARTER,
@@ -81,6 +77,16 @@ const INGENIEUR_TYPES: TypePlan[] = [
 export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProps) {
   const isEditing = !!plan;
   const router = useRouter();
+  const t = useTranslations("abonnements");
+
+  const TYPE_PLAN_OPTIONS = useMemo(
+    () =>
+      Object.values(TypePlan).map((tp) => ({
+        value: tp,
+        label: t(PLAN_LABELS[tp]),
+      })),
+    [t]
+  );
 
   const [open, setOpen] = useState(false);
   const [nom, setNom] = useState("");

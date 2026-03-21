@@ -1,5 +1,9 @@
 import { Permission } from "@/types";
 
+// ---------------------------------------------------------------------------
+// Static fallback maps (used in non-i18n contexts or as default locale fr)
+// ---------------------------------------------------------------------------
+
 export const groupLabels: Record<string, string> = {
   administration: "Administration",
   elevage: "Elevage",
@@ -15,6 +19,8 @@ export const groupLabels: Record<string, string> = {
   packs: "Packs & Provisioning",
   configElevage: "Configuration Elevage",
   ingenieur: "Ingenieur",
+  utilisateurs: "Utilisateurs",
+  abonnements: "Abonnements & Commissions",
 };
 
 export const permissionLabels: Record<string, string> = {
@@ -28,6 +34,9 @@ export const permissionLabels: Record<string, string> = {
   [Permission.RELEVES_VOIR]: "Voir les releves",
   [Permission.RELEVES_CREER]: "Creer des releves",
   [Permission.RELEVES_MODIFIER]: "Modifier les releves",
+  [Permission.CALIBRAGES_VOIR]: "Voir les calibrages",
+  [Permission.CALIBRAGES_CREER]: "Creer des calibrages",
+  [Permission.CALIBRAGES_MODIFIER]: "Modifier les calibrages",
   [Permission.STOCK_VOIR]: "Voir le stock",
   [Permission.STOCK_GERER]: "Gerer le stock",
   [Permission.APPROVISIONNEMENT_VOIR]: "Voir approvisionnement",
@@ -48,24 +57,77 @@ export const permissionLabels: Record<string, string> = {
   [Permission.PLANNING_GERER]: "Gerer le planning",
   [Permission.FINANCES_VOIR]: "Voir les finances",
   [Permission.FINANCES_GERER]: "Gerer les finances",
+  [Permission.ALERTES_VOIR]: "Voir les alertes",
   [Permission.ALERTES_CONFIGURER]: "Configurer les alertes",
   [Permission.DASHBOARD_VOIR]: "Voir le dashboard",
-  [Permission.ALERTES_VOIR]: "Voir les alertes",
   [Permission.EXPORT_DONNEES]: "Exporter les donnees",
-  // Phase 3
-  [Permission.GERER_PACKS]: "Gerer les packs",
-  [Permission.ACTIVER_PACKS]: "Activer les packs",
-  [Permission.GERER_CONFIG_ELEVAGE]: "Gerer la configuration d'elevage",
-  [Permission.REGLES_ACTIVITES_VOIR]: "Voir les regles d'activites",
-  [Permission.GERER_REGLES_ACTIVITES]: "Gerer les regles d'activites",
-  [Permission.MONITORING_CLIENTS]: "Monitoring clients",
-  [Permission.ENVOYER_NOTES]: "Envoyer des notes",
-  [Permission.CALIBRAGES_VOIR]: "Voir les calibrages",
-  [Permission.CALIBRAGES_CREER]: "Creer des calibrages",
   [Permission.DEPENSES_VOIR]: "Voir les depenses",
   [Permission.DEPENSES_CREER]: "Creer des depenses",
   [Permission.DEPENSES_PAYER]: "Payer les depenses",
   [Permission.BESOINS_SOUMETTRE]: "Soumettre des besoins",
   [Permission.BESOINS_APPROUVER]: "Approuver des besoins",
   [Permission.BESOINS_TRAITER]: "Traiter des besoins",
+  // Phase 3
+  [Permission.GERER_PACKS]: "Gerer les packs",
+  [Permission.ACTIVER_PACKS]: "Activer les packs",
+  [Permission.GERER_CONFIG_ELEVAGE]: "Gerer la configuration d'elevage",
+  [Permission.REGLES_ACTIVITES_VOIR]: "Voir les regles d'activites",
+  [Permission.GERER_REGLES_ACTIVITES]: "Gerer les regles d'activites",
+  [Permission.GERER_REGLES_GLOBALES]: "Gerer les regles globales",
+  [Permission.MONITORING_CLIENTS]: "Monitoring clients",
+  [Permission.ENVOYER_NOTES]: "Envoyer des notes",
+  // Utilisateurs
+  [Permission.UTILISATEURS_VOIR]: "Voir les utilisateurs",
+  [Permission.UTILISATEURS_CREER]: "Creer des utilisateurs",
+  [Permission.UTILISATEURS_MODIFIER]: "Modifier les utilisateurs",
+  [Permission.UTILISATEURS_SUPPRIMER]: "Supprimer des utilisateurs",
+  [Permission.UTILISATEURS_GERER]: "Gerer les utilisateurs",
+  [Permission.UTILISATEURS_IMPERSONNER]: "Impersonner un utilisateur",
+  // Abonnements & Commissions
+  [Permission.ABONNEMENTS_VOIR]: "Voir les abonnements",
+  [Permission.ABONNEMENTS_GERER]: "Gerer les abonnements",
+  [Permission.PLANS_GERER]: "Gerer les plans",
+  [Permission.REMISES_GERER]: "Gerer les remises",
+  [Permission.COMMISSIONS_VOIR]: "Voir les commissions",
+  [Permission.COMMISSIONS_GERER]: "Gerer les commissions",
+  [Permission.COMMISSION_PREMIUM]: "Commission premium",
+  [Permission.PORTEFEUILLE_VOIR]: "Voir le portefeuille",
+  [Permission.PORTEFEUILLE_GERER]: "Gerer le portefeuille",
 };
+
+// ---------------------------------------------------------------------------
+// i18n-compatible helper functions
+// Usage: pass t from useTranslations("permissions") or getTranslations("permissions")
+// ---------------------------------------------------------------------------
+
+type TranslateFn = (key: string) => string;
+
+/**
+ * Get the translated label for a permission group key.
+ * Falls back to the static groupLabels map if t is not provided.
+ */
+export function getGroupLabel(groupKey: string, t?: TranslateFn): string {
+  if (t) {
+    try {
+      return t(`groups.${groupKey}`);
+    } catch {
+      // Key not found in messages — fall through to static fallback
+    }
+  }
+  return groupLabels[groupKey] ?? groupKey;
+}
+
+/**
+ * Get the translated label for a permission value.
+ * Falls back to the static permissionLabels map if t is not provided.
+ */
+export function getPermissionLabel(permission: string, t?: TranslateFn): string {
+  if (t) {
+    try {
+      return t(`permissions.${permission}`);
+    } catch {
+      // Key not found in messages — fall through to static fallback
+    }
+  }
+  return permissionLabels[permission] ?? permission;
+}

@@ -1,0 +1,88 @@
+{
+  "benchmarks": {
+    "fcr": {
+      "label": "ICA",
+      "full": "ICA (Indice de Conversion Alimentaire)"
+    },
+    "sgr": {
+      "label": "TCS",
+      "full": "TCS (Taux de Croissance Spécifique)"
+    },
+    "survie": {
+      "label": "Survie",
+      "full": "Taux de survie"
+    },
+    "densite": {
+      "label": "Densité",
+      "full": "Densité"
+    },
+    "mortalite": {
+      "label": "Mortalité",
+      "full": "Mortalité"
+    }
+  },
+  "kpi": {
+    "vaguesActives": "Vagues actives",
+    "biomasseTotale": "Biomasse totale",
+    "survieMoyenne": "Survie moyenne",
+    "bacs": "Bacs"
+  },
+  "axes": {
+    "sgrPerDay": "TCS %/j",
+    "fcrInverse": "ICA (inv.)",
+    "survie": "Survie %",
+    "roi": "ROI %",
+    "marge": "Marge"
+  },
+  "labels": {
+    "fcr": "ICA",
+    "sgr": "TCS",
+    "fcrActuel": "ICA actuel",
+    "sgrActuel": "TCS actuel",
+    "sgrRequis": "TCS requis",
+    "sgrUnit": "%/j",
+    "croissance": "Croissance (TCS)",
+    "enAvanceSurObjectif": "En avance sur l'objectif de croissance",
+    "enRetardSurObjectif": "En retard sur l'objectif de croissance"
+  },
+  "indicators": {
+    "title": "Indicateurs de performance",
+    "survival": "Survie",
+    "mortality": "Mortalité",
+    "density": "Densité",
+    "livingFish": "poissons vivants",
+    "criticalCount": "{count} indicateur(s) critique(s)",
+    "viewCorrectiveAction": "Voir l'activité corrective",
+    "planCorrectiveAction": "Planifier une action corrective",
+    "correctiveAction": "Activité corrective"
+  },
+  "projections": {
+    "title": "Projections de performance",
+    "notEnoughData": "Pas assez de donnees biometriques",
+    "noDataMessage": "Aucune donnee biometrique pour generer la projection.",
+    "hide": "Masquer",
+    "chart": "Graphique",
+    "currentWeight": "Poids actuel",
+    "target": "Objectif",
+    "inDays": "dans {count} j",
+    "insufficientData": "Donnees insuffisantes",
+    "estimatedHarvest": "Recolte estimee",
+    "remainingFeed": "Aliment restant",
+    "expectedRevenue": "Revenu attendu",
+    "growthCurve": "Courbe de croissance",
+    "chartLegend": "Ligne continue = mesures reelles · Pointilles = projection SGR actuel"
+  },
+  "simulation": {
+    "title": "Simulateur de changement d'aliment",
+    "oldFeed": "Aliment actuel",
+    "newFeed": "Nouvel aliment",
+    "targetProduction": "Production cible (kg de biomasse)",
+    "simulate": "Simuler le changement",
+    "selectFeed": "Sélectionner...",
+    "saving": "Économie possible",
+    "extra_cost": "Surcoût estimé",
+    "result": "Résultat",
+    "fcrLabel": "ICA",
+    "cost": "Coût"
+  }
+}

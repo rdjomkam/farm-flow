@@ -17,6 +17,7 @@
  */
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Check, Loader2, AlertCircle, Phone, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -122,6 +123,7 @@ function StepProgress({ etape }: { etape: Etape }) {
 
 export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
   const router = useRouter();
+  const t = useTranslations("abonnements");
   const [etape, setEtape] = useState<Etape>(1);
 
   // Étape 1
@@ -324,7 +326,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
             </p>
             <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
               <div className="flex-1">
-                <p className="font-semibold text-foreground">{PLAN_LABELS[plan.typePlan]}</p>
+                <p className="font-semibold text-foreground">{t(PLAN_LABELS[plan.typePlan])}</p>
                 {plan.description && (
                   <p className="text-xs text-muted-foreground mt-0.5">{plan.description}</p>
                 )}
@@ -360,7 +362,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
                     />
                     <div className="flex-1 flex justify-between items-center">
                       <span className="font-medium text-sm text-foreground">
-                        {PERIODE_LABELS[p]}
+                        {t(PERIODE_LABELS[p])}
                       </span>
                       <span className="text-sm font-semibold text-foreground">
                         {formatXAFOrFree(tarif)}
@@ -445,11 +447,11 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
           <div className="bg-muted/40 rounded-lg p-3">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Plan</span>
-              <span className="font-medium text-foreground">{PLAN_LABELS[plan.typePlan]}</span>
+              <span className="font-medium text-foreground">{t(PLAN_LABELS[plan.typePlan])}</span>
             </div>
             <div className="flex justify-between text-sm mt-1">
               <span className="text-muted-foreground">Période</span>
-              <span className="font-medium text-foreground">{PERIODE_LABELS[periode]}</span>
+              <span className="font-medium text-foreground">{t(PERIODE_LABELS[periode])}</span>
             </div>
             <div className="flex justify-between text-sm mt-1 pt-1 border-t border-border">
               <span className="font-medium text-foreground">Total</span>
@@ -466,7 +468,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
               <CreditCard className="h-5 w-5 text-primary" />
               <div>
                 <p className="font-medium text-sm text-foreground">
-                  {FOURNISSEUR_LABELS[fournisseur]}
+                  {t(FOURNISSEUR_LABELS[fournisseur])}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Paiement mobile money sécurisé

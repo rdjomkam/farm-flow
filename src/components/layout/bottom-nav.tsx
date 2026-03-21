@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   LayoutDashboard,
   Waves,
@@ -21,31 +22,32 @@ import { useMobileMenu } from "./mobile-menu-context";
 
 interface NavItem {
   href: string;
-  label: string;
+  /** i18n key under navigation.items.* */
+  itemKey: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
 // Navigation PISCICULTEUR — operations de base terrain
 const pisciculteurItems: NavItem[] = [
-  { href: "/", label: "Accueil", icon: LayoutDashboard },
-  { href: "/analytics", label: "Analyse", icon: BarChart3 },
-  { href: "/mes-taches", label: "Mes taches", icon: ClipboardCheck },
-  { href: "/notes", label: "Echanges", icon: NotebookPen },
+  { href: "/", itemKey: "accueil", icon: LayoutDashboard },
+  { href: "/analytics", itemKey: "analyse", icon: BarChart3 },
+  { href: "/mes-taches", itemKey: "mesTaches", icon: ClipboardCheck },
+  { href: "/notes", itemKey: "echanges", icon: NotebookPen },
 ];
 
 // Navigation INGENIEUR — suivi clients et notes
 const ingenieurItems: NavItem[] = [
-  { href: "/", label: "Accueil", icon: LayoutDashboard },
-  { href: "/ingenieur", label: "Clients", icon: Users },
-  { href: "/notes", label: "Notes", icon: NotebookPen },
+  { href: "/", itemKey: "accueil", icon: LayoutDashboard },
+  { href: "/ingenieur", itemKey: "clients", icon: Users },
+  { href: "/notes", itemKey: "notes", icon: NotebookPen },
 ];
 
 // Navigation ADMIN/GERANT — gestion complete
 const adminGerantItems: NavItem[] = [
-  { href: "/", label: "Accueil", icon: LayoutDashboard },
-  { href: "/vagues", label: "Vagues", icon: Waves },
-  { href: "/stock", label: "Stock", icon: Package },
-  { href: "/ingenieur", label: "Ingenieur", icon: UserCog },
+  { href: "/", itemKey: "accueil", icon: LayoutDashboard },
+  { href: "/vagues", itemKey: "vagues", icon: Waves },
+  { href: "/stock", itemKey: "stock", icon: Package },
+  { href: "/ingenieur", itemKey: "ingenieur", icon: UserCog },
 ];
 
 function getDefaultItemsByRole(role: Role | null): NavItem[] {
@@ -57,6 +59,7 @@ function getDefaultItemsByRole(role: Role | null): NavItem[] {
 export function BottomNav({ permissions, role, siteModules }: { permissions: Permission[]; role: Role | null; siteModules: SiteModule[] }) {
   const pathname = usePathname();
   const { openMenu } = useMobileMenu();
+  const t = useTranslations("navigation");
   const showPlusButton = role === Role.ADMIN || role === Role.GERANT;
 
   // --- Contextual switching: inside a module → show module sub-pages ---
@@ -81,7 +84,12 @@ export function BottomNav({ permissions, role, siteModules }: { permissions: Per
         return !required || permissions.includes(required);
       });
       if (filtered.length > 1) {
-        navItems = filtered;
+        // Map ModuleNavConfig items (which have label strings) to NavItem with itemKey
+        navItems = filtered.map((item) => ({
+          href: item.href,
+          itemKey: item.itemKey ?? item.label,
+          icon: item.icon,
+        }));
         isModuleNav = true;
       } else {
         navItems = getDefaultItemsByRole(role);
@@ -129,7 +137,9 @@ export function BottomNav({ permissions, role, siteModules }: { permissions: Per
               )}
             >
               <Icon className="h-5 w-5" />
-              <span className={isModuleNav ? "text-[11px] whitespace-nowrap" : ""}>{item.label}</span>
+              <span className={isModuleNav ? "text-[11px] whitespace-nowrap" : ""}>
+                {t(`items.${item.itemKey}`)}
+              </span>
             </Link>
           );
         })}
@@ -139,7 +149,7 @@ export function BottomNav({ permissions, role, siteModules }: { permissions: Per
             className="flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <LayoutGrid className="h-5 w-5" />
-            <span>Plus</span>
+            <span>{t("actions.more")}</span>
           </button>
         )}
       </div>

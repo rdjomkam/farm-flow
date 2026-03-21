@@ -15,6 +15,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { RefreshCw, XCircle, ExternalLink, Calendar, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +86,7 @@ function showRenouvelerButton(abonnement: AbonnementWithPlan): boolean {
 
 export function AbonnementActuelCard({ abonnement }: AbonnementActuelCardProps) {
   const router = useRouter();
+  const t = useTranslations("abonnements");
   const [annulationDialogOpen, setAnnulationDialogOpen] = useState(false);
   const [annulationLoading, setAnnulationLoading] = useState(false);
   const [annulationError, setAnnulationError] = useState<string | null>(null);
@@ -125,14 +127,14 @@ export function AbonnementActuelCard({ abonnement }: AbonnementActuelCardProps) 
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-foreground">
-            {PLAN_LABELS[abonnement.plan.typePlan]}
+            {t(PLAN_LABELS[abonnement.plan.typePlan])}
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {PERIODE_LABELS[abonnement.periode]}
+            {t(PERIODE_LABELS[abonnement.periode])}
           </p>
         </div>
         <Badge variant={statutVariant(abonnement.statut)}>
-          {STATUT_ABONNEMENT_LABELS[abonnement.statut]}
+          {t(STATUT_ABONNEMENT_LABELS[abonnement.statut])}
         </Badge>
       </div>
 
@@ -231,7 +233,7 @@ export function AbonnementActuelCard({ abonnement }: AbonnementActuelCardProps) 
                 <DialogTitle>Annuler l&apos;abonnement</DialogTitle>
                 <DialogDescription>
                   Êtes-vous sûr de vouloir annuler votre abonnement{" "}
-                  <strong>{PLAN_LABELS[abonnement.plan.typePlan]}</strong> ? Cette action est
+                  <strong>{t(PLAN_LABELS[abonnement.plan.typePlan])}</strong> ? Cette action est
                   irréversible.
                 </DialogDescription>
               </DialogHeader>

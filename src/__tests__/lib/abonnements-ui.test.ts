@@ -160,11 +160,11 @@ describe("PLAN_TARIFS", () => {
 });
 
 // ---------------------------------------------------------------------------
-// PLAN_LABELS — tous les plans ont un label FR
+// PLAN_LABELS — tous les plans ont une clé i18n
 // ---------------------------------------------------------------------------
 
 describe("PLAN_LABELS", () => {
-  it("tous les TypePlan ont un label non vide", () => {
+  it("tous les TypePlan ont une clé i18n non vide", () => {
     const allPlans = Object.values(TypePlan);
     allPlans.forEach((plan) => {
       expect(PLAN_LABELS[plan]).toBeTruthy();
@@ -172,8 +172,8 @@ describe("PLAN_LABELS", () => {
     });
   });
 
-  it("DECOUVERTE est bien 'Découverte'", () => {
-    expect(PLAN_LABELS[TypePlan.DECOUVERTE]).toBe("Découverte");
+  it("DECOUVERTE a la clé i18n 'plans.DECOUVERTE'", () => {
+    expect(PLAN_LABELS[TypePlan.DECOUVERTE]).toBe("plans.DECOUVERTE");
   });
 });
 

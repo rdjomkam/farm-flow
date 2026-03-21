@@ -15,6 +15,7 @@
  */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Filter, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,32 +42,12 @@ interface PlansAdminListProps {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Helpers (stateless, no i18n needed)
 // ---------------------------------------------------------------------------
 
 /** Renvoie le variant Badge selon le statut actif/inactif */
 function statutVariant(isActif: boolean): "terminee" | "annulee" {
   return isActif ? "terminee" : "annulee";
-}
-
-/** Formate une limite : 999 = "Illimité", sinon affiche le nombre */
-function formatLimite(val: number | null): string {
-  if (val === null) return "Illimité";
-  if (val >= 999) return "Illimité";
-  return String(val);
-}
-
-/** Formate les 3 prix d'un plan sur une ligne concise */
-function formatPrixResume(
-  mensuel: number | null,
-  trimestriel: number | null,
-  annuel: number | null
-): string {
-  const parts: string[] = [];
-  if (mensuel !== null) parts.push(formatXAFOrFree(mensuel) + "/mois");
-  if (trimestriel !== null) parts.push(formatXAFOrFree(trimestriel) + "/trim.");
-  if (annuel !== null) parts.push(formatXAFOrFree(annuel) + "/an");
-  return parts.length > 0 ? parts.join(" · ") : "Sur devis";
 }
 
 // ---------------------------------------------------------------------------
@@ -178,6 +159,7 @@ function TogglePlanButton({
 
 export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
   const router = useRouter();
+  const t = useTranslations("abonnements");
   const [plans, setPlans] = useState<PlanAdminItem[]>(initialPlans);
   const [filterType, setFilterType] = useState<TypePlan | "">("");
   const [filterStatut, setFilterStatut] = useState<"actif" | "inactif" | "">("");
@@ -187,6 +169,30 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validTypes = Object.values(TypePlan);
+
+  // ---------------------------------------------------------------------------
+  // Helpers with i18n — defined inside component to access `t` closure
+  // ---------------------------------------------------------------------------
+
+  /** Formate une limite : 999 = t("admin.unlimited"), sinon affiche le nombre */
+  function formatLimite(val: number | null): string {
+    if (val === null) return t("admin.unlimited");
+    if (val >= 999) return t("admin.unlimited");
+    return String(val);
+  }
+
+  /** Formate les 3 prix d'un plan sur une ligne concise */
+  function formatPrixResume(
+    mensuel: number | null,
+    trimestriel: number | null,
+    annuel: number | null
+  ): string {
+    const parts: string[] = [];
+    if (mensuel !== null) parts.push(formatXAFOrFree(mensuel) + "/mois");
+    if (trimestriel !== null) parts.push(formatXAFOrFree(trimestriel) + "/trim.");
+    if (annuel !== null) parts.push(formatXAFOrFree(annuel) + "/an");
+    return parts.length > 0 ? parts.join(" · ") : t("admin.onQuote");
+  }
 
   // Filtrage
   const filtered = plans.filter((p) => {
@@ -272,10 +278,10 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
             onChange={(e) => setFilterType(e.target.value as TypePlan | "")}
             aria-label="Filtrer par type de plan"
           >
-            <option value="">Tous les types</option>
-            {validTypes.map((t) => (
-              <option key={t} value={t}>
-                {PLAN_LABELS[t]}
+            <option value="">{t("admin.allTypes")}</option>
+            {validTypes.map((typePlan) => (
+              <option key={typePlan} value={typePlan}>
+                {t(PLAN_LABELS[typePlan])}
               </option>
             ))}
           </select>
@@ -288,9 +294,9 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
             }
             aria-label="Filtrer par statut"
           >
-            <option value="">Tous les statuts</option>
-            <option value="actif">Actif</option>
-            <option value="inactif">Inactif</option>
+            <option value="">{t("admin.allStatuses")}</option>
+            <option value="actif">{t("admin.active")}</option>
+            <option value="inactif">{t("admin.inactive")}</option>
           </select>
           {hasFilter && (
             <Button
@@ -301,7 +307,7 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
                 setFilterStatut("");
               }}
             >
-              Réinitialiser
+              {t("admin.reset")}
             </Button>
           )}
         </div>
@@ -309,7 +315,7 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
         <PlanFormDialog>
           <Button className="min-h-[44px] gap-2" aria-label="Créer un nouveau plan">
             <Plus className="h-4 w-4" />
-            Nouveau plan
+            {t("admin.newPlan")}
           </Button>
         </PlanFormDialog>
       </div>
@@ -319,17 +325,17 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Plan</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Type</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Prix</th>
-              <th className="px-4 py-3 text-center font-medium text-muted-foreground">Sites</th>
-              <th className="px-4 py-3 text-center font-medium text-muted-foreground">Bacs</th>
-              <th className="px-4 py-3 text-center font-medium text-muted-foreground">Vagues</th>
-              <th className="px-4 py-3 text-center font-medium text-muted-foreground">Ingénieur</th>
-              <th className="px-4 py-3 text-center font-medium text-muted-foreground">Abonnés</th>
-              <th className="px-4 py-3 text-center font-medium text-muted-foreground">Statut</th>
-              <th className="px-4 py-3 text-center font-medium text-muted-foreground">Visibilité</th>
-              <th className="px-4 py-3 text-center font-medium text-muted-foreground">Actions</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("admin.columns.plan")}</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("admin.columns.type")}</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("admin.columns.price")}</th>
+              <th className="px-4 py-3 text-center font-medium text-muted-foreground">{t("admin.columns.sites")}</th>
+              <th className="px-4 py-3 text-center font-medium text-muted-foreground">{t("admin.columns.tanks")}</th>
+              <th className="px-4 py-3 text-center font-medium text-muted-foreground">{t("admin.columns.waves")}</th>
+              <th className="px-4 py-3 text-center font-medium text-muted-foreground">{t("admin.columns.engineer")}</th>
+              <th className="px-4 py-3 text-center font-medium text-muted-foreground">{t("admin.columns.subscribers")}</th>
+              <th className="px-4 py-3 text-center font-medium text-muted-foreground">{t("admin.columns.status")}</th>
+              <th className="px-4 py-3 text-center font-medium text-muted-foreground">{t("admin.columns.visibility")}</th>
+              <th className="px-4 py-3 text-center font-medium text-muted-foreground">{t("admin.columns.actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -348,7 +354,7 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
                 </td>
                 <td className="px-4 py-3">
                   <Badge variant="default" className="text-xs">
-                    {PLAN_LABELS[p.typePlan]}
+                    {t(PLAN_LABELS[p.typePlan])}
                   </Badge>
                 </td>
                 <td className="px-4 py-3 text-foreground text-xs whitespace-nowrap">
@@ -371,12 +377,12 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
                 </td>
                 <td className="px-4 py-3 text-center">
                   <Badge variant={statutVariant(p.isActif)}>
-                    {p.isActif ? "Actif" : "Inactif"}
+                    {p.isActif ? t("admin.active") : t("admin.inactive")}
                   </Badge>
                 </td>
                 <td className="px-4 py-3 text-center">
                   <Badge variant={p.isPublic ? "en_cours" : "default"}>
-                    {p.isPublic ? "Public" : "Privé"}
+                    {p.isPublic ? t("admin.public") : t("admin.private")}
                   </Badge>
                 </td>
                 <td className="px-4 py-3">
@@ -439,34 +445,34 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
               <div>
                 <p className="font-semibold text-foreground">{p.nom}</p>
                 <Badge variant="default" className="text-xs mt-1">
-                  {PLAN_LABELS[p.typePlan]}
+                  {t(PLAN_LABELS[p.typePlan])}
                 </Badge>
               </div>
               <div className="flex flex-col items-end gap-1">
                 <Badge variant={statutVariant(p.isActif)}>
-                  {p.isActif ? "Actif" : "Inactif"}
+                  {p.isActif ? t("admin.active") : t("admin.inactive")}
                 </Badge>
                 <Badge variant={p.isPublic ? "en_cours" : "default"} className="text-xs">
-                  {p.isPublic ? "Public" : "Privé"}
+                  {p.isPublic ? t("admin.public") : t("admin.private")}
                 </Badge>
               </div>
             </div>
 
             {/* Prix */}
             <div className="text-xs text-muted-foreground">
-              <p className="font-medium text-foreground text-sm">Prix</p>
+              <p className="font-medium text-foreground text-sm">{t("admin.columns.price")}</p>
               <div className="mt-1 space-y-0.5">
                 {p.prixMensuel !== null && (
-                  <p>Mensuel : <span className="font-medium text-foreground">{formatXAFOrFree(p.prixMensuel)}</span></p>
+                  <p>{t("admin.monthlyPrice")} <span className="font-medium text-foreground">{formatXAFOrFree(p.prixMensuel)}</span></p>
                 )}
                 {p.prixTrimestriel !== null && (
-                  <p>Trimestriel : <span className="font-medium text-foreground">{formatXAFOrFree(p.prixTrimestriel)}</span></p>
+                  <p>{t("admin.quarterlyPrice")} <span className="font-medium text-foreground">{formatXAFOrFree(p.prixTrimestriel)}</span></p>
                 )}
                 {p.prixAnnuel !== null && (
-                  <p>Annuel : <span className="font-medium text-foreground">{formatXAFOrFree(p.prixAnnuel)}</span></p>
+                  <p>{t("admin.annualPrice")} <span className="font-medium text-foreground">{formatXAFOrFree(p.prixAnnuel)}</span></p>
                 )}
                 {p.prixMensuel === null && p.prixTrimestriel === null && p.prixAnnuel === null && (
-                  <p className="font-medium text-foreground">Sur devis</p>
+                  <p className="font-medium text-foreground">{t("admin.onQuote")}</p>
                 )}
               </div>
             </div>

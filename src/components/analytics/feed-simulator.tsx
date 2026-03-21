@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { AnalytiqueAliment, SimulationResult } from "@/types";
 import { useAnalyticsService } from "@/services";
+import { useTranslations } from "next-intl";
 
 interface FeedSimulatorProps {
   aliments: AnalytiqueAliment[];
@@ -14,6 +15,7 @@ interface FeedSimulatorProps {
 
 export function FeedSimulator({ aliments }: FeedSimulatorProps) {
   const analyticsService = useAnalyticsService();
+  const tAnalytics = useTranslations("analytics");
   const [ancienId, setAncienId] = useState("");
   const [nouveauId, setNouveauId] = useState("");
   const [production, setProduction] = useState("1000");
@@ -44,22 +46,22 @@ export function FeedSimulator({ aliments }: FeedSimulatorProps) {
         <CardContent className="p-3 flex flex-col gap-3">
           <div className="flex items-center gap-2 mb-1">
             <Calculator className="h-4 w-4 text-primary" />
-            <p className="text-sm font-semibold">Simulateur de changement d'aliment</p>
+            <p className="text-sm font-semibold">{tAnalytics("simulation.title")}</p>
           </div>
 
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Aliment actuel</label>
+            <label className="text-xs text-muted-foreground mb-1 block">{tAnalytics("simulation.oldFeed")}</label>
             <select
               value={ancienId}
               onChange={(e) => setAncienId(e.target.value)}
               className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm"
             >
-              <option value="">Selectionner...</option>
+              <option value="">{tAnalytics("simulation.selectFeed")}</option>
               {aliments.map((a) => (
                 <option key={a.produitId} value={a.produitId}>
                   {a.produitNom}
                   {a.fournisseurNom ? ` (${a.fournisseurNom})` : ""}
-                  {a.fcrMoyen !== null ? ` — FCR ${a.fcrMoyen}` : ""}
+                  {a.fcrMoyen !== null ? ` — ${tAnalytics("simulation.fcrLabel")} ${a.fcrMoyen}` : ""}
                 </option>
               ))}
             </select>
@@ -70,20 +72,20 @@ export function FeedSimulator({ aliments }: FeedSimulatorProps) {
           </div>
 
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Nouvel aliment</label>
+            <label className="text-xs text-muted-foreground mb-1 block">{tAnalytics("simulation.newFeed")}</label>
             <select
               value={nouveauId}
               onChange={(e) => setNouveauId(e.target.value)}
               className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm"
             >
-              <option value="">Selectionner...</option>
+              <option value="">{tAnalytics("simulation.selectFeed")}</option>
               {aliments
                 .filter((a) => a.produitId !== ancienId)
                 .map((a) => (
                   <option key={a.produitId} value={a.produitId}>
                     {a.produitNom}
                     {a.fournisseurNom ? ` (${a.fournisseurNom})` : ""}
-                    {a.fcrMoyen !== null ? ` — FCR ${a.fcrMoyen}` : ""}
+                    {a.fcrMoyen !== null ? ` — ${tAnalytics("simulation.fcrLabel")} ${a.fcrMoyen}` : ""}
                   </option>
                 ))}
             </select>
@@ -91,7 +93,7 @@ export function FeedSimulator({ aliments }: FeedSimulatorProps) {
 
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">
-              Production cible (kg de biomasse)
+              {tAnalytics("simulation.targetProduction")}
             </label>
             <input
               type="number"
@@ -109,7 +111,7 @@ export function FeedSimulator({ aliments }: FeedSimulatorProps) {
             disabled={!canSimulate}
             className="w-full"
           >
-            Simuler le changement
+            {tAnalytics("simulation.simulate")}
           </Button>
         </CardContent>
       </Card>
@@ -125,6 +127,7 @@ export function FeedSimulator({ aliments }: FeedSimulatorProps) {
 // ---------------------------------------------------------------------------
 
 function SimulationResultCard({ result }: { result: SimulationResult }) {
+  const tAnalytics = useTranslations("analytics");
   const isEconomie = result.economie !== null && result.economie > 0;
   const isSurcout = result.economie !== null && result.economie < 0;
 
@@ -146,10 +149,10 @@ function SimulationResultCard({ result }: { result: SimulationResult }) {
           )}
           <p className="text-sm font-semibold">
             {isEconomie
-              ? "Economie possible"
+              ? tAnalytics("simulation.saving")
               : isSurcout
-                ? "Surcout estime"
-                : "Resultat"}
+                ? tAnalytics("simulation.extra_cost")
+                : tAnalytics("simulation.result")}
           </p>
         </div>
 
@@ -172,16 +175,16 @@ function SimulationResultCard({ result }: { result: SimulationResult }) {
         <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border">
           <div>
             <p className="text-xs text-muted-foreground mb-1">{result.ancienProduitNom}</p>
-            <p className="text-sm">FCR : {result.ancienFCR ?? "—"}</p>
+            <p className="text-sm">{tAnalytics("simulation.fcrLabel")} : {result.ancienFCR ?? "—"}</p>
             <p className="text-sm">
-              Cout : {result.ancienCout !== null ? `${result.ancienCout.toLocaleString("fr-FR")} CFA` : "—"}
+              {tAnalytics("simulation.cost")} : {result.ancienCout !== null ? `${result.ancienCout.toLocaleString("fr-FR")} CFA` : "—"}
             </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">{result.nouveauProduitNom}</p>
-            <p className="text-sm">FCR : {result.nouveauFCR ?? "—"}</p>
+            <p className="text-sm">{tAnalytics("simulation.fcrLabel")} : {result.nouveauFCR ?? "—"}</p>
             <p className="text-sm">
-              Cout : {result.nouveauCout !== null ? `${result.nouveauCout.toLocaleString("fr-FR")} CFA` : "—"}
+              {tAnalytics("simulation.cost")} : {result.nouveauCout !== null ? `${result.nouveauCout.toLocaleString("fr-FR")} CFA` : "—"}
             </p>
           </div>
         </div>

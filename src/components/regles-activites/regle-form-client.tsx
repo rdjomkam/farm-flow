@@ -2,6 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronUp, Info, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -341,6 +342,7 @@ function TitrePreview({ titreTemplate }: { titreTemplate: string }) {
 export function RegleFormClient() {
   const router = useRouter();
   const configService = useConfigService();
+  const t = useTranslations("settings");
 
   // Form state
   const [form, setForm] = useState<FormState>(INITIAL_STATE);
@@ -593,7 +595,7 @@ export function RegleFormClient() {
               <SelectContent>
                 {Object.values(TypeActivite).map((val) => (
                   <SelectItem key={val} value={val}>
-                    {TYPE_ACTIVITE_LABELS[val]}
+                    {t(TYPE_ACTIVITE_LABELS[val])}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -639,7 +641,7 @@ export function RegleFormClient() {
                 <SelectContent>
                   {Object.values(LogiqueCondition).map((val) => (
                     <SelectItem key={val} value={val}>
-                      {LOGIQUE_CONDITION_LABELS[val]}
+                      {t(LOGIQUE_CONDITION_LABELS[val])}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -685,7 +687,7 @@ export function RegleFormClient() {
                       <SelectContent>
                         {Object.values(TypeDeclencheur).map((val) => (
                           <SelectItem key={val} value={val}>
-                            {TYPE_DECLENCHEUR_LABELS[val]}
+                            {t(TYPE_DECLENCHEUR_LABELS[val])}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -711,7 +713,7 @@ export function RegleFormClient() {
                       <SelectContent>
                         {Object.values(OperateurCondition).map((val) => (
                           <SelectItem key={val} value={val}>
-                            {OPERATEUR_CONDITION_LABELS[val]}
+                            {t(OPERATEUR_CONDITION_LABELS[val])}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -725,7 +727,7 @@ export function RegleFormClient() {
                             case TypeDeclencheur.SEUIL_POIDS: return "Poids moyen declencheur (g)";
                             case TypeDeclencheur.SEUIL_QUALITE: return "Valeur minimale (ex: pH min)";
                             case TypeDeclencheur.SEUIL_MORTALITE: return "Taux de mortalite declencheur (%)";
-                            case TypeDeclencheur.FCR_ELEVE: return "FCR declencheur";
+                            case TypeDeclencheur.FCR_ELEVE: return "ICA declencheur";
                             case TypeDeclencheur.STOCK_BAS: return "Quantite de stock minimal";
                             case TypeDeclencheur.JALON: return "Seuil du jalon (% du cycle)";
                             default: return "Valeur";
@@ -810,7 +812,7 @@ export function RegleFormClient() {
               <SelectContent>
                 {Object.values(ActionRegle).map((val) => (
                   <SelectItem key={val} value={val}>
-                    {ACTION_REGLE_LABELS[val]}
+                    {t(ACTION_REGLE_LABELS[val])}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -854,7 +856,7 @@ export function RegleFormClient() {
                   <SelectContent>
                     {Object.values(SeveriteAlerte).map((val) => (
                       <SelectItem key={val} value={val}>
-                        {SEVERITE_ALERTE_LABELS[val]}
+                        {t(SEVERITE_ALERTE_LABELS[val])}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -896,11 +898,11 @@ export function RegleFormClient() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">
-                      {ACTION_PAYLOAD_TYPE_LABELS[""]}
+                      {t(ACTION_PAYLOAD_TYPE_LABELS[""])}
                     </SelectItem>
                     {(["CREER_RELEVE", "MODIFIER_BAC", "VOIR_VAGUE", "VOIR_STOCK"] as const).map((val) => (
                       <SelectItem key={val} value={val}>
-                        {ACTION_PAYLOAD_TYPE_LABELS[val]}
+                        {t(ACTION_PAYLOAD_TYPE_LABELS[val])}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1074,7 +1076,7 @@ export function RegleFormClient() {
               <SelectContent>
                 {PHASE_ELEVAGE_ORDER.map((val) => (
                   <SelectItem key={val} value={val}>
-                    {PHASE_ELEVAGE_LABELS[val]}
+                    {t(PHASE_ELEVAGE_LABELS[val])}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1094,7 +1096,7 @@ export function RegleFormClient() {
               <SelectContent>
                 {PHASE_ELEVAGE_ORDER.map((val) => (
                   <SelectItem key={val} value={val}>
-                    {PHASE_ELEVAGE_LABELS[val]}
+                    {t(PHASE_ELEVAGE_LABELS[val])}
                   </SelectItem>
                 ))}
               </SelectContent>

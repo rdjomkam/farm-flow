@@ -121,48 +121,52 @@ export const PLAN_LIMITES: Record<
 };
 
 /**
- * PLAN_LABELS — Labels français pour l'affichage UI.
+ * PLAN_LABELS — Clés i18n pour l'affichage UI des plans.
+ * Usage : t(PLAN_LABELS[plan.typePlan]) avec useTranslations("abonnements")
  * R2 : utiliser TypePlan.DECOUVERTE, jamais "DECOUVERTE"
  */
 export const PLAN_LABELS: Record<TypePlan, string> = {
-  [TypePlan.DECOUVERTE]: "Découverte",
-  [TypePlan.ELEVEUR]: "Éleveur",
-  [TypePlan.PROFESSIONNEL]: "Professionnel",
-  [TypePlan.ENTREPRISE]: "Entreprise",
-  [TypePlan.INGENIEUR_STARTER]: "Ingénieur Starter",
-  [TypePlan.INGENIEUR_PRO]: "Ingénieur Pro",
-  [TypePlan.INGENIEUR_EXPERT]: "Ingénieur Expert",
+  [TypePlan.DECOUVERTE]: "plans.DECOUVERTE",
+  [TypePlan.ELEVEUR]: "plans.ELEVEUR",
+  [TypePlan.PROFESSIONNEL]: "plans.PROFESSIONNEL",
+  [TypePlan.ENTREPRISE]: "plans.ENTREPRISE",
+  [TypePlan.INGENIEUR_STARTER]: "plans.INGENIEUR_STARTER",
+  [TypePlan.INGENIEUR_PRO]: "plans.INGENIEUR_PRO",
+  [TypePlan.INGENIEUR_EXPERT]: "plans.INGENIEUR_EXPERT",
 };
 
 /**
- * PERIODE_LABELS — Labels français des périodes de facturation.
+ * PERIODE_LABELS — Clés i18n des périodes de facturation.
+ * Usage : t(PERIODE_LABELS[periode]) avec useTranslations("abonnements")
  */
 export const PERIODE_LABELS: Record<PeriodeFacturation, string> = {
-  [PeriodeFacturation.MENSUEL]: "Mensuel",
-  [PeriodeFacturation.TRIMESTRIEL]: "Trimestriel",
-  [PeriodeFacturation.ANNUEL]: "Annuel",
+  [PeriodeFacturation.MENSUEL]: "periods.MENSUEL",
+  [PeriodeFacturation.TRIMESTRIEL]: "periods.TRIMESTRIEL",
+  [PeriodeFacturation.ANNUEL]: "periods.ANNUEL",
 };
 
 /**
- * STATUT_ABONNEMENT_LABELS — Labels français des statuts d'abonnement.
+ * STATUT_ABONNEMENT_LABELS — Clés i18n des statuts d'abonnement.
+ * Usage : t(STATUT_ABONNEMENT_LABELS[statut]) avec useTranslations("abonnements")
  */
 export const STATUT_ABONNEMENT_LABELS: Record<StatutAbonnement, string> = {
-  [StatutAbonnement.ACTIF]: "Actif",
-  [StatutAbonnement.EN_GRACE]: "Période de grâce",
-  [StatutAbonnement.SUSPENDU]: "Suspendu",
-  [StatutAbonnement.EXPIRE]: "Expiré",
-  [StatutAbonnement.ANNULE]: "Annulé",
-  [StatutAbonnement.EN_ATTENTE_PAIEMENT]: "En attente de paiement",
+  [StatutAbonnement.ACTIF]: "statuts.ACTIF",
+  [StatutAbonnement.EN_GRACE]: "statuts.EN_GRACE",
+  [StatutAbonnement.SUSPENDU]: "statuts.SUSPENDU",
+  [StatutAbonnement.EXPIRE]: "statuts.EXPIRE",
+  [StatutAbonnement.ANNULE]: "statuts.ANNULE",
+  [StatutAbonnement.EN_ATTENTE_PAIEMENT]: "statuts.EN_ATTENTE_PAIEMENT",
 };
 
 /**
- * FOURNISSEUR_LABELS — Labels français des fournisseurs de paiement.
+ * FOURNISSEUR_LABELS — Clés i18n des fournisseurs de paiement.
+ * Usage : t(FOURNISSEUR_LABELS[fournisseur]) avec useTranslations("abonnements")
  */
 export const FOURNISSEUR_LABELS: Record<FournisseurPaiement, string> = {
-  [FournisseurPaiement.SMOBILPAY]: "Smobilpay / Maviance",
-  [FournisseurPaiement.MTN_MOMO]: "MTN Mobile Money",
-  [FournisseurPaiement.ORANGE_MONEY]: "Orange Money",
-  [FournisseurPaiement.MANUEL]: "Paiement manuel",
+  [FournisseurPaiement.SMOBILPAY]: "providers.SMOBILPAY",
+  [FournisseurPaiement.MTN_MOMO]: "providers.MTN_MOMO",
+  [FournisseurPaiement.ORANGE_MONEY]: "providers.ORANGE_MONEY",
+  [FournisseurPaiement.MANUEL]: "providers.MANUEL",
 };
 
 // ---------------------------------------------------------------------------

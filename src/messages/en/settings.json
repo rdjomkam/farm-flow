@@ -1,0 +1,133 @@
+{
+  "triggers": {
+    "CALENDRIER": "Calendar",
+    "RECURRENT": "Recurring",
+    "SEUIL_POIDS": "Weight threshold",
+    "SEUIL_QUALITE": "Water quality threshold",
+    "SEUIL_MORTALITE": "Mortality threshold",
+    "STOCK_BAS": "Low stock",
+    "FCR_ELEVE": "High FCR",
+    "JALON": "Production milestone",
+    "SEUIL_DENSITE": "Density threshold",
+    "SEUIL_RENOUVELLEMENT": "Water renewal threshold",
+    "ABSENCE_RELEVE": "Missing record",
+    "SEUIL_AMMONIAC": "Ammonia threshold",
+    "SEUIL_OXYGENE": "Dissolved oxygen threshold",
+    "SEUIL_PH": "pH threshold",
+    "SEUIL_TEMPERATURE": "Temperature threshold"
+  },
+  "activities": {
+    "ALIMENTATION": "Feeding",
+    "BIOMETRIE": "Biometry",
+    "QUALITE_EAU": "Water quality",
+    "COMPTAGE": "Counting",
+    "NETTOYAGE": "Cleaning",
+    "TRAITEMENT": "Treatment",
+    "RECOLTE": "Harvest",
+    "TRI": "Sorting",
+    "MEDICATION": "Medication",
+    "RENOUVELLEMENT": "Water renewal",
+    "AUTRE": "Other"
+  },
+  "phases": {
+    "ACCLIMATATION": "Acclimatisation",
+    "CROISSANCE_DEBUT": "Early growth",
+    "JUVENILE": "Juvenile",
+    "GROSSISSEMENT": "Fattening",
+    "FINITION": "Finishing",
+    "PRE_RECOLTE": "Pre-harvest"
+  },
+  "operators": {
+    "SUPERIEUR": "Greater than",
+    "INFERIEUR": "Less than",
+    "ENTRE": "Between",
+    "EGAL": "Equal to"
+  },
+  "actions": {
+    "ACTIVITE": "Create an activity",
+    "NOTIFICATION": "Send an alert",
+    "LES_DEUX": "Activity + Alert"
+  },
+  "severity": {
+    "INFO": "Information",
+    "AVERTISSEMENT": "Warning",
+    "CRITIQUE": "Critical"
+  },
+  "logic": {
+    "ET": "AND (all conditions)",
+    "OU": "OR (at least one condition)"
+  },
+  "payloadTypes": {
+    "none": "No action (simple alert)",
+    "CREER_RELEVE": "Create a record",
+    "MODIFIER_BAC": "Edit tank",
+    "VOIR_VAGUE": "View batch",
+    "VOIR_STOCK": "View stock"
+  },
+  "placeholders": {
+    "quantite_calculee": {
+      "description": "Feed quantity in kg calculated from the ration rate",
+      "example": "1.25"
+    },
+    "taille": {
+      "description": "Average fish size (last biometry record, in cm)",
+      "example": "12.5"
+    },
+    "poids_moyen": {
+      "description": "Average batch weight (in grams)",
+      "example": "185.3"
+    },
+    "stock": {
+      "description": "Stock quantity of the recommended product (in product unit)",
+      "example": "50.00"
+    },
+    "taux": {
+      "description": "Feeding rate or survival rate depending on context (in %)",
+      "example": "3.50"
+    },
+    "valeur": {
+      "description": "FCR or SGR depending on context (feed conversion ratio or specific growth rate)",
+      "example": "1.42"
+    },
+    "semaine": {
+      "description": "Week number in the rearing cycle",
+      "example": "8"
+    },
+    "produit": {
+      "description": "Name of the recommended product for this activity",
+      "example": "Pellet 3mm Pro"
+    },
+    "seuil": {
+      "description": "Threshold value that triggered the rule (e.g. weight in g, rate in %)",
+      "example": "200.00"
+    },
+    "jours_restants": {
+      "description": "Days remaining until estimated end of cycle",
+      "example": "45"
+    },
+    "quantite_recommandee": {
+      "description": "Recommended quantity defined on the rule (in product unit)",
+      "example": "25.00"
+    },
+    "bac": {
+      "description": "Tank name associated with the batch being evaluated",
+      "example": "Tank 3"
+    },
+    "biomasse": {
+      "description": "Total batch biomass in kg (average weight x live count)",
+      "example": "124.50"
+    },
+    "vague": {
+      "description": "Batch identifier code",
+      "example": "V2026-03"
+    },
+    "jours_ecoules": {
+      "description": "Number of days elapsed since the start of the batch",
+      "example": "55"
+    },
+    "valeur_marchande": {
+      "description": "Estimated market value of the batch in FCFA (biomass x market price)",
+      "example": "1,244,500"
+    }
+  }
+}

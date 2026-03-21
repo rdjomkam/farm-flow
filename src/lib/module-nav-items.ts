@@ -36,7 +36,10 @@ import {
 
 export interface SubNavItem {
   href: string;
+  /** Display label (kept for backward compatibility) */
   label: string;
+  /** i18n key under navigation.items.* — used by BottomNav */
+  itemKey: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
@@ -57,87 +60,87 @@ export const MODULE_NAV: ModuleNavConfig[] = [
     label: "Reproduction",
     matchPaths: ["/alevins"],
     items: [
-      { href: "/alevins", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/alevins/reproducteurs", label: "Reproducteurs", icon: Fish },
-      { href: "/alevins/pontes", label: "Pontes", icon: Egg },
-      { href: "/alevins/lots", label: "Lots", icon: Layers },
+      { href: "/alevins", label: "Dashboard", itemKey: "dashboard", icon: LayoutDashboard },
+      { href: "/alevins/reproducteurs", label: "Reproducteurs", itemKey: "reproducteurs", icon: Fish },
+      { href: "/alevins/pontes", label: "Pontes", itemKey: "pontes", icon: Egg },
+      { href: "/alevins/lots", label: "Lots", itemKey: "lots", icon: Layers },
     ],
   },
   {
     label: "Grossissement",
     matchPaths: ["/vagues", "/bacs", "/releves", "/analytics/bacs", "/analytics/vagues"],
     items: [
-      { href: "/vagues", label: "Vagues", icon: Waves },
-      { href: "/bacs", label: "Bacs", icon: Container },
-      { href: "/releves/nouveau", label: "Releve", icon: PlusCircle },
-      { href: "/analytics/bacs", label: "An. bacs", icon: BarChart3 },
-      { href: "/analytics/vagues", label: "An. vagues", icon: LineChart },
+      { href: "/vagues", label: "Vagues", itemKey: "vagues", icon: Waves },
+      { href: "/bacs", label: "Bacs", itemKey: "bacs", icon: Container },
+      { href: "/releves/nouveau", label: "Releve", itemKey: "releve", icon: PlusCircle },
+      { href: "/analytics/bacs", label: "An. bacs", itemKey: "anBacs", icon: BarChart3 },
+      { href: "/analytics/vagues", label: "An. vagues", itemKey: "anVagues", icon: LineChart },
     ],
   },
   {
     label: "Intrants",
     matchPaths: ["/stock", "/analytics/aliments"],
     items: [
-      { href: "/stock", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/stock/produits", label: "Produits", icon: Tag },
-      { href: "/stock/fournisseurs", label: "Fournisseurs", icon: Truck },
-      { href: "/stock/commandes", label: "Commandes", icon: ShoppingCart },
-      { href: "/stock/mouvements", label: "Mouvements", icon: ArrowUpDown },
+      { href: "/stock", label: "Dashboard", itemKey: "dashboard", icon: LayoutDashboard },
+      { href: "/stock/produits", label: "Produits", itemKey: "produits", icon: Tag },
+      { href: "/stock/fournisseurs", label: "Fournisseurs", itemKey: "fournisseurs", icon: Truck },
+      { href: "/stock/commandes", label: "Commandes", itemKey: "commandes", icon: ShoppingCart },
+      { href: "/stock/mouvements", label: "Mouvements", itemKey: "mouvements", icon: ArrowUpDown },
     ],
   },
   {
     label: "Ventes",
     matchPaths: ["/ventes", "/clients", "/factures", "/finances", "/depenses", "/besoins"],
     items: [
-      { href: "/clients", label: "Clients", icon: Users },
-      { href: "/ventes", label: "Ventes", icon: Banknote },
-      { href: "/factures", label: "Factures", icon: FileText },
-      { href: "/finances", label: "Finances", icon: Wallet },
-      { href: "/depenses", label: "Depenses", icon: Receipt },
-      { href: "/besoins", label: "Besoins", icon: ClipboardList },
+      { href: "/clients", label: "Clients", itemKey: "clients", icon: Users },
+      { href: "/ventes", label: "Ventes", itemKey: "ventesItem", icon: Banknote },
+      { href: "/factures", label: "Factures", itemKey: "factures", icon: FileText },
+      { href: "/finances", label: "Finances", itemKey: "finances", icon: Wallet },
+      { href: "/depenses", label: "Depenses", itemKey: "depenses", icon: Receipt },
+      { href: "/besoins", label: "Besoins", itemKey: "besoins", icon: ClipboardList },
     ],
   },
   {
     label: "Analyse & Pilotage",
     matchPaths: ["/analytics", "/planning", "/mes-taches", "/notifications"],
     items: [
-      { href: "/analytics", label: "Vue globale", icon: BarChart3 },
-      { href: "/planning", label: "Calendrier", icon: Calendar },
-      { href: "/mes-taches", label: "Taches", icon: ClipboardCheck },
+      { href: "/analytics", label: "Vue globale", itemKey: "vueGlobale", icon: BarChart3 },
+      { href: "/planning", label: "Calendrier", itemKey: "calendrier", icon: Calendar },
+      { href: "/mes-taches", label: "Taches", itemKey: "taches", icon: ClipboardCheck },
     ],
   },
   {
     label: "Packs & Provisioning",
     matchPaths: ["/packs", "/activations"],
     items: [
-      { href: "/packs", label: "Packs", icon: Boxes },
-      { href: "/activations", label: "Activations", icon: ClipboardCheck },
+      { href: "/packs", label: "Packs", itemKey: "packs", icon: Boxes },
+      { href: "/activations", label: "Activations", itemKey: "activations", icon: ClipboardCheck },
     ],
   },
   {
     label: "Configuration",
     matchPaths: ["/settings/sites", "/settings/config-elevage", "/settings/alertes", "/settings/regles-activites"],
     items: [
-      { href: "/settings/sites", label: "Sites", icon: Building2 },
-      { href: "/settings/config-elevage", label: "Profils", icon: Settings },
-      { href: "/settings/alertes", label: "Alertes", icon: Settings },
-      { href: "/settings/regles-activites", label: "Regles d'activites", icon: Zap },
+      { href: "/settings/sites", label: "Sites", itemKey: "sites", icon: Building2 },
+      { href: "/settings/config-elevage", label: "Profils", itemKey: "profils", icon: Settings },
+      { href: "/settings/alertes", label: "Alertes", itemKey: "alertes", icon: Settings },
+      { href: "/settings/regles-activites", label: "Regles d'activites", itemKey: "reglesActivites", icon: Zap },
     ],
   },
   {
     label: "Utilisateurs",
     matchPaths: ["/users"],
     items: [
-      { href: "/users", label: "Liste", icon: Users },
-      { href: "/users/nouveau", label: "Nouveau", icon: UserPlus },
+      { href: "/users", label: "Liste", itemKey: "liste", icon: Users },
+      { href: "/users/nouveau", label: "Nouveau", itemKey: "nouveau", icon: UserPlus },
     ],
   },
   {
     label: "Ingenieur",
     matchPaths: ["/ingenieur", "/notes"],
     items: [
-      { href: "/ingenieur", label: "Clients", icon: UserCog },
-      { href: "/notes", label: "Notes", icon: NotebookPen },
+      { href: "/ingenieur", label: "Clients", itemKey: "clients", icon: UserCog },
+      { href: "/notes", label: "Notes", itemKey: "notes", icon: NotebookPen },
     ],
   },
   // Sprint 33 — Abonnement (gate: ABONNEMENTS_VOIR)
@@ -145,8 +148,8 @@ export const MODULE_NAV: ModuleNavConfig[] = [
     label: "Abonnement",
     matchPaths: ["/mon-abonnement", "/tarifs", "/checkout"],
     items: [
-      { href: "/mon-abonnement", label: "Mon abonnement", icon: CreditCard },
-      { href: "/tarifs", label: "Plans & tarifs", icon: Tag },
+      { href: "/mon-abonnement", label: "Mon abonnement", itemKey: "monAbonnement", icon: CreditCard },
+      { href: "/tarifs", label: "Plans & tarifs", itemKey: "plansTarifs", icon: Tag },
     ],
   },
   // Sprint 33 — Admin Abonnements (gate: ABONNEMENTS_GERER)
@@ -154,8 +157,8 @@ export const MODULE_NAV: ModuleNavConfig[] = [
     label: "Admin Abonnements",
     matchPaths: ["/admin/abonnements", "/admin/plans"],
     items: [
-      { href: "/admin/abonnements", label: "Abonnements", icon: ShieldCheck },
-      { href: "/admin/plans", label: "Gestion des plans", icon: LayoutList },
+      { href: "/admin/abonnements", label: "Abonnements", itemKey: "abonnementsItem", icon: ShieldCheck },
+      { href: "/admin/plans", label: "Gestion des plans", itemKey: "gestionPlans", icon: LayoutList },
     ],
   },
   // Sprint 34 — Portefeuille (gate: PORTEFEUILLE_VOIR)
@@ -163,7 +166,7 @@ export const MODULE_NAV: ModuleNavConfig[] = [
     label: "Portefeuille",
     matchPaths: ["/mon-portefeuille"],
     items: [
-      { href: "/mon-portefeuille", label: "Mon portefeuille", icon: Wallet },
+      { href: "/mon-portefeuille", label: "Mon portefeuille", itemKey: "monPortefeuille", icon: Wallet },
     ],
   },
   // Sprint 34 — Admin Commissions (gate: COMMISSIONS_GERER)
@@ -171,7 +174,7 @@ export const MODULE_NAV: ModuleNavConfig[] = [
     label: "Admin Commissions",
     matchPaths: ["/admin/commissions"],
     items: [
-      { href: "/admin/commissions", label: "Commissions", icon: TrendingUp },
+      { href: "/admin/commissions", label: "Commissions", itemKey: "commissions", icon: TrendingUp },
     ],
   },
   // Sprint 35 — Admin Remises (gate: REMISES_GERER)
@@ -179,7 +182,7 @@ export const MODULE_NAV: ModuleNavConfig[] = [
     label: "Admin Remises",
     matchPaths: ["/admin/remises"],
     items: [
-      { href: "/admin/remises", label: "Remises & promos", icon: Tag },
+      { href: "/admin/remises", label: "Remises & promos", itemKey: "remisesPromos", icon: Tag },
     ],
   },
 ];

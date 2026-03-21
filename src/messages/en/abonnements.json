@@ -1,0 +1,63 @@
+{
+  "plans": {
+    "DECOUVERTE": "Discovery",
+    "ELEVEUR": "Farmer",
+    "PROFESSIONNEL": "Professional",
+    "ENTREPRISE": "Enterprise",
+    "INGENIEUR_STARTER": "Engineer Starter",
+    "INGENIEUR_PRO": "Engineer Pro",
+    "INGENIEUR_EXPERT": "Engineer Expert"
+  },
+  "periods": {
+    "MENSUEL": "Monthly",
+    "TRIMESTRIEL": "Quarterly",
+    "ANNUEL": "Annual"
+  },
+  "statuts": {
+    "ACTIF": "Active",
+    "EN_GRACE": "Grace period",
+    "SUSPENDU": "Suspended",
+    "EXPIRE": "Expired",
+    "ANNULE": "Cancelled",
+    "EN_ATTENTE_PAIEMENT": "Awaiting payment"
+  },
+  "providers": {
+    "SMOBILPAY": "Smobilpay / Maviance",
+    "MTN_MOMO": "MTN Mobile Money",
+    "ORANGE_MONEY": "Orange Money",
+    "MANUEL": "Manual payment"
+  },
+  "banner": {
+    "graceMessage": "Your subscription expires in {days} day(s).",
+    "suspendedMessage": "Read-only mode \u2014 Your subscription is suspended.",
+    "renewButton": "Renew my subscription"
+  },
+  "admin": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "public": "Public",
+    "private": "Private",
+    "unlimited": "Unlimited",
+    "onQuote": "On quote",
+    "allTypes": "All types",
+    "allStatuses": "All statuses",
+    "reset": "Reset",
+    "newPlan": "New plan",
+    "monthlyPrice": "Monthly:",
+    "quarterlyPrice": "Quarterly:",
+    "annualPrice": "Annual:",
+    "columns": {
+      "plan": "Plan",
+      "type": "Type",
+      "price": "Price",
+      "sites": "Sites",
+      "tanks": "Tanks",
+      "waves": "Waves",
+      "engineer": "Engineer",
+      "subscribers": "Subscribers",
+      "status": "Status",
+      "visibility": "Visibility",
+      "actions": "Actions"
+    }
+  }
+}

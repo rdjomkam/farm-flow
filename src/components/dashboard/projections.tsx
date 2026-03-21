@@ -19,6 +19,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { ProjectionVague } from "@/types";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 // Recharts chargés dynamiquement (SSR disabled)
 const ResponsiveContainer = dynamic(
@@ -93,10 +94,12 @@ function SGRBadge({
   sgrRequis: number | null;
   enAvance: boolean | null;
 }) {
+  const tAnalytics = useTranslations("analytics");
+
   if (sgrActuel === null || sgrRequis === null) {
     return (
       <span className="text-xs text-muted-foreground">
-        Pas assez de donnees biometriques
+        {tAnalytics("projections.notEnoughData")}
       </span>
     );
   }
@@ -116,11 +119,11 @@ function SGRBadge({
               enAvance ? "text-success" : "text-destructive"
             )}
           >
-            SGR actuel : {sgrActuel}%/j
+            {tAnalytics("labels.sgrActuel")} : {sgrActuel}{tAnalytics("labels.sgrUnit")}
           </span>
         </div>
         <span className="text-xs text-muted-foreground">
-          (requis : {sgrRequis}%/j)
+          ({tAnalytics("labels.sgrRequis")} : {sgrRequis}{tAnalytics("labels.sgrUnit")})
         </span>
       </div>
       <p
@@ -130,8 +133,8 @@ function SGRBadge({
         )}
       >
         {enAvance
-          ? "En avance sur l'objectif de croissance"
-          : "En retard sur l'objectif de croissance"}
+          ? tAnalytics("labels.enAvanceSurObjectif")
+          : tAnalytics("labels.enRetardSurObjectif")}
       </p>
     </div>
   );
@@ -141,12 +144,13 @@ function SGRBadge({
  * Graphique de croissance projetee vs reelle.
  */
 function CourbeProjectionChart({ projection }: { projection: ProjectionVague }) {
+  const tAnalytics = useTranslations("analytics");
   const { courbeProjection, joursEcoules, poidsObjectif } = projection;
 
   if (courbeProjection.length === 0) {
     return (
       <p className="py-6 text-center text-sm text-muted-foreground">
-        Aucune donnee biometrique pour generer la projection.
+        {tAnalytics("projections.noDataMessage")}
       </p>
     );
   }
@@ -235,6 +239,7 @@ function CourbeProjectionChart({ projection }: { projection: ProjectionVague }) 
  */
 function ProjectionCard({ projection }: ProjectionCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const tAnalytics = useTranslations("analytics");
 
   return (
     <Card>
@@ -245,15 +250,15 @@ function ProjectionCard({ projection }: ProjectionCardProps) {
             type="button"
             onClick={() => setExpanded((v) => !v)}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            aria-label={expanded ? "Masquer le graphique" : "Voir le graphique"}
+            aria-label={expanded ? tAnalytics("projections.hide") : tAnalytics("projections.chart")}
           >
             {expanded ? (
               <>
-                Masquer <ChevronUp className="h-3.5 w-3.5" />
+                {tAnalytics("projections.hide")} <ChevronUp className="h-3.5 w-3.5" />
               </>
             ) : (
               <>
-                Graphique <ChevronDown className="h-3.5 w-3.5" />
+                {tAnalytics("projections.chart")} <ChevronDown className="h-3.5 w-3.5" />
               </>
             )}
           </button>
@@ -263,7 +268,7 @@ function ProjectionCard({ projection }: ProjectionCardProps) {
         {/* SGR actuel vs requis */}
         <div className="rounded-lg p-3 border border-border bg-muted/30">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-            Croissance (SGR)
+            {tAnalytics("labels.croissance")}
           </p>
           <SGRBadge
             sgrActuel={projection.sgrActuel}
@@ -272,9 +277,9 @@ function ProjectionCard({ projection }: ProjectionCardProps) {
           />
           {projection.poidsMoyenActuel !== null && (
             <p className="mt-1.5 text-xs text-muted-foreground">
-              Poids actuel : {projection.poidsMoyenActuel} g
+              {tAnalytics("projections.currentWeight")} : {projection.poidsMoyenActuel} g
               {" / "}
-              Objectif : {projection.poidsObjectif} g
+              {tAnalytics("projections.target")} : {projection.poidsObjectif} g
             </p>
           )}
         </div>
@@ -285,7 +290,7 @@ function ProjectionCard({ projection }: ProjectionCardProps) {
           <div className="flex flex-col gap-1 rounded-lg border border-border p-2.5 bg-card">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Calendar className="h-3.5 w-3.5" />
-              <span className="text-[11px] font-medium">Recolte estimee</span>
+              <span className="text-[11px] font-medium">{tAnalytics("projections.estimatedHarvest")}</span>
             </div>
             {projection.dateRecolteEstimee !== null ? (
               <>
@@ -293,12 +298,14 @@ function ProjectionCard({ projection }: ProjectionCardProps) {
                   {formatDate(projection.dateRecolteEstimee)}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  dans {projection.joursRestantsEstimes} j
+                  {projection.joursRestantsEstimes !== null
+                    ? tAnalytics("projections.inDays", { count: projection.joursRestantsEstimes })
+                    : null}
                 </p>
               </>
             ) : (
               <p className="text-xs text-muted-foreground mt-1">
-                Donnees insuffisantes
+                {tAnalytics("projections.insufficientData")}
               </p>
             )}
           </div>
@@ -307,7 +314,7 @@ function ProjectionCard({ projection }: ProjectionCardProps) {
           <div className="flex flex-col gap-1 rounded-lg border border-border p-2.5 bg-card">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Leaf className="h-3.5 w-3.5" />
-              <span className="text-[11px] font-medium">Aliment restant</span>
+              <span className="text-[11px] font-medium">{tAnalytics("projections.remainingFeed")}</span>
             </div>
             {projection.alimentRestantEstime !== null ? (
               <p className="text-sm font-semibold">
@@ -315,7 +322,7 @@ function ProjectionCard({ projection }: ProjectionCardProps) {
               </p>
             ) : (
               <p className="text-xs text-muted-foreground mt-1">
-                Donnees insuffisantes
+                {tAnalytics("projections.insufficientData")}
               </p>
             )}
           </div>
@@ -325,7 +332,7 @@ function ProjectionCard({ projection }: ProjectionCardProps) {
             <div className="flex flex-col gap-1 rounded-lg border border-border p-2.5 bg-card col-span-2 sm:col-span-1">
               <div className="flex items-center gap-1.5 text-muted-foreground">
                 <DollarSign className="h-3.5 w-3.5" />
-                <span className="text-[11px] font-medium">Revenu attendu</span>
+                <span className="text-[11px] font-medium">{tAnalytics("projections.expectedRevenue")}</span>
               </div>
               <p className="text-sm font-semibold">
                 {formatCFA(projection.revenuAttendu)}
@@ -338,11 +345,11 @@ function ProjectionCard({ projection }: ProjectionCardProps) {
         {expanded && (
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-              Courbe de croissance
+              {tAnalytics("projections.growthCurve")}
             </p>
             <CourbeProjectionChart projection={projection} />
             <p className="text-[10px] text-muted-foreground mt-1 text-center">
-              Ligne continue = mesures reelles · Pointilles = projection SGR actuel
+              {tAnalytics("projections.chartLegend")}
             </p>
           </div>
         )}
@@ -356,12 +363,14 @@ function ProjectionCard({ projection }: ProjectionCardProps) {
  * Affiche une ProjectionCard par vague active.
  */
 export function Projections({ projections }: ProjectionsProps) {
+  const tAnalytics = useTranslations("analytics");
+
   if (projections.length === 0) return null;
 
   return (
     <section>
       <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-        Projections de performance
+        {tAnalytics("projections.title")}
       </h2>
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         {projections.map((projection, index) => (

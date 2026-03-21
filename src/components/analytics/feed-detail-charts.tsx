@@ -6,6 +6,7 @@ import { ChartTooltip } from "@/components/ui/chart-tooltip";
 import { BenchmarkBadge } from "./benchmark-badge";
 import { evaluerBenchmark, BENCHMARK_FCR } from "@/lib/benchmarks";
 import type { DetailAliment, DetailAlimentVague } from "@/types";
+import { useTranslations } from "next-intl";
 
 const ResponsiveContainer = dynamic(
   () => import("recharts").then((mod) => mod.ResponsiveContainer),
@@ -53,10 +54,13 @@ interface FeedDetailSummaryProps {
 }
 
 export function FeedDetailSummary({ detail }: FeedDetailSummaryProps) {
+  const tAnalytics = useTranslations("analytics");
+  const fcrLabel = `${tAnalytics("benchmarks.fcr.label")} moyen`;
+  const sgrLabel = `${tAnalytics("benchmarks.sgr.label")} moyen`;
   const metrics = [
-    { label: "FCR moyen", value: detail.fcrMoyen, unit: "" },
+    { label: fcrLabel, value: detail.fcrMoyen, unit: "" },
     { label: "Cout/kg gain", value: detail.coutParKgGain, unit: "CFA" },
-    { label: "SGR moyen", value: detail.sgrMoyen, unit: "%/j" },
+    { label: sgrLabel, value: detail.sgrMoyen, unit: tAnalytics("labels.sgrUnit") },
     { label: "Quantite totale", value: detail.quantiteTotale, unit: "kg" },
     { label: "Cout total", value: detail.coutTotal, unit: "CFA" },
     { label: "Survie associee", value: detail.tauxSurvieAssocie, unit: "%" },
@@ -80,7 +84,7 @@ export function FeedDetailSummary({ detail }: FeedDetailSummaryProps) {
                 <span className="text-xs text-muted-foreground">{m.unit}</span>
               )}
             </div>
-            {m.label === "FCR moyen" && (
+            {m.label === fcrLabel && (
               <BenchmarkBadge level={evaluerBenchmark(detail.fcrMoyen, BENCHMARK_FCR)} />
             )}
           </div>

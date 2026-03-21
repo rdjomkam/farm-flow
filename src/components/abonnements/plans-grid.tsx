@@ -14,6 +14,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Check, Star, Zap } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TypePlan, PeriodeFacturation } from "@/types";
@@ -99,6 +100,7 @@ function getEconomie(plan: PlanAbonnement, periode: PeriodeFacturation): string 
 }
 
 export function PlansGrid({ plans, abonnementActifPlanId }: PlansGridProps) {
+  const t = useTranslations("abonnements");
   const [periode, setPeriode] = useState<PeriodeFacturation>(PeriodeFacturation.MENSUEL);
 
   // Filtrer et trier les plans promoteurs
@@ -131,7 +133,7 @@ export function PlansGrid({ plans, abonnementActifPlanId }: PlansGridProps) {
                     : "text-muted-foreground hover:text-foreground",
                 ].join(" ")}
               >
-                {PERIODE_LABELS[p]}
+                {t(PERIODE_LABELS[p])}
               </button>
             ))}
           </div>
@@ -179,7 +181,7 @@ export function PlansGrid({ plans, abonnementActifPlanId }: PlansGridProps) {
 
               {/* Nom du plan */}
               <h3 className="text-base font-bold text-foreground">
-                {PLAN_LABELS[plan.typePlan]}
+                {t(PLAN_LABELS[plan.typePlan])}
               </h3>
 
               {/* Prix */}

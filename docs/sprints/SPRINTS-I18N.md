@@ -248,7 +248,7 @@ constantes, permissions, format). Ces fichiers impactent chaque page de l'app.
 **Assigne a :** @developer
 **Priorite :** Critique
 **Complexite :** Medium
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Extraire les ~80 chaines de navigation vers le namespace `navigation`.
 
@@ -282,7 +282,7 @@ constantes, permissions, format). Ces fichiers impactent chaque page de l'app.
 **Assigne a :** @developer
 **Priorite :** Haute
 **Complexite :** Medium
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Extraire les ~72 chaines de permissions et roles vers le namespace `permissions`.
 
@@ -309,7 +309,7 @@ constantes, permissions, format). Ces fichiers impactent chaque page de l'app.
 **Assigne a :** @developer
 **Priorite :** Haute
 **Complexite :** Medium
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Extraire les ~25 chaines d'abonnement vers le namespace `abonnements`.
 
@@ -342,7 +342,7 @@ constantes, permissions, format). Ces fichiers impactent chaque page de l'app.
 **Assigne a :** @developer
 **Priorite :** Moyenne
 **Complexite :** Medium
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Extraire les chaines des modules configuration/analytiques.
 
@@ -386,7 +386,7 @@ constantes, permissions, format). Ces fichiers impactent chaque page de l'app.
 **Priorite :** Haute
 **Complexite :** Simple
 **Depend de :** Stories 40.1 a 40.4
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Taches @tester :**
 - [ ] `TODO` Tester la navigation en francais — aucune regression

@@ -36,6 +36,35 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/admin/plans",
 }));
 
+// Mock next-intl — retourne les traductions françaises réelles
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => {
+    const translations: Record<string, string> = {
+      "plans.DECOUVERTE": "Découverte",
+      "plans.ELEVEUR": "Éleveur",
+      "plans.PROFESSIONNEL": "Professionnel",
+      "plans.ENTREPRISE": "Entreprise",
+      "plans.INGENIEUR_STARTER": "Ingénieur Starter",
+      "plans.INGENIEUR_PRO": "Ingénieur Pro",
+      "plans.INGENIEUR_EXPERT": "Ingénieur Expert",
+      "periods.MENSUEL": "Mensuel",
+      "periods.TRIMESTRIEL": "Trimestriel",
+      "periods.ANNUEL": "Annuel",
+      "statuts.ACTIF": "Actif",
+      "statuts.EN_GRACE": "Période de grâce",
+      "statuts.SUSPENDU": "Suspendu",
+      "statuts.EXPIRE": "Expiré",
+      "statuts.ANNULE": "Annulé",
+      "statuts.EN_ATTENTE_PAIEMENT": "En attente de paiement",
+      "providers.SMOBILPAY": "Smobilpay / Maviance",
+      "providers.MTN_MOMO": "MTN Mobile Money",
+      "providers.ORANGE_MONEY": "Orange Money",
+      "providers.MANUEL": "Paiement manuel",
+    };
+    return translations[key] ?? key;
+  },
+}));
+
 // ---------------------------------------------------------------------------
 // Donnees de test — noms sans accents pour eviter les problemes d'encodage
 // mais on utilise les vrais labels du composant dans les assertions

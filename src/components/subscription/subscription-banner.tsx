@@ -15,15 +15,16 @@
  * - Aucun abonnement
  */
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { getSubscriptionStatus, isReadOnlyMode } from "@/lib/abonnements/check-subscription";
 import { StatutAbonnement } from "@/types";
-import { STATUT_ABONNEMENT_LABELS } from "@/lib/abonnements-constants";
 
 interface SubscriptionBannerProps {
   siteId: string;
 }
 
 export async function SubscriptionBanner({ siteId }: SubscriptionBannerProps) {
+  const t = await getTranslations("abonnements");
   const { statut, daysRemaining, isDecouverte } = await getSubscriptionStatus(siteId);
 
   // Ne pas afficher si plan DECOUVERTE, statut ACTIF ou aucun abonnement
@@ -43,14 +44,14 @@ export async function SubscriptionBanner({ siteId }: SubscriptionBannerProps) {
         "w-full px-3 py-2 text-sm",
         "flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between",
         isGrace
-          ? "bg-amber-50 border-b border-amber-200 text-amber-900"
-          : "bg-red-50 border-b border-red-200 text-red-900",
+          ? "bg-accent-amber-muted border-b border-accent-amber text-accent-amber"
+          : "bg-accent-red-muted border-b border-accent-red text-accent-red",
       ].join(" ")}
     >
       <span className="font-medium">
         {isGrace
-          ? `Votre abonnement expire dans ${daysRemaining} jour${daysRemaining !== 1 ? "s" : ""}. ${STATUT_ABONNEMENT_LABELS[StatutAbonnement.EN_GRACE]}.`
-          : "Mode lecture seule \u2014 Votre abonnement est suspendu."}
+          ? t("banner.graceMessage", { days: daysRemaining ?? 0 })
+          : t("banner.suspendedMessage")}
       </span>
       <Link
         href="/mon-abonnement/renouveler"
@@ -58,11 +59,11 @@ export async function SubscriptionBanner({ siteId }: SubscriptionBannerProps) {
           "shrink-0 text-xs font-semibold underline underline-offset-2",
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
           isGrace
-            ? "text-amber-800 hover:text-amber-600 focus-visible:ring-amber-500"
-            : "text-red-800 hover:text-red-600 focus-visible:ring-red-500",
+            ? "text-accent-amber hover:text-warning focus-visible:ring-warning"
+            : "text-accent-red hover:text-danger focus-visible:ring-danger",
         ].join(" ")}
       >
-        Renouveler mon abonnement
+        {t("banner.renewButton")}
       </Link>
     </div>
   );

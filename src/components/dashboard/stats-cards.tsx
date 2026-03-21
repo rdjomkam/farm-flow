@@ -1,36 +1,39 @@
 import { Waves, Weight, HeartPulse, Container } from "lucide-react";
 import { KPICard } from "@/components/ui/kpi-card";
 import type { DashboardData } from "@/types";
+import { getTranslations } from "next-intl/server";
 
 interface StatsCardsProps {
   data: DashboardData;
 }
 
-export function StatsCards({ data }: StatsCardsProps) {
+export async function StatsCards({ data }: StatsCardsProps) {
+  const tAnalytics = await getTranslations("analytics");
+
   const stats = [
     {
-      title: "Vagues actives",
+      title: tAnalytics("kpi.vaguesActives"),
       value: String(data.vaguesActives),
       icon: Waves,
       iconColor: "text-primary",
       iconBgColor: "bg-primary/10",
     },
     {
-      title: "Biomasse totale",
+      title: tAnalytics("kpi.biomasseTotale"),
       value: data.biomasseTotale !== null ? `${data.biomasseTotale} kg` : "\u2014",
       icon: Weight,
       iconColor: "text-accent-blue",
       iconBgColor: "bg-accent-blue-muted",
     },
     {
-      title: "Survie moyenne",
+      title: tAnalytics("kpi.survieMoyenne"),
       value: data.tauxSurvieMoyen !== null ? `${data.tauxSurvieMoyen}%` : "\u2014",
       icon: HeartPulse,
       iconColor: "text-success",
       iconBgColor: "bg-success/10",
     },
     {
-      title: "Bacs",
+      title: tAnalytics("kpi.bacs"),
       value: `${data.bacsOccupes}/${data.bacsTotal}`,
       icon: Container,
       iconColor: "text-accent-amber",

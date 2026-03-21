@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { StatutVague } from "@/types";
 import type { IndicateursVagueComplet, ComparaisonVagues } from "@/types";
 import { useAnalyticsService } from "@/services";
+import { useTranslations } from "next-intl";
 
 // ---------------------------------------------------------------------------
 // Recharts (client-side only)
@@ -159,6 +160,7 @@ function MetricRow({
 }
 
 function VagueResultCard({ vague, color, allVagues }: VagueResultCardProps) {
+  const tAnalytics = useTranslations("analytics");
   const formatDate = (d: Date | null | string) => {
     if (!d) return "—";
     return new Date(d).toLocaleDateString("fr-FR", {
@@ -194,7 +196,7 @@ function VagueResultCard({ vague, color, allVagues }: VagueResultCardProps) {
         </p>
         <div className="mb-3">
           <MetricRow
-            label="FCR"
+            label={tAnalytics("benchmarks.fcr.label")}
             value={vague.fcrGlobal !== null ? `${vague.fcrGlobal}` : "—"}
             best={isBest(vague, allVagues, "fcrGlobal", false)}
             worst={
@@ -217,9 +219,9 @@ function VagueResultCard({ vague, color, allVagues }: VagueResultCardProps) {
             }
           />
           <MetricRow
-            label="SGR"
+            label={tAnalytics("benchmarks.sgr.label")}
             value={vague.sgrMoyen !== null ? `${vague.sgrMoyen}` : "—"}
-            unit="%/j"
+            unit={tAnalytics("labels.sgrUnit")}
             best={isBest(vague, allVagues, "sgrMoyen", true)}
           />
           <MetricRow
@@ -275,6 +277,7 @@ function VagueResultCard({ vague, color, allVagues }: VagueResultCardProps) {
 // ---------------------------------------------------------------------------
 
 function VaguesRadarChart({ vagues }: { vagues: IndicateursVagueComplet[] }) {
+  const tAnalytics = useTranslations("analytics");
   // Normaliser les valeurs entre 0 et 100
   function normalize(value: number | null, min: number, max: number): number {
     if (value === null) return 0;
@@ -290,11 +293,11 @@ function VaguesRadarChart({ vagues }: { vagues: IndicateursVagueComplet[] }) {
   const fcrValues = vagues.map((v) => v.fcrGlobal ?? 0);
 
   const data = [
-    { axe: "Survie %" },
-    { axe: "SGR %/j" },
-    { axe: "ROI %" },
-    { axe: "Marge" },
-    { axe: "FCR (inv.)" },
+    { axe: tAnalytics("axes.survie") },
+    { axe: tAnalytics("axes.sgrPerDay") },
+    { axe: tAnalytics("axes.roi") },
+    { axe: tAnalytics("axes.marge") },
+    { axe: tAnalytics("axes.fcrInverse") },
   ];
 
   const radarData = data.map((d, i) => {

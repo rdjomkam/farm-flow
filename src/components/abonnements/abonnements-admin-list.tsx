@@ -15,6 +15,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Filter, ChevronLeft, ChevronRight, AlertCircle, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -89,6 +90,7 @@ export function AbonnementsAdminList({
   currentPlanId,
 }: AbonnementsAdminListProps) {
   const router = useRouter();
+  const t = useTranslations("abonnements");
   const [annulationId, setAnnulationId] = useState<string | null>(null);
   const [annulationLoading, setAnnulationLoading] = useState(false);
   const [annulationError, setAnnulationError] = useState<string | null>(null);
@@ -156,7 +158,7 @@ export function AbonnementsAdminList({
           <option value="">Tous les statuts</option>
           {validStatuts.map((s) => (
             <option key={s} value={s}>
-              {STATUT_ABONNEMENT_LABELS[s]}
+              {t(STATUT_ABONNEMENT_LABELS[s])}
             </option>
           ))}
         </select>
@@ -171,7 +173,7 @@ export function AbonnementsAdminList({
           <option value="">Tous les plans</option>
           {plans.map((p) => (
             <option key={p.id} value={p.id}>
-              {PLAN_LABELS[p.typePlan]}
+              {t(PLAN_LABELS[p.typePlan])}
             </option>
           ))}
         </select>
@@ -205,16 +207,16 @@ export function AbonnementsAdminList({
             {abonnements.map((a, i) => (
               <tr key={a.id} className={i % 2 === 0 ? "bg-card" : "bg-muted/10"}>
                 <td className="px-4 py-3 font-medium text-foreground">{a.site.name}</td>
-                <td className="px-4 py-3 text-foreground">{PLAN_LABELS[a.plan.typePlan]}</td>
+                <td className="px-4 py-3 text-foreground">{t(PLAN_LABELS[a.plan.typePlan])}</td>
                 <td className="px-4 py-3">
                   <Badge
                     variant={statutVariant(a.statut)}
-                    aria-label={`Statut : ${STATUT_ABONNEMENT_LABELS[a.statut]}`}
+                    aria-label={`Statut : ${t(STATUT_ABONNEMENT_LABELS[a.statut])}`}
                   >
-                    {STATUT_ABONNEMENT_LABELS[a.statut]}
+                    {t(STATUT_ABONNEMENT_LABELS[a.statut])}
                   </Badge>
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">{PERIODE_LABELS[a.periode]}</td>
+                <td className="px-4 py-3 text-muted-foreground">{t(PERIODE_LABELS[a.periode])}</td>
                 <td className="px-4 py-3 text-muted-foreground">
                   {new Date(a.dateDebut).toLocaleDateString("fr-FR")}
                 </td>
@@ -343,19 +345,19 @@ export function AbonnementsAdminList({
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="font-semibold text-foreground">{a.site.name}</p>
-                <p className="text-xs text-muted-foreground">{PLAN_LABELS[a.plan.typePlan]}</p>
+                <p className="text-xs text-muted-foreground">{t(PLAN_LABELS[a.plan.typePlan])}</p>
               </div>
               <Badge
                 variant={statutVariant(a.statut)}
-                aria-label={`Statut : ${STATUT_ABONNEMENT_LABELS[a.statut]}`}
+                aria-label={`Statut : ${t(STATUT_ABONNEMENT_LABELS[a.statut])}`}
               >
-                {STATUT_ABONNEMENT_LABELS[a.statut]}
+                {t(STATUT_ABONNEMENT_LABELS[a.statut])}
               </Badge>
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
                 <p className="text-muted-foreground">Période</p>
-                <p className="font-medium text-foreground">{PERIODE_LABELS[a.periode]}</p>
+                <p className="font-medium text-foreground">{t(PERIODE_LABELS[a.periode])}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Montant</p>

@@ -1,0 +1,88 @@
+{
+  "benchmarks": {
+    "fcr": {
+      "label": "FCR",
+      "full": "FCR (Feed Conversion Ratio)"
+    },
+    "sgr": {
+      "label": "SGR",
+      "full": "SGR (Specific Growth Rate)"
+    },
+    "survie": {
+      "label": "Survival",
+      "full": "Survival rate"
+    },
+    "densite": {
+      "label": "Density",
+      "full": "Density"
+    },
+    "mortalite": {
+      "label": "Mortality",
+      "full": "Mortality"
+    }
+  },
+  "kpi": {
+    "vaguesActives": "Active batches",
+    "biomasseTotale": "Total biomass",
+    "survieMoyenne": "Average survival",
+    "bacs": "Tanks"
+  },
+  "axes": {
+    "sgrPerDay": "SGR %/d",
+    "fcrInverse": "FCR (inv.)",
+    "survie": "Survival %",
+    "roi": "ROI %",
+    "marge": "Margin"
+  },
+  "labels": {
+    "fcr": "FCR",
+    "sgr": "SGR",
+    "fcrActuel": "Current FCR",
+    "sgrActuel": "Current SGR",
+    "sgrRequis": "Required SGR",
+    "sgrUnit": "%/d",
+    "croissance": "Growth (SGR)",
+    "enAvanceSurObjectif": "Ahead of growth target",
+    "enRetardSurObjectif": "Behind growth target"
+  },
+  "indicators": {
+    "title": "Performance Indicators",
+    "survival": "Survival",
+    "mortality": "Mortality",
+    "density": "Density",
+    "livingFish": "living fish",
+    "criticalCount": "{count} critical indicator(s)",
+    "viewCorrectiveAction": "View corrective action",
+    "planCorrectiveAction": "Plan corrective action",
+    "correctiveAction": "Corrective action"
+  },
+  "projections": {
+    "title": "Performance Projections",
+    "notEnoughData": "Not enough biometric data",
+    "noDataMessage": "No biometric data to generate projection.",
+    "hide": "Hide",
+    "chart": "Chart",
+    "currentWeight": "Current weight",
+    "target": "Target",
+    "inDays": "in {count} d",
+    "insufficientData": "Insufficient data",
+    "estimatedHarvest": "Estimated harvest",
+    "remainingFeed": "Remaining feed",
+    "expectedRevenue": "Expected revenue",
+    "growthCurve": "Growth curve",
+    "chartLegend": "Solid line = actual measurements · Dashed = current SGR projection"
+  },
+  "simulation": {
+    "title": "Feed change simulator",
+    "oldFeed": "Current feed",
+    "newFeed": "New feed",
+    "targetProduction": "Target production (kg biomass)",
+    "simulate": "Simulate change",
+    "selectFeed": "Select...",
+    "saving": "Possible saving",
+    "extra_cost": "Estimated extra cost",
+    "result": "Result",
+    "fcrLabel": "FCR",
+    "cost": "Cost"
+  }
+}

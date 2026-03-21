@@ -10,6 +10,7 @@
  * R6 : CSS variables du thème
  */
 import { Check, X, Minus } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { TypePlan } from "@/types";
 import type { PlanAbonnement } from "@/types";
 import { PLAN_LABELS } from "@/lib/abonnements-constants";
@@ -108,9 +109,10 @@ function FeatureCell({ value }: { value: FeatureValue }) {
   return <span className="text-sm text-foreground">{value}</span>;
 }
 
-export function PlanComparaisonTable({ plans }: PlanComparaisonTableProps) {
-  const plansOrdered = PLANS_ORDER.map((t) =>
-    plans.find((p) => p.typePlan === t)
+export async function PlanComparaisonTable({ plans }: PlanComparaisonTableProps) {
+  const t = await getTranslations("abonnements");
+  const plansOrdered = PLANS_ORDER.map((typePlan) =>
+    plans.find((p) => p.typePlan === typePlan)
   ).filter(Boolean) as PlanAbonnement[];
 
   if (plansOrdered.length === 0) return null;
@@ -133,7 +135,7 @@ export function PlanComparaisonTable({ plans }: PlanComparaisonTableProps) {
                     : "text-foreground",
                 ].join(" ")}
               >
-                {PLAN_LABELS[plan.typePlan]}
+                {t(PLAN_LABELS[plan.typePlan])}
               </th>
             ))}
           </tr>

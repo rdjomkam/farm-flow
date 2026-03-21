@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   LayoutDashboard,
   Waves,
@@ -46,16 +47,17 @@ import { Permission, Role, SiteModule } from "@/types";
 import { MODULE_VIEW_PERMISSIONS, ITEM_VIEW_PERMISSIONS, MODULE_LABEL_TO_SITE_MODULE } from "@/lib/permissions-constants";
 import { useAuthService } from "@/services";
 
-const roleLabels: Record<Role, string> = {
-  ADMIN: "Administrateur",
-  GERANT: "Gerant",
-  PISCICULTEUR: "Pisciculteur",
-  INGENIEUR: "Ingenieur",
+const roleKeyMap: Record<Role, string> = {
+  ADMIN: "admin",
+  GERANT: "gerant",
+  PISCICULTEUR: "pisciculteur",
+  INGENIEUR: "ingenieur",
 };
 
 interface NavItem {
   href: string;
-  label: string;
+  /** i18n key under navigation.items.* */
+  itemKey: string;
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
 }
@@ -64,153 +66,175 @@ interface NavItem {
 // Modules ADMIN / GERANT (mirrors sidebar exactly)
 // ---------------------------------------------------------------------------
 
-const modulesAdminGerant: { label: string; primaryHref: string; icon: React.ComponentType<{ className?: string }>; items: NavItem[] }[] = [
+const modulesAdminGerant: {
+  /** Internal permission-lookup key */
+  label: string;
+  /** i18n key under navigation.modules.* */
+  moduleKey: string;
+  primaryHref: string;
+  icon: React.ComponentType<{ className?: string }>;
+  items: NavItem[];
+}[] = [
   {
     label: "Reproduction",
+    moduleKey: "reproduction",
     primaryHref: "/alevins",
     icon: Egg,
     items: [
-      { href: "/alevins", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/alevins/reproducteurs", label: "Reproducteurs", icon: Fish },
-      { href: "/alevins/pontes", label: "Pontes", icon: Egg },
-      { href: "/alevins/lots", label: "Lots d'alevins", icon: Layers },
+      { href: "/alevins", itemKey: "dashboard", icon: LayoutDashboard },
+      { href: "/alevins/reproducteurs", itemKey: "reproducteurs", icon: Fish },
+      { href: "/alevins/pontes", itemKey: "pontes", icon: Egg },
+      { href: "/alevins/lots", itemKey: "lotsAlevins", icon: Layers },
     ],
   },
   {
     label: "Grossissement",
+    moduleKey: "grossissement",
     primaryHref: "/vagues",
     icon: Waves,
     items: [
-      { href: "/vagues", label: "Vagues", icon: Waves },
-      { href: "/bacs", label: "Bacs", icon: Container },
-      { href: "/releves/nouveau", label: "Nouveau releve", icon: PlusCircle },
-      { href: "/analytics/bacs", label: "Analytiques bacs", icon: BarChart3 },
-      { href: "/analytics/vagues", label: "Analytiques vagues", icon: LineChart },
+      { href: "/vagues", itemKey: "vagues", icon: Waves },
+      { href: "/bacs", itemKey: "bacs", icon: Container },
+      { href: "/releves/nouveau", itemKey: "nouveauReleve", icon: PlusCircle },
+      { href: "/analytics/bacs", itemKey: "analytiquesBacs", icon: BarChart3 },
+      { href: "/analytics/vagues", itemKey: "analytiquesVagues", icon: LineChart },
     ],
   },
   {
     label: "Intrants",
+    moduleKey: "intrants",
     primaryHref: "/stock",
     icon: Package,
     items: [
-      { href: "/stock", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/stock/produits", label: "Produits", icon: Tag },
-      { href: "/stock/fournisseurs", label: "Fournisseurs", icon: Truck },
-      { href: "/stock/commandes", label: "Commandes", icon: ShoppingCart },
-      { href: "/stock/mouvements", label: "Mouvements", icon: ArrowUpDown },
-      { href: "/analytics/aliments", label: "Analytiques aliments", icon: BarChart3 },
+      { href: "/stock", itemKey: "dashboard", icon: LayoutDashboard },
+      { href: "/stock/produits", itemKey: "produits", icon: Tag },
+      { href: "/stock/fournisseurs", itemKey: "fournisseurs", icon: Truck },
+      { href: "/stock/commandes", itemKey: "commandes", icon: ShoppingCart },
+      { href: "/stock/mouvements", itemKey: "mouvements", icon: ArrowUpDown },
+      { href: "/analytics/aliments", itemKey: "analytiquesAliments", icon: BarChart3 },
     ],
   },
   {
     label: "Ventes",
+    moduleKey: "ventes",
     primaryHref: "/ventes",
     icon: ShoppingCart,
     items: [
-      { href: "/clients", label: "Clients", icon: Users },
-      { href: "/ventes", label: "Ventes", icon: Banknote },
-      { href: "/factures", label: "Factures", icon: FileText },
-      { href: "/finances", label: "Finances", icon: Wallet },
-      { href: "/depenses", label: "Depenses", icon: Receipt },
-      { href: "/besoins", label: "Besoins", icon: ClipboardList },
+      { href: "/clients", itemKey: "clients", icon: Users },
+      { href: "/ventes", itemKey: "ventesItem", icon: Banknote },
+      { href: "/factures", itemKey: "factures", icon: FileText },
+      { href: "/finances", itemKey: "finances", icon: Wallet },
+      { href: "/depenses", itemKey: "depenses", icon: Receipt },
+      { href: "/besoins", itemKey: "besoins", icon: ClipboardList },
     ],
   },
   {
     label: "Analyse & Pilotage",
+    moduleKey: "analysePilotage",
     primaryHref: "/analytics",
     icon: BarChart3,
     items: [
-      { href: "/analytics", label: "Vue globale", icon: BarChart3 },
-      { href: "/planning", label: "Calendrier", icon: Calendar },
-      { href: "/planning/nouvelle", label: "Nouvelle activite", icon: PlusCircle },
-      { href: "/mes-taches", label: "Mes taches", icon: ClipboardCheck },
-      { href: "/analytics/finances", label: "Finances", icon: Banknote, disabled: true },
-      { href: "/analytics/tendances", label: "Tendances", icon: TrendingUp, disabled: true },
+      { href: "/analytics", itemKey: "vueGlobale", icon: BarChart3 },
+      { href: "/planning", itemKey: "calendrier", icon: Calendar },
+      { href: "/planning/nouvelle", itemKey: "nouvelleActivite", icon: PlusCircle },
+      { href: "/mes-taches", itemKey: "mesTaches", icon: ClipboardCheck },
+      { href: "/analytics/finances", itemKey: "analytiquesFinances", icon: Banknote, disabled: true },
+      { href: "/analytics/tendances", itemKey: "tendances", icon: TrendingUp, disabled: true },
     ],
   },
   {
     label: "Packs & Provisioning",
+    moduleKey: "packsProvisioning",
     primaryHref: "/packs",
     icon: Boxes,
     items: [
-      { href: "/packs", label: "Packs", icon: Boxes },
-      { href: "/activations", label: "Activations", icon: ClipboardCheck },
+      { href: "/packs", itemKey: "packs", icon: Boxes },
+      { href: "/activations", itemKey: "activations", icon: ClipboardCheck },
     ],
   },
   {
     label: "Ingenieur",
+    moduleKey: "ingenieur",
     primaryHref: "/ingenieur",
     icon: UserCog,
     items: [
-      { href: "/ingenieur", label: "Dashboard clients", icon: LayoutDashboard },
-      { href: "/notes", label: "Notes", icon: NotebookPen },
+      { href: "/ingenieur", itemKey: "dashboardClients", icon: LayoutDashboard },
+      { href: "/notes", itemKey: "notes", icon: NotebookPen },
     ],
   },
   // Configuration — unified settings module
   {
     label: "Configuration",
+    moduleKey: "configuration",
     primaryHref: "/settings/sites",
     icon: Settings,
     items: [
-      { href: "/settings/sites", label: "Sites", icon: Building2 },
-      { href: "/settings/config-elevage", label: "Profils d'elevage", icon: Settings },
-      { href: "/settings/alertes", label: "Config. alertes", icon: Settings },
-      { href: "/settings/regles-activites", label: "Regles d'activites", icon: Zap },
+      { href: "/settings/sites", itemKey: "sites", icon: Building2 },
+      { href: "/settings/config-elevage", itemKey: "profilsElevage", icon: Settings },
+      { href: "/settings/alertes", itemKey: "configAlertes", icon: Settings },
+      { href: "/settings/regles-activites", itemKey: "reglesActivites", icon: Zap },
     ],
   },
   // Abonnement — Sprint 33 (gate: ABONNEMENTS_VOIR)
   {
     label: "Abonnement",
+    moduleKey: "abonnement",
     primaryHref: "/mon-abonnement",
     icon: CreditCard,
     items: [
-      { href: "/mon-abonnement", label: "Mon abonnement", icon: CreditCard },
-      { href: "/tarifs", label: "Plans & tarifs", icon: Tag },
+      { href: "/mon-abonnement", itemKey: "monAbonnement", icon: CreditCard },
+      { href: "/tarifs", itemKey: "plansTarifs", icon: Tag },
     ],
   },
   // Admin Abonnements — Sprint 33 (gate: ABONNEMENTS_GERER)
   {
     label: "Admin Abonnements",
+    moduleKey: "adminAbonnements",
     primaryHref: "/admin/abonnements",
     icon: ShieldCheck,
     items: [
-      { href: "/admin/abonnements", label: "Tous les abonnements", icon: ShieldCheck },
-      { href: "/admin/plans", label: "Gestion des plans", icon: LayoutList },
+      { href: "/admin/abonnements", itemKey: "tousAbonnements", icon: ShieldCheck },
+      { href: "/admin/plans", itemKey: "gestionPlans", icon: LayoutList },
     ],
   },
   // Portefeuille Ingénieur — Sprint 34 (gate: PORTEFEUILLE_VOIR)
   {
     label: "Portefeuille",
+    moduleKey: "portefeuille",
     primaryHref: "/mon-portefeuille",
     icon: Wallet,
     items: [
-      { href: "/mon-portefeuille", label: "Mon portefeuille", icon: Wallet },
+      { href: "/mon-portefeuille", itemKey: "monPortefeuille", icon: Wallet },
     ],
   },
   // Admin Commissions — Sprint 34 (gate: COMMISSIONS_GERER)
   {
     label: "Admin Commissions",
+    moduleKey: "adminCommissions",
     primaryHref: "/admin/commissions",
     icon: TrendingUp,
     items: [
-      { href: "/admin/commissions", label: "Toutes les commissions", icon: TrendingUp },
+      { href: "/admin/commissions", itemKey: "toutesCommissions", icon: TrendingUp },
     ],
   },
   // Admin Remises — Sprint 35 (gate: REMISES_GERER)
   {
     label: "Admin Remises",
+    moduleKey: "adminRemises",
     primaryHref: "/admin/remises",
     icon: Tag,
     items: [
-      { href: "/admin/remises", label: "Remises & promos", icon: Tag },
+      { href: "/admin/remises", itemKey: "remisesPromos", icon: Tag },
     ],
   },
   {
     label: "Utilisateurs",
+    moduleKey: "utilisateurs",
     primaryHref: "/users",
     icon: Users,
     items: [
-      { href: "/users", label: "Liste", icon: Users },
-      { href: "/users/nouveau", label: "Nouveau", icon: UserPlus },
+      { href: "/users", itemKey: "liste", icon: Users },
+      { href: "/users/nouveau", itemKey: "nouveau", icon: UserPlus },
     ],
   },
 ];
@@ -246,6 +270,7 @@ export function HamburgerMenu({ open, onOpenChange, permissions, role, userName,
   const pathname = usePathname();
   const router = useRouter();
   const authService = useAuthService();
+  const t = useTranslations("navigation");
 
   // Select modules by role (same logic as sidebar)
   const allModules = useMemo(() => {
@@ -328,7 +353,7 @@ export function HamburgerMenu({ open, onOpenChange, permissions, role, userName,
                 )}
               >
                 <LayoutDashboard className="h-4 w-4" />
-                Dashboard
+                {t("items.dashboard")}
               </Link>
             )}
             {visibleModules.map((mod) => {
@@ -347,7 +372,7 @@ export function HamburgerMenu({ open, onOpenChange, permissions, role, userName,
                   )}
                 >
                   <ModIcon className="h-4 w-4" />
-                  {mod.label}
+                  {t(`modules.${mod.moduleKey}`)}
                 </Link>
               );
             })}
@@ -363,7 +388,7 @@ export function HamburgerMenu({ open, onOpenChange, permissions, role, userName,
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{userName}</p>
-                  <p className="text-xs text-muted-foreground">{roleLabels[role] ?? role}</p>
+                  <p className="text-xs text-muted-foreground">{t(`roles.${roleKeyMap[role]}`)}</p>
                 </div>
               </div>
             )}
@@ -372,7 +397,7 @@ export function HamburgerMenu({ open, onOpenChange, permissions, role, userName,
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
             >
               <LogOut className="h-4 w-4" />
-              Se deconnecter
+              {t("actions.logout")}
             </button>
           </div>
         </div>

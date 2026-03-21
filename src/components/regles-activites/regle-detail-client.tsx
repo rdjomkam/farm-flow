@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -146,6 +147,7 @@ function SectionCard({
 export function RegleDetailClient({ regle, canManage, canManageGlobal, customPlaceholders = [] }: Props) {
   const router = useRouter();
   const configService = useConfigService();
+  const t = useTranslations("settings");
 
   const [editMode, setEditMode] = useState(false);
 
@@ -333,7 +335,9 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           )}
           <InfoRow label="Type d'activite">
             <Badge variant="en_cours">
-              {TYPE_ACTIVITE_LABELS[regle.typeActivite as keyof typeof TYPE_ACTIVITE_LABELS] ?? regle.typeActivite}
+              {TYPE_ACTIVITE_LABELS[regle.typeActivite as keyof typeof TYPE_ACTIVITE_LABELS]
+                ? t(TYPE_ACTIVITE_LABELS[regle.typeActivite as keyof typeof TYPE_ACTIVITE_LABELS])
+                : regle.typeActivite}
             </Badge>
           </InfoRow>
           <InfoRow label="Action">
@@ -342,21 +346,27 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                 (regle.actionType as ActionRegle) === ActionRegle.NOTIFICATION ? "warning" :
                 (regle.actionType as ActionRegle) === ActionRegle.LES_DEUX ? "en_cours" : "default"
               }>
-                {ACTION_REGLE_LABELS[(regle.actionType as ActionRegle) ?? ActionRegle.ACTIVITE] ?? regle.actionType}
+                {ACTION_REGLE_LABELS[(regle.actionType as ActionRegle) ?? ActionRegle.ACTIVITE]
+                  ? t(ACTION_REGLE_LABELS[(regle.actionType as ActionRegle) ?? ActionRegle.ACTIVITE])
+                  : regle.actionType}
               </Badge>
               {regle.severite && (
                 <Badge variant={
                   regle.severite === SeveriteAlerte.CRITIQUE ? "annulee" :
                   regle.severite === SeveriteAlerte.AVERTISSEMENT ? "warning" : "info"
                 }>
-                  {SEVERITE_ALERTE_LABELS[regle.severite as SeveriteAlerte] ?? regle.severite}
+                  {SEVERITE_ALERTE_LABELS[regle.severite as SeveriteAlerte]
+                    ? t(SEVERITE_ALERTE_LABELS[regle.severite as SeveriteAlerte])
+                    : regle.severite}
                 </Badge>
               )}
             </span>
           </InfoRow>
           <InfoRow label="Declencheur">
             <Badge variant="default">
-              {TYPE_DECLENCHEUR_LABELS[regle.typeDeclencheur as keyof typeof TYPE_DECLENCHEUR_LABELS] ?? regle.typeDeclencheur}
+              {TYPE_DECLENCHEUR_LABELS[regle.typeDeclencheur as keyof typeof TYPE_DECLENCHEUR_LABELS]
+                ? t(TYPE_DECLENCHEUR_LABELS[regle.typeDeclencheur as keyof typeof TYPE_DECLENCHEUR_LABELS])
+                : regle.typeDeclencheur}
             </Badge>
           </InfoRow>
           <InfoRow label="Perimetre">
@@ -402,12 +412,16 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           )}
           {regle.phaseMin && (
             <InfoRow label="Phase min">
-              {PHASE_ELEVAGE_LABELS[regle.phaseMin as PhaseElevage]}
+              {PHASE_ELEVAGE_LABELS[regle.phaseMin as PhaseElevage]
+                ? t(PHASE_ELEVAGE_LABELS[regle.phaseMin as PhaseElevage])
+                : regle.phaseMin}
             </InfoRow>
           )}
           {regle.phaseMax && (
             <InfoRow label="Phase max">
-              {PHASE_ELEVAGE_LABELS[regle.phaseMax as PhaseElevage]}
+              {PHASE_ELEVAGE_LABELS[regle.phaseMax as PhaseElevage]
+                ? t(PHASE_ELEVAGE_LABELS[regle.phaseMax as PhaseElevage])
+                : regle.phaseMax}
             </InfoRow>
           )}
         </SectionCard>
@@ -420,7 +434,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-xs text-muted-foreground">Logique :</span>
                   <Badge variant="default">
-                    {LOGIQUE_CONDITION_LABELS[(regle.logique as LogiqueCondition) ?? LogiqueCondition.ET]}
+                    {t(LOGIQUE_CONDITION_LABELS[(regle.logique as LogiqueCondition) ?? LogiqueCondition.ET])}
                   </Badge>
                 </div>
               )}
@@ -435,11 +449,15 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                     </span>
                     <span className="text-foreground">
                       <span className="font-medium">
-                        {TYPE_DECLENCHEUR_LABELS[c.typeDeclencheur as TypeDeclencheur] ?? c.typeDeclencheur}
+                        {TYPE_DECLENCHEUR_LABELS[c.typeDeclencheur as TypeDeclencheur]
+                          ? t(TYPE_DECLENCHEUR_LABELS[c.typeDeclencheur as TypeDeclencheur])
+                          : c.typeDeclencheur}
                       </span>
                       {" "}
                       <span className="text-muted-foreground">
-                        {OPERATEUR_CONDITION_LABELS[c.operateur as OperateurCondition] ?? c.operateur}
+                        {OPERATEUR_CONDITION_LABELS[c.operateur as OperateurCondition]
+                          ? t(OPERATEUR_CONDITION_LABELS[c.operateur as OperateurCondition])
+                          : c.operateur}
                       </span>
                       {" "}
                       {c.conditionValeur !== null && (
@@ -454,7 +472,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
               </div>
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">Aucune condition composee — declencheur simple : {TYPE_DECLENCHEUR_LABELS[regle.typeDeclencheur as keyof typeof TYPE_DECLENCHEUR_LABELS] ?? regle.typeDeclencheur}</p>
+            <p className="text-sm text-muted-foreground">Aucune condition composee — declencheur simple : {TYPE_DECLENCHEUR_LABELS[regle.typeDeclencheur as keyof typeof TYPE_DECLENCHEUR_LABELS] ? t(TYPE_DECLENCHEUR_LABELS[regle.typeDeclencheur as keyof typeof TYPE_DECLENCHEUR_LABELS]) : regle.typeDeclencheur}</p>
           )}
         </SectionCard>
 
@@ -511,7 +529,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
               {regle.actionPayloadType && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Bouton d&apos;action</p>
-                  <p className="text-sm">{ACTION_PAYLOAD_TYPE_LABELS[regle.actionPayloadType] ?? regle.actionPayloadType}</p>
+                  <p className="text-sm">{ACTION_PAYLOAD_TYPE_LABELS[regle.actionPayloadType] ? t(ACTION_PAYLOAD_TYPE_LABELS[regle.actionPayloadType]) : regle.actionPayloadType}</p>
                 </div>
               )}
             </div>
@@ -800,7 +818,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                 <SelectItem value="__none__">Toutes les phases</SelectItem>
                 {PHASE_ELEVAGE_ORDER.map((phase) => (
                   <SelectItem key={phase} value={phase}>
-                    {PHASE_ELEVAGE_LABELS[phase]}
+                    {t(PHASE_ELEVAGE_LABELS[phase])}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -826,7 +844,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                 <SelectItem value="__none__">Toutes les phases</SelectItem>
                 {PHASE_ELEVAGE_ORDER.map((phase) => (
                   <SelectItem key={phase} value={phase}>
-                    {PHASE_ELEVAGE_LABELS[phase]}
+                    {t(PHASE_ELEVAGE_LABELS[phase])}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -861,7 +879,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
             <SelectContent>
               {Object.values(LogiqueCondition).map((val) => (
                 <SelectItem key={val} value={val}>
-                  {LOGIQUE_CONDITION_LABELS[val]}
+                  {t(LOGIQUE_CONDITION_LABELS[val])}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -911,7 +929,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                     <SelectContent>
                       {Object.values(TypeDeclencheur).map((val) => (
                         <SelectItem key={val} value={val}>
-                          {TYPE_DECLENCHEUR_LABELS[val]}
+                          {t(TYPE_DECLENCHEUR_LABELS[val])}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -943,7 +961,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                     <SelectContent>
                       {Object.values(OperateurCondition).map((val) => (
                         <SelectItem key={val} value={val}>
-                          {OPERATEUR_CONDITION_LABELS[val]}
+                          {t(OPERATEUR_CONDITION_LABELS[val])}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1024,7 +1042,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
             <SelectContent>
               {Object.values(ActionRegle).map((val) => (
                 <SelectItem key={val} value={val}>
-                  {ACTION_REGLE_LABELS[val]}
+                  {t(ACTION_REGLE_LABELS[val])}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -1055,7 +1073,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                 <SelectContent>
                   {Object.values(SeveriteAlerte).map((val) => (
                     <SelectItem key={val} value={val}>
-                      {SEVERITE_ALERTE_LABELS[val]}
+                      {t(SEVERITE_ALERTE_LABELS[val])}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1100,10 +1118,10 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">{ACTION_PAYLOAD_TYPE_LABELS[""]}</SelectItem>
+                  <SelectItem value="__none__">{t(ACTION_PAYLOAD_TYPE_LABELS[""])}</SelectItem>
                   {(["CREER_RELEVE", "MODIFIER_BAC", "VOIR_VAGUE", "VOIR_STOCK"] as const).map((val) => (
                     <SelectItem key={val} value={val}>
-                      {ACTION_PAYLOAD_TYPE_LABELS[val]}
+                      {t(ACTION_PAYLOAD_TYPE_LABELS[val])}
                     </SelectItem>
                   ))}
                 </SelectContent>

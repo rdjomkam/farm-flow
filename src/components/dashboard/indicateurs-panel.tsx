@@ -11,6 +11,7 @@ import {
   BENCHMARK_DENSITE,
 } from "@/lib/benchmarks";
 import type { IndicateursBenchmarkVague } from "@/types";
+import { getTranslations } from "next-intl/server";
 
 interface IndicateursPanelProps {
   indicateurs: IndicateursBenchmarkVague[];
@@ -63,7 +64,9 @@ function IndicateurRow({ label, value, unit, level, icon: Icon }: IndicateurRowP
  * Mobile first : cartes empilees sur 360px, grille sur desktop.
  * R6 : utilise les CSS variables du theme via les classes Tailwind.
  */
-export function IndicateursPanel({ indicateurs }: IndicateursPanelProps) {
+export async function IndicateursPanel({ indicateurs }: IndicateursPanelProps) {
+  const tAnalytics = await getTranslations("analytics");
+
   if (indicateurs.length === 0) return null;
 
   // Collecter toutes les alertes MAUVAIS pour la notification prominente
@@ -71,19 +74,19 @@ export function IndicateursPanel({ indicateurs }: IndicateursPanelProps) {
 
   for (const ind of indicateurs) {
     if (evaluerBenchmark(ind.tauxSurvie, BENCHMARK_SURVIE) === "MAUVAIS" && ind.tauxSurvie !== null) {
-      alertesMauvaises.push({ vagueCode: ind.vagueCode, indicateur: "Survie", value: `${ind.tauxSurvie}%` });
+      alertesMauvaises.push({ vagueCode: ind.vagueCode, indicateur: tAnalytics("indicators.survival"), value: `${ind.tauxSurvie}%` });
     }
     if (evaluerBenchmark(ind.fcr, BENCHMARK_FCR) === "MAUVAIS" && ind.fcr !== null) {
-      alertesMauvaises.push({ vagueCode: ind.vagueCode, indicateur: "FCR", value: `${ind.fcr}` });
+      alertesMauvaises.push({ vagueCode: ind.vagueCode, indicateur: tAnalytics("benchmarks.fcr.label"), value: `${ind.fcr}` });
     }
     if (evaluerBenchmark(ind.sgr, BENCHMARK_SGR) === "MAUVAIS" && ind.sgr !== null) {
-      alertesMauvaises.push({ vagueCode: ind.vagueCode, indicateur: "SGR", value: `${ind.sgr}%/j` });
+      alertesMauvaises.push({ vagueCode: ind.vagueCode, indicateur: tAnalytics("benchmarks.sgr.label"), value: `${ind.sgr}${tAnalytics("labels.sgrUnit")}` });
     }
     if (evaluerBenchmark(ind.tauxMortalite, BENCHMARK_MORTALITE) === "MAUVAIS" && ind.tauxMortalite !== null) {
-      alertesMauvaises.push({ vagueCode: ind.vagueCode, indicateur: "Mortalite", value: `${ind.tauxMortalite}%` });
+      alertesMauvaises.push({ vagueCode: ind.vagueCode, indicateur: tAnalytics("indicators.mortality"), value: `${ind.tauxMortalite}%` });
     }
     if (evaluerBenchmark(ind.densite, BENCHMARK_DENSITE) === "MAUVAIS" && ind.densite !== null) {
-      alertesMauvaises.push({ vagueCode: ind.vagueCode, indicateur: "Densite", value: `${ind.densite} p/m\u00b3` });
+      alertesMauvaises.push({ vagueCode: ind.vagueCode, indicateur: tAnalytics("indicators.density"), value: `${ind.densite} p/m\u00b3` });
     }
   }
 
@@ -95,7 +98,7 @@ export function IndicateursPanel({ indicateurs }: IndicateursPanelProps) {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-        Indicateurs de performance
+        {tAnalytics("indicators.title")}
       </h2>
 
       {/* Notification prominente si des indicateurs sont MAUVAIS */}
@@ -117,7 +120,7 @@ export function IndicateursPanel({ indicateurs }: IndicateursPanelProps) {
                 className="text-sm font-semibold"
                 style={{ color: "var(--accent-red)" }}
               >
-                {alertesMauvaises.length} indicateur{alertesMauvaises.length > 1 ? "s" : ""} critique{alertesMauvaises.length > 1 ? "s" : ""}
+                {tAnalytics("indicators.criticalCount", { count: alertesMauvaises.length })}
               </p>
               <ul className="mt-1 space-y-0.5">
                 {alertesMauvaises.slice(0, 3).map((alerte, i) => (
@@ -141,7 +144,7 @@ export function IndicateursPanel({ indicateurs }: IndicateursPanelProps) {
                 background: "var(--accent-red)",
               }}
             >
-              <span>Voir l&apos;activite corrective</span>
+              <span>{tAnalytics("indicators.viewCorrectiveAction")}</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
           )}
@@ -153,7 +156,7 @@ export function IndicateursPanel({ indicateurs }: IndicateursPanelProps) {
                 background: "var(--accent-red)",
               }}
             >
-              <span>Planifier une action corrective</span>
+              <span>{tAnalytics("indicators.planCorrectiveAction")}</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
           )}
@@ -194,42 +197,42 @@ export function IndicateursPanel({ indicateurs }: IndicateursPanelProps) {
                   </div>
                   {ind.nombreVivants !== null && (
                     <p className="text-xs text-muted-foreground">
-                      {ind.nombreVivants.toLocaleString("fr-FR")} poissons vivants
+                      {ind.nombreVivants.toLocaleString("fr-FR")} {tAnalytics("indicators.livingFish")}
                     </p>
                   )}
                 </CardHeader>
                 <CardContent className="pt-0">
                   <div className="divide-y divide-border">
                     <IndicateurRow
-                      label="Survie"
+                      label={tAnalytics("indicators.survival")}
                       value={ind.tauxSurvie}
                       unit="%"
                       level={niveauSurvie}
                       icon={HeartPulse}
                     />
                     <IndicateurRow
-                      label="FCR"
+                      label={tAnalytics("benchmarks.fcr.label")}
                       value={ind.fcr}
                       unit=""
                       level={niveauFcr}
                       icon={BarChart3}
                     />
                     <IndicateurRow
-                      label="SGR"
+                      label={tAnalytics("benchmarks.sgr.label")}
                       value={ind.sgr}
-                      unit="%/j"
+                      unit={tAnalytics("labels.sgrUnit")}
                       level={niveauSgr}
                       icon={TrendingUp}
                     />
                     <IndicateurRow
-                      label="Mortalite"
+                      label={tAnalytics("indicators.mortality")}
                       value={ind.tauxMortalite}
                       unit="%"
                       level={niveauMortalite}
                       icon={TrendingDown}
                     />
                     <IndicateurRow
-                      label="Densite"
+                      label={tAnalytics("indicators.density")}
                       value={ind.densite}
                       unit="p/m\u00b3"
                       level={niveauDensite}
@@ -246,7 +249,7 @@ export function IndicateursPanel({ indicateurs }: IndicateursPanelProps) {
                         color: "var(--accent-red)",
                       }}
                     >
-                      <span>{ind.activiteCorrectiveTitre ?? "Activite corrective"}</span>
+                      <span>{ind.activiteCorrectiveTitre ?? tAnalytics("indicators.correctiveAction")}</span>
                       <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                   )}

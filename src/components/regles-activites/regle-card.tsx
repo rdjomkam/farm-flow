@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Lock, Globe, Building2, Activity, Bell, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ActionRegle, TypeDeclencheur, TypeActivite, LogiqueCondition } from "@/types";
@@ -10,7 +11,6 @@ import {
   TYPE_ACTIVITE_LABELS,
   TYPE_DECLENCHEUR_LABELS,
   SEUIL_TYPES_FIREDONCE,
-  LOGIQUE_CONDITION_LABELS,
 } from "@/lib/regles-activites-constants";
 
 // ---------------------------------------------------------------------------
@@ -57,6 +57,7 @@ interface RegleCardProps {
 // ---------------------------------------------------------------------------
 
 export function RegleCard({ regle, onToggle, isToggling, canManage, canManageGlobal }: RegleCardProps) {
+  const t = useTranslations("settings");
   const isGlobal = regle.siteId === null;
   const activiteBadgeVariant = getActiviteBadgeVariant(
     regle.typeActivite as TypeActivite
@@ -90,15 +91,16 @@ export function RegleCard({ regle, onToggle, isToggling, canManage, canManageGlo
           <div className="flex flex-wrap items-center gap-1.5">
             {/* TypeActivite */}
             <Badge variant={activiteBadgeVariant} className="text-xs">
-              {TYPE_ACTIVITE_LABELS[regle.typeActivite as TypeActivite] ??
-                regle.typeActivite}
+              {TYPE_ACTIVITE_LABELS[regle.typeActivite as TypeActivite]
+                ? t(TYPE_ACTIVITE_LABELS[regle.typeActivite as TypeActivite])
+                : regle.typeActivite}
             </Badge>
 
             {/* TypeDeclencheur */}
             <Badge variant="default" className="text-xs">
-              {TYPE_DECLENCHEUR_LABELS[
-                regle.typeDeclencheur as TypeDeclencheur
-              ] ?? regle.typeDeclencheur}
+              {TYPE_DECLENCHEUR_LABELS[regle.typeDeclencheur as TypeDeclencheur]
+                ? t(TYPE_DECLENCHEUR_LABELS[regle.typeDeclencheur as TypeDeclencheur])
+                : regle.typeDeclencheur}
             </Badge>
 
             {/* ActionRegle badge */}
@@ -114,7 +116,9 @@ export function RegleCard({ regle, onToggle, isToggling, canManage, canManageGlo
                 ) : (
                   <Zap className="h-3 w-3" />
                 )}
-                {ACTION_REGLE_LABELS[regle.actionType as ActionRegle] ?? regle.actionType}
+                {ACTION_REGLE_LABELS[regle.actionType as ActionRegle]
+                  ? t(ACTION_REGLE_LABELS[regle.actionType as ActionRegle])
+                  : regle.actionType}
               </span>
             )}
 

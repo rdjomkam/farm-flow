@@ -1,0 +1,63 @@
+{
+  "plans": {
+    "DECOUVERTE": "Découverte",
+    "ELEVEUR": "Éleveur",
+    "PROFESSIONNEL": "Professionnel",
+    "ENTREPRISE": "Entreprise",
+    "INGENIEUR_STARTER": "Ingénieur Starter",
+    "INGENIEUR_PRO": "Ingénieur Pro",
+    "INGENIEUR_EXPERT": "Ingénieur Expert"
+  },
+  "periods": {
+    "MENSUEL": "Mensuel",
+    "TRIMESTRIEL": "Trimestriel",
+    "ANNUEL": "Annuel"
+  },
+  "statuts": {
+    "ACTIF": "Actif",
+    "EN_GRACE": "Période de grâce",
+    "SUSPENDU": "Suspendu",
+    "EXPIRE": "Expiré",
+    "ANNULE": "Annulé",
+    "EN_ATTENTE_PAIEMENT": "En attente de paiement"
+  },
+  "providers": {
+    "SMOBILPAY": "Smobilpay / Maviance",
+    "MTN_MOMO": "MTN Mobile Money",
+    "ORANGE_MONEY": "Orange Money",
+    "MANUEL": "Paiement manuel"
+  },
+  "banner": {
+    "graceMessage": "Votre abonnement expire dans {days} jour(s).",
+    "suspendedMessage": "Mode lecture seule \u2014 Votre abonnement est suspendu.",
+    "renewButton": "Renouveler mon abonnement"
+  },
+  "admin": {
+    "active": "Actif",
+    "inactive": "Inactif",
+    "public": "Public",
+    "private": "Privé",
+    "unlimited": "Illimité",
+    "onQuote": "Sur devis",
+    "allTypes": "Tous les types",
+    "allStatuses": "Tous les statuts",
+    "reset": "Réinitialiser",
+    "newPlan": "Nouveau plan",
+    "monthlyPrice": "Mensuel :",
+    "quarterlyPrice": "Trimestriel :",
+    "annualPrice": "Annuel :",
+    "columns": {
+      "plan": "Plan",
+      "type": "Type",
+      "price": "Prix",
+      "sites": "Sites",
+      "tanks": "Bacs",
+      "waves": "Vagues",
+      "engineer": "Ingénieur",
+      "subscribers": "Abonnés",
+      "status": "Statut",
+      "visibility": "Visibilité",
+      "actions": "Actions"
+    }
+  }
+}

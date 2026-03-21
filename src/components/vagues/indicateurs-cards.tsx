@@ -1,12 +1,15 @@
 import { HeartPulse, TrendingUp, Weight, Activity, Scale } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import type { IndicateursVague } from "@/types";
+import { getTranslations } from "next-intl/server";
 
 interface IndicateursCardsProps {
   indicateurs: IndicateursVague;
 }
 
-export function IndicateursCards({ indicateurs }: IndicateursCardsProps) {
+export async function IndicateursCards({ indicateurs }: IndicateursCardsProps) {
+  const tAnalytics = await getTranslations("analytics");
+
   const items = [
     {
       label: "Taux de survie",
@@ -30,14 +33,14 @@ export function IndicateursCards({ indicateurs }: IndicateursCardsProps) {
       bgColor: "bg-accent-purple-muted",
     },
     {
-      label: "SGR",
-      value: indicateurs.sgr !== null ? `${indicateurs.sgr}%/j` : "—",
+      label: tAnalytics("benchmarks.sgr.label"),
+      value: indicateurs.sgr !== null ? `${indicateurs.sgr}${tAnalytics("labels.sgrUnit")}` : "—",
       icon: TrendingUp,
       color: "text-primary",
       bgColor: "bg-primary/10",
     },
     {
-      label: "FCR",
+      label: tAnalytics("benchmarks.fcr.label"),
       value: indicateurs.fcr !== null ? `${indicateurs.fcr}` : "—",
       icon: Activity,
       color: "text-accent-amber",

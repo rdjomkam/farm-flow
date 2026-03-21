@@ -75,7 +75,7 @@ export const KNOWN_PLACEHOLDERS: KnownPlaceholder[] = [
   },
   {
     key: "valeur",
-    description: "FCR ou SGR selon le contexte (indice de conversion ou taux de croissance specifique)",
+    description: "ICA ou TCS selon le contexte (indice de conversion alimentaire ou taux de croissance specifique)",
     example: "1,42",
   },
   {
@@ -192,69 +192,72 @@ export function validateTemplatePlaceholdersWithCustom(
 }
 
 // ---------------------------------------------------------------------------
-// Labels FR — TypeDeclencheur
+// Labels i18n — TypeDeclencheur
 // ---------------------------------------------------------------------------
 
 /**
- * Labels en francais pour l'affichage UI de chaque TypeDeclencheur.
+ * Cles i18n pour l'affichage UI de chaque TypeDeclencheur.
+ * Usage : t(TYPE_DECLENCHEUR_LABELS[val]) avec useTranslations("settings")
  * Couvre toutes les valeurs de l'enum (exhaustivite garantie par Record<TypeDeclencheur, string>).
  */
 export const TYPE_DECLENCHEUR_LABELS: Record<TypeDeclencheur, string> = {
-  [TypeDeclencheur.CALENDRIER]:    "Calendrier",
-  [TypeDeclencheur.RECURRENT]:     "Recurrent",
-  [TypeDeclencheur.SEUIL_POIDS]:   "Seuil de poids",
-  [TypeDeclencheur.SEUIL_QUALITE]: "Seuil qualite eau",
-  [TypeDeclencheur.SEUIL_MORTALITE]: "Seuil de mortalite",
-  [TypeDeclencheur.STOCK_BAS]:     "Stock bas",
-  [TypeDeclencheur.FCR_ELEVE]:     "FCR eleve",
-  [TypeDeclencheur.JALON]:         "Jalon de production",
+  [TypeDeclencheur.CALENDRIER]:    "triggers.CALENDRIER",
+  [TypeDeclencheur.RECURRENT]:     "triggers.RECURRENT",
+  [TypeDeclencheur.SEUIL_POIDS]:   "triggers.SEUIL_POIDS",
+  [TypeDeclencheur.SEUIL_QUALITE]: "triggers.SEUIL_QUALITE",
+  [TypeDeclencheur.SEUIL_MORTALITE]: "triggers.SEUIL_MORTALITE",
+  [TypeDeclencheur.STOCK_BAS]:     "triggers.STOCK_BAS",
+  [TypeDeclencheur.FCR_ELEVE]:     "triggers.FCR_ELEVE",
+  [TypeDeclencheur.JALON]:         "triggers.JALON",
   // Sprint 27-28 — Conditions composees de densite (ADR-density-alerts)
-  [TypeDeclencheur.SEUIL_DENSITE]:        "Seuil de densite",
-  [TypeDeclencheur.SEUIL_RENOUVELLEMENT]: "Seuil de renouvellement eau",
-  [TypeDeclencheur.ABSENCE_RELEVE]:       "Absence de releve",
+  [TypeDeclencheur.SEUIL_DENSITE]:        "triggers.SEUIL_DENSITE",
+  [TypeDeclencheur.SEUIL_RENOUVELLEMENT]: "triggers.SEUIL_RENOUVELLEMENT",
+  [TypeDeclencheur.ABSENCE_RELEVE]:       "triggers.ABSENCE_RELEVE",
   // Declencheurs qualite eau specifiques (FAIL-1 fix)
-  [TypeDeclencheur.SEUIL_AMMONIAC]:       "Seuil d'ammoniac",
-  [TypeDeclencheur.SEUIL_OXYGENE]:        "Seuil d'oxygene dissous",
-  [TypeDeclencheur.SEUIL_PH]:             "Seuil de pH",
-  [TypeDeclencheur.SEUIL_TEMPERATURE]:    "Seuil de temperature",
+  [TypeDeclencheur.SEUIL_AMMONIAC]:       "triggers.SEUIL_AMMONIAC",
+  [TypeDeclencheur.SEUIL_OXYGENE]:        "triggers.SEUIL_OXYGENE",
+  [TypeDeclencheur.SEUIL_PH]:             "triggers.SEUIL_PH",
+  [TypeDeclencheur.SEUIL_TEMPERATURE]:    "triggers.SEUIL_TEMPERATURE",
 };
 
 // ---------------------------------------------------------------------------
-// Labels FR — TypeActivite
+// Labels i18n — TypeActivite
 // ---------------------------------------------------------------------------
 
 /**
- * Labels en francais pour l'affichage UI de chaque TypeActivite.
+ * Cles i18n pour l'affichage UI de chaque TypeActivite.
+ * Usage : t(TYPE_ACTIVITE_LABELS[val]) avec useTranslations("settings")
  */
 export const TYPE_ACTIVITE_LABELS: Record<TypeActivite, string> = {
-  [TypeActivite.ALIMENTATION]: "Alimentation",
-  [TypeActivite.BIOMETRIE]:    "Biometrie",
-  [TypeActivite.QUALITE_EAU]:  "Qualite de l'eau",
-  [TypeActivite.COMPTAGE]:     "Comptage",
-  [TypeActivite.NETTOYAGE]:    "Nettoyage",
-  [TypeActivite.TRAITEMENT]:   "Traitement",
-  [TypeActivite.RECOLTE]:      "Recolte",
-  [TypeActivite.TRI]:          "Tri",
-  [TypeActivite.MEDICATION]:   "Medication",
+  [TypeActivite.ALIMENTATION]: "activities.ALIMENTATION",
+  [TypeActivite.BIOMETRIE]:    "activities.BIOMETRIE",
+  [TypeActivite.QUALITE_EAU]:  "activities.QUALITE_EAU",
+  [TypeActivite.COMPTAGE]:     "activities.COMPTAGE",
+  [TypeActivite.NETTOYAGE]:    "activities.NETTOYAGE",
+  [TypeActivite.TRAITEMENT]:   "activities.TRAITEMENT",
+  [TypeActivite.RECOLTE]:      "activities.RECOLTE",
+  [TypeActivite.TRI]:          "activities.TRI",
+  [TypeActivite.MEDICATION]:   "activities.MEDICATION",
   // Sprint 27-28 — Renouvellement eau (ADR-density-alerts)
-  [TypeActivite.RENOUVELLEMENT]: "Renouvellement eau",
-  [TypeActivite.AUTRE]:        "Autre",
+  [TypeActivite.RENOUVELLEMENT]: "activities.RENOUVELLEMENT",
+  [TypeActivite.AUTRE]:        "activities.AUTRE",
 };
 
 // ---------------------------------------------------------------------------
-// Labels FR — PhaseElevage
+// Labels i18n — PhaseElevage
 // ---------------------------------------------------------------------------
 
 /**
- * Labels en francais pour l'affichage UI de chaque PhaseElevage.
+ * Cles i18n pour l'affichage UI de chaque PhaseElevage.
+ * Usage : t(PHASE_ELEVAGE_LABELS[val]) avec useTranslations("settings")
  */
 export const PHASE_ELEVAGE_LABELS: Record<PhaseElevage, string> = {
-  [PhaseElevage.ACCLIMATATION]:    "Acclimatation",
-  [PhaseElevage.CROISSANCE_DEBUT]: "Croissance debut",
-  [PhaseElevage.JUVENILE]:         "Juvenile",
-  [PhaseElevage.GROSSISSEMENT]:    "Grossissement",
-  [PhaseElevage.FINITION]:         "Finition",
-  [PhaseElevage.PRE_RECOLTE]:      "Pre-recolte",
+  [PhaseElevage.ACCLIMATATION]:    "phases.ACCLIMATATION",
+  [PhaseElevage.CROISSANCE_DEBUT]: "phases.CROISSANCE_DEBUT",
+  [PhaseElevage.JUVENILE]:         "phases.JUVENILE",
+  [PhaseElevage.GROSSISSEMENT]:    "phases.GROSSISSEMENT",
+  [PhaseElevage.FINITION]:         "phases.FINITION",
+  [PhaseElevage.PRE_RECOLTE]:      "phases.PRE_RECOLTE",
 };
 
 // ---------------------------------------------------------------------------
@@ -279,58 +282,62 @@ export const PHASE_ELEVAGE_ORDER: PhaseElevage[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Labels FR — OperateurCondition
+// Labels i18n — OperateurCondition
 // ---------------------------------------------------------------------------
 
 /**
- * Labels en francais pour l'affichage UI de chaque OperateurCondition.
+ * Cles i18n pour l'affichage UI de chaque OperateurCondition.
+ * Usage : t(OPERATEUR_CONDITION_LABELS[val]) avec useTranslations("settings")
  */
 export const OPERATEUR_CONDITION_LABELS: Record<OperateurCondition, string> = {
-  [OperateurCondition.SUPERIEUR]: "Superieur a",
-  [OperateurCondition.INFERIEUR]: "Inferieur a",
-  [OperateurCondition.ENTRE]:     "Entre",
-  [OperateurCondition.EGAL]:      "Egal a",
+  [OperateurCondition.SUPERIEUR]: "operators.SUPERIEUR",
+  [OperateurCondition.INFERIEUR]: "operators.INFERIEUR",
+  [OperateurCondition.ENTRE]:     "operators.ENTRE",
+  [OperateurCondition.EGAL]:      "operators.EGAL",
 };
 
 // ---------------------------------------------------------------------------
-// Labels FR — ActionRegle
+// Labels i18n — ActionRegle
 // ---------------------------------------------------------------------------
 
 /**
- * Labels en francais pour l'affichage UI de chaque ActionRegle.
+ * Cles i18n pour l'affichage UI de chaque ActionRegle.
+ * Usage : t(ACTION_REGLE_LABELS[val]) avec useTranslations("settings")
  */
 export const ACTION_REGLE_LABELS: Record<ActionRegle, string> = {
-  [ActionRegle.ACTIVITE]:     "Creer une activite",
-  [ActionRegle.NOTIFICATION]: "Envoyer une alerte",
-  [ActionRegle.LES_DEUX]:    "Activite + Alerte",
+  [ActionRegle.ACTIVITE]:     "actions.ACTIVITE",
+  [ActionRegle.NOTIFICATION]: "actions.NOTIFICATION",
+  [ActionRegle.LES_DEUX]:    "actions.LES_DEUX",
 };
 
 // ---------------------------------------------------------------------------
-// Labels FR — SeveriteAlerte (dans le contexte des regles)
+// Labels i18n — SeveriteAlerte (dans le contexte des regles)
 // ---------------------------------------------------------------------------
 
 /**
- * Labels en francais pour les niveaux de severite d'une notification.
+ * Cles i18n pour les niveaux de severite d'une notification.
+ * Usage : t(SEVERITE_ALERTE_LABELS[val]) avec useTranslations("settings")
  */
 export const SEVERITE_ALERTE_LABELS: Record<SeveriteAlerte, string> = {
-  [SeveriteAlerte.INFO]:          "Information",
-  [SeveriteAlerte.AVERTISSEMENT]: "Avertissement",
-  [SeveriteAlerte.CRITIQUE]:      "Critique",
+  [SeveriteAlerte.INFO]:          "severity.INFO",
+  [SeveriteAlerte.AVERTISSEMENT]: "severity.AVERTISSEMENT",
+  [SeveriteAlerte.CRITIQUE]:      "severity.CRITIQUE",
 };
 
 // ---------------------------------------------------------------------------
-// Labels FR — actionPayloadType
+// Labels i18n — actionPayloadType
 // ---------------------------------------------------------------------------
 
 /**
- * Options de CTA (Call-To-Action) dans une notification generee par une regle.
+ * Cles i18n pour les options de CTA (Call-To-Action) dans une notification generee par une regle.
+ * Usage : t(ACTION_PAYLOAD_TYPE_LABELS[val]) avec useTranslations("settings")
  */
 export const ACTION_PAYLOAD_TYPE_LABELS: Record<string, string> = {
-  "":            "Aucune action (alerte simple)",
-  CREER_RELEVE:  "Creer un releve",
-  MODIFIER_BAC:  "Modifier le bac",
-  VOIR_VAGUE:    "Voir la vague",
-  VOIR_STOCK:    "Voir le stock",
+  "":            "payloadTypes.none",
+  CREER_RELEVE:  "payloadTypes.CREER_RELEVE",
+  MODIFIER_BAC:  "payloadTypes.MODIFIER_BAC",
+  VOIR_VAGUE:    "payloadTypes.VOIR_VAGUE",
+  VOIR_STOCK:    "payloadTypes.VOIR_STOCK",
 };
 
 /** Valeurs valides pour actionPayloadType */
@@ -338,15 +345,16 @@ export const VALID_ACTION_PAYLOAD_TYPES = ["CREER_RELEVE", "MODIFIER_BAC", "VOIR
 export type ActionPayloadType = typeof VALID_ACTION_PAYLOAD_TYPES[number];
 
 // ---------------------------------------------------------------------------
-// Labels FR — LogiqueCondition
+// Labels i18n — LogiqueCondition
 // ---------------------------------------------------------------------------
 
 /**
- * Labels en francais pour l'affichage UI de chaque LogiqueCondition.
+ * Cles i18n pour l'affichage UI de chaque LogiqueCondition.
+ * Usage : t(LOGIQUE_CONDITION_LABELS[val]) avec useTranslations("settings")
  */
 export const LOGIQUE_CONDITION_LABELS: Record<LogiqueCondition, string> = {
-  [LogiqueCondition.ET]: "ET (toutes les conditions)",
-  [LogiqueCondition.OU]: "OU (au moins une condition)",
+  [LogiqueCondition.ET]: "logic.ET",
+  [LogiqueCondition.OU]: "logic.OU",
 };
 
 // ---------------------------------------------------------------------------

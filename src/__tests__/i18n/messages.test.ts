@@ -249,13 +249,35 @@ describe("messages/index.ts — barrel exports", () => {
     expect(namespaces).toContain("format");
   });
 
-  it("namespaces a exactement 2 entrées", () => {
-    expect(namespaces).toHaveLength(2);
+  it("namespaces a exactement 7 entrées (Sprint 39 + Sprint 40)", () => {
+    // Sprint 39 : common, format
+    // Sprint 40 : navigation, permissions, abonnements, settings, analytics
+    expect(namespaces).toHaveLength(7);
   });
 
   it("le type Namespace couvre les valeurs attendues (vérification de présence)", () => {
     const ns: string[] = [...namespaces];
     expect(ns).toContain("common");
     expect(ns).toContain("format");
+  });
+
+  it("namespaces contient 'navigation' (Sprint 40)", () => {
+    expect(namespaces).toContain("navigation");
+  });
+
+  it("namespaces contient 'permissions' (Sprint 40)", () => {
+    expect(namespaces).toContain("permissions");
+  });
+
+  it("namespaces contient 'abonnements' (Sprint 40)", () => {
+    expect(namespaces).toContain("abonnements");
+  });
+
+  it("namespaces contient 'settings' (Sprint 40)", () => {
+    expect(namespaces).toContain("settings");
+  });
+
+  it("namespaces contient 'analytics' (Sprint 40)", () => {
+    expect(namespaces).toContain("analytics");
   });
 });

@@ -36,7 +36,8 @@ export const BENCHMARK_SURVIE: BenchmarkRange = {
 };
 
 export const BENCHMARK_FCR: BenchmarkRange = {
-  label: "FCR",
+  // i18n: display as "ICA" (fr) / "FCR" (en) — use analytics.benchmarks.fcr.label in components
+  label: "fcr",
   unit: "",
   // FCR: lower is better → excellent < bon < acceptable
   excellent: { min: 0, max: 1.5 },
@@ -45,7 +46,8 @@ export const BENCHMARK_FCR: BenchmarkRange = {
 };
 
 export const BENCHMARK_SGR: BenchmarkRange = {
-  label: "SGR",
+  // i18n: display as "TCS" (fr) / "SGR" (en) — use analytics.benchmarks.sgr.label in components
+  label: "sgr",
   unit: "%/j",
   excellent: { min: 2, max: Infinity },
   bon: { min: 1.5, max: 2 },
@@ -110,7 +112,7 @@ export function getBenchmarkSurvie(config?: ConfigElevage | null): BenchmarkRang
 export function getBenchmarkFcr(config?: ConfigElevage | null): BenchmarkRange {
   if (!config) return BENCHMARK_FCR;
   return {
-    label: "FCR",
+    label: "fcr",
     unit: "",
     excellent: { min: 0, max: config.fcrExcellentMax },
     bon: { min: config.fcrExcellentMax, max: config.fcrBonMax },
@@ -125,7 +127,7 @@ export function getBenchmarkFcr(config?: ConfigElevage | null): BenchmarkRange {
 export function getBenchmarkSgr(config?: ConfigElevage | null): BenchmarkRange {
   if (!config) return BENCHMARK_SGR;
   return {
-    label: "SGR",
+    label: "sgr",
     unit: "%/j",
     excellent: { min: config.sgrExcellentMin, max: Infinity },
     bon: { min: config.sgrBonMin, max: config.sgrExcellentMin },

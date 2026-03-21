@@ -9,6 +9,7 @@
  * R2 : enums importés depuis @/types
  * R6 : CSS variables du thème
  */
+import { getTranslations } from "next-intl/server";
 import { StatutPaiementAbo, FournisseurPaiement } from "@/types";
 import type { PaiementAbonnement } from "@/types";
 import { Badge } from "@/components/ui/badge";
@@ -63,7 +64,8 @@ function truncateRef(ref: string | null): string {
   return `${ref.substring(0, 8)}...${ref.substring(ref.length - 4)}`;
 }
 
-export function PaiementsHistoryList({ paiements }: PaiementsHistoryListProps) {
+export async function PaiementsHistoryList({ paiements }: PaiementsHistoryListProps) {
+  const t = await getTranslations("abonnements");
   if (paiements.length === 0) {
     return (
       <p className="text-sm text-muted-foreground text-center py-4">
@@ -93,7 +95,9 @@ export function PaiementsHistoryList({ paiements }: PaiementsHistoryListProps) {
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {FOURNISSEUR_LABELS[paiement.fournisseur as FournisseurPaiement] ?? paiement.fournisseur}
+                {FOURNISSEUR_LABELS[paiement.fournisseur as FournisseurPaiement]
+                  ? t(FOURNISSEUR_LABELS[paiement.fournisseur as FournisseurPaiement])
+                  : paiement.fournisseur}
               </p>
               {paiement.referenceExterne && (
                 <p className="text-xs text-muted-foreground mt-0.5 font-mono">

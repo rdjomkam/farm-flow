@@ -1,0 +1,133 @@
+{
+  "triggers": {
+    "CALENDRIER": "Calendrier",
+    "RECURRENT": "Récurrent",
+    "SEUIL_POIDS": "Seuil de poids",
+    "SEUIL_QUALITE": "Seuil qualité eau",
+    "SEUIL_MORTALITE": "Seuil de mortalité",
+    "STOCK_BAS": "Stock bas",
+    "FCR_ELEVE": "ICA élevé",
+    "JALON": "Jalon de production",
+    "SEUIL_DENSITE": "Seuil de densité",
+    "SEUIL_RENOUVELLEMENT": "Seuil de renouvellement eau",
+    "ABSENCE_RELEVE": "Absence de relevé",
+    "SEUIL_AMMONIAC": "Seuil d'ammoniac",
+    "SEUIL_OXYGENE": "Seuil d'oxygène dissous",
+    "SEUIL_PH": "Seuil de pH",
+    "SEUIL_TEMPERATURE": "Seuil de température"
+  },
+  "activities": {
+    "ALIMENTATION": "Alimentation",
+    "BIOMETRIE": "Biométrie",
+    "QUALITE_EAU": "Qualité de l'eau",
+    "COMPTAGE": "Comptage",
+    "NETTOYAGE": "Nettoyage",
+    "TRAITEMENT": "Traitement",
+    "RECOLTE": "Récolte",
+    "TRI": "Tri",
+    "MEDICATION": "Médication",
+    "RENOUVELLEMENT": "Renouvellement eau",
+    "AUTRE": "Autre"
+  },
+  "phases": {
+    "ACCLIMATATION": "Acclimatation",
+    "CROISSANCE_DEBUT": "Croissance début",
+    "JUVENILE": "Juvénile",
+    "GROSSISSEMENT": "Grossissement",
+    "FINITION": "Finition",
+    "PRE_RECOLTE": "Pré-récolte"
+  },
+  "operators": {
+    "SUPERIEUR": "Supérieur à",
+    "INFERIEUR": "Inférieur à",
+    "ENTRE": "Entre",
+    "EGAL": "Égal à"
+  },
+  "actions": {
+    "ACTIVITE": "Créer une activité",
+    "NOTIFICATION": "Envoyer une alerte",
+    "LES_DEUX": "Activité + Alerte"
+  },
+  "severity": {
+    "INFO": "Information",
+    "AVERTISSEMENT": "Avertissement",
+    "CRITIQUE": "Critique"
+  },
+  "logic": {
+    "ET": "ET (toutes les conditions)",
+    "OU": "OU (au moins une condition)"
+  },
+  "payloadTypes": {
+    "none": "Aucune action (alerte simple)",
+    "CREER_RELEVE": "Créer un relevé",
+    "MODIFIER_BAC": "Modifier le bac",
+    "VOIR_VAGUE": "Voir la vague",
+    "VOIR_STOCK": "Voir le stock"
+  },
+  "placeholders": {
+    "quantite_calculee": {
+      "description": "Quantité d'aliment en kg calculée selon le taux de rationnement",
+      "example": "1,25"
+    },
+    "taille": {
+      "description": "Taille moyenne des poissons (dernier relevé biométrie, en cm)",
+      "example": "12,5"
+    },
+    "poids_moyen": {
+      "description": "Poids moyen de la vague (en grammes)",
+      "example": "185,3"
+    },
+    "stock": {
+      "description": "Quantité en stock du produit recommandé (en unité du produit)",
+      "example": "50,00"
+    },
+    "taux": {
+      "description": "Taux d'alimentation ou taux de survie selon le contexte (en %)",
+      "example": "3,50"
+    },
+    "valeur": {
+      "description": "ICA ou TCS selon le contexte (indice de conversion ou taux de croissance spécifique)",
+      "example": "1,42"
+    },
+    "semaine": {
+      "description": "Numéro de semaine dans le cycle d'élevage",
+      "example": "8"
+    },
+    "produit": {
+      "description": "Nom du produit recommandé pour cette activité",
+      "example": "Granule 3mm Pro"
+    },
+    "seuil": {
+      "description": "Valeur du seuil ayant déclenché la règle (ex: poids en g, taux en %)",
+      "example": "200,00"
+    },
+    "jours_restants": {
+      "description": "Jours restants avant la fin de cycle estimée",
+      "example": "45"
+    },
+    "quantite_recommandee": {
+      "description": "Quantité recommandée définie sur la règle (en unité du produit)",
+      "example": "25,00"
+    },
+    "bac": {
+      "description": "Nom du bac associé à la vague en cours d'évaluation",
+      "example": "Bac 3"
+    },
+    "biomasse": {
+      "description": "Biomasse totale de la vague en kg (poids moyen x effectif vivant)",
+      "example": "124,50"
+    },
+    "vague": {
+      "description": "Code identifiant de la vague",
+      "example": "V2026-03"
+    },
+    "jours_ecoules": {
+      "description": "Nombre de jours écoulés depuis le début de la vague",
+      "example": "55"
+    },
+    "valeur_marchande": {
+      "description": "Valeur marchande estimée de la vague en FCFA (biomasse x prix marché)",
+      "example": "1 244 500"
+    }
+  }
+}

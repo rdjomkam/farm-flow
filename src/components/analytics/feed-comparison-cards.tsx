@@ -7,6 +7,7 @@ import { BenchmarkBadge } from "./benchmark-badge";
 import { evaluerBenchmark, BENCHMARK_FCR } from "@/lib/benchmarks";
 import { cn } from "@/lib/utils";
 import type { AnalytiqueAliment } from "@/types";
+import { useTranslations } from "next-intl";
 
 interface FeedComparisonCardsProps {
   aliments: AnalytiqueAliment[];
@@ -40,6 +41,8 @@ export function FeedComparisonCards({
   meilleurCoutKg,
   meilleurSGR,
 }: FeedComparisonCardsProps) {
+  const tAnalytics = useTranslations("analytics");
+
   if (aliments.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
@@ -97,12 +100,12 @@ export function FeedComparisonCards({
                 )}
                 {isBestFCR && (
                   <span className="rounded-full bg-accent-blue-muted px-1.5 py-0.5 text-[10px] font-medium text-accent-blue">
-                    Meilleur FCR
+                    Meilleur {tAnalytics("benchmarks.fcr.label")}
                   </span>
                 )}
                 {isBestSGR && (
                   <span className="rounded-full bg-accent-purple-muted px-1.5 py-0.5 text-[10px] font-medium text-accent-purple">
-                    Meilleur SGR
+                    Meilleur {tAnalytics("benchmarks.sgr.label")}
                   </span>
                 )}
               </div>
@@ -110,7 +113,7 @@ export function FeedComparisonCards({
               {/* Metrics grid */}
               <div className="grid grid-cols-3 gap-2">
                 <MetricItem
-                  label="FCR"
+                  label={tAnalytics("benchmarks.fcr.label")}
                   value={aliment.fcrMoyen !== null ? `${aliment.fcrMoyen}` : "—"}
                 />
                 <MetricItem
@@ -119,9 +122,9 @@ export function FeedComparisonCards({
                   unit="CFA"
                 />
                 <MetricItem
-                  label="SGR"
+                  label={tAnalytics("benchmarks.sgr.label")}
                   value={aliment.sgrMoyen !== null ? `${aliment.sgrMoyen}` : "—"}
-                  unit="%/j"
+                  unit={tAnalytics("labels.sgrUnit")}
                 />
               </div>
 

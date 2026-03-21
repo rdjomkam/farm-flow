@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Plus, Zap } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -109,6 +110,7 @@ export function ReglesListClient({ regles: initialRegles, canManage, canManageGl
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const configService = useConfigService();
+  const t = useTranslations("settings");
 
   // ---- Toggle handler with optimistic update ----
   const handleToggle = async (id: string) => {
@@ -205,7 +207,9 @@ export function ReglesListClient({ regles: initialRegles, canManage, canManageGl
                     {/* Section header */}
                     <div className="flex items-center gap-2 mb-3">
                       <h2 className="text-sm font-semibold text-foreground">
-                        {TYPE_DECLENCHEUR_LABELS[declencheur] ?? declencheur}
+                        {TYPE_DECLENCHEUR_LABELS[declencheur]
+                          ? t(TYPE_DECLENCHEUR_LABELS[declencheur])
+                          : declencheur}
                       </h2>
                       <span className="text-xs text-muted-foreground">
                         ({group.length})
