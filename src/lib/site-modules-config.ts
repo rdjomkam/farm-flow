@@ -34,7 +34,7 @@ export const SITE_MODULES_CONFIG: SiteModuleConfig[] = [
   { value: SiteModule.INGENIEUR, labelKey: "Ingenieur", icon: HardHat, level: "site" },
   { value: SiteModule.NOTES, labelKey: "Notes", icon: StickyNote, level: "site" },
   // Platform-level (always available, permission-gated only)
-  { value: SiteModule.ABONNEMENTS, labelKey: "Abonnements", icon: CreditCard, level: "platform" },
+  { value: SiteModule.ABONNEMENTS, labelKey: "Abonnements", icon: CreditCard, level: "site" },
   { value: SiteModule.COMMISSIONS, labelKey: "Commissions", icon: TrendingUp, level: "platform" },
   { value: SiteModule.REMISES, labelKey: "Remises", icon: Tag, level: "platform" },
 ];

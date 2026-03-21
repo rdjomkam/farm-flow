@@ -6,6 +6,7 @@ import { AccessDenied } from "@/components/ui/access-denied";
 import { getPackById } from "@/lib/queries/packs";
 import { getProduits } from "@/lib/queries/produits";
 import { getConfigsElevage } from "@/lib/queries/config-elevage";
+import { getPlansAbonnements } from "@/lib/queries/plans-abonnements";
 import { Permission } from "@/types";
 
 interface PageProps {
@@ -21,10 +22,11 @@ export default async function PackDetailPage({ params }: PageProps) {
   const permissions = await checkPagePermission(session, Permission.DASHBOARD_VOIR);
   if (!permissions) return <AccessDenied />;
 
-  const [pack, produits, configs] = await Promise.all([
+  const [pack, produits, configs, plans] = await Promise.all([
     getPackById(id, session.activeSiteId),
     getProduits(session.activeSiteId),
     getConfigsElevage(session.activeSiteId),
+    getPlansAbonnements(true),
   ]);
 
   if (!pack) notFound();
@@ -38,6 +40,7 @@ export default async function PackDetailPage({ params }: PageProps) {
   }));
 
   const configOptions = configs.map((c) => ({ id: c.id, nom: c.nom }));
+  const planOptions = plans.map((p) => ({ id: p.id, nom: p.nom }));
 
   return (
     <>
@@ -47,6 +50,7 @@ export default async function PackDetailPage({ params }: PageProps) {
           pack={JSON.parse(JSON.stringify(pack))}
           produits={produitOptions}
           configElevages={configOptions}
+          plans={planOptions}
           permissions={permissions}
         />
       </div>

@@ -1968,7 +1968,7 @@ model PlanAbonnement {
   limitesIngFermes Int?
   isActif          Boolean            @default(true)
   isPublic         Boolean            @default(true)
-  /** Modules fonctionnels inclus dans ce plan — ABONNEMENTS/COMMISSIONS/REMISES exclus (platform-only) */
+  /** Modules fonctionnels inclus dans ce plan — COMMISSIONS/REMISES exclus (platform-only) */
   modulesInclus    SiteModule[]       @default([])
 
   abonnements      Abonnement[]

@@ -95,10 +95,11 @@ interface Props {
   pack: PackDetailData;
   produits: ProduitOption[];
   configElevages: { id: string; nom: string }[];
+  plans: { id: string; nom: string }[];
   permissions: Permission[];
 }
 
-export function PackDetailClient({ pack, produits, configElevages, permissions }: Props) {
+export function PackDetailClient({ pack, produits, configElevages, plans, permissions }: Props) {
   const router = useRouter();
   const configService = useConfigService();
   const { call } = useApi();
@@ -128,6 +129,7 @@ export function PackDetailClient({ pack, produits, configElevages, permissions }
   const [editNombreAlevins, setEditNombreAlevins] = useState(String(pack.nombreAlevins));
   const [editPoidsMoyenInitial, setEditPoidsMoyenInitial] = useState(String(pack.poidsMoyenInitial));
   const [editPrixTotal, setEditPrixTotal] = useState(String(pack.prixTotal));
+  const [editPlanId, setEditPlanId] = useState(pack.planId);
   const [editConfigElevageId, setEditConfigElevageId] = useState(pack.configElevage?.id ?? "none");
   const canManage = permissions.includes(Permission.GERER_PACKS);
   const canActivate = permissions.includes(Permission.ACTIVER_PACKS);
@@ -205,6 +207,7 @@ export function PackDetailClient({ pack, produits, configElevages, permissions }
       nombreAlevins: parseInt(editNombreAlevins) || 0,
       poidsMoyenInitial: parseFloat(editPoidsMoyenInitial) || 0,
       prixTotal: parseFloat(editPrixTotal) || 0,
+      planId: editPlanId,
       configElevageId: editConfigElevageId === "none" ? null : editConfigElevageId,
     });
     if (result.ok) {
@@ -330,6 +333,16 @@ export function PackDetailClient({ pack, produits, configElevages, permissions }
                       value={editPrixTotal}
                       onChange={(e) => setEditPrixTotal(e.target.value)}
                     />
+                    <Select value={editPlanId} onValueChange={setEditPlanId}>
+                      <SelectTrigger label="Plan d'abonnement">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {plans.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.nom}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Select value={editConfigElevageId} onValueChange={setEditConfigElevageId}>
                       <SelectTrigger label="Config elevage">
                         <SelectValue />

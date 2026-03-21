@@ -28,12 +28,7 @@ ALTER TABLE "Site"
   USING "enabledModules"::text[]::"SiteModule"[];
 ALTER TABLE "Site" ALTER COLUMN "enabledModules" SET DEFAULT ARRAY[]::"SiteModule"[];
 
--- Step 4: Cast array columns on Pack table (drop default, cast, restore default)
-ALTER TABLE "Pack" ALTER COLUMN "enabledModules" DROP DEFAULT;
-ALTER TABLE "Pack"
-  ALTER COLUMN "enabledModules" TYPE "SiteModule"[]
-  USING "enabledModules"::text[]::"SiteModule"[];
-ALTER TABLE "Pack" ALTER COLUMN "enabledModules" SET DEFAULT ARRAY[]::"SiteModule"[];
+-- Step 4: (removed — Pack.enabledModules was dropped in migration 20260321100000)
 
 -- Step 5: Drop old enum
 DROP TYPE "SiteModule_old";

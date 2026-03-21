@@ -4309,7 +4309,32 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 
 | Bug | Titre | Sévérité | Fichier | Statut |
 |-----|-------|----------|---------|--------|
-| [BUG-023](../bugs/BUG-023.md) | Page Tarifs : fetch self-API échoue en SSR → plans vides | Critique | src/app/tarifs/page.tsx | OUVERT |
-| [BUG-024](../bugs/BUG-024.md) | PlansGrid utilise des prix hardcodés au lieu des prix DB | Haute | src/components/abonnements/plans-grid.tsx | OUVERT |
+| [BUG-023](../bugs/BUG-023.md) | Page Tarifs : fetch self-API échoue en SSR → plans vides | Critique | src/app/tarifs/page.tsx | **CLOS** |
+| [BUG-024](../bugs/BUG-024.md) | PlansGrid utilise des prix hardcodés au lieu des prix DB | Haute | src/components/abonnements/plans-grid.tsx | **CLOS** |
 
-> @project-manager : BUG-023 est Critique — la page /tarifs est totalement cassée (0 plans affichés). Fix : remplacer fetch() par appel direct à getPlansAbonnements(). BUG-024 dépend de BUG-023 (les plans doivent arriver avant de corriger l'affichage des prix).
+<!-- BUG-023 CLOS. Remplacé fetch self-API par appel direct à getPlansAbonnements(). -->
+<!-- BUG-024 CLOS. Remplacé PLAN_TARIFS par getTarifForPeriode() + plan.limites. -->
+
+---
+
+## Bugs — Architecture Plateforme
+
+| Bug | Titre | Sévérité | Fichier | Statut |
+|-----|-------|----------|---------|--------|
+| [BUG-025](../bugs/BUG-025.md) | Site model missing `isPlatform` flag | Haute | prisma/schema.prisma, src/types/models.ts | OUVERT |
+| [BUG-026](../bugs/BUG-026.md) | Platform permissions assignable to non-platform sites | Haute | src/lib/permissions-constants.ts, src/lib/auth/permissions-server.ts | OUVERT |
+| [BUG-027](../bugs/BUG-027.md) | Platform modules visible on non-platform sites | Haute | src/lib/site-modules-config.ts, src/lib/auth/permissions-server.ts, sidebar/hamburger | OUVERT |
+| [BUG-028](../bugs/BUG-028.md) | PACKS_PROVISIONING wrongly classified as site-level module | Moyenne | src/lib/site-modules-config.ts | OUVERT |
+| [BUG-029](../bugs/BUG-029.md) | Platform entity siteId not enforced to platform site | Moyenne | src/app/api/commissions/, src/app/api/remises/ | OUVERT |
+
+> @project-manager : BUG-025 est le fondement — les autres bugs (026, 027, 029) en dépendent. Ordre de fix : BUG-025 → BUG-028 → BUG-026 → BUG-027 → BUG-029.
+
+---
+
+## Bugs — i18n
+
+| Bug | Titre | Sévérité | Fichier | Statut |
+|-----|-------|----------|---------|--------|
+| [BUG-030](../bugs/BUG-030.md) | ~130 hardcoded French strings not translated (i18n incomplete) | Moyenne | ~25 fichiers (remises, packs, planning, alertes, UI, pages) | OUVERT |
+
+> @project-manager : BUG-030 impacte les modules remises, packs, activations, planning, alertes, UI transversaux et plusieurs pages. ~7 namespaces de traduction manquants à créer.
