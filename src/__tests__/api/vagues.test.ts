@@ -25,6 +25,16 @@ vi.mock("@/lib/queries/indicateurs", () => ({
   getIndicateursVague: (...args: unknown[]) => mockGetIndicateursVague(...args),
 }));
 
+// Mock check-quotas : quota non atteint par défaut
+const mockGetQuotasUsage = vi.fn();
+vi.mock("@/lib/abonnements/check-quotas", () => ({
+  getQuotasUsage: (...args: unknown[]) => mockGetQuotasUsage(...args),
+  isQuotaAtteint: (ressource: { actuel: number; limite: number | null }) => {
+    if (ressource.limite === null) return false;
+    return ressource.actuel >= ressource.limite;
+  },
+}));
+
 const mockRequirePermission = vi.fn();
 
 vi.mock("@/lib/permissions", () => ({
@@ -163,6 +173,12 @@ describe("POST /api/vagues", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
+    // Quota non atteint par défaut (limites non atteintes)
+    mockGetQuotasUsage.mockResolvedValue({
+      bacs: { actuel: 2, limite: 10 },
+      vagues: { actuel: 0, limite: 3 },
+      sites: { actuel: 1, limite: 1 },
+    });
   });
 
   const validBody = {

@@ -15,6 +15,16 @@ vi.mock("@/lib/queries/bacs", () => ({
   createBac: (...args: unknown[]) => mockCreateBac(...args),
 }));
 
+// Mock check-quotas : quota non atteint par défaut
+const mockGetQuotasUsage = vi.fn();
+vi.mock("@/lib/abonnements/check-quotas", () => ({
+  getQuotasUsage: (...args: unknown[]) => mockGetQuotasUsage(...args),
+  isQuotaAtteint: (ressource: { actuel: number; limite: number | null }) => {
+    if (ressource.limite === null) return false;
+    return ressource.actuel >= ressource.limite;
+  },
+}));
+
 const mockRequirePermission = vi.fn();
 
 vi.mock("@/lib/permissions", () => ({
@@ -136,6 +146,12 @@ describe("POST /api/bacs", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
+    // Quota non atteint par défaut (limites non atteintes)
+    mockGetQuotasUsage.mockResolvedValue({
+      bacs: { actuel: 1, limite: 3 },
+      vagues: { actuel: 0, limite: 1 },
+      sites: { actuel: 1, limite: 1 },
+    });
   });
 
   it("cree un bac avec des donnees valides", async () => {

@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBacs, createBac } from "@/lib/queries/bacs";
+import { getBacs } from "@/lib/queries/bacs";
+import { prisma } from "@/lib/db";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission } from "@/types";
 import type { CreateBacDTO } from "@/types";
+import { normaliseLimite, isQuotaAtteint } from "@/lib/abonnements/check-quotas";
+import { getAbonnementActif } from "@/lib/queries/abonnements";
+import { PLAN_LIMITES } from "@/lib/abonnements-constants";
+import type { QuotaRessource } from "@/lib/abonnements/check-quotas";
 
 export async function GET(request: NextRequest) {
   try {
@@ -65,7 +70,65 @@ export async function POST(request: NextRequest) {
       ...(body.nombrePoissons != null && { nombrePoissons: body.nombrePoissons }),
     };
 
-    const bac = await createBac(auth.activeSiteId, data);
+    // Vérifier le quota et créer le bac dans une transaction atomique (R4)
+    const bac = await prisma.$transaction(async (tx) => {
+      // 1. Charger l'abonnement actif pour déterminer la limite
+      const abonnement = await getAbonnementActif(auth.activeSiteId);
+      let limitesBacs: number;
+
+      if (abonnement) {
+        const typePlan = abonnement.plan.typePlan as string;
+        const planLimites = (PLAN_LIMITES as Record<string, (typeof PLAN_LIMITES)[keyof typeof PLAN_LIMITES]>)[typePlan];
+        limitesBacs = planLimites
+          ? planLimites.limitesBacs
+          : PLAN_LIMITES["DECOUVERTE" as keyof typeof PLAN_LIMITES].limitesBacs;
+      } else {
+        limitesBacs = PLAN_LIMITES["DECOUVERTE" as keyof typeof PLAN_LIMITES].limitesBacs;
+      }
+
+      // 2. Compter les bacs existants (dans la transaction pour éviter la race condition)
+      const nombreBacs = await tx.bac.count({ where: { siteId: auth.activeSiteId } });
+
+      const quotaBacs: QuotaRessource = {
+        actuel: nombreBacs,
+        limite: normaliseLimite(limitesBacs),
+      };
+
+      // 3. Vérifier le quota
+      if (isQuotaAtteint(quotaBacs)) {
+        const err = new Error("QUOTA_DEPASSE");
+        (err as Error & { quotaLimite: number | null }).quotaLimite = quotaBacs.limite;
+        throw err;
+      }
+
+      // 4. Créer le bac
+      return tx.bac.create({
+        data: {
+          nom: data.nom,
+          volume: data.volume,
+          nombrePoissons: data.nombrePoissons ?? null,
+          siteId: auth.activeSiteId,
+        },
+      });
+    }).catch((err: Error & { quotaLimite?: number | null }) => {
+      if (err.message === "QUOTA_DEPASSE") {
+        return { __quotaError: true, limite: err.quotaLimite } as const;
+      }
+      throw err;
+    });
+
+    if ("__quotaError" in bac && bac.__quotaError) {
+      return NextResponse.json(
+        {
+          status: 402,
+          error: "QUOTA_DEPASSE",
+          ressource: "bacs",
+          limite: bac.limite,
+          message: `Vous avez atteint la limite de ${bac.limite} bac(s) autorisé(s) par votre plan. Passez à un plan supérieur pour en créer davantage.`,
+        },
+        { status: 402 }
+      );
+    }
 
     return NextResponse.json(bac, { status: 201 });
   } catch (error) {

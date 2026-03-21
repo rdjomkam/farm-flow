@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getVagues, createVague } from "@/lib/queries/vagues";
+import { prisma } from "@/lib/db";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { Permission } from "@/types";
+import { Permission, StatutVague } from "@/types";
 import type { CreateVagueDTO } from "@/types";
+import { normaliseLimite, isQuotaAtteint } from "@/lib/abonnements/check-quotas";
+import { getAbonnementActif } from "@/lib/queries/abonnements";
+import { PLAN_LIMITES } from "@/lib/abonnements-constants";
+import type { QuotaRessource } from "@/lib/abonnements/check-quotas";
 
 export async function GET(request: NextRequest) {
   try {
@@ -115,6 +120,63 @@ export async function POST(request: NextRequest) {
       origineAlevins: body.origineAlevins ?? undefined,
       bacIds: body.bacIds,
     };
+
+    // Vérifier le quota et créer la vague dans une transaction atomique (R4)
+    // Note : createVague utilise déjà prisma.$transaction en interne pour les bacs,
+    // mais le check quota doit aussi être atomique avec la création.
+    // On effectue le check dans une transaction séparée avant d'appeler createVague.
+    const quotaResult = await prisma.$transaction(async (tx) => {
+      // 1. Charger l'abonnement actif pour déterminer la limite
+      const abonnement = await getAbonnementActif(auth.activeSiteId);
+      let limitesVagues: number;
+
+      if (abonnement) {
+        const typePlan = abonnement.plan.typePlan as string;
+        const planLimites = (PLAN_LIMITES as Record<string, (typeof PLAN_LIMITES)[keyof typeof PLAN_LIMITES]>)[typePlan];
+        limitesVagues = planLimites
+          ? planLimites.limitesVagues
+          : PLAN_LIMITES["DECOUVERTE" as keyof typeof PLAN_LIMITES].limitesVagues;
+      } else {
+        limitesVagues = PLAN_LIMITES["DECOUVERTE" as keyof typeof PLAN_LIMITES].limitesVagues;
+      }
+
+      // 2. Compter les vagues EN_COURS (dans la transaction pour éviter la race condition)
+      const nombreVagues = await tx.vague.count({
+        where: { siteId: auth.activeSiteId, statut: StatutVague.EN_COURS },
+      });
+
+      const quotaVagues: QuotaRessource = {
+        actuel: nombreVagues,
+        limite: normaliseLimite(limitesVagues),
+      };
+
+      // 3. Vérifier le quota
+      if (isQuotaAtteint(quotaVagues)) {
+        const err = new Error("QUOTA_DEPASSE");
+        (err as Error & { quotaLimite: number | null }).quotaLimite = quotaVagues.limite;
+        throw err;
+      }
+
+      return { ok: true } as const;
+    }).catch((err: Error & { quotaLimite?: number | null }) => {
+      if (err.message === "QUOTA_DEPASSE") {
+        return { ok: false, limite: err.quotaLimite } as const;
+      }
+      throw err;
+    });
+
+    if (!quotaResult.ok) {
+      return NextResponse.json(
+        {
+          status: 402,
+          error: "QUOTA_DEPASSE",
+          ressource: "vagues",
+          limite: quotaResult.limite,
+          message: `Vous avez atteint la limite de ${quotaResult.limite} vague(s) en cours autorisée(s) par votre plan. Terminez une vague existante ou passez à un plan supérieur.`,
+        },
+        { status: 402 }
+      );
+    }
 
     const vague = await createVague(auth.activeSiteId, data);
 

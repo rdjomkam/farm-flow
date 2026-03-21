@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { VaguesListClient } from "@/components/vagues/vagues-list-client";
 import { AccessDenied } from "@/components/ui/access-denied";
+import { QuotasUsageBar } from "@/components/subscription/quotas-usage-bar";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getVagues } from "@/lib/queries/vagues";
 import { getBacsLibres } from "@/lib/queries/bacs";
@@ -59,6 +60,9 @@ export default async function VaguesPage() {
   return (
     <>
       <Header title="Vagues" />
+      <div className="px-4 pt-4">
+        <QuotasUsageBar siteId={session.activeSiteId} />
+      </div>
       <VaguesListClient vagues={vagues} bacsLibres={bacsLibres} permissions={permissions} />
     </>
   );

@@ -120,6 +120,43 @@ Utiliser `head -3 migration.sql` et `tail -5 migration.sql` pour vérifier.
 
 ## Catégorie : Pattern
 
+### ERR-016 — Race condition check-then-create sur les quotas de plan (R4)
+**Sprint :** 36 | **Date :** 2026-03-21
+**Sévérité :** Haute
+**Fichier(s) :** `src/app/api/bacs/route.ts`, `src/app/api/vagues/route.ts`
+
+**Symptôme :**
+Deux requêtes POST concurrentes passent simultanément le check de quota (`getQuotasUsage()`) et créent toutes les deux leur ressource, dépassant la limite du plan. Aucune erreur n'est levée, le dépassement est silencieux.
+
+**Cause racine :**
+Le pattern `getQuotasUsage() → if quota atteint → create` n'est pas atomique. Entre le moment du count et celui de la création, une autre requête concurrente peut effectuer le même count (qui retourne la même valeur) et procéder à sa propre création.
+
+**Fix :**
+Encapsuler le count et la création dans `prisma.$transaction()` pour que le check et la création soient atomiques :
+
+```typescript
+// Avant (non-atomique, vulnérable aux race conditions) :
+const usage = await getQuotasUsage(siteId);
+if (usage.bacs >= plan.limiteBacs) {
+  return NextResponse.json({ error: "Quota atteint" }, { status: 403 });
+}
+const bac = await prisma.bac.create({ data });
+
+// Après (atomique) :
+const bac = await prisma.$transaction(async (tx) => {
+  const count = await tx.bac.count({ where: { siteId } });
+  if (count >= plan.limiteBacs) {
+    throw new Error("QUOTA_ATTEINT");
+  }
+  return tx.bac.create({ data });
+});
+```
+
+**Leçon / Règle :**
+R4 s'applique aussi aux créations conditionnelles : quand une création dépend d'un comptage de limite (quotas, stock, places disponibles, etc.), toujours mettre le count + create dans la même transaction. Le pattern check-then-create hors transaction est toujours vulnérable aux race conditions sous charge.
+
+---
+
 ### ERR-005 — Check-then-update au lieu d'opérations atomiques (R4)
 **Sprint :** 2 | **Date :** 2026-03-08
 **Sévérité :** Haute
