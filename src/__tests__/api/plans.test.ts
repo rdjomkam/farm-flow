@@ -253,14 +253,17 @@ describe("GET /api/plans/[id]", () => {
     expect(res.status).toBe(404);
   });
 
-  it("plan inactif sans auth → 404", async () => {
+  it("plan inactif sans auth → 401", async () => {
     mockGetPlanAbonnementById.mockResolvedValue({ ...FAKE_PLAN, isActif: false });
     mockGetSession.mockResolvedValue(null);
+    // Import the mocked AuthError class to create a proper instanceof match
+    const { AuthError } = await import("@/lib/auth");
+    mockRequirePermission.mockRejectedValue(new AuthError("Non authentifié"));
 
     const req = makeRequest("http://localhost:3000/api/plans/plan-1");
     const res = await GET_DETAIL(req, { params: Promise.resolve({ id: "plan-1" }) });
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(401);
   });
 });
 

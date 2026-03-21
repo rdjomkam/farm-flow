@@ -15,11 +15,13 @@ import {
 } from "@/lib/queries/plans-abonnements";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { getSession, AuthError } from "@/lib/auth";
-import { Permission, TypePlan } from "@/types";
+import { Permission, TypePlan, SiteModule } from "@/types";
 import type { CreatePlanAbonnementDTO } from "@/types";
 import { ErrorKeys } from "@/lib/api-error-keys";
+import { SITE_TOGGLEABLE_MODULES } from "@/lib/site-modules-config";
 
 const VALID_TYPE_PLANS = Object.values(TypePlan);
+const VALID_SITE_MODULES = SITE_TOGGLEABLE_MODULES.map((m) => m.value);
 
 export async function GET(request: NextRequest) {
   try {
@@ -106,6 +108,32 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Valider modulesInclus : uniquement les modules site-level (pas les modules platform)
+    let modulesInclus: SiteModule[] | undefined;
+    if (body.modulesInclus !== undefined) {
+      if (!Array.isArray(body.modulesInclus)) {
+        errors.push({
+          field: "modulesInclus",
+          message: "modulesInclus doit etre un tableau.",
+        });
+      } else {
+        const invalidModules = (body.modulesInclus as string[]).filter(
+          (m) => !VALID_SITE_MODULES.includes(m as SiteModule)
+        );
+        if (invalidModules.length > 0) {
+          return NextResponse.json(
+            {
+              status: 400,
+              message: `Modules non autorises (platform ou inconnus) : ${invalidModules.join(", ")}. Seuls les modules site-level sont acceptes : ${VALID_SITE_MODULES.join(", ")}`,
+              errorKey: ErrorKeys.INVALID_PLATFORM_MODULE,
+            },
+            { status: 400 }
+          );
+        }
+        modulesInclus = body.modulesInclus as SiteModule[];
+      }
+    }
+
     if (errors.length > 0) {
       return NextResponse.json(
         { status: 400, message: "Erreurs de validation", errors },
@@ -126,6 +154,7 @@ export async function POST(request: NextRequest) {
       limitesIngFermes: body.limitesIngFermes ?? undefined,
       isActif: body.isActif ?? undefined,
       isPublic: body.isPublic ?? undefined,
+      modulesInclus: modulesInclus ?? [],
     };
 
     const plan = await createPlanAbonnement(data);

@@ -24,7 +24,9 @@
 | **Sprint 36** | Cycle de Vie Abonnements | 5 | Rappels, grâce, suspension, réactivation | Sprints 31, 34, 35 |
 | **Sprint 37** | Tests, Polish & Review Finale | 4 | Tests intégration, UX, review R1-R9 | Sprint 36 |
 | **Sprint 38** | Admin CRUD Plans + SiteModule Platform + Bugfixes | 7 | Page admin plans, CRUD dialog, BUG-021 mobile nav, BUG-022 SiteModule platform/site, navigation | Sprints 32, 33 |
-| **Total** | | **45** | | |
+| **Sprint 43** | Plans configurent les modules | 6 | modulesInclus sur PlanAbonnement, UI admin, vérification à l'activation | Sprint 38 |
+| **Sprint 44** | Packs liés aux plans + Abonnement auto | 7 | Pack.planId, suppression enabledModules, création Abonnement à l'activation | Sprint 43 |
+| **Total** | | **58** | | |
 
 ---
 
@@ -1682,4 +1684,415 @@ comme `platform` ou `site`. C'est cohérent avec l'approche existante (`MODULE_C
 - Permissions vérifiées (PLANS_GERER)
 - BUG-021 vérifié clos
 - BUG-022 vérifié clos
+- Rapport de review produit
+
+---
+
+## Sprint 43 — Plans configurent les modules
+
+**Objectif :** Faire en sorte que chaque `PlanAbonnement` définisse les modules inclus (`modulesInclus`).
+À l'activation d'un abonnement, les modules du site sont automatiquement configurés selon le plan souscrit.
+L'admin DKFarm peut configurer les modules de chaque plan via l'UI existante.
+
+**Contexte métier :**
+- Actuellement les plans définissent des limites (bacs, vagues, sites) mais pas les modules auxquels le promoteur a accès.
+- Un plan DECOUVERTE donne accès à GROSSISSEMENT uniquement, un plan PROFESSIONNEL donne accès à tous les modules site-level.
+- Les modules platform (ABONNEMENTS, COMMISSIONS, REMISES) ne sont jamais inclus dans un plan — ils sont gérés par permissions uniquement.
+
+**Dépend de :** Sprint 38 FAIT
+
+---
+
+### Story 43.1 — Schéma Prisma : modulesInclus sur PlanAbonnement
+**Assigné à :** @db-specialist
+**Priorité :** Critique
+**Complexité :** Simple
+**Statut :** `FAIT`
+
+**Description :** Ajouter le champ `modulesInclus` (tableau de `SiteModule`) sur le modèle `PlanAbonnement`
+pour définir quels modules sont inclus dans chaque plan.
+
+**Tâches :**
+- [ ] `TODO` Ajouter champ `modulesInclus SiteModule[] @default([])` sur le modèle `PlanAbonnement` dans `prisma/schema.prisma`
+- [ ] `TODO` Générer et appliquer la migration `add_modules_inclus_plan`
+- [ ] `TODO` Mettre à jour `prisma/seed.sql` — définir les `modulesInclus` pour chaque plan existant :
+  - DECOUVERTE : `[GROSSISSEMENT]`
+  - ELEVEUR : `[GROSSISSEMENT, INTRANTS, VENTES]`
+  - PROFESSIONNEL : `[GROSSISSEMENT, INTRANTS, VENTES, REPRODUCTION, ANALYSE_PILOTAGE, NOTES]`
+  - ENTREPRISE : `[GROSSISSEMENT, INTRANTS, VENTES, REPRODUCTION, ANALYSE_PILOTAGE, NOTES, CONFIGURATION]`
+  - INGENIEUR_STARTER : `[GROSSISSEMENT, INGENIEUR]`
+  - INGENIEUR_PRO : `[GROSSISSEMENT, INTRANTS, VENTES, INGENIEUR]`
+  - INGENIEUR_EXPERT : `[GROSSISSEMENT, INTRANTS, VENTES, REPRODUCTION, ANALYSE_PILOTAGE, INGENIEUR]`
+- [ ] `TODO` Mettre à jour l'interface TypeScript miroir dans `src/types/models.ts` — ajouter `modulesInclus: SiteModule[]` sur `PlanAbonnementType`
+
+**Critères d'acceptation :**
+- Migration appliquée sans erreur
+- Seed met à jour les plans existants avec les bons modules
+- R3 : Prisma = TypeScript identiques
+- Les modules platform (ABONNEMENTS, COMMISSIONS, REMISES) ne sont JAMAIS dans `modulesInclus`
+
+---
+
+### Story 43.2 — API : CRUD modulesInclus dans les routes plans
+**Assigné à :** @developer
+**Priorité :** Haute
+**Complexité :** Simple
+**Dépend de :** Story 43.1
+**Statut :** `FAIT`
+
+**Description :** Mettre à jour les routes API `GET/POST/PUT /api/plans` pour inclure et valider
+le champ `modulesInclus`.
+
+**Tâches :**
+- [ ] `TODO` Modifier `GET /api/plans` et `GET /api/plans/[id]` — inclure `modulesInclus` dans la réponse
+- [ ] `TODO` Modifier `POST /api/plans` — accepter `modulesInclus: SiteModule[]` dans le body, valider que seuls les modules site-level sont acceptés (rejeter les modules platform), défaut : `[]`
+- [ ] `TODO` Modifier `PUT /api/plans/[id]` — accepter `modulesInclus` dans le body, même validation
+- [ ] `TODO` Ajouter validation : les valeurs de `modulesInclus` doivent être des valeurs valides de l'enum `SiteModule` et de level "site" uniquement (utiliser `SITE_TOGGLEABLE_MODULES` de `site-modules-config.ts`)
+
+**Critères d'acceptation :**
+- GET retourne `modulesInclus` pour chaque plan
+- POST/PUT valident que seuls les modules site-level sont acceptés
+- Erreur 400 si un module platform est soumis dans `modulesInclus`
+- R8 : pas de changement sur siteId (PlanAbonnement est global)
+
+---
+
+### Story 43.3 — UI Admin : sélection des modules dans le formulaire plan
+**Assigné à :** @developer
+**Priorité :** Haute
+**Complexité :** Medium
+**Dépend de :** Story 43.2
+**Statut :** `FAIT`
+
+**Description :** Ajouter un sélecteur de modules dans le dialog de création/édition de plan
+(`plan-form-dialog.tsx`). L'admin peut cocher les modules site-level à inclure dans le plan.
+
+**Tâches :**
+- [ ] `TODO` Modifier `src/components/abonnements/plan-form-dialog.tsx` :
+  - Ajouter une section "Modules inclus" après les champs de limites
+  - Afficher la liste des modules site-level (depuis `SITE_TOGGLEABLE_MODULES`) avec des checkboxes
+  - Chaque checkbox affiche l'icône + le label du module
+  - Pré-cocher les modules existants en mode édition
+  - Envoyer `modulesInclus` dans le POST/PUT
+- [ ] `TODO` Mobile-first : checkboxes en grille 1 colonne (360px), 2 colonnes (tablette+)
+- [ ] `TODO` Ajouter info-bulle ou texte d'aide : "Les modules cochés seront activés automatiquement sur le site du promoteur lors de la souscription"
+
+**Critères d'acceptation :**
+- Les modules platform ne sont PAS affichés dans le sélecteur
+- Les checkboxes reflètent correctement les modules du plan en mode édition
+- R5 : pas de problème d'accessibilité (labels associés aux checkboxes)
+- R6 : CSS variables du thème
+- Mobile-first : utilisable à 360px
+
+---
+
+### Story 43.4 — UI Admin : colonne modules dans la liste des plans
+**Assigné à :** @developer
+**Priorité :** Moyenne
+**Complexité :** Simple
+**Dépend de :** Story 43.2
+**Statut :** `FAIT`
+
+**Description :** Afficher les modules inclus dans la liste admin des plans pour avoir une vue
+d'ensemble rapide de ce que chaque plan propose.
+
+**Tâches :**
+- [ ] `TODO` Modifier `src/components/abonnements/plans-admin-list.tsx` :
+  - Ajouter une colonne/section "Modules" affichant les badges des modules inclus
+  - Desktop : colonne dans le tableau avec badges inline
+  - Mobile : section dans la carte avec badges wrappés
+  - Badges avec icônes miniatures (16px) et label court
+- [ ] `TODO` Si aucun module inclus → afficher "Aucun module" en grisé
+
+**Critères d'acceptation :**
+- Modules visibles sur chaque plan dans la liste
+- Badges lisibles en mobile (360px) et desktop
+- R6 : CSS variables pour les couleurs de badges
+
+---
+
+### Story 43.5 — Logique : appliquer modulesInclus à l'activation d'un abonnement
+**Assigné à :** @developer
+**Priorité :** Critique
+**Complexité :** Medium
+**Dépend de :** Story 43.1
+**Statut :** `FAIT`
+
+**Description :** Quand un abonnement passe à `ACTIF` (après paiement confirmé), les modules du plan
+sont automatiquement appliqués sur le `enabledModules` du site. Cela remplace la configuration manuelle.
+
+**Tâches :**
+- [ ] `TODO` Créer `src/lib/abonnements/apply-plan-modules.ts` :
+  ```typescript
+  export async function applyPlanModules(siteId: string, planId: string): Promise<void>
+  ```
+  - Charger le plan avec `modulesInclus`
+  - Mettre à jour `Site.enabledModules` avec les modules du plan (remplacer, pas merger)
+  - Loguer le changement (console.log en Phase 1, audit trail plus tard)
+- [ ] `TODO` Intégrer l'appel dans le flux d'activation d'abonnement :
+  - Dans la route webhook qui confirme le paiement (`POST /api/webhooks/smobilpay` ou équivalent)
+  - Dans l'activation manuelle admin (`POST /api/abonnements/[id]/activer` si existant)
+  - Après le `prisma.abonnement.update({ statut: ACTIF })`, appeler `applyPlanModules(siteId, planId)`
+- [ ] `TODO` Gérer le cas de renouvellement : si le plan change (upgrade/downgrade), appliquer les nouveaux modules
+
+**Critères d'acceptation :**
+- À l'activation, le site a exactement les modules du plan (pas de résidu d'anciens modules)
+- Les modules platform ne sont pas impactés (ils restent toujours actifs via `isModuleActive()`)
+- R4 : opération atomique — update abonnement + update site dans une transaction si possible
+- Le plan DECOUVERTE active uniquement GROSSISSEMENT
+
+---
+
+### Story 43.6 — Tests + Review Sprint 43
+**Assigné à :** @tester + @code-reviewer
+**Priorité :** Haute
+**Complexité :** Simple
+**Dépend de :** Stories 43.1 à 43.5
+**Statut :** `FAIT`
+
+**Tâches @tester :**
+- [ ] `TODO` Test unitaire `applyPlanModules` : vérifier que les modules du plan sont appliqués au site
+- [ ] `TODO` Test unitaire `applyPlanModules` : vérifier que les modules platform ne sont pas supprimés
+- [ ] `TODO` Test API `POST /api/plans` : rejeter les modules platform dans `modulesInclus`
+- [ ] `TODO` Test API `PUT /api/plans/[id]` : mettre à jour `modulesInclus` correctement
+- [ ] `TODO` Test UI `plan-form-dialog` : les checkboxes de modules s'affichent et se soumettent
+- [ ] `TODO` Test intégration : activation abonnement → site.enabledModules mis à jour
+- [ ] `TODO` `npx vitest run` + `npm run build` — OK
+- [ ] `TODO` Écrire `docs/tests/rapport-sprint-43.md`
+
+**Tâches @code-reviewer :**
+- [ ] `TODO` Checklist R1-R9
+- [ ] `TODO` Vérifier que les modules platform sont exclus de `modulesInclus` (validation API + UI)
+- [ ] `TODO` Vérifier R4 : atomicité de l'activation abonnement + application modules
+- [ ] `TODO` Écrire `docs/reviews/review-sprint-43.md`
+
+**Critères d'acceptation :**
+- Tests passent + build OK (R9)
+- Modules platform jamais dans `modulesInclus` — validé
+- Activation abonnement → modules appliqués — validé
+- Rapport de review produit
+
+---
+
+## Sprint 44 — Packs liés aux plans + Abonnement automatique
+
+**Objectif :** Lier chaque `Pack` à un `PlanAbonnement` via `planId`, supprimer le champ `enabledModules`
+devenu redondant sur `Pack`, et créer automatiquement un `Abonnement` quand un pack est activé sur un site.
+
+**Contexte métier :**
+- Actuellement les Packs ont un champ `enabledModules` qui est déconnecté des plans d'abonnement.
+- Un Pack doit être lié à un plan : quand on active un pack sur un site, cela crée un abonnement avec ce plan.
+- Cela unifie la gestion : les modules viennent du plan (Sprint 43), le pack est le véhicule d'activation.
+- Les packs ingénieur créent aussi un abonnement (INGENIEUR_STARTER, INGENIEUR_PRO, INGENIEUR_EXPERT).
+
+**Dépend de :** Sprint 43 FAIT
+
+---
+
+### Story 44.1 — Schéma Prisma : Pack.planId + suppression enabledModules
+**Assigné à :** @db-specialist
+**Priorité :** Critique
+**Complexité :** Medium
+**Statut :** `TODO`
+
+**Description :** Modifier le modèle `Pack` pour ajouter `planId` (FK vers `PlanAbonnement`) et
+supprimer `enabledModules` qui devient redondant (les modules viennent du plan via `modulesInclus`).
+
+**Tâches :**
+- [ ] `TODO` Ajouter champ `planId String` (FK vers `PlanAbonnement`) sur le modèle `Pack`
+- [ ] `TODO` Ajouter relation `plan PlanAbonnement @relation(fields: [planId], references: [id])`
+- [ ] `TODO` Supprimer le champ `enabledModules SiteModule[]` du modèle `Pack`
+- [ ] `TODO` Ajouter relation inverse `packs Pack[]` sur `PlanAbonnement`
+- [ ] `TODO` Générer et appliquer la migration `pack_plan_id_remove_enabled_modules` :
+  - D'abord ajouter `planId` nullable, peupler via un script de mapping (Pack.nom → PlanAbonnement.typePlan), puis rendre `planId` NOT NULL, enfin supprimer `enabledModules`
+- [ ] `TODO` Mettre à jour `prisma/seed.sql` — les packs existants pointent vers le bon plan :
+  - Pack "Découverte" → plan DECOUVERTE
+  - Pack "Éleveur" → plan ELEVEUR
+  - Pack "Professionnel" → plan PROFESSIONNEL
+  - Pack "Entreprise" → plan ENTREPRISE
+  - Pack "Ingénieur Starter" → plan INGENIEUR_STARTER
+  - Pack "Ingénieur Pro" → plan INGENIEUR_PRO
+  - Pack "Ingénieur Expert" → plan INGENIEUR_EXPERT
+- [ ] `TODO` Mettre à jour l'interface TypeScript miroir — remplacer `enabledModules: SiteModule[]` par `planId: string` et `plan?: PlanAbonnementType` sur `PackType`
+
+**Critères d'acceptation :**
+- Migration appliquée sans erreur (données existantes migrées)
+- Chaque Pack pointe vers un PlanAbonnement valide
+- Le champ `enabledModules` n'existe plus sur Pack
+- R3 : Prisma = TypeScript identiques
+- R7 : `planId` est NOT NULL (chaque pack doit avoir un plan)
+
+---
+
+### Story 44.2 — API : mise à jour des routes Pack pour planId
+**Assigné à :** @developer
+**Priorité :** Haute
+**Complexité :** Simple
+**Dépend de :** Story 44.1
+**Statut :** `TODO`
+
+**Description :** Mettre à jour les routes API CRUD de Pack pour utiliser `planId` au lieu de `enabledModules`.
+
+**Tâches :**
+- [ ] `TODO` Modifier `GET /api/packs` et `GET /api/packs/[id]` — inclure la relation `plan` (avec `modulesInclus`), supprimer `enabledModules` de la réponse
+- [ ] `TODO` Modifier `POST /api/packs` — accepter `planId` au lieu de `enabledModules`, valider que le plan existe
+- [ ] `TODO` Modifier `PUT /api/packs/[id]` — accepter `planId` au lieu de `enabledModules`
+- [ ] `TODO` Supprimer toute référence à `enabledModules` dans les queries packs (`src/lib/queries/packs.ts` si existant)
+
+**Critères d'acceptation :**
+- Aucune référence à `Pack.enabledModules` dans le code
+- GET retourne `plan` avec `modulesInclus` pour chaque pack
+- POST/PUT valident que `planId` pointe vers un plan existant
+- Erreur 400 si `planId` invalide
+
+---
+
+### Story 44.3 — UI : afficher le plan lié dans les composants Pack
+**Assigné à :** @developer
+**Priorité :** Haute
+**Complexité :** Medium
+**Dépend de :** Story 44.2
+**Statut :** `TODO`
+
+**Description :** Mettre à jour les composants UI qui affichent les Packs pour montrer le plan lié
+et ses modules au lieu de l'ancien `enabledModules`.
+
+**Tâches :**
+- [ ] `TODO` Modifier les composants liste/détail de packs :
+  - Remplacer l'affichage de `enabledModules` par le nom du plan lié + ses `modulesInclus`
+  - Afficher le prix du plan (mensuel/trimestriel/annuel)
+  - Afficher les limites du plan (bacs, vagues, sites)
+- [ ] `TODO` Modifier le formulaire de création/édition de pack :
+  - Remplacer le sélecteur de modules par un sélecteur de plan (dropdown avec les plans disponibles)
+  - Afficher un aperçu des modules inclus dans le plan sélectionné (lecture seule)
+- [ ] `TODO` Mobile-first : sélecteur de plan lisible à 360px, aperçu modules en badges wrappés
+
+**Critères d'acceptation :**
+- Aucune référence à `enabledModules` dans les composants Pack
+- Le plan et ses modules sont clairement affichés
+- R5 : DialogTrigger asChild si dialog de sélection
+- R6 : CSS variables du thème
+- Mobile-first : utilisable à 360px
+
+---
+
+### Story 44.4 — Logique : créer un Abonnement à l'activation d'un Pack
+**Assigné à :** @developer
+**Priorité :** Critique
+**Complexité :** Complex
+**Dépend de :** Stories 44.1, 43.5
+**Statut :** `TODO`
+
+**Description :** Quand un pack est activé sur un site (provisioning), créer automatiquement un
+`Abonnement` lié au plan du pack. Cela unifie le cycle de vie : pack → abonnement → modules.
+
+**Tâches :**
+- [ ] `TODO` Créer `src/lib/abonnements/create-from-pack.ts` :
+  ```typescript
+  export async function createAbonnementFromPack(
+    siteId: string, packId: string, userId: string, periode?: PeriodeFacturation
+  ): Promise<Abonnement>
+  ```
+  - Charger le pack avec son plan
+  - Créer l'abonnement avec le plan du pack :
+    - `statut: ACTIF` (le pack est activé directement, pas de paiement à ce stade)
+    - `dateDebut: now()`, `dateFin`: calculée selon la période
+    - `prixPaye: 0` pour DECOUVERTE, sinon le prix du plan selon la période
+  - Appeler `applyPlanModules(siteId, planId)` pour configurer les modules du site
+  - Retourner l'abonnement créé
+- [ ] `TODO` Intégrer l'appel dans le flux d'activation de pack :
+  - Identifier la route/fonction qui active un pack sur un site (provisioning)
+  - Après activation du pack, appeler `createAbonnementFromPack()`
+- [ ] `TODO` Gérer le cas où le site a déjà un abonnement actif :
+  - Si même plan → renouveler (prolonger la date de fin)
+  - Si plan différent → annuler l'ancien (ANNULE) et créer le nouveau
+
+**Critères d'acceptation :**
+- L'activation d'un pack crée un abonnement ACTIF
+- Les modules du site sont configurés selon le plan (via `applyPlanModules`)
+- Un site ne peut pas avoir deux abonnements ACTIF simultanément
+- R4 : opération atomique (transaction Prisma)
+- Le plan DECOUVERTE crée un abonnement gratuit (prixPaye = 0)
+
+---
+
+### Story 44.5 — Supprimer les références résiduelles à Pack.enabledModules
+**Assigné à :** @developer
+**Priorité :** Haute
+**Complexité :** Simple
+**Dépend de :** Stories 44.2, 44.3
+**Statut :** `TODO`
+
+**Description :** Rechercher et supprimer toutes les références résiduelles à `Pack.enabledModules`
+dans le codebase (imports, types, composants, utilitaires).
+
+**Tâches :**
+- [ ] `TODO` Faire un grep global de `enabledModules` dans `src/` — identifier tous les fichiers concernés
+- [ ] `TODO` Pour chaque fichier : remplacer par `plan.modulesInclus` ou supprimer si le code est mort
+- [ ] `TODO` Vérifier que `npm run build` passe sans erreur TypeScript liée à `enabledModules`
+- [ ] `TODO` Vérifier que les tests existants sont mis à jour (mocks, fixtures)
+
+**Critères d'acceptation :**
+- Aucune occurrence de `Pack.enabledModules` ou `pack.enabledModules` dans le code
+- Build TypeScript OK sans erreur
+- Tests existants mis à jour et passent
+
+---
+
+### Story 44.6 — Seed et données de test mises à jour
+**Assigné à :** @db-specialist
+**Priorité :** Moyenne
+**Complexité :** Simple
+**Dépend de :** Stories 44.1, 44.4
+**Statut :** `TODO`
+
+**Description :** Mettre à jour les données de seed pour refléter la nouvelle architecture :
+packs liés aux plans, abonnements créés à l'activation.
+
+**Tâches :**
+- [ ] `TODO` Mettre à jour `prisma/seed.sql` :
+  - Les packs existants ont un `planId` valide
+  - Chaque site actif a un abonnement ACTIF lié au plan de son pack
+  - Les `enabledModules` des sites correspondent aux `modulesInclus` du plan de leur abonnement
+- [ ] `TODO` Vérifier cohérence : `Site.enabledModules` == `PlanAbonnement.modulesInclus` pour chaque site ayant un abonnement actif
+- [ ] `TODO` `npm run db:seed` — exécution sans erreur
+
+**Critères d'acceptation :**
+- Seed crée des données cohérentes (pack → plan → abonnement → modules site)
+- Aucune incohérence entre modules du site et modules du plan
+- Seed exécutable sans erreur
+
+---
+
+### Story 44.7 — Tests + Review Sprint 44
+**Assigné à :** @tester + @code-reviewer
+**Priorité :** Haute
+**Complexité :** Medium
+**Dépend de :** Stories 44.1 à 44.6
+**Statut :** `TODO`
+
+**Tâches @tester :**
+- [ ] `TODO` Test unitaire `createAbonnementFromPack` : pack DECOUVERTE → abonnement gratuit ACTIF
+- [ ] `TODO` Test unitaire `createAbonnementFromPack` : pack PROFESSIONNEL → abonnement avec prix correct
+- [ ] `TODO` Test unitaire `createAbonnementFromPack` : site avec abonnement existant → ancien annulé, nouveau créé
+- [ ] `TODO` Test API `POST /api/packs` : `planId` requis, `enabledModules` rejeté
+- [ ] `TODO` Test API `PUT /api/packs/[id]` : mise à jour `planId`
+- [ ] `TODO` Test intégration : activation pack → abonnement créé → modules appliqués au site
+- [ ] `TODO` Test grep : aucune occurrence de `Pack.enabledModules` dans le code
+- [ ] `TODO` `npx vitest run` + `npm run build` — OK
+- [ ] `TODO` Écrire `docs/tests/rapport-sprint-44.md`
+
+**Tâches @code-reviewer :**
+- [ ] `TODO` Checklist R1-R9
+- [ ] `TODO` Vérifier que `enabledModules` est complètement supprimé du modèle Pack
+- [ ] `TODO` Vérifier R4 : atomicité de la création abonnement + application modules
+- [ ] `TODO` Vérifier R7 : `planId` NOT NULL sur Pack
+- [ ] `TODO` Vérifier cohérence des données seed
+- [ ] `TODO` Écrire `docs/reviews/review-sprint-44.md`
+
+**Critères d'acceptation :**
+- Tests passent + build OK (R9)
+- Aucune référence à `Pack.enabledModules` — validé
+- Activation pack → abonnement + modules — validé
+- Données seed cohérentes — validé
 - Rapport de review produit

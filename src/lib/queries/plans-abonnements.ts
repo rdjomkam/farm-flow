@@ -58,6 +58,7 @@ export async function createPlanAbonnement(data: CreatePlanAbonnementDTO) {
       limitesIngFermes: data.limitesIngFermes ?? null,
       isActif: data.isActif ?? true,
       isPublic: data.isPublic ?? true,
+      modulesInclus: data.modulesInclus ?? [],
     },
   });
 }
@@ -89,6 +90,7 @@ export async function updatePlanAbonnement(
       }),
       ...(data.isActif !== undefined && { isActif: data.isActif }),
       ...(data.isPublic !== undefined && { isPublic: data.isPublic }),
+      ...(data.modulesInclus !== undefined && { modulesInclus: data.modulesInclus }),
     },
   });
 }

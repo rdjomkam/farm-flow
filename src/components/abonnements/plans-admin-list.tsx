@@ -28,10 +28,54 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { TypePlan } from "@/types";
+import { TypePlan, SiteModule } from "@/types";
 import { PLAN_LABELS } from "@/lib/abonnements-constants";
+import { SITE_MODULES_CONFIG } from "@/lib/site-modules-config";
 import { formatXAFOrFree } from "@/lib/format";
 import { PlanFormDialog, type PlanAdminItem } from "@/components/abonnements/plan-form-dialog";
+
+// ---------------------------------------------------------------------------
+// Module badge helper — resolves icon and short label from SITE_MODULES_CONFIG
+// ---------------------------------------------------------------------------
+
+function getModuleConfig(module: SiteModule) {
+  return SITE_MODULES_CONFIG.find((c) => c.value === module) ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// ModuleBadgeList — affiche une liste de badges de modules compacts
+// ---------------------------------------------------------------------------
+
+interface ModuleBadgeListProps {
+  modules: SiteModule[];
+  noModulesLabel: string;
+}
+
+function ModuleBadgeList({ modules, noModulesLabel }: ModuleBadgeListProps) {
+  if (modules.length === 0) {
+    return <span className="text-xs text-muted-foreground">{noModulesLabel}</span>;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {modules.map((mod) => {
+        const config = getModuleConfig(mod);
+        const Icon = config?.icon ?? null;
+        const label = config?.labelKey ?? mod;
+
+        return (
+          <span
+            key={mod}
+            className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 text-xs text-foreground"
+          >
+            {Icon && <Icon className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />}
+            <span className="leading-none">{label}</span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -335,6 +379,7 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
               <th className="px-4 py-3 text-center font-medium text-muted-foreground">{t("admin.columns.subscribers")}</th>
               <th className="px-4 py-3 text-center font-medium text-muted-foreground">{t("admin.columns.status")}</th>
               <th className="px-4 py-3 text-center font-medium text-muted-foreground">{t("admin.columns.visibility")}</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("admin.columns.modules")}</th>
               <th className="px-4 py-3 text-center font-medium text-muted-foreground">{t("admin.columns.actions")}</th>
             </tr>
           </thead>
@@ -385,6 +430,12 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
                     {p.isPublic ? t("admin.public") : t("admin.private")}
                   </Badge>
                 </td>
+                <td className="px-4 py-3 max-w-[220px]">
+                  <ModuleBadgeList
+                    modules={p.modulesInclus}
+                    noModulesLabel={t("admin.noModules")}
+                  />
+                </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-col items-center gap-1">
                     <div className="flex justify-center gap-1">
@@ -417,7 +468,7 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={11} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={12} className="px-4 py-8 text-center text-muted-foreground">
                   Aucun plan trouvé.
                 </td>
               </tr>
@@ -497,6 +548,15 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
                   {p.limitesIngFermes !== null ? `${p.limitesIngFermes}` : "—"}
                 </p>
               </div>
+            </div>
+
+            {/* Modules */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">{t("admin.columns.modules")}</p>
+              <ModuleBadgeList
+                modules={p.modulesInclus}
+                noModulesLabel={t("admin.noModules")}
+              />
             </div>
 
             {/* Erreur toggle */}

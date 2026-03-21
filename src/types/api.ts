@@ -2018,6 +2018,8 @@ export interface CreatePlanAbonnementDTO {
   limitesIngFermes?: number;
   isActif?: boolean;
   isPublic?: boolean;
+  /** Modules site-level inclus dans ce plan (jamais les modules platform) */
+  modulesInclus?: SiteModule[];
 }
 
 /** DTO de mise à jour partielle d'un plan d'abonnement */
@@ -2033,6 +2035,8 @@ export interface UpdatePlanAbonnementDTO {
   limitesIngFermes?: number;
   isActif?: boolean;
   isPublic?: boolean;
+  /** Modules site-level inclus dans ce plan (jamais les modules platform) */
+  modulesInclus?: SiteModule[];
 }
 
 /** DTO pour initier un paiement Mobile Money */

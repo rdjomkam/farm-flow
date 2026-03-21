@@ -87,7 +87,11 @@
       "subscribers": "Subscribers",
       "status": "Status",
       "visibility": "Visibility",
+      "modules": "Modules",
       "actions": "Actions"
-    }
+    },
+    "noModules": "No modules",
+    "modulesInclus": "Included Modules",
+    "modulesHelp": "Checked modules will be automatically activated on the promoter's site upon subscription"
   }
 }

@@ -82,6 +82,9 @@ export const ErrorKeys = {
   QUOTA_EXCEEDED: "quota.exceeded",
   QUOTA_VAGUES_LIMIT: "quota.vaguesLimit",
   QUOTA_BACS_LIMIT: "quota.bacsLimit",
+
+  // Modules
+  INVALID_PLATFORM_MODULE: "validation.invalidPlatformModule",
 } as const;
 
 export type ErrorKey = (typeof ErrorKeys)[keyof typeof ErrorKeys];

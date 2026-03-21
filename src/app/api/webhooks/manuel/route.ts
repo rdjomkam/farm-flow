@@ -21,6 +21,7 @@ import {
   getPaiementByReference,
 } from "@/lib/queries/paiements-abonnements";
 import { activerAbonnement } from "@/lib/queries/abonnements";
+import { applyPlanModules } from "@/lib/abonnements/apply-plan-modules";
 
 // ---------------------------------------------------------------------------
 // POST /api/webhooks/manuel
@@ -84,6 +85,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     await confirmerPaiement(referenceExterne);
     await activerAbonnement(abonnementId);
+
+    // Story 43.5 : appliquer les modules du plan au site
+    // Récupère l'abonnement pour obtenir siteId et planId
+    const abonnement = await prisma.abonnement.findUnique({
+      where: { id: abonnementId },
+      select: { siteId: true, planId: true },
+    });
+
+    if (abonnement) {
+      // Fire-and-forget : ne pas bloquer la réponse si erreur module
+      applyPlanModules(abonnement.siteId, abonnement.planId).catch((modulesError) => {
+        console.error(
+          "[webhook/manuel] Erreur applyPlanModules (non-bloquant) :",
+          modulesError instanceof Error ? modulesError.message : "Erreur inconnue"
+        );
+      });
+    }
 
     return NextResponse.json(
       {

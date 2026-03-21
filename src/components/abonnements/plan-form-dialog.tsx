@@ -24,8 +24,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { TypePlan } from "@/types";
+import { TypePlan, SiteModule } from "@/types";
 import { PLAN_LABELS } from "@/lib/abonnements-constants";
+import { SITE_TOGGLEABLE_MODULES } from "@/lib/site-modules-config";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -45,6 +46,7 @@ export interface PlanAdminItem {
   limitesIngFermes: number | null;
   isActif: boolean;
   isPublic: boolean;
+  modulesInclus: SiteModule[];
   _count: {
     abonnements: number;
   };
@@ -78,6 +80,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
   const isEditing = !!plan;
   const router = useRouter();
   const t = useTranslations("abonnements");
+  const tNav = useTranslations("navigation");
 
   const TYPE_PLAN_OPTIONS = useMemo(
     () =>
@@ -101,6 +104,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
   const [limitesIngFermes, setLimitesIngFermes] = useState("");
   const [isActif, setIsActif] = useState(true);
   const [isPublic, setIsPublic] = useState(true);
+  const [modulesInclus, setModulesInclus] = useState<SiteModule[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ field: string; message: string }[]>([]);
 
@@ -120,6 +124,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
         setLimitesIngFermes(plan.limitesIngFermes !== null ? String(plan.limitesIngFermes) : "");
         setIsActif(plan.isActif);
         setIsPublic(plan.isPublic);
+        setModulesInclus(plan.modulesInclus ?? []);
       } else {
         setNom("");
         setTypePlan(TypePlan.DECOUVERTE);
@@ -133,6 +138,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
         setLimitesIngFermes("");
         setIsActif(true);
         setIsPublic(true);
+        setModulesInclus([]);
       }
       setErrors([]);
     }
@@ -148,6 +154,32 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
     if (val === "" || val === undefined) return null;
     const n = parseFloat(val);
     return isNaN(n) ? null : n;
+  }
+
+  function toggleModule(module: SiteModule) {
+    setModulesInclus((prev) =>
+      prev.includes(module) ? prev.filter((m) => m !== module) : [...prev, module]
+    );
+  }
+
+  /** Map SiteModule enum value to navigation i18n key under "modules.*" */
+  function getModuleNavKey(module: SiteModule): string {
+    const map: Record<SiteModule, string> = {
+      [SiteModule.REPRODUCTION]: "modules.reproduction",
+      [SiteModule.GROSSISSEMENT]: "modules.grossissement",
+      [SiteModule.INTRANTS]: "modules.intrants",
+      [SiteModule.VENTES]: "modules.ventes",
+      [SiteModule.ANALYSE_PILOTAGE]: "modules.analysePilotage",
+      [SiteModule.PACKS_PROVISIONING]: "modules.packsProvisioning",
+      [SiteModule.CONFIGURATION]: "modules.configuration",
+      [SiteModule.INGENIEUR]: "modules.ingenieur",
+      [SiteModule.NOTES]: "modules.notes",
+      // platform-only — not shown, included for type-safety
+      [SiteModule.ABONNEMENTS]: "modules.abonnement",
+      [SiteModule.COMMISSIONS]: "modules.adminCommissions",
+      [SiteModule.REMISES]: "modules.adminRemises",
+    };
+    return map[module];
   }
 
   async function handleSubmit(e: React.FormEvent | React.MouseEvent) {
@@ -220,6 +252,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
         limitesIngFermes: limitesIngFermes !== "" ? parseInt(limitesIngFermes) : undefined,
         isActif,
         isPublic,
+        modulesInclus,
       };
 
       // typePlan uniquement en création (immuable en édition)
@@ -503,6 +536,46 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
                 )}
               </div>
             )}
+          </fieldset>
+
+          {/* Modules inclus */}
+          <fieldset className="space-y-3">
+            <legend className="text-sm font-medium text-foreground">
+              {t("admin.modulesInclus")}
+            </legend>
+            <p className="text-xs text-muted-foreground">
+              {t("admin.modulesHelp")}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {SITE_TOGGLEABLE_MODULES.map((mod) => {
+                const navKey = getModuleNavKey(mod.value);
+                const label = tNav(navKey as Parameters<typeof tNav>[0]);
+                const checked = modulesInclus.includes(mod.value);
+                const checkboxId = `module-${mod.value}`;
+                const Icon = mod.icon;
+                return (
+                  <label
+                    key={mod.value}
+                    htmlFor={checkboxId}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors select-none ${
+                      checked
+                        ? "border-primary bg-primary/5 text-foreground"
+                        : "border-border bg-background text-muted-foreground hover:bg-muted/50"
+                    }`}
+                  >
+                    <input
+                      id={checkboxId}
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleModule(mod.value)}
+                      className="h-4 w-4 rounded border-border accent-primary focus:ring-2 focus:ring-ring focus:ring-offset-1 flex-shrink-0"
+                    />
+                    <Icon className={`h-4 w-4 flex-shrink-0 ${checked ? "text-primary" : "text-muted-foreground"}`} aria-hidden="true" />
+                    <span className="text-sm font-medium leading-none">{label}</span>
+                  </label>
+                );
+              })}
+            </div>
           </fieldset>
 
           {/* Toggles */}

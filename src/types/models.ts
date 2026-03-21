@@ -2359,6 +2359,13 @@ export interface PlanAbonnement {
   limitesIngFermes: number | null;
   isActif: boolean;
   isPublic: boolean;
+  /**
+   * Modules fonctionnels inclus dans ce plan.
+   * R7 : defaut [] (tableau vide).
+   * Regle metier : ABONNEMENTS, COMMISSIONS et REMISES sont des modules platform-only
+   * et ne doivent JAMAIS figurer dans cette liste.
+   */
+  modulesInclus: SiteModule[];
   createdAt: Date;
   updatedAt: Date;
 }

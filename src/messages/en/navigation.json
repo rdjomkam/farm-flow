@@ -13,7 +13,8 @@
     "portefeuille": "Portfolio",
     "adminCommissions": "Admin Commissions",
     "adminRemises": "Admin Discounts",
-    "utilisateurs": "Users"
+    "utilisateurs": "Users",
+    "notes": "Notes"
   },
   "items": {
     "dashboard": "Dashboard",

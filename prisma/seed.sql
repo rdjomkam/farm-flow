@@ -2290,14 +2290,20 @@ VALUES
 -- Sprint 30 — Abonnements & Plans (seed données de test)
 -- ============================================================
 
--- Plans d'abonnement (4 plans)
-INSERT INTO "PlanAbonnement" (id, nom, "typePlan", description, "prixMensuel", "prixTrimestriel", "prixAnnuel", "limitesSites", "limitesBacs", "limitesVagues", "limitesIngFermes", "isActif", "isPublic", "createdAt", "updatedAt")
+-- Plans d'abonnement (7 plans — Story 43.1 : ajout modulesInclus)
+-- Règle : ABONNEMENTS, COMMISSIONS, REMISES sont des modules platform-only — jamais dans modulesInclus
+INSERT INTO "PlanAbonnement" (id, nom, "typePlan", description, "prixMensuel", "prixTrimestriel", "prixAnnuel", "limitesSites", "limitesBacs", "limitesVagues", "limitesIngFermes", "isActif", "isPublic", "modulesInclus", "createdAt", "updatedAt")
 VALUES
-  ('plan_decouverte', 'Découverte', 'DECOUVERTE', 'Plan gratuit pour démarrer', NULL, NULL, NULL, 1, 3, 1, NULL, true, true, NOW(), NOW()),
-  ('plan_eleveur', 'Éleveur', 'ELEVEUR', 'Pour les petits éleveurs', 3000, 7500, 25000, 1, 10, 3, NULL, true, true, NOW(), NOW()),
-  ('plan_professionnel', 'Professionnel', 'PROFESSIONNEL', 'Pour les éleveurs professionnels', 8000, 20000, 70000, 3, 30, 10, NULL, true, true, NOW(), NOW()),
-  ('plan_ing_pro', 'Ingénieur Pro', 'INGENIEUR_PRO', 'Pour les ingénieurs piscicoles supervisants', 15000, NULL, 135000, 1, 3, 1, 20, true, true, NOW(), NOW())
-ON CONFLICT ("typePlan") DO NOTHING;
+  ('plan_decouverte',      'Découverte',       'DECOUVERTE',        'Plan gratuit pour démarrer',                    NULL,  NULL,   NULL,   1, 3,  1,  NULL, true, true, ARRAY['GROSSISSEMENT']::"SiteModule"[],                                                                        NOW(), NOW()),
+  ('plan_eleveur',         'Éleveur',          'ELEVEUR',           'Pour les petits éleveurs',                      3000,  7500,   25000,  1, 10, 3,  NULL, true, true, ARRAY['GROSSISSEMENT','INTRANTS','VENTES']::"SiteModule"[],                                                      NOW(), NOW()),
+  ('plan_professionnel',   'Professionnel',    'PROFESSIONNEL',     'Pour les éleveurs professionnels',              8000,  20000,  70000,  3, 30, 10, NULL, true, true, ARRAY['GROSSISSEMENT','INTRANTS','VENTES','REPRODUCTION','ANALYSE_PILOTAGE','NOTES']::"SiteModule"[],            NOW(), NOW()),
+  ('plan_entreprise',      'Entreprise',       'ENTREPRISE',        'Pour les structures d''élevage avancées',       20000, 50000,  180000, 5, 50, 20, NULL, true, true, ARRAY['GROSSISSEMENT','INTRANTS','VENTES','REPRODUCTION','ANALYSE_PILOTAGE','NOTES','CONFIGURATION']::"SiteModule"[], NOW(), NOW()),
+  ('plan_ing_starter',     'Ingénieur Starter','INGENIEUR_STARTER', 'Pour les ingénieurs débutant leur activité',   5000,  NULL,   50000,  1, 3,  1,  5,    true, true, ARRAY['GROSSISSEMENT','INGENIEUR']::"SiteModule"[],                                                              NOW(), NOW()),
+  ('plan_ing_pro',         'Ingénieur Pro',    'INGENIEUR_PRO',     'Pour les ingénieurs piscicoles supervisants',  15000, NULL,   135000, 1, 3,  1,  20,   true, true, ARRAY['GROSSISSEMENT','INTRANTS','VENTES','INGENIEUR']::"SiteModule"[],                                          NOW(), NOW()),
+  ('plan_ing_expert',      'Ingénieur Expert', 'INGENIEUR_EXPERT',  'Pour les ingénieurs avec expertise avancée',   25000, NULL,   225000, 1, 3,  1,  NULL, true, true, ARRAY['GROSSISSEMENT','INTRANTS','VENTES','REPRODUCTION','ANALYSE_PILOTAGE','INGENIEUR']::"SiteModule"[],        NOW(), NOW())
+ON CONFLICT ("typePlan") DO UPDATE SET
+  "modulesInclus" = EXCLUDED."modulesInclus",
+  "updatedAt"     = NOW();
 
 -- Remises (3 remises : early adopter fixe, early adopter %, bienvenue)
 -- Story 35.2 : EARLY2026 = remise fixe 2000 XAF pour les early adopters (premier abonnement)

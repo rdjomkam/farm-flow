@@ -87,7 +87,11 @@
       "subscribers": "Abonnés",
       "status": "Statut",
       "visibility": "Visibilité",
+      "modules": "Modules",
       "actions": "Actions"
-    }
+    },
+    "noModules": "Aucun module",
+    "modulesInclus": "Modules inclus",
+    "modulesHelp": "Les modules cochés seront activés automatiquement sur le site du promoteur lors de la souscription"
   }
 }

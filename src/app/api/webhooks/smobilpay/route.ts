@@ -23,6 +23,7 @@ import {
 } from "@/lib/queries/paiements-abonnements";
 import { activerAbonnement } from "@/lib/queries/abonnements";
 import { calculerEtCreerCommission } from "@/lib/services/commissions";
+import { applyPlanModules } from "@/lib/abonnements/apply-plan-modules";
 import { prisma } from "@/lib/db";
 import { FournisseurPaiement, StatutAbonnement, StatutPaiementAbo } from "@/types";
 
@@ -115,6 +116,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       if (paiementApresConfirm?.abonnementId) {
         // R4 : activerAbonnement via updateMany conditionnel
         await activerAbonnement(paiementApresConfirm.abonnementId);
+
+        // Story 43.5 : appliquer les modules du plan au site
+        // Fire-and-forget : ne pas bloquer le webhook si erreur module
+        if (paiementApresConfirm.abonnement?.planId) {
+          applyPlanModules(
+            paiementApresConfirm.siteId,
+            paiementApresConfirm.abonnement.planId
+          ).catch((modulesError) => {
+            console.error(
+              "[webhook/smobilpay] Erreur applyPlanModules (non-bloquant) :",
+              modulesError instanceof Error ? modulesError.message : "Erreur inconnue"
+            );
+          });
+        }
 
         // Sprint 34 : calculer et créer la commission ingénieur si applicable
         // Fire-and-forget : ne pas bloquer le webhook si erreur commission

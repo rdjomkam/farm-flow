@@ -16,9 +16,12 @@ import {
 } from "@/lib/queries/plans-abonnements";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
-import { Permission } from "@/types";
+import { Permission, SiteModule } from "@/types";
 import type { UpdatePlanAbonnementDTO } from "@/types";
 import { ErrorKeys } from "@/lib/api-error-keys";
+import { SITE_TOGGLEABLE_MODULES } from "@/lib/site-modules-config";
+
+const VALID_SITE_MODULES = SITE_TOGGLEABLE_MODULES.map((m) => m.value);
 
 export async function GET(
   request: NextRequest,
@@ -107,6 +110,32 @@ export async function PUT(
       });
     }
 
+    // Valider modulesInclus : uniquement les modules site-level (pas les modules platform)
+    let modulesInclus: SiteModule[] | undefined;
+    if (body.modulesInclus !== undefined) {
+      if (!Array.isArray(body.modulesInclus)) {
+        errors.push({
+          field: "modulesInclus",
+          message: "modulesInclus doit etre un tableau.",
+        });
+      } else {
+        const invalidModules = (body.modulesInclus as string[]).filter(
+          (m) => !VALID_SITE_MODULES.includes(m as SiteModule)
+        );
+        if (invalidModules.length > 0) {
+          return NextResponse.json(
+            {
+              status: 400,
+              message: `Modules non autorises (platform ou inconnus) : ${invalidModules.join(", ")}. Seuls les modules site-level sont acceptes : ${VALID_SITE_MODULES.join(", ")}`,
+              errorKey: ErrorKeys.INVALID_PLATFORM_MODULE,
+            },
+            { status: 400 }
+          );
+        }
+        modulesInclus = body.modulesInclus as SiteModule[];
+      }
+    }
+
     if (errors.length > 0) {
       return NextResponse.json(
         { status: 400, message: "Erreurs de validation", errors },
@@ -130,6 +159,7 @@ export async function PUT(
       }),
       ...(body.isActif !== undefined && { isActif: body.isActif }),
       ...(body.isPublic !== undefined && { isPublic: body.isPublic }),
+      ...(modulesInclus !== undefined && { modulesInclus }),
     };
 
     const updated = await updatePlanAbonnement(id, data);
