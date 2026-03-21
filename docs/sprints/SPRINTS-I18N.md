@@ -585,7 +585,7 @@ valider l'ensemble avec des tests complets et faire la review finale.
 **Assigne a :** @developer
 **Priorite :** Critique
 **Complexite :** Medium
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Creer le selecteur de langue et l'integrer dans le layout.
 
@@ -613,7 +613,7 @@ valider l'ensemble avec des tests complets et faire la review finale.
 **Assigne a :** @developer
 **Priorite :** Moyenne
 **Complexite :** Simple
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Traduire les metadata (title, description) des pages et les textes
 des pages publiques (login, tarifs, inscription, abonnement-expire).
@@ -637,7 +637,7 @@ des pages publiques (login, tarifs, inscription, abonnement-expire).
 **Assigne a :** @tester
 **Priorite :** Critique
 **Complexite :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Tests d'integration couvrant le parcours i18n complet.
 
@@ -670,7 +670,7 @@ des pages publiques (login, tarifs, inscription, abonnement-expire).
 **Priorite :** Critique
 **Complexite :** Complex
 **Depend de :** Stories 42.1 a 42.3
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Review complete du systeme i18n.
 

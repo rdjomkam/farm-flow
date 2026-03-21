@@ -10,19 +10,26 @@
  */
 import { PlansGrid } from "@/components/abonnements/plans-grid";
 import { PlanComparaisonTable } from "@/components/abonnements/plan-comparaison-table";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { getServerSession } from "@/lib/auth";
 import { getAbonnementActif } from "@/lib/queries/abonnements";
+import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Tarifs — FarmFlow",
-  description: "Découvrez nos plans tarifaires pour la gestion de votre ferme piscicole.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common.metadata");
+  return {
+    title: t("tarifs"),
+    description: t("tarifsDescription"),
+  };
+}
 
 // Pas de cache : les prix peuvent changer
 export const dynamic = "force-dynamic";
 
 export default async function TarifsPage() {
+  const t = await getTranslations("abonnements.tarifs");
+
   // Charger les plans publics depuis l'API
   const baseUrl = process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
   let plans: import("@/types").PlanAbonnement[] = [];
@@ -51,16 +58,20 @@ export default async function TarifsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background relative">
+      {/* Language switcher — top-right */}
+      <div className="absolute top-3 right-3 z-10">
+        <LanguageSwitcher />
+      </div>
+
       {/* Hero */}
       <section className="bg-card border-b border-border py-10 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-2xl font-bold text-foreground sm:text-3xl lg:text-4xl">
-            Choisissez votre plan
+            {t("heroTitle")}
           </h1>
           <p className="mt-3 text-sm text-muted-foreground sm:text-base max-w-xl mx-auto">
-            Gérez votre ferme piscicole efficacement. Commencez gratuitement,
-            évoluez selon vos besoins.
+            {t("heroSubtitle")}
           </p>
         </div>
       </section>
@@ -76,7 +87,7 @@ export default async function TarifsPage() {
       <section className="hidden lg:block py-8 px-4 bg-muted/30">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-xl font-semibold text-foreground mb-6 text-center">
-            Comparaison détaillée
+            {t("comparisonTitle")}
           </h2>
           <PlanComparaisonTable plans={plans} />
         </div>

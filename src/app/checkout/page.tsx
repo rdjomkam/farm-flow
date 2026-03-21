@@ -13,11 +13,13 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/auth";
 import { getPlanAbonnementById } from "@/lib/queries/plans-abonnements";
 import { CheckoutForm } from "@/components/abonnements/checkout-form";
+import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Checkout — FarmFlow",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common.metadata");
+  return { title: t("checkout") };
+}
 
 interface CheckoutPageProps {
   searchParams: Promise<{ planId?: string; renouvellement?: string }>;
@@ -51,16 +53,17 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
   }
 
   const isRenouvellement = params.renouvellement === "true";
+  const t = await getTranslations("abonnements");
 
   return (
     <main className="min-h-screen bg-background">
       <div className="max-w-lg mx-auto px-4 py-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground">
-            {isRenouvellement ? "Renouveler votre abonnement" : "Choisir un plan"}
+            {isRenouvellement ? t("checkout.titleRenew") : t("checkout.titleNew")}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Complétez les étapes ci-dessous pour activer votre abonnement.
+            {t("checkout.subtitle")}
           </p>
         </div>
         <CheckoutForm

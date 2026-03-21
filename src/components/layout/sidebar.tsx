@@ -40,6 +40,7 @@ import {
   LayoutList,
 } from "lucide-react";
 import { NotificationBell } from "./notification-bell";
+import { LanguageSwitcher } from "./language-switcher";
 import { cn } from "@/lib/utils";
 import { Permission, Role, SiteModule } from "@/types";
 import { MODULE_VIEW_PERMISSIONS, ITEM_VIEW_PERMISSIONS, MODULE_LABEL_TO_SITE_MODULE } from "@/lib/permissions-constants";
@@ -356,6 +357,11 @@ export function Sidebar({ permissions, role, siteModules }: { permissions: Permi
         </div>
 
       </nav>
+
+      {/* Language switcher pinned at bottom of sidebar */}
+      <div className="border-t border-border p-2 flex justify-end">
+        <LanguageSwitcher />
+      </div>
     </aside>
   );
 }

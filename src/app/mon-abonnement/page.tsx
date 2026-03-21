@@ -16,15 +16,18 @@ import { getAbonnementActif, getAbonnementById } from "@/lib/queries/abonnements
 import { AbonnementActuelCard } from "@/components/abonnements/abonnement-actuel-card";
 import { PaiementsHistoryList } from "@/components/abonnements/paiements-history-list";
 import { Permission } from "@/types";
+import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Mon Abonnement — FarmFlow",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common.metadata");
+  return { title: t("monAbonnement") };
+}
 
 export const dynamic = "force-dynamic";
 
 export default async function MonAbonnementPage() {
+  const t = await getTranslations("abonnements");
   const session = await getServerSession();
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
@@ -49,7 +52,7 @@ export default async function MonAbonnementPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header title="Mon Abonnement" />
+      <Header title={t("monAbonnement.title")} />
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
         <AbonnementActuelCard
           abonnement={abonnementActif
@@ -73,7 +76,7 @@ export default async function MonAbonnementPage() {
         {paiements.length > 0 && (
           <div>
             <h2 className="text-base font-semibold text-foreground mb-3">
-              Historique des paiements
+              {t("monAbonnement.paymentHistory")}
             </h2>
             <PaiementsHistoryList paiements={paiements} />
           </div>
@@ -81,13 +84,13 @@ export default async function MonAbonnementPage() {
         {!abonnementActif && (
           <div className="text-center py-10">
             <p className="text-muted-foreground text-sm">
-              Vous n&apos;avez pas d&apos;abonnement actif.
+              {t("monAbonnement.noSubscription")}
             </p>
             <a
               href="/tarifs"
               className="mt-4 inline-flex items-center justify-center rounded-lg bg-primary text-primary-foreground px-6 py-2.5 text-sm font-medium min-h-[44px] transition-colors hover:bg-primary/90"
             >
-              Voir les plans
+              {t("monAbonnement.viewPlans")}
             </a>
           </div>
         )}

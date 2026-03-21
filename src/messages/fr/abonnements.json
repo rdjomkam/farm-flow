@@ -32,6 +32,36 @@
     "suspendedMessage": "Mode lecture seule \u2014 Votre abonnement est suspendu.",
     "renewButton": "Renouveler mon abonnement"
   },
+  "expire": {
+    "graceTitle": "Abonnement expiré",
+    "graceMessage": "Votre abonnement a expiré, vous avez encore <days>{daysRemaining}</days> jour{plural} pour renouveler avant que votre compte soit suspendu.",
+    "suspendedTitle": "Compte en lecture seule",
+    "suspendedMessage": "Votre compte est en mode lecture seule. Vous pouvez consulter vos données, mais vous ne pouvez plus créer ni modifier d'enregistrements. Renouvelez votre abonnement pour retrouver l'accès complet.",
+    "expiredTitle": "Compte suspendu",
+    "expiredMessage": "Votre compte est suspendu. L'accès à l'application n'est plus disponible jusqu'au renouvellement de votre abonnement.",
+    "inactiveTitle": "Abonnement inactif",
+    "inactiveMessage": "Votre abonnement n'est plus actif. Choisissez un plan pour continuer à utiliser FarmFlow.",
+    "renewButton": "Renouveler mon abonnement",
+    "viewPlansButton": "Voir les plans",
+    "helpTitle": "Besoin d'aide ?",
+    "helpMessage": "Contactez notre support à <email>support@farmflow.cm</email> ou appelez le <phone>+237 600 000 000</phone>."
+  },
+  "tarifs": {
+    "heroTitle": "Choisissez votre plan",
+    "heroSubtitle": "Gérez votre ferme piscicole efficacement. Commencez gratuitement, évoluez selon vos besoins.",
+    "comparisonTitle": "Comparaison détaillée"
+  },
+  "checkout": {
+    "titleNew": "Choisir un plan",
+    "titleRenew": "Renouveler votre abonnement",
+    "subtitle": "Complétez les étapes ci-dessous pour activer votre abonnement."
+  },
+  "monAbonnement": {
+    "title": "Mon Abonnement",
+    "paymentHistory": "Historique des paiements",
+    "noSubscription": "Vous n'avez pas d'abonnement actif.",
+    "viewPlans": "Voir les plans"
+  },
   "admin": {
     "active": "Actif",
     "inactive": "Inactif",

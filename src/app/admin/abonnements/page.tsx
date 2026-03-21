@@ -15,11 +15,13 @@ import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { AbonnementsAdminList } from "@/components/abonnements/abonnements-admin-list";
 import { Permission, StatutAbonnement } from "@/types";
+import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Gestion des abonnements — FarmFlow Admin",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common.metadata");
+  return { title: t("adminAbonnements") };
+}
 
 export const dynamic = "force-dynamic";
 

@@ -16,11 +16,13 @@ import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getPlansAbonnements } from "@/lib/queries/plans-abonnements";
 import { PlansAdminList } from "@/components/abonnements/plans-admin-list";
 import { Permission } from "@/types";
+import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Gestion des plans — FarmFlow Admin",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common.metadata");
+  return { title: t("adminPlans") };
+}
 
 export const dynamic = "force-dynamic";
 

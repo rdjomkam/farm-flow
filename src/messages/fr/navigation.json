@@ -83,6 +83,7 @@
   "actions": {
     "logout": "Se déconnecter",
     "more": "Plus",
-    "menu": "Menu"
+    "menu": "Menu",
+    "language": "Langue"
   }
 }

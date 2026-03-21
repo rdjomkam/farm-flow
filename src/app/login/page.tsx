@@ -8,12 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { useAuthService } from "@/services";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { useTranslations } from "next-intl";
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
   const authService = useAuthService();
+  const t = useTranslations("common.login");
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -24,8 +27,8 @@ export default function LoginPage() {
     setErrors({});
 
     const newErrors: Record<string, string> = {};
-    if (!identifier.trim()) newErrors.identifier = "L'email ou le telephone est obligatoire.";
-    if (!password) newErrors.password = "Le mot de passe est obligatoire.";
+    if (!identifier.trim()) newErrors.identifier = t("errorIdentifierRequired");
+    if (!password) newErrors.password = t("errorPasswordRequired");
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -49,7 +52,7 @@ export default function LoginPage() {
         }
         setErrors(fieldErrors);
       } else {
-        setErrors({ form: errorData?.error || "Erreur de connexion." });
+        setErrors({ form: errorData?.error || t("errorGeneric") });
       }
       return;
     }
@@ -59,7 +62,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-dvh bg-surface-0">
+    <div className="flex min-h-dvh bg-surface-0 relative">
+      {/* Language switcher — top-right, accessible on all viewports */}
+      <div className="absolute top-3 right-3 z-10">
+        <LanguageSwitcher />
+      </div>
+
       {/* Left brand panel - desktop only */}
       <div className="hidden md:flex md:w-1/2 md:flex-col md:justify-center md:items-center md:p-12 relative overflow-hidden" style={{ background: "var(--primary-gradient)" }}>
         <div className="relative z-10 max-w-md text-center">
@@ -67,19 +75,19 @@ export default function LoginPage() {
             <Fish className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">FarmFlow</h1>
-          <p className="text-white/80 mb-8">Gerez vos elevages de silures avec precision et simplicite.</p>
+          <p className="text-white/80 mb-8">{t("brandTagline")}</p>
           <div className="space-y-4 text-left">
             <div className="flex items-center gap-3 text-white/90">
               <Waves className="h-5 w-5 shrink-0" />
-              <span className="text-sm">Suivi des vagues et biometries en temps reel</span>
+              <span className="text-sm">{t("feature1")}</span>
             </div>
             <div className="flex items-center gap-3 text-white/90">
               <BarChart3 className="h-5 w-5 shrink-0" />
-              <span className="text-sm">Analytiques avancees et benchmarks</span>
+              <span className="text-sm">{t("feature2")}</span>
             </div>
             <div className="flex items-center gap-3 text-white/90">
               <DollarSign className="h-5 w-5 shrink-0" />
-              <span className="text-sm">Gestion financiere complete</span>
+              <span className="text-sm">{t("feature3")}</span>
             </div>
           </div>
         </div>
@@ -99,9 +107,9 @@ export default function LoginPage() {
 
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <CardTitle className="text-xl">Connexion</CardTitle>
+            <CardTitle className="text-xl">{t("title")}</CardTitle>
             <CardDescription>
-              Connectez-vous a votre compte FarmFlow
+              {t("subtitle")}
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
@@ -112,9 +120,9 @@ export default function LoginPage() {
                 </p>
               )}
               <Input
-                label="Email ou téléphone"
+                label={t("fieldIdentifier")}
                 type="text"
-                placeholder="votre@email.com ou 6XXXXXXXX (+237 ajouté automatiquement)"
+                placeholder={t("fieldIdentifierPlaceholder")}
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 error={errors.identifier}
@@ -122,9 +130,9 @@ export default function LoginPage() {
                 autoFocus
               />
               <Input
-                label="Mot de passe"
+                label={t("fieldPassword")}
                 type="password"
-                placeholder="Votre mot de passe"
+                placeholder={t("fieldPasswordPlaceholder")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 error={errors.password}
@@ -133,12 +141,12 @@ export default function LoginPage() {
             </CardContent>
             <CardFooter className="flex flex-col gap-3">
               <Button type="submit" className="w-full">
-                Se connecter
+                {t("submitButton")}
               </Button>
               <p className="text-sm text-muted-foreground text-center">
-                Pas encore de compte ?{" "}
+                {t("noAccount")}{" "}
                 <Link href="/register" className="text-primary hover:underline font-medium">
-                  Creer un compte
+                  {t("createAccount")}
                 </Link>
               </p>
             </CardFooter>

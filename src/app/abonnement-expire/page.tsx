@@ -20,14 +20,17 @@ import { getServerSession } from "@/lib/auth/session";
 import { getSubscriptionStatus } from "@/lib/abonnements/check-subscription";
 import { StatutAbonnement } from "@/types";
 import { prisma } from "@/lib/db";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Abonnement expiré — FarmFlow",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common.metadata");
+  return { title: t("abonnementExpire") };
+}
 
 export default async function AbonnementExpirePage() {
+  const t = await getTranslations("abonnements.expire");
   const session = await getServerSession();
 
   // Charger le statut d'abonnement si une session est présente
@@ -92,47 +95,45 @@ export default async function AbonnementExpirePage() {
           {isEnGrace ? (
             <>
               <h1 className="text-2xl font-bold text-foreground mb-3">
-                Abonnement expiré
+                {t("graceTitle")}
               </h1>
               <p className="text-base text-muted-foreground">
-                Votre abonnement a expiré, vous avez encore{" "}
-                <span className="font-semibold" style={{ color: "var(--warning, hsl(38 92% 50%))" }}>
-                  {daysRemaining !== null ? daysRemaining : "quelques"} jour
-                  {daysRemaining !== 1 ? "s" : ""}
-                </span>{" "}
-                pour renouveler avant que votre compte soit suspendu.
+                {t.rich("graceMessage", {
+                  daysRemaining: daysRemaining ?? "?",
+                  plural: daysRemaining !== 1 ? "s" : "",
+                  days: (chunks) => (
+                    <span className="font-semibold" style={{ color: "var(--warning, hsl(38 92% 50%))" }}>
+                      {chunks}
+                    </span>
+                  ),
+                })}
               </p>
             </>
           ) : isSuspendu ? (
             <>
               <h1 className="text-2xl font-bold text-foreground mb-3">
-                Compte en lecture seule
+                {t("suspendedTitle")}
               </h1>
               <p className="text-base text-muted-foreground">
-                Votre compte est en mode lecture seule. Vous pouvez consulter
-                vos données, mais vous ne pouvez plus créer ni modifier
-                d'enregistrements. Renouvelez votre abonnement pour retrouver
-                l'accès complet.
+                {t("suspendedMessage")}
               </p>
             </>
           ) : isExpire ? (
             <>
               <h1 className="text-2xl font-bold text-foreground mb-3">
-                Compte suspendu
+                {t("expiredTitle")}
               </h1>
               <p className="text-base text-muted-foreground">
-                Votre compte est suspendu. L'accès à l'application n'est plus
-                disponible jusqu'au renouvellement de votre abonnement.
+                {t("expiredMessage")}
               </p>
             </>
           ) : (
             <>
               <h1 className="text-2xl font-bold text-foreground mb-3">
-                Abonnement inactif
+                {t("inactiveTitle")}
               </h1>
               <p className="text-base text-muted-foreground">
-                Votre abonnement n'est plus actif. Choisissez un plan pour
-                continuer à utiliser FarmFlow.
+                {t("inactiveMessage")}
               </p>
             </>
           )}
@@ -165,7 +166,7 @@ export default async function AbonnementExpirePage() {
               <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
               <path d="M8 16H3v5" />
             </svg>
-            Renouveler mon abonnement
+            {t("renewButton")}
           </Link>
 
           {/* Bouton secondaire : Voir les plans */}
@@ -193,7 +194,7 @@ export default async function AbonnementExpirePage() {
               <line x1="9" y1="12" x2="15" y2="12" />
               <line x1="9" y1="15" x2="12" y2="15" />
             </svg>
-            Voir les plans
+            {t("viewPlansButton")}
           </Link>
         </div>
 
@@ -205,25 +206,28 @@ export default async function AbonnementExpirePage() {
             color: "var(--muted-foreground)",
           }}
         >
-          <p className="font-medium text-foreground mb-1">Besoin d'aide ?</p>
+          <p className="font-medium text-foreground mb-1">{t("helpTitle")}</p>
           <p>
-            Contactez notre support à{" "}
-            <a
-              href="mailto:support@farmflow.cm"
-              className="underline underline-offset-2 hover:opacity-80"
-              style={{ color: "var(--primary)" }}
-            >
-              support@farmflow.cm
-            </a>{" "}
-            ou appelez le{" "}
-            <a
-              href="tel:+237600000000"
-              className="underline underline-offset-2 hover:opacity-80"
-              style={{ color: "var(--primary)" }}
-            >
-              +237 600 000 000
-            </a>
-            .
+            {t.rich("helpMessage", {
+              email: (chunks) => (
+                <a
+                  href="mailto:support@farmflow.cm"
+                  className="underline underline-offset-2 hover:opacity-80"
+                  style={{ color: "var(--primary)" }}
+                >
+                  {chunks}
+                </a>
+              ),
+              phone: (chunks) => (
+                <a
+                  href="tel:+237600000000"
+                  className="underline underline-offset-2 hover:opacity-80"
+                  style={{ color: "var(--primary)" }}
+                >
+                  {chunks}
+                </a>
+              ),
+            })}
           </p>
         </div>
       </div>

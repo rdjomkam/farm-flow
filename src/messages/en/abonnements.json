@@ -32,6 +32,36 @@
     "suspendedMessage": "Read-only mode \u2014 Your subscription is suspended.",
     "renewButton": "Renew my subscription"
   },
+  "expire": {
+    "graceTitle": "Subscription expired",
+    "graceMessage": "Your subscription has expired, you have <days>{daysRemaining}</days> day{plural} left to renew before your account is suspended.",
+    "suspendedTitle": "Account in read-only mode",
+    "suspendedMessage": "Your account is in read-only mode. You can view your data, but you can no longer create or modify records. Renew your subscription to restore full access.",
+    "expiredTitle": "Account suspended",
+    "expiredMessage": "Your account is suspended. Access to the application is no longer available until your subscription is renewed.",
+    "inactiveTitle": "Subscription inactive",
+    "inactiveMessage": "Your subscription is no longer active. Choose a plan to continue using FarmFlow.",
+    "renewButton": "Renew my subscription",
+    "viewPlansButton": "View plans",
+    "helpTitle": "Need help?",
+    "helpMessage": "Contact our support at <email>support@farmflow.cm</email> or call <phone>+237 600 000 000</phone>."
+  },
+  "tarifs": {
+    "heroTitle": "Choose your plan",
+    "heroSubtitle": "Manage your fish farm efficiently. Start for free, scale as you grow.",
+    "comparisonTitle": "Detailed comparison"
+  },
+  "checkout": {
+    "titleNew": "Choose a plan",
+    "titleRenew": "Renew your subscription",
+    "subtitle": "Complete the steps below to activate your subscription."
+  },
+  "monAbonnement": {
+    "title": "My Subscription",
+    "paymentHistory": "Payment History",
+    "noSubscription": "You don't have an active subscription.",
+    "viewPlans": "View Plans"
+  },
   "admin": {
     "active": "Active",
     "inactive": "Inactive",

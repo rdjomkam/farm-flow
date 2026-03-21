@@ -17,11 +17,13 @@ import { PortefeuilleSummary } from "@/components/commissions/portefeuille-summa
 import { CommissionsList } from "@/components/commissions/commissions-list";
 import { RetraitsList } from "@/components/commissions/retraits-list";
 import { Permission } from "@/types";
+import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Mon Portefeuille — FarmFlow",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common.metadata");
+  return { title: t("monPortefeuille") };
+}
 
 export const dynamic = "force-dynamic";
 

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { useAuthService } from "@/services";
+import { useTranslations } from "next-intl";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Accept local 9-digit numbers (6XXXXXXXX / 2XXXXXXXX) or full +237 format
@@ -16,6 +17,8 @@ const PHONE_REGEX = /^(\+?237)?[62]\d{8}$/;
 export default function RegisterPage() {
   const router = useRouter();
   const authService = useAuthService();
+  const t = useTranslations("common.register");
+  const tLogin = useTranslations("common.login");
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -30,24 +33,24 @@ export default function RegisterPage() {
 
     // Client-side validation
     const newErrors: Record<string, string> = {};
-    if (!name.trim()) newErrors.name = "Le nom est obligatoire.";
+    if (!name.trim()) newErrors.name = t("errorNameRequired");
 
     const hasEmail = email.trim().length > 0;
     const hasPhone = phone.trim().length > 0;
 
     if (!hasEmail && !hasPhone) {
-      newErrors.email = "L'email ou le telephone est obligatoire.";
+      newErrors.email = t("errorEmailOrPhoneRequired");
     }
     if (hasEmail && !EMAIL_REGEX.test(email.trim())) {
-      newErrors.email = "L'adresse email n'est pas valide.";
+      newErrors.email = t("errorEmailInvalid");
     }
     if (hasPhone && !PHONE_REGEX.test(phone.trim())) {
-      newErrors.phone = "Format: 6XX XX XX XX ou 2XX XX XX XX.";
+      newErrors.phone = t("errorPhoneInvalid");
     }
 
-    if (!password) newErrors.password = "Le mot de passe est obligatoire.";
-    else if (password.length < 6) newErrors.password = "Le mot de passe doit contenir au moins 6 caracteres.";
-    if (password !== confirmPassword) newErrors.confirmPassword = "Les mots de passe ne correspondent pas.";
+    if (!password) newErrors.password = t("errorPasswordRequired");
+    else if (password.length < 6) newErrors.password = t("errorPasswordTooShort");
+    if (password !== confirmPassword) newErrors.confirmPassword = t("errorPasswordMismatch");
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -76,7 +79,7 @@ export default function RegisterPage() {
         }
         setErrors(fieldErrors);
       } else {
-        setErrors({ form: errorData?.error || "Erreur lors de l'inscription." });
+        setErrors({ form: errorData?.error || t("errorGeneric") });
       }
       return;
     }
@@ -94,19 +97,19 @@ export default function RegisterPage() {
             <Fish className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">FarmFlow</h1>
-          <p className="text-white/80 mb-8">Gerez vos elevages de silures avec precision et simplicite.</p>
+          <p className="text-white/80 mb-8">{tLogin("brandTagline")}</p>
           <div className="space-y-4 text-left">
             <div className="flex items-center gap-3 text-white/90">
               <Waves className="h-5 w-5 shrink-0" />
-              <span className="text-sm">Suivi des vagues et biometries en temps reel</span>
+              <span className="text-sm">{tLogin("feature1")}</span>
             </div>
             <div className="flex items-center gap-3 text-white/90">
               <BarChart3 className="h-5 w-5 shrink-0" />
-              <span className="text-sm">Analytiques avancees et benchmarks</span>
+              <span className="text-sm">{tLogin("feature2")}</span>
             </div>
             <div className="flex items-center gap-3 text-white/90">
               <DollarSign className="h-5 w-5 shrink-0" />
-              <span className="text-sm">Gestion financiere complete</span>
+              <span className="text-sm">{tLogin("feature3")}</span>
             </div>
           </div>
         </div>
@@ -126,9 +129,9 @@ export default function RegisterPage() {
 
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <CardTitle className="text-xl">Creer un compte</CardTitle>
+            <CardTitle className="text-xl">{t("title")}</CardTitle>
             <CardDescription>
-              Inscrivez-vous pour suivre vos silures
+              {t("subtitle")}
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
@@ -139,9 +142,9 @@ export default function RegisterPage() {
                 </p>
               )}
               <Input
-                label="Nom complet"
+                label={t("fieldName")}
                 type="text"
-                placeholder="Jean Dupont"
+                placeholder={t("fieldNamePlaceholder")}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 error={errors.name}
@@ -149,39 +152,39 @@ export default function RegisterPage() {
                 autoFocus
               />
               <Input
-                label="Email (optionnel)"
+                label={t("fieldEmail")}
                 type="email"
-                placeholder="votre@email.com"
+                placeholder={t("fieldEmailPlaceholder")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 error={errors.email}
                 autoComplete="email"
               />
               <Input
-                label="Téléphone (optionnel)"
+                label={t("fieldPhone")}
                 type="tel"
-                placeholder="6XXXXXXXX (+237 ajouté automatiquement)"
+                placeholder={t("fieldPhonePlaceholder")}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 error={errors.phone}
                 autoComplete="tel"
               />
               <p className="text-xs text-muted-foreground -mt-2">
-                Au moins un des deux (email ou telephone) est requis.
+                {t("fieldEmailOrPhoneHint")}
               </p>
               <Input
-                label="Mot de passe"
+                label={t("fieldPassword")}
                 type="password"
-                placeholder="Minimum 6 caracteres"
+                placeholder={t("fieldPasswordPlaceholder")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 error={errors.password}
                 autoComplete="new-password"
               />
               <Input
-                label="Confirmer le mot de passe"
+                label={t("fieldConfirmPassword")}
                 type="password"
-                placeholder="Retapez votre mot de passe"
+                placeholder={t("fieldConfirmPasswordPlaceholder")}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 error={errors.confirmPassword}
@@ -190,12 +193,12 @@ export default function RegisterPage() {
             </CardContent>
             <CardFooter className="flex flex-col gap-3">
               <Button type="submit" className="w-full">
-                Creer mon compte
+                {t("submitButton")}
               </Button>
               <p className="text-sm text-muted-foreground text-center">
-                Deja un compte ?{" "}
+                {t("alreadyAccount")}{" "}
                 <Link href="/login" className="text-primary hover:underline font-medium">
-                  Se connecter
+                  {t("signIn")}
                 </Link>
               </p>
             </CardFooter>

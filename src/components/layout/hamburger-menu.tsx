@@ -46,6 +46,7 @@ import { cn } from "@/lib/utils";
 import { Permission, Role, SiteModule } from "@/types";
 import { MODULE_VIEW_PERMISSIONS, ITEM_VIEW_PERMISSIONS, MODULE_LABEL_TO_SITE_MODULE } from "@/lib/permissions-constants";
 import { useAuthService } from "@/services";
+import { LanguageSwitcher } from "./language-switcher";
 
 const roleKeyMap: Record<Role, string> = {
   ADMIN: "admin",
@@ -379,7 +380,7 @@ export function HamburgerMenu({ open, onOpenChange, permissions, role, userName,
 
           </nav>
 
-          {/* Footer -- User info + Logout */}
+          {/* Footer -- User info + Language + Logout */}
           <div className="border-t border-border p-3 space-y-2">
             {userName && role && (
               <div className="flex items-center gap-3 px-3 py-2">
@@ -392,6 +393,10 @@ export function HamburgerMenu({ open, onOpenChange, permissions, role, userName,
                 </div>
               </div>
             )}
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs text-muted-foreground px-2">{t("actions.language")}</span>
+              <LanguageSwitcher />
+            </div>
             <button
               onClick={handleLogout}
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
