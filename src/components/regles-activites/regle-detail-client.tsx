@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import {
@@ -146,6 +148,7 @@ function SectionCard({
 
 export function RegleDetailClient({ regle, canManage, canManageGlobal, customPlaceholders = [] }: Props) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const configService = useConfigService();
   const t = useTranslations("settings");
 
@@ -235,7 +238,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
     const result = await configService.updateRegle(regle.id, body as Parameters<typeof configService.updateRegle>[1]);
     if (result.ok) {
       setEditMode(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.planning.regles() });
     }
   }
 
@@ -249,7 +252,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
   async function handleResetFiredOnce() {
     const result = await configService.resetRegle(regle.id);
     if (result.ok) {
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.planning.regles() });
     }
   }
 

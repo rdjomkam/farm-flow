@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { queryKeys } from "@/lib/query-keys";
 import { ArrowLeft, Pencil, ArrowRightLeft, Waves } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,7 +79,7 @@ interface Props {
 
 export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) {
   const t = useTranslations("alevins");
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const alevinsService = useAlevinsService();
   const [editOpen, setEditOpen] = useState(false);
   const [transfertOpen, setTransfertOpen] = useState(false);
@@ -119,7 +120,7 @@ export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) 
     });
     if (result.ok) {
       setEditOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.alevins.lots() });
     }
   }
 
@@ -132,7 +133,7 @@ export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) 
     });
     if (result.ok) {
       setTransfertOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.alevins.lots() });
     }
   }
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cachedJson } from "@/lib/api-cache";
 import { getFournisseurs, createFournisseur } from "@/lib/queries/fournisseurs";
 import { AuthError } from "@/lib/auth";
 import { normalizePhone } from "@/lib/auth/phone";
@@ -11,10 +12,7 @@ export async function GET(request: NextRequest) {
     const auth = await requirePermission(request, Permission.APPROVISIONNEMENT_VOIR);
     const fournisseurs = await getFournisseurs(auth.activeSiteId);
 
-    return NextResponse.json({
-      fournisseurs,
-      total: fournisseurs.length,
-    });
+    return cachedJson({ fournisseurs, total: fournisseurs.length }, "medium");
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json({ status: 401, message: error.message }, { status: 401 });

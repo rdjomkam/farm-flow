@@ -12,7 +12,8 @@
  * R6 : CSS variables du thème
  */
 import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
 import {
   Dialog,
@@ -78,7 +79,7 @@ const INGENIEUR_TYPES: TypePlan[] = [
 
 export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProps) {
   const isEditing = !!plan;
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const t = useTranslations("abonnements");
   const tNav = useTranslations("navigation");
 
@@ -283,7 +284,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
       }
 
       setOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.abonnements.plans() });
       if (onSuccess) onSuccess();
     } finally {
       setLoading(false);

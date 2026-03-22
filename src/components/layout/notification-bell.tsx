@@ -1,27 +1,26 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useNotificationService } from "@/services";
+import { queryKeys } from "@/lib/query-keys";
 
 export function NotificationBell() {
   const router = useRouter();
   const notificationService = useNotificationService();
-  const [count, setCount] = useState(0);
 
-  const fetchCount = useCallback(async () => {
-    const { data } = await notificationService.getCount();
-    if (data) setCount(data.count ?? 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    fetchCount();
-    const interval = setInterval(fetchCount, 60_000);
-    return () => clearInterval(interval);
-  }, [fetchCount]);
+  const { data: count = 0 } = useQuery({
+    queryKey: queryKeys.notifications.count(),
+    queryFn: async () => {
+      const { data } = await notificationService.getCount();
+      return data?.count ?? 0;
+    },
+    staleTime: 30_000, // 30s
+    gcTime: 2 * 60_000,
+    refetchInterval: 60_000, // poll every 60s
+  });
 
   return (
     <button

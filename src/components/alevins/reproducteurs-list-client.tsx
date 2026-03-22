@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { queryKeys } from "@/lib/query-keys";
 import { Plus, Users, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,7 +62,7 @@ interface Props {
 
 export function ReproducteursListClient({ reproducteurs, permissions }: Props) {
   const t = useTranslations("alevins");
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const alevinsService = useAlevinsService();
   const [tab, setTab] = useState("tous");
   const [search, setSearch] = useState("");
@@ -128,7 +129,7 @@ export function ReproducteursListClient({ reproducteurs, permissions }: Props) {
     if (result.ok) {
       setDialogOpen(false);
       resetForm();
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.alevins.reproducteurs() });
     }
   }
 

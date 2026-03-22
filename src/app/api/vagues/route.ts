@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cachedJson } from "@/lib/api-cache";
 import { getVagues, createVague } from "@/lib/queries/vagues";
 import { prisma } from "@/lib/db";
 import { AuthError } from "@/lib/auth";
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json({ vagues: result, total: result.length });
+    return cachedJson({ vagues: result, total: result.length }, "medium");
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json({ status: 401, message: error.message }, { status: 401 });

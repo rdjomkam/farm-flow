@@ -14,6 +14,8 @@
  */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Filter, ChevronLeft, ChevronRight, AlertCircle, CheckCircle } from "lucide-react";
@@ -90,6 +92,7 @@ export function AbonnementsAdminList({
   currentPlanId,
 }: AbonnementsAdminListProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const t = useTranslations("abonnements");
   const [annulationId, setAnnulationId] = useState<string | null>(null);
   const [annulationLoading, setAnnulationLoading] = useState(false);
@@ -117,7 +120,7 @@ export function AbonnementsAdminList({
         return;
       }
       setAnnulationId(null);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.abonnements.all });
     } catch {
       setAnnulationError("Erreur réseau.");
     } finally {
@@ -131,7 +134,7 @@ export function AbonnementsAdminList({
       const res = await fetch(`/api/abonnements/${id}/renouveler`, { method: "POST" });
       if (res.ok) {
         setActivationId(null);
-        router.refresh();
+        queryClient.invalidateQueries({ queryKey: queryKeys.abonnements.all });
       }
     } catch {
       // silencieux

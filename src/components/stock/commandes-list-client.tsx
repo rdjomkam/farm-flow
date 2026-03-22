@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Plus, ShoppingCart, ArrowLeft, Calendar, Trash2 } from "lucide-react";
@@ -27,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StatutCommande, UniteStock, Permission } from "@/types";
-import { useStockService } from "@/services";
+import { useCreateCommande } from "@/hooks/queries/use-stock-queries";
 
 const statutVariants: Record<StatutCommande, "default" | "info" | "en_cours" | "warning"> = {
   [StatutCommande.BROUILLON]: "default",
@@ -63,8 +62,7 @@ interface Props {
 
 export function CommandesListClient({ commandes, fournisseurs, produits, permissions }: Props) {
   const t = useTranslations("stock");
-  const router = useRouter();
-  const stockService = useStockService();
+  const createCommandeMutation = useCreateCommande();
   const [tab, setTab] = useState("tous");
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -124,20 +122,20 @@ export function CommandesListClient({ commandes, fournisseurs, produits, permiss
   async function handleCreate() {
     if (!isValid) return;
 
-    const result = await stockService.createCommande({
-      fournisseurId,
-      dateCommande,
-      lignes: lignes.map((l) => ({
-        produitId: l.produitId,
-        quantite: parseFloat(l.quantite),
-        prixUnitaire: parseFloat(l.prixUnitaire),
-      })),
-    });
-
-    if (result.ok) {
+    try {
+      await createCommandeMutation.mutateAsync({
+        fournisseurId,
+        dateCommande,
+        lignes: lignes.map((l) => ({
+          produitId: l.produitId,
+          quantite: parseFloat(l.quantite),
+          prixUnitaire: parseFloat(l.prixUnitaire),
+        })),
+      });
       setDialogOpen(false);
       resetForm();
-      router.refresh();
+    } catch {
+      // Error already handled by useApi toast
     }
   }
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { prisma } from "@/lib/db";
 import type { UserSession } from "@/types";
 
@@ -62,8 +63,9 @@ export async function getSession(
   };
 }
 
-/** Read session from cookies() (for Server Components / Server Actions) */
-export async function getServerSession(): Promise<UserSession | null> {
+/** Read session from cookies() (for Server Components / Server Actions).
+ *  Wrapped with React cache() so it runs at most once per HTTP request. */
+export const getServerSession = cache(async (): Promise<UserSession | null> => {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
   if (!token) return null;
@@ -96,7 +98,7 @@ export async function getServerSession(): Promise<UserSession | null> {
     originalUserId: session.originalUserId,
     originalUserName: session.originalUser?.name ?? null,
   };
-}
+});
 
 /** Get the raw session token from the request cookie */
 export function getSessionToken(request: NextRequest): string | null {

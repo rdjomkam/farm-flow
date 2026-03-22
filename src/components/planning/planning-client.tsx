@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
 import {
   ChevronLeft,
@@ -188,8 +189,8 @@ interface PlanningClientProps {
 
 export function PlanningClient({ activites, permissions, vagues = [], bacs = [], members = [] }: PlanningClientProps) {
   const activiteService = useActiviteService();
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const queryClient = useQueryClient();
+  const [isPending, setIsPending] = useState(false);
 
   const now = new Date();
   const [viewYear, setViewYear] = useState(now.getFullYear());
@@ -260,9 +261,11 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
   }
 
   async function supprimerActivite(activite: ActiviteWithRelations) {
+    setIsPending(true);
     const result = await activiteService.remove(activite.id);
+    setIsPending(false);
     if (result.ok) {
-      startTransition(() => router.refresh());
+      queryClient.invalidateQueries({ queryKey: queryKeys.planning.activites() });
       setSelectedActivite(null);
     }
   }

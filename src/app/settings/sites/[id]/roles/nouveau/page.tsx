@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +19,7 @@ export default function NewRolePage() {
   const params = useParams<{ id: string }>();
   const siteId = params.id;
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const userService = useUserService();
 
@@ -51,8 +54,8 @@ export default function NewRolePage() {
     });
 
     if (ok) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.sites.roles(siteId) });
       router.push(`/settings/sites/${siteId}/roles`);
-      router.refresh();
     }
   }
 

@@ -14,7 +14,8 @@
  * R6 : CSS variables du thème
  */
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
 import { Filter, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -202,7 +203,7 @@ function TogglePlanButton({
 // ---------------------------------------------------------------------------
 
 export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const t = useTranslations("abonnements");
   const [plans, setPlans] = useState<PlanAdminItem[]>(initialPlans);
   const [filterType, setFilterType] = useState<TypePlan | "">("");
@@ -292,7 +293,7 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
       }
 
       // Succès — rafraîchir les données du serveur en arrière-plan
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.abonnements.plans() });
     } catch {
       // Rollback sur erreur réseau
       setPlans(previousPlans);

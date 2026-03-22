@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import {
   Bell,
   AlertTriangle,
@@ -109,6 +111,7 @@ interface NotificationsListClientProps {
 
 export function NotificationsListClient({ notifications }: NotificationsListClientProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const notificationService = useNotificationService();
   const [localNotifications, setLocalNotifications] = useState<Notification[]>(notifications);
 
@@ -139,7 +142,7 @@ export function NotificationsListClient({ notifications }: NotificationsListClie
           n.statut === StatutAlerte.ACTIVE ? { ...n, statut: StatutAlerte.LUE } : n
         )
       );
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
     }
   }
 

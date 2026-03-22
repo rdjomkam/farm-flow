@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Plus, Waves } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,7 @@ import { FormSection } from "@/components/ui/form-section";
 import { VagueCard } from "./vague-card";
 import { StatutVague, Permission } from "@/types";
 import type { VagueSummaryResponse, BacResponse } from "@/types";
-import { useVagueService } from "@/services";
+import { useCreateVague } from "@/hooks/queries/use-vagues-queries";
 
 interface VaguesListClientProps {
   vagues: VagueSummaryResponse[];
@@ -30,8 +29,7 @@ interface VaguesListClientProps {
 }
 
 export function VaguesListClient({ vagues, bacsLibres, permissions }: VaguesListClientProps) {
-  const router = useRouter();
-  const vagueService = useVagueService();
+  const createVagueMutation = useCreateVague();
   const t = useTranslations("vagues");
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -83,19 +81,19 @@ export function VaguesListClient({ vagues, bacsLibres, permissions }: VaguesList
 
     setErrors({});
 
-    const result = await vagueService.create({
-      code: code.trim(),
-      dateDebut,
-      nombreInitial: Number(nombreInitial),
-      poidsMoyenInitial: Number(poidsMoyenInitial),
-      origineAlevins: origineAlevins.trim() || undefined,
-      bacIds: selectedBacs,
-    });
-
-    if (result.ok) {
+    try {
+      await createVagueMutation.mutateAsync({
+        code: code.trim(),
+        dateDebut,
+        nombreInitial: Number(nombreInitial),
+        poidsMoyenInitial: Number(poidsMoyenInitial),
+        origineAlevins: origineAlevins.trim() || undefined,
+        bacIds: selectedBacs,
+      });
       setDialogOpen(false);
       resetForm();
-      router.refresh();
+    } catch {
+      // Error already handled by useApi toast
     }
   }
 

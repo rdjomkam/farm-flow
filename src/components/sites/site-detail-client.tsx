@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import {
   Building2,
@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { Permission, SiteModule } from "@/types";
 import { canAssignRole } from "@/lib/permissions-constants";
 import { useUserService } from "@/services";
+import { queryKeys } from "@/lib/query-keys";
 import { SITE_TOGGLEABLE_MODULES } from "@/lib/site-modules-config";
 
 
@@ -83,7 +84,7 @@ export function SiteDetailClient({
   canManageMembers,
   canManageSite,
 }: Props) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const userService = useUserService();
 
   // Modules state (optimistic)
@@ -142,7 +143,7 @@ export function SiteDetailClient({
       setMemberSiteRoleId(
         siteRoles.find((r) => r.name === "Pisciculteur")?.id ?? siteRoles[siteRoles.length - 1]?.id ?? ""
       );
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.sites.all });
     }
   }
 

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { queryKeys } from "@/lib/query-keys";
 import { Plus, Package, CheckCircle, XCircle, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,7 +54,7 @@ interface Props {
 }
 
 export function PacksListClient({ packs, permissions, plans = [] }: Props) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const configService = useConfigService();
   const [tab, setTab] = useState("actifs");
   const [search, setSearch] = useState("");
@@ -104,13 +105,13 @@ export function PacksListClient({ packs, permissions, plans = [] }: Props) {
     if (result.ok) {
       setDialogOpen(false);
       resetForm();
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.abonnements.packs() });
     }
   }
 
   async function handleToggleActive(pack: PackData) {
     const result = await configService.updatePack(pack.id, { isActive: !pack.isActive });
-    if (result.ok) router.refresh();
+    if (result.ok) queryClient.invalidateQueries({ queryKey: queryKeys.abonnements.packs() });
   }
 
   return (

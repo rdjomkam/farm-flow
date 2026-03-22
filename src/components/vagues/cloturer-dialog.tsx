@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { queryKeys } from "@/lib/query-keys";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -29,7 +30,7 @@ export function CloturerDialog({
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
 }: CloturerDialogProps) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const vagueService = useVagueService();
   const t = useTranslations("vagues");
   const [internalOpen, setInternalOpen] = useState(false);
@@ -44,7 +45,9 @@ export function CloturerDialog({
 
     if (result.ok) {
       setOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.vagues.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bacs.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     }
   }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -139,7 +139,7 @@ export function BesoinsDetailClient({
   canProcess,
   canEdit = false,
 }: Props) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const depenseService = useDepenseService();
   const [liste, setListe] = useState(initial);
 
@@ -179,7 +179,7 @@ export function BesoinsDetailClient({
     if (result.ok && result.data) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setListe(result.data as any);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["besoins"] });
     }
   }
 
@@ -192,7 +192,7 @@ export function BesoinsDetailClient({
       setListe(result.data as any);
       setRejectOpen(false);
       setMotifRejet("");
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["besoins"] });
     }
   }
 
@@ -207,7 +207,7 @@ export function BesoinsDetailClient({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setListe(result.data as any);
       setTraitOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["besoins"] });
     }
   }
 
@@ -223,7 +223,7 @@ export function BesoinsDetailClient({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setListe(result.data as any);
       setClotureOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["besoins"] });
     }
   }
 

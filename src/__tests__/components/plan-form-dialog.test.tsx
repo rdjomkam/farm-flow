@@ -28,9 +28,14 @@ import { TypePlan } from "@/types";
 // ---------------------------------------------------------------------------
 
 const mockRefresh = vi.fn();
+const mockInvalidateQueries = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: mockRefresh, push: vi.fn() }),
   usePathname: () => "/admin/plans",
+}));
+
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
 }));
 
 vi.mock("next-intl", () => ({
@@ -861,7 +866,7 @@ describe("PlanFormDialog — Succes", () => {
     fireEvent.click(screen.getByText("Créer le plan"));
 
     await waitFor(() => {
-      expect(mockRefresh).toHaveBeenCalledOnce();
+      expect(mockInvalidateQueries).toHaveBeenCalled();
     });
   });
 
@@ -911,7 +916,7 @@ describe("PlanFormDialog — Succes", () => {
     });
 
     // Pas d'exception levee
-    expect(mockRefresh).toHaveBeenCalledOnce();
+    expect(mockInvalidateQueries).toHaveBeenCalled();
   });
 
   it("appelle router.refresh() apres une edition reussie", async () => {
@@ -930,7 +935,7 @@ describe("PlanFormDialog — Succes", () => {
     fireEvent.click(screen.getByText("Enregistrer"));
 
     await waitFor(() => {
-      expect(mockRefresh).toHaveBeenCalledOnce();
+      expect(mockInvalidateQueries).toHaveBeenCalled();
     });
   });
 

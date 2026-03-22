@@ -32,9 +32,14 @@ import { TypePlan } from "@/types";
 // ---------------------------------------------------------------------------
 
 const mockRefresh = vi.fn();
+const mockInvalidateQueries = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: mockRefresh, push: vi.fn() }),
   usePathname: () => "/admin/plans",
+}));
+
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
 }));
 
 const translations: Record<string, string> = {
@@ -236,7 +241,7 @@ describe("Toggle — Desactivation directe sans abonnes", () => {
     });
 
     await waitFor(() => {
-      expect(mockRefresh).toHaveBeenCalledOnce();
+      expect(mockInvalidateQueries).toHaveBeenCalled();
     });
   });
 });

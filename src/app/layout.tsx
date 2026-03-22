@@ -8,6 +8,7 @@ import { ImpersonationBanner } from "@/components/users/impersonation-banner";
 import { GlobalLoadingProvider } from "@/contexts/global-loading.context";
 import { GlobalLoadingBar } from "@/components/ui/global-loading-bar";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
+import { QueryProvider } from "@/providers/query-provider";
 import { getServerSession } from "@/lib/auth";
 import { getServerPermissions, getServerSiteModules } from "@/lib/auth/permissions-server";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
@@ -78,6 +79,7 @@ export default async function RootLayout({
         suppressHydrationWarning
       >
         <NextIntlClientProvider locale={locale} messages={messages}>
+          <QueryProvider>
           <ToastProvider>
             <GlobalLoadingProvider>
               <GlobalLoadingBar />
@@ -97,6 +99,7 @@ export default async function RootLayout({
               </div>
             </GlobalLoadingProvider>
           </ToastProvider>
+          </QueryProvider>
         </NextIntlClientProvider>
         <SwRegister />
       </body>

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
@@ -66,7 +67,7 @@ interface Props {
 
 export function ProduitDetailClient({ produit, fournisseurs }: Props) {
   const t = useTranslations("stock");
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const stockService = useStockService();
   const [editOpen, setEditOpen] = useState(false);
 
@@ -100,7 +101,7 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
     });
     if (result.ok) {
       setEditOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.produits.all });
     }
   }
 

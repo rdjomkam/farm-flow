@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
 import { Check, ClipboardCheck, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,7 @@ interface UnlinkedReleve {
 }
 
 export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActiviteDialogProps) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const activiteService = useActiviteService();
   const { call } = useApi();
   const [open, setOpen] = useState(false);
@@ -107,7 +108,7 @@ export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActi
     if (result.ok) {
       setOpen(false);
       onCompleted?.();
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.planning.activites() });
     }
   }
 

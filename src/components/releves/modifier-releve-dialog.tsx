@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Pencil } from "lucide-react";
+import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +37,7 @@ interface ModifierReleveDialogProps {
 }
 
 export function ModifierReleveDialog({ releve, produits = [], permissions }: ModifierReleveDialogProps) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const releveService = useReleveService();
   const t = useTranslations("releves");
   const type = releve.typeReleve as TypeReleve;
@@ -216,7 +217,9 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
 
     if (result.ok) {
       setOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.releves.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.vagues.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     }
   }
 

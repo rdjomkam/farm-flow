@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cachedJson } from "@/lib/api-cache";
 import { getNotifications } from "@/lib/queries";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
       statutParam ? { statut: statutParam as StatutAlerte } : undefined
     );
 
-    return NextResponse.json({ notifications, total: notifications.length });
+    return cachedJson({ notifications, total: notifications.length }, "fast");
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json({ status: 401, message: error.message }, { status: 401 });

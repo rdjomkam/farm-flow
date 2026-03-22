@@ -11,7 +11,8 @@
  * R6 : CSS variables du thème
  */
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import {
   Dialog,
   DialogTrigger,
@@ -80,7 +81,7 @@ interface TraiterDialogProps {
 
 function TraiterDialog({ retrait }: TraiterDialogProps) {
   const t = useTranslations("commissions");
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,7 +116,7 @@ function TraiterDialog({ retrait }: TraiterDialogProps) {
         return;
       }
       setOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.commissions.all });
     } catch {
       setError(t("admin.traiterDialog.errors.erreurReseau"));
     } finally {

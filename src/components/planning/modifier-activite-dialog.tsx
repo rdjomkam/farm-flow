@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { Pencil, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,7 +62,7 @@ export function ModifierActiviteDialog({
   bacs,
   members,
 }: ModifierActiviteDialogProps) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const activiteService = useActiviteService();
   const [open, setOpen] = useState(false);
 
@@ -127,7 +128,7 @@ export function ModifierActiviteDialog({
     const result = await activiteService.update(activite.id, body);
     if (result.ok) {
       setOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.planning.activites() });
     }
   }
 

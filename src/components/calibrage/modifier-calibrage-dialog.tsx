@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { Pencil, Plus, Trash2, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +57,7 @@ export function ModifierCalibrageDialog({
   bacs,
   permissions,
 }: ModifierCalibrageDialogProps) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const calibrageService = useCalibrageService();
   const [open, setOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -192,7 +193,7 @@ export function ModifierCalibrageDialog({
 
     if (result.ok) {
       setOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.vagues.all });
     }
   }
 

@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
 import { ArrowLeft, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,6 +39,7 @@ interface Props {
 export function VenteFormClient({ clients, vagues }: Props) {
   const t = useTranslations("ventes");
   const router = useRouter();
+  const queryClient = useQueryClient();
   const venteService = useVenteService();
 
   const [clientId, setClientId] = useState("");
@@ -64,8 +67,10 @@ export function VenteFormClient({ clients, vagues }: Props) {
     });
 
     if (result.ok) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.clients.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
       router.push("/ventes");
-      router.refresh();
     }
   }
 

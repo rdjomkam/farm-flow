@@ -11,7 +11,8 @@
  * R6 : CSS variables du thème
  */
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import {
   Dialog,
   DialogTrigger,
@@ -45,7 +46,7 @@ function formatXAF(amount: number) {
 
 export function RetraitDialog({ soldeDisponible }: RetraitDialogProps) {
   const t = useTranslations("commissions");
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"form" | "confirm">("form");
   const [loading, setLoading] = useState(false);
@@ -112,7 +113,7 @@ export function RetraitDialog({ soldeDisponible }: RetraitDialogProps) {
         return;
       }
       setOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.commissions.all });
     } catch {
       setError(t("retraits.dialog.errors.erreurReseau"));
       setStep("form");

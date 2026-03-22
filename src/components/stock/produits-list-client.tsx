@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Plus, Package, AlertTriangle, ArrowLeft } from "lucide-react";
@@ -28,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CategorieProduit, UniteStock, Permission } from "@/types";
-import { useStockService } from "@/services";
+import { useCreateProduit } from "@/hooks/queries/use-stock-queries";
 
 interface ProduitData {
   id: string;
@@ -52,8 +51,7 @@ interface Props {
 
 export function ProduitsListClient({ produits, fournisseurs, permissions }: Props) {
   const t = useTranslations("stock");
-  const router = useRouter();
-  const stockService = useStockService();
+  const createProduitMutation = useCreateProduit();
   const [tab, setTab] = useState("tous");
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -94,20 +92,21 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
   async function handleCreate() {
     if (!nom.trim()) return;
 
-    const result = await stockService.createProduit({
-      nom: nom.trim(),
-      categorie: categorie as import("@/types").CategorieProduit,
-      unite: unite as import("@/types").UniteStock,
-      prixUnitaire: parseFloat(prixUnitaire) || 0,
-      seuilAlerte: parseFloat(seuilAlerte) || 0,
-      ...(fournisseurId && { fournisseurId }),
-      ...(dualUnit && uniteAchat && { uniteAchat: uniteAchat as import("@/types").UniteStock }),
-      ...(dualUnit && contenance && { contenance: parseFloat(contenance) }),
-    });
-    if (result.ok) {
+    try {
+      await createProduitMutation.mutateAsync({
+        nom: nom.trim(),
+        categorie: categorie as import("@/types").CategorieProduit,
+        unite: unite as import("@/types").UniteStock,
+        prixUnitaire: parseFloat(prixUnitaire) || 0,
+        seuilAlerte: parseFloat(seuilAlerte) || 0,
+        ...(fournisseurId && { fournisseurId }),
+        ...(dualUnit && uniteAchat && { uniteAchat: uniteAchat as import("@/types").UniteStock }),
+        ...(dualUnit && contenance && { contenance: parseFloat(contenance) }),
+      });
       setDialogOpen(false);
       resetForm();
-      router.refresh();
+    } catch {
+      // Error already handled by useApi toast
     }
   }
 

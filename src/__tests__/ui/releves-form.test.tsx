@@ -16,6 +16,14 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+}));
+
+vi.mock("@/hooks/queries/use-bacs-queries", () => ({
+  useBacsList: () => ({ data: [], isLoading: false }),
+}));
+
 const relevesTranslations: Record<string, string> = {
   "form.title": "Saisir un releve",
   "form.fields.submit": "Enregistrer le relevé",

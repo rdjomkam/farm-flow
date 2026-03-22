@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
 import { Plus, Truck, ArrowLeft, Phone, Mail, MapPin, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,7 @@ interface Props {
 
 export function FournisseursListClient({ fournisseurs, permissions }: Props) {
   const t = useTranslations("stock");
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const stockService = useStockService();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -84,7 +85,7 @@ export function FournisseursListClient({ fournisseurs, permissions }: Props) {
     if (result.ok) {
       setDialogOpen(false);
       resetForm();
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.stock.fournisseurs() });
     }
   }
 

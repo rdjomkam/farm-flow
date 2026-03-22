@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import ReactMarkdown from "react-markdown";
 import {
   AlertTriangle,
@@ -111,7 +112,7 @@ export function NoteDetailDialog({
   onRead,
   children,
 }: NoteDetailDialogProps) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const noteService = useNoteService();
   const [markedRead, setMarkedRead] = useState(false);
 
@@ -122,13 +123,13 @@ export function NoteDetailDialog({
         const result = await noteService.markNoteRead(note.id);
         if (result.ok) {
           onRead?.();
-          router.refresh();
+          queryClient.invalidateQueries({ queryKey: queryKeys.notes.all });
         } else {
           setMarkedRead(false);
         }
       }
     },
-    [note.id, note.isRead, isClientView, markedRead, noteService, router]
+    [note.id, note.isRead, isClientView, markedRead, noteService, queryClient]
   );
 
   return (
@@ -249,7 +250,7 @@ export function NoteDetailDialog({
             <ReplyForm
               parentNote={note}
               isClientView={isClientView}
-              onSuccess={() => router.refresh()}
+              onSuccess={() => queryClient.invalidateQueries({ queryKey: queryKeys.notes.all })}
             />
           </div>
 

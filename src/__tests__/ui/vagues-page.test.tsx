@@ -22,6 +22,18 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/vagues",
 }));
 
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+}));
+
+const mockMutateVague = vi.fn().mockResolvedValue({});
+vi.mock("@/hooks/queries/use-vagues-queries", () => ({
+  useCreateVague: () => ({
+    mutateAsync: mockMutateVague,
+    isPending: false,
+  }),
+}));
+
 const vaguesTranslations: Record<string, string | ((p: Record<string, unknown>) => string)> = {
   "list.countPlural": (p) => `${p.count} vagues`,
   "list.count": (p) => `${p.count} vague`,
@@ -264,7 +276,7 @@ describe("VaguesListClient — Formulaire de création", () => {
     fireEvent.click(screen.getByText("Créer la vague"));
 
     await waitFor(() => {
-      expect(mockCall).toHaveBeenCalled();
+      expect(mockMutateVague).toHaveBeenCalled();
     });
   });
 });

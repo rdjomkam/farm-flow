@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cachedJson } from "@/lib/api-cache";
 import { getVentes, createVente } from "@/lib/queries/ventes";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
@@ -22,10 +23,7 @@ export async function GET(request: NextRequest) {
 
     const ventes = await getVentes(auth.activeSiteId, filters);
 
-    return NextResponse.json({
-      ventes,
-      total: ventes.length,
-    });
+    return cachedJson({ ventes, total: ventes.length }, "fast");
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json({ status: 401, message: error.message }, { status: 401 });

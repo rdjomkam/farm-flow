@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
 import { ArrowLeft, Plus, Trash2, Package, Users, Pencil, AlertTriangle, Settings, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -100,7 +101,7 @@ interface Props {
 }
 
 export function PackDetailClient({ pack, produits, configElevages, plans, permissions }: Props) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const configService = useConfigService();
   const { call } = useApi();
   const [ajoutOpen, setAjoutOpen] = useState(false);
@@ -196,7 +197,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
     );
     if (result.ok) {
       setConfigBacsOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.abonnements.packs() });
     }
   }
 
@@ -212,7 +213,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
     });
     if (result.ok) {
       setEditOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.abonnements.packs() });
     }
   }
 
@@ -226,7 +227,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
     if (result.ok) {
       setAjoutOpen(false);
       resetAjoutForm();
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.abonnements.packs() });
     }
   }
 
@@ -240,7 +241,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
     );
     if (result.ok) {
       setRetirerProduitId(null);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.abonnements.packs() });
     } else {
       setRetirerProduitId(null);
     }

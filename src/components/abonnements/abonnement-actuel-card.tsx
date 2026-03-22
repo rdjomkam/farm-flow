@@ -13,7 +13,8 @@
  * Mobile-first : lisible à 360px
  */
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { RefreshCw, XCircle, ExternalLink, Calendar, Clock } from "lucide-react";
@@ -85,7 +86,7 @@ function showRenouvelerButton(abonnement: AbonnementWithPlan): boolean {
 }
 
 export function AbonnementActuelCard({ abonnement }: AbonnementActuelCardProps) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const t = useTranslations("abonnements");
   const [annulationDialogOpen, setAnnulationDialogOpen] = useState(false);
   const [annulationLoading, setAnnulationLoading] = useState(false);
@@ -113,7 +114,7 @@ export function AbonnementActuelCard({ abonnement }: AbonnementActuelCardProps) 
         return;
       }
       setAnnulationDialogOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.abonnements.all });
     } catch {
       setAnnulationError("Erreur réseau. Veuillez réessayer.");
     } finally {

@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
@@ -90,7 +91,7 @@ function guessTypeFromName(name: string): string {
 
 export function CommandeDetailClient({ commande: initialCommande, permissions }: Props) {
   const t = useTranslations("stock");
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const stockService = useStockService();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -113,13 +114,18 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
   const statutLabel = (s: string) => t(`statuts.${s}` as Parameters<typeof t>[0]) || s;
 
   // Order actions (send, cancel)
+  function invalidateCommandes() {
+    queryClient.invalidateQueries({ queryKey: queryKeys.stock.commandes() });
+    queryClient.invalidateQueries({ queryKey: queryKeys.produits.all });
+  }
+
   async function handleAction(action: string) {
     if (action === "envoyer") {
       const result = await stockService.envoyerCommande(commande.id);
-      if (result.ok) router.refresh();
+      if (result.ok) invalidateCommandes();
     } else if (action === "annuler") {
       const result = await stockService.annulerCommande(commande.id);
-      if (result.ok) router.refresh();
+      if (result.ok) invalidateCommandes();
     }
   }
 
@@ -133,7 +139,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
     if (result.ok) {
       setRecevoirOpen(false);
       setRecuFile(null);
-      router.refresh();
+      invalidateCommandes();
     }
   }
 
@@ -148,7 +154,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
         ...prev,
         factureUrl: `factures/${commande.id}/uploaded`,
       }));
-      router.refresh();
+      invalidateCommandes();
     }
   }
 
@@ -166,7 +172,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
     if (result.ok) {
       setDeleteFactureOpen(false);
       setCommande((prev) => ({ ...prev, factureUrl: null }));
-      router.refresh();
+      invalidateCommandes();
     }
   }
 

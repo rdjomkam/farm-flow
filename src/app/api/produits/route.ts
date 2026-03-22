@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cachedJson } from "@/lib/api-cache";
 import { getProduits, createProduit } from "@/lib/queries/produits";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
@@ -23,10 +24,7 @@ export async function GET(request: NextRequest) {
 
     const produits = await getProduits(auth.activeSiteId, filters);
 
-    return NextResponse.json({
-      produits,
-      total: produits.length,
-    });
+    return cachedJson({ produits, total: produits.length }, "medium");
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json({ status: 401, message: error.message }, { status: 401 });

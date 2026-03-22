@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cachedJson } from "@/lib/api-cache";
 import { getClients, createClient } from "@/lib/queries/clients";
 import { AuthError } from "@/lib/auth";
 import { normalizePhone } from "@/lib/auth/phone";
@@ -11,10 +12,7 @@ export async function GET(request: NextRequest) {
     const auth = await requirePermission(request, Permission.CLIENTS_VOIR);
     const clients = await getClients(auth.activeSiteId);
 
-    return NextResponse.json({
-      clients,
-      total: clients.length,
-    });
+    return cachedJson({ clients, total: clients.length }, "medium");
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json({ status: 401, message: error.message }, { status: 401 });

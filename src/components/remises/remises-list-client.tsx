@@ -11,7 +11,8 @@
  * R6 : CSS variables du thème (pas de couleurs hardcodées)
  */
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import {
   Dialog,
   DialogTrigger,
@@ -90,7 +91,7 @@ function isExpired(remise: RemiseItem): boolean {
 }
 
 export function RemisesListClient({ remises: initialRemises }: RemisesListClientProps) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [remises, setRemises] = useState(initialRemises);
   const [activeTab, setActiveTab] = useState<"actives" | "expirees" | "toutes">("actives");
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -163,7 +164,7 @@ export function RemisesListClient({ remises: initialRemises }: RemisesListClient
   function handleSaveSuccess() {
     setFormDialogOpen(false);
     setEditingRemise(null);
-    router.refresh();
+    queryClient.invalidateQueries({ queryKey: queryKeys.remises.all });
   }
 
   return (

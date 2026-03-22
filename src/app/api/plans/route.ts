@@ -9,6 +9,7 @@
  * R4 : opérations atomiques via les fonctions query
  */
 import { NextRequest, NextResponse } from "next/server";
+import { cachedJson } from "@/lib/api-cache";
 import {
   getPlansAbonnements,
   createPlanAbonnement,
@@ -31,13 +32,13 @@ export async function GET(request: NextRequest) {
     if (isPublic) {
       // Liste publique : sans auth, uniquement les plans actifs+publics
       const plans = await getPlansAbonnements(false);
-      return NextResponse.json({ plans, total: plans.length });
+      return cachedJson({ plans, total: plans.length }, "static");
     }
 
     // Liste complète (y compris inactifs) : auth + PLANS_GERER
     await requirePermission(request, Permission.PLANS_GERER);
     const plans = await getPlansAbonnements(true);
-    return NextResponse.json({ plans, total: plans.length });
+    return cachedJson({ plans, total: plans.length }, "static");
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json(

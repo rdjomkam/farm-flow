@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,12 +18,12 @@ interface ObservationDialogProps {
 }
 
 export function ObservationDialog({ vagues }: ObservationDialogProps) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
 
   function handleSuccess() {
     setOpen(false);
-    router.refresh();
+    queryClient.invalidateQueries({ queryKey: queryKeys.notes.all });
   }
 
   return (

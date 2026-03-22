@@ -20,6 +20,23 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/bacs",
 }));
 
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+}));
+
+const mockMutateBac = vi.fn().mockResolvedValue({});
+vi.mock("@/hooks/queries/use-bacs-queries", () => ({
+  useCreateBac: () => ({
+    mutateAsync: mockMutateBac,
+    isPending: false,
+  }),
+  useUpdateBac: () => ({
+    mutateAsync: vi.fn().mockResolvedValue({}),
+    isPending: false,
+  }),
+  useBacsList: () => ({ data: [], isLoading: false }),
+}));
+
 const mockToast = vi.fn();
 vi.mock("@/components/ui/toast", () => ({
   useToast: () => ({ toast: mockToast }),
@@ -171,7 +188,7 @@ describe("BacsListClient — Formulaire de création", () => {
     fireEvent.click(screen.getByText("Créer le bac"));
 
     await waitFor(() => {
-      expect(mockCall).toHaveBeenCalled();
+      expect(mockMutateBac).toHaveBeenCalled();
     });
   });
 });

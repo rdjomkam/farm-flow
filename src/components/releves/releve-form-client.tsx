@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,8 @@ import { TypeReleve, TypeActivite, StatutActivite, CategorieProduit, ACTIVITE_RE
 import type { BacResponse } from "@/types";
 import { ClipboardCheck } from "lucide-react";
 import { useBacService, useActiviteService, useReleveService } from "@/services";
+import { useBacsList } from "@/hooks/queries/use-bacs-queries";
+import { queryKeys } from "@/lib/query-keys";
 
 /** Inverse de ACTIVITE_RELEVE_TYPE_MAP : TypeReleve → TypeActivite compatible */
 const RELEVE_ACTIVITE_TYPE_MAP: Partial<Record<string, TypeActivite>> = {};
@@ -55,6 +58,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
   const bacService = useBacService();
   const activiteService = useActiviteService();
   const releveService = useReleveService();
+  const queryClient = useQueryClient();
   const t = useTranslations("releves");
   const tStock = useTranslations("stock");
 
@@ -74,8 +78,12 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
     return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
   });
   const [notes, setNotes] = useState("");
-  const [bacs, setBacs] = useState<BacResponse[]>([]);
-  const [loadingBacs, setLoadingBacs] = useState(false);
+  // Use TanStack Query for bacs loading
+  const { data: bacsData, isLoading: loadingBacs } = useBacsList(
+    vagueId ? { vagueId } : undefined,
+    { enabled: !!vagueId }
+  );
+  const bacs = (bacsData ?? []).filter((b: BacResponse) => b.vagueId === vagueId);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [consommations, setConsommations] = useState<ConsommationLine[]>([]);
 
@@ -91,27 +99,9 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
     setFields((prev) => ({ ...prev, [field]: value }));
   }
 
-  // Load bacs when vague changes
+  // Reset bacId when vague changes (unless pre-filled from activity)
   useEffect(() => {
-    if (!vagueId) {
-      setBacs([]);
-      if (!isFromActivite) setBacId("");
-      return;
-    }
-    setLoadingBacs(true);
-    // Ne pas reset bacId si pre-rempli depuis une activite
     if (!isFromActivite) setBacId("");
-    bacService.list({ vagueId }).then((result) => {
-      if (result.ok && result.data) {
-        const vagueBacs = (result.data.bacs ?? []).filter(
-          (b: BacResponse) => b.vagueId === vagueId
-        );
-        setBacs(vagueBacs);
-      } else {
-        setBacs([]);
-      }
-      setLoadingBacs(false);
-    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vagueId]);
 
@@ -257,8 +247,10 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
     const result = await releveService.create(body as unknown as Parameters<typeof releveService.create>[0]);
 
     if (result.ok) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.releves.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.vagues.detail(vagueId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
       router.push(`/vagues/${vagueId}`);
-      router.refresh();
     }
   }
 

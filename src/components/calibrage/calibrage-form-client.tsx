@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { queryKeys } from "@/lib/query-keys";
 import { CategorieCalibrage } from "@/types";
 import type { BacResponse, CreateCalibrageDTO } from "@/types";
 import { StepSources } from "./step-sources";
@@ -54,6 +56,7 @@ export function CalibrageFormClient({
   onSuccess,
 }: CalibrageFormClientProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const calibrageService = useCalibrageService();
 
   const [step, setStep] = useState(1);
@@ -158,8 +161,8 @@ export function CalibrageFormClient({
       if (onSuccess) {
         onSuccess();
       } else {
+        queryClient.invalidateQueries({ queryKey: queryKeys.vagues.all });
         router.push(`/vagues/${vagueId}`);
-        router.refresh();
       }
     }
   }

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
@@ -89,7 +90,7 @@ interface Props {
 
 export function FactureDetailClient({ facture, permissions }: Props) {
   const t = useTranslations("ventes");
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const venteService = useVenteService();
   const [paiementOpen, setPaiementOpen] = useState(false);
 
@@ -124,14 +125,16 @@ export function FactureDetailClient({ facture, permissions }: Props) {
     if (result.ok) {
       setPaiementOpen(false);
       resetPaiementForm();
-      router.refresh();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.factures.all });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
     }
   }
 
   async function handleEnvoyer() {
     const result = await venteService.updateFacture(facture.id, { statut: StatutFacture.ENVOYEE });
     if (result.ok) {
-      router.refresh();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.factures.all });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
     }
   }
 

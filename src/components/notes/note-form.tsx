@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { Send, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,7 +48,7 @@ interface NoteFormProps {
  * Appelle POST /api/ingenieur/notes.
  */
 export function NoteForm({ siteId: _siteId, clientSiteId, vagues = [], onSuccess }: NoteFormProps) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const noteService = useNoteService();
 
   // Champs du formulaire
@@ -96,7 +97,7 @@ export function NoteForm({ siteId: _siteId, clientSiteId, vagues = [], onSuccess
       if (onSuccess) {
         onSuccess();
       } else {
-        router.refresh();
+        queryClient.invalidateQueries({ queryKey: queryKeys.notes.all });
       }
     }
   }

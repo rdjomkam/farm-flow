@@ -36,6 +36,10 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/admin/plans",
 }));
 
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+}));
+
 // Mock next-intl — retourne les traductions françaises réelles
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => {

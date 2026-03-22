@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FormSection } from "@/components/ui/form-section";
@@ -24,6 +24,7 @@ import {
 import { UserRoleBadge } from "./user-role-badge";
 import { Role, Permission } from "@/types";
 import { useUserService } from "@/services";
+import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
 
 interface UserProfileTabProps {
@@ -41,7 +42,7 @@ interface UserProfileTabProps {
 
 export function UserProfileTab({ user, callerPermissions }: UserProfileTabProps) {
   const t = useTranslations("users");
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const userService = useUserService();
 
   const ROLE_OPTIONS = [
@@ -75,7 +76,7 @@ export function UserProfileTab({ user, callerPermissions }: UserProfileTabProps)
 
     if (ok) {
       setEditing(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
     }
   }
 
@@ -84,7 +85,7 @@ export function UserProfileTab({ user, callerPermissions }: UserProfileTabProps)
 
     if (ok) {
       setDeactivateOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
     }
   }
 

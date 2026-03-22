@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,7 +54,7 @@ interface Props {
 // ---------------------------------------------------------------------------
 
 export function ObservationForm({ vagues = [], onSuccess }: Props) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const noteService = useNoteService();
 
   // Champs du formulaire
@@ -114,7 +115,7 @@ export function ObservationForm({ vagues = [], onSuccess }: Props) {
       if (onSuccess) {
         onSuccess();
       } else {
-        router.refresh();
+        queryClient.invalidateQueries({ queryKey: queryKeys.notes.all });
       }
     }
   }

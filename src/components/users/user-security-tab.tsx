@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FormSection } from "@/components/ui/form-section";
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Permission, Role } from "@/types";
 import { useUserService, useAuthService } from "@/services";
+import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
 
 interface UserSecurityTabProps {
@@ -38,6 +40,7 @@ export function UserSecurityTab({
 }: UserSecurityTabProps) {
   const t = useTranslations("users");
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const userService = useUserService();
   const authService = useAuthService();
@@ -98,7 +101,7 @@ export function UserSecurityTab({
     if (ok) {
       setImpersonateOpen(false);
       router.push("/");
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
     } else {
       setImpersonateOpen(false);
     }

@@ -1,7 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
@@ -60,7 +61,7 @@ interface Props {
 
 export function VenteDetailClient({ vente, permissions }: Props) {
   const t = useTranslations("ventes");
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const venteService = useVenteService();
 
   const statutLabel = (s: string) =>
@@ -69,7 +70,8 @@ export function VenteDetailClient({ vente, permissions }: Props) {
   async function handleCreateFacture() {
     const result = await venteService.createFacture(vente.id);
     if (result.ok) {
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.factures.all });
     }
   }
 

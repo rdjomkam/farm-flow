@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cachedJson } from "@/lib/api-cache";
 import { getReleves, createReleve } from "@/lib/queries/releves";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
     if (searchParams.get("nonLie") === "true") filters.nonLie = true;
 
     const result = await getReleves(auth.activeSiteId, filters);
-    return NextResponse.json(result);
+    return cachedJson(result, "fast");
   } catch (error) {
     console.error("[GET /api/releves] Error:", error);
     if (error instanceof AuthError) {

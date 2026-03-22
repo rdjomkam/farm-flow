@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
 import { ArrowLeft, Pencil, Trash2, Baby } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -77,6 +79,7 @@ interface Props {
 export function PonteDetailClient({ ponte, femelles, males, permissions }: Props) {
   const t = useTranslations("alevins");
   const router = useRouter();
+  const queryClient = useQueryClient();
   const alevinsService = useAlevinsService();
   const { call } = useApi();
   const [editOpen, setEditOpen] = useState(false);
@@ -125,7 +128,7 @@ export function PonteDetailClient({ ponte, femelles, males, permissions }: Props
     });
     if (result.ok) {
       setEditOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.alevins.pontes() });
     }
   }
 

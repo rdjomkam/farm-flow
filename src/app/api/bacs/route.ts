@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cachedJson } from "@/lib/api-cache";
 import { getBacs } from "@/lib/queries/bacs";
 import { prisma } from "@/lib/db";
 import { AuthError } from "@/lib/auth";
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.BACS_GERER);
     const bacs = await getBacs(auth.activeSiteId);
-    return NextResponse.json({ bacs, total: bacs.length });
+    return cachedJson({ bacs, total: bacs.length }, "medium");
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json({ status: 401, message: error.message }, { status: 401 });

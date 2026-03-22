@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
 import { Plus, Users, Phone, Mail, MapPin, Pencil, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -35,7 +36,7 @@ interface Props {
 
 export function ClientsListClient({ clients, permissions }: Props) {
   const t = useTranslations("ventes");
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const venteService = useVenteService();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -79,7 +80,7 @@ export function ClientsListClient({ clients, permissions }: Props) {
     if (result.ok) {
       setDialogOpen(false);
       resetForm();
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.clients.all });
     }
   }
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { Building2, Users, Container, Waves, Plus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useUserService, useAuthService } from "@/services";
+import { queryKeys } from "@/lib/query-keys";
 
 interface SiteData {
   id: string;
@@ -38,6 +40,7 @@ interface Props {
 
 export function SitesListClient({ sites, activeSiteId, canCreate }: Props) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const userService = useUserService();
   const authService = useAuthService();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -60,7 +63,7 @@ export function SitesListClient({ sites, activeSiteId, canCreate }: Props) {
 
       // Auto-select the new site (silent — success toast already shown by createSite)
       await authService.switchSite({ siteId: (data as { id: string }).id });
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.sites.all });
     }
   }
 
@@ -71,7 +74,7 @@ export function SitesListClient({ sites, activeSiteId, canCreate }: Props) {
     const { ok } = await authService.switchSite({ siteId });
     if (ok) {
       router.push("/");
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.sites.all });
     }
     setSwitching(null);
   }

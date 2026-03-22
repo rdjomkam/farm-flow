@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Plus, Pencil, Container } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +25,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { Permission, TypeSystemeBac } from "@/types";
 import type { BacResponse } from "@/types";
-import { useBacService } from "@/services";
+import { useCreateBac, useUpdateBac } from "@/hooks/queries/use-bacs-queries";
 
 const TYPE_SYSTEME_LABELS: Record<TypeSystemeBac, string> = {
   [TypeSystemeBac.BAC_BETON]: "Bac beton / plastique",
@@ -41,8 +40,8 @@ interface BacsListClientProps {
 }
 
 export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
-  const router = useRouter();
-  const bacService = useBacService();
+  const createBacMutation = useCreateBac();
+  const updateBacMutation = useUpdateBac();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [nom, setNom] = useState("");
   const [volume, setVolume] = useState("");
@@ -78,12 +77,12 @@ export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
 
     setErrors({});
 
-    const result = await bacService.create({ nom: nom.trim(), volume: Number(volume) });
-
-    if (result.ok) {
+    try {
+      await createBacMutation.mutateAsync({ nom: nom.trim(), volume: Number(volume) });
       setDialogOpen(false);
       resetForm();
-      router.refresh();
+    } catch {
+      // Error already handled by useApi toast
     }
   }
 
@@ -108,18 +107,21 @@ export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
 
     setEditErrors({});
 
-    const result = await bacService.update(editBac!.id, {
-      nom: editNom.trim(),
-      volume: Number(editVolume),
-      ...(editNombrePoissons !== "" && { nombrePoissons: Number(editNombrePoissons) }),
-      ...(editNombreInitial !== "" && { nombreInitial: Number(editNombreInitial) }),
-      ...(editPoidsMoyenInitial !== "" && { poidsMoyenInitial: Number(editPoidsMoyenInitial) }),
-      ...(editTypeSysteme !== "" && { typeSysteme: editTypeSysteme }),
-    });
-
-    if (result.ok) {
+    try {
+      await updateBacMutation.mutateAsync({
+        id: editBac!.id,
+        dto: {
+          nom: editNom.trim(),
+          volume: Number(editVolume),
+          ...(editNombrePoissons !== "" && { nombrePoissons: Number(editNombrePoissons) }),
+          ...(editNombreInitial !== "" && { nombreInitial: Number(editNombreInitial) }),
+          ...(editPoidsMoyenInitial !== "" && { poidsMoyenInitial: Number(editPoidsMoyenInitial) }),
+          ...(editTypeSysteme !== "" && { typeSysteme: editTypeSysteme }),
+        },
+      });
       setEditOpen(false);
-      router.refresh();
+    } catch {
+      // Error already handled by useApi toast
     }
   }
 

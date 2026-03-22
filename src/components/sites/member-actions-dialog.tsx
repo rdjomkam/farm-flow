@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Settings, UserMinus, Mail, Phone, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +27,7 @@ import {
 import { groupLabels, permissionLabels } from "@/lib/role-form-labels";
 import { cn } from "@/lib/utils";
 import { useUserService } from "@/services";
+import { queryKeys } from "@/lib/query-keys";
 
 interface SiteRoleOption {
   id: string;
@@ -56,7 +57,7 @@ export function MemberActionsDialog({
   siteRoles,
   callerPermissions,
 }: MemberActionsDialogProps) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const userService = useUserService();
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<DialogView>("main");
@@ -80,7 +81,7 @@ export function MemberActionsDialog({
     if (newSiteRoleId === member.siteRoleId) return;
     const { ok } = await userService.updateMember(siteId, member.userId, { siteRoleId: newSiteRoleId });
     if (ok) {
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.sites.all });
     }
   }
 
@@ -88,7 +89,7 @@ export function MemberActionsDialog({
     const { ok } = await userService.removeMember(siteId, member.userId);
     if (ok) {
       setOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.sites.all });
     }
     setConfirmRemove(false);
   }

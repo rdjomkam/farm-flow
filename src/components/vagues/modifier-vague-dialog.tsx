@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Pencil } from "lucide-react";
+import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +38,7 @@ export function ModifierVagueDialog({
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
 }: ModifierVagueDialogProps) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const vagueService = useVagueService();
   const t = useTranslations("vagues");
   const [internalOpen, setInternalOpen] = useState(false);
@@ -74,7 +75,8 @@ export function ModifierVagueDialog({
 
     if (result.ok) {
       setOpen(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.vagues.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     }
   }
 

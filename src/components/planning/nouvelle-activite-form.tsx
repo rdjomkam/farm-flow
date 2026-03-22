@@ -3,6 +3,8 @@
 import { useTransition } from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,6 +52,7 @@ interface FormErrors {
 
 export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleActiviteFormProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
   const activiteService = useActiviteService();
 
@@ -95,9 +98,9 @@ export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleAct
 
     const result = await activiteService.create(payload as Parameters<typeof activiteService.create>[0]);
     if (result.ok) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.planning.activites() });
       startTransition(() => {
         router.push("/planning");
-        router.refresh();
       });
     }
   }

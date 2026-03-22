@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import {
   AlertTriangle,
   Droplets,
@@ -154,7 +155,7 @@ interface AlertesConfigClientProps {
 }
 
 export function AlertesConfigClient({ configs }: AlertesConfigClientProps) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const configService = useConfigService();
 
   // Construire la liste de tous les types avec leur config existante
@@ -217,14 +218,14 @@ export function AlertesConfigClient({ configs }: AlertesConfigClientProps) {
           i.typeAlerte === typeAlerte ? { ...i, config: savedConfig } : i
         )
       );
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
     }
   }
 
   async function checkAlertes() {
     const result = await configService.checkAlertes();
     if (result.ok) {
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
     }
   }
 

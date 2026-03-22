@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { Plus, RefreshCw, Clock, ToggleLeft, ToggleRight, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -94,7 +95,7 @@ function formatDate(dateStr: string) {
 // ---------------------------------------------------------------------------
 
 export function RecurrentesListClient({ templates: initial, canManage }: Props) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const depenseService = useDepenseService();
   const [templates, setTemplates] = useState(initial);
 
@@ -113,7 +114,7 @@ export function RecurrentesListClient({ templates: initial, canManage }: Props) 
   async function handleGenerer() {
     const result = await depenseService.genererDepensesRecurrentes();
     if (result.ok) {
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.depenses.all });
     }
   }
 
