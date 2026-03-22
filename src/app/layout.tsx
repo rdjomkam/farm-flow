@@ -11,6 +11,7 @@ import { LoadingOverlay } from "@/components/ui/loading-overlay";
 import { QueryProvider } from "@/providers/query-provider";
 import { getServerSession } from "@/lib/auth";
 import { getServerPermissions, getServerSiteModules } from "@/lib/auth/permissions-server";
+import { prisma } from "@/lib/db";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { Permission, Role, SiteModule } from "@/types";
 import { SwRegister } from "@/components/pwa/sw-register";
@@ -69,12 +70,15 @@ export default async function RootLayout({
   const role: Role | null = session?.role ?? null;
   const isImpersonating = session?.isImpersonating ?? false;
 
-  const [permissions, siteModules, locale, messages] = await Promise.all([
+  const [permissions, siteModules, locale, messages, superAdminUser] = await Promise.all([
     session ? getServerPermissions(session) : Promise.resolve([] as Permission[]),
     session?.activeSiteId ? getServerSiteModules(session.activeSiteId) : Promise.resolve([] as SiteModule[]),
     getLocale(),
     getMessages(),
+    session ? prisma.user.findUnique({ where: { id: session.userId }, select: { isSuperAdmin: true } }) : Promise.resolve(null),
   ]);
+
+  const isSuperAdmin = superAdminUser?.isSuperAdmin ?? false;
 
   return (
     <html lang={locale}>
@@ -102,7 +106,7 @@ export default async function RootLayout({
                 <SubscriptionBanner siteId={session.activeSiteId} />
               )}
               <div className={isImpersonating ? "pt-14 sm:pt-11" : ""}>
-                <AppShell permissions={permissions} role={role} userName={session?.name ?? null} siteModules={siteModules} isImpersonating={isImpersonating}>{children}</AppShell>
+                <AppShell permissions={permissions} role={role} userName={session?.name ?? null} siteModules={siteModules} isImpersonating={isImpersonating} isSuperAdmin={isSuperAdmin}>{children}</AppShell>
               </div>
             </GlobalLoadingProvider>
           </ToastProvider>

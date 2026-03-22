@@ -411,9 +411,11 @@ function RevenueChart({ data, mrr }: RevenueChartProps) {
 
 interface AdminAnalyticsDashboardProps {
   initialKPIs: AdminAnalyticsResponse;
+  /** Base de l'API a utiliser — defaut /api/admin/analytics (backoffice: /api/backoffice/analytics) */
+  apiBase?: string;
 }
 
-export function AdminAnalyticsDashboard({ initialKPIs }: AdminAnalyticsDashboardProps) {
+export function AdminAnalyticsDashboard({ initialKPIs, apiBase = "/api/admin/analytics" }: AdminAnalyticsDashboardProps) {
   const kpis = initialKPIs;
 
   // Sites Growth
@@ -433,7 +435,7 @@ export function AdminAnalyticsDashboard({ initialKPIs }: AdminAnalyticsDashboard
   const fetchSites = useCallback(async (period: Period) => {
     setSitesLoading(true);
     try {
-      const res = await fetch(`/api/admin/analytics/sites?period=${period}`);
+      const res = await fetch(`${apiBase}/sites?period=${period}`);
       if (res.ok) {
         const json = await res.json() as { points: SitesGrowthPoint[] };
         setSitesData(json.points ?? []);
@@ -448,7 +450,7 @@ export function AdminAnalyticsDashboard({ initialKPIs }: AdminAnalyticsDashboard
   const fetchRevenue = useCallback(async (period: Period) => {
     setRevenueLoading(true);
     try {
-      const res = await fetch(`/api/admin/analytics/revenus?period=${period}`);
+      const res = await fetch(`${apiBase}/revenus?period=${period}`);
       if (res.ok) {
         const json = await res.json() as { points: RevenuePoint[] };
         setRevenueData(json.points ?? []);
@@ -463,7 +465,7 @@ export function AdminAnalyticsDashboard({ initialKPIs }: AdminAnalyticsDashboard
   const fetchModules = useCallback(async () => {
     setModulesLoading(true);
     try {
-      const res = await fetch("/api/admin/analytics/modules");
+      const res = await fetch(`${apiBase}/modules`);
       if (res.ok) {
         const json = await res.json() as { distribution: ModuleDistPoint[] };
         setModulesData(json.distribution ?? []);

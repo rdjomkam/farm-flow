@@ -39,6 +39,7 @@ import {
   ShieldCheck,
   LayoutList,
   Globe,
+  Shield,
 } from "lucide-react";
 import { NotificationBell } from "./notification-bell";
 import { LanguageSwitcher } from "./language-switcher";
@@ -237,7 +238,7 @@ const PHASE3_MODULE_PERMISSIONS: Record<string, Permission> = {
   "Portefeuille":          Permission.PORTEFEUILLE_VOIR,
 };
 
-export function Sidebar({ permissions, role, siteModules }: { permissions: Permission[]; role: Role | null; siteModules: SiteModule[] }) {
+export function Sidebar({ permissions, role, siteModules, isSuperAdmin = false }: { permissions: Permission[]; role: Role | null; siteModules: SiteModule[]; isSuperAdmin?: boolean }) {
   const pathname = usePathname();
   const t = useTranslations("navigation");
 
@@ -339,6 +340,22 @@ export function Sidebar({ permissions, role, siteModules }: { permissions: Permi
               </Link>
             );
           })}
+
+          {/* Lien Backoffice — visible uniquement pour les super-admins (ADR-022) */}
+          {isSuperAdmin && (
+            <Link
+              href="/backoffice"
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                pathname.startsWith("/backoffice")
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <Shield className="h-4 w-4" />
+              Backoffice
+            </Link>
+          )}
         </div>
 
       </nav>

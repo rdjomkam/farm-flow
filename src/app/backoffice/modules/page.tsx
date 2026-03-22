@@ -1,0 +1,82 @@
+/**
+ * src/app/backoffice/modules/page.tsx
+ *
+ * Page backoffice — registre des modules.
+ * Server Component — guard checkBackofficeAccess().
+ *
+ * Story C.7 — ADR-022 Backoffice
+ */
+import { redirect } from "next/navigation";
+import { checkBackofficeAccess } from "@/lib/auth/backoffice";
+import { prisma } from "@/lib/db";
+import { AdminModulesList } from "@/components/admin/modules/admin-modules-list";
+import type { AdminModulesListResponse, ModuleDefinitionResponse } from "@/types";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Modules",
+};
+
+export const dynamic = "force-dynamic";
+
+export default async function BackofficeModulesPage() {
+  const session = await checkBackofficeAccess();
+  if (!session) redirect("/login");
+
+  let initialData: AdminModulesListResponse = { modules: [] };
+  try {
+    const rawModules = await prisma.moduleDefinition.findMany({
+      orderBy: [{ sortOrder: "asc" }, { key: "asc" }],
+    });
+
+    const siteCountRows = await prisma.$queryRaw<{ module: string; count: bigint }[]>`
+      SELECT unnest("enabledModules") as module, COUNT(*) as count
+      FROM "Site"
+      WHERE "deletedAt" IS NULL
+      GROUP BY module
+    `;
+    const siteCountMap = new Map(siteCountRows.map((r) => [r.module, Number(r.count)]));
+
+    const planCountRows = await prisma.$queryRaw<{ module: string; count: bigint }[]>`
+      SELECT unnest("modulesInclus") as module, COUNT(*) as count
+      FROM "PlanAbonnement"
+      WHERE "isActif" = true
+      GROUP BY module
+    `;
+    const planCountMap = new Map(planCountRows.map((r) => [r.module, Number(r.count)]));
+
+    const modules: ModuleDefinitionResponse[] = rawModules.map((m) => ({
+      id: m.id,
+      key: m.key,
+      label: m.label,
+      description: m.description,
+      iconName: m.iconName,
+      sortOrder: m.sortOrder,
+      level: m.level as "site" | "platform",
+      dependsOn: m.dependsOn,
+      isVisible: m.isVisible,
+      isActive: m.isActive,
+      category: m.category,
+      siteCount: siteCountMap.get(m.key) ?? 0,
+      planCount: planCountMap.get(m.key) ?? 0,
+    }));
+
+    initialData = { modules };
+  } catch {
+    // Le composant gere l'etat vide
+  }
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-6">
+      <div className="mb-6">
+        <h1 className="text-xl font-bold text-foreground">Registre des modules</h1>
+        <p className="text-sm text-muted-foreground">
+          {initialData.modules.length} module
+          {initialData.modules.length !== 1 ? "s" : ""} enregistre
+          {initialData.modules.length !== 1 ? "s" : ""}
+        </p>
+      </div>
+      <AdminModulesList initialData={initialData} />
+    </div>
+  );
+}

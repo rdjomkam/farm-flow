@@ -41,6 +41,7 @@ import {
   ShieldCheck,
   LayoutList,
   Globe,
+  Shield,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -250,9 +251,10 @@ interface HamburgerMenuProps {
   role: Role | null;
   userName: string | null;
   siteModules: SiteModule[];
+  isSuperAdmin?: boolean;
 }
 
-export function HamburgerMenu({ open, onOpenChange, permissions, role, userName, siteModules }: HamburgerMenuProps) {
+export function HamburgerMenu({ open, onOpenChange, permissions, role, userName, siteModules, isSuperAdmin = false }: HamburgerMenuProps) {
   const pathname = usePathname();
   const router = useRouter();
   const authService = useAuthService();
@@ -362,6 +364,23 @@ export function HamburgerMenu({ open, onOpenChange, permissions, role, userName,
                 </Link>
               );
             })}
+
+            {/* Lien Backoffice — visible uniquement pour les super-admins (ADR-022) */}
+            {isSuperAdmin && (
+              <Link
+                href="/backoffice"
+                onClick={() => onOpenChange(false)}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  pathname.startsWith("/backoffice")
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <Shield className="h-4 w-4" />
+                Backoffice
+              </Link>
+            )}
 
           </nav>
 

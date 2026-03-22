@@ -10,6 +10,7 @@ import type { Permission, Role, SiteModule } from "@/types";
 
 const AUTH_ROUTES = ["/login", "/register"];
 const NO_NAV_ROUTES = ["/select-site"];
+const BACKOFFICE_PREFIX = "/backoffice";
 
 export function AppShell({
   children,
@@ -18,6 +19,7 @@ export function AppShell({
   userName,
   siteModules,
   isImpersonating = false,
+  isSuperAdmin = false,
 }: {
   children: React.ReactNode;
   permissions: Permission[];
@@ -25,22 +27,24 @@ export function AppShell({
   userName: string | null;
   siteModules: SiteModule[];
   isImpersonating?: boolean;
+  isSuperAdmin?: boolean;
 }) {
   const pathname = usePathname();
   const isAuthPage = AUTH_ROUTES.includes(pathname);
   const isNoNavPage = NO_NAV_ROUTES.includes(pathname);
+  const isBackofficePage = pathname.startsWith(BACKOFFICE_PREFIX);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const openMenu = useCallback(() => setMenuOpen(true), []);
 
-  if (isAuthPage || isNoNavPage) {
+  if (isAuthPage || isNoNavPage || isBackofficePage) {
     return <>{children}</>;
   }
 
   return (
     <MobileMenuContext.Provider value={{ openMenu, isImpersonating }}>
       <div className="flex min-h-dvh">
-        <Sidebar permissions={permissions} role={role} siteModules={siteModules} />
+        <Sidebar permissions={permissions} role={role} siteModules={siteModules} isSuperAdmin={isSuperAdmin} />
         <main className="flex-1 overflow-x-hidden pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">{children}</main>
       </div>
       <HamburgerMenu
@@ -50,6 +54,7 @@ export function AppShell({
         role={role}
         userName={userName}
         siteModules={siteModules}
+        isSuperAdmin={isSuperAdmin}
       />
       <BottomNav permissions={permissions} role={role} siteModules={siteModules} />
     </MobileMenuContext.Provider>
