@@ -182,23 +182,7 @@ const modulesAdminGerant: {
       { href: "/tarifs", itemKey: "plansTarifs", icon: Tag },
     ],
   },
-  // Admin Plateforme — Sprint C (gate: ABONNEMENTS_GERER)
-  // Regroupe: Sites, Abonnements, Plans, Analytics, Modules, Commissions, Remises
-  {
-    label: "Admin Plateforme",
-    moduleKey: "adminPlateforme",
-    primaryHref: "/admin/sites",
-    icon: Globe,
-    items: [
-      { href: "/admin/sites",       itemKey: "adminSites",       icon: Building2 },
-      { href: "/admin/abonnements", itemKey: "tousAbonnements",  icon: ShieldCheck },
-      { href: "/admin/plans",       itemKey: "gestionPlans",     icon: LayoutList },
-      { href: "/admin/analytics",   itemKey: "adminAnalytics",   icon: BarChart3 },
-      { href: "/admin/modules",     itemKey: "adminModules",     icon: Boxes },
-      { href: "/admin/commissions", itemKey: "toutesCommissions", icon: TrendingUp },
-      { href: "/admin/remises",     itemKey: "remisesPromos",    icon: Tag },
-    ],
-  },
+  // ADR-022: Admin Plateforme supprimé. Remplacé par lien Backoffice conditionnel (isSuperAdmin).
   // Portefeuille Ingénieur — Sprint 34 (gate: PORTEFEUILLE_VOIR)
   {
     label: "Portefeuille",
@@ -232,8 +216,7 @@ const PHASE3_MODULE_PERMISSIONS: Record<string, Permission> = {
   "Utilisateurs":          Permission.UTILISATEURS_VOIR,
   // Sprint 33 — Abonnements
   "Abonnement":            Permission.ABONNEMENTS_VOIR,
-  // Sprint C — Admin Plateforme (remplace Admin Abonnements + Admin Commissions + Admin Remises)
-  "Admin Plateforme":      Permission.ABONNEMENTS_GERER,
+  // ADR-022: Admin Plateforme supprimé — accès via /backoffice (isSuperAdmin)
   // Sprint 34 — Commissions & Portefeuille
   "Portefeuille":          Permission.PORTEFEUILLE_VOIR,
 };

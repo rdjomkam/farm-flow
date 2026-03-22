@@ -1,8 +1,8 @@
 /**
  * admin-analytics.ts — Queries analytics plateforme (ADR-021, Story D.1).
  *
- * Ces fonctions sont reservees au site plateforme (isPlatform = true).
- * Elles requierent la permission ANALYTICS_PLATEFORME.
+ * Ces fonctions sont reservees aux super-admins (isSuperAdmin = true, ADR-022).
+ * Acces via requireSuperAdmin() dans les routes /api/backoffice/analytics/*.
  *
  * R2 : enums importes depuis @/types.
  * R4 : agregations en SQL ou groupBy — pas de check-then-update.
