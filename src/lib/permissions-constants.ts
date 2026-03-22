@@ -151,6 +151,12 @@ export const PERMISSION_GROUPS = {
     Permission.PORTEFEUILLE_VOIR,
     Permission.PORTEFEUILLE_GERER,
   ],
+  // ADR-021 — Admin Plateforme (Sites & Modules)
+  adminPlateforme: [
+    Permission.SITES_VOIR,
+    Permission.SITES_GERER,
+    Permission.ANALYTICS_PLATEFORME,
+  ],
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -208,6 +214,10 @@ export const ITEM_VIEW_PERMISSIONS: Record<string, Permission> = {
   "/admin/abonnements":  Permission.ABONNEMENTS_GERER,
   // Plans (Sprint 38)
   "/admin/plans":        Permission.PLANS_GERER,
+  // ADR-021 — Admin Plateforme
+  "/admin/sites":        Permission.SITES_VOIR,
+  "/admin/analytics":    Permission.ANALYTICS_PLATEFORME,
+  "/admin/modules":      Permission.SITES_GERER,
 };
 
 // ---------------------------------------------------------------------------
@@ -252,6 +262,10 @@ export const PLATFORM_PERMISSIONS: Permission[] = [
   Permission.COMMISSION_PREMIUM,
   Permission.PORTEFEUILLE_VOIR,
   Permission.PORTEFEUILLE_GERER,
+  // ADR-021 — Admin Plateforme (Sites & Modules)
+  Permission.SITES_VOIR,
+  Permission.SITES_GERER,
+  Permission.ANALYTICS_PLATEFORME,
 ];
 
 export function hasPermission(permissions: Permission[], required: Permission): boolean {

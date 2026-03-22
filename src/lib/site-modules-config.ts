@@ -1,4 +1,4 @@
-import { SiteModule } from "@/types";
+import { SiteModule, SiteStatus } from "@/types";
 import type { LucideIcon } from "lucide-react";
 import {
   FlaskConical,
@@ -47,4 +47,36 @@ export function isModuleActive(module: SiteModule, enabledModules: SiteModule[],
   if (!config) return false;
   if (config.level === "platform") return isPlatform === true;
   return enabledModules.includes(module);
+}
+
+/**
+ * computeSiteStatus — calcule le statut d'un site a partir de ses champs.
+ *
+ * Logique (ADR-021 section 2.5) :
+ *   deletedAt != null          → ARCHIVED
+ *   suspendedAt != null        → SUSPENDED  (isActive peut etre true)
+ *   !isActive                  → BLOCKED
+ *   sinon                      → ACTIVE
+ *
+ * Cette fonction est pure (pas d'effet de bord) et testee unitairement
+ * dans src/__tests__/lib/site-status.test.ts (Story A.3).
+ *
+ * @param site - sous-ensemble des champs Site necessaires au calcul
+ * @returns SiteStatus calcule
+ */
+export function computeSiteStatus(site: {
+  isActive: boolean;
+  suspendedAt?: Date | string | null;
+  deletedAt?: Date | string | null;
+}): SiteStatus {
+  if (site.deletedAt != null) {
+    return SiteStatus.ARCHIVED;
+  }
+  if (site.suspendedAt != null) {
+    return SiteStatus.SUSPENDED;
+  }
+  if (!site.isActive) {
+    return SiteStatus.BLOCKED;
+  }
+  return SiteStatus.ACTIVE;
 }

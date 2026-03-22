@@ -51,8 +51,12 @@ DELETE FROM "PaiementAbonnement";
 DELETE FROM "Abonnement";
 DELETE FROM "Remise";
 DELETE FROM "PlanAbonnement";
+-- ADR-021 — SiteAuditLog avant Site (FK siteId)
+DELETE FROM "SiteAuditLog";
 DELETE FROM "Site";
 DELETE FROM "User";
+-- ADR-021 — ModuleDefinition (registre global, pas de FK)
+DELETE FROM "ModuleDefinition";
 
 -- ──────────────────────────────────────────
 -- Users (3 : admin + gerant + system user)
@@ -2345,6 +2349,36 @@ INSERT INTO "PortefeuilleIngenieur" (id, "ingenieurId", solde, "soldePending", "
 VALUES
   ('portefeuille_ing', 'user_ingenieur', 300, 0, 300, 0, 'site_01', NOW())
 ON CONFLICT DO NOTHING;
+
+-- ──────────────────────────────────────────
+-- ModuleDefinition (ADR-021) — Registre global des 12 modules
+-- Conforme à src/lib/site-modules-config.ts et l'enum SiteModule
+-- ──────────────────────────────────────────
+
+INSERT INTO "ModuleDefinition" (id, key, label, description, "iconName", "sortOrder", level, "dependsOn", "isVisible", "isActive", category, "createdAt", "updatedAt")
+VALUES
+  (gen_random_uuid(), 'REPRODUCTION',       'Reproduction',        'Gestion des reproducteurs, pontes et lots alevins',         'FlaskConical', 1,  'site',     ARRAY[]::TEXT[], true, true, 'elevage',       NOW(), NOW()),
+  (gen_random_uuid(), 'GROSSISSEMENT',      'Grossissement',       'Vagues, bacs, relevés et biométrie',                        'Fish',         2,  'site',     ARRAY[]::TEXT[], true, true, 'elevage',       NOW(), NOW()),
+  (gen_random_uuid(), 'INTRANTS',           'Intrants',            'Stock, fournisseurs et approvisionnement',                  'Package',      3,  'site',     ARRAY[]::TEXT[], true, true, 'stock',         NOW(), NOW()),
+  (gen_random_uuid(), 'VENTES',             'Ventes',              'Clients, ventes, factures et paiements',                    'ShoppingCart', 4,  'site',     ARRAY[]::TEXT[], true, true, 'commercial',    NOW(), NOW()),
+  (gen_random_uuid(), 'ANALYSE_PILOTAGE',   'Analyse & Pilotage',  'Analytics, planning et indicateurs KPI',                    'BarChart2',    5,  'site',     ARRAY[]::TEXT[], true, true, 'analyse',       NOW(), NOW()),
+  (gen_random_uuid(), 'PACKS_PROVISIONING', 'Packs & Provisioning','Création et activation des packs client',                   'Boxes',        6,  'platform', ARRAY[]::TEXT[], true, true, 'plateforme',    NOW(), NOW()),
+  (gen_random_uuid(), 'CONFIGURATION',      'Configuration',       'Paramètres, profils d''élevage et règles',                  'Settings',     7,  'site',     ARRAY[]::TEXT[], true, true, 'admin',         NOW(), NOW()),
+  (gen_random_uuid(), 'INGENIEUR',          'Ingénieur',           'Dashboard multi-clients et monitoring',                     'HardHat',      8,  'site',     ARRAY[]::TEXT[], true, true, 'plateforme',    NOW(), NOW()),
+  (gen_random_uuid(), 'NOTES',              'Notes',               'Notes et observations partagées',                           'StickyNote',   9,  'site',     ARRAY[]::TEXT[], true, true, 'communication', NOW(), NOW()),
+  (gen_random_uuid(), 'ABONNEMENTS',        'Abonnements',         'Gestion des abonnements et plans tarifaires',               'CreditCard',   10, 'platform', ARRAY[]::TEXT[], true, true, 'plateforme',    NOW(), NOW()),
+  (gen_random_uuid(), 'COMMISSIONS',        'Commissions',         'Commissions ingénieurs et portefeuilles',                   'TrendingUp',   11, 'platform', ARRAY[]::TEXT[], true, true, 'plateforme',    NOW(), NOW()),
+  (gen_random_uuid(), 'REMISES',            'Remises',             'Codes promotionnels et remises',                            'Tag',          12, 'platform', ARRAY[]::TEXT[], true, true, 'plateforme',    NOW(), NOW())
+ON CONFLICT (key) DO UPDATE SET
+  label       = EXCLUDED.label,
+  description = EXCLUDED.description,
+  "iconName"  = EXCLUDED."iconName",
+  "sortOrder" = EXCLUDED."sortOrder",
+  level       = EXCLUDED.level,
+  "isVisible" = EXCLUDED."isVisible",
+  "isActive"  = EXCLUDED."isActive",
+  category    = EXCLUDED.category,
+  "updatedAt" = NOW();
 
 COMMIT;
 

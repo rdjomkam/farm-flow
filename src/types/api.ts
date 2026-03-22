@@ -29,6 +29,7 @@ import {
   Role,
   SeveriteAlerte,
   SiteModule,
+  SiteStatus,
   StatutAbonnement,
   StatutActivation,
   StatutActivite,
@@ -2100,4 +2101,279 @@ export interface AbonnementFilters {
   siteId?: string;
   dateDebutAfter?: string;
   dateFinBefore?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Admin Plateforme — DTOs (ADR-021)
+// ---------------------------------------------------------------------------
+
+/**
+ * AdminSiteSummary — representation resumee d'un site pour la liste admin.
+ *
+ * Retourne par GET /api/admin/sites (voir ADR-021 section 3.1).
+ * Le champ `status` est calcule cote serveur via computeSiteStatus().
+ */
+export interface AdminSiteSummary {
+  id: string;
+  name: string;
+  address: string | null;
+  isActive: boolean;
+  isPlatform: boolean;
+  supervised: boolean;
+  /** ISO date string. Null si non suspendu. */
+  suspendedAt: string | null;
+  suspendedReason: string | null;
+  /** ISO date string. Null si non archive. */
+  deletedAt: string | null;
+  /** R2 : utiliser SiteStatus.ACTIVE, SiteStatus.SUSPENDED, etc. */
+  status: SiteStatus;
+  enabledModules: SiteModule[];
+  memberCount: number;
+  bacCount: number;
+  vagueCount: number;
+  /** Abonnement actif du site. Null si aucun abonnement actif. */
+  abonnement: {
+    id: string;
+    planNom: string;
+    /** R2 : utiliser TypePlan.STANDARD, TypePlan.PREMIUM, etc. */
+    typePlan: TypePlan;
+    /** R2 : utiliser StatutAbonnement.ACTIF, etc. */
+    statut: StatutAbonnement;
+    /** ISO date string. */
+    dateFin: string;
+  } | null;
+  /** ISO date string. */
+  createdAt: string;
+}
+
+/**
+ * AdminSitesListResponse — reponse paginee de GET /api/admin/sites.
+ *
+ * Les stats globales sont toujours renvoyees, meme avec des filtres actifs.
+ */
+export interface AdminSitesListResponse {
+  sites: AdminSiteSummary[];
+  total: number;
+  page: number;
+  totalPages: number;
+  stats: {
+    totalActive: number;
+    totalSuspended: number;
+    totalBlocked: number;
+    totalArchived: number;
+  };
+}
+
+/**
+ * AdminSiteDetailResponse — reponse complete de GET /api/admin/sites/[id].
+ *
+ * Inclut membres, abonnement actif et journal d'audit recent.
+ * R3 : tous les Decimal sont serialises en number (prixPaye).
+ */
+export interface AdminSiteDetailResponse {
+  id: string;
+  name: string;
+  address: string | null;
+  isActive: boolean;
+  isPlatform: boolean;
+  supervised: boolean;
+  /** ISO date string. */
+  suspendedAt: string | null;
+  suspendedReason: string | null;
+  /** ISO date string. */
+  deletedAt: string | null;
+  /** R2 : utiliser SiteStatus.ACTIVE, etc. */
+  status: SiteStatus;
+  enabledModules: SiteModule[];
+  members: {
+    id: string;
+    userId: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    siteRoleName: string;
+    isActive: boolean;
+    /** ISO date string. */
+    createdAt: string;
+  }[];
+  /** Abonnement actif. Null si aucun. */
+  abonnementActif: {
+    id: string;
+    planId: string;
+    planNom: string;
+    /** R2 : utiliser TypePlan.STANDARD, etc. */
+    typePlan: TypePlan;
+    /** R2 : utiliser StatutAbonnement.ACTIF, etc. */
+    statut: StatutAbonnement;
+    /** R2 : utiliser PeriodeFacturation.MENSUEL, etc. */
+    periode: PeriodeFacturation;
+    /** ISO date string. */
+    dateDebut: string;
+    /** ISO date string. */
+    dateFin: string;
+    /** ISO date string. */
+    dateProchainRenouvellement: string;
+    /** ISO date string. Null si pas de periode de grace. */
+    dateFinGrace: string | null;
+    /** Decimal serialise en number. */
+    prixPaye: number;
+  } | null;
+  bacCount: number;
+  vagueCount: number;
+  memberCount: number;
+  releveCount: number;
+  recentAuditLogs: {
+    id: string;
+    actorName: string;
+    action: string;
+    details: Record<string, unknown> | null;
+    /** ISO date string. */
+    createdAt: string;
+  }[];
+  /** ISO date string. */
+  createdAt: string;
+  /** ISO date string. */
+  updatedAt: string;
+}
+
+/**
+ * SiteStatusUpdateDTO — corps du PATCH /api/admin/sites/[id]/status.
+ *
+ * `reason` est obligatoire pour SUSPEND et BLOCK.
+ * `confirmArchive` est obligatoire (et doit etre true) pour ARCHIVE.
+ */
+export interface SiteStatusUpdateDTO {
+  action: "SUSPEND" | "BLOCK" | "RESTORE" | "ARCHIVE";
+  /** Obligatoire pour SUSPEND et BLOCK. */
+  reason?: string;
+  /** Doit etre true pour valider l'action ARCHIVE. */
+  confirmArchive?: boolean;
+}
+
+/**
+ * SiteStatusUpdateResponse — reponse du PATCH /api/admin/sites/[id]/status.
+ */
+export interface SiteStatusUpdateResponse {
+  id: string;
+  /** R2 : utiliser SiteStatus.ACTIVE, etc. */
+  status: SiteStatus;
+  isActive: boolean;
+  /** ISO date string. */
+  suspendedAt: string | null;
+  suspendedReason: string | null;
+  /** ISO date string. */
+  deletedAt: string | null;
+  /** ISO date string. */
+  updatedAt: string;
+}
+
+/**
+ * AdminSiteModulesUpdateDTO — corps du PATCH /api/admin/sites/[id]/modules.
+ *
+ * Les modules platform-level (ABONNEMENTS, COMMISSIONS, REMISES) sont refuses
+ * pour les sites non-plateforme.
+ */
+export interface AdminSiteModulesUpdateDTO {
+  /** R2 : utiliser SiteModule.GROSSISSEMENT, etc. */
+  enabledModules: SiteModule[];
+  /** Optionnel — enregistre dans SiteAuditLog. */
+  reason?: string;
+}
+
+/**
+ * AdminSiteModulesUpdateResponse — reponse du PATCH /api/admin/sites/[id]/modules.
+ */
+export interface AdminSiteModulesUpdateResponse {
+  id: string;
+  enabledModules: SiteModule[];
+  /** ISO date string. */
+  updatedAt: string;
+}
+
+/**
+ * AdminAnalyticsResponse — reponse de GET /api/admin/analytics.
+ *
+ * KPIs consolides de toute la plateforme DKFarm.
+ * MRR calcule en XAF.
+ */
+export interface AdminAnalyticsResponse {
+  // Sites
+  sitesActifs: number;
+  sitesSuspendus: number;
+  sitesBlockes: number;
+  sitesCrees30j: number;
+  // Abonnements
+  abonnementsActifs: number;
+  abonnementsGrace: number;
+  abonnementsExpires: number;
+  /** R2 : utiliser TypePlan.STANDARD, etc. */
+  abonnementsParPlan: { typePlan: TypePlan; count: number }[];
+  // Revenus (XAF)
+  /** Somme mensuelle estimee des abonnements actifs (XAF). */
+  mrrEstime: number;
+  /** Paiements confirmes sur les 30 derniers jours (XAF). */
+  revenusTotal30j: number;
+  /** Paiements confirmes sur les 12 derniers mois (XAF). */
+  revenusTotal12m: number;
+  // Ingenieurs
+  ingenieursActifs: number;
+  ingenieursAvecClients: number;
+  /** Nombre de RetraitPortefeuille en statut EN_ATTENTE. */
+  commissionsEnAttente: number;
+  // Modules
+  modulesDistribution: {
+    /** R2 : utiliser SiteModule.GROSSISSEMENT, etc. */
+    module: SiteModule;
+    siteCount: number;
+    /** Pourcentage de sites ayant ce module (0-100). */
+    pourcentage: number;
+  }[];
+}
+
+/**
+ * AdminAnalyticsSitesResponse — reponse de GET /api/admin/analytics/sites.
+ *
+ * Evolution du nombre de sites dans le temps.
+ */
+export interface AdminAnalyticsSitesResponse {
+  points: {
+    /** ISO date (YYYY-MM-DD). */
+    date: string;
+    /** Total cumulatif de sites actifs a cette date. */
+    cumul: number;
+    /** Sites crees ce jour/semaine/mois selon la periode. */
+    nouveaux: number;
+  }[];
+  periode: "7d" | "30d" | "90d" | "12m";
+}
+
+/**
+ * ModuleDefinitionResponse — representation d'un ModuleDefinition avec stats calculees.
+ *
+ * Retourne par GET /api/admin/modules.
+ */
+export interface ModuleDefinitionResponse {
+  id: string;
+  /** Valeur de l'enum SiteModule (ex: "GROSSISSEMENT"). */
+  key: string;
+  label: string;
+  description: string | null;
+  iconName: string;
+  sortOrder: number;
+  level: "site" | "platform";
+  dependsOn: string[];
+  isVisible: boolean;
+  isActive: boolean;
+  category: string | null;
+  /** Nombre de sites ayant ce module dans enabledModules. Calcule dynamiquement. */
+  siteCount: number;
+  /** Nombre de plans incluant ce module dans modulesInclus. Calcule dynamiquement. */
+  planCount: number;
+}
+
+/**
+ * AdminModulesListResponse — reponse de GET /api/admin/modules.
+ */
+export interface AdminModulesListResponse {
+  modules: ModuleDefinitionResponse[];
 }

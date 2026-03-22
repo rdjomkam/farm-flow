@@ -107,6 +107,30 @@ export enum Permission {
   COMMISSION_PREMIUM = "COMMISSION_PREMIUM",
   PORTEFEUILLE_VOIR = "PORTEFEUILLE_VOIR",
   PORTEFEUILLE_GERER = "PORTEFEUILLE_GERER",
+  // Admin Plateforme (ADR-021)
+  SITES_VOIR = "SITES_VOIR",
+  SITES_GERER = "SITES_GERER",
+  ANALYTICS_PLATEFORME = "ANALYTICS_PLATEFORME",
+}
+
+/**
+ * SiteStatus — statut calcule d'un site a partir de ses champs.
+ *
+ * Ce n'est PAS un enum Prisma stocke en base : il est calcule dynamiquement
+ * depuis les champs isActive, suspendedAt, deletedAt du modele Site.
+ * Voir computeSiteStatus() dans src/lib/site-modules-config.ts.
+ *
+ * Transitions autorisees (ADR-021 section 2.8) :
+ *   ACTIVE → SUSPENDED → ACTIVE
+ *   ACTIVE → BLOCKED → ACTIVE
+ *   ACTIVE → ARCHIVED (irreversible via UI)
+ *   SUSPENDED → BLOCKED
+ */
+export enum SiteStatus {
+  ACTIVE = "ACTIVE",
+  SUSPENDED = "SUSPENDED",
+  BLOCKED = "BLOCKED",
+  ARCHIVED = "ARCHIVED",
 }
 
 // ---------------------------------------------------------------------------
@@ -263,6 +287,12 @@ export interface Site {
   isPlatform: boolean;
   supervised: boolean;
   enabledModules: SiteModule[];
+  /** Null si non suspendu. Renseigne lors d'une action SUSPEND (ADR-021 section 2.4). */
+  suspendedAt?: Date | string | null;
+  /** Raison de la suspension — obligatoire lors de l'action SUSPEND. */
+  suspendedReason?: string | null;
+  /** Soft delete — null = site actif. Renseigne lors d'une action ARCHIVE (ADR-021 section 2.4). */
+  deletedAt?: Date | string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -2532,5 +2562,64 @@ export interface RetraitPortefeuille {
   traitePar: string | null;
   dateTraitement: Date | null;
   siteId: string;
+  createdAt: Date;
+}
+
+// ---------------------------------------------------------------------------
+// Modeles — Admin Plateforme (ADR-021)
+// ---------------------------------------------------------------------------
+
+/**
+ * ModuleDefinition — registre DB des modules disponibles sur la plateforme.
+ *
+ * Complementaire a l'enum SiteModule : ajoute des metadonnees (label, icone,
+ * ordre, niveau, disponibilite) sans casser les index PostgreSQL ou la type-safety.
+ *
+ * Note R8 : ModuleDefinition est un registre global (comme PlanAbonnement) —
+ * exception documentee dans ADR-021 section 2.2 : pas de siteId.
+ *
+ * R3 : miroir exact du modele Prisma ModuleDefinition.
+ */
+export interface ModuleDefinition {
+  id: string;
+  /** Valeur de l'enum SiteModule — source de verite, unique. */
+  key: string;
+  /** Label affiche dans l'UI. */
+  label: string;
+  description: string | null;
+  /** Nom de l'icone Lucide (ex: "Fish", "Package"). */
+  iconName: string;
+  /** Ordre d'affichage dans les interfaces d'administration. */
+  sortOrder: number;
+  /** "platform" = reserve au site DKFarm, "site" = activable par sites clients. */
+  level: "site" | "platform";
+  /** Modules requis (valeurs SiteModule) pour activer celui-ci. */
+  dependsOn: string[];
+  /** Si false : masque dans les interfaces sans le supprimer. */
+  isVisible: boolean;
+  /** Si false : ne peut plus etre assigne a de nouveaux plans ou sites. */
+  isActive: boolean;
+  /** Categorie fonctionnelle pour regroupement UI (ex: "elevage", "stock", "plateforme"). */
+  category: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * SiteAuditLog — journal d'audit des actions admin sur les sites.
+ *
+ * Chaque mutation effectuee depuis les routes /api/admin/sites/* cree
+ * une entree dans ce journal (transaction atomique, R4).
+ *
+ * R3 : miroir exact du modele Prisma SiteAuditLog.
+ */
+export interface SiteAuditLog {
+  id: string;
+  siteId: string;
+  actorId: string;
+  /** Action effectuee — ex: SITE_SUSPENDED, MODULE_ADDED, ABONNEMENT_FORCED. */
+  action: string;
+  /** Payload before/after pour traçabilite. Null si aucun detail pertinent. */
+  details: Record<string, unknown> | null;
   createdAt: Date;
 }

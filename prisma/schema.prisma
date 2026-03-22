@@ -203,6 +203,10 @@ enum Permission {
   COMMISSION_PREMIUM
   PORTEFEUILLE_VOIR
   PORTEFEUILLE_GERER
+  // Admin Plateforme (ADR-021)
+  SITES_VOIR
+  SITES_GERER
+  ANALYTICS_PLATEFORME
 }
 
 // ──────────────────────────────────────────
@@ -477,8 +481,19 @@ model Site {
   retraits             RetraitPortefeuille[]     @relation("RetraitsSite")
   // Sprint 30.4 — Idempotency
   idempotencyRecords   IdempotencyRecord[]
+  // ADR-021 — Cycle de vie & audit
+  /** Null si non suspendu. Non-null = site suspendu (accès restreint). */
+  suspendedAt          DateTime?
+  /** Raison de la suspension — obligatoire lors de la suspension. */
+  suspendedReason      String?
+  /** Soft delete — null = actif, non-null = archivé (lecture seule). */
+  deletedAt            DateTime?
+  auditLogs            SiteAuditLog[]
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
+
+  @@index([deletedAt])
+  @@index([suspendedAt])
 }
 
 // ──────────────────────────────────────────
@@ -731,6 +746,8 @@ model User {
   portefeuille            PortefeuilleIngenieur?    @relation("PortefeuilleIngenieur")
   retraitsDemandes        RetraitPortefeuille[]     @relation("RetraitDemandeur")
   retraitsTraites         RetraitPortefeuille[]     @relation("RetraitTraiteur")
+  // ADR-021 — Audit log des actions admin
+  auditLogsActed          SiteAuditLog[]            @relation("AuditLogActor")
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
 }
@@ -2240,4 +2257,71 @@ model IdempotencyRecord {
 
   @@index([siteId])
   @@index([expiresAt])
+}
+
+// ──────────────────────────────────────────
+// Modèle — ModuleDefinition (ADR-021)
+// ──────────────────────────────────────────
+
+/**
+ * ModuleDefinition — Registre des métadonnées des modules de la plateforme.
+ *
+ * Approche hybride : l'enum SiteModule reste la clé forte (type-safety).
+ * Ce modèle compléte l'enum avec les métadonnées (label, icône, visibilité, catégorie).
+ *
+ * Note R8 : pas de siteId — registre global, exception documentée dans ADR-021 section 2.2.
+ */
+model ModuleDefinition {
+  id          String   @id @default(cuid())
+  /** Clé unique — valeur de l'enum SiteModule. Source de vérité. */
+  key         String   @unique
+  /** Label affiché dans l'UI */
+  label       String
+  /** Description de ce que le module offre */
+  description String?
+  /** Nom de l'icône Lucide (ex: "Fish", "Package") */
+  iconName    String   @default("Package")
+  /** Ordre d'affichage dans les interfaces d'administration */
+  sortOrder   Int      @default(0)
+  /** platform = réservé au site DKFarm, site = activable par sites clients */
+  level       String   @default("site")
+  /** Modules requis pour activer celui-ci (dépendances, valeurs SiteModule) */
+  dependsOn   String[] @default([])
+  /** Si false : masqué dans les interfaces sans le supprimer */
+  isVisible   Boolean  @default(true)
+  /** Si false : ne peut plus être assigné à de nouveaux plans ou sites */
+  isActive    Boolean  @default(true)
+  /** Catégorie fonctionnelle pour regroupement UI */
+  category    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ──────────────────────────────────────────
+// Modèle — SiteAuditLog (ADR-021)
+// ──────────────────────────────────────────
+
+/**
+ * SiteAuditLog — Journal d'audit des actions admin sur les sites.
+ *
+ * Toute action admin (suspension, blocage, modification de modules) est loguée ici
+ * dans la même transaction que la mutation principale (R4).
+ * R8 : siteId obligatoire.
+ */
+model SiteAuditLog {
+  id        String   @id @default(cuid())
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id])
+  actorId   String
+  actor     User     @relation("AuditLogActor", fields: [actorId], references: [id])
+  /** ex: SITE_SUSPENDED, MODULE_ADDED, ABONNEMENT_FORCED */
+  action    String
+  /** Payload before/after pour l'action */
+  details   Json?
+  createdAt DateTime @default(now())
+
+  @@index([siteId])
+  @@index([actorId])
+  @@index([createdAt])
 }

@@ -68,6 +68,8 @@ export {
   TypeRemise,
   StatutCommissionIng,
   FournisseurPaiement,
+  // ADR-021 — Admin Plateforme
+  SiteStatus,
 } from "./models";
 export type {
   Site,
@@ -174,6 +176,9 @@ export type {
   CommissionIngenieur,
   PortefeuilleIngenieur,
   RetraitPortefeuille,
+  // ADR-021 — Admin Plateforme
+  ModuleDefinition,
+  SiteAuditLog,
 } from "./models";
 
 // Types authentification et multi-tenancy (DTOs, session, contexte)
@@ -410,6 +415,20 @@ export type {
   CreateCommissionDTO,
   DemandeRetraitDTO,
   AbonnementFilters,
+} from "./api";
+// ADR-021 — Admin Plateforme (Sites & Modules)
+export type {
+  AdminSiteSummary,
+  AdminSitesListResponse,
+  AdminSiteDetailResponse,
+  SiteStatusUpdateDTO,
+  SiteStatusUpdateResponse,
+  AdminSiteModulesUpdateDTO,
+  AdminSiteModulesUpdateResponse,
+  AdminAnalyticsResponse,
+  AdminAnalyticsSitesResponse,
+  ModuleDefinitionResponse,
+  AdminModulesListResponse,
 } from "./api";
 export type {
   StockProduitContext,

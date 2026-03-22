@@ -4350,7 +4350,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ### Story A.1 — Schéma Prisma : ModuleDefinition + SiteAuditLog + champs Site
 **Assigné à :** @db-specialist
 **Priorité :** Critique
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Ajouter modèle `ModuleDefinition` (key unique, label, description, iconName, sortOrder, level, dependsOn, isVisible, isActive, category)
@@ -4366,7 +4366,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @architect
 **Priorité :** Critique
 **Dépend de :** A.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Ajouter enum `SiteStatus`, interface `ModuleDefinition`, interface `SiteAuditLog` dans `src/types/models.ts`
@@ -4381,7 +4381,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @tester
 **Priorité :** Haute
 **Dépend de :** A.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Créer `src/__tests__/lib/site-status.test.ts` (4 cas : ACTIVE, SUSPENDED, BLOCKED, ARCHIVED)
@@ -4393,7 +4393,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ### Story A.4 — Review Sprint A
 **Assigné à :** @code-reviewer
 **Dépend de :** A.1, A.2, A.3
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Vérifier cohérence Prisma ↔ TypeScript (R3), R1 UPPERCASE, R7 nullabilité, R8 siteId
