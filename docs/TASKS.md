@@ -4338,3 +4338,345 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 | [BUG-030](../bugs/BUG-030.md) | ~130 hardcoded French strings not translated (i18n incomplete) | Moyenne | ~25 fichiers (remises, packs, planning, alertes, UI, pages) | OUVERT |
 
 > @project-manager : BUG-030 impacte les modules remises, packs, activations, planning, alertes, UI transversaux et plusieurs pages. ~7 namespaces de traduction manquants à créer.
+
+---
+
+## Sprint A — Site & Module Management : Fondations DB & Permissions (ADR-021)
+
+**Objectif :** Poser les bases de données et les nouvelles permissions sans rien casser.
+**Dépendances :** Aucune. Peut commencer immédiatement.
+**ADR :** [ADR-021](../decisions/ADR-021-site-module-management.md) | [Stories détaillées](../decisions/ADR-021-stories.md)
+
+### Story A.1 — Schéma Prisma : ModuleDefinition + SiteAuditLog + champs Site
+**Assigné à :** @db-specialist
+**Priorité :** Critique
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Ajouter modèle `ModuleDefinition` (key unique, label, description, iconName, sortOrder, level, dependsOn, isVisible, isActive, category)
+- [ ] `TODO` Ajouter modèle `SiteAuditLog` (siteId FK, actorId FK, action, details Json?, index sur siteId/actorId/createdAt)
+- [ ] `TODO` Ajouter champs sur `Site` : `suspendedAt DateTime?`, `suspendedReason String?`, `deletedAt DateTime?`
+- [ ] `TODO` Ajouter 3 permissions dans enum `Permission` : `SITES_VOIR`, `SITES_GERER`, `ANALYTICS_PLATEFORME`
+- [ ] `TODO` Générer et appliquer la migration
+- [ ] `TODO` Seeder les 12 `ModuleDefinition` dans `prisma/seed.sql`
+
+---
+
+### Story A.2 — TypeScript : interfaces et DTOs
+**Assigné à :** @architect
+**Priorité :** Critique
+**Dépend de :** A.1
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Ajouter enum `SiteStatus`, interface `ModuleDefinition`, interface `SiteAuditLog` dans `src/types/models.ts`
+- [ ] `TODO` Étendre interface `Site` avec `suspendedAt`, `suspendedReason`, `deletedAt`
+- [ ] `TODO` Ajouter tous les DTOs admin dans `src/types/api.ts` (AdminSiteSummary, AdminSiteDetailResponse, etc.)
+- [ ] `TODO` Ajouter permissions dans `src/lib/permissions-constants.ts` (PLATFORM_PERMISSIONS, ITEM_VIEW_PERMISSIONS)
+- [ ] `TODO` Ajouter `computeSiteStatus()` dans `src/lib/site-modules-config.ts`
+
+---
+
+### Story A.3 — Tests unitaires pour computeSiteStatus et permissions
+**Assigné à :** @tester
+**Priorité :** Haute
+**Dépend de :** A.2
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/__tests__/lib/site-status.test.ts` (4 cas : ACTIVE, SUSPENDED, BLOCKED, ARCHIVED)
+- [ ] `TODO` Créer `src/__tests__/lib/platform-permissions.test.ts`
+- [ ] `TODO` `npx vitest run` — tous les tests passent
+
+---
+
+### Story A.4 — Review Sprint A
+**Assigné à :** @code-reviewer
+**Dépend de :** A.1, A.2, A.3
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Vérifier cohérence Prisma ↔ TypeScript (R3), R1 UPPERCASE, R7 nullabilité, R8 siteId
+- [ ] `TODO` `npx prisma migrate deploy` + `npm run build` + `npx vitest run` passent
+- [ ] `TODO` Écrire `docs/reviews/review-sprint-A-site-module.md`
+
+---
+
+## Sprint B — Site & Module Management : API Admin Sites (ADR-021)
+
+**Objectif :** Implémenter toutes les API routes pour la gestion admin des sites.
+**Dépendances :** Sprint A entièrement validé.
+
+### Story B.1 — Queries admin sites
+**Assigné à :** @db-specialist
+**Priorité :** Critique
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/lib/queries/admin-sites.ts` : getAdminSites (paginé + filtres), getAdminSiteById, updateSiteStatus, updateSiteModulesAdmin, getSiteAuditLog
+- [ ] `TODO` `updateSiteStatus` : transaction atomique (R4), protection isPlatform, invalidation sessions sur BLOCK
+- [ ] `TODO` Types retournés conformes aux DTOs de A.2
+
+---
+
+### Story B.2 — API route GET /api/admin/sites
+**Assigné à :** @developer
+**Priorité :** Critique
+**Dépend de :** B.1
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/api/admin/sites/route.ts` (GET, paginé, filtres status/planId/hasModule/search)
+- [ ] `TODO` Guard : `SITES_VOIR` + isPlatform
+- [ ] `TODO` Réponse conforme à `AdminSitesListResponse`
+
+---
+
+### Story B.3 — API route GET /api/admin/sites/[id]
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** B.1
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/api/admin/sites/[id]/route.ts` (GET, détail complet + membres + abonnement + audit logs)
+- [ ] `TODO` Guard : `SITES_VOIR` + isPlatform, 404 si introuvable
+
+---
+
+### Story B.4 — API route PATCH /api/admin/sites/[id]/status
+**Assigné à :** @developer
+**Priorité :** Critique
+**Dépend de :** B.1
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/api/admin/sites/[id]/status/route.ts` (SUSPEND/BLOCK/RESTORE/ARCHIVE)
+- [ ] `TODO` Guard : `SITES_GERER` + isPlatform, reason obligatoire pour SUSPEND/BLOCK, confirmArchive pour ARCHIVE
+- [ ] `TODO` Transaction atomique : update Site + audit log + invalidation sessions sur BLOCK
+
+---
+
+### Story B.5 — API route PATCH /api/admin/sites/[id]/modules
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** B.1
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/api/admin/sites/[id]/modules/route.ts`
+- [ ] `TODO` Guard : `SITES_GERER` + isPlatform, rejeter modules platform-level
+- [ ] `TODO` Audit log avec modules avant/après
+
+---
+
+### Story B.6 — Tests API admin sites
+**Assigné à :** @tester
+**Priorité :** Haute
+**Dépend de :** B.2, B.3, B.4, B.5
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/__tests__/api/admin-sites.test.ts` (auth 401/403, pagination, CRUD, protection isPlatform)
+- [ ] `TODO` `npx vitest run` passe
+
+---
+
+### Story B.7 — Review Sprint B
+**Assigné à :** @code-reviewer
+**Dépend de :** B.1 — B.6
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Review R1-R9, protection SITES_VOIR/SITES_GERER, R4 transactions
+- [ ] `TODO` `npm run build` + `npx vitest run` passent
+- [ ] `TODO` Écrire `docs/reviews/review-sprint-B-admin-sites-api.md`
+
+---
+
+## Sprint C — Site & Module Management : UI Admin Sites (ADR-021)
+
+**Objectif :** Pages admin pour voir et gérer les sites côté plateforme DKFarm.
+**Dépendances :** Sprint B validé.
+
+### Story C.1 — Navigation : module "Admin Plateforme"
+**Assigné à :** @developer
+**Priorité :** Haute
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Sidebar + hamburger : renommer "Admin Abonnements" → "Admin Plateforme", ajouter /admin/sites, /admin/analytics, /admin/modules
+- [ ] `TODO` Gating permissions : SITES_VOIR pour sites/analytics, SITES_GERER pour modules
+- [ ] `TODO` i18n : nouvelles clés navigation
+
+---
+
+### Story C.2 — Page /admin/sites (liste)
+**Assigné à :** @developer
+**Priorité :** Critique
+**Dépend de :** B.2, C.1
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/admin/sites/page.tsx` (Server Component, guard SITES_VOIR + isPlatform)
+- [ ] `TODO` Créer `src/components/admin/sites/admin-sites-list.tsx` (cartes mobile 360px, tableau md+, filtres tabs/search/plan, KPI cards, pagination)
+- [ ] `TODO` Créer `src/components/admin/sites/admin-site-status-badge.tsx` + `admin-site-status-dialog.tsx` (R5 asChild)
+
+---
+
+### Story C.3 — Page /admin/sites/[id] (détail)
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** B.3, B.4, B.5, C.2
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/admin/sites/[id]/page.tsx` (Server Component)
+- [ ] `TODO` Créer `src/components/admin/sites/admin-site-detail-client.tsx` (Tabs : Résumé, Modules, Membres, Abonnement, Audit)
+- [ ] `TODO` Créer `src/components/admin/sites/admin-site-modules-editor.tsx` (switches par module, platform-level grisés)
+- [ ] `TODO` Créer `src/components/admin/sites/admin-site-audit-log.tsx` (timeline verticale, before/after)
+
+---
+
+### Story C.4 — Tests UI admin sites
+**Assigné à :** @tester
+**Priorité :** Haute
+**Dépend de :** C.2, C.3
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Tests AdminSiteStatusDialog, computeSiteStatus dans badges, responsive 360px vs md+
+- [ ] `TODO` `npx vitest run` + `npm run build` passent
+
+---
+
+### Story C.5 — Review Sprint C
+**Assigné à :** @code-reviewer
+**Dépend de :** C.1 — C.4
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Mobile first 360px, R5 DialogTrigger asChild, R6 CSS variables, accessibilité
+- [ ] `TODO` `npm run build` + `npx vitest run` passent
+- [ ] `TODO` Écrire `docs/reviews/review-sprint-C-admin-sites-ui.md`
+
+---
+
+## Sprint D — Site & Module Management : Analytics API (ADR-021)
+
+**Objectif :** Endpoints d'analytics plateforme.
+**Dépendances :** Sprint A validé. Parallélisable avec Sprint C.
+
+### Story D.1 — Queries analytics plateforme
+**Assigné à :** @db-specialist
+**Priorité :** Haute
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/lib/queries/admin-analytics.ts` : getPlatformKPIs, getSitesGrowth, getRevenueAnalytics, getModulesDistribution
+- [ ] `TODO` MRR = prixMensuel*count + prixTrimestriel/3*count + prixAnnuel/12*count
+- [ ] `TODO` `getModulesDistribution` via `$queryRaw` avec PostgreSQL `unnest()`
+
+---
+
+### Story D.2 — API routes analytics
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** D.1
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer 4 routes : `/api/admin/analytics` (KPIs), `/api/admin/analytics/sites`, `/api/admin/analytics/revenus`, `/api/admin/analytics/modules`
+- [ ] `TODO` Guard : `ANALYTICS_PLATEFORME` + isPlatform, Cache-Control headers
+
+---
+
+### Story D.3 — API routes registre modules
+**Assigné à :** @developer
+**Priorité :** Moyenne
+**Dépend de :** Sprint A
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/api/admin/modules/route.ts` (GET liste + POST créer) et `[key]/route.ts` (GET détail + PUT modifier)
+- [ ] `TODO` Guard : SITES_VOIR (lecture), SITES_GERER (écriture), key immuable, level immuable
+
+---
+
+### Story D.4 — Tests API analytics
+**Assigné à :** @tester
+**Priorité :** Haute
+**Dépend de :** D.2, D.3
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/__tests__/api/admin-analytics.test.ts` (structure réponse, protection isPlatform, calcul MRR)
+- [ ] `TODO` `npx vitest run` passe
+
+---
+
+### Story D.5 — Review Sprint D
+**Assigné à :** @code-reviewer
+**Dépend de :** D.1 — D.4
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Protection isPlatform sur chaque route, calcul MRR, sérialisation Decimal
+- [ ] `TODO` `npm run build` + `npx vitest run` passent
+- [ ] `TODO` Écrire `docs/reviews/review-sprint-D-analytics-api.md`
+
+---
+
+## Sprint E — Site & Module Management : Analytics UI & Registre Modules (ADR-021)
+
+**Objectif :** Dashboard analytics plateforme et page de gestion des modules.
+**Dépendances :** Sprints C et D validés.
+
+### Story E.1 — Page /admin/analytics (dashboard KPIs)
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** D.2
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/admin/analytics/page.tsx` (Server Component, ISR 5min)
+- [ ] `TODO` Créer KPI cards (6 cartes, mobile 2 cols → 3 → 6), formatage XAF
+- [ ] `TODO` Créer graphiques Recharts : sites growth (LineChart), modules distribution (BarChart), revenue (BarChart + MRR line)
+- [ ] `TODO` Sélecteurs période (7d/30d/90d/12m) avec TanStack Query refetch
+
+---
+
+### Story E.2 — Page /admin/modules (registre)
+**Assigné à :** @developer
+**Priorité :** Moyenne
+**Dépend de :** D.3
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/admin/modules/page.tsx` (Server Component, guard SITES_GERER + isPlatform)
+- [ ] `TODO` Créer `src/components/admin/modules/admin-modules-list.tsx` (tableau/cartes, filtres Visible/Masqué, Site/Platform)
+- [ ] `TODO` Créer `src/components/admin/modules/admin-module-form-dialog.tsx` (édition métadonnées, key/level non-modifiables, R5 asChild)
+
+---
+
+### Story E.3 — Tests UI analytics et modules
+**Assigné à :** @tester
+**Priorité :** Haute
+**Dépend de :** E.1, E.2
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Tests formatage XAF, AdminModuleFormDialog (key/level non-modifiables), responsive
+- [ ] `TODO` `npm run build` + `npx vitest run` passent
+
+---
+
+### Story E.4 — Review Sprint E (Review finale)
+**Assigné à :** @code-reviewer
+**Dépend de :** E.1, E.2, E.3
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Review complète sprints A-E, protection isPlatform uniforme, mobile first, R1-R9
+- [ ] `TODO` `npm run build` + `npx vitest run` passent
+- [ ] `TODO` Écrire `docs/reviews/review-sprint-E-site-module-mgmt-final.md`
