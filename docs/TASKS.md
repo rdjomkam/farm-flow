@@ -4410,7 +4410,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ### Story B.1 — Queries admin sites
 **Assigné à :** @db-specialist
 **Priorité :** Critique
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Créer `src/lib/queries/admin-sites.ts` : getAdminSites (paginé + filtres), getAdminSiteById, updateSiteStatus, updateSiteModulesAdmin, getSiteAuditLog
@@ -4423,7 +4423,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Critique
 **Dépend de :** B.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Créer `src/app/api/admin/sites/route.ts` (GET, paginé, filtres status/planId/hasModule/search)
@@ -4436,7 +4436,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** B.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Créer `src/app/api/admin/sites/[id]/route.ts` (GET, détail complet + membres + abonnement + audit logs)
@@ -4448,7 +4448,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Critique
 **Dépend de :** B.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Créer `src/app/api/admin/sites/[id]/status/route.ts` (SUSPEND/BLOCK/RESTORE/ARCHIVE)
@@ -4461,7 +4461,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** B.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Créer `src/app/api/admin/sites/[id]/modules/route.ts`
@@ -4474,7 +4474,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @tester
 **Priorité :** Haute
 **Dépend de :** B.2, B.3, B.4, B.5
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Créer `src/__tests__/api/admin-sites.test.ts` (auth 401/403, pagination, CRUD, protection isPlatform)
@@ -4485,7 +4485,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ### Story B.7 — Review Sprint B
 **Assigné à :** @code-reviewer
 **Dépend de :** B.1 — B.6
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Review R1-R9, protection SITES_VOIR/SITES_GERER, R4 transactions
