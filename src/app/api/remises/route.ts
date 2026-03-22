@@ -12,7 +12,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAllRemises, createRemise, getRemiseByCode } from "@/lib/queries/remises";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { getPlatformSite, isPlatformSite } from "@/lib/queries/sites";
 import { AuthError } from "@/lib/auth";
 import { Permission, TypeRemise } from "@/types";
 import type { CreateRemiseDTO } from "@/types";

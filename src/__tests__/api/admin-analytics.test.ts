@@ -1,32 +1,29 @@
 /**
- * Tests d'integration — Routes /api/admin/analytics et /api/admin/modules (Sprint 35, Story D.4)
+ * Tests d'integration — Routes /api/backoffice/analytics et /api/backoffice/modules (ADR-022 Sprint D)
  *
  * Couvre :
- * - GET  /api/admin/analytics              — KPIs plateforme (auth, plateforme, cache)
- * - GET  /api/admin/analytics/sites        — evolution sites (auth, plateforme, period)
- * - GET  /api/admin/analytics/revenus      — revenus (auth, plateforme, period)
- * - GET  /api/admin/analytics/modules      — distribution modules (auth, plateforme)
- * - GET  /api/admin/modules                — liste ModuleDefinition (SITES_VOIR)
- * - POST /api/admin/modules                — creation ModuleDefinition (SITES_GERER)
- * - GET  /api/admin/modules/[key]          — detail (auth, plateforme, 404)
- * - PUT  /api/admin/modules/[key]          — modification (immutabilite key/level)
+ * - GET  /api/backoffice/analytics              — KPIs plateforme (auth, super-admin, cache)
+ * - GET  /api/backoffice/analytics/sites        — evolution sites (auth, super-admin, period)
+ * - GET  /api/backoffice/analytics/revenus      — revenus (auth, super-admin, period)
+ * - GET  /api/backoffice/analytics/modules      — distribution modules (auth, super-admin)
+ * - GET  /api/backoffice/modules                — liste ModuleDefinition (super-admin)
+ * - POST /api/backoffice/modules                — creation ModuleDefinition (super-admin)
+ * - GET  /api/backoffice/modules/[key]          — detail (auth, super-admin, 404)
+ * - PUT  /api/backoffice/modules/[key]          — modification (immutabilite key/level)
  *
- * Story D.4 — Sprint 35
+ * Story D.3 — Sprint D (migration admin → backoffice)
  * R2 : enums Permission importes depuis @/types
- * R8 : acces reserve au site plateforme uniquement
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
-import { Permission } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Mocks — vi.hoisted pour eviter les problemes de TDZ avec vi.mock hoisting
 // ---------------------------------------------------------------------------
 
 const {
-  mockRequirePermission,
-  mockIsPlatformSite,
+  mockRequireSuperAdmin,
   mockGetPlatformKPIs,
   mockGetSitesGrowth,
   mockGetRevenueAnalytics,
@@ -37,8 +34,7 @@ const {
   mockPrismaModuleDefinitionUpdate,
   mockPrismaQueryRaw,
 } = vi.hoisted(() => ({
-  mockRequirePermission: vi.fn(),
-  mockIsPlatformSite: vi.fn(),
+  mockRequireSuperAdmin: vi.fn(),
   mockGetPlatformKPIs: vi.fn(),
   mockGetSitesGrowth: vi.fn(),
   mockGetRevenueAnalytics: vi.fn(),
@@ -50,19 +46,9 @@ const {
   mockPrismaQueryRaw: vi.fn(),
 }));
 
-vi.mock("@/lib/permissions", () => {
-  class MockForbiddenError extends Error {
-    public readonly status = 403;
-    constructor(message: string) {
-      super(message);
-      this.name = "ForbiddenError";
-    }
-  }
-  return {
-    requirePermission: (...args: unknown[]) => mockRequirePermission(...args),
-    ForbiddenError: MockForbiddenError,
-  };
-});
+vi.mock("@/lib/auth/backoffice", () => ({
+  requireSuperAdmin: (...args: unknown[]) => mockRequireSuperAdmin(...args),
+}));
 
 vi.mock("@/lib/auth", () => {
   class MockAuthError extends Error {
@@ -77,9 +63,18 @@ vi.mock("@/lib/auth", () => {
   };
 });
 
-vi.mock("@/lib/queries/sites", () => ({
-  isPlatformSite: (...args: unknown[]) => mockIsPlatformSite(...args),
-}));
+vi.mock("@/lib/permissions", () => {
+  class MockForbiddenError extends Error {
+    public readonly status = 403;
+    constructor(message: string) {
+      super(message);
+      this.name = "ForbiddenError";
+    }
+  }
+  return {
+    ForbiddenError: MockForbiddenError,
+  };
+});
 
 vi.mock("@/lib/queries/admin-analytics", () => ({
   getPlatformKPIs: (...args: unknown[]) => mockGetPlatformKPIs(...args),
@@ -104,35 +99,29 @@ vi.mock("@/lib/db", () => ({
 // Imports des routes (apres les mocks)
 // ---------------------------------------------------------------------------
 
-import { GET as GET_KPI } from "@/app/api/admin/analytics/route";
-import { GET as GET_SITES_GROWTH } from "@/app/api/admin/analytics/sites/route";
-import { GET as GET_REVENUS } from "@/app/api/admin/analytics/revenus/route";
-import { GET as GET_MODULES_DIST } from "@/app/api/admin/analytics/modules/route";
+import { GET as GET_KPI } from "@/app/api/backoffice/analytics/route";
+import { GET as GET_SITES_GROWTH } from "@/app/api/backoffice/analytics/sites/route";
+import { GET as GET_REVENUS } from "@/app/api/backoffice/analytics/revenus/route";
+import { GET as GET_MODULES_DIST } from "@/app/api/backoffice/analytics/modules/route";
 import {
   GET as GET_MODULES_LIST,
   POST as POST_MODULE,
-} from "@/app/api/admin/modules/route";
+} from "@/app/api/backoffice/modules/route";
 import {
   GET as GET_MODULE_DETAIL,
-  PUT as PUT_MODULE,
-} from "@/app/api/admin/modules/[key]/route";
+  PATCH as PATCH_MODULE,
+} from "@/app/api/backoffice/modules/[key]/route";
 
 // ---------------------------------------------------------------------------
 // Donnees de test
 // ---------------------------------------------------------------------------
 
-const PLATFORM_SITE_ID = "site-platform";
-
-const AUTH_CONTEXT = {
+const BACKOFFICE_SESSION = {
   userId: "user-admin",
   email: "admin@dkfarm.cm",
   phone: null,
   name: "Admin DKFarm",
-  globalRole: "ADMIN",
-  activeSiteId: PLATFORM_SITE_ID,
-  siteRoleId: "role-admin",
-  siteRoleName: "Super Admin",
-  permissions: Object.values(Permission),
+  isSuperAdmin: true,
 };
 
 const FAKE_KPIS = {
@@ -195,57 +184,41 @@ function makeRequest(url: string, init?: RequestInit) {
 }
 
 // ---------------------------------------------------------------------------
-// Tests : GET /api/admin/analytics (KPIs)
+// Tests : GET /api/backoffice/analytics (KPIs)
 // ---------------------------------------------------------------------------
 
-describe("GET /api/admin/analytics", () => {
+describe("GET /api/backoffice/analytics", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("retourne 401 si non authentifie", async () => {
     const { AuthError } = await import("@/lib/auth");
-    mockRequirePermission.mockRejectedValue(new AuthError("Non authentifie."));
+    mockRequireSuperAdmin.mockRejectedValue(new AuthError("Non authentifie."));
 
-    const req = makeRequest("http://localhost:3000/api/admin/analytics");
+    const req = makeRequest("http://localhost:3000/api/backoffice/analytics");
     const res = await GET_KPI(req);
 
     expect(res.status).toBe(401);
   });
 
-  it("retourne 403 si permission ANALYTICS_PLATEFORME manquante", async () => {
+  it("retourne 403 si l'utilisateur n'est pas super-admin", async () => {
     const { ForbiddenError } = await import("@/lib/permissions");
-    mockRequirePermission.mockRejectedValue(
-      new ForbiddenError("Permission ANALYTICS_PLATEFORME requise.")
+    mockRequireSuperAdmin.mockRejectedValue(
+      new ForbiddenError("Acces reserve aux super-admins.")
     );
 
-    const req = makeRequest("http://localhost:3000/api/admin/analytics");
+    const req = makeRequest("http://localhost:3000/api/backoffice/analytics");
     const res = await GET_KPI(req);
 
     expect(res.status).toBe(403);
-  });
-
-  it("retourne 403 si session n'est pas sur le site plateforme", async () => {
-    mockRequirePermission.mockResolvedValue({
-      ...AUTH_CONTEXT,
-      activeSiteId: "site-client",
-    });
-    mockIsPlatformSite.mockResolvedValue(false);
-
-    const req = makeRequest("http://localhost:3000/api/admin/analytics");
-    const res = await GET_KPI(req);
-    const data = await res.json();
-
-    expect(res.status).toBe(403);
-    expect(data.error).toBeDefined();
   });
 
   it("retourne 200 avec les KPIs de la plateforme", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockGetPlatformKPIs.mockResolvedValue(FAKE_KPIS);
 
-    const req = makeRequest("http://localhost:3000/api/admin/analytics");
+    const req = makeRequest("http://localhost:3000/api/backoffice/analytics");
     const res = await GET_KPI(req);
     const data = await res.json();
 
@@ -257,92 +230,62 @@ describe("GET /api/admin/analytics", () => {
   });
 
   it("retourne le header Cache-Control de 5 minutes", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockGetPlatformKPIs.mockResolvedValue(FAKE_KPIS);
 
-    const req = makeRequest("http://localhost:3000/api/admin/analytics");
+    const req = makeRequest("http://localhost:3000/api/backoffice/analytics");
     const res = await GET_KPI(req);
 
     expect(res.headers.get("Cache-Control")).toBe("public, max-age=300");
   });
 
-  it("verifie isPlatformSite avec l'activeSiteId de la session", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+  it("verifie que requireSuperAdmin est appelee", async () => {
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockGetPlatformKPIs.mockResolvedValue(FAKE_KPIS);
 
-    const req = makeRequest("http://localhost:3000/api/admin/analytics");
+    const req = makeRequest("http://localhost:3000/api/backoffice/analytics");
     await GET_KPI(req);
 
-    expect(mockIsPlatformSite).toHaveBeenCalledWith(PLATFORM_SITE_ID);
-  });
-
-  it("verifie requirePermission avec ANALYTICS_PLATEFORME", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
-    mockGetPlatformKPIs.mockResolvedValue(FAKE_KPIS);
-
-    const req = makeRequest("http://localhost:3000/api/admin/analytics");
-    await GET_KPI(req);
-
-    expect(mockRequirePermission).toHaveBeenCalledWith(
-      expect.anything(),
-      Permission.ANALYTICS_PLATEFORME
-    );
+    expect(mockRequireSuperAdmin).toHaveBeenCalledOnce();
   });
 });
 
 // ---------------------------------------------------------------------------
-// Tests : GET /api/admin/analytics/sites (evolution)
+// Tests : GET /api/backoffice/analytics/sites (evolution)
 // ---------------------------------------------------------------------------
 
-describe("GET /api/admin/analytics/sites", () => {
+describe("GET /api/backoffice/analytics/sites", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("retourne 401 si non authentifie", async () => {
     const { AuthError } = await import("@/lib/auth");
-    mockRequirePermission.mockRejectedValue(new AuthError("Non authentifie."));
+    mockRequireSuperAdmin.mockRejectedValue(new AuthError("Non authentifie."));
 
-    const req = makeRequest("http://localhost:3000/api/admin/analytics/sites");
+    const req = makeRequest("http://localhost:3000/api/backoffice/analytics/sites");
     const res = await GET_SITES_GROWTH(req);
 
     expect(res.status).toBe(401);
   });
 
-  it("retourne 403 si permission ANALYTICS_PLATEFORME manquante", async () => {
+  it("retourne 403 si l'utilisateur n'est pas super-admin", async () => {
     const { ForbiddenError } = await import("@/lib/permissions");
-    mockRequirePermission.mockRejectedValue(
-      new ForbiddenError("Permission ANALYTICS_PLATEFORME requise.")
+    mockRequireSuperAdmin.mockRejectedValue(
+      new ForbiddenError("Acces reserve aux super-admins.")
     );
 
-    const req = makeRequest("http://localhost:3000/api/admin/analytics/sites");
-    const res = await GET_SITES_GROWTH(req);
-
-    expect(res.status).toBe(403);
-  });
-
-  it("retourne 403 si session n'est pas sur le site plateforme", async () => {
-    mockRequirePermission.mockResolvedValue({
-      ...AUTH_CONTEXT,
-      activeSiteId: "site-client",
-    });
-    mockIsPlatformSite.mockResolvedValue(false);
-
-    const req = makeRequest("http://localhost:3000/api/admin/analytics/sites");
+    const req = makeRequest("http://localhost:3000/api/backoffice/analytics/sites");
     const res = await GET_SITES_GROWTH(req);
 
     expect(res.status).toBe(403);
   });
 
   it("retourne 200 avec period=30d par defaut", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockGetSitesGrowth.mockResolvedValue(FAKE_SITES_GROWTH);
 
-    const req = makeRequest("http://localhost:3000/api/admin/analytics/sites");
+    const req = makeRequest("http://localhost:3000/api/backoffice/analytics/sites");
     const res = await GET_SITES_GROWTH(req);
     const data = await res.json();
 
@@ -353,12 +296,11 @@ describe("GET /api/admin/analytics/sites", () => {
   });
 
   it("transmet le query param period=7d correctement", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockGetSitesGrowth.mockResolvedValue({ ...FAKE_SITES_GROWTH, period: "7d" });
 
     const req = makeRequest(
-      "http://localhost:3000/api/admin/analytics/sites?period=7d"
+      "http://localhost:3000/api/backoffice/analytics/sites?period=7d"
     );
     const res = await GET_SITES_GROWTH(req);
 
@@ -367,12 +309,11 @@ describe("GET /api/admin/analytics/sites", () => {
   });
 
   it("transmet le query param period=90d correctement", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockGetSitesGrowth.mockResolvedValue({ ...FAKE_SITES_GROWTH, period: "90d" });
 
     const req = makeRequest(
-      "http://localhost:3000/api/admin/analytics/sites?period=90d"
+      "http://localhost:3000/api/backoffice/analytics/sites?period=90d"
     );
     const res = await GET_SITES_GROWTH(req);
 
@@ -381,12 +322,11 @@ describe("GET /api/admin/analytics/sites", () => {
   });
 
   it("transmet le query param period=12m correctement", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockGetSitesGrowth.mockResolvedValue({ ...FAKE_SITES_GROWTH, period: "12m" });
 
     const req = makeRequest(
-      "http://localhost:3000/api/admin/analytics/sites?period=12m"
+      "http://localhost:3000/api/backoffice/analytics/sites?period=12m"
     );
     const res = await GET_SITES_GROWTH(req);
 
@@ -395,12 +335,11 @@ describe("GET /api/admin/analytics/sites", () => {
   });
 
   it("utilise la periode par defaut 30d pour une valeur invalide", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockGetSitesGrowth.mockResolvedValue(FAKE_SITES_GROWTH);
 
     const req = makeRequest(
-      "http://localhost:3000/api/admin/analytics/sites?period=INVALIDE"
+      "http://localhost:3000/api/backoffice/analytics/sites?period=INVALIDE"
     );
     const res = await GET_SITES_GROWTH(req);
 
@@ -409,11 +348,10 @@ describe("GET /api/admin/analytics/sites", () => {
   });
 
   it("retourne le header Cache-Control de 5 minutes", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockGetSitesGrowth.mockResolvedValue(FAKE_SITES_GROWTH);
 
-    const req = makeRequest("http://localhost:3000/api/admin/analytics/sites");
+    const req = makeRequest("http://localhost:3000/api/backoffice/analytics/sites");
     const res = await GET_SITES_GROWTH(req);
 
     expect(res.headers.get("Cache-Control")).toBe("public, max-age=300");
@@ -421,55 +359,41 @@ describe("GET /api/admin/analytics/sites", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Tests : GET /api/admin/analytics/revenus
+// Tests : GET /api/backoffice/analytics/revenus
 // ---------------------------------------------------------------------------
 
-describe("GET /api/admin/analytics/revenus", () => {
+describe("GET /api/backoffice/analytics/revenus", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("retourne 401 si non authentifie", async () => {
     const { AuthError } = await import("@/lib/auth");
-    mockRequirePermission.mockRejectedValue(new AuthError("Non authentifie."));
+    mockRequireSuperAdmin.mockRejectedValue(new AuthError("Non authentifie."));
 
-    const req = makeRequest("http://localhost:3000/api/admin/analytics/revenus");
+    const req = makeRequest("http://localhost:3000/api/backoffice/analytics/revenus");
     const res = await GET_REVENUS(req);
 
     expect(res.status).toBe(401);
   });
 
-  it("retourne 403 si permission ANALYTICS_PLATEFORME manquante", async () => {
+  it("retourne 403 si l'utilisateur n'est pas super-admin", async () => {
     const { ForbiddenError } = await import("@/lib/permissions");
-    mockRequirePermission.mockRejectedValue(
-      new ForbiddenError("Permission ANALYTICS_PLATEFORME requise.")
+    mockRequireSuperAdmin.mockRejectedValue(
+      new ForbiddenError("Acces reserve aux super-admins.")
     );
 
-    const req = makeRequest("http://localhost:3000/api/admin/analytics/revenus");
-    const res = await GET_REVENUS(req);
-
-    expect(res.status).toBe(403);
-  });
-
-  it("retourne 403 si session n'est pas sur le site plateforme", async () => {
-    mockRequirePermission.mockResolvedValue({
-      ...AUTH_CONTEXT,
-      activeSiteId: "site-client",
-    });
-    mockIsPlatformSite.mockResolvedValue(false);
-
-    const req = makeRequest("http://localhost:3000/api/admin/analytics/revenus");
+    const req = makeRequest("http://localhost:3000/api/backoffice/analytics/revenus");
     const res = await GET_REVENUS(req);
 
     expect(res.status).toBe(403);
   });
 
   it("retourne 200 avec les donnees de revenus (period par defaut 30d)", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockGetRevenueAnalytics.mockResolvedValue(FAKE_REVENUE_DATA);
 
-    const req = makeRequest("http://localhost:3000/api/admin/analytics/revenus");
+    const req = makeRequest("http://localhost:3000/api/backoffice/analytics/revenus");
     const res = await GET_REVENUS(req);
     const data = await res.json();
 
@@ -480,12 +404,11 @@ describe("GET /api/admin/analytics/revenus", () => {
   });
 
   it("transmet le query param period correctement", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockGetRevenueAnalytics.mockResolvedValue({ ...FAKE_REVENUE_DATA, period: "12m" });
 
     const req = makeRequest(
-      "http://localhost:3000/api/admin/analytics/revenus?period=12m"
+      "http://localhost:3000/api/backoffice/analytics/revenus?period=12m"
     );
     const res = await GET_REVENUS(req);
 
@@ -494,12 +417,11 @@ describe("GET /api/admin/analytics/revenus", () => {
   });
 
   it("utilise la periode par defaut 30d pour une valeur invalide", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockGetRevenueAnalytics.mockResolvedValue(FAKE_REVENUE_DATA);
 
     const req = makeRequest(
-      "http://localhost:3000/api/admin/analytics/revenus?period=FAUX"
+      "http://localhost:3000/api/backoffice/analytics/revenus?period=FAUX"
     );
     const res = await GET_REVENUS(req);
 
@@ -508,11 +430,10 @@ describe("GET /api/admin/analytics/revenus", () => {
   });
 
   it("retourne le header Cache-Control de 5 minutes", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockGetRevenueAnalytics.mockResolvedValue(FAKE_REVENUE_DATA);
 
-    const req = makeRequest("http://localhost:3000/api/admin/analytics/revenus");
+    const req = makeRequest("http://localhost:3000/api/backoffice/analytics/revenus");
     const res = await GET_REVENUS(req);
 
     expect(res.headers.get("Cache-Control")).toBe("public, max-age=300");
@@ -520,55 +441,41 @@ describe("GET /api/admin/analytics/revenus", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Tests : GET /api/admin/analytics/modules (distribution)
+// Tests : GET /api/backoffice/analytics/modules (distribution)
 // ---------------------------------------------------------------------------
 
-describe("GET /api/admin/analytics/modules", () => {
+describe("GET /api/backoffice/analytics/modules", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("retourne 401 si non authentifie", async () => {
     const { AuthError } = await import("@/lib/auth");
-    mockRequirePermission.mockRejectedValue(new AuthError("Non authentifie."));
+    mockRequireSuperAdmin.mockRejectedValue(new AuthError("Non authentifie."));
 
-    const req = makeRequest("http://localhost:3000/api/admin/analytics/modules");
+    const req = makeRequest("http://localhost:3000/api/backoffice/analytics/modules");
     const res = await GET_MODULES_DIST(req);
 
     expect(res.status).toBe(401);
   });
 
-  it("retourne 403 si permission ANALYTICS_PLATEFORME manquante", async () => {
+  it("retourne 403 si l'utilisateur n'est pas super-admin", async () => {
     const { ForbiddenError } = await import("@/lib/permissions");
-    mockRequirePermission.mockRejectedValue(
-      new ForbiddenError("Permission ANALYTICS_PLATEFORME requise.")
+    mockRequireSuperAdmin.mockRejectedValue(
+      new ForbiddenError("Acces reserve aux super-admins.")
     );
 
-    const req = makeRequest("http://localhost:3000/api/admin/analytics/modules");
-    const res = await GET_MODULES_DIST(req);
-
-    expect(res.status).toBe(403);
-  });
-
-  it("retourne 403 si session n'est pas sur le site plateforme", async () => {
-    mockRequirePermission.mockResolvedValue({
-      ...AUTH_CONTEXT,
-      activeSiteId: "site-client",
-    });
-    mockIsPlatformSite.mockResolvedValue(false);
-
-    const req = makeRequest("http://localhost:3000/api/admin/analytics/modules");
+    const req = makeRequest("http://localhost:3000/api/backoffice/analytics/modules");
     const res = await GET_MODULES_DIST(req);
 
     expect(res.status).toBe(403);
   });
 
   it("retourne 200 avec la distribution des modules", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockGetModulesDistribution.mockResolvedValue(FAKE_MODULES_DISTRIBUTION);
 
-    const req = makeRequest("http://localhost:3000/api/admin/analytics/modules");
+    const req = makeRequest("http://localhost:3000/api/backoffice/analytics/modules");
     const res = await GET_MODULES_DIST(req);
     const data = await res.json();
 
@@ -580,22 +487,20 @@ describe("GET /api/admin/analytics/modules", () => {
   });
 
   it("retourne le header Cache-Control de 5 minutes", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockGetModulesDistribution.mockResolvedValue(FAKE_MODULES_DISTRIBUTION);
 
-    const req = makeRequest("http://localhost:3000/api/admin/analytics/modules");
+    const req = makeRequest("http://localhost:3000/api/backoffice/analytics/modules");
     const res = await GET_MODULES_DIST(req);
 
     expect(res.headers.get("Cache-Control")).toBe("public, max-age=300");
   });
 
   it("retourne une liste vide si aucun module n'est utilise", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockGetModulesDistribution.mockResolvedValue([]);
 
-    const req = makeRequest("http://localhost:3000/api/admin/analytics/modules");
+    const req = makeRequest("http://localhost:3000/api/backoffice/analytics/modules");
     const res = await GET_MODULES_DIST(req);
     const data = await res.json();
 
@@ -605,59 +510,45 @@ describe("GET /api/admin/analytics/modules", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Tests : GET /api/admin/modules (liste)
+// Tests : GET /api/backoffice/modules (liste)
 // ---------------------------------------------------------------------------
 
-describe("GET /api/admin/modules", () => {
+describe("GET /api/backoffice/modules", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("retourne 401 si non authentifie", async () => {
     const { AuthError } = await import("@/lib/auth");
-    mockRequirePermission.mockRejectedValue(new AuthError("Non authentifie."));
+    mockRequireSuperAdmin.mockRejectedValue(new AuthError("Non authentifie."));
 
-    const req = makeRequest("http://localhost:3000/api/admin/modules");
+    const req = makeRequest("http://localhost:3000/api/backoffice/modules");
     const res = await GET_MODULES_LIST(req);
 
     expect(res.status).toBe(401);
   });
 
-  it("retourne 403 si permission SITES_VOIR manquante", async () => {
+  it("retourne 403 si l'utilisateur n'est pas super-admin", async () => {
     const { ForbiddenError } = await import("@/lib/permissions");
-    mockRequirePermission.mockRejectedValue(
-      new ForbiddenError("Permission SITES_VOIR requise.")
+    mockRequireSuperAdmin.mockRejectedValue(
+      new ForbiddenError("Acces reserve aux super-admins.")
     );
 
-    const req = makeRequest("http://localhost:3000/api/admin/modules");
-    const res = await GET_MODULES_LIST(req);
-
-    expect(res.status).toBe(403);
-  });
-
-  it("retourne 403 si session n'est pas sur le site plateforme", async () => {
-    mockRequirePermission.mockResolvedValue({
-      ...AUTH_CONTEXT,
-      activeSiteId: "site-client",
-    });
-    mockIsPlatformSite.mockResolvedValue(false);
-
-    const req = makeRequest("http://localhost:3000/api/admin/modules");
+    const req = makeRequest("http://localhost:3000/api/backoffice/modules");
     const res = await GET_MODULES_LIST(req);
 
     expect(res.status).toBe(403);
   });
 
   it("retourne 200 avec la liste des modules", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockPrismaModuleDefinitionFindMany.mockResolvedValue([FAKE_MODULE_DEFINITION]);
     // enrichModulesWithStats appelle $queryRaw deux fois (siteCount + planCount)
     mockPrismaQueryRaw
       .mockResolvedValueOnce([{ module: "GROSSISSEMENT", count: BigInt(30) }])
       .mockResolvedValueOnce([{ module: "GROSSISSEMENT", count: BigInt(2) }]);
 
-    const req = makeRequest("http://localhost:3000/api/admin/modules");
+    const req = makeRequest("http://localhost:3000/api/backoffice/modules");
     const res = await GET_MODULES_LIST(req);
     const data = await res.json();
 
@@ -669,11 +560,10 @@ describe("GET /api/admin/modules", () => {
   });
 
   it("retourne 200 avec une liste vide si aucun module en base", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockPrismaModuleDefinitionFindMany.mockResolvedValue([]);
 
-    const req = makeRequest("http://localhost:3000/api/admin/modules");
+    const req = makeRequest("http://localhost:3000/api/backoffice/modules");
     const res = await GET_MODULES_LIST(req);
     const data = await res.json();
 
@@ -683,32 +573,28 @@ describe("GET /api/admin/modules", () => {
     expect(mockPrismaQueryRaw).not.toHaveBeenCalled();
   });
 
-  it("verifie requirePermission avec SITES_VOIR", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+  it("verifie que requireSuperAdmin est appelee", async () => {
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockPrismaModuleDefinitionFindMany.mockResolvedValue([]);
 
-    const req = makeRequest("http://localhost:3000/api/admin/modules");
+    const req = makeRequest("http://localhost:3000/api/backoffice/modules");
     await GET_MODULES_LIST(req);
 
-    expect(mockRequirePermission).toHaveBeenCalledWith(
-      expect.anything(),
-      Permission.SITES_VOIR
-    );
+    expect(mockRequireSuperAdmin).toHaveBeenCalledOnce();
   });
 });
 
 // ---------------------------------------------------------------------------
-// Tests : POST /api/admin/modules (creation)
+// Tests : POST /api/backoffice/modules (creation)
 // ---------------------------------------------------------------------------
 
-describe("POST /api/admin/modules", () => {
+describe("POST /api/backoffice/modules", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   function makePostRequest(body: unknown) {
-    return makeRequest("http://localhost:3000/api/admin/modules", {
+    return makeRequest("http://localhost:3000/api/backoffice/modules", {
       method: "POST",
       body: JSON.stringify(body),
       headers: { "Content-Type": "application/json" },
@@ -717,7 +603,7 @@ describe("POST /api/admin/modules", () => {
 
   it("retourne 401 si non authentifie", async () => {
     const { AuthError } = await import("@/lib/auth");
-    mockRequirePermission.mockRejectedValue(new AuthError("Non authentifie."));
+    mockRequireSuperAdmin.mockRejectedValue(new AuthError("Non authentifie."));
 
     const req = makePostRequest({ label: "Nouveau Module", level: "site" });
     const res = await POST_MODULE(req);
@@ -725,10 +611,10 @@ describe("POST /api/admin/modules", () => {
     expect(res.status).toBe(401);
   });
 
-  it("retourne 403 si permission SITES_GERER manquante", async () => {
+  it("retourne 403 si l'utilisateur n'est pas super-admin", async () => {
     const { ForbiddenError } = await import("@/lib/permissions");
-    mockRequirePermission.mockRejectedValue(
-      new ForbiddenError("Permission SITES_GERER requise.")
+    mockRequireSuperAdmin.mockRejectedValue(
+      new ForbiddenError("Acces reserve aux super-admins.")
     );
 
     const req = makePostRequest({ label: "Nouveau Module", level: "site" });
@@ -737,22 +623,8 @@ describe("POST /api/admin/modules", () => {
     expect(res.status).toBe(403);
   });
 
-  it("retourne 403 si session n'est pas sur le site plateforme", async () => {
-    mockRequirePermission.mockResolvedValue({
-      ...AUTH_CONTEXT,
-      activeSiteId: "site-client",
-    });
-    mockIsPlatformSite.mockResolvedValue(false);
-
-    const req = makePostRequest({ label: "Nouveau Module", level: "site" });
-    const res = await POST_MODULE(req);
-
-    expect(res.status).toBe(403);
-  });
-
   it("retourne 400 si label est absent", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
 
     const req = makePostRequest({ level: "site" });
     const res = await POST_MODULE(req);
@@ -763,8 +635,7 @@ describe("POST /api/admin/modules", () => {
   });
 
   it("retourne 400 si label est une chaine vide", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
 
     const req = makePostRequest({ label: "   ", level: "site" });
     const res = await POST_MODULE(req);
@@ -773,8 +644,7 @@ describe("POST /api/admin/modules", () => {
   });
 
   it("retourne 400 si level est absent", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
 
     const req = makePostRequest({ label: "Nouveau Module" });
     const res = await POST_MODULE(req);
@@ -785,8 +655,7 @@ describe("POST /api/admin/modules", () => {
   });
 
   it("retourne 400 si level est invalide (ni 'site' ni 'platform')", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
 
     const req = makePostRequest({ label: "Nouveau Module", level: "global" });
     const res = await POST_MODULE(req);
@@ -797,8 +666,7 @@ describe("POST /api/admin/modules", () => {
   });
 
   it("retourne 409 si un module avec la meme cle existe deja", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockPrismaModuleDefinitionFindUnique.mockResolvedValue(FAKE_MODULE_DEFINITION);
 
     const req = makePostRequest({ label: "Grossissement", level: "site" });
@@ -808,8 +676,7 @@ describe("POST /api/admin/modules", () => {
   });
 
   it("retourne 201 avec le module cree pour level=site", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockPrismaModuleDefinitionFindUnique.mockResolvedValue(null);
     mockPrismaModuleDefinitionCreate.mockResolvedValue({
       ...FAKE_MODULE_DEFINITION,
@@ -831,8 +698,7 @@ describe("POST /api/admin/modules", () => {
   });
 
   it("retourne 201 avec le module cree pour level=platform", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockPrismaModuleDefinitionFindUnique.mockResolvedValue(null);
     mockPrismaModuleDefinitionCreate.mockResolvedValue({
       ...FAKE_MODULE_DEFINITION,
@@ -851,8 +717,7 @@ describe("POST /api/admin/modules", () => {
   });
 
   it("derive correctement la cle depuis le label (majuscules + underscores)", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockPrismaModuleDefinitionFindUnique.mockResolvedValue(null);
     mockPrismaModuleDefinitionCreate.mockResolvedValue({
       ...FAKE_MODULE_DEFINITION,
@@ -869,9 +734,8 @@ describe("POST /api/admin/modules", () => {
     });
   });
 
-  it("verifie requirePermission avec SITES_GERER", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+  it("verifie que requireSuperAdmin est appelee", async () => {
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockPrismaModuleDefinitionFindUnique.mockResolvedValue(null);
     mockPrismaModuleDefinitionCreate.mockResolvedValue({
       ...FAKE_MODULE_DEFINITION,
@@ -881,28 +745,25 @@ describe("POST /api/admin/modules", () => {
     const req = makePostRequest({ label: "Test Module", level: "site" });
     await POST_MODULE(req);
 
-    expect(mockRequirePermission).toHaveBeenCalledWith(
-      expect.anything(),
-      Permission.SITES_GERER
-    );
+    expect(mockRequireSuperAdmin).toHaveBeenCalledOnce();
   });
 });
 
 // ---------------------------------------------------------------------------
-// Tests : GET /api/admin/modules/[key]
+// Tests : GET /api/backoffice/modules/[key]
 // ---------------------------------------------------------------------------
 
-describe("GET /api/admin/modules/[key]", () => {
+describe("GET /api/backoffice/modules/[key]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("retourne 401 si non authentifie", async () => {
     const { AuthError } = await import("@/lib/auth");
-    mockRequirePermission.mockRejectedValue(new AuthError("Non authentifie."));
+    mockRequireSuperAdmin.mockRejectedValue(new AuthError("Non authentifie."));
 
     const req = makeRequest(
-      "http://localhost:3000/api/admin/modules/GROSSISSEMENT"
+      "http://localhost:3000/api/backoffice/modules/GROSSISSEMENT"
     );
     const res = await GET_MODULE_DETAIL(req, {
       params: Promise.resolve({ key: "GROSSISSEMENT" }),
@@ -911,31 +772,14 @@ describe("GET /api/admin/modules/[key]", () => {
     expect(res.status).toBe(401);
   });
 
-  it("retourne 403 si permission SITES_VOIR manquante", async () => {
+  it("retourne 403 si l'utilisateur n'est pas super-admin", async () => {
     const { ForbiddenError } = await import("@/lib/permissions");
-    mockRequirePermission.mockRejectedValue(
-      new ForbiddenError("Permission SITES_VOIR requise.")
+    mockRequireSuperAdmin.mockRejectedValue(
+      new ForbiddenError("Acces reserve aux super-admins.")
     );
 
     const req = makeRequest(
-      "http://localhost:3000/api/admin/modules/GROSSISSEMENT"
-    );
-    const res = await GET_MODULE_DETAIL(req, {
-      params: Promise.resolve({ key: "GROSSISSEMENT" }),
-    });
-
-    expect(res.status).toBe(403);
-  });
-
-  it("retourne 403 si session n'est pas sur le site plateforme", async () => {
-    mockRequirePermission.mockResolvedValue({
-      ...AUTH_CONTEXT,
-      activeSiteId: "site-client",
-    });
-    mockIsPlatformSite.mockResolvedValue(false);
-
-    const req = makeRequest(
-      "http://localhost:3000/api/admin/modules/GROSSISSEMENT"
+      "http://localhost:3000/api/backoffice/modules/GROSSISSEMENT"
     );
     const res = await GET_MODULE_DETAIL(req, {
       params: Promise.resolve({ key: "GROSSISSEMENT" }),
@@ -945,12 +789,11 @@ describe("GET /api/admin/modules/[key]", () => {
   });
 
   it("retourne 404 si le module n'existe pas", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockPrismaModuleDefinitionFindUnique.mockResolvedValue(null);
 
     const req = makeRequest(
-      "http://localhost:3000/api/admin/modules/INEXISTANT"
+      "http://localhost:3000/api/backoffice/modules/INEXISTANT"
     );
     const res = await GET_MODULE_DETAIL(req, {
       params: Promise.resolve({ key: "INEXISTANT" }),
@@ -962,8 +805,7 @@ describe("GET /api/admin/modules/[key]", () => {
   });
 
   it("retourne 200 avec le detail du module et ses stats", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockPrismaModuleDefinitionFindUnique.mockResolvedValue(FAKE_MODULE_DEFINITION);
     // getModuleStats appelle $queryRaw deux fois (siteCount + planCount)
     mockPrismaQueryRaw
@@ -971,7 +813,7 @@ describe("GET /api/admin/modules/[key]", () => {
       .mockResolvedValueOnce([{ count: BigInt(3) }]);
 
     const req = makeRequest(
-      "http://localhost:3000/api/admin/modules/GROSSISSEMENT"
+      "http://localhost:3000/api/backoffice/modules/GROSSISSEMENT"
     );
     const res = await GET_MODULE_DETAIL(req, {
       params: Promise.resolve({ key: "GROSSISSEMENT" }),
@@ -990,17 +832,17 @@ describe("GET /api/admin/modules/[key]", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Tests : PUT /api/admin/modules/[key]
+// Tests : PUT /api/backoffice/modules/[key]
 // ---------------------------------------------------------------------------
 
-describe("PUT /api/admin/modules/[key]", () => {
+describe("PATCH /api/backoffice/modules/[key]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  function makePutRequest(key: string, body: unknown) {
-    return makeRequest(`http://localhost:3000/api/admin/modules/${key}`, {
-      method: "PUT",
+  function makePatchRequest(key: string, body: unknown) {
+    return makeRequest(`http://localhost:3000/api/backoffice/modules/${key}`, {
+      method: "PATCH",
       body: JSON.stringify(body),
       headers: { "Content-Type": "application/json" },
     });
@@ -1008,39 +850,24 @@ describe("PUT /api/admin/modules/[key]", () => {
 
   it("retourne 401 si non authentifie", async () => {
     const { AuthError } = await import("@/lib/auth");
-    mockRequirePermission.mockRejectedValue(new AuthError("Non authentifie."));
+    mockRequireSuperAdmin.mockRejectedValue(new AuthError("Non authentifie."));
 
-    const req = makePutRequest("GROSSISSEMENT", { label: "Modifie" });
-    const res = await PUT_MODULE(req, {
+    const req = makePatchRequest("GROSSISSEMENT", { label: "Modifie" });
+    const res = await PATCH_MODULE(req, {
       params: Promise.resolve({ key: "GROSSISSEMENT" }),
     });
 
     expect(res.status).toBe(401);
   });
 
-  it("retourne 403 si permission SITES_GERER manquante", async () => {
+  it("retourne 403 si l'utilisateur n'est pas super-admin", async () => {
     const { ForbiddenError } = await import("@/lib/permissions");
-    mockRequirePermission.mockRejectedValue(
-      new ForbiddenError("Permission SITES_GERER requise.")
+    mockRequireSuperAdmin.mockRejectedValue(
+      new ForbiddenError("Acces reserve aux super-admins.")
     );
 
-    const req = makePutRequest("GROSSISSEMENT", { label: "Modifie" });
-    const res = await PUT_MODULE(req, {
-      params: Promise.resolve({ key: "GROSSISSEMENT" }),
-    });
-
-    expect(res.status).toBe(403);
-  });
-
-  it("retourne 403 si session n'est pas sur le site plateforme", async () => {
-    mockRequirePermission.mockResolvedValue({
-      ...AUTH_CONTEXT,
-      activeSiteId: "site-client",
-    });
-    mockIsPlatformSite.mockResolvedValue(false);
-
-    const req = makePutRequest("GROSSISSEMENT", { label: "Modifie" });
-    const res = await PUT_MODULE(req, {
+    const req = makePatchRequest("GROSSISSEMENT", { label: "Modifie" });
+    const res = await PATCH_MODULE(req, {
       params: Promise.resolve({ key: "GROSSISSEMENT" }),
     });
 
@@ -1048,11 +875,10 @@ describe("PUT /api/admin/modules/[key]", () => {
   });
 
   it("retourne 400 si on tente de changer la cle (key immutable)", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
 
-    const req = makePutRequest("GROSSISSEMENT", { key: "NOUVEAU_NOM" });
-    const res = await PUT_MODULE(req, {
+    const req = makePatchRequest("GROSSISSEMENT", { key: "NOUVEAU_NOM" });
+    const res = await PATCH_MODULE(req, {
       params: Promise.resolve({ key: "GROSSISSEMENT" }),
     });
     const data = await res.json();
@@ -1063,11 +889,10 @@ describe("PUT /api/admin/modules/[key]", () => {
   });
 
   it("retourne 400 si on tente de changer le level (level immutable)", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
 
-    const req = makePutRequest("GROSSISSEMENT", { level: "platform" });
-    const res = await PUT_MODULE(req, {
+    const req = makePatchRequest("GROSSISSEMENT", { level: "platform" });
+    const res = await PATCH_MODULE(req, {
       params: Promise.resolve({ key: "GROSSISSEMENT" }),
     });
     const data = await res.json();
@@ -1078,12 +903,11 @@ describe("PUT /api/admin/modules/[key]", () => {
   });
 
   it("retourne 404 si le module n'existe pas", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockPrismaModuleDefinitionFindUnique.mockResolvedValue(null);
 
-    const req = makePutRequest("INEXISTANT", { label: "Modifie" });
-    const res = await PUT_MODULE(req, {
+    const req = makePatchRequest("INEXISTANT", { label: "Modifie" });
+    const res = await PATCH_MODULE(req, {
       params: Promise.resolve({ key: "INEXISTANT" }),
     });
 
@@ -1091,8 +915,7 @@ describe("PUT /api/admin/modules/[key]", () => {
   });
 
   it("retourne 200 apres une mise a jour valide du label", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockPrismaModuleDefinitionFindUnique.mockResolvedValue(FAKE_MODULE_DEFINITION);
     mockPrismaModuleDefinitionUpdate.mockResolvedValue({
       ...FAKE_MODULE_DEFINITION,
@@ -1103,8 +926,8 @@ describe("PUT /api/admin/modules/[key]", () => {
       .mockResolvedValueOnce([{ count: BigInt(25) }])
       .mockResolvedValueOnce([{ count: BigInt(3) }]);
 
-    const req = makePutRequest("GROSSISSEMENT", { label: "Grossissement Modifie" });
-    const res = await PUT_MODULE(req, {
+    const req = makePatchRequest("GROSSISSEMENT", { label: "Grossissement Modifie" });
+    const res = await PATCH_MODULE(req, {
       params: Promise.resolve({ key: "GROSSISSEMENT" }),
     });
     const data = await res.json();
@@ -1121,8 +944,7 @@ describe("PUT /api/admin/modules/[key]", () => {
   });
 
   it("retourne 200 apres une mise a jour de isActive et isVisible", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockPrismaModuleDefinitionFindUnique.mockResolvedValue(FAKE_MODULE_DEFINITION);
     mockPrismaModuleDefinitionUpdate.mockResolvedValue({
       ...FAKE_MODULE_DEFINITION,
@@ -1133,8 +955,8 @@ describe("PUT /api/admin/modules/[key]", () => {
       .mockResolvedValueOnce([{ count: BigInt(0) }])
       .mockResolvedValueOnce([{ count: BigInt(0) }]);
 
-    const req = makePutRequest("GROSSISSEMENT", { isActive: false, isVisible: false });
-    const res = await PUT_MODULE(req, {
+    const req = makePatchRequest("GROSSISSEMENT", { isActive: false, isVisible: false });
+    const res = await PATCH_MODULE(req, {
       params: Promise.resolve({ key: "GROSSISSEMENT" }),
     });
     const data = await res.json();
@@ -1145,12 +967,11 @@ describe("PUT /api/admin/modules/[key]", () => {
   });
 
   it("retourne 400 si sortOrder n'est pas un nombre", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockPrismaModuleDefinitionFindUnique.mockResolvedValue(FAKE_MODULE_DEFINITION);
 
-    const req = makePutRequest("GROSSISSEMENT", { sortOrder: "dix" });
-    const res = await PUT_MODULE(req, {
+    const req = makePatchRequest("GROSSISSEMENT", { sortOrder: "dix" });
+    const res = await PATCH_MODULE(req, {
       params: Promise.resolve({ key: "GROSSISSEMENT" }),
     });
     const data = await res.json();
@@ -1159,21 +980,17 @@ describe("PUT /api/admin/modules/[key]", () => {
     expect(data.error).toMatch(/sortOrder/i);
   });
 
-  it("verifie requirePermission avec SITES_GERER", async () => {
-    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockIsPlatformSite.mockResolvedValue(true);
+  it("verifie que requireSuperAdmin est appelee", async () => {
+    mockRequireSuperAdmin.mockResolvedValue(BACKOFFICE_SESSION);
     mockPrismaModuleDefinitionFindUnique.mockResolvedValue(FAKE_MODULE_DEFINITION);
     mockPrismaModuleDefinitionUpdate.mockResolvedValue(FAKE_MODULE_DEFINITION);
     mockPrismaQueryRaw
       .mockResolvedValueOnce([{ count: BigInt(0) }])
       .mockResolvedValueOnce([{ count: BigInt(0) }]);
 
-    const req = makePutRequest("GROSSISSEMENT", { label: "Test" });
-    await PUT_MODULE(req, { params: Promise.resolve({ key: "GROSSISSEMENT" }) });
+    const req = makePatchRequest("GROSSISSEMENT", { label: "Test" });
+    await PATCH_MODULE(req, { params: Promise.resolve({ key: "GROSSISSEMENT" }) });
 
-    expect(mockRequirePermission).toHaveBeenCalledWith(
-      expect.anything(),
-      Permission.SITES_GERER
-    );
+    expect(mockRequireSuperAdmin).toHaveBeenCalledOnce();
   });
 });

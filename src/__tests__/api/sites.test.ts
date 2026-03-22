@@ -38,8 +38,6 @@ const {
   mockUpdateSiteRole,
   mockDeleteSiteRole,
   mockCanAssignRole,
-  mockIsPlatformSite,
-  mockGetPlatformSite,
 } = vi.hoisted(() => ({
   mockRequireAuth: vi.fn(),
   mockRequirePermission: vi.fn(),
@@ -59,8 +57,6 @@ const {
   mockUpdateSiteRole: vi.fn(),
   mockDeleteSiteRole: vi.fn(),
   mockCanAssignRole: vi.fn(),
-  mockIsPlatformSite: vi.fn(),
-  mockGetPlatformSite: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -99,8 +95,6 @@ vi.mock("@/lib/queries/sites", () => ({
   addMember: (...args: unknown[]) => mockAddMember(...args),
   updateMemberSiteRole: (...args: unknown[]) => mockUpdateMemberSiteRole(...args),
   removeMember: (...args: unknown[]) => mockRemoveMember(...args),
-  isPlatformSite: (...args: unknown[]) => mockIsPlatformSite(...args),
-  getPlatformSite: (...args: unknown[]) => mockGetPlatformSite(...args),
 }));
 
 vi.mock("@/lib/queries/roles", () => ({
@@ -1124,8 +1118,6 @@ describe("POST /api/sites/[id]/roles", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRequirePermission.mockResolvedValue(makeAuthContext({ activeSiteId: "site-1" }));
-    mockIsPlatformSite.mockResolvedValue(true);
-    mockGetPlatformSite.mockResolvedValue({ id: "site-platform", name: "DKFarm", isPlatform: true });
   });
 
   it("cree un role personnalise", async () => {
@@ -1312,8 +1304,6 @@ describe("PUT /api/sites/[id]/roles/[roleId]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRequirePermission.mockResolvedValue(makeAuthContext({ activeSiteId: "site-1" }));
-    mockIsPlatformSite.mockResolvedValue(true);
-    mockGetPlatformSite.mockResolvedValue({ id: "site-platform", name: "DKFarm", isPlatform: true });
   });
 
   it("met a jour les permissions d'un role personnalise", async () => {

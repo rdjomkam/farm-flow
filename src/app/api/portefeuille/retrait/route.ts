@@ -15,7 +15,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { demanderRetrait } from "@/lib/queries/commissions";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { getPlatformSite, isPlatformSite } from "@/lib/queries/sites";
 import { AuthError } from "@/lib/auth";
 import { Permission, FournisseurPaiement } from "@/types";
 import type { DemandeRetraitDTO } from "@/types";

@@ -1,4 +1,3 @@
-import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { SYSTEM_ROLE_DEFINITIONS } from "@/lib/permissions-constants";
 import { SiteModule } from "@/types";
@@ -130,22 +129,6 @@ export async function getSiteMembers(siteId: string) {
     orderBy: { user: { name: "asc" } },
   });
 }
-
-// ──────────────────────────────────────────
-// Helpers — Platform site (BUG-025)
-// ADR-022: isPlatform removed from schema. These functions are deprecated stubs
-// that will be fully removed in Sprint B.
-// ──────────────────────────────────────────
-
-/** @deprecated ADR-022 — will be removed in Sprint B. Always returns null. */
-export async function getPlatformSite() {
-  return null;
-}
-
-/** @deprecated ADR-022 — will be removed in Sprint B. Always returns false. */
-export const isPlatformSite = cache(async (_siteId: string): Promise<boolean> => {
-  return false;
-});
 
 /** Recupere le membership d'un utilisateur pour un site (avec siteRole inclus) */
 export async function getSiteMember(siteId: string, userId: string) {
