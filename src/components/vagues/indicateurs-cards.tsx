@@ -3,6 +3,7 @@
 import { HeartPulse, TrendingUp, Weight, Activity, Scale } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import type { IndicateursVague } from "@/types";
+import { formatNum } from "@/lib/format";
 import { useTranslations } from "next-intl";
 
 interface IndicateursCardsProps {
@@ -16,35 +17,35 @@ export function IndicateursCards({ indicateurs }: IndicateursCardsProps) {
   const items = [
     {
       label: t("indicateurs.tauxSurvie"),
-      value: indicateurs.tauxSurvie !== null ? `${indicateurs.tauxSurvie}%` : "—",
+      value: formatNum(indicateurs.tauxSurvie, 1, "%"),
       icon: HeartPulse,
       color: "text-success",
       bgColor: "bg-success/10",
     },
     {
       label: t("indicateurs.biomasse"),
-      value: indicateurs.biomasse !== null ? `${indicateurs.biomasse} kg` : "—",
+      value: formatNum(indicateurs.biomasse, 2, "kg"),
       icon: Weight,
       color: "text-accent-blue",
       bgColor: "bg-accent-blue-muted",
     },
     {
       label: t("indicateurs.poidsMoyen"),
-      value: indicateurs.poidsMoyen !== null ? `${indicateurs.poidsMoyen} g` : "—",
+      value: formatNum(indicateurs.poidsMoyen, 1, "g"),
       icon: Scale,
       color: "text-accent-purple",
       bgColor: "bg-accent-purple-muted",
     },
     {
       label: tAnalytics("benchmarks.sgr.label"),
-      value: indicateurs.sgr !== null ? `${indicateurs.sgr}${tAnalytics("labels.sgrUnit")}` : "—",
+      value: indicateurs.sgr !== null ? `${indicateurs.sgr.toFixed(2)}${tAnalytics("labels.sgrUnit")}` : "—",
       icon: TrendingUp,
       color: "text-primary",
       bgColor: "bg-primary/10",
     },
     {
       label: tAnalytics("benchmarks.fcr.label"),
-      value: indicateurs.fcr !== null ? `${indicateurs.fcr}` : "—",
+      value: formatNum(indicateurs.fcr, 2),
       icon: Activity,
       color: "text-accent-amber",
       bgColor: "bg-accent-amber-muted",

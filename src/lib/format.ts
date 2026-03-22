@@ -8,6 +8,12 @@
  * Sprint 39 — Story 39.4 (i18n helpers): locale param added to all functions
  */
 
+/** Formats a number with fixed decimals and optional suffix. Returns "—" for null/undefined. */
+export function formatNum(n: number | null | undefined, decimals = 2, suffix = ""): string {
+  if (n == null) return "—";
+  return n.toFixed(decimals) + (suffix ? ` ${suffix}` : "");
+}
+
 /**
  * Formate un montant en FCFA avec séparateurs selon la locale.
  * La locale par défaut est "fr" pour la compatibilité ICU maximale.

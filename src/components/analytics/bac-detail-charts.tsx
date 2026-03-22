@@ -10,6 +10,7 @@ import {
   BENCHMARK_DENSITE,
 } from "@/lib/benchmarks";
 import type { IndicateursBac, HistoriqueBacCycle } from "@/types";
+import { formatNum } from "@/lib/format";
 
 const ResponsiveContainer = dynamic(
   () => import("recharts").then((mod) => mod.ResponsiveContainer),
@@ -104,7 +105,11 @@ export function BacDetailSummary({ indicateurs }: BacDetailSummaryProps) {
             <span className="text-xs text-muted-foreground">{m.label}</span>
             <div className="flex items-center gap-1.5">
               <span className="text-lg font-bold leading-tight">
-                {m.value !== null ? m.value : "—"}
+                {m.key === "biomass" || m.key === "totalFeed"
+                  ? formatNum(m.value, 2)
+                  : m.key === "avgWeight"
+                    ? formatNum(m.value, 1)
+                    : m.value !== null ? m.value : "—"}
               </span>
               {m.unit && m.value !== null && (
                 <span className="text-xs text-muted-foreground">{m.unit}</span>

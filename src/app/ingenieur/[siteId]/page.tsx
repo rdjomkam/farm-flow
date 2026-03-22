@@ -27,6 +27,7 @@ import { getIndicateursVague } from "@/lib/queries/indicateurs";
 import { getNotes } from "@/lib/queries/notes";
 import { Permission, StatutAlerte, StatutActivation, StatutVague, TypeReleve } from "@/types";
 import { prisma } from "@/lib/db";
+import { formatNum } from "@/lib/format";
 
 // ---------------------------------------------------------------------------
 // Page
@@ -372,31 +373,31 @@ export default async function IngenieurClientDetailPage({
                               : "text-danger"
                           }`}
                         >
-                          {vague.tauxSurvie !== null ? `${vague.tauxSurvie}%` : "—"}
+                          {formatNum(vague.tauxSurvie, 1, "%")}
                         </p>
                       </div>
                       {vague.dernierePoidsMoyen !== null && (
                         <div>
                           <p className="text-xs text-muted-foreground">Poids moy.</p>
-                          <p className="text-sm font-medium">{vague.dernierePoidsMoyen} g</p>
+                          <p className="text-sm font-medium">{formatNum(vague.dernierePoidsMoyen, 1, "g")}</p>
                         </div>
                       )}
                       <div>
                         <p className="text-xs text-muted-foreground">Biomasse</p>
                         <p className="text-sm font-medium">
-                          {vague.biomasse !== null ? `${vague.biomasse} kg` : "—"}
+                          {formatNum(vague.biomasse, 2, "kg")}
                         </p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">SGR</p>
                         <p className="text-sm font-medium text-primary">
-                          {vague.sgr !== null ? `${vague.sgr}%/j` : "—"}
+                          {formatNum(vague.sgr, 2, "%/j")}
                         </p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">FCR</p>
                         <p className="text-sm font-medium text-accent-amber">
-                          {vague.fcr !== null ? `${vague.fcr}` : "—"}
+                          {formatNum(vague.fcr, 2)}
                         </p>
                       </div>
                       <div>

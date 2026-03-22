@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatutVague } from "@/types";
 import type { VagueDashboardSummary } from "@/types";
+import { formatNum } from "@/lib/format";
 
 const statutVariants: Record<StatutVague, "en_cours" | "terminee" | "annulee"> = {
   [StatutVague.EN_COURS]: "en_cours",
@@ -50,19 +51,19 @@ export async function VagueSummaryCard({ vague, index = 0 }: VagueSummaryCardPro
             <div className="flex items-center gap-1.5">
               <Weight className="h-3.5 w-3.5 text-accent-blue" />
               <span className="font-medium">
-                {vague.biomasse !== null ? `${vague.biomasse} kg` : "\u2014"}
+                {formatNum(vague.biomasse, 2, "kg")}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
               <HeartPulse className="h-3.5 w-3.5 text-success" />
               <span className="font-medium">
-                {vague.tauxSurvie !== null ? `${vague.tauxSurvie}%` : "\u2014"}
+                {formatNum(vague.tauxSurvie, 1, "%")}
               </span>
             </div>
           </div>
           {vague.poidsMoyen !== null && (
             <p className="mt-2 text-xs text-muted-foreground">
-              {t("indicateurs.poidsMoyen")} : {vague.poidsMoyen} g
+              {t("indicateurs.poidsMoyen")} : {formatNum(vague.poidsMoyen, 1, "g")}
             </p>
           )}
         </CardContent>

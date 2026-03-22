@@ -1,6 +1,7 @@
 import { Waves, Weight, HeartPulse, Container } from "lucide-react";
 import { KPICard } from "@/components/ui/kpi-card";
 import type { DashboardData } from "@/types";
+import { formatNum } from "@/lib/format";
 import { getTranslations } from "next-intl/server";
 
 interface StatsCardsProps {
@@ -20,14 +21,14 @@ export async function StatsCards({ data }: StatsCardsProps) {
     },
     {
       title: tAnalytics("kpi.biomasseTotale"),
-      value: data.biomasseTotale !== null ? `${data.biomasseTotale} kg` : "\u2014",
+      value: formatNum(data.biomasseTotale, 2, "kg"),
       icon: Weight,
       iconColor: "text-accent-blue",
       iconBgColor: "bg-accent-blue-muted",
     },
     {
       title: tAnalytics("kpi.survieMoyenne"),
-      value: data.tauxSurvieMoyen !== null ? `${data.tauxSurvieMoyen}%` : "\u2014",
+      value: formatNum(data.tauxSurvieMoyen, 1, "%"),
       icon: HeartPulse,
       iconColor: "text-success",
       iconBgColor: "bg-success/10",

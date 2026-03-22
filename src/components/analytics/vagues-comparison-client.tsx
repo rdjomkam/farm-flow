@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { StatutVague } from "@/types";
 import type { IndicateursVagueComplet, ComparaisonVagues } from "@/types";
+import { formatNum } from "@/lib/format";
 import { useAnalyticsService } from "@/services";
 
 // ---------------------------------------------------------------------------
@@ -192,7 +193,7 @@ function VagueResultCard({ vague, color, allVagues }: VagueResultCardProps) {
         <div className="mb-3">
           <MetricRow
             label={tAnalytics("benchmarks.fcr.label")}
-            value={vague.fcrGlobal !== null ? `${vague.fcrGlobal}` : "—"}
+            value={formatNum(vague.fcrGlobal, 2)}
             best={isBest(vague, allVagues, "fcrGlobal", false)}
             worst={
               vague.fcrGlobal !== null &&
@@ -215,13 +216,13 @@ function VagueResultCard({ vague, color, allVagues }: VagueResultCardProps) {
           />
           <MetricRow
             label={tAnalytics("benchmarks.sgr.label")}
-            value={vague.sgrMoyen !== null ? `${vague.sgrMoyen}` : "—"}
+            value={formatNum(vague.sgrMoyen, 2)}
             unit={tAnalytics("labels.sgrUnit")}
             best={isBest(vague, allVagues, "sgrMoyen", true)}
           />
           <MetricRow
             label={tVagues("comparison.metrics.biomasse")}
-            value={vague.biomasseProduite !== null ? `${vague.biomasseProduite}` : "—"}
+            value={formatNum(vague.biomasseProduite, 2)}
             unit="kg"
             best={isBest(vague, allVagues, "biomasseProduite", true)}
           />
