@@ -283,10 +283,10 @@ export interface Site {
   name: string;
   address: string | null;
   isActive: boolean;
-  /** True si ce site est le site plateforme DKFarm (un seul possible, garanti par index partiel unique) */
-  isPlatform: boolean;
   supervised: boolean;
   enabledModules: SiteModule[];
+  /** @deprecated ADR-022 — will be removed in Sprint B. */
+  isPlatform?: boolean;
   /** Null si non suspendu. Renseigne lors d'une action SUSPEND (ADR-021 section 2.4). */
   suspendedAt?: Date | string | null;
   /** Raison de la suspension — obligatoire lors de l'action SUSPEND. */
@@ -369,6 +369,7 @@ export interface User {
   passwordHash: string;
   role: Role;
   isActive: boolean;
+  isSuperAdmin: boolean;
   /** True pour les comptes systeme internes (ex: auto-generation d'activites). Ces comptes ne peuvent pas se connecter. */
   isSystem: boolean;
   createdAt: Date;

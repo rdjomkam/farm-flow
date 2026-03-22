@@ -165,7 +165,7 @@ export function AdminSiteDetailClient({ site: initialSite }: AdminSiteDetailClie
           <AdminSiteModulesEditor
             siteId={site.id}
             enabledModules={site.enabledModules}
-            isPlatform={site.isPlatform}
+            isPlatform={site.isPlatform ?? false}
             onSaved={handleModulesSaved}
           />
         </TabsContent>

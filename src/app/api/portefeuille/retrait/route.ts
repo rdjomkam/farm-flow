@@ -26,22 +26,7 @@ export async function POST(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.PORTEFEUILLE_VOIR);
 
-    // BUG-029 : RetraitPortefeuille est une entité plateforme.
-    // L'utilisateur DOIT être connecté au site plateforme pour demander un retrait.
-    const isPlat = await isPlatformSite(auth.activeSiteId);
-    if (!isPlat) {
-      return NextResponse.json(
-        { status: 403, message: "Opération réservée au site plateforme." },
-        { status: 403 }
-      );
-    }
-    const platformSite = await getPlatformSite();
-    if (!platformSite) {
-      return NextResponse.json(
-        { status: 500, message: "Site plateforme introuvable." },
-        { status: 500 }
-      );
-    }
+    // ADR-022: isPlatform removed. Retrait uses activeSiteId directly.
 
     const body = await request.json() as Partial<DemandeRetraitDTO>;
 
@@ -71,8 +56,7 @@ export async function POST(request: NextRequest) {
       fournisseur: body.fournisseur!,
     };
 
-    // BUG-029 : utiliser platformSite.id comme siteId (entité plateforme)
-    const retrait = await demanderRetrait(auth.userId, dto, platformSite.id);
+    const retrait = await demanderRetrait(auth.userId, dto, auth.activeSiteId);
     return NextResponse.json({ retrait }, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {

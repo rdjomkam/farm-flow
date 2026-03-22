@@ -14,3 +14,4 @@ export {
   SESSION_COOKIE_NAME,
 } from "./session";
 export { getServerPermissions, checkPagePermission } from "./permissions-server";
+export { requireSuperAdmin, checkBackofficeAccess } from "./backoffice";

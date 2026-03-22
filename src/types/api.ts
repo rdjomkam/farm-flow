@@ -2118,13 +2118,14 @@ export interface AdminSiteSummary {
   name: string;
   address: string | null;
   isActive: boolean;
-  isPlatform: boolean;
   supervised: boolean;
   /** ISO date string. Null si non suspendu. */
   suspendedAt: string | null;
   suspendedReason: string | null;
   /** ISO date string. Null si non archive. */
   deletedAt: string | null;
+  /** @deprecated ADR-022 — will be removed in Sprint B. */
+  isPlatform?: boolean;
   /** R2 : utiliser SiteStatus.ACTIVE, SiteStatus.SUSPENDED, etc. */
   status: SiteStatus;
   enabledModules: SiteModule[];
@@ -2175,13 +2176,14 @@ export interface AdminSiteDetailResponse {
   name: string;
   address: string | null;
   isActive: boolean;
-  isPlatform: boolean;
   supervised: boolean;
   /** ISO date string. */
   suspendedAt: string | null;
   suspendedReason: string | null;
   /** ISO date string. */
   deletedAt: string | null;
+  /** @deprecated ADR-022 — will be removed in Sprint B. */
+  isPlatform?: boolean;
   /** R2 : utiliser SiteStatus.ACTIVE, etc. */
   status: SiteStatus;
   enabledModules: SiteModule[];
@@ -2376,4 +2378,18 @@ export interface ModuleDefinitionResponse {
  */
 export interface AdminModulesListResponse {
   modules: ModuleDefinitionResponse[];
+}
+
+/**
+ * BackofficeSession — session d'un super-admin connecte au backoffice DKFarm.
+ *
+ * Distinct de UserSession (multi-tenancy) : pas de siteId, isSuperAdmin est
+ * un type literal `true` pour permettre la discrimination de type.
+ */
+export interface BackofficeSession {
+  userId: string;
+  email: string | null;
+  phone: string | null;
+  name: string;
+  isSuperAdmin: true;
 }

@@ -23,8 +23,8 @@ import { useToast } from "@/components/ui/toast";
 interface AdminSiteModulesEditorProps {
   siteId: string;
   enabledModules: SiteModule[];
-  /** Si true, le site est la plateforme elle-même (modifications bloquées). */
-  isPlatform: boolean;
+  /** @deprecated ADR-022 — will be removed in Sprint B. */
+  isPlatform?: boolean;
   onSaved?: (modules: SiteModule[]) => void;
 }
 

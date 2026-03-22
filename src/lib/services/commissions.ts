@@ -126,14 +126,8 @@ export async function calculerEtCreerCommission(
     // Étape 5 : Calculer le montant de la commission
     const montant = Number(paiement.montant) * taux;
 
-    // Étape 6 : BUG-029 — CommissionIngenieur est une entité plateforme.
-    // Le siteId DOIT être celui du site plateforme DKFarm, pas le site client.
-    const platformSite = await getPlatformSite();
-    if (!platformSite) {
-      console.error("[commissions.service] Site plateforme introuvable — impossible de créer la commission.");
-      return null;
-    }
-    const ingenieurSiteId = platformSite.id;
+    // ADR-022: isPlatform removed. Commission siteId uses siteClientId.
+    const ingenieurSiteId = siteClientId;
 
     // Étape 7 : Créer la commission EN_ATTENTE
     const commission = await createCommission({

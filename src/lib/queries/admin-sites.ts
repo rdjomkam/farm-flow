@@ -16,7 +16,7 @@ import {
   TypePlan,
   PeriodeFacturation,
 } from "@/types";
-import { computeSiteStatus, PLATFORM_MODULES } from "@/lib/site-modules-config";
+import { computeSiteStatus } from "@/lib/site-modules-config";
 import type {
   AdminSiteSummary,
   AdminSitesListResponse,
@@ -185,7 +185,6 @@ export async function getAdminSites(
     name: site.name,
     address: site.address,
     isActive: site.isActive,
-    isPlatform: site.isPlatform,
     supervised: site.supervised,
     suspendedAt: site.suspendedAt?.toISOString() ?? null,
     suspendedReason: site.suspendedReason,
@@ -275,7 +274,6 @@ export async function getAdminSiteById(siteId: string): Promise<AdminSiteDetailR
     name: site.name,
     address: site.address,
     isActive: site.isActive,
-    isPlatform: site.isPlatform,
     supervised: site.supervised,
     suspendedAt: site.suspendedAt?.toISOString() ?? null,
     suspendedReason: site.suspendedReason,
@@ -352,7 +350,6 @@ export async function updateSiteStatus(
     select: {
       id: true,
       isActive: true,
-      isPlatform: true,
       suspendedAt: true,
       deletedAt: true,
     },
@@ -360,10 +357,6 @@ export async function updateSiteStatus(
 
   if (!site) {
     throw new Error(`Site introuvable : ${siteId}`);
-  }
-
-  if (site.isPlatform) {
-    throw new Error("Le site plateforme ne peut pas etre modifie via cette action.");
   }
 
   const currentStatus = computeSiteStatus(site);
@@ -524,28 +517,12 @@ export async function updateSiteModulesAdmin(
     where: { id: siteId },
     select: {
       id: true,
-      isPlatform: true,
       enabledModules: true,
     },
   });
 
   if (!site) {
     throw new Error(`Site introuvable : ${siteId}`);
-  }
-
-  if (site.isPlatform) {
-    throw new Error("Le site plateforme ne peut pas etre modifie via cette action.");
-  }
-
-  // Rejeter les modules platform-level pour les sites non-plateforme
-  const platformModuleValues = PLATFORM_MODULES.map((m) => m.value);
-  const rejectedModules = enabledModules.filter((m) => platformModuleValues.includes(m));
-
-  if (rejectedModules.length > 0) {
-    throw new Error(
-      `Les modules suivants sont reserves a la plateforme et ne peuvent pas etre assignes : ` +
-        rejectedModules.join(", ")
-    );
   }
 
   const before = { enabledModules: site.enabledModules };

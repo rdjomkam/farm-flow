@@ -430,6 +430,8 @@ export type {
   ModuleDefinitionResponse,
   AdminModulesListResponse,
 } from "./api";
+// ADR-022 — Backoffice Separation
+export type { BackofficeSession } from "./api";
 export type {
   StockProduitContext,
   IndicateursContext,

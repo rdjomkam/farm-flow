@@ -4353,12 +4353,12 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Ajouter modèle `ModuleDefinition` (key unique, label, description, iconName, sortOrder, level, dependsOn, isVisible, isActive, category)
-- [ ] `TODO` Ajouter modèle `SiteAuditLog` (siteId FK, actorId FK, action, details Json?, index sur siteId/actorId/createdAt)
-- [ ] `TODO` Ajouter champs sur `Site` : `suspendedAt DateTime?`, `suspendedReason String?`, `deletedAt DateTime?`
-- [ ] `TODO` Ajouter 3 permissions dans enum `Permission` : `SITES_VOIR`, `SITES_GERER`, `ANALYTICS_PLATEFORME`
-- [ ] `TODO` Générer et appliquer la migration
-- [ ] `TODO` Seeder les 12 `ModuleDefinition` dans `prisma/seed.sql`
+- [x] `FAIT` Ajouter modèle `ModuleDefinition` (key unique, label, description, iconName, sortOrder, level, dependsOn, isVisible, isActive, category)
+- [x] `FAIT` Ajouter modèle `SiteAuditLog` (siteId FK, actorId FK, action, details Json?, index sur siteId/actorId/createdAt)
+- [x] `FAIT` Ajouter champs sur `Site` : `suspendedAt DateTime?`, `suspendedReason String?`, `deletedAt DateTime?`
+- [x] `FAIT` Ajouter 3 permissions dans enum `Permission` : `SITES_VOIR`, `SITES_GERER`, `ANALYTICS_PLATEFORME`
+- [x] `FAIT` Générer et appliquer la migration
+- [x] `FAIT` Seeder les 12 `ModuleDefinition` dans `prisma/seed.sql`
 
 ---
 
@@ -4369,11 +4369,11 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Ajouter enum `SiteStatus`, interface `ModuleDefinition`, interface `SiteAuditLog` dans `src/types/models.ts`
-- [ ] `TODO` Étendre interface `Site` avec `suspendedAt`, `suspendedReason`, `deletedAt`
-- [ ] `TODO` Ajouter tous les DTOs admin dans `src/types/api.ts` (AdminSiteSummary, AdminSiteDetailResponse, etc.)
-- [ ] `TODO` Ajouter permissions dans `src/lib/permissions-constants.ts` (PLATFORM_PERMISSIONS, ITEM_VIEW_PERMISSIONS)
-- [ ] `TODO` Ajouter `computeSiteStatus()` dans `src/lib/site-modules-config.ts`
+- [x] `FAIT` Ajouter enum `SiteStatus`, interface `ModuleDefinition`, interface `SiteAuditLog` dans `src/types/models.ts`
+- [x] `FAIT` Étendre interface `Site` avec `suspendedAt`, `suspendedReason`, `deletedAt`
+- [x] `FAIT` Ajouter tous les DTOs admin dans `src/types/api.ts` (AdminSiteSummary, AdminSiteDetailResponse, etc.)
+- [x] `FAIT` Ajouter permissions dans `src/lib/permissions-constants.ts` (PLATFORM_PERMISSIONS, ITEM_VIEW_PERMISSIONS)
+- [x] `FAIT` Ajouter `computeSiteStatus()` dans `src/lib/site-modules-config.ts`
 
 ---
 
@@ -4384,9 +4384,9 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Créer `src/__tests__/lib/site-status.test.ts` (4 cas : ACTIVE, SUSPENDED, BLOCKED, ARCHIVED)
-- [ ] `TODO` Créer `src/__tests__/lib/platform-permissions.test.ts`
-- [ ] `TODO` `npx vitest run` — tous les tests passent
+- [x] `FAIT` Créer `src/__tests__/lib/site-status.test.ts` (4 cas : ACTIVE, SUSPENDED, BLOCKED, ARCHIVED)
+- [x] `FAIT` Créer `src/__tests__/lib/platform-permissions.test.ts`
+- [x] `FAIT` `npx vitest run` — tous les tests passent
 
 ---
 
@@ -4396,8 +4396,8 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Vérifier cohérence Prisma ↔ TypeScript (R3), R1 UPPERCASE, R7 nullabilité, R8 siteId
-- [ ] `TODO` `npx prisma migrate deploy` + `npm run build` + `npx vitest run` passent
+- [x] `FAIT` Vérifier cohérence Prisma ↔ TypeScript (R3), R1 UPPERCASE, R7 nullabilité, R8 siteId
+- [x] `FAIT` `npx prisma migrate deploy` + `npm run build` + `npx vitest run` passent
 - [ ] `TODO` Écrire `docs/reviews/review-sprint-A-site-module.md`
 
 ---
@@ -4413,9 +4413,9 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Créer `src/lib/queries/admin-sites.ts` : getAdminSites (paginé + filtres), getAdminSiteById, updateSiteStatus, updateSiteModulesAdmin, getSiteAuditLog
-- [ ] `TODO` `updateSiteStatus` : transaction atomique (R4), protection isPlatform, invalidation sessions sur BLOCK
-- [ ] `TODO` Types retournés conformes aux DTOs de A.2
+- [x] `FAIT` Créer `src/lib/queries/admin-sites.ts` : getAdminSites (paginé + filtres), getAdminSiteById, updateSiteStatus, updateSiteModulesAdmin, getSiteAuditLog
+- [x] `FAIT` `updateSiteStatus` : transaction atomique (R4), protection isPlatform, invalidation sessions sur BLOCK
+- [x] `FAIT` Types retournés conformes aux DTOs de A.2
 
 ---
 
@@ -4426,9 +4426,9 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Créer `src/app/api/admin/sites/route.ts` (GET, paginé, filtres status/planId/hasModule/search)
-- [ ] `TODO` Guard : `SITES_VOIR` + isPlatform
-- [ ] `TODO` Réponse conforme à `AdminSitesListResponse`
+- [x] `FAIT` Créer `src/app/api/admin/sites/route.ts` (GET, paginé, filtres status/planId/hasModule/search)
+- [x] `FAIT` Guard : `SITES_VOIR` + isPlatform
+- [x] `FAIT` Réponse conforme à `AdminSitesListResponse`
 
 ---
 
@@ -4439,8 +4439,8 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Créer `src/app/api/admin/sites/[id]/route.ts` (GET, détail complet + membres + abonnement + audit logs)
-- [ ] `TODO` Guard : `SITES_VOIR` + isPlatform, 404 si introuvable
+- [x] `FAIT` Créer `src/app/api/admin/sites/[id]/route.ts` (GET, détail complet + membres + abonnement + audit logs)
+- [x] `FAIT` Guard : `SITES_VOIR` + isPlatform, 404 si introuvable
 
 ---
 
@@ -4451,9 +4451,9 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Créer `src/app/api/admin/sites/[id]/status/route.ts` (SUSPEND/BLOCK/RESTORE/ARCHIVE)
-- [ ] `TODO` Guard : `SITES_GERER` + isPlatform, reason obligatoire pour SUSPEND/BLOCK, confirmArchive pour ARCHIVE
-- [ ] `TODO` Transaction atomique : update Site + audit log + invalidation sessions sur BLOCK
+- [x] `FAIT` Créer `src/app/api/admin/sites/[id]/status/route.ts` (SUSPEND/BLOCK/RESTORE/ARCHIVE)
+- [x] `FAIT` Guard : `SITES_GERER` + isPlatform, reason obligatoire pour SUSPEND/BLOCK, confirmArchive pour ARCHIVE
+- [x] `FAIT` Transaction atomique : update Site + audit log + invalidation sessions sur BLOCK
 
 ---
 
@@ -4464,9 +4464,9 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Créer `src/app/api/admin/sites/[id]/modules/route.ts`
-- [ ] `TODO` Guard : `SITES_GERER` + isPlatform, rejeter modules platform-level
-- [ ] `TODO` Audit log avec modules avant/après
+- [x] `FAIT` Créer `src/app/api/admin/sites/[id]/modules/route.ts`
+- [x] `FAIT` Guard : `SITES_GERER` + isPlatform, rejeter modules platform-level
+- [x] `FAIT` Audit log avec modules avant/après
 
 ---
 
@@ -4477,8 +4477,8 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Créer `src/__tests__/api/admin-sites.test.ts` (auth 401/403, pagination, CRUD, protection isPlatform)
-- [ ] `TODO` `npx vitest run` passe
+- [x] `FAIT` Créer `src/__tests__/api/admin-sites.test.ts` (auth 401/403, pagination, CRUD, protection isPlatform)
+- [x] `FAIT` `npx vitest run` passe
 
 ---
 
@@ -4488,8 +4488,8 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Review R1-R9, protection SITES_VOIR/SITES_GERER, R4 transactions
-- [ ] `TODO` `npm run build` + `npx vitest run` passent
+- [x] `FAIT` Review R1-R9, protection SITES_VOIR/SITES_GERER, R4 transactions
+- [x] `FAIT` `npm run build` + `npx vitest run` passent
 - [ ] `TODO` Écrire `docs/reviews/review-sprint-B-admin-sites-api.md`
 
 ---
@@ -4545,8 +4545,8 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Tests AdminSiteStatusDialog, computeSiteStatus dans badges, responsive 360px vs md+
-- [ ] `TODO` `npx vitest run` + `npm run build` passent
+- [x] `FAIT` Tests AdminSiteStatusDialog, computeSiteStatus dans badges, responsive 360px vs md+
+- [x] `FAIT` `npx vitest run` + `npm run build` passent
 
 ---
 
@@ -4556,8 +4556,8 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Mobile first 360px, R5 DialogTrigger asChild, R6 CSS variables, accessibilité
-- [ ] `TODO` `npm run build` + `npx vitest run` passent
+- [x] `FAIT` Mobile first 360px, R5 DialogTrigger asChild, R6 CSS variables, accessibilité
+- [x] `FAIT` `npm run build` + `npx vitest run` passent
 - [ ] `TODO` Écrire `docs/reviews/review-sprint-C-admin-sites-ui.md`
 
 ---
@@ -4610,8 +4610,8 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Créer `src/__tests__/api/admin-analytics.test.ts` (structure réponse, protection isPlatform, calcul MRR)
-- [ ] `TODO` `npx vitest run` passe
+- [x] `FAIT` Créer `src/__tests__/api/admin-analytics.test.ts` (structure réponse, protection isPlatform, calcul MRR)
+- [x] `FAIT` `npx vitest run` passe
 
 ---
 
@@ -4621,8 +4621,8 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Protection isPlatform sur chaque route, calcul MRR, sérialisation Decimal
-- [ ] `TODO` `npm run build` + `npx vitest run` passent
+- [x] `FAIT` Protection isPlatform sur chaque route, calcul MRR, sérialisation Decimal
+- [x] `FAIT` `npm run build` + `npx vitest run` passent
 - [ ] `TODO` Écrire `docs/reviews/review-sprint-D-analytics-api.md`
 
 ---
@@ -4639,10 +4639,10 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Créer `src/app/admin/analytics/page.tsx` (Server Component, ISR 5min)
-- [ ] `TODO` Créer KPI cards (6 cartes, mobile 2 cols → 3 → 6), formatage XAF
-- [ ] `TODO` Créer graphiques Recharts : sites growth (LineChart), modules distribution (BarChart), revenue (BarChart + MRR line)
-- [ ] `TODO` Sélecteurs période (7d/30d/90d/12m) avec TanStack Query refetch
+- [x] `FAIT` Créer `src/app/admin/analytics/page.tsx` (Server Component, ISR 5min)
+- [x] `FAIT` Créer KPI cards (6 cartes, mobile 2 cols → 3 → 6), formatage XAF
+- [x] `FAIT` Créer graphiques Recharts : sites growth (LineChart), modules distribution (BarChart), revenue (BarChart + MRR line)
+- [x] `FAIT` Sélecteurs période (7d/30d/90d/12m) avec TanStack Query refetch
 
 ---
 
@@ -4653,9 +4653,9 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Créer `src/app/admin/modules/page.tsx` (Server Component, guard SITES_GERER + isPlatform)
-- [ ] `TODO` Créer `src/components/admin/modules/admin-modules-list.tsx` (tableau/cartes, filtres Visible/Masqué, Site/Platform)
-- [ ] `TODO` Créer `src/components/admin/modules/admin-module-form-dialog.tsx` (édition métadonnées, key/level non-modifiables, R5 asChild)
+- [x] `FAIT` Créer `src/app/admin/modules/page.tsx` (Server Component, guard SITES_GERER + isPlatform)
+- [x] `FAIT` Créer `src/components/admin/modules/admin-modules-list.tsx` (tableau/cartes, filtres Visible/Masqué, Site/Platform)
+- [x] `FAIT` Créer `src/components/admin/modules/admin-module-form-dialog.tsx` (édition métadonnées, key/level non-modifiables, R5 asChild)
 
 ---
 
@@ -4666,8 +4666,8 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Tests formatage XAF, AdminModuleFormDialog (key/level non-modifiables), responsive
-- [ ] `TODO` `npm run build` + `npx vitest run` passent
+- [x] `FAIT` Tests formatage XAF, AdminModuleFormDialog (key/level non-modifiables), responsive
+- [x] `FAIT` `npm run build` + `npx vitest run` passent
 
 ---
 
@@ -4677,6 +4677,346 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Review complète sprints A-E, protection isPlatform uniforme, mobile first, R1-R9
-- [ ] `TODO` `npm run build` + `npx vitest run` passent
+- [x] `FAIT` Review complète sprints A-E, protection isPlatform uniforme, mobile first, R1-R9
+- [x] `FAIT` `npm run build` + `npx vitest run` passent
 - [ ] `TODO` Écrire `docs/reviews/review-sprint-E-site-module-mgmt-final.md`
+
+---
+
+## Sprint BA — Backoffice Separation : Fondations (ADR-022)
+
+**Objectif :** Ajouter `User.isSuperAdmin`, supprimer `Site.isPlatform`, créer les guards backoffice.
+**Dépendances :** Aucune. Peut commencer immédiatement.
+**ADR :** [ADR-022](../decisions/ADR-022-backoffice-separation.md) | [Stories détaillées](../decisions/ADR-022-stories.md)
+
+### Story BA.1 — Migration schéma DB : `isSuperAdmin` + suppression `isPlatform`
+**Assigné à :** @db-specialist
+**Priorité :** Critique
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Ajouter `isSuperAdmin Boolean @default(false)` sur `User` dans schema.prisma
+- [ ] `TODO` Supprimer `isPlatform` et son index unique sur `Site` dans schema.prisma
+- [ ] `TODO` Générer et appliquer la migration SQL (ADD COLUMN + UPDATE admin + DROP COLUMN)
+- [ ] `TODO` Mettre à jour `prisma/seed.sql` (supprimer isPlatform INSERT, ajouter isSuperAdmin=true sur admin)
+
+---
+
+### Story BA.2 — Mise à jour des types TypeScript
+**Assigné à :** @architect
+**Priorité :** Critique
+**Dépend de :** BA.1
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Ajouter `isSuperAdmin: boolean` à interface `User` dans `src/types/models.ts`
+- [ ] `TODO` Supprimer `isPlatform: boolean` de interface `Site` dans `src/types/models.ts`
+- [ ] `TODO` Supprimer `isPlatform` de `AdminSiteSummary` et `AdminSiteDetailResponse` dans `src/types/api.ts`
+- [ ] `TODO` Ajouter interface `BackofficeSession` dans `src/types/api.ts`
+- [ ] `TODO` Exporter `BackofficeSession` dans `src/types/index.ts`
+
+---
+
+### Story BA.3 — Créer `src/lib/auth/backoffice.ts`
+**Assigné à :** @developer
+**Priorité :** Critique
+**Dépend de :** BA.2
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Implémenter `requireSuperAdmin(request)` pour API routes (401/403)
+- [ ] `TODO` Implémenter `checkBackofficeAccess()` pour Server Components (retourne null si non autorisé)
+- [ ] `TODO` Vérification `isSuperAdmin` depuis la DB (pas le cookie session)
+- [ ] `TODO` Tests unitaires dans `src/__tests__/lib/backoffice.test.ts`
+
+---
+
+## Sprint BB — Backoffice Separation : Suppression des dépendances `isPlatform` (ADR-022)
+
+**Objectif :** Nettoyer tout le code qui dépend de `isPlatform`.
+**Dépendances :** Sprint BA validé.
+
+### Story BB.1 — Supprimer `getPlatformSite()` et `isPlatformSite()` de queries/sites.ts
+**Assigné à :** @db-specialist
+**Priorité :** Critique
+**Dépend de :** BA.1, BA.2
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Supprimer les fonctions `getPlatformSite()` et `isPlatformSite()` de `src/lib/queries/sites.ts`
+- [ ] `TODO` Vérifier qu'aucun import externe n'en dépend (bloquant pour BB.2-BB.7)
+
+---
+
+### Story BB.2 — Nettoyer `src/lib/auth/permissions-server.ts`
+**Assigné à :** @developer
+**Priorité :** Critique
+**Dépend de :** BA.2, BB.1
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Supprimer imports `isPlatformSite`, `PLATFORM_MODULES`
+- [ ] `TODO` Supprimer logique `isPlat → filter PLATFORM_PERMISSIONS` dans `getServerPermissions()`
+- [ ] `TODO` Supprimer logique `isPlatform` dans `getServerSiteModules()`
+
+---
+
+### Story BB.3 — Nettoyer `src/lib/queries/admin-sites.ts`
+**Assigné à :** @db-specialist
+**Priorité :** Haute
+**Dépend de :** BA.2, BB.1
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Supprimer vérification `site.isPlatform` dans `updateSiteStatus()` et `updateSiteModulesAdmin()`
+- [ ] `TODO` Supprimer `isPlatform` du mapping dans `getAdminSites()` et `getAdminSiteById()`
+
+---
+
+### Story BB.4 — Nettoyer `src/lib/site-modules-config.ts`
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** BA.2
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Supprimer entrées `level: "platform"` de `SITE_MODULES_CONFIG` (ou reclasser en `"site"`)
+- [ ] `TODO` Supprimer export `PLATFORM_MODULES`
+- [ ] `TODO` Supprimer paramètre `isPlatform?` de `isModuleActive()`
+
+---
+
+### Story BB.5 — Nettoyer les API routes (remises, portefeuille, sites/roles)
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** BA.3, BB.1
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Supprimer imports/guards `isPlatformSite`/`getPlatformSite` dans `src/app/api/remises/route.ts`
+- [ ] `TODO` Supprimer imports/guards dans `src/app/api/portefeuille/retrait/route.ts`
+- [ ] `TODO` Supprimer imports/guards `PLATFORM_PERMISSIONS` dans `src/app/api/sites/[id]/roles/route.ts`
+
+---
+
+### Story BB.6 — Nettoyer `src/lib/permissions-constants.ts`
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** BB.2, BB.5
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Supprimer constante `PLATFORM_PERMISSIONS`
+- [ ] `TODO` Supprimer items `/admin/*` de `ITEM_VIEW_PERMISSIONS`
+- [ ] `TODO` Supprimer groupe `adminPlateforme` de `PERMISSION_GROUPS`
+
+---
+
+### Story BB.7 — Nettoyer composants subscription
+**Assigné à :** @developer
+**Priorité :** Moyenne
+**Dépend de :** BB.1
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Supprimer import/appel `isPlatformSite` dans `subscription-banner.tsx` et `quotas-usage-bar.tsx`
+
+---
+
+## Sprint BC — Backoffice Separation : Création du Backoffice (ADR-022)
+
+**Objectif :** Créer le layout backoffice, les routes API `/api/backoffice/*` et les pages `/backoffice/*`.
+**Dépendances :** Sprint BB validé (ou en parallèle avec les stories B indépendantes).
+
+### Story BC.1 — Layout et navigation backoffice
+**Assigné à :** @developer
+**Priorité :** Critique
+**Dépend de :** BA.3
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/backoffice/layout.tsx` (Server Component, `checkBackofficeAccess()`, redirect si null)
+- [ ] `TODO` Créer `src/components/backoffice/backoffice-sidebar.tsx` (Dashboard, Sites, Abonnements, Plans, Commissions, Remises, Modules, Utilisateurs)
+- [ ] `TODO` Créer `src/components/backoffice/backoffice-header.tsx` ("DKFarm Backoffice" + badge)
+- [ ] `TODO` Mobile first 360px
+
+---
+
+### Story BC.2 — Routes API backoffice : sites
+**Assigné à :** @developer
+**Priorité :** Critique
+**Dépend de :** BA.3, BB.3
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/api/backoffice/sites/route.ts` (GET list) — guard `requireSuperAdmin`
+- [ ] `TODO` Créer `src/app/api/backoffice/sites/[id]/route.ts` (GET detail)
+- [ ] `TODO` Créer `src/app/api/backoffice/sites/[id]/status/route.ts` (PATCH)
+- [ ] `TODO` Créer `src/app/api/backoffice/sites/[id]/modules/route.ts` (PUT)
+
+---
+
+### Story BC.3 — Routes API backoffice : analytics
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** BA.3
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer 4 routes sous `src/app/api/backoffice/analytics/` (KPIs, sites, revenus, modules)
+- [ ] `TODO` Guard `requireSuperAdmin` sur chaque route
+
+---
+
+### Story BC.4 — Routes API backoffice : modules registry
+**Assigné à :** @developer
+**Priorité :** Moyenne
+**Dépend de :** BA.3
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/api/backoffice/modules/route.ts` (GET list + POST create)
+- [ ] `TODO` Créer `src/app/api/backoffice/modules/[key]/route.ts` (GET detail + PATCH update)
+
+---
+
+### Story BC.5 — Page backoffice : dashboard
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** BC.1, BC.3
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/backoffice/dashboard/page.tsx` + `loading.tsx`
+- [ ] `TODO` Réutiliser analytics components, guard `checkBackofficeAccess()`
+
+---
+
+### Story BC.6 — Pages backoffice : sites (liste + détail)
+**Assigné à :** @developer
+**Priorité :** Critique
+**Dépend de :** BC.1, BC.2
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/backoffice/sites/page.tsx` + `loading.tsx`
+- [ ] `TODO` Créer `src/app/backoffice/sites/[id]/page.tsx` + `loading.tsx`
+- [ ] `TODO` Réutiliser composants `AdminSitesList`, `AdminSiteDetailClient`
+
+---
+
+### Story BC.7 — Pages backoffice : abonnements, plans, commissions, remises, modules
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** BC.1
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Créer pages sous `/backoffice/` : abonnements, plans, commissions, remises, modules (+ loading.tsx chacune)
+- [ ] `TODO` Guard `checkBackofficeAccess()` sur chaque page
+
+---
+
+### Story BC.8 — Lien "Backoffice" dans la navigation
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** BC.1, BB.6
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Supprimer module "Admin Plateforme" (items `/admin/*`) de sidebar.tsx et hamburger-menu.tsx
+- [ ] `TODO` Ajouter lien conditionnel "Backoffice" visible uniquement si `isSuperAdmin=true`
+
+---
+
+### Story BC.9 — Nettoyer composants admin (supprimer props isPlatform)
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** BC.6
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Supprimer `isPlatform` de `admin-sites-list.tsx`, `admin-site-detail-client.tsx`, `admin-site-modules-editor.tsx`
+
+---
+
+## Sprint BD — Backoffice Separation : Suppression code obsolète (ADR-022)
+
+**Objectif :** Supprimer `/admin/*`, `/api/admin/*` et valider zéro référence `isPlatform`.
+**Dépendances :** Toutes les stories BC.x.
+
+### Story BD.1 — Supprimer pages et routes `/admin/*` obsolètes
+**Assigné à :** @developer
+**Priorité :** Critique
+**Dépend de :** Toutes BC.x
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Supprimer `src/app/admin/` en entier
+- [ ] `TODO` Supprimer `src/app/api/admin/` en entier
+- [ ] `TODO` Vérifier aucune référence restante aux anciennes routes
+
+---
+
+### Story BD.2 — Validation grep zéro `isPlatform`
+**Assigné à :** @db-specialist
+**Priorité :** Critique
+**Dépend de :** BB.1
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` `grep -r "isPlatform" src/` retourne 0 résultats
+- [ ] `TODO` `grep -r "getPlatformSite\|isPlatformSite" src/` retourne 0 résultats
+- [ ] `TODO` `npm run build` sans erreur
+
+---
+
+### Story BD.3 — Mise à jour de tous les tests
+**Assigné à :** @tester
+**Priorité :** Critique
+**Dépend de :** Toutes BB.x + BC.x
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Supprimer mocks `isPlatformSite`/`getPlatformSite` de tous les tests
+- [ ] `TODO` Renommer/réécrire `admin-sites.test.ts` → `backoffice-sites.test.ts`
+- [ ] `TODO` Renommer/réécrire `admin-analytics.test.ts` → `backoffice-analytics.test.ts`
+- [ ] `TODO` Créer `src/__tests__/api/backoffice-sites.test.ts` et `backoffice-analytics.test.ts`
+- [ ] `TODO` `npx vitest run` : 0 failing, 0 skipped
+
+---
+
+## Sprint BE — Backoffice Separation : Validation finale (ADR-022)
+
+**Objectif :** Build complet, tests, review finale.
+**Dépendances :** Toutes les stories BD.x.
+
+### Story BE.1 — Build + tests complets
+**Assigné à :** @tester
+**Priorité :** Critique
+**Dépend de :** Toutes BD.x
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` `npx prisma migrate deploy` sans erreur
+- [ ] `TODO` `npm run db:seed` sans erreur
+- [ ] `TODO` `npx vitest run` — 0 failing
+- [ ] `TODO` `npm run build` — build production OK
+- [ ] `TODO` Test manuel mobile 360px : `/backoffice/dashboard` avec SuperAdmin
+- [ ] `TODO` Test manuel : accès `/backoffice/*` avec non-superadmin → redirect
+- [ ] `TODO` `grep -r "isPlatform" src/` retourne 0 résultats
+
+---
+
+### Story BE.2 — Review ADR-022
+**Assigné à :** @code-reviewer
+**Priorité :** Critique
+**Dépend de :** BE.1
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` Review R1-R9 sur tous fichiers créés/modifiés
+- [ ] `TODO` Vérifier `requireSuperAdmin` lit depuis DB, pas cookie
+- [ ] `TODO` Mobile first backoffice sur 360px
+- [ ] `TODO` `npm run build` + `npx vitest run` passent
+- [ ] `TODO` Écrire `docs/reviews/review-backoffice-separation.md`

@@ -133,20 +133,18 @@ export async function getSiteMembers(siteId: string) {
 
 // ──────────────────────────────────────────
 // Helpers — Platform site (BUG-025)
+// ADR-022: isPlatform removed from schema. These functions are deprecated stubs
+// that will be fully removed in Sprint B.
 // ──────────────────────────────────────────
 
-/** Recupere le site plateforme (DKFarm). Il ne peut en exister qu'un seul (index partiel unique). */
+/** @deprecated ADR-022 — will be removed in Sprint B. Always returns null. */
 export async function getPlatformSite() {
-  return prisma.site.findFirst({ where: { isPlatform: true } });
+  return null;
 }
 
-/** Retourne true si le site donne est le site plateforme. Cached per-request via React.cache(). */
-export const isPlatformSite = cache(async (siteId: string): Promise<boolean> => {
-  const site = await prisma.site.findUnique({
-    where: { id: siteId },
-    select: { isPlatform: true },
-  });
-  return site?.isPlatform === true;
+/** @deprecated ADR-022 — will be removed in Sprint B. Always returns false. */
+export const isPlatformSite = cache(async (_siteId: string): Promise<boolean> => {
+  return false;
 });
 
 /** Recupere le membership d'un utilisateur pour un site (avec siteRole inclus) */

@@ -428,7 +428,6 @@ model Site {
   name           String
   address        String?
   isActive       Boolean          @default(true)
-  isPlatform     Boolean          @default(false)
   supervised     Boolean          @default(false)
   enabledModules SiteModule[]     @default([])
   members      SiteMember[]
@@ -735,6 +734,8 @@ model User {
   releveModifications   ReleveModification[]
   calibrageModifications CalibrageModification[]
   isSystem              Boolean            @default(false)
+  // ADR-022 — Backoffice separation
+  isSuperAdmin          Boolean            @default(false)
   // Sprint — Impersonation
   originalSessions      Session[]          @relation("OriginalUser")
   // Sprint 30 — Abonnements
