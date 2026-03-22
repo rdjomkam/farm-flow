@@ -12,11 +12,12 @@ export default async function ClientsPage() {
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const permissions = await checkPagePermission(session, Permission.CLIENTS_VOIR);
+  const [permissions, t, clients] = await Promise.all([
+    checkPagePermission(session, Permission.CLIENTS_VOIR),
+    getTranslations("ventes"),
+    getClients(session.activeSiteId),
+  ]);
   if (!permissions) return <AccessDenied />;
-
-  const t = await getTranslations("ventes");
-  const clients = await getClients(session.activeSiteId);
 
   return (
     <>

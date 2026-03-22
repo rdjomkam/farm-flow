@@ -14,15 +14,14 @@ export default async function VentesPage() {
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const permissions = await checkPagePermission(session, Permission.VENTES_VOIR);
-  if (!permissions) return <AccessDenied />;
-
-  const t = await getTranslations("ventes");
-  const [ventes, clients, vagues] = await Promise.all([
+  const [permissions, t, ventes, clients, vagues] = await Promise.all([
+    checkPagePermission(session, Permission.VENTES_VOIR),
+    getTranslations("ventes"),
     getVentes(session.activeSiteId),
     getClients(session.activeSiteId),
     getVagues(session.activeSiteId),
   ]);
+  if (!permissions) return <AccessDenied />;
 
   const clientOptions = clients.map((c) => ({ id: c.id, nom: c.nom }));
   const vagueOptions = vagues.map((v) => ({ id: v.id, code: v.code }));

@@ -12,10 +12,11 @@ export default async function BacsPage() {
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const permissions = await checkPagePermission(session, Permission.BACS_GERER);
+  const [permissions, bacs] = await Promise.all([
+    checkPagePermission(session, Permission.BACS_GERER),
+    getBacs(session.activeSiteId),
+  ]);
   if (!permissions) return <AccessDenied />;
-
-  const bacs = await getBacs(session.activeSiteId);
 
   return (
     <>

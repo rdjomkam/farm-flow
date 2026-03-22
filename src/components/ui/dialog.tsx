@@ -48,7 +48,7 @@ const DialogContent = forwardRef<
       )}
       {...props}
     >
-      <div className="flex h-full flex-col overflow-y-auto p-4 md:max-h-[85vh] md:p-6">
+      <div className="flex h-full flex-col overflow-y-auto p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] md:max-h-[85vh] md:p-6 md:pt-6 md:pb-6">
         {children}
       </div>
       <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px] min-w-[44px] flex items-center justify-center">

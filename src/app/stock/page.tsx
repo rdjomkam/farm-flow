@@ -17,17 +17,15 @@ export default async function StockPage() {
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const permissions = await checkPagePermission(session, Permission.STOCK_VOIR);
-  if (!permissions) return <AccessDenied />;
-
-  const t = await getTranslations("stock");
-
-  const [produits, alertes, fournisseurs, commandes] = await Promise.all([
+  const [permissions, t, produits, alertes, fournisseurs, commandes] = await Promise.all([
+    checkPagePermission(session, Permission.STOCK_VOIR),
+    getTranslations("stock"),
     getProduits(session.activeSiteId),
     getProduitsEnAlerte(session.activeSiteId),
     getFournisseurs(session.activeSiteId),
     getCommandes(session.activeSiteId),
   ]);
+  if (!permissions) return <AccessDenied />;
 
   const commandesEnCours = commandes.filter(
     (c) => c.statut === StatutCommande.BROUILLON || c.statut === StatutCommande.ENVOYEE

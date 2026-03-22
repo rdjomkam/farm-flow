@@ -1,6 +1,12 @@
 @import "tailwindcss";
 
 :root {
+  /* Safe area insets for PWA/notched devices */
+  --sat: env(safe-area-inset-top);
+  --sar: env(safe-area-inset-right);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
+
   --background: #ffffff;
   --foreground: #0f172a;
   --muted: #f1f5f9;

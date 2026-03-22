@@ -14,6 +14,7 @@ import { getServerPermissions, getServerSiteModules } from "@/lib/auth/permissio
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { Permission, Role, SiteModule } from "@/types";
 import { SwRegister } from "@/components/pwa/sw-register";
+import { AppleSplashLinks } from "@/components/pwa/apple-splash-links";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -41,7 +42,12 @@ export async function generateMetadata(): Promise<Metadata> {
       title: "FarmFlow",
     },
     icons: {
-      apple: "/apple-touch-icon.png",
+      apple: [
+        { url: "/apple-touch-icon-180.png", sizes: "180x180" },
+        { url: "/apple-touch-icon-152.png", sizes: "152x152" },
+        { url: "/apple-touch-icon-120.png", sizes: "120x120" },
+        { url: "/apple-touch-icon.png" },
+      ],
     },
   };
 }
@@ -51,7 +57,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#0d9488",
+  themeColor: "#0d9488", // Sync avec --primary dans globals.css
 };
 
 export default async function RootLayout({
@@ -60,20 +66,21 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await getServerSession();
-  const permissions: Permission[] = session ? await getServerPermissions(session) : [];
   const role: Role | null = session?.role ?? null;
-  const siteModules: SiteModule[] = session?.activeSiteId
-    ? await getServerSiteModules(session.activeSiteId)
-    : [];
-
   const isImpersonating = session?.isImpersonating ?? false;
 
-  // Detect locale and load messages for next-intl
-  const locale = await getLocale();
-  const messages = await getMessages();
+  const [permissions, siteModules, locale, messages] = await Promise.all([
+    session ? getServerPermissions(session) : Promise.resolve([] as Permission[]),
+    session?.activeSiteId ? getServerSiteModules(session.activeSiteId) : Promise.resolve([] as SiteModule[]),
+    getLocale(),
+    getMessages(),
+  ]);
 
   return (
     <html lang={locale}>
+      <head>
+        <AppleSplashLinks />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning

@@ -37,7 +37,7 @@ export function Header({ title, children, className }: HeaderProps) {
   return (
     <header
       className={cn(
-        "sticky z-30 flex min-h-[56px] items-center justify-between border-b border-border bg-card px-4 py-3 transition-transform duration-300 md:translate-y-0",
+        "sticky z-30 flex min-h-[calc(56px+env(safe-area-inset-top))] items-center justify-between border-b border-border bg-card px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] transition-transform duration-300 md:min-h-[56px] md:pt-3 md:translate-y-0",
         isImpersonating ? "top-14 sm:top-11" : "top-0",
         !visible && "-translate-y-full",
         className

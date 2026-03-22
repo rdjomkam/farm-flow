@@ -35,7 +35,7 @@ const SheetContent = forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-y-0 left-0 z-50 w-72 bg-card border-r border-border shadow-lg",
+        "fixed inset-y-0 left-0 z-50 w-72 bg-card border-r border-border shadow-lg pt-[env(safe-area-inset-top)]",
         "data-[state=open]:animate-in data-[state=open]:slide-in-from-left",
         "data-[state=closed]:animate-out data-[state=closed]:slide-out-to-left",
         "duration-200",

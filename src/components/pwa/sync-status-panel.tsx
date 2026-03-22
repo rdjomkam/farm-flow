@@ -19,9 +19,9 @@ const STATUS_ICONS = {
 };
 
 const STATUS_COLORS = {
-  pending: "text-amber-500",
+  pending: "text-warning",
   syncing: "text-primary",
-  failed: "text-red-500",
+  failed: "text-danger",
 };
 
 const STATUS_LABELS = {
@@ -82,11 +82,11 @@ export function SyncStatusPanel({ open, onOpenChange, siteId, onSyncNow }: SyncS
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50" />
-        <Dialog.Content className="fixed inset-x-0 bottom-0 z-50 max-h-[80vh] rounded-t-xl bg-white p-4 shadow-xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl">
+        <Dialog.Content className="fixed inset-x-0 bottom-0 z-50 max-h-[80vh] rounded-t-xl bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:pb-4">
           <Dialog.Title className="text-lg font-semibold">
             File de synchronisation
           </Dialog.Title>
-          <Dialog.Description className="mt-1 text-sm text-gray-500">
+          <Dialog.Description className="mt-1 text-sm text-muted-foreground">
             {items.length === 0
               ? "Aucun element en attente"
               : `${items.length} element${items.length > 1 ? "s" : ""} en attente`}
@@ -109,7 +109,7 @@ export function SyncStatusPanel({ open, onOpenChange, siteId, onSyncNow }: SyncS
             {items.length > 0 && (
               <button
                 onClick={() => setConfirmClear(true)}
-                className="flex items-center gap-1.5 rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50"
+                className="flex items-center gap-1.5 rounded-md border border-danger/30 px-3 py-1.5 text-sm text-danger hover:bg-danger/10"
               >
                 <Trash2 className="h-4 w-4" />
                 Vider
@@ -119,21 +119,21 @@ export function SyncStatusPanel({ open, onOpenChange, siteId, onSyncNow }: SyncS
 
           {/* Confirm clear */}
           {confirmClear && (
-            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
-              <p className="text-sm text-red-700">
+            <div className="mt-3 rounded-lg border border-danger/30 bg-danger/10 p-3">
+              <p className="text-sm text-danger">
                 Supprimer tous les elements en attente ? Cette action est irreversible.
               </p>
               <div className="mt-2 flex gap-2">
                 <button
                   onClick={handleClear}
                   disabled={clearing}
-                  className="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700"
+                  className="rounded-md bg-danger px-3 py-1.5 text-sm text-white hover:bg-danger/90"
                 >
                   {clearing ? "Suppression..." : "Confirmer"}
                 </button>
                 <button
                   onClick={() => setConfirmClear(false)}
-                  className="rounded-md border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+                  className="rounded-md border px-3 py-1.5 text-sm text-foreground hover:bg-muted"
                 >
                   Annuler
                 </button>
@@ -159,12 +159,12 @@ export function SyncStatusPanel({ open, onOpenChange, siteId, onSyncNow }: SyncS
                     <p className="text-sm font-medium truncate">
                       {item.entityLabel}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       {STATUS_LABELS[item.status]} · {formatDate(item.createdAt)}
                       {item.retryCount > 0 && ` · ${item.retryCount} tentative${item.retryCount > 1 ? "s" : ""}`}
                     </p>
                     {item.lastError && (
-                      <p className="mt-1 text-xs text-red-500 truncate">
+                      <p className="mt-1 text-xs text-danger truncate">
                         {item.lastError}
                       </p>
                     )}
@@ -175,7 +175,7 @@ export function SyncStatusPanel({ open, onOpenChange, siteId, onSyncNow }: SyncS
           </div>
 
           <Dialog.Close asChild>
-            <button className="mt-4 w-full rounded-md border py-2 text-sm text-gray-600 hover:bg-gray-50">
+            <button className="mt-4 w-full rounded-md border py-2 text-sm text-foreground hover:bg-muted">
               Fermer
             </button>
           </Dialog.Close>

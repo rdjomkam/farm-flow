@@ -103,7 +103,7 @@ export function PinUnlockDialog({
     <Dialog.Root open={open}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-xl">
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl bg-card p-6 shadow-xl">
           <div className="flex flex-col items-center gap-4">
             <div className="rounded-full bg-primary/10 p-3">
               <Lock className="h-6 w-6 text-primary" />
@@ -113,12 +113,12 @@ export function PinUnlockDialog({
               Session verrouillée
             </Dialog.Title>
 
-            <Dialog.Description className="text-sm text-gray-500 text-center">
+            <Dialog.Description className="text-sm text-muted-foreground text-center">
               Saisissez votre PIN pour déverrouiller
             </Dialog.Description>
 
             {lockoutUntil ? (
-              <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
+              <div className="flex items-center gap-2 rounded-lg bg-warning/10 p-3 text-sm text-warning">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
                 <span>Verrouillé pendant {lockoutRemaining}</span>
               </div>
@@ -141,16 +141,16 @@ export function PinUnlockDialog({
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleSubmit();
                   }}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-border px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   placeholder="······"
                   autoFocus
                   disabled={loading}
                 />
 
-                {error && <p className="text-sm text-red-500">{error}</p>}
+                {error && <p className="text-sm text-danger">{error}</p>}
 
                 {retryAfter && retryRemaining && (
-                  <p className="text-sm text-amber-600">
+                  <p className="text-sm text-warning">
                     Patientez {retryRemaining} avant de réessayer
                   </p>
                 )}
@@ -167,7 +167,7 @@ export function PinUnlockDialog({
 
             <button
               onClick={onForgotPin}
-              className="text-xs text-gray-400 hover:text-gray-600"
+              className="text-xs text-muted-foreground hover:text-foreground"
             >
               PIN oublié ? (les données locales seront effacées)
             </button>

@@ -11,18 +11,17 @@ import { StatutVague, Permission, TypeSystemeBac } from "@/types";
 import type { VagueSummaryResponse, BacResponse } from "@/types";
 
 export default async function VaguesPage() {
-  const t = await getTranslations("vagues");
   const session = await getServerSession();
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const permissions = await checkPagePermission(session, Permission.VAGUES_VOIR);
-  if (!permissions) return <AccessDenied />;
-
-  const [vaguesRaw, bacsLibresRaw] = await Promise.all([
+  const [permissions, t, vaguesRaw, bacsLibresRaw] = await Promise.all([
+    checkPagePermission(session, Permission.VAGUES_VOIR),
+    getTranslations("vagues"),
     getVagues(session.activeSiteId),
     getBacsLibres(session.activeSiteId),
   ]);
+  if (!permissions) return <AccessDenied />;
 
   const vagues: VagueSummaryResponse[] = vaguesRaw.map((v) => {
     const now = v.dateFin ?? new Date();

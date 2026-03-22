@@ -5,6 +5,7 @@
  * R4 : toutes les transitions de statut via updateMany avec condition (jamais check-then-update)
  * R8 : siteId obligatoire sur toutes les queries
  */
+import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { StatutAbonnement } from "@/types";
 import type { AbonnementFilters, CreateAbonnementDTO } from "@/types";
@@ -37,7 +38,7 @@ export async function getAbonnements(
  * Récupère l'abonnement actif ou en grâce d'un site.
  * Un site n'a qu'un seul abonnement ACTIF ou EN_GRACE à la fois.
  */
-export async function getAbonnementActif(siteId: string) {
+export const getAbonnementActif = cache(async (siteId: string) => {
   return prisma.abonnement.findFirst({
     where: {
       siteId,
@@ -48,7 +49,7 @@ export async function getAbonnementActif(siteId: string) {
     include: { plan: true },
     orderBy: { createdAt: "desc" },
   });
-}
+});
 
 /** Récupère un abonnement par ID avec plan + paiements */
 export async function getAbonnementById(id: string, siteId?: string) {
