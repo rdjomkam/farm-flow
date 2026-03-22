@@ -10,7 +10,7 @@ export function InstallPrompt() {
 
   return (
     <div className="fixed bottom-20 left-4 right-4 z-40 sm:left-auto sm:right-4 sm:bottom-4 sm:w-80">
-      <div className="rounded-lg border bg-card p-4 shadow-lg">
+      <div className="rounded-lg border bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-lg">
         <div className="flex items-start gap-3">
           <div className="shrink-0 rounded-lg bg-primary/10 p-2">
             <Download className="h-5 w-5 text-primary" />
