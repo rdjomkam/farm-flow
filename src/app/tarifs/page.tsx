@@ -55,9 +55,9 @@ export default async function TarifsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-background relative">
+    <main className="min-h-screen bg-background relative pt-[env(safe-area-inset-top)]">
       {/* Language switcher — top-right */}
-      <div className="absolute top-3 right-3 z-10">
+      <div className="absolute top-[calc(0.75rem+env(safe-area-inset-top))] right-3 z-10">
         <LanguageSwitcher />
       </div>
 
