@@ -4636,7 +4636,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** D.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Créer `src/app/admin/analytics/page.tsx` (Server Component, ISR 5min)
@@ -4650,7 +4650,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Moyenne
 **Dépend de :** D.3
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Créer `src/app/admin/modules/page.tsx` (Server Component, guard SITES_GERER + isPlatform)
@@ -4663,7 +4663,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @tester
 **Priorité :** Haute
 **Dépend de :** E.1, E.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Tests formatage XAF, AdminModuleFormDialog (key/level non-modifiables), responsive
@@ -4674,7 +4674,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ### Story E.4 — Review Sprint E (Review finale)
 **Assigné à :** @code-reviewer
 **Dépend de :** E.1, E.2, E.3
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Review complète sprints A-E, protection isPlatform uniforme, mobile first, R1-R9
