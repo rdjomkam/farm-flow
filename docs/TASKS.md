@@ -4502,12 +4502,12 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ### Story C.1 — Navigation : module "Admin Plateforme"
 **Assigné à :** @developer
 **Priorité :** Haute
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Sidebar + hamburger : renommer "Admin Abonnements" → "Admin Plateforme", ajouter /admin/sites, /admin/analytics, /admin/modules
-- [ ] `TODO` Gating permissions : SITES_VOIR pour sites/analytics, SITES_GERER pour modules
-- [ ] `TODO` i18n : nouvelles clés navigation
+- [x] `FAIT` Sidebar + hamburger : renommer "Admin Abonnements" → "Admin Plateforme", ajouter /admin/sites, /admin/analytics, /admin/modules
+- [x] `FAIT` Gating permissions : SITES_VOIR pour sites/analytics, SITES_GERER pour modules
+- [x] `FAIT` i18n : nouvelles clés navigation (adminPlateforme, adminSites, adminAnalytics, adminModules)
 
 ---
 
@@ -4515,12 +4515,12 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Critique
 **Dépend de :** B.2, C.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Créer `src/app/admin/sites/page.tsx` (Server Component, guard SITES_VOIR + isPlatform)
-- [ ] `TODO` Créer `src/components/admin/sites/admin-sites-list.tsx` (cartes mobile 360px, tableau md+, filtres tabs/search/plan, KPI cards, pagination)
-- [ ] `TODO` Créer `src/components/admin/sites/admin-site-status-badge.tsx` + `admin-site-status-dialog.tsx` (R5 asChild)
+- [x] `FAIT` Créer `src/app/admin/sites/page.tsx` (Server Component, guard SITES_VOIR + isPlatform)
+- [x] `FAIT` Créer `src/components/admin/sites/admin-sites-list.tsx` (cartes mobile 360px, tableau md+, filtres tabs/search/plan, KPI cards, pagination)
+- [x] `FAIT` Créer `src/components/admin/sites/admin-site-status-badge.tsx` + `admin-site-status-dialog.tsx` (R5 asChild)
 
 ---
 
@@ -4528,13 +4528,13 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** B.3, B.4, B.5, C.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Créer `src/app/admin/sites/[id]/page.tsx` (Server Component)
-- [ ] `TODO` Créer `src/components/admin/sites/admin-site-detail-client.tsx` (Tabs : Résumé, Modules, Membres, Abonnement, Audit)
-- [ ] `TODO` Créer `src/components/admin/sites/admin-site-modules-editor.tsx` (switches par module, platform-level grisés)
-- [ ] `TODO` Créer `src/components/admin/sites/admin-site-audit-log.tsx` (timeline verticale, before/after)
+- [x] `FAIT` Créer `src/app/admin/sites/[id]/page.tsx` (Server Component)
+- [x] `FAIT` Créer `src/components/admin/sites/admin-site-detail-client.tsx` (Tabs : Résumé, Modules, Membres, Abonnement, Audit)
+- [x] `FAIT` Créer `src/components/admin/sites/admin-site-modules-editor.tsx` (switches par module, platform-level grisés)
+- [x] `FAIT` Créer `src/components/admin/sites/admin-site-audit-log.tsx` (timeline verticale, before/after)
 
 ---
 
@@ -4542,7 +4542,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @tester
 **Priorité :** Haute
 **Dépend de :** C.2, C.3
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Tests AdminSiteStatusDialog, computeSiteStatus dans badges, responsive 360px vs md+
@@ -4553,7 +4553,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ### Story C.5 — Review Sprint C
 **Assigné à :** @code-reviewer
 **Dépend de :** C.1 — C.4
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Mobile first 360px, R5 DialogTrigger asChild, R6 CSS variables, accessibilité
@@ -4570,12 +4570,12 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ### Story D.1 — Queries analytics plateforme
 **Assigné à :** @db-specialist
 **Priorité :** Haute
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Créer `src/lib/queries/admin-analytics.ts` : getPlatformKPIs, getSitesGrowth, getRevenueAnalytics, getModulesDistribution
-- [ ] `TODO` MRR = prixMensuel*count + prixTrimestriel/3*count + prixAnnuel/12*count
-- [ ] `TODO` `getModulesDistribution` via `$queryRaw` avec PostgreSQL `unnest()`
+- [x] `FAIT` Créer `src/lib/queries/admin-analytics.ts` : getPlatformKPIs, getSitesGrowth, getRevenueAnalytics, getModulesDistribution
+- [x] `FAIT` MRR = prixMensuel*count + prixTrimestriel/3*count + prixAnnuel/12*count
+- [x] `FAIT` `getModulesDistribution` via `$queryRaw` avec PostgreSQL `unnest()`
 
 ---
 
@@ -4583,11 +4583,11 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** D.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Créer 4 routes : `/api/admin/analytics` (KPIs), `/api/admin/analytics/sites`, `/api/admin/analytics/revenus`, `/api/admin/analytics/modules`
-- [ ] `TODO` Guard : `ANALYTICS_PLATEFORME` + isPlatform, Cache-Control headers
+- [x] `FAIT` Créer 4 routes : `/api/admin/analytics` (KPIs), `/api/admin/analytics/sites`, `/api/admin/analytics/revenus`, `/api/admin/analytics/modules`
+- [x] `FAIT` Guard : `ANALYTICS_PLATEFORME` + isPlatform, Cache-Control headers
 
 ---
 
@@ -4595,11 +4595,11 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Moyenne
 **Dépend de :** Sprint A
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
-- [ ] `TODO` Créer `src/app/api/admin/modules/route.ts` (GET liste + POST créer) et `[key]/route.ts` (GET détail + PUT modifier)
-- [ ] `TODO` Guard : SITES_VOIR (lecture), SITES_GERER (écriture), key immuable, level immuable
+- [x] `FAIT` Créer `src/app/api/admin/modules/route.ts` (GET liste + POST créer) et `[key]/route.ts` (GET détail + PUT modifier)
+- [x] `FAIT` Guard : SITES_VOIR (lecture), SITES_GERER (écriture), key immuable, level immuable
 
 ---
 
@@ -4607,7 +4607,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @tester
 **Priorité :** Haute
 **Dépend de :** D.2, D.3
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Créer `src/__tests__/api/admin-analytics.test.ts` (structure réponse, protection isPlatform, calcul MRR)
@@ -4618,7 +4618,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ### Story D.5 — Review Sprint D
 **Assigné à :** @code-reviewer
 **Dépend de :** D.1 — D.4
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Protection isPlatform sur chaque route, calcul MRR, sérialisation Decimal

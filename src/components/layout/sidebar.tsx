@@ -38,6 +38,7 @@ import {
   CreditCard,
   ShieldCheck,
   LayoutList,
+  Globe,
 } from "lucide-react";
 import { NotificationBell } from "./notification-bell";
 import { LanguageSwitcher } from "./language-switcher";
@@ -180,15 +181,21 @@ const modulesAdminGerant: {
       { href: "/tarifs", itemKey: "plansTarifs", icon: Tag },
     ],
   },
-  // Admin Abonnements — Sprint 33 (gate: ABONNEMENTS_GERER)
+  // Admin Plateforme — Sprint C (gate: ABONNEMENTS_GERER)
+  // Regroupe: Sites, Abonnements, Plans, Analytics, Modules, Commissions, Remises
   {
-    label: "Admin Abonnements",
-    moduleKey: "adminAbonnements",
-    primaryHref: "/admin/abonnements",
-    icon: ShieldCheck,
+    label: "Admin Plateforme",
+    moduleKey: "adminPlateforme",
+    primaryHref: "/admin/sites",
+    icon: Globe,
     items: [
-      { href: "/admin/abonnements", itemKey: "tousAbonnements", icon: ShieldCheck },
-      { href: "/admin/plans", itemKey: "gestionPlans", icon: LayoutList },
+      { href: "/admin/sites",       itemKey: "adminSites",       icon: Building2 },
+      { href: "/admin/abonnements", itemKey: "tousAbonnements",  icon: ShieldCheck },
+      { href: "/admin/plans",       itemKey: "gestionPlans",     icon: LayoutList },
+      { href: "/admin/analytics",   itemKey: "adminAnalytics",   icon: BarChart3 },
+      { href: "/admin/modules",     itemKey: "adminModules",     icon: Boxes },
+      { href: "/admin/commissions", itemKey: "toutesCommissions", icon: TrendingUp },
+      { href: "/admin/remises",     itemKey: "remisesPromos",    icon: Tag },
     ],
   },
   // Portefeuille Ingénieur — Sprint 34 (gate: PORTEFEUILLE_VOIR)
@@ -199,26 +206,6 @@ const modulesAdminGerant: {
     icon: Wallet,
     items: [
       { href: "/mon-portefeuille", itemKey: "monPortefeuille", icon: Wallet },
-    ],
-  },
-  // Admin Commissions — Sprint 34 (gate: COMMISSIONS_GERER)
-  {
-    label: "Admin Commissions",
-    moduleKey: "adminCommissions",
-    primaryHref: "/admin/commissions",
-    icon: TrendingUp,
-    items: [
-      { href: "/admin/commissions", itemKey: "toutesCommissions", icon: TrendingUp },
-    ],
-  },
-  // Admin Remises — Sprint 35 (gate: REMISES_GERER)
-  {
-    label: "Admin Remises",
-    moduleKey: "adminRemises",
-    primaryHref: "/admin/remises",
-    icon: Tag,
-    items: [
-      { href: "/admin/remises", itemKey: "remisesPromos", icon: Tag },
     ],
   },
   // Utilisateurs — ADMIN uniquement (filtre par role dans le composant)
@@ -244,12 +231,10 @@ const PHASE3_MODULE_PERMISSIONS: Record<string, Permission> = {
   "Utilisateurs":          Permission.UTILISATEURS_VOIR,
   // Sprint 33 — Abonnements
   "Abonnement":            Permission.ABONNEMENTS_VOIR,
-  "Admin Abonnements":     Permission.ABONNEMENTS_GERER,
+  // Sprint C — Admin Plateforme (remplace Admin Abonnements + Admin Commissions + Admin Remises)
+  "Admin Plateforme":      Permission.ABONNEMENTS_GERER,
   // Sprint 34 — Commissions & Portefeuille
   "Portefeuille":          Permission.PORTEFEUILLE_VOIR,
-  "Admin Commissions":     Permission.COMMISSIONS_GERER,
-  // Sprint 35 — Remises
-  "Admin Remises":         Permission.REMISES_GERER,
 };
 
 export function Sidebar({ permissions, role, siteModules }: { permissions: Permission[]; role: Role | null; siteModules: SiteModule[] }) {

@@ -57,6 +57,15 @@ vi.mock("@/lib/services/billing", () => ({
   initierPaiement: (...args: unknown[]) => mockInitierPaiement(...args),
 }));
 
+vi.mock("@/lib/services/remises-automatiques", () => ({
+  verifierEtAppliquerRemiseAutomatique: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("next/cache", () => ({
+  revalidateTag: vi.fn(),
+  unstable_cache: (fn: (...args: unknown[]) => unknown) => fn,
+}));
+
 const mockRequirePermission = vi.fn();
 const mockPrismaUpdateMany = vi.fn();
 

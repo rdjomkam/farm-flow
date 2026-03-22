@@ -331,13 +331,13 @@ describe("IndicateursCards — Rendu des indicateurs", () => {
 
   it("affiche le taux de survie", () => {
     render(<IndicateursCards indicateurs={indicateurs} />);
-    expect(screen.getByText("92.5%")).toBeInTheDocument();
+    expect(screen.getByText("92.5 %")).toBeInTheDocument();
     expect(screen.getByText("Taux de survie")).toBeInTheDocument();
   });
 
   it("affiche la biomasse", () => {
     render(<IndicateursCards indicateurs={indicateurs} />);
-    expect(screen.getByText("45.6 kg")).toBeInTheDocument();
+    expect(screen.getByText("45.60 kg")).toBeInTheDocument();
   });
 
   it("affiche le poids moyen", () => {
@@ -347,8 +347,8 @@ describe("IndicateursCards — Rendu des indicateurs", () => {
 
   it("affiche le SGR et FCR", () => {
     render(<IndicateursCards indicateurs={indicateurs} />);
-    expect(screen.getByText("2.1%/j")).toBeInTheDocument();
-    expect(screen.getByText("1.3")).toBeInTheDocument();
+    expect(screen.getByText("2.10%/j")).toBeInTheDocument();
+    expect(screen.getByText("1.30")).toBeInTheDocument();
   });
 
   it("affiche '—' quand les indicateurs sont null", () => {

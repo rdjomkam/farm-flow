@@ -21,6 +21,15 @@ import {
 import { StatutAbonnement, TypePlan } from "@/types";
 
 // ---------------------------------------------------------------------------
+// Mocks — next/cache (unstable_cache incompatible hors contexte Next.js)
+// ---------------------------------------------------------------------------
+
+vi.mock("next/cache", () => ({
+  unstable_cache: (fn: (...args: unknown[]) => unknown) => fn,
+  revalidateTag: vi.fn(),
+}));
+
+// ---------------------------------------------------------------------------
 // Mocks — getAbonnementActif
 // ---------------------------------------------------------------------------
 

@@ -218,6 +218,9 @@ export const ITEM_VIEW_PERMISSIONS: Record<string, Permission> = {
   "/admin/sites":        Permission.SITES_VOIR,
   "/admin/analytics":    Permission.ANALYTICS_PLATEFORME,
   "/admin/modules":      Permission.SITES_GERER,
+  // Sprint 34-35 items (moved under Admin Plateforme module)
+  "/admin/commissions":  Permission.COMMISSIONS_GERER,
+  "/admin/remises":      Permission.REMISES_GERER,
 };
 
 // ---------------------------------------------------------------------------
