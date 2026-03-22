@@ -18,12 +18,16 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { getSubscriptionStatus, isReadOnlyMode } from "@/lib/abonnements/check-subscription";
 import { StatutAbonnement } from "@/types";
+import { isPlatformSite } from "@/lib/queries/sites";
 
 interface SubscriptionBannerProps {
   siteId: string;
 }
 
 export async function SubscriptionBanner({ siteId }: SubscriptionBannerProps) {
+  const isPlat = await isPlatformSite(siteId);
+  if (isPlat) return null;
+
   const t = await getTranslations("abonnements");
   const { statut, daysRemaining, isDecouverte } = await getSubscriptionStatus(siteId);
 
