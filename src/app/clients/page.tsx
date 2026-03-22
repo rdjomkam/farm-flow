@@ -24,7 +24,7 @@ export default async function ClientsPage() {
       <Header title={t("clients.title")} />
       <div className="p-4">
         <ClientsListClient
-          clients={JSON.parse(JSON.stringify(clients))}
+          initialClients={clients}
           permissions={permissions}
         />
       </div>

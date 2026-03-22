@@ -10,6 +10,7 @@
  * R8 : siteId = auth.activeSiteId sur toutes les queries
  */
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import {
   getAbonnements,
   createAbonnement,
@@ -202,6 +203,9 @@ export async function POST(request: NextRequest) {
       phoneNumber: body.phoneNumber,
       fournisseur: body.fournisseur as FournisseurPaiement,
     });
+
+    // Invalider le cache d'abonnement du site
+    revalidateTag(`subscription-${auth.activeSiteId}`, {});
 
     return NextResponse.json(
       { abonnement, paiement: { referenceExterne: paiement.referenceExterne, statut: paiement.statut, paiementId: paiement.paiementId } },

@@ -16,6 +16,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getPaymentGateway } from "@/lib/payment/factory";
 import {
   getPaiementByReference,
@@ -25,7 +26,7 @@ import { activerAbonnement } from "@/lib/queries/abonnements";
 import { calculerEtCreerCommission } from "@/lib/services/commissions";
 import { applyPlanModules } from "@/lib/abonnements/apply-plan-modules";
 import { prisma } from "@/lib/db";
-import { FournisseurPaiement, StatutAbonnement, StatutPaiementAbo } from "@/types";
+import { FournisseurPaiement, StatutPaiementAbo } from "@/types";
 
 // ---------------------------------------------------------------------------
 // POST /api/webhooks/smobilpay
@@ -116,6 +117,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       if (paiementApresConfirm?.abonnementId) {
         // R4 : activerAbonnement via updateMany conditionnel
         await activerAbonnement(paiementApresConfirm.abonnementId);
+
+        // Invalider le cache d'abonnement du site (TTL 1h via unstable_cache)
+        revalidateTag(`subscription-${paiementApresConfirm.siteId}`, {});
 
         // Story 43.5 : appliquer les modules du plan au site
         // Fire-and-forget : ne pas bloquer le webhook si erreur module

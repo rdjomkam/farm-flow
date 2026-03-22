@@ -32,7 +32,7 @@ export default async function ProduitsPage() {
       <Header title={t("produits.title")} />
       <div className="p-4">
         <ProduitsListClient
-          produits={JSON.parse(JSON.stringify(produits))}
+          produits={produits}
           fournisseurs={fournisseurOptions}
           permissions={permissions}
         />

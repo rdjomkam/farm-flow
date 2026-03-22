@@ -13,6 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { prisma } from "@/lib/db";
 import { Permission, StatutPaiementAbo } from "@/types";
@@ -94,6 +95,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     if (abonnement) {
+      // Invalider le cache d'abonnement du site (TTL 1h via unstable_cache)
+      revalidateTag(`subscription-${abonnement.siteId}`, {});
+
       // Fire-and-forget : ne pas bloquer la réponse si erreur module
       applyPlanModules(abonnement.siteId, abonnement.planId).catch((modulesError) => {
         console.error(

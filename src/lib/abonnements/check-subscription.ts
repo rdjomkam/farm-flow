@@ -6,7 +6,11 @@
  *
  * Story 32.4 — Sprint 32
  * R2 : enums importés depuis @/types (StatutAbonnement)
+ *
+ * Cache : unstable_cache avec TTL 1h + revalidation par tag `subscription-{siteId}`.
+ * Invalidé par les routes mutation (POST /abonnements, annuler, renouveler, webhooks, cron).
  */
+import { unstable_cache } from "next/cache";
 import { getAbonnementActif } from "@/lib/queries/abonnements";
 import { StatutAbonnement, TypePlan } from "@/types";
 
@@ -30,13 +34,10 @@ export interface SubscriptionStatus {
 // ---------------------------------------------------------------------------
 
 /**
- * Charge l'abonnement actif du site et retourne son statut.
- * Appelle la base de données via getAbonnementActif.
- *
- * @param siteId - ID du site (R8)
- * @returns SubscriptionStatus avec statut + jours restants
+ * Version interne non-cachée.
+ * Ne pas exporter directement — utiliser getSubscriptionStatus (cachée) à la place.
  */
-export async function getSubscriptionStatus(
+async function _getSubscriptionStatusUncached(
   siteId: string
 ): Promise<SubscriptionStatus> {
   const abonnement = await getAbonnementActif(siteId);
@@ -66,6 +67,26 @@ export async function getSubscriptionStatus(
     isDecouverte,
   };
 }
+
+/**
+ * Charge l'abonnement actif du site et retourne son statut.
+ * Résultat mis en cache 1 heure (TTL 3600s) par siteId.
+ * Invalidé par revalidateTag(`subscription-${siteId}`) depuis les routes mutation.
+ *
+ * @param siteId - ID du site (R8)
+ * @returns SubscriptionStatus avec statut + jours restants
+ */
+export const getSubscriptionStatus = (
+  siteId: string
+): Promise<SubscriptionStatus> =>
+  unstable_cache(
+    () => _getSubscriptionStatusUncached(siteId),
+    [`subscription-status-${siteId}`],
+    {
+      revalidate: 3600, // 1 heure
+      tags: [`subscription-${siteId}`],
+    }
+  )();
 
 // ---------------------------------------------------------------------------
 // Fonctions pures de vérification de statut

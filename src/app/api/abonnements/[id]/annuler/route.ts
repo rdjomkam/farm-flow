@@ -13,6 +13,7 @@
  * avec updateMany R4-atomique.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getAbonnementById } from "@/lib/queries/abonnements";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
@@ -78,6 +79,9 @@ export async function POST(
         { status: 400 }
       );
     }
+
+    // Invalider le cache d'abonnement du site
+    revalidateTag(`subscription-${auth.activeSiteId}`, {});
 
     return NextResponse.json({
       message: "Abonnement annul\u00e9. Il restera actif jusqu'\u00e0 la date d'expiration.",

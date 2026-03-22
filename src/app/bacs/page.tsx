@@ -22,7 +22,7 @@ export default async function BacsPage() {
     <>
       <Header title="Bacs" />
       <div className="px-4 pt-4">
-        <QuotasUsageBar siteId={session.activeSiteId} />
+        <QuotasUsageBar siteId={session.activeSiteId} precomputedBacsCount={bacs.length} />
       </div>
       <BacsListClient bacs={bacs} permissions={permissions} />
     </>

@@ -23,7 +23,7 @@ export default async function FacturesPage() {
       <Header title={t("factures.title")} />
       <div className="p-4">
         <FacturesListClient
-          factures={JSON.parse(JSON.stringify(factures))}
+          initialFactures={JSON.parse(JSON.stringify(factures))}
           permissions={permissions}
         />
       </div>

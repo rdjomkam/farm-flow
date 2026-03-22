@@ -1,24 +1,20 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { Waves } from "lucide-react";
 import { Header } from "@/components/layout/header";
-import { StatsCards } from "@/components/dashboard/stats-cards";
-import { VagueSummaryCard } from "@/components/dashboard/vague-summary-card";
 import { QuickActions } from "@/components/dashboard/quick-actions";
-import { RecentActivity } from "@/components/dashboard/recent-activity";
-import { IndicateursPanel } from "@/components/dashboard/indicateurs-panel";
-import { Projections } from "@/components/dashboard/projections";
-import { EmptyState } from "@/components/ui/empty-state";
 import { AccessDenied } from "@/components/ui/access-denied";
-import { Button } from "@/components/ui/button";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
-import {
-  getDashboardData,
-  getRecentActivity,
-  getDashboardIndicateurs,
-  getProjectionsDashboard,
-} from "@/lib/queries/dashboard";
 import { Permission } from "@/types";
-import Link from "next/link";
+import { DashboardHeroSection } from "@/components/dashboard/dashboard-hero-section";
+import { IndicateursSection } from "@/components/dashboard/indicateurs-section";
+import { ProjectionsSection } from "@/components/dashboard/projections-section";
+import { RecentActivitySection } from "@/components/dashboard/recent-activity-section";
+import {
+  HeroSectionSkeleton,
+  IndicateursSkeleton,
+  ProjectionsSkeleton,
+  RecentActivitySkeleton,
+} from "@/components/dashboard/section-skeletons";
 
 export default async function DashboardPage() {
   const session = await getServerSession();
@@ -28,67 +24,29 @@ export default async function DashboardPage() {
   const permissions = await checkPagePermission(session, Permission.DASHBOARD_VOIR);
   if (!permissions) return <AccessDenied />;
 
-  const [data, recentReleves, indicateurs, projections] = await Promise.all([
-    getDashboardData(session.activeSiteId),
-    getRecentActivity(session.activeSiteId),
-    getDashboardIndicateurs(session.activeSiteId),
-    getProjectionsDashboard(session.activeSiteId),
-  ]);
+  const siteId = session.activeSiteId;
 
   return (
     <>
       <Header title="Dashboard" />
       <div className="flex flex-col gap-4 p-4">
-        {/* Hero greeting */}
-        <section className="relative overflow-hidden rounded-2xl p-6" style={{ background: "var(--primary-gradient)" }}>
-          <div className="relative z-10 text-white">
-            <p className="text-sm font-medium text-white/70">
-              {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
-            </p>
-            <h1 className="text-xl font-bold mt-1">
-              Bonjour, {session.name}
-            </h1>
-            <p className="text-sm text-white/80 mt-1">
-              {data.vaguesActives} vague{data.vaguesActives > 1 ? "s" : ""} en cours
-              {data.biomasseTotale ? ` \u00b7 ${data.biomasseTotale} kg de biomasse` : ""}
-            </p>
-          </div>
-          <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10" />
-          <div className="absolute -right-4 bottom-0 h-20 w-20 rounded-full bg-white/5" />
-        </section>
+        <Suspense fallback={<HeroSectionSkeleton />}>
+          <DashboardHeroSection siteId={siteId} sessionName={session.name} />
+        </Suspense>
 
-        <StatsCards data={data} />
         <QuickActions permissions={permissions} />
 
-        <section>
-          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Vagues en cours</h2>
-          {data.vagues.length === 0 ? (
-            <EmptyState
-              icon={<Waves className="h-7 w-7" />}
-              title="Aucune vague en cours"
-              description="Creez une vague pour commencer le suivi de vos silures."
-              action={
-                <Link href="/vagues">
-                  <Button size="sm">Creer une vague</Button>
-                </Link>
-              }
-            />
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {data.vagues.map((vague, index) => (
-                <VagueSummaryCard key={vague.id} vague={vague} index={index} />
-              ))}
-            </div>
-          )}
-        </section>
+        <Suspense fallback={<IndicateursSkeleton />}>
+          <IndicateursSection siteId={siteId} />
+        </Suspense>
 
-        {indicateurs.length > 0 && (
-          <IndicateursPanel indicateurs={indicateurs} />
-        )}
+        <Suspense fallback={<ProjectionsSkeleton />}>
+          <ProjectionsSection siteId={siteId} />
+        </Suspense>
 
-        <Projections projections={projections} />
-
-        <RecentActivity releves={recentReleves} />
+        <Suspense fallback={<RecentActivitySkeleton />}>
+          <RecentActivitySection siteId={siteId} />
+        </Suspense>
       </div>
     </>
   );

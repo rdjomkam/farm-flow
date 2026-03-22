@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatutFacture, Permission } from "@/types";
+import { useFacturesList } from "@/hooks/queries/use-ventes-queries";
+import type { FactureWithRelations } from "@/types";
 
 const statutVariants: Record<StatutFacture, "default" | "info" | "warning" | "terminee" | "annulee"> = {
   [StatutFacture.BROUILLON]: "default",
@@ -28,8 +30,8 @@ interface FactureData {
   id: string;
   numero: string;
   statut: string;
-  dateEmission: string;
-  dateEcheance: string | null;
+  dateEmission: string | Date;
+  dateEcheance: string | Date | null;
   montantTotal: number;
   montantPaye: number;
   vente: {
@@ -43,13 +45,16 @@ interface FactureData {
 }
 
 interface Props {
-  factures: FactureData[];
+  initialFactures: FactureWithRelations[];
   permissions: Permission[];
 }
 
-export function FacturesListClient({ factures, permissions: _permissions }: Props) {
+export function FacturesListClient({ initialFactures, permissions: _permissions }: Props) {
   const t = useTranslations("ventes");
   const [filterStatut, setFilterStatut] = useState<string>("all");
+
+  const { data: rawFactures = initialFactures } = useFacturesList(undefined, initialFactures);
+  const factures = rawFactures as unknown as FactureData[];
 
   const filtered = factures.filter((f) => {
     if (filterStatut !== "all" && f.statut !== filterStatut) return false;

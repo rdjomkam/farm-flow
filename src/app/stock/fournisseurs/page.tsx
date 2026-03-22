@@ -23,7 +23,7 @@ export default async function FournisseursPage() {
       <Header title={t("fournisseurs.title")} />
       <div className="p-4">
         <FournisseursListClient
-          fournisseurs={JSON.parse(JSON.stringify(fournisseurs))}
+          fournisseurs={fournisseurs}
           permissions={permissions}
         />
       </div>

@@ -305,32 +305,33 @@ export async function getRecentActivity(siteId: string, limit = 5) {
 export async function getDashboardIndicateurs(
   siteId: string
 ): Promise<IndicateursBenchmarkVague[]> {
-  // Charger les vagues actives avec leurs releves et bacs
-  const vagues = await prisma.vague.findMany({
-    where: { siteId, statut: StatutVague.EN_COURS },
-    include: {
-      bacs: {
-        select: { volume: true },
-      },
-      releves: {
-        orderBy: { date: "asc" },
-        select: {
-          typeReleve: true,
-          date: true,
-          poidsMoyen: true,
-          nombreMorts: true,
-          quantiteAliment: true,
-          nombreCompte: true,
+  // Charger les vagues actives et la config en parallele (independants)
+  const [vagues, configRaw] = await Promise.all([
+    prisma.vague.findMany({
+      where: { siteId, statut: StatutVague.EN_COURS },
+      include: {
+        bacs: {
+          select: { volume: true },
+        },
+        releves: {
+          orderBy: { date: "asc" },
+          select: {
+            typeReleve: true,
+            date: true,
+            poidsMoyen: true,
+            nombreMorts: true,
+            quantiteAliment: true,
+            nombreCompte: true,
+          },
         },
       },
-    },
-    orderBy: { dateDebut: "desc" },
-  });
+      orderBy: { dateDebut: "desc" },
+    }),
+    getConfigElevageDefaut(siteId),
+  ]);
 
-  // Charger la config elevage par defaut pour les seuils configurables
   // Cast necessaire car le type Prisma (JsonValue sur alimentTailleConfig) differe
   // de l'interface ConfigElevage — seuls les champs numeriques scalaires sont utilises.
-  const configRaw = await getConfigElevageDefaut(siteId);
   const benchmarks = getBenchmarks(configRaw as unknown as ConfigElevage | null);
 
   // Charger TOUTES les activites correctives en une seule requete (anti N+1)

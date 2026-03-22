@@ -31,7 +31,7 @@ export default async function VentesPage() {
       <Header title={t("ventes.title")} />
       <div className="p-4">
         <VentesListClient
-          ventes={JSON.parse(JSON.stringify(ventes))}
+          initialVentes={JSON.parse(JSON.stringify(ventes))}
           clients={clientOptions}
           vagues={vagueOptions}
           permissions={permissions}

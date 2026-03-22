@@ -77,51 +77,49 @@ export function isQuotaAtteint(ressource: QuotaRessource): boolean {
  * @param siteId - ID du site (R8)
  * @returns QuotasUsage avec actuel + limite pour chaque ressource
  */
-export async function getQuotasUsage(siteId: string): Promise<QuotasUsage> {
-  // Charger l'abonnement actif (avec le plan inclus)
-  const abonnement = await getAbonnementActif(siteId);
-
-  // Déterminer les limites selon le plan
-  // Si pas d'abonnement → plan DECOUVERTE par défaut
-  let limitesBacs: number;
-  let limitesVagues: number;
-  let limitesSites: number;
-
-  if (abonnement) {
-    // ERR-008 : cast (plan.typePlan as string) pour comparaison
-    const typePlan = abonnement.plan.typePlan as string;
-
-    // Chercher dans PLAN_LIMITES la clé correspondante
-    // PLAN_LIMITES est indexé par TypePlan enum, dont les valeurs string
-    // sont UPPERCASE (R1 garanti)
-    const planLimites = (PLAN_LIMITES as Record<string, (typeof PLAN_LIMITES)[keyof typeof PLAN_LIMITES]>)[typePlan];
-
-    if (planLimites) {
-      limitesBacs = planLimites.limitesBacs;
-      limitesVagues = planLimites.limitesVagues;
-      limitesSites = planLimites.limitesSites;
-    } else {
-      // Fallback : DECOUVERTE
-      limitesBacs = PLAN_LIMITES["DECOUVERTE" as keyof typeof PLAN_LIMITES].limitesBacs;
-      limitesVagues = PLAN_LIMITES["DECOUVERTE" as keyof typeof PLAN_LIMITES].limitesVagues;
-      limitesSites = PLAN_LIMITES["DECOUVERTE" as keyof typeof PLAN_LIMITES].limitesSites;
-    }
-  } else {
-    // Pas d'abonnement actif → limites DECOUVERTE
-    limitesBacs = PLAN_LIMITES["DECOUVERTE" as keyof typeof PLAN_LIMITES].limitesBacs;
-    limitesVagues = PLAN_LIMITES["DECOUVERTE" as keyof typeof PLAN_LIMITES].limitesVagues;
-    limitesSites = PLAN_LIMITES["DECOUVERTE" as keyof typeof PLAN_LIMITES].limitesSites;
+/**
+ * Résout les limites du plan à partir de l'abonnement actif.
+ * Factorisé pour être partagé entre getQuotasUsage et getQuotasUsageWithCounts.
+ */
+function resolvePlanLimites(abonnement: Awaited<ReturnType<typeof getAbonnementActif>>) {
+  const decouverte = PLAN_LIMITES["DECOUVERTE" as keyof typeof PLAN_LIMITES];
+  if (!abonnement) {
+    return { limitesBacs: decouverte.limitesBacs, limitesVagues: decouverte.limitesVagues, limitesSites: decouverte.limitesSites };
   }
+  const typePlan = abonnement.plan.typePlan as string;
+  const planLimites = (PLAN_LIMITES as Record<string, (typeof PLAN_LIMITES)[keyof typeof PLAN_LIMITES]>)[typePlan];
+  if (planLimites) {
+    return { limitesBacs: planLimites.limitesBacs, limitesVagues: planLimites.limitesVagues, limitesSites: planLimites.limitesSites };
+  }
+  return { limitesBacs: decouverte.limitesBacs, limitesVagues: decouverte.limitesVagues, limitesSites: decouverte.limitesSites };
+}
 
-  // Compter les ressources actuelles en parallèle
+export async function getQuotasUsage(siteId: string): Promise<QuotasUsage> {
+  return getQuotasUsageWithCounts(siteId);
+}
+
+/**
+ * getQuotasUsageWithCounts — Comme getQuotasUsage, mais accepte des comptages
+ * pré-calculés pour éviter des requêtes DB redondantes.
+ *
+ * @param siteId - ID du site (R8)
+ * @param precomputedCounts - Comptages optionnels déjà disponibles côté page
+ */
+export async function getQuotasUsageWithCounts(
+  siteId: string,
+  precomputedCounts?: { bacsCount?: number; vaguesCount?: number }
+): Promise<QuotasUsage> {
+  const abonnement = await getAbonnementActif(siteId);
+  const { limitesBacs, limitesVagues, limitesSites } = resolvePlanLimites(abonnement);
+
+  // Utiliser les comptages pré-calculés ou faire les requêtes DB
   const [nombreBacs, nombreVagues] = await Promise.all([
-    prisma.bac.count({ where: { siteId } }),
-    prisma.vague.count({
-      where: {
-        siteId,
-        statut: StatutVague.EN_COURS,
-      },
-    }),
+    precomputedCounts?.bacsCount !== undefined
+      ? Promise.resolve(precomputedCounts.bacsCount)
+      : prisma.bac.count({ where: { siteId } }),
+    precomputedCounts?.vaguesCount !== undefined
+      ? Promise.resolve(precomputedCounts.vaguesCount)
+      : prisma.vague.count({ where: { siteId, statut: StatutVague.EN_COURS } }),
   ]);
 
   return {
@@ -134,7 +132,6 @@ export async function getQuotasUsage(siteId: string): Promise<QuotasUsage> {
       limite: normaliseLimite(limitesVagues),
     },
     sites: {
-      // Un site ne gère que lui-même : actuel = 1 toujours
       actuel: 1,
       limite: normaliseLimite(limitesSites),
     },

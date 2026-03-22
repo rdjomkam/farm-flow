@@ -45,7 +45,7 @@ export default async function CommandesPage() {
         <CommandesListClient
           commandes={JSON.parse(JSON.stringify(commandes))}
           fournisseurs={fournisseurOptions}
-          produits={produitOptions}
+          produits={JSON.parse(JSON.stringify(produitOptions))}
           permissions={permissions}
         />
       </div>

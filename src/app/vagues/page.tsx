@@ -62,7 +62,7 @@ export default async function VaguesPage() {
     <>
       <Header title={t("page.title")} />
       <div className="px-4 pt-4">
-        <QuotasUsageBar siteId={session.activeSiteId} />
+        <QuotasUsageBar siteId={session.activeSiteId} precomputedVaguesCount={vagues.filter((v) => v.statut === StatutVague.EN_COURS).length} />
       </div>
       <VaguesListClient vagues={vagues} bacsLibres={bacsLibres} permissions={permissions} />
     </>

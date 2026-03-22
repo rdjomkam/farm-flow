@@ -12,7 +12,7 @@
  * Rouge si la limite est atteinte, avec un bouton "Mettre à niveau" vers /tarifs.
  */
 import Link from "next/link";
-import { getQuotasUsage, isQuotaAtteint } from "@/lib/abonnements/check-quotas";
+import { getQuotasUsageWithCounts, isQuotaAtteint } from "@/lib/abonnements/check-quotas";
 import { isPlatformSite } from "@/lib/queries/sites";
 import type { QuotaRessource } from "@/lib/abonnements/check-quotas";
 
@@ -22,6 +22,10 @@ import type { QuotaRessource } from "@/lib/abonnements/check-quotas";
 
 interface QuotasUsageBarProps {
   siteId: string;
+  /** Pre-computed bacs count — skips DB query when provided */
+  precomputedBacsCount?: number;
+  /** Pre-computed active vagues count — skips DB query when provided */
+  precomputedVaguesCount?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -91,11 +95,14 @@ function RessourceBar({ label, ressource }: RessourceBarProps) {
 // Composant principal (Server Component)
 // ---------------------------------------------------------------------------
 
-export async function QuotasUsageBar({ siteId }: QuotasUsageBarProps) {
+export async function QuotasUsageBar({ siteId, precomputedBacsCount, precomputedVaguesCount }: QuotasUsageBarProps) {
   const isPlat = await isPlatformSite(siteId);
   if (isPlat) return null;
 
-  const quotas = await getQuotasUsage(siteId);
+  const quotas = await getQuotasUsageWithCounts(siteId, {
+    bacsCount: precomputedBacsCount,
+    vaguesCount: precomputedVaguesCount,
+  });
 
   const bacsAtteint = isQuotaAtteint(quotas.bacs);
   const vaguesAtteint = isQuotaAtteint(quotas.vagues);

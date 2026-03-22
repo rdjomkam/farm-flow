@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
 import { Plus, Users, Phone, Mail, MapPin, Pencil, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,26 +16,20 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Permission } from "@/types";
-import { useVenteService } from "@/services";
+import { useClientsList, useCreateClient, useUpdateClient } from "@/hooks/queries/use-ventes-queries";
+import type { Client } from "@/types";
 
-interface ClientData {
-  id: string;
-  nom: string;
-  telephone: string | null;
-  email: string | null;
-  adresse: string | null;
+interface ClientData extends Client {
   _count: { ventes: number };
 }
 
 interface Props {
-  clients: ClientData[];
+  initialClients: ClientData[];
   permissions: Permission[];
 }
 
-export function ClientsListClient({ clients, permissions }: Props) {
+export function ClientsListClient({ initialClients, permissions }: Props) {
   const t = useTranslations("ventes");
-  const queryClient = useQueryClient();
-  const venteService = useVenteService();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
 
@@ -45,6 +37,14 @@ export function ClientsListClient({ clients, permissions }: Props) {
   const [telephone, setTelephone] = useState("");
   const [email, setEmail] = useState("");
   const [adresse, setAdresse] = useState("");
+
+  const { data: rawClients = initialClients } = useClientsList(
+    initialClients as unknown as Client[]
+  );
+  const clients = rawClients as unknown as ClientData[];
+
+  const createClient = useCreateClient();
+  const updateClient = useUpdateClient();
 
   function resetForm() {
     setNom("");
@@ -73,14 +73,14 @@ export function ClientsListClient({ clients, permissions }: Props) {
       ...(adresse.trim() && { adresse: adresse.trim() }),
     };
 
-    const result = editId
-      ? await venteService.updateClient(editId, dto)
-      : await venteService.createClient(dto);
+    const mutation = editId
+      ? updateClient.mutateAsync({ id: editId, dto })
+      : createClient.mutateAsync(dto);
 
-    if (result.ok) {
+    const result = await mutation.catch(() => null);
+    if (result) {
       setDialogOpen(false);
       resetForm();
-      queryClient.invalidateQueries({ queryKey: queryKeys.clients.all });
     }
   }
 
@@ -143,7 +143,10 @@ export function ClientsListClient({ clients, permissions }: Props) {
                 <DialogClose asChild>
                   <Button variant="outline">{t("paiements.cancel")}</Button>
                 </DialogClose>
-                <Button onClick={handleSubmit} disabled={!nom.trim()}>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={!nom.trim() || createClient.isPending || updateClient.isPending}
+                >
                   {editId ? t("clients.save") : t("clients.create")}
                 </Button>
               </DialogFooter>

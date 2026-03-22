@@ -16,7 +16,10 @@ import type {
 
 // --- Ventes ---
 
-export function useVentesList(filters?: Record<string, unknown>) {
+export function useVentesList(
+  filters?: Record<string, unknown>,
+  initialData?: VenteWithRelations[]
+) {
   const venteService = useVenteService();
 
   return useQuery({
@@ -24,8 +27,9 @@ export function useVentesList(filters?: Record<string, unknown>) {
     queryFn: async () => {
       const result = await venteService.listVentes();
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement ventes");
-      return result.data.ventes;
+      return result.data.ventes as VenteWithRelations[];
     },
+    initialData,
     staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,
   });
@@ -85,7 +89,10 @@ export function useDeleteVente() {
 
 // --- Factures ---
 
-export function useFacturesList(filters?: Record<string, unknown>) {
+export function useFacturesList(
+  filters?: Record<string, unknown>,
+  initialData?: FactureWithRelations[]
+) {
   const venteService = useVenteService();
 
   return useQuery({
@@ -93,8 +100,9 @@ export function useFacturesList(filters?: Record<string, unknown>) {
     queryFn: async () => {
       const result = await venteService.listFactures();
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement factures");
-      return result.data.factures;
+      return result.data.factures as FactureWithRelations[];
     },
+    initialData,
     staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,
   });
@@ -170,7 +178,7 @@ export function useAddPaiement() {
 
 // --- Clients ---
 
-export function useClientsList() {
+export function useClientsList(initialData?: Client[]) {
   const venteService = useVenteService();
 
   return useQuery({
@@ -180,6 +188,7 @@ export function useClientsList() {
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement clients");
       return result.data.clients;
     },
+    initialData,
     staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,
   });

@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatutFacture, Permission } from "@/types";
+import { useVentesList } from "@/hooks/queries/use-ventes-queries";
+import type { VenteWithRelations } from "@/types";
 
 const statutVariants: Record<string, "default" | "info" | "en_cours" | "terminee" | "warning" | "annulee"> = {
   [StatutFacture.BROUILLON]: "default",
@@ -25,32 +27,19 @@ const statutVariants: Record<string, "default" | "info" | "en_cours" | "terminee
   [StatutFacture.ANNULEE]: "annulee",
 };
 
-interface VenteData {
-  id: string;
-  numero: string;
-  quantitePoissons: number;
-  poidsTotalKg: number;
-  prixUnitaireKg: number;
-  montantTotal: number;
-  notes: string | null;
-  createdAt: string;
-  client: { id: string; nom: string };
-  vague: { id: string; code: string };
-  user: { id: string; name: string };
-  facture: { id: string; numero: string; statut: string; montantPaye: number } | null;
-}
-
 interface Props {
-  ventes: VenteData[];
+  initialVentes: VenteWithRelations[];
   clients: { id: string; nom: string }[];
   vagues: { id: string; code: string }[];
   permissions: Permission[];
 }
 
-export function VentesListClient({ ventes, clients, vagues, permissions }: Props) {
+export function VentesListClient({ initialVentes, clients, vagues, permissions }: Props) {
   const t = useTranslations("ventes");
   const [filterClient, setFilterClient] = useState<string>("all");
   const [filterVague, setFilterVague] = useState<string>("all");
+
+  const { data: ventes = initialVentes } = useVentesList(undefined, initialVentes);
 
   const filtered = ventes.filter((v) => {
     if (filterClient !== "all" && v.client.id !== filterClient) return false;
