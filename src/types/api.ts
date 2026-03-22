@@ -2124,8 +2124,6 @@ export interface AdminSiteSummary {
   suspendedReason: string | null;
   /** ISO date string. Null si non archive. */
   deletedAt: string | null;
-  /** @deprecated ADR-022 — will be removed in Sprint B. */
-  isPlatform?: boolean;
   /** R2 : utiliser SiteStatus.ACTIVE, SiteStatus.SUSPENDED, etc. */
   status: SiteStatus;
   enabledModules: SiteModule[];
@@ -2182,8 +2180,6 @@ export interface AdminSiteDetailResponse {
   suspendedReason: string | null;
   /** ISO date string. */
   deletedAt: string | null;
-  /** @deprecated ADR-022 — will be removed in Sprint B. */
-  isPlatform?: boolean;
   /** R2 : utiliser SiteStatus.ACTIVE, etc. */
   status: SiteStatus;
   enabledModules: SiteModule[];

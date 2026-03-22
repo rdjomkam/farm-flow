@@ -104,7 +104,6 @@ const FAKE_SITE_SUMMARY = {
   id: "site-1",
   name: "Ferme Bello",
   isActive: true,
-  isPlatform: false,
   status: SiteStatus.ACTIVE,
   enabledModules: [SiteModule.GROSSISSEMENT],
   createdAt: new Date("2026-01-01"),

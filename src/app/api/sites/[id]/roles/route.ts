@@ -3,9 +3,7 @@ import { revalidatePath } from "next/cache";
 import { requirePermission, ForbiddenError, canAssignRole } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
 import { getSiteRoles, createSiteRole } from "@/lib/queries/roles";
-import { isPlatformSite } from "@/lib/queries/sites";
 import { Permission } from "@/types";
-import { PLATFORM_PERMISSIONS } from "@/lib/permissions-constants";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -54,24 +52,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     if (errors.length > 0) {
       return NextResponse.json({ status: 400, message: "Erreurs de validation", errors }, { status: 400 });
-    }
-
-    // Platform permissions: reject if site is not the platform site
-    const isPlat = await isPlatformSite(siteId);
-    if (!isPlat) {
-      const forbidden = (body.permissions as Permission[]).filter((p) =>
-        PLATFORM_PERMISSIONS.includes(p)
-      );
-      if (forbidden.length > 0) {
-        return NextResponse.json(
-          {
-            status: 400,
-            message: "Permissions non autorisees sur un site non-plateforme.",
-            errors: [{ field: "permissions", message: `Les permissions suivantes sont reservees au site plateforme : ${forbidden.join(", ")}` }],
-          },
-          { status: 400 }
-        );
-      }
     }
 
     // Anti-escalation: caller can only create roles with permissions they have

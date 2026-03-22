@@ -60,7 +60,7 @@ export function AdminSiteDetailClient({ site: initialSite }: AdminSiteDetailClie
     window.location.reload();
   }
 
-  const canChangeStatus = !site.isPlatform && site.status !== SiteStatus.ARCHIVED;
+  const canChangeStatus = site.status !== SiteStatus.ARCHIVED;
 
   return (
     <div className="space-y-6">
@@ -119,11 +119,6 @@ export function AdminSiteDetailClient({ site: initialSite }: AdminSiteDetailClie
               <SiteInfoRow label="Nom" value={site.name} />
               <SiteInfoRow label="Adresse" value={site.address ?? "—"} />
               <SiteInfoRow
-                label="Site plateforme"
-                value={site.isPlatform ? "Oui" : "Non"}
-                icon={site.isPlatform ? <CheckCircle className="h-4 w-4 text-success" /> : <XCircle className="h-4 w-4 text-muted-foreground" />}
-              />
-              <SiteInfoRow
                 label="Supervisé"
                 value={site.supervised ? "Oui" : "Non"}
               />
@@ -165,7 +160,6 @@ export function AdminSiteDetailClient({ site: initialSite }: AdminSiteDetailClie
           <AdminSiteModulesEditor
             siteId={site.id}
             enabledModules={site.enabledModules}
-            isPlatform={site.isPlatform ?? false}
             onSaved={handleModulesSaved}
           />
         </TabsContent>

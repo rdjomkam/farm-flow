@@ -4,20 +4,16 @@
  * Applique les modules d'un plan à un site lors de l'activation d'un abonnement.
  *
  * Story 43.5 — Sprint 43
+ * ADR-022 Sprint B : PLATFORM_MODULES supprime, tous les modules sont site-level.
  * R2 : enums importés depuis @/types
  * R4 : updateMany atomique via Prisma transaction
  * R8 : siteId obligatoire
- *
- * Note : les modules platform-level (ABONNEMENTS, COMMISSIONS, REMISES)
- * sont gérés par isModuleActive() dans la couche auth — ne pas les inclure dans enabledModules.
  */
 import { prisma } from "@/lib/db";
-import { PLATFORM_MODULES } from "@/lib/site-modules-config";
 import type { SiteModule } from "@/types";
 
 /**
  * Applique les modules du plan au site en remplaçant enabledModules.
- * Filtre les modules platform-level avant l'écriture.
  *
  * @param siteId - ID du site (R8)
  * @param planId - ID du PlanAbonnement à appliquer
@@ -32,11 +28,7 @@ export async function applyPlanModules(siteId: string, planId: string): Promise<
     throw new Error(`[applyPlanModules] Plan ${planId} introuvable`);
   }
 
-  // Filtrer les modules platform-level — jamais stockés dans enabledModules (gérés par isModuleActive())
-  const platformModuleValues = PLATFORM_MODULES.map((m) => m.value);
-  const siteModules = (plan.modulesInclus as SiteModule[]).filter(
-    (m) => !platformModuleValues.includes(m)
-  );
+  const siteModules = plan.modulesInclus as SiteModule[];
 
   await prisma.site.update({
     where: { id: siteId },
@@ -70,10 +62,7 @@ export async function applyPlanModulesTx(
     throw new Error(`[applyPlanModulesTx] Plan ${planId} introuvable`);
   }
 
-  const platformModuleValues = PLATFORM_MODULES.map((m) => m.value);
-  const siteModules = (plan.modulesInclus as SiteModule[]).filter(
-    (m) => !platformModuleValues.includes(m)
-  );
+  const siteModules = plan.modulesInclus as SiteModule[];
 
   await tx.site.update({
     where: { id: siteId },

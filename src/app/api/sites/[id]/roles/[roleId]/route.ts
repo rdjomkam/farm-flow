@@ -3,9 +3,7 @@ import { revalidatePath } from "next/cache";
 import { requirePermission, ForbiddenError, canAssignRole } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
 import { getSiteRoleById, updateSiteRole, deleteSiteRole } from "@/lib/queries/roles";
-import { isPlatformSite } from "@/lib/queries/sites";
 import { Permission } from "@/types";
-import { PLATFORM_PERMISSIONS } from "@/lib/permissions-constants";
 
 type RouteParams = { params: Promise<{ id: string; roleId: string }> };
 
@@ -56,26 +54,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // System roles: name cannot be changed
     if (role.isSystem && body.name !== undefined && body.name !== role.name) {
       return NextResponse.json({ status: 400, message: "Le nom d'un role systeme ne peut pas etre modifie." }, { status: 400 });
-    }
-
-    // Platform permissions: reject if site is not the platform site
-    if (body.permissions) {
-      const isPlat = await isPlatformSite(siteId);
-      if (!isPlat) {
-        const forbidden = (body.permissions as Permission[]).filter((p) =>
-          PLATFORM_PERMISSIONS.includes(p)
-        );
-        if (forbidden.length > 0) {
-          return NextResponse.json(
-            {
-              status: 400,
-              message: "Permissions non autorisees sur un site non-plateforme.",
-              errors: [{ field: "permissions", message: `Les permissions suivantes sont reservees au site plateforme : ${forbidden.join(", ")}` }],
-            },
-            { status: 400 }
-          );
-        }
-      }
     }
 
     // Anti-escalation: can only set permissions the caller has

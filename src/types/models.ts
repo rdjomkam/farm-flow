@@ -285,8 +285,6 @@ export interface Site {
   isActive: boolean;
   supervised: boolean;
   enabledModules: SiteModule[];
-  /** @deprecated ADR-022 — will be removed in Sprint B. */
-  isPlatform?: boolean;
   /** Null si non suspendu. Renseigne lors d'une action SUSPEND (ADR-021 section 2.4). */
   suspendedAt?: Date | string | null;
   /** Raison de la suspension — obligatoire lors de l'action SUSPEND. */

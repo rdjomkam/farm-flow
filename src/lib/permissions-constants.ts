@@ -66,7 +66,13 @@ export function canAssignRole(
 // ---------------------------------------------------------------------------
 
 export const PERMISSION_GROUPS = {
-  administration: [Permission.SITE_GERER, Permission.MEMBRES_GERER],
+  administration: [
+    Permission.SITE_GERER,
+    Permission.MEMBRES_GERER,
+    Permission.SITES_VOIR,
+    Permission.SITES_GERER,
+    Permission.ANALYTICS_PLATEFORME,
+  ],
   elevage: [
     Permission.VAGUES_VOIR,
     Permission.VAGUES_CREER,
@@ -151,12 +157,6 @@ export const PERMISSION_GROUPS = {
     Permission.PORTEFEUILLE_VOIR,
     Permission.PORTEFEUILLE_GERER,
   ],
-  // ADR-021 — Admin Plateforme (Sites & Modules)
-  adminPlateforme: [
-    Permission.SITES_VOIR,
-    Permission.SITES_GERER,
-    Permission.ANALYTICS_PLATEFORME,
-  ],
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -218,7 +218,6 @@ export const ITEM_VIEW_PERMISSIONS: Record<string, Permission> = {
   "/admin/sites":        Permission.SITES_VOIR,
   "/admin/analytics":    Permission.ANALYTICS_PLATEFORME,
   "/admin/modules":      Permission.SITES_GERER,
-  // Sprint 34-35 items (moved under Admin Plateforme module)
   "/admin/commissions":  Permission.COMMISSIONS_GERER,
   "/admin/remises":      Permission.REMISES_GERER,
 };
@@ -243,33 +242,6 @@ export const MODULE_LABEL_TO_SITE_MODULE: Record<string, SiteModule> = {
 };
 
 export const SECONDARY_VIEW_PERMISSIONS: Record<string, Permission> = {};
-
-// ---------------------------------------------------------------------------
-// Platform-only permissions — must NOT be assignable on non-platform sites
-// ---------------------------------------------------------------------------
-
-/**
- * PLATFORM_PERMISSIONS — permissions reservees au site plateforme (DKFarm).
- *
- * Ces permissions ne peuvent pas etre assignees a des roles sur des sites
- * clients ordinaires. Elles donnent acces aux fonctions d'administration
- * globale : plans, abonnements, remises, commissions, portefeuille.
- */
-export const PLATFORM_PERMISSIONS: Permission[] = [
-  Permission.PLANS_GERER,
-  Permission.ABONNEMENTS_VOIR,
-  Permission.ABONNEMENTS_GERER,
-  Permission.REMISES_GERER,
-  Permission.COMMISSIONS_VOIR,
-  Permission.COMMISSIONS_GERER,
-  Permission.COMMISSION_PREMIUM,
-  Permission.PORTEFEUILLE_VOIR,
-  Permission.PORTEFEUILLE_GERER,
-  // ADR-021 — Admin Plateforme (Sites & Modules)
-  Permission.SITES_VOIR,
-  Permission.SITES_GERER,
-  Permission.ANALYTICS_PLATEFORME,
-];
 
 export function hasPermission(permissions: Permission[], required: Permission): boolean {
   return permissions.includes(required);

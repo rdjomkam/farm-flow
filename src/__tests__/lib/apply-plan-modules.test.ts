@@ -1,16 +1,15 @@
 /**
- * Tests unitaires — applyPlanModules / applyPlanModulesTx (Sprint 43)
+ * Tests unitaires — applyPlanModules / applyPlanModulesTx (ADR-022 Sprint B)
+ *
+ * ADR-022 : PLATFORM_MODULES supprime. Tous les modules sont site-level.
+ * applyPlanModules ecrit directement modulesInclus dans enabledModules sans filtrage.
  *
  * Couvre :
  * - applyPlanModules : plan introuvable → throw
- * - applyPlanModules : filtre les modules platform avant écriture
- * - applyPlanModules : met à jour site.enabledModules avec les bons modules
+ * - applyPlanModules : ecrit tous les modules tels quels dans enabledModules
  * - applyPlanModules : plan sans modulesInclus → tableau vide
  * - applyPlanModulesTx : idem dans une transaction Prisma
  * - applyPlanModulesTx : plan introuvable dans tx → throw
- *
- * Story 43.5 — Sprint 43
- * R2 : enums SiteModule importés depuis @/types
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -36,7 +35,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Données de test
+// Donnees de test
 // ---------------------------------------------------------------------------
 
 const PLAN_SITE_MODULES = {
@@ -44,12 +43,12 @@ const PLAN_SITE_MODULES = {
   typePlan: TypePlan.ELEVEUR,
 };
 
-const PLAN_WITH_PLATFORM_MODULES = {
+const PLAN_MIXED_MODULES = {
   modulesInclus: [
     SiteModule.GROSSISSEMENT,
-    SiteModule.ABONNEMENTS,   // platform — doit être filtré
-    SiteModule.COMMISSIONS,   // platform — doit être filtré
-    SiteModule.REMISES,       // platform — doit être filtré
+    SiteModule.ABONNEMENTS,
+    SiteModule.COMMISSIONS,
+    SiteModule.REMISES,
     SiteModule.VENTES,
   ],
   typePlan: TypePlan.PROFESSIONNEL,
@@ -61,7 +60,7 @@ const PLAN_EMPTY_MODULES = {
 };
 
 // ---------------------------------------------------------------------------
-// applyPlanModules — cas nominaux
+// applyPlanModules — plan introuvable
 // ---------------------------------------------------------------------------
 
 describe("applyPlanModules — plan introuvable", () => {
@@ -78,11 +77,15 @@ describe("applyPlanModules — plan introuvable", () => {
   });
 });
 
-describe("applyPlanModules — modules site-level uniquement", () => {
+// ---------------------------------------------------------------------------
+// applyPlanModules — ecriture directe sans filtrage
+// ---------------------------------------------------------------------------
+
+describe("applyPlanModules — ecriture directe de tous les modules", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("applique uniquement les modules site-level (filtre les modules platform)", async () => {
-    mockPlanFindUnique.mockResolvedValue(PLAN_WITH_PLATFORM_MODULES);
+  it("ecrit tous les modules tels quels (pas de filtrage)", async () => {
+    mockPlanFindUnique.mockResolvedValue(PLAN_MIXED_MODULES);
     mockSiteUpdate.mockResolvedValue({ id: "site-abc" });
 
     await applyPlanModules("site-abc", "plan-1");
@@ -90,12 +93,18 @@ describe("applyPlanModules — modules site-level uniquement", () => {
     expect(mockSiteUpdate).toHaveBeenCalledWith({
       where: { id: "site-abc" },
       data: {
-        enabledModules: [SiteModule.GROSSISSEMENT, SiteModule.VENTES],
+        enabledModules: [
+          SiteModule.GROSSISSEMENT,
+          SiteModule.ABONNEMENTS,
+          SiteModule.COMMISSIONS,
+          SiteModule.REMISES,
+          SiteModule.VENTES,
+        ],
       },
     });
   });
 
-  it("ne write jamais ABONNEMENTS dans enabledModules", async () => {
+  it("ecrit ABONNEMENTS si present dans modulesInclus", async () => {
     mockPlanFindUnique.mockResolvedValue({
       modulesInclus: [SiteModule.ABONNEMENTS],
       typePlan: TypePlan.ELEVEUR,
@@ -105,11 +114,11 @@ describe("applyPlanModules — modules site-level uniquement", () => {
     await applyPlanModules("site-abc", "plan-1");
 
     const callArgs = mockSiteUpdate.mock.calls[0][0];
-    expect(callArgs.data.enabledModules).not.toContain(SiteModule.ABONNEMENTS);
-    expect(callArgs.data.enabledModules).toHaveLength(0);
+    expect(callArgs.data.enabledModules).toContain(SiteModule.ABONNEMENTS);
+    expect(callArgs.data.enabledModules).toHaveLength(1);
   });
 
-  it("ne write jamais COMMISSIONS dans enabledModules", async () => {
+  it("ecrit COMMISSIONS et GROSSISSEMENT si presents dans modulesInclus", async () => {
     mockPlanFindUnique.mockResolvedValue({
       modulesInclus: [SiteModule.COMMISSIONS, SiteModule.GROSSISSEMENT],
       typePlan: TypePlan.ELEVEUR,
@@ -119,29 +128,19 @@ describe("applyPlanModules — modules site-level uniquement", () => {
     await applyPlanModules("site-abc", "plan-1");
 
     const callArgs = mockSiteUpdate.mock.calls[0][0];
-    expect(callArgs.data.enabledModules).not.toContain(SiteModule.COMMISSIONS);
+    expect(callArgs.data.enabledModules).toContain(SiteModule.COMMISSIONS);
     expect(callArgs.data.enabledModules).toContain(SiteModule.GROSSISSEMENT);
   });
-
-  it("ne write jamais REMISES dans enabledModules", async () => {
-    mockPlanFindUnique.mockResolvedValue({
-      modulesInclus: [SiteModule.REMISES, SiteModule.VENTES],
-      typePlan: TypePlan.ELEVEUR,
-    });
-    mockSiteUpdate.mockResolvedValue({ id: "site-abc" });
-
-    await applyPlanModules("site-abc", "plan-1");
-
-    const callArgs = mockSiteUpdate.mock.calls[0][0];
-    expect(callArgs.data.enabledModules).not.toContain(SiteModule.REMISES);
-    expect(callArgs.data.enabledModules).toContain(SiteModule.VENTES);
-  });
 });
+
+// ---------------------------------------------------------------------------
+// applyPlanModules — plan avec modules site-level
+// ---------------------------------------------------------------------------
 
 describe("applyPlanModules — plan avec modules valides", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("passe tous les modules site-level tels quels", async () => {
+  it("passe tous les modules tels quels", async () => {
     mockPlanFindUnique.mockResolvedValue(PLAN_SITE_MODULES);
     mockSiteUpdate.mockResolvedValue({ id: "site-abc" });
 
@@ -155,7 +154,7 @@ describe("applyPlanModules — plan avec modules valides", () => {
     });
   });
 
-  it("accepte une liste vide de modules (désactivation de tous les modules)", async () => {
+  it("accepte une liste vide de modules", async () => {
     mockPlanFindUnique.mockResolvedValue(PLAN_EMPTY_MODULES);
     mockSiteUpdate.mockResolvedValue({ id: "site-abc" });
 
@@ -210,10 +209,10 @@ describe("applyPlanModulesTx — dans une transaction Prisma", () => {
     expect(mockTx.site.update).not.toHaveBeenCalled();
   });
 
-  it("filtre les modules platform dans la transaction", async () => {
+  it("ecrit tous les modules sans filtrage dans la transaction", async () => {
     const mockTx = {
       planAbonnement: {
-        findUnique: vi.fn().mockResolvedValue(PLAN_WITH_PLATFORM_MODULES),
+        findUnique: vi.fn().mockResolvedValue(PLAN_MIXED_MODULES),
       },
       site: { update: vi.fn().mockResolvedValue({ id: "site-abc" }) },
     };
@@ -223,7 +222,13 @@ describe("applyPlanModulesTx — dans une transaction Prisma", () => {
     expect(mockTx.site.update).toHaveBeenCalledWith({
       where: { id: "site-abc" },
       data: {
-        enabledModules: [SiteModule.GROSSISSEMENT, SiteModule.VENTES],
+        enabledModules: [
+          SiteModule.GROSSISSEMENT,
+          SiteModule.ABONNEMENTS,
+          SiteModule.COMMISSIONS,
+          SiteModule.REMISES,
+          SiteModule.VENTES,
+        ],
       },
     });
   });
@@ -271,7 +276,6 @@ describe("applyPlanModulesTx — dans une transaction Prisma", () => {
     await applyPlanModulesTx(mockTx as never, "site-abc", "plan-eleveur");
 
     expect(mockTx.planAbonnement.findUnique).toHaveBeenCalledOnce();
-    // Le mock global (prisma) ne doit pas avoir été appelé
     expect(mockPlanFindUnique).not.toHaveBeenCalled();
   });
 });
@@ -283,20 +287,7 @@ describe("applyPlanModulesTx — dans une transaction Prisma", () => {
 describe("applyPlanModules — cas limites", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("plan avec uniquement des modules platform → enabledModules vide", async () => {
-    mockPlanFindUnique.mockResolvedValue({
-      modulesInclus: [SiteModule.ABONNEMENTS, SiteModule.COMMISSIONS, SiteModule.REMISES],
-      typePlan: TypePlan.DECOUVERTE,
-    });
-    mockSiteUpdate.mockResolvedValue({ id: "site-abc" });
-
-    await applyPlanModules("site-abc", "plan-platform-only");
-
-    const callArgs = mockSiteUpdate.mock.calls[0][0];
-    expect(callArgs.data.enabledModules).toHaveLength(0);
-  });
-
-  it("plan avec tous les modules site-level → tous passent le filtre", async () => {
+  it("plan avec tous les modules site-level → tous passes tels quels", async () => {
     const allSiteModules = [
       SiteModule.REPRODUCTION,
       SiteModule.GROSSISSEMENT,
@@ -320,7 +311,7 @@ describe("applyPlanModules — cas limites", () => {
     expect(callArgs.data.enabledModules).toEqual(allSiteModules);
   });
 
-  it("appelé deux fois de suite → site.update appelé deux fois (idempotence)", async () => {
+  it("appele deux fois de suite → site.update appele deux fois (idempotence)", async () => {
     mockPlanFindUnique.mockResolvedValue(PLAN_SITE_MODULES);
     mockSiteUpdate.mockResolvedValue({ id: "site-abc" });
 

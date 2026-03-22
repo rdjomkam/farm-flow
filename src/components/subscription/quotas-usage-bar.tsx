@@ -13,7 +13,6 @@
  */
 import Link from "next/link";
 import { getQuotasUsageWithCounts, isQuotaAtteint } from "@/lib/abonnements/check-quotas";
-import { isPlatformSite } from "@/lib/queries/sites";
 import type { QuotaRessource } from "@/lib/abonnements/check-quotas";
 
 // ---------------------------------------------------------------------------
@@ -96,9 +95,6 @@ function RessourceBar({ label, ressource }: RessourceBarProps) {
 // ---------------------------------------------------------------------------
 
 export async function QuotasUsageBar({ siteId, precomputedBacsCount, precomputedVaguesCount }: QuotasUsageBarProps) {
-  const isPlat = await isPlatformSite(siteId);
-  if (isPlat) return null;
-
   const quotas = await getQuotasUsageWithCounts(siteId, {
     bacsCount: precomputedBacsCount,
     vaguesCount: precomputedVaguesCount,

@@ -1,8 +1,8 @@
 /**
  * admin-sites.ts — Queries admin plateforme pour la gestion des sites.
  *
- * Ces fonctions sont reservees au site plateforme (isPlatform = true) et
- * necessitent les permissions SITES_VOIR / SITES_GERER (ADR-021).
+ * Ces fonctions necessitent les permissions SITES_VOIR / SITES_GERER (ADR-021).
+ * Acces restreint via requireSuperAdmin() ou checkBackofficeAccess() (ADR-022).
  *
  * R4 : toutes les mutations multi-etapes utilisent des transactions atomiques.
  * R8 : siteId filter present sur toutes les queries retournant des donnees siteId-scoped.
@@ -331,8 +331,6 @@ export async function getAdminSiteById(siteId: string): Promise<AdminSiteDetailR
  * R4 : la mise a jour du site et la creation du SiteAuditLog sont dans la
  * meme transaction atomique.
  *
- * Protection : le site plateforme (isPlatform = true) ne peut pas etre modifie.
- *
  * Sur BLOCK : les sessions actives du site sont invalidees (delete cascades).
  *
  * @throws Error si le site est introuvable, est la plateforme, ou si la
@@ -499,13 +497,7 @@ function validateTransition(currentStatus: SiteStatus, action: SiteLifecycleActi
  *
  * R4 : la mise a jour et l'audit log sont dans la meme transaction.
  *
- * Protection :
- * - Le site plateforme ne peut pas etre modifie.
- * - Les modules de niveau "platform" (ABONNEMENTS, COMMISSIONS, REMISES) sont
- *   refuses pour les sites non-plateforme.
- *
- * @throws Error si le site est introuvable, est la plateforme, ou si des modules
- *   platform-only sont inclus dans la liste pour un site non-plateforme.
+ * @throws Error si le site est introuvable.
  */
 export async function updateSiteModulesAdmin(
   siteId: string,

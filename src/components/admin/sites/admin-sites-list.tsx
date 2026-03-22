@@ -96,7 +96,7 @@ function SiteCard({ site, onStatusChanged }: SiteCardProps) {
             Gérer
           </Button>
         </Link>
-        {site.status !== SiteStatus.ARCHIVED && !site.isPlatform && (
+        {site.status !== SiteStatus.ARCHIVED && (
           <AdminSiteStatusDialog
             siteId={site.id}
             siteName={site.name}
@@ -157,7 +157,7 @@ function SiteTableRow({
               Gérer
             </Button>
           </Link>
-          {site.status !== SiteStatus.ARCHIVED && !site.isPlatform && (
+          {site.status !== SiteStatus.ARCHIVED && (
             <AdminSiteStatusDialog
               siteId={site.id}
               siteName={site.name}

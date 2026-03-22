@@ -248,11 +248,11 @@ describe("canAssignRole (anti-escalation)", () => {
 // ===== PERMISSION_GROUPS ===================================================
 
 describe("PERMISSION_GROUPS", () => {
-  it("contient exactement 17 groupes (Sprint 30 : abonnements + Sprint C : adminPlateforme)", () => {
-    expect(Object.keys(PERMISSION_GROUPS)).toHaveLength(17);
+  it("contient exactement 16 groupes (ADR-022 : adminPlateforme supprime, perms integrees dans administration)", () => {
+    expect(Object.keys(PERMISSION_GROUPS)).toHaveLength(16);
   });
 
-  it("les 17 groupes attendus existent (Sprint 30 : +abonnements, Sprint C : +adminPlateforme)", () => {
+  it("les 16 groupes attendus existent (ADR-022 Sprint B)", () => {
     const groupNames = Object.keys(PERMISSION_GROUPS);
     expect(groupNames).toContain("administration");
     expect(groupNames).toContain("elevage");
@@ -273,8 +273,8 @@ describe("PERMISSION_GROUPS", () => {
     expect(groupNames).toContain("utilisateurs");
     // Sprint 30 — Abonnements
     expect(groupNames).toContain("abonnements");
-    // Sprint C — Admin Plateforme (ADR-021)
-    expect(groupNames).toContain("adminPlateforme");
+    // ADR-022 : adminPlateforme supprime
+    expect(groupNames).not.toContain("adminPlateforme");
   });
 
   it("couvre exactement toutes les permissions sans doublon (47 depuis Sprint 30)", () => {
@@ -284,10 +284,13 @@ describe("PERMISSION_GROUPS", () => {
     expect(new Set(allGroupedPerms)).toEqual(new Set(ALL_PERMISSIONS));
   });
 
-  it("administration contient SITE_GERER et MEMBRES_GERER (2 permissions)", () => {
+  it("administration contient SITE_GERER, MEMBRES_GERER et les permissions admin plateforme (5 permissions)", () => {
     expect(PERMISSION_GROUPS.administration).toContain(Permission.SITE_GERER);
     expect(PERMISSION_GROUPS.administration).toContain(Permission.MEMBRES_GERER);
-    expect(PERMISSION_GROUPS.administration).toHaveLength(2);
+    expect(PERMISSION_GROUPS.administration).toContain(Permission.SITES_VOIR);
+    expect(PERMISSION_GROUPS.administration).toContain(Permission.SITES_GERER);
+    expect(PERMISSION_GROUPS.administration).toContain(Permission.ANALYTICS_PLATEFORME);
+    expect(PERMISSION_GROUPS.administration).toHaveLength(5);
   });
 
   it("elevage contient 10 permissions dont BACS_MODIFIER et RELEVES_MODIFIER", () => {
