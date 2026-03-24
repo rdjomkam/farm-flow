@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Plus, Package, AlertTriangle, ArrowLeft } from "lucide-react";
+import { formatXAF } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -315,7 +316,7 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
                             </p>
                           )}
                           <p className="text-xs text-muted-foreground">
-                            {p.prixUnitaire.toLocaleString("fr-FR")} FCFA
+                            {formatXAF(p.prixUnitaire)}
                           </p>
                         </div>
                       </CardContent>

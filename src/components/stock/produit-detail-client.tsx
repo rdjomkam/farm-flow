@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
+import { formatXAF } from "@/lib/format";
 import {
   ArrowLeft,
   AlertTriangle,
@@ -271,7 +272,7 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
             </div>
             <div className="rounded-lg bg-muted/50 p-3 text-center">
               <p className="text-2xl font-bold">
-                {produit.prixUnitaire.toLocaleString("fr-FR")}
+                {formatXAF(produit.prixUnitaire)}
               </p>
               <p className="text-xs text-muted-foreground">FCFA / {baseUniteLabel}</p>
             </div>
