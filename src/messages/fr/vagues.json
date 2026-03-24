@@ -93,7 +93,17 @@
       "poidsMoyenInitial": "Le poids moyen doit être supérieur à 0.",
       "bacIds": "Sélectionnez au moins un bac.",
       "nombreInitialEdit": "Entier superieur a 0.",
-      "poidsMoyenInitialEdit": "Superieur a 0."
+      "poidsMoyenInitialEdit": "Superieur a 0.",
+      "distributionIncomplete": "Tous les bacs sélectionnés doivent avoir un nombre de poissons supérieur à 0.",
+      "distributionDesequilibree": "La somme ({total}) doit être égale au nombre d'alevins ({nombreInitial})."
+    },
+    "distribution": {
+      "placeholder": "Nb. poissons",
+      "totalLabel": "Total distribué : {total} / {nombreInitial} poissons",
+      "warningManquant": "Il manque {diff} poissons à distribuer.",
+      "warningExcedent": "{diff} poissons en trop.",
+      "repartirButton": "Répartir équitablement",
+      "equilibre": "Distribution équilibrée."
     }
   },
   "actionMenu": {

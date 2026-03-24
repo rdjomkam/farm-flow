@@ -229,6 +229,7 @@ export type {
   UpdateBacDTO,
   BacResponse,
   BacListResponse,
+  BacStockingEntry,
   CreateVagueDTO,
   UpdateVagueDTO,
   VagueSummaryResponse,

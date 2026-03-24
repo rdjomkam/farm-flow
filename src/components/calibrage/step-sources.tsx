@@ -27,7 +27,12 @@ export function StepSources({
   );
 
   const bacsAvecPoissons = bacs.filter((b) => (b.nombrePoissons ?? 0) > 0);
-  const bacsVides = bacs.filter((b) => (b.nombrePoissons ?? 0) === 0);
+  const bacsLegacy = bacs.filter(
+    (b) => (b.nombrePoissons ?? 0) === 0 && b.vagueId !== null
+  );
+  const bacsVides = bacs.filter(
+    (b) => (b.nombrePoissons ?? 0) === 0 && b.vagueId === null
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -38,7 +43,7 @@ export function StepSources({
         </p>
       </div>
 
-      {bacsAvecPoissons.length === 0 && (
+      {bacsAvecPoissons.length === 0 && bacsLegacy.length === 0 && (
         <div className="rounded-xl border border-border bg-muted/50 p-4 text-sm text-muted-foreground text-center">
           Aucun bac de cette vague ne contient de poissons.
         </div>
@@ -75,6 +80,36 @@ export function StepSources({
           );
         })}
 
+        {bacsLegacy.map((bac) => {
+          const isSelected = selectedBacIds.includes(bac.id);
+          return (
+            <button
+              key={bac.id}
+              type="button"
+              onClick={() => onToggle(bac.id)}
+              className={cn(
+                "flex items-center gap-3 w-full rounded-xl border p-4 text-left transition-colors min-h-[56px]",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                isSelected
+                  ? "border-primary bg-primary/5"
+                  : "border-border bg-card hover:border-primary/30"
+              )}
+            >
+              {isSelected ? (
+                <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+              ) : (
+                <Circle className="h-5 w-5 text-muted-foreground shrink-0" />
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm">{bac.nom}</p>
+                <p className="text-xs text-muted-foreground">
+                  Quantite inconnue — {bac.volume} L
+                </p>
+              </div>
+            </button>
+          );
+        })}
+
         {bacsVides.map((bac) => (
           <div
             key={bac.id}
@@ -95,7 +130,10 @@ export function StepSources({
         <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
           <Fish className="h-4 w-4 text-primary shrink-0" />
           <p className="text-sm text-primary font-medium">
-            {totalPoissons} poissons a calibrer ({selectedBacIds.length} bac
+            {totalPoissons > 0
+              ? `${totalPoissons} poissons a calibrer`
+              : "Quantite inconnue"}{" "}
+            ({selectedBacIds.length} bac
             {selectedBacIds.length > 1 ? "s" : ""} selectionne
             {selectedBacIds.length > 1 ? "s" : ""})
           </p>
@@ -107,7 +145,7 @@ export function StepSources({
       <Button
         type="button"
         onClick={onNext}
-        disabled={selectedBacIds.length === 0 || totalPoissons === 0}
+        disabled={selectedBacIds.length === 0}
         className="w-full"
       >
         Suivant

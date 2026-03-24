@@ -222,7 +222,10 @@ describe("POST /api/vagues", () => {
     nombreInitial: 1000,
     poidsMoyenInitial: 3.5,
     origineAlevins: "Production locale",
-    bacIds: ["bac-1", "bac-2"],
+    bacDistribution: [
+      { bacId: "bac-1", nombrePoissons: 500 },
+      { bacId: "bac-2", nombrePoissons: 500 },
+    ],
   };
 
   it("cree une vague avec des donnees valides", async () => {
@@ -253,7 +256,10 @@ describe("POST /api/vagues", () => {
     expect(data.nombreBacs).toBe(2);
     expect(mockCreateVague).toHaveBeenCalledWith("site-1", expect.objectContaining({
       code: "VAGUE-2026-003",
-      bacIds: ["bac-1", "bac-2"],
+      bacDistribution: [
+        { bacId: "bac-1", nombrePoissons: 500 },
+        { bacId: "bac-2", nombrePoissons: 500 },
+      ],
     }));
   });
 
@@ -329,8 +335,8 @@ describe("POST /api/vagues", () => {
     ).toBe(true);
   });
 
-  it("retourne 400 si bacIds est vide", async () => {
-    const body = { ...validBody, bacIds: [] };
+  it("retourne 400 si bacDistribution est vide", async () => {
+    const body = { ...validBody, bacDistribution: [] };
     const request = makeRequest("/api/vagues", {
       method: "POST",
       body: JSON.stringify(body),
@@ -340,7 +346,7 @@ describe("POST /api/vagues", () => {
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.errors.some((e: { field: string }) => e.field === "bacIds")).toBe(true);
+    expect(data.errors.some((e: { field: string }) => e.field === "bacDistribution")).toBe(true);
   });
 
   it("retourne 409 quand un bac est deja assigne", async () => {

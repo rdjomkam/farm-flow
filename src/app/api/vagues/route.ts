@@ -100,11 +100,47 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (!Array.isArray(body.bacIds) || body.bacIds.length === 0) {
+    if (!Array.isArray(body.bacDistribution) || body.bacDistribution.length === 0) {
       errors.push({
-        field: "bacIds",
-        message: "Au moins un bac doit etre selectionne.",
+        field: "bacDistribution",
+        message: "Au moins un bac doit etre selectionne avec sa distribution d'alevins.",
       });
+    } else {
+      // Valider chaque entree de la distribution
+      for (let i = 0; i < body.bacDistribution.length; i++) {
+        const entry = body.bacDistribution[i];
+        if (!entry || typeof entry.bacId !== "string" || entry.bacId.trim() === "") {
+          errors.push({
+            field: `bacDistribution[${i}].bacId`,
+            message: `L'entree ${i + 1} doit avoir un bacId valide.`,
+          });
+        }
+        if (
+          entry == null ||
+          typeof entry.nombrePoissons !== "number" ||
+          !Number.isInteger(entry.nombrePoissons) ||
+          entry.nombrePoissons <= 0
+        ) {
+          errors.push({
+            field: `bacDistribution[${i}].nombrePoissons`,
+            message: `L'entree ${i + 1} doit avoir un nombrePoissons entier superieur a 0.`,
+          });
+        }
+      }
+
+      // Valider que la somme des nombrePoissons correspond au nombreInitial
+      if (errors.length === 0 && body.nombreInitial != null) {
+        const somme = (body.bacDistribution as Array<{ nombrePoissons: number }>).reduce(
+          (acc, e) => acc + e.nombrePoissons,
+          0
+        );
+        if (somme !== body.nombreInitial) {
+          errors.push({
+            field: "bacDistribution",
+            message: `La somme des poissons par bac (${somme}) doit etre egale au nombre initial (${body.nombreInitial}).`,
+          });
+        }
+      }
     }
 
     if (errors.length > 0) {
@@ -120,7 +156,7 @@ export async function POST(request: NextRequest) {
       nombreInitial: body.nombreInitial,
       poidsMoyenInitial: body.poidsMoyenInitial,
       origineAlevins: body.origineAlevins ?? undefined,
-      bacIds: body.bacIds,
+      bacDistribution: body.bacDistribution,
     };
 
     // Vérifier le quota et créer la vague dans une transaction atomique (R4)

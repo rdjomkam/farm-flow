@@ -37,12 +37,14 @@ export async function getVagueById(id: string, siteId: string) {
 /** Cree une vague et assigne les bacs en transaction */
 export async function createVague(siteId: string, data: CreateVagueDTO) {
   return prisma.$transaction(async (tx) => {
+    const bacIds = data.bacDistribution.map((e) => e.bacId);
+
     // Verifier que tous les bacs existent, sont libres, et appartiennent au site
     const bacs = await tx.bac.findMany({
-      where: { id: { in: data.bacIds }, siteId },
+      where: { id: { in: bacIds }, siteId },
     });
 
-    if (bacs.length !== data.bacIds.length) {
+    if (bacs.length !== bacIds.length) {
       throw new Error("Un ou plusieurs bacs sont introuvables");
     }
 
@@ -72,11 +74,18 @@ export async function createVague(siteId: string, data: CreateVagueDTO) {
       },
     });
 
-    // Assigner les bacs
-    await tx.bac.updateMany({
-      where: { id: { in: data.bacIds }, siteId },
-      data: { vagueId: vague.id },
-    });
+    // Assigner les bacs avec leur distribution d'alevins
+    for (const entry of data.bacDistribution) {
+      await tx.bac.update({
+        where: { id: entry.bacId, siteId },
+        data: {
+          vagueId: vague.id,
+          nombrePoissons: entry.nombrePoissons,
+          nombreInitial: entry.nombrePoissons,
+          poidsMoyenInitial: data.poidsMoyenInitial,
+        },
+      });
+    }
 
     return tx.vague.findUnique({
       where: { id: vague.id },

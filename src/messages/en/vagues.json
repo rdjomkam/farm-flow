@@ -93,7 +93,17 @@
       "poidsMoyenInitial": "Average weight must be greater than 0.",
       "bacIds": "Select at least one tank.",
       "nombreInitialEdit": "Must be an integer greater than 0.",
-      "poidsMoyenInitialEdit": "Must be greater than 0."
+      "poidsMoyenInitialEdit": "Must be greater than 0.",
+      "distributionIncomplete": "All selected tanks must have a fish count greater than 0.",
+      "distributionDesequilibree": "The sum ({total}) must equal the initial count ({nombreInitial})."
+    },
+    "distribution": {
+      "placeholder": "Fish count",
+      "totalLabel": "Total distributed: {total} / {nombreInitial} fish",
+      "warningManquant": "{diff} fish still to distribute.",
+      "warningExcedent": "{diff} fish over the limit.",
+      "repartirButton": "Distribute evenly",
+      "equilibre": "Distribution balanced."
     }
   },
   "actionMenu": {

@@ -145,6 +145,12 @@ export interface BacListResponse {
 // Vagues
 // ---------------------------------------------------------------------------
 
+/** Repartition des alevins pour un bac lors de la creation d'une vague */
+export interface BacStockingEntry {
+  bacId: string;
+  nombrePoissons: number;
+}
+
 /** DTO pour creer une nouvelle vague */
 export interface CreateVagueDTO {
   /** Code unique de la vague (ex: "VAGUE-2024-001") */
@@ -157,8 +163,8 @@ export interface CreateVagueDTO {
   poidsMoyenInitial: number;
   /** Provenance des alevins */
   origineAlevins?: string;
-  /** IDs des bacs a assigner a cette vague */
-  bacIds: string[];
+  /** Distribution des alevins par bac */
+  bacDistribution: BacStockingEntry[];
 }
 
 /** DTO pour modifier/cloturer une vague */

@@ -19,7 +19,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FormSection } from "@/components/ui/form-section";
 import { VagueCard } from "./vague-card";
 import { StatutVague, Permission } from "@/types";
-import type { VagueSummaryResponse, BacResponse } from "@/types";
+import type { VagueSummaryResponse, BacResponse, BacStockingEntry } from "@/types";
 import { useCreateVague } from "@/hooks/queries/use-vagues-queries";
 
 interface VaguesListClientProps {
@@ -40,6 +40,8 @@ export function VaguesListClient({ vagues, bacsLibres, permissions }: VaguesList
   const [poidsMoyenInitial, setPoidsMoyenInitial] = useState("");
   const [origineAlevins, setOrigineAlevins] = useState("");
   const [selectedBacs, setSelectedBacs] = useState<string[]>([]);
+  // distribution: bacId -> nombrePoissons string (kept as string for input binding)
+  const [distributionMap, setDistributionMap] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const enCours = vagues.filter((v) => v.statut === StatutVague.EN_COURS);
@@ -53,26 +55,75 @@ export function VaguesListClient({ vagues, bacsLibres, permissions }: VaguesList
     setPoidsMoyenInitial("");
     setOrigineAlevins("");
     setSelectedBacs([]);
+    setDistributionMap({});
     setErrors({});
   }
 
   function toggleBac(bacId: string) {
-    setSelectedBacs((prev) =>
-      prev.includes(bacId) ? prev.filter((id) => id !== bacId) : [...prev, bacId]
-    );
+    setSelectedBacs((prev) => {
+      if (prev.includes(bacId)) {
+        // remove from distribution too
+        setDistributionMap((dm) => {
+          const next = { ...dm };
+          delete next[bacId];
+          return next;
+        });
+        return prev.filter((id) => id !== bacId);
+      }
+      return [...prev, bacId];
+    });
   }
+
+  function handleDistributionChange(bacId: string, value: string) {
+    setDistributionMap((prev) => ({ ...prev, [bacId]: value }));
+  }
+
+  function distributeEvenly() {
+    const total = Number(nombreInitial);
+    if (!total || total <= 0 || selectedBacs.length === 0) return;
+    const base = Math.floor(total / selectedBacs.length);
+    const remainder = total % selectedBacs.length;
+    const next: Record<string, string> = {};
+    selectedBacs.forEach((id, i) => {
+      next[id] = String(base + (i === 0 ? remainder : 0));
+    });
+    setDistributionMap(next);
+  }
+
+  // Derived: sum of all distribution values for selected bacs
+  const totalDistribue = selectedBacs.reduce((sum, id) => {
+    const v = Number(distributionMap[id]);
+    return sum + (Number.isFinite(v) && v > 0 ? v : 0);
+  }, 0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
+    const nombreInitialNum = Number(nombreInitial);
 
     if (!code.trim()) newErrors.code = t("form.errors.code");
     if (!dateDebut) newErrors.dateDebut = t("form.errors.dateDebut");
-    if (!nombreInitial || Number(nombreInitial) <= 0)
+    if (!nombreInitial || nombreInitialNum <= 0)
       newErrors.nombreInitial = t("form.errors.nombreInitial");
     if (!poidsMoyenInitial || Number(poidsMoyenInitial) <= 0)
       newErrors.poidsMoyenInitial = t("form.errors.poidsMoyenInitial");
-    if (selectedBacs.length === 0) newErrors.bacIds = t("form.errors.bacIds");
+    if (selectedBacs.length === 0) {
+      newErrors.bacIds = t("form.errors.bacIds");
+    } else {
+      // Validate each selected bac has a valid distribution
+      const hasIncomplete = selectedBacs.some((id) => {
+        const v = Number(distributionMap[id]);
+        return !Number.isInteger(v) || v <= 0;
+      });
+      if (hasIncomplete) {
+        newErrors.bacIds = t("form.errors.distributionIncomplete");
+      } else if (totalDistribue !== nombreInitialNum) {
+        newErrors.bacIds = t("form.errors.distributionDesequilibree", {
+          total: totalDistribue,
+          nombreInitial: nombreInitialNum,
+        });
+      }
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -81,14 +132,19 @@ export function VaguesListClient({ vagues, bacsLibres, permissions }: VaguesList
 
     setErrors({});
 
+    const bacDistribution: BacStockingEntry[] = selectedBacs.map((bacId) => ({
+      bacId,
+      nombrePoissons: Number(distributionMap[bacId]),
+    }));
+
     try {
       await createVagueMutation.mutateAsync({
         code: code.trim(),
         dateDebut,
-        nombreInitial: Number(nombreInitial),
+        nombreInitial: nombreInitialNum,
         poidsMoyenInitial: Number(poidsMoyenInitial),
         origineAlevins: origineAlevins.trim() || undefined,
-        bacIds: selectedBacs,
+        bacDistribution,
       });
       setDialogOpen(false);
       resetForm();
@@ -192,32 +248,89 @@ export function VaguesListClient({ vagues, bacsLibres, permissions }: VaguesList
                     {t("form.fields.aucunBacLibre")}
                   </p>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    {bacsLibres.map((bac) => (
-                      <label
-                        key={bac.id}
-                        className={`flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
-                          selectedBacs.includes(bac.id)
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:bg-muted"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedBacs.includes(bac.id)}
-                          onChange={() => toggleBac(bac.id)}
-                          className="h-4 w-4 accent-primary"
-                        />
-                        <div>
-                          <span className="font-medium">{bac.nom}</span>
-                          <span className="ml-1 text-muted-foreground">
-                            ({bac.volume}L)
-                          </span>
+                  <div className="flex flex-col gap-2">
+                    {bacsLibres.map((bac) => {
+                      const isSelected = selectedBacs.includes(bac.id);
+                      return (
+                        <div key={bac.id} className="flex flex-col gap-1">
+                          <label
+                            className={`flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                              isSelected
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover:bg-muted"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleBac(bac.id)}
+                              className="h-4 w-4 accent-primary"
+                            />
+                            <div>
+                              <span className="font-medium">{bac.nom}</span>
+                              <span className="ml-1 text-muted-foreground">
+                                ({bac.volume}L)
+                              </span>
+                            </div>
+                          </label>
+                          {isSelected && (
+                            <input
+                              type="number"
+                              min="1"
+                              step="1"
+                              placeholder={t("form.distribution.placeholder")}
+                              value={distributionMap[bac.id] ?? ""}
+                              onChange={(e) => handleDistributionChange(bac.id, e.target.value)}
+                              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                              required
+                            />
+                          )}
                         </div>
-                      </label>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
+
+                {/* Distribution summary — shown when at least one bac is selected */}
+                {selectedBacs.length > 0 && Number(nombreInitial) > 0 && (
+                  <div className="mt-2 flex flex-col gap-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium">
+                        {t("form.distribution.totalLabel", {
+                          total: totalDistribue,
+                          nombreInitial: Number(nombreInitial),
+                        })}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={distributeEvenly}
+                        className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
+                      >
+                        {t("form.distribution.repartirButton")}
+                      </button>
+                    </div>
+                    {totalDistribue < Number(nombreInitial) && totalDistribue > 0 && (
+                      <p className="text-xs text-warning">
+                        {t("form.distribution.warningManquant", {
+                          diff: Number(nombreInitial) - totalDistribue,
+                        })}
+                      </p>
+                    )}
+                    {totalDistribue > Number(nombreInitial) && (
+                      <p className="text-xs text-danger">
+                        {t("form.distribution.warningExcedent", {
+                          diff: totalDistribue - Number(nombreInitial),
+                        })}
+                      </p>
+                    )}
+                    {totalDistribue === Number(nombreInitial) && totalDistribue > 0 && (
+                      <p className="text-xs text-success">
+                        {t("form.distribution.equilibre")}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {errors.bacIds && (
                   <p className="text-sm text-danger">{errors.bacIds}</p>
                 )}
