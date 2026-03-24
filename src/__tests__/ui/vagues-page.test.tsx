@@ -52,6 +52,14 @@ const vaguesTranslations: Record<string, string | ((p: Record<string, unknown>) 
   "form.errors.nombreInitial": "Le nombre initial est requis.",
   "form.errors.poidsMoyenInitial": "Le poids moyen initial est requis.",
   "form.errors.bacIds": "Sélectionnez au moins un bac.",
+  "form.errors.distributionIncomplete": "Répartition incomplète.",
+  "form.errors.distributionDesequilibree": (p) => `Total ${p.total} ≠ ${p.nombreInitial}`,
+  "form.distribution.placeholder": "Nombre",
+  "form.distribution.totalLabel": (p) => `Total: ${p.total} / ${p.nombreInitial}`,
+  "form.distribution.repartirButton": "Répartir équitablement",
+  "form.distribution.warningManquant": (p) => `Il manque ${p.manquant}`,
+  "form.distribution.warningExcedent": (p) => `Excédent de ${p.excedent}`,
+  "form.distribution.equilibre": "Répartition équilibrée",
   "form.sections.identification.title": "Identification",
   "form.sections.identification.description": "Informations de la vague",
   "form.sections.population.title": "Population initiale",
@@ -272,6 +280,10 @@ describe("VaguesListClient — Formulaire de création", () => {
     // Select bac
     const bacCheckbox = screen.getByRole("checkbox");
     fireEvent.click(bacCheckbox);
+
+    // Fill in the distribution input (how many fish go in this bac)
+    const distributionInput = screen.getByPlaceholderText("Nombre");
+    fireEvent.change(distributionInput, { target: { value: "1000" } });
 
     fireEvent.click(screen.getByText("Créer la vague"));
 

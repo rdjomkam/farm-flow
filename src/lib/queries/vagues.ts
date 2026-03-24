@@ -110,10 +110,15 @@ export async function cloturerVague(id: string, siteId: string, dateFin?: string
       throw new Error("Seule une vague en cours peut être clôturée");
     }
 
-    // Liberer tous les bacs
+    // Liberer tous les bacs et remettre les compteurs a zero
     await tx.bac.updateMany({
       where: { vagueId: id, siteId },
-      data: { vagueId: null },
+      data: {
+        vagueId: null,
+        nombrePoissons: null,
+        nombreInitial: null,
+        poidsMoyenInitial: null,
+      },
     });
 
     // Mettre a jour le statut et la date de fin

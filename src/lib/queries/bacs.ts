@@ -46,17 +46,36 @@ export async function createBac(siteId: string, data: CreateBacDTO) {
   });
 }
 
-/** Met a jour un bac (nom, volume) */
+/** Met a jour un bac (nom, volume, compteurs poissons) */
 export async function updateBac(id: string, siteId: string, data: UpdateBacDTO) {
   const bac = await prisma.bac.findFirst({ where: { id, siteId } });
   if (!bac) throw new Error("Bac introuvable");
+
+  // Si nombreInitial est fourni mais pas nombrePoissons, auto-calculer :
+  // nombrePoissons = nombreInitial - sum(mortalité relevés du bac dans la vague)
+  let computedNombrePoissons: number | undefined;
+  if (data.nombreInitial !== undefined && data.nombrePoissons === undefined && bac.vagueId) {
+    const mortaliteSum = await prisma.releve.aggregate({
+      where: {
+        bacId: id,
+        vagueId: bac.vagueId,
+        typeReleve: "MORTALITE",
+      },
+      _sum: { nombreMorts: true },
+    });
+    computedNombrePoissons = data.nombreInitial - (mortaliteSum._sum.nombreMorts ?? 0);
+  }
 
   return prisma.bac.update({
     where: { id },
     data: {
       ...(data.nom !== undefined && { nom: data.nom }),
       ...(data.volume !== undefined && { volume: data.volume }),
-      ...(data.nombrePoissons !== undefined && { nombrePoissons: data.nombrePoissons }),
+      ...(data.nombrePoissons !== undefined
+        ? { nombrePoissons: data.nombrePoissons }
+        : computedNombrePoissons !== undefined
+          ? { nombrePoissons: computedNombrePoissons }
+          : {}),
       ...(data.nombreInitial !== undefined && { nombreInitial: data.nombreInitial }),
       ...(data.poidsMoyenInitial !== undefined && { poidsMoyenInitial: data.poidsMoyenInitial }),
       ...(data.typeSysteme !== undefined && { typeSysteme: data.typeSysteme as TypeSystemeBac | null }),

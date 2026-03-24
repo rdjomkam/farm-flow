@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getBacById, updateBac } from "@/lib/queries/bacs";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
@@ -122,6 +123,7 @@ export async function PUT(
     }
 
     const bac = await updateBac(id, auth.activeSiteId, data);
+    revalidatePath("/vagues");
     return NextResponse.json(bac);
   } catch (error) {
     if (error instanceof AuthError) {
