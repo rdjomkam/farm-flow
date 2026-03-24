@@ -25,9 +25,9 @@ describe("formatXAF", () => {
     expect(formatXAF(10000)).toContain("FCFA");
   });
 
-  it('formatXAF(0) retourne "0 FCFA"', () => {
+  it('formatXAF(0) retourne "0,00 FCFA"', () => {
     const result = formatXAF(0).replace(/\s/g, " ");
-    expect(result).toBe("0 FCFA");
+    expect(result).toBe("0,00 FCFA");
   });
 
   it("formatXAF(15000) contient le bon montant formaté", () => {
@@ -42,15 +42,14 @@ describe("formatXAF", () => {
     expect(result).toContain("FCFA");
   });
 
-  it("formatXAF ne produit pas de décimales", () => {
-    const result = formatXAF(12345.67);
-    expect(result).not.toContain(",");
-    expect(result).not.toContain(".");
+  it("formatXAF produit 2 décimales", () => {
+    const result = formatXAF(12345.67).replace(/\s/g, " ");
+    expect(result).toBe("12 345,67 FCFA");
   });
 
   it("formatXAF(500) retourne un montant inférieur à 1000 sans séparateur de milliers", () => {
     const result = formatXAF(500).replace(/\s/g, " ");
-    expect(result).toBe("500 FCFA");
+    expect(result).toBe("500,00 FCFA");
   });
 });
 

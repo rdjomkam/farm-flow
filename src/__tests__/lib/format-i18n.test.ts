@@ -27,9 +27,9 @@ describe("formatXAF — locale fr (défaut)", () => {
     expect(result).toContain("FCFA");
   });
 
-  it("formatXAF(0) retourne '0 FCFA' en fr", () => {
+  it("formatXAF(0) retourne '0,00 FCFA' en fr", () => {
     const result = formatXAF(0).replace(/\s/g, " ");
-    expect(result).toBe("0 FCFA");
+    expect(result).toBe("0,00 FCFA");
   });
 
   it("formatXAF sans paramètre locale utilise fr par défaut", () => {
@@ -46,20 +46,19 @@ describe("formatXAF — locale fr (défaut)", () => {
 describe("formatXAF — locale en", () => {
   it("formate 1000 avec séparateur virgule en anglais", () => {
     const result = formatXAF(1000, "en");
-    expect(result).toContain("1,000");
+    expect(result).toContain("1,000.00");
     expect(result).toContain("FCFA");
   });
 
   it("formate 10000 avec séparateur virgule en anglais", () => {
     const result = formatXAF(10000, "en");
-    expect(result).toContain("10,000");
+    expect(result).toContain("10,000.00");
     expect(result).toContain("FCFA");
   });
 
-  it("formatXAF(0, 'en') retourne '0 FCFA'", () => {
+  it("formatXAF(0, 'en') retourne '0.00 FCFA'", () => {
     const result = formatXAF(0, "en");
-    expect(result).toContain("0");
-    expect(result).toContain("FCFA");
+    expect(result).toBe("0.00 FCFA");
   });
 
   it("le séparateur fr et en sont différents pour 1000", () => {

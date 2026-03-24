@@ -28,7 +28,8 @@ export function formatXAF(amount: number, locale: string = "fr"): string {
   return (
     new Intl.NumberFormat(intlLocale, {
       style: "decimal",
-      maximumFractionDigits: 0,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount) + " FCFA"
   );
 }
