@@ -324,7 +324,7 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
                     <div className="text-right shrink-0">
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Calendar className="h-3 w-3" />
-                        {new Date(m.date).toLocaleDateString("fr-FR")}
+                        {new Date(m.date).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}
                       </div>
                       <p className="text-xs text-muted-foreground">{m.user.name}</p>
                     </div>
