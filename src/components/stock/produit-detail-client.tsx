@@ -259,14 +259,14 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-lg bg-muted/50 p-3 text-center">
               <p className="text-2xl font-bold">
-                {produit.stockActuel}
+                {formatNum(produit.stockActuel)}
               </p>
               <p className="text-xs text-muted-foreground">
                 {t("produits.detail.inStock", { unit: baseUniteLabel })}
               </p>
               {produit.uniteAchat && produit.contenance && produit.contenance > 0 && (
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {"\u2248 "}{Math.round((produit.stockActuel / produit.contenance) * 10) / 10} {uniteLabel(produit.uniteAchat)}
+                  {"\u2248 "}{formatNum(produit.stockActuel / produit.contenance)} {uniteLabel(produit.uniteAchat)}
                 </p>
               )}
             </div>
@@ -314,7 +314,7 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">
-                        {isEntree ? "+" : "-"}{m.quantite} {baseUniteLabel}
+                        {isEntree ? "+" : "-"}{formatNum(m.quantite)} {baseUniteLabel}
                       </p>
                       {m.notes && (
                         <p className="text-xs text-muted-foreground truncate">
