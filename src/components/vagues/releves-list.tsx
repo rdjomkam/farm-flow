@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Calendar, ChevronRight, FileText, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -82,6 +83,7 @@ function ReleveDetails({ releve }: { releve: Releve }) {
 
 function DeleteReleveButton({ releveId }: { releveId: string }) {
   const t = useTranslations("releves");
+  const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const releveService = useReleveService();
@@ -99,6 +101,7 @@ function DeleteReleveButton({ releveId }: { releveId: string }) {
       queryClient.invalidateQueries({ queryKey: queryKeys.produits.all });
       queryClient.invalidateQueries({ queryKey: ["stock"] });
       setOpen(false);
+      router.refresh();
     } catch {
       // toast is handled by the service layer
     } finally {
