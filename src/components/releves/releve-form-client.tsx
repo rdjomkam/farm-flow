@@ -209,8 +209,8 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
       typeReleve,
       ...(notes.trim() && { notes: notes.trim() }),
       ...(activiteId && { activiteId }),
-      // Toujours envoyer la date pour permettre la saisie retroactive
-      date: releveDate,
+      // Convert datetime-local (local time) to ISO string so the server gets correct UTC
+      date: new Date(releveDate).toISOString(),
     };
 
     // Add type-specific numeric fields

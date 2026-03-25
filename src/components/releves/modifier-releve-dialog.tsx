@@ -161,9 +161,9 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
   function buildBody(): Record<string, unknown> {
     const body: Record<string, unknown> = { raison: raison.trim() };
 
-    // Inclure la date seulement si elle a change
+    // Inclure la date seulement si elle a change — convert to ISO for correct UTC
     if (releveDate && releveDate !== formatDatetime(releve.date)) {
-      body.date = releveDate;
+      body.date = new Date(releveDate).toISOString();
     }
 
     if (notes.trim()) body.notes = notes.trim();
