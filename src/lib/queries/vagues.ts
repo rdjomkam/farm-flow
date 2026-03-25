@@ -23,10 +23,15 @@ export async function getVagueById(id: string, siteId: string) {
     include: {
       bacs: { orderBy: { nom: "asc" } },
       releves: {
-        orderBy: { updatedAt: "desc" },
+        orderBy: { date: "desc" },
         include: {
           consommations: {
             include: { produit: true },
+          },
+          modifications: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { raison: true, createdAt: true, user: { select: { name: true } } },
           },
         },
       },

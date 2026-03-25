@@ -68,6 +68,7 @@ export const ErrorKeys = {
   SERVER_CREATE_RELEVE: "server.createReleve",
   SERVER_GET_RELEVE: "server.getReleve",
   SERVER_UPDATE_RELEVE: "server.updateReleve",
+  SERVER_DELETE_RELEVE: "server.deleteReleve",
   SERVER_GET_PLANS: "server.getPlans",
   SERVER_CREATE_PLAN: "server.createPlan",
   SERVER_GET_PLAN: "server.getPlan",
