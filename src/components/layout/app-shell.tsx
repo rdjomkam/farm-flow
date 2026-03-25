@@ -45,7 +45,7 @@ export function AppShell({
     <MobileMenuContext.Provider value={{ openMenu, isImpersonating }}>
       <div className="flex min-h-dvh">
         <Sidebar permissions={permissions} role={role} siteModules={siteModules} isSuperAdmin={isSuperAdmin} />
-        <main className="flex-1 overflow-x-hidden pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">{children}</main>
+        <main className="flex-1 overflow-x-clip pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">{children}</main>
       </div>
       <HamburgerMenu
         open={menuOpen}

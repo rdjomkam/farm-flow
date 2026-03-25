@@ -35,25 +35,29 @@ export function Header({ title, children, className }: HeaderProps) {
   }, []);
 
   return (
-    <header
-      className={cn(
-        "sticky z-30 flex min-h-[calc(56px+env(safe-area-inset-top))] items-center justify-between border-b border-border bg-card px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] transition-transform duration-300 md:min-h-[56px] md:pt-3 md:translate-y-0",
-        isImpersonating ? "top-14 sm:top-11" : "top-0",
-        !visible && "-translate-y-full",
-        className
-      )}
-    >
-      <div className="flex items-center gap-2 min-w-0">
-        <div className="flex items-center gap-1 md:hidden">
-          <Button variant="ghost" className="h-11 w-11 p-0" onClick={openMenu}>
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Menu</span>
-          </Button>
-          <NotificationBell />
+    <>
+      <header
+        className={cn(
+          "fixed inset-x-0 z-30 flex min-h-[calc(56px+env(safe-area-inset-top))] items-center justify-between border-b border-border bg-card px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] transition-transform duration-300 md:sticky md:inset-x-auto md:min-h-[56px] md:pt-3 md:translate-y-0",
+          isImpersonating ? "top-14 sm:top-11" : "top-0",
+          !visible && "-translate-y-full md:translate-y-0",
+          className
+        )}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-1 md:hidden">
+            <Button variant="ghost" className="h-11 w-11 p-0" onClick={openMenu}>
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Menu</span>
+            </Button>
+            <NotificationBell />
+          </div>
+          <h1 className="text-lg font-semibold truncate">{title}</h1>
         </div>
-        <h1 className="text-lg font-semibold truncate">{title}</h1>
-      </div>
-      {children && <div className="flex items-center gap-2 shrink-0">{children}</div>}
-    </header>
+        {children && <div className="flex items-center gap-2 shrink-0">{children}</div>}
+      </header>
+      {/* Spacer to offset fixed header on mobile */}
+      <div className="h-[calc(56px+env(safe-area-inset-top))] md:hidden" />
+    </>
   );
 }
