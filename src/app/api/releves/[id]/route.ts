@@ -389,7 +389,16 @@ export async function DELETE(
     const { id } = await params;
 
     const result = await deleteReleve(auth.activeSiteId, id);
-    return NextResponse.json(result, { status: 200 });
+
+    // Fire-and-forget SEUIL reevaluation (same pattern as PATCH)
+    const seuilTypes = [TypeReleve.BIOMETRIE, TypeReleve.MORTALITE, TypeReleve.ALIMENTATION, TypeReleve.QUALITE_EAU];
+    if (seuilTypes.includes(result.typeReleve as TypeReleve)) {
+      runEngineForSite(auth.activeSiteId, auth.userId).catch((err) =>
+        console.error("[DELETE /api/releves/[id]] Erreur hook SEUIL:", err)
+      );
+    }
+
+    return NextResponse.json({ message: result.message }, { status: 200 });
   } catch (error) {
     console.error("[DELETE /api/releves/[id]] Error:", error);
     if (error instanceof AuthError) {

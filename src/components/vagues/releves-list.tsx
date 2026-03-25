@@ -20,6 +20,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ModifierReleveDialog } from "@/components/releves/modifier-releve-dialog";
 import { useReleveService } from "@/services";
+import { useToast } from "@/components/ui/toast";
 import { queryKeys } from "@/lib/query-keys";
 import { TypeReleve, Permission } from "@/types";
 import type { Releve } from "@/types";
@@ -81,6 +82,7 @@ function ReleveDetails({ releve }: { releve: Releve }) {
 
 function DeleteReleveButton({ releveId }: { releveId: string }) {
   const t = useTranslations("releves");
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const releveService = useReleveService();
   const [open, setOpen] = useState(false);
@@ -90,6 +92,7 @@ function DeleteReleveButton({ releveId }: { releveId: string }) {
     setDeleting(true);
     try {
       await releveService.remove(releveId);
+      toast({ title: t("list.deleteSuccess"), variant: "success" });
       queryClient.invalidateQueries({ queryKey: queryKeys.releves.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.vagues.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
@@ -106,7 +109,13 @@ function DeleteReleveButton({ releveId }: { releveId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-7 w-7 px-0 text-muted-foreground hover:text-destructive">
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={t("list.deleteTitle")}
+          title={t("list.deleteTitle")}
+          className="h-7 w-7 px-0 text-muted-foreground hover:text-destructive"
+        >
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
       </DialogTrigger>

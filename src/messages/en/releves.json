@@ -25,7 +25,8 @@
     "deleteDescription": "This action cannot be undone. Stock will be adjusted accordingly.",
     "deleteCancel": "Cancel",
     "deleteConfirm": "Delete",
-    "deleting": "Deleting..."
+    "deleting": "Deleting...",
+    "deleteSuccess": "Record deleted."
   },
   "details": {
     "poids": "Weight: {value}g",

@@ -400,9 +400,12 @@ export async function getRelevesByType(siteId: string, vagueId: string, type: Ty
  *
  * Transaction atomique :
  * 1. Verifie que le releve appartient au site
- * 2. Restaure le stock pour chaque consommation (increment stockActuel)
- * 3. Supprime les mouvements de stock lies
- * 4. Supprime le releve (cascade: consommations + modifications)
+ * 2. Reset linked Activite back to PLANIFIEE (undo auto-completion)
+ * 3. Restaure le stock pour chaque consommation (increment stockActuel)
+ * 4. Supprime les mouvements de stock lies
+ * 5. Supprime le releve (cascade: consommations + modifications)
+ *
+ * Returns vagueId for post-delete SEUIL reevaluation.
  */
 export async function deleteReleve(siteId: string, id: string) {
   return prisma.$transaction(async (tx) => {
@@ -411,6 +414,7 @@ export async function deleteReleve(siteId: string, id: string) {
       where: { id, siteId },
       include: {
         consommations: true,
+        activite: true,
       },
     });
 
@@ -418,7 +422,15 @@ export async function deleteReleve(siteId: string, id: string) {
       throw new Error("Releve introuvable ou n'appartient pas a ce site.");
     }
 
-    // 2. Restaurer le stock pour chaque consommation
+    // 2. Reset linked Activite back to PLANIFIEE (undo auto-completion on creation)
+    if (releve.activite) {
+      await tx.activite.update({
+        where: { id: releve.activite.id },
+        data: { statut: StatutActivite.PLANIFIEE, releveId: null, dateTerminee: null },
+      });
+    }
+
+    // 3. Restaurer le stock pour chaque consommation
     for (const conso of releve.consommations) {
       await tx.produit.update({
         where: { id: conso.produitId },
@@ -426,17 +438,17 @@ export async function deleteReleve(siteId: string, id: string) {
       });
     }
 
-    // 3. Supprimer les mouvements de stock lies a ce releve
+    // 4. Supprimer les mouvements de stock lies a ce releve
     await tx.mouvementStock.deleteMany({
       where: { releveId: id, siteId },
     });
 
-    // 4. Supprimer le releve (cascade supprime consommations + modifications)
+    // 5. Supprimer le releve (cascade supprime consommations + modifications)
     await tx.releve.delete({
       where: { id },
     });
 
-    return { message: "Releve supprime." };
+    return { message: "Releve supprime.", vagueId: releve.vagueId, typeReleve: releve.typeReleve };
   });
 }
 
