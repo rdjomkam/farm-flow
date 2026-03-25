@@ -19,7 +19,14 @@
     "emptyTitle": "Aucun relevé",
     "emptyDescription": "Les relevés apparaîtront ici au fur et à mesure du suivi.",
     "voirTout": "Voir tout ({count})",
-    "modified": "Modifie"
+    "modified": "Modifié",
+    "modifiedBy": "Modifié par {name} : {reason}",
+    "deleteTitle": "Supprimer le relevé",
+    "deleteDescription": "Cette action est irréversible. Le stock sera ajusté en conséquence.",
+    "deleteCancel": "Annuler",
+    "deleteConfirm": "Supprimer",
+    "deleting": "Suppression...",
+    "deleteSuccess": "Relevé supprimé."
   },
   "details": {
     "poids": "Poids : {value}g",

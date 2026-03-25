@@ -15,7 +15,7 @@ export {
   updateVague,
 } from "./vagues";
 
-export { getReleves, createReleve, getRelevesByType } from "./releves";
+export { getReleves, createReleve, getRelevesByType, deleteReleve } from "./releves";
 
 export { getIndicateursVague } from "./indicateurs";
 

@@ -2,12 +2,26 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Calendar, ChevronRight, FileText } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Calendar, ChevronRight, FileText, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ModifierReleveDialog } from "@/components/releves/modifier-releve-dialog";
+import { useReleveService } from "@/services";
+import { useToast } from "@/components/ui/toast";
+import { queryKeys } from "@/lib/query-keys";
 import { TypeReleve, Permission } from "@/types";
 import type { Releve } from "@/types";
 import type { ProduitOption } from "@/components/releves/consommation-fields";
@@ -66,6 +80,63 @@ function ReleveDetails({ releve }: { releve: Releve }) {
   }
 }
 
+function DeleteReleveButton({ releveId }: { releveId: string }) {
+  const t = useTranslations("releves");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const releveService = useReleveService();
+  const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await releveService.remove(releveId);
+      toast({ title: t("list.deleteSuccess"), variant: "success" });
+      queryClient.invalidateQueries({ queryKey: queryKeys.releves.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.vagues.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.produits.all });
+      queryClient.invalidateQueries({ queryKey: ["stock"] });
+      setOpen(false);
+    } catch {
+      // toast is handled by the service layer
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={t("list.deleteTitle")}
+          title={t("list.deleteTitle")}
+          className="h-7 w-7 px-0 text-muted-foreground hover:text-destructive"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("list.deleteTitle")}</DialogTitle>
+          <DialogDescription>{t("list.deleteDescription")}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={deleting}>
+            {t("list.deleteCancel")}
+          </Button>
+          <Button variant="danger" onClick={handleDelete} disabled={deleting}>
+            {deleting ? t("list.deleting") : t("list.deleteConfirm")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 interface RelevesListProps {
   releves: Releve[];
   produits?: ProduitOption[];
@@ -106,7 +177,7 @@ export function RelevesList({ releves, produits = [], permissions, limit, vagueI
                 <Badge variant={typeVariants[r.typeReleve as TypeReleve]}>
                   {t(`types.${r.typeReleve as TypeReleve}`)}
                 </Badge>
-                {(r as { modifie?: boolean }).modifie && (
+                {r.modifie && (
                   <Badge variant="warning">{t("list.modified")}</Badge>
                 )}
               </div>
@@ -116,8 +187,19 @@ export function RelevesList({ releves, produits = [], permissions, limit, vagueI
                   {new Date(r.date).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })}
                 </span>
                 <ModifierReleveDialog releve={r} produits={produits} permissions={permissions} />
+                {permissions.includes(Permission.RELEVES_SUPPRIMER) && (
+                  <DeleteReleveButton releveId={r.id} />
+                )}
               </div>
             </div>
+            {r.modifie && r.modifications?.[0] && (
+              <p className="text-xs italic text-muted-foreground">
+                {t("list.modifiedBy", {
+                  name: r.modifications[0].user.name,
+                  reason: r.modifications[0].raison,
+                })}
+              </p>
+            )}
             <ReleveDetails releve={r} />
             {r.consommations && r.consommations.length > 0 && (
               <div className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">

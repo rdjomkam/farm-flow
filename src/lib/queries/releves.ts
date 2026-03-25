@@ -396,6 +396,63 @@ export async function getRelevesByType(siteId: string, vagueId: string, type: Ty
 }
 
 /**
+ * Supprime un releve et restaure le stock consomme.
+ *
+ * Transaction atomique :
+ * 1. Verifie que le releve appartient au site
+ * 2. Reset linked Activite back to PLANIFIEE (undo auto-completion)
+ * 3. Restaure le stock pour chaque consommation (increment stockActuel)
+ * 4. Supprime les mouvements de stock lies
+ * 5. Supprime le releve (cascade: consommations + modifications)
+ *
+ * Returns vagueId for post-delete SEUIL reevaluation.
+ */
+export async function deleteReleve(siteId: string, id: string) {
+  return prisma.$transaction(async (tx) => {
+    // 1. Verifier que le releve existe et appartient au site
+    const releve = await tx.releve.findFirst({
+      where: { id, siteId },
+      include: {
+        consommations: true,
+        activite: true,
+      },
+    });
+
+    if (!releve) {
+      throw new Error("Releve introuvable ou n'appartient pas a ce site.");
+    }
+
+    // 2. Reset linked Activite back to PLANIFIEE (undo auto-completion on creation)
+    if (releve.activite) {
+      await tx.activite.update({
+        where: { id: releve.activite.id },
+        data: { statut: StatutActivite.PLANIFIEE, releveId: null, dateTerminee: null },
+      });
+    }
+
+    // 3. Restaurer le stock pour chaque consommation
+    for (const conso of releve.consommations) {
+      await tx.produit.update({
+        where: { id: conso.produitId },
+        data: { stockActuel: { increment: conso.quantite } },
+      });
+    }
+
+    // 4. Supprimer les mouvements de stock lies a ce releve
+    await tx.mouvementStock.deleteMany({
+      where: { releveId: id, siteId },
+    });
+
+    // 5. Supprimer le releve (cascade supprime consommations + modifications)
+    await tx.releve.delete({
+      where: { id },
+    });
+
+    return { message: "Releve supprime.", vagueId: releve.vagueId, typeReleve: releve.typeReleve };
+  });
+}
+
+/**
  * Met a jour un releve avec traçabilite obligatoire de la raison (ADR-014).
  *
  * Transaction atomique :

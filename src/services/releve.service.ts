@@ -80,7 +80,6 @@ export function useReleveService() {
       call<{ message: string }>(
         `/api/releves/${id}`,
         { method: "DELETE" },
-        { successMessage: "Relevé supprimé." }
       ),
     [call]
   );

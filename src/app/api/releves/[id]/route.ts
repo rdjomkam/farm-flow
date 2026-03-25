@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getReleveById, updateReleve, patchReleve } from "@/lib/queries/releves";
+import { getReleveById, updateReleve, patchReleve, deleteReleve } from "@/lib/queries/releves";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import {
@@ -371,6 +371,48 @@ export async function PATCH(
 
     return NextResponse.json(
       { status: 500, message: "Erreur serveur lors de la modification du releve.", errorKey: ErrorKeys.SERVER_UPDATE_RELEVE },
+      { status: 500 }
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// DELETE — Suppression d'un releve avec restauration du stock
+// ---------------------------------------------------------------------------
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const auth = await requirePermission(request, Permission.RELEVES_SUPPRIMER);
+    const { id } = await params;
+
+    const result = await deleteReleve(auth.activeSiteId, id);
+
+    // Fire-and-forget SEUIL reevaluation (same pattern as PATCH)
+    const seuilTypes = [TypeReleve.BIOMETRIE, TypeReleve.MORTALITE, TypeReleve.ALIMENTATION, TypeReleve.QUALITE_EAU];
+    if (seuilTypes.includes(result.typeReleve as TypeReleve)) {
+      runEngineForSite(auth.activeSiteId, auth.userId).catch((err) =>
+        console.error("[DELETE /api/releves/[id]] Erreur hook SEUIL:", err)
+      );
+    }
+
+    return NextResponse.json({ message: result.message }, { status: 200 });
+  } catch (error) {
+    console.error("[DELETE /api/releves/[id]] Error:", error);
+    if (error instanceof AuthError) {
+      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+    }
+    if (error instanceof ForbiddenError) {
+      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+    }
+    const message = error instanceof Error ? error.message : "Erreur serveur inattendue.";
+    if (message.includes("introuvable")) {
+      return NextResponse.json({ status: 404, message }, { status: 404 });
+    }
+    return NextResponse.json(
+      { status: 500, message: "Erreur serveur lors de la suppression du releve.", errorKey: ErrorKeys.SERVER_DELETE_RELEVE },
       { status: 500 }
     );
   }

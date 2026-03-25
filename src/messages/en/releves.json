@@ -19,7 +19,14 @@
     "emptyTitle": "No records",
     "emptyDescription": "Records will appear here as monitoring progresses.",
     "voirTout": "View all ({count})",
-    "modified": "Modified"
+    "modified": "Modified",
+    "modifiedBy": "Modified by {name}: {reason}",
+    "deleteTitle": "Delete record",
+    "deleteDescription": "This action cannot be undone. Stock will be adjusted accordingly.",
+    "deleteCancel": "Cancel",
+    "deleteConfirm": "Delete",
+    "deleting": "Deleting...",
+    "deleteSuccess": "Record deleted."
   },
   "details": {
     "poids": "Weight: {value}g",
