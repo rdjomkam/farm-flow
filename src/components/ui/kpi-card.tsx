@@ -30,7 +30,7 @@ export function KPICard({
         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           {title}
         </p>
-        <p className="mt-1 text-2xl font-bold tracking-tight">{value}</p>
+        <p className="mt-1 text-xl sm:text-2xl font-bold tracking-tight">{value}</p>
         {subtitle && (
           <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
         )}

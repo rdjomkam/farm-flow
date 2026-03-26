@@ -57,7 +57,7 @@ export function QuickActions({ permissions }: QuickActionsProps) {
       <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4">
         {visibleActions.map((action) => (
           <Link key={action.href} href={action.href} className="shrink-0">
-            <div className={cn("relative flex items-center gap-3 rounded-xl px-4 py-3 min-w-[160px] transition-all hover:scale-[1.02]", action.bgClass)}>
+            <div className={cn("relative flex items-center gap-3 rounded-xl px-4 py-3 min-w-[140px] transition-all hover:scale-[1.02]", action.bgClass)}>
               <action.icon className={cn("h-5 w-5", action.iconColor)} />
               <span className="text-sm font-medium whitespace-nowrap">{action.label}</span>
               {action.badge !== undefined && action.badge > 0 && (

@@ -35,8 +35,8 @@ export async function DashboardHeroSection({ siteId, sessionName }: DashboardHer
             {data.biomasseTotale ? ` \u00b7 ${data.biomasseTotale} kg de biomasse` : ""}
           </p>
         </div>
-        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10" />
-        <div className="absolute -right-4 bottom-0 h-20 w-20 rounded-full bg-white/5" />
+        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 hidden sm:block" />
+        <div className="absolute -right-4 bottom-0 h-20 w-20 rounded-full bg-white/5 hidden sm:block" />
       </section>
 
       <StatsCards data={data} />

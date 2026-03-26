@@ -43,7 +43,7 @@ export async function StatsCards({ data }: StatsCardsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-3 lg:grid-cols-4">
       {stats.map((stat, index) => (
         <div
           key={stat.title}
