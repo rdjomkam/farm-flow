@@ -111,6 +111,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
+html, body {
+  overflow-x: hidden;
+}
+
 body {
   background: var(--surface-0);
   color: var(--foreground);

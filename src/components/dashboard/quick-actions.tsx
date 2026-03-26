@@ -54,7 +54,8 @@ export function QuickActions({ permissions }: QuickActionsProps) {
   return (
     <section>
       <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Actions rapides</h2>
-      <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4">
+      <div className="overflow-hidden -mx-4 md:mx-0">
+      <div className="flex gap-3 overflow-x-auto pb-1 px-4 md:px-0 md:grid md:grid-cols-4">
         {visibleActions.map((action) => (
           <Link key={action.href} href={action.href} className="shrink-0">
             <div className={cn("relative flex items-center gap-3 rounded-xl px-4 py-3 min-w-[140px] transition-all hover:scale-[1.02]", action.bgClass)}>
@@ -68,6 +69,7 @@ export function QuickActions({ permissions }: QuickActionsProps) {
             </div>
           </Link>
         ))}
+      </div>
       </div>
     </section>
   );
