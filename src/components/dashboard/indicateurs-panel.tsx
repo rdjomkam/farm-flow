@@ -38,7 +38,7 @@ function IndicateurRow({ label, value, unit, level, icon: Icon }: IndicateurRowP
             : "text-muted-foreground";
 
   return (
-    <div className="flex items-center justify-between gap-2 py-2">
+    <div className="flex items-center justify-between gap-1.5 py-2">
       <div className="flex items-center gap-2 min-w-0">
         <Icon className={`h-4 w-4 shrink-0 ${iconColorClass}`} />
         <span className="text-sm text-muted-foreground truncate">{label}</span>
@@ -144,7 +144,7 @@ export async function IndicateursPanel({ indicateurs }: IndicateursPanelProps) {
                 background: "var(--accent-red)",
               }}
             >
-              <span>{tAnalytics("indicators.viewCorrectiveAction")}</span>
+              <span className="truncate">{tAnalytics("indicators.viewCorrectiveAction")}</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
           )}
@@ -156,7 +156,7 @@ export async function IndicateursPanel({ indicateurs }: IndicateursPanelProps) {
                 background: "var(--accent-red)",
               }}
             >
-              <span>{tAnalytics("indicators.planCorrectiveAction")}</span>
+              <span className="truncate">{tAnalytics("indicators.planCorrectiveAction")}</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
           )}
@@ -249,7 +249,7 @@ export async function IndicateursPanel({ indicateurs }: IndicateursPanelProps) {
                         color: "var(--accent-red)",
                       }}
                     >
-                      <span>{ind.activiteCorrectiveTitre ?? tAnalytics("indicators.correctiveAction")}</span>
+                      <span className="truncate">{ind.activiteCorrectiveTitre ?? tAnalytics("indicators.correctiveAction")}</span>
                       <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                   )}

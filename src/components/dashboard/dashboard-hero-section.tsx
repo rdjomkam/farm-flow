@@ -18,7 +18,7 @@ export async function DashboardHeroSection({ siteId, sessionName }: DashboardHer
     <>
       {/* Hero greeting */}
       <section
-        className="relative overflow-hidden rounded-2xl p-6"
+        className="relative overflow-hidden rounded-2xl p-4 sm:p-6"
         style={{ background: "var(--primary-gradient)" }}
       >
         <div className="relative z-10 text-white">

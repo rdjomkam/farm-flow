@@ -106,7 +106,7 @@ function SGRBadge({
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex flex-col min-[400px]:flex-row min-[400px]:items-center gap-1 min-[400px]:gap-2">
         <div className="flex items-center gap-1.5">
           {enAvance ? (
             <TrendingUp className="h-4 w-4 text-success" />
@@ -196,14 +196,14 @@ function CourbeProjectionChart({ projection }: { projection: ProjectionVague }) 
             x={joursEcoules}
             stroke="var(--muted-foreground)"
             strokeDasharray="4 4"
-            label={{ value: "Aujourd'hui", fontSize: 10, fill: "var(--muted-foreground)" }}
+            label={{ value: "Auj.", fontSize: 10, fill: "var(--muted-foreground)" }}
           />
           {/* Ligne horizontale objectif */}
           <ReferenceLine
             y={poidsObjectif}
             stroke="var(--accent-amber)"
             strokeDasharray="4 4"
-            label={{ value: `Objectif ${poidsObjectif}g`, fontSize: 10, fill: "var(--accent-amber)" }}
+            label={{ value: `Obj. ${poidsObjectif}g`, fontSize: 10, fill: "var(--accent-amber)" }}
           />
           {/* Courbe reelle */}
           <Line
@@ -285,7 +285,7 @@ function ProjectionCard({ projection }: ProjectionCardProps) {
         </div>
 
         {/* Grille de KPIs */}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-2 sm:grid-cols-3">
           {/* Date de recolte */}
           <div className="flex flex-col gap-1 rounded-lg border border-border p-2.5 bg-card">
             <div className="flex items-center gap-1.5 text-muted-foreground">
@@ -294,7 +294,7 @@ function ProjectionCard({ projection }: ProjectionCardProps) {
             </div>
             {projection.dateRecolteEstimee !== null ? (
               <>
-                <p className="text-sm font-semibold leading-tight">
+                <p className="text-sm font-semibold leading-tight break-words">
                   {formatDate(projection.dateRecolteEstimee)}
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -334,7 +334,7 @@ function ProjectionCard({ projection }: ProjectionCardProps) {
                 <DollarSign className="h-3.5 w-3.5" />
                 <span className="text-[11px] font-medium">{tAnalytics("projections.expectedRevenue")}</span>
               </div>
-              <p className="text-sm font-semibold">
+              <p className="text-sm font-semibold break-words">
                 {formatCFA(projection.revenuAttendu)}
               </p>
             </div>
