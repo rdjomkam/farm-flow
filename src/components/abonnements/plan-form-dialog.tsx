@@ -261,7 +261,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
         body.typePlan = typePlan;
       }
 
-      const url = isEditing ? `/api/plans/${plan!.id}` : "/api/plans";
+      const url = isEditing ? `/api/backoffice/plans/${plan!.id}` : "/api/backoffice/plans";
       const method = isEditing ? "PUT" : "POST";
 
       const res = await fetch(url, {

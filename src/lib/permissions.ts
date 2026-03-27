@@ -79,23 +79,24 @@ export async function requirePermission(
 ): Promise<AuthContext> {
   const session = await requireAuth(request);
 
-  if (!session.activeSiteId) {
-    throw new ForbiddenError("Aucun site actif selectionne.");
-  }
-
-  // Global ADMIN has all permissions — bypass membership check
+  // Global ADMIN has all permissions — bypass membership and activeSiteId check
   if (session.role === Role.ADMIN) {
+    const activeSiteId = session.activeSiteId ?? "";
     return {
       userId: session.userId,
       email: session.email,
       phone: session.phone,
       name: session.name,
       globalRole: session.role,
-      activeSiteId: session.activeSiteId,
+      activeSiteId,
       siteRoleId: "",
       siteRoleName: "Super Admin",
       permissions: Object.values(Permission),
     };
+  }
+
+  if (!session.activeSiteId) {
+    throw new ForbiddenError("Aucun site actif selectionne.");
   }
 
   // Load membership for active site (with siteRole included)

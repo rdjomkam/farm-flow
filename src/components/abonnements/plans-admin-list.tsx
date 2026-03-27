@@ -267,7 +267,7 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
     setLoadingIds((prev) => new Set(prev).add(planId));
 
     try {
-      const res = await fetch(`/api/plans/${planId}/toggle`, {
+      const res = await fetch(`/api/backoffice/plans/${planId}/toggle`, {
         method: "PATCH",
       });
 
