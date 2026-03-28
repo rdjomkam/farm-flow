@@ -1,7 +1,7 @@
 # ADR — Interface Ingénieur vs Interface Propriétaire (Éleveur)
 
 **Date :** 2026-03-28
-**Statut :** PROPOSÉ
+**Statut :** ACCEPTÉ
 **Auteur :** @architect
 
 ---

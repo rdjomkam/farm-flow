@@ -5036,7 +5036,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Critique
 **Dépend de :** Sprint BE (isSuperAdmin disponible)
-**Statut :** `TODO`
+**Statut :** `FAIT`
 **Type :** REFACTOR
 
 **Description :** Créer `src/middleware.ts` qui redirige les utilisateurs vers le bon route group après login et enforce les frontières entre layouts.
@@ -5067,7 +5067,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Critique
 **Dépend de :** Aucune (parallélisable avec IA.1)
-**Statut :** `TODO`
+**Statut :** `FAIT`
 **Type :** UI
 
 **Description :** Créer les deux route groups Next.js `src/app/(farm)/` et `src/app/(ingenieur)/` avec leurs layouts respectifs. Les layouts sont des shells de navigation (bottom-nav + sidebar) sans logique métier.
@@ -5099,7 +5099,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** IA.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 **Type :** REFACTOR
 
 **Description :** Déplacer la logique réelle des pages partagées (BOTH) depuis `src/app/` vers `src/components/pages/` pour permettre les stub re-exports dans les deux route groups. C'est le coeur de l'architecture Y1.
@@ -5140,7 +5140,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** Story IA.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 **Type :** UI
 
 **Description :** Créer les composants de navigation pour le layout farm. La bottom-nav a 5 items : Accueil | Ma ferme | Finances | Messages | Menu. La sidebar est l'équivalent desktop.
@@ -5169,7 +5169,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** Story IA.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 **Type :** UI
 
 **Description :** Créer les composants de navigation pour le layout ingénieur. La bottom-nav a 5 items : Accueil | Tâches | +Relevé (FAB) | Clients | Menu. Le +Relevé est un FAB (Floating Action Button) centré pour optimiser le geste le plus fréquent.
@@ -5198,7 +5198,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** Stories IB.1, IB.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 **Type :** UI
 
 **Description :** Intégrer le système de visibilité par permissions SiteMember et par modules site (enabledModules) dans les nouvelles navigations farm et ingénieur. Le layout ne bloque jamais — il organise.
@@ -5231,7 +5231,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Critique
 **Dépend de :** Stories IA.3, IB.1, IB.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 **Type :** REFACTOR
 
 **Description :** Créer les stubs 1 ligne dans chaque route group pour les pages classées BOTH. Le composant réel est dans `src/components/pages/`, les stubs font juste `export { default } from "@/components/pages/xxx-page"`.
@@ -5277,7 +5277,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** Story IA.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 **Type :** REFACTOR
 
 **Description :** Déplacer les pages exclusives au propriétaire/farm dans `src/app/(farm)/`. Ces pages ne sont pas accessibles dans le layout ingénieur.
@@ -5306,7 +5306,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** Story IA.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 **Type :** REFACTOR
 
 **Description :** Déplacer les pages exclusives à l'ingénieur dans `src/app/(ingenieur)/`. Ces pages ne sont pas accessibles dans le layout farm.
@@ -5341,7 +5341,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** Stories IC.1, IC.3
-**Statut :** `TODO`
+**Statut :** `FAIT`
 **Type :** UI
 
 **Description :** Quand un ingénieur n'a pas de site client sélectionné (ou est sur DKFarm), il voit un dashboard multi-fermes. Quand il switch son activeSiteId vers un client, le dashboard affiche les données de ce client, mais la navigation reste celle de l'ingénieur.
@@ -5367,7 +5367,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** Story IB.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 **Type :** UI
 
 **Description :** Le FAB (+Relevé) dans la bottom-nav ingénieur ouvre directement le formulaire de saisie de relevé. Il détermine automatiquement la vague cible.
@@ -5402,7 +5402,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @tester
 **Priorité :** Critique
 **Dépend de :** Toutes stories IA, IB, IC, ID
-**Statut :** `TODO`
+**Statut :** `FAIT`
 **Type :** TEST
 
 **Description :** Tests complets du split d'interface.
@@ -5446,7 +5446,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @code-reviewer
 **Priorité :** Critique
 **Dépend de :** Story IE.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 **Type :** REVIEW
 
 **Description :** Review complète du split d'interface.
