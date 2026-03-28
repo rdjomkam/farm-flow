@@ -104,7 +104,7 @@ export function FormRenouvellement({
         min="1"
         max="20"
         step="1"
-        placeholder="Ex : 4"
+        placeholder="Ex : 2"
         value={values.nombreRenouvellements}
         onChange={(e) => onChange("nombreRenouvellements", e.target.value)}
         error={errors.nombreRenouvellements}

@@ -416,6 +416,14 @@ export interface UpdateReleveDTO {
   // --- Champs observation (typeReleve = OBSERVATION) ---
   /** Description de l'observation */
   description?: string;
+
+  // --- Champs renouvellement (typeReleve = RENOUVELLEMENT) ---
+  /** Pourcentage du volume du bac renouvele (0-100) */
+  pourcentageRenouvellement?: number;
+  /** Volume d'eau renouvele en litres */
+  volumeRenouvele?: number;
+  /** Nombre de passages de renouvellement (1-20) */
+  nombreRenouvellements?: number;
 }
 
 // ---------------------------------------------------------------------------

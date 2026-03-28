@@ -117,6 +117,15 @@ export async function PUT(
     if (body.description !== undefined && (typeof body.description !== "string" || body.description.trim() === "")) {
       errors.push({ field: "description", message: "La description ne peut pas etre vide." });
     }
+    if (body.pourcentageRenouvellement !== undefined && (typeof body.pourcentageRenouvellement !== "number" || body.pourcentageRenouvellement < 0 || body.pourcentageRenouvellement > 100)) {
+      errors.push({ field: "pourcentageRenouvellement", message: "Le pourcentage doit etre entre 0 et 100." });
+    }
+    if (body.volumeRenouvele !== undefined && (typeof body.volumeRenouvele !== "number" || body.volumeRenouvele <= 0)) {
+      errors.push({ field: "volumeRenouvele", message: "Le volume doit etre superieur a 0." });
+    }
+    if (body.nombreRenouvellements !== undefined && (typeof body.nombreRenouvellements !== "number" || !Number.isInteger(body.nombreRenouvellements) || body.nombreRenouvellements < 1 || body.nombreRenouvellements > 20)) {
+      errors.push({ field: "nombreRenouvellements", message: "Le nombre de renouvellements doit etre un entier entre 1 et 20." });
+    }
 
     // Validate consommations if provided
     if (body.consommations !== undefined) {
@@ -162,6 +171,9 @@ export async function PUT(
     if (body.methodeComptage !== undefined) data.methodeComptage = body.methodeComptage;
     if (body.description !== undefined) data.description = body.description.trim();
     if (body.consommations !== undefined) data.consommations = body.consommations;
+    if (body.pourcentageRenouvellement !== undefined) data.pourcentageRenouvellement = body.pourcentageRenouvellement;
+    if (body.volumeRenouvele !== undefined) data.volumeRenouvele = body.volumeRenouvele;
+    if (body.nombreRenouvellements !== undefined) data.nombreRenouvellements = body.nombreRenouvellements;
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json(
@@ -281,6 +293,15 @@ export async function PATCH(
     if (body.description !== undefined && (typeof body.description !== "string" || body.description.trim() === "")) {
       errors.push({ field: "description", message: "La description ne peut pas etre vide." });
     }
+    if (body.pourcentageRenouvellement !== undefined && (typeof body.pourcentageRenouvellement !== "number" || body.pourcentageRenouvellement < 0 || body.pourcentageRenouvellement > 100)) {
+      errors.push({ field: "pourcentageRenouvellement", message: "Le pourcentage doit etre entre 0 et 100." });
+    }
+    if (body.volumeRenouvele !== undefined && (typeof body.volumeRenouvele !== "number" || body.volumeRenouvele <= 0)) {
+      errors.push({ field: "volumeRenouvele", message: "Le volume doit etre superieur a 0." });
+    }
+    if (body.nombreRenouvellements !== undefined && (typeof body.nombreRenouvellements !== "number" || !Number.isInteger(body.nombreRenouvellements) || body.nombreRenouvellements < 1 || body.nombreRenouvellements > 20)) {
+      errors.push({ field: "nombreRenouvellements", message: "Le nombre de renouvellements doit etre un entier entre 1 et 20." });
+    }
 
     // Validation des consommations
     if (body.consommations !== undefined) {
@@ -323,6 +344,9 @@ export async function PATCH(
     if (body.methodeComptage !== undefined) data.methodeComptage = body.methodeComptage;
     if (body.description !== undefined) data.description = body.description.trim();
     if (body.consommations !== undefined) data.consommations = body.consommations;
+    if (body.pourcentageRenouvellement !== undefined) data.pourcentageRenouvellement = body.pourcentageRenouvellement;
+    if (body.volumeRenouvele !== undefined) data.volumeRenouvele = body.volumeRenouvele;
+    if (body.nombreRenouvellements !== undefined) data.nombreRenouvellements = body.nombreRenouvellements;
 
     // 6. Verifier qu'au moins un champ metier est fourni (hors raison)
     if (Object.keys(data).length === 0) {
