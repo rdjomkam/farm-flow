@@ -94,7 +94,26 @@
   },
   "aliments": {
     "kgUtilises": "kg utilisés",
-    "detail": "Détail"
+    "detail": "Détail",
+    "noAliments": "Aucun aliment utilisé pour le moment.",
+    "meilleurCoutKg": "Meilleur coût/kg",
+    "meilleurFCR": "Meilleur ICA",
+    "meilleurSGR": "Meilleur TCS",
+    "coutKgLabel": "Coût/kg gain",
+    "quantiteTotale": "Quantité totale",
+    "coutTotal": "Coût total",
+    "survieAssociee": "Survie associée",
+    "fcrMoyen": "ICA moyen",
+    "sgrMoyen": "TCS moyen",
+    "evolutionFCR": "Évolution du FCR",
+    "pasAssezDonnees": "Pas assez de données pour afficher l'évolution.",
+    "performanceParVague": "Performance par vague",
+    "aucuneDonneeVague": "Aucune donnée par vague disponible.",
+    "prix": "Prix",
+    "fournisseur": "Fournisseur",
+    "vagues": "{count} vague(s)",
+    "kgUtilisesMeta": "{qty} kg utilisés",
+    "cout": "Coût"
   },
   "simulation": {
     "title": "Simulateur de changement d'aliment",

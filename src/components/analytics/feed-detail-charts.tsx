@@ -55,15 +55,15 @@ interface FeedDetailSummaryProps {
 
 export function FeedDetailSummary({ detail }: FeedDetailSummaryProps) {
   const tAnalytics = useTranslations("analytics");
-  const fcrLabel = `${tAnalytics("benchmarks.fcr.label")} moyen`;
-  const sgrLabel = `${tAnalytics("benchmarks.sgr.label")} moyen`;
+  const fcrLabel = tAnalytics("aliments.fcrMoyen");
+  const sgrLabel = tAnalytics("aliments.sgrMoyen");
   const metrics = [
     { label: fcrLabel, value: detail.fcrMoyen, unit: "" },
-    { label: "Cout/kg gain", value: detail.coutParKgGain, unit: "CFA" },
+    { label: tAnalytics("aliments.coutKgLabel"), value: detail.coutParKgGain, unit: "CFA" },
     { label: sgrLabel, value: detail.sgrMoyen, unit: tAnalytics("labels.sgrUnit") },
-    { label: "Quantite totale", value: detail.quantiteTotale, unit: "kg" },
-    { label: "Cout total", value: detail.coutTotal, unit: "CFA" },
-    { label: "Survie associee", value: detail.tauxSurvieAssocie, unit: "%" },
+    { label: tAnalytics("aliments.quantiteTotale"), value: detail.quantiteTotale, unit: "kg" },
+    { label: tAnalytics("aliments.coutTotal"), value: detail.coutTotal, unit: "CFA" },
+    { label: tAnalytics("aliments.survieAssociee"), value: detail.tauxSurvieAssocie, unit: "%" },
   ];
 
   return (
@@ -103,15 +103,17 @@ interface FeedFCRChartProps {
 }
 
 export function FeedFCRChart({ evolutionFCR }: FeedFCRChartProps) {
+  const tAnalytics = useTranslations("analytics");
+
   if (evolutionFCR.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Evolution du FCR</CardTitle>
+          <CardTitle className="text-base">{tAnalytics("aliments.evolutionFCR")}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="py-8 text-center text-sm text-muted-foreground">
-            Pas assez de donnees pour afficher l'evolution.
+            {tAnalytics("aliments.pasAssezDonnees")}
           </p>
         </CardContent>
       </Card>
@@ -126,7 +128,7 @@ export function FeedFCRChart({ evolutionFCR }: FeedFCRChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Evolution du FCR</CardTitle>
+        <CardTitle className="text-base">{tAnalytics("aliments.evolutionFCR")}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[250px] w-full">
@@ -168,15 +170,17 @@ interface FeedVagueBreakdownProps {
 }
 
 export function FeedVagueBreakdown({ parVague }: FeedVagueBreakdownProps) {
+  const tAnalytics = useTranslations("analytics");
+
   if (parVague.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Performance par vague</CardTitle>
+          <CardTitle className="text-base">{tAnalytics("aliments.performanceParVague")}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="py-8 text-center text-sm text-muted-foreground">
-            Aucune donnee par vague disponible.
+            {tAnalytics("aliments.aucuneDonneeVague")}
           </p>
         </CardContent>
       </Card>
@@ -193,7 +197,7 @@ export function FeedVagueBreakdown({ parVague }: FeedVagueBreakdownProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Performance par vague</CardTitle>
+        <CardTitle className="text-base">{tAnalytics("aliments.performanceParVague")}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[250px] w-full">
@@ -229,10 +233,10 @@ export function FeedVagueBreakdown({ parVague }: FeedVagueBreakdownProps) {
                 </span>
               </div>
               <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                <span>FCR : {v.fcr !== null ? v.fcr : "—"}</span>
-                <span>SGR : {v.sgr !== null ? `${v.sgr}%/j` : "—"}</span>
+                <span>{tAnalytics("benchmarks.fcr.label")} : {v.fcr !== null ? v.fcr : "—"}</span>
+                <span>{tAnalytics("benchmarks.sgr.label")} : {v.sgr !== null ? `${v.sgr}%/j` : "—"}</span>
                 <span>
-                  Cout : {v.coutParKgGain !== null ? `${v.coutParKgGain.toLocaleString("fr-FR")} CFA/kg` : "—"}
+                  {tAnalytics("aliments.cout")} : {v.coutParKgGain !== null ? `${v.coutParKgGain.toLocaleString("fr-FR")} CFA/kg` : "—"}
                 </span>
               </div>
             </CardContent>
@@ -253,12 +257,14 @@ interface FeedDetailMetaProps {
 }
 
 export function FeedDetailMeta({ detail }: FeedDetailMetaProps) {
+  const tAnalytics = useTranslations("analytics");
+
   return (
     <section className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground border-b border-border pb-3">
-      <span>Prix : {detail.prixUnitaire.toLocaleString("fr-FR")} CFA/kg</span>
-      {detail.fournisseurNom && <span>Fournisseur : {detail.fournisseurNom}</span>}
-      <span>{detail.nombreVagues} vague{detail.nombreVagues > 1 ? "s" : ""}</span>
-      <span>{detail.quantiteTotale} kg utilises</span>
+      <span>{tAnalytics("aliments.prix")} : {detail.prixUnitaire.toLocaleString("fr-FR")} CFA/kg</span>
+      {detail.fournisseurNom && <span>{tAnalytics("aliments.fournisseur")} : {detail.fournisseurNom}</span>}
+      <span>{tAnalytics("aliments.vagues", { count: detail.nombreVagues })}</span>
+      <span>{tAnalytics("aliments.kgUtilisesMeta", { qty: detail.quantiteTotale })}</span>
     </section>
   );
 }

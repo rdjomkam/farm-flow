@@ -94,7 +94,26 @@
   },
   "aliments": {
     "kgUtilises": "kg used",
-    "detail": "Detail"
+    "detail": "Detail",
+    "noAliments": "No feed used yet.",
+    "meilleurCoutKg": "Best cost/kg",
+    "meilleurFCR": "Best FCR",
+    "meilleurSGR": "Best SGR",
+    "coutKgLabel": "Cost/kg gain",
+    "quantiteTotale": "Total quantity",
+    "coutTotal": "Total cost",
+    "survieAssociee": "Associated survival",
+    "fcrMoyen": "Average FCR",
+    "sgrMoyen": "Average SGR",
+    "evolutionFCR": "FCR evolution",
+    "pasAssezDonnees": "Not enough data to display evolution.",
+    "performanceParVague": "Performance by batch",
+    "aucuneDonneeVague": "No batch data available.",
+    "prix": "Price",
+    "fournisseur": "Supplier",
+    "vagues": "{count} batch(es)",
+    "kgUtilisesMeta": "{qty} kg used",
+    "cout": "Cost"
   },
   "simulation": {
     "title": "Feed change simulator",
