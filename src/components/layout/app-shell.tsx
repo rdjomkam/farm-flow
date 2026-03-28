@@ -28,6 +28,7 @@ export function AppShell({
   siteModules,
   isImpersonating = false,
   isSuperAdmin = false,
+  activeSiteId = null,
 }: {
   children: React.ReactNode;
   permissions: Permission[];
@@ -36,6 +37,7 @@ export function AppShell({
   siteModules: SiteModule[];
   isImpersonating?: boolean;
   isSuperAdmin?: boolean;
+  activeSiteId?: string | null;
 }) {
   const pathname = usePathname();
   const isAuthPage = AUTH_ROUTES.includes(pathname);
@@ -73,6 +75,7 @@ export function AppShell({
           role={role}
           userName={userName}
           isSuperAdmin={isSuperAdmin}
+          activeSiteId={activeSiteId}
         />
       </MobileMenuContext.Provider>
     );

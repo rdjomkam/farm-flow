@@ -7,7 +7,6 @@ import { useTranslations } from "next-intl";
 import {
   Home,
   CheckSquare,
-  Plus,
   Users,
   Menu,
   NotebookPen,
@@ -26,6 +25,7 @@ import { Permission, Role, SiteModule } from "@/types";
 import { ITEM_VIEW_PERMISSIONS } from "@/lib/permissions-constants";
 import { useAuthService } from "@/services";
 import { LanguageSwitcher } from "./language-switcher";
+import { FabReleve } from "./fab-releve";
 
 interface IngenieurBottomNavProps {
   permissions: Permission[];
@@ -33,6 +33,7 @@ interface IngenieurBottomNavProps {
   role: Role;
   userName: string | null;
   isSuperAdmin: boolean;
+  activeSiteId?: string | null;
 }
 
 interface SheetNavItem {
@@ -88,6 +89,7 @@ export function IngenieurBottomNav({
   role,
   userName,
   isSuperAdmin,
+  activeSiteId = null,
 }: IngenieurBottomNavProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -152,21 +154,11 @@ export function IngenieurBottomNav({
             </Link>
           )}
 
-          {/* 3. +Relevé — FAB style, centered, visually distinct */}
+          {/* 3. +Relevé — FAB smart, centered, visually distinct */}
           {canAddReleve && (
             <div className="flex flex-1 flex-col items-center justify-end pb-2">
-              <Link
-                href="/releves/nouveau"
-                className={cn(
-                  "flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all",
-                  "bg-primary text-primary-foreground hover:opacity-90 active:scale-95",
-                  "-translate-y-3" // lifts the FAB above the nav bar
-                )}
-                aria-label="Nouveau relevé"
-              >
-                <Plus className="h-7 w-7" strokeWidth={2.5} />
-              </Link>
-              <span className="mt-0.5 text-[10px] text-muted-foreground">Relevé</span>
+              <FabReleve activeSiteId={activeSiteId} />
+              <span className="mt-0.5 text-[10px] text-muted-foreground">Releve</span>
             </div>
           )}
 

@@ -15,27 +15,137 @@ import {
   ProjectionsSkeleton,
   RecentActivitySkeleton,
 } from "@/components/dashboard/section-skeletons";
+import { IngenieurDashboardMultiFarm } from "@/components/ingenieur/ingenieur-dashboard-multi-farm";
+import { IngenieurDashboardSingleFarm } from "@/components/ingenieur/ingenieur-dashboard-single-farm";
+import { prisma } from "@/lib/db";
 
 /**
- * Farm dashboard page — entry point for the (farm) route group.
- * Serves PISCICULTEUR, GERANT, and ADMIN roles.
+ * Unified dashboard page — entry point for both (farm) and (ingenieur) route groups.
  *
- * INGENIEUR users are redirected to /ingenieur (their multi-farm hub).
- * Per ADR-ingenieur-interface: User.role === INGENIEUR → ingénieur layout.
+ * - ADMIN/GERANT/PISCICULTEUR → farm dashboard
+ * - INGENIEUR → dual-mode dashboard:
+ *     * Multi-farm (hub) mode: when activeSiteId is the engineer's vendeur/DKFarm site
+ *     * Single-farm mode: when activeSiteId is a client site
  *
- * This page will diverge from the ingénieur hub in Sprint IB when
- * owner-specific widgets and navigation are added.
+ * Per ADR-ingenieur-interface: engineers stay in the ingenieur layout at all times.
+ * Sprint ID — Stories ID.1
  */
 export default async function FarmDashboardPage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
 
-  // Route engineers to their multi-farm hub — ADR-ingenieur-interface
-  if (session.role === Role.INGENIEUR) redirect("/monitoring");
-
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const permissions = await checkPagePermission(session, Permission.DASHBOARD_VOIR);
+  // -------------------------------------------------------------------------
+  // Ingénieur — dual-mode dashboard
+  // -------------------------------------------------------------------------
+  if (session.role === Role.INGENIEUR) {
+    const permissions = await checkPagePermission(
+      session,
+      Permission.DASHBOARD_VOIR
+    );
+    if (!permissions) return <AccessDenied />;
+
+    const activeSiteId = session.activeSiteId;
+
+    // Determine mode: is the active site a vendeur (hub) site?
+    // A vendeur site has PackActivations where siteId = activeSiteId.
+    const vendeurActivationCount = await prisma.packActivation.count({
+      where: { siteId: activeSiteId },
+    });
+
+    const isHubMode = vendeurActivationCount > 0 || activeSiteId !== null;
+
+    if (isHubMode && vendeurActivationCount > 0) {
+      // Multi-farm (hub) mode — engineer sees all supervised clients
+      return (
+        <>
+          <Header title="Accueil" />
+          <Suspense
+            fallback={
+              <div className="flex flex-col gap-6 p-4">
+                <div className="h-28 rounded-2xl bg-muted animate-pulse" />
+                <div className="grid grid-cols-2 gap-3">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="h-20 rounded-xl bg-muted animate-pulse" />
+                  ))}
+                </div>
+              </div>
+            }
+          >
+            <IngenieurDashboardMultiFarm
+              vendeurSiteId={activeSiteId}
+              userId={session.userId}
+              sessionName={session.name}
+            />
+          </Suspense>
+        </>
+      );
+    }
+
+    // Single-farm mode — engineer scoped to a client site
+    // Find vendeur site from PackActivations where clientSiteId = activeSiteId
+    const clientActivation = await prisma.packActivation.findFirst({
+      where: { clientSiteId: activeSiteId },
+      select: { siteId: true },
+      orderBy: { dateActivation: "desc" },
+    });
+
+    if (!clientActivation) {
+      // Fallback: treat as hub mode with no clients yet
+      return (
+        <>
+          <Header title="Accueil" />
+          <Suspense
+            fallback={
+              <div className="flex flex-col gap-6 p-4">
+                <div className="h-28 rounded-2xl bg-muted animate-pulse" />
+              </div>
+            }
+          >
+            <IngenieurDashboardMultiFarm
+              vendeurSiteId={activeSiteId}
+              userId={session.userId}
+              sessionName={session.name}
+            />
+          </Suspense>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <Header title="Accueil" />
+        <Suspense
+          fallback={
+            <div className="flex flex-col gap-6 p-4">
+              <div className="h-28 rounded-2xl bg-muted animate-pulse" />
+              <div className="grid grid-cols-2 gap-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-20 rounded-xl bg-muted animate-pulse" />
+                ))}
+              </div>
+            </div>
+          }
+        >
+          <IngenieurDashboardSingleFarm
+            vendeurSiteId={clientActivation.siteId}
+            clientSiteId={activeSiteId}
+            userId={session.userId}
+            sessionName={session.name}
+          />
+        </Suspense>
+      </>
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Farm roles — ADMIN, GERANT, PISCICULTEUR
+  // -------------------------------------------------------------------------
+  const permissions = await checkPagePermission(
+    session,
+    Permission.DASHBOARD_VOIR
+  );
   if (!permissions) return <AccessDenied />;
 
   const siteId = session.activeSiteId;
