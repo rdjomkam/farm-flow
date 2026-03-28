@@ -146,35 +146,100 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
   }
 
   return prisma.$transaction(async (tx) => {
-    const vague = await tx.vague.findFirst({ where: { id, siteId } });
+    const vague = await tx.vague.findFirst({
+      where: { id, siteId },
+      include: { _count: { select: { bacs: true } } },
+    });
 
     if (!vague) {
       throw new Error("Vague introuvable");
     }
 
-    // Ajouter des bacs
-    if (data.addBacIds && data.addBacIds.length > 0) {
+    // Ajouter des bacs (avec nombre de poissons)
+    if (data.addBacs && data.addBacs.length > 0) {
+      if (vague.statut !== StatutVague.EN_COURS) {
+        throw new Error("L'ajout de bacs n'est possible que sur une vague en cours");
+      }
+
+      const bacIds = data.addBacs.map((e) => e.bacId);
       const bacs = await tx.bac.findMany({
-        where: { id: { in: data.addBacIds }, siteId },
+        where: { id: { in: bacIds }, siteId },
       });
+
+      if (bacs.length !== bacIds.length) {
+        throw new Error("Un ou plusieurs bacs sont introuvables");
+      }
 
       const bacsOccupes = bacs.filter((b) => b.vagueId !== null);
       if (bacsOccupes.length > 0) {
         const noms = bacsOccupes.map((b) => b.nom).join(", ");
-        throw new Error(`Bacs déjà assignés : ${noms}`);
+        throw new Error(`Bacs déjà assignés à une vague : ${noms}`);
       }
 
-      await tx.bac.updateMany({
-        where: { id: { in: data.addBacIds }, siteId },
-        data: { vagueId: id },
+      let totalPoissonAjoutes = 0;
+      for (const entry of data.addBacs) {
+        await tx.bac.update({
+          where: { id: entry.bacId, siteId },
+          data: {
+            vagueId: id,
+            nombrePoissons: entry.nombrePoissons,
+            nombreInitial: entry.nombrePoissons,
+            poidsMoyenInitial: vague.poidsMoyenInitial,
+          },
+        });
+        totalPoissonAjoutes += entry.nombrePoissons;
+      }
+
+      await tx.vague.update({
+        where: { id },
+        data: { nombreInitial: { increment: totalPoissonAjoutes } },
       });
     }
 
     // Retirer des bacs
     if (data.removeBacIds && data.removeBacIds.length > 0) {
+      if (vague.statut !== StatutVague.EN_COURS) {
+        throw new Error("Le retrait de bacs n'est possible que sur une vague en cours");
+      }
+
+      const currentBacCount = vague._count.bacs;
+      if (currentBacCount - data.removeBacIds.length < 1) {
+        throw new Error("Impossible de retirer tous les bacs : une vague doit avoir au moins un bac");
+      }
+
+      // Recuperer les bacs a retirer pour calculer la somme des poissons
+      const bacsARetirer = await tx.bac.findMany({
+        where: { id: { in: data.removeBacIds }, vagueId: id, siteId },
+      });
+
+      const totalPoissonRetires = bacsARetirer.reduce(
+        (sum, b) => sum + (b.nombreInitial ?? 0),
+        0
+      );
+
+      // Liberer les bacs
       await tx.bac.updateMany({
         where: { id: { in: data.removeBacIds }, vagueId: id, siteId },
-        data: { vagueId: null },
+        data: {
+          vagueId: null,
+          nombrePoissons: null,
+          nombreInitial: null,
+          poidsMoyenInitial: null,
+        },
+      });
+
+      // Annuler les activites PLANIFIEE liees a ces bacs pour cette vague
+      for (const bacId of data.removeBacIds) {
+        await tx.activite.updateMany({
+          where: { bacId, vagueId: id, statut: "PLANIFIEE" },
+          data: { statut: "ANNULEE" },
+        });
+      }
+
+      // Decrementer le nombreInitial de la vague
+      await tx.vague.update({
+        where: { id },
+        data: { nombreInitial: { decrement: totalPoissonRetires } },
       });
     }
 

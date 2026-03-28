@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cachedJson } from "@/lib/api-cache";
-import { getBacs } from "@/lib/queries/bacs";
+import { getBacs, getBacsLibres } from "@/lib/queries/bacs";
 import { prisma } from "@/lib/db";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";

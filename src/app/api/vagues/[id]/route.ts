@@ -104,11 +104,27 @@ export async function PUT(
       });
     }
 
-    if (body.addBacIds != null && (!Array.isArray(body.addBacIds) || body.addBacIds.length === 0)) {
-      errors.push({
-        field: "addBacIds",
-        message: "addBacIds doit etre un tableau non vide.",
-      });
+    if (body.addBacs != null) {
+      if (!Array.isArray(body.addBacs) || body.addBacs.length === 0) {
+        errors.push({
+          field: "addBacs",
+          message: "addBacs doit etre un tableau non vide.",
+        });
+      } else {
+        for (let i = 0; i < body.addBacs.length; i++) {
+          const entry = body.addBacs[i];
+          if (!entry || typeof entry.bacId !== "string" || entry.bacId.trim() === "") {
+            errors.push({ field: `addBacs[${i}].bacId`, message: "bacId est obligatoire et doit etre une chaine." });
+          }
+          if (
+            typeof entry?.nombrePoissons !== "number" ||
+            !Number.isInteger(entry.nombrePoissons) ||
+            entry.nombrePoissons < 1
+          ) {
+            errors.push({ field: `addBacs[${i}].nombrePoissons`, message: "nombrePoissons doit etre un entier superieur a 0." });
+          }
+        }
+      }
     }
 
     if (body.removeBacIds != null && (!Array.isArray(body.removeBacIds) || body.removeBacIds.length === 0)) {
@@ -147,7 +163,7 @@ export async function PUT(
     const data: UpdateVagueDTO = {};
     if (body.statut != null) data.statut = body.statut;
     if (body.dateFin != null) data.dateFin = body.dateFin;
-    if (body.addBacIds != null) data.addBacIds = body.addBacIds;
+    if (body.addBacs != null) data.addBacs = body.addBacs;
     if (body.removeBacIds != null) data.removeBacIds = body.removeBacIds;
     if (body.nombreInitial !== undefined) data.nombreInitial = body.nombreInitial;
     if (body.poidsMoyenInitial !== undefined) data.poidsMoyenInitial = body.poidsMoyenInitial;
