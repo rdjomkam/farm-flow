@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartTooltip } from "@/components/ui/chart-tooltip";
 import { BenchmarkBadge } from "./benchmark-badge";
 import { evaluerBenchmark, BENCHMARK_FCR } from "@/lib/benchmarks";
-import type { DetailAliment, DetailAlimentVague } from "@/types";
+import type { DetailAliment, DetailAlimentVague, FCRHebdomadairePoint, ChangementGranule } from "@/types";
 import { useTranslations } from "next-intl";
 
 const ResponsiveContainer = dynamic(
@@ -18,6 +18,10 @@ const LineChart = dynamic(
 );
 const Line = dynamic(
   () => import("recharts").then((mod) => mod.Line),
+  { ssr: false }
+);
+const ComposedChart = dynamic(
+  () => import("recharts").then((mod) => mod.ComposedChart),
   { ssr: false }
 );
 const BarChart = dynamic(
@@ -42,6 +46,14 @@ const CartesianGrid = dynamic(
 );
 const Tooltip = dynamic(
   () => import("recharts").then((mod) => mod.Tooltip),
+  { ssr: false }
+);
+const ReferenceLine = dynamic(
+  () => import("recharts").then((mod) => mod.ReferenceLine),
+  { ssr: false }
+);
+const Legend = dynamic(
+  () => import("recharts").then((mod) => mod.Legend),
   { ssr: false }
 );
 
@@ -266,5 +278,228 @@ export function FeedDetailMeta({ detail }: FeedDetailMetaProps) {
       <span>{tAnalytics("aliments.vagues", { count: detail.nombreVagues })}</span>
       <span>{tAnalytics("aliments.kgUtilisesMeta", { qty: detail.quantiteTotale })}</span>
     </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// FC.7 — FCR hebdomadaire (ComposedChart bar + line + reference lines)
+// ---------------------------------------------------------------------------
+
+interface FeedFCRHebdoChartProps {
+  points: FCRHebdomadairePoint[];
+  changements?: ChangementGranule[];
+}
+
+export function FeedFCRHebdoChart({ points, changements = [] }: FeedFCRHebdoChartProps) {
+  const tAnalytics = useTranslations("analytics");
+
+  if (points.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{tAnalytics("aliments.fcrHebdoTitle")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            {tAnalytics("aliments.pasAssezDonnees")}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Format semaine ISO "YYYY-WNN" → "S12 2026"
+  const formatSemaine = (s: string) => {
+    const [year, week] = s.split("-W");
+    return `S${week} ${year}`;
+  };
+
+  const data = points.map((p) => ({
+    semaine: formatSemaine(p.semaine),
+    semaineRaw: p.semaine,
+    quantiteAlimentKg: p.quantiteAlimentKg,
+    fcr: p.fcr,
+    benchmarkFCR: p.benchmarkFCR,
+  }));
+
+  // Benchmark value for ReferenceLine (from first point with benchmarkFCR)
+  const benchmarkValue = points.find((p) => p.benchmarkFCR !== null)?.benchmarkFCR ?? null;
+
+  // Changements de granulé : map semaine ISO → label
+  const changementsMap = new Set(
+    changements.map((c) => {
+      const d = new Date(c.date);
+      const jan4 = new Date(d.getFullYear(), 0, 4);
+      const weekNum = Math.ceil(
+        ((d.getTime() - jan4.getTime()) / 86400000 + jan4.getDay() + 1) / 7
+      );
+      return formatSemaine(`${d.getFullYear()}-W${String(weekNum).padStart(2, "0")}`);
+    })
+  );
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{tAnalytics("aliments.fcrHebdoTitle")}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="h-[300px] w-full sm:h-[400px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis
+                dataKey="semaine"
+                tick={{ fontSize: 10 }}
+                interval="preserveStartEnd"
+              />
+              {/* Left Y-axis for kg aliment */}
+              <YAxis
+                yAxisId="left"
+                tick={{ fontSize: 10 }}
+                width={40}
+                label={{
+                  value: "kg",
+                  angle: -90,
+                  position: "insideLeft",
+                  style: { fontSize: 10 },
+                }}
+              />
+              {/* Right Y-axis for FCR */}
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                tick={{ fontSize: 10 }}
+                width={40}
+                domain={[0, "auto"]}
+                label={{
+                  value: tAnalytics("benchmarks.fcr.label"),
+                  angle: 90,
+                  position: "insideRight",
+                  style: { fontSize: 10 },
+                }}
+              />
+              <Tooltip
+                content={
+                  <ChartTooltip
+                    valueFormatter={(v, name) => {
+                      if (name === tAnalytics("benchmarks.fcr.label")) return v.toFixed(2);
+                      return `${v.toFixed(1)} kg`;
+                    }}
+                  />
+                }
+              />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Bar
+                yAxisId="left"
+                dataKey="quantiteAlimentKg"
+                name={tAnalytics("aliments.quantiteTotale")}
+                fill="var(--primary)"
+                opacity={0.7}
+                radius={[4, 4, 0, 0]}
+              />
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="fcr"
+                name={tAnalytics("benchmarks.fcr.label")}
+                stroke="var(--destructive)"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+                activeDot={{ r: 6 }}
+                connectNulls
+              />
+              {/* Benchmark FCR reference line */}
+              {benchmarkValue !== null && (
+                <ReferenceLine
+                  yAxisId="right"
+                  y={benchmarkValue}
+                  stroke="var(--warning, orange)"
+                  strokeDasharray="6 3"
+                  label={{
+                    value: `${tAnalytics("benchmarks.fcr.label")} ref: ${benchmarkValue}`,
+                    position: "insideTopRight",
+                    style: { fontSize: 10, fill: "var(--muted-foreground)" },
+                  }}
+                />
+              )}
+              {/* Changements de granulé — vertical reference lines */}
+              {[...changementsMap].map((semaine) => (
+                <ReferenceLine
+                  key={semaine}
+                  yAxisId="left"
+                  x={semaine}
+                  stroke="var(--secondary-foreground, #888)"
+                  strokeDasharray="4 2"
+                  label={{
+                    value: tAnalytics("aliments.changementGranule"),
+                    position: "insideTopLeft",
+                    style: { fontSize: 9, fill: "var(--muted-foreground)" },
+                  }}
+                />
+              ))}
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// FC.8 — Corrélation mortalité / aliment
+// ---------------------------------------------------------------------------
+
+interface FeedMortaliteCorrelationProps {
+  parVague: DetailAlimentVague[];
+}
+
+export function FeedMortaliteCorrelation({ parVague }: FeedMortaliteCorrelationProps) {
+  const tAnalytics = useTranslations("analytics");
+
+  const vaguesAvecMortalite = parVague.filter(
+    (v) => v.tauxMortaliteAssocie !== null
+  );
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{tAnalytics("aliments.correlationMortalite")}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {vaguesAvecMortalite.length === 0 ? (
+          <p className="py-4 text-center text-sm text-muted-foreground">
+            {tAnalytics("aliments.aucuneDonneeMortalite")}
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {vaguesAvecMortalite.map((v) => {
+              const mortalite = v.tauxMortaliteAssocie!;
+              const isHigh = mortalite > 10;
+              return (
+                <div
+                  key={v.vagueId}
+                  className="flex items-center justify-between rounded-md border border-border p-2"
+                >
+                  <span className="text-sm font-medium">{v.vagueCode}</span>
+                  <span
+                    className={[
+                      "rounded-full px-2 py-0.5 text-xs font-semibold",
+                      isHigh
+                        ? "bg-destructive/15 text-destructive"
+                        : "bg-muted text-muted-foreground",
+                    ].join(" ")}
+                  >
+                    {mortalite.toFixed(1)} %
+                    {isHigh && (
+                      <span className="ml-1">{tAnalytics("aliments.mortaliteElevee")}</span>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

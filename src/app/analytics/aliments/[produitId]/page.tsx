@@ -6,18 +6,26 @@ import { Button } from "@/components/ui/button";
 import {
   FeedDetailSummary,
   FeedFCRChart,
+  FeedFCRHebdoChart,
   FeedVagueBreakdown,
   FeedDetailMeta,
+  FeedMortaliteCorrelation,
 } from "@/components/analytics/feed-detail-charts";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
-import { getDetailAliment } from "@/lib/queries/analytics";
+import {
+  getDetailAliment,
+  getFCRHebdomadaire,
+  getChangementsGranule,
+} from "@/lib/queries/analytics";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { Permission } from "@/types";
 
 export default async function AnalyticsAlimentDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ produitId: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await getServerSession();
   if (!session) redirect("/login");
@@ -27,7 +35,16 @@ export default async function AnalyticsAlimentDetailPage({
   if (!permissions) return <AccessDenied />;
 
   const { produitId } = await params;
-  const detail = await getDetailAliment(session.activeSiteId, produitId);
+  const resolvedSearch = searchParams ? await searchParams : {};
+  const vagueIdParam = typeof resolvedSearch?.vagueId === "string" ? resolvedSearch.vagueId : undefined;
+
+  const [detail, fcrHebdo, changementsGranule] = await Promise.all([
+    getDetailAliment(session.activeSiteId, produitId),
+    getFCRHebdomadaire(session.activeSiteId, produitId, vagueIdParam),
+    vagueIdParam
+      ? getChangementsGranule(session.activeSiteId, produitId, vagueIdParam)
+      : Promise.resolve([]),
+  ]);
 
   if (!detail) {
     return (
@@ -48,8 +65,15 @@ export default async function AnalyticsAlimentDetailPage({
       <div className="flex flex-col gap-4 p-4">
         <FeedDetailMeta detail={detail} />
         <FeedDetailSummary detail={detail} />
+
+        {/* FC.7 — FCR hebdomadaire */}
+        <FeedFCRHebdoChart points={fcrHebdo} changements={changementsGranule} />
+
         <FeedFCRChart evolutionFCR={detail.evolutionFCR} />
         <FeedVagueBreakdown parVague={detail.parVague} />
+
+        {/* FC.8 — Corrélation mortalité */}
+        <FeedMortaliteCorrelation parVague={detail.parVague} />
 
         <div className="pb-4">
           <Button variant="ghost" size="sm" asChild>

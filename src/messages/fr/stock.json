@@ -48,7 +48,13 @@
       "seuilAlerte": "Seuil d'alerte",
       "fournisseur": "Fournisseur (optionnel)",
       "fournisseurRequired": "Fournisseur",
-      "fournisseurNone": "Aucun"
+      "fournisseurNone": "Aucun",
+      "tailleGranule": "Taille granulé",
+      "formeAliment": "Forme aliment",
+      "tauxProteines": "Taux protéines (%)",
+      "tauxLipides": "Taux lipides (%)",
+      "tauxFibres": "Taux fibres (%)",
+      "phasesCibles": "Phases cibles"
     },
     "detail": {
       "inStock": "{unit} en stock",

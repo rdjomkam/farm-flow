@@ -225,6 +225,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
       "nombreMorts", "quantiteAliment", "frequenceAliment",
       "nombreCompte", "temperature", "ph", "oxygene", "ammoniac",
       "pourcentageRenouvellement", "volumeRenouvele", "nombreRenouvellements",
+      "tauxRefus",
     ];
     for (const f of numericFields) {
       if (fields[f] !== undefined && fields[f] !== "") {
@@ -232,7 +233,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
       }
     }
     // String fields
-    const stringFields = ["causeMortalite", "typeAliment", "methodeComptage", "description"];
+    const stringFields = ["causeMortalite", "typeAliment", "methodeComptage", "description", "comportementAlim"];
     for (const f of stringFields) {
       if (fields[f]) {
         body[f] = f === "description" ? fields[f].trim() : fields[f];
@@ -439,6 +440,8 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
                     quantiteAliment: fields.quantiteAliment ?? "",
                     typeAliment: fields.typeAliment ?? "",
                     frequenceAliment: fields.frequenceAliment ?? "",
+                    tauxRefus: fields.tauxRefus ?? "",
+                    comportementAlim: fields.comportementAlim ?? "",
                   }}
                   onChange={updateField}
                   errors={errors}

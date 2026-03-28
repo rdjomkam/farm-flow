@@ -9,6 +9,28 @@ import { evaluerBenchmark, BENCHMARK_FCR } from "@/lib/benchmarks";
 import { cn } from "@/lib/utils";
 import type { AnalytiqueAliment } from "@/types";
 
+// FC.3 — Score badge
+function ScoreBadge({ score }: { score: number }) {
+  const tAnalytics = useTranslations("analytics");
+  let colorClass: string;
+  let label: string;
+  if (score >= 7) {
+    colorClass = "bg-green-100 text-green-700";
+    label = tAnalytics("score.excellent");
+  } else if (score >= 5) {
+    colorClass = "bg-amber-100 text-amber-700";
+    label = tAnalytics("score.bon");
+  } else {
+    colorClass = "bg-red-100 text-red-700";
+    label = tAnalytics("score.insuffisant");
+  }
+  return (
+    <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-semibold", colorClass)}>
+      {score.toFixed(1)}{tAnalytics("score.sur10")} {label}
+    </span>
+  );
+}
+
 interface FeedComparisonCardsProps {
   aliments: AnalytiqueAliment[];
   meilleurFCR: string | null;
@@ -43,6 +65,7 @@ export function FeedComparisonCards({
 }: FeedComparisonCardsProps) {
   const tAnalytics = useTranslations("analytics");
   const tVagues = useTranslations("vagues");
+
 
   if (aliments.length === 0) {
     return (
@@ -108,6 +131,22 @@ export function FeedComparisonCards({
                   <span className="rounded-full bg-accent-purple-muted px-1.5 py-0.5 text-[10px] font-medium text-accent-purple">
                     {tAnalytics("aliments.meilleurSGR")}
                   </span>
+                )}
+                {/* FC.3 — Taille granule badge */}
+                {aliment.tailleGranule !== null && (
+                  <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700">
+                    {tAnalytics(`tailleGranule.${aliment.tailleGranule}`)}
+                  </span>
+                )}
+                {/* FC.3 — Forme aliment badge */}
+                {aliment.formeAliment !== null && (
+                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                    {tAnalytics(`formeAliment.${aliment.formeAliment}`)}
+                  </span>
+                )}
+                {/* FC.3 — Score qualite badge */}
+                {aliment.scoreQualite !== null && (
+                  <ScoreBadge score={aliment.scoreQualite} />
                 )}
               </div>
 

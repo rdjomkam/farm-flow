@@ -27,7 +27,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
-import { CategorieProduit, UniteStock, Permission } from "@/types";
+import {
+  CategorieProduit,
+  UniteStock,
+  Permission,
+  TailleGranule,
+  FormeAliment,
+  PhaseElevage,
+} from "@/types";
 import { useCreateProduit } from "@/hooks/queries/use-stock-queries";
 
 interface ProduitData {
@@ -66,6 +73,13 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
   const [dualUnit, setDualUnit] = useState(false);
   const [uniteAchat, setUniteAchat] = useState<string>("");
   const [contenance, setContenance] = useState("");
+  // Champs conditionnels ALIMENT
+  const [tailleGranule, setTailleGranule] = useState<string>("");
+  const [formeAliment, setFormeAliment] = useState<string>("");
+  const [tauxProteines, setTauxProteines] = useState("");
+  const [tauxLipides, setTauxLipides] = useState("");
+  const [tauxFibres, setTauxFibres] = useState("");
+  const [phasesCibles, setPhasesCibles] = useState<string[]>([]);
 
   const filtered =
     tab === "tous"
@@ -88,12 +102,25 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
     setDualUnit(false);
     setUniteAchat("");
     setContenance("");
+    setTailleGranule("");
+    setFormeAliment("");
+    setTauxProteines("");
+    setTauxLipides("");
+    setTauxFibres("");
+    setPhasesCibles([]);
+  }
+
+  function togglePhase(phase: string) {
+    setPhasesCibles((prev) =>
+      prev.includes(phase) ? prev.filter((p) => p !== phase) : [...prev, phase]
+    );
   }
 
   async function handleCreate() {
     if (!nom.trim()) return;
 
     try {
+      const isAliment = categorie === CategorieProduit.ALIMENT;
       await createProduitMutation.mutateAsync({
         nom: nom.trim(),
         categorie: categorie as import("@/types").CategorieProduit,
@@ -103,6 +130,12 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
         ...(fournisseurId && { fournisseurId }),
         ...(dualUnit && uniteAchat && { uniteAchat: uniteAchat as import("@/types").UniteStock }),
         ...(dualUnit && contenance && { contenance: parseFloat(contenance) }),
+        ...(isAliment && tailleGranule && { tailleGranule: tailleGranule as import("@/types").TailleGranule }),
+        ...(isAliment && formeAliment && { formeAliment: formeAliment as import("@/types").FormeAliment }),
+        ...(isAliment && tauxProteines && { tauxProteines: parseFloat(tauxProteines) }),
+        ...(isAliment && tauxLipides && { tauxLipides: parseFloat(tauxLipides) }),
+        ...(isAliment && tauxFibres && { tauxFibres: parseFloat(tauxFibres) }),
+        ...(isAliment && phasesCibles.length > 0 && { phasesCibles: phasesCibles as import("@/types").PhaseElevage[] }),
       });
       setDialogOpen(false);
       resetForm();
@@ -213,6 +246,82 @@ export function ProduitsListClient({ produits, fournisseurs, permissions }: Prop
                     value={contenance}
                     onChange={(e) => setContenance(e.target.value)}
                   />
+                </>
+              )}
+              {/* Section conditionnelle ALIMENT */}
+              {categorie === CategorieProduit.ALIMENT && (
+                <>
+                  <Select value={tailleGranule} onValueChange={setTailleGranule}>
+                    <SelectTrigger label={t("produits.fields.tailleGranule")}>
+                      <SelectValue placeholder={t("commandes.fields.choix")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(TailleGranule).map((val) => (
+                        <SelectItem key={val} value={val}>{val}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={formeAliment} onValueChange={setFormeAliment}>
+                    <SelectTrigger label={t("produits.fields.formeAliment")}>
+                      <SelectValue placeholder={t("commandes.fields.choix")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(FormeAliment).map((val) => (
+                        <SelectItem key={val} value={val}>{val}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    label={t("produits.fields.tauxProteines")}
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    placeholder="Ex: 35"
+                    value={tauxProteines}
+                    onChange={(e) => setTauxProteines(e.target.value)}
+                  />
+                  <Input
+                    label={t("produits.fields.tauxLipides")}
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    placeholder="Ex: 8"
+                    value={tauxLipides}
+                    onChange={(e) => setTauxLipides(e.target.value)}
+                  />
+                  <Input
+                    label={t("produits.fields.tauxFibres")}
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    placeholder="Ex: 3"
+                    value={tauxFibres}
+                    onChange={(e) => setTauxFibres(e.target.value)}
+                  />
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-medium text-foreground">
+                      {t("produits.fields.phasesCibles")}
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.values(PhaseElevage).map((phase) => (
+                        <label
+                          key={phase}
+                          className="flex items-center gap-1.5 text-sm cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={phasesCibles.includes(phase)}
+                            onChange={() => togglePhase(phase)}
+                            className="rounded border-border"
+                          />
+                          {phase}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 </>
               )}
               <Input

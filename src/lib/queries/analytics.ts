@@ -581,6 +581,14 @@ async function computeAlimentMetrics(
     const gainPoidsG = gainBiomasse !== null ? gainBiomasse * 1000 : null;
     const per = calculerPER(gainPoidsG, conso.quantite, tauxProteines);
 
+    const totalMorts = releves
+      .filter((r) => r.typeReleve === TypeReleve.MORTALITE)
+      .reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
+    const tauxMortaliteAssocie =
+      vague.nombreInitial > 0
+        ? calculerTauxMortalite(totalMorts, vague.nombreInitial)
+        : null;
+
     vagueMetrics.push({
       quantite: conso.quantite,
       gainBiomasse,
@@ -600,6 +608,8 @@ async function computeAlimentMetrics(
         periode: { debut: vague.dateDebut, fin: vague.dateFin },
         adg: adg !== null ? Math.round(adg * 100) / 100 : null,
         per: per !== null ? Math.round(per * 100) / 100 : null,
+        tauxMortaliteAssocie:
+          tauxMortaliteAssocie !== null ? Math.round(tauxMortaliteAssocie * 100) / 100 : null,
       },
     });
 
@@ -1946,4 +1956,95 @@ export async function getChangementsGranule(
   }
 
   return changements;
+}
+
+// ===========================================================================
+// FC.9 — Alertes DLC stock aliment
+// ===========================================================================
+
+export interface MouvementExpirable {
+  produitNom: string;
+  lotFabrication: string | null;
+  datePeremption: Date;
+  quantite: number;
+}
+
+export interface MouvementExpirableSoon extends MouvementExpirable {
+  joursRestants: number;
+}
+
+/**
+ * Retourne les mouvements ENTREE avec date de peremption expirée ou proche (30j).
+ *
+ * Guard E13 : les deux catégories sont séparées strictement —
+ *   - `expires` : datePeremption < now
+ *   - `expiringSoon` : datePeremption entre now et now+30j (exclu de expires)
+ *
+ * @param siteId - ID du site (multi-tenancy)
+ */
+export async function getMouvementsExpirables(siteId: string): Promise<{
+  expires: MouvementExpirable[];
+  expiringSoon: MouvementExpirableSoon[];
+}> {
+  const now = new Date();
+  const limitPlus30j = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  const [expiresRaw, expiringSoonRaw] = await Promise.all([
+    // Lots déjà expirés
+    prisma.mouvementStock.findMany({
+      where: {
+        siteId,
+        type: "ENTREE",
+        datePeremption: { lt: now },
+      },
+      select: {
+        quantite: true,
+        lotFabrication: true,
+        datePeremption: true,
+        produit: { select: { nom: true } },
+      },
+      orderBy: { datePeremption: "asc" },
+    }),
+    // Lots expirant dans les 30 prochains jours
+    prisma.mouvementStock.findMany({
+      where: {
+        siteId,
+        type: "ENTREE",
+        datePeremption: { gte: now, lte: limitPlus30j },
+      },
+      select: {
+        quantite: true,
+        lotFabrication: true,
+        datePeremption: true,
+        produit: { select: { nom: true } },
+      },
+      orderBy: { datePeremption: "asc" },
+    }),
+  ]);
+
+  const expires: MouvementExpirable[] = expiresRaw
+    .filter((m) => m.datePeremption !== null)
+    .map((m) => ({
+      produitNom: m.produit.nom,
+      lotFabrication: m.lotFabrication,
+      datePeremption: m.datePeremption!,
+      quantite: m.quantite,
+    }));
+
+  const expiringSoon: MouvementExpirableSoon[] = expiringSoonRaw
+    .filter((m) => m.datePeremption !== null)
+    .map((m) => {
+      const joursRestants = Math.ceil(
+        (m.datePeremption!.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      return {
+        produitNom: m.produit.nom,
+        lotFabrication: m.lotFabrication,
+        datePeremption: m.datePeremption!,
+        quantite: m.quantite,
+        joursRestants,
+      };
+    });
+
+  return { expires, expiringSoon };
 }

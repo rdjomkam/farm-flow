@@ -154,6 +154,20 @@
         "ARTISANAL": "Artisanal",
         "COMMERCIAL": "Commercial",
         "MIXTE": "Mixte"
+      },
+      "tauxRefus": {
+        "label": "Taux de refus",
+        "0": "0% — Tout mangé",
+        "10": "10% — Quasi tout mangé",
+        "25": "25% — Refus partiel",
+        "50": "50% — Refus important"
+      },
+      "comportementAlim": {
+        "label": "Comportement alimentaire",
+        "VORACE": "Vorace",
+        "NORMAL": "Normal",
+        "FAIBLE": "Faible",
+        "REFUSE": "Refusé"
       }
     },
     "qualiteEau": {

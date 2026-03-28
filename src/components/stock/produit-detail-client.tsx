@@ -34,7 +34,14 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { CategorieProduit, UniteStock, TypeMouvement } from "@/types";
+import {
+  CategorieProduit,
+  UniteStock,
+  TypeMouvement,
+  TailleGranule,
+  FormeAliment,
+  PhaseElevage,
+} from "@/types";
 import { useStockService } from "@/services";
 
 interface MouvementData {
@@ -59,6 +66,13 @@ interface ProduitData {
   seuilAlerte: number;
   fournisseur: { id: string; nom: string } | null;
   mouvements: MouvementData[];
+  // Champs ALIMENT
+  tailleGranule: string | null;
+  formeAliment: string | null;
+  tauxProteines: number | null;
+  tauxLipides: number | null;
+  tauxFibres: number | null;
+  phasesCibles: string[];
 }
 
 interface Props {
@@ -83,6 +97,19 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
   const [uniteAchat, setUniteAchat] = useState(produit.uniteAchat ?? "");
   const [contenance, setContenance] = useState(produit.contenance ? String(produit.contenance) : "");
   const contenanceDisabled = produit.stockActuel > 0;
+  // Champs conditionnels ALIMENT
+  const [tailleGranule, setTailleGranule] = useState(produit.tailleGranule ?? "");
+  const [formeAliment, setFormeAliment] = useState(produit.formeAliment ?? "");
+  const [tauxProteines, setTauxProteines] = useState(produit.tauxProteines != null ? String(produit.tauxProteines) : "");
+  const [tauxLipides, setTauxLipides] = useState(produit.tauxLipides != null ? String(produit.tauxLipides) : "");
+  const [tauxFibres, setTauxFibres] = useState(produit.tauxFibres != null ? String(produit.tauxFibres) : "");
+  const [phasesCibles, setPhasesCibles] = useState<string[]>(produit.phasesCibles ?? []);
+
+  function togglePhase(phase: string) {
+    setPhasesCibles((prev) =>
+      prev.includes(phase) ? prev.filter((p) => p !== phase) : [...prev, phase]
+    );
+  }
 
   const isAlerte = produit.stockActuel <= produit.seuilAlerte;
   const uniteLabel = (u: string) => t(`unites.${u}` as Parameters<typeof t>[0]) || u;
@@ -90,6 +117,7 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
   const baseUniteLabel = uniteLabel(produit.unite);
 
   async function handleSave() {
+    const isAliment = categorie === CategorieProduit.ALIMENT;
     const result = await stockService.updateProduit(produit.id, {
       nom: nom.trim(),
       categorie: categorie as import("@/types").CategorieProduit,
@@ -99,6 +127,12 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
       fournisseurId: fournisseurId || null,
       uniteAchat: dualUnit && uniteAchat ? uniteAchat as import("@/types").UniteStock : null,
       contenance: dualUnit && contenance ? parseFloat(contenance) : null,
+      tailleGranule: isAliment && tailleGranule ? tailleGranule as import("@/types").TailleGranule : null,
+      formeAliment: isAliment && formeAliment ? formeAliment as import("@/types").FormeAliment : null,
+      tauxProteines: isAliment && tauxProteines ? parseFloat(tauxProteines) : null,
+      tauxLipides: isAliment && tauxLipides ? parseFloat(tauxLipides) : null,
+      tauxFibres: isAliment && tauxFibres ? parseFloat(tauxFibres) : null,
+      phasesCibles: isAliment ? phasesCibles as import("@/types").PhaseElevage[] : [],
     });
     if (result.ok) {
       setEditOpen(false);
@@ -218,6 +252,82 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
                             {t("produits.detail.contenanceNotEditable")}
                           </p>
                         )}
+                      </div>
+                    </>
+                  )}
+                  {/* Section conditionnelle ALIMENT */}
+                  {categorie === CategorieProduit.ALIMENT && (
+                    <>
+                      <Select value={tailleGranule} onValueChange={setTailleGranule}>
+                        <SelectTrigger label={t("produits.fields.tailleGranule")}>
+                          <SelectValue placeholder={t("commandes.fields.choix")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.values(TailleGranule).map((val) => (
+                            <SelectItem key={val} value={val}>{val}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={formeAliment} onValueChange={setFormeAliment}>
+                        <SelectTrigger label={t("produits.fields.formeAliment")}>
+                          <SelectValue placeholder={t("commandes.fields.choix")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.values(FormeAliment).map((val) => (
+                            <SelectItem key={val} value={val}>{val}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        label={t("produits.fields.tauxProteines")}
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        placeholder="Ex: 35"
+                        value={tauxProteines}
+                        onChange={(e) => setTauxProteines(e.target.value)}
+                      />
+                      <Input
+                        label={t("produits.fields.tauxLipides")}
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        placeholder="Ex: 8"
+                        value={tauxLipides}
+                        onChange={(e) => setTauxLipides(e.target.value)}
+                      />
+                      <Input
+                        label={t("produits.fields.tauxFibres")}
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        placeholder="Ex: 3"
+                        value={tauxFibres}
+                        onChange={(e) => setTauxFibres(e.target.value)}
+                      />
+                      <div className="flex flex-col gap-2">
+                        <span className="text-xs font-medium text-foreground">
+                          {t("produits.fields.phasesCibles")}
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.values(PhaseElevage).map((phase) => (
+                            <label
+                              key={phase}
+                              className="flex items-center gap-1.5 text-sm cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={phasesCibles.includes(phase)}
+                                onChange={() => togglePhase(phase)}
+                                className="rounded border-border"
+                              />
+                              {phase}
+                            </label>
+                          ))}
+                        </div>
                       </div>
                     </>
                   )}

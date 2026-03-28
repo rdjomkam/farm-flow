@@ -113,7 +113,70 @@
     "fournisseur": "Fournisseur",
     "vagues": "{count} vague(s)",
     "kgUtilisesMeta": "{qty} kg utilisés",
-    "cout": "Coût"
+    "cout": "Coût",
+    "fcrHebdoTitle": "FCR hebdomadaire",
+    "changementGranule": "Chgt granulé",
+    "correlationMortalite": "Corrélation mortalité",
+    "aucuneDonneeMortalite": "Aucune donnée de mortalité disponible.",
+    "mortaliteElevee": "— élevée"
+  },
+  "tailleGranule": {
+    "label": "Taille granulé",
+    "P0": "P0 — Poudre < 0.5mm",
+    "P1": "P1 — Poudre 0.5mm",
+    "P2": "P2 — Crumble 1mm",
+    "P3": "P3 — Crumble 1.5mm",
+    "G1": "G1 — Granulé 2mm",
+    "G2": "G2 — Granulé 3mm",
+    "G3": "G3 — Granulé 4mm",
+    "G4": "G4 — Granulé 6mm",
+    "G5": "G5 — Granulé 8mm"
+  },
+  "formeAliment": {
+    "label": "Forme aliment",
+    "FLOTTANT": "Flottant",
+    "COULANT": "Coulant",
+    "SEMI_FLOTTANT": "Semi-flottant",
+    "POUDRE": "Poudre"
+  },
+  "comportementAlimentaire": {
+    "label": "Comportement alimentaire",
+    "VORACE": "Vorace",
+    "NORMAL": "Normal",
+    "FAIBLE": "Faible",
+    "REFUSE": "Refusé"
+  },
+  "score": {
+    "label": "Score qualité",
+    "sur10": "/10",
+    "excellent": "Excellent",
+    "bon": "Bon",
+    "insuffisant": "Insuffisant"
+  },
+  "filtres": {
+    "phase": "Phase d'élevage",
+    "taille": "Taille granulé",
+    "forme": "Forme aliment",
+    "saison": "Saison",
+    "toutes": "Toutes",
+    "saisonSeche": "Saison sèche",
+    "saisonPluies": "Saison des pluies"
+  },
+  "alertesRation": {
+    "titre": "Alertes alimentation",
+    "sousAlimentation": "Sous-alimentation détectée",
+    "surAlimentation": "Sur-alimentation détectée",
+    "ecart": "Écart moyen de {pct}% sur {nb} relevés consécutifs",
+    "aucune": "Aucune alerte"
+  },
+  "dlc": {
+    "titre": "Alertes DLC stock",
+    "expire": "Expiré",
+    "bientot": "Expire dans {jours} jours",
+    "aucune": "Aucun lot proche de la DLC"
+  },
+  "avertissement": {
+    "taillesDifferentes": "Attention : les aliments comparés ont des tailles de granulé différentes. La comparaison du FCR peut être biaisée."
   },
   "simulation": {
     "title": "Simulateur de changement d'aliment",

@@ -5665,113 +5665,113 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story FC.1 — i18n : clés analytics aliments
-**Assigné à :** @developer | **Dépend de :** Sprint FB FAIT | **Statut :** `TODO` | **Type :** UI
+**Assigné à :** @developer | **Dépend de :** Sprint FB FAIT | **Statut :** `FAIT` | **Type :** UI
 
 **Tâches :**
-- [ ] `TODO` `src/messages/fr/analytics.json` : +labels TailleGranule, FormeAliment, ComportementAlimentaire, +score (/10, seuils), +filtres (phase, taille, forme, saison), +alertes ration (sous/sur), +DLC (expiré, bientôt)
-- [ ] `TODO` `src/messages/fr/stock.json` : +champs produit tailleGranule, formeAliment, tauxProteines, tauxLipides, tauxFibres, phasesCibles
-- [ ] `TODO` `src/messages/fr/releves.json` : +tauxRefus (label + options 0/10/25/50%), +comportementAlim (label + options enum)
+- [x] `FAIT` `src/messages/fr/analytics.json` : +labels TailleGranule, FormeAliment, ComportementAlimentaire, +score (/10, seuils), +filtres (phase, taille, forme, saison), +alertes ration (sous/sur), +DLC (expiré, bientôt)
+- [x] `FAIT` `src/messages/fr/stock.json` : +champs produit tailleGranule, formeAliment, tauxProteines, tauxLipides, tauxFibres, phasesCibles
+- [x] `FAIT` `src/messages/fr/releves.json` : +tauxRefus (label + options 0/10/25/50%), +comportementAlim (label + options enum)
 
 **Correction ADJ-08 :** Il n'existe PAS de `src/messages/en/` — modifier uniquement les fichiers `fr/`. Voir `docs/decisions/ADJUSTMENTS-feed-analytics-stories.md` section 8.
 
 ---
 
 ### Story FC.2 — Composant FeedFilters (F2)
-**Assigné à :** @developer | **Dépend de :** FC.1 | **Statut :** `TODO` | **Type :** UI
+**Assigné à :** @developer | **Dépend de :** FC.1 | **Statut :** `FAIT` | **Type :** UI
 
 **Tâches :**
-- [ ] `TODO` Créer `src/components/analytics/feed-filters.tsx` (Client Component) : 4 Radix Select (phase, taille, forme, saison), validation enum searchParams (E6 : liste blanche avant cast), mobile-first
-- [ ] `TODO` Mettre à jour le stub `src/app/(farm)/analytics/aliments/page.tsx` pour passer `searchParams` au composant page (voir ADJ-11)
-- [ ] `TODO` Intégrer FeedFilters dans `src/components/pages/analytics-aliments-page.tsx` (PAS dans src/app/analytics/aliments/page.tsx)
+- [x] `FAIT` Créer `src/components/analytics/feed-filters.tsx` (Client Component) : 4 Radix Select (phase, taille, forme, saison), validation enum searchParams (E6 : liste blanche avant cast), mobile-first
+- [x] `FAIT` Mettre à jour le stub `src/app/(farm)/analytics/aliments/page.tsx` pour passer `searchParams` au composant page (voir ADJ-11)
+- [x] `FAIT` Intégrer FeedFilters dans `src/components/pages/analytics-aliments-page.tsx` (PAS dans src/app/analytics/aliments/page.tsx)
 
 **Correction ADJ-01/11 :** La page liste aliments réelle est `src/components/pages/analytics-aliments-page.tsx`. Le stub `src/app/(farm)/analytics/aliments/page.tsx` doit être mis à jour pour transmettre searchParams. Voir `docs/decisions/ADJUSTMENTS-feed-analytics-stories.md` sections 1, 11.
 
 ---
 
 ### Story FC.3 — Badges taille + score sur cartes aliment (F3, F11)
-**Assigné à :** @developer | **Dépend de :** FC.1 | **Statut :** `TODO` | **Type :** UI
+**Assigné à :** @developer | **Dépend de :** FC.1 | **Statut :** `FAIT` | **Type :** UI
 
 **Tâches :**
-- [ ] `TODO` Badge granulométrie, forme, ScoreBadge coloré (≥7 vert, ≥5 amber, <5 rouge)
+- [x] `FAIT` Badge granulométrie, forme, ScoreBadge coloré (≥7 vert, ≥5 amber, <5 rouge)
 
 ---
 
 ### Story FC.4 — Avertissement comparaison tailles différentes (F4)
-**Assigné à :** @developer | **Dépend de :** FC.1 | **Statut :** `TODO` | **Type :** UI
+**Assigné à :** @developer | **Dépend de :** FC.1 | **Statut :** `FAIT` | **Type :** UI
 
 **Tâches :**
-- [ ] `TODO` Banner AlertTriangle si > 1 taille unique, message i18n
+- [x] `FAIT` Banner AlertTriangle si > 1 taille unique, message i18n
 
 ---
 
 ### Story FC.5 — Formulaire produit : champs aliment conditionnels
-**Assigné à :** @developer | **Dépend de :** FC.1 | **Statut :** `TODO` | **Type :** UI
+**Assigné à :** @developer | **Dépend de :** FC.1 | **Statut :** `FAIT` | **Type :** UI
 
 **Tâches :**
-- [ ] `TODO` `src/components/stock/produits-list-client.tsx` : ajouter section conditionnelle ALIMENT dans le Dialog de création (visible si categorie === ALIMENT) — Select TailleGranule (Radix), Select FormeAliment (Radix), inputs tauxProteines/Lipides/Fibres (0–100), multi-select PhaseElevage
-- [ ] `TODO` `src/components/stock/produit-detail-client.tsx` : idem dans le Dialog de modification
-- [ ] `TODO` Valeurs soumises via le state existant (`fields`) — pas de nouveau state global nécessaire
+- [x] `FAIT` `src/components/stock/produits-list-client.tsx` : ajouter section conditionnelle ALIMENT dans le Dialog de création (visible si categorie === ALIMENT) — Select TailleGranule (Radix), Select FormeAliment (Radix), inputs tauxProteines/Lipides/Fibres (0–100), multi-select PhaseElevage
+- [x] `FAIT` `src/components/stock/produit-detail-client.tsx` : idem dans le Dialog de modification
+- [x] `FAIT` Valeurs soumises via le state existant (`fields`) — pas de nouveau state global nécessaire
 
 **Correction ADJ-02 :** `src/components/stock/produit-form.tsx` N'EXISTE PAS. Le formulaire produit est inline dans `produits-list-client.tsx` (création) et `produit-detail-client.tsx` (modification). Voir `docs/decisions/ADJUSTMENTS-feed-analytics-stories.md` section 2.
 
 ---
 
 ### Story FC.6 — Formulaire relevé : tauxRefus + comportementAlim (F7, F8)
-**Assigné à :** @developer | **Dépend de :** FC.1 | **Statut :** `TODO` | **Type :** UI
+**Assigné à :** @developer | **Dépend de :** FC.1 | **Statut :** `FAIT` | **Type :** UI
 
 **Tâches :**
-- [ ] `TODO` `src/components/releves/form-alimentation.tsx` : +RadioGroup tauxRefus (Radix RadioGroup, options 0/10/25/50%, h-12 min), +Select comportementAlim (Radix Select, options enum ComportementAlimentaire), mettre à jour l'interface `FormAlimentationProps` pour inclure ces 2 champs dans `values`
-- [ ] `TODO` Les valeurs `tauxRefus` et `comportementAlim` transitent via le `fields` Record existant dans `releve-form-client.tsx` — pas de state supplémentaire à créer
-- [ ] `TODO` Le parent `releve-form-client.tsx` extrait déjà `fields.tauxRefus` et `fields.comportementAlim` pour les passer au body POST — vérifier que le body de soumission les inclut
+- [x] `FAIT` `src/components/releves/form-alimentation.tsx` : +RadioGroup tauxRefus (Radix RadioGroup, options 0/10/25/50%, h-12 min), +Select comportementAlim (Radix Select, options enum ComportementAlimentaire), mettre à jour l'interface `FormAlimentationProps` pour inclure ces 2 champs dans `values`
+- [x] `FAIT` Les valeurs `tauxRefus` et `comportementAlim` transitent via le `fields` Record existant dans `releve-form-client.tsx` — pas de state supplémentaire à créer
+- [x] `FAIT` Le parent `releve-form-client.tsx` extrait déjà `fields.tauxRefus` et `fields.comportementAlim` pour les passer au body POST — vérifier que le body de soumission les inclut
 
 **Correction ADJ-09 :** Les RadioGroups vont dans `form-alimentation.tsx`, pas dans `releve-form-client.tsx` directement. Voir `docs/decisions/ADJUSTMENTS-feed-analytics-stories.md` section 9.
 
 ---
 
 ### Story FC.7 — Graphique FCR hebdomadaire (F14, F17)
-**Assigné à :** @developer | **Dépend de :** FB.6 | **Statut :** `TODO` | **Type :** UI
+**Assigné à :** @developer | **Dépend de :** FB.6 | **Statut :** `FAIT` | **Type :** UI
 
 **Tâches :**
-- [ ] `TODO` Dans `src/components/analytics/feed-detail-charts.tsx` : ajouter composant `FeedFCRHebdoChart` (Recharts ComposedChart, dynamic imports ssr:false, ReferenceLine pour changements de granulé, ReferenceLine pour benchmark FCR, responsive, mobile-first)
-- [ ] `TODO` Intégrer `FeedFCRHebdoChart` dans `src/app/analytics/aliments/[produitId]/page.tsx`
+- [x] `FAIT` Dans `src/components/analytics/feed-detail-charts.tsx` : ajouter composant `FeedFCRHebdoChart` (Recharts ComposedChart, dynamic imports ssr:false, ReferenceLine pour changements de granulé, ReferenceLine pour benchmark FCR, responsive, mobile-first)
+- [x] `FAIT` Intégrer `FeedFCRHebdoChart` dans `src/app/analytics/aliments/[produitId]/page.tsx`
 
 **Note ADJ-01 :** La page détail est HORS route group — `src/app/analytics/aliments/[produitId]/page.tsx` est le chemin correct (pas dans `/(farm)/`).
 
 ---
 
 ### Story FC.8 — Corrélation mortalité / aliment (F15)
-**Assigné à :** @developer | **Dépend de :** FB.5 | **Statut :** `TODO` | **Type :** UI
+**Assigné à :** @developer | **Dépend de :** FB.5 | **Statut :** `FAIT` | **Type :** UI
 
 **Tâches :**
-- [ ] `TODO` Dans `src/app/analytics/aliments/[produitId]/page.tsx` (page détail) : ajouter section corrélation mortalité — cartes empilées mobile, badge mortalité si > 10%, données issues de l'enrichissement `computeAlimentMetrics`
+- [x] `FAIT` Dans `src/app/analytics/aliments/[produitId]/page.tsx` (page détail) : ajouter section corrélation mortalité — cartes empilées mobile, badge mortalité si > 10%, données issues de l'enrichissement `computeAlimentMetrics`
 
 ---
 
 ### Story FC.9 — Alerte DLC stock aliment (F21)
-**Assigné à :** @developer | **Dépend de :** Sprint FA FAIT | **Statut :** `TODO` | **Type :** UI
+**Assigné à :** @developer | **Dépend de :** Sprint FA FAIT | **Statut :** `FAIT` | **Type :** UI
 
 **Tâches :**
-- [ ] `TODO` Dans `src/lib/queries/analytics.ts` (ou nouveau `src/lib/queries/stock.ts`) : query `getMouvementsExpirables(siteId)` — séparer lots expirés (`datePeremption < now`) vs bientôt expirés (`datePeremption < now+30j`) (E13)
-- [ ] `TODO` Créer `src/components/analytics/alerte-dlc.tsx` (Client ou Server Component) : badges expiré/bientôt, i18n depuis fr/analytics.json
-- [ ] `TODO` Intégrer AlerteDLC dans `src/components/pages/analytics-aliments-page.tsx`
+- [x] `FAIT` Dans `src/lib/queries/analytics.ts` : query `getMouvementsExpirables(siteId)` — séparer lots expirés (`datePeremption < now`) vs bientôt expirés (`datePeremption < now+30j`) (E13)
+- [x] `FAIT` Créer `src/components/analytics/alerte-dlc.tsx` : badges expiré/bientôt, i18n depuis fr/analytics.json
+- [x] `FAIT` Intégrer AlerteDLC dans `src/components/pages/analytics-aliments-page.tsx`
 
 ---
 
 ### Story FC.10 — Tests Phase 3
-**Assigné à :** @tester | **Dépend de :** FC.2 à FC.9 | **Statut :** `TODO` | **Type :** TEST
+**Assigné à :** @tester | **Dépend de :** FC.2 à FC.9 | **Statut :** `FAIT` | **Type :** TEST
 
 **Tâches :**
-- [ ] `TODO` Tests filtres, avertissement, ?taille=INVALID, mobile 360px manuel
-- [ ] `TODO` Non-régression + rapport `docs/tests/rapport-sprint-FC.md`
+- [x] `FAIT` Tests filtres, avertissement, ?taille=INVALID, mobile 360px manuel
+- [x] `FAIT` Non-régression + rapport `docs/tests/rapport-sprint-FC.md`
 
 ---
 
 ### Story FC.11 — Review Phase 3
-**Assigné à :** @code-reviewer | **Dépend de :** FC.10 | **Statut :** `TODO` | **Type :** REVIEW
+**Assigné à :** @code-reviewer | **Dépend de :** FC.10 | **Statut :** `FAIT` | **Type :** REVIEW
 
 **Tâches :**
-- [ ] `TODO` i18n complet, R5/R6, mobile first, accessibilité RadioGroups
-- [ ] `TODO` Rapport `docs/reviews/review-sprint-FC.md`
+- [x] `FAIT` i18n complet, R5/R6, mobile first, accessibilité RadioGroups
+- [x] `FAIT` Rapport `docs/reviews/review-sprint-FC.md`
 
 ---
 

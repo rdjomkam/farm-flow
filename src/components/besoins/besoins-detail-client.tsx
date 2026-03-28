@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Calendar,
@@ -13,6 +14,7 @@ import {
   CheckCheck,
   Package,
   ChevronRight,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -140,6 +142,7 @@ export function BesoinsDetailClient({
   canEdit = false,
 }: Props) {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const depenseService = useDepenseService();
   const [liste, setListe] = useState(initial);
 
@@ -148,6 +151,7 @@ export function BesoinsDetailClient({
   const [motifRejet, setMotifRejet] = useState("");
   const [traitOpen, setTraitOpen] = useState(false);
   const [clotureOpen, setClotureOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   // Traitement: action per ligne
   const [ligneActions, setLigneActions] = useState<
@@ -226,6 +230,14 @@ export function BesoinsDetailClient({
       queryClient.invalidateQueries({ queryKey: ["besoins"] });
     }
   }
+
+  const handleDelete = useCallback(async () => {
+    const result = await depenseService.deleteBesoin(liste.id);
+    if (result.ok) {
+      queryClient.invalidateQueries({ queryKey: ["besoins"] });
+      router.push("/besoins");
+    }
+  }, [depenseService, liste.id, queryClient, router]);
 
   return (
     <div className="p-4 pb-24 max-w-2xl mx-auto">
@@ -345,9 +357,35 @@ export function BesoinsDetailClient({
         </CardContent>
       </Card>
 
-      {/* Bouton Modifier — seulement si statut SOUMISE et canEdit */}
+      {/* Bouton Modifier + Supprimer — seulement si statut SOUMISE et canEdit */}
       {canEdit && statut === StatutBesoins.SOUMISE && (
-        <div className="mb-4 flex justify-end">
+        <div className="mb-4 flex justify-end gap-2">
+          <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                <Trash2 className="h-4 w-4 mr-1" />
+                Supprimer
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Supprimer cette liste ?</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-muted-foreground py-2">
+                Cette action est irreversible. La liste de besoins{" "}
+                <strong>{liste.numero}</strong> et toutes ses lignes seront
+                definitivement supprimees.
+              </p>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="ghost">Annuler</Button>
+                </DialogClose>
+                <Button variant="danger" onClick={handleDelete}>
+                  Supprimer
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <ModifierBesoinDialog
             liste={liste}
             onSuccess={(updated) => {

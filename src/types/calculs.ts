@@ -453,6 +453,8 @@ export interface DetailAlimentVague {
   adg: number | null;
   /** PER (Protein Efficiency Ratio) — null si donnees insuffisantes */
   per: number | null;
+  /** Taux de mortalite associe a cette vague (%) — null si donnees insuffisantes */
+  tauxMortaliteAssocie: number | null;
 }
 
 /**

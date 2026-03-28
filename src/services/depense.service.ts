@@ -301,6 +301,16 @@ export function useDepenseService() {
     [call]
   );
 
+  const deleteBesoin = useCallback(
+    (id: string) =>
+      call<{ success: boolean }>(
+        `/api/besoins/${id}`,
+        { method: "DELETE" },
+        { successMessage: "Liste de besoins supprimee." }
+      ),
+    [call]
+  );
+
   return {
     listDepenses,
     getDepense,
@@ -324,5 +334,6 @@ export function useDepenseService() {
     rejeterBesoin,
     traiterBesoin,
     cloturerBesoin,
+    deleteBesoin,
   };
 }
