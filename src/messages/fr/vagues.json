@@ -111,9 +111,31 @@
     "nouveauReleve": "Nouveau relevé",
     "calibrage": "Calibrage",
     "modifier": "Modifier",
+    "gererBacs": "Gérer les bacs",
     "rapportPdf": "Rapport PDF",
     "exportReleves": "Export relevés",
     "cloturer": "Clôturer"
+  },
+  "gererBacs": {
+    "title": "Gérer les bacs",
+    "description": "Ajoutez ou retirez des bacs de cette vague en cours.",
+    "bacsActuels": "Bacs actuels",
+    "aucunBac": "Aucun bac dans cette vague.",
+    "poissonsDansBac": "{count} poissons",
+    "ajouterBac": "Ajouter un bac",
+    "selectBac": "Bac à ajouter",
+    "selectBacPlaceholder": "Sélectionner un bac libre",
+    "chargement": "Chargement...",
+    "nombrePoissons": "Nombre de poissons",
+    "ajouterButton": "Ajouter ce bac",
+    "retirer": "Retirer",
+    "errors": {
+      "bacRequired": "Sélectionnez un bac.",
+      "nombrePoissonsInvalid": "Le nombre de poissons doit être un entier supérieur à 0.",
+      "dernierBac": "Impossible de retirer le dernier bac d'une vague.",
+      "addFailed": "Échec de l'ajout du bac.",
+      "removeFailed": "Échec du retrait du bac."
+    }
   },
   "poidsChart": {
     "title": "Evolution du poids moyen",

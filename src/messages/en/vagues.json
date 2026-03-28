@@ -111,9 +111,31 @@
     "nouveauReleve": "New record",
     "calibrage": "Grading",
     "modifier": "Edit",
+    "gererBacs": "Manage tanks",
     "rapportPdf": "PDF Report",
     "exportReleves": "Export records",
     "cloturer": "Close"
+  },
+  "gererBacs": {
+    "title": "Manage tanks",
+    "description": "Add or remove tanks from this active batch.",
+    "bacsActuels": "Current tanks",
+    "aucunBac": "No tanks in this batch.",
+    "poissonsDansBac": "{count} fish",
+    "ajouterBac": "Add a tank",
+    "selectBac": "Tank to add",
+    "selectBacPlaceholder": "Select a free tank",
+    "chargement": "Loading...",
+    "nombrePoissons": "Number of fish",
+    "ajouterButton": "Add this tank",
+    "retirer": "Remove",
+    "errors": {
+      "bacRequired": "Select a tank.",
+      "nombrePoissonsInvalid": "Fish count must be an integer greater than 0.",
+      "dernierBac": "Cannot remove the last tank from a batch.",
+      "addFailed": "Failed to add tank.",
+      "removeFailed": "Failed to remove tank."
+    }
   },
   "poidsChart": {
     "title": "Average weight evolution",

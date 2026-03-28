@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cachedJson } from "@/lib/api-cache";
-import { getBacs } from "@/lib/queries/bacs";
+import { getBacs, getBacsLibres } from "@/lib/queries/bacs";
 import { prisma } from "@/lib/db";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
@@ -15,7 +15,26 @@ import { ErrorKeys } from "@/lib/api-error-keys";
 export async function GET(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.BACS_GERER);
-    const bacs = await getBacs(auth.activeSiteId);
+    const { searchParams } = new URL(request.url);
+    const libre = searchParams.get("libre") === "true";
+    const bacs = libre
+      ? await getBacsLibres(auth.activeSiteId).then((list) =>
+          list.map((b) => ({
+            id: b.id,
+            nom: b.nom,
+            volume: b.volume,
+            nombrePoissons: b.nombrePoissons,
+            nombreInitial: b.nombreInitial,
+            poidsMoyenInitial: b.poidsMoyenInitial,
+            typeSysteme: b.typeSysteme ?? null,
+            vagueId: b.vagueId,
+            siteId: b.siteId,
+            vagueCode: null,
+            createdAt: b.createdAt,
+            updatedAt: b.updatedAt,
+          }))
+        )
+      : await getBacs(auth.activeSiteId);
     return cachedJson({ bacs, total: bacs.length }, "medium");
   } catch (error) {
     if (error instanceof AuthError) {
