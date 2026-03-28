@@ -251,6 +251,19 @@ export async function POST(request: NextRequest) {
           });
         }
       }
+      if (body.nombreRenouvellements != null) {
+        if (
+          typeof body.nombreRenouvellements !== "number" ||
+          !Number.isInteger(body.nombreRenouvellements) ||
+          body.nombreRenouvellements < 1 ||
+          body.nombreRenouvellements > 20
+        ) {
+          errors.push({
+            field: "nombreRenouvellements",
+            message: "Le nombre de passages doit etre un entier entre 1 et 20.",
+          });
+        }
+      }
     }
 
     // Validation date optionnelle
@@ -386,6 +399,7 @@ export async function POST(request: NextRequest) {
           typeReleve: TypeReleve.RENOUVELLEMENT,
           ...(body.pourcentageRenouvellement != null && { pourcentageRenouvellement: body.pourcentageRenouvellement }),
           ...(body.volumeRenouvele != null && { volumeRenouvele: body.volumeRenouvele }),
+          ...(body.nombreRenouvellements != null && { nombreRenouvellements: body.nombreRenouvellements }),
         };
         break;
       default:

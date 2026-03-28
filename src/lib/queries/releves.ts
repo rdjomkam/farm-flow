@@ -135,6 +135,7 @@ export async function createReleve(siteId: string, userId: string, data: CreateR
         // Champs renouvellement eau (Sprint 27-28, ADR-density-alerts)
         ...("pourcentageRenouvellement" in data && { pourcentageRenouvellement: data.pourcentageRenouvellement }),
         ...("volumeRenouvele" in data && { volumeRenouvele: data.volumeRenouvele }),
+        ...("nombreRenouvellements" in data && { nombreRenouvellements: data.nombreRenouvellements }),
       },
     });
 
@@ -260,6 +261,7 @@ const champsParType: Record<string, string[]> = {
   [TypeReleveEnum.QUALITE_EAU]: ["temperature", "ph", "oxygene", "ammoniac"],
   [TypeReleveEnum.COMPTAGE]: ["nombreCompte", "methodeComptage"],
   [TypeReleveEnum.OBSERVATION]: ["description"],
+  [TypeReleveEnum.RENOUVELLEMENT]: ["pourcentageRenouvellement", "volumeRenouvele", "nombreRenouvellements"],
 };
 
 /** Met a jour un releve (seuls les champs du type sont modifiables, typeReleve immutable) */

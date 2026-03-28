@@ -314,6 +314,8 @@ export interface CreateReleveRenouvellementDTO extends CreateReleveBase {
   pourcentageRenouvellement?: number;
   /** Volume reel en litres renouvele — alternative ou complement a pourcentageRenouvellement */
   volumeRenouvele?: number;
+  /** Nombre de passages de renouvellement (ex: 25% × 4 = 100%) — defaut 1, max 20 */
+  nombreRenouvellements?: number;
 }
 
 /**
@@ -414,6 +416,14 @@ export interface UpdateReleveDTO {
   // --- Champs observation (typeReleve = OBSERVATION) ---
   /** Description de l'observation */
   description?: string;
+
+  // --- Champs renouvellement (typeReleve = RENOUVELLEMENT) ---
+  /** Pourcentage du volume du bac renouvele (0-100) */
+  pourcentageRenouvellement?: number;
+  /** Volume d'eau renouvele en litres */
+  volumeRenouvele?: number;
+  /** Nombre de passages de renouvellement (1-20) */
+  nombreRenouvellements?: number;
 }
 
 // ---------------------------------------------------------------------------

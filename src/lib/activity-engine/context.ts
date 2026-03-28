@@ -49,6 +49,7 @@ type ReleveCtx = Pick<
   | "bacId"
   | "pourcentageRenouvellement"
   | "volumeRenouvele"
+  | "nombreRenouvellements"
 >;
 
 /** Bac minimal pour l'iteration per-bac */
@@ -277,6 +278,7 @@ export function buildEvaluationContext(
         date: r.date,
         pourcentageRenouvellement: r.pourcentageRenouvellement ?? null,
         volumeRenouvele: r.volumeRenouvele ?? null,
+        nombreRenouvellements: r.nombreRenouvellements ?? null,
       }));
     tauxRenouvellementPctJour = computeTauxRenouvellement(
       relevesRenouvellement,

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Calendar, ChevronRight, FileText, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -77,11 +78,48 @@ function ReleveDetails({ releve }: { releve: Releve }) {
       return (
         <div className="text-sm text-muted-foreground">{releve.description}</div>
       );
+    case TypeReleve.RENOUVELLEMENT: {
+      const passages = releve.nombreRenouvellements ?? 1;
+      const pct = releve.pourcentageRenouvellement;
+      const vol = releve.volumeRenouvele;
+      if (pct != null && passages > 1) {
+        const totalPct = Math.round(pct * passages * 10) / 10;
+        const totalVol = vol != null ? Math.round(vol * passages) : null;
+        return (
+          <div className="text-sm text-muted-foreground">
+            {pct}% × {passages} = {totalPct}%{totalVol != null ? ` (${totalVol} L)` : ""}
+          </div>
+        );
+      }
+      if (pct != null) {
+        return (
+          <div className="text-sm text-muted-foreground">
+            {pct}%{vol != null ? ` (${vol} L)` : ""}
+          </div>
+        );
+      }
+      if (vol != null && passages > 1) {
+        return (
+          <div className="text-sm text-muted-foreground">
+            {vol} L × {passages} = {Math.round(vol * passages)} L
+          </div>
+        );
+      }
+      if (vol != null) {
+        return (
+          <div className="text-sm text-muted-foreground">{vol} L</div>
+        );
+      }
+      return (
+        <div className="text-sm text-muted-foreground">{t("details.renouvellement")}</div>
+      );
+    }
   }
 }
 
 function DeleteReleveButton({ releveId }: { releveId: string }) {
   const t = useTranslations("releves");
+  const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const releveService = useReleveService();
@@ -99,6 +137,7 @@ function DeleteReleveButton({ releveId }: { releveId: string }) {
       queryClient.invalidateQueries({ queryKey: queryKeys.produits.all });
       queryClient.invalidateQueries({ queryKey: ["stock"] });
       setOpen(false);
+      router.refresh();
     } catch {
       // toast is handled by the service layer
     } finally {

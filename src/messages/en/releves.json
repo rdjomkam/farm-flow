@@ -35,7 +35,8 @@
     "mort": "{count} death",
     "morts": "{count} deaths",
     "poissons": "{count} fish",
-    "xParJour": "{count}x/day"
+    "xParJour": "{count}x/day",
+    "renouvellement": "Water renewal"
   },
   "form": {
     "title": "Enter a record",
@@ -122,7 +123,8 @@
       "description": "Required.",
       "renouvellementRequis": "At least one field is required: percentage or volume.",
       "pourcentageRange": "Percentage must be between 0 and 100.",
-      "volumePositif": "Volume must be greater than 0."
+      "volumePositif": "Volume must be greater than 0.",
+      "nombreRenouvellementMin": "Number of passes must be an integer between 1 and 20."
     },
     "biometrie": {
       "poidsMoyen": "Average weight (g)",
@@ -181,7 +183,10 @@
       "volume": "Volume renewed (L)",
       "volumeAvecBac": "Volume renewed (L) — tank {volume} L",
       "hint": "At least one field is required.",
-      "hintLinked": " Both fields are linked automatically."
+      "hintLinked": " Both fields are linked automatically.",
+      "nombre": "Number of passes",
+      "nombreLabel": "Number of passes (e.g. 4 passes of 25%)",
+      "totalEffectif": "Effective total: {pct}% ({vol} L)"
     },
     "consommation": {
       "alimentsConsommes": "Feed consumed",
@@ -225,7 +230,8 @@
       "ph": "pH",
       "oxygene": "Dissolved oxygen (mg/L)",
       "ammoniac": "Ammonia (mg/L)",
-      "nombreCompte": "Number of fish"
+      "nombreCompte": "Number of fish",
+      "nombreRenouvellements": "Number of passes"
     },
     "errors": {
       "poidsMoyen": "Must be greater than 0.",

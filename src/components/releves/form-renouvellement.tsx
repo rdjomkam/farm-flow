@@ -9,6 +9,7 @@ interface FormRenouvellementProps {
   values: {
     pourcentageRenouvellement: string;
     volumeRenouvele: string;
+    nombreRenouvellements: string;
   };
   onChange: (field: string, value: string) => void;
   errors: Record<string, string>;
@@ -36,6 +37,15 @@ export function FormRenouvellement({
 }: FormRenouvellementProps) {
   const t = useTranslations("releves");
   const hasVolume = bacVolumeLitres != null && bacVolumeLitres > 0;
+
+  const passages = Number(values.nombreRenouvellements) || 1;
+  const pct = Number(values.pourcentageRenouvellement);
+  const vol = Number(values.volumeRenouvele);
+  const hasPct = values.pourcentageRenouvellement !== "" && !isNaN(pct) && pct > 0;
+  const hasVol = values.volumeRenouvele !== "" && !isNaN(vol) && vol > 0;
+  const showTotal = passages > 1 && (hasPct || hasVol);
+  const totalPct = hasPct ? Math.round(pct * passages * 10) / 10 : null;
+  const totalVol = hasVol ? Math.round(vol * passages) : hasPct && hasVolume ? Math.round((pct / 100) * bacVolumeLitres! * passages) : null;
 
   function handlePctChange(rawValue: string) {
     onChange("pourcentageRenouvellement", rawValue);
@@ -87,6 +97,26 @@ export function FormRenouvellement({
         onChange={(e) => handleVolChange(e.target.value)}
         error={errors.volumeRenouvele}
       />
+      <Input
+        id="nombreRenouvellements"
+        label={t("form.renouvellement.nombreLabel")}
+        type="number"
+        min="1"
+        max="20"
+        step="1"
+        placeholder="Ex : 2"
+        value={values.nombreRenouvellements}
+        onChange={(e) => onChange("nombreRenouvellements", e.target.value)}
+        error={errors.nombreRenouvellements}
+      />
+      {showTotal && totalPct != null && (
+        <p className="text-xs font-medium text-primary">
+          {t("form.renouvellement.totalEffectif", {
+            pct: totalPct,
+            vol: totalVol ?? "?",
+          })}
+        </p>
+      )}
       {!errors.pourcentageRenouvellement && !errors.volumeRenouvele && (
         <p className="text-xs text-muted-foreground">
           {t("form.renouvellement.hint")}

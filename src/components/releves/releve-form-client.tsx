@@ -189,6 +189,12 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
       if (hasVol && Number(fields.volumeRenouvele) <= 0) {
         errs.volumeRenouvele = t("form.errors.volumePositif");
       }
+      if (fields.nombreRenouvellements !== undefined && fields.nombreRenouvellements !== "") {
+        const n = Number(fields.nombreRenouvellements);
+        if (!Number.isInteger(n) || n < 1 || n > 20) {
+          errs.nombreRenouvellements = t("form.errors.nombreRenouvellementMin");
+        }
+      }
     }
     return errs;
   }
@@ -209,8 +215,8 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
       typeReleve,
       ...(notes.trim() && { notes: notes.trim() }),
       ...(activiteId && { activiteId }),
-      // Toujours envoyer la date pour permettre la saisie retroactive
-      date: releveDate,
+      // Convert datetime-local (local time) to ISO string so the server gets correct UTC
+      date: new Date(releveDate).toISOString(),
     };
 
     // Add type-specific numeric fields
@@ -218,7 +224,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
       "poidsMoyen", "tailleMoyenne", "echantillonCount",
       "nombreMorts", "quantiteAliment", "frequenceAliment",
       "nombreCompte", "temperature", "ph", "oxygene", "ammoniac",
-      "pourcentageRenouvellement", "volumeRenouvele",
+      "pourcentageRenouvellement", "volumeRenouvele", "nombreRenouvellements",
     ];
     for (const f of numericFields) {
       if (fields[f] !== undefined && fields[f] !== "") {
@@ -502,6 +508,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
                 values={{
                   pourcentageRenouvellement: fields.pourcentageRenouvellement ?? "",
                   volumeRenouvele: fields.volumeRenouvele ?? "",
+                  nombreRenouvellements: fields.nombreRenouvellements ?? "1",
                 }}
                 onChange={updateField}
                 errors={errors}
