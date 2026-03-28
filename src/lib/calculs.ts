@@ -865,6 +865,7 @@ export function computeTauxRenouvellement(
     date: Date;
     pourcentageRenouvellement: number | null;
     volumeRenouvele: number | null;
+    nombreRenouvellements: number | null;
   }[],
   bacVolumeLitres: number | null,
   periodeDays: number = 7
@@ -883,13 +884,14 @@ export function computeTauxRenouvellement(
   let count = 0;
 
   for (const r of relevesDansFenetre) {
+    const passages = r.nombreRenouvellements ?? 1;
     if (r.pourcentageRenouvellement != null) {
-      totalPct += r.pourcentageRenouvellement;
+      totalPct += r.pourcentageRenouvellement * passages;
       count++;
     } else if (r.volumeRenouvele != null && bacVolumeLitres != null && bacVolumeLitres > 0) {
       // Convertir volume en pourcentage
       const pct = (r.volumeRenouvele / bacVolumeLitres) * 100;
-      totalPct += pct;
+      totalPct += pct * passages;
       count++;
     }
     // Si ni pourcentage ni volume convertible → ignorer

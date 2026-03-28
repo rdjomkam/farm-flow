@@ -882,6 +882,7 @@ model Releve {
   // L'un ou l'autre est renseigné (ou les deux si le formulaire calcule automatiquement)
   pourcentageRenouvellement Float?  // % du volume du bac renouvelée (ex: 50 = 50%)
   volumeRenouvele           Float?  // Volume réel en litres (alternative à pourcentageRenouvellement)
+  nombreRenouvellements     Int?    @default(1)  // Nombre de passages de renouvellement (ex: 25% × 4 = 100%)
 
   consommations   ReleveConsommation[]
   mouvements      MouvementStock[]

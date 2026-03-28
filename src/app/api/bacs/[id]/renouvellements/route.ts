@@ -49,6 +49,7 @@ export async function GET(
         date: true,
         pourcentageRenouvellement: true,
         volumeRenouvele: true,
+        nombreRenouvellements: true,
         notes: true,
       },
     });
@@ -64,6 +65,7 @@ export async function GET(
       date: r.date,
       pourcentageRenouvellement: r.pourcentageRenouvellement ?? null,
       volumeRenouvele: r.volumeRenouvele ?? null,
+      nombreRenouvellements: r.nombreRenouvellements ?? null,
     }));
 
     const tauxMoyenPctJour = computeTauxRenouvellement(
@@ -78,6 +80,7 @@ export async function GET(
         date: r.date,
         pourcentageRenouvellement: r.pourcentageRenouvellement ?? null,
         volumeRenouvele: r.volumeRenouvele ?? null,
+        nombreRenouvellements: r.nombreRenouvellements ?? null,
         notes: r.notes ?? null,
       })),
       tauxMoyenPctJour,

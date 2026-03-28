@@ -542,6 +542,8 @@ export interface Releve {
   pourcentageRenouvellement: number | null;
   /** Volume reel en litres renouvele — alternative ou complement a pourcentageRenouvellement */
   volumeRenouvele: number | null;
+  /** Nombre de passages de renouvellement (ex: 25% × 4 = 100%) — defaut 1 */
+  nombreRenouvellements: number | null;
 
   createdAt: Date;
   updatedAt: Date;

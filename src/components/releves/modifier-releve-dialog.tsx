@@ -78,6 +78,9 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
   const [nombreCompte, setNombreCompte] = useState(String(releve.nombreCompte ?? ""));
   const [methodeComptage, setMethodeComptage] = useState(releve.methodeComptage ?? "");
   const [description, setDescription] = useState(releve.description ?? "");
+  const [pourcentageRenouvellement, setPourcentageRenouvellement] = useState(String(releve.pourcentageRenouvellement ?? ""));
+  const [volumeRenouvele, setVolumeRenouvele] = useState(String(releve.volumeRenouvele ?? ""));
+  const [nombreRenouvellements, setNombreRenouvellements] = useState(String(releve.nombreRenouvellements ?? 1));
   const [notes, setNotes] = useState(releve.notes ?? "");
 
   // Types de releve qui supportent les consommations
@@ -109,6 +112,9 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
     setNombreCompte(String(releve.nombreCompte ?? ""));
     setMethodeComptage(releve.methodeComptage ?? "");
     setDescription(releve.description ?? "");
+    setPourcentageRenouvellement(String(releve.pourcentageRenouvellement ?? ""));
+    setVolumeRenouvele(String(releve.volumeRenouvele ?? ""));
+    setNombreRenouvellements(String(releve.nombreRenouvellements ?? 1));
     setNotes(releve.notes ?? "");
     setConsommationLignes(
       releve.consommations?.map((c) => ({
@@ -153,6 +159,19 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
       case TypeReleve.OBSERVATION:
         if (!description.trim()) errs.description = t("modify.errors.description");
         break;
+      case TypeReleve.RENOUVELLEMENT: {
+        const hasPct = pourcentageRenouvellement !== "" && pourcentageRenouvellement != null;
+        const hasVol = volumeRenouvele !== "" && volumeRenouvele != null;
+        if (!hasPct && !hasVol) errs.pourcentageRenouvellement = t("form.errors.renouvellementRequis");
+        if (hasPct && (Number(pourcentageRenouvellement) < 0 || Number(pourcentageRenouvellement) > 100))
+          errs.pourcentageRenouvellement = t("form.errors.pourcentageRange");
+        if (hasVol && Number(volumeRenouvele) <= 0)
+          errs.volumeRenouvele = t("form.errors.volumePositif");
+        const n = Number(nombreRenouvellements);
+        if (nombreRenouvellements !== "" && (!Number.isInteger(n) || n < 1 || n > 20))
+          errs.nombreRenouvellements = t("form.errors.nombreRenouvellementMin");
+        break;
+      }
       // QUALITE_EAU: all fields optional
     }
     return errs;
@@ -196,6 +215,11 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
         break;
       case TypeReleve.OBSERVATION:
         body.description = description.trim();
+        break;
+      case TypeReleve.RENOUVELLEMENT:
+        if (pourcentageRenouvellement !== "") body.pourcentageRenouvellement = Number(pourcentageRenouvellement);
+        if (volumeRenouvele !== "") body.volumeRenouvele = Number(volumeRenouvele);
+        body.nombreRenouvellements = Number(nombreRenouvellements) || 1;
         break;
     }
 
@@ -454,6 +478,43 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
               />
               {errors.description && <p className="text-sm text-danger">{errors.description}</p>}
             </div>
+          )}
+
+          {type === TypeReleve.RENOUVELLEMENT && (
+            <>
+              <Input
+                id={`pourcentageRenouvellement-${releve.id}`}
+                label={t("form.renouvellement.pourcentage")}
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                value={pourcentageRenouvellement}
+                onChange={(e) => setPourcentageRenouvellement(e.target.value)}
+                error={errors.pourcentageRenouvellement}
+              />
+              <Input
+                id={`volumeRenouvele-${releve.id}`}
+                label={t("form.renouvellement.volume")}
+                type="number"
+                min="1"
+                step="1"
+                value={volumeRenouvele}
+                onChange={(e) => setVolumeRenouvele(e.target.value)}
+                error={errors.volumeRenouvele}
+              />
+              <Input
+                id={`nombreRenouvellements-${releve.id}`}
+                label={t("modify.fields.nombreRenouvellements")}
+                type="number"
+                min="1"
+                max="20"
+                step="1"
+                value={nombreRenouvellements}
+                onChange={(e) => setNombreRenouvellements(e.target.value)}
+                error={errors.nombreRenouvellements}
+              />
+            </>
           )}
 
           {/* Consommations de produits */}

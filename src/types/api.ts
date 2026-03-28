@@ -314,6 +314,8 @@ export interface CreateReleveRenouvellementDTO extends CreateReleveBase {
   pourcentageRenouvellement?: number;
   /** Volume reel en litres renouvele — alternative ou complement a pourcentageRenouvellement */
   volumeRenouvele?: number;
+  /** Nombre de passages de renouvellement (ex: 25% × 4 = 100%) — defaut 1, max 20 */
+  nombreRenouvellements?: number;
 }
 
 /**

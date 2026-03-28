@@ -35,7 +35,8 @@
     "mort": "{count} mort",
     "morts": "{count} morts",
     "poissons": "{count} poissons",
-    "xParJour": "{count}x/jour"
+    "xParJour": "{count}x/jour",
+    "renouvellement": "Renouvellement d'eau"
   },
   "form": {
     "title": "Saisir un releve",
@@ -122,7 +123,8 @@
       "description": "Requis.",
       "renouvellementRequis": "Au moins un champ est requis : pourcentage ou volume.",
       "pourcentageRange": "Le pourcentage doit etre entre 0 et 100.",
-      "volumePositif": "Le volume doit etre superieur a 0."
+      "volumePositif": "Le volume doit etre superieur a 0.",
+      "nombreRenouvellementMin": "Le nombre de passages doit etre un entier entre 1 et 20."
     },
     "biometrie": {
       "poidsMoyen": "Poids moyen (g)",
@@ -181,7 +183,10 @@
       "volume": "Volume renouvelee (L)",
       "volumeAvecBac": "Volume renouvelee (L) — bac {volume} L",
       "hint": "Au moins un des deux champs est obligatoire.",
-      "hintLinked": " Les deux champs sont lies automatiquement."
+      "hintLinked": " Les deux champs sont lies automatiquement.",
+      "nombre": "Nombre de passages",
+      "nombreLabel": "Nombre de passages (ex : 4 passages de 25%)",
+      "totalEffectif": "Total effectif : {pct}% ({vol} L)"
     },
     "consommation": {
       "alimentsConsommes": "Aliments consommes",
@@ -225,7 +230,8 @@
       "ph": "pH",
       "oxygene": "Oxygene dissous (mg/L)",
       "ammoniac": "Ammoniac (mg/L)",
-      "nombreCompte": "Nombre de poissons"
+      "nombreCompte": "Nombre de poissons",
+      "nombreRenouvellements": "Nombre de passages"
     },
     "errors": {
       "poidsMoyen": "Superieur a 0.",

@@ -39,6 +39,7 @@ export async function GET(
                 bacId: true,
                 pourcentageRenouvellement: true,
                 volumeRenouvele: true,
+                nombreRenouvellements: true,
               },
             },
           },
@@ -101,6 +102,7 @@ export async function GET(
         date: r.date,
         pourcentageRenouvellement: r.pourcentageRenouvellement ?? null,
         volumeRenouvele: r.volumeRenouvele ?? null,
+        nombreRenouvellements: r.nombreRenouvellements ?? null,
       }));
 
     const tauxRenouvellementPctJour = computeTauxRenouvellement(
