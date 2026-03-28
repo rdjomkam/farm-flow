@@ -15,12 +15,19 @@ export function useBacService() {
   const { call } = useApi();
 
   const list = useCallback(
-    (params?: { vagueId?: string }) => {
+    (params?: { vagueId?: string; libre?: boolean }) => {
       const qs = params?.vagueId
         ? `?vagueId=${encodeURIComponent(params.vagueId)}`
-        : "";
+        : params?.libre
+          ? "?libre=true"
+          : "";
       return call<BacListResponse>(`/api/bacs${qs}`);
     },
+    [call]
+  );
+
+  const listLibres = useCallback(
+    () => call<BacListResponse>("/api/bacs?libre=true"),
     [call]
   );
 
@@ -58,5 +65,5 @@ export function useBacService() {
     [call]
   );
 
-  return { list, listByVague, create, update };
+  return { list, listLibres, listByVague, create, update };
 }

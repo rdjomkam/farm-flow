@@ -19,7 +19,7 @@ import { getCalibrages } from "@/lib/queries/calibrages";
 import { prisma } from "@/lib/db";
 import { computeVivantsByBac } from "@/lib/calculs";
 import { StatutVague, TypeReleve, CategorieProduit, Permission } from "@/types";
-import type { Releve, EvolutionPoidsPoint, IndicateursVague as IndicateursType, CalibrageWithRelations } from "@/types";
+import type { Bac, Releve, EvolutionPoidsPoint, IndicateursVague as IndicateursType, CalibrageWithRelations } from "@/types";
 import type { ProduitOption } from "@/components/releves/consommation-fields";
 
 const statutVariants: Record<StatutVague, "en_cours" | "terminee" | "annulee"> = {
@@ -145,6 +145,7 @@ export default async function VagueDetailPage({
               permissions={permissions}
               isEnCours={isEnCours}
               canExport={permissions.includes(Permission.EXPORT_DONNEES)}
+              currentBacs={vague.bacs as Bac[]}
               className="ml-auto"
             />
           )}

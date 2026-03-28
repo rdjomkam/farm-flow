@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MoreVertical, Plus, Scissors, Pencil, FileText, FileSpreadsheet, XCircle } from "lucide-react";
+import { MoreVertical, Plus, Scissors, Pencil, FileText, FileSpreadsheet, XCircle, Container } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +14,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ModifierVagueDialog } from "./modifier-vague-dialog";
 import { CloturerDialog } from "./cloturer-dialog";
+import { GererBacsDialog } from "./gerer-bacs-dialog";
 import { Permission } from "@/types";
+import type { Bac } from "@/types";
 import { useExportService } from "@/services";
 
 interface VagueActionMenuProps {
@@ -26,6 +28,7 @@ interface VagueActionMenuProps {
   permissions: Permission[];
   isEnCours: boolean;
   canExport: boolean;
+  currentBacs?: Bac[];
   className?: string;
 }
 
@@ -38,6 +41,7 @@ export function VagueActionMenu({
   permissions,
   isEnCours,
   canExport,
+  currentBacs = [],
   className,
 }: VagueActionMenuProps) {
   const router = useRouter();
@@ -45,10 +49,12 @@ export function VagueActionMenu({
   const t = useTranslations("vagues");
   const [modifierOpen, setModifierOpen] = useState(false);
   const [cloturerOpen, setCloturerOpen] = useState(false);
+  const [gererBacsOpen, setGererBacsOpen] = useState(false);
 
   const canModifier = isEnCours && permissions.includes(Permission.VAGUES_MODIFIER);
   const canCalibrage = isEnCours && permissions.includes(Permission.CALIBRAGES_CREER);
   const canCloturer = isEnCours;
+  const canGererBacs = isEnCours && permissions.includes(Permission.VAGUES_MODIFIER);
 
   return (
     <>
@@ -76,6 +82,12 @@ export function VagueActionMenu({
             <DropdownMenuItem onSelect={() => setModifierOpen(true)}>
               <Pencil className="h-4 w-4" />
               {t("actionMenu.modifier")}
+            </DropdownMenuItem>
+          )}
+          {canGererBacs && (
+            <DropdownMenuItem onSelect={() => setGererBacsOpen(true)}>
+              <Container className="h-4 w-4" />
+              {t("actionMenu.gererBacs")}
             </DropdownMenuItem>
           )}
 
@@ -133,6 +145,14 @@ export function VagueActionMenu({
         vagueCode={vagueCode}
         open={cloturerOpen}
         onOpenChange={setCloturerOpen}
+      />
+
+      <GererBacsDialog
+        vagueId={vagueId}
+        currentBacs={currentBacs}
+        permissions={permissions}
+        open={gererBacsOpen}
+        onOpenChange={setGererBacsOpen}
       />
     </>
   );

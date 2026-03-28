@@ -25,6 +25,22 @@ export function useBacsList(
   });
 }
 
+export function useBacsLibres(options?: { enabled?: boolean }) {
+  const bacService = useBacService();
+
+  return useQuery({
+    queryKey: queryKeys.bacs.list({ libre: true }),
+    queryFn: async () => {
+      const result = await bacService.listLibres();
+      if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement bacs libres");
+      return (result.data as BacListResponse).bacs;
+    },
+    staleTime: 30_000,
+    gcTime: 2 * 60_000,
+    enabled: options?.enabled,
+  });
+}
+
 export function useCreateBac() {
   const queryClient = useQueryClient();
   const bacService = useBacService();
