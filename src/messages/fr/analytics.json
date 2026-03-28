@@ -175,6 +175,14 @@
     "bientot": "Expire dans {jours} jours",
     "aucune": "Aucun lot proche de la DLC"
   },
+  "fournisseurs": {
+    "titre": "Performance par fournisseur",
+    "aucun": "Aucun fournisseur avec des données disponibles.",
+    "nombreProduits": "{count} produit(s)",
+    "scoreMoyen": "Score moyen",
+    "fcrMoyen": "ICA moyen",
+    "nonDisponible": "N/D"
+  },
   "avertissement": {
     "taillesDifferentes": "Attention : les aliments comparés ont des tailles de granulé différentes. La comparaison du FCR peut être biaisée."
   },

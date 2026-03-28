@@ -8,8 +8,15 @@ import { FeedComparisonCards } from "@/components/analytics/feed-comparison-card
 import { RecommendationCard } from "@/components/analytics/recommendation-card";
 import { FeedFilters } from "@/components/analytics/feed-filters";
 import { AlerteDLC } from "@/components/analytics/alerte-dlc";
+import { AlerteRationCard } from "@/components/analytics/alerte-ration-card";
+import { ScoreFournisseursCard } from "@/components/analytics/score-fournisseurs-card";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
-import { getComparaisonAliments, getMouvementsExpirables } from "@/lib/queries/analytics";
+import {
+  getComparaisonAliments,
+  getMouvementsExpirables,
+  getAlertesRation,
+  getScoresFournisseurs,
+} from "@/lib/queries/analytics";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { Permission, TailleGranule } from "@/types";
 
@@ -29,9 +36,17 @@ export default async function AnalyticsAlimentsPage({
 
   const tAnalytics = await getTranslations("analytics");
 
-  const [comparaison, dlcData] = await Promise.all([
-    getComparaisonAliments(session.activeSiteId),
+  // FD.3 — lire le filtre saison depuis les searchParams
+  const params = await searchParams;
+  const rawSaison = typeof params?.saison === "string" ? params.saison : undefined;
+  const saisonFilter =
+    rawSaison === "SECHE" || rawSaison === "PLUIES" ? rawSaison : undefined;
+
+  const [comparaison, dlcData, alertesRation, scoresFournisseurs] = await Promise.all([
+    getComparaisonAliments(session.activeSiteId, saisonFilter ? { saison: saisonFilter } : undefined),
     getMouvementsExpirables(session.activeSiteId),
+    getAlertesRation(session.activeSiteId),
+    getScoresFournisseurs(session.activeSiteId),
   ]);
 
   // FC.4 — detect mixed granule sizes
@@ -48,6 +63,9 @@ export default async function AnalyticsAlimentsPage({
       <div className="flex flex-col gap-4 p-4">
         {/* FC.9 — Alertes DLC */}
         <AlerteDLC expires={dlcData.expires} expiringSoon={dlcData.expiringSoon} />
+
+        {/* FD.1 — Alertes sous/sur-alimentation */}
+        <AlerteRationCard alertes={alertesRation} />
 
         {/* FC.2 — Filters */}
         <FeedFilters />
@@ -68,6 +86,9 @@ export default async function AnalyticsAlimentsPage({
           meilleurCoutKg={comparaison.meilleurCoutKg}
           meilleurSGR={comparaison.meilleurSGR}
         />
+
+        {/* FD.2 — Performance par fournisseur */}
+        <ScoreFournisseursCard fournisseurs={scoresFournisseurs} />
 
         {comparaison.aliments.length >= 2 && (
           <div className="pb-4">

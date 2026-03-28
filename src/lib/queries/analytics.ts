@@ -420,7 +420,8 @@ async function computeAlimentMetrics(
     tauxProteines?: number | null;
     phasesCibles?: string[];
     fournisseur: { nom: string } | null;
-  }
+  },
+  saisonFilter?: "SECHE" | "PLUIES" | null
 ): Promise<{
   analytique: AnalytiqueAliment;
   parVague: DetailAlimentVague[];
@@ -433,7 +434,7 @@ async function computeAlimentMetrics(
   const phasesCibles = (produit.phasesCibles ?? []) as AnalytiqueAliment["phasesCibles"];
 
   // Get all ReleveConsommation for this product on this site
-  const consommations = await prisma.releveConsommation.findMany({
+  const allConsommations = await prisma.releveConsommation.findMany({
     where: { produitId: produit.id, siteId },
     select: {
       quantite: true,
@@ -446,6 +447,17 @@ async function computeAlimentMetrics(
       },
     },
   });
+
+  // FD.3 : filtrer par saison si fourni (par mois calendaires, toutes les annees)
+  // Saison seche Cameroun : janv(0), fevr(1), nov(10), dec(11)
+  const MOIS_SECHE = [0, 1, 10, 11];
+  const consommations = saisonFilter
+    ? allConsommations.filter((c) => {
+        const m = c.releve.date.getMonth();
+        if (saisonFilter === "SECHE") return MOIS_SECHE.includes(m);
+        return !MOIS_SECHE.includes(m); // "PLUIES"
+      })
+    : allConsommations;
 
   if (consommations.length === 0) {
     return {
@@ -752,10 +764,16 @@ export async function getComparaisonAliments(
     orderBy: { nom: "asc" },
   });
 
+  // FD.3 : convertir le filtre saison en type discrimine
+  const saisonFilter =
+    filtres?.saison === "SECHE" || filtres?.saison === "PLUIES"
+      ? (filtres.saison as "SECHE" | "PLUIES")
+      : null;
+
   const aliments: AnalytiqueAliment[] = [];
 
   for (const produit of produits) {
-    const { analytique } = await computeAlimentMetrics(siteId, produit);
+    const { analytique } = await computeAlimentMetrics(siteId, produit, saisonFilter);
     // Only include aliments that have been used
     if (analytique.quantiteTotale > 0) {
       aliments.push(analytique);
@@ -2047,4 +2065,139 @@ export async function getMouvementsExpirables(siteId: string): Promise<{
     });
 
   return { expires, expiringSoon };
+}
+
+// ===========================================================================
+// FD.2 — Score fournisseur agrege
+// ===========================================================================
+
+/**
+ * Calcule le score agrege par fournisseur pour les produits ALIMENT d'un site.
+ *
+ * Pour chaque fournisseur ayant au moins un produit ALIMENT actif, on calcule :
+ * - le nombre de produits
+ * - le score moyen pondere par quantite (scoreQualite des AnalytiqueAliment)
+ * - le FCR moyen pondere par quantite
+ *
+ * @param siteId - ID du site (multi-tenancy)
+ * @returns Liste triee par scoreMoyen DESC (null en fin)
+ */
+export async function getScoresFournisseurs(siteId: string): Promise<
+  Array<{
+    fournisseurId: string;
+    fournisseurNom: string;
+    nombreProduits: number;
+    scoreMoyen: number | null;
+    fcrMoyen: number | null;
+  }>
+> {
+  // Recuperer tous les produits ALIMENT actifs du site avec leur fournisseur
+  const produits = await prisma.produit.findMany({
+    where: {
+      siteId,
+      categorie: CategorieProduit.ALIMENT,
+      isActive: true,
+      fournisseurId: { not: null },
+    },
+    select: {
+      id: true,
+      nom: true,
+      prixUnitaire: true,
+      uniteAchat: true,
+      contenance: true,
+      tailleGranule: true,
+      formeAliment: true,
+      tauxProteines: true,
+      phasesCibles: true,
+      fournisseurId: true,
+      fournisseur: { select: { id: true, nom: true } },
+    },
+    orderBy: { nom: "asc" },
+  });
+
+  // Calculer les metriques de chaque produit
+  type ProduitScore = {
+    fournisseurId: string;
+    fournisseurNom: string;
+    scoreQualite: number | null;
+    fcrMoyen: number | null;
+    quantiteTotale: number;
+  };
+
+  const produitScores: ProduitScore[] = [];
+
+  for (const produit of produits) {
+    if (!produit.fournisseur) continue;
+    const { analytique } = await computeAlimentMetrics(siteId, {
+      ...produit,
+      fournisseur: produit.fournisseur,
+    });
+    if (analytique.quantiteTotale <= 0) continue;
+    produitScores.push({
+      fournisseurId: produit.fournisseur.id,
+      fournisseurNom: produit.fournisseur.nom,
+      scoreQualite: analytique.scoreQualite,
+      fcrMoyen: analytique.fcrMoyen,
+      quantiteTotale: analytique.quantiteTotale,
+    });
+  }
+
+  // Agreger par fournisseur (moyenne ponderee par quantite)
+  const byFournisseur = new Map<
+    string,
+    {
+      fournisseurNom: string;
+      nombreProduits: number;
+      sommeScorePondere: number;
+      sommeFCRPondere: number;
+      totalQuantiteScore: number;
+      totalQuantiteFCR: number;
+    }
+  >();
+
+  for (const ps of produitScores) {
+    const existing = byFournisseur.get(ps.fournisseurId) ?? {
+      fournisseurNom: ps.fournisseurNom,
+      nombreProduits: 0,
+      sommeScorePondere: 0,
+      sommeFCRPondere: 0,
+      totalQuantiteScore: 0,
+      totalQuantiteFCR: 0,
+    };
+    existing.nombreProduits += 1;
+    if (ps.scoreQualite !== null) {
+      existing.sommeScorePondere += ps.scoreQualite * ps.quantiteTotale;
+      existing.totalQuantiteScore += ps.quantiteTotale;
+    }
+    if (ps.fcrMoyen !== null) {
+      existing.sommeFCRPondere += ps.fcrMoyen * ps.quantiteTotale;
+      existing.totalQuantiteFCR += ps.quantiteTotale;
+    }
+    byFournisseur.set(ps.fournisseurId, existing);
+  }
+
+  // Construire la liste de resultats
+  const result = Array.from(byFournisseur.entries()).map(([fournisseurId, data]) => ({
+    fournisseurId,
+    fournisseurNom: data.fournisseurNom,
+    nombreProduits: data.nombreProduits,
+    scoreMoyen:
+      data.totalQuantiteScore > 0
+        ? Math.round((data.sommeScorePondere / data.totalQuantiteScore) * 100) / 100
+        : null,
+    fcrMoyen:
+      data.totalQuantiteFCR > 0
+        ? Math.round((data.sommeFCRPondere / data.totalQuantiteFCR) * 100) / 100
+        : null,
+  }));
+
+  // Trier par scoreMoyen DESC (null en fin)
+  result.sort((a, b) => {
+    if (a.scoreMoyen === null && b.scoreMoyen === null) return 0;
+    if (a.scoreMoyen === null) return 1;
+    if (b.scoreMoyen === null) return -1;
+    return b.scoreMoyen - a.scoreMoyen;
+  });
+
+  return result;
 }

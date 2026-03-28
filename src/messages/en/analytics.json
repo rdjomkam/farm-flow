@@ -115,6 +115,72 @@
     "kgUtilisesMeta": "{qty} kg used",
     "cout": "Cost"
   },
+  "tailleGranule": {
+    "label": "Pellet size",
+    "P0": "P0 — Powder < 0.5mm",
+    "P1": "P1 — Powder 0.5mm",
+    "P2": "P2 — Crumble 1mm",
+    "P3": "P3 — Crumble 1.5mm",
+    "G1": "G1 — Pellet 2mm",
+    "G2": "G2 — Pellet 3mm",
+    "G3": "G3 — Pellet 4mm",
+    "G4": "G4 — Pellet 6mm",
+    "G5": "G5 — Pellet 8mm"
+  },
+  "formeAliment": {
+    "label": "Feed form",
+    "FLOTTANT": "Floating",
+    "COULANT": "Sinking",
+    "SEMI_FLOTTANT": "Semi-floating",
+    "POUDRE": "Powder"
+  },
+  "comportementAlimentaire": {
+    "label": "Feeding behaviour",
+    "VORACE": "Voracious",
+    "NORMAL": "Normal",
+    "FAIBLE": "Weak",
+    "REFUSE": "Refused"
+  },
+  "score": {
+    "label": "Quality score",
+    "sur10": "/10",
+    "excellent": "Excellent",
+    "bon": "Good",
+    "insuffisant": "Insufficient"
+  },
+  "filtres": {
+    "phase": "Growth phase",
+    "taille": "Pellet size",
+    "forme": "Feed form",
+    "saison": "Season",
+    "toutes": "All",
+    "saisonSeche": "Dry season",
+    "saisonPluies": "Rainy season"
+  },
+  "alertesRation": {
+    "titre": "Feed alerts",
+    "sousAlimentation": "Underfeeding detected",
+    "surAlimentation": "Overfeeding detected",
+    "ecart": "Average deviation of {pct}% over {nb} consecutive readings",
+    "aucune": "No alerts"
+  },
+  "dlc": {
+    "titre": "Stock expiry alerts",
+    "expire": "Expired",
+    "bientot": "Expires in {jours} days",
+    "aucune": "No lots near expiry"
+  },
+  "fournisseurs": {
+    "titre": "Performance by supplier",
+    "aucun": "No supplier data available.",
+    "nombreProduits": "{count} product(s)",
+    "scoreMoyen": "Average score",
+    "fcrMoyen": "Average FCR",
+    "nonDisponible": "N/A"
+  },
+  "avertissement": {
+    "taillesDifferentes": "Warning: feeds compared have different pellet sizes. FCR comparison may be biased."
+  },
   "simulation": {
     "title": "Feed change simulator",
     "oldFeed": "Current feed",

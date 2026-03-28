@@ -501,6 +501,8 @@ model Site {
   // Sprint 26 — Modification tracking (ADR-014/ADR-015)
   releveModifications  ReleveModification[]
   calibrageModifications CalibrageModification[]
+  // Sprint FD — Feed Analytics
+  historiqueNutritionnel HistoriqueNutritionnel[]
   // Sprint 30 — Abonnements
   abonnements          Abonnement[]              @relation("AbonnementsSite")
   paiementsAbo         PaiementAbonnement[]      @relation("PaiementsAboSite")
@@ -863,6 +865,8 @@ model Vague {
   notes                   NoteIngenieur[]
   // Sprint 24 — Calibrage
   calibrages              Calibrage[]
+  // Sprint FD — Feed Analytics
+  historiqueNutritionnel  HistoriqueNutritionnel[]
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
 
@@ -2380,4 +2384,51 @@ model SiteAuditLog {
   @@index([siteId])
   @@index([actorId])
   @@index([createdAt])
+}
+
+// ──────────────────────────────────────────
+// Modèle — HistoriqueNutritionnel (Sprint FD.6)
+// ──────────────────────────────────────────
+
+/**
+ * HistoriqueNutritionnel — Matérialisation des données nutritionnelles par vague et phase.
+ *
+ * Table de cache analytique : évite de recalculer FCR, SGR, ADG, PER à chaque requête.
+ * Les données peuvent être recalculées à tout moment depuis les relevés bruts.
+ * R8 : siteId obligatoire.
+ * @@unique([vagueId, phase]) : un seul enregistrement par vague et par phase.
+ */
+model HistoriqueNutritionnel {
+  id      String       @id @default(cuid())
+  vagueId String
+  vague   Vague        @relation(fields: [vagueId], references: [id])
+  phase   PhaseElevage
+
+  // Métriques agrégées pour cette phase
+  /** FCR moyen sur la phase (kg aliment / kg gain) */
+  fcrMoyen          Float?
+  /** SGR moyen sur la phase (% poids vif / jour) */
+  sgrMoyen          Float?
+  /** ADG moyen sur la phase (g / jour) — Gain Quotidien Moyen */
+  adgMoyen          Float?
+  /** PER moyen sur la phase (kg gain / kg protéines) */
+  perMoyen          Float?
+  /** Quantité totale d'aliment distribué sur la phase (kg) */
+  quantiteAlimentKg Float?
+  /** Poids moyen des poissons au début de la phase (g) */
+  poidsMoyenDebut   Float?
+  /** Poids moyen des poissons à la fin de la phase (g) */
+  poidsMoyenFin     Float?
+  /** Taux de survie sur la phase (%) */
+  tauxSurvie        Float?
+  /** Durée effective de la phase en jours */
+  dureeJours        Int?
+
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([vagueId, phase])
+  @@index([siteId])
 }

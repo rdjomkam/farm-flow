@@ -1220,3 +1220,28 @@ export function convertirUniteStock(
       return null;
   }
 }
+
+// ===========================================================================
+// FD.3 — Saison (Cameroun)
+// ===========================================================================
+
+/**
+ * Retourne la saison agricole correspondant a une date, selon le pays.
+ *
+ * Cameroun (defaut) :
+ *   - Saison seche : novembre (10), decembre (11), janvier (0), fevrier (1)
+ *   - Saison des pluies : mars (2) a octobre (9)
+ *
+ * @param date - La date a evaluer
+ * @param pays - Code pays ISO 3166-1 alpha-2 (ex. "CM" pour le Cameroun)
+ * @returns "SECHE" ou "PLUIES"
+ */
+export function getSaison(date: Date, pays?: string): "SECHE" | "PLUIES" {
+  const month = date.getMonth(); // 0-indexed (0 = janvier)
+  if (!pays || pays === "CM") {
+    // Saison seche : novembre(10), decembre(11), janvier(0), fevrier(1)
+    return [0, 1, 10, 11].includes(month) ? "SECHE" : "PLUIES";
+  }
+  // Defaut identique au Cameroun
+  return [0, 1, 10, 11].includes(month) ? "SECHE" : "PLUIES";
+}

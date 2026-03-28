@@ -5784,74 +5784,74 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story FD.1 — Alerte sous/sur-alimentation UI (F18)
-**Assigné à :** @developer | **Dépend de :** Sprint FC FAIT, FB.7 | **Statut :** `TODO` | **Type :** UI
+**Assigné à :** @developer | **Dépend de :** Sprint FC FAIT, FB.7 | **Statut :** `FAIT` | **Type :** UI
 
 **Tâches :**
-- [ ] `TODO` Créer `src/components/analytics/alerte-ration-card.tsx` : carte affichant les AlerteRation (icône TrendingDown sous-alimentation / TrendingUp sur-alimentation), lien vers la page relevés de la vague concernée, toutes les chaînes via i18n fr/analytics.json
-- [ ] `TODO` Intégrer dans `src/components/pages/analytics-aliments-page.tsx` (PAS dans `src/app/analytics/aliments/page.tsx`)
+- [x] `FAIT` Créer `src/components/analytics/alerte-ration-card.tsx` : carte affichant les AlerteRation (icône TrendingDown sous-alimentation / TrendingUp sur-alimentation), lien vers la page relevés de la vague concernée, toutes les chaînes via i18n fr/analytics.json
+- [x] `FAIT` Intégrer dans `src/components/pages/analytics-aliments-page.tsx` (PAS dans `src/app/analytics/aliments/page.tsx`)
 
 **Correction ADJ-01 :** Modifier `src/components/pages/analytics-aliments-page.tsx`, pas le stub. Voir `docs/decisions/ADJUSTMENTS-feed-analytics-stories.md` section 1.
 
 ---
 
 ### Story FD.2 — Score fournisseur agrégé (F20)
-**Assigné à :** @developer | **Dépend de :** FB.2, Sprint FC FAIT | **Statut :** `TODO` | **Type :** QUERIES + UI
+**Assigné à :** @developer | **Dépend de :** FB.2, Sprint FC FAIT | **Statut :** `FAIT` | **Type :** QUERIES + UI
 
 **Tâches :**
-- [ ] `TODO` Dans `src/lib/queries/analytics.ts` : ajouter `getScoresFournisseurs(siteId)` — agrège les scores par fournisseur via les produits aliment du site
-- [ ] `TODO` Ajouter section UI "Performance par fournisseur" dans `src/components/pages/analytics-aliments-page.tsx`
+- [x] `FAIT` Dans `src/lib/queries/analytics.ts` : ajouter `getScoresFournisseurs(siteId)` — agrège les scores par fournisseur via les produits aliment du site
+- [x] `FAIT` Ajouter section UI "Performance par fournisseur" dans `src/components/pages/analytics-aliments-page.tsx`
 
 **Correction ADJ-01 :** Intégration dans `analytics-aliments-page.tsx`, pas dans le stub `/(farm)/analytics/aliments/page.tsx`. Voir section 1.
 
 ---
 
 ### Story FD.3 — Filtre par saison (F22)
-**Assigné à :** @developer | **Dépend de :** FC.2 | **Statut :** `TODO` | **Type :** QUERIES + UI
+**Assigné à :** @developer | **Dépend de :** FC.2 | **Statut :** `FAIT` | **Type :** QUERIES + UI
 
 **Tâches :**
-- [ ] `TODO` Ajouter `getSaison(date: Date, pays?: string): string` dans `src/lib/calculs.ts` (fonction pure, pas de DB) — multi-tenant via param pays (E15), défaut "CM" (Cameroun)
-- [ ] `TODO` Exporter getSaison depuis `src/lib/calculs.ts`
-- [ ] `TODO` Intégrer le filtre saison dans le composant `src/components/analytics/feed-filters.tsx`
+- [x] `FAIT` Ajouter `getSaison(date: Date, pays?: string): string` dans `src/lib/calculs.ts` (fonction pure, pas de DB) — multi-tenant via param pays (E15), défaut "CM" (Cameroun)
+- [x] `FAIT` Exporter getSaison depuis `src/lib/calculs.ts`
+- [x] `FAIT` Intégrer le filtre saison dans le composant `src/components/analytics/feed-filters.tsx`
 
 **Correction ADJ-12 :** `getSaison` est une fonction pure → appartient à `src/lib/calculs.ts`, PAS à un fichier `queries/saisons.ts`. Voir `docs/decisions/ADJUSTMENTS-feed-analytics-stories.md` section 12.
 
 ---
 
 ### Story FD.4 — [DESIGN NEEDED] Rapport PDF consommation (F16)
-**Assigné à :** @architect | **Dépend de :** Sprint FC FAIT | **Statut :** `TODO` | **Type :** ADR
+**Assigné à :** @architect | **Dépend de :** Sprint FC FAIT | **Statut :** `FAIT` | **Type :** ADR
 
 **Tâches :**
-- [ ] `TODO` ADR `docs/decisions/ADR-rapport-pdf-consommation.md`
+- [x] `FAIT` ADR `docs/decisions/ADR-rapport-pdf-consommation.md`
 
 ---
 
 ### Story FD.5 — [DESIGN NEEDED] Courbe de croissance vs référentiel (F19)
-**Assigné à :** @architect | **Dépend de :** Sprint FC FAIT | **Statut :** `TODO` | **Type :** ADR
+**Assigné à :** @architect | **Dépend de :** Sprint FC FAIT | **Statut :** `FAIT` | **Type :** ADR
 
 **Tâches :**
-- [ ] `TODO` ADR `docs/decisions/ADR-courbe-croissance-reference.md`
+- [x] `FAIT` ADR `docs/decisions/ADR-courbe-croissance-reference.md`
 
 ---
 
 ### Story FD.6 — HistoriqueNutritionnel modèle (F23, optionnel)
-**Assigné à :** @db-specialist | **Dépend de :** Sprint FC FAIT | **Statut :** `TODO` | **Type :** SCHEMA
+**Assigné à :** @db-specialist | **Dépend de :** Sprint FC FAIT | **Statut :** `FAIT` | **Type :** SCHEMA
 
 **Tâches :**
-- [ ] `TODO` Modèle Prisma @@unique([vagueId, phase]) + siteId (R8) + migration
+- [x] `FAIT` Modèle Prisma @@unique([vagueId, phase]) + siteId (R8) + migration
 
 ---
 
 ### Story FD.7 — Tests Phase 4
-**Assigné à :** @tester | **Dépend de :** FD.1 à FD.3 | **Statut :** `TODO` | **Type :** TEST
+**Assigné à :** @tester | **Dépend de :** FD.1 à FD.3 | **Statut :** `FAIT` | **Type :** TEST
 
 **Tâches :**
-- [ ] `TODO` Tests score fournisseur, getSaison, alertes + rapport `docs/tests/rapport-sprint-FD.md`
+- [x] `FAIT` Tests score fournisseur, getSaison, alertes + rapport `docs/tests/rapport-sprint-FD.md`
 
 ---
 
 ### Story FD.8 — Review Phase 4
-**Assigné à :** @code-reviewer | **Dépend de :** FD.7 | **Statut :** `TODO` | **Type :** REVIEW
+**Assigné à :** @code-reviewer | **Dépend de :** FD.7 | **Statut :** `FAIT` | **Type :** REVIEW
 
 **Tâches :**
-- [ ] `TODO` R1-R9 sur toute la feature, edge cases reviews adressés, i18n, rétrocompatibilité
-- [ ] `TODO` Rapport `docs/reviews/review-sprint-FD.md`
+- [x] `FAIT` R1-R9 sur toute la feature, edge cases reviews adressés, i18n, rétrocompatibilité
+- [x] `FAIT` Rapport `docs/reviews/review-sprint-FD.md`
