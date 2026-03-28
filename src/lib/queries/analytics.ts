@@ -12,6 +12,11 @@ import type {
   DetailAlimentVague,
   SimulationResult,
   AnalyticsDashboard,
+  FiltresAnalyticsAliments,
+  FCRHebdomadairePoint,
+  ChangementGranule,
+  AlerteRation,
+  ConfigElevage,
 } from "@/types";
 import {
   calculerTauxSurvie,
@@ -27,10 +32,18 @@ import {
   genererRecommandation,
   getPrixParUniteBase,
   computeNombreVivantsVague,
+  calculerADG,
+  calculerPER,
+  calculerScoreAliment,
+  calculerEcartRation,
+  getTauxAlimentation,
+  detecterPhase,
 } from "@/lib/calculs";
 import {
   BENCHMARK_MORTALITE,
   BENCHMARK_DENSITE,
+  getBenchmarkFCRPourPhase,
+  BENCHMARK_DFR_PAR_PHASE,
 } from "@/lib/benchmarks";
 
 // ---------------------------------------------------------------------------
@@ -402,6 +415,10 @@ async function computeAlimentMetrics(
     prixUnitaire: number;
     uniteAchat?: string | null;
     contenance?: number | null;
+    tailleGranule?: string | null;
+    formeAliment?: string | null;
+    tauxProteines?: number | null;
+    phasesCibles?: string[];
     fournisseur: { nom: string } | null;
   }
 ): Promise<{
@@ -409,6 +426,12 @@ async function computeAlimentMetrics(
   parVague: DetailAlimentVague[];
   evolutionFCR: { date: string; fcr: number }[];
 }> {
+  // Fix A13: propagate produit fields consistently — cast via unknown for enum compatibility
+  const tailleGranule = (produit.tailleGranule ?? null) as AnalytiqueAliment["tailleGranule"];
+  const formeAliment = (produit.formeAliment ?? null) as AnalytiqueAliment["formeAliment"];
+  const tauxProteines = produit.tauxProteines ?? null;
+  const phasesCibles = (produit.phasesCibles ?? []) as AnalytiqueAliment["phasesCibles"];
+
   // Get all ReleveConsommation for this product on this site
   const consommations = await prisma.releveConsommation.findMany({
     where: { produitId: produit.id, siteId },
@@ -439,6 +462,14 @@ async function computeAlimentMetrics(
         sgrMoyen: null,
         coutParKgGain: null,
         tauxSurvieAssocie: null,
+        // Fix A13: propagate null correctly — these come from produit fields, not biometric data
+        tailleGranule,
+        formeAliment,
+        tauxProteines,
+        adgMoyen: null,
+        perMoyen: null,
+        scoreQualite: null,
+        phasesCibles,
       },
       parVague: [],
       evolutionFCR: [],
@@ -506,6 +537,8 @@ async function computeAlimentMetrics(
     sgr: number | null;
     coutParKgGain: number | null;
     tauxSurvie: number | null;
+    adg: number | null;
+    per: number | null;
     detail: DetailAlimentVague;
   }[] = [];
 
@@ -541,6 +574,13 @@ async function computeAlimentMetrics(
     const tauxSurvie = calculerTauxSurvie(nombreVivants, vague.nombreInitial);
     const coutKg = calculerCoutParKgGain(conso.quantite, getPrixParUniteBase(produit), gainBiomasse);
 
+    // ADG : gain de poids individuel moyen (poidsMoyenInitial → poidsMoyen) sur la duree
+    const adg = calculerADG(vague.poidsMoyenInitial, poidsMoyen, jours);
+
+    // PER : gain biomasse (kg→g) / proteines consommees
+    const gainPoidsG = gainBiomasse !== null ? gainBiomasse * 1000 : null;
+    const per = calculerPER(gainPoidsG, conso.quantite, tauxProteines);
+
     vagueMetrics.push({
       quantite: conso.quantite,
       gainBiomasse,
@@ -548,6 +588,8 @@ async function computeAlimentMetrics(
       sgr,
       coutParKgGain: coutKg,
       tauxSurvie,
+      adg,
+      per,
       detail: {
         vagueId: vague.id,
         vagueCode: vague.code,
@@ -556,6 +598,8 @@ async function computeAlimentMetrics(
         sgr: sgr !== null ? Math.round(sgr * 100) / 100 : null,
         coutParKgGain: coutKg !== null ? Math.round(coutKg) : null,
         periode: { debut: vague.dateDebut, fin: vague.dateFin },
+        adg: adg !== null ? Math.round(adg * 100) / 100 : null,
+        per: per !== null ? Math.round(per * 100) / 100 : null,
       },
     });
 
@@ -602,6 +646,25 @@ async function computeAlimentMetrics(
   );
   const coutParKgGain = totalGain > 0 ? coutTotal / totalGain : null;
 
+  // Weighted ADG mean
+  const adgEntries = vagueMetrics.filter((v) => v.adg !== null);
+  const adgMoyen =
+    adgEntries.length > 0
+      ? adgEntries.reduce((s, v) => s + v.adg! * v.quantite, 0) /
+        adgEntries.reduce((s, v) => s + v.quantite, 0)
+      : null;
+
+  // Weighted PER mean
+  const perEntries = vagueMetrics.filter((v) => v.per !== null);
+  const perMoyen =
+    perEntries.length > 0
+      ? perEntries.reduce((s, v) => s + v.per! * v.quantite, 0) /
+        perEntries.reduce((s, v) => s + v.quantite, 0)
+      : null;
+
+  // Score qualite aliment /10
+  const scoreQualite = calculerScoreAliment(fcrMoyen, sgrMoyen, coutParKgGain, tauxSurvieAssocie);
+
   return {
     analytique: {
       produitId: produit.id,
@@ -617,6 +680,13 @@ async function computeAlimentMetrics(
       coutParKgGain: coutParKgGain !== null ? Math.round(coutParKgGain) : null,
       tauxSurvieAssocie:
         tauxSurvieAssocie !== null ? Math.round(tauxSurvieAssocie * 100) / 100 : null,
+      tailleGranule,
+      formeAliment,
+      tauxProteines,
+      adgMoyen: adgMoyen !== null ? Math.round(adgMoyen * 100) / 100 : null,
+      perMoyen: perMoyen !== null ? Math.round(perMoyen * 100) / 100 : null,
+      scoreQualite: scoreQualite !== null ? Math.round(scoreQualite * 10) / 10 : null,
+      phasesCibles,
     },
     parVague: vagueMetrics.map((v) => v.detail),
     evolutionFCR: evolutionFCR.sort(
@@ -629,11 +699,11 @@ async function computeAlimentMetrics(
  * Compare tous les aliments utilises sur un site.
  *
  * @param siteId - ID du site
- * @param filters - Filtres optionnels (vagueId, fournisseurId)
+ * @param filtres - Filtres optionnels (phase, tailleGranule, formeAliment, fournisseurId, vagueId)
  */
 export async function getComparaisonAliments(
   siteId: string,
-  filters?: { vagueId?: string; fournisseurId?: string }
+  filtres?: FiltresAnalyticsAliments & { vagueId?: string; fournisseurId?: string }
 ): Promise<ComparaisonAliments> {
   // Fetch all active ALIMENT products on the site
   const whereClause: Record<string, unknown> = {
@@ -641,8 +711,18 @@ export async function getComparaisonAliments(
     categorie: CategorieProduit.ALIMENT,
     isActive: true,
   };
-  if (filters?.fournisseurId) {
-    whereClause.fournisseurId = filters.fournisseurId;
+  // Fix E5: use !== undefined && !== null to avoid false negatives with falsy values (0, "")
+  if (filtres?.fournisseurId !== undefined && filtres.fournisseurId !== null) {
+    whereClause.fournisseurId = filtres.fournisseurId;
+  }
+  if (filtres?.tailleGranule !== undefined && filtres.tailleGranule !== null) {
+    whereClause.tailleGranule = filtres.tailleGranule;
+  }
+  if (filtres?.formeAliment !== undefined && filtres.formeAliment !== null) {
+    whereClause.formeAliment = filtres.formeAliment;
+  }
+  if (filtres?.phase !== undefined && filtres.phase !== null) {
+    whereClause.phasesCibles = { has: filtres.phase };
   }
 
   const produits = await prisma.produit.findMany({
@@ -653,6 +733,10 @@ export async function getComparaisonAliments(
       prixUnitaire: true,
       uniteAchat: true,
       contenance: true,
+      tailleGranule: true,
+      formeAliment: true,
+      tauxProteines: true,
+      phasesCibles: true,
       fournisseur: { select: { nom: true } },
     },
     orderBy: { nom: "asc" },
@@ -733,10 +817,13 @@ export async function getComparaisonAliments(
  *
  * @param siteId - ID du site
  * @param produitId - ID du produit aliment
+ * @param filtres - Filtres optionnels (non appliques au produit unique, conserves pour coherence API)
  */
 export async function getDetailAliment(
   siteId: string,
-  produitId: string
+  produitId: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _filtres?: FiltresAnalyticsAliments
 ): Promise<DetailAliment | null> {
   const produit = await prisma.produit.findFirst({
     where: { id: produitId, siteId, categorie: CategorieProduit.ALIMENT },
@@ -746,6 +833,10 @@ export async function getDetailAliment(
       prixUnitaire: true,
       uniteAchat: true,
       contenance: true,
+      tailleGranule: true,
+      formeAliment: true,
+      tauxProteines: true,
+      phasesCibles: true,
       fournisseur: { select: { nom: true } },
     },
   });
@@ -775,14 +866,27 @@ export async function getSimulationChangementAliment(
   nouveauProduitId: string,
   productionCible: number
 ): Promise<SimulationResult | null> {
+  const alimentSelect = {
+    id: true,
+    nom: true,
+    prixUnitaire: true,
+    uniteAchat: true,
+    contenance: true,
+    tailleGranule: true,
+    formeAliment: true,
+    tauxProteines: true,
+    phasesCibles: true,
+    fournisseur: { select: { nom: true } },
+  } as const;
+
   const [ancien, nouveau] = await Promise.all([
     prisma.produit.findFirst({
       where: { id: ancienProduitId, siteId, categorie: CategorieProduit.ALIMENT },
-      select: { id: true, nom: true, prixUnitaire: true, uniteAchat: true, contenance: true, fournisseur: { select: { nom: true } } },
+      select: alimentSelect,
     }),
     prisma.produit.findFirst({
       where: { id: nouveauProduitId, siteId, categorie: CategorieProduit.ALIMENT },
-      select: { id: true, nom: true, prixUnitaire: true, uniteAchat: true, contenance: true, fournisseur: { select: { nom: true } } },
+      select: alimentSelect,
     }),
   ]);
 
@@ -977,6 +1081,10 @@ export async function getAnalyticsDashboard(siteId: string): Promise<AnalyticsDa
       prixUnitaire: true,
       uniteAchat: true,
       contenance: true,
+      tailleGranule: true,
+      formeAliment: true,
+      tauxProteines: true,
+      phasesCibles: true,
       fournisseur: { select: { nom: true } },
     },
   });
@@ -1239,4 +1347,603 @@ export async function getComparaisonVagues(
   });
 
   return { vagues: result };
+}
+
+// ===========================================================================
+// Alertes ration (F18/F24)
+// ===========================================================================
+
+/**
+ * Detecte les sous/sur-alimentations pour les vagues actives d'un site.
+ *
+ * Algorithme :
+ *   1. Recupere toutes les vagues EN_COURS du site avec leur ConfigElevage
+ *   2. Guard E9 : skip les vagues sans ConfigElevage (pas de ration theorique)
+ *   3. Pour chaque vague, recupere les releves ALIMENTATION recents (30j) tries par date DESC
+ *   4. Pour chaque releve, calcule la ration theorique :
+ *        - Utilise le poids moyen de la derniere biometrie pour detecter la phase
+ *        - Ration theorique = getTauxAlimentation(poidsMoyen, config) * biomasse / 100
+ *        - Fallback : si pas de biometrie, utilise BENCHMARK_DFR_PAR_PHASE[phase].optimal
+ *   5. Detecte 3 releves consecutifs avec |ecart| > 20% dans la meme direction :
+ *        - Les 3 positifs → SUR_ALIMENTATION
+ *        - Les 3 negatifs → SOUS_ALIMENTATION
+ *   6. Retourne un tableau d'AlerteRation avec ecartMoyenPct et relevesConsecutifs
+ *
+ * Guard E9 : les vagues sans ConfigElevage actif sont ignorees (skip silencieux).
+ *
+ * @param siteId - ID du site (multi-tenancy)
+ * @returns Liste des alertes ration actives
+ */
+export async function getAlertesRation(siteId: string): Promise<AlerteRation[]> {
+  // 1. Recuperer les vagues actives avec leur ConfigElevage et bacs
+  const vagues = await prisma.vague.findMany({
+    where: { siteId, statut: StatutVague.EN_COURS },
+    select: {
+      id: true,
+      code: true,
+      nombreInitial: true,
+      poidsMoyenInitial: true,
+      configElevage: true,
+      bacs: { select: { id: true, nombreInitial: true } },
+    },
+  });
+
+  const alertes: AlerteRation[] = [];
+
+  for (const vague of vagues) {
+    // Guard E9 : skip si pas de ConfigElevage
+    if (!vague.configElevage) continue;
+
+    // Cast necessaire : champs JSON Prisma (alimentTailleConfig, alimentTauxConfig)
+    // sont types JsonValue, mais getTauxAlimentation/detecterPhase attendent ConfigElevage | null.
+    const config = vague.configElevage as unknown as ConfigElevage;
+
+    // 2. Fenetre : releves ALIMENTATION des 30 derniers jours, tries par date ASC
+    const dateLimit = new Date();
+    dateLimit.setDate(dateLimit.getDate() - 30);
+
+    const [alimentationReleves, biometrieReleves, mortaliteReleves, comptageReleves] =
+      await Promise.all([
+        prisma.releve.findMany({
+          where: {
+            vagueId: vague.id,
+            siteId,
+            typeReleve: TypeReleve.ALIMENTATION,
+            date: { gte: dateLimit },
+          },
+          orderBy: { date: "asc" },
+          select: {
+            id: true,
+            date: true,
+            quantiteAliment: true,
+          },
+        }),
+        // Biometrie sans fenetre temporelle pour avoir le dernier poids
+        prisma.releve.findMany({
+          where: { vagueId: vague.id, siteId, typeReleve: TypeReleve.BIOMETRIE },
+          orderBy: { date: "asc" },
+          select: { date: true, poidsMoyen: true, bacId: true },
+        }),
+        prisma.releve.findMany({
+          where: { vagueId: vague.id, siteId, typeReleve: TypeReleve.MORTALITE },
+          select: { bacId: true, nombreMorts: true, typeReleve: true, nombreCompte: true },
+        }),
+        prisma.releve.findMany({
+          where: { vagueId: vague.id, siteId, typeReleve: TypeReleve.COMPTAGE },
+          orderBy: { date: "asc" },
+          select: { bacId: true, nombreMorts: true, typeReleve: true, nombreCompte: true },
+        }),
+      ]);
+
+    // Besoin d'au moins 3 releves pour detecter 3 consecutifs
+    if (alimentationReleves.length < 3) continue;
+
+    // 3. Calculer le nombre de vivants pour estimer la biomasse
+    const relevesPourVivants = [
+      ...mortaliteReleves,
+      ...comptageReleves,
+    ];
+    const nombreVivants = computeNombreVivantsVague(
+      vague.bacs,
+      relevesPourVivants,
+      vague.nombreInitial
+    );
+
+    // 4. Obtenir le poids moyen depuis la derniere biometrie
+    const derniereBiometrie = biometrieReleves
+      .filter((r) => r.poidsMoyen != null)
+      .at(-1);
+    const poidsMoyen = derniereBiometrie?.poidsMoyen ?? null;
+
+    // 5. Calculer la ration theorique pour chaque releve d'alimentation
+    const ecartsParReleve: number[] = [];
+
+    for (const releve of alimentationReleves) {
+      const quantiteDistribuee = releve.quantiteAliment;
+      if (quantiteDistribuee == null) continue;
+
+      let rationTheoriqueKg: number | null = null;
+
+      if (poidsMoyen != null && nombreVivants > 0) {
+        // Ration theorique via ConfigElevage : taux% * biomasse(kg) / 100
+        const biomasseKg = calculerBiomasse(poidsMoyen, nombreVivants);
+        if (biomasseKg != null && biomasseKg > 0) {
+          const tauxPct = getTauxAlimentation(poidsMoyen, config);
+          rationTheoriqueKg = (tauxPct * biomasseKg) / 100;
+        }
+      }
+
+      // Fallback : utiliser BENCHMARK_DFR_PAR_PHASE avec poids initial si pas de biometrie
+      if (rationTheoriqueKg == null) {
+        const poidsRef = poidsMoyen ?? vague.poidsMoyenInitial;
+        const phase = detecterPhase(poidsRef, config);
+        const benchmarkDfr = BENCHMARK_DFR_PAR_PHASE[phase];
+        if (benchmarkDfr && nombreVivants > 0) {
+          const biomasseRef = calculerBiomasse(poidsRef, nombreVivants);
+          if (biomasseRef != null && biomasseRef > 0) {
+            rationTheoriqueKg = (benchmarkDfr.optimal * biomasseRef) / 100;
+          }
+        }
+      }
+
+      if (rationTheoriqueKg == null) continue;
+
+      const ecart = calculerEcartRation(quantiteDistribuee, rationTheoriqueKg);
+      if (ecart != null) {
+        ecartsParReleve.push(ecart);
+      }
+    }
+
+    // 6. Detecter les sequences de 3 releves consecutifs avec |ecart| > 20%
+    // Parcourir le tableau et chercher la sequence la plus longue en cours
+    const SEUIL_ECART_PCT = 20;
+    let seqPositive = 0;
+    let seqNegative = 0;
+    let sommePositive = 0;
+    let sommeNegative = 0;
+
+    for (const ecart of ecartsParReleve) {
+      if (ecart > SEUIL_ECART_PCT) {
+        seqPositive++;
+        sommePositive += ecart;
+        seqNegative = 0;
+        sommeNegative = 0;
+      } else if (ecart < -SEUIL_ECART_PCT) {
+        seqNegative++;
+        sommeNegative += ecart;
+        seqPositive = 0;
+        sommePositive = 0;
+      } else {
+        // Ecart dans la zone acceptable → reset les deux sequences
+        seqPositive = 0;
+        sommePositive = 0;
+        seqNegative = 0;
+        sommeNegative = 0;
+      }
+    }
+
+    // Creer une alerte si la sequence en cours atteint au moins 3 releves consecutifs
+    if (seqPositive >= 3) {
+      alertes.push({
+        vagueId: vague.id,
+        vagueNom: vague.code,
+        type: "SUR_ALIMENTATION",
+        ecartMoyenPct: Math.round((sommePositive / seqPositive) * 100) / 100,
+        relevesConsecutifs: seqPositive,
+      });
+    } else if (seqNegative >= 3) {
+      alertes.push({
+        vagueId: vague.id,
+        vagueNom: vague.code,
+        type: "SOUS_ALIMENTATION",
+        ecartMoyenPct: Math.round((sommeNegative / seqNegative) * 100) / 100,
+        relevesConsecutifs: seqNegative,
+      });
+    }
+  }
+
+  return alertes;
+}
+
+// ===========================================================================
+// Feed Analytics v2 — FCR hebdomadaire + changements de granule (FB.6)
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// Helpers internes FB.6
+// ---------------------------------------------------------------------------
+
+/**
+ * Retourne la cle de semaine ISO au format "YYYY-WNN" pour une date donnee.
+ */
+function getISOWeekKey(date: Date): string {
+  const d = new Date(date.getTime());
+  const dayOfWeek = d.getUTCDay() === 0 ? 7 : d.getUTCDay(); // 1=Lun, 7=Dim
+  d.setUTCDate(d.getUTCDate() + 4 - dayOfWeek); // Jeudi de la semaine courante
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  const isoYear = d.getUTCFullYear();
+  return `${isoYear}-W${String(week).padStart(2, "0")}`;
+}
+
+/**
+ * Retourne les dates de debut (lundi 00:00 UTC) et fin (dimanche 23:59 UTC)
+ * d'une semaine ISO au format "YYYY-WNN".
+ */
+function getISOWeekBounds(semaine: string): { debut: Date; fin: Date } {
+  const [yearStr, weekStr] = semaine.split("-W");
+  const year = parseInt(yearStr, 10);
+  const week = parseInt(weekStr, 10);
+  // Le 4 janvier est toujours en semaine 1 (ISO 8601)
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const dayOfWeekJan4 = jan4.getUTCDay() === 0 ? 7 : jan4.getUTCDay();
+  const lundi = new Date(
+    jan4.getTime() - (dayOfWeekJan4 - 1) * 86400000 + (week - 1) * 7 * 86400000
+  );
+  const dimanche = new Date(lundi.getTime() + 6 * 86400000);
+  dimanche.setUTCHours(23, 59, 59, 999);
+  return { debut: lundi, fin: dimanche };
+}
+
+/**
+ * Interpole le poids moyen a une date cible a partir de biometries encadrantes.
+ * Algorithme A5/A6 du PLAN-feed-analytics-v2.md.
+ *
+ * @param biometries - Liste triee ASC par date, avec poidsMoyen non null
+ * @param targetDate - Date pour laquelle interpoler le poids
+ * @param sgrEstime  - SGR en %/jour pour extrapolation (defaut 2.0)
+ */
+function interpolerPoidsMoyen(
+  biometries: { date: Date; poidsMoyen: number }[],
+  targetDate: Date,
+  sgrEstime = 2.0
+): number | null {
+  if (biometries.length === 0) return null;
+
+  const targetMs = targetDate.getTime();
+
+  // Derniere biometrie <= date cible
+  let bAvant: { date: Date; poidsMoyen: number } | null = null;
+  for (const b of biometries) {
+    if (b.date.getTime() <= targetMs) bAvant = b;
+    else break;
+  }
+
+  // Premiere biometrie >= date cible
+  let bApres: { date: Date; poidsMoyen: number } | null = null;
+  for (const b of biometries) {
+    if (b.date.getTime() >= targetMs) {
+      bApres = b;
+      break;
+    }
+  }
+
+  if (bAvant === null && bApres === null) return null;
+
+  if (bApres === null && bAvant !== null) {
+    // Extrapolation exponentielle avec SGR constant
+    const joursDepuisAvant = (targetMs - bAvant.date.getTime()) / 86400000;
+    return bAvant.poidsMoyen * Math.exp((sgrEstime * joursDepuisAvant) / 100);
+  }
+
+  if (bAvant === null && bApres !== null) {
+    // Utiliser bApres comme valeur de secours
+    return bApres.poidsMoyen;
+  }
+
+  // Interpolation lineaire
+  const totalMs = bApres!.date.getTime() - bAvant!.date.getTime();
+  if (totalMs === 0) return bAvant!.poidsMoyen;
+  const fraction = (targetMs - bAvant!.date.getTime()) / totalMs;
+  return bAvant!.poidsMoyen + fraction * (bApres!.poidsMoyen - bAvant!.poidsMoyen);
+}
+
+// ---------------------------------------------------------------------------
+// Queries publiques FB.6
+// ---------------------------------------------------------------------------
+
+/**
+ * Calcule l'evolution FCR semaine par semaine pour un produit aliment donne.
+ *
+ * - Filtre par produitId via ReleveConsommation
+ * - Guard E7 : releves filtres par vagueId (pas de melange inter-vagues)
+ * - Guard E8 : biometries avec poidsMoyen null exclues
+ * - Interpolation lineaire du poids moyen entre biometries (algorithme A5/A6)
+ * - Benchmark FCR via getBenchmarkFCRPourPhase sur la premiere phase cible du produit
+ *
+ * @param siteId    - ID du site (multi-tenancy)
+ * @param produitId - ID du produit aliment
+ * @param vagueId   - Vague a analyser (optionnel - si absent, toutes les vagues)
+ */
+export async function getFCRHebdomadaire(
+  siteId: string,
+  produitId: string,
+  vagueId?: string
+): Promise<FCRHebdomadairePoint[]> {
+  // 1. Verifier que le produit existe et appartient au site
+  const produit = await prisma.produit.findFirst({
+    where: { id: produitId, siteId, categorie: CategorieProduit.ALIMENT },
+    select: { id: true, tailleGranule: true, phasesCibles: true },
+  });
+  if (!produit) return [];
+
+  // 2. Charger les consommations de ce produit (filtrees par vague si fourni)
+  const consommations = await prisma.releveConsommation.findMany({
+    where: {
+      produitId,
+      siteId,
+      ...(vagueId ? { releve: { vagueId } } : {}),
+    },
+    select: {
+      quantite: true,
+      releve: {
+        select: {
+          id: true,
+          date: true,
+          vagueId: true,
+        },
+      },
+    },
+    orderBy: { releve: { date: "asc" } },
+  });
+
+  if (consommations.length === 0) return [];
+
+  // 3. Guard E7 : isoler les vagueIds (pas de melange inter-vagues)
+  const vagueIds = [...new Set(consommations.map((c) => c.releve.vagueId))];
+
+  // 4. Charger les vagues avec leurs bacs
+  const vagues = await prisma.vague.findMany({
+    where: { id: { in: vagueIds }, siteId },
+    select: {
+      id: true,
+      nombreInitial: true,
+      poidsMoyenInitial: true,
+      dateDebut: true,
+      dateFin: true,
+      bacs: { select: { id: true, nombreInitial: true } },
+    },
+  });
+  const vagueMap = new Map(vagues.map((v) => [v.id, v]));
+
+  // 5. Biometries - Guard E8 : exclure poidsMoyen null
+  const biometriesRaw = await prisma.releve.findMany({
+    where: {
+      vagueId: { in: vagueIds },
+      siteId,
+      typeReleve: TypeReleve.BIOMETRIE,
+      poidsMoyen: { not: null },
+    },
+    orderBy: { date: "asc" },
+    select: { vagueId: true, date: true, poidsMoyen: true },
+  });
+  const biosByVague = new Map<string, { date: Date; poidsMoyen: number }[]>();
+  for (const b of biometriesRaw) {
+    if (b.poidsMoyen === null) continue;
+    const existing = biosByVague.get(b.vagueId) ?? [];
+    existing.push({ date: b.date, poidsMoyen: b.poidsMoyen });
+    biosByVague.set(b.vagueId, existing);
+  }
+
+  // 6. Releves MORTALITE + COMPTAGE pour computeNombreVivantsVague
+  const relevesVivants = await prisma.releve.findMany({
+    where: {
+      vagueId: { in: vagueIds },
+      siteId,
+      typeReleve: { in: [TypeReleve.MORTALITE, TypeReleve.COMPTAGE] },
+    },
+    orderBy: { date: "asc" },
+    select: {
+      vagueId: true,
+      bacId: true,
+      typeReleve: true,
+      nombreMorts: true,
+      nombreCompte: true,
+    },
+  });
+  const vivantsByVague = new Map<string, typeof relevesVivants>();
+  for (const r of relevesVivants) {
+    const existing = vivantsByVague.get(r.vagueId) ?? [];
+    existing.push(r);
+    vivantsByVague.set(r.vagueId, existing);
+  }
+
+  // 7. Grouper les consommations par (vagueId, semaine ISO)
+  type SemaineKey = string; // "vagueId::YYYY-WNN"
+  const alimBySemaineVague = new Map<
+    SemaineKey,
+    { quantiteAliment: number; vagueId: string; semaine: string }
+  >();
+  for (const c of consommations) {
+    const semaine = getISOWeekKey(c.releve.date);
+    const key: SemaineKey = `${c.releve.vagueId}::${semaine}`;
+    const existing = alimBySemaineVague.get(key) ?? {
+      quantiteAliment: 0,
+      vagueId: c.releve.vagueId,
+      semaine,
+    };
+    existing.quantiteAliment += c.quantite;
+    alimBySemaineVague.set(key, existing);
+  }
+
+  // 8. Calculer FCR par semaine - aggregation sur toutes les vagues
+  type SemaineCumul = {
+    quantiteAliment: number;
+    gainBiomasseKg: number | null;
+    poidsMoyenG: number | null;
+    countPoids: number;
+    benchmarkFCR: number | null;
+  };
+  const semaineMap = new Map<string, SemaineCumul>();
+
+  for (const [, entry] of alimBySemaineVague) {
+    const { semaine, vagueId: vid, quantiteAliment } = entry;
+    const vague = vagueMap.get(vid);
+    if (!vague) continue;
+
+    const biometries = biosByVague.get(vid) ?? [];
+    const { debut, fin } = getISOWeekBounds(semaine);
+
+    // Nombre de vivants pour le gain de biomasse
+    const vivantsReleves = vivantsByVague.get(vid) ?? [];
+    const nombreVivants = computeNombreVivantsVague(
+      vague.bacs,
+      vivantsReleves,
+      vague.nombreInitial
+    );
+
+    // SGR estime pour extrapolation post-dernier-releve biometrique
+    const dernierBio = biometries.at(-1);
+    const sgrEstime =
+      dernierBio && dernierBio.poidsMoyen > vague.poidsMoyenInitial
+        ? (calculerSGR(vague.poidsMoyenInitial, dernierBio.poidsMoyen, 1) ?? 2.0)
+        : 2.0;
+
+    // Interpolation poids debut et fin de semaine
+    const poidsDebut = interpolerPoidsMoyen(biometries, debut, sgrEstime);
+    const poidsFin = interpolerPoidsMoyen(biometries, fin, sgrEstime);
+
+    let gainBiomasseKg: number | null = null;
+    if (poidsDebut !== null && poidsFin !== null && nombreVivants > 0) {
+      gainBiomasseKg = ((poidsFin - poidsDebut) * nombreVivants) / 1000;
+    }
+
+    // Poids moyen au milieu de la semaine (pour affichage)
+    const milieu = new Date((debut.getTime() + fin.getTime()) / 2);
+    const poidsMoyenG = interpolerPoidsMoyen(biometries, milieu, sgrEstime);
+
+    // Benchmark FCR de la premiere phase cible du produit
+    const phaseCourante = (produit.phasesCibles?.[0] as string | undefined) ?? null;
+    const benchmarkRange = getBenchmarkFCRPourPhase(phaseCourante);
+    const benchmarkFCR =
+      isFinite(benchmarkRange.acceptable.max) ? benchmarkRange.acceptable.max : null;
+
+    // Aggregation par semaine
+    const existing = semaineMap.get(semaine);
+    if (existing) {
+      existing.quantiteAliment += quantiteAliment;
+      if (gainBiomasseKg !== null) {
+        existing.gainBiomasseKg =
+          existing.gainBiomasseKg !== null
+            ? existing.gainBiomasseKg + gainBiomasseKg
+            : gainBiomasseKg;
+      }
+      if (poidsMoyenG !== null) {
+        const newCount = existing.countPoids + 1;
+        existing.poidsMoyenG =
+          existing.poidsMoyenG !== null
+            ? (existing.poidsMoyenG * existing.countPoids + poidsMoyenG) / newCount
+            : poidsMoyenG;
+        existing.countPoids = newCount;
+      }
+    } else {
+      semaineMap.set(semaine, {
+        quantiteAliment,
+        gainBiomasseKg,
+        poidsMoyenG: poidsMoyenG ?? null,
+        countPoids: poidsMoyenG !== null ? 1 : 0,
+        benchmarkFCR,
+      });
+    }
+  }
+
+  // 9. Construire et retourner les points FCR hebdomadaires tries par semaine
+  const points: FCRHebdomadairePoint[] = [];
+  for (const [semaine, cumul] of semaineMap.entries()) {
+    const fcr = calculerFCR(
+      cumul.quantiteAliment,
+      cumul.gainBiomasseKg !== null && cumul.gainBiomasseKg > 0
+        ? cumul.gainBiomasseKg
+        : null
+    );
+    points.push({
+      semaine,
+      fcr: fcr !== null ? Math.round(fcr * 100) / 100 : null,
+      quantiteAlimentKg: Math.round(cumul.quantiteAliment * 100) / 100,
+      poidsMoyenG:
+        cumul.poidsMoyenG !== null ? Math.round(cumul.poidsMoyenG * 10) / 10 : null,
+      benchmarkFCR: cumul.benchmarkFCR,
+    });
+  }
+
+  return points.sort((a, b) => a.semaine.localeCompare(b.semaine));
+}
+
+/**
+ * Detecte les changements de taille de granule au cours d'une vague pour un produit.
+ *
+ * Parcourt les releves ALIMENTATION tries par date et detecte les transitions
+ * entre produits dont la tailleGranule differe.
+ *
+ * @param siteId    - ID du site (multi-tenancy)
+ * @param produitId - ID du produit aliment de reference
+ * @param vagueId   - ID de la vague
+ */
+export async function getChangementsGranule(
+  siteId: string,
+  produitId: string,
+  vagueId: string
+): Promise<ChangementGranule[]> {
+  // Charger les releves ALIMENTATION avec les consommations et tailleGranule
+  const releves = await prisma.releve.findMany({
+    where: { vagueId, siteId, typeReleve: TypeReleve.ALIMENTATION },
+    orderBy: { date: "asc" },
+    select: {
+      date: true,
+      consommations: {
+        select: {
+          produit: {
+            select: { id: true, tailleGranule: true },
+          },
+        },
+      },
+    },
+  });
+
+  if (releves.length === 0) return [];
+
+  // Pour chaque releve, identifier le produit principal utilise
+  // (preferer le produitId de reference s'il est present dans le releve)
+  type ReleveAlimProduit = {
+    date: Date;
+    produitId: string;
+    tailleGranule: string | null;
+  };
+  const relevesProduits: ReleveAlimProduit[] = [];
+
+  for (const r of releves) {
+    if (r.consommations.length === 0) continue;
+    const consoRef = r.consommations.find((c) => c.produit.id === produitId);
+    const conso = consoRef ?? r.consommations[0];
+    relevesProduits.push({
+      date: r.date,
+      produitId: conso.produit.id,
+      tailleGranule: conso.produit.tailleGranule,
+    });
+  }
+
+  // Detecter les transitions de tailleGranule entre produits consecutifs
+  const changements: ChangementGranule[] = [];
+  let dernierProduitId: string | null = null;
+  let derniereTaille: string | null = null;
+
+  for (const r of relevesProduits) {
+    if (
+      dernierProduitId !== null &&
+      r.produitId !== dernierProduitId &&
+      derniereTaille !== null &&
+      r.tailleGranule !== null &&
+      derniereTaille !== r.tailleGranule
+    ) {
+      changements.push({
+        date: r.date,
+        ancienneTaille: derniereTaille as ChangementGranule["ancienneTaille"],
+        nouvelleTaille: r.tailleGranule as ChangementGranule["nouvelleTaille"],
+      });
+    }
+    dernierProduitId = r.produitId;
+    derniereTaille = r.tailleGranule;
+  }
+
+  return changements;
 }

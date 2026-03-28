@@ -3,7 +3,7 @@ import { cachedJson } from "@/lib/api-cache";
 import { getReleves, createReleve } from "@/lib/queries/releves";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { TypeReleve, CauseMortalite, TypeAliment, MethodeComptage, Permission, StatutVague, TypeDeclencheur } from "@/types";
+import { TypeReleve, CauseMortalite, TypeAliment, MethodeComptage, Permission, StatutVague, TypeDeclencheur, ComportementAlimentaire } from "@/types";
 import type { CreateReleveDTO, ReleveFilters } from "@/types";
 import { prisma } from "@/lib/db";
 import {
@@ -222,6 +222,37 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Validation tauxRefus et comportementAlim — valides uniquement pour ALIMENTATION
+    const TAUX_REFUS_VALIDES = [0, 10, 25, 50];
+
+    if (body.tauxRefus !== undefined && body.tauxRefus !== null) {
+      if (body.typeReleve !== TypeReleve.ALIMENTATION) {
+        errors.push({
+          field: "tauxRefus",
+          message: "Le taux de refus est valide uniquement pour un releve de type ALIMENTATION.",
+        });
+      } else if (!TAUX_REFUS_VALIDES.includes(body.tauxRefus)) {
+        errors.push({
+          field: "tauxRefus",
+          message: `Le taux de refus doit etre l'une des valeurs : ${TAUX_REFUS_VALIDES.join(", ")}.`,
+        });
+      }
+    }
+
+    if (body.comportementAlim !== undefined && body.comportementAlim !== null) {
+      if (body.typeReleve !== TypeReleve.ALIMENTATION) {
+        errors.push({
+          field: "comportementAlim",
+          message: "Le comportement alimentaire est valide uniquement pour un releve de type ALIMENTATION.",
+        });
+      } else if (!Object.values(ComportementAlimentaire).includes(body.comportementAlim as ComportementAlimentaire)) {
+        errors.push({
+          field: "comportementAlim",
+          message: `Le comportement alimentaire doit etre : ${Object.values(ComportementAlimentaire).join(", ")}.`,
+        });
+      }
+    }
+
     if (body.typeReleve === TypeReleve.RENOUVELLEMENT) {
       const hasPct = body.pourcentageRenouvellement != null;
       const hasVol = body.volumeRenouvele != null;
@@ -366,6 +397,8 @@ export async function POST(request: NextRequest) {
           quantiteAliment: body.quantiteAliment,
           typeAliment: body.typeAliment,
           frequenceAliment: body.frequenceAliment,
+          ...(body.tauxRefus != null && { tauxRefus: body.tauxRefus }),
+          ...(body.comportementAlim != null && { comportementAlim: body.comportementAlim }),
         };
         break;
       case TypeReleve.QUALITE_EAU:

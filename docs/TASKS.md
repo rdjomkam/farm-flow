@@ -5470,3 +5470,388 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 - Mobile-first validé
 - R1-R9 respectées
 - Rapport de review dans `docs/reviews/`
+
+---
+
+## Sprint FA — Feed Analytics Phase 1 : Schéma & Types (PLAN-feed-analytics-v2)
+
+**Objectif :** Enrichir le schéma de données pour les analytiques aliments (3 enums, 6 champs Produit, 2 champs Releve, 2 champs MouvementStock, 1 champ ConfigElevage). Migration non-destructive (tout nullable).
+**Référence :** `docs/decisions/PLAN-feed-analytics-v2.md` — Phase 1
+**Dépend de :** Aucun (indépendant des sprints IE)
+
+---
+
+### Story FA.1 — Migration DB : enums + champs aliment
+**Assigné à :** @db-specialist
+**Priorité :** Critique
+**Dépend de :** Aucun
+**Statut :** `FAIT`
+**Type :** SCHEMA
+
+**Description :** Créer 3 enums Prisma (TailleGranule, FormeAliment, ComportementAlimentaire), ajouter 6 champs sur Produit, 2 sur Releve, 2 sur MouvementStock, 1 sur ConfigElevage. Migration SQL + rollback.
+
+**Tâches :**
+- [ ] `TODO` 3 enums dans schema.prisma (TailleGranule P0-G5, FormeAliment, ComportementAlimentaire)
+- [ ] `TODO` Produit : tailleGranule?, formeAliment?, tauxProteines?, tauxLipides?, tauxFibres?, phasesCibles[]
+- [ ] `TODO` Releve : tauxRefus?, comportementAlim?
+- [ ] `TODO` MouvementStock : datePeremption?, lotFabrication? (PAS sur Produit)
+- [ ] `TODO` ConfigElevage : scoreAlimentConfig Json?
+- [ ] `TODO` Migration SQL + rollback SQL
+- [ ] `TODO` `npx prisma generate` + `npm run build`
+
+**Critères d'acceptation :**
+- R1/R7/R8 respectées, migration non-destructive, rollback documenté
+
+---
+
+### Story FA.2 — Types TypeScript : enums + interfaces aliment
+**Assigné à :** @architect | **Dépend de :** FA.1 | **Statut :** `FAIT` | **Type :** TYPES
+
+**Tâches :**
+- [ ] `TODO` 3 enums TS dans `src/types/models.ts` : TailleGranule, FormeAliment, ComportementAlimentaire (section enums, avant les modèles)
+- [ ] `TODO` Enrichir interface `Produit` dans models.ts : +tailleGranule?, +formeAliment?, +tauxProteines?, +tauxLipides?, +tauxFibres?, +phasesCibles[]
+- [ ] `TODO` Enrichir interface `Releve` dans models.ts : +tauxRefus?, +comportementAlim? (section champs alimentation — valides uniquement si typeReleve=ALIMENTATION)
+- [ ] `TODO` Enrichir interface `MouvementStock` dans models.ts : +releveId?, +datePeremption?, +lotFabrication? (releveId existait en DB mais manquait dans le type)
+- [ ] `TODO` Enrichir interface `ConfigElevage` dans models.ts : +scoreAlimentConfig typer `Record<string, unknown> | null` (sera affiné en FB.4 avec ScoreAlimentConfig)
+- [ ] `TODO` DTOs dans api.ts : enrichir CreateProduitDTO/UpdateProduitDTO (+champs aliment), CreateReleveDTO (+tauxRefus, +comportementAlim), CreateMouvementDTO (+datePeremption?, +lotFabrication?)
+- [ ] `TODO` Barrel export `src/types/index.ts` : exporter TailleGranule, FormeAliment, ComportementAlimentaire
+- [ ] `TODO` R3 : miroir exact des modèles Prisma après FA.1
+
+**Correction ADJ-03/04/05/06 :** Voir `docs/decisions/ADJUSTMENTS-feed-analytics-stories.md` sections 3–6.
+
+---
+
+### Story FA.3 — API validation : nouveaux champs aliment
+**Assigné à :** @developer | **Dépend de :** FA.2 | **Statut :** `FAIT` | **Type :** API
+
+**Tâches :**
+- [ ] `TODO` `src/app/api/produits/route.ts` (POST) : +validation tailleGranule (enum TailleGranule?), formeAliment (enum FormeAliment?), tauxProteines/Lipides/Fibres [0,100], phasesCibles (tableau PhaseElevage valides)
+- [ ] `TODO` `src/app/api/produits/[id]/route.ts` (PUT) : mêmes validations
+- [ ] `TODO` `src/app/api/releves/route.ts` (POST) : +validation tauxRefus liste blanche {0,10,25,50}, guard HTTP 400 si tauxRefus/comportementAlim présent ET typeReleve !== ALIMENTATION
+- [ ] `TODO` `src/app/api/releves/[id]/route.ts` (PUT/PATCH) : mêmes validations
+- [ ] `TODO` `src/app/api/stock/mouvements/route.ts` (POST) : +datePeremption (ISO string → DateTime, optionnel ENTREE), +lotFabrication (string, optionnel ENTREE)
+
+**Correction ADJ-09/10 :** Chemin exact des routes : `/api/releves/route.ts` et `/api/stock/mouvements/route.ts` (préfixe `/stock/` requis). Voir `docs/decisions/ADJUSTMENTS-feed-analytics-stories.md` sections 9, 10.
+
+---
+
+### Story FA.4 — Seed : enrichir aliments existants
+**Assigné à :** @db-specialist | **Dépend de :** FA.1 | **Statut :** `FAIT` | **Type :** SCHEMA
+
+**Tâches :**
+- [ ] `TODO` UPDATE aliments avec `AND categorie='ALIMENT'`, INSERT nouvel aliment G3
+- [ ] `TODO` Relevés ALIMENTATION avec tauxRefus + mouvement ENTREE avec DLC
+
+---
+
+### Story FA.5 — Tests Phase 1
+**Assigné à :** @tester | **Dépend de :** FA.3, FA.4 | **Statut :** `FAIT` | **Type :** TEST
+
+**Tâches :**
+- [ ] `TODO` Tests validation (tauxRefus=37→400, tauxProteines=-5→400, BIOMETRIE+tauxRefus→400)
+- [ ] `TODO` Non-régression + rapport `docs/tests/rapport-sprint-FA.md`
+
+---
+
+### Story FA.6 — Review Phase 1
+**Assigné à :** @code-reviewer | **Dépend de :** FA.5 | **Statut :** `FAIT` | **Type :** REVIEW
+
+**Tâches :**
+- [ ] `TODO` R1-R9, datePeremption sur MouvementStock, validations API, rollback SQL
+- [ ] `TODO` Rapport `docs/reviews/review-sprint-FA.md`
+
+---
+
+## Sprint FB — Feed Analytics Phase 2 : Calculs & Queries (PLAN-feed-analytics-v2)
+
+**Objectif :** Fonctions de calcul (ADG, PER, DFR, score), benchmarks par phase, queries analytics enrichies.
+**Référence :** `docs/decisions/PLAN-feed-analytics-v2.md` — Phase 2
+**Dépend de :** Sprint FA FAIT
+
+---
+
+### Story FB.1 — Fonctions de calcul : ADG, PER, DFR, écart ration
+**Assigné à :** @developer | **Dépend de :** Sprint FA FAIT | **Statut :** `FAIT` | **Type :** API
+
+**Tâches :**
+- [ ] `TODO` calculerADG (négatif autorisé), calculerPER (gainPoids en grammes), calculerDFR, calculerEcartRation
+
+---
+
+### Story FB.2 — Fonction score qualité aliment /10
+**Assigné à :** @developer | **Dépend de :** Sprint FA FAIT | **Statut :** `FAIT` | **Type :** API
+
+**Tâches :**
+- [ ] `TODO` ScoreAlimentConfig interface + calculerScoreAliment configurable
+- [ ] `TODO` Guard FCR≤0→null, formule `score/poidsTotal` (PAS *10)
+
+---
+
+### Story FB.3 — Benchmarks par phase d'élevage
+**Assigné à :** @developer | **Dépend de :** Sprint FA FAIT | **Statut :** `FAIT` | **Type :** API
+
+**Tâches :**
+- [ ] `TODO` 4 constantes benchmark + getBenchmarkFCRPourPhase + getBenchmarkADGPourPoids (boundary exclusive)
+
+---
+
+### Story FB.4 — Types calculs enrichis
+**Assigné à :** @architect | **Dépend de :** Sprint FA FAIT | **Statut :** `FAIT` | **Type :** TYPES
+
+**Tâches :**
+- [ ] `TODO` Dans `src/types/calculs.ts` : enrichir `AnalytiqueAliment` (+tailleGranule?, +formeAliment?, +scoreQualite?, +adgMoyen?, +perMoyen?) + enrichir `DetailAlimentVague` (+adg?, +per?)
+- [ ] `TODO` Dans `src/types/calculs.ts` : créer FiltresAnalyticsAliments, FCRHebdomadairePoint, ChangementGranule, AlerteRation
+- [ ] `TODO` Dans `src/types/calculs.ts` : créer ScoreAlimentConfig (remplace le `Record<string, unknown>` provisoire de FA.2)
+- [ ] `TODO` Dans `src/types/models.ts` : mettre à jour `ConfigElevage.scoreAlimentConfig` de `Record<string, unknown> | null` vers `ScoreAlimentConfig | null`
+- [ ] `TODO` Exporter tous les nouveaux types depuis `src/types/index.ts`
+
+---
+
+### Story FB.5 — Query : enrichir computeAlimentMetrics + filtres
+**Assigné à :** @developer | **Dépend de :** FB.1, FB.2, FB.4 | **Statut :** `FAIT` | **Type :** QUERIES
+
+**Tâches :**
+- [ ] `TODO` Dans `src/lib/queries/analytics.ts` : enrichir le SELECT Prisma interne de la fonction PRIVÉE `computeAlimentMetrics` pour inclure tailleGranule, formeAliment, tauxProteines (ces champs sont sur Produit)
+- [ ] `TODO` Dans `computeAlimentMetrics` : calculer ADG, PER, scoreQualite en appelant les nouvelles fonctions de calculs.ts
+- [ ] `TODO` Ajouter paramètre `filtres?: FiltresAnalyticsAliments` à `getComparaisonAliments` et `getDetailAliment` (fonctions publiques exportées)
+- [ ] `TODO` Fix E5 : remplacer `...(filters?.x && {...})` par `...(filters?.x !== undefined && filters.x !== null && {...})` dans les spreads de filtres
+- [ ] `TODO` Fix A13 : propager null correctement pour AnalytiqueAliment sans données biométriques
+
+**Correction ADJ-07 :** `computeAlimentMetrics` est une fonction PRIVÉE (non exportée) dans `src/lib/queries/analytics.ts`. Modifier directement à l'intérieur du fichier. Voir `docs/decisions/ADJUSTMENTS-feed-analytics-stories.md` section 7.
+
+---
+
+### Story FB.6 — Query : FCR hebdomadaire + détection changement granulé (F14, F17)
+**Assigné à :** @developer | **Dépend de :** FB.4 | **Statut :** `FAIT` | **Type :** QUERIES
+
+**Tâches :**
+- [ ] `TODO` Interpolation biométrie linéaire, multi-bac guard E7, détection changement granulé
+- [ ] `TODO` Query avec poidsMoyen: { not: null } (E8)
+
+---
+
+### Story FB.7 — Query : alertes ration (F18/F24)
+**Assigné à :** @developer | **Dépend de :** FB.1 | **Statut :** `FAIT` | **Type :** QUERIES
+
+**Tâches :**
+- [ ] `TODO` Guard E9 skip sans ConfigElevage, seuil 20% × 3 consécutifs
+
+---
+
+### Story FB.8 — Tests Phase 2
+**Assigné à :** @tester | **Dépend de :** FB.5, FB.6, FB.7 | **Statut :** `FAIT` | **Type :** TEST
+
+**Tâches :**
+- [ ] `TODO` Tests 5 fonctions calcul + edge cases (FCR=0, ADG négatif, boundary 30g)
+- [ ] `TODO` Non-régression + rapport `docs/tests/rapport-sprint-FB.md`
+
+---
+
+### Story FB.9 — Review Phase 2
+**Assigné à :** @code-reviewer | **Dépend de :** FB.8 | **Statut :** `FAIT` | **Type :** REVIEW
+
+**Tâches :**
+- [ ] `TODO` Formule score, guards, contrat PER, interpolation, filter spread
+- [ ] `TODO` Rapport `docs/reviews/review-sprint-FB.md`
+
+---
+
+## Sprint FC — Feed Analytics Phase 3 : Interface Utilisateur (PLAN-feed-analytics-v2)
+
+**Objectif :** UI : filtres, badges, avertissements, formulaires, graphiques, DLC. Tout via i18n.
+**Référence :** `docs/decisions/PLAN-feed-analytics-v2.md` — Phase 3
+**Dépend de :** Sprint FB FAIT
+
+---
+
+### Story FC.1 — i18n : clés analytics aliments
+**Assigné à :** @developer | **Dépend de :** Sprint FB FAIT | **Statut :** `TODO` | **Type :** UI
+
+**Tâches :**
+- [ ] `TODO` `src/messages/fr/analytics.json` : +labels TailleGranule, FormeAliment, ComportementAlimentaire, +score (/10, seuils), +filtres (phase, taille, forme, saison), +alertes ration (sous/sur), +DLC (expiré, bientôt)
+- [ ] `TODO` `src/messages/fr/stock.json` : +champs produit tailleGranule, formeAliment, tauxProteines, tauxLipides, tauxFibres, phasesCibles
+- [ ] `TODO` `src/messages/fr/releves.json` : +tauxRefus (label + options 0/10/25/50%), +comportementAlim (label + options enum)
+
+**Correction ADJ-08 :** Il n'existe PAS de `src/messages/en/` — modifier uniquement les fichiers `fr/`. Voir `docs/decisions/ADJUSTMENTS-feed-analytics-stories.md` section 8.
+
+---
+
+### Story FC.2 — Composant FeedFilters (F2)
+**Assigné à :** @developer | **Dépend de :** FC.1 | **Statut :** `TODO` | **Type :** UI
+
+**Tâches :**
+- [ ] `TODO` Créer `src/components/analytics/feed-filters.tsx` (Client Component) : 4 Radix Select (phase, taille, forme, saison), validation enum searchParams (E6 : liste blanche avant cast), mobile-first
+- [ ] `TODO` Mettre à jour le stub `src/app/(farm)/analytics/aliments/page.tsx` pour passer `searchParams` au composant page (voir ADJ-11)
+- [ ] `TODO` Intégrer FeedFilters dans `src/components/pages/analytics-aliments-page.tsx` (PAS dans src/app/analytics/aliments/page.tsx)
+
+**Correction ADJ-01/11 :** La page liste aliments réelle est `src/components/pages/analytics-aliments-page.tsx`. Le stub `src/app/(farm)/analytics/aliments/page.tsx` doit être mis à jour pour transmettre searchParams. Voir `docs/decisions/ADJUSTMENTS-feed-analytics-stories.md` sections 1, 11.
+
+---
+
+### Story FC.3 — Badges taille + score sur cartes aliment (F3, F11)
+**Assigné à :** @developer | **Dépend de :** FC.1 | **Statut :** `TODO` | **Type :** UI
+
+**Tâches :**
+- [ ] `TODO` Badge granulométrie, forme, ScoreBadge coloré (≥7 vert, ≥5 amber, <5 rouge)
+
+---
+
+### Story FC.4 — Avertissement comparaison tailles différentes (F4)
+**Assigné à :** @developer | **Dépend de :** FC.1 | **Statut :** `TODO` | **Type :** UI
+
+**Tâches :**
+- [ ] `TODO` Banner AlertTriangle si > 1 taille unique, message i18n
+
+---
+
+### Story FC.5 — Formulaire produit : champs aliment conditionnels
+**Assigné à :** @developer | **Dépend de :** FC.1 | **Statut :** `TODO` | **Type :** UI
+
+**Tâches :**
+- [ ] `TODO` `src/components/stock/produits-list-client.tsx` : ajouter section conditionnelle ALIMENT dans le Dialog de création (visible si categorie === ALIMENT) — Select TailleGranule (Radix), Select FormeAliment (Radix), inputs tauxProteines/Lipides/Fibres (0–100), multi-select PhaseElevage
+- [ ] `TODO` `src/components/stock/produit-detail-client.tsx` : idem dans le Dialog de modification
+- [ ] `TODO` Valeurs soumises via le state existant (`fields`) — pas de nouveau state global nécessaire
+
+**Correction ADJ-02 :** `src/components/stock/produit-form.tsx` N'EXISTE PAS. Le formulaire produit est inline dans `produits-list-client.tsx` (création) et `produit-detail-client.tsx` (modification). Voir `docs/decisions/ADJUSTMENTS-feed-analytics-stories.md` section 2.
+
+---
+
+### Story FC.6 — Formulaire relevé : tauxRefus + comportementAlim (F7, F8)
+**Assigné à :** @developer | **Dépend de :** FC.1 | **Statut :** `TODO` | **Type :** UI
+
+**Tâches :**
+- [ ] `TODO` `src/components/releves/form-alimentation.tsx` : +RadioGroup tauxRefus (Radix RadioGroup, options 0/10/25/50%, h-12 min), +Select comportementAlim (Radix Select, options enum ComportementAlimentaire), mettre à jour l'interface `FormAlimentationProps` pour inclure ces 2 champs dans `values`
+- [ ] `TODO` Les valeurs `tauxRefus` et `comportementAlim` transitent via le `fields` Record existant dans `releve-form-client.tsx` — pas de state supplémentaire à créer
+- [ ] `TODO` Le parent `releve-form-client.tsx` extrait déjà `fields.tauxRefus` et `fields.comportementAlim` pour les passer au body POST — vérifier que le body de soumission les inclut
+
+**Correction ADJ-09 :** Les RadioGroups vont dans `form-alimentation.tsx`, pas dans `releve-form-client.tsx` directement. Voir `docs/decisions/ADJUSTMENTS-feed-analytics-stories.md` section 9.
+
+---
+
+### Story FC.7 — Graphique FCR hebdomadaire (F14, F17)
+**Assigné à :** @developer | **Dépend de :** FB.6 | **Statut :** `TODO` | **Type :** UI
+
+**Tâches :**
+- [ ] `TODO` Dans `src/components/analytics/feed-detail-charts.tsx` : ajouter composant `FeedFCRHebdoChart` (Recharts ComposedChart, dynamic imports ssr:false, ReferenceLine pour changements de granulé, ReferenceLine pour benchmark FCR, responsive, mobile-first)
+- [ ] `TODO` Intégrer `FeedFCRHebdoChart` dans `src/app/analytics/aliments/[produitId]/page.tsx`
+
+**Note ADJ-01 :** La page détail est HORS route group — `src/app/analytics/aliments/[produitId]/page.tsx` est le chemin correct (pas dans `/(farm)/`).
+
+---
+
+### Story FC.8 — Corrélation mortalité / aliment (F15)
+**Assigné à :** @developer | **Dépend de :** FB.5 | **Statut :** `TODO` | **Type :** UI
+
+**Tâches :**
+- [ ] `TODO` Dans `src/app/analytics/aliments/[produitId]/page.tsx` (page détail) : ajouter section corrélation mortalité — cartes empilées mobile, badge mortalité si > 10%, données issues de l'enrichissement `computeAlimentMetrics`
+
+---
+
+### Story FC.9 — Alerte DLC stock aliment (F21)
+**Assigné à :** @developer | **Dépend de :** Sprint FA FAIT | **Statut :** `TODO` | **Type :** UI
+
+**Tâches :**
+- [ ] `TODO` Dans `src/lib/queries/analytics.ts` (ou nouveau `src/lib/queries/stock.ts`) : query `getMouvementsExpirables(siteId)` — séparer lots expirés (`datePeremption < now`) vs bientôt expirés (`datePeremption < now+30j`) (E13)
+- [ ] `TODO` Créer `src/components/analytics/alerte-dlc.tsx` (Client ou Server Component) : badges expiré/bientôt, i18n depuis fr/analytics.json
+- [ ] `TODO` Intégrer AlerteDLC dans `src/components/pages/analytics-aliments-page.tsx`
+
+---
+
+### Story FC.10 — Tests Phase 3
+**Assigné à :** @tester | **Dépend de :** FC.2 à FC.9 | **Statut :** `TODO` | **Type :** TEST
+
+**Tâches :**
+- [ ] `TODO` Tests filtres, avertissement, ?taille=INVALID, mobile 360px manuel
+- [ ] `TODO` Non-régression + rapport `docs/tests/rapport-sprint-FC.md`
+
+---
+
+### Story FC.11 — Review Phase 3
+**Assigné à :** @code-reviewer | **Dépend de :** FC.10 | **Statut :** `TODO` | **Type :** REVIEW
+
+**Tâches :**
+- [ ] `TODO` i18n complet, R5/R6, mobile first, accessibilité RadioGroups
+- [ ] `TODO` Rapport `docs/reviews/review-sprint-FC.md`
+
+---
+
+## Sprint FD — Feed Analytics Phase 4 : Fonctionnalités Avancées (PLAN-feed-analytics-v2)
+
+**Objectif :** Alertes ration UI, score fournisseur, filtre saison, ADRs pour PDF et courbe croissance. F16/F19 = [DESIGN NEEDED].
+**Référence :** `docs/decisions/PLAN-feed-analytics-v2.md` — Phase 4
+**Dépend de :** Sprint FC FAIT
+
+---
+
+### Story FD.1 — Alerte sous/sur-alimentation UI (F18)
+**Assigné à :** @developer | **Dépend de :** Sprint FC FAIT, FB.7 | **Statut :** `TODO` | **Type :** UI
+
+**Tâches :**
+- [ ] `TODO` Créer `src/components/analytics/alerte-ration-card.tsx` : carte affichant les AlerteRation (icône TrendingDown sous-alimentation / TrendingUp sur-alimentation), lien vers la page relevés de la vague concernée, toutes les chaînes via i18n fr/analytics.json
+- [ ] `TODO` Intégrer dans `src/components/pages/analytics-aliments-page.tsx` (PAS dans `src/app/analytics/aliments/page.tsx`)
+
+**Correction ADJ-01 :** Modifier `src/components/pages/analytics-aliments-page.tsx`, pas le stub. Voir `docs/decisions/ADJUSTMENTS-feed-analytics-stories.md` section 1.
+
+---
+
+### Story FD.2 — Score fournisseur agrégé (F20)
+**Assigné à :** @developer | **Dépend de :** FB.2, Sprint FC FAIT | **Statut :** `TODO` | **Type :** QUERIES + UI
+
+**Tâches :**
+- [ ] `TODO` Dans `src/lib/queries/analytics.ts` : ajouter `getScoresFournisseurs(siteId)` — agrège les scores par fournisseur via les produits aliment du site
+- [ ] `TODO` Ajouter section UI "Performance par fournisseur" dans `src/components/pages/analytics-aliments-page.tsx`
+
+**Correction ADJ-01 :** Intégration dans `analytics-aliments-page.tsx`, pas dans le stub `/(farm)/analytics/aliments/page.tsx`. Voir section 1.
+
+---
+
+### Story FD.3 — Filtre par saison (F22)
+**Assigné à :** @developer | **Dépend de :** FC.2 | **Statut :** `TODO` | **Type :** QUERIES + UI
+
+**Tâches :**
+- [ ] `TODO` Ajouter `getSaison(date: Date, pays?: string): string` dans `src/lib/calculs.ts` (fonction pure, pas de DB) — multi-tenant via param pays (E15), défaut "CM" (Cameroun)
+- [ ] `TODO` Exporter getSaison depuis `src/lib/calculs.ts`
+- [ ] `TODO` Intégrer le filtre saison dans le composant `src/components/analytics/feed-filters.tsx`
+
+**Correction ADJ-12 :** `getSaison` est une fonction pure → appartient à `src/lib/calculs.ts`, PAS à un fichier `queries/saisons.ts`. Voir `docs/decisions/ADJUSTMENTS-feed-analytics-stories.md` section 12.
+
+---
+
+### Story FD.4 — [DESIGN NEEDED] Rapport PDF consommation (F16)
+**Assigné à :** @architect | **Dépend de :** Sprint FC FAIT | **Statut :** `TODO` | **Type :** ADR
+
+**Tâches :**
+- [ ] `TODO` ADR `docs/decisions/ADR-rapport-pdf-consommation.md`
+
+---
+
+### Story FD.5 — [DESIGN NEEDED] Courbe de croissance vs référentiel (F19)
+**Assigné à :** @architect | **Dépend de :** Sprint FC FAIT | **Statut :** `TODO` | **Type :** ADR
+
+**Tâches :**
+- [ ] `TODO` ADR `docs/decisions/ADR-courbe-croissance-reference.md`
+
+---
+
+### Story FD.6 — HistoriqueNutritionnel modèle (F23, optionnel)
+**Assigné à :** @db-specialist | **Dépend de :** Sprint FC FAIT | **Statut :** `TODO` | **Type :** SCHEMA
+
+**Tâches :**
+- [ ] `TODO` Modèle Prisma @@unique([vagueId, phase]) + siteId (R8) + migration
+
+---
+
+### Story FD.7 — Tests Phase 4
+**Assigné à :** @tester | **Dépend de :** FD.1 à FD.3 | **Statut :** `TODO` | **Type :** TEST
+
+**Tâches :**
+- [ ] `TODO` Tests score fournisseur, getSaison, alertes + rapport `docs/tests/rapport-sprint-FD.md`
+
+---
+
+### Story FD.8 — Review Phase 4
+**Assigné à :** @code-reviewer | **Dépend de :** FD.7 | **Statut :** `TODO` | **Type :** REVIEW
+
+**Tâches :**
+- [ ] `TODO` R1-R9 sur toute la feature, edge cases reviews adressés, i18n, rétrocompatibilité
+- [ ] `TODO` Rapport `docs/reviews/review-sprint-FD.md`

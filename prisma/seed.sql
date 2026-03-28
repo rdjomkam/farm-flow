@@ -2386,5 +2386,109 @@ ON CONFLICT (key) DO UPDATE SET
   category    = EXCLUDED.category,
   "updatedAt" = NOW();
 
+-- ──────────────────────────────────────────
+-- Feed Analytics (Sprint FA) — enrichissement aliments existants
+-- ──────────────────────────────────────────
+
+-- prod_01 : Aliment Croissance 3mm — granulé G2, flottant, phase croissance/grossissement
+UPDATE "Produit" SET
+  "tailleGranule" = 'G2'::"TailleGranule",
+  "formeAliment"  = 'FLOTTANT'::"FormeAliment",
+  "tauxProteines" = 38.0,
+  "tauxLipides"   = 6.0,
+  "tauxFibres"    = 5.0,
+  "phasesCibles"  = ARRAY['GROSSISSEMENT', 'FINITION']::"PhaseElevage"[],
+  "updatedAt"     = NOW()
+WHERE id = 'prod_01';
+
+-- prod_02 : Aliment Demarrage 1mm — granulé P1, poudre/starter, phase alevin/début croissance
+UPDATE "Produit" SET
+  "tailleGranule" = 'P1'::"TailleGranule",
+  "formeAliment"  = 'POUDRE'::"FormeAliment",
+  "tauxProteines" = 45.0,
+  "tauxLipides"   = 8.0,
+  "tauxFibres"    = 3.0,
+  "phasesCibles"  = ARRAY['ACCLIMATATION', 'CROISSANCE_DEBUT']::"PhaseElevage"[],
+  "updatedAt"     = NOW()
+WHERE id = 'prod_02';
+
+-- prod_03 : Farine de poisson — pas de taille granulé (mélange), semi-flottant, toutes phases
+UPDATE "Produit" SET
+  "tailleGranule" = 'P2'::"TailleGranule",
+  "formeAliment"  = 'SEMI_FLOTTANT'::"FormeAliment",
+  "tauxProteines" = 55.0,
+  "tauxLipides"   = 10.0,
+  "tauxFibres"    = 2.0,
+  "phasesCibles"  = ARRAY['JUVENILE', 'GROSSISSEMENT']::"PhaseElevage"[],
+  "updatedAt"     = NOW()
+WHERE id = 'prod_03';
+
+-- Nouvel aliment G3 — gros granulé finition/pré-récolte (grandes tailles)
+INSERT INTO "Produit" (id, nom, categorie, unite, "uniteAchat", contenance, "prixUnitaire", "stockActuel", "seuilAlerte", "fournisseurId", "isActive", "tailleGranule", "formeAliment", "tauxProteines", "tauxLipides", "tauxFibres", "phasesCibles", "siteId", "createdAt", "updatedAt")
+VALUES (
+  'prod_07',
+  'Aliment Finition 6mm',
+  'ALIMENT',
+  'KG',
+  'SACS',
+  25,
+  780,
+  80.0,
+  40.0,
+  'fourn_01',
+  true,
+  'G3'::"TailleGranule",
+  'FLOTTANT'::"FormeAliment",
+  30.0,
+  5.0,
+  6.0,
+  ARRAY['FINITION', 'PRE_RECOLTE']::"PhaseElevage"[],
+  'site_01',
+  NOW(),
+  NOW()
+);
+
+-- ──────────────────────────────────────────
+-- Feed Analytics — enrichissement relevés ALIMENTATION
+-- ──────────────────────────────────────────
+
+-- rel_07 : Alimentation normale — taux refus 0%, comportement vorace
+UPDATE "Releve" SET
+  "tauxRefus"        = 0.0,
+  "comportementAlim" = 'VORACE'::"ComportementAlimentaire",
+  "updatedAt"        = NOW()
+WHERE id = 'rel_07';
+
+-- rel_08 : Alimentation normale — taux refus 10%, comportement normal
+UPDATE "Releve" SET
+  "tauxRefus"        = 10.0,
+  "comportementAlim" = 'NORMAL'::"ComportementAlimentaire",
+  "updatedAt"        = NOW()
+WHERE id = 'rel_08';
+
+-- rel_09 : Transition aliment — taux refus 25%, comportement normal (changement d'aliment)
+UPDATE "Releve" SET
+  "tauxRefus"        = 25.0,
+  "comportementAlim" = 'NORMAL'::"ComportementAlimentaire",
+  "updatedAt"        = NOW()
+WHERE id = 'rel_09';
+
+-- rel_10 : Aliment artisanal — taux refus 50%, comportement faible (qualité moindre)
+UPDATE "Releve" SET
+  "tauxRefus"        = 50.0,
+  "comportementAlim" = 'FAIBLE'::"ComportementAlimentaire",
+  "updatedAt"        = NOW()
+WHERE id = 'rel_10';
+
+-- ──────────────────────────────────────────
+-- Feed Analytics — mouvement ENTREE avec DLC et lot de fabrication
+-- ──────────────────────────────────────────
+
+-- Réception lot Aliment Finition 6mm avec DLC et numéro de lot
+INSERT INTO "MouvementStock" (id, "produitId", type, quantite, "prixTotal", "vagueId", "commandeId", "releveId", "userId", date, notes, "datePeremption", "lotFabrication", "siteId", "createdAt")
+VALUES
+  ('mvt_09', 'prod_07', 'ENTREE', 80.0, 62400, NULL, NULL, NULL, 'user_admin', '2026-03-01', 'Reception lot finition — controle qualite OK', '2027-03-01', 'LOT-2026-F06-001', 'site_01', NOW()),
+  ('mvt_10', 'prod_01', 'ENTREE', 50.0, 42500, NULL, NULL, NULL, 'user_admin', '2026-03-10', 'Reapprovisionnement aliment croissance 3mm', '2027-01-15', 'LOT-2026-C03-002', 'site_01', NOW());
+
 COMMIT;
 

@@ -64,7 +64,7 @@ export default async function VagueRelevesPage({
         )}
 
         <RelevesList
-          releves={vague.releves as Releve[]}
+          releves={vague.releves as unknown as Releve[]}
           produits={produitsDb.map((p) => ({
             id: p.id,
             nom: p.nom,

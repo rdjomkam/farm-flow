@@ -16,6 +16,8 @@ import {
   CategorieDepense,
   CauseMortalite,
   CategorieProduit,
+  ComportementAlimentaire,
+  FormeAliment,
   FrequenceRecurrence,
   FournisseurPaiement,
   LogiqueCondition,
@@ -23,6 +25,7 @@ import {
   ModePaiement,
   OperateurCondition,
   PeriodeFacturation,
+  PhaseElevage,
   PlaceholderFormat,
   PlaceholderMode,
   Recurrence,
@@ -43,6 +46,7 @@ import {
   StatutReproducteur,
   StatutVague,
   SexeReproducteur,
+  TailleGranule,
   TypeActivite,
   TypeAlerte,
   TypeAliment,
@@ -86,7 +90,6 @@ import type {
   PackWithRelations,
   Paiement,
   PaiementDepense,
-  PhaseElevage,
   Ponte,
   Produit,
   Releve,
@@ -276,6 +279,10 @@ export interface CreateReleveAlimentationDTO extends CreateReleveBase {
   typeAliment: TypeAliment;
   /** Frequence quotidienne */
   frequenceAliment: number;
+  /** Taux de refus en % — valeurs acceptees : 0, 10, 25, 50 */
+  tauxRefus?: number;
+  /** Comportement alimentaire observe */
+  comportementAlim?: ComportementAlimentaire;
 }
 
 /** DTO pour creer un releve de qualite d'eau */
@@ -396,6 +403,10 @@ export interface UpdateReleveDTO {
   typeAliment?: TypeAliment;
   /** Frequence quotidienne */
   frequenceAliment?: number;
+  /** Taux de refus en % — valeurs acceptees : 0, 10, 25, 50 */
+  tauxRefus?: number | null;
+  /** Comportement alimentaire observe */
+  comportementAlim?: ComportementAlimentaire | null;
 
   // --- Champs qualite eau (typeReleve = QUALITE_EAU) ---
   /** Temperature en degres Celsius */
@@ -535,6 +546,19 @@ export interface CreateProduitDTO {
   prixUnitaire: number;
   seuilAlerte?: number;
   fournisseurId?: string;
+  // --- Champs analytiques aliment (Sprint FA) — valides uniquement si categorie === ALIMENT ---
+  /** Taille du granule */
+  tailleGranule?: TailleGranule;
+  /** Forme physique de l'aliment */
+  formeAliment?: FormeAliment;
+  /** Taux de proteines brutes (%) */
+  tauxProteines?: number;
+  /** Taux de lipides bruts (%) */
+  tauxLipides?: number;
+  /** Taux de fibres brutes (%) */
+  tauxFibres?: number;
+  /** Phases d'elevage cibles */
+  phasesCibles?: PhaseElevage[];
 }
 
 /** DTO pour modifier un produit */
@@ -550,6 +574,19 @@ export interface UpdateProduitDTO {
   seuilAlerte?: number;
   fournisseurId?: string | null;
   isActive?: boolean;
+  // --- Champs analytiques aliment (Sprint FA) — valides uniquement si categorie === ALIMENT ---
+  /** Taille du granule (null pour effacer) */
+  tailleGranule?: TailleGranule | null;
+  /** Forme physique de l'aliment (null pour effacer) */
+  formeAliment?: FormeAliment | null;
+  /** Taux de proteines brutes (%) — null pour effacer */
+  tauxProteines?: number | null;
+  /** Taux de lipides bruts (%) — null pour effacer */
+  tauxLipides?: number | null;
+  /** Taux de fibres brutes (%) — null pour effacer */
+  tauxFibres?: number | null;
+  /** Phases d'elevage cibles */
+  phasesCibles?: PhaseElevage[];
 }
 
 /** Filtres pour lister les produits */
@@ -580,6 +617,10 @@ export interface CreateMouvementDTO {
   commandeId?: string;
   date: string;
   notes?: string;
+  /** Date de peremption du lot recu (ISO 8601) — pertinent uniquement si type === ENTREE */
+  datePeremption?: string;
+  /** Numero de lot fabricant — tracabilite — pertinent uniquement si type === ENTREE */
+  lotFabrication?: string;
 }
 
 /** Filtres pour lister les mouvements */

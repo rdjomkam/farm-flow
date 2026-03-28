@@ -70,6 +70,10 @@ export {
   FournisseurPaiement,
   // ADR-021 — Admin Plateforme
   SiteStatus,
+  // Sprint FA — Feed Analytics
+  TailleGranule,
+  FormeAliment,
+  ComportementAlimentaire,
 } from "./models";
 export type {
   Site,
@@ -471,6 +475,12 @@ export type {
   CourbeCroissancePoint,
   // Sprint 22 (S16-6) — Alertes graduees par benchmark
   IndicateursBenchmarkVague,
+  // Sprint FB — Feed Analytics v2
+  FiltresAnalyticsAliments,
+  FCRHebdomadairePoint,
+  ChangementGranule,
+  AlerteRation,
+  ScoreAlimentConfig,
 } from "./calculs";
 
 // Types export PDF/Excel — Sprint 12

@@ -71,6 +71,12 @@ export async function createProduit(siteId: string, data: CreateProduitDTO) {
       prixUnitaire: data.prixUnitaire,
       seuilAlerte: data.seuilAlerte ?? 0,
       fournisseurId: data.fournisseurId ?? null,
+      tailleGranule: data.tailleGranule ?? null,
+      formeAliment: data.formeAliment ?? null,
+      tauxProteines: data.tauxProteines ?? null,
+      tauxLipides: data.tauxLipides ?? null,
+      tauxFibres: data.tauxFibres ?? null,
+      phasesCibles: data.phasesCibles ?? [],
       siteId,
     },
     include: {
@@ -115,6 +121,12 @@ export async function updateProduit(
       ...(data.prixUnitaire !== undefined && { prixUnitaire: data.prixUnitaire }),
       ...(data.seuilAlerte !== undefined && { seuilAlerte: data.seuilAlerte }),
       ...(data.fournisseurId !== undefined && { fournisseurId: data.fournisseurId }),
+      ...(data.tailleGranule !== undefined && { tailleGranule: data.tailleGranule }),
+      ...(data.formeAliment !== undefined && { formeAliment: data.formeAliment }),
+      ...(data.tauxProteines !== undefined && { tauxProteines: data.tauxProteines }),
+      ...(data.tauxLipides !== undefined && { tauxLipides: data.tauxLipides }),
+      ...(data.tauxFibres !== undefined && { tauxFibres: data.tauxFibres }),
+      ...(data.phasesCibles !== undefined && { phasesCibles: data.phasesCibles }),
     },
   });
 

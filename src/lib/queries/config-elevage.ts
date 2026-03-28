@@ -235,7 +235,7 @@ export async function dupliquerConfigElevage(
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id: _id, createdAt: _c, updatedAt: _u, isDefault: _d, nom: _n,
-      alimentTailleConfig, alimentTauxConfig, ...rest } = source;
+      alimentTailleConfig, alimentTauxConfig, scoreAlimentConfig, ...rest } = source;
 
     return tx.configElevage.create({
       data: {
@@ -245,6 +245,8 @@ export async function dupliquerConfigElevage(
         // Cast JSON fields: Prisma returns JsonValue (nullable) but create expects InputJsonValue
         alimentTailleConfig: alimentTailleConfig ?? [],
         alimentTauxConfig: alimentTauxConfig ?? [],
+        // scoreAlimentConfig est nullable — on ne le passe que s'il est non-null
+        ...(scoreAlimentConfig !== null && { scoreAlimentConfig }),
       },
     });
   });

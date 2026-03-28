@@ -929,6 +929,230 @@ export function computeTauxRenouvellement(
   return totalPct / periodeDays;
 }
 
+// ---------------------------------------------------------------------------
+// PLAN-feed-analytics-v2 — FB.1 : ADG, PER, DFR, Ecart ration
+// ---------------------------------------------------------------------------
+
+/**
+ * Calcule l'ADG (Average Daily Gain) — gain de poids moyen quotidien.
+ *
+ * Formule : (poidsFinal - poidsInitial) / jours
+ * Le resultat peut etre negatif (perte de poids intentionnellement autorisee).
+ *
+ * @param poidsInitial - Poids moyen initial en grammes
+ * @param poidsFinal - Poids moyen final en grammes (peut etre < poidsInitial)
+ * @param jours - Nombre de jours entre les deux mesures (doit etre > 0)
+ * @returns ADG en g/jour (peut etre negatif), ou null si donnees insuffisantes
+ */
+export function calculerADG(
+  poidsInitial: number | null,
+  poidsFinal: number | null,
+  jours: number | null
+): number | null {
+  if (
+    poidsInitial == null ||
+    poidsFinal == null ||
+    jours == null ||
+    jours <= 0
+  ) {
+    return null;
+  }
+  // Resultat peut etre negatif intentionnellement (perte de poids)
+  return (poidsFinal - poidsInitial) / jours;
+}
+
+/**
+ * Calcule le PER (Protein Efficiency Ratio) — efficacite proteique.
+ *
+ * Formule : gainPoids(g) / proteinesConsommees(g)
+ *   ou proteinesConsommees(g) = quantiteAliment(kg) * 1000 * (tauxProteines / 100)
+ *
+ * CONTRAT CALLER : gainPoids DOIT etre en grammes (population totale, pas individu).
+ * Exemple correct : gainBiomasse(kg) * 1000 = gainPoids(g).
+ *
+ * @param gainPoidsG - Gain de poids total de la population en GRAMMES
+ * @param quantiteAlimentKg - Quantite d'aliment consommee en kg
+ * @param tauxProteinesPct - Taux de proteines en % MS (ex: 42 pour 42%)
+ * @returns PER sans unite, ou null si donnees insuffisantes
+ */
+export function calculerPER(
+  gainPoidsG: number | null,
+  quantiteAlimentKg: number | null,
+  tauxProteinesPct: number | null
+): number | null {
+  if (
+    gainPoidsG == null ||
+    quantiteAlimentKg == null ||
+    tauxProteinesPct == null ||
+    quantiteAlimentKg <= 0 ||
+    tauxProteinesPct <= 0
+  ) {
+    return null;
+  }
+  const proteinesConsommees = (quantiteAlimentKg * 1000) * (tauxProteinesPct / 100);
+  if (proteinesConsommees <= 0) return null;
+  return gainPoidsG / proteinesConsommees;
+}
+
+/**
+ * Calcule le DFR (Daily Feeding Rate) — taux d'alimentation quotidien.
+ *
+ * Formule : (quantiteJournaliere / biomasse) x 100
+ * Benchmark Clarias : 2-5 % biomasse/jour selon phase
+ *
+ * @param quantiteJournaliereKg - Quantite d'aliment distribuee en kg ce jour
+ * @param biomasseKg - Biomasse estimee en kg
+ * @returns DFR en % de la biomasse, ou null si donnees insuffisantes
+ */
+export function calculerDFR(
+  quantiteJournaliereKg: number | null,
+  biomasseKg: number | null
+): number | null {
+  if (
+    quantiteJournaliereKg == null ||
+    biomasseKg == null ||
+    biomasseKg <= 0
+  ) {
+    return null;
+  }
+  return (quantiteJournaliereKg / biomasseKg) * 100;
+}
+
+/**
+ * Calcule l'ecart entre ration reelle et ration theorique.
+ *
+ * Formule : ((reel - theorique) / theorique) x 100
+ * Positif = sur-alimentation, Negatif = sous-alimentation.
+ * Seuil d'alerte : ecart > 20% sur 3 releves consecutifs.
+ *
+ * @param consommeKg - Quantite reellement distribuee en kg
+ * @param rationTheoriqueKg - Ration theorique calculee depuis ConfigElevage en kg
+ * @returns Ecart en %, ou null si donnees insuffisantes
+ */
+export function calculerEcartRation(
+  consommeKg: number | null,
+  rationTheoriqueKg: number | null
+): number | null {
+  if (
+    consommeKg == null ||
+    rationTheoriqueKg == null ||
+    rationTheoriqueKg <= 0
+  ) {
+    return null;
+  }
+  return ((consommeKg - rationTheoriqueKg) / rationTheoriqueKg) * 100;
+}
+
+// ---------------------------------------------------------------------------
+// PLAN-feed-analytics-v2 — FB.2 : Score qualite aliment /10
+// ---------------------------------------------------------------------------
+
+/**
+ * Interface de configuration des seuils du score qualite aliment.
+ * Stockee en JSON dans ConfigElevage.scoreAlimentConfig.
+ * Si absent, les valeurs par defaut sont utilisees.
+ */
+export interface ScoreAlimentConfig {
+  /** Seuil FCR min (lower is better). Defaut : 1.0 */
+  fcrMin: number;
+  /** Seuil FCR max (= score 0). Defaut : 3.0 */
+  fcrMax: number;
+  /** Seuil SGR max (%/j, higher is better). Defaut : 4.0 */
+  sgrMax: number;
+  /** Seuil cout/kg gain bas (score max). Configurable selon monnaie locale. */
+  coutKgMin: number;
+  /** Seuil cout/kg gain haut (score 0). */
+  coutKgMax: number;
+  /** Seuil survie bas (score 0). Defaut : 70 */
+  survieMin: number;
+}
+
+export const DEFAULT_SCORE_CONFIG: ScoreAlimentConfig = {
+  fcrMin: 1.0,
+  fcrMax: 3.0,
+  sgrMax: 4.0,
+  coutKgMin: 500,   // Remplacer par une valeur relative si multi-devise
+  coutKgMax: 4000,  // idem
+  survieMin: 70,
+};
+
+/**
+ * Calcule le score qualite d'un aliment sur 10 (multicriteres).
+ *
+ * Algorithme pondere (correction bug v1 — E4) :
+ *   FCR    : 40% du score (lower is better)
+ *   SGR    : 25% du score (higher is better)
+ *   Cout/kg: 25% du score (lower is better, seuils configurables)
+ *   Survie : 10% du score (higher is better)
+ *
+ * CORRECTION BUG v1 : la formule finale est `score / poidsTotal` sans `* 10`.
+ * Chaque composante est deja normalisee sur 10, puis ponderee.
+ * `score / poidsTotal` ramene a l'echelle 0-10 correcte sans double-scaling.
+ *
+ * GUARD (E3) : si fcr <= 0, retourner null (FCR nul ou negatif est invalide).
+ * GUARD (E9) : si fcr == null ET sgr == null, retourner null.
+ *
+ * @param fcr - FCR moyen pondere. Guard : null ou <= 0 => ignore
+ * @param sgr - SGR moyen en %/jour
+ * @param coutKg - Cout par kg de gain (dans la devise configuree)
+ * @param tauxSurvie - Taux de survie moyen en %
+ * @param config - Seuils configurables. Null = DEFAULT_SCORE_CONFIG
+ * @returns Score entre 0 et 10, ou null si donnees insuffisantes
+ */
+export function calculerScoreAliment(
+  fcr: number | null,
+  sgr: number | null,
+  coutKg: number | null,
+  tauxSurvie: number | null,
+  config?: ScoreAlimentConfig | null
+): number | null {
+  if (fcr == null && sgr == null) return null;
+
+  const c = config ?? DEFAULT_SCORE_CONFIG;
+  let score = 0;
+  let poidsTotal = 0;
+
+  // FCR — 40%
+  // Guard E3 : FCR <= 0 est invalide (ne pas le traiter comme parfait)
+  if (fcr !== null && fcr > 0) {
+    const fcrRange = c.fcrMax - c.fcrMin;
+    const fcrNorm = Math.max(0, Math.min(10, 10 - ((fcr - c.fcrMin) / fcrRange) * 10));
+    score += fcrNorm * 0.4;
+    poidsTotal += 0.4;
+  }
+
+  // SGR — 25%
+  if (sgr !== null) {
+    const sgrNorm = Math.max(0, Math.min(10, (sgr / c.sgrMax) * 10));
+    score += sgrNorm * 0.25;
+    poidsTotal += 0.25;
+  }
+
+  // Cout/kg — 25%
+  if (coutKg !== null) {
+    const coutRange = c.coutKgMax - c.coutKgMin;
+    const coutNorm = Math.max(0, Math.min(10, 10 - ((coutKg - c.coutKgMin) / coutRange) * 10));
+    score += coutNorm * 0.25;
+    poidsTotal += 0.25;
+  }
+
+  // Survie — 10%
+  if (tauxSurvie !== null) {
+    const survieRange = 100 - c.survieMin;
+    const survieNorm = Math.max(0, Math.min(10, ((tauxSurvie - c.survieMin) / survieRange) * 10));
+    score += survieNorm * 0.1;
+    poidsTotal += 0.1;
+  }
+
+  if (poidsTotal <= 0) return null;
+
+  // CORRECTION v1 (E4) : score / poidsTotal sans * 10
+  // Chaque composante est deja normalisee sur 10 avant ponderation.
+  // score / poidsTotal ramene sur l'echelle 0-10 correcte.
+  const scoreAjuste = score / poidsTotal;
+  return Math.round(scoreAjuste * 10) / 10;
+}
+
 /**
  * Convertit une quantite entre unites de stock.
  *

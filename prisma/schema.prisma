@@ -421,6 +421,36 @@ enum StatutLotAlevins {
 }
 
 // ──────────────────────────────────────────
+// Enums — Feed Analytics (Sprint FA)
+// ──────────────────────────────────────────
+
+enum TailleGranule {
+  P0
+  P1
+  P2
+  P3
+  G1
+  G2
+  G3
+  G4
+  G5
+}
+
+enum FormeAliment {
+  FLOTTANT
+  COULANT
+  SEMI_FLOTTANT
+  POUDRE
+}
+
+enum ComportementAlimentaire {
+  VORACE
+  NORMAL
+  FAIBLE
+  REFUSE
+}
+
+// ──────────────────────────────────────────
 // Modèles — Multi-tenancy
 // ──────────────────────────────────────────
 
@@ -538,6 +568,8 @@ model ConfigElevage {
   alimentTailleConfig Json
   /** JSON: [{phase, tauxMin, tauxMax, frequence, notes}] */
   alimentTauxConfig   Json
+  /** JSON: [{phase, scoreMin, scoreMax, label, couleur}] — Feed Analytics (Sprint FA) */
+  scoreAlimentConfig  Json?
 
   // ── Benchmarks : FCR (lower is better) ──────────
   fcrExcellentMax    Float @default(1.5)
@@ -864,6 +896,9 @@ model Releve {
   typeAliment       TypeAliment?
   quantiteAliment   Float?
   frequenceAliment  Int?
+  // Feed Analytics (Sprint FA)
+  tauxRefus         Float?                   // valeurs : 0, 10, 25, 50
+  comportementAlim  ComportementAlimentaire?
 
   // Champs qualité eau
   temperature       Float?
@@ -942,6 +977,13 @@ model Produit {
   fournisseurId  String?
   fournisseur    Fournisseur?     @relation(fields: [fournisseurId], references: [id], onDelete: SetNull)
   isActive       Boolean          @default(true)
+  // Feed Analytics (Sprint FA) — caractéristiques nutritionnelles aliment
+  tailleGranule  TailleGranule?
+  formeAliment   FormeAliment?
+  tauxProteines  Float?
+  tauxLipides    Float?
+  tauxFibres     Float?
+  phasesCibles   PhaseElevage[]
   siteId         String
   site           Site             @relation(fields: [siteId], references: [id])
   mouvements     MouvementStock[]
@@ -975,8 +1017,11 @@ model MouvementStock {
   releve     Releve?       @relation(fields: [releveId], references: [id])
   userId     String
   user       User          @relation(fields: [userId], references: [id])
-  date       DateTime
-  notes      String?
+  date           DateTime
+  notes          String?
+  // Feed Analytics (Sprint FA) — traçabilité lot
+  datePeremption DateTime?
+  lotFabrication String?
   siteId     String
   site       Site          @relation(fields: [siteId], references: [id])
   createdAt  DateTime      @default(now())

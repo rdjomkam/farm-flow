@@ -102,6 +102,8 @@ const FORM_DEFAULTS: Omit<ConfigElevage, "id" | "siteId" | "createdAt" | "update
   // Recolte
   recoltePartiellePoidsSeuil: 500,
   recolteJeuneAvantJours: 1,
+  // Score aliment (FA.1)
+  scoreAlimentConfig: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -299,6 +301,7 @@ export function ConfigElevageFormClient({ templates }: Props) {
       eauChangementIntervalleJours: tpl.eauChangementIntervalleJours,
       recoltePartiellePoidsSeuil: tpl.recoltePartiellePoidsSeuil,
       recolteJeuneAvantJours: tpl.recolteJeuneAvantJours,
+      scoreAlimentConfig: tpl.scoreAlimentConfig ?? null,
     });
   };
 

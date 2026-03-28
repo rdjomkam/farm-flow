@@ -120,6 +120,8 @@ export async function createReleve(siteId: string, userId: string, data: CreateR
         ...("frequenceAliment" in data && {
           frequenceAliment: data.frequenceAliment,
         }),
+        ...("tauxRefus" in data && { tauxRefus: data.tauxRefus ?? null }),
+        ...("comportementAlim" in data && { comportementAlim: data.comportementAlim ?? null }),
         // Champs qualite eau
         ...("temperature" in data && { temperature: data.temperature }),
         ...("ph" in data && { ph: data.ph }),
@@ -257,7 +259,7 @@ export async function getReleveById(siteId: string, id: string) {
 const champsParType: Record<string, string[]> = {
   [TypeReleveEnum.BIOMETRIE]: ["poidsMoyen", "tailleMoyenne", "echantillonCount"],
   [TypeReleveEnum.MORTALITE]: ["nombreMorts", "causeMortalite"],
-  [TypeReleveEnum.ALIMENTATION]: ["quantiteAliment", "typeAliment", "frequenceAliment"],
+  [TypeReleveEnum.ALIMENTATION]: ["quantiteAliment", "typeAliment", "frequenceAliment", "tauxRefus", "comportementAlim"],
   [TypeReleveEnum.QUALITE_EAU]: ["temperature", "ph", "oxygene", "ammoniac"],
   [TypeReleveEnum.COMPTAGE]: ["nombreCompte", "methodeComptage"],
   [TypeReleveEnum.OBSERVATION]: ["description"],

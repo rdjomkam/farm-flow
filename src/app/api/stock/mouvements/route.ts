@@ -77,6 +77,30 @@ export async function POST(request: NextRequest) {
       errors.push({ field: "prixTotal", message: "Le prix total doit etre un nombre >= 0." });
     }
 
+    // Validation datePeremption (optionnel, pertinent uniquement pour ENTREE)
+    let datePeremption: Date | undefined;
+    if (body.datePeremption !== undefined && body.datePeremption !== null) {
+      const parsed = new Date(body.datePeremption);
+      if (isNaN(parsed.getTime())) {
+        errors.push({
+          field: "datePeremption",
+          message: "La date de peremption est invalide (format ISO 8601 attendu).",
+        });
+      } else {
+        datePeremption = parsed;
+      }
+    }
+
+    // Validation lotFabrication (optionnel, pertinent uniquement pour ENTREE)
+    if (body.lotFabrication !== undefined && body.lotFabrication !== null) {
+      if (typeof body.lotFabrication !== "string" || body.lotFabrication.trim() === "") {
+        errors.push({
+          field: "lotFabrication",
+          message: "Le numero de lot de fabrication doit etre une chaine non vide.",
+        });
+      }
+    }
+
     if (errors.length > 0) {
       return NextResponse.json(
         { status: 400, message: "Erreurs de validation", errors },
@@ -93,6 +117,8 @@ export async function POST(request: NextRequest) {
       vagueId: body.vagueId || undefined,
       commandeId: body.commandeId || undefined,
       notes: body.notes?.trim() || undefined,
+      ...(datePeremption !== undefined && { datePeremption: datePeremption.toISOString() }),
+      ...(body.lotFabrication !== undefined && body.lotFabrication !== null && { lotFabrication: body.lotFabrication.trim() }),
     };
 
     const mouvement = await createMouvement(auth.activeSiteId, auth.userId, data);

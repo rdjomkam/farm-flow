@@ -6,11 +6,14 @@ import {
 } from "@/lib/queries/produits";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { Permission, CategorieProduit, UniteStock } from "@/types";
+import { Permission, CategorieProduit, UniteStock, TailleGranule, FormeAliment, PhaseElevage } from "@/types";
 import type { UpdateProduitDTO } from "@/types";
 
 const VALID_CATEGORIES = Object.values(CategorieProduit);
 const VALID_UNITES = Object.values(UniteStock);
+const VALID_TAILLE_GRANULE = Object.values(TailleGranule);
+const VALID_FORME_ALIMENT = Object.values(FormeAliment);
+const VALID_PHASES_ELEVAGE = Object.values(PhaseElevage);
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -107,6 +110,59 @@ export async function PUT(request: NextRequest, { params }: Params) {
       }
     }
 
+    // Validation champs analytiques aliment (optionnels)
+    if (body.tailleGranule !== undefined && body.tailleGranule !== null) {
+      if (!VALID_TAILLE_GRANULE.includes(body.tailleGranule)) {
+        errors.push({
+          field: "tailleGranule",
+          message: `La taille de granule doit etre : ${VALID_TAILLE_GRANULE.join(", ")}.`,
+        });
+      }
+    }
+
+    if (body.formeAliment !== undefined && body.formeAliment !== null) {
+      if (!VALID_FORME_ALIMENT.includes(body.formeAliment)) {
+        errors.push({
+          field: "formeAliment",
+          message: `La forme de l'aliment doit etre : ${VALID_FORME_ALIMENT.join(", ")}.`,
+        });
+      }
+    }
+
+    if (body.tauxProteines !== undefined && body.tauxProteines !== null) {
+      if (typeof body.tauxProteines !== "number" || body.tauxProteines < 0 || body.tauxProteines > 100) {
+        errors.push({ field: "tauxProteines", message: "Le taux de proteines doit etre un nombre entre 0 et 100." });
+      }
+    }
+
+    if (body.tauxLipides !== undefined && body.tauxLipides !== null) {
+      if (typeof body.tauxLipides !== "number" || body.tauxLipides < 0 || body.tauxLipides > 100) {
+        errors.push({ field: "tauxLipides", message: "Le taux de lipides doit etre un nombre entre 0 et 100." });
+      }
+    }
+
+    if (body.tauxFibres !== undefined && body.tauxFibres !== null) {
+      if (typeof body.tauxFibres !== "number" || body.tauxFibres < 0 || body.tauxFibres > 100) {
+        errors.push({ field: "tauxFibres", message: "Le taux de fibres doit etre un nombre entre 0 et 100." });
+      }
+    }
+
+    if (body.phasesCibles !== undefined && body.phasesCibles !== null) {
+      if (!Array.isArray(body.phasesCibles)) {
+        errors.push({ field: "phasesCibles", message: "Les phases cibles doivent etre un tableau." });
+      } else {
+        const invalidPhases = body.phasesCibles.filter(
+          (p: unknown) => !VALID_PHASES_ELEVAGE.includes(p as PhaseElevage)
+        );
+        if (invalidPhases.length > 0) {
+          errors.push({
+            field: "phasesCibles",
+            message: `Phases invalides : ${invalidPhases.join(", ")}. Valeurs acceptees : ${VALID_PHASES_ELEVAGE.join(", ")}.`,
+          });
+        }
+      }
+    }
+
     if (errors.length > 0) {
       return NextResponse.json(
         { status: 400, message: "Erreurs de validation", errors },
@@ -123,6 +179,12 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (body.fournisseurId !== undefined) data.fournisseurId = body.fournisseurId;
     if (body.uniteAchat !== undefined) data.uniteAchat = body.uniteAchat;
     if (body.contenance !== undefined) data.contenance = body.contenance;
+    if (body.tailleGranule !== undefined) data.tailleGranule = body.tailleGranule;
+    if (body.formeAliment !== undefined) data.formeAliment = body.formeAliment;
+    if (body.tauxProteines !== undefined) data.tauxProteines = body.tauxProteines;
+    if (body.tauxLipides !== undefined) data.tauxLipides = body.tauxLipides;
+    if (body.tauxFibres !== undefined) data.tauxFibres = body.tauxFibres;
+    if (body.phasesCibles !== undefined) data.phasesCibles = body.phasesCibles;
 
     const produit = await updateProduit(id, auth.activeSiteId, data);
     return NextResponse.json(produit);

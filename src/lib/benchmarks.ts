@@ -248,3 +248,108 @@ export function benchmarkBgColor(level: BenchmarkLevel | null): string {
       return "bg-muted";
   }
 }
+
+// ---------------------------------------------------------------------------
+// PLAN-feed-analytics-v2 — FB.3 : Benchmarks par phase pour Clarias gariepinus
+// ---------------------------------------------------------------------------
+
+/**
+ * Benchmarks FCR differencies par phase d'elevage.
+ * Source : FAO / CIRAD Clarias gariepinus guidelines.
+ * FCR : lower is better.
+ */
+export const BENCHMARK_FCR_PAR_PHASE: Record<
+  string,
+  { excellent: number; bon: number; acceptable: number }
+> = {
+  ACCLIMATATION:    { excellent: 1.2, bon: 1.5, acceptable: 2.0 },
+  CROISSANCE_DEBUT: { excellent: 1.3, bon: 1.6, acceptable: 2.0 },
+  JUVENILE:         { excellent: 1.4, bon: 1.8, acceptable: 2.2 },
+  GROSSISSEMENT:    { excellent: 1.5, bon: 1.9, acceptable: 2.5 },
+  FINITION:         { excellent: 1.6, bon: 2.0, acceptable: 2.8 },
+  PRE_RECOLTE:      { excellent: 1.8, bon: 2.2, acceptable: 3.0 },
+} as const;
+
+/**
+ * Benchmarks SGR differencies par phase.
+ * SGR : higher is better. Valeurs en %/jour.
+ */
+export const BENCHMARK_SGR_PAR_PHASE: Record<
+  string,
+  { excellent: number; bon: number; acceptable: number }
+> = {
+  ACCLIMATATION:    { excellent: 4.0, bon: 3.0, acceptable: 2.0 },
+  CROISSANCE_DEBUT: { excellent: 3.5, bon: 2.5, acceptable: 1.8 },
+  JUVENILE:         { excellent: 3.0, bon: 2.0, acceptable: 1.5 },
+  GROSSISSEMENT:    { excellent: 2.5, bon: 1.8, acceptable: 1.2 },
+  FINITION:         { excellent: 2.0, bon: 1.5, acceptable: 1.0 },
+  PRE_RECOLTE:      { excellent: 1.5, bon: 1.0, acceptable: 0.7 },
+} as const;
+
+/**
+ * Benchmarks ADG (Average Daily Gain) par stade de poids.
+ * Valeurs en g/jour.
+ *
+ * FRONTIERES : poidsMin inclusif, poidsMax exclusif.
+ * Ex : fingerling couvre [0, 30[, juvenile couvre [30, 150[, etc.
+ */
+export const BENCHMARK_ADG_PAR_STADE: Record<
+  string,
+  { label: string; poidsMin: number; poidsMax: number; excellent: number; bon: number }
+> = {
+  fingerling: { label: "Fingerling (<30g)",     poidsMin: 0,   poidsMax: 30,       excellent: 1.5, bon: 1.0 },
+  juvenile:   { label: "Juvenile (30-150g)",    poidsMin: 30,  poidsMax: 150,      excellent: 3.0, bon: 2.0 },
+  subadulte:  { label: "Sub-adulte (150-400g)", poidsMin: 150, poidsMax: 400,      excellent: 5.0, bon: 3.5 },
+  adulte:     { label: "Adulte (>=400g)",       poidsMin: 400, poidsMax: Infinity, excellent: 6.0, bon: 4.0 },
+} as const;
+
+/**
+ * Benchmark DFR (Daily Feeding Rate) en % biomasse/jour.
+ */
+export const BENCHMARK_DFR_PAR_PHASE: Record<
+  string,
+  { min: number; max: number; optimal: number }
+> = {
+  ACCLIMATATION:    { min: 8,   max: 15, optimal: 10  },
+  CROISSANCE_DEBUT: { min: 5,   max: 8,  optimal: 6   },
+  JUVENILE:         { min: 3,   max: 5,  optimal: 4   },
+  GROSSISSEMENT:    { min: 2,   max: 4,  optimal: 3   },
+  FINITION:         { min: 1.5, max: 3,  optimal: 2   },
+  PRE_RECOLTE:      { min: 1,   max: 2,  optimal: 1.5 },
+} as const;
+
+/**
+ * Retourne les seuils FCR pour une phase donnee.
+ */
+export function getBenchmarkFCRPourPhase(phase: string | null): BenchmarkRange {
+  if (!phase || !(phase in BENCHMARK_FCR_PAR_PHASE)) {
+    return BENCHMARK_FCR;
+  }
+  const seuils = BENCHMARK_FCR_PAR_PHASE[phase];
+  return {
+    label: "fcr",
+    unit: "",
+    excellent: { min: 0, max: seuils.excellent },
+    bon: { min: seuils.excellent, max: seuils.bon },
+    acceptable: { min: seuils.bon, max: seuils.acceptable },
+  };
+}
+
+/**
+ * Retourne les seuils ADG pour un poids moyen donne.
+ * Frontieres : poidsMin inclusif, poidsMax exclusif.
+ */
+export function getBenchmarkADGPourPoids(poidsMoyen: number | null): BenchmarkRange | null {
+  if (poidsMoyen == null) return null;
+  const stade = Object.values(BENCHMARK_ADG_PAR_STADE).find(
+    (s) => poidsMoyen >= s.poidsMin && poidsMoyen < s.poidsMax
+  );
+  if (!stade) return null;
+  return {
+    label: "adg",
+    unit: "g/j",
+    excellent: { min: stade.excellent, max: Infinity },
+    bon: { min: stade.bon, max: stade.excellent },
+    acceptable: { min: 0, max: stade.bon },
+  };
+}

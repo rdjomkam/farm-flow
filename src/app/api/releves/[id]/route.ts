@@ -8,6 +8,7 @@ import {
   TypeAliment,
   MethodeComptage,
   Permission,
+  ComportementAlimentaire,
 } from "@/types";
 import type { UpdateReleveDTO } from "@/types";
 import { prisma } from "@/lib/db";
@@ -144,6 +145,49 @@ export async function PUT(
       }
     }
 
+    // Validation tauxRefus et comportementAlim — valides uniquement pour ALIMENTATION
+    const hasTauxRefus = body.tauxRefus !== undefined && body.tauxRefus !== null;
+    const hasComportementAlim = body.comportementAlim !== undefined && body.comportementAlim !== null;
+    if (hasTauxRefus || hasComportementAlim) {
+      // Recuperer le typeReleve existant depuis la DB
+      const existingReleve = await prisma.releve.findFirst({
+        where: { id, siteId: auth.activeSiteId },
+        select: { typeReleve: true },
+      });
+      const typeReleveExistant = existingReleve?.typeReleve;
+
+      if (hasTauxRefus) {
+        if (typeReleveExistant !== TypeReleve.ALIMENTATION) {
+          errors.push({
+            field: "tauxRefus",
+            message: "Le taux de refus est valide uniquement pour un releve de type ALIMENTATION.",
+          });
+        } else {
+          const TAUX_REFUS_VALIDES = [0, 10, 25, 50];
+          if (!TAUX_REFUS_VALIDES.includes(body.tauxRefus)) {
+            errors.push({
+              field: "tauxRefus",
+              message: `Le taux de refus doit etre l'une des valeurs : ${TAUX_REFUS_VALIDES.join(", ")}.`,
+            });
+          }
+        }
+      }
+
+      if (hasComportementAlim) {
+        if (typeReleveExistant !== TypeReleve.ALIMENTATION) {
+          errors.push({
+            field: "comportementAlim",
+            message: "Le comportement alimentaire est valide uniquement pour un releve de type ALIMENTATION.",
+          });
+        } else if (!Object.values(ComportementAlimentaire).includes(body.comportementAlim as ComportementAlimentaire)) {
+          errors.push({
+            field: "comportementAlim",
+            message: `Le comportement alimentaire doit etre : ${Object.values(ComportementAlimentaire).join(", ")}.`,
+          });
+        }
+      }
+    }
+
     if (errors.length > 0) {
       return NextResponse.json(
         { status: 400, message: "Erreurs de validation", errors },
@@ -174,6 +218,8 @@ export async function PUT(
     if (body.pourcentageRenouvellement !== undefined) data.pourcentageRenouvellement = body.pourcentageRenouvellement;
     if (body.volumeRenouvele !== undefined) data.volumeRenouvele = body.volumeRenouvele;
     if (body.nombreRenouvellements !== undefined) data.nombreRenouvellements = body.nombreRenouvellements;
+    if (body.tauxRefus !== undefined) data.tauxRefus = body.tauxRefus;
+    if (body.comportementAlim !== undefined) data.comportementAlim = body.comportementAlim;
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json(
@@ -320,6 +366,49 @@ export async function PATCH(
       }
     }
 
+    // Validation tauxRefus et comportementAlim — valides uniquement pour ALIMENTATION
+    const hasTauxRefusPatch = body.tauxRefus !== undefined && body.tauxRefus !== null;
+    const hasComportementAlimPatch = body.comportementAlim !== undefined && body.comportementAlim !== null;
+    if (hasTauxRefusPatch || hasComportementAlimPatch) {
+      // Recuperer le typeReleve existant depuis la DB
+      const existingRelevePatch = await prisma.releve.findFirst({
+        where: { id, siteId: auth.activeSiteId },
+        select: { typeReleve: true },
+      });
+      const typeReleveExistantPatch = existingRelevePatch?.typeReleve;
+
+      if (hasTauxRefusPatch) {
+        if (typeReleveExistantPatch !== TypeReleve.ALIMENTATION) {
+          errors.push({
+            field: "tauxRefus",
+            message: "Le taux de refus est valide uniquement pour un releve de type ALIMENTATION.",
+          });
+        } else {
+          const TAUX_REFUS_VALIDES = [0, 10, 25, 50];
+          if (!TAUX_REFUS_VALIDES.includes(body.tauxRefus)) {
+            errors.push({
+              field: "tauxRefus",
+              message: `Le taux de refus doit etre l'une des valeurs : ${TAUX_REFUS_VALIDES.join(", ")}.`,
+            });
+          }
+        }
+      }
+
+      if (hasComportementAlimPatch) {
+        if (typeReleveExistantPatch !== TypeReleve.ALIMENTATION) {
+          errors.push({
+            field: "comportementAlim",
+            message: "Le comportement alimentaire est valide uniquement pour un releve de type ALIMENTATION.",
+          });
+        } else if (!Object.values(ComportementAlimentaire).includes(body.comportementAlim as ComportementAlimentaire)) {
+          errors.push({
+            field: "comportementAlim",
+            message: `Le comportement alimentaire doit etre : ${Object.values(ComportementAlimentaire).join(", ")}.`,
+          });
+        }
+      }
+    }
+
     if (errors.length > 0) {
       return NextResponse.json({ status: 400, message: "Erreurs de validation", errors }, { status: 400 });
     }
@@ -347,6 +436,8 @@ export async function PATCH(
     if (body.pourcentageRenouvellement !== undefined) data.pourcentageRenouvellement = body.pourcentageRenouvellement;
     if (body.volumeRenouvele !== undefined) data.volumeRenouvele = body.volumeRenouvele;
     if (body.nombreRenouvellements !== undefined) data.nombreRenouvellements = body.nombreRenouvellements;
+    if (body.tauxRefus !== undefined) data.tauxRefus = body.tauxRefus;
+    if (body.comportementAlim !== undefined) data.comportementAlim = body.comportementAlim;
 
     // 6. Verifier qu'au moins un champ metier est fourni (hors raison)
     if (Object.keys(data).length === 0) {

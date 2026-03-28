@@ -8,6 +8,7 @@
  * + Sprint 30 : PlanAbonnement, Abonnement, PaiementAbonnement, Remise, RemiseApplication, CommissionIngenieur, PortefeuilleIngenieur, RetraitPortefeuille (8 modeles)
  * 36 enums : Role (+ INGENIEUR), Permission (+ 6 Phase 3), StatutVague, TypeReleve (+ RENOUVELLEMENT), TypeAliment, CauseMortalite, MethodeComptage, CategorieProduit, UniteStock, TypeMouvement, StatutCommande, StatutFacture, ModePaiement, SiteModule, SexeReproducteur, StatutReproducteur, StatutPonte, StatutLotAlevins, TypeAlerte (+ 4 density), StatutAlerte, TypeActivite (+ TRI/MEDICATION/RENOUVELLEMENT), StatutActivite, Recurrence, CategorieDepense, StatutDepense, FrequenceRecurrence, StatutBesoins, PhaseElevage, StatutActivation, TypeDeclencheur (+ 3 density), VisibiliteNote, CategorieCalibrage, TypeSystemeBac, OperateurCondition, LogiqueCondition, SeveriteAlerte
  * + Sprint 30 : TypePlan, PeriodeFacturation, StatutAbonnement, StatutPaiementAbo, TypeRemise, StatutCommissionIng, FournisseurPaiement (7 enums) + 8 nouvelles permissions
+ * + Sprint FA : TailleGranule, FormeAliment, ComportementAlimentaire (3 enums)
  */
 
 // ---------------------------------------------------------------------------
@@ -516,6 +517,10 @@ export interface Releve {
   typeAliment: TypeAliment | null;
   /** Nombre de distributions par jour */
   frequenceAliment: number | null;
+  /** Taux de refus en % — valeurs : 0, 10, 25, 50. Valide uniquement si typeReleve === ALIMENTATION */
+  tauxRefus: number | null;
+  /** Comportement alimentaire observe. Valide uniquement si typeReleve === ALIMENTATION */
+  comportementAlim: ComportementAlimentaire | null;
 
   // --- Champs qualite eau ---
   /** Temperature de l'eau en degres Celsius */
@@ -644,6 +649,19 @@ export interface Produit {
   /** Fournisseur par defaut (nullable) */
   fournisseurId: string | null;
   isActive: boolean;
+  // --- Champs analytiques aliment (Sprint FA) ---
+  /** Taille du granule — valide uniquement si categorie === ALIMENT */
+  tailleGranule: TailleGranule | null;
+  /** Forme physique de l'aliment — valide uniquement si categorie === ALIMENT */
+  formeAliment: FormeAliment | null;
+  /** Taux de proteines brutes (%) — valide uniquement si categorie === ALIMENT */
+  tauxProteines: number | null;
+  /** Taux de lipides bruts (%) — valide uniquement si categorie === ALIMENT */
+  tauxLipides: number | null;
+  /** Taux de fibres brutes (%) — valide uniquement si categorie === ALIMENT */
+  tauxFibres: number | null;
+  /** Phases d'elevage cibles pour cet aliment — tableau vide = toutes phases */
+  phasesCibles: PhaseElevage[];
   /** ID du site (ferme) — R8 */
   siteId: string;
   createdAt: Date;
@@ -672,10 +690,16 @@ export interface MouvementStock {
   vagueId: string | null;
   /** Commande associee si entree de livraison */
   commandeId: string | null;
+  /** ID du releve source (null si non lie a un releve) */
+  releveId: string | null;
   /** Utilisateur ayant effectue le mouvement */
   userId: string;
   date: Date;
   notes: string | null;
+  /** Date de peremption du lot recu — pertinent uniquement pour ENTREE/ALIMENT */
+  datePeremption: Date | null;
+  /** Numero de lot fabricant — tracabilite */
+  lotFabrication: string | null;
   /** ID du site (ferme) — R8 */
   siteId: string;
   createdAt: Date;
@@ -1766,6 +1790,39 @@ export enum PhaseElevage {
 }
 
 // ---------------------------------------------------------------------------
+// Enums — Feed Analytics (Sprint FA)
+// ---------------------------------------------------------------------------
+
+/** Taille de granule d'un aliment commercial */
+export enum TailleGranule {
+  P0 = "P0",
+  P1 = "P1",
+  P2 = "P2",
+  P3 = "P3",
+  G1 = "G1",
+  G2 = "G2",
+  G3 = "G3",
+  G4 = "G4",
+  G5 = "G5",
+}
+
+/** Forme physique d'un aliment */
+export enum FormeAliment {
+  FLOTTANT = "FLOTTANT",
+  COULANT = "COULANT",
+  SEMI_FLOTTANT = "SEMI_FLOTTANT",
+  POUDRE = "POUDRE",
+}
+
+/** Comportement alimentaire observe lors d'un releve d'alimentation */
+export enum ComportementAlimentaire {
+  VORACE = "VORACE",
+  NORMAL = "NORMAL",
+  FAIBLE = "FAIBLE",
+  REFUSE = "REFUSE",
+}
+
+// ---------------------------------------------------------------------------
 // Enums — Phase 3 : Packs & Provisioning (Sprint 20)
 // ---------------------------------------------------------------------------
 
@@ -1811,6 +1868,27 @@ export interface AlimentTauxEntree {
 // ---------------------------------------------------------------------------
 // Modeles — ConfigElevage (Sprint 19)
 // ---------------------------------------------------------------------------
+
+/**
+ * Configuration des seuils pour le calcul du score qualite aliment.
+ *
+ * Stockee dans ConfigElevage.scoreAlimentConfig (JSON).
+ * Null = utiliser les seuils par defaut dans calculerScoreAliment.
+ */
+export interface ScoreAlimentConfig {
+  /** FCR minimum pour score parfait */
+  fcrMin: number;
+  /** FCR maximum au-dela duquel le score FCR est 0 */
+  fcrMax: number;
+  /** SGR maximum pour score parfait */
+  sgrMax: number;
+  /** Cout par kg de gain minimum en CFA pour score parfait */
+  coutKgMin: number;
+  /** Cout par kg de gain maximum au-dela duquel le score cout est 0 */
+  coutKgMax: number;
+  /** Taux de survie minimum en % pour score parfait */
+  survieMin: number;
+}
 
 /**
  * ConfigElevage — Parametres configurables par site pour piloter le moteur d'elevage.
@@ -1891,6 +1969,8 @@ export interface ConfigElevage {
   // Alimentation alertes
   fcrAlerteMax: number;
   stockJoursAlerte: number;
+  /** Seuils configurables pour le score qualite aliment — null = seuils par defaut */
+  scoreAlimentConfig: ScoreAlimentConfig | null;
 
   // Tri
   triPoidsMin: number;

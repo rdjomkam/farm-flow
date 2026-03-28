@@ -150,7 +150,7 @@ export default async function IngenieurVagueDetailPage({
 
         {/* Releves (read-only: empty permissions array disables edit actions) */}
         <RelevesList
-          releves={vague.releves as Releve[]}
+          releves={vague.releves as unknown as Releve[]}
           permissions={[]}
         />
 

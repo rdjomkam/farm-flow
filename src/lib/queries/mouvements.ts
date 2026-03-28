@@ -97,6 +97,8 @@ export async function createMouvement(
         userId,
         date: new Date(data.date),
         notes: data.notes ?? null,
+        datePeremption: data.datePeremption ? new Date(data.datePeremption) : null,
+        lotFabrication: data.lotFabrication ?? null,
         siteId,
       },
       include: {

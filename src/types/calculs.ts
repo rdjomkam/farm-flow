@@ -5,7 +5,16 @@
  * Les fonctions de calcul correspondantes sont dans src/lib/calculs.ts.
  */
 
-import { StatutVague } from "./models";
+import {
+  StatutVague,
+  TailleGranule,
+  FormeAliment,
+  PhaseElevage,
+  ScoreAlimentConfig,
+} from "./models";
+
+// Re-export pour que les consommateurs n'aient pas a importer depuis models
+export type { ScoreAlimentConfig };
 
 // ---------------------------------------------------------------------------
 // Indicateurs principaux
@@ -387,6 +396,20 @@ export interface AnalytiqueAliment {
   coutParKgGain: number | null;
   /** Taux de survie moyen pendant utilisation */
   tauxSurvieAssocie: number | null;
+  /** Taille du granule — null si non renseignee */
+  tailleGranule: TailleGranule | null;
+  /** Forme physique de l'aliment — null si non renseignee */
+  formeAliment: FormeAliment | null;
+  /** Taux de proteines brutes en % MS — null si non renseigne */
+  tauxProteines: number | null;
+  /** ADG moyen (Average Daily Gain) en g/jour — null si donnees insuffisantes */
+  adgMoyen: number | null;
+  /** PER moyen (Protein Efficiency Ratio) — null si donnees insuffisantes */
+  perMoyen: number | null;
+  /** Score qualite /10. Null si FCR et SGR tous deux absents. */
+  scoreQualite: number | null;
+  /** Phases d'elevage ciblees par cet aliment */
+  phasesCibles: PhaseElevage[];
 }
 
 /**
@@ -426,6 +449,10 @@ export interface DetailAlimentVague {
   sgr: number | null;
   coutParKgGain: number | null;
   periode: { debut: Date; fin: Date | null };
+  /** ADG (Average Daily Gain) en g/jour — null si donnees insuffisantes */
+  adg: number | null;
+  /** PER (Protein Efficiency Ratio) — null si donnees insuffisantes */
+  per: number | null;
 }
 
 /**
@@ -578,3 +605,69 @@ export interface ComparaisonVagues {
   /** Liste des vagues avec leurs indicateurs complets */
   vagues: IndicateursVagueComplet[];
 }
+
+// ---------------------------------------------------------------------------
+// Sprint FB — Feed Analytics v2
+// ---------------------------------------------------------------------------
+
+/**
+ * Filtres pour la page analytics aliments.
+ *
+ * Tous les champs sont optionnels — null ou undefined signifie "pas de filtre".
+ */
+export interface FiltresAnalyticsAliments {
+  phase?: PhaseElevage;
+  tailleGranule?: TailleGranule;
+  formeAliment?: FormeAliment;
+  /** Saison au format "YYYY" ou label metier (ex. "SAISON_SECHE_2026") */
+  saison?: string;
+}
+
+/**
+ * Point de donnees FCR hebdomadaire pour le graphique de tendance.
+ *
+ * Utilise par Recharts LineChart dans la page detail aliment.
+ */
+export interface FCRHebdomadairePoint {
+  /** Semaine au format ISO "YYYY-WNN" (ex. "2026-W12") */
+  semaine: string;
+  /** FCR calcule sur la semaine — null si donnees insuffisantes */
+  fcr: number | null;
+  /** Quantite totale d'aliment distribue cette semaine en kg */
+  quantiteAlimentKg: number;
+  /** Poids moyen interpole en grammes — null si pas de biometrie cette semaine */
+  poidsMoyenG: number | null;
+  /** FCR de reference de la litterature pour comparaison — null si non applicable */
+  benchmarkFCR: number | null;
+}
+
+/**
+ * Detection de changement de granule au cours d'une vague.
+ *
+ * Genere une annotation sur le graphique FCR hebdomadaire.
+ */
+export interface ChangementGranule {
+  date: Date;
+  ancienneTaille: TailleGranule;
+  nouvelleTaille: TailleGranule;
+}
+
+/**
+ * Alerte de ration (sur-alimentation ou sous-alimentation).
+ *
+ * Generee quand l'ecart entre ration distribuee et ration recommandee
+ * depasse un seuil pendant plusieurs releves consecutifs.
+ */
+export interface AlerteRation {
+  vagueId: string;
+  vagueNom: string;
+  /** Type d'ecart detecte */
+  type: "SOUS_ALIMENTATION" | "SUR_ALIMENTATION";
+  /** Ecart moyen en pourcentage (positif = surplus, negatif = deficit) */
+  ecartMoyenPct: number;
+  /** Nombre de releves consecutifs avec l'ecart detecte */
+  relevesConsecutifs: number;
+}
+
+// ScoreAlimentConfig est definie dans models.ts (evite la dependance circulaire)
+// et re-exportee depuis ce fichier via le re-export en haut.
