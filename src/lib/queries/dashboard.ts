@@ -12,6 +12,7 @@ import {
   calculerAlimentRestantEstime,
   calculerRevenuAttendu,
   genererCourbeProjection,
+  computeNombreVivantsVague,
 } from "@/lib/calculs";
 import { getConfigElevageDefaut } from "@/lib/queries/config-elevage";
 import { CONFIG_ELEVAGE_DEFAULTS } from "@/lib/queries/config-elevage";
@@ -33,6 +34,7 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
       where: { siteId, statut: StatutVague.EN_COURS },
       include: {
         _count: { select: { bacs: true } },
+        bacs: { select: { id: true, nombreInitial: true } },
         releves: {
           orderBy: { date: "asc" },
           select: {
@@ -40,6 +42,7 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
             poidsMoyen: true,
             nombreMorts: true,
             nombreCompte: true,
+            bacId: true,
           },
         },
       },
@@ -51,12 +54,9 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
 
   const vagues: VagueDashboardSummary[] = vaguesActives.map((v) => {
     const biometries = v.releves.filter((r) => r.typeReleve === TypeReleve.BIOMETRIE);
-    const mortalites = v.releves.filter((r) => r.typeReleve === TypeReleve.MORTALITE);
-    const comptages = v.releves.filter((r) => r.typeReleve === TypeReleve.COMPTAGE);
 
     const poidsMoyen = biometries.at(-1)?.poidsMoyen ?? null;
-    const totalMortalites = mortalites.reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
-    const nombreVivants = comptages.at(-1)?.nombreCompte ?? v.nombreInitial - totalMortalites;
+    const nombreVivants = computeNombreVivantsVague(v.bacs, v.releves, v.nombreInitial);
 
     const now = new Date();
     const joursEcoules = Math.floor(
@@ -111,6 +111,7 @@ export async function getProjectionsDashboard(siteId: string): Promise<Projectio
     prisma.vague.findMany({
       where: { siteId, statut: StatutVague.EN_COURS },
       include: {
+        bacs: { select: { id: true, nombreInitial: true } },
         releves: {
           orderBy: { date: "asc" },
           select: {
@@ -120,6 +121,7 @@ export async function getProjectionsDashboard(siteId: string): Promise<Projectio
             nombreMorts: true,
             nombreCompte: true,
             quantiteAliment: true,
+            bacId: true,
           },
         },
       },
@@ -139,13 +141,10 @@ export async function getProjectionsDashboard(siteId: string): Promise<Projectio
       .filter((r) => r.typeReleve === TypeReleve.BIOMETRIE && r.poidsMoyen !== null)
       .sort((a, b) => a.date.getTime() - b.date.getTime());
 
-    const mortalites = v.releves.filter((r) => r.typeReleve === TypeReleve.MORTALITE);
-    const comptages = v.releves.filter((r) => r.typeReleve === TypeReleve.COMPTAGE);
     const alimentations = v.releves.filter((r) => r.typeReleve === TypeReleve.ALIMENTATION);
 
     const poidsMoyenActuel = biometries.at(-1)?.poidsMoyen ?? null;
-    const totalMortalites = mortalites.reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
-    const nombreVivants = comptages.at(-1)?.nombreCompte ?? v.nombreInitial - totalMortalites;
+    const nombreVivants = computeNombreVivantsVague(v.bacs, v.releves, v.nombreInitial);
     const totalAliment = alimentations.reduce((sum, r) => sum + (r.quantiteAliment ?? 0), 0);
 
     const joursEcoules = Math.floor(
@@ -311,7 +310,7 @@ export async function getDashboardIndicateurs(
       where: { siteId, statut: StatutVague.EN_COURS },
       include: {
         bacs: {
-          select: { volume: true },
+          select: { id: true, volume: true, nombreInitial: true },
         },
         releves: {
           orderBy: { date: "asc" },
@@ -322,6 +321,7 @@ export async function getDashboardIndicateurs(
             nombreMorts: true,
             quantiteAliment: true,
             nombreCompte: true,
+            bacId: true,
           },
         },
       },
@@ -365,7 +365,7 @@ export async function getDashboardIndicateurs(
     const poidsMoyen = biometries.at(-1)?.poidsMoyen ?? null;
     const totalMortalites = mortalites.reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
     const totalAliment = alimentations.reduce((sum, r) => sum + (r.quantiteAliment ?? 0), 0);
-    const nombreVivants = comptages.at(-1)?.nombreCompte ?? v.nombreInitial - totalMortalites;
+    const nombreVivants = computeNombreVivantsVague(v.bacs, v.releves, v.nombreInitial);
 
     const now = v.dateFin ?? new Date();
     const joursEcoules = Math.floor(

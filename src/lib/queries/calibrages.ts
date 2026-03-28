@@ -260,6 +260,25 @@ export async function createCalibrage(
       });
     }
 
+    // 8d. COMPTAGE=0 for source-only bacs (now empty after calibrage)
+    for (const sourceBac of sourceBacs) {
+      if (!destBacTotals.has(sourceBac.id)) {
+        await tx.releve.create({
+          data: {
+            date: calibrageDate,
+            typeReleve: TypeReleve.COMPTAGE,
+            nombreCompte: 0,
+            methodeComptage: MethodeComptage.DIRECT,
+            notes: "Comptage post-calibrage (bac source vide)",
+            vagueId: data.vagueId,
+            bacId: sourceBac.id,
+            siteId,
+            calibrageId: calibrage.id,
+          },
+        });
+      }
+    }
+
     return calibrage;
   });
 }
@@ -525,6 +544,25 @@ export async function patchCalibrage(
             calibrageId: id,
           },
         });
+      }
+
+      // COMPTAGE=0 for source-only bacs (now empty after calibrage)
+      for (const sourceBacId of ancienCalibrage.sourceBacIds) {
+        if (!nouveauxDestTotals2.has(sourceBacId)) {
+          await tx.releve.create({
+            data: {
+              date: nouvelleDate,
+              typeReleve: TypeReleve.COMPTAGE,
+              nombreCompte: 0,
+              methodeComptage: MethodeComptage.DIRECT,
+              notes: "Comptage post-calibrage (bac source vide)",
+              vagueId: ancienCalibrage.vague.id,
+              bacId: sourceBacId,
+              siteId,
+              calibrageId: id,
+            },
+          });
+        }
       }
     } else if (data.date !== undefined) {
       // Mettre a jour la date des releves BIOMETRIE et COMPTAGE si seulement la date change

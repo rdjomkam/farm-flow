@@ -15,6 +15,7 @@ import {
   calculerTauxSurvie,
   calculerBiomasse,
   calculerFCR,
+  computeNombreVivantsVague,
 } from "@/lib/calculs";
 
 // ---------------------------------------------------------------------------
@@ -82,22 +83,23 @@ export interface ClientsIngenieurPaginated {
 function calculerSurvieMoyenneVagues(
   vagues: Array<{
     nombreInitial: number;
+    bacs?: Array<{ id: string; nombreInitial: number | null }>;
     releves: Array<{
       typeReleve: string;
       nombreMorts: number | null;
       nombreCompte: number | null;
+      bacId?: string | null;
     }>;
   }>
 ): number | null {
   const survies: number[] = [];
 
   for (const vague of vagues) {
-    const mortalites = vague.releves.filter((r) => r.typeReleve === TypeReleve.MORTALITE);
-    const comptages = vague.releves.filter((r) => r.typeReleve === TypeReleve.COMPTAGE);
-
-    const totalMortalites = mortalites.reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
-    const nombreVivants =
-      comptages.at(-1)?.nombreCompte ?? vague.nombreInitial - totalMortalites;
+    const nombreVivants = computeNombreVivantsVague(
+      vague.bacs ?? [],
+      vague.releves.map(r => ({ ...r, bacId: r.bacId ?? null })),
+      vague.nombreInitial
+    );
 
     const survie = calculerTauxSurvie(nombreVivants, vague.nombreInitial);
     if (survie !== null) {
@@ -135,11 +137,13 @@ export async function getIngenieurDashboardMetrics(
           vagues: {
             where: { statut: StatutVague.EN_COURS },
             include: {
+              bacs: { select: { id: true, nombreInitial: true } },
               releves: {
                 select: {
                   typeReleve: true,
                   nombreMorts: true,
                   nombreCompte: true,
+                  bacId: true,
                 },
               },
             },
@@ -229,11 +233,13 @@ export async function getClientsIngenieur(
             select: {
               id: true,
               nombreInitial: true,
+              bacs: { select: { id: true, nombreInitial: true } },
               releves: {
                 select: {
                   typeReleve: true,
                   nombreMorts: true,
                   nombreCompte: true,
+                  bacId: true,
                   date: true,
                 },
               },
@@ -350,11 +356,13 @@ export async function getClientIngenieurDetail(
             select: {
               id: true,
               nombreInitial: true,
+              bacs: { select: { id: true, nombreInitial: true } },
               releves: {
                 select: {
                   typeReleve: true,
                   nombreMorts: true,
                   nombreCompte: true,
+                  bacId: true,
                   date: true,
                 },
               },

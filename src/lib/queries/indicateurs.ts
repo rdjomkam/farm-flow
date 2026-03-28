@@ -8,6 +8,7 @@ import {
   calculerFCR,
   calculerBiomasse,
   computeVivantsByBac,
+  computeNombreVivantsVague,
 } from "@/lib/calculs";
 
 /**
@@ -145,9 +146,7 @@ export async function getIndicateursVague(
       0
     );
 
-    const dernierComptage = comptages.at(-1);
-    nombreVivants =
-      dernierComptage?.nombreCompte ?? vague.nombreInitial - totalMortalites;
+    nombreVivants = computeNombreVivantsVague(vague.bacs, vague.releves, vague.nombreInitial);
 
     if (biometries.length > 0) {
       const derniereBiometrie = biometries.at(-1);

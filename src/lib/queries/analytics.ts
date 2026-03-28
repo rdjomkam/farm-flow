@@ -26,6 +26,7 @@ import {
   calculerROI,
   genererRecommandation,
   getPrixParUniteBase,
+  computeNombreVivantsVague,
 } from "@/lib/calculs";
 import {
   BENCHMARK_MORTALITE,
@@ -466,6 +467,7 @@ async function computeAlimentMetrics(
       poidsMoyenInitial: true,
       dateDebut: true,
       dateFin: true,
+      bacs: { select: { id: true, nombreInitial: true } },
     },
   });
 
@@ -479,6 +481,7 @@ async function computeAlimentMetrics(
     orderBy: { date: "asc" },
     select: {
       vagueId: true,
+      bacId: true,
       typeReleve: true,
       date: true,
       poidsMoyen: true,
@@ -516,15 +519,11 @@ async function computeAlimentMetrics(
     const biometries = releves
       .filter((r) => r.typeReleve === TypeReleve.BIOMETRIE)
       .sort((a, b) => a.date.getTime() - b.date.getTime());
-    const mortalites = releves.filter((r) => r.typeReleve === TypeReleve.MORTALITE);
-    const comptages = releves.filter((r) => r.typeReleve === TypeReleve.COMPTAGE);
 
     const derniereBio = biometries.at(-1);
     const poidsMoyen = derniereBio?.poidsMoyen ?? null;
 
-    const totalMorts = mortalites.reduce((s, r) => s + (r.nombreMorts ?? 0), 0);
-    const dernierComptage = comptages.at(-1);
-    const nombreVivants = dernierComptage?.nombreCompte ?? vague.nombreInitial - totalMorts;
+    const nombreVivants = computeNombreVivantsVague(vague.bacs, releves, vague.nombreInitial);
 
     const biomasse = calculerBiomasse(poidsMoyen, nombreVivants);
     const biomasseInitiale = calculerBiomasse(vague.poidsMoyenInitial, vague.nombreInitial);
@@ -1107,7 +1106,7 @@ export async function getComparaisonVagues(
         dateFin: true,
         nombreInitial: true,
         poidsMoyenInitial: true,
-        bacs: { select: { id: true } },
+        bacs: { select: { id: true, nombreInitial: true } },
       },
       orderBy: { dateDebut: "asc" },
     }),
@@ -1116,6 +1115,7 @@ export async function getComparaisonVagues(
       orderBy: { date: "asc" },
       select: {
         vagueId: true,
+        bacId: true,
         typeReleve: true,
         date: true,
         poidsMoyen: true,
@@ -1170,9 +1170,7 @@ export async function getComparaisonVagues(
     const poidsMoyenFinal = derniereBio?.poidsMoyen ?? null;
     const poidsMoyenDebut = premiereBio?.poidsMoyen ?? vague.poidsMoyenInitial;
 
-    const totalMorts = mortalites.reduce((s, r) => s + (r.nombreMorts ?? 0), 0);
-    const dernierComptage = comptages.at(-1);
-    const nombreVivants = dernierComptage?.nombreCompte ?? vague.nombreInitial - totalMorts;
+    const nombreVivants = computeNombreVivantsVague(vague.bacs, releves, vague.nombreInitial);
 
     const totalAliment = alimentations.reduce((s, r) => s + (r.quantiteAliment ?? 0), 0);
 

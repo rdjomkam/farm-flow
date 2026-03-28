@@ -277,6 +277,31 @@ export function computeVivantsByBac(
   return result;
 }
 
+/**
+ * Calcule le nombre total de poissons vivants pour une vague
+ * en agregeant par bac via computeVivantsByBac().
+ * Remplace le pattern faux `comptages.at(-1)?.nombreCompte`.
+ */
+export function computeNombreVivantsVague(
+  bacs: { id: string; nombreInitial: number | null }[],
+  releves: { bacId: string | null; typeReleve: string; nombreMorts: number | null; nombreCompte: number | null }[],
+  nombreInitialVague: number
+): number {
+  if (bacs.length === 0) {
+    // Fallback: no bacs attached, use global logic
+    const comptages = releves.filter(r => r.typeReleve === "COMPTAGE" && r.nombreCompte !== null);
+    if (comptages.length > 0) return comptages.at(-1)!.nombreCompte!;
+    const totalMorts = releves
+      .filter(r => r.typeReleve === "MORTALITE")
+      .reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
+    return nombreInitialVague - totalMorts;
+  }
+  const vivantsByBac = computeVivantsByBac(bacs, releves, nombreInitialVague);
+  let total = 0;
+  for (const v of vivantsByBac.values()) total += v;
+  return total;
+}
+
 // ---------------------------------------------------------------------------
 // Conversion d'unites d'achat (Sprint 14)
 // ---------------------------------------------------------------------------
