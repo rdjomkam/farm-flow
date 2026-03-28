@@ -137,12 +137,14 @@ export async function createCalibrage(
     }
 
     // 6. Create Calibrage with nested CalibrageGroupe records
+    const calibrageDate = data.date ? new Date(data.date) : new Date();
     const calibrage = await tx.calibrage.create({
       data: {
         vagueId: data.vagueId,
         sourceBacIds: data.sourceBacIds,
         nombreMorts: data.nombreMorts,
         notes: data.notes ?? null,
+        date: calibrageDate,
         siteId,
         userId,
         groupes: {
@@ -198,13 +200,12 @@ export async function createCalibrage(
     }
 
     // 8. Auto-create Releve records from calibrage data
-    const now = new Date();
 
     // 8a. MORTALITE releve (if deaths occurred)
     if (data.nombreMorts > 0) {
       await tx.releve.create({
         data: {
-          date: now,
+          date: calibrageDate,
           typeReleve: TypeReleve.MORTALITE,
           nombreMorts: data.nombreMorts,
           causeMortalite: CauseMortalite.AUTRE,
@@ -212,6 +213,7 @@ export async function createCalibrage(
           vagueId: data.vagueId,
           bacId: sourceBacs[0].id,
           siteId,
+          calibrageId: calibrage.id,
         },
       });
     }
@@ -227,7 +229,7 @@ export async function createCalibrage(
 
       await tx.releve.create({
         data: {
-          date: now,
+          date: calibrageDate,
           typeReleve: TypeReleve.BIOMETRIE,
           poidsMoyen: groupe.poidsMoyen,
           tailleMoyenne: groupe.tailleMoyenne ?? null,
@@ -236,6 +238,7 @@ export async function createCalibrage(
           vagueId: data.vagueId,
           bacId: groupe.destinationBacId,
           siteId,
+          calibrageId: calibrage.id,
         },
       });
     }
@@ -244,7 +247,7 @@ export async function createCalibrage(
     for (const [bacId, total] of destBacTotals.entries()) {
       await tx.releve.create({
         data: {
-          date: now,
+          date: calibrageDate,
           typeReleve: TypeReleve.COMPTAGE,
           nombreCompte: total,
           methodeComptage: MethodeComptage.DIRECT,
@@ -252,6 +255,7 @@ export async function createCalibrage(
           vagueId: data.vagueId,
           bacId,
           siteId,
+          calibrageId: calibrage.id,
         },
       });
     }
@@ -412,22 +416,34 @@ export async function patchCalibrage(
     }
 
     // ----------------------------------------------------------------
+    // Etape 3b — Determination de la nouvelle date effective
+    // ----------------------------------------------------------------
+    const nouvelleDate = data.date !== undefined ? new Date(data.date) : ancienCalibrage.date;
+
+    // ----------------------------------------------------------------
+    // Etape 3c — Verification qu'au moins un champ a reellement change
+    // (fail-fast avant toute ecriture sur les releves)
+    // ----------------------------------------------------------------
+    const hasChanges =
+      (data.nombreMorts !== undefined && data.nombreMorts !== ancienCalibrage.nombreMorts) ||
+      (data.notes !== undefined && data.notes !== ancienCalibrage.notes) ||
+      data.groupes !== undefined ||
+      (data.date !== undefined && new Date(data.date).getTime() !== ancienCalibrage.date.getTime());
+
+    if (!hasChanges) {
+      throw new Error("Aucun champ n'a ete modifie");
+    }
+
+    // ----------------------------------------------------------------
     // Etape 8 — Mise a jour des releves auto-crees
     // ----------------------------------------------------------------
-    const calibrageCreatedAt = ancienCalibrage.createdAt;
-    const startOfDay = new Date(calibrageCreatedAt);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(calibrageCreatedAt);
-    endOfDay.setHours(23, 59, 59, 999);
 
     // 8a. Mettre a jour ou supprimer le releve MORTALITE auto-cree
     if (data.nombreMorts !== undefined && data.nombreMorts !== ancienCalibrage.nombreMorts) {
       const relevesMortalite = await tx.releve.findMany({
         where: {
-          vagueId: ancienCalibrage.vague.id,
+          calibrageId: id,
           typeReleve: TypeReleve.MORTALITE,
-          notes: { contains: "calibrage" },
-          date: { gte: startOfDay, lte: endOfDay },
           siteId,
         },
       });
@@ -435,15 +451,21 @@ export async function patchCalibrage(
       if (relevesMortalite.length > 0) {
         if (nouveauxNombreMorts === 0) {
           await tx.releve.deleteMany({
-            where: { id: { in: relevesMortalite.map((r) => r.id) } },
+            where: { calibrageId: id, typeReleve: TypeReleve.MORTALITE, siteId },
           });
         } else {
           await tx.releve.update({
             where: { id: relevesMortalite[0].id },
-            data: { nombreMorts: nouveauxNombreMorts },
+            data: { nombreMorts: nouveauxNombreMorts, date: nouvelleDate },
           });
         }
       }
+    } else if (data.date !== undefined) {
+      // Mettre a jour la date du releve MORTALITE meme si nombreMorts n'a pas change
+      await tx.releve.updateMany({
+        where: { calibrageId: id, typeReleve: TypeReleve.MORTALITE, siteId },
+        data: { date: nouvelleDate },
+      });
     }
 
     // 8b. Reconstruire les releves BIOMETRIE et COMPTAGE si groupes modifies
@@ -451,15 +473,11 @@ export async function patchCalibrage(
       // Supprimer les anciens releves BIOMETRIE et COMPTAGE auto-crees
       await tx.releve.deleteMany({
         where: {
-          vagueId: ancienCalibrage.vague.id,
+          calibrageId: id,
           typeReleve: { in: [TypeReleve.BIOMETRIE, TypeReleve.COMPTAGE] },
-          notes: { contains: "calibrage" },
-          date: { gte: startOfDay, lte: endOfDay },
           siteId,
         },
       });
-
-      const now = new Date();
 
       // Recréer les releves BIOMETRIE
       for (const groupe of nouveauxGroupes) {
@@ -472,7 +490,7 @@ export async function patchCalibrage(
 
         await tx.releve.create({
           data: {
-            date: now,
+            date: nouvelleDate,
             typeReleve: TypeReleve.BIOMETRIE,
             poidsMoyen: groupe.poidsMoyen,
             tailleMoyenne: groupe.tailleMoyenne ?? null,
@@ -481,6 +499,7 @@ export async function patchCalibrage(
             vagueId: ancienCalibrage.vague.id,
             bacId: groupe.destinationBacId,
             siteId,
+            calibrageId: id,
           },
         });
       }
@@ -495,7 +514,7 @@ export async function patchCalibrage(
       for (const [bacId, total] of nouveauxDestTotals2.entries()) {
         await tx.releve.create({
           data: {
-            date: now,
+            date: nouvelleDate,
             typeReleve: TypeReleve.COMPTAGE,
             nombreCompte: total,
             methodeComptage: MethodeComptage.DIRECT,
@@ -503,9 +522,20 @@ export async function patchCalibrage(
             vagueId: ancienCalibrage.vague.id,
             bacId,
             siteId,
+            calibrageId: id,
           },
         });
       }
+    } else if (data.date !== undefined) {
+      // Mettre a jour la date des releves BIOMETRIE et COMPTAGE si seulement la date change
+      await tx.releve.updateMany({
+        where: {
+          calibrageId: id,
+          typeReleve: { in: [TypeReleve.BIOMETRIE, TypeReleve.COMPTAGE] },
+          siteId,
+        },
+        data: { date: nouvelleDate },
+      });
     }
 
     // ----------------------------------------------------------------
@@ -524,6 +554,7 @@ export async function patchCalibrage(
         nombreMorts: nouveauxNombreMorts,
         notes: nouvellesNotes,
         modifie: true,
+        ...(data.date !== undefined && { date: new Date(data.date) }),
         ...(data.groupes !== undefined && {
           groupes: {
             create: nouveauxGroupes.map((g) => ({
@@ -573,6 +604,19 @@ export async function patchCalibrage(
         champModifie: "notes",
         ancienneValeur: ancienCalibrage.notes ?? null,
         nouvelleValeur: data.notes ?? null,
+      });
+    }
+
+    if (data.date !== undefined && new Date(data.date).getTime() !== ancienCalibrage.date.getTime()) {
+      traces.push({
+        id: crypto.randomUUID(),
+        calibrageId: id,
+        userId,
+        raison,
+        siteId,
+        champModifie: "date",
+        ancienneValeur: ancienCalibrage.date.toISOString(),
+        nouvelleValeur: data.date,
       });
     }
 

@@ -1775,6 +1775,8 @@ export interface CreateCalibrageDTO {
   nombreMorts: number;
   /** Notes libres (optionnel) */
   notes?: string;
+  /** Date et heure du calibrage (ISO 8601 — si absent, utilise l'heure actuelle) */
+  date?: string;
   /** Groupes de redistribution (au moins 1 requis) */
   groupes: CreateCalibrageGroupeDTO[];
 }
@@ -1880,6 +1882,8 @@ export interface PatchCalibrageBody {
   nombreMorts?: number;
   /** Nouvelles notes libres (null pour effacer) */
   notes?: string | null;
+  /** Nouvelle date et heure du calibrage (ISO 8601) */
+  date?: string;
   /**
    * Remplacement complet des groupes.
    * Si omis, les groupes existants sont conserves (seuls nombreMorts/notes peuvent changer).

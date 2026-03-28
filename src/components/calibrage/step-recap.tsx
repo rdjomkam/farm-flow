@@ -31,6 +31,7 @@ interface StepRecapProps {
   groupes: GroupeForm[];
   nombreMorts: string;
   notes: string;
+  date: string;
   onBack: () => void;
   onSubmit: () => void;
   submitting: boolean;
@@ -42,6 +43,7 @@ export function StepRecap({
   groupes,
   nombreMorts,
   notes,
+  date,
   onBack,
   onSubmit,
   submitting,
@@ -123,6 +125,14 @@ export function StepRecap({
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Date du calibrage */}
+      <section className="rounded-xl border border-border bg-card p-4">
+        <h3 className="text-sm font-semibold mb-2">Date du calibrage</h3>
+        <p className="text-sm font-semibold">
+          {new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeStyle: "short" }).format(new Date(date))}
+        </p>
       </section>
 
       {/* Mortalite */}

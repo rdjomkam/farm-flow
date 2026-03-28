@@ -23,8 +23,13 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { CategorieCalibrage, Permission } from "@/types";
-import type { CalibrageWithRelations } from "@/types";
+import type { CalibrageWithRelations, PatchCalibrageBody } from "@/types";
 import { useCalibrageService } from "@/services";
+
+function toLocalDatetimeString(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 const categorieLabels: Record<CategorieCalibrage, string> = {
   [CategorieCalibrage.PETIT]: "Petit",
@@ -68,6 +73,7 @@ export function ModifierCalibrageDialog({
   // Champs modifiables
   const [nombreMorts, setNombreMorts] = useState(String(calibrage.nombreMorts));
   const [notes, setNotes] = useState(calibrage.notes ?? "");
+  const [calibrageDate, setCalibrageDate] = useState(() => toLocalDatetimeString(new Date(calibrage.date)));
 
   // Toggle "modifier les groupes"
   const [modifierGroupes, setModifierGroupes] = useState(false);
@@ -98,6 +104,7 @@ export function ModifierCalibrageDialog({
     setRaison("");
     setNombreMorts(String(calibrage.nombreMorts));
     setNotes(calibrage.notes ?? "");
+    setCalibrageDate(toLocalDatetimeString(new Date(calibrage.date)));
     setModifierGroupes(false);
     setGroupes(
       calibrage.groupes.map((g) => ({
@@ -174,6 +181,7 @@ export function ModifierCalibrageDialog({
       raison: raison.trim(),
       nombreMorts: Number(nombreMorts),
       notes: notes.trim() || null,
+      date: new Date(calibrageDate).toISOString(),
     };
 
     if (modifierGroupes) {
@@ -188,7 +196,7 @@ export function ModifierCalibrageDialog({
 
     const result = await calibrageService.update(
       calibrage.id,
-      body as unknown as Parameters<typeof calibrageService.update>[1]
+      (body as unknown) as PatchCalibrageBody
     );
 
     if (result.ok) {
@@ -254,7 +262,21 @@ export function ModifierCalibrageDialog({
             </div>
           </div>
 
-          {/* Section 2 — Nombre de morts */}
+          {/* Section 2 — Date et heure du calibrage */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="calib-date" className="text-sm font-medium text-foreground">
+              Date et heure du calibrage
+            </label>
+            <input
+              id="calib-date"
+              type="datetime-local"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+              value={calibrageDate}
+              onChange={(e) => setCalibrageDate(e.target.value)}
+            />
+          </div>
+
+          {/* Section 3 — Nombre de morts */}
           <Input
             id="calib-nombreMorts"
             label="Nombre de mortalites"
@@ -265,7 +287,7 @@ export function ModifierCalibrageDialog({
             error={errors.nombreMorts}
           />
 
-          {/* Section 3 — Groupes (toggle) */}
+          {/* Section 4 — Groupes (toggle) */}
           <div className="flex flex-col gap-3">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
@@ -411,7 +433,7 @@ export function ModifierCalibrageDialog({
             )}
           </div>
 
-          {/* Section 4 — Notes */}
+          {/* Section 5 — Notes */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="calib-notes" className="text-sm font-medium text-foreground">
               Notes (optionnel)

@@ -7,7 +7,7 @@ import { Permission, CategorieCalibrage } from "@/types";
 type Params = { params: Promise<{ id: string }> };
 
 /** Champs structurels non modifiables via PATCH */
-const NON_MODIFIABLE_FIELDS = ["id", "vagueId", "sourceBacIds", "siteId", "userId", "date", "createdAt", "updatedAt"];
+const NON_MODIFIABLE_FIELDS = ["id", "vagueId", "sourceBacIds", "siteId", "userId", "createdAt", "updatedAt"];
 
 export async function GET(request: NextRequest, { params }: Params) {
   try {
@@ -43,14 +43,8 @@ export async function GET(request: NextRequest, { params }: Params) {
 
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
-    // 1. Permission — CALIBRAGES_MODIFIER (ou fallback CALIBRAGES_CREER si migration pas encore appliquee)
-    let auth;
-    try {
-      auth = await requirePermission(request, Permission.CALIBRAGES_MODIFIER);
-    } catch {
-      // Fallback temporaire : si CALIBRAGES_MODIFIER n'existe pas encore, utiliser CALIBRAGES_CREER
-      auth = await requirePermission(request, Permission.CALIBRAGES_CREER);
-    }
+    // 1. Permission — CALIBRAGES_MODIFIER
+    const auth = await requirePermission(request, Permission.CALIBRAGES_MODIFIER);
 
     const { id } = await params;
     const body = await request.json();
@@ -83,15 +77,22 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const hasNombreMorts = body.nombreMorts !== undefined;
     const hasNotes = body.notes !== undefined;
     const hasGroupes = body.groupes !== undefined;
+    const hasDate = body.date !== undefined;
 
-    if (!hasNombreMorts && !hasNotes && !hasGroupes) {
+    if (!hasNombreMorts && !hasNotes && !hasGroupes && !hasDate) {
       return NextResponse.json(
-        { status: 400, message: "Au moins un champ metier doit etre fourni : nombreMorts, notes ou groupes." },
+        { status: 400, message: "Au moins un champ metier doit etre fourni : nombreMorts, notes, date ou groupes." },
         { status: 400 }
       );
     }
 
     // 5. Validation des champs metier
+    if (hasDate) {
+      if (typeof body.date !== "string" || isNaN(Date.parse(body.date))) {
+        errors.push({ field: "date", message: "La date doit etre une chaine ISO 8601 valide." });
+      }
+    }
+
     if (hasNombreMorts) {
       if (typeof body.nombreMorts !== "number" || !Number.isInteger(body.nombreMorts) || body.nombreMorts < 0) {
         errors.push({ field: "nombreMorts", message: "Le nombre de morts doit etre un entier positif ou nul." });
@@ -129,6 +130,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const data = {
       ...(hasNombreMorts && { nombreMorts: body.nombreMorts }),
       ...(hasNotes && { notes: body.notes }),
+      ...(hasDate && { date: body.date }),
       ...(hasGroupes && { groupes: body.groupes }),
     };
 

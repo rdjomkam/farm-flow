@@ -890,6 +890,10 @@ model Releve {
   // Relation inverse : un releve peut etre lie a au plus une activite (1:1 optionnelle)
   activite        Activite?
 
+  // Lien vers le calibrage source (nullable — rempli si auto-cree lors d'un calibrage)
+  calibrageId     String?
+  calibrage       Calibrage? @relation("CalibrageReleves", fields: [calibrageId], references: [id], onDelete: SetNull)
+
   // Traçabilité modification (Sprint 26, ADR-014)
   modifie         Boolean              @default(false)
   modifications   ReleveModification[]
@@ -900,6 +904,7 @@ model Releve {
   @@index([vagueId, typeReleve])
   @@index([bacId])
   @@index([date])
+  @@index([calibrageId])
   @@index([siteId])
 }
 
@@ -1757,7 +1762,7 @@ model NoteIngenieur {
 
 model Calibrage {
   id            String            @id @default(cuid())
-  date          DateTime          @default(now())
+  date          DateTime
   vagueId       String
   vague         Vague             @relation(fields: [vagueId], references: [id])
   sourceBacIds  String[]
@@ -1772,6 +1777,9 @@ model Calibrage {
   // Traçabilité modification (Sprint 26, ADR-015)
   modifie       Boolean                @default(false)
   modifications CalibrageModification[]
+
+  // Relevés auto-créés lors du calibrage
+  releves       Releve[]          @relation("CalibrageReleves")
 
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt

@@ -8,10 +8,12 @@ import { cn } from "@/lib/utils";
 interface StepMortaliteProps {
   nombreMorts: string;
   notes: string;
+  date: string;
   totalSourcePoissons: number;
   totalGroupePoissons: number;
   onChangeMorts: (value: string) => void;
   onChangeNotes: (value: string) => void;
+  onChangeDate: (value: string) => void;
   onNext: () => void;
   onBack: () => void;
 }
@@ -19,10 +21,12 @@ interface StepMortaliteProps {
 export function StepMortalite({
   nombreMorts,
   notes,
+  date,
   totalSourcePoissons,
   totalGroupePoissons,
   onChangeMorts,
   onChangeNotes,
+  onChangeDate,
   onNext,
   onBack,
 }: StepMortaliteProps) {
@@ -100,6 +104,21 @@ export function StepMortalite({
               : `${total - totalSourcePoissons} poissons en trop.`}
           </p>
         )}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-foreground">
+          Date et heure du calibrage
+        </label>
+        <input
+          type="datetime-local"
+          className={cn(
+            "flex w-full rounded-lg border border-border bg-transparent px-3 py-2.5 text-base",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+          )}
+          value={date}
+          onChange={(e) => onChangeDate(e.target.value)}
+        />
       </div>
 
       <Input

@@ -12,6 +12,11 @@ import { StepMortalite } from "./step-mortalite";
 import { StepRecap } from "./step-recap";
 import { useCalibrageService } from "@/services";
 
+function toLocalDatetimeString(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export interface GroupeForm {
   categorie: string;
   destinationBacId: string;
@@ -64,8 +69,10 @@ export function CalibrageFormClient({
   const [groupes, setGroupes] = useState<GroupeForm[]>(INITIAL_GROUPES);
   const [nombreMorts, setNombreMorts] = useState("0");
   const [notes, setNotes] = useState("");
+  const [calibrageDate, setCalibrageDate] = useState(() => toLocalDatetimeString(new Date()));
   const [sourceError, setSourceError] = useState("");
   const [groupeErrors, setGroupeErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const sourceBacs = bacs.filter((b) => selectedBacIds.includes(b.id));
   const totalSourcePoissons = sourceBacs.reduce(
@@ -147,6 +154,7 @@ export function CalibrageFormClient({
       sourceBacIds: selectedBacIds,
       nombreMorts: Number(nombreMorts) || 0,
       notes: notes.trim() || undefined,
+      date: new Date(calibrageDate).toISOString(),
       groupes: validGroupes.map((g) => ({
         categorie: g.categorie as CategorieCalibrage,
         destinationBacId: g.destinationBacId,
@@ -156,14 +164,19 @@ export function CalibrageFormClient({
       })),
     };
 
-    const result = await calibrageService.create(dto);
-    if (result.ok) {
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        queryClient.invalidateQueries({ queryKey: queryKeys.vagues.all });
-        router.push(`/vagues/${vagueId}`);
+    setIsSubmitting(true);
+    try {
+      const result = await calibrageService.create(dto);
+      if (result.ok) {
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          queryClient.invalidateQueries({ queryKey: queryKeys.vagues.all });
+          router.push(`/vagues/${vagueId}`);
+        }
       }
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -232,10 +245,12 @@ export function CalibrageFormClient({
         <StepMortalite
           nombreMorts={nombreMorts}
           notes={notes}
+          date={calibrageDate}
           totalSourcePoissons={totalSourcePoissons}
           totalGroupePoissons={totalGroupePoissons}
           onChangeMorts={setNombreMorts}
           onChangeNotes={setNotes}
+          onChangeDate={setCalibrageDate}
           onNext={handleNextFromMortalite}
           onBack={() => setStep(2)}
         />
@@ -247,9 +262,10 @@ export function CalibrageFormClient({
           groupes={groupes}
           nombreMorts={nombreMorts}
           notes={notes}
+          date={calibrageDate}
           onBack={() => setStep(3)}
           onSubmit={handleSubmit}
-          submitting={false}
+          submitting={isSubmitting}
         />
       )}
     </div>

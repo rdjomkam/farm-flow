@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (typeof body.nombreMorts !== "number" || body.nombreMorts < 0) {
+    if (typeof body.nombreMorts !== "number" || !Number.isInteger(body.nombreMorts) || body.nombreMorts < 0) {
       errors.push({
         field: "nombreMorts",
         message: "Le nombre de morts doit etre un entier >= 0.",
@@ -103,6 +103,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    if (body.date !== undefined) {
+      if (typeof body.date !== "string" || isNaN(Date.parse(body.date))) {
+        errors.push({ field: "date", message: "La date doit etre une chaine ISO 8601 valide." });
+      }
+    }
+
     if (errors.length > 0) {
       return NextResponse.json(
         { status: 400, message: "Erreurs de validation", errors },
@@ -115,6 +121,7 @@ export async function POST(request: NextRequest) {
       sourceBacIds: body.sourceBacIds,
       nombreMorts: body.nombreMorts,
       notes: body.notes?.trim() || undefined,
+      date: typeof body.date === "string" ? body.date : undefined,
       groupes: body.groupes.map((g: Record<string, unknown>) => ({
         categorie: g.categorie as CreateCalibrageDTO["groupes"][number]["categorie"],
         destinationBacId: g.destinationBacId as string,

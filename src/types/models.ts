@@ -555,6 +555,9 @@ export interface Releve {
   consommations?: ReleveConsommationWithRelations[];
   /** Historique des modifications (present si la query inclut les modifications) */
   modifications?: ReleveModificationWithUser[];
+
+  /** ID du calibrage source (nullable — rempli si auto-cree lors d'un calibrage) */
+  calibrageId?: string | null;
 }
 
 /** Releve avec ses relations vague et bac chargees */
