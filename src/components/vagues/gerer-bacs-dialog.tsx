@@ -76,8 +76,8 @@ export function GererBacsDialog({
       return;
     }
 
-    const count = Number(nombrePoissons);
-    if (!nombrePoissons || !Number.isInteger(count) || count < 1) {
+    const count = nombrePoissons ? Number(nombrePoissons) : 0;
+    if (!Number.isInteger(count) || count < 0) {
       setAddError(t("gererBacs.errors.nombrePoissonsInvalid"));
       return;
     }
@@ -216,7 +216,7 @@ export function GererBacsDialog({
               id="nombrePoissons"
               label={t("gererBacs.nombrePoissons")}
               type="number"
-              min="1"
+              min="0"
               step="1"
               value={nombrePoissons}
               onChange={(e) => { setNombrePoissons(e.target.value); setAddError(""); }}

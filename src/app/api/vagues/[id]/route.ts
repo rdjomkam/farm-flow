@@ -119,9 +119,9 @@ export async function PUT(
           if (
             typeof entry?.nombrePoissons !== "number" ||
             !Number.isInteger(entry.nombrePoissons) ||
-            entry.nombrePoissons < 1
+            entry.nombrePoissons < 0
           ) {
-            errors.push({ field: `addBacs[${i}].nombrePoissons`, message: "nombrePoissons doit etre un entier superieur a 0." });
+            errors.push({ field: `addBacs[${i}].nombrePoissons`, message: "nombrePoissons doit etre un entier >= 0." });
           }
         }
       }
