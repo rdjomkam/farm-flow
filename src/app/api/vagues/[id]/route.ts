@@ -132,6 +132,12 @@ export async function PUT(
         field: "removeBacIds",
         message: "removeBacIds doit etre un tableau non vide.",
       });
+    } else if (Array.isArray(body.removeBacIds)) {
+      for (let i = 0; i < body.removeBacIds.length; i++) {
+        if (!body.removeBacIds[i] || typeof body.removeBacIds[i] !== "string") {
+          errors.push({ field: `removeBacIds[${i}]`, message: "Chaque ID de bac doit etre une chaine non vide." });
+        }
+      }
     }
 
     // Validate new editable fields

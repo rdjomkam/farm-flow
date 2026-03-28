@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { StatutVague } from "@/types";
+import { StatutVague, StatutActivite } from "@/types";
 import type { CreateVagueDTO, UpdateVagueDTO } from "@/types";
 
 /** Liste les vagues d'un site avec filtre optionnel sur le statut */
@@ -231,8 +231,8 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
       // Annuler les activites PLANIFIEE liees a ces bacs pour cette vague
       for (const bacId of data.removeBacIds) {
         await tx.activite.updateMany({
-          where: { bacId, vagueId: id, statut: "PLANIFIEE" },
-          data: { statut: "ANNULEE" },
+          where: { bacId, vagueId: id, statut: StatutActivite.PLANIFIEE },
+          data: { statut: StatutActivite.ANNULEE },
         });
       }
 

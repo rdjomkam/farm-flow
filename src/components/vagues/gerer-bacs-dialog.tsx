@@ -51,6 +51,7 @@ export function GererBacsDialog({
   const [selectedBacId, setSelectedBacId] = useState<string>("");
   const [nombrePoissons, setNombrePoissons] = useState<string>("");
   const [addError, setAddError] = useState<string>("");
+  const [removeError, setRemoveError] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: bacsLibres = [], isLoading: loadingLibres } = useBacsLibres({
@@ -107,9 +108,12 @@ export function GererBacsDialog({
     setIsSubmitting(false);
 
     if (result.ok) {
+      setRemoveError("");
       queryClient.invalidateQueries({ queryKey: queryKeys.vagues.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.bacs.all });
       router.refresh();
+    } else {
+      setRemoveError(result.error ?? t("gererBacs.removeFailed"));
     }
   }
 
@@ -168,6 +172,10 @@ export function GererBacsDialog({
               </ul>
             )}
           </div>
+
+          {removeError && (
+            <p className="text-sm text-destructive">{removeError}</p>
+          )}
 
           {/* Add a bac */}
           <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
