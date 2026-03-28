@@ -25,6 +25,7 @@ export async function getVagueById(id: string, siteId: string) {
       releves: {
         orderBy: { date: "desc" },
         include: {
+          bac: { select: { id: true, nom: true } },
           consommations: {
             include: { produit: true },
           },

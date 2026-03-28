@@ -558,6 +558,9 @@ export interface Releve {
 
   /** ID du calibrage source (nullable — rempli si auto-cree lors d'un calibrage) */
   calibrageId?: string | null;
+
+  /** Bac associe (present si la query inclut le bac) */
+  bac?: { id: string; nom: string } | null;
 }
 
 /** Releve avec ses relations vague et bac chargees */

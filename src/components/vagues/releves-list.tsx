@@ -216,6 +216,9 @@ export function RelevesList({ releves, produits = [], permissions, limit, vagueI
                 <Badge variant={typeVariants[r.typeReleve as TypeReleve]}>
                   {t(`types.${r.typeReleve as TypeReleve}`)}
                 </Badge>
+                {r.bac && (
+                  <span className="text-xs text-muted-foreground">{r.bac.nom}</span>
+                )}
                 {r.modifie && (
                   <Badge variant="warning">{t("list.modified")}</Badge>
                 )}
