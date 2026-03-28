@@ -8,10 +8,13 @@ export {
   deleteSession,
   setSessionCookie,
   clearSessionCookie,
+  setUserRoleCookie,
+  clearUserRoleCookie,
   getSessionToken,
   getServerSessionToken,
   AuthError,
   SESSION_COOKIE_NAME,
+  ROLE_COOKIE_NAME,
 } from "./session";
 export { getServerPermissions, checkPagePermission } from "./permissions-server";
 export { requireSuperAdmin, checkBackofficeAccess } from "./backoffice";

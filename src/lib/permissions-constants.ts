@@ -82,6 +82,7 @@ export const PERMISSION_GROUPS = {
     Permission.RELEVES_VOIR,
     Permission.RELEVES_CREER,
     Permission.RELEVES_MODIFIER,
+    Permission.RELEVES_SUPPRIMER,
     Permission.CALIBRAGES_VOIR,
     Permission.CALIBRAGES_CREER,
     Permission.CALIBRAGES_MODIFIER,

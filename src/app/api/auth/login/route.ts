@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyPassword, createSession, setSessionCookie, normalizePhone } from "@/lib/auth";
+import { verifyPassword, createSession, setSessionCookie, setUserRoleCookie, normalizePhone } from "@/lib/auth";
 import { getUserByIdentifier } from "@/lib/queries/users";
 import { Role } from "@/types";
 import type { AuthResponse } from "@/types";
@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json(responseBody);
     setSessionCookie(response, sessionToken, expires);
+    setUserRoleCookie(response, user.role, expires);
     return response;
   } catch {
     return NextResponse.json(

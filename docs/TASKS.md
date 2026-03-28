@@ -4692,7 +4692,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ### Story BA.1 — Migration schéma DB : `isSuperAdmin` + suppression `isPlatform`
 **Assigné à :** @db-specialist
 **Priorité :** Critique
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Ajouter `isSuperAdmin Boolean @default(false)` sur `User` dans schema.prisma
@@ -4706,7 +4706,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @architect
 **Priorité :** Critique
 **Dépend de :** BA.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Ajouter `isSuperAdmin: boolean` à interface `User` dans `src/types/models.ts`
@@ -4721,7 +4721,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Critique
 **Dépend de :** BA.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Implémenter `requireSuperAdmin(request)` pour API routes (401/403)
@@ -4740,7 +4740,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @db-specialist
 **Priorité :** Critique
 **Dépend de :** BA.1, BA.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Supprimer les fonctions `getPlatformSite()` et `isPlatformSite()` de `src/lib/queries/sites.ts`
@@ -4752,7 +4752,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Critique
 **Dépend de :** BA.2, BB.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Supprimer imports `isPlatformSite`, `PLATFORM_MODULES`
@@ -4765,7 +4765,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @db-specialist
 **Priorité :** Haute
 **Dépend de :** BA.2, BB.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Supprimer vérification `site.isPlatform` dans `updateSiteStatus()` et `updateSiteModulesAdmin()`
@@ -4777,7 +4777,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** BA.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Supprimer entrées `level: "platform"` de `SITE_MODULES_CONFIG` (ou reclasser en `"site"`)
@@ -4790,7 +4790,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** BA.3, BB.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Supprimer imports/guards `isPlatformSite`/`getPlatformSite` dans `src/app/api/remises/route.ts`
@@ -4803,7 +4803,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** BB.2, BB.5
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Supprimer constante `PLATFORM_PERMISSIONS`
@@ -4816,7 +4816,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Moyenne
 **Dépend de :** BB.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Supprimer import/appel `isPlatformSite` dans `subscription-banner.tsx` et `quotas-usage-bar.tsx`
@@ -4832,7 +4832,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Critique
 **Dépend de :** BA.3
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Créer `src/app/backoffice/layout.tsx` (Server Component, `checkBackofficeAccess()`, redirect si null)
@@ -4846,7 +4846,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Critique
 **Dépend de :** BA.3, BB.3
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Créer `src/app/api/backoffice/sites/route.ts` (GET list) — guard `requireSuperAdmin`
@@ -4860,7 +4860,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** BA.3
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Créer 4 routes sous `src/app/api/backoffice/analytics/` (KPIs, sites, revenus, modules)
@@ -4872,7 +4872,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Moyenne
 **Dépend de :** BA.3
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Créer `src/app/api/backoffice/modules/route.ts` (GET list + POST create)
@@ -4884,7 +4884,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** BC.1, BC.3
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Créer `src/app/backoffice/dashboard/page.tsx` + `loading.tsx`
@@ -4896,7 +4896,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Critique
 **Dépend de :** BC.1, BC.2
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Créer `src/app/backoffice/sites/page.tsx` + `loading.tsx`
@@ -4909,7 +4909,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** BC.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Créer pages sous `/backoffice/` : abonnements, plans, commissions, remises, modules (+ loading.tsx chacune)
@@ -4921,7 +4921,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** BC.1, BB.6
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Supprimer module "Admin Plateforme" (items `/admin/*`) de sidebar.tsx et hamburger-menu.tsx
@@ -4933,7 +4933,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Haute
 **Dépend de :** BC.6
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Supprimer `isPlatform` de `admin-sites-list.tsx`, `admin-site-detail-client.tsx`, `admin-site-modules-editor.tsx`
@@ -4949,7 +4949,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @developer
 **Priorité :** Critique
 **Dépend de :** Toutes BC.x
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Supprimer `src/app/admin/` en entier
@@ -4962,7 +4962,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @db-specialist
 **Priorité :** Critique
 **Dépend de :** BB.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` `grep -r "isPlatform" src/` retourne 0 résultats
@@ -4975,7 +4975,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @tester
 **Priorité :** Critique
 **Dépend de :** Toutes BB.x + BC.x
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Supprimer mocks `isPlatformSite`/`getPlatformSite` de tous les tests
@@ -4995,7 +4995,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @tester
 **Priorité :** Critique
 **Dépend de :** Toutes BD.x
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` `npx prisma migrate deploy` sans erreur
@@ -5012,7 +5012,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Assigné à :** @code-reviewer
 **Priorité :** Critique
 **Dépend de :** BE.1
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Review R1-R9 sur tous fichiers créés/modifiés
@@ -5020,3 +5020,453 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 - [ ] `TODO` Mobile first backoffice sur 360px
 - [ ] `TODO` `npm run build` + `npx vitest run` passent
 - [ ] `TODO` Écrire `docs/reviews/review-backoffice-separation.md`
+
+---
+
+## Sprint IA — Interface Ingénieur vs Farm : Middleware + Route Groups (ADR-ingenieur-interface)
+
+**Objectif :** Créer le middleware de redirection par rôle et les deux route groups Next.js `(farm)` et `(ingenieur)` avec leurs layouts respectifs. Poser les fondations du split d'interface sans casser les pages existantes.
+**Dépendances :** Sprint BE (Backoffice Separation) — le middleware doit connaître `isSuperAdmin` pour le redirect backoffice.
+**ADR :** [ADR-ingenieur-interface](../decisions/ADR-ingenieur-interface.md) | [Brainstorming](../../_bmad-output/brainstorming/brainstorming-session-2026-03-28.md)
+**Impact schema :** ZERO migrations. ZERO nouveaux champs. Tout est frontend.
+
+---
+
+### Story IA.1 — Middleware de redirection par rôle
+**Assigné à :** @developer
+**Priorité :** Critique
+**Dépend de :** Sprint BE (isSuperAdmin disponible)
+**Statut :** `TODO`
+**Type :** REFACTOR
+
+**Description :** Créer `src/middleware.ts` qui redirige les utilisateurs vers le bon route group après login et enforce les frontières entre layouts.
+
+**Tâches :**
+- [ ] `TODO` Créer `src/middleware.ts` avec la logique de redirection :
+  - `user.isSuperAdmin` → `/(backoffice)/`
+  - `user.role === INGENIEUR` → `/(ingenieur)/`
+  - Tous les autres (PISCICULTEUR, GERANT, ADMIN) → `/(farm)/`
+- [ ] `TODO` Enforcer les frontières de layout :
+  - Un INGENIEUR qui hit `/(farm)/*` → redirect vers `/(ingenieur)/*` equivalent
+  - Un non-INGENIEUR qui hit `/(ingenieur)/*` → redirect vers `/(farm)/`
+  - Un non-superAdmin qui hit `/(backoffice)/*` → redirect vers son layout
+- [ ] `TODO` Configurer le matcher Next.js pour exclure `/_next/`, `/api/`, fichiers statiques
+- [ ] `TODO` Gérer le cas utilisateur non connecté → redirect vers `/login`
+- [ ] `TODO` Le middleware lit le rôle depuis le cookie de session (pas un appel DB par requête)
+
+**Critères d'acceptation :**
+- Redirect correct pour chaque rôle (INGENIEUR, PISCICULTEUR, GERANT, ADMIN, superAdmin)
+- Les frontières sont enforcées : impossible d'accéder au mauvais layout
+- Les routes API (`/api/*`) ne sont PAS impactées par le middleware
+- Les fichiers statiques et assets ne sont pas interceptés
+- `npm run build` OK
+
+---
+
+### Story IA.2 — Route groups (farm) et (ingenieur) avec layouts
+**Assigné à :** @developer
+**Priorité :** Critique
+**Dépend de :** Aucune (parallélisable avec IA.1)
+**Statut :** `TODO`
+**Type :** UI
+
+**Description :** Créer les deux route groups Next.js `src/app/(farm)/` et `src/app/(ingenieur)/` avec leurs layouts respectifs. Les layouts sont des shells de navigation (bottom-nav + sidebar) sans logique métier.
+
+**Tâches :**
+- [ ] `TODO` Créer `src/app/(farm)/layout.tsx` — layout shell farm avec :
+  - Farm bottom-nav (mobile)
+  - Farm sidebar (desktop)
+  - Passe `perspective="farm"` au contexte si nécessaire
+- [ ] `TODO` Créer `src/app/(ingenieur)/layout.tsx` — layout shell ingénieur avec :
+  - Ingénieur bottom-nav (mobile)
+  - Ingénieur sidebar (desktop)
+  - Passe `perspective="ingenieur"` au contexte si nécessaire
+- [ ] `TODO` S'assurer que le layout racine `src/app/layout.tsx` reste pour les éléments globaux (providers, fonts, etc.)
+- [ ] `TODO` Créer `src/app/(farm)/page.tsx` — dashboard farm (stub initial, peut être un redirect vers le dashboard existant)
+- [ ] `TODO` Créer `src/app/(ingenieur)/page.tsx` — dashboard ingénieur (stub initial, peut être un redirect vers le dashboard existant)
+- [ ] `TODO` Vérifier que `/(backoffice)/` existant n'est pas impacté
+
+**Critères d'acceptation :**
+- Les deux route groups coexistent sans conflit
+- Chaque layout charge sa propre navigation
+- Le layout racine reste intact pour les providers globaux
+- `npm run build` OK
+- Les routes existantes continuent de fonctionner pendant la migration
+
+---
+
+### Story IA.3 — Extraction des composants de page partagés vers src/components/pages/
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** IA.2
+**Statut :** `TODO`
+**Type :** REFACTOR
+
+**Description :** Déplacer la logique réelle des pages partagées (BOTH) depuis `src/app/` vers `src/components/pages/` pour permettre les stub re-exports dans les deux route groups. C'est le coeur de l'architecture Y1.
+
+**Tâches :**
+- [ ] `TODO` Créer le dossier `src/components/pages/`
+- [ ] `TODO` Pour chaque page partagée, extraire le composant principal :
+  - `src/components/pages/dashboard-page.tsx` (depuis src/app/page.tsx ou dashboard)
+  - `src/components/pages/vagues-page.tsx` (depuis src/app/vagues/page.tsx)
+  - `src/components/pages/vagues-detail-page.tsx` (depuis src/app/vagues/[id]/page.tsx)
+  - `src/components/pages/releves-page.tsx` (depuis src/app/releves/page.tsx)
+  - `src/components/pages/bacs-page.tsx` (depuis src/app/bacs/page.tsx)
+  - `src/components/pages/stock-page.tsx` (depuis src/app/stock/ et sous-pages)
+  - `src/components/pages/analytics-page.tsx` (depuis src/app/analytics/ et sous-pages)
+  - `src/components/pages/planning-page.tsx` (depuis src/app/planning/page.tsx)
+  - `src/components/pages/notes-page.tsx` (depuis src/app/notes/page.tsx)
+  - `src/components/pages/depenses-page.tsx` (depuis src/app/depenses/page.tsx)
+  - `src/components/pages/settings-alertes-page.tsx` (depuis src/app/settings/alertes/page.tsx)
+- [ ] `TODO` Chaque composant extrait reste un Server Component (ou conserve son "use client" existant)
+- [ ] `TODO` Vérifier que les imports internes de chaque composant restent valides après le déplacement
+
+**Critères d'acceptation :**
+- Tous les composants de pages partagées sont dans `src/components/pages/`
+- Les anciennes pages fonctionnent toujours (pas de régression)
+- `npm run build` OK
+- Aucun changement de logique métier, uniquement du déplacement de fichiers
+
+---
+
+## Sprint IB — Interface Ingénieur vs Farm : Navigation Components (ADR-ingenieur-interface)
+
+**Objectif :** Créer les composants de navigation spécifiques à chaque layout (bottom-nav et sidebar) avec visibilité conditionnelle par permissions.
+**Dépendances :** Sprint IA validé (layouts créés).
+
+---
+
+### Story IB.1 — Farm bottom-nav + sidebar
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** Story IA.2
+**Statut :** `TODO`
+**Type :** UI
+
+**Description :** Créer les composants de navigation pour le layout farm. La bottom-nav a 5 items : Accueil | Ma ferme | Finances | Messages | Menu. La sidebar est l'équivalent desktop.
+
+**Tâches :**
+- [ ] `TODO` Créer `src/components/layout/farm-bottom-nav.tsx` avec 5 items :
+  1. Accueil (icône Home) → `/(farm)/` — dashboard ferme
+  2. Ma ferme (icône Layers) → `/(farm)/vagues` — vagues, bacs, relevés en lecture
+  3. Finances (icône Wallet) → `/(farm)/finances` — ventes, factures, dépenses — visible si FINANCES_VOIR
+  4. Messages (icône MessageSquare) → `/(farm)/notes` — notes, échanges
+  5. Menu (icône Menu) → ouvre un drawer/sheet avec les modules secondaires (stock, alevins, planning, paramètres, abonnement)
+- [ ] `TODO` Créer `src/components/layout/farm-sidebar.tsx` — équivalent desktop avec modules organisés en groupes
+- [ ] `TODO` Items visibles basés sur les permissions SiteMember (réutiliser le pattern ITEM_VIEW_PERMISSIONS existant)
+- [ ] `TODO` Mobile-first 360px : bottom-nav avec icônes + labels courts, min 44px touch targets
+
+**Critères d'acceptation :**
+- 5 items exactement sur la bottom-nav mobile
+- Items conditionnels selon permissions (ex: Finances masqué si pas FINANCES_VOIR)
+- R5 : pas de DialogTrigger imbriqué
+- R6 : CSS variables du thème
+- Cohérence bottom-nav / sidebar
+
+---
+
+### Story IB.2 — Ingénieur bottom-nav + sidebar
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** Story IA.2
+**Statut :** `TODO`
+**Type :** UI
+
+**Description :** Créer les composants de navigation pour le layout ingénieur. La bottom-nav a 5 items : Accueil | Tâches | +Relevé (FAB) | Clients | Menu. Le +Relevé est un FAB (Floating Action Button) centré pour optimiser le geste le plus fréquent.
+
+**Tâches :**
+- [ ] `TODO` Créer `src/components/layout/ingenieur-bottom-nav.tsx` avec 5 items :
+  1. Accueil (icône Home) → `/(ingenieur)/` — dashboard multi-fermes OU single-farm quand scopé
+  2. Tâches (icône CheckSquare) → `/(ingenieur)/mes-taches` — tâches du jour
+  3. +Relevé (FAB central, icône Plus dans un cercle coloré) → ouvre directement le formulaire de saisie de relevé. Style FAB : bouton rond surélevé, couleur primaire, plus grand que les autres items
+  4. Clients (icône Users) → `/(ingenieur)/monitoring` — vue globale des fermes supervisées
+  5. Menu (icône Menu) → ouvre un drawer avec modules secondaires (notes, portefeuille, packs, stock, profil)
+- [ ] `TODO` Créer `src/components/layout/ingenieur-sidebar.tsx` — équivalent desktop avec modules groupés
+- [ ] `TODO` Le FAB (+Relevé) doit déterminer la vague active (dernière vague consultée ou première vague EN_COURS du site actif)
+- [ ] `TODO` Mobile-first 360px : FAB central visuellement distinct (surélevé, rond, couleur primaire)
+
+**Critères d'acceptation :**
+- FAB central visuellement distinct et fonctionnel
+- Navigation multi-fermes adaptée
+- Items conditionnels selon permissions
+- R6 : CSS variables du thème
+- Mobile-first 360px avec touch targets 44px+
+
+---
+
+### Story IB.3 — Permission-based module visibility dans les navs
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** Stories IB.1, IB.2
+**Statut :** `TODO`
+**Type :** UI
+
+**Description :** Intégrer le système de visibilité par permissions SiteMember et par modules site (enabledModules) dans les nouvelles navigations farm et ingénieur. Le layout ne bloque jamais — il organise.
+
+**Tâches :**
+- [ ] `TODO` Les 4 composants nav (farm-bottom-nav, farm-sidebar, ingenieur-bottom-nav, ingenieur-sidebar) reçoivent en props : `permissions: Permission[]`, `siteModules: SiteModule[]`, `role: Role`
+- [ ] `TODO` Appliquer le double filtrage existant :
+  1. Permission utilisateur (ITEM_VIEW_PERMISSIONS)
+  2. Modules site (MODULE_LABEL_TO_SITE_MODULE + enabledModules)
+- [ ] `TODO` Le menu hamburger/drawer de chaque layout filtre aussi ses items
+- [ ] `TODO` Gérer le cas "enabledModules vide = tous les modules" (backward compat)
+
+**Critères d'acceptation :**
+- Un PISCICULTEUR avec toutes les permissions voit tous les items farm
+- Un GERANT voit uniquement les modules autorisés par le propriétaire
+- Un site supervisé avec enabledModules restreints masque les modules non inclus
+- Le layout ne bloque jamais l'accès — il masque les items nav non pertinents
+- R2 : enums importés pour les permissions et modules
+
+---
+
+## Sprint IC — Interface Ingénieur vs Farm : Migration des Pages (ADR-ingenieur-interface)
+
+**Objectif :** Migrer toutes les pages existantes vers les route groups via des stub re-exports. Les pages partagées sont accessibles dans les deux layouts. Les pages exclusives sont dans un seul layout.
+**Dépendances :** Sprint IB validé (navigations créées) + Sprint IA.3 (composants extraits).
+
+---
+
+### Story IC.1 — Stub re-exports pour les pages partagées
+**Assigné à :** @developer
+**Priorité :** Critique
+**Dépend de :** Stories IA.3, IB.1, IB.2
+**Statut :** `TODO`
+**Type :** REFACTOR
+
+**Description :** Créer les stubs 1 ligne dans chaque route group pour les pages classées BOTH. Le composant réel est dans `src/components/pages/`, les stubs font juste `export { default } from "@/components/pages/xxx-page"`.
+
+**Tâches :**
+- [ ] `TODO` Créer les stubs dans `src/app/(farm)/` :
+  - `vagues/page.tsx` → re-export vagues-page
+  - `vagues/[id]/page.tsx` → re-export vagues-detail-page
+  - `releves/page.tsx` → re-export releves-page
+  - `bacs/page.tsx` → re-export bacs-page
+  - `stock/page.tsx` → re-export stock-page (et sous-pages)
+  - `analytics/page.tsx` → re-export analytics-page (et sous-pages)
+  - `planning/page.tsx` → re-export planning-page
+  - `notes/page.tsx` → re-export notes-page
+  - `depenses/page.tsx` → re-export depenses-page
+  - `settings/alertes/page.tsx` → re-export settings-alertes-page
+  - `notifications/page.tsx` → re-export notifications-page
+  - `besoins/page.tsx` → re-export besoins-page (et sous-pages)
+- [ ] `TODO` Créer les mêmes stubs dans `src/app/(ingenieur)/` pour les pages partagées :
+  - `vagues/page.tsx`, `vagues/[id]/page.tsx`
+  - `releves/page.tsx`
+  - `bacs/page.tsx`
+  - `stock/page.tsx`
+  - `analytics/page.tsx`
+  - `planning/page.tsx`
+  - `notes/page.tsx`
+  - `depenses/page.tsx`
+  - `settings/alertes/page.tsx`
+  - `notifications/page.tsx`
+- [ ] `TODO` Supprimer les anciens fichiers page.tsx de `src/app/` (hors route groups) pour les pages migrées
+- [ ] `TODO` Vérifier que toutes les routes fonctionnent dans les deux layouts
+
+**Critères d'acceptation :**
+- Chaque stub est exactement 1 ligne (re-export)
+- Les pages fonctionnent identiquement dans les deux layouts
+- Aucune duplication de logique
+- `npm run build` OK
+- Aucune régression fonctionnelle
+
+---
+
+### Story IC.2 — Pages exclusives farm
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** Story IA.2
+**Statut :** `TODO`
+**Type :** REFACTOR
+
+**Description :** Déplacer les pages exclusives au propriétaire/farm dans `src/app/(farm)/`. Ces pages ne sont pas accessibles dans le layout ingénieur.
+
+**Tâches :**
+- [ ] `TODO` Déplacer vers `src/app/(farm)/` :
+  - `finances/` (dashboard financier)
+  - `ventes/` (liste + détail + formulaire)
+  - `factures/` (liste + détail)
+  - `clients/` (clients acheteurs)
+  - `mon-abonnement/` (gestion abonnement)
+  - `settings/sites/` (gestion sites et membres)
+  - `users/` (gestion utilisateurs)
+  - `depenses/recurrentes/` (dépenses récurrentes — OWNER only)
+- [ ] `TODO` Supprimer les anciens fichiers de `src/app/` pour ces pages
+- [ ] `TODO` Mettre à jour les liens internes si nécessaire
+
+**Critères d'acceptation :**
+- Les pages farm-only ne sont PAS dans `src/app/(ingenieur)/`
+- Le middleware redirige un INGENIEUR qui tente d'accéder à ces routes
+- `npm run build` OK
+
+---
+
+### Story IC.3 — Pages exclusives ingénieur
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** Story IA.2
+**Statut :** `TODO`
+**Type :** REFACTOR
+
+**Description :** Déplacer les pages exclusives à l'ingénieur dans `src/app/(ingenieur)/`. Ces pages ne sont pas accessibles dans le layout farm.
+
+**Tâches :**
+- [ ] `TODO` Déplacer vers `src/app/(ingenieur)/` :
+  - `monitoring/` (vue globale clients multi-fermes)
+  - `portefeuille/` (commissions ingénieur)
+  - `packs/` (gestion et activation de packs)
+  - `activations/` (historique activations)
+  - `mes-taches/` (tâches opérationnelles du jour)
+  - `settings/regles-activites/` (configuration règles d'activité)
+  - `settings/config-elevage/` (profils élevage — expertise technique)
+- [ ] `TODO` Supprimer les anciens fichiers de `src/app/` pour ces pages
+- [ ] `TODO` Mettre à jour les liens internes si nécessaire
+
+**Critères d'acceptation :**
+- Les pages ingénieur-only ne sont PAS dans `src/app/(farm)/`
+- Le middleware redirige un non-INGENIEUR qui tente d'accéder à ces routes
+- `npm run build` OK
+
+---
+
+## Sprint ID — Interface Ingénieur vs Farm : Scope Adaptation (ADR-ingenieur-interface)
+
+**Objectif :** Adapter le dashboard ingénieur pour supporter deux modes (multi-fermes vs single-farm) et implémenter le FAB (+Relevé) comme action rapide.
+**Dépendances :** Sprint IC validé (pages migrées).
+
+---
+
+### Story ID.1 — Dashboard ingénieur : vue multi-fermes vs single-farm
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** Stories IC.1, IC.3
+**Statut :** `TODO`
+**Type :** UI
+
+**Description :** Quand un ingénieur n'a pas de site client sélectionné (ou est sur DKFarm), il voit un dashboard multi-fermes. Quand il switch son activeSiteId vers un client, le dashboard affiche les données de ce client, mais la navigation reste celle de l'ingénieur.
+
+**Tâches :**
+- [ ] `TODO` Modifier ou créer `src/components/pages/ingenieur-dashboard-page.tsx` pour supporter deux modes :
+  - **Mode multi-fermes** (activeSiteId = site DKFarm ou null) : alertes actives toutes fermes, tâches du jour, liste fermes supervisées, portefeuille commissions
+  - **Mode single-farm** (activeSiteId = site client) : indicateurs zootechniques du client (survie, FCR, SGR, biomasse), alertes actives pour ce client, tâches du jour pour ce client
+- [ ] `TODO` Le switch se fait via le sélecteur de site existant (Session.activeSiteId)
+- [ ] `TODO` L'ingénieur reste TOUJOURS dans le layout ingénieur, même scopé sur un client
+- [ ] `TODO` Le dashboard multi-fermes réutilise les composants de `src/components/ingenieur/`
+
+**Critères d'acceptation :**
+- Mode multi-fermes : liste des fermes supervisées avec indicateurs
+- Mode single-farm : données du client sélectionné
+- La navigation ingénieur ne change PAS lors du switch
+- Mobile-first 360px
+- R6 : CSS variables du thème
+
+---
+
+### Story ID.2 — FAB (+Relevé) action rapide ingénieur
+**Assigné à :** @developer
+**Priorité :** Haute
+**Dépend de :** Story IB.2
+**Statut :** `TODO`
+**Type :** UI
+
+**Description :** Le FAB (+Relevé) dans la bottom-nav ingénieur ouvre directement le formulaire de saisie de relevé. Il détermine automatiquement la vague cible.
+
+**Tâches :**
+- [ ] `TODO` Créer `src/components/layout/fab-releve.tsx` — composant FAB avec :
+  - Bouton rond central, couleur primaire, icône Plus, surélevé par rapport aux autres items nav
+  - Au clic : déterminer la vague cible (via localStorage "dernière vague" ou requête API "première vague EN_COURS")
+  - Si vague trouvée → redirect vers `/(ingenieur)/vagues/[vagueId]/releves/nouveau`
+  - Si aucune vague EN_COURS → afficher un toast "Aucune vague active sur ce site"
+  - Si aucun site sélectionné (mode multi-fermes) → afficher "Sélectionnez un site d'abord"
+- [ ] `TODO` Intégrer le FAB dans `ingenieur-bottom-nav.tsx` en position 3 (centrale)
+- [ ] `TODO` Style distinct : z-index élevé, ombre portée, animation subtle au hover/press
+
+**Critères d'acceptation :**
+- Le FAB est visuellement distinct des autres items nav (plus grand, rond, coloré)
+- Le relevé s'ouvre pour la bonne vague
+- Gestion des cas limites (pas de vague, pas de site)
+- Touch target 56px+ (plus grand que les 44px des items normaux)
+- R6 : CSS variables du thème
+
+---
+
+## Sprint IE — Interface Ingénieur vs Farm : Tests + Review (ADR-ingenieur-interface)
+
+**Objectif :** Valider le split d'interface complet avec des tests de middleware, navigation, et route boundaries. Review finale.
+**Dépendances :** Sprints IA, IB, IC, ID tous validés.
+
+---
+
+### Story IE.1 — Tests : middleware, navigation, route boundaries
+**Assigné à :** @tester
+**Priorité :** Critique
+**Dépend de :** Toutes stories IA, IB, IC, ID
+**Statut :** `TODO`
+**Type :** TEST
+
+**Description :** Tests complets du split d'interface.
+
+**Tâches :**
+- [ ] `TODO` Tests middleware (`src/__tests__/middleware.test.ts`) :
+  - INGENIEUR → redirect vers `/(ingenieur)/`
+  - PISCICULTEUR → redirect vers `/(farm)/`
+  - GERANT → redirect vers `/(farm)/`
+  - ADMIN → redirect vers `/(farm)/`
+  - isSuperAdmin → redirect vers `/(backoffice)/`
+  - INGENIEUR sur `/(farm)/*` → redirect vers `/(ingenieur)/*`
+  - Non-INGENIEUR sur `/(ingenieur)/*` → redirect vers `/(farm)/`
+  - Routes API non impactées
+  - Utilisateur non connecté → `/login`
+- [ ] `TODO` Tests navigation farm (`src/__tests__/ui/farm-nav.test.ts`) :
+  - 5 items bottom-nav corrects
+  - Items conditionnels (Finances masqué sans FINANCES_VOIR)
+  - Cohérence bottom-nav / sidebar
+- [ ] `TODO` Tests navigation ingénieur (`src/__tests__/ui/ingenieur-nav.test.ts`) :
+  - 5 items bottom-nav corrects incluant FAB central
+  - Items conditionnels
+  - FAB détermine la bonne vague
+- [ ] `TODO` Tests route boundaries :
+  - Pages farm-only inaccessibles depuis `/(ingenieur)/`
+  - Pages ingénieur-only inaccessibles depuis `/(farm)/`
+  - Pages partagées accessibles depuis les deux layouts
+- [ ] `TODO` Non-régression : `npx vitest run` + `npm run build`
+- [ ] `TODO` Écrire rapport dans `docs/tests/rapport-sprint-IE.md`
+
+**Critères d'acceptation :**
+- R9 : tous les tests passent, build OK
+- Chaque rôle redirigé vers le bon layout
+- Frontières enforcées
+- Non-régression complète
+- Rapport de test dans `docs/tests/`
+
+---
+
+### Story IE.2 — Review ADR-ingenieur-interface
+**Assigné à :** @code-reviewer
+**Priorité :** Critique
+**Dépend de :** Story IE.1
+**Statut :** `TODO`
+**Type :** REVIEW
+
+**Description :** Review complète du split d'interface.
+
+**Tâches :**
+- [ ] `TODO` Vérifier R1-R9 sur tous les fichiers créés/modifiés
+- [ ] `TODO` Vérifier que les stubs sont bien des 1-liners (pas de logique dupliquée)
+- [ ] `TODO` Vérifier que le middleware enforce correctement les frontières
+- [ ] `TODO` Vérifier que la navigation farm a exactement 5 items : Accueil | Ma ferme | Finances | Messages | Menu
+- [ ] `TODO` Vérifier que la navigation ingénieur a exactement 5 items : Accueil | Tâches | +Relevé (FAB) | Clients | Menu
+- [ ] `TODO` Vérifier que les permissions contrôlent la visibilité des items (pas le layout)
+- [ ] `TODO` Vérifier mobile-first 360px sur les deux layouts
+- [ ] `TODO` Vérifier que les pages existantes n'ont pas de régression
+- [ ] `TODO` `npm run build` + `npx vitest run`
+- [ ] `TODO` Écrire `docs/reviews/review-interface-split.md`
+
+**Critères d'acceptation :**
+- Architecture Y1 respectée (stubs 1 ligne)
+- Middleware correct pour tous les rôles
+- Navigations conformes aux décisions du brainstorming
+- Mobile-first validé
+- R1-R9 respectées
+- Rapport de review dans `docs/reviews/`

@@ -200,7 +200,7 @@ describe("Toggle — Desactivation directe sans abonnes", () => {
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
-        `/api/plans/${planActifSansAbonnes.id}/toggle`,
+        `/api/backoffice/plans/${planActifSansAbonnes.id}/toggle`,
         { method: "PATCH" }
       );
     });
@@ -267,7 +267,7 @@ describe("Toggle — Activation d'un plan inactif", () => {
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
-        `/api/plans/${planInactifSansAbonnes.id}/toggle`,
+        `/api/backoffice/plans/${planInactifSansAbonnes.id}/toggle`,
         { method: "PATCH" }
       );
     });
@@ -638,7 +638,7 @@ describe("Toggle — Confirmer la desactivation via le dialog", () => {
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
-        `/api/plans/${planActifAvecAbonnes.id}/toggle`,
+        `/api/backoffice/plans/${planActifAvecAbonnes.id}/toggle`,
         { method: "PATCH" }
       );
     });

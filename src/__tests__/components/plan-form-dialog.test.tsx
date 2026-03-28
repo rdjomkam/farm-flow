@@ -623,7 +623,7 @@ describe("PlanFormDialog — Appel API creation", () => {
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
-        "/api/plans",
+        "/api/backoffice/plans",
         expect.objectContaining({
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -695,7 +695,7 @@ describe("PlanFormDialog — Appel API edition", () => {
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
-        `/api/plans/${planDecouverte.id}`,
+        `/api/backoffice/plans/${planDecouverte.id}`,
         expect.objectContaining({
           method: "PUT",
           headers: { "Content-Type": "application/json" },

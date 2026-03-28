@@ -4,7 +4,7 @@ import { Header } from "@/components/layout/header";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
-import { Permission } from "@/types";
+import { Permission, Role } from "@/types";
 import { DashboardHeroSection } from "@/components/dashboard/dashboard-hero-section";
 import { IndicateursSection } from "@/components/dashboard/indicateurs-section";
 import { ProjectionsSection } from "@/components/dashboard/projections-section";
@@ -16,9 +16,23 @@ import {
   RecentActivitySkeleton,
 } from "@/components/dashboard/section-skeletons";
 
-export default async function DashboardPage() {
+/**
+ * Farm dashboard page — entry point for the (farm) route group.
+ * Serves PISCICULTEUR, GERANT, and ADMIN roles.
+ *
+ * INGENIEUR users are redirected to /ingenieur (their multi-farm hub).
+ * Per ADR-ingenieur-interface: User.role === INGENIEUR → ingénieur layout.
+ *
+ * This page will diverge from the ingénieur hub in Sprint IB when
+ * owner-specific widgets and navigation are added.
+ */
+export default async function FarmDashboardPage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
+
+  // Route engineers to their multi-farm hub — ADR-ingenieur-interface
+  if (session.role === Role.INGENIEUR) redirect("/ingenieur");
+
   if (!session.activeSiteId) redirect("/settings/sites");
 
   const permissions = await checkPagePermission(session, Permission.DASHBOARD_VOIR);

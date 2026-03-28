@@ -7,7 +7,7 @@ import { getConfigAlertes } from "@/lib/queries";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { Permission } from "@/types";
 
-export default async function AlertesConfigPage() {
+export default async function SettingsAlertesPage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");

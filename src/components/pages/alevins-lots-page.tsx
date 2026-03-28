@@ -7,7 +7,7 @@ import { getLotsAlevins } from "@/lib/queries/lots-alevins";
 import { getPontes } from "@/lib/queries/pontes";
 import { Permission } from "@/types";
 
-export default async function LotsAlevinsPage() {
+export default async function AlevinsLotsPage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");

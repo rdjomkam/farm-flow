@@ -6,7 +6,7 @@ import { AccessDenied } from "@/components/ui/access-denied";
 import { getCommandeById } from "@/lib/queries/commandes";
 import { Permission } from "@/types";
 
-export default async function CommandeDetailPage({
+export default async function StockCommandeDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;

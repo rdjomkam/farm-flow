@@ -10,7 +10,7 @@ import { getProduits } from "@/lib/queries/produits";
 import { getVagues } from "@/lib/queries/vagues";
 import { Permission } from "@/types";
 
-export default async function MouvementsPage() {
+export default async function StockMouvementsPage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");

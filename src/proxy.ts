@@ -16,11 +16,16 @@
  * La vérification d'abonnement se fait via fetch vers l'API interne Node.js.
  *
  * Story 36.3 — Sprint 36
+ * Story IA.1 — Redirection par rôle (INGENIEUR vs farm)
  */
 import { NextRequest, NextResponse } from "next/server";
 import { StatutAbonnement } from "@/types";
 
 const SESSION_COOKIE = "session_token";
+const ROLE_COOKIE = "user_role";
+
+/** Préfixe URL de l'espace ingénieur */
+const INGENIEUR_PREFIX = "/ingenieur";
 
 /** Routes that don't require authentication */
 const PUBLIC_ROUTES = ["/login", "/register"];
@@ -98,6 +103,23 @@ export async function proxy(request: NextRequest) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // Session cookie exists — vérifier le rôle pour les pages (pas les API)
+  if (!pathname.startsWith("/api/") && !pathname.startsWith("/backoffice")) {
+    const userRole = request.cookies.get(ROLE_COOKIE)?.value ?? "";
+    const isIngenieur = userRole === "INGENIEUR";
+    const isOnIngenieurPath = pathname === INGENIEUR_PREFIX || pathname.startsWith(INGENIEUR_PREFIX + "/");
+
+    if (isIngenieur && !isOnIngenieurPath) {
+      // Un ingénieur tente d'accéder à l'espace farm → rediriger vers l'espace ingénieur
+      return NextResponse.redirect(new URL(INGENIEUR_PREFIX + "/", request.url));
+    }
+
+    if (!isIngenieur && isOnIngenieurPath) {
+      // Un non-ingénieur tente d'accéder à l'espace ingénieur → rediriger vers l'accueil farm
+      return NextResponse.redirect(new URL("/", request.url));
+    }
   }
 
   // Session cookie exists — vérifier le statut d'abonnement pour les routes concernées

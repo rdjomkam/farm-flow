@@ -7,6 +7,7 @@ import type { UserSession } from "@/types";
 const COOKIE_NAME = "session_token";
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const SESSION_MAX_AGE_S = 30 * 24 * 60 * 60; // 30 days in seconds
+export const ROLE_COOKIE_NAME = "user_role";
 
 /** Create a new session in DB for the given userId */
 export async function createSession(userId: string): Promise<{
@@ -145,6 +146,39 @@ export function setSessionCookie(
 export function clearSessionCookie(response: NextResponse): void {
   response.cookies.set(COOKIE_NAME, "", {
     httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
+}
+
+/**
+ * Set a companion non-httpOnly cookie containing the user's role.
+ * This allows the Edge middleware to read the role without a DB call.
+ * The value is not sensitive (role is not a secret), but it must be
+ * consistent with the session. If the session is invalid, the middleware
+ * will redirect to /login anyway.
+ */
+export function setUserRoleCookie(
+  response: NextResponse,
+  role: string,
+  expires: Date
+): void {
+  response.cookies.set(ROLE_COOKIE_NAME, role, {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_MAX_AGE_S,
+    expires,
+  });
+}
+
+/** Clear the user role cookie on a response */
+export function clearUserRoleCookie(response: NextResponse): void {
+  response.cookies.set(ROLE_COOKIE_NAME, "", {
+    httpOnly: false,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",

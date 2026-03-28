@@ -293,8 +293,8 @@ describe("PERMISSION_GROUPS", () => {
     expect(PERMISSION_GROUPS.administration).toHaveLength(5);
   });
 
-  it("elevage contient 10 permissions dont BACS_MODIFIER et RELEVES_MODIFIER", () => {
-    expect(PERMISSION_GROUPS.elevage).toHaveLength(11);
+  it("elevage contient 12 permissions dont BACS_MODIFIER, RELEVES_MODIFIER et RELEVES_SUPPRIMER", () => {
+    expect(PERMISSION_GROUPS.elevage).toHaveLength(12);
     expect(PERMISSION_GROUPS.elevage).toContain(Permission.VAGUES_VOIR);
     expect(PERMISSION_GROUPS.elevage).toContain(Permission.RELEVES_CREER);
     expect(PERMISSION_GROUPS.elevage).toContain(Permission.BACS_MODIFIER);

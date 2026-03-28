@@ -9,7 +9,7 @@ import { getFournisseurs } from "@/lib/queries/fournisseurs";
 import { getProduits } from "@/lib/queries/produits";
 import { Permission } from "@/types";
 
-export default async function CommandesPage() {
+export default async function StockCommandesPage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
