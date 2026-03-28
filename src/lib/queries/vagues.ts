@@ -31,7 +31,7 @@ export async function getVagueById(id: string, siteId: string) {
           modifications: {
             orderBy: { createdAt: "desc" },
             take: 1,
-            select: { raison: true, createdAt: true, user: { select: { name: true } } },
+            include: { user: { select: { id: true, name: true } } },
           },
         },
       },
