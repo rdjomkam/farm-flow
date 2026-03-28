@@ -35,7 +35,7 @@ const pisciculteurItems: NavItem[] = [
 
 const ingenieurItems: NavItem[] = [
   { href: "/", label: "Accueil" },
-  { href: "/ingenieur", label: "Clients" },
+  { href: "/monitoring", label: "Clients" },
   { href: "/notes", label: "Notes" },
 ];
 
@@ -43,7 +43,7 @@ const adminGerantItems: NavItem[] = [
   { href: "/", label: "Accueil" },
   { href: "/vagues", label: "Vagues" },
   { href: "/stock", label: "Stock" },
-  { href: "/ingenieur", label: "Ingénieur" },
+  { href: "/monitoring", label: "Ingénieur" },
 ];
 
 /**
@@ -82,8 +82,8 @@ describe("Navigation PISCICULTEUR", () => {
     expect(items.some((i) => i.href === "/releves/nouveau")).toBe(true);
   });
 
-  it("n'inclut pas /ingenieur (pas pour les pisciculteurs)", () => {
-    expect(items.some((i) => i.href === "/ingenieur")).toBe(false);
+  it("n'inclut pas /monitoring (pas pour les pisciculteurs)", () => {
+    expect(items.some((i) => i.href === "/monitoring")).toBe(false);
   });
 
   it("n'inclut pas /vagues (gestion vague = admin)", () => {
@@ -114,8 +114,8 @@ describe("Navigation INGENIEUR", () => {
     expect(items.some((i) => i.href === "/")).toBe(true);
   });
 
-  it("inclut Clients (/ingenieur)", () => {
-    expect(items.some((i) => i.href === "/ingenieur")).toBe(true);
+  it("inclut Clients (/monitoring)", () => {
+    expect(items.some((i) => i.href === "/monitoring")).toBe(true);
   });
 
   it("inclut Notes (/notes)", () => {
@@ -166,8 +166,8 @@ describe("Navigation ADMIN / GERANT", () => {
     expect(adminItems.some((i) => i.href === "/stock")).toBe(true);
   });
 
-  it("inclut /ingenieur pour ADMIN", () => {
-    expect(adminItems.some((i) => i.href === "/ingenieur")).toBe(true);
+  it("inclut /monitoring pour ADMIN", () => {
+    expect(adminItems.some((i) => i.href === "/monitoring")).toBe(true);
   });
 
   it("inclut l'Accueil pour ADMIN", () => {
@@ -295,8 +295,8 @@ describe("Detection de section contextuelle (getModuleForPath)", () => {
     expect(getModuleForPath("/ventes")).toBe("Ventes");
   });
 
-  it("/ingenieur n'appartient pas a un module (retourne null)", () => {
-    expect(getModuleForPath("/ingenieur")).toBeNull();
+  it("/monitoring n'appartient pas a un module (retourne null)", () => {
+    expect(getModuleForPath("/monitoring")).toBeNull();
   });
 
   it("/notes n'appartient pas a un module (retourne null)", () => {

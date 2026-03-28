@@ -127,10 +127,10 @@ const modulesAdminGerant: NavModule[] = [
   },
   {
     label: "Ingenieur",
-    primaryHref: "/ingenieur",
+    primaryHref: "/monitoring",
     icon: "UserCog",
     items: [
-      { href: "/ingenieur", label: "Dashboard clients", icon: "LayoutDashboard" },
+      { href: "/monitoring", label: "Dashboard clients", icon: "LayoutDashboard" },
       { href: "/notes", label: "Notes", icon: "NotebookPen" },
     ],
   },

@@ -31,7 +31,7 @@ export default async function FarmDashboardPage() {
   if (!session) redirect("/login");
 
   // Route engineers to their multi-farm hub — ADR-ingenieur-interface
-  if (session.role === Role.INGENIEUR) redirect("/ingenieur");
+  if (session.role === Role.INGENIEUR) redirect("/monitoring");
 
   if (!session.activeSiteId) redirect("/settings/sites");
 

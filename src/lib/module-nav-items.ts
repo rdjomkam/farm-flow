@@ -137,9 +137,9 @@ export const MODULE_NAV: ModuleNavConfig[] = [
   },
   {
     label: "Ingenieur",
-    matchPaths: ["/ingenieur", "/notes"],
+    matchPaths: ["/monitoring", "/notes"],
     items: [
-      { href: "/ingenieur", label: "Clients", itemKey: "clients", icon: UserCog },
+      { href: "/monitoring", label: "Clients", itemKey: "clients", icon: UserCog },
       { href: "/notes", label: "Notes", itemKey: "notes", icon: NotebookPen },
     ],
   },

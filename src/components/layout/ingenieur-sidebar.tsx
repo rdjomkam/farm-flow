@@ -56,7 +56,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Monitoring",
     items: [
-      { href: "/ingenieur", label: "Clients supervisés", icon: Users },
+      { href: "/monitoring", label: "Clients supervisés", icon: Users },
       { href: "/notes", label: "Notes", icon: NotebookPen },
     ],
     permissionRequired: Permission.MONITORING_CLIENTS,
@@ -136,7 +136,7 @@ export function IngenieurSidebar({
       href === "/finances" ||
       href === "/mes-taches" ||
       href === "/ventes" ||
-      href === "/ingenieur" ||
+      href === "/monitoring" ||
       href === "/packs" ||
       href === "/activations" ||
       href === "/notes"

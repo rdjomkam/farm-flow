@@ -141,7 +141,7 @@ export default async function IngenieurClientDetailPage({
   return (
     <>
       <Header title={clientSummary.siteName}>
-        <Link href="/ingenieur">
+        <Link href="/monitoring">
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4" />
             <span className="sr-only sm:not-sr-only">Retour</span>
@@ -520,7 +520,7 @@ export default async function IngenieurClientDetailPage({
         {/* Retour */}
         <div className="pb-4">
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/ingenieur">
+            <Link href="/monitoring">
               <ArrowLeft className="h-4 w-4" />
               Retour au monitoring
             </Link>

@@ -158,10 +158,10 @@ const modulesAdminGerant: {
   {
     label: "Ingenieur",
     moduleKey: "ingenieur",
-    primaryHref: "/ingenieur",
+    primaryHref: "/monitoring",
     icon: UserCog,
     items: [
-      { href: "/ingenieur", itemKey: "dashboardClients", icon: LayoutDashboard },
+      { href: "/monitoring", itemKey: "dashboardClients", icon: LayoutDashboard },
       { href: "/notes", itemKey: "notes", icon: NotebookPen },
     ],
   },
@@ -276,7 +276,7 @@ export function HamburgerMenu({ open, onOpenChange, permissions, role, userName,
   const showDashboard = permissions.includes(Permission.DASHBOARD_VOIR) && role !== Role.INGENIEUR && role !== Role.PISCICULTEUR;
 
   function isActive(href: string) {
-    if (href === "/" || href === "/stock" || href === "/alevins" || href === "/analytics" || href === "/planning" || href === "/finances" || href === "/mes-taches" || href === "/ingenieur" || href === "/notes" || href === "/packs" || href === "/activations" || href === "/users")
+    if (href === "/" || href === "/stock" || href === "/alevins" || href === "/analytics" || href === "/planning" || href === "/finances" || href === "/mes-taches" || href === "/monitoring" || href === "/notes" || href === "/packs" || href === "/activations" || href === "/users")
       return pathname === href || pathname.startsWith(href + "/");
     if (href === "/ventes")
       return pathname === "/ventes" || pathname.startsWith("/ventes/");

@@ -137,7 +137,7 @@ export default async function IngenieurPage() {
                           </p>
                           <div className="flex items-center justify-between mt-1">
                             <Link
-                              href={`/ingenieur/${alerte.siteId}`}
+                              href={`/monitoring/${alerte.siteId}`}
                               className="text-xs text-primary hover:underline font-medium"
                             >
                               {(alerte as typeof alerte & { site?: { name: string } }).site?.name ?? alerte.siteId}

@@ -199,7 +199,7 @@ export const ITEM_VIEW_PERMISSIONS: Record<string, Permission> = {
   "/packs":              Permission.ACTIVER_PACKS,
   "/activations":        Permission.ACTIVER_PACKS,
   // Phase 3 — Ingénieur (Sprint 23)
-  "/ingenieur":          Permission.MONITORING_CLIENTS,
+  "/monitoring":         Permission.MONITORING_CLIENTS,
   "/notes":              Permission.ENVOYER_NOTES,
   // Configuration module items
   "/settings/sites":     Permission.SITE_GERER,

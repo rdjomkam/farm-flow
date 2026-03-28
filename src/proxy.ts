@@ -24,8 +24,19 @@ import { StatutAbonnement } from "@/types";
 const SESSION_COOKIE = "session_token";
 const ROLE_COOKIE = "user_role";
 
-/** Préfixe URL de l'espace ingénieur */
-const INGENIEUR_PREFIX = "/ingenieur";
+/** Page d'accueil de l'espace ingénieur */
+const INGENIEUR_HOME = "/monitoring";
+
+/**
+ * Routes réservées à l'espace ingénieur.
+ * Un non-ingénieur qui tente d'y accéder est redirigé vers l'accueil farm.
+ * Note : /packs, /activations, /mes-taches sont partagés — l'accès est contrôlé par
+ * les permissions de page (checkPagePermission), pas par le middleware.
+ */
+const INGENIEUR_ONLY_PREFIXES = [
+  "/monitoring",
+  "/mon-portefeuille",
+];
 
 /** Routes that don't require authentication */
 const PUBLIC_ROUTES = ["/login", "/register"];
@@ -109,15 +120,17 @@ export async function proxy(request: NextRequest) {
   if (!pathname.startsWith("/api/") && !pathname.startsWith("/backoffice")) {
     const userRole = request.cookies.get(ROLE_COOKIE)?.value ?? "";
     const isIngenieur = userRole === "INGENIEUR";
-    const isOnIngenieurPath = pathname === INGENIEUR_PREFIX || pathname.startsWith(INGENIEUR_PREFIX + "/");
+    const isOnIngenieurOnlyPath = INGENIEUR_ONLY_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
+    );
 
-    if (isIngenieur && !isOnIngenieurPath) {
-      // Un ingénieur tente d'accéder à l'espace farm → rediriger vers l'espace ingénieur
-      return NextResponse.redirect(new URL(INGENIEUR_PREFIX + "/", request.url));
+    if (isIngenieur && pathname === "/") {
+      // Un ingénieur accède à la racine → rediriger vers son espace monitoring
+      return NextResponse.redirect(new URL(INGENIEUR_HOME, request.url));
     }
 
-    if (!isIngenieur && isOnIngenieurPath) {
-      // Un non-ingénieur tente d'accéder à l'espace ingénieur → rediriger vers l'accueil farm
+    if (!isIngenieur && isOnIngenieurOnlyPath) {
+      // Un non-ingénieur tente d'accéder aux routes ingénieur → rediriger vers l'accueil farm
       return NextResponse.redirect(new URL("/", request.url));
     }
   }

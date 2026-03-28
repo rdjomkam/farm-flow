@@ -173,10 +173,10 @@ export function IngenieurBottomNav({
           {/* 4. Clients — multi-fermes monitoring */}
           {canSeeClients && (
             <Link
-              href="/ingenieur"
+              href="/monitoring"
               className={cn(
                 "flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 text-xs transition-colors pb-1",
-                isActive("/ingenieur")
+                isActive("/monitoring")
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
               )}

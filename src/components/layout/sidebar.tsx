@@ -151,10 +151,10 @@ const modulesAdminGerant: {
   {
     label: "Ingenieur",
     moduleKey: "ingenieur",
-    primaryHref: "/ingenieur",
+    primaryHref: "/monitoring",
     icon: UserCog,
     items: [
-      { href: "/ingenieur", itemKey: "dashboardClients", icon: LayoutDashboard },
+      { href: "/monitoring", itemKey: "dashboardClients", icon: LayoutDashboard },
       { href: "/notes", itemKey: "notes", icon: NotebookPen },
     ],
   },
@@ -261,7 +261,7 @@ export function Sidebar({ permissions, role, siteModules, isSuperAdmin = false }
 
   function isActive(href: string) {
     // Pages racines : match exact uniquement
-    if (href === "/" || href === "/stock" || href === "/alevins" || href === "/analytics" || href === "/planning" || href === "/finances" || href === "/mes-taches" || href === "/ingenieur" || href === "/notes" || href === "/packs" || href === "/activations")
+    if (href === "/" || href === "/stock" || href === "/alevins" || href === "/analytics" || href === "/planning" || href === "/finances" || href === "/mes-taches" || href === "/monitoring" || href === "/notes" || href === "/packs" || href === "/activations")
       return pathname === href || pathname.startsWith(href + "/");
     if (href === "/ventes")
       return pathname === "/ventes" || pathname.startsWith("/ventes/");

@@ -38,7 +38,7 @@ const pisciculteurItems: NavItem[] = [
 // Navigation INGENIEUR — suivi clients et notes
 const ingenieurItems: NavItem[] = [
   { href: "/", itemKey: "accueil", icon: LayoutDashboard },
-  { href: "/ingenieur", itemKey: "clients", icon: Users },
+  { href: "/monitoring", itemKey: "clients", icon: Users },
   { href: "/notes", itemKey: "notes", icon: NotebookPen },
 ];
 
@@ -47,7 +47,7 @@ const adminGerantItems: NavItem[] = [
   { href: "/", itemKey: "accueil", icon: LayoutDashboard },
   { href: "/vagues", itemKey: "vagues", icon: Waves },
   { href: "/stock", itemKey: "stock", icon: Package },
-  { href: "/ingenieur", itemKey: "ingenieur", icon: UserCog },
+  { href: "/monitoring", itemKey: "ingenieur", icon: UserCog },
 ];
 
 function getDefaultItemsByRole(role: Role | null): NavItem[] {
@@ -105,7 +105,7 @@ export function BottomNav({ permissions, role, siteModules }: { permissions: Per
       if (item.href === "/") return permissions.includes(Permission.DASHBOARD_VOIR);
       if (item.href === "/vagues") return permissions.includes(Permission.VAGUES_VOIR) && siteModules.includes(SiteModule.GROSSISSEMENT);
       if (item.href === "/stock") return permissions.includes(Permission.STOCK_VOIR) && siteModules.includes(SiteModule.INTRANTS);
-      if (item.href === "/ingenieur") return permissions.includes(Permission.MONITORING_CLIENTS) && siteModules.includes(SiteModule.INGENIEUR);
+      if (item.href === "/monitoring") return permissions.includes(Permission.MONITORING_CLIENTS) && siteModules.includes(SiteModule.INGENIEUR);
       return true;
     });
   }
