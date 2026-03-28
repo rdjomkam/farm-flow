@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
+import { StatutVague } from "@/types";
 
 const LAST_VAGUE_KEY = "lastVagueId";
 
@@ -63,7 +64,7 @@ export function FabReleve({ activeSiteId, className }: FabReleveProps) {
           const data = await res.json() as {
             vague?: { id: string; statut: string };
           };
-          if (data.vague?.statut === "EN_COURS") {
+          if (data.vague?.statut === StatutVague.EN_COURS) {
             router.push(`/releves/nouveau?vagueId=${lastVagueId}`);
             return;
           }

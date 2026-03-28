@@ -42,7 +42,7 @@ export default async function IngenieurClientNotesPage({
   return (
     <>
       <Header title={`Notes — ${clientSummary.siteName}`}>
-        <Link href={`/ingenieur/${clientSiteId}`}>
+        <Link href={`/monitoring/${clientSiteId}`}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4" />
             <span className="sr-only sm:not-sr-only">Retour</span>
@@ -64,7 +64,7 @@ export default async function IngenieurClientNotesPage({
 
         <div className="pb-4">
           <Button variant="ghost" size="sm" asChild>
-            <Link href={`/ingenieur/${clientSiteId}`}>
+            <Link href={`/monitoring/${clientSiteId}`}>
               <ArrowLeft className="h-4 w-4" />
               Retour au client
             </Link>

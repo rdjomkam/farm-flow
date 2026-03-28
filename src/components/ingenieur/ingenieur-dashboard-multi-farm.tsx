@@ -27,38 +27,18 @@ import { DashboardStats } from "@/components/ingenieur/dashboard-stats";
 import { ClientCard } from "@/components/ingenieur/client-card";
 import { getIngenieurDashboardMetrics, getClientsIngenieur } from "@/lib/queries/ingenieur";
 import { getPortefeuille } from "@/lib/queries/commissions";
-import { StatutAlerte, TypeAlerte } from "@/types";
+import { StatutAlerte } from "@/types";
 import { prisma } from "@/lib/db";
+import {
+  typeAlerteLabels,
+  severiteAlerte,
+  sortAlertesBySeverite,
+  type AlerteSeverite,
+} from "@/lib/ingenieur/alerte-helpers";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-const typeAlerteLabels: Record<string, string> = {
-  [TypeAlerte.MORTALITE_ELEVEE]: "Mortalite elevee",
-  [TypeAlerte.QUALITE_EAU]: "Qualite eau",
-  [TypeAlerte.STOCK_BAS]: "Stock bas",
-  [TypeAlerte.RAPPEL_ALIMENTATION]: "Alimentation",
-  [TypeAlerte.RAPPEL_BIOMETRIE]: "Biometrie",
-  [TypeAlerte.PERSONNALISEE]: "Personnalisee",
-};
-
-type AlerteSeverite = "critique" | "attention" | "info";
-
-const severiteAlerte: Record<string, AlerteSeverite> = {
-  [TypeAlerte.MORTALITE_ELEVEE]: "critique",
-  [TypeAlerte.QUALITE_EAU]: "critique",
-  [TypeAlerte.STOCK_BAS]: "attention",
-  [TypeAlerte.RAPPEL_ALIMENTATION]: "info",
-  [TypeAlerte.RAPPEL_BIOMETRIE]: "info",
-  [TypeAlerte.PERSONNALISEE]: "info",
-};
-
-const severiteOrder: Record<AlerteSeverite, number> = {
-  critique: 0,
-  attention: 1,
-  info: 2,
-};
 
 function formatXAF(amount: number) {
   return new Intl.NumberFormat("fr-CM", {
@@ -112,11 +92,7 @@ export async function IngenieurDashboardMultiFarm({
         })
       : [];
 
-  const alertesTriees = [...alertesActives].sort((a, b) => {
-    const sA = severiteOrder[severiteAlerte[a.typeAlerte] ?? "info"];
-    const sB = severiteOrder[severiteAlerte[b.typeAlerte] ?? "info"];
-    return sA - sB;
-  });
+  const alertesTriees = sortAlertesBySeverite(alertesActives);
 
   const clientsSerialized = JSON.parse(JSON.stringify(clientsResult.clients));
   const metricsSerialized = JSON.parse(JSON.stringify(metrics));

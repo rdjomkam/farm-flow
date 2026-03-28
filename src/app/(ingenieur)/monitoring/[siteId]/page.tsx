@@ -335,7 +335,7 @@ export default async function IngenieurClientDetailPage({
           ) : (
             <div className="flex flex-col gap-3">
               {vaguesAvecStats.map((vague) => (
-                <Link key={vague.id} href={`/ingenieur/${clientSiteId}/vagues/${vague.id}`}>
+                <Link key={vague.id} href={`/monitoring/${clientSiteId}/vagues/${vague.id}`}>
                   <Card className="transition-colors hover:border-primary/40">
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
@@ -500,7 +500,7 @@ export default async function IngenieurClientDetailPage({
               ))}
               {notesSerialized.length > 0 && (
                 <Link
-                  href={`/ingenieur/${clientSiteId}/notes`}
+                  href={`/monitoring/${clientSiteId}/notes`}
                   className="text-sm font-medium text-primary hover:underline text-center py-2"
                 >
                   Voir plus ({notesSerialized.length})

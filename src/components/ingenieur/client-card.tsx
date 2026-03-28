@@ -99,7 +99,7 @@ export function ClientCard({ client }: ClientCardProps) {
   const inactif = isInactif(client.dernierReleveDate);
 
   return (
-    <Link href={`/ingenieur/${client.siteId}`} className="block">
+    <Link href={`/monitoring/${client.siteId}`} className="block">
       <Card
         interactive
         className={`transition-all ${styles.border}`}

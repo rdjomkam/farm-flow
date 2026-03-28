@@ -54,9 +54,9 @@ export default async function FarmDashboardPage() {
       where: { siteId: activeSiteId },
     });
 
-    const isHubMode = vendeurActivationCount > 0 || activeSiteId !== null;
+    const isHubMode = vendeurActivationCount > 0;
 
-    if (isHubMode && vendeurActivationCount > 0) {
+    if (isHubMode) {
       // Multi-farm (hub) mode — engineer sees all supervised clients
       return (
         <>

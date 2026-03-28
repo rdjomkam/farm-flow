@@ -19,7 +19,7 @@
  * Story IA.1 — Redirection par rôle (INGENIEUR vs farm)
  */
 import { NextRequest, NextResponse } from "next/server";
-import { StatutAbonnement } from "@/types";
+import { Role, StatutAbonnement } from "@/types";
 
 const SESSION_COOKIE = "session_token";
 const ROLE_COOKIE = "user_role";
@@ -119,7 +119,7 @@ export async function proxy(request: NextRequest) {
   // Session cookie exists — vérifier le rôle pour les pages (pas les API)
   if (!pathname.startsWith("/api/") && !pathname.startsWith("/backoffice")) {
     const userRole = request.cookies.get(ROLE_COOKIE)?.value ?? "";
-    const isIngenieur = userRole === "INGENIEUR";
+    const isIngenieur = userRole === Role.INGENIEUR;
     const isOnIngenieurOnlyPath = INGENIEUR_ONLY_PREFIXES.some(
       (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
     );

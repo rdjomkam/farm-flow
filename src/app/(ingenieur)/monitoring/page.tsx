@@ -9,36 +9,13 @@ import { DashboardStats } from "@/components/ingenieur/dashboard-stats";
 import { ClientCard } from "@/components/ingenieur/client-card";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getIngenieurDashboardMetrics, getClientsIngenieur } from "@/lib/queries/ingenieur";
-import { Permission, StatutAlerte, TypeAlerte } from "@/types";
+import { Permission, StatutAlerte } from "@/types";
 import { prisma } from "@/lib/db";
-
-// ---------------------------------------------------------------------------
-// Labels / icones alertes
-// ---------------------------------------------------------------------------
-
-const typeAlerteLabels: Record<string, string> = {
-  [TypeAlerte.MORTALITE_ELEVEE]: "Mortalite elevee",
-  [TypeAlerte.QUALITE_EAU]: "Qualite eau",
-  [TypeAlerte.STOCK_BAS]: "Stock bas",
-  [TypeAlerte.RAPPEL_ALIMENTATION]: "Alimentation",
-  [TypeAlerte.RAPPEL_BIOMETRIE]: "Biometrie",
-  [TypeAlerte.PERSONNALISEE]: "Personnalisee",
-};
-
-const severiteAlerte: Record<string, "critique" | "attention" | "info"> = {
-  [TypeAlerte.MORTALITE_ELEVEE]: "critique",
-  [TypeAlerte.QUALITE_EAU]: "critique",
-  [TypeAlerte.STOCK_BAS]: "attention",
-  [TypeAlerte.RAPPEL_ALIMENTATION]: "info",
-  [TypeAlerte.RAPPEL_BIOMETRIE]: "info",
-  [TypeAlerte.PERSONNALISEE]: "info",
-};
-
-const severiteOrder: Record<"critique" | "attention" | "info", number> = {
-  critique: 0,
-  attention: 1,
-  info: 2,
-};
+import {
+  typeAlerteLabels,
+  severiteAlerte,
+  sortAlertesBySeverite,
+} from "@/lib/ingenieur/alerte-helpers";
 
 // ---------------------------------------------------------------------------
 // Page
@@ -75,11 +52,7 @@ export default async function IngenieurPage() {
     : [];
 
   // Trier alertes par sévérité
-  const alertesTriees = [...alertesActives].sort((a, b) => {
-    const sA = severiteOrder[severiteAlerte[a.typeAlerte] ?? "info"];
-    const sB = severiteOrder[severiteAlerte[b.typeAlerte] ?? "info"];
-    return sA - sB;
-  });
+  const alertesTriees = sortAlertesBySeverite(alertesActives);
 
   // Serialiser pour passer en props
   const clientsSerialized = JSON.parse(JSON.stringify(clientsResult.clients));
