@@ -36,6 +36,7 @@ interface FeedComparisonCardsProps {
   meilleurFCR: string | null;
   meilleurCoutKg: string | null;
   meilleurSGR: string | null;
+  meilleurK?: string | null;
 }
 
 function rankColor(index: number): string {
@@ -57,11 +58,27 @@ function MetricItem({ label, value, unit }: { label: string; value: string; unit
   );
 }
 
+// Helper: badge color and label for Gompertz K level
+function kNiveauBadge(niveau: string, label: string) {
+  const colorClass =
+    niveau === "EXCELLENT"
+      ? "bg-emerald-100 text-emerald-700"
+      : niveau === "BON"
+      ? "bg-amber-100 text-amber-700"
+      : "bg-red-100 text-red-700";
+  return (
+    <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-semibold", colorClass)}>
+      {label}
+    </span>
+  );
+}
+
 export function FeedComparisonCards({
   aliments,
   meilleurFCR,
   meilleurCoutKg,
   meilleurSGR,
+  meilleurK,
 }: FeedComparisonCardsProps) {
   const tAnalytics = useTranslations("analytics");
   const tVagues = useTranslations("vagues");
@@ -81,6 +98,9 @@ export function FeedComparisonCards({
         const isBestCout = aliment.produitId === meilleurCoutKg;
         const isBestFCR = aliment.produitId === meilleurFCR;
         const isBestSGR = aliment.produitId === meilleurSGR;
+        const isBestK = meilleurK != null && aliment.produitId === meilleurK;
+        const hasGompertzK =
+          aliment.kMoyenGompertz != null && aliment.kNiveauGompertz != null;
 
         return (
           <Card key={aliment.produitId} className={cn(isBestCout && "border-accent-green/30")}>
@@ -148,10 +168,17 @@ export function FeedComparisonCards({
                 {aliment.scoreQualite !== null && (
                   <ScoreBadge score={aliment.scoreQualite} />
                 )}
+                {/* G3.3 — Meilleur K Gompertz badge */}
+                {isBestK && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+                    <Trophy className="h-2.5 w-2.5" />
+                    {tAnalytics("gompertz.meilleurK")}
+                  </span>
+                )}
               </div>
 
               {/* Metrics grid */}
-              <div className="grid grid-cols-3 gap-2">
+              <div className={cn("grid gap-2", hasGompertzK ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3")}>
                 <MetricItem
                   label={tAnalytics("benchmarks.fcr.label")}
                   value={aliment.fcrMoyen !== null ? `${aliment.fcrMoyen}` : "—"}
@@ -166,6 +193,23 @@ export function FeedComparisonCards({
                   value={aliment.sgrMoyen !== null ? `${aliment.sgrMoyen}` : "—"}
                   unit={tAnalytics("labels.sgrUnit")}
                 />
+                {/* G3.3 — Vitesse Gompertz metric */}
+                {hasGompertzK && (
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                      {tAnalytics("gompertz.vitesseLabel")}
+                    </span>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      {kNiveauBadge(
+                        aliment.kNiveauGompertz!,
+                        tAnalytics(`gompertz.${aliment.kNiveauGompertz}`)
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground mt-0.5">
+                      K={aliment.kMoyenGompertz!.toFixed(4)}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Footer metadata */}

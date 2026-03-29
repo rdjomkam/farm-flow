@@ -488,6 +488,8 @@ export type {
 // Gompertz growth model — public interfaces (Story G2.1)
 export type { GompertzParams, GompertzCalibrationResult } from "@/lib/gompertz";
 export type { GompertzConfidenceLevel } from "@/lib/gompertz";
+// Gompertz K level — Feed Analytics (Story G3.2)
+export type { GompertzKLevel } from "@/lib/benchmarks";
 
 // Types export PDF/Excel — Sprint 12
 export type {

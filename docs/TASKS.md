@@ -6557,40 +6557,41 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story G3.1 — Agregation K par produitId
-**Assigne a :** @db-specialist | **Depend de :** G1.3 | **Statut :** `TODO` | **Type :** DB/QUERY
+**Assigne a :** @db-specialist | **Depend de :** G1.3 | **Statut :** `FAIT` | **Type :** DB/QUERY
 
 **Taches :**
-- [ ] `TODO` Creer `src/lib/queries/gompertz-analytics.ts`
-- [ ] `TODO` Implementer `getKParAliment(siteId)` — K moyen pondere par aliment
-- [ ] `TODO` Filtrer : confidenceLevel HIGH/MEDIUM, >= 2 vagues par aliment
-- [ ] `TODO` Retourner : produitId, nom, fournisseur, kMoyen, kNiveau, nombreVagues
+- [x] `FAIT` Creer `src/lib/queries/gompertz-analytics.ts`
+- [x] `FAIT` Implementer `getKParAliment(siteId)` — K moyen pondere par aliment (single query, no N+1)
+- [x] `FAIT` Filtrer : confidenceLevel HIGH/MEDIUM, >= 2 vagues par aliment
+- [x] `FAIT` Retourner : produitId, nom, fournisseur, kMoyen, kNiveau, nombreVagues + details[]
 
 ---
 
 ### Story G3.2 — Extension types AnalytiqueAliment
-**Assigne a :** @architect | **Depend de :** G1.5 | **Statut :** `TODO` | **Type :** TYPES
+**Assigne a :** @architect | **Depend de :** G1.5 | **Statut :** `FAIT` | **Type :** TYPES
 
 **Taches :**
-- [ ] `TODO` Ajouter kMoyenGompertz et kNiveauGompertz aux types analytics aliment
-- [ ] `TODO` Build passe
+- [x] `FAIT` Ajouter kMoyenGompertz et kNiveauGompertz a AnalytiqueAliment, kGompertz a DetailAlimentVague
+- [x] `FAIT` Exporter GompertzKLevel depuis src/types/index.ts — Build passe
 
 ---
 
 ### Story G3.3 — UI comparaison aliments avec K Gompertz
-**Assigne a :** @developer | **Depend de :** G3.1, G3.2 | **Statut :** `TODO` | **Type :** UI
+**Assigne a :** @developer | **Depend de :** G3.1, G3.2 | **Statut :** `FAIT` | **Type :** UI
 
 **Taches :**
-- [ ] `TODO` Colonne "Vitesse croissance Gompertz" dans feed-comparison-cards.tsx
-- [ ] `TODO` K en langage metier : Rapide (vert) / Normal (amber) / Lent (rouge)
-- [ ] `TODO` Graphique barre horizontale K par aliment
-- [ ] `TODO` Conditionnel si pas de donnees Gompertz
+- [x] `FAIT` Colonne "Vitesse Gompertz" dans feed-comparison-cards.tsx avec badges couleur
+- [x] `FAIT` K en langage metier : Rapide (vert) / Normal (amber) / Lent (rouge)
+- [x] `FAIT` Graphique barre horizontale K par aliment (feed-k-comparison-chart.tsx)
+- [x] `FAIT` Conditionnel si pas de donnees Gompertz, integration dans analytics-aliments-page.tsx
+- [x] `FAIT` i18n fr/en ajoutees (namespace gompertz dans analytics.json)
 
 ---
 
 ### Story G3.4 — Tests agregation K et UI
-**Assigne a :** @tester | **Depend de :** G3.3 | **Statut :** `TODO` | **Type :** TEST
+**Assigne a :** @tester | **Depend de :** G3.3 | **Statut :** `FAIT` | **Type :** TEST
 
 **Taches :**
-- [ ] `TODO` Tests `getKParAliment` (K ponderes, filtrage siteId, min 2 vagues)
-- [ ] `TODO` Tests UI colonne K
-- [ ] `TODO` Build production OK
+- [x] `FAIT` 23 tests `getKParAliment` (K ponderes, filtrage siteId, min 2 vagues, tri, details)
+- [x] `FAIT` 23 tests UI : feed-comparison-cards K column + feed-k-comparison-chart
+- [x] `FAIT` Build production OK — 46 tests passent, rapport docs/tests/rapport-sprint-G3.4.md

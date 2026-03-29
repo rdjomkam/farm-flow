@@ -227,5 +227,17 @@
     "result": "Result",
     "fcrLabel": "FCR",
     "cost": "Cost"
+  },
+  "gompertz": {
+    "vitesseLabel": "Gompertz Speed",
+    "meilleurK": "Best growth K",
+    "EXCELLENT": "Fast",
+    "BON": "Normal",
+    "FAIBLE": "Slow",
+    "chartTitle": "Growth speed comparison (Gompertz K)",
+    "chartXAxisLabel": "K parameter (d⁻¹)",
+    "tooltipAbove": "above",
+    "tooltipBelow": "below",
+    "tooltipTemplate": "This feed produced a growth speed {pct}% {direction} average"
   }
 }

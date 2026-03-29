@@ -13,6 +13,7 @@ import {
   ScoreAlimentConfig,
 } from "./models";
 import type { GompertzParams } from "@/lib/gompertz";
+import type { GompertzKLevel } from "@/lib/benchmarks";
 
 // Re-export pour que les consommateurs n'aient pas a importer depuis models
 export type { ScoreAlimentConfig };
@@ -448,6 +449,10 @@ export interface AnalytiqueAliment {
   scoreQualite: number | null;
   /** Phases d'elevage ciblees par cet aliment */
   phasesCibles: PhaseElevage[];
+  /** Coefficient de croissance K de Gompertz moyen pondere — null si donnees insuffisantes */
+  kMoyenGompertz?: number | null;
+  /** Niveau qualitatif du K Gompertz (EXCELLENT | BON | FAIBLE) — null si kMoyenGompertz absent */
+  kNiveauGompertz?: GompertzKLevel | null;
 }
 
 /**
@@ -493,6 +498,8 @@ export interface DetailAlimentVague {
   per: number | null;
   /** Taux de mortalite associe a cette vague (%) — null si donnees insuffisantes */
   tauxMortaliteAssocie: number | null;
+  /** Coefficient de croissance K de Gompertz pour cette vague — null si donnees insuffisantes */
+  kGompertz?: number | null;
 }
 
 /**

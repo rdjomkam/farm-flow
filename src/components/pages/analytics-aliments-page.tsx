@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { FeedComparisonCards } from "@/components/analytics/feed-comparison-cards";
+import { FeedKComparisonChart } from "@/components/analytics/feed-k-comparison-chart";
 import { RecommendationCard } from "@/components/analytics/recommendation-card";
 import { FeedFilters } from "@/components/analytics/feed-filters";
 import { AlerteDLC } from "@/components/analytics/alerte-dlc";
@@ -17,6 +18,7 @@ import {
   getAlertesRation,
   getScoresFournisseurs,
 } from "@/lib/queries/analytics";
+import { getKParAliment } from "@/lib/queries/gompertz-analytics";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { Permission, TailleGranule, PhaseElevage, FormeAliment } from "@/types";
 
@@ -63,12 +65,32 @@ export default async function AnalyticsAlimentsPage({
       ? { saison: saisonFilter, phase: phaseFilter, tailleGranule: tailleFilter, formeAliment: formeFilter }
       : undefined;
 
-  const [comparaison, dlcData, alertesRation, scoresFournisseurs] = await Promise.all([
+  const [comparaison, dlcData, alertesRation, scoresFournisseurs, kParAliment] = await Promise.all([
     getComparaisonAliments(session.activeSiteId, filtres),
     getMouvementsExpirables(session.activeSiteId),
     getAlertesRation(session.activeSiteId),
     getScoresFournisseurs(session.activeSiteId),
+    getKParAliment(session.activeSiteId),
   ]);
+
+  // G3.3 — Merge K Gompertz data into aliments and determine best K produitId
+  const kParAlimentMap = new Map(kParAliment.map((k) => [k.produitId, k]));
+  const alimentsAvecK = comparaison.aliments.map((aliment) => {
+    const kData = kParAlimentMap.get(aliment.produitId);
+    if (!kData) return aliment;
+    return {
+      ...aliment,
+      kMoyenGompertz: kData.kMoyen,
+      kNiveauGompertz: kData.kNiveau,
+    };
+  });
+
+  // Meilleur K = produit avec le kMoyen le plus eleve (parmi ceux ayant des donnees)
+  let meilleurK: string | null = null;
+  if (kParAliment.length >= 2) {
+    const best = kParAliment.reduce((a, b) => (b.kMoyen > a.kMoyen ? b : a));
+    meilleurK = best.produitId;
+  }
 
   // FC.4 — detect mixed granule sizes
   const tailles = new Set(
@@ -102,11 +124,15 @@ export default async function AnalyticsAlimentsPage({
         <RecommendationCard recommandation={comparaison.recommandation} />
 
         <FeedComparisonCards
-          aliments={comparaison.aliments}
+          aliments={alimentsAvecK}
           meilleurFCR={comparaison.meilleurFCR}
           meilleurCoutKg={comparaison.meilleurCoutKg}
           meilleurSGR={comparaison.meilleurSGR}
+          meilleurK={meilleurK}
         />
+
+        {/* G3.3 — Graphique comparaison K Gompertz (conditionnel, min 2 aliments avec K) */}
+        <FeedKComparisonChart aliments={alimentsAvecK} />
 
         {/* FD.2 — Performance par fournisseur */}
         <ScoreFournisseursCard fournisseurs={scoresFournisseurs} />

@@ -227,5 +227,17 @@
     "result": "Résultat",
     "fcrLabel": "ICA",
     "cost": "Coût"
+  },
+  "gompertz": {
+    "vitesseLabel": "Vitesse Gompertz",
+    "meilleurK": "Meilleure croissance K",
+    "EXCELLENT": "Rapide",
+    "BON": "Normal",
+    "FAIBLE": "Lent",
+    "chartTitle": "Comparaison vitesse de croissance (K Gompertz)",
+    "chartXAxisLabel": "Paramètre K (j⁻¹)",
+    "tooltipAbove": "au-dessus",
+    "tooltipBelow": "en-dessous",
+    "tooltipTemplate": "Cet aliment a produit une vitesse de croissance {pct}% {direction} la moyenne"
   }
 }
