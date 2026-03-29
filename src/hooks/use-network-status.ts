@@ -5,7 +5,7 @@ import { requestSync, initSync, mirrorSession } from "@/lib/offline/sync";
 import { getPendingCount } from "@/lib/offline/queue";
 
 interface UseNetworkStatusOptions {
-  siteId: string | null;
+  siteId?: string | null;
   /** Session data to mirror to IndexedDB */
   session?: {
     userId: string;
@@ -23,10 +23,10 @@ interface UseNetworkStatusReturn {
   syncNow: () => Promise<void>;
 }
 
-export function useNetworkStatus({
-  siteId,
-  session,
-}: UseNetworkStatusOptions): UseNetworkStatusReturn {
+export function useNetworkStatus(
+  options: UseNetworkStatusOptions = {}
+): UseNetworkStatusReturn {
+  const { siteId = null, session } = options;
   const [isOnline, setIsOnline] = useState(
     typeof navigator !== "undefined" ? navigator.onLine : true
   );

@@ -6041,16 +6041,16 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story NB.1 — Créer FarmHeader (topbar mobile farm)
-**Assigné à :** @developer | **Dépend de :** Sprint NA FAIT | **Statut :** `TODO` | **Type :** UI
+**Assigné à :** @developer | **Dépend de :** Sprint NA FAIT | **Statut :** `FAIT` | **Type :** UI
 
 **Description :** Créer le composant `FarmHeader` — topbar mobile sticky pour le layout farm, affichant logo + NotificationBell + SiteSelector conditionnel (ADR §4.2).
 
 **Tâches :**
-- [ ] `TODO` Créer `src/components/layout/farm-header.tsx` : `md:hidden`, `sticky top-0 z-50`, hauteur `h-12`
-- [ ] `TODO` Logo à gauche : icône `Waves` 20px + texte "FarmFlow" `text-sm font-semibold`
-- [ ] `TODO` `NotificationBell` à droite : icône `Bell`, badge count avec `formatBadgeCount` (plafond "99+", guard NaN/Infinity — ADR §6), `bg-destructive text-destructive-foreground text-[10px] min-w-[16px] h-4`, `absolute -top-1 -right-1`
-- [ ] `TODO` `SiteSelector` à droite : Radix UI `DropdownMenu` ou `Select`, masqué si `userSites.length <= 1` (E6)
-- [ ] `TODO` Indicateur réseau offline : dot 8×8px rouge/vert dans la topbar (ADR §7.2)
+- [x] `FAIT` Créer `src/components/layout/farm-header.tsx` : `md:hidden`, `sticky top-0 z-50`, hauteur `h-12`
+- [x] `FAIT` Logo à gauche : icône `Waves` 20px + texte "FarmFlow" `text-sm font-semibold`
+- [x] `FAIT` `NotificationBell` à droite : icône `Bell`, badge count avec `formatBadgeCount` (plafond "99+", guard NaN/Infinity — ADR §6), `bg-destructive text-destructive-foreground text-[10px] min-w-[16px] h-4`, `absolute -top-1 -right-1`
+- [x] `FAIT` `SiteSelector` à droite : Radix UI `DropdownMenu` ou `Select`, masqué si `userSites.length <= 1` (E6)
+- [x] `FAIT` Indicateur réseau offline : dot 8×8px rouge/vert dans la topbar (ADR §7.2)
 
 **Critères d'acceptation :**
 - `FarmHeader` est `md:hidden` (invisible sur desktop)
@@ -6060,15 +6060,15 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story NB.2 — Créer IngenieurHeader (topbar mobile ingénieur)
-**Assigné à :** @developer | **Dépend de :** Sprint NA FAIT | **Statut :** `TODO` | **Type :** UI
+**Assigné à :** @developer | **Dépend de :** Sprint NA FAIT | **Statut :** `FAIT` | **Type :** UI
 
 **Description :** Créer le composant `IngenieurHeader` — topbar mobile sticky pour le layout ingénieur, affichant logo + NotificationBell (ADR §5.2).
 
 **Tâches :**
-- [ ] `TODO` Créer `src/components/layout/ingenieur-header.tsx` : `md:hidden`, `sticky top-0 z-50`, `h-12`
-- [ ] `TODO` Logo à gauche + mention "(Ingénieur)" ou badge visuel distinctif
-- [ ] `TODO` `NotificationBell` à droite avec badge "99+" (même spec que FarmHeader)
-- [ ] `TODO` Indicateur réseau offline (dot rouge/vert — ADR §7.2)
+- [x] `FAIT` Créer `src/components/layout/ingenieur-header.tsx` : `md:hidden`, `sticky top-0 z-50`, `h-12`
+- [x] `FAIT` Logo à gauche + mention "(Ingénieur)" ou badge visuel distinctif
+- [x] `FAIT` `NotificationBell` à droite avec badge "99+" (même spec que FarmHeader)
+- [x] `FAIT` Indicateur réseau offline (dot rouge/vert — ADR §7.2)
 
 **Critères d'acceptation :**
 - `IngenieurHeader` est `md:hidden`
@@ -6077,16 +6077,16 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story NB.3 — Créer BottomNavSkeleton (état loading permissions)
-**Assigné à :** @developer | **Dépend de :** Sprint NA FAIT | **Statut :** `TODO` | **Type :** UI
+**Assigné à :** @developer | **Dépend de :** Sprint NA FAIT | **Statut :** `FAIT` | **Type :** UI
 
 **Description :** Créer le composant `BottomNavSkeleton` — état de chargement des permissions avant que la bottom nav réelle puisse être rendue (ADR §3, A15, E6).
 
 **Tâches :**
-- [ ] `TODO` Créer `src/components/layout/bottom-nav-skeleton.tsx`
-- [ ] `TODO` Hauteur identique à la vraie bottom nav : 56px + `pb-safe` (safe area iOS)
-- [ ] `TODO` 5 slots gris uniformes `animate-pulse bg-muted rounded-md`, sans labels ni icônes colorées
-- [ ] `TODO` Même positionnement que la bottom nav réelle : `position: fixed; bottom: 0`
-- [ ] `TODO` Usage dans les bottom navs : `if (!permissionsLoaded) return <BottomNavSkeleton />;`
+- [x] `FAIT` Créer `src/components/layout/bottom-nav-skeleton.tsx`
+- [x] `FAIT` Hauteur identique à la vraie bottom nav : 56px + `pb-safe` (safe area iOS)
+- [x] `FAIT` 5 slots gris uniformes `animate-pulse bg-muted rounded-md`, sans labels ni icônes colorées
+- [x] `FAIT` Même positionnement que la bottom nav réelle : `position: fixed; bottom: 0`
+- [x] `FAIT` Usage dans les bottom navs : `if (!permissionsLoaded) return <BottomNavSkeleton />;`
 
 **Critères d'acceptation :**
 - Le skeleton a exactement la même hauteur et le même positionnement que la bottom nav réelle
@@ -6096,15 +6096,15 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story NB.4 — Réorganiser FarmSidebar : groupes selon ADR §4.4
-**Assigné à :** @developer | **Dépend de :** Sprint NA FAIT | **Statut :** `TODO` | **Type :** UI
+**Assigné à :** @developer | **Dépend de :** Sprint NA FAIT | **Statut :** `FAIT` | **Type :** UI
 
 **Description :** Réorganiser les groupes de la FarmSidebar selon la spécification §4.4 de l'ADR : 8 groupes ordonnés (Élevage, Stock, Finances, Alevins, Planning & Tâches, Analytics, Administration, Abonnement) + groupe Super Admin conditionnel.
 
 **Tâches :**
-- [ ] `TODO` Dans `src/components/layout/farm-sidebar.tsx`, restructurer les groupes dans l'ordre : ÉLEVAGE (Dashboard, Vagues, Bacs, Relevés, Observations) → STOCK (Vue stock, Produits, Mouvements, Fournisseurs, Commandes, Besoins) → FINANCES (Dashboard finances, Ventes, Factures, Clients, Dépenses) → ALEVINS → PLANNING & TÂCHES → ANALYTICS → ADMINISTRATION → ABONNEMENT → SUPER ADMIN
-- [ ] `TODO` Chaque groupe a une gate selon l'ADR §4.4 (ex: STOCK gate = STOCK_VOIR, FINANCES gate = FINANCES_VOIR)
-- [ ] `TODO` Appliquer l'algorithme `isGroupVisible` : masquer les groupes entiers si 0 items visibles (E1, E8)
-- [ ] `TODO` Appliquer la règle E5 : groupe avec 1 seul item visible → afficher sans header de groupe
+- [x] `FAIT` Dans `src/components/layout/farm-sidebar.tsx`, restructurer les groupes dans l'ordre : ÉLEVAGE (Dashboard, Vagues, Bacs, Relevés, Observations) → STOCK (Vue stock, Produits, Mouvements, Fournisseurs, Commandes, Besoins) → FINANCES (Dashboard finances, Ventes, Factures, Clients, Dépenses) → ALEVINS → PLANNING & TÂCHES → ANALYTICS → ADMINISTRATION → ABONNEMENT → SUPER ADMIN
+- [x] `FAIT` Chaque groupe a une gate selon l'ADR §4.4 (ex: STOCK gate = STOCK_VOIR, FINANCES gate = FINANCES_VOIR)
+- [x] `FAIT` Appliquer l'algorithme `isGroupVisible` : masquer les groupes entiers si 0 items visibles (E1, E8)
+- [x] `FAIT` Appliquer la règle E5 : groupe avec 1 seul item visible → afficher sans header de groupe
 
 **Critères d'acceptation :**
 - La FarmSidebar desktop respecte exactement la structure ASCII de l'ADR §4.4
@@ -6114,14 +6114,14 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story NB.5 — Réorganiser IngenieurSidebar : 4 groupes selon ADR §5.4
-**Assigné à :** @developer | **Dépend de :** Sprint NA FAIT | **Statut :** `TODO` | **Type :** UI
+**Assigné à :** @developer | **Dépend de :** Sprint NA FAIT | **Statut :** `FAIT` | **Type :** UI
 
 **Description :** Réorganiser les groupes de l'IngenieurSidebar selon la spécification §5.4 de l'ADR : 4 groupes ordonnés (Monitoring, Opérations, Commercial, Configuration).
 
 **Tâches :**
-- [ ] `TODO` Dans `src/components/layout/ingenieur-sidebar.tsx`, restructurer les 4 groupes dans l'ordre : MONITORING (Clients supervisés, Notes) → OPÉRATIONS (Stock, Produits, Mouvements, Fournisseurs, Commandes, Planning, Analytics) → COMMERCIAL (Packs, Activations, Portefeuille) → CONFIGURATION (Alertes, Config élevage, Règles activités)
-- [ ] `TODO` Appliquer les gates de groupes : MONITORING gate = MONITORING_CLIENTS, COMMERCIAL gate = ACTIVER_PACKS|PORTEFEUILLE_VOIR, CONFIGURATION gate = GERER_CONFIG_ELEVAGE|REGLES_ACTIVITES_VOIR|ALERTES_CONFIGURER, OPÉRATIONS gate = toujours visible pour INGENIEUR
-- [ ] `TODO` Appliquer la règle E9 pour l'item `/notes` : visible si ENVOYER_NOTES OU unreadNotesCount > 0
+- [x] `FAIT` Dans `src/components/layout/ingenieur-sidebar.tsx`, restructurer les 4 groupes dans l'ordre : MONITORING (Clients supervisés, Notes) → OPÉRATIONS (Stock, Produits, Mouvements, Fournisseurs, Commandes, Planning, Analytics) → COMMERCIAL (Packs, Activations, Portefeuille) → CONFIGURATION (Alertes, Config élevage, Règles activités)
+- [x] `FAIT` Appliquer les gates de groupes : MONITORING gate = MONITORING_CLIENTS, COMMERCIAL gate = ACTIVER_PACKS|PORTEFEUILLE_VOIR, CONFIGURATION gate = GERER_CONFIG_ELEVAGE|REGLES_ACTIVITES_VOIR|ALERTES_CONFIGURER, OPÉRATIONS gate = toujours visible pour INGENIEUR
+- [x] `FAIT` Appliquer la règle E9 pour l'item `/notes` : visible si ENVOYER_NOTES OU unreadNotesCount > 0
 
 **Critères d'acceptation :**
 - La IngenieurSidebar desktop a exactement 4 groupes dans l'ordre spécifié (ADR §5.4)
@@ -6130,16 +6130,16 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story NB.6 — Réorganiser FarmBottomNav sheet : groupes avec séparateurs
-**Assigné à :** @developer | **Dépend de :** NB.4 | **Statut :** `TODO` | **Type :** UI
+**Assigné à :** @developer | **Dépend de :** NB.4 | **Statut :** `FAIT` | **Type :** UI
 
 **Description :** Restructurer le sheet du FarmBottomNav en groupes séparés avec headers et séparateurs visuels selon la structure §4.3 de l'ADR. Appliquer la règle de masquage des groupes vides.
 
 **Tâches :**
-- [ ] `TODO` Dans `src/components/layout/farm-bottom-nav.tsx`, refactoriser les SHEET_ITEMS en structure de groupes (`NavGroup[]`) : Grossissement, Intrants, Ventes, Analyse & Pilotage, Reproduction, Configuration
-- [ ] `TODO` Implémenter le rendu par groupes avec headers i18n (`navigation:modules.*`) et séparateurs Radix UI `Separator`
-- [ ] `TODO` Appliquer `isGroupVisible` sur chaque groupe — masquer le groupe entier si 0 items visibles
-- [ ] `TODO` Appliquer la règle E5 pour les groupes avec 1 seul item visible (afficher sans header)
-- [ ] `TODO` Implémentation du comportement paysage (E12) : si `window.innerHeight < 500` → side-drawer depuis la droite (`side="right"`, `w-80`) au lieu du bottom sheet
+- [x] `FAIT` Dans `src/components/layout/farm-bottom-nav.tsx`, refactoriser les SHEET_ITEMS en structure de groupes (`NavGroup[]`) : Grossissement, Intrants, Ventes, Analyse & Pilotage, Reproduction, Configuration
+- [x] `FAIT` Implémenter le rendu par groupes avec headers i18n (`navigation:modules.*`) et séparateurs Radix UI `Separator`
+- [x] `FAIT` Appliquer `isGroupVisible` sur chaque groupe — masquer le groupe entier si 0 items visibles
+- [x] `FAIT` Appliquer la règle E5 pour les groupes avec 1 seul item visible (afficher sans header)
+- [x] `FAIT` Implémentation du comportement paysage (E12) : si `window.innerHeight < 500` → side-drawer depuis la droite (`side="right"`, `w-80`) au lieu du bottom sheet
 
 **Critères d'acceptation :**
 - Le sheet affiche les groupes dans l'ordre de l'ADR §4.3 avec headers i18n
@@ -6149,15 +6149,15 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story NB.7 — Réorganiser IngenieurBottomNav sheet : alignement avec sidebar
-**Assigné à :** @developer | **Dépend de :** NB.5 | **Statut :** `TODO` | **Type :** UI
+**Assigné à :** @developer | **Dépend de :** NB.5 | **Statut :** `FAIT` | **Type :** UI
 
 **Description :** Restructurer le sheet de l'IngenieurBottomNav en groupes alignés avec ceux de la IngenieurSidebar (ADR §5.3, A4).
 
 **Tâches :**
-- [ ] `TODO` Dans `src/components/layout/ingenieur-bottom-nav.tsx`, refactoriser les SHEET_ITEMS en 4 groupes : Monitoring, Opérations, Commercial, Configuration
-- [ ] `TODO` Même ordre, mêmes items, mêmes gates que la IngenieurSidebar (A4)
-- [ ] `TODO` Appliquer `isGroupVisible` et la règle E5 (groupes vides / 1 item)
-- [ ] `TODO` Implémenter comportement paysage (E12) : side-drawer depuis la droite si height < 500px
+- [x] `FAIT` Dans `src/components/layout/ingenieur-bottom-nav.tsx`, refactoriser les SHEET_ITEMS en 4 groupes : Monitoring, Opérations, Commercial, Configuration
+- [x] `FAIT` Même ordre, mêmes items, mêmes gates que la IngenieurSidebar (A4)
+- [x] `FAIT` Appliquer `isGroupVisible` et la règle E5 (groupes vides / 1 item)
+- [x] `FAIT` Implémenter comportement paysage (E12) : side-drawer depuis la droite si height < 500px
 
 **Critères d'acceptation :**
 - Les groupes du sheet ingénieur et de la sidebar ingénieur ont exactement les mêmes items dans le même ordre (A4)
@@ -6166,17 +6166,17 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story NB.8 — Implémenter l'algorithme de permission gating complet
-**Assigné à :** @developer | **Dépend de :** NB.4, NB.5, NB.6, NB.7 | **Statut :** `TODO` | **Type :** UI
+**Assigné à :** @developer | **Dépend de :** NB.4, NB.5, NB.6, NB.7 | **Statut :** `FAIT` | **Type :** UI
 
 **Description :** Implémenter les fonctions `isNavItemVisible`, `isGroupVisible` et `getVisibleBottomNavItems` telles que spécifiées dans l'ADR §3. Ces fonctions centralisent toute la logique de visibilité de la navigation.
 
 **Tâches :**
-- [ ] `TODO` Créer `src/lib/nav-gating.ts` avec les fonctions `isNavItemVisible`, `isGroupVisible`, `getVisibleBottomNavItems` selon la spec exacte de l'ADR §3
-- [ ] `TODO` Interface `NavItem` avec `id`, `labelKey`, `href`, `icon`, `requiredPermissions?` (ANY/OR), `requiredPermissionsAll?` (ALL/AND), `requiredModule?`, `superAdminOnly?`, `alwaysVisible?`
-- [ ] `TODO` Implémenter le SuperAdmin bypass universel (step 1 de `isNavItemVisible`) : `if (isSuperAdmin) return true;`
-- [ ] `TODO` Null guards sur `userPermissions` et `userModules` (E2-E5)
-- [ ] `TODO` Exporter `isGroupVisible` avec signature explicite (pas de spread `Parameters<>` — E2-E5)
-- [ ] `TODO` Intégrer ces fonctions dans FarmSidebar, FarmBottomNav, IngenieurSidebar, IngenieurBottomNav
+- [x] `FAIT` Créer `src/lib/nav-gating.ts` avec les fonctions `isNavItemVisible`, `isGroupVisible`, `getVisibleBottomNavItems` selon la spec exacte de l'ADR §3
+- [x] `FAIT` Interface `NavItem` avec `id`, `labelKey`, `href`, `icon`, `requiredPermissions?` (ANY/OR), `requiredPermissionsAll?` (ALL/AND), `requiredModule?`, `superAdminOnly?`, `alwaysVisible?`
+- [x] `FAIT` Implémenter le SuperAdmin bypass universel (step 1 de `isNavItemVisible`) : `if (isSuperAdmin) return true;`
+- [x] `FAIT` Null guards sur `userPermissions` et `userModules` (E2-E5)
+- [x] `FAIT` Exporter `isGroupVisible` avec signature explicite (pas de spread `Parameters<>` — E2-E5)
+- [x] `FAIT` Intégrer ces fonctions dans FarmSidebar, FarmBottomNav, IngenieurSidebar, IngenieurBottomNav
 
 **Critères d'acceptation :**
 - `isNavItemVisible` retourne `true` pour un SuperAdmin sur tout item sans exception
@@ -6186,15 +6186,15 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story NB.9 — Intégrer FarmHeader et IngenieurHeader dans AppShell
-**Assigné à :** @developer | **Dépend de :** NB.1, NB.2 | **Statut :** `TODO` | **Type :** UI
+**Assigné à :** @developer | **Dépend de :** NB.1, NB.2 | **Statut :** `FAIT` | **Type :** UI
 
 **Description :** Modifier `AppShell` pour injecter `FarmHeader` ou `IngenieurHeader` en haut du `<main>` selon le rôle de l'utilisateur (ADR §14.2, Phase 2 step 3).
 
 **Tâches :**
-- [ ] `TODO` Dans `src/components/layout/app-shell.tsx`, ajouter le rendu conditionnel des headers mobiles : `if (role === Role.INGENIEUR)` → `<IngenieurHeader ...>`, `if (role in FARM_ROLES)` → `<FarmHeader ...>`
-- [ ] `TODO` Passer les props nécessaires aux headers : `notificationCount`, `userSites`, `activeSite` pour `FarmHeader`
-- [ ] `TODO` Vérifier que les headers sont bien `md:hidden` et n'apparaissent pas sur desktop
-- [ ] `TODO` Vérifier le z-index et le positionnement sticky ne cassent pas le layout existant
+- [x] `FAIT` Dans `src/components/layout/app-shell.tsx`, ajouter le rendu conditionnel des headers mobiles : `if (role === Role.INGENIEUR)` → `<IngenieurHeader ...>`, `if (role in FARM_ROLES)` → `<FarmHeader ...>`
+- [x] `FAIT` Passer les props nécessaires aux headers : `notificationCount`, `userSites`, `activeSite` pour `FarmHeader`
+- [x] `FAIT` Vérifier que les headers sont bien `md:hidden` et n'apparaissent pas sur desktop
+- [x] `FAIT` Vérifier le z-index et le positionnement sticky ne cassent pas le layout existant
 
 **Critères d'acceptation :**
 - En mobile (< md), la topbar est visible pour les layouts farm et ingénieur
@@ -6204,16 +6204,16 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story NB.10 — Comportement offline pour la navigation
-**Assigné à :** @developer | **Dépend de :** NB.8 | **Statut :** `TODO` | **Type :** UI
+**Assigné à :** @developer | **Dépend de :** NB.8 | **Statut :** `FAIT` | **Type :** UI
 
 **Description :** Implémenter le comportement offline des items de navigation : routes non-cachées affichent `opacity-50` + `aria-disabled="true"` + Toast "Hors ligne" au tap (ADR §7, E19).
 
 **Tâches :**
-- [ ] `TODO` Créer un hook `useNetworkStatus()` qui retourne `{ isOnline: boolean }` via `navigator.onLine` + events `online`/`offline`
-- [ ] `TODO` Dans les composants de navigation, appliquer sur les items non-cachés quand offline : `opacity-50`, `aria-disabled="true"`, `pointer-events-none` (ne pas utiliser `disabled` sur `<a>`)
-- [ ] `TODO` Au tap sur un item offline désactivé, afficher un Toast Radix UI : "Vous êtes hors connexion. Cette page n'est pas disponible."
-- [ ] `TODO` Routes prioritaires en cache (restent actives offline) : `/`, `/mes-taches`, shell statique (ADR §7.1)
-- [ ] `TODO` Indicateur réseau dans les headers : dot 8×8px rouge si offline, vert si en ligne (ADR §7.2)
+- [x] `FAIT` Créer un hook `useNetworkStatus()` qui retourne `{ isOnline: boolean }` via `navigator.onLine` + events `online`/`offline`
+- [x] `FAIT` Dans les composants de navigation, appliquer sur les items non-cachés quand offline : `opacity-50`, `aria-disabled="true"`, `pointer-events-none` (ne pas utiliser `disabled` sur `<a>`)
+- [x] `FAIT` Au tap sur un item offline désactivé, afficher un Toast Radix UI : "Vous êtes hors connexion. Cette page n'est pas disponible."
+- [x] `FAIT` Routes prioritaires en cache (restent actives offline) : `/`, `/mes-taches`, shell statique (ADR §7.1)
+- [x] `FAIT` Indicateur réseau dans les headers : dot 8×8px rouge si offline, vert si en ligne (ADR §7.2)
 
 **Critères d'acceptation :**
 - En mode offline simulé (DevTools → Offline), les items non-cachés sont visuellement désactivés
@@ -6223,28 +6223,28 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story NB.11 — Tests Sprint NB
-**Assigné à :** @tester | **Dépend de :** NB.1, NB.2, NB.3, NB.4, NB.5, NB.6, NB.7, NB.8, NB.9, NB.10 | **Statut :** `TODO` | **Type :** TEST
+**Assigné à :** @tester | **Dépend de :** NB.1, NB.2, NB.3, NB.4, NB.5, NB.6, NB.7, NB.8, NB.9, NB.10 | **Statut :** `FAIT` | **Type :** TEST
 
 **Tâches :**
-- [ ] `TODO` Tests unitaires pour `isNavItemVisible` : cas SuperAdmin bypass, cas superAdminOnly, cas permissions OR/AND, cas null guards, comportement minimum 2 items (Vitest)
-- [ ] `TODO` Tests unitaires pour `isGroupVisible` : groupes 0/1/N items
-- [ ] `TODO` Tests unitaires pour `formatBadgeCount` : count 0, 1, 99, 100, NaN, Infinity
-- [ ] `TODO` Vérification manuelle mobile 360px portrait : FarmHeader visible, BottomNavSkeleton avant chargement permissions
-- [ ] `TODO` Vérification manuelle mobile paysage (height < 500px) : sheet s'ouvre depuis la droite
-- [ ] `TODO` Exécuter `npx vitest run` et `npm run build` — les deux doivent passer
-- [ ] `TODO` Produire rapport `docs/tests/rapport-sprint-NB.md`
+- [x] `FAIT` Tests unitaires pour `isNavItemVisible` : cas SuperAdmin bypass, cas superAdminOnly, cas permissions OR/AND, cas null guards, comportement minimum 2 items (Vitest)
+- [x] `FAIT` Tests unitaires pour `isGroupVisible` : groupes 0/1/N items
+- [x] `FAIT` Tests unitaires pour `formatBadgeCount` : count 0, 1, 99, 100, NaN, Infinity
+- [x] `FAIT` Vérification manuelle mobile 360px portrait : FarmHeader visible, BottomNavSkeleton avant chargement permissions
+- [x] `FAIT` Vérification manuelle mobile paysage (height < 500px) : sheet s'ouvre depuis la droite
+- [x] `FAIT` Exécuter `npx vitest run` et `npm run build` — les deux doivent passer
+- [x] `FAIT` Produire rapport `docs/tests/rapport-sprint-NB.md`
 
 ---
 
 ### Story NB.12 — Review Sprint NB
-**Assigné à :** @code-reviewer | **Dépend de :** NB.11 | **Statut :** `TODO` | **Type :** REVIEW
+**Assigné à :** @code-reviewer | **Dépend de :** NB.11 | **Statut :** `FAIT` | **Type :** REVIEW
 
 **Tâches :**
-- [ ] `TODO` Vérifier R1-R9 sur tous les nouveaux composants et fonctions
-- [ ] `TODO` Vérifier conformité ADR §3, §4.1-4.4, §5.1-5.4, §6, §7, §8, §9
-- [ ] `TODO` Vérifier ARIA : touch targets 44px+, `aria-current`, `aria-label` FAB, `aria-disabled` offline
-- [ ] `TODO` Vérifier performances : imports Lucide named only (tree-shaking), lazy loading des sheets
-- [ ] `TODO` Produire rapport `docs/reviews/review-sprint-NB.md`
+- [x] `FAIT` Vérifier R1-R9 sur tous les nouveaux composants et fonctions
+- [x] `FAIT` Vérifier conformité ADR §3, §4.1-4.4, §5.1-5.4, §6, §7, §8, §9
+- [x] `FAIT` Vérifier ARIA : touch targets 44px+, `aria-current`, `aria-label` FAB, `aria-disabled` offline
+- [x] `FAIT` Vérifier performances : imports Lucide named only (tree-shaking), lazy loading des sheets
+- [x] `FAIT` Produire rapport `docs/reviews/review-sprint-NB.md`
 
 ---
 

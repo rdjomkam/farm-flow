@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -14,6 +14,7 @@ import {
   Boxes,
   Package,
   Bell,
+  BellRing,
   User,
   LogOut,
   Fish,
@@ -51,25 +52,27 @@ interface SheetNavItem {
 }
 
 interface SheetNavGroup {
+  /** i18n key under groups.* */
   groupKey: string;
   items: SheetNavItem[];
+  /** Gate: group hidden unless user has this permission */
+  permissionRequired?: Permission;
+  /** Gate: group hidden unless user has at least one of these permissions */
+  permissionsAny?: Permission[];
 }
 
+// 4 groups aligned with ingenieur-sidebar NAV_GROUPS
 const SHEET_GROUPS: SheetNavGroup[] = [
+  // 1. MONITORING — gated by MONITORING_CLIENTS
   {
-    groupKey: "operations",
+    groupKey: "monitoring",
+    permissionRequired: Permission.MONITORING_CLIENTS,
     items: [
       {
-        href: "/planning",
-        labelKey: "items.calendrier",
-        icon: Calendar,
-        permissionRequired: Permission.PLANNING_VOIR,
-      },
-      {
-        href: "/analytics",
-        labelKey: "items.analyse",
-        icon: BarChart3,
-        permissionRequired: Permission.DASHBOARD_VOIR,
+        href: "/monitoring",
+        labelKey: "items.dashboardClients",
+        icon: Eye,
+        permissionRequired: Permission.MONITORING_CLIENTS,
       },
       {
         href: "/notes",
@@ -79,21 +82,10 @@ const SHEET_GROUPS: SheetNavGroup[] = [
       },
     ],
   },
+  // 2. OPÉRATIONS — always visible; individual items gated by their permissions
   {
-    groupKey: "commercial",
+    groupKey: "operationsIngenieur",
     items: [
-      {
-        href: "/packs",
-        labelKey: "items.packs",
-        icon: Boxes,
-        permissionRequired: Permission.ACTIVER_PACKS,
-      },
-      {
-        href: "/activations",
-        labelKey: "items.activationsItem",
-        icon: PackageCheck,
-        permissionRequired: Permission.ACTIVER_PACKS,
-      },
       {
         href: "/stock",
         labelKey: "items.stock",
@@ -112,11 +104,37 @@ const SHEET_GROUPS: SheetNavGroup[] = [
         icon: ShoppingCart,
         permissionRequired: Permission.APPROVISIONNEMENT_GERER,
       },
+      {
+        href: "/planning",
+        labelKey: "items.calendrier",
+        icon: Calendar,
+        permissionRequired: Permission.PLANNING_VOIR,
+      },
+      {
+        href: "/analytics",
+        labelKey: "items.analyse",
+        icon: BarChart3,
+        permissionRequired: Permission.DASHBOARD_VOIR,
+      },
     ],
   },
+  // 3. COMMERCIAL — gated by ACTIVER_PACKS OR PORTEFEUILLE_VOIR
   {
-    groupKey: "portefeuille",
+    groupKey: "commercial",
+    permissionsAny: [Permission.ACTIVER_PACKS, Permission.PORTEFEUILLE_VOIR],
     items: [
+      {
+        href: "/packs",
+        labelKey: "items.packs",
+        icon: Boxes,
+        permissionRequired: Permission.ACTIVER_PACKS,
+      },
+      {
+        href: "/activations",
+        labelKey: "items.activationsItem",
+        icon: PackageCheck,
+        permissionRequired: Permission.ACTIVER_PACKS,
+      },
       {
         href: "/mon-portefeuille",
         labelKey: "items.monPortefeuille",
@@ -125,13 +143,14 @@ const SHEET_GROUPS: SheetNavGroup[] = [
       },
     ],
   },
+  // 4. CONFIGURATION — always visible; individual items gated
   {
     groupKey: "configuration",
     items: [
       {
         href: "/settings/alertes",
         labelKey: "items.alertes",
-        icon: Bell,
+        icon: BellRing,
         permissionRequired: Permission.ALERTES_CONFIGURER,
       },
       {
@@ -170,6 +189,21 @@ export function IngenieurBottomNav({
   const t = useTranslations("navigation");
   const authService = useAuthService();
   const [sheetOpen, setSheetOpen] = useState(false);
+  // E12: landscape detection (innerHeight < 500px → side drawer from right)
+  const [isLandscape, setIsLandscape] = useState(false);
+
+  useEffect(() => {
+    function check() {
+      setIsLandscape(window.innerHeight < 500);
+    }
+    check();
+    window.addEventListener("resize", check);
+    window.addEventListener("orientationchange", check);
+    return () => {
+      window.removeEventListener("resize", check);
+      window.removeEventListener("orientationchange", check);
+    };
+  }, []);
 
   const openSheet = useCallback(() => setSheetOpen(true), []);
 
@@ -186,10 +220,24 @@ export function IngenieurBottomNav({
     return true;
   }
 
-  const visibleGroups = SHEET_GROUPS.map((group) => ({
-    ...group,
-    items: group.items.filter(isItemVisible),
-  })).filter((group) => group.items.length > 0);
+  // Filter groups: apply group-level gates, then filter items
+  const visibleGroups = SHEET_GROUPS.map((group) => {
+    // Check group-level permission gates
+    if (
+      group.permissionRequired &&
+      !permissions.includes(group.permissionRequired)
+    )
+      return null;
+    if (
+      group.permissionsAny &&
+      !group.permissionsAny.some((p) => permissions.includes(p))
+    )
+      return null;
+
+    const visibleItems = group.items.filter(isItemVisible);
+    if (visibleItems.length === 0) return null;
+    return { ...group, items: visibleItems };
+  }).filter(Boolean) as (SheetNavGroup & { items: SheetNavItem[] })[];
 
   const canSeeClients = permissions.includes(Permission.MONITORING_CLIENTS);
   const canSeeTasks = permissions.includes(Permission.DASHBOARD_VOIR);
@@ -200,6 +248,11 @@ export function IngenieurBottomNav({
     router.push("/login");
     router.refresh();
   }
+
+  // E12: landscape → side drawer from right (w-80), portrait → bottom sheet
+  const sheetContentClass = isLandscape
+    ? "inset-y-0 right-0 left-auto bottom-auto top-0 w-80 h-full max-h-full overflow-y-auto rounded-none border-l border-border border-t-0 border-r-0"
+    : "inset-y-auto bottom-0 top-auto left-0 right-0 w-full h-auto max-h-[80vh] overflow-y-auto rounded-t-2xl border-r-0 border-t border-border";
 
   return (
     <>
@@ -268,9 +321,9 @@ export function IngenieurBottomNav({
         </div>
       </nav>
 
-      {/* Secondary modules sheet */}
+      {/* Secondary modules sheet — portrait: bottom drawer, landscape: right side drawer (E12) */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="inset-y-auto bottom-0 top-auto left-0 right-0 w-full h-auto max-h-[80vh] overflow-y-auto rounded-t-2xl border-r-0 border-t border-border" style={{ borderRight: "none" }}>
+        <SheetContent className={sheetContentClass} style={{ borderRight: "none" }}>
           <div className="flex flex-col gap-0">
             {/* Header */}
             <div className="flex h-12 items-center gap-2 border-b border-border px-4 mb-2">
@@ -280,34 +333,42 @@ export function IngenieurBottomNav({
 
             {/* Grouped secondary nav */}
             <nav className="flex flex-col gap-3 p-3">
-              {visibleGroups.map((group) => (
-                <div key={group.groupKey}>
-                  <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    {t(`groups.${group.groupKey}`)}
-                  </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {group.items.map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          onClick={() => setSheetOpen(false)}
-                          className={cn(
-                            "flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-xs font-medium transition-colors",
-                            isActive(item.href)
-                              ? "bg-primary/10 text-primary"
-                              : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                          )}
-                        >
-                          <Icon className="h-5 w-5" />
-                          <span className="text-center leading-tight">{t(item.labelKey as Parameters<typeof t>[0])}</span>
-                        </Link>
-                      );
-                    })}
+              {visibleGroups.map((group) => {
+                // E5: group with exactly 1 visible item → no group header
+                const showHeader = group.items.length > 1;
+                return (
+                  <div key={group.groupKey}>
+                    {showHeader && (
+                      <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        {t(`groups.${group.groupKey}` as Parameters<typeof t>[0])}
+                      </p>
+                    )}
+                    <div className="grid grid-cols-3 gap-2">
+                      {group.items.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setSheetOpen(false)}
+                            className={cn(
+                              "flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-xs font-medium transition-colors",
+                              isActive(item.href)
+                                ? "bg-primary/10 text-primary"
+                                : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            )}
+                          >
+                            <Icon className="h-5 w-5" />
+                            <span className="text-center leading-tight">
+                              {t(item.labelKey as Parameters<typeof t>[0])}
+                            </span>
+                          </Link>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
               {/* Static items: Profil + Backoffice — always last */}
               <div>
@@ -357,7 +418,7 @@ export function IngenieurBottomNav({
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{userName}</p>
                     <p className="text-xs text-muted-foreground">
-                      {t(`roles.${roleKeyMap[role]}`)}
+                      {t(`roles.${roleKeyMap[role]}` as Parameters<typeof t>[0])}
                     </p>
                   </div>
                   <div className="ml-auto">

@@ -7,8 +7,10 @@ import { BottomNav } from "./bottom-nav";
 import { HamburgerMenu } from "./hamburger-menu";
 import { FarmSidebar } from "./farm-sidebar";
 import { FarmBottomNav } from "./farm-bottom-nav";
+import { FarmHeader } from "./farm-header";
 import { IngenieurSidebar } from "./ingenieur-sidebar";
 import { IngenieurBottomNav } from "./ingenieur-bottom-nav";
+import { IngenieurHeader } from "./ingenieur-header";
 import { MobileMenuContext } from "./mobile-menu-context";
 import type { Permission, Role, SiteModule } from "@/types";
 import { Role as RoleEnum } from "@/types";
@@ -65,9 +67,12 @@ export function AppShell({
             userName={userName}
             isSuperAdmin={isSuperAdmin}
           />
-          <main className="flex-1 overflow-x-clip max-w-full pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
-            {children}
-          </main>
+          <div className="flex flex-1 flex-col overflow-x-clip max-w-full">
+            <IngenieurHeader />
+            <main className="flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+              {children}
+            </main>
+          </div>
         </div>
         <IngenieurBottomNav
           permissions={permissions}
@@ -95,9 +100,12 @@ export function AppShell({
             userName={userName}
             isSuperAdmin={isSuperAdmin}
           />
-          <main className="flex-1 overflow-x-clip max-w-full pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
-            {children}
-          </main>
+          <div className="flex flex-1 flex-col overflow-x-clip max-w-full">
+            <FarmHeader />
+            <main className="flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+              {children}
+            </main>
+          </div>
         </div>
         <FarmBottomNav
           permissions={permissions}

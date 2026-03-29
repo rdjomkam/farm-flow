@@ -43,21 +43,12 @@ interface NavGroup {
   label: string;
   items: NavItem[];
   permissionRequired?: Permission;
+  permissionsAny?: Permission[];
   moduleRequired?: SiteModule;
 }
 
 const NAV_GROUPS: NavGroup[] = [
-  {
-    label: "Opérations",
-    items: [
-      { href: "/", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/mes-taches", label: "Tâches", icon: CheckSquare },
-      { href: "/vagues", label: "Vagues", icon: Waves },
-      { href: "/bacs", label: "Bacs", icon: Container },
-      { href: "/releves", label: "Relevés", icon: NotebookPen },
-    ],
-    permissionRequired: Permission.DASHBOARD_VOIR,
-  },
+  // 1. MONITORING — shown only if user has MONITORING_CLIENTS permission
   {
     label: "Monitoring",
     items: [
@@ -66,18 +57,25 @@ const NAV_GROUPS: NavGroup[] = [
     ],
     permissionRequired: Permission.MONITORING_CLIENTS,
   },
+  // 2. OPÉRATIONS — always visible for INGENIEUR; individual items gated by ITEM_VIEW_PERMISSIONS
   {
-    label: "Stock",
+    label: "Opérations",
     items: [
+      { href: "/", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/mes-taches", label: "Tâches", icon: CheckSquare },
+      { href: "/vagues", label: "Vagues", icon: Waves },
+      { href: "/bacs", label: "Bacs", icon: Container },
+      { href: "/releves", label: "Relevés", icon: NotebookPen },
       { href: "/stock", label: "Vue stock", icon: Package },
       { href: "/stock/produits", label: "Produits", icon: Tag },
       { href: "/stock/mouvements", label: "Mouvements", icon: ArrowUpDown },
       { href: "/stock/fournisseurs", label: "Fournisseurs", icon: Truck },
       { href: "/stock/commandes", label: "Commandes", icon: ShoppingCart },
+      { href: "/planning", label: "Planning", icon: Calendar },
+      { href: "/analytics", label: "Analytics", icon: BarChart3 },
     ],
-    permissionRequired: Permission.STOCK_VOIR,
-    moduleRequired: SiteModule.INTRANTS,
   },
+  // 3. COMMERCIAL — shown if user has ACTIVER_PACKS OR PORTEFEUILLE_VOIR
   {
     label: "Commercial",
     items: [
@@ -85,16 +83,9 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/activations", label: "Activations", icon: PackageCheck },
       { href: "/mon-portefeuille", label: "Portefeuille", icon: Wallet },
     ],
-    permissionRequired: Permission.ACTIVER_PACKS,
+    permissionsAny: [Permission.ACTIVER_PACKS, Permission.PORTEFEUILLE_VOIR],
   },
-  {
-    label: "Planning & Analytics",
-    items: [
-      { href: "/planning", label: "Planning", icon: Calendar },
-      { href: "/analytics", label: "Analytics", icon: BarChart3 },
-    ],
-    permissionRequired: Permission.PLANNING_VOIR,
-  },
+  // 4. CONFIGURATION — always shown; individual items gated by ITEM_VIEW_PERMISSIONS
   {
     label: "Configuration",
     items: [
@@ -125,6 +116,9 @@ export function IngenieurSidebar({
   const visibleGroups = useMemo(() => {
     return NAV_GROUPS.map((group) => {
       if (group.permissionRequired && !permissions.includes(group.permissionRequired)) {
+        return null;
+      }
+      if (group.permissionsAny && !group.permissionsAny.some((p) => permissions.includes(p))) {
         return null;
       }
       if (group.moduleRequired && !siteModules.includes(group.moduleRequired)) {

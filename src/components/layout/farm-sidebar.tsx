@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Waves,
   Container,
-  PlusCircle,
   BarChart3,
   LineChart,
   Package,
@@ -27,15 +26,14 @@ import {
   Layers,
   Calendar,
   ClipboardCheck,
-  TrendingUp,
   CreditCard,
-  UserPlus,
   Building2,
-  Settings,
+  BellRing,
   Shield,
   Boxes,
   PackageCheck,
   NotebookPen,
+  Eye,
 } from "lucide-react";
 import { NotificationBell } from "./notification-bell";
 import { LanguageSwitcher } from "./language-switcher";
@@ -66,6 +64,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/vagues", label: "Vagues", icon: Waves },
       { href: "/bacs", label: "Bacs", icon: Container },
       { href: "/releves", label: "Relevés", icon: NotebookPen },
+      { href: "/observations", label: "Observations", icon: Eye },
     ],
     permissionRequired: Permission.VAGUES_VOIR,
     moduleRequired: SiteModule.GROSSISSEMENT,
@@ -107,7 +106,7 @@ const NAV_GROUPS: NavGroup[] = [
     moduleRequired: SiteModule.REPRODUCTION,
   },
   {
-    label: "Planning & Activités",
+    label: "Planning & Tâches",
     items: [
       { href: "/planning", label: "Planning", icon: Calendar },
       { href: "/mes-taches", label: "Mes tâches", icon: ClipboardCheck },
@@ -121,28 +120,26 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/analytics/vagues", label: "Vagues", icon: LineChart },
       { href: "/analytics/aliments", label: "Aliments", icon: BarChart3 },
       { href: "/analytics/bacs", label: "Bacs", icon: Container },
-      { href: "/analytics/tendances", label: "Tendances", icon: TrendingUp, disabled: true },
     ],
     permissionRequired: Permission.DASHBOARD_VOIR,
   },
   {
     label: "Administration",
     items: [
-      { href: "/mon-abonnement", label: "Mon abonnement", icon: CreditCard },
       { href: "/settings/sites", label: "Gestion sites", icon: Building2 },
+      { href: "/settings/alertes", label: "Alertes", icon: BellRing },
       { href: "/users", label: "Utilisateurs", icon: Users },
-      { href: "/users/nouveau", label: "Nouvel utilisateur", icon: UserPlus },
-      { href: "/settings/alertes", label: "Alertes", icon: Settings },
     ],
     permissionRequired: Permission.SITE_GERER,
   },
   {
-    label: "Packs & Provisioning",
+    label: "Abonnement",
     items: [
+      { href: "/mon-abonnement", label: "Mon abonnement", icon: CreditCard },
       { href: "/packs", label: "Packs", icon: Boxes },
       { href: "/activations", label: "Activations", icon: PackageCheck },
     ],
-    permissionRequired: Permission.ACTIVER_PACKS,
+    permissionRequired: Permission.ABONNEMENTS_VOIR,
   },
 ];
 
@@ -199,7 +196,9 @@ export function FarmSidebar({
       href === "/clients" ||
       href === "/users" ||
       href === "/packs" ||
-      href === "/activations"
+      href === "/activations" ||
+      href === "/mon-abonnement" ||
+      href === "/observations"
     ) {
       return pathname === href || pathname.startsWith(href + "/");
     }
@@ -219,45 +218,51 @@ export function FarmSidebar({
 
       {/* Navigation groups */}
       <nav className="flex flex-1 flex-col overflow-y-auto p-2 gap-4">
-        {visibleGroups.map((group) => (
-          <div key={group.label}>
-            <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {group.label}
-            </p>
-            <div className="space-y-0.5">
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const active = isActive(item.href);
-                if (item.disabled) {
+        {visibleGroups.map((group) => {
+          // E5: if only 1 visible item, render without group header
+          const showHeader = group.items.length > 1;
+          return (
+            <div key={group.label}>
+              {showHeader && (
+                <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {group.label}
+                </p>
+              )}
+              <div className="space-y-0.5">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.href);
+                  if (item.disabled) {
+                    return (
+                      <span
+                        key={item.href}
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground/40 cursor-not-allowed"
+                      >
+                        <Icon className="h-4 w-4" />
+                        {item.label}
+                      </span>
+                    );
+                  }
                   return (
-                    <span
+                    <Link
                       key={item.href}
-                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground/40 cursor-not-allowed"
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        active
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
                     >
                       <Icon className="h-4 w-4" />
                       {item.label}
-                    </span>
+                    </Link>
                   );
-                }
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                      active
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {item.label}
-                  </Link>
-                );
-              })}
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {/* Backoffice link — super admin only (ADR-022) */}
         {isSuperAdmin && (

@@ -80,7 +80,8 @@
     "activationsItem": "Activations",
     "notificationsItem": "Notifications",
     "portefeuilleItem": "Portefeuille",
-    "alevins": "Alevins"
+    "alevins": "Alevins",
+    "backoffice": "Backoffice"
   },
   "roles": {
     "admin": "Administrateur",
@@ -96,6 +97,8 @@
   },
   "groups": {
     "operations": "Opérations",
+    "operationsIngenieur": "Opérations",
+    "monitoring": "Monitoring",
     "commercial": "Commercial",
     "portefeuille": "Portefeuille",
     "configuration": "Configuration"

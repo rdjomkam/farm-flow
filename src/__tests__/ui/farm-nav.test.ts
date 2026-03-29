@@ -6,7 +6,7 @@
  * - Bottom nav a 5 slots : Accueil, Ma ferme, Finances, Messages, Menu
  * - Finances masqué sans FINANCES_VOIR + module VENTES
  * - Ma ferme masqué sans VAGUES_VOIR
- * - Sidebar : 8 groupes attendus avec leurs permissions
+ * - Sidebar : 8 groupes attendus avec leurs permissions (ADR §4.4)
  * - Sidebar : Finances gate par FINANCES_VOIR + module VENTES
  * - Sidebar : Administration gate par SITE_GERER
  * - Sheet items filtrés par permissions + modules
@@ -72,7 +72,7 @@ const FARM_SIDEBAR_GROUPS = [
     moduleRequired: SiteModule.REPRODUCTION,
   },
   {
-    label: "Planning & Activités",
+    label: "Planning & Tâches",
     permissionRequired: Permission.PLANNING_VOIR,
   },
   {
@@ -84,8 +84,8 @@ const FARM_SIDEBAR_GROUPS = [
     permissionRequired: Permission.SITE_GERER,
   },
   {
-    label: "Packs & Provisioning",
-    permissionRequired: Permission.ACTIVER_PACKS,
+    label: "Abonnement",
+    permissionRequired: Permission.ABONNEMENTS_VOIR,
   },
 ];
 
@@ -259,7 +259,7 @@ describe("FarmBottomNav — Sheet items", () => {
 // Tests — Sidebar groupes
 // ---------------------------------------------------------------------------
 describe("FarmSidebar — groupes de navigation", () => {
-  it("définit exactement 8 groupes", () => {
+  it("définit exactement 8 groupes (ADR §4.4 — 8 groupes farm + 1 Super Admin séparé)", () => {
     expect(FARM_SIDEBAR_GROUPS).toHaveLength(8);
   });
 
@@ -280,9 +280,9 @@ describe("FarmSidebar — groupes de navigation", () => {
     expect(g?.permissionRequired).toBe(Permission.SITE_GERER);
   });
 
-  it("groupe Packs & Provisioning gate par ACTIVER_PACKS", () => {
-    const g = FARM_SIDEBAR_GROUPS.find((g) => g.label === "Packs & Provisioning");
-    expect(g?.permissionRequired).toBe(Permission.ACTIVER_PACKS);
+  it("groupe Abonnement gate par ABONNEMENTS_VOIR", () => {
+    const g = FARM_SIDEBAR_GROUPS.find((g) => g.label === "Abonnement");
+    expect(g?.permissionRequired).toBe(Permission.ABONNEMENTS_VOIR);
   });
 
   it("avec toutes les permissions + modules → tous les 8 groupes visibles", () => {

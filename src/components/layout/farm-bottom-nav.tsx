@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -34,6 +34,8 @@ import {
   PackageCheck,
   ClipboardCheck,
   NotebookPen,
+  Banknote,
+  FileText,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -56,17 +58,28 @@ interface SheetNavItem {
   icon: React.ComponentType<{ className?: string }>;
   permissionRequired?: Permission;
   moduleRequired?: SiteModule;
+  superAdminOnly?: boolean;
 }
 
 interface SheetNavGroup {
-  groupLabel: string;
+  /** i18n key under navigation:modules.* */
+  groupKey: string;
+  /** Gate: group is visible only if any item passes visibility check */
+  gatePermission?: Permission;
   items: SheetNavItem[];
 }
 
 const SHEET_GROUPS: SheetNavGroup[] = [
   {
-    groupLabel: "Élevage",
+    groupKey: "grossissement",
+    gatePermission: Permission.VAGUES_VOIR,
     items: [
+      {
+        href: "/vagues",
+        labelKey: "items.vagues",
+        icon: Waves,
+        permissionRequired: Permission.VAGUES_VOIR,
+      },
       {
         href: "/bacs",
         labelKey: "items.bacs",
@@ -88,24 +101,8 @@ const SHEET_GROUPS: SheetNavGroup[] = [
     ],
   },
   {
-    groupLabel: "Finances",
-    items: [
-      {
-        href: "/clients",
-        labelKey: "items.clientsItem",
-        icon: UserRound,
-        permissionRequired: Permission.CLIENTS_VOIR,
-      },
-      {
-        href: "/depenses",
-        labelKey: "items.depenses",
-        icon: Receipt,
-        permissionRequired: Permission.DEPENSES_VOIR,
-      },
-    ],
-  },
-  {
-    groupLabel: "Stock",
+    groupKey: "intrants",
+    gatePermission: Permission.STOCK_VOIR,
     items: [
       {
         href: "/stock",
@@ -137,7 +134,44 @@ const SHEET_GROUPS: SheetNavGroup[] = [
     ],
   },
   {
-    groupLabel: "Analytics",
+    groupKey: "ventes",
+    gatePermission: Permission.FINANCES_VOIR,
+    items: [
+      {
+        href: "/finances",
+        labelKey: "items.finances",
+        icon: Wallet,
+        permissionRequired: Permission.FINANCES_VOIR,
+      },
+      {
+        href: "/ventes",
+        labelKey: "items.ventesItem",
+        icon: Banknote,
+        permissionRequired: Permission.VENTES_VOIR,
+      },
+      {
+        href: "/factures",
+        labelKey: "items.factures",
+        icon: FileText,
+        permissionRequired: Permission.FACTURES_VOIR,
+      },
+      {
+        href: "/clients",
+        labelKey: "items.clientsItem",
+        icon: UserRound,
+        permissionRequired: Permission.CLIENTS_VOIR,
+      },
+      {
+        href: "/depenses",
+        labelKey: "items.depenses",
+        icon: Receipt,
+        permissionRequired: Permission.DEPENSES_VOIR,
+      },
+    ],
+  },
+  {
+    groupKey: "analysePilotage",
+    gatePermission: Permission.DASHBOARD_VOIR,
     items: [
       {
         href: "/analytics",
@@ -160,19 +194,32 @@ const SHEET_GROUPS: SheetNavGroup[] = [
     ],
   },
   {
-    groupLabel: "Admin",
+    groupKey: "reproduction",
+    gatePermission: Permission.ALEVINS_VOIR,
     items: [
       {
-        href: "/settings/alertes",
-        labelKey: "items.alertes",
-        icon: BellRing,
-        permissionRequired: Permission.ALERTES_CONFIGURER,
+        href: "/alevins",
+        labelKey: "items.alevins",
+        icon: Egg,
+        permissionRequired: Permission.ALEVINS_VOIR,
+        moduleRequired: SiteModule.REPRODUCTION,
       },
+    ],
+  },
+  {
+    groupKey: "configuration",
+    items: [
       {
         href: "/settings/sites",
         labelKey: "items.sites",
         icon: Settings,
         permissionRequired: Permission.SITE_GERER,
+      },
+      {
+        href: "/settings/alertes",
+        labelKey: "items.alertes",
+        icon: BellRing,
+        permissionRequired: Permission.ALERTES_CONFIGURER,
       },
       {
         href: "/users",
@@ -199,11 +246,10 @@ const SHEET_GROUPS: SheetNavGroup[] = [
         permissionRequired: Permission.ACTIVER_PACKS,
       },
       {
-        href: "/alevins",
-        labelKey: "items.alevins",
-        icon: Egg,
-        permissionRequired: Permission.ALEVINS_VOIR,
-        moduleRequired: SiteModule.REPRODUCTION,
+        href: "/backoffice",
+        labelKey: "items.backoffice",
+        icon: Shield,
+        superAdminOnly: true,
       },
     ],
   },
@@ -228,8 +274,18 @@ export function FarmBottomNav({
   const t = useTranslations("navigation");
   const authService = useAuthService();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [isLandscape, setIsLandscape] = useState(false);
 
   const openSheet = useCallback(() => setSheetOpen(true), []);
+
+  useEffect(() => {
+    function checkOrientation() {
+      setIsLandscape(window.innerHeight < 500);
+    }
+    checkOrientation();
+    window.addEventListener("resize", checkOrientation);
+    return () => window.removeEventListener("resize", checkOrientation);
+  }, []);
 
   const visibleFinances =
     permissions.includes(Permission.FINANCES_VOIR) &&
@@ -248,6 +304,7 @@ export function FarmBottomNav({
   }
 
   function isItemVisible(item: SheetNavItem): boolean {
+    if (item.superAdminOnly) return isSuperAdmin;
     if (item.permissionRequired && !permissions.includes(item.permissionRequired))
       return false;
     if (item.moduleRequired && !siteModules.includes(item.moduleRequired))
@@ -345,7 +402,15 @@ export function FarmBottomNav({
 
       {/* Secondary modules sheet / drawer */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="inset-y-auto bottom-0 top-auto left-0 right-0 w-full h-auto max-h-[80vh] overflow-y-auto rounded-t-2xl border-r-0 border-t border-border" style={{ borderRight: "none" }}>
+        <SheetContent
+          className={cn(
+            "overflow-y-auto border-border",
+            isLandscape
+              ? "inset-y-0 right-0 left-auto top-0 bottom-0 h-full w-80 rounded-l-2xl border-l border-t-0"
+              : "inset-y-auto bottom-0 top-auto left-0 right-0 w-full h-auto max-h-[80vh] rounded-t-2xl border-r-0 border-t"
+          )}
+          style={isLandscape ? {} : { borderRight: "none" }}
+        >
           <div className="flex flex-col gap-0">
             {/* Header */}
             <div className="flex h-12 items-center gap-2 border-b border-border px-4 mb-2">
@@ -355,58 +420,40 @@ export function FarmBottomNav({
 
             {/* Secondary nav items — grouped */}
             <nav className="flex flex-col gap-4 p-3">
-              {visibleGroups.map((group) => (
-                <div key={group.groupLabel}>
-                  <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    {group.groupLabel}
-                  </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {group.items.map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          onClick={() => setSheetOpen(false)}
-                          className={cn(
-                            "flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-xs font-medium transition-colors",
-                            isActive(item.href)
-                              ? "bg-primary/10 text-primary"
-                              : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                          )}
-                        >
-                          <Icon className="h-5 w-5" />
-                          <span className="text-center leading-tight">{t(item.labelKey as Parameters<typeof t>[0])}</span>
-                        </Link>
-                      );
-                    })}
+              {visibleGroups.map((group) => {
+                const showHeader = group.items.length > 1;
+                return (
+                  <div key={group.groupKey}>
+                    {/* E5: hide group header when only 1 item visible */}
+                    {showHeader && (
+                      <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        {t(`modules.${group.groupKey}` as Parameters<typeof t>[0])}
+                      </p>
+                    )}
+                    <div className="grid grid-cols-3 gap-2">
+                      {group.items.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setSheetOpen(false)}
+                            className={cn(
+                              "flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-xs font-medium transition-colors",
+                              isActive(item.href)
+                                ? "bg-primary/10 text-primary"
+                                : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            )}
+                          >
+                            <Icon className="h-5 w-5" />
+                            <span className="text-center leading-tight">{t(item.labelKey as Parameters<typeof t>[0])}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
-
-              {/* Backoffice — super admin only */}
-              {isSuperAdmin && (
-                <div>
-                  <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Plateforme
-                  </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Link
-                      href="/backoffice"
-                      onClick={() => setSheetOpen(false)}
-                      className={cn(
-                        "flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-xs font-medium transition-colors",
-                        isActive("/backoffice")
-                          ? "bg-primary/10 text-primary"
-                          : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      <Shield className="h-5 w-5" />
-                      <span>Backoffice</span>
-                    </Link>
-                  </div>
-                </div>
-              )}
+                );
+              })}
             </nav>
 
             {/* User info + logout */}
