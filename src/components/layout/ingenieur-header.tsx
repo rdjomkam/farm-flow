@@ -21,7 +21,7 @@ export function IngenieurHeader() {
         <div
           className={cn(
             "ml-1 h-2 w-2 rounded-full",
-            isOnline ? "bg-green-500" : "bg-destructive"
+            isOnline ? "bg-success" : "bg-destructive"
           )}
           aria-label={isOnline ? "En ligne" : "Hors ligne"}
           role="status"

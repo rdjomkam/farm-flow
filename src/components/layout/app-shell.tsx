@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { FarmSidebar } from "./farm-sidebar";
 import { FarmBottomNav } from "./farm-bottom-nav";
@@ -8,7 +7,6 @@ import { FarmHeader } from "./farm-header";
 import { IngenieurSidebar } from "./ingenieur-sidebar";
 import { IngenieurBottomNav } from "./ingenieur-bottom-nav";
 import { IngenieurHeader } from "./ingenieur-header";
-import { MobileMenuContext } from "./mobile-menu-context";
 import type { Permission, Role, SiteModule } from "@/types";
 import { Role as RoleEnum } from "@/types";
 
@@ -42,10 +40,6 @@ export function AppShell({
   const isAuthPage = AUTH_ROUTES.includes(pathname);
   const isNoNavPage = NO_NAV_ROUTES.includes(pathname);
   const isBackofficePage = pathname.startsWith(BACKOFFICE_PREFIX);
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  const openMenu = useCallback(() => setMenuOpen(true), []);
-
   if (isAuthPage || isNoNavPage || isBackofficePage) {
     return <>{children}</>;
   }
@@ -55,7 +49,7 @@ export function AppShell({
   // -------------------------------------------------------------------------
   if (role === RoleEnum.INGENIEUR) {
     return (
-      <MobileMenuContext.Provider value={{ openMenu, isImpersonating }}>
+      <>
         <div className="flex min-h-dvh overflow-x-hidden">
           <IngenieurSidebar
             permissions={permissions}
@@ -79,7 +73,7 @@ export function AppShell({
           isSuperAdmin={isSuperAdmin}
           activeSiteId={activeSiteId}
         />
-      </MobileMenuContext.Provider>
+      </>
     );
   }
 
@@ -88,7 +82,7 @@ export function AppShell({
   // -------------------------------------------------------------------------
   if (role !== null && FARM_ROLES.includes(role)) {
     return (
-      <MobileMenuContext.Provider value={{ openMenu, isImpersonating }}>
+      <>
         <div className="flex min-h-dvh overflow-x-hidden">
           <FarmSidebar
             permissions={permissions}
@@ -111,7 +105,7 @@ export function AppShell({
           userName={userName}
           isSuperAdmin={isSuperAdmin}
         />
-      </MobileMenuContext.Provider>
+      </>
     );
   }
 
