@@ -37,7 +37,6 @@ const INGENIEUR_HOME = "/monitoring";
 const INGENIEUR_ONLY_PREFIXES = [
   "/monitoring",
   "/mon-portefeuille",
-  "/settings/config-elevage",
   "/settings/regles-activites",
 ];
 
