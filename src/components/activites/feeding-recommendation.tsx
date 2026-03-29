@@ -23,6 +23,7 @@ import {
   AlertTriangle,
   Info,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { UniteStock, PhaseElevage } from "@/types";
 import { convertirUniteStock } from "@/lib/calculs";
 import { FREQUENCES_PAR_PHASE } from "@/lib/activity-engine/feeding";
@@ -106,17 +107,8 @@ export interface FeedingRecommendationProps {
 }
 
 // ---------------------------------------------------------------------------
-// Labels phases
+// Labels phases (removed — now using i18n via stock.json produits.phases)
 // ---------------------------------------------------------------------------
-
-const phaseLabels: Record<string, string> = {
-  [PhaseElevage.ACCLIMATATION]: "Acclimatation",
-  [PhaseElevage.CROISSANCE_DEBUT]: "Croissance debut",
-  [PhaseElevage.JUVENILE]: "Juvenile",
-  [PhaseElevage.GROSSISSEMENT]: "Grossissement",
-  [PhaseElevage.FINITION]: "Finition",
-  [PhaseElevage.PRE_RECOLTE]: "Pre-recolte",
-};
 
 // ---------------------------------------------------------------------------
 // Helpers de formatage
@@ -230,6 +222,7 @@ interface BacCardProps {
 }
 
 function BacCard({ bac }: BacCardProps) {
+  const t = useTranslations("stock");
   const quantiteGrammesLabel =
     bac.recommendation.quantiteGrammes >= 1000
       ? `${(bac.recommendation.quantiteGrammes / 1000).toFixed(2)} kg`
@@ -254,7 +247,7 @@ function BacCard({ bac }: BacCardProps) {
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Granule</p>
-          <p className="text-sm font-medium">{bac.recommendation.tailleGranule}</p>
+          <p className="text-sm font-medium">{t(`produits.taillesGranule.${bac.recommendation.tailleGranule}` as any) || bac.recommendation.tailleGranule}</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Repas/jour</p>
@@ -289,6 +282,7 @@ export function FeedingRecommendation({
   produitStock,
   parBac,
 }: FeedingRecommendationProps) {
+  const t = useTranslations("stock");
   const [showParBac, setShowParBac] = useState(false);
 
   // Donnees insuffisantes
@@ -382,7 +376,7 @@ export function FeedingRecommendation({
       {phaseElevage && (
         <div className="mb-3">
           <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-            {phaseLabels[phaseElevage] ?? phaseElevage}
+            {t(`produits.phases.${phaseElevage}` as any) || phaseElevage}
           </span>
         </div>
       )}
@@ -408,7 +402,7 @@ export function FeedingRecommendation({
           <MetricRow
             icon={<Package className="h-3.5 w-3.5" />}
             label="Taille granule"
-            value={tailleGranuleEffective}
+            value={t(`produits.taillesGranule.${tailleGranuleEffective}` as any) || tailleGranuleEffective}
           />
         )}
 

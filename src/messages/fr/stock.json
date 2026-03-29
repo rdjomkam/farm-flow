@@ -56,6 +56,31 @@
       "tauxFibres": "Taux fibres (%)",
       "phasesCibles": "Phases cibles"
     },
+    "taillesGranule": {
+      "P0": "P0 — Poudre < 0.5mm",
+      "P1": "P1 — Poudre 0.5mm",
+      "P2": "P2 — Crumble 1mm",
+      "P3": "P3 — Crumble 1.5mm",
+      "G1": "G1 — Granulé 2mm",
+      "G2": "G2 — Granulé 3mm",
+      "G3": "G3 — Granulé 4mm",
+      "G4": "G4 — Granulé 6mm",
+      "G5": "G5 — Granulé 8mm"
+    },
+    "formesAliment": {
+      "FLOTTANT": "Flottant",
+      "COULANT": "Coulant",
+      "SEMI_FLOTTANT": "Semi-flottant",
+      "POUDRE": "Poudre"
+    },
+    "phases": {
+      "ACCLIMATATION": "Acclimatation",
+      "CROISSANCE_DEBUT": "Croissance début",
+      "JUVENILE": "Juvénile",
+      "GROSSISSEMENT": "Grossissement",
+      "FINITION": "Finition",
+      "PRE_RECOLTE": "Pré-récolte"
+    },
     "detail": {
       "inStock": "{unit} en stock",
       "alerteMessage": "Stock en dessous du seuil d'alerte ({seuil} {unit})",

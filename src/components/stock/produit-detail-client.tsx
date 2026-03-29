@@ -264,7 +264,7 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
                         </SelectTrigger>
                         <SelectContent>
                           {Object.values(TailleGranule).map((val) => (
-                            <SelectItem key={val} value={val}>{val}</SelectItem>
+                            <SelectItem key={val} value={val}>{t(`produits.taillesGranule.${val}` as any)}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -274,7 +274,7 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
                         </SelectTrigger>
                         <SelectContent>
                           {Object.values(FormeAliment).map((val) => (
-                            <SelectItem key={val} value={val}>{val}</SelectItem>
+                            <SelectItem key={val} value={val}>{t(`produits.formesAliment.${val}` as any)}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -324,7 +324,7 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
                                 onChange={() => togglePhase(phase)}
                                 className="rounded border-border"
                               />
-                              {phase}
+                              {t(`produits.phases.${phase}` as any)}
                             </label>
                           ))}
                         </div>

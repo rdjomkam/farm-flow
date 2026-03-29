@@ -48,7 +48,38 @@
       "seuilAlerte": "Alert threshold",
       "fournisseur": "Supplier (optional)",
       "fournisseurRequired": "Supplier",
-      "fournisseurNone": "None"
+      "fournisseurNone": "None",
+      "tailleGranule": "Pellet size",
+      "formeAliment": "Feed form",
+      "tauxProteines": "Protein content (%)",
+      "tauxLipides": "Fat content (%)",
+      "tauxFibres": "Fiber content (%)",
+      "phasesCibles": "Target phases"
+    },
+    "taillesGranule": {
+      "P0": "P0 — Powder < 0.5mm",
+      "P1": "P1 — Powder 0.5mm",
+      "P2": "P2 — Crumble 1mm",
+      "P3": "P3 — Crumble 1.5mm",
+      "G1": "G1 — Pellet 2mm",
+      "G2": "G2 — Pellet 3mm",
+      "G3": "G3 — Pellet 4mm",
+      "G4": "G4 — Pellet 6mm",
+      "G5": "G5 — Pellet 8mm"
+    },
+    "formesAliment": {
+      "FLOTTANT": "Floating",
+      "COULANT": "Sinking",
+      "SEMI_FLOTTANT": "Semi-floating",
+      "POUDRE": "Powder"
+    },
+    "phases": {
+      "ACCLIMATATION": "Acclimatisation",
+      "CROISSANCE_DEBUT": "Early growth",
+      "JUVENILE": "Juvenile",
+      "GROSSISSEMENT": "Fattening",
+      "FINITION": "Finishing",
+      "PRE_RECOLTE": "Pre-harvest"
     },
     "detail": {
       "inStock": "{unit} in stock",
