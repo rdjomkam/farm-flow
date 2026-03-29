@@ -32,6 +32,12 @@ export interface GompertzParams {
 export interface GompertzCalibrationInput {
   /** Observed data points: day index since stocking and mean weight (g). */
   points: Array<{ jour: number; poidsMoyen: number }>;
+  /**
+   * Optional initial parameter guess — values from ConfigElevage to seed the solver.
+   * Each value is validated against physical bounds before use; out-of-bounds values
+   * fall back to the heuristic.
+   */
+  initialGuess?: Partial<GompertzParams>;
 }
 
 /** Confidence level labels for the calibration result. */
@@ -329,16 +335,46 @@ function levenbergMarquardt(
 /**
  * Heuristic initial parameter guess from ADR-gompertz-lm-validation.md.
  *
- * W∞₀ = 2.5 × max observed weight
- * K₀  = 0.03 (middle of physiological range)
- * ti₀ = mean of observed days
+ * W∞₀ = 2.5 × max observed weight  (or initialGuess.wInfinity if within bounds)
+ * K₀  = 0.03 (middle of physiological range, or initialGuess.k if within bounds)
+ * ti₀ = mean of observed days       (or initialGuess.ti if within bounds)
+ *
+ * @param data         - observed data points {t, w}
+ * @param initialGuess - optional caller-supplied starting values (from ConfigElevage)
  */
 function buildInitialGuess(
-  data: { t: number; w: number }[]
+  data: { t: number; w: number }[],
+  initialGuess?: Partial<GompertzParams>
 ): [number, number, number] {
   const maxW = Math.max(...data.map((d) => d.w));
   const tMean = data.reduce((s, d) => s + d.t, 0) / data.length;
-  return [maxW * 2.5, 0.03, tMean];
+
+  // W∞: must be >= maxWeight and <= 3000 g
+  const wInfHeuristic = maxW * 2.5;
+  const wInf =
+    initialGuess?.wInfinity !== undefined &&
+    initialGuess.wInfinity >= maxW &&
+    initialGuess.wInfinity <= 3000
+      ? initialGuess.wInfinity
+      : wInfHeuristic;
+
+  // K: must be within [0.005, 0.2] day⁻¹
+  const k =
+    initialGuess?.k !== undefined &&
+    initialGuess.k >= 0.005 &&
+    initialGuess.k <= 0.2
+      ? initialGuess.k
+      : 0.03;
+
+  // ti: must be within [0, 120] days
+  const ti =
+    initialGuess?.ti !== undefined &&
+    initialGuess.ti >= 0 &&
+    initialGuess.ti <= 120
+      ? initialGuess.ti
+      : tMean;
+
+  return [wInf, k, ti];
 }
 
 /**
@@ -395,7 +431,7 @@ function resolveConfidenceLevel(
 export function calibrerGompertz(
   input: GompertzCalibrationInput
 ): GompertzCalibrationResult | null {
-  const { points } = input;
+  const { points, initialGuess } = input;
 
   if (points.length < 5) {
     return null;
@@ -404,7 +440,7 @@ export function calibrerGompertz(
   // Convert to internal format
   const data = points.map((p) => ({ t: p.jour, w: p.poidsMoyen }));
 
-  const initial = buildInitialGuess(data);
+  const initial = buildInitialGuess(data, initialGuess);
   const bounds = buildBounds(data);
 
   const { params, r2, rmse } = levenbergMarquardt(data, initial, bounds);
@@ -444,6 +480,13 @@ export function projeterDateRecolte(
 
   if (wInfinity <= poidsObjectif) {
     // Target weight exceeds the asymptotic weight — unreachable
+    return null;
+  }
+
+  if (poidsObjectif >= 0.99 * wInfinity) {
+    // Target weight is within the asymptotic zone (>= 99% of W∞).
+    // The Gompertz curve flattens here and the analytic inversion becomes
+    // numerically unreliable (ln(-ln(ratio)) → -∞ as ratio → 1).
     return null;
   }
 

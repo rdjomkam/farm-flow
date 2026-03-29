@@ -194,12 +194,22 @@ function SGRBadge({
 /**
  * Bloc dates de recolte : SGR + Gompertz cote a cote.
  * Si Gompertz est present, les deux dates sont affichees et labellisees.
+ * Si le poids objectif est dans la zone asymptotique (>= 99% de W∞),
+ * un avertissement est affiche a la place de la date Gompertz.
  */
 function HarvestDateBlock({ projection }: { projection: ProjectionVagueV2 }) {
   const tAnalytics = useTranslations("analytics");
   const hasGompertz =
     typeof projection.dateRecolteGompertz === "number" &&
     projection.dateRecolteGompertz !== null;
+
+  // Detect asymptotic zone: gompertz model calibrated but date projection is null
+  // because poidsObjectif >= 0.99 * wInfinity
+  const isAsymptoticZone =
+    projection.gompertzParams != null &&
+    projection.gompertzConfidence !== "INSUFFICIENT_DATA" &&
+    !hasGompertz &&
+    projection.poidsObjectif >= 0.99 * projection.gompertzParams.wInfinity;
 
   return (
     <div className="flex flex-col gap-1 rounded-lg border border-border p-2.5 bg-card">
@@ -211,7 +221,7 @@ function HarvestDateBlock({ projection }: { projection: ProjectionVagueV2 }) {
       {/* SGR harvest date */}
       {projection.dateRecolteEstimee !== null ? (
         <div className="flex flex-col gap-0.5">
-          {hasGompertz && (
+          {(hasGompertz || isAsymptoticZone) && (
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               {tAnalytics("projections.sgrHarvest")}
             </span>
@@ -226,7 +236,7 @@ function HarvestDateBlock({ projection }: { projection: ProjectionVagueV2 }) {
           </p>
         </div>
       ) : (
-        !hasGompertz && (
+        !hasGompertz && !isAsymptoticZone && (
           <p className="text-xs text-muted-foreground mt-1">
             {tAnalytics("projections.insufficientData")}
           </p>
@@ -243,6 +253,16 @@ function HarvestDateBlock({ projection }: { projection: ProjectionVagueV2 }) {
             {tAnalytics("projections.harvestInDays", {
               count: Math.round(projection.dateRecolteGompertz as number),
             })}
+          </p>
+        </div>
+      )}
+
+      {/* Asymptotic zone warning — shown when Gompertz is calibrated but target
+          weight is too close to W∞ for a reliable projection */}
+      {isAsymptoticZone && (
+        <div className="mt-1 pt-1 border-t border-border/50">
+          <p className="text-[11px] text-warning leading-snug">
+            Poids objectif proche du maximum theorique (W&infin;). Estimation Gompertz non fiable &mdash; utilisation du SGR.
           </p>
         </div>
       )}

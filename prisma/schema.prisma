@@ -675,6 +675,14 @@ model ConfigElevage {
   recoltePartiellePoidsSeuil Float @default(400)
   recolteJeuneAvantJours     Int   @default(2)
 
+  // ── Calibrage Gompertz : parametres initiaux par defaut ─────────────────
+  /** Valeur initiale de W∞ (poids asymptotique en g) pour le calibrage Gompertz — ex: 1200 */
+  gompertzWInfDefault Float?
+  /** Valeur initiale de K (constante de croissance) pour le calibrage Gompertz — ex: 0.018 */
+  gompertzKDefault    Float?
+  /** Valeur initiale de tᵢ (point d'inflexion en jours) pour le calibrage Gompertz — ex: 95 */
+  gompertzTiDefault   Float?
+
   // ── Metadonnees ─────────────────────────────────
   /** Profil par defaut du site (un seul isDefault=true par site) */
   isDefault Boolean @default(false)

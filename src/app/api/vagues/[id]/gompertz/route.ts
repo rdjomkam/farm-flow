@@ -27,7 +27,12 @@ export async function GET(
         id: true,
         dateDebut: true,
         configElevage: {
-          select: { poidsObjectif: true },
+          select: {
+            poidsObjectif: true,
+            gompertzWInfDefault: true,
+            gompertzKDefault: true,
+            gompertzTiDefault: true,
+          },
         },
         gompertz: true,
       },
@@ -126,8 +131,14 @@ export async function GET(
           poidsMoyen: r.poidsMoyen as number,
         }));
 
+      // 4c. Build initial guess from ConfigElevage if available
+      const initialGuess: Partial<GompertzParams> = {};
+      if (vague.configElevage?.gompertzWInfDefault) initialGuess.wInfinity = vague.configElevage.gompertzWInfDefault;
+      if (vague.configElevage?.gompertzKDefault) initialGuess.k = vague.configElevage.gompertzKDefault;
+      if (vague.configElevage?.gompertzTiDefault) initialGuess.ti = vague.configElevage.gompertzTiDefault;
+
       // 4c. Calibrate
-      const result = calibrerGompertz({ points });
+      const result = calibrerGompertz({ points, initialGuess });
 
       if (!result) {
         // calibrerGompertz returned null (< 5 points after filtering nulls)

@@ -2015,6 +2015,14 @@ export interface ConfigElevage {
   recoltePartiellePoidsSeuil: number;
   recolteJeuneAvantJours: number;
 
+  // Modele de croissance Gompertz — points de depart pour la calibration (optionnels)
+  /** Poids asymptotique W∞ par defaut (g) — point de depart pour la calibration Gompertz */
+  gompertzWInfDefault?: number | null;
+  /** Constante de croissance K par defaut (jour⁻¹) — point de depart pour la calibration Gompertz */
+  gompertzKDefault?: number | null;
+  /** Point d'inflexion ti par defaut (jours) — point de depart pour la calibration Gompertz */
+  gompertzTiDefault?: number | null;
+
   // Metadonnees
   /** Profil par defaut du site (un seul isDefault=true par site) */
   isDefault: boolean;
