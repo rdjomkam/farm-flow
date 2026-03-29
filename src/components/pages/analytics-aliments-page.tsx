@@ -18,7 +18,7 @@ import {
   getScoresFournisseurs,
 } from "@/lib/queries/analytics";
 import { AccessDenied } from "@/components/ui/access-denied";
-import { Permission, TailleGranule } from "@/types";
+import { Permission, TailleGranule, PhaseElevage, FormeAliment } from "@/types";
 
 interface AnalyticsAlimentsPageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -36,14 +36,35 @@ export default async function AnalyticsAlimentsPage({
 
   const tAnalytics = await getTranslations("analytics");
 
-  // FD.3 — lire le filtre saison depuis les searchParams
+  // FD.3 — lire les filtres depuis les searchParams
   const params = await searchParams;
   const rawSaison = typeof params?.saison === "string" ? params.saison : undefined;
+  const rawPhase = typeof params?.phase === "string" ? params.phase : undefined;
+  const rawTaille = typeof params?.taille === "string" ? params.taille : undefined;
+  const rawForme = typeof params?.forme === "string" ? params.forme : undefined;
+
   const saisonFilter =
     rawSaison === "SECHE" || rawSaison === "PLUIES" ? rawSaison : undefined;
+  const phaseFilter =
+    rawPhase && Object.values(PhaseElevage).includes(rawPhase as PhaseElevage)
+      ? (rawPhase as PhaseElevage)
+      : undefined;
+  const tailleFilter =
+    rawTaille && Object.values(TailleGranule).includes(rawTaille as TailleGranule)
+      ? (rawTaille as TailleGranule)
+      : undefined;
+  const formeFilter =
+    rawForme && Object.values(FormeAliment).includes(rawForme as FormeAliment)
+      ? (rawForme as FormeAliment)
+      : undefined;
+
+  const filtres =
+    saisonFilter || phaseFilter || tailleFilter || formeFilter
+      ? { saison: saisonFilter, phase: phaseFilter, tailleGranule: tailleFilter, formeAliment: formeFilter }
+      : undefined;
 
   const [comparaison, dlcData, alertesRation, scoresFournisseurs] = await Promise.all([
-    getComparaisonAliments(session.activeSiteId, saisonFilter ? { saison: saisonFilter } : undefined),
+    getComparaisonAliments(session.activeSiteId, filtres),
     getMouvementsExpirables(session.activeSiteId),
     getAlertesRation(session.activeSiteId),
     getScoresFournisseurs(session.activeSiteId),

@@ -77,7 +77,9 @@ export function FeedFilters() {
         value={isValidPhase(currentPhase) ? currentPhase : ALL_VALUE}
         onValueChange={handlePhaseChange}
       >
-        <SelectTrigger label={tAnalytics("filtres.phase")} />
+        <SelectTrigger label={tAnalytics("filtres.phase")}>
+          <SelectValue />
+        </SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL_VALUE}>{tAnalytics("filtres.toutes")}</SelectItem>
           {Object.values(PhaseElevage).map((phase) => (
@@ -93,7 +95,9 @@ export function FeedFilters() {
         value={isValidTaille(currentTaille) ? currentTaille : ALL_VALUE}
         onValueChange={handleTailleChange}
       >
-        <SelectTrigger label={tAnalytics("filtres.taille")} />
+        <SelectTrigger label={tAnalytics("filtres.taille")}>
+          <SelectValue />
+        </SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL_VALUE}>{tAnalytics("filtres.toutes")}</SelectItem>
           {Object.values(TailleGranule).map((taille) => (
@@ -109,7 +113,9 @@ export function FeedFilters() {
         value={isValidForme(currentForme) ? currentForme : ALL_VALUE}
         onValueChange={handleFormeChange}
       >
-        <SelectTrigger label={tAnalytics("filtres.forme")} />
+        <SelectTrigger label={tAnalytics("filtres.forme")}>
+          <SelectValue />
+        </SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL_VALUE}>{tAnalytics("filtres.toutes")}</SelectItem>
           {Object.values(FormeAliment).map((forme) => (
@@ -125,7 +131,9 @@ export function FeedFilters() {
         value={isValidSaison(currentSaison) ? currentSaison : ALL_VALUE}
         onValueChange={handleSaisonChange}
       >
-        <SelectTrigger label={tAnalytics("filtres.saison")} />
+        <SelectTrigger label={tAnalytics("filtres.saison")}>
+          <SelectValue />
+        </SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL_VALUE}>{tAnalytics("filtres.toutes")}</SelectItem>
           <SelectItem value="SECHE">{tAnalytics("filtres.saisonSeche")}</SelectItem>
