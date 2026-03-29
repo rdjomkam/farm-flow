@@ -6257,7 +6257,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story NC.1 — Audit et nettoyage sidebar.tsx legacy
-**Assigné à :** @developer | **Dépend de :** Sprint NB FAIT | **Statut :** `TODO` | **Type :** CLEANUP
+**Assigné à :** @developer | **Dépend de :** Sprint NB FAIT | **Statut :** `FAIT` | **Type :** CLEANUP
 
 **Description :** Auditer les call sites du composant `sidebar.tsx` legacy. Supprimer les entrées `/admin/*` inexistantes. Si aucun import actif, supprimer le fichier (ADR §13 Phase 3, I5).
 
@@ -6275,7 +6275,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story NC.2 — Audit et nettoyage bottom-nav.tsx legacy
-**Assigné à :** @developer | **Dépend de :** Sprint NB FAIT | **Statut :** `TODO` | **Type :** CLEANUP
+**Assigné à :** @developer | **Dépend de :** Sprint NB FAIT | **Statut :** `FAIT` | **Type :** CLEANUP
 
 **Description :** Auditer les call sites du composant `bottom-nav.tsx` legacy. Le migrer ou supprimer selon les imports actifs (ADR §14.3, I6).
 
@@ -6292,7 +6292,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story NC.3 — Audit et nettoyage hamburger-menu.tsx legacy
-**Assigné à :** @developer | **Dépend de :** Sprint NB FAIT | **Statut :** `TODO` | **Type :** CLEANUP
+**Assigné à :** @developer | **Dépend de :** Sprint NB FAIT | **Statut :** `FAIT` | **Type :** CLEANUP
 
 **Description :** Auditer les call sites du composant `hamburger-menu.tsx`. Le migrer ou supprimer selon les imports actifs (ADR §13 Phase 3).
 
@@ -6308,7 +6308,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story NC.4 — Nettoyage module-nav-items.ts : supprimer entrées Admin obsolètes
-**Assigné à :** @developer | **Dépend de :** Sprint NB FAIT | **Statut :** `TODO` | **Type :** CLEANUP
+**Assigné à :** @developer | **Dépend de :** Sprint NB FAIT | **Statut :** `FAIT` | **Type :** CLEANUP
 
 **Description :** Le fichier `src/lib/module-nav-items.ts` contient des entrées pour `Admin Abonnements`, `Admin Commissions`, `Admin Remises` qui pointent vers des routes `/admin/*` inexistantes depuis la migration backoffice (ADR §14.2, §13 Phase 3).
 
@@ -6324,7 +6324,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story NC.5 — Vérification couverture routes mobile 360px
-**Assigné à :** @tester | **Dépend de :** NC.1, NC.2, NC.3, NC.4 | **Statut :** `TODO` | **Type :** TEST
+**Assigné à :** @tester | **Dépend de :** NC.1, NC.2, NC.3, NC.4 | **Statut :** `FAIT` | **Type :** TEST
 
 **Description :** Vérification complète que toutes les routes primaires sont accessibles en 2 taps max depuis la bottom nav à 360px de largeur.
 
@@ -6341,7 +6341,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story NC.6 — Vérification couverture routes desktop
-**Assigné à :** @tester | **Dépend de :** NC.1, NC.2, NC.3, NC.4 | **Statut :** `TODO` | **Type :** TEST
+**Assigné à :** @tester | **Dépend de :** NC.1, NC.2, NC.3, NC.4 | **Statut :** `FAIT` | **Type :** TEST
 
 **Description :** Vérification que toutes les routes accessibles via la sidebar desktop sont fonctionnelles et correctement groupées.
 
@@ -6358,7 +6358,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story NC.7 — Audit ARIA et accessibilité navigation
-**Assigné à :** @tester | **Dépend de :** NC.5, NC.6 | **Statut :** `TODO` | **Type :** TEST
+**Assigné à :** @tester | **Dépend de :** NC.5, NC.6 | **Statut :** `FAIT` | **Type :** TEST
 
 **Description :** Audit d'accessibilité ARIA complet sur tous les composants de navigation selon les règles de l'ADR §15.
 
@@ -6378,7 +6378,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story NC.8 — Tests de non-régression et review finale Sprint NC
-**Assigné à :** @tester | **Dépend de :** NC.7 | **Statut :** `TODO` | **Type :** TEST
+**Assigné à :** @tester | **Dépend de :** NC.7 | **Statut :** `FAIT` | **Type :** TEST
 
 **Tâches :**
 - [ ] `TODO` Exécuter `npx vitest run` — tous les tests doivent passer (anciens + nouveaux depuis NA/NB)
@@ -6389,7 +6389,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story NC.9 — Review finale Sprint NC
-**Assigné à :** @code-reviewer | **Dépend de :** NC.8 | **Statut :** `TODO` | **Type :** REVIEW
+**Assigné à :** @code-reviewer | **Dépend de :** NC.8 | **Statut :** `FAIT` | **Type :** REVIEW
 
 **Tâches :**
 - [ ] `TODO` Vérifier que tous les composants legacy supprimés n'ont plus d'imports actifs

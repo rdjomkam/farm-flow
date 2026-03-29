@@ -2,14 +2,9 @@
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
-import { BottomNav } from "@/components/layout/bottom-nav";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Permission, Role, SiteModule } from "@/types";
-
-const allPermissions = Object.values(Permission);
-const allSiteModules = Object.values(SiteModule);
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -23,43 +18,11 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-// ---------------------------------------------------------------------------
-// Mobile-first responsive patterns
-// ---------------------------------------------------------------------------
-
-describe("Responsive — Mobile first patterns", () => {
-  it("BottomNav est visible sur mobile (md:hidden)", () => {
-    const { container } = render(<BottomNav permissions={allPermissions} role={null} siteModules={allSiteModules} />);
-    const nav = container.querySelector("nav");
-    expect(nav?.className).toContain("md:hidden");
-  });
-
-  it("BottomNav a une hauteur tactile suffisante (min-h-[56px])", () => {
-    const { container } = render(<BottomNav permissions={allPermissions} role={null} siteModules={allSiteModules} />);
-    const links = container.querySelectorAll("a");
-    links.forEach((link) => {
-      expect(link.className).toContain("min-h-[56px]");
-    });
-  });
-
-  it("BottomNav ADMIN/GERANT a 4 onglets par defaut", () => {
-    const { container } = render(<BottomNav permissions={allPermissions} role={null} siteModules={allSiteModules} />);
-    const links = container.querySelectorAll("a");
-    expect(links).toHaveLength(4);
-  });
-
-  it("BottomNav PISCICULTEUR a 4 onglets dedies", () => {
-    const { container } = render(<BottomNav permissions={allPermissions} role={Role.PISCICULTEUR} siteModules={allSiteModules} />);
-    const links = container.querySelectorAll("a");
-    expect(links).toHaveLength(4);
-  });
-
-  it("BottomNav INGENIEUR a 3 onglets dedies", () => {
-    const { container } = render(<BottomNav permissions={allPermissions} role={Role.INGENIEUR} siteModules={allSiteModules} />);
-    const links = container.querySelectorAll("a");
-    expect(links).toHaveLength(3);
-  });
-});
+// Note: The legacy BottomNav (bottom-nav.tsx) has been removed. Navigation
+// is now role-specific: FarmBottomNav (ADMIN/GERANT/PISCICULTEUR) and
+// IngenieurBottomNav (INGENIEUR). Navigation logic is covered by:
+//   src/__tests__/ui/farm-nav.test.ts
+//   src/__tests__/ui/ingenieur-nav.test.ts
 
 describe("Responsive — Taille tactile des composants", () => {
   it("Button a une taille minimum de 44px", () => {

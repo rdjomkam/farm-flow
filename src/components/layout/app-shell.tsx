@@ -2,9 +2,6 @@
 
 import { useState, useCallback } from "react";
 import { usePathname } from "next/navigation";
-import { Sidebar } from "./sidebar";
-import { BottomNav } from "./bottom-nav";
-import { HamburgerMenu } from "./hamburger-menu";
 import { FarmSidebar } from "./farm-sidebar";
 import { FarmBottomNav } from "./farm-bottom-nav";
 import { FarmHeader } from "./farm-header";
@@ -119,24 +116,7 @@ export function AppShell({
   }
 
   // -------------------------------------------------------------------------
-  // Fallback — generic navigation for unauthenticated or unknown roles
+  // Fallback — unknown or null role (middleware should redirect to /login)
   // -------------------------------------------------------------------------
-  return (
-    <MobileMenuContext.Provider value={{ openMenu, isImpersonating }}>
-      <div className="flex min-h-dvh overflow-x-hidden">
-        <Sidebar permissions={permissions} role={role} siteModules={siteModules} isSuperAdmin={isSuperAdmin} />
-        <main className="flex-1 overflow-x-clip max-w-full pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">{children}</main>
-      </div>
-      <HamburgerMenu
-        open={menuOpen}
-        onOpenChange={setMenuOpen}
-        permissions={permissions}
-        role={role}
-        userName={userName}
-        siteModules={siteModules}
-        isSuperAdmin={isSuperAdmin}
-      />
-      <BottomNav permissions={permissions} role={role} siteModules={siteModules} />
-    </MobileMenuContext.Provider>
-  );
+  return <>{children}</>;
 }

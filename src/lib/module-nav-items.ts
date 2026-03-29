@@ -29,9 +29,6 @@ import {
   Settings,
   Zap,
   CreditCard,
-  ShieldCheck,
-  LayoutList,
-  TrendingUp,
 } from "lucide-react";
 
 export interface SubNavItem {
@@ -79,7 +76,7 @@ export const MODULE_NAV: ModuleNavConfig[] = [
   },
   {
     label: "Intrants",
-    matchPaths: ["/stock", "/analytics/aliments"],
+    matchPaths: ["/stock"],
     items: [
       { href: "/stock", label: "Dashboard", itemKey: "dashboard", icon: LayoutDashboard },
       { href: "/stock/produits", label: "Produits", itemKey: "produits", icon: Tag },
@@ -105,6 +102,7 @@ export const MODULE_NAV: ModuleNavConfig[] = [
     matchPaths: ["/analytics", "/planning", "/mes-taches", "/notifications"],
     items: [
       { href: "/analytics", label: "Vue globale", itemKey: "vueGlobale", icon: BarChart3 },
+      { href: "/analytics/aliments", label: "Aliments", itemKey: "aliments", icon: Package },
       { href: "/planning", label: "Calendrier", itemKey: "calendrier", icon: Calendar },
       { href: "/mes-taches", label: "Taches", itemKey: "taches", icon: ClipboardCheck },
     ],
@@ -152,37 +150,12 @@ export const MODULE_NAV: ModuleNavConfig[] = [
       { href: "/tarifs", label: "Plans & tarifs", itemKey: "plansTarifs", icon: Tag },
     ],
   },
-  // Sprint 33 — Admin Abonnements (gate: ABONNEMENTS_GERER)
-  {
-    label: "Admin Abonnements",
-    matchPaths: ["/admin/abonnements", "/admin/plans"],
-    items: [
-      { href: "/admin/abonnements", label: "Abonnements", itemKey: "abonnementsItem", icon: ShieldCheck },
-      { href: "/admin/plans", label: "Gestion des plans", itemKey: "gestionPlans", icon: LayoutList },
-    ],
-  },
   // Sprint 34 — Portefeuille (gate: PORTEFEUILLE_VOIR)
   {
     label: "Portefeuille",
     matchPaths: ["/mon-portefeuille"],
     items: [
       { href: "/mon-portefeuille", label: "Mon portefeuille", itemKey: "monPortefeuille", icon: Wallet },
-    ],
-  },
-  // Sprint 34 — Admin Commissions (gate: COMMISSIONS_GERER)
-  {
-    label: "Admin Commissions",
-    matchPaths: ["/admin/commissions"],
-    items: [
-      { href: "/admin/commissions", label: "Commissions", itemKey: "commissions", icon: TrendingUp },
-    ],
-  },
-  // Sprint 35 — Admin Remises (gate: REMISES_GERER)
-  {
-    label: "Admin Remises",
-    matchPaths: ["/admin/remises"],
-    items: [
-      { href: "/admin/remises", label: "Remises & promos", itemKey: "remisesPromos", icon: Tag },
     ],
   },
 ];
