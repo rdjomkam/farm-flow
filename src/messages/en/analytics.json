@@ -70,7 +70,36 @@
     "remainingFeed": "Remaining feed",
     "expectedRevenue": "Expected revenue",
     "growthCurve": "Growth curve",
-    "chartLegend": "Solid line = actual measurements · Dashed = current SGR projection"
+    "chartLegend": "Solid line = actual measurements · Dashed = current SGR projection",
+    "sgrHarvest": "SGR harvest",
+    "gompertzHarvest": "Gompertz harvest",
+    "harvestInDays": "~{count} d",
+    "gompertzBadge": {
+      "HIGH": "Reliable model",
+      "MEDIUM": "Under construction",
+      "LOW": "Preliminary estimate",
+      "INSUFFICIENT_DATA": "Insufficient data (min. 5 biometrics)"
+    },
+    "gompertzParams": {
+      "title": "Growth model",
+      "ceilingWeight": "Ceiling weight",
+      "speedRapide": "Fast",
+      "speedNormale": "Normal",
+      "speedLente": "Slow",
+      "speedLabel": "Speed",
+      "growthPeak": "Growth peak",
+      "dayUnit": "day {day}"
+    },
+    "technicalDetails": {
+      "title": "Technical details",
+      "show": "Show details",
+      "hide": "Hide",
+      "wInfinity": "W\u221e (asymptotic weight)",
+      "kRate": "K (growth rate)",
+      "tiInflection": "ti (inflection point)",
+      "r2": "R\u00b2",
+      "rmse": "RMSE"
+    }
   },
   "bacs": {
     "noBacs": "No tanks assigned to this batch.",

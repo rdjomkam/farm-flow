@@ -12,7 +12,8 @@
     "db:seed": "docker exec -i silures-db psql -U dkfarm -d farm-flow < prisma/seed.sql",
     "postinstall": "prisma generate",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:gompertz": "npx tsx scripts/test-gompertz-lm.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1009.0",

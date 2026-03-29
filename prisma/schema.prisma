@@ -504,6 +504,8 @@ model Site {
   calibrageModifications CalibrageModification[]
   // Sprint FD — Feed Analytics
   historiqueNutritionnel HistoriqueNutritionnel[]
+  // Sprint Gompertz
+  gompertzVagues         GompertzVague[]
   // Sprint 30 — Abonnements
   abonnements          Abonnement[]              @relation("AbonnementsSite")
   paiementsAbo         PaiementAbonnement[]      @relation("PaiementsAboSite")
@@ -868,6 +870,8 @@ model Vague {
   calibrages              Calibrage[]
   // Sprint FD — Feed Analytics
   historiqueNutritionnel  HistoriqueNutritionnel[]
+  // Sprint Gompertz
+  gompertz                GompertzVague?
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
 
@@ -2432,4 +2436,56 @@ model HistoriqueNutritionnel {
 
   @@unique([vagueId, phase])
   @@index([siteId])
+}
+
+// ──────────────────────────────────────────
+// Modèle — GompertzVague (Sprint Gompertz)
+// ──────────────────────────────────────────
+
+/**
+ * GompertzVague — Parametres du modele de croissance de Gompertz calibres sur les
+ * releves biometriques d'une vague.
+ *
+ * W(t) = W∞ × exp(−exp(−k × (t − ti)))
+ *
+ * Un seul enregistrement par vague (@@unique vagueId).
+ * Supprime en cascade avec la vague (onDelete: Cascade).
+ * R8 : siteId obligatoire.
+ */
+model GompertzVague {
+  id             String   @id @default(cuid())
+
+  vagueId        String   @unique
+  vague          Vague    @relation(fields: [vagueId], references: [id], onDelete: Cascade)
+
+  /** W∞ — Poids asymptotique (g) */
+  wInfinity      Float
+  /** k — Constante de taux de croissance (1/jour) */
+  k              Float
+  /** ti — Point d'inflexion (jours depuis le debut de la vague) */
+  ti             Float
+  /** R² — Coefficient de determination (0-1) */
+  r2             Float
+  /** RMSE — Erreur quadratique moyenne (g) */
+  rmse           Float
+  /** Nombre de releves biometriques utilises pour le calibrage */
+  biometrieCount Int
+
+  /**
+   * Niveau de confiance du calibrage.
+   * INSUFFICIENT_DATA = < 3 points
+   * LOW               = 3-4 points
+   * MEDIUM            = 5-7 points
+   * HIGH              = >= 8 points
+   */
+  confidenceLevel String
+
+  siteId         String
+  site           Site     @relation(fields: [siteId], references: [id])
+
+  calculatedAt   DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([siteId])
+  @@index([vagueId])
 }

@@ -12,6 +12,7 @@ import {
   PhaseElevage,
   ScoreAlimentConfig,
 } from "./models";
+import type { GompertzParams } from "@/lib/gompertz";
 
 // Re-export pour que les consommateurs n'aient pas a importer depuis models
 export type { ScoreAlimentConfig };
@@ -232,6 +233,8 @@ export interface CourbeCroissancePoint {
   poidsReel: number | null;
   /** Poids moyen projete en grammes (null pour les points passes) */
   poidsProjecte: number | null;
+  /** Poids predit par le modele Gompertz en grammes (null si modele non calibre) */
+  poidsGompertz?: number | null;
 }
 
 /**
@@ -278,6 +281,41 @@ export interface ProjectionVague {
   poidsObjectif: number;
   /** Nombre de jours ecoules depuis le debut de la vague */
   joursEcoules: number;
+}
+
+/**
+ * Extension de ProjectionVague avec les donnees du modele Gompertz.
+ *
+ * Tous les champs Gompertz sont optionnels pour garantir la compatibilite
+ * ascendante avec les projections SGR existantes.
+ */
+export interface ProjectionVagueV2 extends ProjectionVague {
+  /**
+   * Parametres Gompertz calibres (W∞, K, ti).
+   * Null si moins de 5 points biometriques sont disponibles.
+   */
+  gompertzParams?: GompertzParams | null;
+
+  /**
+   * Coefficient de determination R² du modele Gompertz calibre.
+   * Null si le modele n'a pas pu etre calibre.
+   */
+  gompertzR2?: number | null;
+
+  /**
+   * Niveau de confiance qualitatif du calibrage Gompertz.
+   * Valeurs possibles : "INSUFFICIENT_DATA" | "LOW" | "MEDIUM" | "HIGH"
+   * Null si le modele n'a pas pu etre calibre.
+   */
+  gompertzConfidence?: string | null;
+
+  /**
+   * Nombre de jours restants avant d'atteindre le poids objectif
+   * selon la projection Gompertz.
+   * Null si le modele n'est pas calibre ou si le poids objectif
+   * depasse le poids asymptotique W∞.
+   */
+  dateRecolteGompertz?: number | null;
 }
 
 // ---------------------------------------------------------------------------

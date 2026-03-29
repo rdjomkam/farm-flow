@@ -353,3 +353,43 @@ export function getBenchmarkADGPourPoids(poidsMoyen: number | null): BenchmarkRa
     acceptable: { min: 0, max: stade.bon },
   };
 }
+
+// ---------------------------------------------------------------------------
+// Gompertz — Constantes de reference pour Clarias gariepinus (FAO/CIRAD)
+// ---------------------------------------------------------------------------
+
+/**
+ * Valeurs de reference du modele de Gompertz pour Clarias gariepinus.
+ * Sources : FAO Manual on Catfish Production, CIRAD Aquaculture Clarias guidelines.
+ *
+ * - wInfinity : poids asymptotique theorique (grammes)
+ * - k         : taux de croissance Gompertz (jour^-1)
+ * - ti        : point d'inflexion — age auquel la croissance absolue est maximale (jours)
+ */
+export const GOMPERTZ_REF_CLARIAS = {
+  wInfinity: { min: 800, max: 2000, typical: 1200 }, // grammes
+  k:         { min: 0.015, max: 0.05, typical: 0.025 }, // taux de croissance (jour^-1)
+  ti:        { min: 40, max: 100, typical: 70 },         // point d'inflexion (jours)
+} as const;
+
+/**
+ * Niveau d'evaluation du parametre k de Gompertz.
+ * Utilise pour qualifier la vitesse de croissance d'une vague.
+ */
+export type GompertzKLevel = "EXCELLENT" | "BON" | "FAIBLE";
+
+/**
+ * Evalue le niveau du parametre k de Gompertz par rapport aux references Clarias.
+ *
+ * Seuils (FAO/CIRAD) :
+ *   k >= 0.020 → EXCELLENT (croissance rapide)
+ *   k >= 0.015 → BON       (croissance dans la norme)
+ *   k <  0.015 → FAIBLE    (croissance sous la norme)
+ *
+ * @param k - Parametre de taux de croissance Gompertz (jour^-1)
+ */
+export function evaluerKGompertz(k: number): GompertzKLevel {
+  if (k >= 0.020) return "EXCELLENT";
+  if (k >= 0.015) return "BON";
+  return "FAIBLE";
+}

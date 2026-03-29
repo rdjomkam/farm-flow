@@ -473,6 +473,8 @@ export type {
   // Sprint 22 (S16-5) — Projections de performance
   ProjectionVague,
   CourbeCroissancePoint,
+  // Gompertz extension (Story G2.1)
+  ProjectionVagueV2,
   // Sprint 22 (S16-6) — Alertes graduees par benchmark
   IndicateursBenchmarkVague,
   // Sprint FB — Feed Analytics v2
@@ -482,6 +484,10 @@ export type {
   AlerteRation,
   ScoreAlimentConfig,
 } from "./calculs";
+
+// Gompertz growth model — public interfaces (Story G2.1)
+export type { GompertzParams, GompertzCalibrationResult } from "@/lib/gompertz";
+export type { GompertzConfidenceLevel } from "@/lib/gompertz";
 
 // Types export PDF/Excel — Sprint 12
 export type {

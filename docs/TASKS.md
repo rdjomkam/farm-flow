@@ -6396,3 +6396,201 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 - [ ] `TODO` Vérifier R1-R9 sur les fichiers de nettoyage (pas de régression)
 - [ ] `TODO` Vérifier conformité ADR §13 Phase 3, §14.3
 - [ ] `TODO` Produire rapport `docs/reviews/review-sprint-NC.md`
+
+---
+
+## Sprint G0 — Pre-requis Gompertz : Validation LM (review-gompertz-implementation)
+
+**Objectif :** Valider la convergence de l'algorithme Levenberg-Marquardt sur les donnees biometriques DK Farm.
+**Reference :** `docs/reviews/review-gompertz-implementation.md`, `docs/sprints/SPRINT-PLAN-GOMPERTZ.md`
+
+---
+
+### Story G0.1 — Validation convergence Levenberg-Marquardt
+**Assigne a :** @architect | **Depend de :** Aucune | **Statut :** `FAIT` | **Type :** RESEARCH
+
+**Taches :**
+- [x] `FAIT` LM implementé from scratch (pas de npm — ESM incompatibilité)
+- [x] `FAIT` Ecrire script `scripts/test-gompertz-lm.ts` avec donnees seed
+- [x] `FAIT` Tester convergence avec 5, 10, 15 points — R² > 97% sur tous les cas
+- [x] `FAIT` Tester bornes physiques : K ∈ [0.005, 0.2], W∞ ∈ [max, 3000g], ti ∈ [0, 120j]
+- [x] `FAIT` Documenter decision GO dans `docs/decisions/ADR-gompertz-lm-validation.md`
+
+**Resultat :** GO — LM converge sur 5+ points (R²>97%). Min 5 biometries exigé. `npm run test:gompertz` ajouté.
+
+---
+
+## Sprint G1 — Fondations Gompertz (review-gompertz-implementation)
+
+**Objectif :** Implementer la lib de calcul Gompertz, la table de persistance, et l'API de calibrage.
+**Depend de :** Sprint G0 (GO)
+
+---
+
+### Story G1.1 — Bibliotheque `gompertz.ts` — Fonctions pures
+**Assigne a :** @developer | **Depend de :** G0.1 GO | **Statut :** `FAIT` | **Type :** FEATURE
+
+**Taches :**
+- [x] `FAIT` Creer `src/lib/gompertz.ts` avec interfaces GompertzParams, GompertzCalibrationInput, GompertzCalibrationResult, GompertzConfidenceLevel
+- [x] `FAIT` Implementer `gompertzWeight(t, params)` — prediction poids
+- [x] `FAIT` Implementer `gompertzVelocity(t, params)` — taux croissance dW/dt
+- [x] `FAIT` Implementer `calibrerGompertz(input)` — regression LM from scratch avec bornes
+- [x] `FAIT` Implementer `projeterDateRecolte(params, poidsObjectif, joursActuels)`
+- [x] `FAIT` Implementer `genererCourbeGompertz(params, joursMax, pas)`
+- [x] `FAIT` Strategie d'initialisation : W∞₀ = max×2.5, K₀ = 0.03, ti₀ = mean(jours)
+- [x] `FAIT` Graduation confiance : INSUFFICIENT_DATA (<5 pts), LOW (5-6), MEDIUM (7-9), HIGH (10+, R²>0.95)
+
+---
+
+### Story G1.2 — Tests unitaires `gompertz.ts`
+**Assigne a :** @tester | **Depend de :** G1.1 | **Statut :** `FAIT` | **Type :** TEST
+
+**Taches :**
+- [x] `FAIT` Creer `src/__tests__/lib/gompertz.test.ts` — 54 tests
+- [x] `FAIT` Tests convergence sur jeux synthetiques (15 points FAO) — R² > 0.95
+- [x] `FAIT` Tests bornes (K negatif impossible, W∞ > max observe)
+- [x] `FAIT` Tests cas degeneres (0 pts, 1 pt, 4 pts → null)
+- [x] `FAIT` Tests confidence level selon nombre de points (LOW/MEDIUM/HIGH)
+
+---
+
+### Story G1.3 — Migration Prisma : table `GompertzVague`
+**Assigne a :** @db-specialist | **Depend de :** Aucune | **Statut :** `FAIT` | **Type :** DB
+
+**Taches :**
+- [x] `FAIT` Ajouter modele GompertzVague dans schema.prisma (1:1 Vague, CASCADE)
+- [x] `FAIT` Champs : wInfinity, k, ti, r2, rmse, biometrieCount, confidenceLevel, siteId
+- [x] `FAIT` Relation gompertz sur Vague, gompertzVagues sur Site
+- [x] `FAIT` Generer migration SQL manuellement + appliquer (migration 20260329000000_add_gompertz_vague)
+
+---
+
+### Story G1.4 — API route `GET /api/vagues/[id]/gompertz`
+**Assigne a :** @developer | **Depend de :** G1.1, G1.3 | **Statut :** `FAIT` | **Type :** FEATURE
+
+**Taches :**
+- [x] `FAIT` Creer `src/app/api/vagues/[id]/gompertz/route.ts` (GET)
+- [x] `FAIT` Auth + siteId (R8) via requirePermission(VAGUES_VOIR)
+- [x] `FAIT` Calibrage lazy : recalcule si biometrieCount a change
+- [x] `FAIT` Upsert dans GompertzVague
+- [x] `FAIT` Retourner { vagueId, calibration, courbe, dateRecolteEstimee }
+
+---
+
+### Story G1.5 — Constantes reference Gompertz dans benchmarks
+**Assigne a :** @developer | **Depend de :** G1.1 | **Statut :** `FAIT` | **Type :** FEATURE
+
+**Taches :**
+- [x] `FAIT` Ajouter GOMPERTZ_REF_CLARIAS dans `src/lib/benchmarks.ts`
+- [x] `FAIT` Implementer `evaluerKGompertz(k)` : EXCELLENT / BON / FAIBLE
+- [x] `FAIT` Exporter type GompertzKLevel
+
+---
+
+## Sprint G2 — Integration UI Gompertz (review-gompertz-implementation)
+
+**Objectif :** Afficher la courbe Gompertz dans le dashboard projections. Badges fiabilite. Date recolte Gompertz vs SGR.
+**Depend de :** Sprint G1 FAIT
+
+---
+
+### Story G2.1 — Extension types TypeScript (non-breaking)
+**Assigne a :** @architect | **Depend de :** G1.1 | **Statut :** `FAIT` | **Type :** TYPES
+
+**Taches :**
+- [x] `FAIT` Ajouter `poidsGompertz?: number | null` a CourbeCroissancePoint
+- [x] `FAIT` Creer ProjectionVagueV2 avec gompertzParams, gompertzR2, gompertzConfidence, dateRecolteGompertz
+- [x] `FAIT` Exporter GompertzParams, GompertzConfidenceLevel, GompertzCalibrationResult depuis types/index.ts
+
+---
+
+### Story G2.2 — Extension CourbeProjectionChart : ligne Gompertz
+**Assigne a :** @developer | **Depend de :** G2.1 | **Statut :** `FAIT` | **Type :** UI
+
+**Taches :**
+- [x] `FAIT` Ajouter Line Gompertz conditionnelle (orange, tirets 2 2, sans dots, connectNulls)
+- [x] `FAIT` Etendre legende : Reel / Projete (SGR) / Gompertz
+- [x] `FAIT` Etendre Tooltip avec les 3 valeurs via labelMap
+
+---
+
+### Story G2.3 — Extension ProjectionCard : badges et date recolte
+**Assigne a :** @developer | **Depend de :** G2.1 | **Statut :** `FAIT` | **Type :** UI
+
+**Taches :**
+- [ ] `TODO` Badge fiabilite : HIGH/MEDIUM/LOW/INSUFFICIENT_DATA
+- [ ] `TODO` Date recolte Gompertz a cote de date SGR
+- [ ] `TODO` Traduction parametres en langage metier (poids plafond, vitesse, pic)
+- [ ] `TODO` Section "Details techniques" collapsible pour INGENIEUR/ADMIN
+
+---
+
+### Story G2.4 — Connexion Server Component → API Gompertz
+**Assigne a :** @developer | **Depend de :** G1.4, G2.2 | **Statut :** `FAIT` | **Type :** FEATURE
+
+**Taches :**
+- [x] `FAIT` Enrichir directement server-side (pas de self-fetch) via enrichWithGompertz()
+- [x] `FAIT` Merger courbe Gompertz dans courbeProjection (Map O(1) lookup)
+- [x] `FAIT` Remplir gompertzParams, R2, confidence, dateRecolteGompertz
+- [x] `FAIT` Gerer gracieusement le cas null (try/catch, pas de crash dashboard)
+
+---
+
+### Story G2.5 — Tests UI projections Gompertz
+**Assigne a :** @tester | **Depend de :** G2.4 | **Statut :** `FAIT` | **Type :** TEST
+
+**Taches :**
+- [x] `FAIT` Creer `src/__tests__/ui/gompertz-projections.test.tsx` — 47 tests
+- [x] `FAIT` Tests 4 scenarios confidence level (INSUFFICIENT_DATA, LOW, MEDIUM, HIGH)
+- [x] `FAIT` Tests details techniques par role (ADMIN/INGENIEUR vs GERANT)
+- [x] `FAIT` Test non-regression projections existantes (13 tests SGR classique)
+- [x] `FAIT` Build production OK + rapport docs/tests/rapport-sprint-G2.5.md
+
+---
+
+## Sprint G3 — Comparaison aliments via K Gompertz (NICE-TO-HAVE)
+
+**Objectif :** Agreger le parametre K par aliment pour comparaison objective de l'impact sur la croissance.
+**Depend de :** Sprint G2 FAIT + min. 3 vagues terminees avec donnees Gompertz
+**Condition :** Sprint conditionnel.
+
+---
+
+### Story G3.1 — Agregation K par produitId
+**Assigne a :** @db-specialist | **Depend de :** G1.3 | **Statut :** `TODO` | **Type :** DB/QUERY
+
+**Taches :**
+- [ ] `TODO` Creer `src/lib/queries/gompertz-analytics.ts`
+- [ ] `TODO` Implementer `getKParAliment(siteId)` — K moyen pondere par aliment
+- [ ] `TODO` Filtrer : confidenceLevel HIGH/MEDIUM, >= 2 vagues par aliment
+- [ ] `TODO` Retourner : produitId, nom, fournisseur, kMoyen, kNiveau, nombreVagues
+
+---
+
+### Story G3.2 — Extension types AnalytiqueAliment
+**Assigne a :** @architect | **Depend de :** G1.5 | **Statut :** `TODO` | **Type :** TYPES
+
+**Taches :**
+- [ ] `TODO` Ajouter kMoyenGompertz et kNiveauGompertz aux types analytics aliment
+- [ ] `TODO` Build passe
+
+---
+
+### Story G3.3 — UI comparaison aliments avec K Gompertz
+**Assigne a :** @developer | **Depend de :** G3.1, G3.2 | **Statut :** `TODO` | **Type :** UI
+
+**Taches :**
+- [ ] `TODO` Colonne "Vitesse croissance Gompertz" dans feed-comparison-cards.tsx
+- [ ] `TODO` K en langage metier : Rapide (vert) / Normal (amber) / Lent (rouge)
+- [ ] `TODO` Graphique barre horizontale K par aliment
+- [ ] `TODO` Conditionnel si pas de donnees Gompertz
+
+---
+
+### Story G3.4 — Tests agregation K et UI
+**Assigne a :** @tester | **Depend de :** G3.3 | **Statut :** `TODO` | **Type :** TEST
+
+**Taches :**
+- [ ] `TODO` Tests `getKParAliment` (K ponderes, filtrage siteId, min 2 vagues)
+- [ ] `TODO` Tests UI colonne K
+- [ ] `TODO` Build production OK

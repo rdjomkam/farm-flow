@@ -70,7 +70,36 @@
     "remainingFeed": "Aliment restant",
     "expectedRevenue": "Revenu attendu",
     "growthCurve": "Courbe de croissance",
-    "chartLegend": "Ligne continue = mesures reelles · Pointilles = projection SGR actuel"
+    "chartLegend": "Ligne continue = mesures reelles · Pointilles = projection SGR actuel",
+    "sgrHarvest": "Recolte SGR",
+    "gompertzHarvest": "Recolte Gompertz",
+    "harvestInDays": "~{count} j",
+    "gompertzBadge": {
+      "HIGH": "Modele fiable",
+      "MEDIUM": "En construction",
+      "LOW": "Estimation preliminaire",
+      "INSUFFICIENT_DATA": "Donnees insuffisantes (min. 5 biometries)"
+    },
+    "gompertzParams": {
+      "title": "Modele de croissance",
+      "ceilingWeight": "Poids plafond",
+      "speedRapide": "Rapide",
+      "speedNormale": "Normale",
+      "speedLente": "Lente",
+      "speedLabel": "Vitesse",
+      "growthPeak": "Pic de croissance",
+      "dayUnit": "jour {day}"
+    },
+    "technicalDetails": {
+      "title": "Details techniques",
+      "show": "Voir les details",
+      "hide": "Masquer",
+      "wInfinity": "W\u221e (poids asymptotique)",
+      "kRate": "K (taux de croissance)",
+      "tiInflection": "ti (point d'inflexion)",
+      "r2": "R\u00b2",
+      "rmse": "RMSE"
+    }
   },
   "bacs": {
     "noBacs": "Aucun bac assigné à cette vague.",
