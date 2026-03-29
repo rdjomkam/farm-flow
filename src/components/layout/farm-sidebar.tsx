@@ -128,6 +128,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/settings/sites", label: "Gestion sites", icon: Building2 },
       { href: "/settings/alertes", label: "Alertes", icon: BellRing },
+      { href: "/settings/config-elevage", label: "Config élevage", icon: ClipboardCheck },
       { href: "/users", label: "Utilisateurs", icon: Users },
     ],
     permissionRequired: Permission.SITE_GERER,

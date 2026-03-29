@@ -245,6 +245,7 @@ enum TypeActivite {
   RECOLTE
   TRI
   MEDICATION
+  RENOUVELLEMENT
   AUTRE
 }
 

@@ -222,6 +222,12 @@ const SHEET_GROUPS: SheetNavGroup[] = [
         permissionRequired: Permission.ALERTES_CONFIGURER,
       },
       {
+        href: "/settings/config-elevage",
+        labelKey: "items.profilsElevage",
+        icon: ClipboardCheck,
+        permissionRequired: Permission.GERER_CONFIG_ELEVAGE,
+      },
+      {
         href: "/users",
         labelKey: "modules.utilisateurs",
         icon: Users,
