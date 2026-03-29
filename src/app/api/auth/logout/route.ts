@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteSession, clearSessionCookie, clearUserRoleCookie, SESSION_COOKIE_NAME } from "@/lib/auth";
+import { deleteSession, clearSessionCookie, clearUserRoleCookie, clearIsSuperAdminCookie, SESSION_COOKIE_NAME } from "@/lib/auth";
 import type { AuthResponse } from "@/types";
 
 export async function POST(request: NextRequest) {
@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
     } satisfies AuthResponse);
     clearSessionCookie(response);
     clearUserRoleCookie(response);
+    clearIsSuperAdminCookie(response);
     return response;
   } catch {
     return NextResponse.json(

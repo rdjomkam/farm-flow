@@ -198,3 +198,38 @@ export class AuthError extends Error {
 
 /** Cookie name exported for use by middleware */
 export const SESSION_COOKIE_NAME = COOKIE_NAME;
+
+/**
+ * Cookie name for super-admin flag.
+ * Non-httpOnly so the Edge middleware (proxy.ts) can read it.
+ * The value is not a secret — the actual privilege check for backoffice routes
+ * (requireSuperAdmin) always re-validates against the DB.
+ * This cookie is only used for lightweight route-guard redirects in the middleware.
+ */
+export const IS_SUPER_ADMIN_COOKIE_NAME = "is_super_admin";
+
+/** Set the super-admin companion cookie on a response */
+export function setIsSuperAdminCookie(
+  response: NextResponse,
+  expires: Date
+): void {
+  response.cookies.set(IS_SUPER_ADMIN_COOKIE_NAME, "true", {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_MAX_AGE_S,
+    expires,
+  });
+}
+
+/** Clear the super-admin companion cookie on a response */
+export function clearIsSuperAdminCookie(response: NextResponse): void {
+  response.cookies.set(IS_SUPER_ADMIN_COOKIE_NAME, "", {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
+}

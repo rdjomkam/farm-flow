@@ -66,6 +66,7 @@ const fakeAliment1: AnalytiqueAliment = {
   sgrMoyen: 1.8,
   coutParKgGain: 2280,
   tauxSurvieAssocie: 91.5,
+  scoreQualite: 7.5,
 };
 
 const fakeAliment2: AnalytiqueAliment = {
@@ -81,6 +82,7 @@ const fakeAliment2: AnalytiqueAliment = {
   sgrMoyen: 1.5,
   coutParKgGain: 2960,
   tauxSurvieAssocie: 88,
+  scoreQualite: 5.2,
 };
 
 const fakeAlimentNoData: AnalytiqueAliment = {
@@ -96,6 +98,7 @@ const fakeAlimentNoData: AnalytiqueAliment = {
   sgrMoyen: null,
   coutParKgGain: null,
   tauxSurvieAssocie: null,
+  scoreQualite: null,
 };
 
 // ---------------------------------------------------------------------------

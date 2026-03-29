@@ -13,6 +13,7 @@ import {
   calculerRevenuAttendu,
   genererCourbeProjection,
   computeNombreVivantsVague,
+  computeVivantsByBac,
 } from "@/lib/calculs";
 import { getConfigElevageDefaut } from "@/lib/queries/config-elevage";
 import { CONFIG_ELEVAGE_DEFAULTS } from "@/lib/queries/config-elevage";
@@ -54,9 +55,8 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
 
   const vagues: VagueDashboardSummary[] = vaguesActives.map((v) => {
     const biometries = v.releves.filter((r) => r.typeReleve === TypeReleve.BIOMETRIE);
-
-    const poidsMoyen = biometries.at(-1)?.poidsMoyen ?? null;
     const nombreVivants = computeNombreVivantsVague(v.bacs, v.releves, v.nombreInitial);
+    const hasPerBacReleves = v.releves.some((r) => r.bacId !== null);
 
     const now = new Date();
     const joursEcoules = Math.floor(
@@ -64,7 +64,40 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
     );
 
     const tauxSurvie = calculerTauxSurvie(nombreVivants, v.nombreInitial);
-    const biomasse = calculerBiomasse(poidsMoyen, nombreVivants);
+
+    let poidsMoyen: number | null = null;
+    let biomasse: number | null = null;
+
+    if (hasPerBacReleves && v.bacs.length > 0) {
+      // Per-bac weighted calculation (same logic as indicateurs.ts)
+      const vivantsByBac = computeVivantsByBac(v.bacs, v.releves, v.nombreInitial);
+      const biometriesParBac = new Map<string, (typeof biometries)[0]>();
+      for (const b of biometries) {
+        if (b.bacId) biometriesParBac.set(b.bacId, b);
+      }
+      let totalBiomasse = 0;
+      let hasBiomasse = false;
+      let totalPoidsWeighted = 0;
+      let totalVivantsForWeight = 0;
+      for (const bac of v.bacs) {
+        const vivantsBac = vivantsByBac.get(bac.id) ?? 0;
+        const bio = biometriesParBac.get(bac.id);
+        if (bio && bio.poidsMoyen !== null) {
+          totalBiomasse += bio.poidsMoyen * vivantsBac / 1000;
+          hasBiomasse = true;
+          totalPoidsWeighted += bio.poidsMoyen * vivantsBac;
+          totalVivantsForWeight += vivantsBac;
+        }
+      }
+      biomasse = hasBiomasse ? Math.round(totalBiomasse * 100) / 100 : null;
+      poidsMoyen = totalVivantsForWeight > 0
+        ? Math.round((totalPoidsWeighted / totalVivantsForWeight) * 100) / 100
+        : null;
+    } else {
+      // Fallback: global (no bacId on releves)
+      poidsMoyen = biometries.at(-1)?.poidsMoyen ?? null;
+      biomasse = calculerBiomasse(poidsMoyen, nombreVivants);
+    }
 
     return {
       id: v.id,

@@ -23,9 +23,11 @@ vi.mock("@/lib/auth", () => ({
   createSession: (...args: unknown[]) => mockCreateSession(...args),
   setSessionCookie: (...args: unknown[]) => mockSetSessionCookie(...args),
   setUserRoleCookie: vi.fn(),
+  setIsSuperAdminCookie: vi.fn(),
   deleteSession: (...args: unknown[]) => mockDeleteSession(...args),
   clearSessionCookie: (...args: unknown[]) => mockClearSessionCookie(...args),
   clearUserRoleCookie: vi.fn(),
+  clearIsSuperAdminCookie: vi.fn(),
   requireAuth: (...args: unknown[]) => mockRequireAuth(...args),
   normalizePhone: (input: string): string | null => {
     const cleaned = input.replace(/[\s\-().]/g, "");

@@ -199,12 +199,15 @@ describe("Rôle INGENIEUR — redirections", () => {
 
 // ---------------------------------------------------------------------------
 // 5. Non-INGENIEUR — blocage sur routes ingenieur-only
+// Note (Sprint NA — NA.6) : le Guard E11 intercepte les rôles vides AVANT
+// la vérification INGENIEUR_ONLY. Un utilisateur sans rôle est redirigé vers
+// /login, pas vers /. Seuls ADMIN/GERANT/PISCICULTEUR sont redirigés vers /.
 // ---------------------------------------------------------------------------
 describe("Rôle non-INGENIEUR — blocage routes ingenieur-only", () => {
-  const nonIngenieurRoles = ["ADMIN", "GERANT", "PISCICULTEUR", ""];
+  const farmRoles = ["ADMIN", "GERANT", "PISCICULTEUR"];
 
-  for (const role of nonIngenieurRoles) {
-    it(`${role || "no-role"} accede à /monitoring → redirect vers /`, async () => {
+  for (const role of farmRoles) {
+    it(`${role} accede à /monitoring → redirect vers /`, async () => {
       const req = makeRequest("/monitoring", { session: "tok", role });
       const res = await proxy(req);
       expect(res.status).toBe(307);
@@ -212,7 +215,7 @@ describe("Rôle non-INGENIEUR — blocage routes ingenieur-only", () => {
       expect(location).toMatch(/\/$/); // redirect to root
     });
 
-    it(`${role || "no-role"} accede à /mon-portefeuille → redirect vers /`, async () => {
+    it(`${role} accede à /mon-portefeuille → redirect vers /`, async () => {
       const req = makeRequest("/mon-portefeuille", { session: "tok", role });
       const res = await proxy(req);
       expect(res.status).toBe(307);
@@ -220,6 +223,24 @@ describe("Rôle non-INGENIEUR — blocage routes ingenieur-only", () => {
       expect(location).toMatch(/\/$/);
     });
   }
+
+  // Guard E11 (Sprint NA — NA.6) : session existe mais rôle absent → /login
+  it("no-role accede à /monitoring → redirect vers /login (Guard E11)", async () => {
+    const req = makeRequest("/monitoring", { session: "tok", role: "" });
+    const res = await proxy(req);
+    expect(res.status).toBe(307);
+    const location = res.headers.get("location");
+    expect(location).toContain("/login");
+  });
+
+  it("no-role accede à /mon-portefeuille → redirect vers /login (Guard E11)", async () => {
+    const req = makeRequest("/mon-portefeuille", { session: "tok", role: "" });
+    const res = await proxy(req);
+    expect(res.status).toBe(307);
+    const location = res.headers.get("location");
+    expect(location).toContain("/login");
+  });
+
 
   it("ADMIN accede à / → laisse passer (espace farm)", async () => {
     const req = makeRequest("/", { session: "tok", role: "ADMIN" });

@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import {
   Home,
   CheckSquare,
-  Users,
+  Eye,
   Menu,
   NotebookPen,
   Wallet,
@@ -18,6 +18,13 @@ import {
   LogOut,
   Fish,
   Shield,
+  Calendar,
+  BarChart3,
+  PackageCheck,
+  Truck,
+  ShoppingCart,
+  Settings,
+  Zap,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -38,41 +45,108 @@ interface IngenieurBottomNavProps {
 
 interface SheetNavItem {
   href: string;
-  label: string;
+  labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
   permissionRequired?: Permission;
 }
 
-const SHEET_ITEMS: SheetNavItem[] = [
+interface SheetNavGroup {
+  groupKey: string;
+  items: SheetNavItem[];
+}
+
+const SHEET_GROUPS: SheetNavGroup[] = [
   {
-    href: "/notes",
-    label: "Notes",
-    icon: NotebookPen,
-    permissionRequired: Permission.ENVOYER_NOTES,
+    groupKey: "operations",
+    items: [
+      {
+        href: "/planning",
+        labelKey: "items.calendrier",
+        icon: Calendar,
+        permissionRequired: Permission.PLANNING_VOIR,
+      },
+      {
+        href: "/analytics",
+        labelKey: "items.analyse",
+        icon: BarChart3,
+        permissionRequired: Permission.DASHBOARD_VOIR,
+      },
+      {
+        href: "/notes",
+        labelKey: "items.notes",
+        icon: NotebookPen,
+        permissionRequired: Permission.ENVOYER_NOTES,
+      },
+    ],
   },
   {
-    href: "/mon-portefeuille",
-    label: "Portefeuille",
-    icon: Wallet,
-    permissionRequired: Permission.PORTEFEUILLE_VOIR,
+    groupKey: "commercial",
+    items: [
+      {
+        href: "/packs",
+        labelKey: "items.packs",
+        icon: Boxes,
+        permissionRequired: Permission.ACTIVER_PACKS,
+      },
+      {
+        href: "/activations",
+        labelKey: "items.activationsItem",
+        icon: PackageCheck,
+        permissionRequired: Permission.ACTIVER_PACKS,
+      },
+      {
+        href: "/stock",
+        labelKey: "items.stock",
+        icon: Package,
+        permissionRequired: Permission.STOCK_VOIR,
+      },
+      {
+        href: "/stock/fournisseurs",
+        labelKey: "items.fournisseurs",
+        icon: Truck,
+        permissionRequired: Permission.APPROVISIONNEMENT_VOIR,
+      },
+      {
+        href: "/stock/commandes",
+        labelKey: "items.commandes",
+        icon: ShoppingCart,
+        permissionRequired: Permission.APPROVISIONNEMENT_GERER,
+      },
+    ],
   },
   {
-    href: "/packs",
-    label: "Packs",
-    icon: Boxes,
-    permissionRequired: Permission.ACTIVER_PACKS,
+    groupKey: "portefeuille",
+    items: [
+      {
+        href: "/mon-portefeuille",
+        labelKey: "items.monPortefeuille",
+        icon: Wallet,
+        permissionRequired: Permission.PORTEFEUILLE_VOIR,
+      },
+    ],
   },
   {
-    href: "/stock",
-    label: "Stock",
-    icon: Package,
-    permissionRequired: Permission.STOCK_VOIR,
-  },
-  {
-    href: "/settings/alertes",
-    label: "Alertes",
-    icon: Bell,
-    permissionRequired: Permission.ALERTES_CONFIGURER,
+    groupKey: "configuration",
+    items: [
+      {
+        href: "/settings/alertes",
+        labelKey: "items.alertes",
+        icon: Bell,
+        permissionRequired: Permission.ALERTES_CONFIGURER,
+      },
+      {
+        href: "/settings/config-elevage",
+        labelKey: "items.profilsElevage",
+        icon: Settings,
+        permissionRequired: Permission.GERER_CONFIG_ELEVAGE,
+      },
+      {
+        href: "/settings/regles-activites",
+        labelKey: "items.reglesActivites",
+        icon: Zap,
+        permissionRequired: Permission.REGLES_ACTIVITES_VOIR,
+      },
+    ],
   },
 ];
 
@@ -104,13 +178,18 @@ export function IngenieurBottomNav({
     return pathname === href || pathname.startsWith(href + "/");
   }
 
-  const visibleSheetItems = SHEET_ITEMS.filter((item) => {
+  function isItemVisible(item: SheetNavItem): boolean {
     if (item.permissionRequired && !permissions.includes(item.permissionRequired))
       return false;
     const itemPerm = ITEM_VIEW_PERMISSIONS[item.href];
     if (itemPerm && !permissions.includes(itemPerm)) return false;
     return true;
-  });
+  }
+
+  const visibleGroups = SHEET_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter(isItemVisible),
+  })).filter((group) => group.items.length > 0);
 
   const canSeeClients = permissions.includes(Permission.MONITORING_CLIENTS);
   const canSeeTasks = permissions.includes(Permission.DASHBOARD_VOIR);
@@ -135,7 +214,7 @@ export function IngenieurBottomNav({
             )}
           >
             <Home className="h-5 w-5" />
-            <span>Accueil</span>
+            <span>{t("items.accueil")}</span>
           </Link>
 
           {/* 2. Tâches */}
@@ -150,7 +229,7 @@ export function IngenieurBottomNav({
               )}
             >
               <CheckSquare className="h-5 w-5" />
-              <span>Tâches</span>
+              <span>{t("items.taches")}</span>
             </Link>
           )}
 
@@ -158,7 +237,7 @@ export function IngenieurBottomNav({
           {canAddReleve && (
             <div className="flex flex-1 flex-col items-center justify-end pb-2">
               <FabReleve activeSiteId={activeSiteId} />
-              <span className="mt-0.5 text-[10px] text-muted-foreground">Releve</span>
+              <span className="mt-0.5 text-[10px] text-muted-foreground">{t("items.releve")}</span>
             </div>
           )}
 
@@ -173,8 +252,8 @@ export function IngenieurBottomNav({
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Users className="h-5 w-5" />
-              <span>Clients</span>
+              <Eye className="h-5 w-5" />
+              <span>{t("items.dashboardClients")}</span>
             </Link>
           )}
 
@@ -199,59 +278,73 @@ export function IngenieurBottomNav({
               <span className="text-base font-bold">FarmFlow</span>
             </div>
 
-            {/* Secondary nav grid */}
-            <nav className="grid grid-cols-3 gap-2 p-3">
-              {visibleSheetItems.map((item) => {
-                const Icon = item.icon;
-                return (
+            {/* Grouped secondary nav */}
+            <nav className="flex flex-col gap-3 p-3">
+              {visibleGroups.map((group) => (
+                <div key={group.groupKey}>
+                  <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {t(`groups.${group.groupKey}`)}
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {group.items.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setSheetOpen(false)}
+                          className={cn(
+                            "flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-xs font-medium transition-colors",
+                            isActive(item.href)
+                              ? "bg-primary/10 text-primary"
+                              : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                          )}
+                        >
+                          <Icon className="h-5 w-5" />
+                          <span className="text-center leading-tight">{t(item.labelKey as Parameters<typeof t>[0])}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              {/* Static items: Profil + Backoffice — always last */}
+              <div>
+                <div className="grid grid-cols-3 gap-2">
+                  {/* Profil */}
                   <Link
-                    key={item.href}
-                    href={item.href}
+                    href="/profil"
                     onClick={() => setSheetOpen(false)}
                     className={cn(
                       "flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-xs font-medium transition-colors",
-                      isActive(item.href)
+                      isActive("/profil")
                         ? "bg-primary/10 text-primary"
                         : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                   >
-                    <Icon className="h-5 w-5" />
-                    <span className="text-center leading-tight">{item.label}</span>
+                    <User className="h-5 w-5" />
+                    <span>Profil</span>
                   </Link>
-                );
-              })}
 
-              {/* Profil */}
-              <Link
-                href="/profil"
-                onClick={() => setSheetOpen(false)}
-                className={cn(
-                  "flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-xs font-medium transition-colors",
-                  isActive("/profil")
-                    ? "bg-primary/10 text-primary"
-                    : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <User className="h-5 w-5" />
-                <span>Profil</span>
-              </Link>
-
-              {/* Backoffice — super admin only */}
-              {isSuperAdmin && (
-                <Link
-                  href="/backoffice"
-                  onClick={() => setSheetOpen(false)}
-                  className={cn(
-                    "flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-xs font-medium transition-colors",
-                    isActive("/backoffice")
-                      ? "bg-primary/10 text-primary"
-                      : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  {/* Backoffice — super admin only */}
+                  {isSuperAdmin && (
+                    <Link
+                      href="/backoffice"
+                      onClick={() => setSheetOpen(false)}
+                      className={cn(
+                        "flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-xs font-medium transition-colors",
+                        isActive("/backoffice")
+                          ? "bg-primary/10 text-primary"
+                          : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <Shield className="h-5 w-5" />
+                      <span>Backoffice</span>
+                    </Link>
                   )}
-                >
-                  <Shield className="h-5 w-5" />
-                  <span>Backoffice</span>
-                </Link>
-              )}
+                </div>
+              </div>
             </nav>
 
             {/* User info + logout */}

@@ -8,18 +8,23 @@ import {
   Waves,
   Container,
   NotebookPen,
-  Users,
+  Eye,
   Package,
   Tag,
   ArrowUpDown,
   Boxes,
-  ClipboardCheck,
+  PackageCheck,
   Wallet,
   Calendar,
   BarChart3,
   Fish,
   Shield,
   CheckSquare,
+  Truck,
+  ShoppingCart,
+  BellRing,
+  Settings,
+  Zap,
 } from "lucide-react";
 import { NotificationBell } from "./notification-bell";
 import { LanguageSwitcher } from "./language-switcher";
@@ -56,7 +61,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Monitoring",
     items: [
-      { href: "/monitoring", label: "Clients supervisés", icon: Users },
+      { href: "/monitoring", label: "Clients supervisés", icon: Eye },
       { href: "/notes", label: "Notes", icon: NotebookPen },
     ],
     permissionRequired: Permission.MONITORING_CLIENTS,
@@ -67,6 +72,8 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/stock", label: "Vue stock", icon: Package },
       { href: "/stock/produits", label: "Produits", icon: Tag },
       { href: "/stock/mouvements", label: "Mouvements", icon: ArrowUpDown },
+      { href: "/stock/fournisseurs", label: "Fournisseurs", icon: Truck },
+      { href: "/stock/commandes", label: "Commandes", icon: ShoppingCart },
     ],
     permissionRequired: Permission.STOCK_VOIR,
     moduleRequired: SiteModule.INTRANTS,
@@ -75,7 +82,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Commercial",
     items: [
       { href: "/packs", label: "Packs", icon: Boxes },
-      { href: "/activations", label: "Activations", icon: ClipboardCheck },
+      { href: "/activations", label: "Activations", icon: PackageCheck },
       { href: "/mon-portefeuille", label: "Portefeuille", icon: Wallet },
     ],
     permissionRequired: Permission.ACTIVER_PACKS,
@@ -87,6 +94,14 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/analytics", label: "Analytics", icon: BarChart3 },
     ],
     permissionRequired: Permission.PLANNING_VOIR,
+  },
+  {
+    label: "Configuration",
+    items: [
+      { href: "/settings/alertes", label: "Alertes", icon: BellRing },
+      { href: "/settings/config-elevage", label: "Config élevage", icon: Settings },
+      { href: "/settings/regles-activites", label: "Règles activités", icon: Zap },
+    ],
   },
 ];
 

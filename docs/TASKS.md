@@ -5855,3 +5855,544 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 **Tâches :**
 - [x] `FAIT` R1-R9 sur toute la feature, edge cases reviews adressés, i18n, rétrocompatibilité
 - [x] `FAIT` Rapport `docs/reviews/review-sprint-FD.md`
+
+---
+
+## Sprint NA — Navigation Phase 1 : Corrections urgentes (ADR-navigation-architecture)
+
+**Objectif :** Corriger les lacunes bloquantes dans les composants de navigation existants — items manquants, dead links, routes mal placées, guards middleware absents. Aucun nouveau composant, aucune refonte.
+**Référence :** `docs/decisions/ADR-navigation-architecture.md` — Phase 1
+**Dépend de :** Sprint FD FAIT
+
+---
+
+### Story NA.1 — Fix FarmBottomNav sheet : items manquants
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Type :** UI
+
+**Description :** Le sheet du FarmBottomNav ne contient pas tous les items requis par l'ADR §4.3. Ajouter les items manquants organisés par groupes avec leurs permissions et icônes canoniques.
+
+**Tâches :**
+- [x] `FAIT` Dans `src/components/layout/farm-bottom-nav.tsx`, ajouter dans les SHEET_ITEMS groupés : `/bacs` (Container, BACS_GERER|BACS_MODIFIER), `/releves` (NotebookPen, RELEVES_VOIR), `/observations` (Eye, RELEVES_VOIR), `/notifications` (Bell, alwaysVisible — topbar only, retirer du sheet si présent)
+- [x] `FAIT` Ajouter groupe Finances : `/clients` (UserRound, CLIENTS_VOIR), `/depenses` (Receipt, DEPENSES_VOIR)
+- [x] `FAIT` Ajouter groupe Stock : `/stock/fournisseurs` (Truck, APPROVISIONNEMENT_VOIR), `/stock/commandes` (ShoppingCart, APPROVISIONNEMENT_GERER), `/besoins` (ClipboardList, BESOINS_SOUMETTRE|BESOINS_APPROUVER)
+- [x] `FAIT` Ajouter groupe Admin : `/settings/alertes` (BellRing, ALERTES_CONFIGURER), `/activations` (PackageCheck, ACTIVER_PACKS), `/mes-taches` (ClipboardCheck, PLANNING_VOIR)
+- [x] `FAIT` Utiliser les clés i18n `navigation:items.*` pour tous les labels (aucun texte hardcodé)
+
+**Critères d'acceptation :**
+- Toutes les routes listées dans l'ADR §4.3 sont accessibles depuis le sheet en 2 taps max depuis la bottom nav
+- Chaque item a l'icône Lucide canonique définie en §12
+- Aucun texte hardcodé — toutes les chaînes via `useTranslations('navigation')`
+
+---
+
+### Story NA.2 — Fix IngenieurBottomNav sheet : items manquants
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Type :** UI
+
+**Description :** Le sheet de l'IngenieurBottomNav ne contient pas tous les items requis par l'ADR §5.3. Ajouter les items manquants alignés avec les groupes de la sidebar ingénieur.
+
+**Tâches :**
+- [x] `FAIT` Dans `src/components/layout/ingenieur-bottom-nav.tsx`, ajouter dans les SHEET_ITEMS : `/planning` (Calendar, PLANNING_VOIR), `/analytics` (BarChart3, DASHBOARD_VOIR)
+- [x] `FAIT` Ajouter groupe Commercial : `/activations` (PackageCheck, ACTIVER_PACKS), `/stock/fournisseurs` (Truck, APPROVISIONNEMENT_VOIR), `/stock/commandes` (ShoppingCart, APPROVISIONNEMENT_GERER)
+- [x] `FAIT` Ajouter groupe Configuration : `/settings/config-elevage` (Settings, GERER_CONFIG_ELEVAGE), `/settings/regles-activites` (Zap, REGLES_ACTIVITES_VOIR)
+- [x] `FAIT` Utiliser les clés i18n `navigation:items.*` pour tous les labels
+
+**Critères d'acceptation :**
+- Toutes les routes du §2.4 marquées "dans sheet Opérations/Commercial/Config" sont présentes dans le sheet
+- Ordre des groupes aligné avec la sidebar : Monitoring → Opérations → Commercial → Configuration (ADR §5.3 note A4)
+
+---
+
+### Story NA.3 — Fix IngenieurSidebar : items manquants et groupe Configuration
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Type :** UI
+
+**Description :** La sidebar ingénieur manque `/stock/fournisseurs`, `/stock/commandes` dans le groupe Stock, et n'a pas de groupe "Configuration" pour alertes, config-élevage et règles-activités.
+
+**Tâches :**
+- [x] `FAIT` Dans `src/components/layout/ingenieur-sidebar.tsx`, ajouter dans le groupe Stock : `/stock/fournisseurs` (Truck, APPROVISIONNEMENT_VOIR) et `/stock/commandes` (ShoppingCart, APPROVISIONNEMENT_GERER)
+- [x] `FAIT` Créer le groupe "CONFIGURATION" (gate : GERER_CONFIG_ELEVAGE | REGLES_ACTIVITES_VOIR | ALERTES_CONFIGURER) avec : `/settings/alertes` (BellRing, ALERTES_CONFIGURER), `/settings/config-elevage` (Settings, GERER_CONFIG_ELEVAGE), `/settings/regles-activites` (Zap, REGLES_ACTIVITES_VOIR)
+- [x] `FAIT` Déplacer `/settings/alertes` depuis le groupe Monitoring vers le groupe Configuration (corrige incohérence sheet/sidebar — ADR §5.3 note A4)
+
+**Critères d'acceptation :**
+- La sidebar ingénieur a exactement 4 groupes : Monitoring, Opérations, Commercial, Configuration (ADR §5.4)
+- `/settings/alertes` est dans Configuration dans la sidebar ET dans le sheet (cohérence A4)
+
+---
+
+### Story NA.4 — Fix routes partagées : déplacer /packs, /activations, /mes-taches à la racine app
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Type :** ROUTING
+
+**Description :** Les routes `/packs`, `/activations`, `/mes-taches` sont actuellement dans le route group `(ingenieur)/` ce qui cause une injection incorrecte du layout ingénieur pour les utilisateurs farm. Ces routes doivent exister à `src/app/` (racine) pour hériter du bon layout via `AppShell` (ADR §2.2, E4).
+
+**Tâches :**
+- [x] `FAIT` Créer ou déplacer `src/app/packs/page.tsx` (copier depuis `(ingenieur)/packs/page.tsx` si le fichier existe là, sinon créer un stub qui redirige vers la vraie page)
+- [x] `FAIT` Créer ou déplacer `src/app/activations/page.tsx` — même logique
+- [x] `FAIT` Créer ou déplacer `src/app/mes-taches/page.tsx` — même logique
+- [x] `FAIT` Vérifier qu'aucun import interne dans ces pages ne dépend du route group `(ingenieur)/`
+- [x] `FAIT` Supprimer ou vider les doublons dans `(ingenieur)/` si les pages ont été déplacées
+
+**Critères d'acceptation :**
+- `/packs`, `/activations`, `/mes-taches` renvoient le bon layout farm ou ingénieur selon le rôle de l'utilisateur connecté
+- Aucune erreur 404 sur ces trois routes
+- Les liens existants dans la navigation pointent vers les bonnes URLs (pas de changement d'URL)
+
+---
+
+### Story NA.5 — Fix FarmSidebar : supprimer dead link /calibrages et modules INGENIEUR
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Type :** UI
+
+**Description :** La FarmSidebar contient un item `/calibrages` qui pointe vers une route inexistante (dead link). Elle contient aussi `/settings/config-elevage` et `/settings/regles-activites` qui sont des modules INGENIEUR exclusifs (ADR §2.3, A11, M1, M2).
+
+**Tâches :**
+- [x] `FAIT` Dans `src/components/layout/farm-sidebar.tsx`, supprimer l'item `/calibrages`
+- [x] `FAIT` Supprimer les items `/settings/config-elevage` et `/settings/regles-activites` de la FarmSidebar
+- [x] `FAIT` Vérifier qu'aucun autre item de la FarmSidebar ne pointe vers une route inexistante
+
+**Critères d'acceptation :**
+- Aucun item de la FarmSidebar ne pointe vers `/calibrages`
+- `/settings/config-elevage` et `/settings/regles-activites` sont absents de la FarmSidebar
+- Build sans erreur TypeScript
+
+---
+
+### Story NA.6 — Middleware guards INGENIEUR_ONLY et FARM_ONLY
+**Assigné à :** @developer | **Dépend de :** NA.4 | **Statut :** `FAIT` | **Type :** SECURITY
+
+**Description :** Le middleware doit protéger les routes exclusives à chaque rôle. Un utilisateur farm ne doit pas accéder à `/monitoring`, `/mon-portefeuille`, `/settings/config-elevage`, `/settings/regles-activites`. Un ingénieur ne doit pas accéder à `/alevins`, `/depenses`, `/finances`, `/factures`, `/clients`, `/ventes`, `/besoins` (ADR §3bis.2, A6, E10, E11, E16).
+
+**Tâches :**
+- [x] `FAIT` Dans `src/middleware.ts`, ajouter la liste `INGENIEUR_ONLY` : `/monitoring`, `/mon-portefeuille`, `/settings/config-elevage`, `/settings/regles-activites`
+- [x] `FAIT` Ajouter la liste `FARM_ONLY` : `/alevins`, `/depenses`, `/finances`, `/factures`, `/clients`, `/ventes`, `/besoins`
+- [x] `FAIT` Ajouter le guard INGENIEUR_ONLY : si `session.role !== Role.INGENIEUR && !session.isSuperAdmin` → redirect `/`
+- [x] `FAIT` Ajouter le guard FARM_ONLY : si `!FARM_ROLES.includes(session.role) && !session.isSuperAdmin` → redirect `/`
+- [x] `FAIT` Ajouter le guard null-role (E11) : si `session && (!session.role || session.role === '') && !session.isSuperAdmin` → redirect `/login`
+- [x] `FAIT` SuperAdmin bypass universel : les guards ci-dessus ne s'appliquent pas si `session.isSuperAdmin === true`
+
+**Critères d'acceptation :**
+- Un utilisateur avec rôle PISCICULTEUR ne peut pas accéder à `/monitoring` (redirect vers `/`)
+- Un utilisateur avec rôle INGENIEUR ne peut pas accéder à `/finances` (redirect vers `/`)
+- Un SuperAdmin peut accéder à toutes les routes sans restriction
+- Un utilisateur sans rôle est redirigé vers `/login`
+
+---
+
+### Story NA.7 — Ajout clés i18n navigation manquantes
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Type :** I18N
+
+**Description :** Plusieurs clés i18n utilisées dans les items de navigation ne sont pas encore définies dans `src/messages/fr/navigation.json` et `src/messages/en/navigation.json` (ADR §10.2, A13).
+
+**Tâches :**
+- [x] `FAIT` Dans `src/messages/fr/navigation.json`, section `items`, ajouter : `"observations": "Observations"`, `"clientsItem": "Clients"`, `"activationsItem": "Activations"`, `"notificationsItem": "Notifications"`, `"portefeuilleItem": "Portefeuille"`
+- [x] `FAIT` Dans `src/messages/en/navigation.json`, section `items`, ajouter les équivalents anglais (observations, clientsItem, activationsItem, notificationsItem, `"portefeuilleItem": "Portfolio"`)
+- [x] `FAIT` Vérifier que toutes les clés i18n référencées dans NA.1, NA.2, NA.3 sont présentes dans les deux fichiers de messages
+
+**Critères d'acceptation :**
+- `npx next build` passe sans warning de clé i18n manquante
+- Aucun item de navigation n'affiche sa clé brute (`navigation:items.xxx`) au lieu du label traduit
+
+---
+
+### Story NA.8 — Fix icônes en collision : UserRound, Eye, PackageCheck
+**Assigné à :** @developer | **Dépend de :** NA.1, NA.2 | **Statut :** `FAIT` | **Type :** UI
+
+**Description :** Trois icônes sont en collision ou incorrectes selon l'ADR §12 (A10) : `Users` doit devenir `UserRound` pour Clients (évite collision avec Utilisateurs), `Eye` est l'icône canonique de Monitoring/Observations, `PackageCheck` est l'icône canonique d'Activations.
+
+**Tâches :**
+- [x] `FAIT` Dans FarmBottomNav et FarmSidebar, remplacer l'icône Clients `Users` par `UserRound`
+- [x] `FAIT` Dans IngenieurBottomNav et IngenieurSidebar, vérifier que Monitoring utilise `Eye` (pas `Monitor` ou `Users`)
+- [x] `FAIT` Dans FarmBottomNav sheet et FarmSidebar, vérifier que l'item Activations utilise `PackageCheck` (pas `Package` ou `CheckCircle`)
+- [x] `FAIT` Vérifier que `Users` (pluriel) est conservé uniquement pour l'item Utilisateurs (`/users`)
+
+**Critères d'acceptation :**
+- La table d'assignation canonique de l'ADR §12 est respectée pour les trois icônes concernées
+- Aucune icône en double sur deux items différents dans le même composant de navigation
+
+---
+
+### Story NA.9 — Tests Sprint NA
+**Assigné à :** @tester | **Dépend de :** NA.1, NA.2, NA.3, NA.4, NA.5, NA.6, NA.7, NA.8 | **Statut :** `FAIT` | **Type :** TEST
+
+**Tâches :**
+- [x] `FAIT` Vérifier manuellement (360px) que toutes les routes listées dans l'ADR §2.3 et §2.4 sont accessibles depuis le sheet en 2 taps max
+- [x] `FAIT` Vérifier que les guards middleware redirigent correctement (INGENIEUR sur `/finances` → redirect `/`, PISCICULTEUR sur `/monitoring` → redirect `/`)
+- [x] `FAIT` Vérifier que `/packs`, `/activations`, `/mes-taches` rendent le bon layout selon le rôle
+- [x] `FAIT` Vérifier qu'aucun item de navigation ne produit une erreur 404
+- [x] `FAIT` Exécuter `npx vitest run` et `npm run build` — les deux doivent passer
+- [x] `FAIT` Produire rapport `docs/tests/rapport-sprint-NA.md`
+
+---
+
+### Story NA.10 — Review Sprint NA
+**Assigné à :** @code-reviewer | **Dépend de :** NA.9 | **Statut :** `FAIT` | **Type :** REVIEW
+
+**Tâches :**
+- [x] `FAIT` Vérifier R1-R9 sur tous les fichiers modifiés
+- [x] `FAIT` Vérifier conformité ADR §2.2, §3bis.2, §4.3, §5.3, §5.4, §10.2, §12
+- [x] `FAIT` Vérifier accessibilité : touch targets 44px+, `aria-current`, clés i18n
+- [x] `FAIT` Produire rapport `docs/reviews/review-sprint-NA.md`
+
+---
+
+## Sprint NB — Navigation Phase 2 : Restructuration (ADR-navigation-architecture)
+
+**Objectif :** Créer les nouveaux composants header mobiles, réorganiser les groupes sidebar/sheet selon l'ADR, implémenter l'algorithme de permission gating complet, le skeleton loading et les comportements avancés (offline, paysage).
+**Référence :** `docs/decisions/ADR-navigation-architecture.md` — Phase 2
+**Dépend de :** Sprint NA FAIT
+
+---
+
+### Story NB.1 — Créer FarmHeader (topbar mobile farm)
+**Assigné à :** @developer | **Dépend de :** Sprint NA FAIT | **Statut :** `TODO` | **Type :** UI
+
+**Description :** Créer le composant `FarmHeader` — topbar mobile sticky pour le layout farm, affichant logo + NotificationBell + SiteSelector conditionnel (ADR §4.2).
+
+**Tâches :**
+- [ ] `TODO` Créer `src/components/layout/farm-header.tsx` : `md:hidden`, `sticky top-0 z-50`, hauteur `h-12`
+- [ ] `TODO` Logo à gauche : icône `Waves` 20px + texte "FarmFlow" `text-sm font-semibold`
+- [ ] `TODO` `NotificationBell` à droite : icône `Bell`, badge count avec `formatBadgeCount` (plafond "99+", guard NaN/Infinity — ADR §6), `bg-destructive text-destructive-foreground text-[10px] min-w-[16px] h-4`, `absolute -top-1 -right-1`
+- [ ] `TODO` `SiteSelector` à droite : Radix UI `DropdownMenu` ou `Select`, masqué si `userSites.length <= 1` (E6)
+- [ ] `TODO` Indicateur réseau offline : dot 8×8px rouge/vert dans la topbar (ADR §7.2)
+
+**Critères d'acceptation :**
+- `FarmHeader` est `md:hidden` (invisible sur desktop)
+- Badge "99+" s'affiche correctement quand count > 99, vide quand count = 0
+- SiteSelector est absent quand l'utilisateur n'a qu'un seul site
+
+---
+
+### Story NB.2 — Créer IngenieurHeader (topbar mobile ingénieur)
+**Assigné à :** @developer | **Dépend de :** Sprint NA FAIT | **Statut :** `TODO` | **Type :** UI
+
+**Description :** Créer le composant `IngenieurHeader` — topbar mobile sticky pour le layout ingénieur, affichant logo + NotificationBell (ADR §5.2).
+
+**Tâches :**
+- [ ] `TODO` Créer `src/components/layout/ingenieur-header.tsx` : `md:hidden`, `sticky top-0 z-50`, `h-12`
+- [ ] `TODO` Logo à gauche + mention "(Ingénieur)" ou badge visuel distinctif
+- [ ] `TODO` `NotificationBell` à droite avec badge "99+" (même spec que FarmHeader)
+- [ ] `TODO` Indicateur réseau offline (dot rouge/vert — ADR §7.2)
+
+**Critères d'acceptation :**
+- `IngenieurHeader` est `md:hidden`
+- Visuellement distinct du `FarmHeader` (identité ingénieur)
+
+---
+
+### Story NB.3 — Créer BottomNavSkeleton (état loading permissions)
+**Assigné à :** @developer | **Dépend de :** Sprint NA FAIT | **Statut :** `TODO` | **Type :** UI
+
+**Description :** Créer le composant `BottomNavSkeleton` — état de chargement des permissions avant que la bottom nav réelle puisse être rendue (ADR §3, A15, E6).
+
+**Tâches :**
+- [ ] `TODO` Créer `src/components/layout/bottom-nav-skeleton.tsx`
+- [ ] `TODO` Hauteur identique à la vraie bottom nav : 56px + `pb-safe` (safe area iOS)
+- [ ] `TODO` 5 slots gris uniformes `animate-pulse bg-muted rounded-md`, sans labels ni icônes colorées
+- [ ] `TODO` Même positionnement que la bottom nav réelle : `position: fixed; bottom: 0`
+- [ ] `TODO` Usage dans les bottom navs : `if (!permissionsLoaded) return <BottomNavSkeleton />;`
+
+**Critères d'acceptation :**
+- Le skeleton a exactement la même hauteur et le même positionnement que la bottom nav réelle
+- Aucun élément de contenu visible pendant l'état skeleton (évite le biais perceptif)
+- Disparaît immédiatement quand `permissionsLoaded === true`
+
+---
+
+### Story NB.4 — Réorganiser FarmSidebar : groupes selon ADR §4.4
+**Assigné à :** @developer | **Dépend de :** Sprint NA FAIT | **Statut :** `TODO` | **Type :** UI
+
+**Description :** Réorganiser les groupes de la FarmSidebar selon la spécification §4.4 de l'ADR : 8 groupes ordonnés (Élevage, Stock, Finances, Alevins, Planning & Tâches, Analytics, Administration, Abonnement) + groupe Super Admin conditionnel.
+
+**Tâches :**
+- [ ] `TODO` Dans `src/components/layout/farm-sidebar.tsx`, restructurer les groupes dans l'ordre : ÉLEVAGE (Dashboard, Vagues, Bacs, Relevés, Observations) → STOCK (Vue stock, Produits, Mouvements, Fournisseurs, Commandes, Besoins) → FINANCES (Dashboard finances, Ventes, Factures, Clients, Dépenses) → ALEVINS → PLANNING & TÂCHES → ANALYTICS → ADMINISTRATION → ABONNEMENT → SUPER ADMIN
+- [ ] `TODO` Chaque groupe a une gate selon l'ADR §4.4 (ex: STOCK gate = STOCK_VOIR, FINANCES gate = FINANCES_VOIR)
+- [ ] `TODO` Appliquer l'algorithme `isGroupVisible` : masquer les groupes entiers si 0 items visibles (E1, E8)
+- [ ] `TODO` Appliquer la règle E5 : groupe avec 1 seul item visible → afficher sans header de groupe
+
+**Critères d'acceptation :**
+- La FarmSidebar desktop respecte exactement la structure ASCII de l'ADR §4.4
+- Un utilisateur sans FINANCES_VOIR ne voit pas le groupe Finances
+- Build TypeScript sans erreur
+
+---
+
+### Story NB.5 — Réorganiser IngenieurSidebar : 4 groupes selon ADR §5.4
+**Assigné à :** @developer | **Dépend de :** Sprint NA FAIT | **Statut :** `TODO` | **Type :** UI
+
+**Description :** Réorganiser les groupes de l'IngenieurSidebar selon la spécification §5.4 de l'ADR : 4 groupes ordonnés (Monitoring, Opérations, Commercial, Configuration).
+
+**Tâches :**
+- [ ] `TODO` Dans `src/components/layout/ingenieur-sidebar.tsx`, restructurer les 4 groupes dans l'ordre : MONITORING (Clients supervisés, Notes) → OPÉRATIONS (Stock, Produits, Mouvements, Fournisseurs, Commandes, Planning, Analytics) → COMMERCIAL (Packs, Activations, Portefeuille) → CONFIGURATION (Alertes, Config élevage, Règles activités)
+- [ ] `TODO` Appliquer les gates de groupes : MONITORING gate = MONITORING_CLIENTS, COMMERCIAL gate = ACTIVER_PACKS|PORTEFEUILLE_VOIR, CONFIGURATION gate = GERER_CONFIG_ELEVAGE|REGLES_ACTIVITES_VOIR|ALERTES_CONFIGURER, OPÉRATIONS gate = toujours visible pour INGENIEUR
+- [ ] `TODO` Appliquer la règle E9 pour l'item `/notes` : visible si ENVOYER_NOTES OU unreadNotesCount > 0
+
+**Critères d'acceptation :**
+- La IngenieurSidebar desktop a exactement 4 groupes dans l'ordre spécifié (ADR §5.4)
+- L'item Notes respecte la règle E9 (visible en lecture seule si notes reçues mais pas ENVOYER_NOTES)
+
+---
+
+### Story NB.6 — Réorganiser FarmBottomNav sheet : groupes avec séparateurs
+**Assigné à :** @developer | **Dépend de :** NB.4 | **Statut :** `TODO` | **Type :** UI
+
+**Description :** Restructurer le sheet du FarmBottomNav en groupes séparés avec headers et séparateurs visuels selon la structure §4.3 de l'ADR. Appliquer la règle de masquage des groupes vides.
+
+**Tâches :**
+- [ ] `TODO` Dans `src/components/layout/farm-bottom-nav.tsx`, refactoriser les SHEET_ITEMS en structure de groupes (`NavGroup[]`) : Grossissement, Intrants, Ventes, Analyse & Pilotage, Reproduction, Configuration
+- [ ] `TODO` Implémenter le rendu par groupes avec headers i18n (`navigation:modules.*`) et séparateurs Radix UI `Separator`
+- [ ] `TODO` Appliquer `isGroupVisible` sur chaque groupe — masquer le groupe entier si 0 items visibles
+- [ ] `TODO` Appliquer la règle E5 pour les groupes avec 1 seul item visible (afficher sans header)
+- [ ] `TODO` Implémentation du comportement paysage (E12) : si `window.innerHeight < 500` → side-drawer depuis la droite (`side="right"`, `w-80`) au lieu du bottom sheet
+
+**Critères d'acceptation :**
+- Le sheet affiche les groupes dans l'ordre de l'ADR §4.3 avec headers i18n
+- En paysage (height < 500px), le sheet s'ouvre depuis la droite en drawer latéral
+- Un utilisateur sans FINANCES_VOIR ne voit pas le groupe Ventes dans le sheet
+
+---
+
+### Story NB.7 — Réorganiser IngenieurBottomNav sheet : alignement avec sidebar
+**Assigné à :** @developer | **Dépend de :** NB.5 | **Statut :** `TODO` | **Type :** UI
+
+**Description :** Restructurer le sheet de l'IngenieurBottomNav en groupes alignés avec ceux de la IngenieurSidebar (ADR §5.3, A4).
+
+**Tâches :**
+- [ ] `TODO` Dans `src/components/layout/ingenieur-bottom-nav.tsx`, refactoriser les SHEET_ITEMS en 4 groupes : Monitoring, Opérations, Commercial, Configuration
+- [ ] `TODO` Même ordre, mêmes items, mêmes gates que la IngenieurSidebar (A4)
+- [ ] `TODO` Appliquer `isGroupVisible` et la règle E5 (groupes vides / 1 item)
+- [ ] `TODO` Implémenter comportement paysage (E12) : side-drawer depuis la droite si height < 500px
+
+**Critères d'acceptation :**
+- Les groupes du sheet ingénieur et de la sidebar ingénieur ont exactement les mêmes items dans le même ordre (A4)
+- Test à 360px portrait et landscape : comportement correct dans les deux orientations
+
+---
+
+### Story NB.8 — Implémenter l'algorithme de permission gating complet
+**Assigné à :** @developer | **Dépend de :** NB.4, NB.5, NB.6, NB.7 | **Statut :** `TODO` | **Type :** UI
+
+**Description :** Implémenter les fonctions `isNavItemVisible`, `isGroupVisible` et `getVisibleBottomNavItems` telles que spécifiées dans l'ADR §3. Ces fonctions centralisent toute la logique de visibilité de la navigation.
+
+**Tâches :**
+- [ ] `TODO` Créer `src/lib/nav-gating.ts` avec les fonctions `isNavItemVisible`, `isGroupVisible`, `getVisibleBottomNavItems` selon la spec exacte de l'ADR §3
+- [ ] `TODO` Interface `NavItem` avec `id`, `labelKey`, `href`, `icon`, `requiredPermissions?` (ANY/OR), `requiredPermissionsAll?` (ALL/AND), `requiredModule?`, `superAdminOnly?`, `alwaysVisible?`
+- [ ] `TODO` Implémenter le SuperAdmin bypass universel (step 1 de `isNavItemVisible`) : `if (isSuperAdmin) return true;`
+- [ ] `TODO` Null guards sur `userPermissions` et `userModules` (E2-E5)
+- [ ] `TODO` Exporter `isGroupVisible` avec signature explicite (pas de spread `Parameters<>` — E2-E5)
+- [ ] `TODO` Intégrer ces fonctions dans FarmSidebar, FarmBottomNav, IngenieurSidebar, IngenieurBottomNav
+
+**Critères d'acceptation :**
+- `isNavItemVisible` retourne `true` pour un SuperAdmin sur tout item sans exception
+- `isNavItemVisible` retourne `false` pour un item `superAdminOnly: true` si `isSuperAdmin === false`
+- Comportement minimum viable vérifié : 0 permissions → seuls Accueil + Menu visibles (ADR §4.1)
+
+---
+
+### Story NB.9 — Intégrer FarmHeader et IngenieurHeader dans AppShell
+**Assigné à :** @developer | **Dépend de :** NB.1, NB.2 | **Statut :** `TODO` | **Type :** UI
+
+**Description :** Modifier `AppShell` pour injecter `FarmHeader` ou `IngenieurHeader` en haut du `<main>` selon le rôle de l'utilisateur (ADR §14.2, Phase 2 step 3).
+
+**Tâches :**
+- [ ] `TODO` Dans `src/components/layout/app-shell.tsx`, ajouter le rendu conditionnel des headers mobiles : `if (role === Role.INGENIEUR)` → `<IngenieurHeader ...>`, `if (role in FARM_ROLES)` → `<FarmHeader ...>`
+- [ ] `TODO` Passer les props nécessaires aux headers : `notificationCount`, `userSites`, `activeSite` pour `FarmHeader`
+- [ ] `TODO` Vérifier que les headers sont bien `md:hidden` et n'apparaissent pas sur desktop
+- [ ] `TODO` Vérifier le z-index et le positionnement sticky ne cassent pas le layout existant
+
+**Critères d'acceptation :**
+- En mobile (< md), la topbar est visible pour les layouts farm et ingénieur
+- En desktop (>= md), aucune topbar mobile n'est rendue
+- Le badge notification dans la topbar affiche le bon count
+
+---
+
+### Story NB.10 — Comportement offline pour la navigation
+**Assigné à :** @developer | **Dépend de :** NB.8 | **Statut :** `TODO` | **Type :** UI
+
+**Description :** Implémenter le comportement offline des items de navigation : routes non-cachées affichent `opacity-50` + `aria-disabled="true"` + Toast "Hors ligne" au tap (ADR §7, E19).
+
+**Tâches :**
+- [ ] `TODO` Créer un hook `useNetworkStatus()` qui retourne `{ isOnline: boolean }` via `navigator.onLine` + events `online`/`offline`
+- [ ] `TODO` Dans les composants de navigation, appliquer sur les items non-cachés quand offline : `opacity-50`, `aria-disabled="true"`, `pointer-events-none` (ne pas utiliser `disabled` sur `<a>`)
+- [ ] `TODO` Au tap sur un item offline désactivé, afficher un Toast Radix UI : "Vous êtes hors connexion. Cette page n'est pas disponible."
+- [ ] `TODO` Routes prioritaires en cache (restent actives offline) : `/`, `/mes-taches`, shell statique (ADR §7.1)
+- [ ] `TODO` Indicateur réseau dans les headers : dot 8×8px rouge si offline, vert si en ligne (ADR §7.2)
+
+**Critères d'acceptation :**
+- En mode offline simulé (DevTools → Offline), les items non-cachés sont visuellement désactivés
+- Le tap sur un item offline affiche un Toast (pas une navigation vers la page)
+- `aria-disabled="true"` est présent sur les items offline (vérifiable avec inspecteur)
+
+---
+
+### Story NB.11 — Tests Sprint NB
+**Assigné à :** @tester | **Dépend de :** NB.1, NB.2, NB.3, NB.4, NB.5, NB.6, NB.7, NB.8, NB.9, NB.10 | **Statut :** `TODO` | **Type :** TEST
+
+**Tâches :**
+- [ ] `TODO` Tests unitaires pour `isNavItemVisible` : cas SuperAdmin bypass, cas superAdminOnly, cas permissions OR/AND, cas null guards, comportement minimum 2 items (Vitest)
+- [ ] `TODO` Tests unitaires pour `isGroupVisible` : groupes 0/1/N items
+- [ ] `TODO` Tests unitaires pour `formatBadgeCount` : count 0, 1, 99, 100, NaN, Infinity
+- [ ] `TODO` Vérification manuelle mobile 360px portrait : FarmHeader visible, BottomNavSkeleton avant chargement permissions
+- [ ] `TODO` Vérification manuelle mobile paysage (height < 500px) : sheet s'ouvre depuis la droite
+- [ ] `TODO` Exécuter `npx vitest run` et `npm run build` — les deux doivent passer
+- [ ] `TODO` Produire rapport `docs/tests/rapport-sprint-NB.md`
+
+---
+
+### Story NB.12 — Review Sprint NB
+**Assigné à :** @code-reviewer | **Dépend de :** NB.11 | **Statut :** `TODO` | **Type :** REVIEW
+
+**Tâches :**
+- [ ] `TODO` Vérifier R1-R9 sur tous les nouveaux composants et fonctions
+- [ ] `TODO` Vérifier conformité ADR §3, §4.1-4.4, §5.1-5.4, §6, §7, §8, §9
+- [ ] `TODO` Vérifier ARIA : touch targets 44px+, `aria-current`, `aria-label` FAB, `aria-disabled` offline
+- [ ] `TODO` Vérifier performances : imports Lucide named only (tree-shaking), lazy loading des sheets
+- [ ] `TODO` Produire rapport `docs/reviews/review-sprint-NB.md`
+
+---
+
+## Sprint NC — Navigation Phase 3 : Nettoyage legacy (ADR-navigation-architecture)
+
+**Objectif :** Auditer et nettoyer les composants de navigation legacy (sidebar.tsx, bottom-nav.tsx, hamburger-menu.tsx, module-nav-items.ts) devenus obsolètes après les phases 1 et 2. Vérification finale de l'accessibilité et de la couverture mobile/desktop.
+**Référence :** `docs/decisions/ADR-navigation-architecture.md` — Phase 3
+**Dépend de :** Sprint NB FAIT
+
+---
+
+### Story NC.1 — Audit et nettoyage sidebar.tsx legacy
+**Assigné à :** @developer | **Dépend de :** Sprint NB FAIT | **Statut :** `TODO` | **Type :** CLEANUP
+
+**Description :** Auditer les call sites du composant `sidebar.tsx` legacy. Supprimer les entrées `/admin/*` inexistantes. Si aucun import actif, supprimer le fichier (ADR §13 Phase 3, I5).
+
+**Tâches :**
+- [ ] `TODO` Exécuter `grep -r "from.*layout/sidebar" src/` pour trouver tous les imports actifs
+- [ ] `TODO` Si imports actifs → migrer vers `FarmSidebar` ou `IngenieurSidebar` selon le contexte
+- [ ] `TODO` Supprimer les entrées pointant vers `/admin/abonnements`, `/admin/commissions`, `/admin/remises` (routes inexistantes — ADR §14.3)
+- [ ] `TODO` Si plus aucun import actif après migration → supprimer `src/components/layout/sidebar.tsx`
+
+**Critères d'acceptation :**
+- Aucune référence active à `sidebar.tsx` legacy dans le codebase
+- `npm run build` passe sans erreur
+- Aucun item de navigation ne pointe vers `/admin/*`
+
+---
+
+### Story NC.2 — Audit et nettoyage bottom-nav.tsx legacy
+**Assigné à :** @developer | **Dépend de :** Sprint NB FAIT | **Statut :** `TODO` | **Type :** CLEANUP
+
+**Description :** Auditer les call sites du composant `bottom-nav.tsx` legacy. Le migrer ou supprimer selon les imports actifs (ADR §14.3, I6).
+
+**Tâches :**
+- [ ] `TODO` Exécuter `grep -r "from.*layout/bottom-nav" src/` pour trouver tous les imports actifs
+- [ ] `TODO` Si imports actifs dans `AppShell` → remplacer par `FarmBottomNav` / `IngenieurBottomNav` selon le rôle
+- [ ] `TODO` Si plus aucun import actif → supprimer `src/components/layout/bottom-nav.tsx`
+- [ ] `TODO` Vérifier que le fallback `<Sidebar> + <BottomNav>` dans `AppShell` est remplacé par une redirection vers `/login` ou un état d'erreur explicite (plus de composant legacy fallback)
+
+**Critères d'acceptation :**
+- Aucune référence active à `bottom-nav.tsx` legacy dans le codebase
+- `npm run build` passe sans erreur
+
+---
+
+### Story NC.3 — Audit et nettoyage hamburger-menu.tsx legacy
+**Assigné à :** @developer | **Dépend de :** Sprint NB FAIT | **Statut :** `TODO` | **Type :** CLEANUP
+
+**Description :** Auditer les call sites du composant `hamburger-menu.tsx`. Le migrer ou supprimer selon les imports actifs (ADR §13 Phase 3).
+
+**Tâches :**
+- [ ] `TODO` Exécuter `grep -r "from.*layout/hamburger-menu" src/` pour trouver tous les imports actifs
+- [ ] `TODO` Si imports actifs → évaluer si la fonctionnalité est couverte par les nouveaux sheets (FarmBottomNav, IngenieurBottomNav)
+- [ ] `TODO` Migrer ou supprimer selon le résultat de l'audit
+- [ ] `TODO` `npm run build` passe sans erreur après nettoyage
+
+**Critères d'acceptation :**
+- Aucune référence active à `hamburger-menu.tsx` dans le codebase (ou document la raison de le conserver si des imports actifs persistent)
+
+---
+
+### Story NC.4 — Nettoyage module-nav-items.ts : supprimer entrées Admin obsolètes
+**Assigné à :** @developer | **Dépend de :** Sprint NB FAIT | **Statut :** `TODO` | **Type :** CLEANUP
+
+**Description :** Le fichier `src/lib/module-nav-items.ts` contient des entrées pour `Admin Abonnements`, `Admin Commissions`, `Admin Remises` qui pointent vers des routes `/admin/*` inexistantes depuis la migration backoffice (ADR §14.2, §13 Phase 3).
+
+**Tâches :**
+- [ ] `TODO` Dans `src/lib/module-nav-items.ts`, supprimer les entrées : "Admin Abonnements" (`/admin/abonnements`), "Admin Commissions" (`/admin/commissions`), "Admin Remises" (`/admin/remises`)
+- [ ] `TODO` Vérifier que `/analytics/aliments` n'est référencé que dans le groupe Analytics (pas dans le groupe Intrants/Stock) selon l'ADR §2.3 note A12
+- [ ] `TODO` Vérifier que tous les items restants dans `module-nav-items.ts` pointent vers des routes existantes
+
+**Critères d'acceptation :**
+- Aucune entrée dans `module-nav-items.ts` ne pointe vers `/admin/*`
+- `/analytics/aliments` est dans le groupe Analytics uniquement
+
+---
+
+### Story NC.5 — Vérification couverture routes mobile 360px
+**Assigné à :** @tester | **Dépend de :** NC.1, NC.2, NC.3, NC.4 | **Statut :** `TODO` | **Type :** TEST
+
+**Description :** Vérification complète que toutes les routes primaires sont accessibles en 2 taps max depuis la bottom nav à 360px de largeur.
+
+**Tâches :**
+- [ ] `TODO` Sur mobile simulé 360px, vérifier chaque route du tableau §2.3 (Farm) : accessible en ≤ 2 taps depuis la bottom nav
+- [ ] `TODO` Sur mobile simulé 360px, vérifier chaque route du tableau §2.4 (Ingénieur) : accessible en ≤ 2 taps depuis la bottom nav
+- [ ] `TODO` Vérifier les routes détail (vagues/[id], releves/[id], etc.) : accessibles en ≤ 3 taps total
+- [ ] `TODO` Documenter toute route non conforme à la règle "2 taps" dans le rapport de test
+
+**Critères d'acceptation :**
+- 100% des routes primaires accessibles en ≤ 2 taps sur mobile 360px
+- Aucun item de navigation mène à une page 404 ou vide
+
+---
+
+### Story NC.6 — Vérification couverture routes desktop
+**Assigné à :** @tester | **Dépend de :** NC.1, NC.2, NC.3, NC.4 | **Statut :** `TODO` | **Type :** TEST
+
+**Description :** Vérification que toutes les routes accessibles via la sidebar desktop sont fonctionnelles et correctement groupées.
+
+**Tâches :**
+- [ ] `TODO` Sur desktop (>= 1024px), vérifier que FarmSidebar affiche tous les groupes et items listés dans l'ADR §4.4
+- [ ] `TODO` Sur desktop, vérifier que IngenieurSidebar affiche les 4 groupes listés dans l'ADR §5.4
+- [ ] `TODO` Vérifier que la FarmHeader et IngenieurHeader sont masquées sur desktop (`md:hidden` effectif)
+- [ ] `TODO` Vérifier que les sidebars sont masquées sur mobile (`md:block` ou équivalent effectif)
+
+**Critères d'acceptation :**
+- Aucune route de sidebar ne produit une 404
+- Aucun item de navigation legacy (`/admin/*`, `/calibrages`) n'apparaît dans la sidebar
+
+---
+
+### Story NC.7 — Audit ARIA et accessibilité navigation
+**Assigné à :** @tester | **Dépend de :** NC.5, NC.6 | **Statut :** `TODO` | **Type :** TEST
+
+**Description :** Audit d'accessibilité ARIA complet sur tous les composants de navigation selon les règles de l'ADR §15.
+
+**Tâches :**
+- [ ] `TODO` Vérifier `aria-current="page"` sur l'item actif de la bottom nav (FarmBottomNav, IngenieurBottomNav)
+- [ ] `TODO` Vérifier `aria-label="Nouveau relevé"` sur le FAB ingénieur
+- [ ] `TODO` Vérifier `aria-label` ou `aria-labelledby` sur tous les `SheetContent` Radix UI (farm et ingénieur)
+- [ ] `TODO` Vérifier touch targets ≥ 44×44px pour tous les items de la bottom nav et du sheet (inspecter CSS)
+- [ ] `TODO` Vérifier `aria-disabled="true"` sur les items offline (après simulation offline)
+- [ ] `TODO` Vérifier que les boutons sans texte visible ont un `aria-label` explicite (NotificationBell, SiteSelector)
+
+**Critères d'acceptation :**
+- Aucun élément interactif de navigation sans `aria-label` explicite
+- Tous les touch targets ≥ 44px en hauteur et largeur
+- `aria-current="page"` correct sur l'item actif
+
+---
+
+### Story NC.8 — Tests de non-régression et review finale Sprint NC
+**Assigné à :** @tester | **Dépend de :** NC.7 | **Statut :** `TODO` | **Type :** TEST
+
+**Tâches :**
+- [ ] `TODO` Exécuter `npx vitest run` — tous les tests doivent passer (anciens + nouveaux depuis NA/NB)
+- [ ] `TODO` Exécuter `npm run build` — build production sans erreur
+- [ ] `TODO` Vérifier que les tests des sprints précédents (FA-FD) ne sont pas régressés
+- [ ] `TODO` Produire rapport `docs/tests/rapport-sprint-NC.md`
+
+---
+
+### Story NC.9 — Review finale Sprint NC
+**Assigné à :** @code-reviewer | **Dépend de :** NC.8 | **Statut :** `TODO` | **Type :** REVIEW
+
+**Tâches :**
+- [ ] `TODO` Vérifier que tous les composants legacy supprimés n'ont plus d'imports actifs
+- [ ] `TODO` Vérifier R1-R9 sur les fichiers de nettoyage (pas de régression)
+- [ ] `TODO` Vérifier conformité ADR §13 Phase 3, §14.3
+- [ ] `TODO` Produire rapport `docs/reviews/review-sprint-NC.md`

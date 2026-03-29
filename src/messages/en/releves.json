@@ -154,6 +154,20 @@
         "ARTISANAL": "Artisanal",
         "COMMERCIAL": "Commercial",
         "MIXTE": "Mixed"
+      },
+      "comportementAlim": {
+        "label": "Feeding behaviour",
+        "VORACE": "Voracious",
+        "NORMAL": "Normal",
+        "FAIBLE": "Weak",
+        "REFUSE": "Refused"
+      },
+      "tauxRefus": {
+        "label": "Refusal rate",
+        "0": "0% — All eaten",
+        "10": "10% — Almost all eaten",
+        "25": "25% — Partial refusal",
+        "50": "50% — Major refusal"
       }
     },
     "qualiteEau": {

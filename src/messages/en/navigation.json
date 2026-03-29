@@ -74,7 +74,13 @@
     "analyse": "Analysis",
     "stock": "Stock",
     "echanges": "Exchanges",
-    "ingenieur": "Engineer"
+    "ingenieur": "Engineer",
+    "observations": "Observations",
+    "clientsItem": "Clients",
+    "activationsItem": "Activations",
+    "notificationsItem": "Notifications",
+    "portefeuilleItem": "Portfolio",
+    "alevins": "Fingerlings"
   },
   "roles": {
     "admin": "Administrator",
@@ -87,5 +93,11 @@
     "more": "More",
     "menu": "Menu",
     "language": "Language"
+  },
+  "groups": {
+    "operations": "Operations",
+    "commercial": "Commercial",
+    "portefeuille": "Portfolio",
+    "configuration": "Configuration"
   }
 }

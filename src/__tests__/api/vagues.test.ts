@@ -672,9 +672,10 @@ describe("PUT /api/vagues/[id]", () => {
       _count: { bacs: 3 },
     });
 
+    // API actuelle : addBacs accepte des objets { bacId, nombrePoissons }
     const request = makeRequest("/api/vagues/vague-1", {
       method: "PUT",
-      body: JSON.stringify({ addBacIds: ["bac-3"] }),
+      body: JSON.stringify({ addBacs: [{ bacId: "bac-3", nombrePoissons: 100 }] }),
     });
 
     const response = await PUT(request, {
@@ -684,7 +685,7 @@ describe("PUT /api/vagues/[id]", () => {
 
     expect(response.status).toBe(200);
     expect(mockUpdateVague).toHaveBeenCalledWith("vague-1", "site-1", {
-      addBacIds: ["bac-3"],
+      addBacs: [{ bacId: "bac-3", nombrePoissons: 100 }],
     });
     expect(data.code).toBe("VAGUE-2026-001");
   });
@@ -696,7 +697,7 @@ describe("PUT /api/vagues/[id]", () => {
 
     const request = makeRequest("/api/vagues/vague-1", {
       method: "PUT",
-      body: JSON.stringify({ addBacIds: ["bac-3"] }),
+      body: JSON.stringify({ addBacs: [{ bacId: "bac-3", nombrePoissons: 100 }] }),
     });
 
     const response = await PUT(request, {

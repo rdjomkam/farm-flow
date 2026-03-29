@@ -63,7 +63,6 @@ describe("Routes farm-exclusives — absentes de (ingenieur)/", () => {
 const INGENIEUR_EXCLUSIVE_ROUTES = [
   "monitoring",
   "mon-portefeuille",
-  "mes-taches",
 ];
 
 describe("Routes ingénieur-exclusives — présentes dans (ingenieur)/", () => {
@@ -83,16 +82,35 @@ describe("Routes ingénieur-exclusives — absentes de (farm)/", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 3. Routes présentes dans (ingenieur)/ uniquement (depuis ls)
-// Packs et activations sont dans ingenieur/
+// 3. Routes déplacées à la racine de l'app (Sprint NA — NA.4)
+// /packs, /activations, /mes-taches sont à la racine (app root), pas dans (ingenieur)/
+// L'accès est contrôlé par checkPagePermission, pas par le middleware.
 // ---------------------------------------------------------------------------
-describe("Routes ingénieur — packs et activations", () => {
-  it("(ingenieur)/packs/ existe", () => {
-    expect(existsSync(ingenieurPath("packs"))).toBe(true);
+describe("Routes app-root — packs, activations, mes-taches (déplacées par NA.4)", () => {
+  const APP_ROOT = join(ROOT);
+
+  it("app/packs/ existe (racine)", () => {
+    expect(existsSync(join(APP_ROOT, "packs"))).toBe(true);
   });
 
-  it("(ingenieur)/activations/ existe", () => {
-    expect(existsSync(ingenieurPath("activations"))).toBe(true);
+  it("app/activations/ existe (racine)", () => {
+    expect(existsSync(join(APP_ROOT, "activations"))).toBe(true);
+  });
+
+  it("app/mes-taches/ existe (racine)", () => {
+    expect(existsSync(join(APP_ROOT, "mes-taches"))).toBe(true);
+  });
+
+  it("(ingenieur)/packs/ n'existe PAS (déplacé à la racine)", () => {
+    expect(existsSync(ingenieurPath("packs"))).toBe(false);
+  });
+
+  it("(ingenieur)/activations/ n'existe PAS (déplacé à la racine)", () => {
+    expect(existsSync(ingenieurPath("activations"))).toBe(false);
+  });
+
+  it("(ingenieur)/mes-taches/ n'existe PAS (déplacé à la racine)", () => {
+    expect(existsSync(ingenieurPath("mes-taches"))).toBe(false);
   });
 });
 

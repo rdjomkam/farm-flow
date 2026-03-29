@@ -23,6 +23,7 @@ import { Role, StatutAbonnement } from "@/types";
 
 const SESSION_COOKIE = "session_token";
 const ROLE_COOKIE = "user_role";
+const IS_SUPER_ADMIN_COOKIE = "is_super_admin";
 
 /** Page d'accueil de l'espace ingénieur */
 const INGENIEUR_HOME = "/monitoring";
@@ -36,7 +37,27 @@ const INGENIEUR_HOME = "/monitoring";
 const INGENIEUR_ONLY_PREFIXES = [
   "/monitoring",
   "/mon-portefeuille",
+  "/settings/config-elevage",
+  "/settings/regles-activites",
 ];
+
+/**
+ * Routes réservées aux rôles farm (ADMIN, GERANT, PISCICULTEUR).
+ * Un ingénieur qui tente d'y accéder est redirigé vers l'accueil ingénieur.
+ * SuperAdmin peut toujours accéder à ces routes.
+ */
+const FARM_ONLY_PREFIXES = [
+  "/alevins",
+  "/depenses",
+  "/finances",
+  "/factures",
+  "/clients",
+  "/ventes",
+  "/besoins",
+];
+
+/** Rôles autorisés sur les routes FARM_ONLY */
+const FARM_ROLES = [Role.ADMIN, Role.GERANT, Role.PISCICULTEUR];
 
 /** Routes that don't require authentication */
 const PUBLIC_ROUTES = ["/login", "/register"];
@@ -119,8 +140,21 @@ export async function proxy(request: NextRequest) {
   // Session cookie exists — vérifier le rôle pour les pages (pas les API)
   if (!pathname.startsWith("/api/") && !pathname.startsWith("/backoffice")) {
     const userRole = request.cookies.get(ROLE_COOKIE)?.value ?? "";
+    const isSuperAdmin =
+      request.cookies.get(IS_SUPER_ADMIN_COOKIE)?.value === "true";
     const isIngenieur = userRole === Role.INGENIEUR;
+
+    // Guard E11 : session existe mais rôle absent (cookie corrompu/manquant)
+    if (!userRole && !isSuperAdmin) {
+      const loginUrl = new URL("/login", request.url);
+      return NextResponse.redirect(loginUrl);
+    }
+
     const isOnIngenieurOnlyPath = INGENIEUR_ONLY_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
+    );
+
+    const isOnFarmOnlyPath = FARM_ONLY_PREFIXES.some(
       (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
     );
 
@@ -129,9 +163,14 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL(INGENIEUR_HOME, request.url));
     }
 
-    if (!isIngenieur && isOnIngenieurOnlyPath) {
+    if (!isIngenieur && isOnIngenieurOnlyPath && !isSuperAdmin) {
       // Un non-ingénieur tente d'accéder aux routes ingénieur → rediriger vers l'accueil farm
       return NextResponse.redirect(new URL("/", request.url));
+    }
+
+    if (isOnFarmOnlyPath && !FARM_ROLES.includes(userRole as Role) && !isSuperAdmin) {
+      // Un ingénieur (ou rôle inconnu) tente d'accéder aux routes farm → rediriger vers l'accueil ingénieur
+      return NextResponse.redirect(new URL(INGENIEUR_HOME, request.url));
     }
   }
 

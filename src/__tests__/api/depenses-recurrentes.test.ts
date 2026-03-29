@@ -184,7 +184,10 @@ describe("genererDepensesRecurrentes — MENSUEL", () => {
   });
 
   it("genere une depense si derniereGeneration < debut du mois courant", async () => {
+    // Utiliser le 15 du mois precedent pour eviter les rollovers de fin de mois
+    // (ex: 29 mars -> setMonth(1) -> 1 mars en annee non-bissextile)
     const dernierMois = new Date();
+    dernierMois.setDate(15);
     dernierMois.setMonth(dernierMois.getMonth() - 1);
 
     mockDepenseRecurrenteFindMany.mockResolvedValue([
