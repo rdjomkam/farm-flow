@@ -212,15 +212,6 @@ export const ITEM_VIEW_PERMISSIONS: Record<string, Permission> = {
   // Abonnements (Sprint 33)
   "/mon-abonnement":     Permission.ABONNEMENTS_VOIR,
   "/tarifs":             Permission.ABONNEMENTS_VOIR,
-  "/admin/abonnements":  Permission.ABONNEMENTS_GERER,
-  // Plans (Sprint 38)
-  "/admin/plans":        Permission.PLANS_GERER,
-  // ADR-021 — Admin Plateforme
-  "/admin/sites":        Permission.SITES_VOIR,
-  "/admin/analytics":    Permission.ANALYTICS_PLATEFORME,
-  "/admin/modules":      Permission.SITES_GERER,
-  "/admin/commissions":  Permission.COMMISSIONS_GERER,
-  "/admin/remises":      Permission.REMISES_GERER,
 };
 
 // ---------------------------------------------------------------------------

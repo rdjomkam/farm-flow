@@ -1,15 +1,15 @@
 /**
  * Tests Sprint 23 — Navigation conditionnelle par role
  *
- * Couvre la fonction getDefaultItemsByRole et la logique contextuelle du BottomNav.
+ * Couvre la fonction getDefaultItemsByRole et la logique contextuelle de navigation.
  * Les items de navigation sont testes selon les roles :
  *   - PISCICULTEUR : nav simplifiee terrain (4 items)
  *   - INGENIEUR    : nav suivi clients (3 items)
  *   - ADMIN/GERANT : nav complete (filtree par permissions)
  *   - null (non authentifie) : nav admin par defaut
  *
- * Note : le composant BottomNav est un Client Component ("use client").
- * On teste donc uniquement la logique pure (fonctions utilitaires extractees).
+ * Note : Les composants navigation actuels sont FarmBottomNav et IngenieurBottomNav.
+ * On teste uniquement la logique pure (fonctions utilitaires extractees).
  */
 
 import { describe, it, expect } from "vitest";
@@ -25,7 +25,7 @@ interface NavItem {
   label: string;
 }
 
-// Items de navigation definis dans bottom-nav.tsx
+// Items de navigation par role (legacy bottom-nav logic, now in FarmBottomNav/IngenieurBottomNav)
 const pisciculteurItems: NavItem[] = [
   { href: "/", label: "Accueil" },
   { href: "/mes-taches", label: "Mes tâches" },
@@ -47,7 +47,7 @@ const adminGerantItems: NavItem[] = [
 ];
 
 /**
- * Reimplementation de getDefaultItemsByRole depuis bottom-nav.tsx
+ * Reimplementation de getDefaultItemsByRole (legacy logic from former bottom-nav.tsx)
  */
 function getDefaultItemsByRole(role: Role | null): NavItem[] {
   if (role === Role.PISCICULTEUR) return pisciculteurItems;
@@ -241,7 +241,7 @@ describe("Isolation de la navigation par role (logique conditionnelle)", () => {
 
 describe("Detection de section contextuelle (getModuleForPath)", () => {
   /**
-   * Reimplementation locale de getModuleForPath depuis bottom-nav.tsx.
+   * Reimplementation locale de getModuleForPath (updated per NC.4 cleanup).
    */
   function getModuleForPath(pathname: string): string | null {
     if (pathname.startsWith("/alevins")) return "Reproduction";
@@ -252,7 +252,7 @@ describe("Detection de section contextuelle (getModuleForPath)", () => {
       pathname.startsWith("/analytics/bacs") ||
       pathname.startsWith("/analytics/vagues")
     ) return "Grossissement";
-    if (pathname.startsWith("/stock") || pathname.startsWith("/analytics/aliments")) return "Intrants";
+    if (pathname.startsWith("/stock")) return "Intrants";
     if (
       pathname.startsWith("/ventes") ||
       pathname.startsWith("/clients") ||
@@ -263,6 +263,7 @@ describe("Detection de section contextuelle (getModuleForPath)", () => {
     ) return "Ventes";
     if (
       pathname === "/analytics" ||
+      pathname.startsWith("/analytics/aliments") ||
       pathname.startsWith("/planning") ||
       pathname.startsWith("/mes-taches") ||
       pathname.startsWith("/notifications") ||
