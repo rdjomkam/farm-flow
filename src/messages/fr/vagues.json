@@ -154,6 +154,7 @@
     "releve": "{count} relevé",
     "releves": "{count} relevés",
     "compareButton": "Comparer",
+    "comparing": "Comparaison en cours...",
     "resultsTitle": "Resultats — {count} vagues",
     "sectionZootechnique": "Zootechnique",
     "sectionFinancier": "Financier",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
@@ -199,18 +199,59 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
   const [selectedActivite, setSelectedActivite] = useState<ActiviteWithRelations | null>(null);
   const [filterStatut, setFilterStatut] = useState<string>("toutes");
 
+  // Cache des activites par mois (cle: "YYYY-M")
+  const monthCacheRef = useRef<Map<string, ActiviteWithRelations[]>>(new Map());
+  // Initialiser le cache avec les donnees SSR du mois courant
+  const initialCacheKey = `${now.getFullYear()}-${now.getMonth()}`;
+  if (!monthCacheRef.current.has(initialCacheKey)) {
+    monthCacheRef.current.set(initialCacheKey, activites);
+  }
+
+  const [activitesData, setActivitesData] = useState<ActiviteWithRelations[]>(activites);
+  const [isFetchingMonth, setIsFetchingMonth] = useState(false);
+
+  async function fetchMonth(year: number, month: number) {
+    const cacheKey = `${year}-${month}`;
+    // Utiliser le cache si disponible
+    if (monthCacheRef.current.has(cacheKey)) {
+      setActivitesData(monthCacheRef.current.get(cacheKey)!);
+      return;
+    }
+    setIsFetchingMonth(true);
+    try {
+      const dateDebut = new Date(year, month, 1).toISOString();
+      const dateFin = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
+      const res = await activiteService.list({ dateDebut, dateFin });
+      if (res.ok && res.data) {
+        const fetched = res.data.activites ?? [];
+        monthCacheRef.current.set(cacheKey, fetched);
+        setActivitesData(fetched);
+      }
+    } finally {
+      setIsFetchingMonth(false);
+    }
+  }
+
   function prevMonth() {
-    if (viewMonth === 0) { setViewMonth(11); setViewYear((y) => y - 1); }
-    else setViewMonth((m) => m - 1);
+    const newMonth = viewMonth === 0 ? 11 : viewMonth - 1;
+    const newYear = viewMonth === 0 ? viewYear - 1 : viewYear;
+    setViewMonth(newMonth);
+    setViewYear(newYear);
+    setSelectedDay(null);
+    void fetchMonth(newYear, newMonth);
   }
 
   function nextMonth() {
-    if (viewMonth === 11) { setViewMonth(0); setViewYear((y) => y + 1); }
-    else setViewMonth((m) => m + 1);
+    const newMonth = viewMonth === 11 ? 0 : viewMonth + 1;
+    const newYear = viewMonth === 11 ? viewYear + 1 : viewYear;
+    setViewMonth(newMonth);
+    setViewYear(newYear);
+    setSelectedDay(null);
+    void fetchMonth(newYear, newMonth);
   }
 
   // Filtrer les activites selon le statut
-  const filteredActivites = activites.filter((a) => {
+  const filteredActivites = activitesData.filter((a) => {
     if (filterStatut === "toutes") return true;
     return a.statut === filterStatut;
   });
@@ -323,13 +364,28 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
       {/* Header navigation mois + bouton nouvelle activite */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={prevMonth} className="h-10 w-10 p-0">
+          <Button variant="outline" size="sm" onClick={prevMonth} disabled={isFetchingMonth} className="h-10 w-10 p-0">
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="text-sm font-semibold min-w-[120px] text-center">
-            {MONTHS[viewMonth]} {viewYear}
+            {isFetchingMonth ? (
+              <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                <svg
+                  className="h-3.5 w-3.5 animate-spin"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Chargement...
+              </span>
+            ) : (
+              `${MONTHS[viewMonth]} ${viewYear}`
+            )}
           </span>
-          <Button variant="outline" size="sm" onClick={nextMonth} className="h-10 w-10 p-0">
+          <Button variant="outline" size="sm" onClick={nextMonth} disabled={isFetchingMonth} className="h-10 w-10 p-0">
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>

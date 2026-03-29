@@ -98,6 +98,12 @@ function formatDate(dateStr: string): string {
 
 export function DepensesListClient({ depenses, canManage, templatesActifsCount = 0 }: Props) {
   const [categorieFilter, setCategorieFilter] = useState<string>("TOUTES");
+  const [activeTab, setActiveTab] = useState("toutes");
+
+  function handleCategorieChange(value: string) {
+    setCategorieFilter(value);
+    setActiveTab("toutes");
+  }
 
   const depensesFiltrees =
     categorieFilter === "TOUTES"
@@ -138,7 +144,7 @@ export function DepensesListClient({ depenses, canManage, templatesActifsCount =
         <div className="flex-1 max-w-xs">
           <Select
             value={categorieFilter}
-            onValueChange={setCategorieFilter}
+            onValueChange={handleCategorieChange}
           >
             <SelectTrigger className="h-9 text-sm">
               <SelectValue placeholder="Toutes categories" />
@@ -174,7 +180,7 @@ export function DepensesListClient({ depenses, canManage, templatesActifsCount =
       </div>
 
       {/* Tabs par statut */}
-      <Tabs defaultValue="toutes">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full grid grid-cols-4">
           <TabsTrigger value="toutes">
             Toutes ({depensesFiltrees.length})

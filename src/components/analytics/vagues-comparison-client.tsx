@@ -410,6 +410,7 @@ export function VaguesComparisonClient({ vagues }: VaguesComparisonClientProps) 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [result, setResult] = useState<ComparaisonVagues | null>(null);
   const [showSelector, setShowSelector] = useState(true);
+  const [isComparing, setIsComparing] = useState(false);
 
   function toggleVague(id: string) {
     setSelectedIds((prev) => {
@@ -427,13 +428,16 @@ export function VaguesComparisonClient({ vagues }: VaguesComparisonClientProps) 
 
   async function handleComparer() {
     if (selectedIds.size < 2) return;
-
-    const ids = Array.from(selectedIds);
-    const res = await analyticsService.getVagues({ vagueIds: ids });
-
-    if (res.ok && res.data) {
-      setResult(res.data as unknown as ComparaisonVagues);
-      setShowSelector(false);
+    setIsComparing(true);
+    try {
+      const ids = Array.from(selectedIds);
+      const res = await analyticsService.getVagues({ vagueIds: ids });
+      if (res.ok && res.data) {
+        setResult(res.data as unknown as ComparaisonVagues);
+        setShowSelector(false);
+      }
+    } finally {
+      setIsComparing(false);
     }
   }
 
@@ -527,10 +531,36 @@ export function VaguesComparisonClient({ vagues }: VaguesComparisonClientProps) 
               </p>
               <Button
                 onClick={handleComparer}
-                disabled={!canCompare}
+                disabled={!canCompare || isComparing}
                 className="w-full min-h-[48px]"
               >
-                {tVagues("comparison.compareButton")}
+                {isComparing ? (
+                  <span className="flex items-center gap-2">
+                    <svg
+                      className="h-4 w-4 animate-spin"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      />
+                    </svg>
+                    {tVagues("comparison.comparing")}
+                  </span>
+                ) : (
+                  tVagues("comparison.compareButton")
+                )}
               </Button>
             </div>
           </>

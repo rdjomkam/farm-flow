@@ -36,11 +36,15 @@ export function useActiviteService() {
       vagueId?: string;
       typeActivite?: string;
       statut?: string;
+      dateDebut?: string;
+      dateFin?: string;
     }) => {
       const qs = new URLSearchParams();
       if (params?.vagueId) qs.set("vagueId", params.vagueId);
       if (params?.typeActivite) qs.set("typeActivite", params.typeActivite);
       if (params?.statut) qs.set("statut", params.statut);
+      if (params?.dateDebut) qs.set("dateDebut", params.dateDebut);
+      if (params?.dateFin) qs.set("dateFin", params.dateFin);
       const query = qs.toString();
       return call<ActiviteListResult>(`/api/activites${query ? `?${query}` : ""}`);
     },

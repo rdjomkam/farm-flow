@@ -14,12 +14,18 @@ import {
 // ---------------------------------------------------------------------------
 
 interface GlobalLoadingContextValue {
-  /** true dès qu'au moins une requête API est en cours */
+  /** true dès qu'au moins une requête (navigation ou mutation) est en cours */
   isLoading: boolean;
-  /** Incrémente le compteur de requêtes actives */
+  /** true uniquement quand une mutation bloquante est en cours */
+  isMutating: boolean;
+  /** Incrémente le compteur de requêtes actives (navigation) */
   increment: () => void;
-  /** Décrémente le compteur de requêtes actives */
+  /** Décrémente le compteur de requêtes actives (navigation) */
   decrement: () => void;
+  /** Incrémente le compteur de mutations bloquantes */
+  incrementMutation: () => void;
+  /** Décrémente le compteur de mutations bloquantes */
+  decrementMutation: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -41,25 +47,30 @@ export function useGlobalLoading(): GlobalLoadingContextValue {
 // ---------------------------------------------------------------------------
 
 /**
- * GlobalLoadingProvider — Compteur de requêtes API actives.
+ * GlobalLoadingProvider — Deux compteurs distincts :
  *
- * Utilise un ref (pas un state) pour le compteur afin d'éviter les re-renders
- * intermédiaires. Seul le boolean `isLoading` trigger un re-render, et
- * seulement lors du passage 0→1 et 1→0.
+ * 1. `countRef` — navigation + toutes requêtes → alimente `isLoading` → GlobalLoadingBar
+ * 2. `mutationCountRef` — mutations bloquantes (POST/PUT/PATCH/DELETE) → alimente
+ *    `isMutating` → LoadingOverlay plein écran
  *
- * Supporte les requêtes concurrentes : isLoading reste true tant que toutes
- * les requêtes actives ne sont pas terminées.
+ * NavigationLoader utilise increment/decrement (barre fine uniquement).
+ * useApi utilise incrementMutation/decrementMutation pour POST/PUT/PATCH/DELETE
+ * et increment/decrement pour GET.
  *
  * Usage dans layout.tsx :
  *   <GlobalLoadingProvider>
  *     <GlobalLoadingBar />
+ *     <LoadingOverlay />
  *     {children}
  *   </GlobalLoadingProvider>
  */
 export function GlobalLoadingProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isMutating, setIsMutating] = useState(false);
   const countRef = useRef(0);
+  const mutationCountRef = useRef(0);
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const hideMutationTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const increment = useCallback(() => {
     if (hideTimerRef.current) {
@@ -67,9 +78,7 @@ export function GlobalLoadingProvider({ children }: { children: React.ReactNode 
       hideTimerRef.current = null;
     }
     countRef.current += 1;
-    if (countRef.current === 1) {
-      setIsLoading(true);
-    }
+    if (countRef.current === 1) setIsLoading(true);
   }, []);
 
   const decrement = useCallback(() => {
@@ -82,16 +91,41 @@ export function GlobalLoadingProvider({ children }: { children: React.ReactNode 
     }
   }, []);
 
+  const incrementMutation = useCallback(() => {
+    if (hideMutationTimerRef.current) {
+      clearTimeout(hideMutationTimerRef.current);
+      hideMutationTimerRef.current = null;
+    }
+    mutationCountRef.current += 1;
+    if (mutationCountRef.current === 1) {
+      setIsLoading(true);
+      setIsMutating(true);
+    }
+  }, []);
+
+  const decrementMutation = useCallback(() => {
+    mutationCountRef.current = Math.max(0, mutationCountRef.current - 1);
+    if (mutationCountRef.current === 0) {
+      hideMutationTimerRef.current = setTimeout(() => {
+        hideMutationTimerRef.current = null;
+        setIsMutating(false);
+        // isLoading suit le countRef normal
+        if (countRef.current === 0) setIsLoading(false);
+      }, 300);
+    }
+  }, []);
+
   useEffect(() => {
     return () => {
-      if (hideTimerRef.current) {
-        clearTimeout(hideTimerRef.current);
-      }
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      if (hideMutationTimerRef.current) clearTimeout(hideMutationTimerRef.current);
     };
   }, []);
 
   return (
-    <GlobalLoadingContext value={{ isLoading, increment, decrement }}>
+    <GlobalLoadingContext
+      value={{ isLoading, isMutating, increment, decrement, incrementMutation, decrementMutation }}
+    >
       {children}
     </GlobalLoadingContext>
   );

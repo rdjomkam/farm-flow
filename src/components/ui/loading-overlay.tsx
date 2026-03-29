@@ -23,9 +23,10 @@ import { FishLoader } from "@/components/ui/fish-loader";
  *   </GlobalLoadingProvider>
  */
 export function LoadingOverlay() {
-  const { isLoading } = useGlobalLoading();
+  // Ne s'affiche QUE pour les mutations bloquantes, pas pour la navigation
+  const { isMutating } = useGlobalLoading();
 
-  if (!isLoading) return null;
+  if (!isMutating) return null;
 
   return (
     <div

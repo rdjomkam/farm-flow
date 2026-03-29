@@ -117,13 +117,7 @@ export function BesoinsListClient({
     { value: "rejetees", label: "Rejetees", statuts: [StatutBesoins.REJETEE] },
   ];
 
-  const filteredListes = tabs
-    .find((t) => t.value === activeTab)
-    ?.statuts
-    ? listesBesoins.filter((lb) =>
-        tabs.find((t) => t.value === activeTab)!.statuts!.includes(lb.statut)
-      )
-    : listesBesoins;
+  // filteredListes is computed inside the single TabsContent render below
 
   return (
     <div className="p-4 pb-24 max-w-2xl mx-auto">
@@ -167,15 +161,21 @@ export function BesoinsListClient({
           ))}
         </TabsList>
 
-        {tabs.map((tab) => (
-          <TabsContent key={tab.value} value={tab.value}>
-            {filteredListes.length === 0 ? (
+        {/* UN SEUL TabsContent — valeur dynamique liée à activeTab (Pattern C2) */}
+        <TabsContent value={activeTab}>
+          {(() => {
+            const activeTabDef = tabs.find((t) => t.value === activeTab);
+            const currentList = activeTabDef?.statuts
+              ? listesBesoins.filter((lb) => activeTabDef.statuts!.includes(lb.statut))
+              : listesBesoins;
+
+            return currentList.length === 0 ? (
               <div className="text-center py-12">
                 <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
                 <p className="text-muted-foreground text-sm">
                   Aucune liste de besoins dans cet onglet
                 </p>
-                {canCreate && tab.value === "toutes" && (
+                {canCreate && activeTab === "toutes" && (
                   <Button asChild variant="primary" className="mt-4">
                     <Link href="/besoins/nouveau">
                       <Plus className="h-4 w-4 mr-1" />
@@ -186,7 +186,7 @@ export function BesoinsListClient({
               </div>
             ) : (
               <div className="space-y-3">
-                {filteredListes.map((lb) => (
+                {currentList.map((lb) => (
                   <Link key={lb.id} href={`/besoins/${lb.id}`}>
                     <Card className="hover:shadow-md transition-shadow cursor-pointer my-4">
                       <CardContent className="p-4">
@@ -286,9 +286,9 @@ export function BesoinsListClient({
                   </Link>
                 ))}
               </div>
-            )}
-          </TabsContent>
-        ))}
+            );
+          })()}
+        </TabsContent>
       </Tabs>
     </div>
   );

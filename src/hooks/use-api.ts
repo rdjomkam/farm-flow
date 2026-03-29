@@ -72,10 +72,14 @@ export interface ApiResult<T> {
  */
 export function useApi() {
   const { toast } = useToast();
-  const { increment, decrement } = useGlobalLoading();
+  const { increment, decrement, incrementMutation, decrementMutation } = useGlobalLoading();
 
   /**
    * call — Effectue un appel fetch avec gestion automatique du loading et des erreurs.
+   *
+   * Pour les mutations (POST/PUT/PATCH/DELETE), utilise incrementMutation/decrementMutation
+   * qui déclenche l'overlay bloquant. Pour les requêtes GET, utilise increment/decrement
+   * qui déclenche uniquement la barre fine.
    */
   const call = useCallback(
     async <T>(
@@ -93,7 +97,14 @@ export function useApi() {
         priority,
       } = options ?? {};
 
-      if (!silentLoading) increment();
+      const isMutation =
+        init?.method !== undefined &&
+        ["POST", "PUT", "PATCH", "DELETE"].includes(init.method.toUpperCase());
+
+      if (!silentLoading) {
+        if (isMutation) incrementMutation();
+        else increment();
+      }
 
       try {
         const res = await fetch(url, init);
@@ -182,10 +193,13 @@ export function useApi() {
         }
         return { data: null, error: message, ok: false };
       } finally {
-        if (!silentLoading) decrement();
+        if (!silentLoading) {
+          if (isMutation) decrementMutation();
+          else decrement();
+        }
       }
     },
-    [toast, increment, decrement]
+    [toast, increment, decrement, incrementMutation, decrementMutation]
   );
 
   /**
@@ -241,7 +255,7 @@ export function useApi() {
         if (!silentLoading) decrement();
       }
     },
-    [toast, increment, decrement]
+    [toast, increment, decrement, incrementMutation, decrementMutation]
   );
 
   return { call, download };

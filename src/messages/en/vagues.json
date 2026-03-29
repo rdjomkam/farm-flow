@@ -154,6 +154,7 @@
     "releve": "{count} record",
     "releves": "{count} records",
     "compareButton": "Compare",
+    "comparing": "Comparing...",
     "resultsTitle": "Results — {count} batches",
     "sectionZootechnique": "Zootechnics",
     "sectionFinancier": "Financial",
