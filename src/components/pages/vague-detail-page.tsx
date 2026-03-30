@@ -102,20 +102,31 @@ export default async function VagueDetailPage({
     else groupedByDate.set(key, [r]);
   }
 
-  // Gompertz curve — generate if cached params available with sufficient confidence.
-  // Guard against stale DB records: require that the stored biometrieCount matches
-  // the current number of unique biometry dates, and that there are at least gompertzMinPoints.
+  // Gompertz curve — calibrate inline if enough biometry data points.
+  // The API route is not called from the page, so we must calibrate server-side here.
   const currentBiometrieCount = groupedByDate.size;
 
-  // Detect stale INSUFFICIENT_DATA: config threshold was lowered but record wasn't recalibrated
-  const isStaleInsufficientData =
+  // Check if cached record is still valid
+  const cachedIsValid =
     gompertzRecord !== null &&
-    gompertzRecord.confidenceLevel === "INSUFFICIENT_DATA" &&
+    gompertzRecord.confidenceLevel !== "INSUFFICIENT_DATA" &&
+    gompertzRecord.wInfinity > 0 &&
+    gompertzRecord.biometrieCount === currentBiometrieCount &&
     currentBiometrieCount >= gompertzMinPoints;
 
-  // Inline recalibration when stale
-  let inlineCalibration: { params: { wInfinity: number; k: number; ti: number }; r2: number; rmse: number; confidenceLevel: string; biometrieCount: number } | null = null;
-  if (isStaleInsufficientData && currentBiometrieCount >= gompertzMinPoints) {
+  // Inline calibration: run when we have enough points but no valid cache
+  let effectiveGompertz: { params: { wInfinity: number; k: number; ti: number }; r2: number; rmse: number; confidenceLevel: string; biometrieCount: number } | null = null;
+
+  if (cachedIsValid && gompertzRecord) {
+    effectiveGompertz = {
+      params: { wInfinity: gompertzRecord.wInfinity, k: gompertzRecord.k, ti: gompertzRecord.ti },
+      r2: gompertzRecord.r2,
+      rmse: gompertzRecord.rmse,
+      confidenceLevel: gompertzRecord.confidenceLevel,
+      biometrieCount: gompertzRecord.biometrieCount,
+    };
+  } else if (currentBiometrieCount >= gompertzMinPoints) {
+    // No valid cache — calibrate inline
     const vagueStartMs = new Date(vague.dateDebut).getTime();
     const points = Array.from(groupedByDate.entries())
       .sort(([a], [b]) => a.localeCompare(b))
@@ -148,7 +159,7 @@ export default async function VagueDetailPage({
 
     const result = calibrerGompertz({ points, initialGuess }, gompertzMinPoints);
     if (result) {
-      inlineCalibration = {
+      effectiveGompertz = {
         params: result.params,
         r2: result.r2,
         rmse: result.rmse,
@@ -157,13 +168,6 @@ export default async function VagueDetailPage({
       };
     }
   }
-
-  // Use inline calibration if available, otherwise use cached record
-  const effectiveGompertz = inlineCalibration
-    ? inlineCalibration
-    : gompertzRecord && gompertzRecord.confidenceLevel !== "INSUFFICIENT_DATA" && gompertzRecord.wInfinity > 0 && gompertzRecord.biometrieCount === currentBiometrieCount && currentBiometrieCount >= gompertzMinPoints
-      ? { params: { wInfinity: gompertzRecord.wInfinity, k: gompertzRecord.k, ti: gompertzRecord.ti }, r2: gompertzRecord.r2, rmse: gompertzRecord.rmse, confidenceLevel: gompertzRecord.confidenceLevel, biometrieCount: gompertzRecord.biometrieCount }
-      : null;
 
   const hasGompertz = effectiveGompertz !== null;
 
