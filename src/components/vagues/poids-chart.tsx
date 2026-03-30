@@ -5,6 +5,9 @@ import { useTranslations } from "next-intl";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChartTooltip } from "@/components/ui/chart-tooltip";
+import { buildGompertzPanelData } from "@/lib/gompertz-panel";
+import { GompertzInfoPanel } from "./gompertz-info-panel";
+import type { GompertzConfidenceLevel } from "@/lib/gompertz";
 import type { EvolutionPoidsPoint } from "@/types";
 
 const ResponsiveContainer = dynamic(
@@ -42,6 +45,18 @@ interface PoidsChartProps {
   gompertzConfidence?: string | null;
   /** R² du modele Gompertz — null si pas de courbe Gompertz */
   gompertzR2?: number | null;
+  /** RMSE du modele Gompertz en grammes */
+  gompertzRmse?: number | null;
+  /** Nombre de dates uniques de biometrie utilisees */
+  gompertzBiometrieCount?: number | null;
+  /** Parametres calibres du modele Gompertz */
+  gompertzParams?: { wInfinity: number; k: number; ti: number } | null;
+  /** Poids objectif de recolte en grammes */
+  poidsObjectif?: number | null;
+  /** Nombre de jours ecoules depuis le debut de la vague */
+  joursActuels?: number | null;
+  /** Date de debut de la vague */
+  dateDebut?: Date | null;
 }
 
 /** Badge de fiabilite du modele Gompertz */
@@ -67,13 +82,47 @@ function GompertzBadge({ confidence, r2 }: { confidence: string; r2: number | nu
   );
 }
 
-export function PoidsChart({ data, gompertzConfidence, gompertzR2 }: PoidsChartProps) {
+export function PoidsChart({
+  data,
+  gompertzConfidence,
+  gompertzR2,
+  gompertzRmse,
+  gompertzBiometrieCount,
+  gompertzParams,
+  poidsObjectif,
+  joursActuels,
+  dateDebut,
+}: PoidsChartProps) {
   const t = useTranslations("vagues");
 
   const hasGompertz =
     !!gompertzConfidence &&
     gompertzConfidence !== "INSUFFICIENT_DATA" &&
     data.some((d) => d.poidsGompertz != null);
+
+  const panelData =
+    hasGompertz &&
+    gompertzParams != null &&
+    gompertzR2 != null &&
+    gompertzRmse != null &&
+    gompertzBiometrieCount != null &&
+    poidsObjectif != null &&
+    joursActuels != null &&
+    dateDebut != null
+      ? buildGompertzPanelData({
+          data,
+          confidenceLevel: gompertzConfidence as GompertzConfidenceLevel,
+          r2: gompertzR2,
+          rmse: gompertzRmse,
+          biometrieCount: gompertzBiometrieCount,
+          wInfinity: gompertzParams.wInfinity,
+          k: gompertzParams.k,
+          ti: gompertzParams.ti,
+          poidsObjectif,
+          joursActuels,
+          dateDebut,
+        })
+      : null;
 
   if (data.length === 0) {
     return (
@@ -96,7 +145,10 @@ export function PoidsChart({ data, gompertzConfidence, gompertzR2 }: PoidsChartP
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-base">{t("poidsChart.title")}</CardTitle>
           {hasGompertz && gompertzConfidence && (
-            <GompertzBadge confidence={gompertzConfidence} r2={gompertzR2 ?? null} />
+            <div className="flex items-center gap-1">
+              <GompertzBadge confidence={gompertzConfidence} r2={gompertzR2 ?? null} />
+              {panelData && <GompertzInfoPanel data={panelData} />}
+            </div>
           )}
         </div>
       </CardHeader>
@@ -140,7 +192,7 @@ export function PoidsChart({ data, gompertzConfidence, gompertzR2 }: PoidsChartP
                   type="monotone"
                   dataKey="poidsGompertz"
                   name="Courbe Gompertz"
-                  stroke="var(--accent-green, #22c55e)"
+                  stroke="var(--accent-green)"
                   strokeWidth={1.5}
                   strokeDasharray="4 3"
                   dot={false}

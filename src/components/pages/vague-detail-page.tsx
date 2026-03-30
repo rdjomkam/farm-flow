@@ -62,6 +62,15 @@ export default async function VagueDetailPage({
 
   if (!vague) notFound();
 
+  // Fetch poidsObjectif from ConfigElevage if linked to this vague
+  const configElevage = vague.configElevageId
+    ? await prisma.configElevage.findUnique({
+        where: { id: vague.configElevageId },
+        select: { poidsObjectif: true },
+      })
+    : null;
+  const poidsObjectif = configElevage?.poidsObjectif ?? 800;
+
   const statut = vague.statut as StatutVague;
   const isEnCours = statut === StatutVague.EN_COURS;
 
@@ -92,11 +101,16 @@ export default async function VagueDetailPage({
     else groupedByDate.set(key, [r]);
   }
 
-  // Gompertz curve — generate if cached params available with sufficient confidence
+  // Gompertz curve — generate if cached params available with sufficient confidence.
+  // Guard against stale DB records: require that the stored biometrieCount matches
+  // the current number of unique biometry dates, and that there are at least 5.
+  const currentBiometrieCount = groupedByDate.size;
   const hasGompertz =
     gompertzRecord !== null &&
     gompertzRecord.confidenceLevel !== "INSUFFICIENT_DATA" &&
-    gompertzRecord.wInfinity > 0;
+    gompertzRecord.wInfinity > 0 &&
+    gompertzRecord.biometrieCount === currentBiometrieCount &&
+    currentBiometrieCount >= 5;
 
   const gompertzByJour = new Map<number, number>();
   if (hasGompertz && gompertzRecord) {
@@ -187,8 +201,14 @@ export default async function VagueDetailPage({
         {/* Chart */}
         <PoidsChart
           data={poidsData}
-          gompertzConfidence={hasGompertz ? gompertzRecord?.confidenceLevel ?? null : null}
-          gompertzR2={hasGompertz ? gompertzRecord?.r2 ?? null : null}
+          gompertzConfidence={hasGompertz ? gompertzRecord!.confidenceLevel : null}
+          gompertzR2={hasGompertz ? gompertzRecord!.r2 : null}
+          gompertzRmse={hasGompertz ? gompertzRecord!.rmse : null}
+          gompertzBiometrieCount={hasGompertz ? gompertzRecord!.biometrieCount : null}
+          gompertzParams={hasGompertz ? { wInfinity: gompertzRecord!.wInfinity, k: gompertzRecord!.k, ti: gompertzRecord!.ti } : null}
+          poidsObjectif={poidsObjectif}
+          joursActuels={Math.floor((Date.now() - new Date(vague.dateDebut).getTime()) / 86400000)}
+          dateDebut={new Date(vague.dateDebut)}
         />
 
         {/* Calibrages */}
