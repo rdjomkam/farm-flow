@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
 import { Plus, Truck, ArrowLeft, Phone, Mail, MapPin, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +17,8 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Permission } from "@/types";
-import { useStockService } from "@/services";
+import type { FournisseurListResponse } from "@/types";
+import { useFournisseursList, useCreateFournisseur, useUpdateFournisseur } from "@/hooks/queries/use-stock-queries";
 
 interface FournisseurData {
   id: string;
@@ -35,10 +34,14 @@ interface Props {
   permissions: Permission[];
 }
 
-export function FournisseursListClient({ fournisseurs, permissions }: Props) {
+export function FournisseursListClient({ fournisseurs: initialFournisseurs, permissions }: Props) {
   const t = useTranslations("stock");
-  const queryClient = useQueryClient();
-  const stockService = useStockService();
+  const { data: fournisseursRaw = initialFournisseurs } = useFournisseursList({
+    initialData: initialFournisseurs as unknown as FournisseurListResponse["fournisseurs"],
+  });
+  const fournisseurs = fournisseursRaw as unknown as FournisseurData[];
+  const createFournisseurMutation = useCreateFournisseur();
+  const updateFournisseurMutation = useUpdateFournisseur();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
 
@@ -75,17 +78,16 @@ export function FournisseursListClient({ fournisseurs, permissions }: Props) {
       ...(adresse.trim() && { adresse: adresse.trim() }),
     };
 
-    let result;
-    if (editId) {
-      result = await stockService.updateFournisseur(editId, dto);
-    } else {
-      result = await stockService.createFournisseur(dto);
-    }
-
-    if (result.ok) {
+    try {
+      if (editId) {
+        await updateFournisseurMutation.mutateAsync({ id: editId, dto });
+      } else {
+        await createFournisseurMutation.mutateAsync(dto);
+      }
       setDialogOpen(false);
       resetForm();
-      queryClient.invalidateQueries({ queryKey: queryKeys.stock.fournisseurs() });
+    } catch {
+      // Error already handled by useApi toast
     }
   }
 

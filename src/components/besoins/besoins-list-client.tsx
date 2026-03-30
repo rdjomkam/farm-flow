@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { StatutBesoins } from "@/types";
+import { useBesoinsList } from "@/hooks/queries/use-depenses-queries";
+import type { ListeBesoinsWithRelations } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Labels & variants
@@ -95,9 +97,13 @@ function getDateLimiteStatus(dateLimite: string | null, statut: string): "retard
 // ---------------------------------------------------------------------------
 
 export function BesoinsListClient({
-  listesBesoins,
+  listesBesoins: initialListesBesoins,
   canCreate,
 }: Props) {
+  const { data: listesBesoinsRaw = initialListesBesoins } = useBesoinsList(undefined, {
+    initialData: initialListesBesoins as unknown as ListeBesoinsWithRelations[],
+  });
+  const listesBesoins = listesBesoinsRaw as unknown as ListeBesoinsData[];
   const [activeTab, setActiveTab] = useState("toutes");
 
   const tabs: { value: string; label: string; statuts: string[] | null }[] = [

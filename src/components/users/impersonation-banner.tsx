@@ -39,6 +39,7 @@ export function ImpersonationBanner({
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 text-white shadow-md">
+      <div className="h-[env(safe-area-inset-top)]" aria-hidden="true" />
       <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm font-medium truncate">
           {t("impersonation.banner.viewingAs")}{" "}

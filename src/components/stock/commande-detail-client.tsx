@@ -34,6 +34,7 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { StatutCommande, Permission } from "@/types";
 import { useStockService } from "@/services";
+import { ShareCommandeButton } from "@/components/stock/share-commande-button";
 
 const statutVariants: Record<StatutCommande, "default" | "info" | "en_cours" | "warning"> = {
   [StatutCommande.BROUILLON]: "default",
@@ -268,6 +269,25 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
           </div>
         </CardContent>
       </Card>
+
+      {/* Share actions */}
+      <ShareCommandeButton
+        commande={{
+          numero: commande.numero,
+          dateCommande: commande.dateCommande,
+          fournisseur: commande.fournisseur,
+          lignes: commande.lignes.map((l) => ({
+            produit: {
+              nom: l.produit.nom,
+              unite: l.produit.unite,
+              uniteAchat: l.produit.uniteAchat,
+            },
+            quantite: l.quantite,
+            prixUnitaire: l.prixUnitaire,
+          })),
+          montantTotal: commande.montantTotal,
+        }}
+      />
 
       {/* Order actions */}
       {canManage && (statut === StatutCommande.BROUILLON || statut === StatutCommande.ENVOYEE) && (

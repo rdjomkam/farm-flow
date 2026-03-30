@@ -78,6 +78,12 @@ export const queryKeys = {
     list: (filters?: Record<string, unknown>) => ["depenses", "list", filters] as const,
   },
 
+  // --- Besoins ---
+  besoins: {
+    all: ["besoins"] as const,
+    list: (filters?: Record<string, unknown>) => ["besoins", "list", filters] as const,
+  },
+
   // --- Planning ---
   planning: {
     activites: (filters?: Record<string, unknown>) => ["planning", "activites", filters] as const,

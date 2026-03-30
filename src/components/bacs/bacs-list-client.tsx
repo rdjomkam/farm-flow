@@ -25,7 +25,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { Permission, TypeSystemeBac } from "@/types";
 import type { BacResponse } from "@/types";
-import { useCreateBac, useUpdateBac } from "@/hooks/queries/use-bacs-queries";
+import { useCreateBac, useUpdateBac, useBacsList } from "@/hooks/queries/use-bacs-queries";
 
 const TYPE_SYSTEME_LABELS: Record<TypeSystemeBac, string> = {
   [TypeSystemeBac.BAC_BETON]: "Bac beton / plastique",
@@ -39,9 +39,10 @@ interface BacsListClientProps {
   permissions: Permission[];
 }
 
-export function BacsListClient({ bacs, permissions }: BacsListClientProps) {
+export function BacsListClient({ bacs: initialBacs, permissions }: BacsListClientProps) {
   const createBacMutation = useCreateBac();
   const updateBacMutation = useUpdateBac();
+  const { data: bacs = initialBacs } = useBacsList(undefined, { initialData: initialBacs });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [nom, setNom] = useState("");
   const [volume, setVolume] = useState("");

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDepenseService } from "@/services";
+import { queryKeys } from "@/lib/query-keys";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -79,6 +81,7 @@ function emptyLigne(): LigneForm {
 
 export function BesoinsFormClient({ vagues, produits }: Props) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const depenseService = useDepenseService();
 
   const [titre, setTitre] = useState("");
@@ -173,6 +176,7 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
     });
 
     if (result.ok && result.data) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.besoins.all });
       router.push(`/besoins/${result.data.id}`);
     }
   }

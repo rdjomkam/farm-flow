@@ -20,7 +20,7 @@ import { FormSection } from "@/components/ui/form-section";
 import { VagueCard } from "./vague-card";
 import { StatutVague, Permission } from "@/types";
 import type { VagueSummaryResponse, BacResponse, BacStockingEntry } from "@/types";
-import { useCreateVague } from "@/hooks/queries/use-vagues-queries";
+import { useCreateVague, useVaguesList } from "@/hooks/queries/use-vagues-queries";
 
 interface VaguesListClientProps {
   vagues: VagueSummaryResponse[];
@@ -28,8 +28,9 @@ interface VaguesListClientProps {
   permissions: Permission[];
 }
 
-export function VaguesListClient({ vagues, bacsLibres, permissions }: VaguesListClientProps) {
+export function VaguesListClient({ vagues: initialVagues, bacsLibres, permissions }: VaguesListClientProps) {
   const createVagueMutation = useCreateVague();
+  const { data: vagues = initialVagues } = useVaguesList(undefined, { initialData: initialVagues });
   const t = useTranslations("vagues");
   const [dialogOpen, setDialogOpen] = useState(false);
 

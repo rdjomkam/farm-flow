@@ -32,6 +32,7 @@ vi.mock("@/hooks/queries/use-vagues-queries", () => ({
     mutateAsync: mockMutateVague,
     isPending: false,
   }),
+  useVaguesList: () => ({ data: undefined, isLoading: false }),
 }));
 
 const vaguesTranslations: Record<string, string | ((p: Record<string, unknown>) => string)> = {

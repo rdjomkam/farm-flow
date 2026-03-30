@@ -105,7 +105,7 @@ export default async function RootLayout({
               {session?.activeSiteId && (
                 <SubscriptionBanner siteId={session.activeSiteId} />
               )}
-              <div className={isImpersonating ? "pt-14 sm:pt-11" : ""}>
+              <div className={isImpersonating ? "pt-[calc(3.5rem+env(safe-area-inset-top))] sm:pt-[calc(2.75rem+env(safe-area-inset-top))]" : ""}>
                 <AppShell permissions={permissions} role={role} userName={session?.name ?? null} siteModules={siteModules} isImpersonating={isImpersonating} isSuperAdmin={isSuperAdmin} activeSiteId={session?.activeSiteId ?? null}>{children}</AppShell>
               </div>
             </GlobalLoadingProvider>

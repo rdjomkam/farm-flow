@@ -212,11 +212,14 @@ export function useGenererDepensesRecurrentes() {
 
 // --- Besoins ---
 
-export function useBesoinsList(filters?: { statut?: string }) {
+export function useBesoinsList(
+  filters?: { statut?: string },
+  options?: { initialData?: ListeBesoinsWithRelations[] },
+) {
   const depenseService = useDepenseService();
 
   return useQuery({
-    queryKey: [...besoinsKey, filters],
+    queryKey: queryKeys.besoins.list(filters as Record<string, unknown>),
     queryFn: async () => {
       const result = await depenseService.listBesoins(filters);
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement besoins");
@@ -224,6 +227,7 @@ export function useBesoinsList(filters?: { statut?: string }) {
     },
     staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,
+    initialData: options?.initialData,
   });
 }
 

@@ -34,7 +34,7 @@ vi.mock("@/hooks/queries/use-bacs-queries", () => ({
     mutateAsync: vi.fn().mockResolvedValue({}),
     isPending: false,
   }),
-  useBacsList: () => ({ data: [], isLoading: false }),
+  useBacsList: () => ({ data: undefined, isLoading: false }),
 }));
 
 const mockToast = vi.fn();

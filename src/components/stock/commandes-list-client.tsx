@@ -26,7 +26,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StatutCommande, UniteStock, Permission } from "@/types";
-import { useCreateCommande } from "@/hooks/queries/use-stock-queries";
+import type { CommandeListResponse } from "@/types";
+import { useCreateCommande, useCommandesList } from "@/hooks/queries/use-stock-queries";
 
 const statutVariants: Record<StatutCommande, "default" | "info" | "en_cours" | "warning"> = {
   [StatutCommande.BROUILLON]: "default",
@@ -60,9 +61,13 @@ interface Props {
   permissions: Permission[];
 }
 
-export function CommandesListClient({ commandes, fournisseurs, produits, permissions }: Props) {
+export function CommandesListClient({ commandes: initialCommandes, fournisseurs, produits, permissions }: Props) {
   const t = useTranslations("stock");
   const createCommandeMutation = useCreateCommande();
+  const { data: commandesRaw = initialCommandes } = useCommandesList({
+    initialData: initialCommandes as unknown as CommandeListResponse["commandes"],
+  });
+  const commandes = commandesRaw as unknown as CommandeData[];
   const [tab, setTab] = useState("tous");
   const [dialogOpen, setDialogOpen] = useState(false);
 
