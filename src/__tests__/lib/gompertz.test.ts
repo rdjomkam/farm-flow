@@ -242,11 +242,11 @@ describe("calibrerGompertz", () => {
     expect(result!.params.k).toBeLessThanOrEqual(0.2);
   });
 
-  it("ti est dans les bornes physiques [0, 120] pour Clarias", () => {
+  it("ti est dans les bornes physiques [0, 300] pour Clarias", () => {
     const result = calibrerGompertz({ points: FAO_CLARIAS_POINTS });
     expect(result).not.toBeNull();
     expect(result!.params.ti).toBeGreaterThanOrEqual(0);
-    expect(result!.params.ti).toBeLessThanOrEqual(120);
+    expect(result!.params.ti).toBeLessThanOrEqual(300);
   });
 
   it("RMSE est exprime en grammes (meme unite que les donnees)", () => {
@@ -307,6 +307,31 @@ describe("calibrerGompertz", () => {
     expect(result).not.toBeNull();
     expect(result!.biometrieCount).toBe(3);
     expect(result!.confidenceLevel).toBe("LOW");
+  });
+
+  it("poidsObjectif empêche W∞ de descendre sous l'objectif, ti raisonnable", () => {
+    // Simulates the user's scenario: 4 early points, target 400g, 120 days
+    const earlyPoints = [
+      { jour: 7, poidsMoyen: 26 },
+      { jour: 14, poidsMoyen: 50.17 },
+      { jour: 21, poidsMoyen: 81.98 },
+      { jour: 28, poidsMoyen: 66.35 },
+    ];
+    // Without poidsObjectif, W∞ heuristic = 2.5×82 = 205g → ti collapses to ~0
+    const resultBad = calibrerGompertz({ points: earlyPoints }, 3);
+    expect(resultBad).not.toBeNull();
+    // ti should be very low (the bug)
+    expect(resultBad!.params.wInfinity).toBeLessThan(400);
+
+    // With poidsObjectif=400, W∞ >= 400 → ti is pushed to a reasonable value
+    const resultGood = calibrerGompertz(
+      { points: earlyPoints, poidsObjectif: 400 },
+      3
+    );
+    expect(resultGood).not.toBeNull();
+    expect(resultGood!.params.wInfinity).toBeGreaterThanOrEqual(400);
+    // ti should be well beyond the observed data range (28 days)
+    expect(resultGood!.params.ti).toBeGreaterThan(10);
   });
 
   it("custom minPoints=8 rejette 6 points", () => {

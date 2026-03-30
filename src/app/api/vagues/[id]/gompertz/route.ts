@@ -168,7 +168,8 @@ export async function GET(
       if (vague.configElevage?.gompertzTiDefault) initialGuess.ti = vague.configElevage.gompertzTiDefault;
 
       // 4c. Calibrate with aggregated weighted-average points
-      const result = calibrerGompertz({ points, initialGuess }, minPoints);
+      const poidsObjectif = vague.configElevage?.poidsObjectif;
+      const result = calibrerGompertz({ points, initialGuess, poidsObjectif }, minPoints);
 
       if (!result) {
         // calibrerGompertz returned null (< 5 points after filtering nulls)

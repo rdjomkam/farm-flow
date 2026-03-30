@@ -163,7 +163,7 @@ export default async function VagueDetailPage({
     if (configForGuess?.gompertzKDefault) initialGuess.k = configForGuess.gompertzKDefault;
     if (configForGuess?.gompertzTiDefault) initialGuess.ti = configForGuess.gompertzTiDefault;
 
-    const result = calibrerGompertz({ points, initialGuess }, gompertzMinPoints);
+    const result = calibrerGompertz({ points, initialGuess, poidsObjectif }, gompertzMinPoints);
     if (result) {
       effectiveGompertz = {
         params: result.params,
