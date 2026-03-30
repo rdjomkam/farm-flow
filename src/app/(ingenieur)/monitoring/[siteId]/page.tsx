@@ -28,6 +28,7 @@ import { getNotes } from "@/lib/queries/notes";
 import { Permission, StatutAlerte, StatutActivation, StatutVague, TypeReleve } from "@/types";
 import { prisma } from "@/lib/db";
 import { formatNum } from "@/lib/format";
+import { computeNombreVivantsVague, calculerTauxSurvie } from "@/lib/calculs";
 
 // ---------------------------------------------------------------------------
 // Page
@@ -68,10 +69,11 @@ export default async function IngenieurClientDetailPage({
           tailleMoyenne: true,
           nombreMorts: true,
           nombreCompte: true,
+          bacId: true,
           notes: true,
         },
       },
-      bacs: { select: { id: true, nom: true } },
+      bacs: { select: { id: true, nom: true, nombreInitial: true } },
     },
     orderBy: { dateDebut: "asc" },
   });
@@ -110,11 +112,8 @@ export default async function IngenieurClientDetailPage({
     const mortalites = vague.releves.filter((r) => r.typeReleve === TypeReleve.MORTALITE);
     const totalMortalites = mortalites.reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
     const dernierePoidsMoyen = biometries.at(-1)?.poidsMoyen ?? null;
-    const nombreVivants = vague.nombreInitial - totalMortalites;
-    const tauxSurvie =
-      vague.nombreInitial > 0
-        ? Math.round((nombreVivants / vague.nombreInitial) * 10000) / 100
-        : null;
+    const nombreVivants = computeNombreVivantsVague(vague.bacs, vague.releves, vague.nombreInitial);
+    const tauxSurvie = calculerTauxSurvie(nombreVivants, vague.nombreInitial);
 
     const joursEcoules = Math.floor(
       (new Date().getTime() - new Date(vague.dateDebut).getTime()) / (1000 * 60 * 60 * 24)
