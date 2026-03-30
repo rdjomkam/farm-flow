@@ -234,6 +234,6 @@ export const config = {
      * - favicon.ico, icons, manifest
      * - public assets
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|.*\\.png$|.*\\.svg$|manifest\\.json).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|.*\\.png$|.*\\.svg$|manifest\\.json|sw\\.js|swe-worker.*\\.js).*)",
   ],
 };

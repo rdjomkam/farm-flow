@@ -24,8 +24,22 @@ interface SubscriptionBannerProps {
 }
 
 export async function SubscriptionBanner({ siteId }: SubscriptionBannerProps) {
-  const t = await getTranslations("abonnements");
-  const { statut, daysRemaining, isDecouverte } = await getSubscriptionStatus(siteId);
+  let t: Awaited<ReturnType<typeof getTranslations<"abonnements">>>;
+  let statut: StatutAbonnement | null;
+  let daysRemaining: number | null;
+  let isDecouverte: boolean;
+
+  try {
+    [t, { statut, daysRemaining, isDecouverte }] = await Promise.all([
+      getTranslations("abonnements"),
+      getSubscriptionStatus(siteId),
+    ]);
+  } catch (error: unknown) {
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
+    console.error("[SubscriptionBanner]", error);
+    return null;
+  }
 
   // Ne pas afficher si plan DECOUVERTE, statut ACTIF ou aucun abonnement
   if (isDecouverte || !statut) return null;
