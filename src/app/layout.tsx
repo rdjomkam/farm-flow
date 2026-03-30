@@ -29,13 +29,22 @@ const geistMono = Geist_Mono({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("common.metadata");
+  let description = "Application de suivi d'élevage de silures";
+  try {
+    const t = await getTranslations("common.metadata");
+    description = t("appDescription");
+  } catch (error: unknown) {
+    if (error instanceof Error && "digest" in error) {
+      throw error;
+    }
+    // Fallback to hardcoded description
+  }
   return {
     title: {
       default: "FarmFlow",
       template: "%s | FarmFlow",
     },
-    description: t("appDescription"),
+    description,
     manifest: "/manifest.json",
     appleWebApp: {
       capable: true,
@@ -66,19 +75,40 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await getServerSession();
-  const role: Role | null = session?.role ?? null;
-  const isImpersonating = session?.isImpersonating ?? false;
+  let permissions: Permission[] = [];
+  let siteModules: SiteModule[] = [];
+  let locale = "fr";
+  let messages: Record<string, unknown> = {};
+  let isSuperAdmin = false;
+  let session: Awaited<ReturnType<typeof getServerSession>> | null = null;
+  let role: Role | null = null;
+  let isImpersonating = false;
 
-  const [permissions, siteModules, locale, messages, superAdminUser] = await Promise.all([
-    session ? getServerPermissions(session) : Promise.resolve([] as Permission[]),
-    session?.activeSiteId ? getServerSiteModules(session.activeSiteId) : Promise.resolve([] as SiteModule[]),
-    getLocale(),
-    getMessages(),
-    session ? prisma.user.findUnique({ where: { id: session.userId }, select: { isSuperAdmin: true } }) : Promise.resolve(null),
-  ]);
+  try {
+    session = await getServerSession();
+    role = session?.role ?? null;
+    isImpersonating = session?.isImpersonating ?? false;
 
-  const isSuperAdmin = superAdminUser?.isSuperAdmin ?? false;
+    const [p, sm, l, m, superAdminUser] = await Promise.all([
+      session ? getServerPermissions(session) : ([] as Permission[]),
+      session?.activeSiteId ? getServerSiteModules(session.activeSiteId) : ([] as SiteModule[]),
+      getLocale(),
+      getMessages(),
+      session ? prisma.user.findUnique({ where: { id: session.userId }, select: { isSuperAdmin: true } }) : null,
+    ]);
+    permissions = p;
+    siteModules = sm;
+    locale = l;
+    messages = m as Record<string, unknown>;
+    isSuperAdmin = superAdminUser?.isSuperAdmin ?? false;
+  } catch (error: unknown) {
+    // Re-throw Next.js internal errors (e.g. DYNAMIC_SERVER_USAGE for static analysis)
+    if (error instanceof Error && "digest" in error) {
+      throw error;
+    }
+    console.error("[RootLayout] Failed to load session/messages:", error);
+    // Continue with safe defaults — the page will still render
+  }
 
   return (
     <html lang={locale}>
