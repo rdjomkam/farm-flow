@@ -123,6 +123,7 @@ const FORM_DEFAULTS: Omit<ConfigElevage, "id" | "siteId" | "createdAt" | "update
   gompertzWInfDefault: null,
   gompertzKDefault: null,
   gompertzTiDefault: null,
+  gompertzMinPoints: 5,
 };
 
 // ---------------------------------------------------------------------------
@@ -369,6 +370,7 @@ export function ConfigElevageFormClient({ templates }: Props) {
       gompertzWInfDefault: tpl.gompertzWInfDefault ?? null,
       gompertzKDefault: tpl.gompertzKDefault ?? null,
       gompertzTiDefault: tpl.gompertzTiDefault ?? null,
+      gompertzMinPoints: tpl.gompertzMinPoints ?? 5,
     });
   };
 
@@ -657,6 +659,15 @@ export function ConfigElevageFormClient({ templates }: Props) {
                     placeholder="ex: 95"
                   />
                 </div>
+                <NumericField
+                  label="Points de biometrie minimum pour Gompertz"
+                  name="gompertzMinPoints"
+                  value={form.gompertzMinPoints}
+                  onChange={handleNumeric}
+                  min={3}
+                  max={20}
+                  step={1}
+                />
                 <p className="text-xs text-muted-foreground">
                   Ces valeurs servent de point de depart pour la calibration. Laissez vide pour utiliser les valeurs par defaut du systeme.
                 </p>

@@ -35,6 +35,7 @@ export async function GET(
             gompertzWInfDefault: true,
             gompertzKDefault: true,
             gompertzTiDefault: true,
+            gompertzMinPoints: true,
           },
         },
         gompertz: true,
@@ -106,7 +107,7 @@ export async function GET(
       rmse = existingGompertz.rmse;
       confidenceLevel = existingGompertz.confidenceLevel;
       storedBiometrieCount = existingGompertz.biometrieCount;
-    } else if (biometrieCount < 5) {
+    } else if (biometrieCount < (vague.configElevage?.gompertzMinPoints ?? 5)) {
       // Not enough data — return early with INSUFFICIENT_DATA
       // Still upsert with count=0 or current to track state (only if count changed)
       if (needsCalibration) {
@@ -164,7 +165,8 @@ export async function GET(
       if (vague.configElevage?.gompertzTiDefault) initialGuess.ti = vague.configElevage.gompertzTiDefault;
 
       // 4c. Calibrate with aggregated weighted-average points
-      const result = calibrerGompertz({ points, initialGuess });
+      const minPoints = vague.configElevage?.gompertzMinPoints ?? 5;
+      const result = calibrerGompertz({ points, initialGuess }, minPoints);
 
       if (!result) {
         // calibrerGompertz returned null (< 5 points after filtering nulls)

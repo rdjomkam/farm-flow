@@ -682,6 +682,8 @@ model ConfigElevage {
   gompertzKDefault    Float?
   /** Valeur initiale de tᵢ (point d'inflexion en jours) pour le calibrage Gompertz — ex: 95 */
   gompertzTiDefault   Float?
+  /** Nombre minimum de biometries (dates uniques) pour declencher le calcul Gompertz */
+  gompertzMinPoints   Int     @default(5)
 
   // ── Metadonnees ─────────────────────────────────
   /** Profil par defaut du site (un seul isDefault=true par site) */
@@ -2485,10 +2487,10 @@ model GompertzVague {
 
   /**
    * Niveau de confiance du calibrage.
-   * INSUFFICIENT_DATA = < 3 points
-   * LOW               = 3-4 points
-   * MEDIUM            = 5-7 points
-   * HIGH              = >= 8 points
+   * INSUFFICIENT_DATA = < minPoints
+   * LOW               = minPoints to minPoints+1
+   * MEDIUM            = minPoints+2 to minPoints+4
+   * HIGH              = >= minPoints+5 AND R² > 0.95
    */
   confidenceLevel String
 

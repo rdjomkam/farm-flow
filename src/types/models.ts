@@ -2022,6 +2022,8 @@ export interface ConfigElevage {
   gompertzKDefault?: number | null;
   /** Point d'inflexion ti par defaut (jours) — point de depart pour la calibration Gompertz */
   gompertzTiDefault?: number | null;
+  /** Nombre minimum de biometries (dates uniques) pour declencher le calcul Gompertz */
+  gompertzMinPoints: number;
 
   // Metadonnees
   /** Profil par defaut du site (un seul isDefault=true par site) */

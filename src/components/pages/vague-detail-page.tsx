@@ -66,10 +66,11 @@ export default async function VagueDetailPage({
   const configElevage = vague.configElevageId
     ? await prisma.configElevage.findUnique({
         where: { id: vague.configElevageId },
-        select: { poidsObjectif: true },
+        select: { poidsObjectif: true, gompertzMinPoints: true },
       })
     : null;
   const poidsObjectif = configElevage?.poidsObjectif ?? 800;
+  const gompertzMinPoints = configElevage?.gompertzMinPoints ?? 5;
 
   const statut = vague.statut as StatutVague;
   const isEnCours = statut === StatutVague.EN_COURS;
@@ -110,7 +111,7 @@ export default async function VagueDetailPage({
     gompertzRecord.confidenceLevel !== "INSUFFICIENT_DATA" &&
     gompertzRecord.wInfinity > 0 &&
     gompertzRecord.biometrieCount === currentBiometrieCount &&
-    currentBiometrieCount >= 5;
+    currentBiometrieCount >= gompertzMinPoints;
 
   const gompertzByJour = new Map<number, number>();
   if (hasGompertz && gompertzRecord) {

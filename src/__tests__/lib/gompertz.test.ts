@@ -297,6 +297,27 @@ describe("calibrerGompertz", () => {
     expect(result).not.toBeNull();
     expect(result!.confidenceLevel).toBe("MEDIUM");
   });
+
+  it("custom minPoints=3 permet la calibration avec 3 points", () => {
+    const points3 = FAO_CLARIAS_POINTS.slice(0, 3);
+    // Avec le seuil par defaut (5), retourne null
+    expect(calibrerGompertz({ points: points3 })).toBeNull();
+    // Avec minPoints=3, retourne un resultat
+    const result = calibrerGompertz({ points: points3 }, 3);
+    expect(result).not.toBeNull();
+    expect(result!.biometrieCount).toBe(3);
+    expect(result!.confidenceLevel).toBe("LOW");
+  });
+
+  it("custom minPoints=8 rejette 6 points", () => {
+    const points6 = FAO_CLARIAS_POINTS.slice(0, 6);
+    // Avec le seuil par defaut (5), retourne un resultat
+    const resultDefault = calibrerGompertz({ points: points6 });
+    expect(resultDefault).not.toBeNull();
+    // Avec minPoints=8, retourne null
+    const result = calibrerGompertz({ points: points6 }, 8);
+    expect(result).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------

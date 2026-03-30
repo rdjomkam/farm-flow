@@ -400,19 +400,21 @@ function buildBounds(
 /**
  * Determine qualitative confidence level from point count and R².
  *
- * INSUFFICIENT_DATA : < 5 points
- * LOW               : 5–6 points
- * MEDIUM            : 7–9 points
- * HIGH              : 10+ points AND R² > 0.95
+ * Thresholds are relative to `minPoints` (default 5):
+ *   INSUFFICIENT_DATA : n < minPoints
+ *   LOW               : minPoints ≤ n ≤ minPoints + 1
+ *   MEDIUM            : minPoints + 2 ≤ n ≤ minPoints + 4
+ *   HIGH              : n ≥ minPoints + 5 AND R² > 0.95
  */
 function resolveConfidenceLevel(
   n: number,
-  r2: number
+  r2: number,
+  minPoints: number = 5
 ): GompertzConfidenceLevel {
-  if (n < 5) return "INSUFFICIENT_DATA";
-  if (n <= 6) return "LOW";
-  if (n <= 9) return "MEDIUM";
-  // n >= 10
+  if (n < minPoints) return "INSUFFICIENT_DATA";
+  if (n <= minPoints + 1) return "LOW";
+  if (n <= minPoints + 4) return "MEDIUM";
+  // n >= minPoints + 5
   return r2 > 0.95 ? "HIGH" : "MEDIUM";
 }
 
@@ -422,18 +424,20 @@ function resolveConfidenceLevel(
  * Calibrate Gompertz parameters from biometric measurements using
  * Levenberg-Marquardt non-linear least squares.
  *
- * Returns null when fewer than 5 points are provided — the system is
- * under-determined and the fitted parameters are not reliable for prediction.
+ * Returns null when fewer than `minPoints` data points are provided — the
+ * system is under-determined and the fitted parameters are not reliable.
  *
- * @param input - array of {jour, poidsMoyen} biometric observations
- * @returns calibration result or null if < 5 points
+ * @param input     - array of {jour, poidsMoyen} biometric observations
+ * @param minPoints - minimum number of points required (default 5)
+ * @returns calibration result or null if insufficient points
  */
 export function calibrerGompertz(
-  input: GompertzCalibrationInput
+  input: GompertzCalibrationInput,
+  minPoints: number = 5
 ): GompertzCalibrationResult | null {
   const { points, initialGuess } = input;
 
-  if (points.length < 5) {
+  if (points.length < minPoints) {
     return null;
   }
 
@@ -446,7 +450,7 @@ export function calibrerGompertz(
   const { params, r2, rmse } = levenbergMarquardt(data, initial, bounds);
 
   const [wInfinity, k, ti] = params;
-  const confidenceLevel = resolveConfidenceLevel(points.length, r2);
+  const confidenceLevel = resolveConfidenceLevel(points.length, r2, minPoints);
 
   return {
     params: { wInfinity, k, ti },

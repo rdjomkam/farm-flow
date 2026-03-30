@@ -373,6 +373,9 @@ const baseConfigElevageObject = z.object({
     recoltePartiellePoidsSeuil: z.number().positive().optional(),
     recolteJeuneAvantJours: z.number().int().min(0).optional(),
 
+    // Gompertz
+    gompertzMinPoints: z.number().int().min(3).max(20).default(5),
+
     // Metadonnees
     isDefault: z.boolean().optional(),
     isActive: z.boolean().optional(),
