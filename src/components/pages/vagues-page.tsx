@@ -15,56 +15,63 @@ export default async function VaguesPage() {
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const [permissions, t, vaguesRaw, bacsLibresRaw] = await Promise.all([
-    checkPagePermission(session, Permission.VAGUES_VOIR),
-    getTranslations("vagues"),
-    getVagues(session.activeSiteId),
-    getBacsLibres(session.activeSiteId),
-  ]);
-  if (!permissions) return <AccessDenied />;
+  try {
+    const [permissions, t, vaguesRaw, bacsLibresRaw] = await Promise.all([
+      checkPagePermission(session, Permission.VAGUES_VOIR),
+      getTranslations("vagues"),
+      getVagues(session.activeSiteId),
+      getBacsLibres(session.activeSiteId),
+    ]);
+    if (!permissions) return <AccessDenied />;
 
-  const vagues: VagueSummaryResponse[] = vaguesRaw.map((v) => {
-    const now = v.dateFin ?? new Date();
-    const joursEcoules = Math.floor(
-      (now.getTime() - v.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
+    const vagues: VagueSummaryResponse[] = vaguesRaw.map((v) => {
+      const now = v.dateFin ?? new Date();
+      const joursEcoules = Math.floor(
+        (now.getTime() - v.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      return {
+        id: v.id,
+        code: v.code,
+        dateDebut: v.dateDebut,
+        dateFin: v.dateFin,
+        statut: v.statut as StatutVague,
+        nombreInitial: v.nombreInitial,
+        poidsMoyenInitial: v.poidsMoyenInitial,
+        origineAlevins: v.origineAlevins,
+        nombreBacs: v._count.bacs,
+        joursEcoules,
+        createdAt: v.createdAt,
+      };
+    });
+
+    const bacsLibres: BacResponse[] = bacsLibresRaw.map((b) => ({
+      id: b.id,
+      nom: b.nom,
+      volume: b.volume,
+      nombrePoissons: b.nombrePoissons,
+      nombreInitial: b.nombreInitial,
+      poidsMoyenInitial: b.poidsMoyenInitial,
+      typeSysteme: (b.typeSysteme as TypeSystemeBac | null) ?? null,
+      vagueId: b.vagueId,
+      siteId: b.siteId,
+      vagueCode: null,
+      createdAt: b.createdAt,
+      updatedAt: b.updatedAt,
+    }));
+
+    return (
+      <>
+        <Header title={t("page.title")} />
+        <div className="px-4 pt-4">
+          <QuotasUsageBar siteId={session.activeSiteId} precomputedVaguesCount={vagues.filter((v) => v.statut === StatutVague.EN_COURS).length} />
+        </div>
+        <VaguesListClient vagues={vagues} bacsLibres={bacsLibres} permissions={permissions} />
+      </>
     );
-    return {
-      id: v.id,
-      code: v.code,
-      dateDebut: v.dateDebut,
-      dateFin: v.dateFin,
-      statut: v.statut as StatutVague,
-      nombreInitial: v.nombreInitial,
-      poidsMoyenInitial: v.poidsMoyenInitial,
-      origineAlevins: v.origineAlevins,
-      nombreBacs: v._count.bacs,
-      joursEcoules,
-      createdAt: v.createdAt,
-    };
-  });
-
-  const bacsLibres: BacResponse[] = bacsLibresRaw.map((b) => ({
-    id: b.id,
-    nom: b.nom,
-    volume: b.volume,
-    nombrePoissons: b.nombrePoissons,
-    nombreInitial: b.nombreInitial,
-    poidsMoyenInitial: b.poidsMoyenInitial,
-    typeSysteme: (b.typeSysteme as TypeSystemeBac | null) ?? null,
-    vagueId: b.vagueId,
-    siteId: b.siteId,
-    vagueCode: null,
-    createdAt: b.createdAt,
-    updatedAt: b.updatedAt,
-  }));
-
-  return (
-    <>
-      <Header title={t("page.title")} />
-      <div className="px-4 pt-4">
-        <QuotasUsageBar siteId={session.activeSiteId} precomputedVaguesCount={vagues.filter((v) => v.statut === StatutVague.EN_COURS).length} />
-      </div>
-      <VaguesListClient vagues={vagues} bacsLibres={bacsLibres} permissions={permissions} />
-    </>
-  );
+  } catch (error: unknown) {
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
+    console.error("[VaguesPage]", error);
+    throw error;
+  }
 }

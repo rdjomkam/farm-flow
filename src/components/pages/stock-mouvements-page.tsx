@@ -15,49 +15,56 @@ export default async function StockMouvementsPage() {
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const permissions = await checkPagePermission(session, Permission.STOCK_VOIR);
-  if (!permissions) return <AccessDenied />;
+  try {
+    const permissions = await checkPagePermission(session, Permission.STOCK_VOIR);
+    if (!permissions) return <AccessDenied />;
 
-  const t = await getTranslations("stock");
-  const [mouvements, produits, vagues] = await Promise.all([
-    getMouvements(session.activeSiteId),
-    getProduits(session.activeSiteId),
-    getVagues(session.activeSiteId),
-  ]);
+    const t = await getTranslations("stock");
+    const [mouvements, produits, vagues] = await Promise.all([
+      getMouvements(session.activeSiteId),
+      getProduits(session.activeSiteId),
+      getVagues(session.activeSiteId),
+    ]);
 
-  const produitOptions = produits.map((p) => ({
-    id: p.id,
-    nom: p.nom,
-    unite: p.unite,
-  }));
+    const produitOptions = produits.map((p) => ({
+      id: p.id,
+      nom: p.nom,
+      unite: p.unite,
+    }));
 
-  const vagueOptions = vagues.map((v) => ({
-    id: v.id,
-    code: v.code,
-  }));
+    const vagueOptions = vagues.map((v) => ({
+      id: v.id,
+      code: v.code,
+    }));
 
-  const canExport = permissions.includes(Permission.EXPORT_DONNEES);
+    const canExport = permissions.includes(Permission.EXPORT_DONNEES);
 
-  return (
-    <>
-      <Header title={t("mouvements.title")}>
-        {canExport && (
-          <ExportButton
-            href="/api/export/stock"
-            filename={`mouvements-stock-${new Date().toISOString().slice(0, 10)}.xlsx`}
-            label="Excel"
-            variant="outline"
+    return (
+      <>
+        <Header title={t("mouvements.title")}>
+          {canExport && (
+            <ExportButton
+              href="/api/export/stock"
+              filename={`mouvements-stock-${new Date().toISOString().slice(0, 10)}.xlsx`}
+              label="Excel"
+              variant="outline"
+            />
+          )}
+        </Header>
+        <div className="p-4">
+          <MouvementsListClient
+            mouvements={JSON.parse(JSON.stringify(mouvements))}
+            produits={produitOptions}
+            vagues={vagueOptions}
+            permissions={permissions}
           />
-        )}
-      </Header>
-      <div className="p-4">
-        <MouvementsListClient
-          mouvements={JSON.parse(JSON.stringify(mouvements))}
-          produits={produitOptions}
-          vagues={vagueOptions}
-          permissions={permissions}
-        />
-      </div>
-    </>
-  );
+        </div>
+      </>
+    );
+  } catch (error: unknown) {
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
+    console.error("[StockMouvementsPage]", error);
+    throw error;
+  }
 }

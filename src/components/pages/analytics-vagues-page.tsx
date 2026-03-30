@@ -11,16 +11,23 @@ export default async function AnalyticsVaguesPage() {
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const permissions = await checkPagePermission(session, Permission.VAGUES_VOIR);
-  if (!permissions) return <AccessDenied />;
+  try {
+    const permissions = await checkPagePermission(session, Permission.VAGUES_VOIR);
+    if (!permissions) return <AccessDenied />;
 
-  // Charger toutes les vagues du site (EN_COURS et TERMINEE) pour le selecteur
-  const vagues = await getVagues(session.activeSiteId);
+    // Charger toutes les vagues du site (EN_COURS et TERMINEE) pour le selecteur
+    const vagues = await getVagues(session.activeSiteId);
 
-  return (
-    <>
-      <Header title="Comparaison vagues" />
-      <VaguesComparisonClient vagues={vagues} />
-    </>
-  );
+    return (
+      <>
+        <Header title="Comparaison vagues" />
+        <VaguesComparisonClient vagues={vagues} />
+      </>
+    );
+  } catch (error: unknown) {
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
+    console.error("[AnalyticsVaguesPage]", error);
+    throw error;
+  }
 }

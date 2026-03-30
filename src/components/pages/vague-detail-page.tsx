@@ -38,6 +38,7 @@ export default async function VagueDetailPage({
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
+  try {
   const permissions = await checkPagePermission(session, Permission.VAGUES_VOIR);
   if (!permissions) return <AccessDenied />;
 
@@ -310,4 +311,10 @@ export default async function VagueDetailPage({
       </div>
     </>
   );
+  } catch (error: unknown) {
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
+    console.error("[VagueDetailPage]", error);
+    throw error;
+  }
 }

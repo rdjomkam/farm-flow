@@ -17,6 +17,7 @@ export default async function StockPage() {
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
+  try {
   const [permissions, t, produits, alertes, fournisseurs, commandes] = await Promise.all([
     checkPagePermission(session, Permission.STOCK_VOIR),
     getTranslations("stock"),
@@ -124,4 +125,10 @@ export default async function StockPage() {
       </div>
     </>
   );
+  } catch (error: unknown) {
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
+    console.error("[StockPage]", error);
+    throw error;
+  }
 }

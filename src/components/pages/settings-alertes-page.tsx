@@ -12,23 +12,30 @@ export default async function SettingsAlertesPage() {
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const permissions = await checkPagePermission(session, Permission.ALERTES_CONFIGURER);
-  if (!permissions) return <AccessDenied />;
+  try {
+    const permissions = await checkPagePermission(session, Permission.ALERTES_CONFIGURER);
+    if (!permissions) return <AccessDenied />;
 
-  const configs = await getConfigAlertes(session.activeSiteId, session.userId);
+    const configs = await getConfigAlertes(session.activeSiteId, session.userId);
 
-  return (
-    <>
-      <Header title="Configuration des alertes">
-        <Settings className="h-5 w-5 text-muted-foreground" />
-      </Header>
-      <div className="p-4">
-        <p className="text-sm text-muted-foreground mb-4">
-          Configurez les alertes automatiques pour votre site. Les alertes activees
-          genereront des notifications dans la cloche de notification.
-        </p>
-        <AlertesConfigClient configs={JSON.parse(JSON.stringify(configs))} />
-      </div>
-    </>
-  );
+    return (
+      <>
+        <Header title="Configuration des alertes">
+          <Settings className="h-5 w-5 text-muted-foreground" />
+        </Header>
+        <div className="p-4">
+          <p className="text-sm text-muted-foreground mb-4">
+            Configurez les alertes automatiques pour votre site. Les alertes activees
+            genereront des notifications dans la cloche de notification.
+          </p>
+          <AlertesConfigClient configs={JSON.parse(JSON.stringify(configs))} />
+        </div>
+      </>
+    );
+  } catch (error: unknown) {
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
+    console.error("[SettingsAlertesPage]", error);
+    throw error;
+  }
 }

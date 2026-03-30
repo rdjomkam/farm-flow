@@ -36,6 +36,7 @@ export default async function FarmDashboardPage() {
 
   if (!session.activeSiteId) redirect("/settings/sites");
 
+  try {
   // -------------------------------------------------------------------------
   // Ingénieur — dual-mode dashboard
   // -------------------------------------------------------------------------
@@ -174,4 +175,10 @@ export default async function FarmDashboardPage() {
       </div>
     </>
   );
+  } catch (error: unknown) {
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
+    console.error("[FarmDashboardPage]", error);
+    throw error;
+  }
 }

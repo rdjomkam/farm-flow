@@ -12,26 +12,33 @@ export default async function AlevinsLotsPage() {
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const permissions = await checkPagePermission(session, Permission.ALEVINS_VOIR);
-  if (!permissions) return <AccessDenied />;
+  try {
+    const permissions = await checkPagePermission(session, Permission.ALEVINS_VOIR);
+    if (!permissions) return <AccessDenied />;
 
-  const [lots, pontes] = await Promise.all([
-    getLotsAlevins(session.activeSiteId),
-    getPontes(session.activeSiteId),
-  ]);
+    const [lots, pontes] = await Promise.all([
+      getLotsAlevins(session.activeSiteId),
+      getPontes(session.activeSiteId),
+    ]);
 
-  const ponteOptions = pontes.map((p) => ({ id: p.id, code: p.code }));
+    const ponteOptions = pontes.map((p) => ({ id: p.id, code: p.code }));
 
-  return (
-    <>
-      <Header title="Lots d'alevins" />
-      <div className="p-4">
-        <LotsAlevinsListClient
-          lots={JSON.parse(JSON.stringify(lots))}
-          pontes={ponteOptions}
-          permissions={permissions}
-        />
-      </div>
-    </>
-  );
+    return (
+      <>
+        <Header title="Lots d'alevins" />
+        <div className="p-4">
+          <LotsAlevinsListClient
+            lots={JSON.parse(JSON.stringify(lots))}
+            pontes={ponteOptions}
+            permissions={permissions}
+          />
+        </div>
+      </>
+    );
+  } catch (error: unknown) {
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
+    console.error("[AlevinsLotsPage]", error);
+    throw error;
+  }
 }

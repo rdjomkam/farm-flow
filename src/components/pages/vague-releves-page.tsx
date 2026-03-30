@@ -23,67 +23,74 @@ export default async function VagueRelevesPage({
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const permissions = await checkPagePermission(session, Permission.VAGUES_VOIR);
-  if (!permissions) return <AccessDenied />;
+  try {
+    const permissions = await checkPagePermission(session, Permission.VAGUES_VOIR);
+    if (!permissions) return <AccessDenied />;
 
-  const t = await getTranslations("releves");
-  const tVagues = await getTranslations("vagues");
+    const t = await getTranslations("releves");
+    const tVagues = await getTranslations("vagues");
 
-  const { id } = await params;
-  const [vague, produitsDb] = await Promise.all([
-    getVagueById(id, session.activeSiteId),
-    prisma.produit.findMany({
-      where: {
-        siteId: session.activeSiteId,
-        isActive: true,
-        categorie: { in: [CategorieProduit.ALIMENT, CategorieProduit.INTRANT] },
-      },
-      select: { id: true, nom: true, categorie: true, unite: true, stockActuel: true },
-      orderBy: { nom: "asc" },
-    }),
-  ]);
+    const { id } = await params;
+    const [vague, produitsDb] = await Promise.all([
+      getVagueById(id, session.activeSiteId),
+      prisma.produit.findMany({
+        where: {
+          siteId: session.activeSiteId,
+          isActive: true,
+          categorie: { in: [CategorieProduit.ALIMENT, CategorieProduit.INTRANT] },
+        },
+        select: { id: true, nom: true, categorie: true, unite: true, stockActuel: true },
+        orderBy: { nom: "asc" },
+      }),
+    ]);
 
-  if (!vague) notFound();
+    if (!vague) notFound();
 
-  const isEnCours = vague.statut === StatutVague.EN_COURS;
+    const isEnCours = vague.statut === StatutVague.EN_COURS;
 
-  return (
-    <>
-      <Header title={`${t("list.title", { count: vague.releves.length })} — ${vague.code}`} />
+    return (
+      <>
+        <Header title={`${t("list.title", { count: vague.releves.length })} — ${vague.code}`} />
 
-      <div className="flex flex-col gap-4 p-4">
-        {isEnCours && permissions.includes(Permission.RELEVES_CREER) && (
-          <div className="flex justify-end">
-            <Button size="sm" asChild>
-              <Link href={`/releves/nouveau?vagueId=${id}`}>
-                <PlusCircle className="h-4 w-4" />
-                {t("page.nouveau_btn")}
+        <div className="flex flex-col gap-4 p-4">
+          {isEnCours && permissions.includes(Permission.RELEVES_CREER) && (
+            <div className="flex justify-end">
+              <Button size="sm" asChild>
+                <Link href={`/releves/nouveau?vagueId=${id}`}>
+                  <PlusCircle className="h-4 w-4" />
+                  {t("page.nouveau_btn")}
+                </Link>
+              </Button>
+            </div>
+          )}
+
+          <RelevesList
+            releves={vague.releves as unknown as Releve[]}
+            produits={produitsDb.map((p) => ({
+              id: p.id,
+              nom: p.nom,
+              categorie: p.categorie,
+              unite: p.unite,
+              stockActuel: p.stockActuel,
+            } satisfies ProduitOption))}
+            permissions={permissions}
+          />
+
+          <div className="pb-4">
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={`/vagues/${id}`}>
+                <ArrowLeft className="h-4 w-4" />
+                {tVagues("detail.retourVagues")}
               </Link>
             </Button>
           </div>
-        )}
-
-        <RelevesList
-          releves={vague.releves as unknown as Releve[]}
-          produits={produitsDb.map((p) => ({
-            id: p.id,
-            nom: p.nom,
-            categorie: p.categorie,
-            unite: p.unite,
-            stockActuel: p.stockActuel,
-          } satisfies ProduitOption))}
-          permissions={permissions}
-        />
-
-        <div className="pb-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href={`/vagues/${id}`}>
-              <ArrowLeft className="h-4 w-4" />
-              {tVagues("detail.retourVagues")}
-            </Link>
-          </Button>
         </div>
-      </div>
-    </>
-  );
+      </>
+    );
+  } catch (error: unknown) {
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
+    console.error("[VagueRelevesPage]", error);
+    throw error;
+  }
 }

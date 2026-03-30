@@ -25,15 +25,22 @@ export default async function NotesPage() {
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  // Determiner si le site est supervise (client) via les modules actifs
-  const siteModules = await getServerSiteModules(session.activeSiteId);
-  const isSupervisedSite = !siteModules.includes(SiteModule.PACKS_PROVISIONING);
+  try {
+    // Determiner si le site est supervise (client) via les modules actifs
+    const siteModules = await getServerSiteModules(session.activeSiteId);
+    const isSupervisedSite = !siteModules.includes(SiteModule.PACKS_PROVISIONING);
 
-  if (isSupervisedSite) {
-    return <ClientNotesView siteId={session.activeSiteId} />;
+    if (isSupervisedSite) {
+      return <ClientNotesView siteId={session.activeSiteId} />;
+    }
+
+    return <DKFarmNotesView siteId={session.activeSiteId} />;
+  } catch (error: unknown) {
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
+    console.error("[NotesPage]", error);
+    throw error;
   }
-
-  return <DKFarmNotesView siteId={session.activeSiteId} />;
 }
 
 // ---------------------------------------------------------------------------

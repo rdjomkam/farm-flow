@@ -12,29 +12,36 @@ export default async function DepensesPage() {
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const permissions = await checkPagePermission(
-    session,
-    Permission.DEPENSES_VOIR
-  );
-  if (!permissions) return <AccessDenied />;
+  try {
+    const permissions = await checkPagePermission(
+      session,
+      Permission.DEPENSES_VOIR
+    );
+    if (!permissions) return <AccessDenied />;
 
-  const [depenses, templatesActifs] = await Promise.all([
-    getDepenses(session.activeSiteId),
-    getDepensesRecurrentes(session.activeSiteId, true),
-  ]);
+    const [depenses, templatesActifs] = await Promise.all([
+      getDepenses(session.activeSiteId),
+      getDepensesRecurrentes(session.activeSiteId, true),
+    ]);
 
-  const canManage = permissions.includes(Permission.DEPENSES_CREER);
-  const canPay = permissions.includes(Permission.DEPENSES_PAYER);
+    const canManage = permissions.includes(Permission.DEPENSES_CREER);
+    const canPay = permissions.includes(Permission.DEPENSES_PAYER);
 
-  return (
-    <>
-      <Header title="Depenses" />
-      <DepensesListClient
-        depenses={JSON.parse(JSON.stringify(depenses))}
-        canManage={canManage}
-        canPay={canPay}
-        templatesActifsCount={templatesActifs.length}
-      />
-    </>
-  );
+    return (
+      <>
+        <Header title="Depenses" />
+        <DepensesListClient
+          depenses={JSON.parse(JSON.stringify(depenses))}
+          canManage={canManage}
+          canPay={canPay}
+          templatesActifsCount={templatesActifs.length}
+        />
+      </>
+    );
+  } catch (error: unknown) {
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
+    console.error("[DepensesPage]", error);
+    throw error;
+  }
 }

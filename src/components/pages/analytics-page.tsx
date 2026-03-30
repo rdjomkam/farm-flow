@@ -11,15 +11,22 @@ export default async function AnalyticsPage() {
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const permissions = await checkPagePermission(session, Permission.DASHBOARD_VOIR);
-  if (!permissions) return <AccessDenied />;
+  try {
+    const permissions = await checkPagePermission(session, Permission.DASHBOARD_VOIR);
+    if (!permissions) return <AccessDenied />;
 
-  const dashboard = await getAnalyticsDashboard(session.activeSiteId);
+    const dashboard = await getAnalyticsDashboard(session.activeSiteId);
 
-  return (
-    <>
-      <Header title="Analytiques" />
-      <AnalyticsDashboardClient dashboard={dashboard} />
-    </>
-  );
+    return (
+      <>
+        <Header title="Analytiques" />
+        <AnalyticsDashboardClient dashboard={dashboard} />
+      </>
+    );
+  } catch (error: unknown) {
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
+    console.error("[AnalyticsPage]", error);
+    throw error;
+  }
 }

@@ -12,19 +12,26 @@ export default async function NotificationsPage() {
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const permissions = await checkPagePermission(session, Permission.ALERTES_VOIR);
-  if (!permissions) return <AccessDenied />;
+  try {
+    const permissions = await checkPagePermission(session, Permission.ALERTES_VOIR);
+    if (!permissions) return <AccessDenied />;
 
-  const notifications = await getNotifications(session.activeSiteId, session.userId);
+    const notifications = await getNotifications(session.activeSiteId, session.userId);
 
-  return (
-    <>
-      <Header title="Notifications">
-        <Bell className="h-5 w-5 text-muted-foreground" />
-      </Header>
-      <div className="p-4">
-        <NotificationsListClient notifications={JSON.parse(JSON.stringify(notifications))} />
-      </div>
-    </>
-  );
+    return (
+      <>
+        <Header title="Notifications">
+          <Bell className="h-5 w-5 text-muted-foreground" />
+        </Header>
+        <div className="p-4">
+          <NotificationsListClient notifications={JSON.parse(JSON.stringify(notifications))} />
+        </div>
+      </>
+    );
+  } catch (error: unknown) {
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
+    console.error("[NotificationsPage]", error);
+    throw error;
+  }
 }

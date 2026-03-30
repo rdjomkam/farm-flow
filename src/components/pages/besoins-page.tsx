@@ -11,27 +11,34 @@ export default async function BesoinsPage() {
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const permissions = await checkPagePermission(
-    session,
-    Permission.BESOINS_SOUMETTRE
-  );
-  if (!permissions) return <AccessDenied />;
+  try {
+    const permissions = await checkPagePermission(
+      session,
+      Permission.BESOINS_SOUMETTRE
+    );
+    if (!permissions) return <AccessDenied />;
 
-  const listesBesoins = await getListeBesoins(session.activeSiteId);
+    const listesBesoins = await getListeBesoins(session.activeSiteId);
 
-  const canCreate = permissions.includes(Permission.BESOINS_SOUMETTRE);
-  const canApprove = permissions.includes(Permission.BESOINS_APPROUVER);
-  const canProcess = permissions.includes(Permission.BESOINS_TRAITER);
+    const canCreate = permissions.includes(Permission.BESOINS_SOUMETTRE);
+    const canApprove = permissions.includes(Permission.BESOINS_APPROUVER);
+    const canProcess = permissions.includes(Permission.BESOINS_TRAITER);
 
-  return (
-    <>
-      <Header title="Listes de Besoins" />
-      <BesoinsListClient
-        listesBesoins={JSON.parse(JSON.stringify(listesBesoins))}
-        canCreate={canCreate}
-        canApprove={canApprove}
-        canProcess={canProcess}
-      />
-    </>
-  );
+    return (
+      <>
+        <Header title="Listes de Besoins" />
+        <BesoinsListClient
+          listesBesoins={JSON.parse(JSON.stringify(listesBesoins))}
+          canCreate={canCreate}
+          canApprove={canApprove}
+          canProcess={canProcess}
+        />
+      </>
+    );
+  } catch (error: unknown) {
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
+    console.error("[BesoinsPage]", error);
+    throw error;
+  }
 }

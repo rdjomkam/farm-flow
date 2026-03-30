@@ -15,23 +15,30 @@ export default async function StockCommandeDetailPage({
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const permissions = await checkPagePermission(session, Permission.APPROVISIONNEMENT_VOIR);
-  if (!permissions) return <AccessDenied />;
+  try {
+    const permissions = await checkPagePermission(session, Permission.APPROVISIONNEMENT_VOIR);
+    if (!permissions) return <AccessDenied />;
 
-  const { id } = await params;
-  const commande = await getCommandeById(id, session.activeSiteId);
+    const { id } = await params;
+    const commande = await getCommandeById(id, session.activeSiteId);
 
-  if (!commande) notFound();
+    if (!commande) notFound();
 
-  return (
-    <>
-      <Header title={commande.numero} />
-      <div className="p-4">
-        <CommandeDetailClient
-          commande={JSON.parse(JSON.stringify(commande))}
-          permissions={permissions}
-        />
-      </div>
-    </>
-  );
+    return (
+      <>
+        <Header title={commande.numero} />
+        <div className="p-4">
+          <CommandeDetailClient
+            commande={JSON.parse(JSON.stringify(commande))}
+            permissions={permissions}
+          />
+        </div>
+      </>
+    );
+  } catch (error: unknown) {
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
+    console.error("[StockCommandeDetailPage]", error);
+    throw error;
+  }
 }

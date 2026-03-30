@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
     if (error instanceof ForbiddenError) {
       return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
     }
+    console.error("[API GET /vagues]", error);
     return NextResponse.json(
       { status: 500, message: "Erreur serveur lors de la recuperation des vagues.", errorKey: ErrorKeys.SERVER_GET_VAGUES },
       { status: 500 }
@@ -264,6 +265,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: 404, message }, { status: 404 });
     }
 
+    console.error("[API POST /vagues]", error);
     return NextResponse.json(
       { status: 500, message: "Erreur serveur lors de la creation de la vague.", errorKey: ErrorKeys.SERVER_CREATE_VAGUE },
       { status: 500 }

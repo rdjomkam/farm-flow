@@ -12,19 +12,26 @@ export default async function BacsPage() {
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const [permissions, bacs] = await Promise.all([
-    checkPagePermission(session, Permission.BACS_GERER),
-    getBacs(session.activeSiteId),
-  ]);
-  if (!permissions) return <AccessDenied />;
+  try {
+    const [permissions, bacs] = await Promise.all([
+      checkPagePermission(session, Permission.BACS_GERER),
+      getBacs(session.activeSiteId),
+    ]);
+    if (!permissions) return <AccessDenied />;
 
-  return (
-    <>
-      <Header title="Bacs" />
-      <div className="px-4 pt-4">
-        <QuotasUsageBar siteId={session.activeSiteId} precomputedBacsCount={bacs.length} />
-      </div>
-      <BacsListClient bacs={bacs} permissions={permissions} />
-    </>
-  );
+    return (
+      <>
+        <Header title="Bacs" />
+        <div className="px-4 pt-4">
+          <QuotasUsageBar siteId={session.activeSiteId} precomputedBacsCount={bacs.length} />
+        </div>
+        <BacsListClient bacs={bacs} permissions={permissions} />
+      </>
+    );
+  } catch (error: unknown) {
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
+    console.error("[BacsPage]", error);
+    throw error;
+  }
 }
