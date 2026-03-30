@@ -84,10 +84,12 @@ export default async function RootLayout({
   let role: Role | null = null;
   let isImpersonating = false;
 
+  console.log("[RootLayout] START");
   try {
     session = await getServerSession();
     role = session?.role ?? null;
     isImpersonating = session?.isImpersonating ?? false;
+    console.log("[RootLayout] SESSION:", !!session, "siteId:", session?.activeSiteId ?? "none");
 
     const [p, sm, l, m, superAdminUser] = await Promise.all([
       session ? getServerPermissions(session) : ([] as Permission[]),
@@ -109,40 +111,58 @@ export default async function RootLayout({
     // Continue with safe defaults — the page will still render
   }
 
-  return (
-    <html lang={locale}>
-      <head>
-        <AppleSplashLinks />
-      </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        suppressHydrationWarning
-      >
-        <NextIntlClientProvider locale={locale} messages={messages}>
-          <QueryProvider>
-          <ToastProvider>
-            <GlobalLoadingProvider>
-              <GlobalLoadingBar />
-              <LoadingOverlay />
-              {isImpersonating && session && (
-                <ImpersonationBanner
-                  targetUserName={session.name}
-                  targetUserRole={session.role}
-                  originalUserName={session.originalUserName ?? "Administrateur"}
-                />
-              )}
-              {session?.activeSiteId && (
-                <SubscriptionBanner siteId={session.activeSiteId} />
-              )}
-              <div className={isImpersonating ? "pt-[calc(3.5rem+env(safe-area-inset-top))] sm:pt-[calc(2.75rem+env(safe-area-inset-top))]" : ""}>
-                <AppShell permissions={permissions} role={role} userName={session?.name ?? null} siteModules={siteModules} isImpersonating={isImpersonating} isSuperAdmin={isSuperAdmin} activeSiteId={session?.activeSiteId ?? null}>{children}</AppShell>
-              </div>
-            </GlobalLoadingProvider>
-          </ToastProvider>
-          </QueryProvider>
-        </NextIntlClientProvider>
-        <SwRegister />
-      </body>
-    </html>
-  );
+  try {
+    return (
+      <html lang={locale}>
+        <head>
+          <AppleSplashLinks />
+        </head>
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          suppressHydrationWarning
+        >
+          <NextIntlClientProvider locale={locale} messages={messages}>
+            <QueryProvider>
+            <ToastProvider>
+              <GlobalLoadingProvider>
+                <GlobalLoadingBar />
+                <LoadingOverlay />
+                {isImpersonating && session && (
+                  <ImpersonationBanner
+                    targetUserName={session.name}
+                    targetUserRole={session.role}
+                    originalUserName={session.originalUserName ?? "Administrateur"}
+                  />
+                )}
+                {session?.activeSiteId && (
+                  <SubscriptionBanner siteId={session.activeSiteId} />
+                )}
+                <div className={isImpersonating ? "pt-[calc(3.5rem+env(safe-area-inset-top))] sm:pt-[calc(2.75rem+env(safe-area-inset-top))]" : ""}>
+                  <AppShell permissions={permissions} role={role} userName={session?.name ?? null} siteModules={siteModules} isImpersonating={isImpersonating} isSuperAdmin={isSuperAdmin} activeSiteId={session?.activeSiteId ?? null}>{children}</AppShell>
+                </div>
+              </GlobalLoadingProvider>
+            </ToastProvider>
+            </QueryProvider>
+          <SwRegister />
+          </NextIntlClientProvider>
+        </body>
+      </html>
+    );
+  } catch (renderError: unknown) {
+    console.error("[RootLayout:render]", renderError);
+    return (
+      <html lang="fr">
+        <body>
+          <div style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center", fontFamily: "system-ui, sans-serif", padding: "1rem", textAlign: "center" }}>
+            <div>
+              <h1 style={{ fontSize: "1.25rem", fontWeight: 600 }}>Erreur critique</h1>
+              <p style={{ color: "#6b7280", marginTop: "0.5rem" }}>
+                L&apos;application a rencontré une erreur. Veuillez rafraîchir la page.
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    );
+  }
 }

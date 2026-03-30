@@ -21,6 +21,9 @@ const withSerwist = withSerwistInit({
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  experimental: {
+    serverSourceMaps: true,
+  },
 };
 
 export default withSerwist(withNextIntl(nextConfig));

@@ -61,6 +61,7 @@ const FARM_ROLES = [Role.ADMIN, Role.GERANT, Role.PISCICULTEUR];
 /** Routes that don't require authentication */
 const PUBLIC_ROUTES = ["/login", "/register"];
 const PUBLIC_API_PREFIX = "/api/auth/";
+const PUBLIC_API_ROUTES = ["/api/health"];
 
 /** Routes accessible without an active site selected */
 const NO_SITE_ROUTES = ["/settings/sites", "/select-site"];
@@ -82,6 +83,7 @@ const SUBSCRIPTION_WHITELIST_ROUTES = [
 function isPublicRoute(pathname: string): boolean {
   if (PUBLIC_ROUTES.includes(pathname)) return true;
   if (pathname.startsWith(PUBLIC_API_PREFIX)) return true;
+  if (PUBLIC_API_ROUTES.includes(pathname)) return true;
   return false;
 }
 
