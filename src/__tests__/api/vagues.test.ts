@@ -222,6 +222,7 @@ describe("POST /api/vagues", () => {
     nombreInitial: 1000,
     poidsMoyenInitial: 3.5,
     origineAlevins: "Production locale",
+    configElevageId: "config-1",
     bacDistribution: [
       { bacId: "bac-1", nombrePoissons: 500 },
       { bacId: "bac-2", nombrePoissons: 500 },

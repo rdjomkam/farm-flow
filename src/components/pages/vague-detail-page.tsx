@@ -45,7 +45,7 @@ export default async function VagueDetailPage({
   const t = await getTranslations("vagues");
 
   const { id } = await params;
-  const [vague, indicateurs, produitsDb, calibragesDb, gompertzRecord] = await Promise.all([
+  const [vague, indicateurs, produitsDb, calibragesDb, gompertzRecord, configElevages] = await Promise.all([
     getVagueById(id, session.activeSiteId),
     getIndicateursVague(session.activeSiteId, id),
     prisma.produit.findMany({
@@ -59,6 +59,11 @@ export default async function VagueDetailPage({
     }),
     getCalibrages(session.activeSiteId, { vagueId: id }),
     prisma.gompertzVague.findUnique({ where: { vagueId: id } }),
+    prisma.configElevage.findMany({
+      where: { siteId: session.activeSiteId },
+      select: { id: true, nom: true },
+      orderBy: { nom: "asc" },
+    }),
   ]);
 
   if (!vague) notFound();
@@ -241,6 +246,8 @@ export default async function VagueDetailPage({
               nombreInitial={vague.nombreInitial}
               poidsMoyenInitial={vague.poidsMoyenInitial}
               origineAlevins={vague.origineAlevins}
+              configElevageId={vague.configElevageId}
+              configElevages={configElevages}
               permissions={permissions}
               isEnCours={isEnCours}
               canExport={permissions.includes(Permission.EXPORT_DONNEES)}

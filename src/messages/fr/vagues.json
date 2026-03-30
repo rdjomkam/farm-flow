@@ -84,6 +84,8 @@
       "poidsMoyenInitial": "Poids moyen initial (g)",
       "origineAlevins": "Origine des alevins (optionnel)",
       "origineAlevinsFr": "Ex : Écloserie locale",
+      "configElevage": "Configuration d'élevage",
+      "configElevagePlaceholder": "Sélectionnez une configuration",
       "aucunBacLibre": "Aucun bac libre disponible."
     },
     "errors": {
@@ -94,6 +96,7 @@
       "bacIds": "Sélectionnez au moins un bac.",
       "nombreInitialEdit": "Entier superieur a 0.",
       "poidsMoyenInitialEdit": "Superieur a 0.",
+      "configElevageRequired": "La configuration d'élevage est obligatoire.",
       "distributionIncomplete": "Tous les bacs sélectionnés doivent avoir un nombre de poissons supérieur à 0.",
       "distributionDesequilibree": "La somme ({total}) doit être égale au nombre d'alevins ({nombreInitial})."
     },

@@ -84,6 +84,8 @@
       "poidsMoyenInitial": "Initial average weight (g)",
       "origineAlevins": "Fry origin (optional)",
       "origineAlevinsFr": "E.g.: Local hatchery",
+      "configElevage": "Farming configuration",
+      "configElevagePlaceholder": "Select a configuration",
       "aucunBacLibre": "No free tanks available."
     },
     "errors": {
@@ -94,6 +96,7 @@
       "bacIds": "Select at least one tank.",
       "nombreInitialEdit": "Must be an integer greater than 0.",
       "poidsMoyenInitialEdit": "Must be greater than 0.",
+      "configElevageRequired": "Farming configuration is required.",
       "distributionIncomplete": "All selected tanks must have a fish count greater than 0.",
       "distributionDesequilibree": "The sum ({total}) must equal the initial count ({nombreInitial})."
     },

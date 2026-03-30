@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { VaguesListClient } from "@/components/vagues/vagues-list-client";
 import { VagueCard } from "@/components/vagues/vague-card";
 import { IndicateursCards } from "@/components/vagues/indicateurs-cards";
@@ -74,6 +75,9 @@ const vaguesTranslations: Record<string, string | ((p: Record<string, unknown>) 
   "form.fields.poidsMoyenInitial": "Poids moyen initial (g)",
   "form.fields.origineAlevins": "Origine des alevins",
   "form.fields.origineAlevinsFr": "Ex: Écloserie Douala",
+  "form.fields.configElevage": "Configuration d'élevage",
+  "form.fields.configElevagePlaceholder": "Sélectionnez une configuration",
+  "form.errors.configElevageRequired": "La configuration d'élevage est obligatoire.",
   "form.fields.aucunBacLibre": "Aucun bac libre disponible.",
   "statuts.EN_COURS": "En cours",
   "statuts.TERMINEE": "Terminée",
@@ -162,6 +166,10 @@ const fakeVagues: VagueSummaryResponse[] = [
   },
 ];
 
+const fakeConfigElevages = [
+  { id: "config-1", nom: "Config Standard" },
+];
+
 const fakebacsLibres: BacResponse[] = [
   {
     id: "bac-libre-1",
@@ -185,24 +193,24 @@ describe("VaguesListClient — Affichage et filtres", () => {
   });
 
   it("affiche le nombre total de vagues", () => {
-    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} />);
+    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} configElevages={fakeConfigElevages} />);
     expect(screen.getByText("2 vagues")).toBeInTheDocument();
   });
 
   it("affiche les onglets En cours, Terminées, Annulées", () => {
-    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} />);
+    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} configElevages={fakeConfigElevages} />);
     expect(screen.getByText("En cours (1)")).toBeInTheDocument();
     expect(screen.getByText("Terminées (1)")).toBeInTheDocument();
     expect(screen.getByText("Annulées (0)")).toBeInTheDocument();
   });
 
   it("affiche un message quand aucune vague", () => {
-    render(<VaguesListClient vagues={[]} bacsLibres={[]} permissions={allPermissions} />);
+    render(<VaguesListClient vagues={[]} bacsLibres={[]} permissions={allPermissions} configElevages={fakeConfigElevages} />);
     expect(screen.getByText("0 vague")).toBeInTheDocument();
   });
 
   it("a un bouton 'Nouvelle vague'", () => {
-    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} />);
+    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} configElevages={fakeConfigElevages} />);
     expect(screen.getByText("Nouvelle vague")).toBeInTheDocument();
   });
 });
@@ -213,7 +221,7 @@ describe("VaguesListClient — Formulaire de création", () => {
   });
 
   it("ouvre le dialogue au clic sur 'Nouvelle vague'", async () => {
-    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} />);
+    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} configElevages={fakeConfigElevages} />);
     fireEvent.click(screen.getByText("Nouvelle vague"));
 
     await waitFor(() => {
@@ -222,7 +230,7 @@ describe("VaguesListClient — Formulaire de création", () => {
   });
 
   it("affiche les erreurs de validation si champs vides", async () => {
-    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} />);
+    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} configElevages={fakeConfigElevages} />);
     fireEvent.click(screen.getByText("Nouvelle vague"));
 
     await waitFor(() => {
@@ -234,12 +242,13 @@ describe("VaguesListClient — Formulaire de création", () => {
     await waitFor(() => {
       expect(screen.getByText("Le code est obligatoire.")).toBeInTheDocument();
       expect(screen.getByText("La date de début est obligatoire.")).toBeInTheDocument();
+      expect(screen.getByText("La configuration d'élevage est obligatoire.")).toBeInTheDocument();
       expect(screen.getByText("Sélectionnez au moins un bac.")).toBeInTheDocument();
     });
   });
 
   it("affiche les bacs libres disponibles dans le formulaire", async () => {
-    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} />);
+    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} configElevages={fakeConfigElevages} />);
     fireEvent.click(screen.getByText("Nouvelle vague"));
 
     await waitFor(() => {
@@ -249,7 +258,7 @@ describe("VaguesListClient — Formulaire de création", () => {
   });
 
   it("affiche un message quand aucun bac libre", async () => {
-    render(<VaguesListClient vagues={fakeVagues} bacsLibres={[]} permissions={allPermissions} />);
+    render(<VaguesListClient vagues={fakeVagues} bacsLibres={[]} permissions={allPermissions} configElevages={fakeConfigElevages} />);
     fireEvent.click(screen.getByText("Nouvelle vague"));
 
     await waitFor(() => {
@@ -258,7 +267,7 @@ describe("VaguesListClient — Formulaire de création", () => {
   });
 
   it("soumet le formulaire avec des données valides", async () => {
-    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} />);
+    render(<VaguesListClient vagues={fakeVagues} bacsLibres={fakebacsLibres} permissions={allPermissions} configElevages={fakeConfigElevages} />);
     fireEvent.click(screen.getByText("Nouvelle vague"));
 
     await waitFor(() => {
@@ -277,6 +286,13 @@ describe("VaguesListClient — Formulaire de création", () => {
     fireEvent.change(screen.getByLabelText("Poids moyen initial (g)"), {
       target: { value: "5" },
     });
+
+    // Select config elevage — Radix Select uses pointer events not supported in JSDOM.
+    // We interact with the hidden native <select> that Radix renders for accessibility.
+    const nativeSelect = document.querySelector("select[aria-hidden]") as HTMLSelectElement | null;
+    if (nativeSelect) {
+      fireEvent.change(nativeSelect, { target: { value: "config-1" } });
+    }
 
     // Select bac
     const bacCheckbox = screen.getByRole("checkbox");

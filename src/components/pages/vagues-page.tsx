@@ -7,6 +7,7 @@ import { QuotasUsageBar } from "@/components/subscription/quotas-usage-bar";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getVagues } from "@/lib/queries/vagues";
 import { getBacsLibres } from "@/lib/queries/bacs";
+import { prisma } from "@/lib/db";
 import { StatutVague, Permission, TypeSystemeBac } from "@/types";
 import type { VagueSummaryResponse, BacResponse } from "@/types";
 
@@ -16,11 +17,16 @@ export default async function VaguesPage() {
   if (!session.activeSiteId) redirect("/settings/sites");
 
   try {
-    const [permissions, t, vaguesRaw, bacsLibresRaw] = await Promise.all([
+    const [permissions, t, vaguesRaw, bacsLibresRaw, configElevages] = await Promise.all([
       checkPagePermission(session, Permission.VAGUES_VOIR),
       getTranslations("vagues"),
       getVagues(session.activeSiteId),
       getBacsLibres(session.activeSiteId),
+      prisma.configElevage.findMany({
+        where: { siteId: session.activeSiteId },
+        select: { id: true, nom: true },
+        orderBy: { nom: "asc" },
+      }),
     ]);
     if (!permissions) return <AccessDenied />;
 
@@ -65,7 +71,7 @@ export default async function VaguesPage() {
         <div className="px-4 pt-4">
           <QuotasUsageBar siteId={session.activeSiteId} precomputedVaguesCount={vagues.filter((v) => v.statut === StatutVague.EN_COURS).length} />
         </div>
-        <VaguesListClient vagues={vagues} bacsLibres={bacsLibres} permissions={permissions} />
+        <VaguesListClient vagues={vagues} bacsLibres={bacsLibres} permissions={permissions} configElevages={configElevages} />
       </>
     );
   } catch (error: unknown) {

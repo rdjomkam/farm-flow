@@ -17,6 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Permission } from "@/types";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useVagueService } from "@/services";
 
 interface ModifierVagueDialogProps {
@@ -24,6 +25,8 @@ interface ModifierVagueDialogProps {
   nombreInitial: number;
   poidsMoyenInitial: number;
   origineAlevins: string | null;
+  configElevageId: string | null;
+  configElevages: { id: string; nom: string }[];
   permissions: Permission[];
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -34,6 +37,8 @@ export function ModifierVagueDialog({
   nombreInitial,
   poidsMoyenInitial,
   origineAlevins,
+  configElevageId,
+  configElevages,
   permissions,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
@@ -47,12 +52,14 @@ export function ModifierVagueDialog({
   const [nombre, setNombre] = useState(String(nombreInitial));
   const [poids, setPoids] = useState(String(poidsMoyenInitial));
   const [origine, setOrigine] = useState(origineAlevins ?? "");
+  const [configId, setConfigId] = useState(configElevageId ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   function resetForm() {
     setNombre(String(nombreInitial));
     setPoids(String(poidsMoyenInitial));
     setOrigine(origineAlevins ?? "");
+    setConfigId(configElevageId ?? "");
     setErrors({});
   }
 
@@ -71,6 +78,7 @@ export function ModifierVagueDialog({
       nombreInitial: Number(nombre),
       poidsMoyenInitial: Number(poids),
       origineAlevins: origine.trim() || null,
+      ...(configId && { configElevageId: configId }),
     });
 
     if (result.ok) {
@@ -128,6 +136,19 @@ export function ModifierVagueDialog({
             value={origine}
             onChange={(e) => setOrigine(e.target.value)}
           />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium">{t("form.fields.configElevage")}</label>
+            <Select value={configId} onValueChange={setConfigId}>
+              <SelectTrigger>
+                <SelectValue placeholder={t("form.fields.configElevagePlaceholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                {configElevages.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.nom}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               {t("form.cancel")}

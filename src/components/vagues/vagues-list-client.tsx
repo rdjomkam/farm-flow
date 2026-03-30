@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FormSection } from "@/components/ui/form-section";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { VagueCard } from "./vague-card";
 import { StatutVague, Permission } from "@/types";
 import type { VagueSummaryResponse, BacResponse, BacStockingEntry } from "@/types";
@@ -26,9 +27,10 @@ interface VaguesListClientProps {
   vagues: VagueSummaryResponse[];
   bacsLibres: BacResponse[];
   permissions: Permission[];
+  configElevages: { id: string; nom: string }[];
 }
 
-export function VaguesListClient({ vagues: initialVagues, bacsLibres, permissions }: VaguesListClientProps) {
+export function VaguesListClient({ vagues: initialVagues, bacsLibres, permissions, configElevages }: VaguesListClientProps) {
   const createVagueMutation = useCreateVague();
   const { data: vagues = initialVagues } = useVaguesList(undefined, { initialData: initialVagues });
   const t = useTranslations("vagues");
@@ -40,6 +42,7 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
   const [nombreInitial, setNombreInitial] = useState("");
   const [poidsMoyenInitial, setPoidsMoyenInitial] = useState("");
   const [origineAlevins, setOrigineAlevins] = useState("");
+  const [configElevageId, setConfigElevageId] = useState("");
   const [selectedBacs, setSelectedBacs] = useState<string[]>([]);
   // distribution: bacId -> nombrePoissons string (kept as string for input binding)
   const [distributionMap, setDistributionMap] = useState<Record<string, string>>({});
@@ -55,6 +58,7 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
     setNombreInitial("");
     setPoidsMoyenInitial("");
     setOrigineAlevins("");
+    setConfigElevageId("");
     setSelectedBacs([]);
     setDistributionMap({});
     setErrors({});
@@ -108,6 +112,7 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
       newErrors.nombreInitial = t("form.errors.nombreInitial");
     if (!poidsMoyenInitial || Number(poidsMoyenInitial) <= 0)
       newErrors.poidsMoyenInitial = t("form.errors.poidsMoyenInitial");
+    if (!configElevageId) newErrors.configElevageId = t("form.errors.configElevageRequired");
     if (selectedBacs.length === 0) {
       newErrors.bacIds = t("form.errors.bacIds");
     } else {
@@ -145,6 +150,7 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
         nombreInitial: nombreInitialNum,
         poidsMoyenInitial: Number(poidsMoyenInitial),
         origineAlevins: origineAlevins.trim() || undefined,
+        configElevageId,
         bacDistribution,
       });
       setDialogOpen(false);
@@ -241,6 +247,22 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
                   value={origineAlevins}
                   onChange={(e) => setOrigineAlevins(e.target.value)}
                 />
+              </FormSection>
+
+              <FormSection title={t("form.fields.configElevage")}>
+                <Select value={configElevageId} onValueChange={setConfigElevageId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("form.fields.configElevagePlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {configElevages.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.nom}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.configElevageId && (
+                  <p className="text-sm text-danger">{errors.configElevageId}</p>
+                )}
               </FormSection>
 
               <FormSection title={t("form.sections.bacs.title")} description={t("form.sections.bacs.description")}>

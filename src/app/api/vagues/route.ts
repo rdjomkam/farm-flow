@@ -101,6 +101,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    if (!body.configElevageId || typeof body.configElevageId !== "string") {
+      errors.push({
+        field: "configElevageId",
+        message: "La configuration d'elevage est obligatoire.",
+      });
+    }
+
     if (!Array.isArray(body.bacDistribution) || body.bacDistribution.length === 0) {
       errors.push({
         field: "bacDistribution",
@@ -157,6 +164,7 @@ export async function POST(request: NextRequest) {
       nombreInitial: body.nombreInitial,
       poidsMoyenInitial: body.poidsMoyenInitial,
       origineAlevins: body.origineAlevins ?? undefined,
+      configElevageId: body.configElevageId,
       bacDistribution: body.bacDistribution,
     };
 

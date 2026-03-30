@@ -155,6 +155,7 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
       dateDebut: "2026-03-01",
       nombreInitial: 1000,
       poidsMoyenInitial: 5.0,
+      configElevageId: "config-1",
       bacDistribution: [
         { bacId: "bac-1", nombrePoissons: 600 },
         { bacId: "bac-2", nombrePoissons: 400 },
@@ -210,6 +211,7 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
       dateDebut: "2026-03-01",
       nombreInitial: 500,
       poidsMoyenInitial: 3.0,
+      configElevageId: "config-1",
       bacDistribution: [
         { bacId: "bac-3", nombrePoissons: 500 },
       ],
@@ -239,6 +241,7 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
       dateDebut: "2026-03-01",
       nombreInitial: 1000,
       poidsMoyenInitial: 5.0,
+      configElevageId: "config-1",
       bacDistribution: [
         { bacId: "bac-1", nombrePoissons: 600 },
         { bacId: "bac-2", nombrePoissons: 300 }, // somme = 900, pas 1000
@@ -267,6 +270,7 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
       dateDebut: "2026-03-01",
       nombreInitial: 500,
       poidsMoyenInitial: 5.0,
+      configElevageId: "config-1",
       bacDistribution: [
         { bacId: "bac-1", nombrePoissons: 300 },
         { bacId: "bac-2", nombrePoissons: 400 }, // somme = 700, superieur a 500
@@ -297,6 +301,7 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
       dateDebut: "2026-03-01",
       nombreInitial: 1000,
       poidsMoyenInitial: 5.0,
+      configElevageId: "config-1",
       // bacDistribution absent
     };
 
@@ -319,6 +324,7 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
       dateDebut: "2026-03-01",
       nombreInitial: 1000,
       poidsMoyenInitial: 5.0,
+      configElevageId: "config-1",
       bacDistribution: [],
     };
 
@@ -342,6 +348,7 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
       dateDebut: "2026-03-01",
       nombreInitial: 1000,
       poidsMoyenInitial: 5.0,
+      configElevageId: "config-1",
       bacDistribution: null,
     };
 
@@ -367,6 +374,7 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
       dateDebut: "2026-03-01",
       nombreInitial: 1000,
       poidsMoyenInitial: 5.0,
+      configElevageId: "config-1",
       bacDistribution: [
         { bacId: "bac-1", nombrePoissons: 1000 },
         { bacId: "bac-2", nombrePoissons: 0 }, // invalide
@@ -394,6 +402,7 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
       dateDebut: "2026-03-01",
       nombreInitial: 1000,
       poidsMoyenInitial: 5.0,
+      configElevageId: "config-1",
       bacDistribution: [
         { bacId: "bac-1", nombrePoissons: -100 }, // invalide
         { bacId: "bac-2", nombrePoissons: 500 },
@@ -420,6 +429,7 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
       dateDebut: "2026-03-01",
       nombreInitial: 1000,
       poidsMoyenInitial: 5.0,
+      configElevageId: "config-1",
       bacDistribution: [
         { bacId: "bac-1", nombrePoissons: 500.5 }, // non-entier
         { bacId: "bac-2", nombrePoissons: 499.5 },
@@ -445,6 +455,7 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
       dateDebut: "2026-03-01",
       nombreInitial: 1000,
       poidsMoyenInitial: 5.0,
+      configElevageId: "config-1",
       bacDistribution: [
         { nombrePoissons: 1000 }, // bacId absent
       ],
@@ -470,6 +481,7 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
       dateDebut: "2026-03-01",
       nombreInitial: 1000,
       poidsMoyenInitial: 5.0,
+      configElevageId: "config-1",
       bacDistribution: [
         { bacId: "", nombrePoissons: 1000 }, // bacId vide
       ],
@@ -502,6 +514,7 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
       dateDebut: "2026-03-01",
       nombreInitial: 1000,
       poidsMoyenInitial: 5.0,
+      configElevageId: "config-1",
       bacDistribution: [
         { bacId: "bac-already-assigned", nombrePoissons: 1000 },
       ],
@@ -527,6 +540,7 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
       dateDebut: "2026-03-01",
       nombreInitial: 1000,
       poidsMoyenInitial: 5.0,
+      configElevageId: "config-1",
       bacDistribution: [
         { bacId: "bac-inexistant", nombrePoissons: 1000 },
       ],
@@ -552,6 +566,7 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
       dateDebut: "2026-03-01",
       nombreInitial: 1000,
       poidsMoyenInitial: 5.0,
+      configElevageId: "config-1",
       bacIds: ["bac-1", "bac-2"], // ancien format — doit etre rejete
     };
 

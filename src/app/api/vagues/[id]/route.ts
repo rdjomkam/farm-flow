@@ -166,6 +166,12 @@ export async function PUT(
       }
     }
 
+    if (body.configElevageId !== undefined) {
+      if (typeof body.configElevageId !== "string" || body.configElevageId.trim() === "") {
+        errors.push({ field: "configElevageId", message: "La configuration d'elevage doit etre un identifiant valide." });
+      }
+    }
+
     if (errors.length > 0) {
       return NextResponse.json(
         { status: 400, message: "Erreurs de validation", errors },
@@ -182,6 +188,7 @@ export async function PUT(
     if (body.nombreInitial !== undefined) data.nombreInitial = body.nombreInitial;
     if (body.poidsMoyenInitial !== undefined) data.poidsMoyenInitial = body.poidsMoyenInitial;
     if (body.origineAlevins !== undefined) data.origineAlevins = body.origineAlevins;
+    if (body.configElevageId !== undefined) data.configElevageId = body.configElevageId;
 
     const vague = await updateVague(id, auth.activeSiteId, data);
 
