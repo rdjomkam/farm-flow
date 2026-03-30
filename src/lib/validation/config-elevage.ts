@@ -282,7 +282,7 @@ function validateBenchmarks(data: {
  */
 const baseConfigElevageObject = z.object({
     nom: z.string().min(1, "nom est obligatoire").max(100),
-    description: z.string().max(500).optional(),
+    description: z.string().max(500).nullable().optional(),
 
     // Objectif de production
     poidsObjectif: z.number().positive("poidsObjectif doit etre > 0"),

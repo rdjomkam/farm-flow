@@ -1392,7 +1392,7 @@ export interface GenererDepensesRecurrentesResponse {
 /** DTO pour creer un profil de configuration d'elevage */
 export interface CreateConfigElevageDTO {
   nom: string;
-  description?: string;
+  description?: string | null;
   poidsObjectif: number;
   dureeEstimeeCycle: number;
   tauxSurvieObjectif: number;

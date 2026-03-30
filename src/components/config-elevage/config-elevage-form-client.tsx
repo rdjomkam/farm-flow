@@ -6,6 +6,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useConfigService } from "@/services";
+import { PhaseElevage } from "@/types";
 import type { ConfigElevage } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -28,8 +29,22 @@ const FORM_DEFAULTS: Omit<ConfigElevage, "id" | "siteId" | "createdAt" | "update
   seuilGrossissement: 350,
   seuilFinition: 700,
   // Aliment (JSON, kept as-is from defaults — not editable in this form)
-  alimentTailleConfig: [],
-  alimentTauxConfig: [],
+  alimentTailleConfig: [
+    { poidsMin: 0, poidsMax: 15, tailleGranule: "1.2mm", description: "Aliment demarrage" },
+    { poidsMin: 15, poidsMax: 30, tailleGranule: "1.5-2mm", description: "Aliment croissance petit" },
+    { poidsMin: 30, poidsMax: 80, tailleGranule: "2-3mm", description: "Aliment croissance" },
+    { poidsMin: 80, poidsMax: 150, tailleGranule: "3-4mm", description: "Aliment grossissement petit" },
+    { poidsMin: 150, poidsMax: 350, tailleGranule: "4-6mm", description: "Aliment grossissement" },
+    { poidsMin: 350, poidsMax: 99999, tailleGranule: "6-9mm", description: "Aliment finition" },
+  ],
+  alimentTauxConfig: [
+    { phase: PhaseElevage.ACCLIMATATION, tauxMin: 8, tauxMax: 10, frequence: 4 },
+    { phase: PhaseElevage.CROISSANCE_DEBUT, tauxMin: 5, tauxMax: 6, frequence: 3 },
+    { phase: PhaseElevage.JUVENILE, tauxMin: 3, tauxMax: 5, frequence: 3 },
+    { phase: PhaseElevage.GROSSISSEMENT, tauxMin: 2, tauxMax: 3, frequence: 2 },
+    { phase: PhaseElevage.FINITION, tauxMin: 1.5, tauxMax: 2, frequence: 2 },
+    { phase: PhaseElevage.PRE_RECOLTE, tauxMin: 1, tauxMax: 1.5, frequence: 2 },
+  ],
   // Benchmarks FCR
   fcrExcellentMax: 1.2,
   fcrBonMax: 1.5,
