@@ -249,11 +249,8 @@ describe("messages/index.ts — barrel exports", () => {
     expect(namespaces).toContain("format");
   });
 
-  it("namespaces a exactement 15 entrées (Sprint 39 + 40 + 41)", () => {
-    // Sprint 39 : common, format
-    // Sprint 40 : navigation, permissions, abonnements, settings, analytics
-    // Sprint 41 : errors, stock, ventes, vagues, releves, alevins, users, commissions
-    expect(namespaces).toHaveLength(15);
+  it("namespaces a exactement 34 entrées", () => {
+    expect(namespaces).toHaveLength(34);
   });
 
   it("le type Namespace couvre les valeurs attendues (vérification de présence)", () => {
