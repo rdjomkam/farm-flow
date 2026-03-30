@@ -18,7 +18,7 @@ import { getIndicateursVague } from "@/lib/queries/indicateurs";
 import { getCalibrages } from "@/lib/queries/calibrages";
 import { prisma } from "@/lib/db";
 import { computeVivantsByBac } from "@/lib/calculs";
-import { genererCourbeGompertz } from "@/lib/gompertz";
+import { genererCourbeGompertz, calibrerGompertz } from "@/lib/gompertz";
 import { StatutVague, TypeReleve, CategorieProduit, Permission } from "@/types";
 import type { Bac, Releve, EvolutionPoidsPoint, IndicateursVague as IndicateursType, CalibrageWithRelations } from "@/types";
 import type { ProduitOption } from "@/components/releves/consommation-fields";
@@ -104,29 +104,78 @@ export default async function VagueDetailPage({
 
   // Gompertz curve — generate if cached params available with sufficient confidence.
   // Guard against stale DB records: require that the stored biometrieCount matches
-  // the current number of unique biometry dates, and that there are at least 5.
+  // the current number of unique biometry dates, and that there are at least gompertzMinPoints.
   const currentBiometrieCount = groupedByDate.size;
-  const hasGompertz =
+
+  // Detect stale INSUFFICIENT_DATA: config threshold was lowered but record wasn't recalibrated
+  const isStaleInsufficientData =
     gompertzRecord !== null &&
-    gompertzRecord.confidenceLevel !== "INSUFFICIENT_DATA" &&
-    gompertzRecord.wInfinity > 0 &&
-    gompertzRecord.biometrieCount === currentBiometrieCount &&
+    gompertzRecord.confidenceLevel === "INSUFFICIENT_DATA" &&
     currentBiometrieCount >= gompertzMinPoints;
 
+  // Inline recalibration when stale
+  let inlineCalibration: { params: { wInfinity: number; k: number; ti: number }; r2: number; rmse: number; confidenceLevel: string; biometrieCount: number } | null = null;
+  if (isStaleInsufficientData && currentBiometrieCount >= gompertzMinPoints) {
+    const vagueStartMs = new Date(vague.dateDebut).getTime();
+    const points = Array.from(groupedByDate.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([dateKey, releves]) => {
+        let sumWeighted = 0;
+        let sumWeights = 0;
+        for (const r of releves) {
+          const weight = (r.bacId ? vivantsByBac.get(r.bacId) : undefined) ?? 1;
+          sumWeighted += r.poidsMoyen! * weight;
+          sumWeights += weight;
+        }
+        const dateMs = new Date(dateKey + "T00:00:00").getTime();
+        return {
+          jour: Math.floor((dateMs - vagueStartMs) / (1000 * 60 * 60 * 24)),
+          poidsMoyen: Math.round((sumWeighted / sumWeights) * 100) / 100,
+        };
+      });
+
+    // Fetch initial guess from configElevage if available
+    const configForGuess = vague.configElevageId
+      ? await prisma.configElevage.findUnique({
+          where: { id: vague.configElevageId },
+          select: { gompertzWInfDefault: true, gompertzKDefault: true, gompertzTiDefault: true },
+        })
+      : null;
+    const initialGuess: Partial<{ wInfinity: number; k: number; ti: number }> = {};
+    if (configForGuess?.gompertzWInfDefault) initialGuess.wInfinity = configForGuess.gompertzWInfDefault;
+    if (configForGuess?.gompertzKDefault) initialGuess.k = configForGuess.gompertzKDefault;
+    if (configForGuess?.gompertzTiDefault) initialGuess.ti = configForGuess.gompertzTiDefault;
+
+    const result = calibrerGompertz({ points, initialGuess }, gompertzMinPoints);
+    if (result) {
+      inlineCalibration = {
+        params: result.params,
+        r2: result.r2,
+        rmse: result.rmse,
+        confidenceLevel: result.confidenceLevel,
+        biometrieCount: result.biometrieCount,
+      };
+    }
+  }
+
+  // Use inline calibration if available, otherwise use cached record
+  const effectiveGompertz = inlineCalibration
+    ? inlineCalibration
+    : gompertzRecord && gompertzRecord.confidenceLevel !== "INSUFFICIENT_DATA" && gompertzRecord.wInfinity > 0 && gompertzRecord.biometrieCount === currentBiometrieCount && currentBiometrieCount >= gompertzMinPoints
+      ? { params: { wInfinity: gompertzRecord.wInfinity, k: gompertzRecord.k, ti: gompertzRecord.ti }, r2: gompertzRecord.r2, rmse: gompertzRecord.rmse, confidenceLevel: gompertzRecord.confidenceLevel, biometrieCount: gompertzRecord.biometrieCount }
+      : null;
+
+  const hasGompertz = effectiveGompertz !== null;
+
   const gompertzByJour = new Map<number, number>();
-  if (hasGompertz && gompertzRecord) {
-    const gompertzParams = {
-      wInfinity: gompertzRecord.wInfinity,
-      k: gompertzRecord.k,
-      ti: gompertzRecord.ti,
-    };
+  if (hasGompertz && effectiveGompertz) {
     const maxJour = Math.max(200, groupedByDate.size > 0
       ? Math.floor(
           (new Date(Array.from(groupedByDate.keys()).sort().at(-1)! + "T00:00:00").getTime() - vague.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
         ) + 30
       : 200
     );
-    const courbeGompertz = genererCourbeGompertz(gompertzParams, maxJour, 1);
+    const courbeGompertz = genererCourbeGompertz(effectiveGompertz.params, maxJour, 1);
     for (const pt of courbeGompertz) {
       gompertzByJour.set(pt.jour, Math.round(pt.poids * 100) / 100);
     }
@@ -202,11 +251,11 @@ export default async function VagueDetailPage({
         {/* Chart */}
         <PoidsChart
           data={poidsData}
-          gompertzConfidence={hasGompertz ? gompertzRecord!.confidenceLevel : null}
-          gompertzR2={hasGompertz ? gompertzRecord!.r2 : null}
-          gompertzRmse={hasGompertz ? gompertzRecord!.rmse : null}
-          gompertzBiometrieCount={hasGompertz ? gompertzRecord!.biometrieCount : null}
-          gompertzParams={hasGompertz ? { wInfinity: gompertzRecord!.wInfinity, k: gompertzRecord!.k, ti: gompertzRecord!.ti } : null}
+          gompertzConfidence={hasGompertz ? effectiveGompertz!.confidenceLevel : null}
+          gompertzR2={hasGompertz ? effectiveGompertz!.r2 : null}
+          gompertzRmse={hasGompertz ? effectiveGompertz!.rmse : null}
+          gompertzBiometrieCount={hasGompertz ? effectiveGompertz!.biometrieCount : null}
+          gompertzParams={hasGompertz ? effectiveGompertz!.params : null}
           poidsObjectif={poidsObjectif}
           joursActuels={Math.floor((Date.now() - new Date(vague.dateDebut).getTime()) / 86400000)}
           dateDebut={new Date(vague.dateDebut)}

@@ -85,10 +85,13 @@ export async function GET(
     // biometrieCount = unique dates (not raw releve count)
     const biometrieCount = groupedByDate.size;
 
-    // 3. Lazy calibration: recalibrate only if biometrieCount changed or no record exists
+    // 3. Lazy calibration: recalibrate if biometrieCount changed, no record, or config threshold lowered
     const existingGompertz = vague.gompertz;
+    const minPoints = vague.configElevage?.gompertzMinPoints ?? 5;
     const needsCalibration =
-      !existingGompertz || existingGompertz.biometrieCount !== biometrieCount;
+      !existingGompertz ||
+      existingGompertz.biometrieCount !== biometrieCount ||
+      (existingGompertz.confidenceLevel === "INSUFFICIENT_DATA" && biometrieCount >= minPoints);
 
     let calibrationParams: GompertzParams | null = null;
     let r2: number | null = null;
@@ -107,7 +110,7 @@ export async function GET(
       rmse = existingGompertz.rmse;
       confidenceLevel = existingGompertz.confidenceLevel;
       storedBiometrieCount = existingGompertz.biometrieCount;
-    } else if (biometrieCount < (vague.configElevage?.gompertzMinPoints ?? 5)) {
+    } else if (biometrieCount < minPoints) {
       // Not enough data — return early with INSUFFICIENT_DATA
       // Still upsert with count=0 or current to track state (only if count changed)
       if (needsCalibration) {
@@ -165,7 +168,6 @@ export async function GET(
       if (vague.configElevage?.gompertzTiDefault) initialGuess.ti = vague.configElevage.gompertzTiDefault;
 
       // 4c. Calibrate with aggregated weighted-average points
-      const minPoints = vague.configElevage?.gompertzMinPoints ?? 5;
       const result = calibrerGompertz({ points, initialGuess }, minPoints);
 
       if (!result) {
