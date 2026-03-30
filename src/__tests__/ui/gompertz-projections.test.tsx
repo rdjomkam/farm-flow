@@ -1,23 +1,23 @@
 // @vitest-environment jsdom
 /**
- * Tests G2.5 — UI Projections Gompertz
+ * Tests G2.5 — UI Projections (non-regression)
  *
  * Couvre :
- *   1. Aucune donnee Gompertz (gompertzParams undefined/null) — badge absent, pas de ligne Gompertz
- *   2. INSUFFICIENT_DATA — texte "Donnees insuffisantes" present, pas de badge colore
- *   3. Confiance LOW — badge "Estimation preliminaire" affiché
- *   4. Confiance MEDIUM — badge "En construction" affiché
- *   5. Confiance HIGH — badge "Modele fiable" affiché
- *   6. Visibilite details techniques — ADMIN/INGENIEUR voient la section, GERANT ne la voit pas
- *   7. Non-regression — la carte de projection SGR classique fonctionne toujours
+ *   1. Aucune donnee Gompertz — badges absents, pas de section Gompertz
+ *      (la courbe Gompertz a ete deplacee sur la page de detail vague)
+ *   2. INSUFFICIENT_DATA — la projection SGR de base fonctionne encore
+ *   3. Non-regression — la carte de projection SGR classique fonctionne toujours
+ *
+ * Scenarios 3-6 (confiance LOW/MEDIUM/HIGH, details techniques par role) ont ete
+ * supprimes car Gompertz n'est plus rendu dans le composant Projections du dashboard.
+ * Ces fonctionnalites sont testees via poids-chart.tsx (page detail vague).
  */
 
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { Role } from "@/types";
-import type { ProjectionVagueV2, CourbeCroissancePoint } from "@/types/calculs";
-import type { GompertzParams } from "@/lib/gompertz";
+import type { CourbeCroissancePoint, ProjectionVague } from "@/types/calculs";
 
 // ---------------------------------------------------------------------------
 // Mocks globaux
@@ -54,9 +54,7 @@ vi.mock("next/dynamic", () => ({
   default: (loader: () => Promise<{ default: unknown } | unknown>) => {
     // Pour les imports recharts via .then(mod => mod.XXX), on redirige vers le mock
     return (props: Record<string, unknown>) => {
-      // On recupere le nom du composant depuis la chaine de l'import
       // Ce mock simplifie : retourne null pour les composants dynamiques recharts
-      // Le test de graphique vérifie via data-testid injectes par le mock recharts ci-dessus
       return null;
     };
   },
@@ -82,26 +80,6 @@ const analyticsTranslations: Record<string, string | ((p: Record<string, unknown
   "projections.sgrHarvest": "Recolte SGR",
   "projections.gompertzHarvest": "Recolte Gompertz",
   "projections.harvestInDays": (p) => `~${p.count} j`,
-  // Badges Gompertz
-  "projections.gompertzBadge.HIGH": "Modele fiable",
-  "projections.gompertzBadge.MEDIUM": "En construction",
-  "projections.gompertzBadge.LOW": "Estimation preliminaire",
-  "projections.gompertzBadge.INSUFFICIENT_DATA": "Donnees insuffisantes (min. 5 biometries)",
-  // Params metier
-  "projections.gompertzParams.title": "Modele de croissance",
-  "projections.gompertzParams.ceilingWeight": "Poids plafond",
-  "projections.gompertzParams.speedRapide": "Rapide",
-  "projections.gompertzParams.speedNormale": "Normale",
-  "projections.gompertzParams.speedLente": "Lente",
-  "projections.gompertzParams.speedLabel": "Vitesse",
-  "projections.gompertzParams.growthPeak": "Pic de croissance",
-  "projections.gompertzParams.dayUnit": (p) => `jour ${p.day}`,
-  // Details techniques
-  "projections.technicalDetails.title": "Details techniques",
-  "projections.technicalDetails.wInfinity": "W∞ (poids asymptotique)",
-  "projections.technicalDetails.kRate": "K (taux de croissance)",
-  "projections.technicalDetails.tiInflection": "ti (point d'inflexion)",
-  "projections.technicalDetails.r2": "R²",
   // Labels SGR
   "labels.sgrActuel": "TCS actuel",
   "labels.sgrRequis": "TCS requis",
@@ -124,8 +102,6 @@ vi.mock("next-intl", () => ({
 // Import du composant APRES les mocks
 // ---------------------------------------------------------------------------
 
-// Note : on importe les sous-composants exportes individuellement depuis le module.
-// Projections et ProjectionCard ne sont pas exportes nommément — on importe Projections.
 import { Projections } from "@/components/dashboard/projections";
 
 // ---------------------------------------------------------------------------
@@ -133,29 +109,15 @@ import { Projections } from "@/components/dashboard/projections";
 // ---------------------------------------------------------------------------
 
 const BASE_CURVE: CourbeCroissancePoint[] = [
-  { jour: 0, poidsReel: 5, poidsProjecte: null, poidsGompertz: null },
-  { jour: 7, poidsReel: 12, poidsProjecte: null, poidsGompertz: null },
-  { jour: 14, poidsReel: 25, poidsProjecte: null, poidsGompertz: null },
-  { jour: 21, poidsReel: null, poidsProjecte: 45, poidsGompertz: null },
-  { jour: 28, poidsReel: null, poidsProjecte: 70, poidsGompertz: null },
+  { jour: 0, poidsReel: 5, poidsProjecte: null },
+  { jour: 7, poidsReel: 12, poidsProjecte: null },
+  { jour: 14, poidsReel: 25, poidsProjecte: null },
+  { jour: 21, poidsReel: null, poidsProjecte: 45 },
+  { jour: 28, poidsReel: null, poidsProjecte: 70 },
 ];
 
-const GOMPERTZ_CURVE: CourbeCroissancePoint[] = [
-  { jour: 0, poidsReel: 5, poidsProjecte: null, poidsGompertz: 5.2 },
-  { jour: 7, poidsReel: 12, poidsProjecte: null, poidsGompertz: 13.1 },
-  { jour: 14, poidsReel: 25, poidsProjecte: null, poidsGompertz: 26.4 },
-  { jour: 21, poidsReel: null, poidsProjecte: 45, poidsGompertz: 47.8 },
-  { jour: 28, poidsReel: null, poidsProjecte: 70, poidsGompertz: 72.3 },
-];
-
-const GOMPERTZ_PARAMS: GompertzParams = {
-  wInfinity: 1200,
-  k: 0.025,
-  ti: 70,
-};
-
-/** Base d'une projection sans Gompertz */
-function makeBaseProjection(overrides: Partial<ProjectionVagueV2> = {}): ProjectionVagueV2 {
+/** Base d'une projection SGR sans Gompertz */
+function makeBaseProjection(overrides: Partial<ProjectionVague> = {}): ProjectionVague {
   return {
     vagueId: "vague-1",
     vagueCode: "V2026-001",
@@ -170,72 +132,20 @@ function makeBaseProjection(overrides: Partial<ProjectionVagueV2> = {}): Project
     poidsMoyenActuel: 85,
     poidsObjectif: 500,
     joursEcoules: 14,
-    gompertzParams: undefined,
-    gompertzR2: undefined,
-    gompertzConfidence: undefined,
-    dateRecolteGompertz: undefined,
     ...overrides,
   };
 }
 
-/** Projection avec Gompertz calibre a confiance HIGH */
-function makeGompertzHighProjection(overrides: Partial<ProjectionVagueV2> = {}): ProjectionVagueV2 {
-  return makeBaseProjection({
-    courbeProjection: GOMPERTZ_CURVE,
-    gompertzParams: GOMPERTZ_PARAMS,
-    gompertzR2: 0.982,
-    gompertzConfidence: "HIGH",
-    dateRecolteGompertz: 72,
-    ...overrides,
-  });
-}
-
-/** Projection avec Gompertz calibre a confiance MEDIUM */
-function makeGompertzMediumProjection(overrides: Partial<ProjectionVagueV2> = {}): ProjectionVagueV2 {
-  return makeBaseProjection({
-    courbeProjection: GOMPERTZ_CURVE,
-    gompertzParams: GOMPERTZ_PARAMS,
-    gompertzR2: 0.875,
-    gompertzConfidence: "MEDIUM",
-    dateRecolteGompertz: 80,
-    ...overrides,
-  });
-}
-
-/** Projection avec Gompertz calibre a confiance LOW */
-function makeGompertzLowProjection(overrides: Partial<ProjectionVagueV2> = {}): ProjectionVagueV2 {
-  return makeBaseProjection({
-    courbeProjection: GOMPERTZ_CURVE,
-    gompertzParams: GOMPERTZ_PARAMS,
-    gompertzR2: 0.72,
-    gompertzConfidence: "LOW",
-    dateRecolteGompertz: 90,
-    ...overrides,
-  });
-}
-
-/** Projection avec Gompertz INSUFFICIENT_DATA */
-function makeGompertzInsufficientProjection(overrides: Partial<ProjectionVagueV2> = {}): ProjectionVagueV2 {
-  return makeBaseProjection({
-    courbeProjection: BASE_CURVE,
-    gompertzParams: null,
-    gompertzR2: null,
-    gompertzConfidence: "INSUFFICIENT_DATA",
-    dateRecolteGompertz: null,
-    ...overrides,
-  });
-}
-
 // ---------------------------------------------------------------------------
-// 1. Aucune donnee Gompertz (gompertzParams undefined)
+// 1. Aucune donnee Gompertz — badges absents du composant Projections
 // ---------------------------------------------------------------------------
 
-describe("Scenario 1 — Aucune donnee Gompertz", () => {
+describe("Scenario 1 — Aucune donnee Gompertz dans le dashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("n'affiche aucun badge Gompertz quand gompertzParams est undefined", () => {
+  it("n'affiche aucun badge Gompertz (Modele fiable / En construction / Estimation preliminaire)", () => {
     const projection = makeBaseProjection();
     render(<Projections projections={[projection]} userRole={Role.GERANT} />);
 
@@ -245,12 +155,11 @@ describe("Scenario 1 — Aucune donnee Gompertz", () => {
     expect(screen.queryByText("Donnees insuffisantes (min. 5 biometries)")).not.toBeInTheDocument();
   });
 
-  it("n'affiche pas le bloc Recolte Gompertz quand gompertzParams est undefined", () => {
+  it("n'affiche pas le label 'Recolte Gompertz'", () => {
     const projection = makeBaseProjection();
     render(<Projections projections={[projection]} userRole={Role.GERANT} />);
 
     expect(screen.queryByText("Recolte Gompertz")).not.toBeInTheDocument();
-    expect(screen.queryByText("Recolte SGR")).not.toBeInTheDocument();
   });
 
   it("affiche quand meme le code de la vague et la date de recolte SGR", () => {
@@ -261,7 +170,7 @@ describe("Scenario 1 — Aucune donnee Gompertz", () => {
     expect(screen.getByText("Recolte estimee")).toBeInTheDocument();
   });
 
-  it("n'affiche pas la section parametres Gompertz metier", () => {
+  it("n'affiche pas la section 'Modele de croissance' (parametres Gompertz metier)", () => {
     const projection = makeBaseProjection();
     render(<Projections projections={[projection]} userRole={Role.GERANT} />);
 
@@ -269,7 +178,7 @@ describe("Scenario 1 — Aucune donnee Gompertz", () => {
     expect(screen.queryByText("Poids plafond")).not.toBeInTheDocument();
   });
 
-  it("n'affiche pas la section details techniques", () => {
+  it("n'affiche pas la section 'Details techniques'", () => {
     const projection = makeBaseProjection();
     render(<Projections projections={[projection]} userRole={Role.ADMIN} />);
 
@@ -278,283 +187,51 @@ describe("Scenario 1 — Aucune donnee Gompertz", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 2. INSUFFICIENT_DATA
+// 2. Projection sans donnees suffisantes (sgrActuel null)
 // ---------------------------------------------------------------------------
 
-describe("Scenario 2 — INSUFFICIENT_DATA", () => {
+describe("Scenario 2 — Projection sans donnees suffisantes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("affiche le texte 'Donnees insuffisantes (min. 5 biometries)' en italique", () => {
-    const projection = makeGompertzInsufficientProjection();
+  it("affiche 'Pas assez de donnees biometriques' quand sgrActuel est null", () => {
+    const projection = makeBaseProjection({ sgrActuel: null, sgrRequis: null, enAvance: null });
     render(<Projections projections={[projection]} userRole={Role.GERANT} />);
 
-    expect(
-      screen.getByText("Donnees insuffisantes (min. 5 biometries)")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Pas assez de donnees biometriques")).toBeInTheDocument();
   });
 
-  it("n'affiche pas un badge colore (vert/ambre/gris-defaut) pour INSUFFICIENT_DATA", () => {
-    const projection = makeGompertzInsufficientProjection();
-    render(<Projections projections={[projection]} userRole={Role.GERANT} />);
+  it("n'affiche toujours pas de badge Gompertz ni de section technique", () => {
+    const projection = makeBaseProjection({ sgrActuel: null, sgrRequis: null, enAvance: null });
+    render(<Projections projections={[projection]} userRole={Role.ADMIN} />);
 
     expect(screen.queryByText("Modele fiable")).not.toBeInTheDocument();
-    expect(screen.queryByText("En construction")).not.toBeInTheDocument();
-    expect(screen.queryByText("Estimation preliminaire")).not.toBeInTheDocument();
-  });
-
-  it("n'affiche pas la date de recolte Gompertz pour INSUFFICIENT_DATA", () => {
-    const projection = makeGompertzInsufficientProjection();
-    render(<Projections projections={[projection]} userRole={Role.GERANT} />);
-
-    expect(screen.queryByText("Recolte Gompertz")).not.toBeInTheDocument();
-  });
-
-  it("n'affiche pas la section parametres Gompertz metier pour INSUFFICIENT_DATA", () => {
-    const projection = makeGompertzInsufficientProjection();
-    render(<Projections projections={[projection]} userRole={Role.GERANT} />);
-
+    expect(screen.queryByText("Details techniques")).not.toBeInTheDocument();
     expect(screen.queryByText("Modele de croissance")).not.toBeInTheDocument();
   });
 
-  it("n'affiche pas la section details techniques pour INSUFFICIENT_DATA", () => {
-    const projection = makeGompertzInsufficientProjection();
-    render(<Projections projections={[projection]} userRole={Role.ADMIN} />);
-
-    expect(screen.queryByText("Details techniques")).not.toBeInTheDocument();
-  });
-
-  it("affiche quand meme les donnees SGR de base", () => {
-    const projection = makeGompertzInsufficientProjection();
+  it("affiche quand meme le code de la vague", () => {
+    const projection = makeBaseProjection({ sgrActuel: null, sgrRequis: null, enAvance: null });
     render(<Projections projections={[projection]} userRole={Role.GERANT} />);
 
     expect(screen.getByText("V2026-001")).toBeInTheDocument();
     expect(screen.getByText("Recolte estimee")).toBeInTheDocument();
   });
-});
 
-// ---------------------------------------------------------------------------
-// 3. Confiance LOW
-// ---------------------------------------------------------------------------
-
-describe("Scenario 3 — Confiance LOW", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("affiche le badge 'Estimation preliminaire' pour LOW", () => {
-    const projection = makeGompertzLowProjection();
+  it("affiche 'Donnees insuffisantes' pour alimentRestantEstime null", () => {
+    const projection = makeBaseProjection({ alimentRestantEstime: null });
     render(<Projections projections={[projection]} userRole={Role.GERANT} />);
 
-    expect(screen.getByText("Estimation preliminaire")).toBeInTheDocument();
-  });
-
-  it("affiche le bloc parametres Gompertz metier pour LOW", () => {
-    const projection = makeGompertzLowProjection();
-    render(<Projections projections={[projection]} userRole={Role.GERANT} />);
-
-    expect(screen.getByText("Modele de croissance")).toBeInTheDocument();
-    expect(screen.getByText("Poids plafond")).toBeInTheDocument();
-  });
-
-  it("affiche la date de recolte Gompertz pour LOW (dateRecolteGompertz present)", () => {
-    const projection = makeGompertzLowProjection();
-    render(<Projections projections={[projection]} userRole={Role.GERANT} />);
-
-    expect(screen.getByText("Recolte Gompertz")).toBeInTheDocument();
-    expect(screen.getByText("~90 j")).toBeInTheDocument();
+    expect(screen.getByText("Donnees insuffisantes")).toBeInTheDocument();
   });
 });
 
 // ---------------------------------------------------------------------------
-// 4. Confiance MEDIUM
+// 3. Non-regression — projection SGR classique
 // ---------------------------------------------------------------------------
 
-describe("Scenario 4 — Confiance MEDIUM", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("affiche le badge 'En construction' pour MEDIUM", () => {
-    const projection = makeGompertzMediumProjection();
-    render(<Projections projections={[projection]} userRole={Role.GERANT} />);
-
-    expect(screen.getByText("En construction")).toBeInTheDocument();
-  });
-
-  it("affiche le bloc parametres Gompertz metier pour MEDIUM", () => {
-    const projection = makeGompertzMediumProjection();
-    render(<Projections projections={[projection]} userRole={Role.GERANT} />);
-
-    expect(screen.getByText("Modele de croissance")).toBeInTheDocument();
-    expect(screen.getByText("Vitesse")).toBeInTheDocument();
-  });
-
-  it("affiche la date de recolte Gompertz pour MEDIUM", () => {
-    const projection = makeGompertzMediumProjection();
-    render(<Projections projections={[projection]} userRole={Role.GERANT} />);
-
-    expect(screen.getByText("Recolte Gompertz")).toBeInTheDocument();
-    expect(screen.getByText("~80 j")).toBeInTheDocument();
-  });
-
-  it("n'affiche pas le badge LOW ou HIGH pour MEDIUM", () => {
-    const projection = makeGompertzMediumProjection();
-    render(<Projections projections={[projection]} userRole={Role.GERANT} />);
-
-    expect(screen.queryByText("Estimation preliminaire")).not.toBeInTheDocument();
-    expect(screen.queryByText("Modele fiable")).not.toBeInTheDocument();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// 5. Confiance HIGH
-// ---------------------------------------------------------------------------
-
-describe("Scenario 5 — Confiance HIGH", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("affiche le badge 'Modele fiable' pour HIGH", () => {
-    const projection = makeGompertzHighProjection();
-    render(<Projections projections={[projection]} userRole={Role.GERANT} />);
-
-    expect(screen.getByText("Modele fiable")).toBeInTheDocument();
-  });
-
-  it("affiche les deux labels de recolte SGR et Gompertz pour HIGH", () => {
-    const projection = makeGompertzHighProjection();
-    render(<Projections projections={[projection]} userRole={Role.GERANT} />);
-
-    expect(screen.getByText("Recolte SGR")).toBeInTheDocument();
-    expect(screen.getByText("Recolte Gompertz")).toBeInTheDocument();
-    expect(screen.getByText("~72 j")).toBeInTheDocument();
-  });
-
-  it("affiche le bloc parametres Gompertz metier pour HIGH", () => {
-    const projection = makeGompertzHighProjection();
-    render(<Projections projections={[projection]} userRole={Role.GERANT} />);
-
-    expect(screen.getByText("Modele de croissance")).toBeInTheDocument();
-    expect(screen.getByText("Poids plafond")).toBeInTheDocument();
-    expect(screen.getByText("Vitesse")).toBeInTheDocument();
-    expect(screen.getByText("Pic de croissance")).toBeInTheDocument();
-  });
-
-  it("affiche le poids plafond arrondi (1200 g)", () => {
-    const projection = makeGompertzHighProjection();
-    render(<Projections projections={[projection]} userRole={Role.GERANT} />);
-
-    expect(screen.getByText("1200 g")).toBeInTheDocument();
-  });
-
-  it("affiche la vitesse 'Rapide' pour k=0.025 (>= 0.020)", () => {
-    const projection = makeGompertzHighProjection();
-    render(<Projections projections={[projection]} userRole={Role.GERANT} />);
-
-    expect(screen.getByText("Rapide")).toBeInTheDocument();
-  });
-
-  it("affiche le pic de croissance au jour 70", () => {
-    const projection = makeGompertzHighProjection();
-    render(<Projections projections={[projection]} userRole={Role.GERANT} />);
-
-    expect(screen.getByText("jour 70")).toBeInTheDocument();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// 6. Visibilite des details techniques par role
-// ---------------------------------------------------------------------------
-
-describe("Scenario 6 — Visibilite details techniques par role", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("ADMIN voit le bouton 'Details techniques' quand Gompertz est calibre", () => {
-    const projection = makeGompertzHighProjection();
-    render(<Projections projections={[projection]} userRole={Role.ADMIN} />);
-
-    expect(screen.getByText("Details techniques")).toBeInTheDocument();
-  });
-
-  it("INGENIEUR voit le bouton 'Details techniques' quand Gompertz est calibre", () => {
-    const projection = makeGompertzHighProjection();
-    render(<Projections projections={[projection]} userRole={Role.INGENIEUR} />);
-
-    expect(screen.getByText("Details techniques")).toBeInTheDocument();
-  });
-
-  it("GERANT ne voit pas la section details techniques", () => {
-    const projection = makeGompertzHighProjection();
-    render(<Projections projections={[projection]} userRole={Role.GERANT} />);
-
-    expect(screen.queryByText("Details techniques")).not.toBeInTheDocument();
-  });
-
-  it("PISCICULTEUR ne voit pas la section details techniques", () => {
-    const projection = makeGompertzHighProjection();
-    render(<Projections projections={[projection]} userRole={Role.PISCICULTEUR} />);
-
-    expect(screen.queryByText("Details techniques")).not.toBeInTheDocument();
-  });
-
-  it("role undefined ne voit pas la section details techniques", () => {
-    const projection = makeGompertzHighProjection();
-    render(<Projections projections={[projection]} userRole={undefined} />);
-
-    expect(screen.queryByText("Details techniques")).not.toBeInTheDocument();
-  });
-
-  it("ADMIN peut deployer les details techniques et voir W∞, K, ti, R²", () => {
-    const projection = makeGompertzHighProjection();
-    render(<Projections projections={[projection]} userRole={Role.ADMIN} />);
-
-    const btn = screen.getByText("Details techniques");
-    fireEvent.click(btn.closest("button") ?? btn);
-
-    expect(screen.getByText("W∞ (poids asymptotique)")).toBeInTheDocument();
-    expect(screen.getByText("K (taux de croissance)")).toBeInTheDocument();
-    expect(screen.getByText("ti (point d'inflexion)")).toBeInTheDocument();
-    expect(screen.getByText("R²")).toBeInTheDocument();
-  });
-
-  it("ADMIN voit les valeurs brutes W∞=1200.0 g, K=0.0250 j⁻¹, ti=70.0 j apres deploiement", () => {
-    const projection = makeGompertzHighProjection();
-    render(<Projections projections={[projection]} userRole={Role.ADMIN} />);
-
-    const btn = screen.getByText("Details techniques");
-    fireEvent.click(btn.closest("button") ?? btn);
-
-    expect(screen.getByText("1200.0 g")).toBeInTheDocument();
-    expect(screen.getByText("0.0250 j⁻¹")).toBeInTheDocument();
-    expect(screen.getByText("70.0 j")).toBeInTheDocument();
-    expect(screen.getByText("0.982")).toBeInTheDocument();
-  });
-
-  it("INGENIEUR ne voit pas les valeurs brutes tant que non deploye", () => {
-    const projection = makeGompertzHighProjection();
-    render(<Projections projections={[projection]} userRole={Role.INGENIEUR} />);
-
-    expect(screen.queryByText("W∞ (poids asymptotique)")).not.toBeInTheDocument();
-  });
-
-  it("ADMIN ne voit pas les details si Gompertz non calibre (null)", () => {
-    const projection = makeBaseProjection({ gompertzParams: null, gompertzConfidence: null });
-    render(<Projections projections={[projection]} userRole={Role.ADMIN} />);
-
-    expect(screen.queryByText("Details techniques")).not.toBeInTheDocument();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// 7. Non-regression — projection SGR classique
-// ---------------------------------------------------------------------------
-
-describe("Scenario 7 — Non-regression SGR classique", () => {
+describe("Scenario 3 — Non-regression SGR classique", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

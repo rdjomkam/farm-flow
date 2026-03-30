@@ -3,8 +3,8 @@
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ChartTooltip } from "@/components/ui/chart-tooltip";
-import { Skeleton } from "@/components/ui/skeleton";
 import type { EvolutionPoidsPoint } from "@/types";
 
 const ResponsiveContainer = dynamic(
@@ -38,10 +38,42 @@ const Tooltip = dynamic(
 
 interface PoidsChartProps {
   data: EvolutionPoidsPoint[];
+  /** Niveau de confiance Gompertz — null si pas de courbe Gompertz */
+  gompertzConfidence?: string | null;
+  /** R² du modele Gompertz — null si pas de courbe Gompertz */
+  gompertzR2?: number | null;
 }
 
-export function PoidsChart({ data }: PoidsChartProps) {
+/** Badge de fiabilite du modele Gompertz */
+function GompertzBadge({ confidence, r2 }: { confidence: string; r2: number | null }) {
+  const variantMap: Record<string, "terminee" | "warning" | "default"> = {
+    HIGH: "terminee",
+    MEDIUM: "warning",
+    LOW: "default",
+  };
+  const labelMap: Record<string, string> = {
+    HIGH: "Gompertz haute fiabilite",
+    MEDIUM: "Gompertz fiabilite moyenne",
+    LOW: "Gompertz faible fiabilite",
+  };
+  const variant = variantMap[confidence] ?? "default";
+  const label = labelMap[confidence] ?? "Gompertz";
+  const r2Label = r2 !== null ? ` (R²=${r2.toFixed(2)})` : "";
+
+  return (
+    <Badge variant={variant} className="text-[10px]">
+      {label}{r2Label}
+    </Badge>
+  );
+}
+
+export function PoidsChart({ data, gompertzConfidence, gompertzR2 }: PoidsChartProps) {
   const t = useTranslations("vagues");
+
+  const hasGompertz =
+    !!gompertzConfidence &&
+    gompertzConfidence !== "INSUFFICIENT_DATA" &&
+    data.some((d) => d.poidsGompertz != null);
 
   if (data.length === 0) {
     return (
@@ -61,7 +93,12 @@ export function PoidsChart({ data }: PoidsChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t("poidsChart.title")}</CardTitle>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle className="text-base">{t("poidsChart.title")}</CardTitle>
+          {hasGompertz && gompertzConfidence && (
+            <GompertzBadge confidence={gompertzConfidence} r2={gompertzR2 ?? null} />
+          )}
+        </div>
       </CardHeader>
       <CardContent className="overflow-hidden">
         <div className="h-[220px] w-full max-w-full">
@@ -98,9 +135,27 @@ export function PoidsChart({ data }: PoidsChartProps) {
                 dot={{ r: 3 }}
                 activeDot={{ r: 6 }}
               />
+              {hasGompertz && (
+                <Line
+                  type="monotone"
+                  dataKey="poidsGompertz"
+                  name="Courbe Gompertz"
+                  stroke="var(--accent-green, #22c55e)"
+                  strokeWidth={1.5}
+                  strokeDasharray="4 3"
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                  connectNulls={true}
+                />
+              )}
             </LineChart>
           </ResponsiveContainer>
         </div>
+        {hasGompertz && (
+          <p className="text-[10px] text-muted-foreground mt-1 text-center">
+            Ligne verte pointillee : courbe Gompertz ajustee sur les mesures agrégées
+          </p>
+        )}
       </CardContent>
     </Card>
   );

@@ -9,6 +9,7 @@ import {
   projeterDateRecolte,
   type GompertzParams,
 } from "@/lib/gompertz";
+import { computeVivantsByBac } from "@/lib/calculs";
 
 const DEFAULT_TARGET_WEIGHT_G = 800;
 
@@ -26,6 +27,8 @@ export async function GET(
       select: {
         id: true,
         dateDebut: true,
+        nombreInitial: true,
+        bacs: { select: { id: true, nombreInitial: true } },
         configElevage: {
           select: {
             poidsObjectif: true,
@@ -45,14 +48,41 @@ export async function GET(
       );
     }
 
-    // 2. Count BIOMETRIE releves for this vague (scoped by site)
-    const biometrieCount = await prisma.releve.count({
+    // 2. Fetch all BIOMETRIE + MORTALITE + COMPTAGE releves for aggregation
+    const allReleves = await prisma.releve.findMany({
       where: {
         vagueId,
         siteId: auth.activeSiteId,
-        typeReleve: TypeReleve.BIOMETRIE,
+        typeReleve: { in: [TypeReleve.BIOMETRIE, TypeReleve.MORTALITE, TypeReleve.COMPTAGE] },
       },
+      select: {
+        typeReleve: true,
+        date: true,
+        poidsMoyen: true,
+        nombreMorts: true,
+        nombreCompte: true,
+        bacId: true,
+      },
+      orderBy: { date: "asc" },
     });
+
+    // 3. Compute vivantsByBac for weighted-average aggregation
+    const vivantsByBac = computeVivantsByBac(vague.bacs, allReleves, vague.nombreInitial);
+
+    // 4. Aggregate biometries by date (weighted average per unique date)
+    const biometriesRaw = allReleves.filter(
+      (r) => r.typeReleve === TypeReleve.BIOMETRIE && r.poidsMoyen !== null
+    );
+    const groupedByDate = new Map<string, typeof biometriesRaw>();
+    for (const r of biometriesRaw) {
+      const key = new Date(r.date).toISOString().slice(0, 10);
+      const group = groupedByDate.get(key);
+      if (group) group.push(r);
+      else groupedByDate.set(key, [r]);
+    }
+
+    // biometrieCount = unique dates (not raw releve count)
+    const biometrieCount = groupedByDate.size;
 
     // 3. Lazy calibration: recalibrate only if biometrieCount changed or no record exists
     const existingGompertz = vague.gompertz;
@@ -108,36 +138,32 @@ export async function GET(
         dateRecolteEstimee: null,
       });
     } else {
-      // 4a. Fetch all BIOMETRIE releves ordered by date (asc)
-      const releves = await prisma.releve.findMany({
-        where: {
-          vagueId,
-          siteId: auth.activeSiteId,
-          typeReleve: TypeReleve.BIOMETRIE,
-          poidsMoyen: { not: null },
-        },
-        select: { date: true, poidsMoyen: true },
-        orderBy: { date: "asc" },
-      });
-
-      // 4b. Convert to calibration input: day index since vague start
+      // 4a. Build weighted-average points per unique date
       const vagueStartMs = vague.dateDebut.getTime();
-      const points = releves
-        .filter((r) => r.poidsMoyen !== null)
-        .map((r) => ({
-          jour: Math.floor(
-            (r.date.getTime() - vagueStartMs) / (1000 * 60 * 60 * 24)
-          ),
-          poidsMoyen: r.poidsMoyen as number,
-        }));
+      const points = Array.from(groupedByDate.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([dateKey, releves]) => {
+          let sumWeighted = 0;
+          let sumWeights = 0;
+          for (const r of releves) {
+            const weight = (r.bacId ? vivantsByBac.get(r.bacId) : undefined) ?? 1;
+            sumWeighted += r.poidsMoyen! * weight;
+            sumWeights += weight;
+          }
+          const dateMs = new Date(dateKey + "T00:00:00").getTime();
+          return {
+            jour: Math.floor((dateMs - vagueStartMs) / (1000 * 60 * 60 * 24)),
+            poidsMoyen: Math.round((sumWeighted / sumWeights) * 100) / 100,
+          };
+        });
 
-      // 4c. Build initial guess from ConfigElevage if available
+      // 4b. Build initial guess from ConfigElevage if available
       const initialGuess: Partial<GompertzParams> = {};
       if (vague.configElevage?.gompertzWInfDefault) initialGuess.wInfinity = vague.configElevage.gompertzWInfDefault;
       if (vague.configElevage?.gompertzKDefault) initialGuess.k = vague.configElevage.gompertzKDefault;
       if (vague.configElevage?.gompertzTiDefault) initialGuess.ti = vague.configElevage.gompertzTiDefault;
 
-      // 4c. Calibrate
+      // 4c. Calibrate with aggregated weighted-average points
       const result = calibrerGompertz({ points, initialGuess });
 
       if (!result) {

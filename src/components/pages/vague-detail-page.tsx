@@ -18,6 +18,7 @@ import { getIndicateursVague } from "@/lib/queries/indicateurs";
 import { getCalibrages } from "@/lib/queries/calibrages";
 import { prisma } from "@/lib/db";
 import { computeVivantsByBac } from "@/lib/calculs";
+import { genererCourbeGompertz } from "@/lib/gompertz";
 import { StatutVague, TypeReleve, CategorieProduit, Permission } from "@/types";
 import type { Bac, Releve, EvolutionPoidsPoint, IndicateursVague as IndicateursType, CalibrageWithRelations } from "@/types";
 import type { ProduitOption } from "@/components/releves/consommation-fields";
@@ -43,7 +44,7 @@ export default async function VagueDetailPage({
   const t = await getTranslations("vagues");
 
   const { id } = await params;
-  const [vague, indicateurs, produitsDb, calibragesDb] = await Promise.all([
+  const [vague, indicateurs, produitsDb, calibragesDb, gompertzRecord] = await Promise.all([
     getVagueById(id, session.activeSiteId),
     getIndicateursVague(session.activeSiteId, id),
     prisma.produit.findMany({
@@ -56,6 +57,7 @@ export default async function VagueDetailPage({
       orderBy: { nom: "asc" },
     }),
     getCalibrages(session.activeSiteId, { vagueId: id }),
+    prisma.gompertzVague.findUnique({ where: { vagueId: id } }),
   ]);
 
   if (!vague) notFound();
@@ -89,6 +91,32 @@ export default async function VagueDetailPage({
     if (group) group.push(r);
     else groupedByDate.set(key, [r]);
   }
+
+  // Gompertz curve — generate if cached params available with sufficient confidence
+  const hasGompertz =
+    gompertzRecord !== null &&
+    gompertzRecord.confidenceLevel !== "INSUFFICIENT_DATA" &&
+    gompertzRecord.wInfinity > 0;
+
+  const gompertzByJour = new Map<number, number>();
+  if (hasGompertz && gompertzRecord) {
+    const gompertzParams = {
+      wInfinity: gompertzRecord.wInfinity,
+      k: gompertzRecord.k,
+      ti: gompertzRecord.ti,
+    };
+    const maxJour = Math.max(200, groupedByDate.size > 0
+      ? Math.floor(
+          (new Date(Array.from(groupedByDate.keys()).sort().at(-1)! + "T00:00:00").getTime() - vague.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
+        ) + 30
+      : 200
+    );
+    const courbeGompertz = genererCourbeGompertz(gompertzParams, maxJour, 1);
+    for (const pt of courbeGompertz) {
+      gompertzByJour.set(pt.jour, Math.round(pt.poids * 100) / 100);
+    }
+  }
+
   const poidsData: EvolutionPoidsPoint[] = Array.from(groupedByDate.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([dateKey, releves]) => {
@@ -100,12 +128,14 @@ export default async function VagueDetailPage({
         sumWeights += weight;
       }
       const dateObj = new Date(dateKey + "T00:00:00");
+      const jour = Math.floor(
+        (dateObj.getTime() - vague.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
+      );
       return {
         date: dateObj.toISOString(),
         poidsMoyen: Math.round((sumWeighted / sumWeights) * 100) / 100,
-        jour: Math.floor(
-          (dateObj.getTime() - vague.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
-        ),
+        jour,
+        poidsGompertz: hasGompertz ? (gompertzByJour.get(jour) ?? null) : undefined,
       };
     });
 
@@ -155,7 +185,11 @@ export default async function VagueDetailPage({
         <IndicateursCards indicateurs={indicateurs ?? defaultIndicateurs} />
 
         {/* Chart */}
-        <PoidsChart data={poidsData} />
+        <PoidsChart
+          data={poidsData}
+          gompertzConfidence={hasGompertz ? gompertzRecord?.confidenceLevel ?? null : null}
+          gompertzR2={hasGompertz ? gompertzRecord?.r2 ?? null : null}
+        />
 
         {/* Calibrages */}
         {permissions.includes(Permission.CALIBRAGES_VOIR) && (

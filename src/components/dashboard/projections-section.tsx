@@ -15,6 +15,5 @@ export async function ProjectionsSection({ siteId }: ProjectionsSectionProps) {
 
   const userRole: Role = session?.role ?? Role.GERANT;
 
-  // getProjectionsDashboard retourne maintenant ProjectionVagueV2[] (avec Gompertz)
   return <Projections projections={projections} userRole={userRole} />;
 }

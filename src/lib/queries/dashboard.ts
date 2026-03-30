@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/db";
 import { StatutVague, TypeReleve, StatutActivite } from "@/types";
 import type { DashboardData, VagueDashboardSummary, ProjectionVague, CourbeCroissancePoint, IndicateursBenchmarkVague, ConfigElevage } from "@/types";
-import type { ProjectionVagueV2 } from "@/types/calculs";
 import {
   calculerTauxSurvie,
   calculerBiomasse,
@@ -22,229 +21,6 @@ import {
   evaluerBenchmark,
   getBenchmarks,
 } from "@/lib/benchmarks";
-import {
-  calibrerGompertz,
-  genererCourbeGompertz,
-  projeterDateRecolte,
-} from "@/lib/gompertz";
-
-const DEFAULT_TARGET_WEIGHT_G = 800;
-
-/**
- * Enrichit une ProjectionVague avec les donnees du modele Gompertz.
- *
- * Calibre le modele Gompertz (ou utilise le cache GompertzVague) pour la vague
- * donnee, puis injecte poidsGompertz dans chaque CourbeCroissancePoint et remplit
- * les champs gompertzParams, gompertzR2, gompertzConfidence et dateRecolteGompertz.
- *
- * Si le calibrage renvoie null (< 5 points biometriques), tous les champs Gompertz
- * restent null — le comportement de la carte de projection n'est pas affecte.
- *
- * @param projection - projection SGR calculee par getProjectionsDashboard
- * @param siteId     - ID du site courant (R8)
- * @param vagueInfo  - donnees minimales de la vague (dateDebut, configElevage)
- */
-async function enrichWithGompertz(
-  projection: ProjectionVague,
-  siteId: string,
-  vagueInfo: {
-    dateDebut: Date;
-    poidsObjectifConfig: number | null;
-  }
-): Promise<ProjectionVagueV2> {
-  try {
-    const vagueId = projection.vagueId;
-
-    // Compter les releves biometriques pour detecter si un recalibrage est necessaire
-    const biometrieCount = await prisma.releve.count({
-      where: { vagueId, siteId, typeReleve: TypeReleve.BIOMETRIE },
-    });
-
-    // Verifier si un enregistrement GompertzVague en cache est deja valide
-    const existingGompertz = await prisma.gompertzVague.findUnique({
-      where: { vagueId },
-    });
-
-    const needsCalibration =
-      !existingGompertz || existingGompertz.biometrieCount !== biometrieCount;
-
-    let wInfinity: number | null = null;
-    let k: number | null = null;
-    let ti: number | null = null;
-    let r2: number | null = null;
-    let confidenceLevel: string | null = null;
-
-    if (!needsCalibration && existingGompertz && existingGompertz.confidenceLevel !== "INSUFFICIENT_DATA") {
-      // Utiliser le cache
-      wInfinity = existingGompertz.wInfinity;
-      k = existingGompertz.k;
-      ti = existingGompertz.ti;
-      r2 = existingGompertz.r2;
-      confidenceLevel = existingGompertz.confidenceLevel;
-    } else if (biometrieCount < 5) {
-      // Pas assez de donnees — mettre a jour l'etat en cache si necessaire
-      if (needsCalibration) {
-        await prisma.gompertzVague.upsert({
-          where: { vagueId },
-          create: {
-            vagueId,
-            siteId,
-            wInfinity: 0,
-            k: 0,
-            ti: 0,
-            r2: 0,
-            rmse: 0,
-            biometrieCount,
-            confidenceLevel: "INSUFFICIENT_DATA",
-          },
-          update: {
-            biometrieCount,
-            confidenceLevel: "INSUFFICIENT_DATA",
-            calculatedAt: new Date(),
-          },
-        });
-      }
-      // Retourner la projection sans champs Gompertz
-      return {
-        ...projection,
-        gompertzParams: null,
-        gompertzR2: null,
-        gompertzConfidence: "INSUFFICIENT_DATA",
-        dateRecolteGompertz: null,
-      };
-    } else {
-      // Recalibrer avec les releves biometriques actuels
-      const releves = await prisma.releve.findMany({
-        where: {
-          vagueId,
-          siteId,
-          typeReleve: TypeReleve.BIOMETRIE,
-          poidsMoyen: { not: null },
-        },
-        select: { date: true, poidsMoyen: true },
-        orderBy: { date: "asc" },
-      });
-
-      const vagueStartMs = vagueInfo.dateDebut.getTime();
-      const points = releves
-        .filter((r) => r.poidsMoyen !== null)
-        .map((r) => ({
-          jour: Math.floor(
-            (r.date.getTime() - vagueStartMs) / (1000 * 60 * 60 * 24)
-          ),
-          poidsMoyen: r.poidsMoyen as number,
-        }));
-
-      const result = calibrerGompertz({ points });
-
-      if (!result) {
-        return {
-          ...projection,
-          gompertzParams: null,
-          gompertzR2: null,
-          gompertzConfidence: "INSUFFICIENT_DATA",
-          dateRecolteGompertz: null,
-        };
-      }
-
-      // Persister le resultat du calibrage
-      await prisma.gompertzVague.upsert({
-        where: { vagueId },
-        create: {
-          vagueId,
-          siteId,
-          wInfinity: result.params.wInfinity,
-          k: result.params.k,
-          ti: result.params.ti,
-          r2: result.r2,
-          rmse: result.rmse,
-          biometrieCount: result.biometrieCount,
-          confidenceLevel: result.confidenceLevel,
-        },
-        update: {
-          wInfinity: result.params.wInfinity,
-          k: result.params.k,
-          ti: result.params.ti,
-          r2: result.r2,
-          rmse: result.rmse,
-          biometrieCount: result.biometrieCount,
-          confidenceLevel: result.confidenceLevel,
-          calculatedAt: new Date(),
-        },
-      });
-
-      wInfinity = result.params.wInfinity;
-      k = result.params.k;
-      ti = result.params.ti;
-      r2 = result.r2;
-      confidenceLevel = result.confidenceLevel;
-    }
-
-    // Si les parametres ne sont pas disponibles, retourner sans Gompertz
-    if (wInfinity === null || k === null || ti === null) {
-      return {
-        ...projection,
-        gompertzParams: null,
-        gompertzR2: null,
-        gompertzConfidence: confidenceLevel,
-        dateRecolteGompertz: null,
-      };
-    }
-
-    const gompertzParams = { wInfinity, k, ti };
-
-    // Generer la courbe Gompertz (0 a 200 jours, pas de 1 jour)
-    const joursMax = Math.max(
-      200,
-      projection.courbeProjection.at(-1)?.jour ?? 200
-    );
-    const courbeGompertz = genererCourbeGompertz(gompertzParams, joursMax, 1);
-
-    // Indexer la courbe Gompertz par jour pour un merge O(1)
-    const gompertzByJour = new Map<number, number>();
-    for (const pt of courbeGompertz) {
-      gompertzByJour.set(pt.jour, Math.round(pt.poids * 100) / 100);
-    }
-
-    // Merger poidsGompertz dans chaque point de courbeProjection
-    const courbeEnrichie: CourbeCroissancePoint[] = projection.courbeProjection.map(
-      (pt) => ({
-        ...pt,
-        poidsGompertz: gompertzByJour.get(pt.jour) ?? null,
-      })
-    );
-
-    // Calculer la date de recolte Gompertz (jours restants)
-    const targetWeight =
-      vagueInfo.poidsObjectifConfig ?? DEFAULT_TARGET_WEIGHT_G;
-    const dateRecolteGompertz = projeterDateRecolte(
-      gompertzParams,
-      targetWeight,
-      projection.joursEcoules
-    );
-
-    return {
-      ...projection,
-      courbeProjection: courbeEnrichie,
-      gompertzParams,
-      gompertzR2: r2,
-      gompertzConfidence: confidenceLevel,
-      dateRecolteGompertz:
-        dateRecolteGompertz !== null
-          ? Math.round(dateRecolteGompertz)
-          : null,
-    };
-  } catch {
-    // Gompertz echoue silencieusement — la carte de projection reste fonctionnelle
-    return {
-      ...projection,
-      gompertzParams: null,
-      gompertzR2: null,
-      gompertzConfidence: null,
-      dateRecolteGompertz: null,
-    };
-  }
-}
 
 /**
  * Charge les donnees du dashboard pour un site :
@@ -357,15 +133,16 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
  *
  * Pour chaque vague :
  * - SGR actuel vs SGR requis
- * - Date de recolte estimee (SGR + Gompertz si disponible)
+ * - Date de recolte estimee (SGR)
  * - Aliment restant estime
  * - Revenu attendu (null — prixVenteKg pas dans ConfigElevage v1)
- * - Courbe de croissance projetee (reelle + future + Gompertz) pour Recharts
+ * - Courbe de croissance projetee (reelle + future) pour Recharts
  *
  * Utilise ConfigElevage.isDefault si disponible, sinon CONFIG_ELEVAGE_DEFAULTS.
- * Appelle enrichWithGompertz() en parallele (Promise.all) pour eviter les N+1.
+ * Note : la courbe Gompertz est calculee et affichee sur la page de detail vague,
+ * pas sur le dashboard.
  */
-export async function getProjectionsDashboard(siteId: string): Promise<ProjectionVagueV2[]> {
+export async function getProjectionsDashboard(siteId: string): Promise<ProjectionVague[]> {
   const [vaguesActives, configElevage] = await Promise.all([
     prisma.vague.findMany({
       where: { siteId, statut: StatutVague.EN_COURS },
@@ -396,20 +173,12 @@ export async function getProjectionsDashboard(siteId: string): Promise<Projectio
 
   const now = new Date();
 
-  // Type interne pour transporter les donnees de vague necessaires a l'enrichissement
-  type ProjectionBaseWithMeta = ProjectionVague & {
-    _vagueInfo: { dateDebut: Date; poidsObjectifConfig: number | null };
-  };
-
-  // Calcul SGR base (synchrone) puis enrichissement Gompertz en parallele
-  const projectionsBase: ProjectionBaseWithMeta[] = vaguesActives.map((v) => {
-    const biometries = v.releves
+  return vaguesActives.map((v) => {
+    const biometriesRaw = v.releves
       .filter((r) => r.typeReleve === TypeReleve.BIOMETRIE && r.poidsMoyen !== null)
       .sort((a, b) => a.date.getTime() - b.date.getTime());
 
     const alimentations = v.releves.filter((r) => r.typeReleve === TypeReleve.ALIMENTATION);
-
-    const poidsMoyenActuel = biometries.at(-1)?.poidsMoyen ?? null;
     const nombreVivants = computeNombreVivantsVague(v.bacs, v.releves, v.nombreInitial);
     const totalAliment = alimentations.reduce((sum, r) => sum + (r.quantiteAliment ?? 0), 0);
 
@@ -417,20 +186,51 @@ export async function getProjectionsDashboard(siteId: string): Promise<Projectio
       (now.getTime() - v.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    // SGR actuel : entre premier et dernier releve biometrique (ou depuis le debut)
+    // Agréger les biométries par date (moyenne pondérée par vivantsByBac)
+    const vivantsByBac = computeVivantsByBac(v.bacs, v.releves, v.nombreInitial);
+    const groupedByDate = new Map<string, typeof biometriesRaw>();
+    for (const r of biometriesRaw) {
+      const key = new Date(r.date).toISOString().slice(0, 10);
+      const group = groupedByDate.get(key);
+      if (group) group.push(r);
+      else groupedByDate.set(key, [r]);
+    }
+
+    // Un point agrégé par date unique
+    const pointsAggreges = Array.from(groupedByDate.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([dateKey, releves]) => {
+        let sumWeighted = 0;
+        let sumWeights = 0;
+        for (const r of releves) {
+          const weight = (r.bacId ? vivantsByBac.get(r.bacId) : undefined) ?? 1;
+          sumWeighted += r.poidsMoyen! * weight;
+          sumWeights += weight;
+        }
+        const dateObj = new Date(dateKey + "T00:00:00");
+        return {
+          date: dateObj,
+          jour: Math.floor(
+            (dateObj.getTime() - v.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
+          ),
+          poidsMoyen: Math.round((sumWeighted / sumWeights) * 100) / 100,
+        };
+      });
+
+    // Poids moyen actuel = moyenne pondérée de la dernière date de biométrie
+    const poidsMoyenActuel = pointsAggreges.at(-1)?.poidsMoyen ?? null;
+
+    // SGR actuel : entre premier et dernier point agrégé (ou depuis le debut)
     const premierPoids =
-      biometries.length > 0
-        ? biometries.at(0)!.poidsMoyen
+      pointsAggreges.length > 0
+        ? pointsAggreges.at(0)!.poidsMoyen
         : (v.poidsMoyenInitial ?? null);
-    const dernierPoids = biometries.at(-1)?.poidsMoyen ?? null;
+    const dernierPoids = pointsAggreges.at(-1)?.poidsMoyen ?? null;
     const joursEntreReleves =
-      biometries.length >= 2
+      pointsAggreges.length >= 2
         ? Math.max(
             1,
-            Math.floor(
-              (biometries.at(-1)!.date.getTime() - biometries.at(0)!.date.getTime()) /
-                (1000 * 60 * 60 * 24)
-            )
+            pointsAggreges.at(-1)!.jour - pointsAggreges.at(0)!.jour
           )
         : Math.max(1, joursEcoules);
 
@@ -494,13 +294,12 @@ export async function getProjectionsDashboard(siteId: string): Promise<Projectio
       joursEcoules
     );
 
-    // Courbe reelle (points biometriques)
-    const pointsReels: CourbeCroissancePoint[] = biometries.map((b) => {
-      const jourReleve = Math.floor(
-        (b.date.getTime() - v.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      return { jour: jourReleve, poidsReel: b.poidsMoyen, poidsProjecte: null };
-    });
+    // Courbe reelle (points agrégés par date)
+    const pointsReels: CourbeCroissancePoint[] = pointsAggreges.map((p) => ({
+      jour: p.jour,
+      poidsReel: p.poidsMoyen,
+      poidsProjecte: null,
+    }));
 
     // Fusion : eviter les doublons sur le meme jour
     const joursDejaPresents = new Set(pointsReels.map((p) => p.jour));
@@ -539,20 +338,8 @@ export async function getProjectionsDashboard(siteId: string): Promise<Projectio
       poidsMoyenActuel,
       poidsObjectif,
       joursEcoules,
-      // Gompertz sera injecte apres par enrichWithGompertz
-      _vagueInfo: {
-        dateDebut: v.dateDebut,
-        poidsObjectifConfig: v.configElevage?.poidsObjectif ?? null,
-      },
     };
   });
-
-  // Enrichissement Gompertz en parallele (anti N+1)
-  return Promise.all(
-    projectionsBase.map(({ _vagueInfo, ...projection }) =>
-      enrichWithGompertz(projection, siteId, _vagueInfo)
-    )
-  );
 }
 
 /**

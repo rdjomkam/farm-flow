@@ -4,28 +4,22 @@
  * Composant Projections — Section "Projections" du dashboard client.
  *
  * Affiche pour chaque vague active :
- * - Badge de fiabilite Gompertz (HIGH/MEDIUM/LOW/INSUFFICIENT_DATA)
  * - SGR requis vs actuel (vert si en avance, rouge si en retard)
- * - Date de recolte estimee (SGR + Gompertz si disponible)
- * - Parametres Gompertz en langage metier (W∞, K, ti)
- * - Section "Details techniques" repliable (INGENIEUR/ADMIN uniquement)
+ * - Date de recolte estimee (SGR)
  * - Aliment total restant estimé
  * - Revenu attendu (si prixVenteKg renseigné)
  * - Graphique Recharts : courbe de croissance projetee vs reelle
  *
  * Sprint 22 (S16-5) — Mobile first 360px
- * Story G2.3 — Extension Gompertz badges + date recolte
+ * Note: La courbe Gompertz a été déplacée sur la page de détail vague.
  */
 
 import dynamic from "next/dynamic";
 import { TrendingUp, TrendingDown, Calendar, Leaf, DollarSign, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ProjectionVague } from "@/types";
-import type { ProjectionVagueV2 } from "@/types/calculs";
 import { Role } from "@/types";
-import { evaluerKGompertz } from "@/lib/benchmarks";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -62,18 +56,14 @@ const ReferenceLine = dynamic(
   () => import("recharts").then((mod) => mod.ReferenceLine),
   { ssr: false }
 );
-const Legend = dynamic(
-  () => import("recharts").then((mod) => mod.Legend),
-  { ssr: false }
-);
 
 interface ProjectionsProps {
-  projections: ProjectionVagueV2[];
+  projections: ProjectionVague[];
   userRole?: Role;
 }
 
 interface ProjectionCardProps {
-  projection: ProjectionVagueV2;
+  projection: ProjectionVague;
   userRole?: Role;
 }
 
@@ -89,47 +79,6 @@ function formatDate(date: Date): string {
     month: "long",
     year: "numeric",
   });
-}
-
-/**
- * Badge de fiabilite du modele Gompertz.
- * Ne s'affiche que si gompertzConfidence est present.
- */
-function GompertzBadge({ confidence }: { confidence: string | null | undefined }) {
-  const tAnalytics = useTranslations("analytics");
-
-  if (!confidence) return null;
-
-  if (confidence === "INSUFFICIENT_DATA") {
-    return (
-      <span className="text-[11px] text-muted-foreground italic">
-        {tAnalytics("projections.gompertzBadge.INSUFFICIENT_DATA")}
-      </span>
-    );
-  }
-
-  if (confidence === "HIGH") {
-    return (
-      <Badge variant="terminee">
-        {tAnalytics("projections.gompertzBadge.HIGH")}
-      </Badge>
-    );
-  }
-
-  if (confidence === "MEDIUM") {
-    return (
-      <Badge variant="warning">
-        {tAnalytics("projections.gompertzBadge.MEDIUM")}
-      </Badge>
-    );
-  }
-
-  // LOW
-  return (
-    <Badge variant="default">
-      {tAnalytics("projections.gompertzBadge.LOW")}
-    </Badge>
-  );
 }
 
 /**
@@ -192,24 +141,10 @@ function SGRBadge({
 }
 
 /**
- * Bloc dates de recolte : SGR + Gompertz cote a cote.
- * Si Gompertz est present, les deux dates sont affichees et labellisees.
- * Si le poids objectif est dans la zone asymptotique (>= 99% de W∞),
- * un avertissement est affiche a la place de la date Gompertz.
+ * Bloc date de recolte SGR.
  */
-function HarvestDateBlock({ projection }: { projection: ProjectionVagueV2 }) {
+function HarvestDateBlock({ projection }: { projection: ProjectionVague }) {
   const tAnalytics = useTranslations("analytics");
-  const hasGompertz =
-    typeof projection.dateRecolteGompertz === "number" &&
-    projection.dateRecolteGompertz !== null;
-
-  // Detect asymptotic zone: gompertz model calibrated but date projection is null
-  // because poidsObjectif >= 0.99 * wInfinity
-  const isAsymptoticZone =
-    projection.gompertzParams != null &&
-    projection.gompertzConfidence !== "INSUFFICIENT_DATA" &&
-    !hasGompertz &&
-    projection.poidsObjectif >= 0.99 * projection.gompertzParams.wInfinity;
 
   return (
     <div className="flex flex-col gap-1 rounded-lg border border-border p-2.5 bg-card">
@@ -218,14 +153,8 @@ function HarvestDateBlock({ projection }: { projection: ProjectionVagueV2 }) {
         <span className="text-[11px] font-medium">{tAnalytics("projections.estimatedHarvest")}</span>
       </div>
 
-      {/* SGR harvest date */}
       {projection.dateRecolteEstimee !== null ? (
         <div className="flex flex-col gap-0.5">
-          {(hasGompertz || isAsymptoticZone) && (
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {tAnalytics("projections.sgrHarvest")}
-            </span>
-          )}
           <p className="text-sm font-semibold leading-tight break-words">
             {formatDate(projection.dateRecolteEstimee)}
           </p>
@@ -236,163 +165,9 @@ function HarvestDateBlock({ projection }: { projection: ProjectionVagueV2 }) {
           </p>
         </div>
       ) : (
-        !hasGompertz && !isAsymptoticZone && (
-          <p className="text-xs text-muted-foreground mt-1">
-            {tAnalytics("projections.insufficientData")}
-          </p>
-        )
-      )}
-
-      {/* Gompertz harvest date */}
-      {hasGompertz && (
-        <div className="flex flex-col gap-0.5 mt-1 pt-1 border-t border-border/50">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {tAnalytics("projections.gompertzHarvest")}
-          </span>
-          <p className="text-sm font-semibold text-primary">
-            {tAnalytics("projections.harvestInDays", {
-              count: Math.round(projection.dateRecolteGompertz as number),
-            })}
-          </p>
-        </div>
-      )}
-
-      {/* Asymptotic zone warning — shown when Gompertz is calibrated but target
-          weight is too close to W∞ for a reliable projection */}
-      {isAsymptoticZone && (
-        <div className="mt-1 pt-1 border-t border-border/50">
-          <p className="text-[11px] text-warning leading-snug">
-            Poids objectif proche du maximum theorique (W&infin;). Estimation Gompertz non fiable &mdash; utilisation du SGR.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * Parametres Gompertz en langage metier pour les pisciculteurs.
- * W∞ → "Poids plafond : X g"
- * K → "Vitesse : Rapide/Normale/Lente"
- * ti → "Pic de croissance : jour X"
- */
-function GompertzParamsMetier({ projection }: { projection: ProjectionVagueV2 }) {
-  const tAnalytics = useTranslations("analytics");
-  const { gompertzParams, gompertzConfidence } = projection;
-
-  if (!gompertzParams || gompertzConfidence === "INSUFFICIENT_DATA") return null;
-
-  const kLevel = evaluerKGompertz(gompertzParams.k);
-  const speedLabel =
-    kLevel === "EXCELLENT"
-      ? tAnalytics("projections.gompertzParams.speedRapide")
-      : kLevel === "BON"
-        ? tAnalytics("projections.gompertzParams.speedNormale")
-        : tAnalytics("projections.gompertzParams.speedLente");
-
-  return (
-    <div className="rounded-lg border border-border p-2.5 bg-card">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-        {tAnalytics("projections.gompertzParams.title")}
-      </p>
-      <dl className="grid grid-cols-1 min-[360px]:grid-cols-3 gap-1.5">
-        <div className="flex flex-col gap-0.5">
-          <dt className="text-[10px] text-muted-foreground">
-            {tAnalytics("projections.gompertzParams.ceilingWeight")}
-          </dt>
-          <dd className="text-xs font-semibold">
-            {Math.round(gompertzParams.wInfinity)} g
-          </dd>
-        </div>
-        <div className="flex flex-col gap-0.5">
-          <dt className="text-[10px] text-muted-foreground">
-            {tAnalytics("projections.gompertzParams.speedLabel")}
-          </dt>
-          <dd className="text-xs font-semibold">{speedLabel}</dd>
-        </div>
-        <div className="flex flex-col gap-0.5">
-          <dt className="text-[10px] text-muted-foreground">
-            {tAnalytics("projections.gompertzParams.growthPeak")}
-          </dt>
-          <dd className="text-xs font-semibold">
-            {tAnalytics("projections.gompertzParams.dayUnit", {
-              day: Math.round(gompertzParams.ti),
-            })}
-          </dd>
-        </div>
-      </dl>
-    </div>
-  );
-}
-
-/**
- * Section "Details techniques" repliable — INGENIEUR/ADMIN uniquement.
- * Affiche les valeurs brutes W∞, K, ti, R².
- */
-function TechnicalDetailsSection({ projection }: { projection: ProjectionVagueV2 }) {
-  const tAnalytics = useTranslations("analytics");
-  const [open, setOpen] = useState(false);
-  const { gompertzParams, gompertzR2, gompertzConfidence } = projection;
-
-  if (!gompertzParams || gompertzConfidence === "INSUFFICIENT_DATA") return null;
-
-  return (
-    <div className="rounded-lg border border-border bg-muted/20">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-3 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-        aria-expanded={open}
-      >
-        <span className="font-medium">
-          {tAnalytics("projections.technicalDetails.title")}
-        </span>
-        {open ? (
-          <ChevronUp className="h-3.5 w-3.5" />
-        ) : (
-          <ChevronDown className="h-3.5 w-3.5" />
-        )}
-      </button>
-
-      {open && (
-        <div className="px-3 pb-3">
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-            <div>
-              <dt className="text-[10px] text-muted-foreground">
-                {tAnalytics("projections.technicalDetails.wInfinity")}
-              </dt>
-              <dd className="text-xs font-mono font-semibold">
-                {gompertzParams.wInfinity.toFixed(1)} g
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[10px] text-muted-foreground">
-                {tAnalytics("projections.technicalDetails.kRate")}
-              </dt>
-              <dd className="text-xs font-mono font-semibold">
-                {gompertzParams.k.toFixed(4)} j⁻¹
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[10px] text-muted-foreground">
-                {tAnalytics("projections.technicalDetails.tiInflection")}
-              </dt>
-              <dd className="text-xs font-mono font-semibold">
-                {gompertzParams.ti.toFixed(1)} j
-              </dd>
-            </div>
-            {gompertzR2 !== null && gompertzR2 !== undefined && (
-              <div>
-                <dt className="text-[10px] text-muted-foreground">
-                  {tAnalytics("projections.technicalDetails.r2")}
-                </dt>
-                <dd className="text-xs font-mono font-semibold">
-                  {gompertzR2.toFixed(3)}
-                </dd>
-              </div>
-            )}
-          </dl>
-        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          {tAnalytics("projections.insufficientData")}
+        </p>
       )}
     </div>
   );
@@ -401,12 +176,9 @@ function TechnicalDetailsSection({ projection }: { projection: ProjectionVagueV2
 /**
  * Graphique de croissance projetee vs reelle.
  */
-function CourbeProjectionChart({ projection }: { projection: ProjectionVagueV2 }) {
+function CourbeProjectionChart({ projection }: { projection: ProjectionVague }) {
   const tAnalytics = useTranslations("analytics");
-  const { courbeProjection, joursEcoules, poidsObjectif, gompertzParams, gompertzConfidence } = projection;
-
-  const hasGompertzCurve =
-    gompertzParams != null && gompertzConfidence !== "INSUFFICIENT_DATA";
+  const { courbeProjection, joursEcoules, poidsObjectif } = projection;
 
   if (courbeProjection.length === 0) {
     return (
@@ -446,14 +218,6 @@ function CourbeProjectionChart({ projection }: { projection: ProjectionVagueV2 }
               );
             }}
           />
-          <Legend
-            wrapperStyle={{ fontSize: "11px" }}
-            formatter={(value) => {
-              if (value === "poidsReel") return "Reel";
-              if (value === "poidsGompertz") return "Gompertz";
-              return "Projete";
-            }}
-          />
           {/* Ligne verticale au jour courant */}
           <ReferenceLine
             x={joursEcoules}
@@ -491,20 +255,6 @@ function CourbeProjectionChart({ projection }: { projection: ProjectionVagueV2 }
             activeDot={{ r: 4 }}
             connectNulls={false}
           />
-          {/* Courbe Gompertz — affichee uniquement si le modele est calibre */}
-          {hasGompertzCurve && (
-            <Line
-              type="monotone"
-              dataKey="poidsGompertz"
-              name="poidsGompertz"
-              stroke="var(--accent-green, #22c55e)"
-              strokeWidth={1.5}
-              strokeDasharray="3 3"
-              dot={false}
-              activeDot={{ r: 3 }}
-              connectNulls={true}
-            />
-          )}
         </ComposedChart>
       </ResponsiveContainer>
     </div>
@@ -513,18 +263,10 @@ function CourbeProjectionChart({ projection }: { projection: ProjectionVagueV2 }
 
 /**
  * Carte de projection pour une vague.
- * Accepte ProjectionVagueV2 (champs Gompertz optionnels, null si non calibre).
  */
-function ProjectionCard({ projection, userRole }: ProjectionCardProps) {
+function ProjectionCard({ projection }: ProjectionCardProps) {
   const [chartExpanded, setChartExpanded] = useState(false);
   const tAnalytics = useTranslations("analytics");
-
-  const hasGompertz =
-    projection.gompertzParams != null && projection.gompertzConfidence !== "INSUFFICIENT_DATA";
-
-  // Seuls ADMIN et INGENIEUR voient les details techniques bruts
-  const canSeeTechnicalDetails =
-    userRole === Role.ADMIN || userRole === Role.INGENIEUR;
 
   return (
     <Card>
@@ -532,8 +274,6 @@ function ProjectionCard({ projection, userRole }: ProjectionCardProps) {
         <div className="flex items-start justify-between gap-2">
           <div className="flex flex-col gap-1">
             <CardTitle className="text-base">{projection.vagueCode}</CardTitle>
-            {/* Badge fiabilite Gompertz */}
-            <GompertzBadge confidence={projection.gompertzConfidence} />
           </div>
           <button
             type="button"
@@ -575,7 +315,7 @@ function ProjectionCard({ projection, userRole }: ProjectionCardProps) {
 
         {/* Grille de KPIs */}
         <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-2 sm:grid-cols-3">
-          {/* Date de recolte (SGR + Gompertz) */}
+          {/* Date de recolte */}
           <HarvestDateBlock projection={projection} />
 
           {/* Aliment restant */}
@@ -608,14 +348,6 @@ function ProjectionCard({ projection, userRole }: ProjectionCardProps) {
             </div>
           )}
         </div>
-
-        {/* Parametres Gompertz en langage metier */}
-        {hasGompertz && <GompertzParamsMetier projection={projection} />}
-
-        {/* Details techniques — INGENIEUR/ADMIN uniquement */}
-        {hasGompertz && canSeeTechnicalDetails && (
-          <TechnicalDetailsSection projection={projection} />
-        )}
 
         {/* Graphique — affiche si chartExpanded */}
         {chartExpanded && (
