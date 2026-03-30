@@ -27,6 +27,7 @@ const SECTIONS: Section[] = [
   { id: "tri-biometrie", titre: "Tri et Biometrie", description: "Frequences et parametres de tri et de biometrie" },
   { id: "densite", titre: "Densite d'elevage", description: "Poissons maximum par m³" },
   { id: "recolte", titre: "Recolte", description: "Poids minimum pour recolte partielle" },
+  { id: "gompertz", titre: "Modele de croissance (Gompertz)", description: "Valeurs initiales pour la calibration du modele de croissance" },
 ];
 
 function SectionCard({
@@ -100,6 +101,50 @@ function NumericField({
   );
 }
 
+function OptionalNumericField({
+  label,
+  name,
+  value,
+  onChange,
+  unit,
+  min,
+  max,
+  step,
+  placeholder,
+}: {
+  label: string;
+  name: string;
+  value: number | null | undefined;
+  onChange: (name: string, val: number | null) => void;
+  unit?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  placeholder?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-foreground mb-1">
+        {label}{unit ? <span className="text-muted-foreground ml-1">({unit})</span> : null}
+      </label>
+      <input
+        type="number"
+        name={name}
+        value={value ?? ""}
+        min={min}
+        max={max}
+        step={step ?? 0.1}
+        placeholder={placeholder}
+        onChange={(e) => {
+          const raw = e.target.value;
+          onChange(name, raw === "" ? null : parseFloat(raw) || null);
+        }}
+        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      />
+    </div>
+  );
+}
+
 export function ConfigElevageEditClient({ config }: Props) {
   const router = useRouter();
   const configService = useConfigService();
@@ -116,6 +161,10 @@ export function ConfigElevageEditClient({ config }: Props) {
   };
 
   const handleNumeric = (name: string, val: number) => {
+    setForm((prev) => ({ ...prev, [name]: val }));
+  };
+
+  const handleOptionalNumeric = (name: string, val: number | null) => {
     setForm((prev) => ({ ...prev, [name]: val }));
   };
 
@@ -302,6 +351,56 @@ export function ConfigElevageEditClient({ config }: Props) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <NumericField label="Poids min recolte partielle" name="recoltePartiellePoidsSeuil" value={form.recoltePartiellePoidsSeuil} onChange={handleNumeric} unit="g" min={100} max={2000} step={50} />
                 <NumericField label="Arret aliment avant recolte" name="recolteJeuneAvantJours" value={form.recolteJeuneAvantJours} onChange={handleNumeric} unit="jours" min={0} max={7} step={1} />
+              </div>
+            )}
+            {section.id === "gompertz" && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <OptionalNumericField
+                    label="W∞ par defaut"
+                    name="gompertzWInfDefault"
+                    value={form.gompertzWInfDefault}
+                    onChange={handleOptionalNumeric}
+                    unit="g"
+                    min={100}
+                    max={3000}
+                    step={10}
+                    placeholder="ex: 1200"
+                  />
+                  <OptionalNumericField
+                    label="K par defaut"
+                    name="gompertzKDefault"
+                    value={form.gompertzKDefault}
+                    onChange={handleOptionalNumeric}
+                    min={0.005}
+                    max={0.2}
+                    step={0.001}
+                    placeholder="ex: 0.018"
+                  />
+                  <OptionalNumericField
+                    label="ti par defaut"
+                    name="gompertzTiDefault"
+                    value={form.gompertzTiDefault}
+                    onChange={handleOptionalNumeric}
+                    unit="jours"
+                    min={0}
+                    max={120}
+                    step={1}
+                    placeholder="ex: 95"
+                  />
+                </div>
+                <NumericField
+                  label="Points de biometrie minimum pour Gompertz"
+                  name="gompertzMinPoints"
+                  value={form.gompertzMinPoints}
+                  onChange={handleNumeric}
+                  min={3}
+                  max={20}
+                  step={1}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Ces valeurs servent de point de depart pour la calibration. Laissez vide pour utiliser les valeurs par defaut du systeme.
+                </p>
               </div>
             )}
           </SectionCard>
