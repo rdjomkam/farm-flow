@@ -7,6 +7,7 @@ import { FarmHeader } from "./farm-header";
 import { IngenieurSidebar } from "./ingenieur-sidebar";
 import { IngenieurBottomNav } from "./ingenieur-bottom-nav";
 import { IngenieurHeader } from "./ingenieur-header";
+import { PullToRefresh } from "@/components/pwa/pull-to-refresh";
 import type { Permission, Role, SiteModule } from "@/types";
 import { Role as RoleEnum } from "@/types";
 
@@ -61,6 +62,7 @@ export function AppShell({
           />
           <div className="flex flex-1 flex-col overflow-x-clip max-w-full">
             <IngenieurHeader />
+            <PullToRefresh />
             <main className="flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
               {children}
             </main>
@@ -94,6 +96,7 @@ export function AppShell({
           />
           <div className="flex flex-1 flex-col overflow-x-clip max-w-full">
             <FarmHeader />
+            <PullToRefresh />
             <main className="flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
               {children}
             </main>

@@ -65,7 +65,8 @@ export function SitesListClient({ sites, activeSiteId, canCreate }: Props) {
 
       // Auto-select the new site (silent — success toast already shown by createSite)
       await authService.switchSite({ siteId: (data as { id: string }).id });
-      queryClient.invalidateQueries({ queryKey: queryKeys.sites.all });
+      // Full reload to re-render root layout with fresh permissions/modules
+      window.location.href = "/";
     }
   }
 
@@ -75,8 +76,8 @@ export function SitesListClient({ sites, activeSiteId, canCreate }: Props) {
     setSwitching(siteId);
     const { ok } = await authService.switchSite({ siteId });
     if (ok) {
-      router.push("/");
-      queryClient.invalidateQueries({ queryKey: queryKeys.sites.all });
+      // Full reload to re-render root layout with fresh permissions/modules
+      window.location.href = "/";
     }
     setSwitching(null);
   }

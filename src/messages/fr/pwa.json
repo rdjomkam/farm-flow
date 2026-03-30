@@ -43,5 +43,10 @@
       "failed": "Echoue"
     },
     "tentatives": "{count} tentative(s)"
+  },
+  "pullToRefresh": {
+    "tirer": "Tirer pour rafraichir",
+    "relacher": "Relacher pour rafraichir",
+    "rafraichissement": "Rafraichissement..."
   }
 }

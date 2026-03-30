@@ -43,5 +43,10 @@
       "failed": "Failed"
     },
     "tentatives": "{count} attempt(s)"
+  },
+  "pullToRefresh": {
+    "tirer": "Pull to refresh",
+    "relacher": "Release to refresh",
+    "rafraichissement": "Refreshing..."
   }
 }

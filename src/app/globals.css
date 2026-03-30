@@ -115,6 +115,13 @@ html, body {
   overflow-x: hidden;
 }
 
+/* Prevent native overscroll/pull-to-refresh in PWA standalone mode */
+@media all and (display-mode: standalone) {
+  html, body {
+    overscroll-behavior-y: none;
+  }
+}
+
 body {
   background: var(--surface-0);
   color: var(--foreground);
