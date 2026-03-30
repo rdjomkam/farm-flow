@@ -1843,6 +1843,10 @@ model Calibrage {
   // Relevés auto-créés lors du calibrage
   releves       Releve[]          @relation("CalibrageReleves")
 
+  // Snapshots — état vague+bacs avant création / avant modification (Fix 5)
+  snapshotAvant      Json?
+  snapshotAvantModif Json?
+
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 

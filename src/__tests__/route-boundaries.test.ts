@@ -124,8 +124,8 @@ describe("Settings — sous-routes par espace", () => {
     expect(existsSync(ingenieurPath("settings", "regles-activites"))).toBe(true);
   });
 
-  it("(ingenieur)/settings/config-elevage/ existe", () => {
-    expect(existsSync(ingenieurPath("settings", "config-elevage"))).toBe(true);
+  it("(ingenieur)/settings/config-elevage/ n'existe PAS (déplacé vers farm)", () => {
+    expect(existsSync(ingenieurPath("settings", "config-elevage"))).toBe(false);
   });
 
   it("(farm)/settings/alertes/ existe", () => {
@@ -140,8 +140,8 @@ describe("Settings — sous-routes par espace", () => {
     expect(existsSync(farmPath("settings", "regles-activites"))).toBe(false);
   });
 
-  it("(farm)/settings/config-elevage/ n'existe PAS (réservé ingénieur)", () => {
-    expect(existsSync(farmPath("settings", "config-elevage"))).toBe(false);
+  it("(farm)/settings/config-elevage/ existe", () => {
+    expect(existsSync(farmPath("settings", "config-elevage"))).toBe(true);
   });
 
   it("(ingenieur)/settings/sites/ n'existe PAS (réservé farm)", () => {

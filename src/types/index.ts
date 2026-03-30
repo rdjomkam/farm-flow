@@ -381,6 +381,9 @@ export type {
 export type {
   CreateCalibrageGroupeDTO,
   CreateCalibrageDTO,
+  CalibrageSnapshotBac,
+  CalibrageSnapshotVague,
+  CalibrageSnapshot,
 } from "./api";
 // Sprint 26 — Modification de releve (ADR-014)
 export type {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, Plus, Container } from "lucide-react";
+import { Trash2, Plus, Container, ArrowRight } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -54,6 +54,15 @@ export function GererBacsDialog({
   const [removeError, setRemoveError] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Transfer state — shown when removing a bac that still has fish
+  const [transferPending, setTransferPending] = useState<{
+    bacId: string;
+    bacNom: string;
+    nombrePoissons: number;
+  } | null>(null);
+  const [transferDestinationBacId, setTransferDestinationBacId] = useState<string>("");
+  const [transferError, setTransferError] = useState<string>("");
+
   const { data: bacsLibres = [], isLoading: loadingLibres } = useBacsLibres({
     enabled: open,
   });
@@ -66,6 +75,12 @@ export function GererBacsDialog({
     setSelectedBacId("");
     setNombrePoissons("");
     setAddError("");
+  }
+
+  function resetTransfer() {
+    setTransferPending(null);
+    setTransferDestinationBacId("");
+    setTransferError("");
   }
 
   async function handleAddBac() {
@@ -98,12 +113,58 @@ export function GererBacsDialog({
     }
   }
 
-  async function handleRemoveBac(bacId: string) {
+  async function handleRemoveBac(bac: Bac) {
     if (!canRemove) return;
+
+    const poissonsPresents = bac.nombrePoissons ?? 0;
+
+    // If bac has fish, show inline transfer dialog instead of immediate removal
+    if (poissonsPresents > 0) {
+      setTransferPending({
+        bacId: bac.id,
+        bacNom: bac.nom,
+        nombrePoissons: poissonsPresents,
+      });
+      setTransferDestinationBacId("");
+      setTransferError("");
+      return;
+    }
+
+    // Bac is empty — remove directly
+    await doRemoveBac(bac.id, undefined);
+  }
+
+  async function handleConfirmTransferAndRemove() {
+    if (!transferPending) return;
+
+    if (!transferDestinationBacId) {
+      setTransferError(t("gererBacs.errors.transferDestinationRequired"));
+      return;
+    }
 
     setIsSubmitting(true);
     const result = await vagueService.update(vagueId, {
+      removeBacIds: [transferPending.bacId],
+      transferDestinationBacId,
+    });
+    setIsSubmitting(false);
+
+    if (result.ok) {
+      resetTransfer();
+      setRemoveError("");
+      queryClient.invalidateQueries({ queryKey: queryKeys.vagues.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bacs.all });
+      router.refresh();
+    } else {
+      setTransferError(result.error ?? t("gererBacs.errors.removeFailed"));
+    }
+  }
+
+  async function doRemoveBac(bacId: string, destinationBacId: string | undefined) {
+    setIsSubmitting(true);
+    const result = await vagueService.update(vagueId, {
       removeBacIds: [bacId],
+      ...(destinationBacId && { transferDestinationBacId: destinationBacId }),
     });
     setIsSubmitting(false);
 
@@ -113,12 +174,17 @@ export function GererBacsDialog({
       queryClient.invalidateQueries({ queryKey: queryKeys.bacs.all });
       router.refresh();
     } else {
-      setRemoveError(result.error ?? t("gererBacs.removeFailed"));
+      setRemoveError(result.error ?? t("gererBacs.errors.removeFailed"));
     }
   }
 
+  // Bacs eligibles pour le transfert (tous les bacs de la vague sauf celui qu'on retire)
+  const bacsTransferEligibles = transferPending
+    ? currentBacs.filter((b) => b.id !== transferPending.bacId)
+    : [];
+
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) resetAddForm(); onOpenChange(o); }}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { resetAddForm(); resetTransfer(); } onOpenChange(o); }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("gererBacs.title")}</DialogTitle>
@@ -126,6 +192,71 @@ export function GererBacsDialog({
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
+          {/* Inline transfer confirmation panel */}
+          {transferPending && (
+            <div className="flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
+              <div className="flex items-start gap-2">
+                <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  {t("gererBacs.transferRequired", {
+                    bac: transferPending.bacNom,
+                    count: transferPending.nombrePoissons,
+                  })}
+                </p>
+              </div>
+
+              <Select
+                value={transferDestinationBacId}
+                onValueChange={(val) => { setTransferDestinationBacId(val); setTransferError(""); }}
+                disabled={bacsTransferEligibles.length === 0}
+              >
+                <SelectTrigger
+                  label={t("gererBacs.transferDestination")}
+                  error={transferError && !transferDestinationBacId ? transferError : undefined}
+                >
+                  <SelectValue placeholder={t("gererBacs.transferDestinationPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {bacsTransferEligibles.map((bac) => (
+                    <SelectItem key={bac.id} value={bac.id}>
+                      {bac.nom}
+                      {bac.nombrePoissons != null && (
+                        <span className="ml-1 text-muted-foreground">({bac.nombrePoissons} poissons)</span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {transferError && (
+                <p className="text-sm text-destructive">{transferError}</p>
+              )}
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={resetTransfer}
+                  disabled={isSubmitting}
+                  className="flex-1"
+                >
+                  {t("form.cancel")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={handleConfirmTransferAndRemove}
+                  disabled={isSubmitting || !transferDestinationBacId}
+                  className="flex-1"
+                >
+                  {t("gererBacs.confirmerTransfertRetrait")}
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Current bacs */}
           <div className="flex flex-col gap-2">
             <h3 className="text-sm font-semibold text-foreground">
@@ -156,13 +287,13 @@ export function GererBacsDialog({
                       variant="ghost"
                       size="sm"
                       className="h-9 w-9 p-0 text-destructive hover:text-destructive shrink-0"
-                      disabled={!canRemove || isSubmitting}
+                      disabled={!canRemove || isSubmitting || (transferPending?.bacId === bac.id)}
                       title={
                         !canRemove
                           ? t("gererBacs.errors.dernierBac")
                           : t("gererBacs.retirer")
                       }
-                      onClick={() => handleRemoveBac(bac.id)}
+                      onClick={() => handleRemoveBac(bac)}
                     >
                       <Trash2 className="h-4 w-4" />
                       <span className="sr-only">{t("gererBacs.retirer")}</span>
@@ -245,7 +376,7 @@ export function GererBacsDialog({
         <DialogFooter>
           <Button
             variant="secondary"
-            onClick={() => { resetAddForm(); onOpenChange(false); }}
+            onClick={() => { resetAddForm(); resetTransfer(); onOpenChange(false); }}
           >
             {t("form.cancel")}
           </Button>

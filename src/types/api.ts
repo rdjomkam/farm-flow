@@ -186,6 +186,8 @@ export interface UpdateVagueDTO {
   addBacs?: { bacId: string; nombrePoissons: number }[];
   /** Retirer des bacs de la vague */
   removeBacIds?: string[];
+  /** Bac de destination pour transferer les poissons lors du retrait d'un bac non vide */
+  transferDestinationBacId?: string;
 }
 
 /** Resume d'une vague pour la liste */
@@ -1804,6 +1806,36 @@ export interface CreateCalibrageGroupeDTO {
   poidsMoyen: number;
   /** Taille moyenne des poissons en cm (optionnel) */
   tailleMoyenne?: number;
+}
+
+// ────────────────────────────────────────────────────────────
+// Calibrage — Types snapshot (Fix 5)
+// ────────────────────────────────────────────────────────────
+
+/** Snapshot d'un bac au moment de la capture */
+export interface CalibrageSnapshotBac {
+  id: string;
+  nom: string;
+  nombrePoissons: number | null;
+  nombreInitial: number | null;
+  poidsMoyenInitial: number | null;
+  vagueId: string | null;
+}
+
+/** Snapshot de la vague au moment de la capture */
+export interface CalibrageSnapshotVague {
+  id: string;
+  code: string;
+  nombreInitial: number;
+  poidsMoyenInitial: number | null;
+  statut: string;
+}
+
+/** Snapshot complet — vague + tous ses bacs — capturé avant mutation */
+export interface CalibrageSnapshot {
+  capturedAt: string;
+  vague: CalibrageSnapshotVague;
+  allBacsOfVague: CalibrageSnapshotBac[];
 }
 
 /** DTO pour creer un calibrage (POST /api/calibrages) */

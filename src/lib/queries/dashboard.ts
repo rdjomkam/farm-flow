@@ -264,6 +264,7 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
           orderBy: { date: "asc" },
           select: {
             typeReleve: true,
+            date: true,
             poidsMoyen: true,
             nombreMorts: true,
             nombreCompte: true,

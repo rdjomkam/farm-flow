@@ -164,10 +164,8 @@ export async function getIndicateursVague(
   );
 
   // Indicateurs calcules via fonctions pures de calculs.ts
-  // Utiliser les totaux per-bac si disponibles, sinon vague-level
-  const nombreInitialEffectif = hasPerBacReleves && vague.bacs.length > 0
-    ? totalNombreInitialBacs
-    : vague.nombreInitial;
+  // Toujours utiliser vague.nombreInitial comme reference (Fix 3 — survie post-calibrage)
+  const nombreInitialEffectif = vague.nombreInitial;
   const poidsMoyenInitialEffectif = hasPerBacReleves && vague.bacs.length > 0 && totalNombreInitialBacs > 0
     ? totalPoidsInitialWeighted / totalNombreInitialBacs
     : vague.poidsMoyenInitial;

@@ -140,6 +140,13 @@ export async function PUT(
       }
     }
 
+    if (body.transferDestinationBacId != null && typeof body.transferDestinationBacId !== "string") {
+      errors.push({
+        field: "transferDestinationBacId",
+        message: "transferDestinationBacId doit etre une chaine de caracteres.",
+      });
+    }
+
     // Validate new editable fields
     if (body.nombreInitial !== undefined) {
       if (typeof body.nombreInitial !== "number" || !Number.isInteger(body.nombreInitial) || body.nombreInitial <= 0) {
@@ -171,6 +178,7 @@ export async function PUT(
     if (body.dateFin != null) data.dateFin = body.dateFin;
     if (body.addBacs != null) data.addBacs = body.addBacs;
     if (body.removeBacIds != null) data.removeBacIds = body.removeBacIds;
+    if (body.transferDestinationBacId != null) data.transferDestinationBacId = body.transferDestinationBacId;
     if (body.nombreInitial !== undefined) data.nombreInitial = body.nombreInitial;
     if (body.poidsMoyenInitial !== undefined) data.poidsMoyenInitial = body.poidsMoyenInitial;
     if (body.origineAlevins !== undefined) data.origineAlevins = body.origineAlevins;
@@ -211,6 +219,10 @@ export async function PUT(
 
     if (message.includes("deja assigne") || message.includes("cloturee") || message.includes("vague cloturee")) {
       return NextResponse.json({ status: 409, message }, { status: 409 });
+    }
+
+    if (message.includes("contient") && message.includes("poissons")) {
+      return NextResponse.json({ status: 422, message, errorKey: "TRANSFER_REQUIRED" }, { status: 422 });
     }
 
     return NextResponse.json(

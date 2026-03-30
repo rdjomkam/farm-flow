@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { StatutVague, StatutActivite } from "@/types";
+import { StatutVague, StatutActivite, TypeReleve, MethodeComptage } from "@/types";
 import type { CreateVagueDTO, UpdateVagueDTO } from "@/types";
 
 /** Liste les vagues d'un site avec filtre optionnel sur le statut */
@@ -208,17 +208,72 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
         throw new Error("Impossible de retirer tous les bacs : une vague doit avoir au moins un bac");
       }
 
-      // Recuperer les bacs a retirer pour calculer la somme des poissons
+      // Recuperer les bacs a retirer
       const bacsARetirer = await tx.bac.findMany({
         where: { id: { in: data.removeBacIds }, vagueId: id, siteId },
       });
 
-      const totalPoissonRetires = bacsARetirer.reduce(
-        (sum, b) => sum + (b.nombreInitial ?? 0),
-        0
-      );
+      // Verifier que le bac de destination n'est pas dans les bacs a retirer
+      if (data.transferDestinationBacId && data.removeBacIds.includes(data.transferDestinationBacId)) {
+        throw new Error("Le bac de destination ne peut pas faire partie des bacs à retirer");
+      }
 
-      // Liberer les bacs
+      // Verifier si un bac non vide doit etre transfere
+      for (const bacARetirer of bacsARetirer) {
+        const poissonsPresents = bacARetirer.nombrePoissons ?? 0;
+        if (poissonsPresents > 0) {
+          if (!data.transferDestinationBacId) {
+            throw new Error(
+              `Le bac ${bacARetirer.nom} contient ${poissonsPresents} poissons. Veuillez les transférer vers un autre bac avant de le retirer.`
+            );
+          }
+
+          // Verifier que le bac de destination appartient a la meme vague
+          const bacDestination = await tx.bac.findFirst({
+            where: { id: data.transferDestinationBacId, vagueId: id, siteId },
+          });
+          if (!bacDestination) {
+            throw new Error("Le bac de destination est introuvable ou n'appartient pas a cette vague");
+          }
+
+          // Transferer les poissons : incrémenter la destination
+          const nouveauNombreDestination = (bacDestination.nombrePoissons ?? 0) + poissonsPresents;
+          await tx.bac.update({
+            where: { id: data.transferDestinationBacId },
+            data: { nombrePoissons: { increment: poissonsPresents } },
+          });
+
+          // Creer COMPTAGE=0 pour le bac source (maintenant vide)
+          await tx.releve.create({
+            data: {
+              date: new Date(),
+              typeReleve: TypeReleve.COMPTAGE,
+              nombreCompte: 0,
+              methodeComptage: MethodeComptage.DIRECT,
+              notes: `Transfert lors du retrait du bac ${bacARetirer.nom}`,
+              vagueId: id,
+              bacId: bacARetirer.id,
+              siteId,
+            },
+          });
+
+          // Creer COMPTAGE pour le bac destination avec son nouveau total
+          await tx.releve.create({
+            data: {
+              date: new Date(),
+              typeReleve: TypeReleve.COMPTAGE,
+              nombreCompte: nouveauNombreDestination,
+              methodeComptage: MethodeComptage.DIRECT,
+              notes: `Transfert depuis le bac ${bacARetirer.nom} lors de son retrait`,
+              vagueId: id,
+              bacId: data.transferDestinationBacId,
+              siteId,
+            },
+          });
+        }
+      }
+
+      // Liberer les bacs (ne jamais decrementer vague.nombreInitial)
       await tx.bac.updateMany({
         where: { id: { in: data.removeBacIds }, vagueId: id, siteId },
         data: {
@@ -236,12 +291,7 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
           data: { statut: StatutActivite.ANNULEE },
         });
       }
-
-      // Decrementer le nombreInitial de la vague
-      await tx.vague.update({
-        where: { id },
-        data: { nombreInitial: { decrement: totalPoissonRetires } },
-      });
+      // Note: vague.nombreInitial n'est jamais decremente lors du retrait d'un bac (Fix 4)
     }
 
     // Bloquer modification champs numeriques si vague TERMINEE

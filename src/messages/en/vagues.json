@@ -129,12 +129,17 @@
     "nombrePoissons": "Number of fish",
     "ajouterButton": "Add this tank",
     "retirer": "Remove",
+    "transferRequired": "Tank {bac} contains {count} fish. Select a destination tank to transfer them before removing this tank.",
+    "transferDestination": "Destination tank",
+    "transferDestinationPlaceholder": "Select a destination tank",
+    "confirmerTransfertRetrait": "Transfer and remove",
     "errors": {
       "bacRequired": "Select a tank.",
       "nombrePoissonsInvalid": "Fish count must be an integer greater than 0.",
       "dernierBac": "Cannot remove the last tank from a batch.",
       "addFailed": "Failed to add tank.",
-      "removeFailed": "Failed to remove tank."
+      "removeFailed": "Failed to remove tank.",
+      "transferDestinationRequired": "Select a destination tank for the transfer."
     }
   },
   "poidsChart": {

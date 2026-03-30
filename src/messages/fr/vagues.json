@@ -129,12 +129,17 @@
     "nombrePoissons": "Nombre de poissons",
     "ajouterButton": "Ajouter ce bac",
     "retirer": "Retirer",
+    "transferRequired": "Le bac {bac} contient {count} poissons. Sélectionnez un bac de destination pour les transférer avant de retirer ce bac.",
+    "transferDestination": "Bac de destination",
+    "transferDestinationPlaceholder": "Sélectionner un bac de destination",
+    "confirmerTransfertRetrait": "Transférer et retirer",
     "errors": {
       "bacRequired": "Sélectionnez un bac.",
       "nombrePoissonsInvalid": "Le nombre de poissons doit être un entier supérieur à 0.",
       "dernierBac": "Impossible de retirer le dernier bac d'une vague.",
       "addFailed": "Échec de l'ajout du bac.",
-      "removeFailed": "Échec du retrait du bac."
+      "removeFailed": "Échec du retrait du bac.",
+      "transferDestinationRequired": "Sélectionnez un bac de destination pour le transfert."
     }
   },
   "poidsChart": {

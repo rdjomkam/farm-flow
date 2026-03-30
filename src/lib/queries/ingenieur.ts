@@ -139,8 +139,10 @@ export async function getIngenieurDashboardMetrics(
             include: {
               bacs: { select: { id: true, nombreInitial: true } },
               releves: {
+                orderBy: { date: "asc" as const },
                 select: {
                   typeReleve: true,
+                  date: true,
                   nombreMorts: true,
                   nombreCompte: true,
                   bacId: true,
@@ -235,6 +237,7 @@ export async function getClientsIngenieur(
               nombreInitial: true,
               bacs: { select: { id: true, nombreInitial: true } },
               releves: {
+                orderBy: { date: "asc" as const },
                 select: {
                   typeReleve: true,
                   nombreMorts: true,
@@ -358,6 +361,7 @@ export async function getClientIngenieurDetail(
               nombreInitial: true,
               bacs: { select: { id: true, nombreInitial: true } },
               releves: {
+                orderBy: { date: "asc" as const },
                 select: {
                   typeReleve: true,
                   nombreMorts: true,

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { StatutVague, TypeReleve, CauseMortalite, MethodeComptage, CategorieCalibrage } from "@/types";
-import type { CreateCalibrageDTO, PatchCalibrageBody } from "@/types";
+import type { CreateCalibrageDTO, PatchCalibrageBody, CalibrageSnapshot } from "@/types";
 import type { CalibrageWithModifications, CalibrageModificationWithUser } from "@/types";
 
 /** Liste les calibrages d'un site avec filtres optionnels */
@@ -123,7 +123,24 @@ export async function createCalibrage(
       );
     }
 
-    // 5. Snapshot bacs sources if nombreInitial is null
+    // 5a. Capture snapshotAvant — état vague + tous ses bacs AVANT toute mutation (Fix 5)
+    const allBacsOfVague = await tx.bac.findMany({
+      where: { vagueId: data.vagueId, siteId },
+      select: { id: true, nom: true, nombrePoissons: true, nombreInitial: true, poidsMoyenInitial: true, vagueId: true },
+    });
+    const snapshotAvant: CalibrageSnapshot = {
+      capturedAt: new Date().toISOString(),
+      vague: {
+        id: vague.id,
+        code: vague.code,
+        nombreInitial: vague.nombreInitial,
+        poidsMoyenInitial: vague.poidsMoyenInitial,
+        statut: vague.statut,
+      },
+      allBacsOfVague,
+    };
+
+    // 5b. Snapshot bacs sources if nombreInitial is null
     for (const bac of sourceBacs) {
       if (bac.nombreInitial === null) {
         await tx.bac.update({
@@ -147,6 +164,7 @@ export async function createCalibrage(
         date: calibrageDate,
         siteId,
         userId,
+        snapshotAvant: snapshotAvant as object,
         groupes: {
           create: data.groupes.map((g) => ({
             categorie: g.categorie,
@@ -451,6 +469,35 @@ export async function patchCalibrage(
 
     if (!hasChanges) {
       throw new Error("Aucun champ n'a ete modifie");
+    }
+
+    // ----------------------------------------------------------------
+    // Etape 5b — Capture snapshotAvantModif (apres hasChanges check)
+    // ----------------------------------------------------------------
+    const allBacsOfVagueModif = await tx.bac.findMany({
+      where: { vagueId: ancienCalibrage.vague.id, siteId },
+      select: { id: true, nom: true, nombrePoissons: true, nombreInitial: true, poidsMoyenInitial: true, vagueId: true },
+    });
+    const vagueForSnapshot = await tx.vague.findFirst({
+      where: { id: ancienCalibrage.vague.id, siteId },
+      select: { id: true, code: true, nombreInitial: true, poidsMoyenInitial: true, statut: true },
+    });
+    if (vagueForSnapshot) {
+      const snapshotAvantModif: CalibrageSnapshot = {
+        capturedAt: new Date().toISOString(),
+        vague: {
+          id: vagueForSnapshot.id,
+          code: vagueForSnapshot.code,
+          nombreInitial: vagueForSnapshot.nombreInitial,
+          poidsMoyenInitial: vagueForSnapshot.poidsMoyenInitial,
+          statut: vagueForSnapshot.statut,
+        },
+        allBacsOfVague: allBacsOfVagueModif,
+      };
+      await tx.calibrage.update({
+        where: { id },
+        data: { snapshotAvantModif: snapshotAvantModif as object },
+      });
     }
 
     // ----------------------------------------------------------------
