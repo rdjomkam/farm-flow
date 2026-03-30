@@ -1,14 +1,12 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { FarmSidebar } from "./farm-sidebar";
 import { FarmBottomNav } from "./farm-bottom-nav";
 import { FarmHeader } from "./farm-header";
 import { IngenieurSidebar } from "./ingenieur-sidebar";
 import { IngenieurBottomNav } from "./ingenieur-bottom-nav";
 import { IngenieurHeader } from "./ingenieur-header";
-import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
-import { PullToRefreshIndicator } from "@/components/ui/pull-to-refresh-indicator";
 import type { Permission, Role, SiteModule } from "@/types";
 import { Role as RoleEnum } from "@/types";
 
@@ -39,19 +37,9 @@ export function AppShell({
   activeSiteId?: string | null;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const isAuthPage = AUTH_ROUTES.includes(pathname);
   const isNoNavPage = NO_NAV_ROUTES.includes(pathname);
   const isBackofficePage = pathname.startsWith(BACKOFFICE_PREFIX);
-
-  const isDesktop =
-    typeof window !== "undefined" &&
-    window.matchMedia("(pointer: fine)").matches;
-
-  const { isPulling, isRefreshing, pullProgress } = usePullToRefresh({
-    onRefresh: () => router.refresh(),
-    disabled: isDesktop || isAuthPage || isNoNavPage || isBackofficePage,
-  });
 
   if (isAuthPage || isNoNavPage || isBackofficePage) {
     return <>{children}</>;
@@ -63,12 +51,7 @@ export function AppShell({
   if (role === RoleEnum.INGENIEUR) {
     return (
       <>
-        <PullToRefreshIndicator
-          isPulling={isPulling}
-          isRefreshing={isRefreshing}
-          progress={pullProgress}
-        />
-        <div className="flex min-h-dvh overflow-x-hidden">
+<div className="flex min-h-dvh overflow-x-hidden">
           <IngenieurSidebar
             permissions={permissions}
             siteModules={siteModules}
@@ -101,12 +84,7 @@ export function AppShell({
   if (role !== null && FARM_ROLES.includes(role)) {
     return (
       <>
-        <PullToRefreshIndicator
-          isPulling={isPulling}
-          isRefreshing={isRefreshing}
-          progress={pullProgress}
-        />
-        <div className="flex min-h-dvh overflow-x-hidden">
+<div className="flex min-h-dvh overflow-x-hidden">
           <FarmSidebar
             permissions={permissions}
             siteModules={siteModules}
