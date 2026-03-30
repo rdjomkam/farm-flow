@@ -18,6 +18,7 @@ import {
   calibrerGompertz,
   projeterDateRecolte,
   genererCourbeGompertz,
+  CLARIAS_DEFAULTS,
   type GompertzParams,
 } from "@/lib/gompertz";
 
@@ -309,29 +310,27 @@ describe("calibrerGompertz", () => {
     expect(result!.confidenceLevel).toBe("LOW");
   });
 
-  it("poidsObjectif empêche W∞ de descendre sous l'objectif, ti raisonnable", () => {
-    // Simulates the user's scenario: 4 early points, target 400g, 120 days
+  it("CLARIAS_DEFAULTS has correct biological values", () => {
+    expect(CLARIAS_DEFAULTS.wInfinity).toBe(1200);
+    expect(CLARIAS_DEFAULTS.k).toBe(0.018);
+    expect(CLARIAS_DEFAULTS.ti).toBe(95);
+  });
+
+  it("biological defaults prevent W∞ and ti collapse with sparse early data", () => {
+    // 4 early points — previously caused ti≈0 with heuristic 2.5×maxObserved
     const earlyPoints = [
       { jour: 7, poidsMoyen: 26 },
       { jour: 14, poidsMoyen: 50.17 },
       { jour: 21, poidsMoyen: 81.98 },
       { jour: 28, poidsMoyen: 66.35 },
     ];
-    // Without poidsObjectif, W∞ heuristic = 2.5×82 = 205g → ti collapses to ~0
-    const resultBad = calibrerGompertz({ points: earlyPoints }, 3);
-    expect(resultBad).not.toBeNull();
-    // ti should be very low (the bug)
-    expect(resultBad!.params.wInfinity).toBeLessThan(400);
-
-    // With poidsObjectif=400, W∞ >= 400 → ti is pushed to a reasonable value
-    const resultGood = calibrerGompertz(
-      { points: earlyPoints, poidsObjectif: 400 },
-      3
-    );
-    expect(resultGood).not.toBeNull();
-    expect(resultGood!.params.wInfinity).toBeGreaterThanOrEqual(400);
-    // ti should be well beyond the observed data range (28 days)
-    expect(resultGood!.params.ti).toBeGreaterThan(10);
+    const result = calibrerGompertz({ points: earlyPoints }, 3);
+    expect(result).not.toBeNull();
+    // W∞ must be at least the biological floor (800g)
+    expect(result!.params.wInfinity).toBeGreaterThanOrEqual(800);
+    // ti must be in a reasonable biological range, not collapsed to ~0
+    expect(result!.params.ti).toBeGreaterThan(10);
+    expect(result!.params.ti).toBeLessThan(300);
   });
 
   it("custom minPoints=8 rejette 6 points", () => {

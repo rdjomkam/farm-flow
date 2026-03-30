@@ -1217,6 +1217,7 @@ INSERT INTO "ConfigElevage" (
   "eauChangementPct", "eauChangementIntervalleJours",
   "densiteMaxPoissonsM3", "densiteOptimalePoissonsM3",
   "recoltePartiellePoidsSeuil", "recolteJeuneAvantJours",
+  "gompertzWInfDefault", "gompertzKDefault", "gompertzTiDefault", "gompertzMinPoints",
   "isDefault", "isActive",
   "siteId", "createdAt", "updatedAt"
 ) VALUES
@@ -1260,6 +1261,7 @@ INSERT INTO "ConfigElevage" (
     30.0, 3,
     100.0, 50.0,
     400.0, 2,
+    1200.0, 0.018, 95.0, 5,
     true, true,
     'site_01', NOW(), NOW()
   ),
@@ -1303,6 +1305,7 @@ INSERT INTO "ConfigElevage" (
     30.0, 3,
     80.0, 40.0,
     300.0, 1,
+    1000.0, 0.025, 70.0, 5,
     false, true,
     'site_01', NOW(), NOW()
   ),
@@ -1347,6 +1350,7 @@ INSERT INTO "ConfigElevage" (
     25.0, 2,
     60.0, 30.0,
     600.0, 3,
+    1500.0, 0.015, 110.0, 5,
     false, true,
     'site_01', NOW(), NOW()
   );

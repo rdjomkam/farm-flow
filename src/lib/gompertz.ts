@@ -38,13 +38,17 @@ export interface GompertzCalibrationInput {
    * fall back to the heuristic.
    */
   initialGuess?: Partial<GompertzParams>;
-  /**
-   * Target harvest weight from ConfigElevage (g). Used to set a meaningful
-   * lower bound on W∞ — without it, the heuristic `2.5 × maxObserved` can
-   * underestimate the asymptote and push ti to near-zero.
-   */
-  poidsObjectif?: number;
 }
+
+/**
+ * Biological defaults for Clarias gariepinus — pond culture, Cameroon.
+ * Source: ADR-gompertz-lm-validation.md + FAO literature.
+ */
+export const CLARIAS_DEFAULTS = {
+  wInfinity: 1200,  // g — asymptote littérature Clarias pond culture
+  k: 0.018,         // day⁻¹ — constante croissance standard Cameroun
+  ti: 95,           // jours — inflexion pour bacs béton Cameroun
+} as const satisfies GompertzParams;
 
 /** Confidence level labels for the calibration result. */
 export type GompertzConfidenceLevel =
@@ -339,33 +343,28 @@ function levenbergMarquardt(
 // ─── Initialization & bounds (internal) ──────────────────────────────────────
 
 /**
- * Heuristic initial parameter guess from ADR-gompertz-lm-validation.md.
+ * Heuristic initial parameter guess using biological defaults for Clarias.
  *
- * W∞₀ = max(2.5 × maxObserved, poidsObjectif × 1.5)  — ensures the asymptote
- *        is above the harvest target so the solver doesn't collapse ti to 0.
- * K₀  = 0.03 (middle of physiological range, or initialGuess.k if within bounds)
- * ti₀ = mean of observed days       (or initialGuess.ti if within bounds)
+ * W∞₀ = max(2.5 × maxObserved, CLARIAS_DEFAULTS.wInfinity)  — always ≥ 1200g
+ * K₀  = CLARIAS_DEFAULTS.k (0.018)
+ * ti₀ = CLARIAS_DEFAULTS.ti (95)
+ *
+ * If initialGuess.* is provided and within bounds, it takes precedence.
  *
  * @param data           - observed data points {t, w}
  * @param initialGuess   - optional caller-supplied starting values (from ConfigElevage)
- * @param poidsObjectif  - optional harvest target weight (g) from ConfigElevage
  */
 function buildInitialGuess(
   data: { t: number; w: number }[],
-  initialGuess?: Partial<GompertzParams>,
-  poidsObjectif?: number
+  initialGuess?: Partial<GompertzParams>
 ): [number, number, number] {
   const maxW = Math.max(...data.map((d) => d.w));
-  const tMean = data.reduce((s, d) => s + d.t, 0) / data.length;
 
-  // W∞: must be well above both maxObserved and the production target.
-  // Without poidsObjectif, 2.5×maxObserved can be far too low (e.g. 205g
-  // when the target is 400g), causing the solver to push ti → 0.
-  const wInfFloor = poidsObjectif ? Math.max(maxW, poidsObjectif) : maxW;
-  const wInfHeuristic = Math.max(maxW * 2.5, poidsObjectif ? poidsObjectif * 1.5 : 0);
+  // W∞: biological floor ensures the asymptote is never too low
+  const wInfHeuristic = Math.max(maxW * 2.5, CLARIAS_DEFAULTS.wInfinity);
   const wInf =
     initialGuess?.wInfinity !== undefined &&
-    initialGuess.wInfinity >= wInfFloor &&
+    initialGuess.wInfinity >= CLARIAS_DEFAULTS.wInfinity &&
     initialGuess.wInfinity <= 3000
       ? initialGuess.wInfinity
       : Math.min(wInfHeuristic, 3000);
@@ -376,7 +375,7 @@ function buildInitialGuess(
     initialGuess.k >= 0.005 &&
     initialGuess.k <= 0.2
       ? initialGuess.k
-      : 0.03;
+      : CLARIAS_DEFAULTS.k;
 
   // ti: must be within [0, 300] days
   const ti =
@@ -384,7 +383,7 @@ function buildInitialGuess(
     initialGuess.ti >= 0 &&
     initialGuess.ti <= 300
       ? initialGuess.ti
-      : tMean;
+      : CLARIAS_DEFAULTS.ti;
 
   return [wInf, k, ti];
 }
@@ -392,23 +391,16 @@ function buildInitialGuess(
 /**
  * Physical bounds for Gompertz parameters — Clarias gariepinus pond culture.
  *
- * W∞  ∈ [max(maxObserved, poidsObjectif), 3000] g
- *     The lower bound MUST be at least the production target — otherwise the
- *     solver can converge to W∞ < poidsObjectif which is biologically
- *     meaningless (fish would never reach harvest weight).
+ * W∞  ∈ [max(maxObserved, 800), 3000] g — 800g biological floor for the species
  * K   ∈ [0.005, 0.2]  day⁻¹
  * ti  ∈ [0, 300]       days
  */
 function buildBounds(
-  data: { t: number; w: number }[],
-  poidsObjectif?: number
+  data: { t: number; w: number }[]
 ): [[number, number], [number, number], [number, number]] {
   const maxObserved = Math.max(...data.map((d) => d.w));
-  const wInfLower = poidsObjectif
-    ? Math.max(maxObserved, poidsObjectif)
-    : maxObserved;
   return [
-    [wInfLower, 3000],
+    [Math.max(maxObserved, 800), 3000],
     [0.005, 0.2],
     [0, 300],
   ];
@@ -454,7 +446,7 @@ export function calibrerGompertz(
   input: GompertzCalibrationInput,
   minPoints: number = 5
 ): GompertzCalibrationResult | null {
-  const { points, initialGuess, poidsObjectif } = input;
+  const { points, initialGuess } = input;
 
   if (points.length < minPoints) {
     return null;
@@ -463,8 +455,8 @@ export function calibrerGompertz(
   // Convert to internal format
   const data = points.map((p) => ({ t: p.jour, w: p.poidsMoyen }));
 
-  const initial = buildInitialGuess(data, initialGuess, poidsObjectif);
-  const bounds = buildBounds(data, poidsObjectif);
+  const initial = buildInitialGuess(data, initialGuess);
+  const bounds = buildBounds(data);
 
   const { params, r2, rmse } = levenbergMarquardt(data, initial, bounds);
 

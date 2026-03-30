@@ -410,7 +410,7 @@ export function ConfigElevageEditClient({ config }: Props) {
                     onChange={handleOptionalNumeric}
                     unit="jours"
                     min={0}
-                    max={120}
+                    max={300}
                     step={1}
                     placeholder="ex: 95"
                   />
