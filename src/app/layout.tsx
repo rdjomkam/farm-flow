@@ -34,9 +34,9 @@ export async function generateMetadata(): Promise<Metadata> {
     const t = await getTranslations("common.metadata");
     description = t("appDescription");
   } catch (error: unknown) {
-    if (error instanceof Error && "digest" in error) {
-      throw error;
-    }
+    // Re-throw Next.js internal errors (DYNAMIC_SERVER_USAGE, NEXT_REDIRECT, etc.)
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
     // Fallback to hardcoded description
   }
   return {
@@ -102,10 +102,9 @@ export default async function RootLayout({
     messages = m as Record<string, unknown>;
     isSuperAdmin = superAdminUser?.isSuperAdmin ?? false;
   } catch (error: unknown) {
-    // Re-throw Next.js internal errors (e.g. DYNAMIC_SERVER_USAGE for static analysis)
-    if (error instanceof Error && "digest" in error) {
-      throw error;
-    }
+    // Re-throw Next.js internal errors (DYNAMIC_SERVER_USAGE, NEXT_REDIRECT, etc.)
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
     console.error("[RootLayout] Failed to load session/messages:", error);
     // Continue with safe defaults — the page will still render
   }
