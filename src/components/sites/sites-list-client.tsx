@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Building2, Users, Container, Waves, Plus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ interface Props {
 }
 
 export function SitesListClient({ sites, activeSiteId, canCreate }: Props) {
+  const t = useTranslations("sites");
   const router = useRouter();
   const queryClient = useQueryClient();
   const userService = useUserService();
@@ -83,41 +85,41 @@ export function SitesListClient({ sites, activeSiteId, canCreate }: Props) {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {sites.length} site{sites.length > 1 ? "s" : ""}
+          {t("list.count", { count: sites.length })}
         </p>
         {canCreate && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-1" />
-                Nouveau site
+                {t("list.nouveau")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Creer un site</DialogTitle>
+                <DialogTitle>{t("list.createTitle")}</DialogTitle>
               </DialogHeader>
               <div className="flex flex-col gap-4 py-2">
                 <Input
-                  label="Nom du site"
-                  placeholder="Ex: Ferme de Douala"
+                  label={t("list.nomLabel")}
+                  placeholder={t("list.nomPlaceholder")}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   autoFocus
                 />
                 <Input
-                  label="Adresse (optionnel)"
-                  placeholder="Ex: Douala, Cameroun"
+                  label={t("list.adresseLabel")}
+                  placeholder={t("list.adressePlaceholder")}
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                 />
               </div>
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button variant="outline">Annuler</Button>
+                  <Button variant="outline">{t("list.annuler")}</Button>
                 </DialogClose>
                 <Button onClick={handleCreate} disabled={!name.trim()}>
-                  Creer
+                  {t("list.creer")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -128,11 +130,9 @@ export function SitesListClient({ sites, activeSiteId, canCreate }: Props) {
       {sites.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground mb-2">Aucun site</p>
+          <p className="text-muted-foreground mb-2">{t("list.empty")}</p>
           <p className="text-sm text-muted-foreground">
-            {canCreate
-              ? "Creez votre premier site pour commencer."
-              : "Demandez a un administrateur de vous ajouter a un site."}
+            {canCreate ? t("list.emptyOwner") : t("list.emptyMember")}
           </p>
         </div>
       ) : (
@@ -154,7 +154,7 @@ export function SitesListClient({ sites, activeSiteId, canCreate }: Props) {
                       {site.id === activeSiteId && (
                         <span className="flex items-center gap-1 text-xs text-primary font-medium shrink-0">
                           <Check className="h-3 w-3" />
-                          Actif
+                          {t("list.actif")}
                         </span>
                       )}
                     </div>
@@ -189,11 +189,11 @@ export function SitesListClient({ sites, activeSiteId, canCreate }: Props) {
                     disabled={switching === site.id || site.id === activeSiteId}
                     className="flex-1"
                   >
-                    {site.id === activeSiteId ? "Site actif" : "Selectionner"}
+                    {site.id === activeSiteId ? t("list.badgeActif") : t("list.selectionner")}
                   </Button>
                   <Link href={`/settings/sites/${site.id}`}>
                     <Button size="sm" variant="outline">
-                      Gerer
+                      {t("list.gerer")}
                     </Button>
                   </Link>
                 </div>

@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { RefreshCw, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export function SwRegister() {
+  const t = useTranslations("pwa");
   const [showUpdate, setShowUpdate] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
 
   useEffect(() => {
@@ -53,7 +56,12 @@ export function SwRegister() {
 
   const handleUpdate = () => {
     if (registration?.waiting) {
+      setIsUpdating(true);
       registration.waiting.postMessage({ type: "SKIP_WAITING" });
+      // Fallback reload if controllerchange never fires
+      setTimeout(() => {
+        window.location.reload();
+      }, 3000);
     }
   };
 
@@ -62,18 +70,22 @@ export function SwRegister() {
   return (
     <div className="fixed bottom-20 left-4 right-4 z-50 sm:left-auto sm:right-4 sm:bottom-4 sm:w-80">
       <div className="flex items-center gap-3 rounded-lg border bg-card p-3 shadow-lg">
-        <RefreshCw className="h-5 w-5 shrink-0 text-primary" />
-        <p className="flex-1 text-sm">Nouvelle version disponible</p>
+        <RefreshCw className={`h-5 w-5 shrink-0 text-primary${isUpdating ? " animate-spin" : ""}`} />
+        <p className="flex-1 text-sm">
+          {isUpdating ? t("swRegister.miseAJour") : t("swRegister.nouvelleVersion")}
+        </p>
         <button
           onClick={handleUpdate}
-          className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          disabled={isUpdating}
+          className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Mettre à jour
+          {isUpdating ? t("swRegister.miseAJour") : t("swRegister.mettreAJour")}
         </button>
         <button
           onClick={() => setShowUpdate(false)}
-          className="shrink-0 p-1 text-muted-foreground hover:text-foreground"
-          aria-label="Fermer"
+          disabled={isUpdating}
+          className="shrink-0 p-1 text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label={t("swRegister.fermer")}
         >
           <X className="h-4 w-4" />
         </button>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Settings, UserMinus, Mail, Phone, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,6 +58,7 @@ export function MemberActionsDialog({
   siteRoles,
   callerPermissions,
 }: MemberActionsDialogProps) {
+  const t = useTranslations("sites");
   const queryClient = useQueryClient();
   const userService = useUserService();
   const [open, setOpen] = useState(false);
@@ -111,9 +113,9 @@ export function MemberActionsDialog({
         {view === "main" ? (
           <>
             <DialogHeader>
-              <DialogTitle>Gerer — {member.name}</DialogTitle>
+              <DialogTitle>{t("memberActions.gererTitle", { name: member.name })}</DialogTitle>
               <DialogDescription>
-                Modifier le role ou retirer ce membre du site.
+                {t("memberActions.gererDescription")}
               </DialogDescription>
             </DialogHeader>
 
@@ -140,7 +142,7 @@ export function MemberActionsDialog({
                 onValueChange={handleChangeSiteRole}
                 disabled={assignableRoles.length === 0}
               >
-                <SelectTrigger label="Role">
+                <SelectTrigger label={t("memberActions.roleLabel")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -165,7 +167,7 @@ export function MemberActionsDialog({
                 onClick={() => setView("permissions")}
               >
                 <Settings className="h-4 w-4" />
-                Voir les permissions du role
+                {t("memberActions.voirPermissions")}
               </Button>
 
               {/* Separator */}
@@ -179,15 +181,15 @@ export function MemberActionsDialog({
                   onClick={() => setConfirmRemove(true)}
                 >
                   <UserMinus className="h-4 w-4" />
-                  Retirer du site
+                  {t("memberActions.retirer")}
                 </Button>
               ) : (
                 <div className="flex flex-col gap-2 rounded-lg border border-danger/30 bg-danger/5 p-3">
                   <p className="text-sm font-medium text-danger">
-                    Retirer {member.name} du site ?
+                    {t("memberActions.retirerTitle", { name: member.name })}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Cette action est irreversible.
+                    {t("memberActions.retirerDescription")}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
@@ -195,14 +197,14 @@ export function MemberActionsDialog({
                       size="sm"
                       onClick={() => setConfirmRemove(false)}
                     >
-                      Annuler
+                      {t("memberActions.annuler")}
                     </Button>
                     <Button
                       variant="danger"
                       size="sm"
                       onClick={handleRemove}
                     >
-                      Confirmer
+                      {t("memberActions.confirmer")}
                     </Button>
                   </div>
                 </div>
@@ -214,10 +216,10 @@ export function MemberActionsDialog({
           <>
             <DialogHeader>
               <DialogTitle>
-                Permissions — {member.siteRoleName}
+                {t("memberActions.permissionsTitle", { roleName: member.siteRoleName })}
               </DialogTitle>
               <DialogDescription>
-                Permissions associees au role de {member.name}.
+                {t("memberActions.permissionsDescription", { name: member.name })}
               </DialogDescription>
             </DialogHeader>
 
@@ -266,7 +268,7 @@ export function MemberActionsDialog({
                 onClick={() => setView("main")}
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
-                Retour
+                {t("memberActions.retourBtn")}
               </Button>
             </div>
           </>

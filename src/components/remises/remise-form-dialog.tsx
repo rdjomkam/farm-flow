@@ -11,6 +11,7 @@
  * R6 : CSS variables du thème
  */
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -62,7 +63,13 @@ function generateCodeFromNom(nom: string): string {
     .substring(0, 20);
 }
 
-export function RemiseFormDialog({ open, onOpenChange, remise, onSuccess }: RemiseFormDialogProps) {
+export function RemiseFormDialog({
+  open,
+  onOpenChange,
+  remise,
+  onSuccess,
+}: RemiseFormDialogProps) {
+  const t = useTranslations("remises");
   const isEditing = !!remise;
 
   const [nom, setNom] = useState("");
@@ -75,7 +82,9 @@ export function RemiseFormDialog({ open, onOpenChange, remise, onSuccess }: Remi
   const [limiteUtilisations, setLimiteUtilisations] = useState("");
   const [isGlobale, setIsGlobale] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ field: string; message: string }[]>([]);
+  const [errors, setErrors] = useState<{ field: string; message: string }[]>(
+    []
+  );
 
   // Réinitialiser le formulaire quand le dialog s'ouvre
   useEffect(() => {
@@ -88,7 +97,9 @@ export function RemiseFormDialog({ open, onOpenChange, remise, onSuccess }: Remi
         setEstPourcentage(remise.estPourcentage);
         setDateDebut(toDateInput(remise.dateDebut));
         setDateFin(toDateInput(remise.dateFin));
-        setLimiteUtilisations(remise.limiteUtilisations ? String(remise.limiteUtilisations) : "");
+        setLimiteUtilisations(
+          remise.limiteUtilisations ? String(remise.limiteUtilisations) : ""
+        );
       } else {
         setNom("");
         setCode("");
@@ -127,13 +138,28 @@ export function RemiseFormDialog({ open, onOpenChange, remise, onSuccess }: Remi
 
     // Validation côté client
     const clientErrors: { field: string; message: string }[] = [];
-    if (!nom.trim()) clientErrors.push({ field: "nom", message: "Le nom est requis." });
-    if (!code.trim()) clientErrors.push({ field: "code", message: "Le code est requis." });
+    if (!nom.trim())
+      clientErrors.push({ field: "nom", message: t("form.erreurs.nomRequis") });
+    if (!code.trim())
+      clientErrors.push({
+        field: "code",
+        message: t("form.erreurs.codeRequis"),
+      });
     if (!valeur || parseFloat(valeur) <= 0)
-      clientErrors.push({ field: "valeur", message: "La valeur doit être positive." });
-    if (!dateDebut) clientErrors.push({ field: "dateDebut", message: "La date de début est requise." });
+      clientErrors.push({
+        field: "valeur",
+        message: t("form.erreurs.valeurRequise"),
+      });
+    if (!dateDebut)
+      clientErrors.push({
+        field: "dateDebut",
+        message: t("form.erreurs.debutRequis"),
+      });
     if (dateFin && dateDebut && dateFin <= dateDebut)
-      clientErrors.push({ field: "dateFin", message: "La date de fin doit être après la date de début." });
+      clientErrors.push({
+        field: "dateFin",
+        message: t("form.erreurs.datefinApresDebut"),
+      });
 
     if (clientErrors.length > 0) {
       setErrors(clientErrors);
@@ -150,7 +176,9 @@ export function RemiseFormDialog({ open, onOpenChange, remise, onSuccess }: Remi
         estPourcentage,
         dateDebut,
         dateFin: dateFin || undefined,
-        limiteUtilisations: limiteUtilisations ? parseInt(limiteUtilisations) : undefined,
+        limiteUtilisations: limiteUtilisations
+          ? parseInt(limiteUtilisations)
+          : undefined,
         isGlobale,
       };
 
@@ -169,7 +197,12 @@ export function RemiseFormDialog({ open, onOpenChange, remise, onSuccess }: Remi
         if (data.errors) {
           setErrors(data.errors);
         } else {
-          setErrors([{ field: "global", message: data.message ?? "Erreur serveur." }]);
+          setErrors([
+            {
+              field: "global",
+              message: data.message ?? t("form.erreurs.erreurServeur"),
+            },
+          ]);
         }
         return;
       }
@@ -185,12 +218,12 @@ export function RemiseFormDialog({ open, onOpenChange, remise, onSuccess }: Remi
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? "Modifier la remise" : "Créer une remise"}
+            {isEditing ? t("form.modifierTitle") : t("form.creerTitle")}
           </DialogTitle>
           <DialogDescription>
             {isEditing
-              ? "Modifiez les propriétés de la remise. Le code et le type sont immuables."
-              : "Créez un nouveau code promo ou une remise automatique."}
+              ? t("form.modifierDescription")
+              : t("form.creerDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -205,13 +238,13 @@ export function RemiseFormDialog({ open, onOpenChange, remise, onSuccess }: Remi
           {/* Nom */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              Nom <span className="text-destructive">*</span>
+              {t("form.nomLabel")} <span className="text-destructive">*</span>
             </label>
             <input
               type="text"
               value={nom}
               onChange={(e) => handleNomChange(e.target.value)}
-              placeholder="Ex: Early Adopter Lancement 2026"
+              placeholder={t("form.nomPlaceholder")}
               className="w-full h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
             {getError("nom") && (
@@ -222,7 +255,7 @@ export function RemiseFormDialog({ open, onOpenChange, remise, onSuccess }: Remi
           {/* Code */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              Code promo <span className="text-destructive">*</span>
+              {t("form.codeLabel")} <span className="text-destructive">*</span>
             </label>
             <input
               type="text"
@@ -233,17 +266,19 @@ export function RemiseFormDialog({ open, onOpenChange, remise, onSuccess }: Remi
               className="w-full h-10 px-3 rounded-lg border border-border bg-background text-foreground font-mono text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Lettres, chiffres et tirets uniquement. Automatiquement en majuscules.
+              {t("form.codeAutoHint")}
             </p>
             {getError("code") && (
-              <p className="text-destructive text-xs mt-1">{getError("code")}</p>
+              <p className="text-destructive text-xs mt-1">
+                {getError("code")}
+              </p>
             )}
           </div>
 
           {/* Type */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              Type <span className="text-destructive">*</span>
+              {t("form.typeLabel")} <span className="text-destructive">*</span>
             </label>
             <select
               value={type}
@@ -263,7 +298,8 @@ export function RemiseFormDialog({ open, onOpenChange, remise, onSuccess }: Remi
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="block text-sm font-medium text-foreground mb-1">
-                Valeur <span className="text-destructive">*</span>
+                {t("form.valeurLabel")}{" "}
+                <span className="text-destructive">*</span>
               </label>
               <input
                 type="number"
@@ -271,24 +307,30 @@ export function RemiseFormDialog({ open, onOpenChange, remise, onSuccess }: Remi
                 onChange={(e) => setValeur(e.target.value)}
                 min="0.01"
                 step="1"
-                placeholder={estPourcentage ? "Ex: 10" : "Ex: 2000"}
+                placeholder={
+                  estPourcentage
+                    ? t("form.valeurPlaceholderPct")
+                    : t("form.valeurPlaceholderXAF")
+                }
                 className="w-full h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
               {getError("valeur") && (
-                <p className="text-destructive text-xs mt-1">{getError("valeur")}</p>
+                <p className="text-destructive text-xs mt-1">
+                  {getError("valeur")}
+                </p>
               )}
             </div>
             <div className="w-32">
               <label className="block text-sm font-medium text-foreground mb-1">
-                Unité
+                {t("form.uniteLabel")}
               </label>
               <select
                 value={estPourcentage ? "pct" : "xaf"}
                 onChange={(e) => setEstPourcentage(e.target.value === "pct")}
                 className="w-full h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
-                <option value="xaf">XAF fixe</option>
-                <option value="pct">% remise</option>
+                <option value="xaf">{t("form.uniteXAF")}</option>
+                <option value="pct">{t("form.unitePct")}</option>
               </select>
             </div>
           </div>
@@ -297,7 +339,8 @@ export function RemiseFormDialog({ open, onOpenChange, remise, onSuccess }: Remi
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="block text-sm font-medium text-foreground mb-1">
-                Début <span className="text-destructive">*</span>
+                {t("form.debutLabel")}{" "}
+                <span className="text-destructive">*</span>
               </label>
               <input
                 type="date"
@@ -306,12 +349,14 @@ export function RemiseFormDialog({ open, onOpenChange, remise, onSuccess }: Remi
                 className="w-full h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
               {getError("dateDebut") && (
-                <p className="text-destructive text-xs mt-1">{getError("dateDebut")}</p>
+                <p className="text-destructive text-xs mt-1">
+                  {getError("dateDebut")}
+                </p>
               )}
             </div>
             <div className="flex-1">
               <label className="block text-sm font-medium text-foreground mb-1">
-                Fin (optionnel)
+                {t("form.finLabel")}
               </label>
               <input
                 type="date"
@@ -321,7 +366,9 @@ export function RemiseFormDialog({ open, onOpenChange, remise, onSuccess }: Remi
                 className="w-full h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
               {getError("dateFin") && (
-                <p className="text-destructive text-xs mt-1">{getError("dateFin")}</p>
+                <p className="text-destructive text-xs mt-1">
+                  {getError("dateFin")}
+                </p>
               )}
             </div>
           </div>
@@ -329,7 +376,7 @@ export function RemiseFormDialog({ open, onOpenChange, remise, onSuccess }: Remi
           {/* Limite d'utilisations */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              Limite d&apos;utilisations (optionnel)
+              {t("form.limiteLabel")}
             </label>
             <input
               type="number"
@@ -337,7 +384,7 @@ export function RemiseFormDialog({ open, onOpenChange, remise, onSuccess }: Remi
               onChange={(e) => setLimiteUtilisations(e.target.value)}
               min="1"
               step="1"
-              placeholder="Illimité si vide"
+              placeholder={t("form.limitePlaceholder")}
               className="w-full h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
@@ -352,8 +399,11 @@ export function RemiseFormDialog({ open, onOpenChange, remise, onSuccess }: Remi
                 onChange={(e) => setIsGlobale(e.target.checked)}
                 className="w-4 h-4 rounded border-border"
               />
-              <label htmlFor="isGlobale" className="text-sm text-foreground cursor-pointer">
-                Remise globale (applicable à tous les sites)
+              <label
+                htmlFor="isGlobale"
+                className="text-sm text-foreground cursor-pointer"
+              >
+                {t("form.globaleCheckbox")}
               </label>
             </div>
           )}
@@ -365,14 +415,18 @@ export function RemiseFormDialog({ open, onOpenChange, remise, onSuccess }: Remi
             onClick={() => onOpenChange(false)}
             className="px-4 py-2 bg-muted text-muted-foreground rounded-lg text-sm hover:bg-muted/80 transition-colors"
           >
-            Annuler
+            {t("form.annuler")}
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
-            {loading ? "..." : isEditing ? "Enregistrer" : "Créer"}
+            {loading
+              ? t("form.chargement")
+              : isEditing
+                ? t("form.enregistrer")
+                : t("form.creer")}
           </button>
         </DialogFooter>
       </DialogContent>

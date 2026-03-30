@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Bell, AlertTriangle, AlertCircle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SeveriteAlerte, TypeReleve } from "@/types";
@@ -26,7 +27,7 @@ const SEVERITE_STYLES: Record<
     iconColor: string;
     badgeBg: string;
     badgeText: string;
-    label: string;
+    severiteKey: string;
     Icon: React.ComponentType<{ className?: string }>;
   }
 > = {
@@ -36,7 +37,7 @@ const SEVERITE_STYLES: Record<
     iconColor: "text-accent-red",
     badgeBg: "bg-accent-red/10",
     badgeText: "text-accent-red",
-    label: "Critique",
+    severiteKey: "CRITIQUE",
     Icon: AlertCircle,
   },
   [SeveriteAlerte.AVERTISSEMENT]: {
@@ -45,7 +46,7 @@ const SEVERITE_STYLES: Record<
     iconColor: "text-accent-amber",
     badgeBg: "bg-accent-amber/10",
     badgeText: "text-accent-amber",
-    label: "Avertissement",
+    severiteKey: "AVERTISSEMENT",
     Icon: AlertTriangle,
   },
   [SeveriteAlerte.INFO]: {
@@ -54,7 +55,7 @@ const SEVERITE_STYLES: Record<
     iconColor: "text-primary",
     badgeBg: "bg-primary/10",
     badgeText: "text-primary",
-    label: "Info",
+    severiteKey: "INFO",
     Icon: Bell,
   },
 };
@@ -81,6 +82,7 @@ export function NotificationCard({
   actionPayload,
   onMarkRead,
 }: NotificationCardProps) {
+  const t = useTranslations("alertes");
   const router = useRouter();
   const styles = SEVERITE_STYLES[severite] ?? SEVERITE_STYLES[SeveriteAlerte.INFO];
   const { Icon } = styles;
@@ -111,31 +113,35 @@ export function NotificationCard({
   function buildCtaLabel(payload: NotificationActionPayload): string {
     switch (payload.type) {
       case "CREER_RELEVE": {
-        const labels: Partial<Record<TypeReleve, string>> = {
-          [TypeReleve.QUALITE_EAU]: "Mesurer la qualite de l'eau",
-          [TypeReleve.RENOUVELLEMENT]: "Enregistrer le renouvellement",
-          [TypeReleve.BIOMETRIE]: "Effectuer la biometrie",
-          [TypeReleve.ALIMENTATION]: "Saisir l'alimentation",
-          [TypeReleve.MORTALITE]: "Signaler la mortalite",
-          [TypeReleve.COMPTAGE]: "Effectuer le comptage",
-          [TypeReleve.OBSERVATION]: "Faire une observation",
-        };
-        return labels[payload.typeReleve as TypeReleve] ?? "Saisir un releve";
+        const typeReleve = payload.typeReleve as TypeReleve;
+        const knownTypes: TypeReleve[] = [
+          TypeReleve.QUALITE_EAU,
+          TypeReleve.RENOUVELLEMENT,
+          TypeReleve.BIOMETRIE,
+          TypeReleve.ALIMENTATION,
+          TypeReleve.MORTALITE,
+          TypeReleve.COMPTAGE,
+          TypeReleve.OBSERVATION,
+        ];
+        if (knownTypes.includes(typeReleve)) {
+          return t(`card.ctaLabels.CREER_RELEVE.${typeReleve}`);
+        }
+        return t("card.ctaLabels.CREER_RELEVE.default");
       }
       case "MODIFIER_BAC":
-        return "Configurer le bac";
+        return t("card.ctaLabels.MODIFIER_BAC");
       case "VOIR_VAGUE":
-        return "Voir la vague";
+        return t("card.ctaLabels.VOIR_VAGUE");
       case "VOIR_STOCK":
-        return "Voir le stock";
+        return t("card.ctaLabels.VOIR_STOCK");
       default:
-        return "Voir les details";
+        return t("card.ctaLabels.default");
     }
   }
 
   const payload = actionPayload as NotificationActionPayload | null;
   const ctaUrl = payload ? buildCtaUrl(payload) : lien ?? null;
-  const ctaLabel = payload ? buildCtaLabel(payload) : "Voir les details";
+  const ctaLabel = payload ? buildCtaLabel(payload) : t("card.ctaLabels.default");
 
   function handleCta() {
     if (onMarkRead) onMarkRead(id);
@@ -154,10 +160,10 @@ export function NotificationCard({
             <span
               className={`text-xs font-semibold rounded-full px-1.5 py-0.5 ${styles.badgeBg} ${styles.badgeText}`}
             >
-              {styles.label}
+              {t(`severites.${styles.severiteKey}`)}
             </span>
             {!lu && (
-              <span className="h-2 w-2 rounded-full bg-primary shrink-0" title="Non lu" />
+              <span className="h-2 w-2 rounded-full bg-primary shrink-0" title={t("card.nonLu")} />
             )}
           </div>
           <p className="text-sm font-semibold mt-1 leading-tight">{titre}</p>

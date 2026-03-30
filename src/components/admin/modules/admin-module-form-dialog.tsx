@@ -4,18 +4,19 @@
  * admin-module-form-dialog.tsx
  *
  * Formulaire d'edition des metadonnees d'un ModuleDefinition.
- * Mode edition uniquement — key et level sont NON-MODIFIABLES (R5 : asChild).
+ * Mode edition uniquement - key et level sont NON-MODIFIABLES (R5 : asChild).
  *
  * Champs editables : label, description, iconName, sortOrder, category, isVisible, isActive.
  * Calls PUT /api/admin/modules/[key].
  *
- * Story E.2 — Sprint E (ADR-021).
+ * Story E.2 - Sprint E (ADR-021).
  * R5 : DialogTrigger asChild.
  * R6 : couleurs via CSS variables.
  */
 
 import { useState } from "react";
 import { Pencil, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogTrigger,
@@ -86,11 +87,12 @@ interface AdminModuleFormDialogProps {
 }
 
 export function AdminModuleFormDialog({ module, onUpdated }: AdminModuleFormDialogProps) {
+  const t = useTranslations("admin.modules");
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Form state — only editable fields
+  // Form state - only editable fields
   const [label, setLabel] = useState(module.label);
   const [description, setDescription] = useState(module.description ?? "");
   const [iconName, setIconName] = useState(module.iconName);
@@ -121,12 +123,12 @@ export function AdminModuleFormDialog({ module, onUpdated }: AdminModuleFormDial
 
     const sortOrderNum = parseInt(sortOrder, 10);
     if (isNaN(sortOrderNum)) {
-      setError("L'ordre de tri doit etre un nombre entier.");
+      setError(t("erreurs.ordreTriInvalide"));
       return;
     }
 
     if (!label.trim()) {
-      setError("Le libelle est obligatoire.");
+      setError(t("erreurs.libelleRequis"));
       return;
     }
 
@@ -148,7 +150,7 @@ export function AdminModuleFormDialog({ module, onUpdated }: AdminModuleFormDial
 
       if (!res.ok) {
         const data = (await res.json()) as { error?: string; message?: string };
-        setError(data.error ?? data.message ?? "Une erreur est survenue.");
+        setError(data.error ?? data.message ?? t("erreurs.erreurReseau"));
         return;
       }
 
@@ -156,7 +158,7 @@ export function AdminModuleFormDialog({ module, onUpdated }: AdminModuleFormDial
       onUpdated(updated);
       setOpen(false);
     } catch {
-      setError("Erreur reseau. Veuillez reessayer.");
+      setError(t("erreurs.erreurReseau"));
     } finally {
       setSaving(false);
     }
@@ -168,30 +170,30 @@ export function AdminModuleFormDialog({ module, onUpdated }: AdminModuleFormDial
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
           <Pencil className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Modifier</span>
+          <span className="hidden sm:inline">{t("trigger")}</span>
         </Button>
       </DialogTrigger>
 
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Modifier le module</DialogTitle>
+          <DialogTitle>{t("modifierTitle")}</DialogTitle>
           <DialogDescription>
-            Mise a jour des metadonnees du module. La cle et le niveau sont immuables.
+            {t("modifierDescription")}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Immutable fields — displayed read-only */}
+          {/* Immutable fields - displayed read-only */}
           <div className="rounded-lg bg-muted/50 border border-border px-4 py-3 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Cle (immuable)
+                {t("cleLabel")}
               </span>
               <span className="font-mono text-sm text-foreground">{module.key}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Niveau (immuable)
+                {t("niveauLabel")}
               </span>
               <span className="text-sm text-foreground capitalize">{module.level}</span>
             </div>
@@ -199,36 +201,36 @@ export function AdminModuleFormDialog({ module, onUpdated }: AdminModuleFormDial
 
           {/* Label */}
           <Input
-            label="Libelle *"
+            label={`${t("libelleLabel")} *`}
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            placeholder="Ex : Grossissement"
+            placeholder={t("libellePlaceholder")}
             required
             disabled={saving}
           />
 
           {/* Description */}
           <Textarea
-            label="Description"
+            label={t("descriptionLabel")}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Description optionnelle du module..."
+            placeholder={t("descriptionPlaceholder")}
             disabled={saving}
           />
 
           {/* Icon name */}
           <Input
-            label="Nom de l'icone (Lucide)"
+            label={t("iconeLabel")}
             value={iconName}
             onChange={(e) => setIconName(e.target.value)}
-            placeholder="Ex : Package, Fish, BarChart3..."
+            placeholder={t("iconePlaceholder")}
             disabled={saving}
           />
 
-          {/* Sort order + category — inline on desktop */}
+          {/* Sort order + category - inline on desktop */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
-              label="Ordre de tri"
+              label={t("ordreTriLabel")}
               type="number"
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
@@ -237,10 +239,10 @@ export function AdminModuleFormDialog({ module, onUpdated }: AdminModuleFormDial
               disabled={saving}
             />
             <Input
-              label="Categorie"
+              label={t("categorieLabel")}
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              placeholder="Ex : production, finance..."
+              placeholder={t("categoriePlaceholder")}
               disabled={saving}
             />
           </div>
@@ -249,16 +251,16 @@ export function AdminModuleFormDialog({ module, onUpdated }: AdminModuleFormDial
           <div className="space-y-3 rounded-lg border border-border px-4 py-3">
             <Toggle
               id="toggle-visible"
-              label="Visible"
-              description="Le module est affiche dans les interfaces de selection"
+              label={t("visibleLabel")}
+              description={t("visibleDescription")}
               checked={isVisible}
               onChange={setIsVisible}
             />
             <div className="border-t border-border" />
             <Toggle
               id="toggle-active"
-              label="Actif"
-              description="Le module peut etre active sur les sites"
+              label={t("actifLabel")}
+              description={t("actifDescription")}
               checked={isActive}
               onChange={setIsActive}
             />
@@ -279,16 +281,16 @@ export function AdminModuleFormDialog({ module, onUpdated }: AdminModuleFormDial
               onClick={() => setOpen(false)}
               disabled={saving}
             >
-              Annuler
+              {t("annuler")}
             </Button>
             <Button type="submit" disabled={saving}>
               {saving ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Enregistrement...
+                  {t("enregistrement")}
                 </>
               ) : (
-                "Enregistrer"
+                t("enregistrer")
               )}
             </Button>
           </DialogFooter>

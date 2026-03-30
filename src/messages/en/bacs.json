@@ -1,0 +1,49 @@
+{
+  "typeSysteme": {
+    "BAC_BETON": "Concrete / plastic tank",
+    "BAC_PLASTIQUE": "Plastic tank",
+    "ETANG_TERRE": "Earth pond",
+    "RAS": "RAS system (recirculation)"
+  },
+  "list": {
+    "count": "{count} tank(s)",
+    "nouveau": "New tank",
+    "empty": "No tanks",
+    "emptyDescription": "Start by creating a tank for your site.",
+    "poissons": "{count} fish",
+    "initial": "Initial: {nombre} ind. / {poids} g",
+    "libre": "Available",
+    "occupe": "Occupied"
+  },
+  "createDialog": {
+    "title": "New tank",
+    "description": "Add a new container for your fish.",
+    "nomLabel": "Tank name",
+    "nomPlaceholder": "E.g.: Tank 1",
+    "volumeLabel": "Volume (litres)",
+    "annuler": "Cancel",
+    "creer": "Create tank",
+    "erreurs": {
+      "nomRequis": "Name is required.",
+      "volumePositif": "Volume must be greater than 0."
+    }
+  },
+  "editDialog": {
+    "title": "Edit tank",
+    "description": "Modify the tank name or volume.",
+    "nomLabel": "Tank name",
+    "volumeLabel": "Volume (litres)",
+    "nombrePoissonsLabel": "Current fish count",
+    "nombreInitialLabel": "Initial count",
+    "poidsMoyenInitialLabel": "Initial average weight (g)",
+    "typeSystemeLabel": "System type",
+    "typeSystemePlaceholder": "Select system type",
+    "typeSystemeNonSpecifie": "Not specified",
+    "annuler": "Cancel",
+    "enregistrer": "Save",
+    "erreurs": {
+      "nomRequis": "Name is required.",
+      "volumePositif": "Volume must be greater than 0."
+    }
+  }
+}

@@ -2,8 +2,10 @@
 
 import { Download, Share, X } from "lucide-react";
 import { useInstallPrompt } from "@/hooks/use-install-prompt";
+import { useTranslations } from "next-intl";
 
 export function InstallPrompt() {
+  const t = useTranslations("pwa");
   const { canInstall, isIOS, isStandalone, promptInstall, dismiss } = useInstallPrompt();
 
   if (!canInstall || isStandalone) return null;
@@ -16,23 +18,22 @@ export function InstallPrompt() {
             <Download className="h-5 w-5 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium">Installer FarmFlow</p>
+            <p className="text-sm font-medium">{t("installPrompt.title")}</p>
             {isIOS ? (
               <p className="mt-1 text-xs text-muted-foreground">
-                Appuyez sur{" "}
-                <Share className="inline h-3.5 w-3.5 text-primary" />{" "}
-                puis &quot;Sur l&apos;écran d&apos;accueil&quot;
+                {t("installPrompt.iosDescription")}{" "}
+                <Share className="inline h-3.5 w-3.5 text-primary" />
               </p>
             ) : (
               <p className="mt-1 text-xs text-muted-foreground">
-                Accédez rapidement à l&apos;app depuis votre écran d&apos;accueil
+                {t("installPrompt.androidDescription")}
               </p>
             )}
           </div>
           <button
             onClick={dismiss}
             className="shrink-0 p-1 text-muted-foreground hover:text-foreground"
-            aria-label="Fermer"
+            aria-label={t("installPrompt.fermer")}
           >
             <X className="h-4 w-4" />
           </button>
@@ -42,7 +43,7 @@ export function InstallPrompt() {
             onClick={promptInstall}
             className="mt-3 w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
           >
-            Installer
+            {t("installPrompt.installer")}
           </button>
         )}
       </div>

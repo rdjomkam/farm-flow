@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -16,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { useUserService } from "@/services";
 
 export default function NewRolePage() {
+  const t = useTranslations("sites");
   const params = useParams<{ id: string }>();
   const siteId = params.id;
   const router = useRouter();
@@ -39,11 +41,11 @@ export default function NewRolePage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
-      toast({ title: "Le nom du role est obligatoire.", variant: "error" });
+      toast({ title: t("roles.nouveau.erreurs.nomRequis"), variant: "error" });
       return;
     }
     if (selectedPerms.size === 0) {
-      toast({ title: "Selectionnez au moins une permission.", variant: "error" });
+      toast({ title: t("roles.nouveau.erreurs.auMoinsUnePermission"), variant: "error" });
       return;
     }
 
@@ -61,36 +63,36 @@ export default function NewRolePage() {
 
   return (
     <>
-      <Header title="Nouveau role" />
+      <Header title={t("roles.nouveau.title")} />
       <div className="p-4 flex flex-col gap-4 max-w-lg mx-auto">
         <Link
           href={`/settings/sites/${siteId}/roles`}
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
         >
           <ArrowLeft className="h-4 w-4" />
-          Roles
+          {t("roles.nouveau.rolesLink")}
         </Link>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div className="flex flex-col gap-4">
             <Input
-              label="Nom du role"
-              placeholder="Ex: Technicien eau"
+              label={t("roles.nouveau.nomLabel")}
+              placeholder={t("roles.nouveau.nomPlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
               autoFocus
             />
             <Input
-              label="Description (optionnelle)"
-              placeholder="Ex: Responsable de la qualite de l'eau"
+              label={t("roles.nouveau.descriptionLabel")}
+              placeholder={t("roles.nouveau.descriptionPlaceholder")}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
 
           <div className="flex flex-col gap-3">
-            <p className="text-sm font-semibold">Permissions</p>
+            <p className="text-sm font-semibold">{t("roles.nouveau.permissionsLabel")}</p>
             {Object.entries(PERMISSION_GROUPS).map(([groupKey, groupPerms]) => (
               <div key={groupKey}>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
@@ -127,7 +129,7 @@ export default function NewRolePage() {
           <div className="flex gap-3 pt-2">
             <Link href={`/settings/sites/${siteId}/roles`} className="flex-1">
               <Button type="button" variant="outline" className="w-full">
-                Annuler
+                {t("roles.nouveau.annuler")}
               </Button>
             </Link>
             <Button
@@ -135,7 +137,7 @@ export default function NewRolePage() {
               className="flex-1"
               disabled={!name.trim() || selectedPerms.size === 0}
             >
-              Creer le role
+              {t("roles.nouveau.creer")}
             </Button>
           </div>
         </form>

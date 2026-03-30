@@ -1,0 +1,47 @@
+{
+  "swRegister": {
+    "nouvelleVersion": "New version available",
+    "mettreAJour": "Update",
+    "miseAJour": "Updating...",
+    "fermer": "Close"
+  },
+  "installPrompt": {
+    "title": "Install FarmFlow",
+    "iosDescription": "Tap the share button then \"Add to Home Screen\"",
+    "androidDescription": "Quickly access the app from your home screen",
+    "installer": "Install",
+    "fermer": "Close"
+  },
+  "pinSetup": {
+    "creerTitle": "Create your security PIN",
+    "confirmerTitle": "Confirm your PIN",
+    "creerDescription": "This PIN protects your offline data. Choose 6 digits.",
+    "confirmerDescription": "Enter your PIN again to confirm.",
+    "suivant": "Next",
+    "confirmer": "Confirm",
+    "retour": "Back",
+    "chiffrement": "Encrypting...",
+    "erreurs": {
+      "pinSixChiffres": "PIN must contain 6 digits",
+      "pinsDifferents": "PINs do not match"
+    }
+  },
+  "syncStatus": {
+    "title": "Sync queue",
+    "aucunElement": "No items pending",
+    "elementsEnAttente": "{count} item(s) pending",
+    "synchroniser": "Sync",
+    "vider": "Clear",
+    "confirmerVider": "Delete all pending items? This action is irreversible.",
+    "suppression": "Deleting...",
+    "confirmer": "Confirm",
+    "annuler": "Cancel",
+    "fermer": "Close",
+    "statuts": {
+      "pending": "Pending",
+      "syncing": "In progress",
+      "failed": "Failed"
+    },
+    "tentatives": "{count} attempt(s)"
+  }
+}

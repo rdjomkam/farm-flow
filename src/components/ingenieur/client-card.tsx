@@ -11,6 +11,7 @@ import {
   Package,
   WifiOff,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatutActivation } from "@/types";
@@ -33,19 +34,16 @@ const statusStyles = {
     border: "",
     icon: "text-danger bg-danger/10",
     badge: "bg-danger/15 text-danger",
-    label: "Critique",
   },
   attention: {
     border: "",
     icon: "text-warning bg-warning/10",
     badge: "bg-accent-amber-muted text-accent-amber",
-    label: "Attention",
   },
   ok: {
     border: "",
     icon: "text-success bg-success/10",
     badge: "bg-success/15 text-success",
-    label: "OK",
   },
 } as const;
 
@@ -54,17 +52,6 @@ const StatusIcon = {
   attention: AlertTriangle,
   ok: CheckCircle2,
 } as const;
-
-function formatDateRelative(date: Date | string): string {
-  const d = typeof date === "string" ? new Date(date) : date;
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays === 0) return "aujourd'hui";
-  if (diffDays === 1) return "hier";
-  if (diffDays < 7) return `il y a ${diffDays} jours`;
-  return d.toLocaleDateString("fr-FR");
-}
 
 /**
  * Un client est inactif si son dernier relevé date de 3 jours ou plus.
@@ -93,10 +80,22 @@ interface ClientCardProps {
 // ---------------------------------------------------------------------------
 
 export function ClientCard({ client }: ClientCardProps) {
+  const t = useTranslations("ingenieur.clientCard");
   const color = getStatusColor(client);
   const styles = statusStyles[color];
   const Icon = StatusIcon[color];
   const inactif = isInactif(client.dernierReleveDate);
+
+  function formatDateRelative(date: Date | string): string {
+    const d = typeof date === "string" ? new Date(date) : date;
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return t("dates.aujourdhui");
+    if (diffDays === 1) return t("dates.hier");
+    if (diffDays < 7) return t("dates.ilYAJours", { count: diffDays });
+    return d.toLocaleDateString("fr-FR");
+  }
 
   return (
     <Link href={`/monitoring/${client.siteId}`} className="block">
@@ -113,7 +112,7 @@ export function ClientCard({ client }: ClientCardProps) {
                 {inactif && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                     <WifiOff className="h-3 w-3" />
-                    Inactif
+                    {t("badges.inactif")}
                   </span>
                 )}
               </div>
@@ -125,7 +124,7 @@ export function ClientCard({ client }: ClientCardProps) {
                 <Icon className="h-4 w-4" />
               </div>
               <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${styles.badge}`}>
-                {styles.label}
+                {t(`statusLabels.${color}`)}
               </span>
             </div>
           </div>
@@ -136,7 +135,7 @@ export function ClientCard({ client }: ClientCardProps) {
             <div className="flex flex-col gap-0.5">
               <div className="flex items-center gap-1 text-muted-foreground">
                 <HeartPulse className="h-3.5 w-3.5" />
-                <span className="text-xs">Survie</span>
+                <span className="text-xs">{t("metriques.survie")}</span>
               </div>
               <p
                 className={`text-sm font-bold ${
@@ -157,11 +156,11 @@ export function ClientCard({ client }: ClientCardProps) {
             <div className="flex flex-col gap-0.5">
               <div className="flex items-center gap-1 text-muted-foreground">
                 <Fish className="h-3.5 w-3.5" />
-                <span className="text-xs">Vagues</span>
+                <span className="text-xs">{t("metriques.vagues")}</span>
               </div>
               <p className="text-sm font-bold">
                 {client.vaguesEnCours}
-                <span className="text-xs font-normal text-muted-foreground"> en cours</span>
+                <span className="text-xs font-normal text-muted-foreground"> {t("metriques.vaguesEnCours")}</span>
               </p>
             </div>
 
@@ -169,7 +168,7 @@ export function ClientCard({ client }: ClientCardProps) {
             <div className="flex flex-col gap-0.5">
               <div className="flex items-center gap-1 text-muted-foreground">
                 <AlertTriangle className="h-3.5 w-3.5" />
-                <span className="text-xs">Alertes</span>
+                <span className="text-xs">{t("metriques.alertes")}</span>
               </div>
               <p
                 className={`text-sm font-bold ${
@@ -184,7 +183,7 @@ export function ClientCard({ client }: ClientCardProps) {
             <div className="flex flex-col gap-0.5">
               <div className="flex items-center gap-1 text-muted-foreground">
                 <MessageSquare className="h-3.5 w-3.5" />
-                <span className="text-xs">Messages</span>
+                <span className="text-xs">{t("metriques.messages")}</span>
               </div>
               <p
                 className={`text-sm font-bold ${
@@ -192,7 +191,7 @@ export function ClientCard({ client }: ClientCardProps) {
                 }`}
               >
                 {client.notesNonLues}
-                <span className="text-xs font-normal text-muted-foreground"> non lu{client.notesNonLues > 1 ? "s" : ""}</span>
+                <span className="text-xs font-normal text-muted-foreground"> {t("metriques.nonLus")}</span>
               </p>
             </div>
           </div>
@@ -207,10 +206,10 @@ export function ClientCard({ client }: ClientCardProps) {
               <Clock className="h-3 w-3" />
               <span>
                 {client.activationStatut === StatutActivation.ACTIVE
-                  ? "Actif"
+                  ? t("statuts.ACTIVE")
                   : client.activationStatut === StatutActivation.EXPIREE
-                  ? "Expiré"
-                  : "Suspendu"}
+                  ? t("statuts.EXPIREE")
+                  : t("statuts.SUSPENDUE")}
               </span>
               <span className="mx-1">·</span>
               <span>{formatDateRelative(client.dateActivation)}</span>

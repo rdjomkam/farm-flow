@@ -1,0 +1,121 @@
+{
+  "jours": ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"],
+  "mois": ["Janvier", "Fevrier", "Mars", "Avril", "Mai", "Juin", "Juillet", "Aout", "Septembre", "Octobre", "Novembre", "Decembre"],
+  "chargement": "Chargement...",
+  "nouvelle": "Nouvelle",
+  "tabs": {
+    "toutes": "Toutes",
+    "planifiees": "Planifiees",
+    "terminees": "Terminees",
+    "enRetard": "En retard"
+  },
+  "empty": {
+    "ceJour": "Aucune activite ce jour",
+    "ceMois": "Aucune activite ce mois"
+  },
+  "planifier": "Planifier une activite",
+  "creePar": "Cree par {name}",
+  "badges": {
+    "releve": "Releve"
+  },
+  "detail": {
+    "planification": "Planification",
+    "dateDebut": "Date debut",
+    "dateFin": "Date fin",
+    "recurrence": "Recurrence",
+    "vague": "Vague",
+    "bac": "Bac",
+    "conseilIA": "Conseil IA",
+    "instructions": "Instructions",
+    "produitRecommande": "Produit recommande",
+    "quantiteRecommandee": "Quantite recommandee :",
+    "stockActuel": "Stock actuel :",
+    "stockInsuffisant": "Stock insuffisant",
+    "voirStock": "Voir le stock",
+    "releveLie": "Releve lie",
+    "intervenants": "Intervenants",
+    "creePar": "Cree par",
+    "assigneA": "Assigne a",
+    "noteCompletion": "Note de completion",
+    "termineeLe": "Terminee le",
+    "supprimer": "Supprimer",
+    "enRetardBanner": "Cette activite est en retard."
+  },
+  "statuts": {
+    "PLANIFIEE": "Planifiee",
+    "TERMINEE": "Terminee",
+    "ANNULEE": "Annulee",
+    "EN_RETARD": "En retard"
+  },
+  "priorites": {
+    "HAUTE": "Urgente",
+    "MOYENNE": "Moyenne",
+    "BASSE": "Basse"
+  },
+  "recurrences": {
+    "AUCUNE": "Aucune",
+    "QUOTIDIENNE": "Quotidienne",
+    "HEBDOMADAIRE": "Hebdomadaire",
+    "MENSUELLE": "Mensuelle"
+  },
+  "phases": {
+    "ACCLIMATATION": "Acclimatation",
+    "CROISSANCE_DEBUT": "Croissance debut",
+    "JUVENILE": "Juvenile",
+    "GROSSISSEMENT": "Grossissement",
+    "FINITION": "Finition",
+    "PRE_RECOLTE": "Pre-recolte"
+  },
+  "nouvelleActivite": {
+    "titre": "Titre *",
+    "titrePlaceholder": "Ex: Alimentation bac 1",
+    "typeActivite": "Type d'activite *",
+    "typeActivitePlaceholder": "Choisir un type...",
+    "dateDebut": "Date de debut *",
+    "dateFin": "Date de fin (optionnel)",
+    "recurrence": "Recurrence",
+    "recurrenceAucune": "Aucune (ponctuel)",
+    "vague": "Vague (optionnel)",
+    "vagueAucune": "Aucune vague",
+    "bac": "Bac (optionnel)",
+    "bacAucun": "Aucun bac",
+    "assigneA": "Assigner a (optionnel)",
+    "assigneAucun": "Non assigne",
+    "description": "Description (optionnel)",
+    "descriptionPlaceholder": "Details de l'activite...",
+    "submitting": "Planification...",
+    "submit": "Planifier l'activite",
+    "annuler": "Annuler",
+    "erreurs": {
+      "titreRequis": "Le titre est obligatoire.",
+      "typeRequis": "Le type d'activite est obligatoire.",
+      "dateDebutRequise": "La date de debut est obligatoire."
+    }
+  },
+  "modifierActivite": {
+    "trigger": "Modifier",
+    "title": "Modifier l'activite",
+    "termineeOuAnnulee": "Activite terminee ou annulee — seuls certains champs sont modifiables.",
+    "description": "Modifiez les parametres de l'activite.",
+    "noteCompletion": "Note de completion",
+    "annuler": "Annuler",
+    "enregistrer": "Enregistrer"
+  },
+  "completerActivite": {
+    "trigger": "Completer",
+    "title": "Completer l'activite",
+    "necessiteReleve": "Cette activite necessite un releve. Creez ou liez un releve avant de marquer comme terminee.",
+    "descriptionPlaceholder": "Decrivez ce qui a ete fait...",
+    "creerReleve": "Creer un releve",
+    "saisirReleve": "Saisir un nouveau releve de type {type}",
+    "ouLierReleve": "Ou lier un releve existant",
+    "aucunReleve": "Aucun releve non lie disponible.",
+    "choisirReleve": "Choisir un releve...",
+    "releveOption": "{type} — {date}",
+    "noteCompletion": "Note de completion *",
+    "notePlaceholder": "Decrivez ce qui a ete fait (minimum 10 caracteres)...",
+    "noteMinimum": "{count}/10 caracteres minimum",
+    "annuler": "Annuler",
+    "completer": "Completer"
+  }
+}

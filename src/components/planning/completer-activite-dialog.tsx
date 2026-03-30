@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
 import { Check, ClipboardCheck, ExternalLink } from "lucide-react";
@@ -51,6 +52,7 @@ interface UnlinkedReleve {
 }
 
 export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActiviteDialogProps) {
+  const t = useTranslations("planning");
   const queryClient = useQueryClient();
   const activiteService = useActiviteService();
   const { call } = useApi();
@@ -122,16 +124,16 @@ export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActi
       <DialogTrigger asChild>
         <Button size="sm" className="gap-1.5">
           <Check className="h-3.5 w-3.5" />
-          Completer
+          {t("completerActivite.trigger")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Completer l'activite</DialogTitle>
+          <DialogTitle>{t("completerActivite.title")}</DialogTitle>
           <DialogDescription>
             {isReleveType
-              ? "Cette activite necessite un releve pour etre completee."
-              : "Decrivez ce qui a ete fait pour completer cette activite."}
+              ? t("completerActivite.necessiteReleve")
+              : t("completerActivite.descriptionPlaceholder")}
           </DialogDescription>
         </DialogHeader>
 
@@ -143,9 +145,11 @@ export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActi
                 <div className="flex items-center gap-3 rounded-xl border border-border p-4 hover:bg-muted/50 transition-colors">
                   <ClipboardCheck className="h-5 w-5 text-primary shrink-0" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium">Creer un releve</p>
+                    <p className="text-sm font-medium">{t("completerActivite.creerReleve")}</p>
                     <p className="text-xs text-muted-foreground">
-                      Saisir un nouveau releve de type {mappedReleveType ? typeReleveLabels[mappedReleveType] : ""}
+                      {t("completerActivite.saisirReleve", {
+                        type: mappedReleveType ? typeReleveLabels[mappedReleveType] : "",
+                      })}
                     </p>
                   </div>
                   <ExternalLink className="h-4 w-4 text-muted-foreground" />
@@ -155,23 +159,25 @@ export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActi
 
             {/* Option B: Lier un releve existant */}
             <div className="flex flex-col gap-2">
-              <p className="text-sm font-medium">Ou lier un releve existant</p>
+              <p className="text-sm font-medium">{t("completerActivite.ouLierReleve")}</p>
               {unlinkedReleves.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Aucun releve non lie disponible.</p>
+                <p className="text-sm text-muted-foreground">{t("completerActivite.aucunReleve")}</p>
               ) : (
                 <Select value={selectedReleveId} onValueChange={setSelectedReleveId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Choisir un releve..." />
+                    <SelectValue placeholder={t("completerActivite.choisirReleve")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">Choisir un releve...</SelectItem>
+                    <SelectItem value="__none__">{t("completerActivite.choisirReleve")}</SelectItem>
                     {unlinkedReleves.map((r) => (
                       <SelectItem key={r.id} value={r.id}>
-                        {typeReleveLabels[r.typeReleve] ?? r.typeReleve} —{" "}
-                        {new Date(r.date).toLocaleDateString("fr-FR", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
+                        {t("completerActivite.releveOption", {
+                          type: typeReleveLabels[r.typeReleve] ?? r.typeReleve,
+                          date: new Date(r.date).toLocaleDateString("fr-FR", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          }),
                         })}
                       </SelectItem>
                     ))}
@@ -181,35 +187,35 @@ export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActi
             </div>
 
             <DialogFooter>
-              <Button variant="secondary" onClick={() => setOpen(false)}>Annuler</Button>
+              <Button variant="secondary" onClick={() => setOpen(false)}>{t("completerActivite.annuler")}</Button>
               <Button
                 onClick={handleComplete}
                 disabled={selectedReleveId === "__none__"}
               >
-                Completer
+                {t("completerActivite.completer")}
               </Button>
             </DialogFooter>
           </div>
         ) : (
           <div className="flex flex-col gap-4">
             <Textarea
-              label="Note de completion *"
-              placeholder="Decrivez ce qui a ete fait (minimum 10 caracteres)..."
+              label={t("completerActivite.noteCompletion")}
+              placeholder={t("completerActivite.notePlaceholder")}
               value={noteCompletion}
               onChange={(e) => setNoteCompletion(e.target.value)}
               rows={4}
             />
             <p className="text-xs text-muted-foreground">
-              {noteCompletion.trim().length}/10 caracteres minimum
+              {t("completerActivite.noteMinimum", { count: noteCompletion.trim().length })}
             </p>
 
             <DialogFooter>
-              <Button variant="secondary" onClick={() => setOpen(false)}>Annuler</Button>
+              <Button variant="secondary" onClick={() => setOpen(false)}>{t("completerActivite.annuler")}</Button>
               <Button
                 onClick={handleComplete}
                 disabled={noteCompletion.trim().length < 10}
               >
-                Completer
+                {t("completerActivite.completer")}
               </Button>
             </DialogFooter>
           </div>

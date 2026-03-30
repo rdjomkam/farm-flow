@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import {
   Building2,
@@ -84,6 +85,7 @@ export function SiteDetailClient({
   canManageMembers,
   canManageSite,
 }: Props) {
+  const t = useTranslations("sites");
   const queryClient = useQueryClient();
   const userService = useUserService();
 
@@ -154,7 +156,7 @@ export function SiteDetailClient({
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
       >
         <ArrowLeft className="h-4 w-4" />
-        Mes sites
+        {t("detail.mesSites")}
       </Link>
 
       {/* Site info */}
@@ -187,7 +189,7 @@ export function SiteDetailClient({
       {/* Modules section — visible only to admins */}
       {canManageSite && (
         <section className="border-b border-border pb-3">
-          <h3 className="text-sm font-semibold mb-2">Modules</h3>
+          <h3 className="text-sm font-semibold mb-2">{t("detail.modules")}</h3>
           <div className="flex flex-wrap gap-2">
             {SITE_TOGGLEABLE_MODULES.map(({ value, labelKey: label, icon: Icon }) => {
               const active = enabledModules.includes(value);
@@ -213,7 +215,7 @@ export function SiteDetailClient({
             })}
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            Cliquez pour activer ou desactiver un module sur ce site.
+            {t("detail.modulesDescription")}
           </p>
         </section>
       )}
@@ -221,13 +223,13 @@ export function SiteDetailClient({
       {/* Members section */}
       <section>
         <div className="flex items-center justify-between pb-2">
-          <h3 className="text-sm font-semibold">Membres</h3>
+          <h3 className="text-sm font-semibold">{t("detail.membres")}</h3>
           <div className="flex items-center gap-2">
             {canManageSite && (
               <Link href={`/settings/sites/${site.id}/roles`}>
                 <Button variant="outline" size="sm" className="gap-1.5">
                   <ShieldCheck className="h-3.5 w-3.5" />
-                  Roles
+                  {t("detail.roles")}
                 </Button>
               </Link>
             )}
@@ -236,23 +238,23 @@ export function SiteDetailClient({
                 <DialogTrigger asChild>
                   <Button size="sm">
                     <Plus className="h-4 w-4 mr-1" />
-                    Ajouter
+                    {t("detail.ajouter")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Ajouter un membre</DialogTitle>
+                    <DialogTitle>{t("detail.ajouterMembreTitle")}</DialogTitle>
                   </DialogHeader>
                   <div className="flex flex-col gap-4 py-2">
                     <Input
-                      label="Email ou telephone"
-                      placeholder="votre@email.com ou +237 6XX XXX XXX"
+                      label={t("detail.emailOuTelephone")}
+                      placeholder={t("detail.emailOuTelephonePlaceholder")}
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
                       autoFocus
                     />
                     <Select value={memberSiteRoleId} onValueChange={setMemberSiteRoleId}>
-                      <SelectTrigger label="Role">
+                      <SelectTrigger label={t("detail.roleLabel")}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -266,13 +268,13 @@ export function SiteDetailClient({
                   </div>
                   <DialogFooter>
                     <DialogClose asChild>
-                      <Button variant="outline">Annuler</Button>
+                      <Button variant="outline">{t("detail.annuler")}</Button>
                     </DialogClose>
                     <Button
                       onClick={handleAddMember}
                       disabled={!identifier.trim()}
                     >
-                      Ajouter
+                      {t("detail.ajouterBtn")}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -304,7 +306,7 @@ export function SiteDetailClient({
                     <span className="text-sm font-medium truncate block">
                       {member.name}
                       {isCurrentUser && (
-                        <span className="text-muted-foreground ml-1">(vous)</span>
+                        <span className="text-muted-foreground ml-1">{t("detail.vous")}</span>
                       )}
                     </span>
                     <p className="text-xs text-muted-foreground truncate">

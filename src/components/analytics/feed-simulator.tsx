@@ -54,7 +54,7 @@ export function FeedSimulator({ aliments }: FeedSimulatorProps) {
             <select
               value={ancienId}
               onChange={(e) => setAncienId(e.target.value)}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm"
+              className="w-full rounded-lg bg-background px-3 py-2.5 text-sm"
             >
               <option value="">{tAnalytics("simulation.selectFeed")}</option>
               {aliments.map((a) => (
@@ -76,7 +76,7 @@ export function FeedSimulator({ aliments }: FeedSimulatorProps) {
             <select
               value={nouveauId}
               onChange={(e) => setNouveauId(e.target.value)}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm"
+              className="w-full rounded-lg bg-background px-3 py-2.5 text-sm"
             >
               <option value="">{tAnalytics("simulation.selectFeed")}</option>
               {aliments
@@ -101,7 +101,7 @@ export function FeedSimulator({ aliments }: FeedSimulatorProps) {
               step="100"
               value={production}
               onChange={(e) => setProduction(e.target.value)}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm"
+              className="w-full rounded-lg bg-background px-3 py-2.5 text-sm"
               placeholder="1000"
             />
           </div>

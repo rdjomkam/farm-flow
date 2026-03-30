@@ -1,0 +1,26 @@
+{
+  "form": {
+    "sectionInfos": "Informations de la note",
+    "sectionInfosDescription": "Redigez la note destinee au client",
+    "titreLabel": "Titre",
+    "titrePlaceholder": "Ex : Resultats biometrie semaine 12",
+    "contenuLabel": "Contenu",
+    "contenuPlaceholder": "Redigez le contenu de la note...",
+    "sectionOptions": "Options",
+    "sectionOptionsDescription": "Visibilite et parametres supplementaires",
+    "visibiliteLabel": "Visibilite",
+    "visibilitePlaceholder": "Selectionnez la visibilite",
+    "visibilitePublique": "Public — visible par le client",
+    "visibiliteInterne": "Interne — usage DKFarm uniquement",
+    "vagueLabel": "Vague concernee (optionnel)",
+    "vagueAucune": "Aucune vague",
+    "urgente": "Marquer comme urgente",
+    "reinitialiser": "Reinitialiser",
+    "envoyer": "Envoyer la note",
+    "erreurs": {
+      "titreRequis": "Le titre est obligatoire.",
+      "contenuRequis": "Le contenu est obligatoire.",
+      "visibiliteRequise": "La visibilite est obligatoire."
+    }
+  }
+}

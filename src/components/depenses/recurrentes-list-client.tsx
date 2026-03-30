@@ -2,8 +2,16 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
-import { Plus, RefreshCw, Clock, ToggleLeft, ToggleRight, Pencil, Trash2 } from "lucide-react";
+import {
+  Plus,
+  RefreshCw,
+  Clock,
+  ToggleLeft,
+  ToggleRight,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,31 +35,6 @@ import {
 import { CategorieDepense, FrequenceRecurrence } from "@/types";
 import type { CreateDepenseRecurrenteDTO } from "@/types";
 import { useDepenseService } from "@/services";
-
-// ---------------------------------------------------------------------------
-// Labels
-// ---------------------------------------------------------------------------
-
-const frequenceLabels: Record<FrequenceRecurrence, string> = {
-  [FrequenceRecurrence.MENSUEL]: "Mensuel",
-  [FrequenceRecurrence.TRIMESTRIEL]: "Trimestriel",
-  [FrequenceRecurrence.ANNUEL]: "Annuel",
-};
-
-const categorieLabels: Record<CategorieDepense, string> = {
-  [CategorieDepense.ALIMENT]: "Aliment",
-  [CategorieDepense.INTRANT]: "Intrant",
-  [CategorieDepense.EQUIPEMENT]: "Equipement",
-  [CategorieDepense.ELECTRICITE]: "Electricite",
-  [CategorieDepense.EAU]: "Eau",
-  [CategorieDepense.LOYER]: "Loyer",
-  [CategorieDepense.SALAIRE]: "Salaire",
-  [CategorieDepense.TRANSPORT]: "Transport",
-  [CategorieDepense.VETERINAIRE]: "Veterinaire",
-  [CategorieDepense.REPARATION]: "Reparation",
-  [CategorieDepense.INVESTISSEMENT]: "Investissement",
-  [CategorieDepense.AUTRE]: "Autre",
-};
 
 // ---------------------------------------------------------------------------
 // Types
@@ -78,10 +61,6 @@ interface Props {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatMontant(n: number) {
-  return new Intl.NumberFormat("fr-FR").format(Math.round(n)) + " FCFA";
-}
-
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("fr-FR", {
     day: "2-digit",
@@ -94,8 +73,12 @@ function formatDate(dateStr: string) {
 // Component principal
 // ---------------------------------------------------------------------------
 
-export function RecurrentesListClient({ templates: initial, canManage }: Props) {
+export function RecurrentesListClient({
+  templates: initial,
+  canManage,
+}: Props) {
   const queryClient = useQueryClient();
+  const t = useTranslations("depenses");
   const depenseService = useDepenseService();
   const [templates, setTemplates] = useState(initial);
 
@@ -124,24 +107,38 @@ export function RecurrentesListClient({ templates: initial, canManage }: Props) 
     });
     if (result.ok) {
       setTemplates((prev) =>
-        prev.map((t) =>
-          t.id === template.id ? { ...t, isActive: !t.isActive } : t
+        prev.map((tmpl) =>
+          tmpl.id === template.id
+            ? { ...tmpl, isActive: !tmpl.isActive }
+            : tmpl
         )
       );
     }
   }
 
   async function handleCreate() {
-    if (!form.description || !form.categorieDepense || !form.montantEstime || !form.frequence) {
+    if (
+      !form.description ||
+      !form.categorieDepense ||
+      !form.montantEstime ||
+      !form.frequence
+    ) {
       return;
     }
     const result = await depenseService.createDepenseRecurrente(
       form as CreateDepenseRecurrenteDTO
     );
     if (result.ok && result.data) {
-      setTemplates((prev) => [result.data! as unknown as TemplateData, ...prev]);
+      setTemplates((prev) => [
+        result.data! as unknown as TemplateData,
+        ...prev,
+      ]);
       setCreateOpen(false);
-      setForm({ frequence: FrequenceRecurrence.MENSUEL, jourDuMois: 1, isActive: true });
+      setForm({
+        frequence: FrequenceRecurrence.MENSUEL,
+        jourDuMois: 1,
+        isActive: true,
+      });
     }
   }
 
@@ -149,14 +146,14 @@ export function RecurrentesListClient({ templates: initial, canManage }: Props) 
     if (!deletingId) return;
     const result = await depenseService.deleteDepenseRecurrente(deletingId);
     if (result.ok) {
-      setTemplates((prev) => prev.filter((t) => t.id !== deletingId));
+      setTemplates((prev) => prev.filter((tmpl) => tmpl.id !== deletingId));
       setDeleteOpen(false);
       setDeletingId(null);
     }
   }
 
-  const actifs = templates.filter((t) => t.isActive);
-  const inactifs = templates.filter((t) => !t.isActive);
+  const actifs = templates.filter((tmpl) => tmpl.isActive);
+  const inactifs = templates.filter((tmpl) => !tmpl.isActive);
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -169,67 +166,88 @@ export function RecurrentesListClient({ templates: initial, canManage }: Props) 
           onClick={handleGenerer}
         >
           <RefreshCw className="h-4 w-4" />
-          Generer maintenant
+          {t("recurrentes.generer")}
         </Button>
         {canManage && (
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1.5 shrink-0">
                 <Plus className="h-4 w-4" />
-                Nouveau
+                {t("recurrentes.nouveau")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Nouveau template recurrent</DialogTitle>
+                <DialogTitle>{t("recurrentes.createTitle")}</DialogTitle>
               </DialogHeader>
               <div className="flex flex-col gap-3 py-2">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium">Description *</label>
+                  <label className="text-sm font-medium">
+                    {t("recurrentes.descriptionLabel")} *
+                  </label>
                   <Input
                     value={form.description ?? ""}
-                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                    placeholder="Ex: Loyer atelier pisciculture"
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, description: e.target.value }))
+                    }
+                    placeholder={t("recurrentes.descriptionPlaceholder")}
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium">Categorie *</label>
+                  <label className="text-sm font-medium">
+                    {t("recurrentes.categorieLabel")} *
+                  </label>
                   <Select
                     value={form.categorieDepense}
                     onValueChange={(v) =>
-                      setForm((f) => ({ ...f, categorieDepense: v as CategorieDepense }))
+                      setForm((f) => ({
+                        ...f,
+                        categorieDepense: v as CategorieDepense,
+                      }))
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Choisir une categorie" />
+                      <SelectValue
+                        placeholder={t("recurrentes.categoriePlaceholder")}
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {Object.values(CategorieDepense).map((cat) => (
                         <SelectItem key={cat} value={cat}>
-                          {categorieLabels[cat]}
+                          {t(`categories.${cat}`)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium">Montant estime (FCFA) *</label>
+                  <label className="text-sm font-medium">
+                    {t("recurrentes.montantLabel")} *
+                  </label>
                   <Input
                     type="number"
                     min={1}
                     value={form.montantEstime ?? ""}
                     onChange={(e) =>
-                      setForm((f) => ({ ...f, montantEstime: parseFloat(e.target.value) || 0 }))
+                      setForm((f) => ({
+                        ...f,
+                        montantEstime: parseFloat(e.target.value) || 0,
+                      }))
                     }
                     placeholder="Ex: 150000"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium">Frequence *</label>
+                  <label className="text-sm font-medium">
+                    {t("recurrentes.frequenceLabel")} *
+                  </label>
                   <Select
                     value={form.frequence}
                     onValueChange={(v) =>
-                      setForm((f) => ({ ...f, frequence: v as FrequenceRecurrence }))
+                      setForm((f) => ({
+                        ...f,
+                        frequence: v as FrequenceRecurrence,
+                      }))
                     }
                   >
                     <SelectTrigger>
@@ -238,7 +256,7 @@ export function RecurrentesListClient({ templates: initial, canManage }: Props) 
                     <SelectContent>
                       {Object.values(FrequenceRecurrence).map((freq) => (
                         <SelectItem key={freq} value={freq}>
-                          {frequenceLabels[freq]}
+                          {t(`recurrentes.frequences.${freq}`)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -246,7 +264,7 @@ export function RecurrentesListClient({ templates: initial, canManage }: Props) 
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-medium">
-                    Jour du mois (1-28)
+                    {t("recurrentes.jourLabel")}
                   </label>
                   <Input
                     type="number"
@@ -256,7 +274,10 @@ export function RecurrentesListClient({ templates: initial, canManage }: Props) 
                     onChange={(e) =>
                       setForm((f) => ({
                         ...f,
-                        jourDuMois: Math.min(28, Math.max(1, parseInt(e.target.value) || 1)),
+                        jourDuMois: Math.min(
+                          28,
+                          Math.max(1, parseInt(e.target.value) || 1)
+                        ),
                       }))
                     }
                   />
@@ -265,11 +286,11 @@ export function RecurrentesListClient({ templates: initial, canManage }: Props) 
               <DialogFooter>
                 <DialogClose asChild>
                   <Button variant="outline">
-                    Annuler
+                    {t("recurrentes.annuler")}
                   </Button>
                 </DialogClose>
                 <Button onClick={handleCreate}>
-                  Creer
+                  {t("recurrentes.creer")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -281,13 +302,13 @@ export function RecurrentesListClient({ templates: initial, canManage }: Props) 
       {actifs.length > 0 && (
         <section>
           <h2 className="text-sm font-semibold text-muted-foreground mb-2">
-            Actifs ({actifs.length})
+            {t("recurrentes.tabActifs", { count: actifs.length })}
           </h2>
           <div className="flex flex-col gap-3">
-            {actifs.map((t) => (
+            {actifs.map((tmpl) => (
               <TemplateCard
-                key={t.id}
-                template={t}
+                key={tmpl.id}
+                template={tmpl}
                 canManage={canManage}
                 onToggle={handleToggleActive}
                 onDelete={(id) => {
@@ -304,13 +325,13 @@ export function RecurrentesListClient({ templates: initial, canManage }: Props) 
       {inactifs.length > 0 && (
         <section>
           <h2 className="text-sm font-semibold text-muted-foreground mb-2">
-            Inactifs ({inactifs.length})
+            {t("recurrentes.tabInactifs", { count: inactifs.length })}
           </h2>
           <div className="flex flex-col gap-3">
-            {inactifs.map((t) => (
+            {inactifs.map((tmpl) => (
               <TemplateCard
-                key={t.id}
-                template={t}
+                key={tmpl.id}
+                template={tmpl}
                 canManage={canManage}
                 onToggle={handleToggleActive}
                 onDelete={(id) => {
@@ -326,9 +347,9 @@ export function RecurrentesListClient({ templates: initial, canManage }: Props) 
       {templates.length === 0 && (
         <div className="flex flex-col items-center justify-center gap-2 py-16 text-muted-foreground">
           <Clock className="h-10 w-10 opacity-30" />
-          <p className="text-sm">Aucun template recurrent</p>
+          <p className="text-sm">{t("recurrentes.empty")}</p>
           {canManage && (
-            <p className="text-xs">Cliquez sur &quot;Nouveau&quot; pour en creer un.</p>
+            <p className="text-xs">{t("recurrentes.emptyAction")}</p>
           )}
         </div>
       )}
@@ -337,11 +358,10 @@ export function RecurrentesListClient({ templates: initial, canManage }: Props) 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Supprimer le template ?</DialogTitle>
+            <DialogTitle>{t("recurrentes.supprimerTitle")}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Ce template sera definitivement supprime. Les depenses deja generees
-            ne seront pas affectees.
+            {t("recurrentes.supprimerDescription")}
           </p>
           <DialogFooter>
             <DialogClose asChild>
@@ -351,11 +371,11 @@ export function RecurrentesListClient({ templates: initial, canManage }: Props) 
                   setDeletingId(null);
                 }}
               >
-                Annuler
+                {t("recurrentes.annuler")}
               </Button>
             </DialogClose>
             <Button variant="danger" onClick={handleDelete}>
-              Supprimer
+              {t("recurrentes.supprimer")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -379,6 +399,7 @@ function TemplateCard({
   onToggle: (t: TemplateData) => void;
   onDelete: (id: string) => void;
 }) {
+  const t = useTranslations("depenses");
   const frequence = template.frequence as FrequenceRecurrence;
   const categorie = template.categorieDepense as CategorieDepense;
 
@@ -387,36 +408,46 @@ function TemplateCard({
       <CardContent className="p-4 flex flex-col gap-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="font-semibold text-sm leading-tight">{template.description}</p>
+            <p className="font-semibold text-sm leading-tight">
+              {template.description}
+            </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {categorieLabels[categorie]}
+              {t(`categories.${categorie}`)}
             </p>
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
             <Badge variant={template.isActive ? "en_cours" : "default"}>
-              {template.isActive ? "Actif" : "Inactif"}
+              {template.isActive
+                ? t("recurrentes.badgeActif")
+                : t("recurrentes.badgeInactif")}
             </Badge>
             <Badge variant="info" className="text-xs">
-              {frequenceLabels[frequence]}
+              {t(`recurrentes.frequences.${frequence}`)}
             </Badge>
           </div>
         </div>
 
         <div className="flex items-center justify-between text-sm">
           <div>
-            <span className="text-muted-foreground text-xs">Montant estime : </span>
+            <span className="text-muted-foreground text-xs">
+              {t("recurrentes.montantEstime")}{" "}
+            </span>
             <span className="font-semibold">
-              {new Intl.NumberFormat("fr-FR").format(Math.round(template.montantEstime))} FCFA
+              {new Intl.NumberFormat("fr-FR").format(
+                Math.round(template.montantEstime)
+              )}{" "}
+              FCFA
             </span>
           </div>
           <div className="text-xs text-muted-foreground">
-            Jour {template.jourDuMois} du mois
+            {t("recurrentes.jourDuMois", { jour: template.jourDuMois })}
           </div>
         </div>
 
         {template.derniereGeneration && (
           <p className="text-xs text-muted-foreground">
-            Derniere generation : {formatDate(template.derniereGeneration)}
+            {t("recurrentes.derniereGeneration")}{" "}
+            {formatDate(template.derniereGeneration)}
           </p>
         )}
 
@@ -431,12 +462,12 @@ function TemplateCard({
               {template.isActive ? (
                 <>
                   <ToggleRight className="h-4 w-4" />
-                  Desactiver
+                  {t("recurrentes.desactiver")}
                 </>
               ) : (
                 <>
                   <ToggleLeft className="h-4 w-4" />
-                  Activer
+                  {t("recurrentes.activer")}
                 </>
               )}
             </Button>

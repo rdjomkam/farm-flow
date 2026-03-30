@@ -1,0 +1,77 @@
+{
+  "phases": {
+    "ACCLIMATATION": "Acclimatation",
+    "CROISSANCE_DEBUT": "Croissance debut",
+    "JUVENILE": "Juvenile",
+    "GROSSISSEMENT": "Grossissement",
+    "FINITION": "Finition",
+    "PRE_RECOLTE": "Pre-recolte"
+  },
+  "instructionViewer": {
+    "mesTaches": "Mes taches",
+    "statuts": {
+      "TERMINEE": "Terminee",
+      "ANNULEE": "Annulee",
+      "EN_RETARD": "En retard",
+      "PLANIFIEE": "Planifiee"
+    },
+    "badges": {
+      "auto": "Auto"
+    },
+    "sections": {
+      "instructions": "Instructions",
+      "aucuneInstruction": "Aucune instruction detaillee pour cette activite.",
+      "conseilIA": "Conseil IA",
+      "produitRecommande": "Produit recommande",
+      "quantiteRecommandee": "Quantite recommandee :",
+      "stockActuel": "Stock actuel :",
+      "stockInsuffisant": "Stock insuffisant",
+      "voirStock": "Voir le stock",
+      "noteCompletion": "Note de completion",
+      "termineeLe": "Terminee le",
+      "questionCompletion": "Avez-vous effectue cette activite ?",
+      "ou": "ou"
+    }
+  },
+  "placeholders": {
+    "retourRegles": "Retour aux regles",
+    "nouveau": "Nouveau placeholder",
+    "empty": "Aucun placeholder personnalise.",
+    "chargement": "Chargement...",
+    "modes": {
+      "MAPPING": "Mapping",
+      "FORMULA": "Formule"
+    },
+    "badgeInactif": "Inactif",
+    "exempleLabel": "Exemple :",
+    "cheminLabel": "Chemin :",
+    "formuleLabel": "Formule :",
+    "form": {
+      "createTitle": "Nouveau placeholder",
+      "editTitle": "Modifier le placeholder",
+      "cleLabel": "Cle",
+      "cleHint": "Utilisable dans les templates comme {cle}",
+      "libelleLabel": "Libelle",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Aide affichee dans l'editeur de template",
+      "exempleLabel": "Valeur d'exemple",
+      "modeLabel": "Mode de resolution",
+      "modeMapping": "Mapping (chemin dans le contexte)",
+      "modeFormule": "Formule arithmetique",
+      "entiteLabel": "Entite",
+      "entitePlaceholder": "Selectionnez une entite...",
+      "champLabel": "Champ",
+      "champPlaceholder": "Selectionnez un champ...",
+      "formuleLabel": "Formule",
+      "formuleHint": "Operateurs : + - * / ( ). Identifiants : cles de placeholders ou chemins (ex: indicateurs.biomasse)",
+      "formatLabel": "Format",
+      "formatNombre": "Nombre",
+      "formatTexte": "Texte",
+      "decimalesLabel": "Decimales",
+      "annuler": "Annuler",
+      "creer": "Creer",
+      "enregistrer": "Enregistrer"
+    },
+    "supprimer": "Supprimer ce placeholder personnalise ?"
+  }
+}

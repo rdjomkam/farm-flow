@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { queryKeys } from "@/lib/query-keys";
@@ -54,6 +55,7 @@ interface Props {
 }
 
 export function PacksListClient({ packs, permissions, plans = [] }: Props) {
+  const t = useTranslations("packs");
   const queryClient = useQueryClient();
   const configService = useConfigService();
   const [tab, setTab] = useState("actifs");
@@ -119,7 +121,7 @@ export function PacksListClient({ packs, permissions, plans = [] }: Props) {
       {/* Header actions */}
       <div className="flex items-center gap-2">
         <Input
-          placeholder="Rechercher un pack..."
+          placeholder={t("list.recherche")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1"
@@ -129,45 +131,45 @@ export function PacksListClient({ packs, permissions, plans = [] }: Props) {
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-1" />
-                Nouveau
+                {t("list.nouveau")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Nouveau Pack</DialogTitle>
+                <DialogTitle>{t("list.createTitle")}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-2">
                 <div>
-                  <label className="text-sm font-medium">Nom du pack *</label>
+                  <label className="text-sm font-medium">{t("list.nomLabel")} *</label>
                   <Input
                     value={nom}
                     onChange={(e) => setNom(e.target.value)}
-                    placeholder="Ex: Pack Decouverte 100"
+                    placeholder={t("list.nomPlaceholder")}
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Description</label>
+                  <label className="text-sm font-medium">{t("list.descriptionLabel")}</label>
                   <Input
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Description optionnelle"
+                    placeholder={t("list.descriptionPlaceholder")}
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Nombre d'alevins *</label>
+                  <label className="text-sm font-medium">{t("list.nombreAlevinsLabel")} *</label>
                   <Input
                     type="number"
                     min={1}
                     value={nombreAlevins}
                     onChange={(e) => setNombreAlevins(e.target.value)}
-                    placeholder="Ex: 100"
+                    placeholder={t("list.nombreAlevinsPlaceholder")}
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Poids moyen initial (g)</label>
+                  <label className="text-sm font-medium">{t("list.poidsMoyenLabel")}</label>
                   <Input
                     type="number"
                     min={0.1}
@@ -179,7 +181,7 @@ export function PacksListClient({ packs, permissions, plans = [] }: Props) {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Prix total (FCFA)</label>
+                  <label className="text-sm font-medium">{t("list.prixTotalLabel")}</label>
                   <Input
                     type="number"
                     min={0}
@@ -190,13 +192,13 @@ export function PacksListClient({ packs, permissions, plans = [] }: Props) {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Plan d&apos;abonnement *</label>
+                  <label className="text-sm font-medium">{t("list.planLabel")} *</label>
                   <select
                     value={planId}
                     onChange={(e) => setPlanId(e.target.value)}
-                    className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="mt-1 flex h-10 w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    <option value="">Sélectionner un plan...</option>
+                    <option value="">{t("list.planPlaceholder")}</option>
                     {plans.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.nom} ({p.typePlan})
@@ -207,9 +209,9 @@ export function PacksListClient({ packs, permissions, plans = [] }: Props) {
               </div>
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button variant="outline" onClick={resetForm}>Annuler</Button>
+                  <Button variant="outline" onClick={resetForm}>{t("list.annuler")}</Button>
                 </DialogClose>
-                <Button onClick={handleCreate}>Creer</Button>
+                <Button onClick={handleCreate}>{t("list.creer")}</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -219,17 +221,17 @@ export function PacksListClient({ packs, permissions, plans = [] }: Props) {
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="actifs">Actifs</TabsTrigger>
-          <TabsTrigger value="inactifs">Inactifs</TabsTrigger>
-          <TabsTrigger value="tous">Tous</TabsTrigger>
+          <TabsTrigger value="actifs">{t("list.tabs.actifs")}</TabsTrigger>
+          <TabsTrigger value="inactifs">{t("list.tabs.inactifs")}</TabsTrigger>
+          <TabsTrigger value="tous">{t("list.tabs.tous")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value={tab} className="mt-4">
           {filtered.length === 0 ? (
             <EmptyState
               icon={<Package className="h-8 w-8 text-muted-foreground" />}
-              title="Aucun pack"
-              description={search ? "Aucun pack ne correspond a votre recherche." : "Aucun pack configure pour ce site."}
+              title={t("list.empty")}
+              description={search ? t("list.emptySearch") : t("list.emptyDescription")}
             />
           ) : (
             <div className="space-y-3">
@@ -246,7 +248,7 @@ export function PacksListClient({ packs, permissions, plans = [] }: Props) {
                             {pack.nom}
                           </Link>
                           <Badge variant={pack.isActive ? "en_cours" : "default"}>
-                            {pack.isActive ? "Actif" : "Inactif"}
+                            {pack.isActive ? t("list.badgeActif") : t("list.badgeInactif")}
                           </Badge>
                         </div>
                         {pack.description && (
@@ -255,25 +257,25 @@ export function PacksListClient({ packs, permissions, plans = [] }: Props) {
                         <div className="flex flex-wrap gap-3 mt-2 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Package className="h-3.5 w-3.5" />
-                            {pack.nombreAlevins.toLocaleString()} alevins
+                            {t("list.alevins", { count: pack.nombreAlevins.toLocaleString() })}
                           </span>
                           <span>{pack.poidsMoyenInitial}g/alevin</span>
                           <span>{pack.prixTotal.toLocaleString()} FCFA</span>
                           <span className="flex items-center gap-1">
                             <Users className="h-3.5 w-3.5" />
-                            {pack._count.activations} activation{pack._count.activations !== 1 ? "s" : ""}
+                            {t("list.activations", { count: pack._count.activations })}
                           </span>
                         </div>
                         {pack.produits.length > 0 && (
                           <p className="text-xs text-muted-foreground mt-1">
-                            {pack.produits.length} produit{pack.produits.length !== 1 ? "s" : ""} inclus
+                            {t("list.produitsInclus", { count: pack.produits.length })}
                           </p>
                         )}
                       </div>
                       <div className="flex flex-col gap-2 shrink-0">
                         {canActivate && pack.isActive && (
                           <Button asChild size="sm" variant="primary">
-                            <Link href={`/packs/${pack.id}/activer`}>Activer</Link>
+                            <Link href={`/packs/${pack.id}/activer`}>{t("list.activer")}</Link>
                           </Button>
                         )}
                         {canManage && (
@@ -287,7 +289,7 @@ export function PacksListClient({ packs, permissions, plans = [] }: Props) {
                             ) : (
                               <CheckCircle className="h-4 w-4 mr-1" />
                             )}
-                            {pack.isActive ? "Desactiver" : "Activer"}
+                            {pack.isActive ? t("list.desactiver") : t("list.activer")}
                           </Button>
                         )}
                       </div>

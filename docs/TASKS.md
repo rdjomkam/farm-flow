@@ -6595,3 +6595,116 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 - [x] `FAIT` 23 tests `getKParAliment` (K ponderes, filtrage siteId, min 2 vagues, tri, details)
 - [x] `FAIT` 23 tests UI : feed-comparison-cards K column + feed-k-comparison-chart
 - [x] `FAIT` Build production OK — 46 tests passent, rapport docs/tests/rapport-sprint-G3.4.md
+
+---
+
+## Sprint I18N — Migration i18n : Texte francais code en dur
+
+**Objectif :** Migrer ~45 composants client contenant du texte francais hardcode vers next-intl (useTranslations/getTranslations).
+**Reference :** Audit composants i18n (2026-03-30)
+**Depend de :** Aucun sprint bloquant
+
+---
+
+### Story I18N.0 — Fondation : Audit et extension des fichiers de traduction JSON
+**Assigne a :** @developer | **Depend de :** Aucune | **Statut :** `FAIT` | **Type :** REFACTOR
+
+**Taches :**
+- [x] `FAIT` Audit des namespaces JSON existants et inventaire des cles
+- [x] `FAIT` Extraction des chaines francaises hardcodees de 45 composants
+- [x] `FAIT` Creation de 19 fichiers namespace fr/ et en/ (calibrage, config-elevage, planning, besoins, bacs, observations, notes, depenses, remises, sites, packs, admin, backoffice, pwa, dashboard, layout, alertes, activites, ingenieur)
+- [x] `FAIT` Mise a jour de src/i18n/request.ts avec les 19 nouveaux namespaces
+- [x] `FAIT` Build OK
+
+---
+
+### Story I18N.1 — Migration i18n : Config Elevage + Calibrage (7 fichiers)
+**Assigne a :** @developer | **Depend de :** I18N.0 | **Statut :** `FAIT` | **Type :** REFACTOR
+
+**Taches :**
+- [x] `FAIT` 7 fichiers migres : config-elevage-edit-client, config-elevage-form-client, step-groupes, step-mortalite, step-sources, step-recap, modifier-calibrage-dialog
+- [x] `FAIT` Build OK
+
+---
+
+### Story I18N.2 — Migration i18n : Planning (4 fichiers)
+**Assigne a :** @developer | **Depend de :** I18N.0 | **Statut :** `FAIT` | **Type :** REFACTOR
+
+**Taches :**
+- [x] `FAIT` 4 fichiers migres : planning-client, nouvelle-activite-form, modifier-activite-dialog, completer-activite-dialog
+- [x] `FAIT` Build OK (2 labels mineurs restants dans modifier-activite-dialog — reportes)
+
+---
+
+### Story I18N.3 — Migration i18n : Besoins (3 fichiers)
+**Assigne a :** @developer | **Depend de :** I18N.0 | **Statut :** `FAIT` | **Type :** REFACTOR
+
+**Taches :**
+- [x] `FAIT` 3 fichiers migres : besoins-form-client, modifier-besoin-dialog, besoins-detail-client
+- [x] `FAIT` Build OK
+
+---
+
+### Story I18N.4 — Migration i18n : Bacs, Observations, Notes (3 fichiers)
+**Assigne a :** @developer | **Depend de :** I18N.0 | **Statut :** `FAIT` | **Type :** REFACTOR
+
+**Taches :**
+- [x] `FAIT` 3 fichiers migres : bacs-list-client, observation-form, note-form
+- [x] `FAIT` Build OK
+
+---
+
+### Story I18N.5 — Migration i18n : Depenses & Remises (4 fichiers)
+**Assigne a :** @developer | **Depend de :** I18N.0 | **Statut :** `FAIT` | **Type :** REFACTOR
+
+**Taches :**
+- [x] `FAIT` 4 fichiers migres : depense-detail-client, recurrentes-list-client, remise-form-dialog, remises-list-client
+- [x] `FAIT` Build OK
+
+---
+
+### Story I18N.6 — Migration i18n : Sites & Roles (5 fichiers)
+**Assigne a :** @developer | **Depend de :** I18N.0 | **Statut :** `FAIT` | **Type :** REFACTOR
+
+**Taches :**
+- [x] `FAIT` 5 fichiers migres : site-detail-client, sites-list-client, member-actions-dialog, roles/nouveau/page, roles/[roleId]/page
+- [x] `FAIT` Build OK
+
+---
+
+### Story I18N.7 — Migration i18n : Packs (3 fichiers)
+**Assigne a :** @developer | **Depend de :** I18N.0 | **Statut :** `FAIT` | **Type :** REFACTOR
+
+**Taches :**
+- [x] `FAIT` 3 fichiers migres : pack-detail-client, pack-activer-client, packs-list-client
+- [x] `FAIT` Build OK
+
+---
+
+### Story I18N.8 — Migration i18n : Admin & Backoffice (6 fichiers)
+**Assigne a :** @developer | **Depend de :** I18N.0 | **Statut :** `FAIT` | **Type :** REFACTOR
+
+**Taches :**
+- [x] `FAIT` 6 fichiers migres : admin-site-status-dialog, admin-module-form-dialog, admin-analytics-dashboard, backoffice-header, backoffice-sidebar, backoffice-site-status-dialog
+- [x] `FAIT` Build OK
+
+---
+
+### Story I18N.9 — Migration i18n : PWA, Dashboard, Layout & Divers (11 fichiers)
+**Assigne a :** @developer | **Depend de :** I18N.0 | **Statut :** `FAIT` | **Type :** REFACTOR
+
+**Taches :**
+- [x] `FAIT` 11 fichiers migres : sw-register, install-prompt, pin-setup-dialog, sync-status-panel, quick-actions, fab-releve, notification-card, placeholders-client, instruction-viewer, vente-form-client (complete), client-card
+- [x] `FAIT` Build OK
+
+---
+
+### Story I18N.10 — Tests et Review Sprint I18N
+**Assigne a :** @tester + @code-reviewer | **Depend de :** I18N.1-I18N.9 | **Statut :** `FAIT` | **Type :** TEST + REVIEW
+
+**Taches :**
+- [x] `FAIT` Build production OK (138 pages)
+- [x] `FAIT` 3787 tests passent, 0 echec
+- [x] `FAIT` Audit : 43/45 fichiers 100% conformes, 2 anomalies mineures dans planning/ (reportees)
+- [x] `FAIT` Parite fr/en verifiee et corrigee (remises.json 2 cles manquantes ajoutees)
+- [x] `FAIT` Rapports : docs/tests/rapport-sprint-I18N.md + docs/reviews/review-sprint-I18N.md

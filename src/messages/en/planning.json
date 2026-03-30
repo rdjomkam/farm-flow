@@ -1,0 +1,121 @@
+{
+  "jours": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+  "mois": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+  "chargement": "Loading...",
+  "nouvelle": "New",
+  "tabs": {
+    "toutes": "All",
+    "planifiees": "Planned",
+    "terminees": "Completed",
+    "enRetard": "Overdue"
+  },
+  "empty": {
+    "ceJour": "No activities today",
+    "ceMois": "No activities this month"
+  },
+  "planifier": "Schedule an activity",
+  "creePar": "Created by {name}",
+  "badges": {
+    "releve": "Record"
+  },
+  "detail": {
+    "planification": "Schedule",
+    "dateDebut": "Start date",
+    "dateFin": "End date",
+    "recurrence": "Recurrence",
+    "vague": "Batch",
+    "bac": "Tank",
+    "conseilIA": "AI advice",
+    "instructions": "Instructions",
+    "produitRecommande": "Recommended product",
+    "quantiteRecommandee": "Recommended quantity:",
+    "stockActuel": "Current stock:",
+    "stockInsuffisant": "Insufficient stock",
+    "voirStock": "View stock",
+    "releveLie": "Linked record",
+    "intervenants": "Participants",
+    "creePar": "Created by",
+    "assigneA": "Assigned to",
+    "noteCompletion": "Completion note",
+    "termineeLe": "Completed on",
+    "supprimer": "Delete",
+    "enRetardBanner": "This activity is overdue."
+  },
+  "statuts": {
+    "PLANIFIEE": "Planned",
+    "TERMINEE": "Completed",
+    "ANNULEE": "Cancelled",
+    "EN_RETARD": "Overdue"
+  },
+  "priorites": {
+    "HAUTE": "Urgent",
+    "MOYENNE": "Medium",
+    "BASSE": "Low"
+  },
+  "recurrences": {
+    "AUCUNE": "None",
+    "QUOTIDIENNE": "Daily",
+    "HEBDOMADAIRE": "Weekly",
+    "MENSUELLE": "Monthly"
+  },
+  "phases": {
+    "ACCLIMATATION": "Acclimatation",
+    "CROISSANCE_DEBUT": "Early growth",
+    "JUVENILE": "Juvenile",
+    "GROSSISSEMENT": "Grow-out",
+    "FINITION": "Finishing",
+    "PRE_RECOLTE": "Pre-harvest"
+  },
+  "nouvelleActivite": {
+    "titre": "Title *",
+    "titrePlaceholder": "E.g.: Feeding tank 1",
+    "typeActivite": "Activity type *",
+    "typeActivitePlaceholder": "Choose a type...",
+    "dateDebut": "Start date *",
+    "dateFin": "End date (optional)",
+    "recurrence": "Recurrence",
+    "recurrenceAucune": "None (one-time)",
+    "vague": "Batch (optional)",
+    "vagueAucune": "No batch",
+    "bac": "Tank (optional)",
+    "bacAucun": "No tank",
+    "assigneA": "Assign to (optional)",
+    "assigneAucun": "Not assigned",
+    "description": "Description (optional)",
+    "descriptionPlaceholder": "Activity details...",
+    "submitting": "Scheduling...",
+    "submit": "Schedule activity",
+    "annuler": "Cancel",
+    "erreurs": {
+      "titreRequis": "Title is required.",
+      "typeRequis": "Activity type is required.",
+      "dateDebutRequise": "Start date is required."
+    }
+  },
+  "modifierActivite": {
+    "trigger": "Edit",
+    "title": "Edit activity",
+    "termineeOuAnnulee": "Activity completed or cancelled — only some fields are editable.",
+    "description": "Modify the activity parameters.",
+    "noteCompletion": "Completion note",
+    "annuler": "Cancel",
+    "enregistrer": "Save"
+  },
+  "completerActivite": {
+    "trigger": "Complete",
+    "title": "Complete activity",
+    "necessiteReleve": "This activity requires a record. Create or link a record before marking as complete.",
+    "descriptionPlaceholder": "Describe what was done...",
+    "creerReleve": "Create a record",
+    "saisirReleve": "Enter a new record of type {type}",
+    "ouLierReleve": "Or link an existing record",
+    "aucunReleve": "No unlinked records available.",
+    "choisirReleve": "Choose a record...",
+    "releveOption": "{type} — {date}",
+    "noteCompletion": "Completion note *",
+    "notePlaceholder": "Describe what was done (minimum 10 characters)...",
+    "noteMinimum": "{count}/10 characters minimum",
+    "annuler": "Cancel",
+    "completer": "Complete"
+  }
+}

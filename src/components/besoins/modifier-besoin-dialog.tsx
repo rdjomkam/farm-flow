@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -117,6 +118,7 @@ function emptyLigne(): LigneForm {
 export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
   const depenseService = useDepenseService();
   const stockService = useStockService();
+  const t = useTranslations("besoins");
 
   const [open, setOpen] = useState(false);
   const [produits, setProduits] = useState<ProduitOption[]>([]);
@@ -192,25 +194,31 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
   async function handleSubmit() {
     // Validation legere
     if (!titre.trim()) {
-      setValidationError("Le titre est obligatoire.");
+      setValidationError(t("modifierDialog.erreurs.titreRequis"));
       return;
     }
     if (lignes.length === 0) {
-      setValidationError("Au moins une ligne est requise.");
+      setValidationError(t("modifierDialog.erreurs.auMoinsUneLigne"));
       return;
     }
     for (let i = 0; i < lignes.length; i++) {
       const l = lignes[i];
       if (!l.designation.trim()) {
-        setValidationError(`La designation de la ligne ${i + 1} est obligatoire.`);
+        setValidationError(
+          t("modifierDialog.erreurs.designationRequise", { index: i + 1 })
+        );
         return;
       }
       if (!l.quantite || parseFloat(l.quantite) <= 0) {
-        setValidationError(`La quantite de la ligne ${i + 1} doit etre positive.`);
+        setValidationError(
+          t("modifierDialog.erreurs.quantitePositive", { index: i + 1 })
+        );
         return;
       }
       if (l.prixEstime === "" || parseFloat(l.prixEstime) < 0) {
-        setValidationError(`Le prix estime de la ligne ${i + 1} doit etre positif ou zero.`);
+        setValidationError(
+          t("modifierDialog.erreurs.prixPositif", { index: i + 1 })
+        );
         return;
       }
     }
@@ -240,34 +248,35 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
-          Modifier
+          {t("modifierDialog.trigger")}
         </Button>
       </DialogTrigger>
 
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Modifier la liste de besoins</DialogTitle>
+          <DialogTitle>{t("modifierDialog.title")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           {/* Titre */}
           <div>
             <label className="text-sm font-medium">
-              Titre <span className="text-destructive">*</span>
+              {t("modifierDialog.titreLabel")}{" "}
+              <span className="text-destructive">*</span>
             </label>
             <Input
               value={titre}
               onChange={(e) => setTitre(e.target.value)}
-              placeholder="Ex: Besoins alimentation mars 2026"
+              placeholder={t("form.titrePlaceholder")}
               className="mt-1"
             />
           </div>
 
           {/* Date limite */}
           <div>
-            <label className="text-sm font-medium">Date limite</label>
+            <label className="text-sm font-medium">{t("modifierDialog.dateLimite")}</label>
             <p className="text-xs text-muted-foreground mb-1">
-              Date jusqu&apos;a laquelle la liste doit etre traitee (optionnel)
+              {t("modifierDialog.dateLimiteHint")}
             </p>
             <Input
               type="date"
@@ -281,18 +290,18 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
                 className="text-xs text-muted-foreground underline mt-1"
                 onClick={() => setDateLimite("")}
               >
-                Supprimer la date limite
+                {t("modifierDialog.supprimerDate")}
               </button>
             )}
           </div>
 
           {/* Notes */}
           <div>
-            <label className="text-sm font-medium">Notes</label>
+            <label className="text-sm font-medium">{t("modifierDialog.notes")}</label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Informations complementaires..."
+              placeholder={t("modifierDialog.notesPlaceholder")}
               rows={2}
               className="mt-1"
             />
@@ -302,10 +311,11 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium">
-                Lignes de besoin <span className="text-destructive">*</span>
+                {t("modifierDialog.lignesTitle")}{" "}
+                <span className="text-destructive">*</span>
               </label>
               <span className="text-xs text-muted-foreground">
-                {lignes.length} ligne{lignes.length !== 1 ? "s" : ""}
+                {t("modifierDialog.lignesCount", { count: lignes.length })}
               </span>
             </div>
 
@@ -315,7 +325,7 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
                   <CardContent className="p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <p className="text-xs text-muted-foreground font-medium">
-                        Ligne {idx + 1}
+                        {t("modifierDialog.ligneLabel", { index: idx + 1 })}
                       </p>
                       {lignes.length > 1 && (
                         <Button
@@ -332,7 +342,7 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
 
                     <div>
                       <label className="text-xs text-muted-foreground">
-                        Produit du catalogue
+                        {t("modifierDialog.produit")}
                       </label>
                       <Select
                         value={l.produitId || "none"}
@@ -344,13 +354,13 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
                           <SelectValue
                             placeholder={
                               produitsLoading
-                                ? "Chargement..."
-                                : "Selectionner un produit"
+                                ? t("modifierDialog.produitChargement")
+                                : t("modifierDialog.produitPlaceholder")
                             }
                           />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">-- Aucun produit --</SelectItem>
+                          <SelectItem value="none">{t("modifierDialog.produitAucun")}</SelectItem>
                           {produits.map((p) => (
                             <SelectItem key={p.id} value={p.id}>
                               {p.nom}
@@ -362,12 +372,13 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
 
                     <div>
                       <label className="text-xs text-muted-foreground">
-                        Designation <span className="text-destructive">*</span>
+                        {t("modifierDialog.designation")}{" "}
+                        <span className="text-destructive">*</span>
                       </label>
                       <Input
                         value={l.designation}
                         onChange={(e) => updateLigne(l.id, "designation", e.target.value)}
-                        placeholder="Ex: Aliment granules 3mm"
+                        placeholder={t("modifierDialog.designationPlaceholder")}
                         className="mt-0.5 h-9 text-sm"
                       />
                     </div>
@@ -375,7 +386,8 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="text-xs text-muted-foreground">
-                          Quantite <span className="text-destructive">*</span>
+                          {t("modifierDialog.quantite")}{" "}
+                          <span className="text-destructive">*</span>
                         </label>
                         <Input
                           type="number"
@@ -388,11 +400,11 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
                         />
                       </div>
                       <div>
-                        <label className="text-xs text-muted-foreground">Unite</label>
+                        <label className="text-xs text-muted-foreground">{t("modifierDialog.unite")}</label>
                         <Input
                           value={l.unite}
                           onChange={(e) => updateLigne(l.id, "unite", e.target.value)}
-                          placeholder="kg, litre..."
+                          placeholder={t("modifierDialog.unitePlaceholder")}
                           className="mt-0.5 h-9 text-sm"
                         />
                       </div>
@@ -400,7 +412,7 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
 
                     <div>
                       <label className="text-xs text-muted-foreground">
-                        Prix unitaire estime (FCFA){" "}
+                        {t("modifierDialog.prixEstime")}{" "}
                         <span className="text-destructive">*</span>
                       </label>
                       <Input
@@ -416,7 +428,7 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
 
                     {l.quantite && l.prixEstime && (
                       <p className="text-xs text-muted-foreground text-right">
-                        Sous-total :{" "}
+                        {t("modifierDialog.sousTotal")}{" "}
                         <span className="font-medium text-foreground">
                           {formatMontant(
                             (parseFloat(l.quantite) || 0) * (parseFloat(l.prixEstime) || 0)
@@ -438,12 +450,12 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
               onClick={addLigne}
             >
               <Plus className="h-4 w-4 mr-1" />
-              Ajouter une ligne
+              {t("modifierDialog.ajouterLigne")}
             </Button>
 
             {/* Total estime */}
             <div className="mt-3 flex items-center justify-between rounded-lg border border-border px-3 py-2">
-              <span className="text-sm font-medium">Total estime</span>
+              <span className="text-sm font-medium">{t("modifierDialog.totalEstime")}</span>
               <span className="text-base font-bold">{formatMontant(montantEstime)} FCFA</span>
             </div>
           </div>
@@ -459,11 +471,11 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
         <DialogFooter>
           <DialogClose asChild>
             <Button variant="ghost">
-              Annuler
+              {t("modifierDialog.annuler")}
             </Button>
           </DialogClose>
           <Button variant="primary" onClick={handleSubmit}>
-            Enregistrer
+            {t("modifierDialog.enregistrer")}
           </Button>
         </DialogFooter>
       </DialogContent>

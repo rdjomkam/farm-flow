@@ -1,0 +1,26 @@
+{
+  "severites": {
+    "CRITIQUE": "Critical",
+    "AVERTISSEMENT": "Warning",
+    "INFO": "Info"
+  },
+  "card": {
+    "nonLu": "Unread",
+    "ctaLabels": {
+      "CREER_RELEVE": {
+        "QUALITE_EAU": "Measure water quality",
+        "RENOUVELLEMENT": "Record renewal",
+        "BIOMETRIE": "Perform biometry",
+        "ALIMENTATION": "Record feeding",
+        "MORTALITE": "Report mortality",
+        "COMPTAGE": "Perform count",
+        "OBSERVATION": "Make an observation",
+        "default": "Enter a record"
+      },
+      "MODIFIER_BAC": "Configure tank",
+      "VOIR_VAGUE": "View batch",
+      "VOIR_STOCK": "View stock",
+      "default": "View details"
+    }
+  }
+}

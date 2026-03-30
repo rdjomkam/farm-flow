@@ -1,0 +1,26 @@
+{
+  "types": {
+    "mortalite": "Mortalite anormale",
+    "eau": "Qualite de l'eau",
+    "comportement": "Comportement des poissons",
+    "alimentation": "Probleme d'alimentation",
+    "autre": "Autre observation"
+  },
+  "form": {
+    "title": "Envoyer une observation",
+    "description": "Signalez un probleme ou une anomalie sur votre site.",
+    "typeLabel": "Type d'observation",
+    "typePlaceholder": "Choisir un type",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Decrivez votre observation en detail...",
+    "descriptionCount": "{count} / 2000 caracteres",
+    "vagueLabel": "Vague concernee (optionnel)",
+    "vagueAucune": "Aucune vague specifique",
+    "submit": "Envoyer l'observation",
+    "erreurs": {
+      "typeRequis": "Le type d'observation est obligatoire.",
+      "descriptionRequise": "La description est obligatoire.",
+      "descriptionTropCourte": "La description doit contenir au moins 10 caracteres."
+    }
+  }
+}

@@ -13,6 +13,53 @@ const allPermissions = Object.values(Permission);
 // Mocks
 // ---------------------------------------------------------------------------
 
+// next-intl mock — retourne les valeurs reelles de bacs.json (fr) pour les assertions
+vi.mock("next-intl", () => ({
+  useTranslations: () => {
+    const translations: Record<string, string> = {
+      "list.count": "{count} bac(s)",
+      "list.nouveau": "Nouveau bac",
+      "list.empty": "Aucun bac",
+      "list.emptyDescription": "Commencez par creer un bac pour votre site.",
+      "list.poissons": "{count} poissons",
+      "list.libre": "Libre",
+      "list.occupe": "Occupe",
+      "createDialog.title": "Nouveau bac",
+      "createDialog.description": "Ajoutez un nouveau contenant pour vos poissons.",
+      "createDialog.nomLabel": "Nom du bac",
+      "createDialog.nomPlaceholder": "Ex : Bac 1",
+      "createDialog.volumeLabel": "Volume (litres)",
+      "createDialog.annuler": "Annuler",
+      "createDialog.creer": "Creer le bac",
+      "createDialog.erreurs.nomRequis": "Le nom est obligatoire.",
+      "createDialog.erreurs.volumePositif": "Le volume doit etre superieur a 0.",
+      "editDialog.title": "Modifier le bac",
+      "editDialog.description": "Modifiez le nom ou le volume du bac.",
+      "editDialog.nomLabel": "Nom du bac",
+      "editDialog.volumeLabel": "Volume (litres)",
+      "editDialog.nombrePoissonsLabel": "Nombre de poissons actuel",
+      "editDialog.nombreInitialLabel": "Nombre initial",
+      "editDialog.poidsMoyenInitialLabel": "Poids moyen initial (g)",
+      "editDialog.typeSystemeLabel": "Type de systeme",
+      "editDialog.typeSystemePlaceholder": "Selectionner le type de systeme",
+      "editDialog.typeSystemeNonSpecifie": "Non specifie",
+      "editDialog.annuler": "Annuler",
+      "editDialog.enregistrer": "Enregistrer",
+      "editDialog.erreurs.nomRequis": "Le nom est obligatoire.",
+      "editDialog.erreurs.volumePositif": "Le volume doit etre superieur a 0.",
+    };
+    return (key: string, params?: Record<string, unknown>) => {
+      let value = translations[key] ?? key;
+      if (params) {
+        Object.entries(params).forEach(([k, v]) => {
+          value = value.replace(`{${k}}`, String(v));
+        });
+      }
+      return value;
+    };
+  },
+}));
+
 const mockRefresh = vi.fn();
 const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -90,7 +137,7 @@ describe("BacsListClient — Affichage", () => {
 
   it("affiche le nombre total de bacs", () => {
     render(<BacsListClient bacs={fakeBacs} permissions={allPermissions} />);
-    expect(screen.getByText("2 bacs")).toBeInTheDocument();
+    expect(screen.getByText("2 bac(s)")).toBeInTheDocument();
   });
 
   it("affiche le nom et volume de chaque bac", () => {
@@ -132,7 +179,7 @@ describe("BacsListClient — Formulaire de création", () => {
     fireEvent.click(screen.getByText("Nouveau bac"));
 
     await waitFor(() => {
-      expect(screen.getByText("Créer le bac")).toBeInTheDocument();
+      expect(screen.getByText("Creer le bac")).toBeInTheDocument();
     });
   });
 
@@ -141,10 +188,10 @@ describe("BacsListClient — Formulaire de création", () => {
     fireEvent.click(screen.getByText("Nouveau bac"));
 
     await waitFor(() => {
-      expect(screen.getByText("Créer le bac")).toBeInTheDocument();
+      expect(screen.getByText("Creer le bac")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText("Créer le bac"));
+    fireEvent.click(screen.getByText("Creer le bac"));
 
     await waitFor(() => {
       expect(screen.getByText("Le nom est obligatoire.")).toBeInTheDocument();
@@ -156,17 +203,17 @@ describe("BacsListClient — Formulaire de création", () => {
     fireEvent.click(screen.getByText("Nouveau bac"));
 
     await waitFor(() => {
-      expect(screen.getByText("Créer le bac")).toBeInTheDocument();
+      expect(screen.getByText("Creer le bac")).toBeInTheDocument();
     });
 
     const nomInput = screen.getByLabelText("Nom du bac");
     fireEvent.change(nomInput, { target: { value: "Bac Test" } });
 
-    fireEvent.click(screen.getByText("Créer le bac"));
+    fireEvent.click(screen.getByText("Creer le bac"));
 
     await waitFor(() => {
       expect(
-        screen.getByText("Le volume doit être supérieur à 0.")
+        screen.getByText("Le volume doit etre superieur a 0.")
       ).toBeInTheDocument();
     });
   });
@@ -176,7 +223,7 @@ describe("BacsListClient — Formulaire de création", () => {
     fireEvent.click(screen.getByText("Nouveau bac"));
 
     await waitFor(() => {
-      expect(screen.getByText("Créer le bac")).toBeInTheDocument();
+      expect(screen.getByText("Creer le bac")).toBeInTheDocument();
     });
 
     const nomInput = screen.getByLabelText("Nom du bac");
@@ -185,7 +232,7 @@ describe("BacsListClient — Formulaire de création", () => {
     fireEvent.change(nomInput, { target: { value: "Bac Test" } });
     fireEvent.change(volumeInput, { target: { value: "1500" } });
 
-    fireEvent.click(screen.getByText("Créer le bac"));
+    fireEvent.click(screen.getByText("Creer le bac"));
 
     await waitFor(() => {
       expect(mockMutateBac).toHaveBeenCalled();

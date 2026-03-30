@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
 import {
@@ -70,13 +71,6 @@ const typeActiviteColors: Record<TypeActivite, string> = {
   [TypeActivite.AUTRE]: "bg-muted-foreground",
 };
 
-const statutLabels: Record<StatutActivite, string> = {
-  [StatutActivite.PLANIFIEE]: "Planifiee",
-  [StatutActivite.TERMINEE]: "Terminee",
-  [StatutActivite.ANNULEE]: "Annulee",
-  [StatutActivite.EN_RETARD]: "En retard",
-};
-
 const statutVariants: Record<StatutActivite, "en_cours" | "terminee" | "annulee" | "default"> = {
   [StatutActivite.PLANIFIEE]: "en_cours",
   [StatutActivite.TERMINEE]: "terminee",
@@ -108,15 +102,6 @@ const recurrenceLabels: Record<Recurrence, string> = {
   [Recurrence.BIMENSUEL]: "Bimensuelle",
   [Recurrence.MENSUEL]: "Mensuelle",
   [Recurrence.PERSONNALISE]: "Personnalisee",
-};
-
-const phaseElevageLabels: Record<PhaseElevage, string> = {
-  [PhaseElevage.ACCLIMATATION]: "Acclimatation",
-  [PhaseElevage.CROISSANCE_DEBUT]: "Croissance debut",
-  [PhaseElevage.JUVENILE]: "Juvenile",
-  [PhaseElevage.GROSSISSEMENT]: "Grossissement",
-  [PhaseElevage.FINITION]: "Finition",
-  [PhaseElevage.PRE_RECOLTE]: "Pre-recolte",
 };
 
 interface PrioriteConfig {
@@ -188,9 +173,26 @@ interface PlanningClientProps {
 }
 
 export function PlanningClient({ activites, permissions, vagues = [], bacs = [], members = [] }: PlanningClientProps) {
+  const t = useTranslations("planning");
   const activiteService = useActiviteService();
   const queryClient = useQueryClient();
   const [isPending, setIsPending] = useState(false);
+
+  // Derived label helpers
+  function getStatutLabel(statut: StatutActivite): string {
+    return t(`statuts.${statut}`);
+  }
+  function getRecurrenceLabel(rec: string): string {
+    return recurrenceLabels[rec as Recurrence] ?? rec;
+  }
+  function getPhaseLabel(phase: PhaseElevage): string {
+    return t(`phases.${phase}`);
+  }
+  function getPrioriteLabel(priorite: number): string {
+    if (priorite >= 3) return t("priorites.HAUTE");
+    if (priorite === 2) return t("priorites.MOYENNE");
+    return t("priorites.BASSE");
+  }
 
   const now = new Date();
   const [viewYear, setViewYear] = useState(now.getFullYear());
@@ -328,14 +330,14 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                 {hasReleve && (
                   <span
                     className="inline-flex items-center gap-0.5 rounded-full bg-accent-green/15 px-2 py-0.5 text-[10px] font-medium text-accent-green"
-                    title="Relevé lié"
+                    title={t("badges.releve")}
                   >
                     <ClipboardCheck className="h-2.5 w-2.5" />
-                    Relevé
+                    {t("badges.releve")}
                   </span>
                 )}
                 <Badge variant={statutVariants[activite.statut as StatutActivite] ?? "default"}>
-                  {statutLabels[activite.statut as StatutActivite] ?? activite.statut}
+                  {getStatutLabel(activite.statut as StatutActivite)}
                 </Badge>
               </div>
             </div>
@@ -350,7 +352,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
             </p>
             {activite.user && (
               <p className="text-xs text-muted-foreground mt-0.5">
-                Cree par {activite.user.name}
+                {t("creePar", { name: activite.user.name })}
               </p>
             )}
           </div>
@@ -379,7 +381,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
-                Chargement...
+                {t("chargement")}
               </span>
             ) : (
               `${MONTHS[viewMonth]} ${viewYear}`
@@ -393,7 +395,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
           <Link href="/planning/nouvelle">
             <Button size="sm" className="gap-1.5">
               <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Nouvelle</span>
+              <span className="hidden sm:inline">{t("nouvelle")}</span>
             </Button>
           </Link>
         )}
@@ -402,10 +404,10 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
       {/* Filtre statuts */}
       <Tabs value={filterStatut} onValueChange={setFilterStatut}>
         <TabsList className="w-full">
-          <TabsTrigger value="toutes">Toutes</TabsTrigger>
-          <TabsTrigger value={StatutActivite.PLANIFIEE}>Planifiees</TabsTrigger>
-          <TabsTrigger value={StatutActivite.TERMINEE}>Terminees</TabsTrigger>
-          <TabsTrigger value={StatutActivite.EN_RETARD}>En retard</TabsTrigger>
+          <TabsTrigger value="toutes">{t("tabs.toutes")}</TabsTrigger>
+          <TabsTrigger value={StatutActivite.PLANIFIEE}>{t("tabs.planifiees")}</TabsTrigger>
+          <TabsTrigger value={StatutActivite.TERMINEE}>{t("tabs.terminees")}</TabsTrigger>
+          <TabsTrigger value={StatutActivite.EN_RETARD}>{t("tabs.enRetard")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value={filterStatut}>
@@ -468,7 +470,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                   {activitesDuJour.length > 0 && ` · ${activitesDuJour.length} activite${activitesDuJour.length > 1 ? "s" : ""}`}
                 </h3>
                 {activitesDuJour.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Aucune activite ce jour</p>
+                  <p className="text-sm text-muted-foreground">{t("empty.ceJour")}</p>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2">
                     {activitesDuJour.map((a) => (
@@ -485,10 +487,10 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
             {groupesParDate.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Calendar className="h-10 w-10 text-muted-foreground/30 mb-3" />
-                <p className="text-sm text-muted-foreground">Aucune activite ce mois</p>
+                <p className="text-sm text-muted-foreground">{t("empty.ceMois")}</p>
                 {permissions.includes(Permission.PLANNING_GERER) && (
                   <Link href="/planning/nouvelle" className="mt-3">
-                    <Button size="sm" variant="outline">Planifier une activite</Button>
+                    <Button size="sm" variant="outline">{t("planifier")}</Button>
                   </Link>
                 )}
               </div>
@@ -543,7 +545,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
               <DialogTitle className="sr-only">{a.titre}</DialogTitle>
               {/* Accessible description for screen readers */}
               <DialogDescription className="sr-only">
-                {typeActiviteLabels[typeActivite] ?? typeActivite} — {statutLabels[statut] ?? statut}
+                {typeActiviteLabels[typeActivite] ?? typeActivite} — {getStatutLabel(statut)}
               </DialogDescription>
 
               <div className="flex flex-col gap-4">
@@ -567,7 +569,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                     <div className="shrink-0">
                       <Badge variant={statutVariants[statut] ?? "default"}>
                         {isEnRetard && <AlertTriangle className="h-3 w-3 mr-1" />}
-                        {statutLabels[statut] ?? statut}
+                        {getStatutLabel(statut)}
                       </Badge>
                     </div>
                   </div>
@@ -585,7 +587,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                     )}
                     {a.phaseElevage && (
                       <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">
-                        {phaseElevageLabels[a.phaseElevage as PhaseElevage] ?? a.phaseElevage}
+                        {getPhaseLabel(a.phaseElevage as PhaseElevage)}
                       </span>
                     )}
                     {a.isAutoGenerated && (
@@ -597,7 +599,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                     {priorite >= 2 && (
                       <span className={["inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", config.badgeBgClass, config.badgeTextClass].join(" ")}>
                         <span className={["h-1.5 w-1.5 rounded-full", config.dotClass].join(" ")} />
-                        {config.label}
+                        {getPrioriteLabel(priorite)}
                       </span>
                     )}
                   </div>
@@ -609,7 +611,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-danger shrink-0" />
                       <p className="text-sm text-danger font-medium">
-                        Cette activite est en retard.
+                        {t("detail.enRetardBanner")}
                       </p>
                     </div>
                   </div>
@@ -619,11 +621,11 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                 <div className="rounded-xl bg-surface-0 p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <Calendar className="h-4 w-4 text-primary shrink-0" />
-                    <h3 className="text-sm font-semibold text-foreground">Planification</h3>
+                    <h3 className="text-sm font-semibold text-foreground">{t("detail.planification")}</h3>
                   </div>
                   <div className="flex flex-col gap-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Date debut</span>
+                      <span className="text-muted-foreground">{t("detail.dateDebut")}</span>
                       <span className="font-medium">
                         {new Date(a.dateDebut).toLocaleDateString("fr-FR", {
                           weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
@@ -632,7 +634,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                     </div>
                     {a.dateFin && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Date fin</span>
+                        <span className="text-muted-foreground">{t("detail.dateFin")}</span>
                         <span className="font-medium">
                           {new Date(a.dateFin).toLocaleDateString("fr-FR", {
                             weekday: "short", day: "numeric", month: "short",
@@ -642,15 +644,15 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                     )}
                     {a.recurrence && (
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">Recurrence</span>
+                        <span className="text-muted-foreground">{t("detail.recurrence")}</span>
                         <Badge variant="info">
-                          {recurrenceLabels[a.recurrence as Recurrence] ?? a.recurrence}
+                          {getRecurrenceLabel(a.recurrence as Recurrence)}
                         </Badge>
                       </div>
                     )}
                     {a.vague && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Vague</span>
+                        <span className="text-muted-foreground">{t("detail.vague")}</span>
                         <Link
                           href={`/vagues/${a.vagueId}`}
                           className="font-medium text-primary hover:underline"
@@ -662,7 +664,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                     )}
                     {a.bac && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Bac</span>
+                        <span className="text-muted-foreground">{t("detail.bac")}</span>
                         <span className="font-medium">{a.bac.nom}</span>
                       </div>
                     )}
@@ -675,7 +677,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                     <div className="flex items-start gap-2.5">
                       <Info className="h-4 w-4 text-warning mt-0.5 shrink-0" />
                       <div>
-                        <p className="text-xs font-semibold text-warning mb-1">Conseil IA</p>
+                        <p className="text-xs font-semibold text-warning mb-1">{t("detail.conseilIA")}</p>
                         <p className="text-sm text-warning leading-relaxed">{a.conseilIA}</p>
                       </div>
                     </div>
@@ -687,7 +689,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                   <div className="rounded-xl bg-surface-0 p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <FileText className="h-4 w-4 text-primary shrink-0" />
-                      <h3 className="text-sm font-semibold text-foreground">Instructions</h3>
+                      <h3 className="text-sm font-semibold text-foreground">{t("detail.instructions")}</h3>
                     </div>
                     <InstructionSteps text={a.instructionsDetaillees} />
                   </div>
@@ -698,14 +700,14 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                   <div className="rounded-xl bg-surface-0 p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <Package className="h-4 w-4 text-primary shrink-0" />
-                      <h3 className="text-sm font-semibold text-foreground">Produit recommande</h3>
+                      <h3 className="text-sm font-semibold text-foreground">{t("detail.produitRecommande")}</h3>
                     </div>
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">{a.produitRecommande.nom}</p>
                         {a.quantiteRecommandee != null && (
                           <p className="text-sm text-muted-foreground mt-0.5">
-                            Quantite recommandee :{" "}
+                            {t("detail.quantiteRecommandee")}{" "}
                             <span className="font-semibold text-foreground">
                               {a.quantiteRecommandee} {a.produitRecommande.unite}
                             </span>
@@ -718,11 +720,11 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                               ? "text-danger font-medium"
                               : "text-muted-foreground",
                           ].join(" ")}>
-                            Stock actuel : {a.produitRecommande.stockActuel} {a.produitRecommande.unite}
+                            {t("detail.stockActuel")} {a.produitRecommande.stockActuel} {a.produitRecommande.unite}
                             {a.quantiteRecommandee != null && a.produitRecommande.stockActuel < a.quantiteRecommandee && (
                               <span className="ml-1 inline-flex items-center gap-0.5">
                                 <AlertTriangle className="h-3 w-3" />
-                                Stock insuffisant
+                                {t("detail.stockInsuffisant")}
                               </span>
                             )}
                           </p>
@@ -733,7 +735,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                         className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-muted px-3 py-2 text-xs font-medium text-foreground hover:bg-muted/70 transition-colors min-h-[44px]"
                         onClick={() => setSelectedActivite(null)}
                       >
-                        Voir le stock
+                        {t("detail.voirStock")}
                       </Link>
                     </div>
                   </div>
@@ -745,7 +747,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <ClipboardCheck className="h-4 w-4 text-primary shrink-0" />
-                        <span className="text-sm font-semibold text-foreground">Releve lie</span>
+                        <span className="text-sm font-semibold text-foreground">{t("detail.releveLie")}</span>
                       </div>
                       <Link
                         href={`/vagues/${a.vagueId}#releve-${a.releve.id}`}
@@ -767,18 +769,18 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                   <div className="rounded-xl bg-surface-0 p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <User className="h-4 w-4 text-primary shrink-0" />
-                      <h3 className="text-sm font-semibold text-foreground">Intervenants</h3>
+                      <h3 className="text-sm font-semibold text-foreground">{t("detail.intervenants")}</h3>
                     </div>
                     <div className="flex flex-col gap-2">
                       {a.user && (
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Cree par</span>
+                          <span className="text-muted-foreground">{t("detail.creePar")}</span>
                           <span className="font-medium">{a.user.name}</span>
                         </div>
                       )}
                       {a.assigneA && (
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Assigne a</span>
+                          <span className="text-muted-foreground">{t("detail.assigneA")}</span>
                           <span className="font-medium">{a.assigneA.name}</span>
                         </div>
                       )}
@@ -789,11 +791,11 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                 {/* Section 9 — Note de completion */}
                 {isTerminee && a.noteCompletion && (
                   <div className="rounded-xl bg-success/10 p-4">
-                    <p className="text-xs font-semibold text-success mb-1">Note de completion</p>
+                    <p className="text-xs font-semibold text-success mb-1">{t("detail.noteCompletion")}</p>
                     <p className="text-sm text-success leading-relaxed">{a.noteCompletion}</p>
                     {a.dateTerminee && (
                       <p className="text-xs text-success/70 mt-1.5">
-                        Terminee le{" "}
+                        {t("detail.termineeLe")}{" "}
                         {new Date(a.dateTerminee).toLocaleDateString("fr-FR", {
                           day: "numeric", month: "long", year: "numeric",
                         })}
@@ -828,7 +830,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                       disabled={isPending}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
-                      Supprimer
+                      {t("detail.supprimer")}
                     </Button>
                   </div>
                 )}

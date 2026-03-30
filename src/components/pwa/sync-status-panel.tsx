@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { RefreshCw, Trash2, AlertCircle, Clock, Loader2 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
+import { useTranslations } from "next-intl";
 import type { QueueMeta } from "@/lib/offline/db";
 
 interface SyncStatusPanelProps {
@@ -24,13 +25,8 @@ const STATUS_COLORS = {
   failed: "text-danger",
 };
 
-const STATUS_LABELS = {
-  pending: "En attente",
-  syncing: "En cours",
-  failed: "Echoue",
-};
-
 export function SyncStatusPanel({ open, onOpenChange, siteId, onSyncNow }: SyncStatusPanelProps) {
+  const t = useTranslations("pwa");
   const [items, setItems] = useState<QueueMeta[]>([]);
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -84,12 +80,12 @@ export function SyncStatusPanel({ open, onOpenChange, siteId, onSyncNow }: SyncS
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50" />
         <Dialog.Content className="fixed inset-x-0 bottom-0 z-50 max-h-[80vh] rounded-t-xl bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:pb-4">
           <Dialog.Title className="text-lg font-semibold">
-            File de synchronisation
+            {t("syncStatus.title")}
           </Dialog.Title>
           <Dialog.Description className="mt-1 text-sm text-muted-foreground">
             {items.length === 0
-              ? "Aucun element en attente"
-              : `${items.length} element${items.length > 1 ? "s" : ""} en attente`}
+              ? t("syncStatus.aucunElement")
+              : t("syncStatus.elementsEnAttente", { count: items.length })}
           </Dialog.Description>
 
           {/* Actions */}
@@ -104,7 +100,7 @@ export function SyncStatusPanel({ open, onOpenChange, siteId, onSyncNow }: SyncS
               ) : (
                 <RefreshCw className="h-4 w-4" />
               )}
-              Synchroniser
+              {t("syncStatus.synchroniser")}
             </button>
             {items.length > 0 && (
               <button
@@ -112,7 +108,7 @@ export function SyncStatusPanel({ open, onOpenChange, siteId, onSyncNow }: SyncS
                 className="flex items-center gap-1.5 rounded-md border border-danger/30 px-3 py-1.5 text-sm text-danger hover:bg-danger/10"
               >
                 <Trash2 className="h-4 w-4" />
-                Vider
+                {t("syncStatus.vider")}
               </button>
             )}
           </div>
@@ -121,7 +117,7 @@ export function SyncStatusPanel({ open, onOpenChange, siteId, onSyncNow }: SyncS
           {confirmClear && (
             <div className="mt-3 rounded-lg border border-danger/30 bg-danger/10 p-3">
               <p className="text-sm text-danger">
-                Supprimer tous les elements en attente ? Cette action est irreversible.
+                {t("syncStatus.confirmerVider")}
               </p>
               <div className="mt-2 flex gap-2">
                 <button
@@ -129,13 +125,13 @@ export function SyncStatusPanel({ open, onOpenChange, siteId, onSyncNow }: SyncS
                   disabled={clearing}
                   className="rounded-md bg-danger px-3 py-1.5 text-sm text-white hover:bg-danger/90"
                 >
-                  {clearing ? "Suppression..." : "Confirmer"}
+                  {clearing ? t("syncStatus.suppression") : t("syncStatus.confirmer")}
                 </button>
                 <button
                   onClick={() => setConfirmClear(false)}
                   className="rounded-md border px-3 py-1.5 text-sm text-foreground hover:bg-muted"
                 >
-                  Annuler
+                  {t("syncStatus.annuler")}
                 </button>
               </div>
             </div>
@@ -160,8 +156,8 @@ export function SyncStatusPanel({ open, onOpenChange, siteId, onSyncNow }: SyncS
                       {item.entityLabel}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {STATUS_LABELS[item.status]} · {formatDate(item.createdAt)}
-                      {item.retryCount > 0 && ` · ${item.retryCount} tentative${item.retryCount > 1 ? "s" : ""}`}
+                      {t(`syncStatus.statuts.${item.status}`)} · {formatDate(item.createdAt)}
+                      {item.retryCount > 0 && ` · ${t("syncStatus.tentatives", { count: item.retryCount })}`}
                     </p>
                     {item.lastError && (
                       <p className="mt-1 text-xs text-danger truncate">
@@ -176,7 +172,7 @@ export function SyncStatusPanel({ open, onOpenChange, siteId, onSyncNow }: SyncS
 
           <Dialog.Close asChild>
             <button className="mt-4 w-full rounded-md border py-2 text-sm text-foreground hover:bg-muted">
-              Fermer
+              {t("syncStatus.fermer")}
             </button>
           </Dialog.Close>
         </Dialog.Content>

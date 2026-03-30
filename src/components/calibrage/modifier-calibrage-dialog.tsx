@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { Pencil, Plus, Trash2, CheckCircle2, XCircle } from "lucide-react";
@@ -31,12 +32,6 @@ function toLocalDatetimeString(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-const categorieLabels: Record<CategorieCalibrage, string> = {
-  [CategorieCalibrage.PETIT]: "Petit",
-  [CategorieCalibrage.MOYEN]: "Moyen",
-  [CategorieCalibrage.GROS]: "Gros",
-  [CategorieCalibrage.TRES_GROS]: "Tres gros",
-};
 
 interface GroupeEditForm {
   categorie: string;
@@ -62,6 +57,7 @@ export function ModifierCalibrageDialog({
   bacs,
   permissions,
 }: ModifierCalibrageDialogProps) {
+  const t = useTranslations("calibrage.modifierDialog");
   const queryClient = useQueryClient();
   const calibrageService = useCalibrageService();
   const [open, setOpen] = useState(false);
@@ -140,30 +136,30 @@ export function ModifierCalibrageDialog({
 
     const raisonTrimmed = raison.trim();
     if (!raisonTrimmed || raisonTrimmed.length < 5) {
-      errs.raison = "La raison doit contenir au moins 5 caracteres.";
+      errs.raison = t("erreurs.raisonRequise");
     }
 
     if (nombreMorts === "" || Number(nombreMorts) < 0 || !Number.isInteger(Number(nombreMorts))) {
-      errs.nombreMorts = "Entier positif ou zero.";
+      errs.nombreMorts = t("erreurs.mortsEntier");
     }
 
     if (modifierGroupes) {
       if (groupes.length === 0) {
-        errs.groupes = "Au moins un groupe est requis.";
+        errs.groupes = t("auMoinsUnGroupe");
       }
       groupes.forEach((g, i) => {
-        if (!g.categorie) errs[`groupes_${i}_categorie`] = "Categorie requise.";
-        if (!g.destinationBacId) errs[`groupes_${i}_bacId`] = "Bac requis.";
+        if (!g.categorie) errs[`groupes_${i}_categorie`] = t("erreurs.groupeCategorie");
+        if (!g.destinationBacId) errs[`groupes_${i}_bacId`] = t("erreurs.groupeBac");
         if (!g.nombrePoissons || Number(g.nombrePoissons) <= 0 || !Number.isInteger(Number(g.nombrePoissons))) {
-          errs[`groupes_${i}_nombrePoissons`] = "Entier > 0.";
+          errs[`groupes_${i}_nombrePoissons`] = t("erreurs.groupePoissons");
         }
         if (!g.poidsMoyen || Number(g.poidsMoyen) <= 0) {
-          errs[`groupes_${i}_poidsMoyen`] = "Valeur > 0.";
+          errs[`groupes_${i}_poidsMoyen`] = t("erreurs.groupePoids");
         }
       });
 
       if (!conservationOk) {
-        errs.conservation = `Conservation non respectee. Total : ${totalActuel} / ${totalSource}`;
+        errs.conservation = t("erreurs.conservationNonRespectee", { total: totalActuel, source: totalSource });
       }
     }
 
@@ -220,14 +216,14 @@ export function ModifierCalibrageDialog({
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <Pencil className="h-4 w-4 mr-1.5" />
-          Modifier
+          {t("trigger")}
         </Button>
       </DialogTrigger>
       <DialogContent className="w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Modifier le calibrage</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
           <DialogDescription>
-            Toutes les modifications sont tracees pour l&apos;audit.
+            {t("description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -236,7 +232,7 @@ export function ModifierCalibrageDialog({
           {/* Section 1 — Raison obligatoire (EN PREMIER) */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="calib-raison" className="text-sm font-medium text-foreground">
-              Raison de la modification <span className="text-danger">*</span>
+              {t("raisonLabel")}
             </label>
             <textarea
               id="calib-raison"
@@ -244,7 +240,7 @@ export function ModifierCalibrageDialog({
                 errors.raison ? "border-danger" : "border-border"
               }`}
               maxLength={500}
-              placeholder="Ex : Erreur de comptage des mortalites lors du calibrage"
+              placeholder={t("raisonPlaceholder")}
               value={raison}
               onChange={(e) => setRaison(e.target.value)}
             />
@@ -253,7 +249,7 @@ export function ModifierCalibrageDialog({
                 <p className="text-xs text-danger">{errors.raison}</p>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  {raisonValid ? "Raison valide." : "Minimum 5 caracteres."}
+                  {raisonValid ? t("raisonValide") : t("raisonMinimum")}
                 </p>
               )}
               <span className={`text-xs ${raisonLength > 500 ? "text-danger" : "text-muted-foreground"}`}>
@@ -265,7 +261,7 @@ export function ModifierCalibrageDialog({
           {/* Section 2 — Date et heure du calibrage */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="calib-date" className="text-sm font-medium text-foreground">
-              Date et heure du calibrage
+              {t("dateHeure")}
             </label>
             <input
               id="calib-date"
@@ -279,7 +275,7 @@ export function ModifierCalibrageDialog({
           {/* Section 3 — Nombre de morts */}
           <Input
             id="calib-nombreMorts"
-            label="Nombre de mortalites"
+            label={t("nombreMortalites")}
             type="number"
             min="0"
             value={nombreMorts}
@@ -296,7 +292,7 @@ export function ModifierCalibrageDialog({
                 checked={modifierGroupes}
                 onChange={(e) => setModifierGroupes(e.target.checked)}
               />
-              <span className="text-sm font-medium text-foreground">Modifier les groupes de redistribution</span>
+              <span className="text-sm font-medium text-foreground">{t("modifierGroupes")}</span>
             </label>
 
             {modifierGroupes && (
@@ -313,16 +309,16 @@ export function ModifierCalibrageDialog({
                     ) : (
                       <XCircle className="h-4 w-4 shrink-0" />
                     )}
-                    <span>Conservation des poissons</span>
+                    <span>{t("conservationPoissons")}</span>
                   </div>
                   <p className="text-xs">
-                    Total source : <strong>{totalSource}</strong> poissons
+                    {t("totalSource", { count: totalSource })}
                   </p>
                   <p className="text-xs">
-                    Groupes : <strong>{totalGroupes}</strong> + Morts : <strong>{Number(nombreMorts) || 0}</strong> = <strong>{totalActuel}</strong>
+                    {t("totalGroupes", { groupes: totalGroupes, morts: Number(nombreMorts) || 0, total: totalActuel })}
                     {!conservationOk && (
                       <span className="ml-1">
-                        (ecart : {totalActuel - totalSource > 0 ? "+" : ""}{totalActuel - totalSource})
+                        {t("ecart", { ecart: `${totalActuel - totalSource > 0 ? "+" : ""}${totalActuel - totalSource}` })}
                       </span>
                     )}
                   </p>
@@ -339,7 +335,7 @@ export function ModifierCalibrageDialog({
                 {groupes.map((g, i) => (
                   <div key={i} className="rounded-lg border border-border bg-background p-3 flex flex-col gap-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground">Groupe {i + 1}</span>
+                      <span className="text-xs font-medium text-muted-foreground">{t("groupeLabel", { index: i + 1 })}</span>
                       {groupes.length > 1 && (
                         <Button
                           type="button"
@@ -359,14 +355,14 @@ export function ModifierCalibrageDialog({
                         onValueChange={(v) => updateGroupe(i, "categorie", v)}
                       >
                         <SelectTrigger
-                          label="Categorie"
+                          label={t("categorie")}
                           error={errors[`groupes_${i}_categorie`]}
                         >
                           <SelectValue placeholder="Selectionnez..." />
                         </SelectTrigger>
                         <SelectContent>
                           {Object.values(CategorieCalibrage).map((c) => (
-                            <SelectItem key={c} value={c}>{categorieLabels[c]}</SelectItem>
+                            <SelectItem key={c} value={c}>{t(`categorieOptions.${c}` as "categorieOptions.PETIT")}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -376,7 +372,7 @@ export function ModifierCalibrageDialog({
                         onValueChange={(v) => updateGroupe(i, "destinationBacId", v)}
                       >
                         <SelectTrigger
-                          label="Bac destination"
+                          label={t("bacDestination")}
                           error={errors[`groupes_${i}_bacId`]}
                         >
                           <SelectValue placeholder="Selectionnez..." />
@@ -389,7 +385,7 @@ export function ModifierCalibrageDialog({
                       </Select>
 
                       <Input
-                        label="Nombre poissons"
+                        label={t("nombrePoissons")}
                         type="number"
                         min="1"
                         value={g.nombrePoissons}
@@ -398,7 +394,7 @@ export function ModifierCalibrageDialog({
                       />
 
                       <Input
-                        label="Poids moyen (g)"
+                        label={t("poidsMoyen")}
                         type="number"
                         min="0.1"
                         step="0.1"
@@ -408,7 +404,7 @@ export function ModifierCalibrageDialog({
                       />
 
                       <Input
-                        label="Taille moyenne (cm, optionnel)"
+                        label={t("tailleMoyenne")}
                         type="number"
                         min="0.1"
                         step="0.1"
@@ -427,7 +423,7 @@ export function ModifierCalibrageDialog({
                   className="self-start"
                 >
                   <Plus className="h-4 w-4 mr-1.5" />
-                  Ajouter un groupe
+                  {t("ajouterGroupe")}
                 </Button>
               </div>
             )}
@@ -436,7 +432,7 @@ export function ModifierCalibrageDialog({
           {/* Section 5 — Notes */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="calib-notes" className="text-sm font-medium text-foreground">
-              Notes (optionnel)
+              {t("notes")}
             </label>
             <textarea
               id="calib-notes"
@@ -448,10 +444,10 @@ export function ModifierCalibrageDialog({
 
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-              Annuler
+              {t("annuler")}
             </Button>
             <Button type="submit" disabled={!canSubmit}>
-              Enregistrer les modifications
+              {t("enregistrer")}
             </Button>
           </DialogFooter>
         </form>

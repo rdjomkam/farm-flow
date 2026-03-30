@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, Package, Users, Pencil, AlertTriangle, Settings, Check, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, Pencil, AlertTriangle, Settings, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,12 +29,6 @@ import {
 import { useConfigService } from "@/services";
 import { useApi } from "@/hooks/use-api";
 import { Permission, StatutActivation, UniteStock } from "@/types";
-
-const statutActivationLabels: Record<StatutActivation, string> = {
-  [StatutActivation.ACTIVE]: "Active",
-  [StatutActivation.EXPIREE]: "Expiree",
-  [StatutActivation.SUSPENDUE]: "Suspendue",
-};
 
 const statutActivationVariants: Record<StatutActivation, "en_cours" | "default" | "warning"> = {
   [StatutActivation.ACTIVE]: "en_cours",
@@ -101,6 +96,7 @@ interface Props {
 }
 
 export function PackDetailClient({ pack, produits, configElevages, plans, permissions }: Props) {
+  const t = useTranslations("packs");
   const queryClient = useQueryClient();
   const configService = useConfigService();
   const { call } = useApi();
@@ -193,7 +189,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
           })),
         }),
       },
-      { successMessage: "Bacs configures." }
+      { successMessage: t("detail.bacsConfigures") }
     );
     if (result.ok) {
       setConfigBacsOpen(false);
@@ -237,7 +233,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
     const result = await call<unknown>(
       `/api/packs/${pack.id}/produits?produitId=${retirerProduitId}`,
       { method: "DELETE" },
-      { successMessage: "Produit retire." }
+      { successMessage: t("detail.produitRetire") }
     );
     if (result.ok) {
       setRetirerProduitId(null);
@@ -255,8 +251,6 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
   const produitsDisponibles = produits.filter(
     (p) => !pack.produits.some((pp) => pp.produit.id === p.id)
   );
-  const selectedProduit = produitsDisponibles.find((p) => p.id === produitId);
-
   function handleProduitChange(id: string) {
     setProduitId(id);
     const p = produitsDisponibles.find((pr) => pr.id === id);
@@ -270,7 +264,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
         <Button variant="ghost" size="sm" asChild>
           <Link href="/packs">
             <ArrowLeft className="h-4 w-4 mr-1" />
-            Retour
+            {t("detail.retour")}
           </Link>
         </Button>
       </div>
@@ -294,33 +288,33 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Modifier le pack</DialogTitle>
+                    <DialogTitle>{t("detail.modifierTitle")}</DialogTitle>
                   </DialogHeader>
                   <div className="flex flex-col gap-4 py-2">
                     <Input
-                      label="Nom *"
+                      label={`${t("detail.nomLabel")} *`}
                       value={editNom}
                       onChange={(e) => setEditNom(e.target.value)}
                     />
                     <div>
-                      <label className="text-sm font-medium">Description</label>
+                      <label className="text-sm font-medium">{t("detail.descriptionLabel")}</label>
                       <Textarea
                         value={editDescription}
                         onChange={(e) => setEditDescription(e.target.value)}
-                        placeholder="Description du pack..."
+                        placeholder={t("detail.descriptionPlaceholder")}
                         className="mt-1"
                         rows={3}
                       />
                     </div>
                     <Input
-                      label="Nombre d'alevins *"
+                      label={`${t("detail.nombreAlevinsLabel")} *`}
                       type="number"
                       min={1}
                       value={editNombreAlevins}
                       onChange={(e) => setEditNombreAlevins(e.target.value)}
                     />
                     <Input
-                      label="Poids moyen initial (g)"
+                      label={t("detail.poidsMoyenLabel")}
                       type="number"
                       min={0}
                       step={0.1}
@@ -328,14 +322,14 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
                       onChange={(e) => setEditPoidsMoyenInitial(e.target.value)}
                     />
                     <Input
-                      label="Prix total (FCFA)"
+                      label={t("detail.prixTotalLabel")}
                       type="number"
                       min={0}
                       value={editPrixTotal}
                       onChange={(e) => setEditPrixTotal(e.target.value)}
                     />
                     <Select value={editPlanId} onValueChange={setEditPlanId}>
-                      <SelectTrigger label="Plan d'abonnement">
+                      <SelectTrigger label={t("detail.planLabel")}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -345,11 +339,11 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
                       </SelectContent>
                     </Select>
                     <Select value={editConfigElevageId} onValueChange={setEditConfigElevageId}>
-                      <SelectTrigger label="Config elevage">
+                      <SelectTrigger label={t("detail.configElevageLabel")}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">Aucune</SelectItem>
+                        <SelectItem value="none">{t("detail.configElevageAucune")}</SelectItem>
                         {configElevages.map((c) => (
                           <SelectItem key={c.id} value={c.id}>{c.nom}</SelectItem>
                         ))}
@@ -358,48 +352,48 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
                   </div>
                   <DialogFooter>
                     <DialogClose asChild>
-                      <Button variant="outline">Annuler</Button>
+                      <Button variant="outline">{t("detail.annuler")}</Button>
                     </DialogClose>
                     <Button onClick={handleEditPack} disabled={!editNom.trim()}>
-                      Enregistrer
+                      {t("detail.enregistrer")}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
             )}
             <Badge variant={pack.isActive ? "en_cours" : "default"}>
-              {pack.isActive ? "Actif" : "Inactif"}
+              {pack.isActive ? t("detail.badgeActif") : t("detail.badgeInactif")}
             </Badge>
           </div>
         </div>
         {canActivate && pack.isActive && (
           <Button asChild size="sm" className="w-full sm:w-auto mt-3">
-            <Link href={`/packs/${pack.id}/activer`}>Activer pour un client</Link>
+            <Link href={`/packs/${pack.id}/activer`}>{t("detail.activerClient")}</Link>
           </Button>
         )}
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 text-sm mt-4">
           <div>
-            <dt className="text-muted-foreground">Alevins</dt>
+            <dt className="text-muted-foreground">{t("detail.alevins")}</dt>
             <dd className="font-medium">{pack.nombreAlevins.toLocaleString()}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Poids initial</dt>
+            <dt className="text-muted-foreground">{t("detail.poidsInitial")}</dt>
             <dd className="font-medium">{pack.poidsMoyenInitial} g/alevin</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Prix total</dt>
+            <dt className="text-muted-foreground">{t("detail.prixTotal")}</dt>
             <dd className="font-medium">{pack.prixTotal.toLocaleString()} FCFA</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Config elevage</dt>
-            <dd className="font-medium">{pack.configElevage?.nom ?? "Non assignee"}</dd>
+            <dt className="text-muted-foreground">{t("detail.configElevage")}</dt>
+            <dd className="font-medium">{pack.configElevage?.nom ?? t("detail.configElevageNonAssignee")}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Cree par</dt>
+            <dt className="text-muted-foreground">{t("detail.creePar")}</dt>
             <dd className="font-medium">{pack.user.name}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Activations</dt>
+            <dt className="text-muted-foreground">{t("detail.activations")}</dt>
             <dd className="font-medium flex items-center gap-1">
               <Users className="h-3.5 w-3.5" />
               {pack.activations.length}
@@ -409,7 +403,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
 
         {/* Plan associé */}
         <div className="mt-4">
-          <p className="text-sm text-muted-foreground mb-2">Plan d'abonnement</p>
+          <p className="text-sm text-muted-foreground mb-2">{t("detail.planAbonnement")}</p>
           <span className="text-sm font-medium">
             {pack.plan?.nom ?? pack.planId}
           </span>
@@ -420,12 +414,12 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
       <section className="pt-6 border-t border-border">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Configuration bacs
+            {t("detail.configBacs")}
           </h2>
           {canManage && (
             <Button size="sm" variant="outline" onClick={openConfigBacs}>
               <Settings className="h-4 w-4 mr-1" />
-              Configurer les bacs
+              {t("detail.configurerBacs")}
             </Button>
           )}
         </div>
@@ -435,15 +429,14 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
           <div className="flex items-start gap-2 rounded-md border border-warning/50 bg-warning/10 p-3 mb-3 text-sm text-warning">
             <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
             <span>
-              La somme des alevins ({bacsSum.toLocaleString()}) ne correspond pas au total du pack ({pack.nombreAlevins.toLocaleString()}).
-              Corrigez la configuration avant d&apos;activer ce pack.
+              {t("detail.configBacsWarning", { current: bacsSum.toLocaleString(), total: pack.nombreAlevins.toLocaleString() })}
             </span>
           </div>
         )}
 
         {pack.bacs.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">
-            Aucune configuration de bacs — 1 bac par defaut sera cree a l&apos;activation.
+            {t("detail.configBacsEmpty")}
           </p>
         ) : (
           <div className="space-y-2">
@@ -466,13 +459,13 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
         <Dialog open={configBacsOpen} onOpenChange={setConfigBacsOpen}>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Configurer les bacs</DialogTitle>
+              <DialogTitle>{t("detail.configurerBacsTitle")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-3 py-2">
               {localBacs.map((bac, index) => (
                 <div key={index} className="rounded-md border border-border p-3 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Bac {index + 1}</span>
+                    <span className="text-sm font-medium">{t("detail.bacLabel", { index: index + 1 })}</span>
                     {localBacs.length > 1 && (
                       <Button
                         size="sm"
@@ -486,29 +479,29 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <Input
-                      label="Nom *"
+                      label={`${t("detail.bacNomLabel")} *`}
                       value={bac.nom}
                       onChange={(e) => updateLocalBac(index, "nom", e.target.value)}
-                      placeholder="Ex: Bac A"
+                      placeholder={t("detail.bacNomPlaceholder")}
                     />
                     <Input
-                      label="Volume (m³)"
+                      label={t("detail.bacVolumeLabel")}
                       type="number"
                       min={0}
                       step={0.1}
                       value={bac.volume}
                       onChange={(e) => updateLocalBac(index, "volume", e.target.value)}
-                      placeholder="Optionnel"
+                      placeholder={t("detail.bacVolumePlaceholder")}
                     />
                     <Input
-                      label="Alevins *"
+                      label={`${t("detail.bacAlevinsLabel")} *`}
                       type="number"
                       min={1}
                       value={bac.nombreAlevins}
                       onChange={(e) => updateLocalBac(index, "nombreAlevins", e.target.value)}
                     />
                     <Input
-                      label="Poids (g)"
+                      label={t("detail.bacPoidsLabel")}
                       type="number"
                       min={0}
                       step={0.1}
@@ -521,7 +514,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
 
               <Button size="sm" variant="outline" className="w-full" onClick={addLocalBac}>
                 <Plus className="h-4 w-4 mr-1" />
-                Ajouter un bac
+                {t("detail.ajouterBac")}
               </Button>
 
               {/* Live validation footer */}
@@ -532,7 +525,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
                   : "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800",
               ].join(" ")}>
                 <span>
-                  Total : {localBacsSum.toLocaleString()} / {pack.nombreAlevins.toLocaleString()} alevins
+                  {t("detail.totalAlevins", { current: localBacsSum.toLocaleString(), total: pack.nombreAlevins.toLocaleString() })}
                 </span>
                 {localBacsValid ? (
                   <Check className="h-4 w-4" />
@@ -542,21 +535,21 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
               </div>
 
               {!localBacsAllNamed && (
-                <p className="text-xs text-destructive">Tous les bacs doivent avoir un nom.</p>
+                <p className="text-xs text-destructive">{t("detail.erreurNomsRequis")}</p>
               )}
               {!localBacsNoDuplicates && (
-                <p className="text-xs text-destructive">Les noms de bacs doivent etre uniques.</p>
+                <p className="text-xs text-destructive">{t("detail.erreurNomsDupliques")}</p>
               )}
             </div>
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="outline">Annuler</Button>
+                <Button variant="outline">{t("detail.annuler")}</Button>
               </DialogClose>
               <Button
                 onClick={handleSaveConfigBacs}
                 disabled={!localBacsValid || !localBacsAllNamed || !localBacsNoDuplicates}
               >
-                Enregistrer
+                {t("detail.enregistrer")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -567,26 +560,26 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
       <section className="pt-6 border-t border-border">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Produits inclus
+            {t("detail.produitsInclus")}
           </h2>
           {canManage && produitsDisponibles.length > 0 && (
             <Dialog open={ajoutOpen} onOpenChange={setAjoutOpen}>
               <DialogTrigger asChild>
                 <Button size="sm" variant="outline">
                   <Plus className="h-4 w-4 mr-1" />
-                  Ajouter
+                  {t("detail.ajouterProduit")}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Ajouter un produit au pack</DialogTitle>
+                  <DialogTitle>{t("detail.ajouterProduitTitle")}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-2">
                   <div>
-                    <label className="text-sm font-medium">Produit *</label>
+                    <label className="text-sm font-medium">{t("detail.produitLabel")} *</label>
                     <Select value={produitId} onValueChange={handleProduitChange}>
                       <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Selectionnez un produit..." />
+                        <SelectValue placeholder={t("detail.selectProduitPlaceholder")} />
                       </SelectTrigger>
                       <SelectContent>
                         {produitsDisponibles.map((p) => (
@@ -598,10 +591,10 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
                     </Select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Unite *</label>
+                    <label className="text-sm font-medium">{t("detail.uniteLabel")} *</label>
                     <Select value={unite} onValueChange={setUnite} disabled={!produitId}>
                       <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Selectionnez une unite..." />
+                        <SelectValue placeholder={t("detail.selectUnitePlaceholder")} />
                       </SelectTrigger>
                       <SelectContent>
                         {Object.values(UniteStock).map((u) => (
@@ -612,7 +605,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
                   </div>
                   <div>
                     <label className="text-sm font-medium">
-                      Quantite{unite ? ` (${unite})` : ""} *
+                      {unite ? t("detail.uniteQuantiteLabel", { unite }) : t("detail.quantiteLabelSansUnite")} *
                     </label>
                     <Input
                       type="number"
@@ -627,10 +620,10 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
                 </div>
                 <DialogFooter>
                   <DialogClose asChild>
-                    <Button variant="outline" onClick={resetAjoutForm}>Annuler</Button>
+                    <Button variant="outline" onClick={resetAjoutForm}>{t("detail.annuler")}</Button>
                   </DialogClose>
                   <Button onClick={handleAjoutProduit}>
-                    Ajouter
+                    {t("detail.ajouterProduit")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -639,7 +632,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
         </div>
         {pack.produits.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">
-            Aucun produit dans ce pack.
+            {t("detail.aucunProduit")}
           </p>
         ) : (
           <div className="space-y-2">
@@ -670,16 +663,16 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
         <Dialog open={retirerProduitId !== null} onOpenChange={(open) => { if (!open) setRetirerProduitId(null); }}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Retirer ce produit ?</DialogTitle>
+              <DialogTitle>{t("detail.retirerTitle")}</DialogTitle>
             </DialogHeader>
             <p className="text-sm text-muted-foreground">
-              &quot;{retirerProduitNom}&quot; sera retire du pack.
+              {t("detail.retirerDescription", { nom: retirerProduitNom })}
             </p>
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="outline">Annuler</Button>
+                <Button variant="outline">{t("detail.annuler")}</Button>
               </DialogClose>
-              <Button variant="danger" onClick={handleConfirmRetirer}>Retirer</Button>
+              <Button variant="danger" onClick={handleConfirmRetirer}>{t("detail.retirerBtn")}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -688,11 +681,11 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
       {/* Historique des activations */}
       <section className="pt-6 border-t border-border">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-          Historique des activations
+          {t("detail.historiqueActivations")}
         </h2>
         {pack.activations.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">
-            Aucune activation pour ce pack.
+            {t("detail.aucuneActivation")}
           </p>
         ) : (
           <div className="space-y-2">
@@ -705,7 +698,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
                   </p>
                 </div>
                 <Badge variant={statutActivationVariants[act.statut as StatutActivation]}>
-                  {statutActivationLabels[act.statut as StatutActivation]}
+                  {t(`statutsActivation.${act.statut as StatutActivation}`)}
                 </Badge>
               </div>
             ))}

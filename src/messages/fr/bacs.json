@@ -1,0 +1,49 @@
+{
+  "typeSysteme": {
+    "BAC_BETON": "Bac beton / plastique",
+    "BAC_PLASTIQUE": "Bac plastique",
+    "ETANG_TERRE": "Etang en terre",
+    "RAS": "Systeme RAS (recirculation)"
+  },
+  "list": {
+    "count": "{count} bac(s)",
+    "nouveau": "Nouveau bac",
+    "empty": "Aucun bac",
+    "emptyDescription": "Commencez par creer un bac pour votre site.",
+    "poissons": "{count} poissons",
+    "initial": "Initial : {nombre} ind. / {poids} g",
+    "libre": "Libre",
+    "occupe": "Occupe"
+  },
+  "createDialog": {
+    "title": "Nouveau bac",
+    "description": "Ajoutez un nouveau contenant pour vos poissons.",
+    "nomLabel": "Nom du bac",
+    "nomPlaceholder": "Ex : Bac 1",
+    "volumeLabel": "Volume (litres)",
+    "annuler": "Annuler",
+    "creer": "Creer le bac",
+    "erreurs": {
+      "nomRequis": "Le nom est obligatoire.",
+      "volumePositif": "Le volume doit etre superieur a 0."
+    }
+  },
+  "editDialog": {
+    "title": "Modifier le bac",
+    "description": "Modifiez le nom ou le volume du bac.",
+    "nomLabel": "Nom du bac",
+    "volumeLabel": "Volume (litres)",
+    "nombrePoissonsLabel": "Nombre de poissons actuel",
+    "nombreInitialLabel": "Nombre initial",
+    "poidsMoyenInitialLabel": "Poids moyen initial (g)",
+    "typeSystemeLabel": "Type de systeme",
+    "typeSystemePlaceholder": "Selectionner le type de systeme",
+    "typeSystemeNonSpecifie": "Non specifie",
+    "annuler": "Annuler",
+    "enregistrer": "Enregistrer",
+    "erreurs": {
+      "nomRequis": "Le nom est obligatoire.",
+      "volumePositif": "Le volume doit etre superieur a 0."
+    }
+  }
+}

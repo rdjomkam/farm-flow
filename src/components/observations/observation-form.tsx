@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { Button } from "@/components/ui/button";
@@ -29,14 +30,6 @@ const TYPES_OBSERVATION = [
 
 type TypeObservation = (typeof TYPES_OBSERVATION)[number];
 
-const TYPE_LABELS: Record<TypeObservation, string> = {
-  mortalite: "Mortalite anormale",
-  eau: "Qualite de l'eau",
-  comportement: "Comportement des poissons",
-  alimentation: "Probleme d'alimentation",
-  autre: "Autre observation",
-};
-
 interface VagueOption {
   id: string;
   code: string;
@@ -54,6 +47,7 @@ interface Props {
 // ---------------------------------------------------------------------------
 
 export function ObservationForm({ vagues = [], onSuccess }: Props) {
+  const t = useTranslations("observations");
   const queryClient = useQueryClient();
   const noteService = useNoteService();
 
@@ -79,19 +73,19 @@ export function ObservationForm({ vagues = [], onSuccess }: Props) {
     if (!type) {
       clientErrors.push({
         field: "type",
-        message: "Veuillez choisir un type d'observation.",
+        message: t("form.erreurs.typeRequis"),
       });
     }
 
     if (!observationTexte.trim()) {
       clientErrors.push({
         field: "observationTexte",
-        message: "Le texte de l'observation est obligatoire.",
+        message: t("form.erreurs.descriptionRequise"),
       });
     } else if (observationTexte.trim().length < 10) {
       clientErrors.push({
         field: "observationTexte",
-        message: "L'observation doit contenir au moins 10 caracteres.",
+        message: t("form.erreurs.descriptionTropCourte"),
       });
     }
 
@@ -131,18 +125,17 @@ export function ObservationForm({ vagues = [], onSuccess }: Props) {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">
-              Envoyer une observation
+              {t("form.title")}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Signalez un probleme ou une observation a l&apos;equipe DKFarm.
-              Nous vous repondrons rapidement.
+              {t("form.description")}
             </p>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             {/* Type d'observation */}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="type" className="text-sm font-medium">
-                Type d&apos;observation{" "}
+                {t("form.typeLabel")}{" "}
                 <span className="text-destructive">*</span>
               </label>
               <Select
@@ -155,12 +148,12 @@ export function ObservationForm({ vagues = [], onSuccess }: Props) {
                     getFieldError("type") ? "border-destructive" : ""
                   }
                 >
-                  <SelectValue placeholder="Choisir un type" />
+                  <SelectValue placeholder={t("form.typePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {TYPES_OBSERVATION.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {TYPE_LABELS[t]}
+                  {TYPES_OBSERVATION.map((observationType) => (
+                    <SelectItem key={observationType} value={observationType}>
+                      {t(`types.${observationType}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -178,13 +171,13 @@ export function ObservationForm({ vagues = [], onSuccess }: Props) {
                 htmlFor="observationTexte"
                 className="text-sm font-medium"
               >
-                Description <span className="text-destructive">*</span>
+                {t("form.descriptionLabel")} <span className="text-destructive">*</span>
               </label>
               <Textarea
                 id="observationTexte"
                 value={observationTexte}
                 onChange={(e) => setObservationTexte(e.target.value)}
-                placeholder="Decrivez votre observation en detail : ce que vous avez observe, quand, dans quel bac..."
+                placeholder={t("form.descriptionPlaceholder")}
                 rows={5}
                 className={
                   getFieldError("observationTexte")
@@ -198,7 +191,7 @@ export function ObservationForm({ vagues = [], onSuccess }: Props) {
                 </p>
               )}
               <p className="text-xs text-muted-foreground">
-                {observationTexte.length} / 2000 caracteres
+                {t("form.descriptionCount", { count: observationTexte.length })}
               </p>
             </div>
 
@@ -206,10 +199,7 @@ export function ObservationForm({ vagues = [], onSuccess }: Props) {
             {vagues.length > 0 && (
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="vague" className="text-sm font-medium">
-                  Vague concernee{" "}
-                  <span className="text-muted-foreground text-xs font-normal">
-                    (optionnel)
-                  </span>
+                  {t("form.vagueLabel")}
                 </label>
                 <Select
                   value={vagueId || "__aucune"}
@@ -218,11 +208,11 @@ export function ObservationForm({ vagues = [], onSuccess }: Props) {
                   }
                 >
                   <SelectTrigger id="vague">
-                    <SelectValue placeholder="Aucune vague" />
+                    <SelectValue placeholder={t("form.vagueAucune")} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__aucune">
-                      Aucune vague specifique
+                      {t("form.vagueAucune")}
                     </SelectItem>
                     {vagues.map((v) => (
                       <SelectItem key={v.id} value={v.id}>
@@ -251,7 +241,7 @@ export function ObservationForm({ vagues = [], onSuccess }: Props) {
           type="submit"
           className="w-full h-12 text-base"
         >
-          Envoyer l'observation
+          {t("form.submit")}
         </Button>
       </form>
     </div>

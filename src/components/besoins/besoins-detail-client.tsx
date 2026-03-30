@@ -37,21 +37,14 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
+import { useTranslations } from "next-intl";
 import { StatutBesoins } from "@/types";
 import { useDepenseService } from "@/services";
 import { ModifierBesoinDialog } from "./modifier-besoin-dialog";
 
 // ---------------------------------------------------------------------------
-// Labels & variants
+// Variants
 // ---------------------------------------------------------------------------
-
-const statutLabels: Record<StatutBesoins, string> = {
-  [StatutBesoins.SOUMISE]: "Soumise",
-  [StatutBesoins.APPROUVEE]: "Approuvee",
-  [StatutBesoins.TRAITEE]: "Traitee",
-  [StatutBesoins.CLOTUREE]: "Cloturee",
-  [StatutBesoins.REJETEE]: "Rejetee",
-};
 
 const statutVariants: Record<
   StatutBesoins,
@@ -144,6 +137,7 @@ export function BesoinsDetailClient({
   const queryClient = useQueryClient();
   const router = useRouter();
   const depenseService = useDepenseService();
+  const t = useTranslations("besoins");
   const [liste, setListe] = useState(initial);
 
   // Dialog states
@@ -247,7 +241,7 @@ export function BesoinsDetailClient({
         className="flex items-center gap-1 text-sm text-muted-foreground mb-4"
       >
         <ArrowLeft className="h-4 w-4" />
-        Retour aux besoins
+        {t("detail.retour")}
       </Link>
 
       {/* Header card */}
@@ -264,14 +258,14 @@ export function BesoinsDetailClient({
               variant={statutVariants[statut] ?? "default"}
               className="flex-shrink-0 mt-1"
             >
-              {statutLabels[statut] ?? statut}
+              {t(`statuts.${statut}` as Parameters<typeof t>[0])}
             </Badge>
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-sm">
             {liste.demandeur && (
               <div>
-                <p className="text-xs text-muted-foreground">Demandeur</p>
+                <p className="text-xs text-muted-foreground">{t("detail.demandeur")}</p>
                 <p className="flex items-center gap-1">
                   <User className="h-3 w-3" />
                   {liste.demandeur.name}
@@ -280,7 +274,7 @@ export function BesoinsDetailClient({
             )}
             {liste.valideur && (
               <div>
-                <p className="text-xs text-muted-foreground">Valideur</p>
+                <p className="text-xs text-muted-foreground">{t("detail.valideur")}</p>
                 <p className="flex items-center gap-1">
                   <User className="h-3 w-3" />
                   {liste.valideur.name}
@@ -289,12 +283,12 @@ export function BesoinsDetailClient({
             )}
             {liste.vague && (
               <div>
-                <p className="text-xs text-muted-foreground">Vague</p>
+                <p className="text-xs text-muted-foreground">{t("detail.vague")}</p>
                 <p className="text-primary font-medium">{liste.vague.code}</p>
               </div>
             )}
             <div>
-              <p className="text-xs text-muted-foreground">Creee le</p>
+              <p className="text-xs text-muted-foreground">{t("detail.creeeLe")}</p>
               <p className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
                 {formatDate(liste.createdAt)}
@@ -306,13 +300,13 @@ export function BesoinsDetailClient({
               const enRetard = limite < now && ![StatutBesoins.TRAITEE, StatutBesoins.CLOTUREE, StatutBesoins.REJETEE].includes(statut);
               return (
                 <div className="col-span-2">
-                  <p className="text-xs text-muted-foreground">Date limite</p>
+                  <p className="text-xs text-muted-foreground">{t("detail.dateLimite")}</p>
                   <p className={`flex items-center gap-1 text-sm font-medium ${enRetard ? "text-destructive" : ""}`}>
                     <Calendar className="h-3 w-3" />
                     {formatDate(liste.dateLimite)}
                     {enRetard && (
                       <span className="ml-1 text-xs bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-full">
-                        En retard
+                        {t("detail.enRetard")}
                       </span>
                     )}
                   </p>
@@ -324,14 +318,14 @@ export function BesoinsDetailClient({
           {/* Montants */}
           <div className="mt-3 pt-3 flex gap-4">
             <div>
-              <p className="text-xs text-muted-foreground">Montant estime</p>
+              <p className="text-xs text-muted-foreground">{t("detail.montantEstime")}</p>
               <p className="text-base font-semibold">
                 {formatMontant(liste.montantEstime)} FCFA
               </p>
             </div>
             {liste.montantReel !== null && (
               <div>
-                <p className="text-xs text-muted-foreground">Montant reel</p>
+                <p className="text-xs text-muted-foreground">{t("detail.montantReel")}</p>
                 <p className="text-base font-semibold text-primary">
                   {formatMontant(liste.montantReel)} FCFA
                 </p>
@@ -342,7 +336,7 @@ export function BesoinsDetailClient({
           {/* Motif rejet */}
           {liste.motifRejet && (
             <div className="mt-3 pt-3">
-              <p className="text-xs text-muted-foreground mb-1">Motif de rejet</p>
+              <p className="text-xs text-muted-foreground mb-1">{t("detail.motifRejet")}</p>
               <p className="text-sm text-destructive">{liste.motifRejet}</p>
             </div>
           )}
@@ -350,7 +344,7 @@ export function BesoinsDetailClient({
           {/* Notes */}
           {liste.notes && (
             <div className="mt-3 pt-3">
-              <p className="text-xs text-muted-foreground mb-1">Notes</p>
+              <p className="text-xs text-muted-foreground mb-1">{t("detail.notes")}</p>
               <p className="text-sm">{liste.notes}</p>
             </div>
           )}
@@ -364,24 +358,22 @@ export function BesoinsDetailClient({
             <DialogTrigger asChild>
               <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10">
                 <Trash2 className="h-4 w-4 mr-1" />
-                Supprimer
+                {t("detail.supprimer")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Supprimer cette liste ?</DialogTitle>
+                <DialogTitle>{t("detail.supprimerTitle")}</DialogTitle>
               </DialogHeader>
               <p className="text-sm text-muted-foreground py-2">
-                Cette action est irreversible. La liste de besoins{" "}
-                <strong>{liste.numero}</strong> et toutes ses lignes seront
-                definitivement supprimees.
+                {t("detail.supprimerDescription", { numero: liste.numero })}
               </p>
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button variant="ghost">Annuler</Button>
+                  <Button variant="ghost">{t("detail.annuler")}</Button>
                 </DialogClose>
                 <Button variant="danger" onClick={handleDelete}>
-                  Supprimer
+                  {t("detail.supprimer")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -405,28 +397,28 @@ export function BesoinsDetailClient({
             onClick={handleApprouver}
           >
             <CheckCircle className="h-4 w-4 mr-1" />
-            Approuver
+            {t("detail.approuver")}
           </Button>
           <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
             <DialogTrigger asChild>
               <Button variant="danger" className="flex-1">
                 <XCircle className="h-4 w-4 mr-1" />
-                Rejeter
+                {t("detail.rejeter")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Rejeter la liste de besoins</DialogTitle>
+                <DialogTitle>{t("detail.rejeterTitle")}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-2">
                 <div>
                   <label className="text-sm font-medium">
-                    Motif de rejet (optionnel)
+                    {t("detail.motifRejetLabel")}
                   </label>
                   <Textarea
                     value={motifRejet}
                     onChange={(e) => setMotifRejet(e.target.value)}
-                    placeholder="Expliquer pourquoi la liste est rejetee..."
+                    placeholder={t("detail.motifRejetPlaceholder")}
                     className="mt-1"
                     rows={3}
                   />
@@ -434,13 +426,13 @@ export function BesoinsDetailClient({
               </div>
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button variant="ghost">Annuler</Button>
+                  <Button variant="ghost">{t("detail.annuler")}</Button>
                 </DialogClose>
                 <Button
                   variant="danger"
                   onClick={handleRejeter}
                 >
-                  Confirmer le rejet
+                  {t("detail.confirmerRejet")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -453,16 +445,16 @@ export function BesoinsDetailClient({
           <DialogTrigger asChild>
             <Button variant="primary" className="w-full mb-4">
               <Settings className="h-4 w-4 mr-1" />
-              Traiter la liste
+              {t("detail.traiter")}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Traiter la liste de besoins</DialogTitle>
+              <DialogTitle>{t("detail.traiterTitle")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-3 py-2 max-h-80 overflow-y-auto">
               <p className="text-sm text-muted-foreground">
-                Choisissez le mode de traitement pour chaque ligne :
+                {t("detail.traiterDescription")}
               </p>
               {liste.lignes.map((l) => (
                 <div key={l.id} className="border rounded p-3 space-y-2">
@@ -485,9 +477,9 @@ export function BesoinsDetailClient({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="COMMANDE" disabled={!l.produitId}>
-                        Commande fournisseur{!l.produitId ? " (produit requis)" : ""}
+                        {t("detail.commandeFournisseur")}{!l.produitId ? ` ${t("detail.produitRequis")}` : ""}
                       </SelectItem>
-                      <SelectItem value="LIBRE">Achat direct / libre</SelectItem>
+                      <SelectItem value="LIBRE">{t("detail.achatDirect")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -495,13 +487,13 @@ export function BesoinsDetailClient({
             </div>
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="ghost">Annuler</Button>
+                <Button variant="ghost">{t("detail.annuler")}</Button>
               </DialogClose>
               <Button
                 variant="primary"
                 onClick={handleTraiter}
               >
-                Confirmer le traitement
+                {t("detail.confirmerTraitement")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -513,26 +505,26 @@ export function BesoinsDetailClient({
           <DialogTrigger asChild>
             <Button variant="primary" className="w-full mb-4">
               <CheckCheck className="h-4 w-4 mr-1" />
-              Cloturer la liste
+              {t("detail.cloturer")}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Cloturer la liste de besoins</DialogTitle>
+              <DialogTitle>{t("detail.cloturerTitle")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-3 py-2 max-h-80 overflow-y-auto">
               <p className="text-sm text-muted-foreground">
-                Saisissez le prix reel par ligne :
+                {t("detail.cloturerDescription")}
               </p>
               {liste.lignes.map((l) => (
                 <div key={l.id} className="border rounded p-3 space-y-2">
                   <p className="text-sm font-medium">{l.designation}</p>
                   <p className="text-xs text-muted-foreground">
-                    Quantite : {l.quantite} {l.unite ?? (l.produit?.unite ?? "")}
+                    {t("detail.quantite")} {l.quantite} {l.unite ?? (l.produit?.unite ?? "")}
                   </p>
                   <div>
                     <label className="text-xs text-muted-foreground">
-                      Prix reel unitaire (FCFA)
+                      {t("detail.prixReelLabel")}
                     </label>
                     <Input
                       type="number"
@@ -552,13 +544,13 @@ export function BesoinsDetailClient({
             </div>
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="ghost">Annuler</Button>
+                <Button variant="ghost">{t("detail.annuler")}</Button>
               </DialogClose>
               <Button
                 variant="primary"
                 onClick={handleCloturer}
               >
-                Confirmer la cloture
+                {t("detail.confirmerCloture")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -569,13 +561,13 @@ export function BesoinsDetailClient({
       <Card className="mb-4">
         <CardHeader className="p-4 pb-2">
           <CardTitle className="text-base">
-            Lignes de besoin ({liste.lignes.length})
+            {t("detail.lignesTitle", { count: liste.lignes.length })}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           {liste.lignes.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Aucune ligne de besoin
+              {t("detail.aucuneLigne")}
             </p>
           ) : (
             <div className="space-y-2">
@@ -586,7 +578,7 @@ export function BesoinsDetailClient({
                       <p className="text-sm font-medium">{l.designation}</p>
                       {l.produit && (
                         <p className="text-xs text-muted-foreground">
-                          Produit : {l.produit.nom}
+                          {t("detail.produitLabel")} {l.produit.nom}
                         </p>
                       )}
                       <p className="text-xs text-muted-foreground mt-0.5">
@@ -600,7 +592,7 @@ export function BesoinsDetailClient({
                       </p>
                       {l.prixReel !== null && (
                         <p className="text-xs text-primary mt-0.5">
-                          Reel : {l.quantite} × {formatMontant(l.prixReel)} ={" "}
+                          {t("detail.reelLabel")} {l.quantite} × {formatMontant(l.prixReel)} ={" "}
                           {formatMontant(l.quantite * l.prixReel)} FCFA
                         </p>
                       )}
@@ -631,7 +623,7 @@ export function BesoinsDetailClient({
         <Card>
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-base">
-              Depenses liees ({liste.depenses.length})
+              {t("detail.depensesLiees", { count: liste.depenses.length })}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">

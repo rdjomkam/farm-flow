@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,13 +14,6 @@ import { Plus, Trash2 } from "lucide-react";
 import { CategorieCalibrage } from "@/types";
 import type { BacResponse } from "@/types";
 import type { GroupeForm } from "./calibrage-form-client";
-
-const categorieLabels: Record<CategorieCalibrage, string> = {
-  [CategorieCalibrage.PETIT]: "Petit",
-  [CategorieCalibrage.MOYEN]: "Moyen",
-  [CategorieCalibrage.GROS]: "Gros",
-  [CategorieCalibrage.TRES_GROS]: "Tres gros",
-};
 
 interface StepGroupesProps {
   bacs: BacResponse[];
@@ -40,6 +34,7 @@ export function StepGroupes({
   onBack,
   errors,
 }: StepGroupesProps) {
+  const t = useTranslations("calibrage.stepGroupes");
   const totalReparti = groupes.reduce(
     (sum, g) => sum + (Number(g.nombrePoissons) || 0),
     0
@@ -84,16 +79,16 @@ export function StepGroupes({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-base font-semibold">Groupes de redistribution</h2>
+        <h2 className="text-base font-semibold">{t("title")}</h2>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Definissez les groupes par categorie de taille.
+          {t("description")}
         </p>
       </div>
 
       {/* Compteur de repartition */}
       <div className="rounded-xl border border-border bg-card p-3">
         <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-medium">Repartition</p>
+          <p className="text-sm font-medium">{t("repartition")}</p>
           <p
             className={
               isBalanced
@@ -118,10 +113,10 @@ export function StepGroupes({
         </div>
         <p className="text-xs text-muted-foreground mt-1">
           {totalSourcePoissons - totalReparti > 0
-            ? `${totalSourcePoissons - totalReparti} poissons restants a repartir`
+            ? t("poissonsRestants", { count: totalSourcePoissons - totalReparti })
             : totalReparti > totalSourcePoissons
-            ? `${totalReparti - totalSourcePoissons} poissons en trop`
-            : "Tous les poissons sont repartis"}
+            ? t("poissonsTrop", { count: totalReparti - totalSourcePoissons })
+            : t("tousRepartis")}
         </p>
       </div>
 
@@ -133,7 +128,7 @@ export function StepGroupes({
             className="rounded-xl border border-border bg-card p-4"
           >
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-semibold">Groupe {index + 1}</p>
+              <p className="text-sm font-semibold">{t("groupeLabel", { index: index + 1 })}</p>
               {groupes.length > 2 && (
                 <button
                   type="button"
@@ -151,15 +146,15 @@ export function StepGroupes({
                 onValueChange={(v) => updateGroupe(index, "categorie", v)}
               >
                 <SelectTrigger
-                  label="Categorie"
+                  label={t("categorie")}
                   error={errors[`groupe_${index}_categorie`]}
                 >
-                  <SelectValue placeholder="Choisir une categorie" />
+                  <SelectValue placeholder={t("choisirCategorie")} />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.values(CategorieCalibrage).map((c) => (
                     <SelectItem key={c} value={c}>
-                      {categorieLabels[c]}
+                      {t(`categorieOptions.${c}` as "categorieOptions.PETIT")}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -172,10 +167,10 @@ export function StepGroupes({
                 }
               >
                 <SelectTrigger
-                  label="Bac de destination"
+                  label={t("bacDestination")}
                   error={errors[`groupe_${index}_destinationBacId`]}
                 >
-                  <SelectValue placeholder="Choisir un bac" />
+                  <SelectValue placeholder={t("choisirBac")} />
                 </SelectTrigger>
                 <SelectContent>
                   {bacs.map((b) => (
@@ -187,7 +182,7 @@ export function StepGroupes({
               </Select>
 
               <Input
-                label="Nombre de poissons"
+                label={t("nombrePoissons")}
                 type="number"
                 inputMode="numeric"
                 min={1}
@@ -200,7 +195,7 @@ export function StepGroupes({
               />
 
               <Input
-                label="Poids moyen (g)"
+                label={t("poidsMoyen")}
                 type="number"
                 inputMode="decimal"
                 min={0.1}
@@ -214,7 +209,7 @@ export function StepGroupes({
               />
 
               <Input
-                label="Taille moyenne (cm) — optionnel"
+                label={t("tailleMoyenne")}
                 type="number"
                 inputMode="decimal"
                 min={0.1}
@@ -238,22 +233,22 @@ export function StepGroupes({
           className="w-full"
         >
           <Plus className="h-4 w-4" />
-          Ajouter un groupe
+          {t("ajouterGroupe")}
         </Button>
       )}
 
       {hasErrors && (
         <p className="text-sm text-danger">
-          Veuillez corriger les erreurs avant de continuer.
+          {t("erreurCorrection")}
         </p>
       )}
 
       <div className="flex gap-3">
         <Button type="button" variant="outline" onClick={onBack} className="flex-1">
-          Retour
+          {t("retour")}
         </Button>
         <Button type="button" onClick={onNext} className="flex-1">
-          Suivant
+          {t("suivant")}
         </Button>
       </div>
     </div>

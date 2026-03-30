@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Plus, Pencil, Container } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,19 +28,13 @@ import { Permission, TypeSystemeBac } from "@/types";
 import type { BacResponse } from "@/types";
 import { useCreateBac, useUpdateBac, useBacsList } from "@/hooks/queries/use-bacs-queries";
 
-const TYPE_SYSTEME_LABELS: Record<TypeSystemeBac, string> = {
-  [TypeSystemeBac.BAC_BETON]: "Bac beton / plastique",
-  [TypeSystemeBac.BAC_PLASTIQUE]: "Bac plastique",
-  [TypeSystemeBac.ETANG_TERRE]: "Etang en terre",
-  [TypeSystemeBac.RAS]: "Systeme RAS (recirculation)",
-};
-
 interface BacsListClientProps {
   bacs: BacResponse[];
   permissions: Permission[];
 }
 
 export function BacsListClient({ bacs: initialBacs, permissions }: BacsListClientProps) {
+  const t = useTranslations("bacs");
   const createBacMutation = useCreateBac();
   const updateBacMutation = useUpdateBac();
   const { data: bacs = initialBacs } = useBacsList(undefined, { initialData: initialBacs });
@@ -68,8 +63,8 @@ export function BacsListClient({ bacs: initialBacs, permissions }: BacsListClien
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
-    if (!nom.trim()) newErrors.nom = "Le nom est obligatoire.";
-    if (!volume || Number(volume) <= 0) newErrors.volume = "Le volume doit être supérieur à 0.";
+    if (!nom.trim()) newErrors.nom = t("createDialog.erreurs.nomRequis");
+    if (!volume || Number(volume) <= 0) newErrors.volume = t("createDialog.erreurs.volumePositif");
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -102,8 +97,8 @@ export function BacsListClient({ bacs: initialBacs, permissions }: BacsListClien
   async function handleEdit(e: React.FormEvent) {
     e.preventDefault();
     const errs: Record<string, string> = {};
-    if (!editNom.trim()) errs.nom = "Le nom est obligatoire.";
-    if (!editVolume || Number(editVolume) <= 0) errs.volume = "Le volume doit etre superieur a 0.";
+    if (!editNom.trim()) errs.nom = t("editDialog.erreurs.nomRequis");
+    if (!editVolume || Number(editVolume) <= 0) errs.volume = t("editDialog.erreurs.volumePositif");
     if (Object.keys(errs).length > 0) { setEditErrors(errs); return; }
 
     setEditErrors({});
@@ -130,35 +125,35 @@ export function BacsListClient({ bacs: initialBacs, permissions }: BacsListClien
     <>
       <div className="flex items-center justify-between px-4 pt-4">
         <h2 className="text-base font-semibold">
-          {bacs.length} bac{bacs.length > 1 ? "s" : ""}
+          {t("list.count", { count: bacs.length })}
         </h2>
         {permissions.includes(Permission.BACS_GERER) && (
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4" />
-                Nouveau bac
+                {t("list.nouveau")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Nouveau bac</DialogTitle>
+                <DialogTitle>{t("createDialog.title")}</DialogTitle>
                 <DialogDescription>
-                  Ajoutez un nouveau contenant pour vos poissons.
+                  {t("createDialog.description")}
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 <Input
                   id="nom"
-                  label="Nom du bac"
-                  placeholder="Ex : Bac 1"
+                  label={t("createDialog.nomLabel")}
+                  placeholder={t("createDialog.nomPlaceholder")}
                   value={nom}
                   onChange={(e) => setNom(e.target.value)}
                   error={errors.nom}
                 />
                 <Input
                   id="volume"
-                  label="Volume (litres)"
+                  label={t("createDialog.volumeLabel")}
                   type="number"
                   min="1"
                   value={volume}
@@ -167,10 +162,10 @@ export function BacsListClient({ bacs: initialBacs, permissions }: BacsListClien
                 />
                 <DialogFooter>
                   <Button type="button" variant="secondary" onClick={() => setDialogOpen(false)}>
-                    Annuler
+                    {t("createDialog.annuler")}
                   </Button>
                   <Button type="submit">
-                    Créer le bac
+                    {t("createDialog.creer")}
                   </Button>
                 </DialogFooter>
               </form>
@@ -184,8 +179,8 @@ export function BacsListClient({ bacs: initialBacs, permissions }: BacsListClien
           <div className="col-span-full">
             <EmptyState
               icon={<Container className="h-7 w-7" />}
-              title="Aucun bac"
-              description="Commencez par creer un bac pour votre site."
+              title={t("list.empty")}
+              description={t("list.emptyDescription")}
             />
           </div>
         ) : (
@@ -198,21 +193,23 @@ export function BacsListClient({ bacs: initialBacs, permissions }: BacsListClien
                     <p className="font-medium">{bac.nom}</p>
                     <p className="text-sm text-muted-foreground">{bac.volume} L</p>
                     {bac.nombrePoissons != null && (
-                      <p className="text-sm text-muted-foreground">{bac.nombrePoissons} poissons</p>
+                      <p className="text-sm text-muted-foreground">
+                        {t("list.poissons", { count: bac.nombrePoissons })}
+                      </p>
                     )}
                     {bac.nombreInitial != null && bac.poidsMoyenInitial != null && (
                       <p className="text-xs text-muted-foreground">
-                        Initial : {bac.nombreInitial} ind. / {bac.poidsMoyenInitial} g
+                        {t("list.initial", { nombre: bac.nombreInitial, poids: bac.poidsMoyenInitial })}
                       </p>
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {isOccupe ? (
                       <Badge variant="warning">
-                        {bac.vagueCode ?? "Occupé"}
+                        {bac.vagueCode ?? t("list.occupe")}
                       </Badge>
                     ) : (
-                      <Badge variant="info">Libre</Badge>
+                      <Badge variant="info">{t("list.libre")}</Badge>
                     )}
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEdit(bac)}>
                       <Pencil className="h-3.5 w-3.5" />
@@ -229,22 +226,22 @@ export function BacsListClient({ bacs: initialBacs, permissions }: BacsListClien
       <Dialog open={editOpen} onOpenChange={(open) => { setEditOpen(open); if (!open) setEditBac(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Modifier le bac</DialogTitle>
+            <DialogTitle>{t("editDialog.title")}</DialogTitle>
             <DialogDescription>
-              Modifiez le nom ou le volume du bac.
+              {t("editDialog.description")}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEdit} className="flex flex-col gap-4">
             <Input
               id="edit-nom"
-              label="Nom du bac"
+              label={t("editDialog.nomLabel")}
               value={editNom}
               onChange={(e) => setEditNom(e.target.value)}
               error={editErrors.nom}
             />
             <Input
               id="edit-volume"
-              label="Volume (litres)"
+              label={t("editDialog.volumeLabel")}
               type="number"
               min="1"
               value={editVolume}
@@ -253,7 +250,7 @@ export function BacsListClient({ bacs: initialBacs, permissions }: BacsListClien
             />
             <Input
               id="edit-nombrePoissons"
-              label="Nombre de poissons actuel"
+              label={t("editDialog.nombrePoissonsLabel")}
               type="number"
               min="0"
               step="1"
@@ -263,7 +260,7 @@ export function BacsListClient({ bacs: initialBacs, permissions }: BacsListClien
             />
             <Input
               id="edit-nombreInitial"
-              label="Nombre initial"
+              label={t("editDialog.nombreInitialLabel")}
               type="number"
               min="0"
               step="1"
@@ -273,7 +270,7 @@ export function BacsListClient({ bacs: initialBacs, permissions }: BacsListClien
             />
             <Input
               id="edit-poidsMoyenInitial"
-              label="Poids moyen initial (g)"
+              label={t("editDialog.poidsMoyenInitialLabel")}
               type="number"
               min="0.1"
               step="0.1"
@@ -285,24 +282,24 @@ export function BacsListClient({ bacs: initialBacs, permissions }: BacsListClien
               value={editTypeSysteme || "__none__"}
               onValueChange={(val) => setEditTypeSysteme(val === "__none__" ? "" : val)}
             >
-              <SelectTrigger label="Type de systeme">
-                <SelectValue placeholder="Selectionner le type de systeme" />
+              <SelectTrigger label={t("editDialog.typeSystemeLabel")}>
+                <SelectValue placeholder={t("editDialog.typeSystemePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">Non specifie</SelectItem>
-                {Object.values(TypeSystemeBac).map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {TYPE_SYSTEME_LABELS[t]}
+                <SelectItem value="__none__">{t("editDialog.typeSystemeNonSpecifie")}</SelectItem>
+                {Object.values(TypeSystemeBac).map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {t(`typeSysteme.${type}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <DialogFooter>
               <Button type="button" variant="secondary" onClick={() => setEditOpen(false)}>
-                Annuler
+                {t("editDialog.annuler")}
               </Button>
               <Button type="submit">
-                Enregistrer
+                {t("editDialog.enregistrer")}
               </Button>
             </DialogFooter>
           </form>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { Send, AlertTriangle } from "lucide-react";
@@ -48,6 +49,7 @@ interface NoteFormProps {
  * Appelle POST /api/ingenieur/notes.
  */
 export function NoteForm({ siteId: _siteId, clientSiteId, vagues = [], onSuccess }: NoteFormProps) {
+  const t = useTranslations("notes");
   const queryClient = useQueryClient();
   const noteService = useNoteService();
 
@@ -70,9 +72,9 @@ export function NoteForm({ siteId: _siteId, clientSiteId, vagues = [], onSuccess
 
   function validate(): boolean {
     const newErrors: Record<string, string> = {};
-    if (!titre.trim()) newErrors.titre = "Le titre est obligatoire.";
-    if (!contenu.trim()) newErrors.contenu = "Le contenu est obligatoire.";
-    if (!visibility) newErrors.visibility = "La visibilite est obligatoire.";
+    if (!titre.trim()) newErrors.titre = t("form.erreurs.titreRequis");
+    if (!contenu.trim()) newErrors.contenu = t("form.erreurs.contenuRequis");
+    if (!visibility) newErrors.visibility = t("form.erreurs.visibiliteRequise");
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
@@ -105,13 +107,13 @@ export function NoteForm({ siteId: _siteId, clientSiteId, vagues = [], onSuccess
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <FormSection
-        title="Informations de la note"
-        description="Redigez la note destinee au client"
+        title={t("form.sectionInfos")}
+        description={t("form.sectionInfosDescription")}
       >
         <Input
           id="titre"
-          label="Titre"
-          placeholder="Ex : Resultats biometrie semaine 12"
+          label={t("form.titreLabel")}
+          placeholder={t("form.titrePlaceholder")}
           value={titre}
           onChange={(e) => setTitre(e.target.value)}
           error={errors.titre}
@@ -119,8 +121,8 @@ export function NoteForm({ siteId: _siteId, clientSiteId, vagues = [], onSuccess
 
         <MarkdownEditor
           id="contenu"
-          label="Contenu"
-          placeholder="Redigez le contenu de la note..."
+          label={t("form.contenuLabel")}
+          placeholder={t("form.contenuPlaceholder")}
           value={contenu}
           onChange={setContenu}
           error={errors.contenu}
@@ -129,8 +131,8 @@ export function NoteForm({ siteId: _siteId, clientSiteId, vagues = [], onSuccess
       </FormSection>
 
       <FormSection
-        title="Options"
-        description="Visibilite et parametres supplementaires"
+        title={t("form.sectionOptions")}
+        description={t("form.sectionOptionsDescription")}
       >
         {/* Visibilite */}
         <Select
@@ -138,17 +140,17 @@ export function NoteForm({ siteId: _siteId, clientSiteId, vagues = [], onSuccess
           onValueChange={(val) => setVisibility(val as VisibiliteNote)}
         >
           <SelectTrigger
-            label="Visibilite"
+            label={t("form.visibiliteLabel")}
             error={errors.visibility}
           >
-            <SelectValue placeholder="Selectionnez la visibilite" />
+            <SelectValue placeholder={t("form.visibilitePlaceholder")} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={VisibiliteNote.PUBLIC}>
-              Public — visible par le client
+              {t("form.visibilitePublique")}
             </SelectItem>
             <SelectItem value={VisibiliteNote.INTERNE}>
-              Interne — usage DKFarm uniquement
+              {t("form.visibiliteInterne")}
             </SelectItem>
           </SelectContent>
         </Select>
@@ -159,11 +161,11 @@ export function NoteForm({ siteId: _siteId, clientSiteId, vagues = [], onSuccess
             value={vagueId}
             onValueChange={(val) => setVagueId(val === "none" ? "" : val)}
           >
-            <SelectTrigger label="Vague concernee (optionnel)">
-              <SelectValue placeholder="Aucune vague" />
+            <SelectTrigger label={t("form.vagueLabel")}>
+              <SelectValue placeholder={t("form.vagueAucune")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">Aucune vague</SelectItem>
+              <SelectItem value="none">{t("form.vagueAucune")}</SelectItem>
               {vagues.map((v) => (
                 <SelectItem key={v.id} value={v.id}>
                   {v.code}
@@ -183,7 +185,7 @@ export function NoteForm({ siteId: _siteId, clientSiteId, vagues = [], onSuccess
           />
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-danger" aria-hidden="true" />
-            <span className="text-sm font-medium">Marquer comme urgente</span>
+            <span className="text-sm font-medium">{t("form.urgente")}</span>
           </div>
         </label>
       </FormSection>
@@ -194,10 +196,10 @@ export function NoteForm({ siteId: _siteId, clientSiteId, vagues = [], onSuccess
           variant="secondary"
           onClick={resetForm}
         >
-          Reinitialiser
+          {t("form.reinitialiser")}
         </Button>
         <Button type="submit">
-          <Send className="h-4 w-4" /> Envoyer la note
+          <Send className="h-4 w-4" /> {t("form.envoyer")}
         </Button>
       </div>
     </form>

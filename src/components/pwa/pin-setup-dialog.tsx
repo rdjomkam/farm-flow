@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Lock, Eye, EyeOff } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface PinSetupDialogProps {
   open: boolean;
@@ -10,6 +11,7 @@ interface PinSetupDialogProps {
 }
 
 export function PinSetupDialog({ open, onComplete }: PinSetupDialogProps) {
+  const t = useTranslations("pwa");
   const [step, setStep] = useState<"create" | "confirm">("create");
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -26,7 +28,7 @@ export function PinSetupDialog({ open, onComplete }: PinSetupDialogProps) {
 
   const handleNext = () => {
     if (pin.length !== 6) {
-      setError("Le PIN doit contenir 6 chiffres");
+      setError(t("pinSetup.erreurs.pinSixChiffres"));
       return;
     }
     setStep("confirm");
@@ -38,7 +40,7 @@ export function PinSetupDialog({ open, onComplete }: PinSetupDialogProps) {
 
   const handleConfirm = async () => {
     if (confirmPin !== pin) {
-      setError("Les PINs ne correspondent pas");
+      setError(t("pinSetup.erreurs.pinsDifferents"));
       setConfirmPin("");
       return;
     }
@@ -62,14 +64,14 @@ export function PinSetupDialog({ open, onComplete }: PinSetupDialogProps) {
 
             <Dialog.Title className="text-lg font-semibold text-center">
               {step === "create"
-                ? "Créer votre PIN de sécurité"
-                : "Confirmer votre PIN"}
+                ? t("pinSetup.creerTitle")
+                : t("pinSetup.confirmerTitle")}
             </Dialog.Title>
 
             <Dialog.Description className="text-sm text-muted-foreground text-center">
               {step === "create"
-                ? "Ce PIN protège vos données hors ligne. Choisissez 6 chiffres."
-                : "Saisissez à nouveau votre PIN pour confirmer."}
+                ? t("pinSetup.creerDescription")
+                : t("pinSetup.confirmerDescription")}
             </Dialog.Description>
 
             <div className="relative w-full">
@@ -120,7 +122,7 @@ export function PinSetupDialog({ open, onComplete }: PinSetupDialogProps) {
                   }}
                   className="flex-1 rounded-lg border border-border px-4 py-3 text-sm font-medium text-foreground hover:bg-muted"
                 >
-                  Retour
+                  {t("pinSetup.retour")}
                 </button>
               )}
               <button
@@ -132,10 +134,10 @@ export function PinSetupDialog({ open, onComplete }: PinSetupDialogProps) {
                 className="flex-1 rounded-lg bg-primary px-4 py-3 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
               >
                 {loading
-                  ? "Chiffrement en cours..."
+                  ? t("pinSetup.chiffrement")
                   : step === "create"
-                    ? "Suivant"
-                    : "Confirmer"}
+                    ? t("pinSetup.suivant")
+                    : t("pinSetup.confirmer")}
               </button>
             </div>
           </div>

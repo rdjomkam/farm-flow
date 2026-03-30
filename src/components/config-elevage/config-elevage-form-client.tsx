@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -145,15 +146,15 @@ interface Section {
 }
 
 const SECTIONS: Section[] = [
-  { id: "objectif", titre: "Objectif de production", description: "Poids cible, duree du cycle, taux de survie attendu" },
-  { id: "phases", titre: "Phases de croissance", description: "Seuils de poids pour chaque phase (en grammes)" },
-  { id: "benchmarks", titre: "Benchmarks de performance", description: "Seuils FCR, SGR, survie, densite, mortalite" },
-  { id: "qualite-eau", titre: "Qualite de l'eau", description: "Seuils pH, temperature, oxygene, ammoniac, nitrite" },
-  { id: "alertes-mortalite", titre: "Alertes mortalite", description: "Seuils de mortalite quotidienne" },
-  { id: "tri-biometrie", titre: "Tri et Biometrie", description: "Frequences et parametres de tri et de biometrie" },
-  { id: "densite", titre: "Densite d'elevage", description: "Poissons maximum par m³" },
-  { id: "recolte", titre: "Recolte", description: "Poids minimum pour recolte partielle" },
-  { id: "gompertz", titre: "Modele de croissance (Gompertz)", description: "Valeurs initiales pour la calibration du modele de croissance" },
+  { id: "objectif", titre: "", description: "" },
+  { id: "phases", titre: "", description: "" },
+  { id: "benchmarks", titre: "", description: "" },
+  { id: "qualite-eau", titre: "", description: "" },
+  { id: "alertes-mortalite", titre: "", description: "" },
+  { id: "tri-biometrie", titre: "", description: "" },
+  { id: "densite", titre: "", description: "" },
+  { id: "recolte", titre: "", description: "" },
+  { id: "gompertz", titre: "", description: "" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -161,12 +162,14 @@ const SECTIONS: Section[] = [
 // ---------------------------------------------------------------------------
 
 function SectionCard({
-  section,
+  titre,
+  description,
   isOpen,
   onToggle,
   children,
 }: {
-  section: Section;
+  titre: string;
+  description: string;
   isOpen: boolean;
   onToggle: () => void;
   children: React.ReactNode;
@@ -179,8 +182,8 @@ function SectionCard({
         onClick={onToggle}
       >
         <div>
-          <p className="font-medium text-sm">{section.titre}</p>
-          <p className="text-xs text-muted-foreground">{section.description}</p>
+          <p className="font-medium text-sm">{titre}</p>
+          <p className="text-xs text-muted-foreground">{description}</p>
         </div>
         {isOpen ? (
           <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -225,7 +228,7 @@ function NumericField({
         max={max}
         step={step ?? 0.1}
         onChange={(e) => onChange(name, parseFloat(e.target.value) || 0)}
-        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        className="flex h-10 w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       />
     </div>
   );
@@ -269,7 +272,7 @@ function OptionalNumericField({
           const raw = e.target.value;
           onChange(name, raw === "" ? null : parseFloat(raw));
         }}
-        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        className="flex h-10 w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       />
     </div>
   );
@@ -282,6 +285,7 @@ function OptionalNumericField({
 type FormValues = Omit<ConfigElevage, "id" | "siteId" | "createdAt" | "updatedAt">;
 
 export function ConfigElevageFormClient({ templates }: Props) {
+  const t = useTranslations("config-elevage");
   const router = useRouter();
   const configService = useConfigService();
   const [form, setForm] = useState<FormValues>({ ...FORM_DEFAULTS });
@@ -295,7 +299,7 @@ export function ConfigElevageFormClient({ templates }: Props) {
       setForm({ ...FORM_DEFAULTS });
       return;
     }
-    const tpl = templates.find((t) => t.id === templateId);
+    const tpl = templates.find((tmpl) => tmpl.id === templateId);
     if (!tpl) return;
     setForm({
       nom: `${tpl.nom} (copie)`,
@@ -417,22 +421,22 @@ export function ConfigElevageFormClient({ templates }: Props) {
       {templates.length > 0 && (
         <div className="border border-border rounded-lg p-4 bg-muted/20">
           <label className="block text-sm font-medium text-foreground mb-1">
-            Partir d&apos;un profil existant (optionnel)
+            {t("form.partirProfil")}
           </label>
           <select
             onChange={handleTemplateChange}
             defaultValue=""
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-10 w-full rounded-md bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <option value="">-- Valeurs par defaut FAO Clarias --</option>
-            {templates.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.nom}{t.isDefault ? " (par defaut)" : ""}
+            <option value="">{t("form.profilFao")}</option>
+            {templates.map((tmpl) => (
+              <option key={tmpl.id} value={tmpl.id}>
+                {tmpl.nom}{tmpl.isDefault ? ` ${t("form.parDefaut")}` : ""}
               </option>
             ))}
           </select>
           <p className="text-xs text-muted-foreground mt-1">
-            Selectionnez un profil pour pre-remplir le formulaire avec ses valeurs.
+            {t("form.selectProfilHint")}
           </p>
         </div>
       )}
@@ -440,19 +444,19 @@ export function ConfigElevageFormClient({ templates }: Props) {
       {/* Nom et description */}
       <div className="space-y-3">
         <Input
-          label="Nom du profil"
+          label={t("fields.nomDuProfil")}
           value={form.nom}
           onChange={(e) => setForm((prev) => ({ ...prev, nom: e.target.value }))}
-          placeholder="Ex: Clarias Standard Cameroun"
+          placeholder={t("form.nomProfilPlaceholder")}
           required
         />
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Description (optionnel)</label>
+          <label className="block text-sm font-medium text-foreground mb-1">{t("fields.description")}</label>
           <textarea
             value={form.description ?? ""}
             onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value || null }))}
-            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            placeholder="Description du profil..."
+            className="flex min-h-[80px] w-full rounded-md bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            placeholder={t("fields.descriptionPlaceholder")}
           />
         </div>
         <div className="flex items-center gap-3">
@@ -463,7 +467,7 @@ export function ConfigElevageFormClient({ templates }: Props) {
               onChange={(e) => handleBoolean("isDefault", e.target.checked)}
               className="rounded border-input"
             />
-            <span className="text-sm">Profil par defaut</span>
+            <span className="text-sm">{t("fields.profilParDefaut")}</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -472,76 +476,100 @@ export function ConfigElevageFormClient({ templates }: Props) {
               onChange={(e) => handleBoolean("isActive", e.target.checked)}
               className="rounded border-input"
             />
-            <span className="text-sm">Actif</span>
+            <span className="text-sm">{t("fields.actif")}</span>
           </label>
         </div>
       </div>
 
       {/* Sections repliables */}
       <div className="space-y-2">
-        {SECTIONS.map((section) => (
+        {SECTIONS.map((section) => {
+          const sectionTitles: Record<string, string> = {
+            objectif: t("sections.objectifProduction"),
+            phases: t("sections.phasesCroissance"),
+            benchmarks: t("sections.benchmarksPerformance"),
+            "qualite-eau": t("sections.qualiteEau"),
+            "alertes-mortalite": t("sections.alertesMortalite"),
+            "tri-biometrie": t("sections.triEtBiometrie"),
+            densite: t("sections.densiteElevage"),
+            recolte: t("sections.recolte"),
+            gompertz: t("sections.modeleGompertz"),
+          };
+          const sectionDescs: Record<string, string> = {
+            objectif: t("sections.objectifProductionDesc"),
+            phases: t("sections.phasesCroissanceDesc"),
+            benchmarks: t("sections.benchmarksPerformanceDesc"),
+            "qualite-eau": t("sections.qualiteEauDesc"),
+            "alertes-mortalite": t("sections.alertesMortaliteDesc"),
+            "tri-biometrie": t("sections.triEtBiometrieDesc"),
+            densite: t("sections.densiteElevageDesc"),
+            recolte: t("sections.recolteDesc"),
+            gompertz: t("sections.modeleGompertzDesc"),
+          };
+          return (
           <SectionCard
             key={section.id}
-            section={section}
+            titre={sectionTitles[section.id] ?? section.id}
+            description={sectionDescs[section.id] ?? ""}
             isOpen={openSections.has(section.id)}
             onToggle={() => toggleSection(section.id)}
           >
             {section.id === "objectif" && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <NumericField label="Poids objectif" name="poidsObjectif" value={form.poidsObjectif} onChange={handleNumeric} unit="g" min={100} max={5000} step={50} />
-                <NumericField label="Duree estimee" name="dureeEstimeeCycle" value={form.dureeEstimeeCycle} onChange={handleNumeric} unit="jours" min={30} max={365} step={1} />
-                <NumericField label="Survie objectif" name="tauxSurvieObjectif" value={form.tauxSurvieObjectif} onChange={handleNumeric} unit="%" min={50} max={100} step={1} />
+                <NumericField label={t("fields.poidsObjectif")} name="poidsObjectif" value={form.poidsObjectif} onChange={handleNumeric} unit="g" min={100} max={5000} step={50} />
+                <NumericField label={t("fields.dureeEstimee")} name="dureeEstimeeCycle" value={form.dureeEstimeeCycle} onChange={handleNumeric} unit="jours" min={30} max={365} step={1} />
+                <NumericField label={t("fields.survieObjectif")} name="tauxSurvieObjectif" value={form.tauxSurvieObjectif} onChange={handleNumeric} unit="%" min={50} max={100} step={1} />
               </div>
             )}
             {section.id === "phases" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <NumericField label="Acclimatation (fin)" name="seuilAcclimatation" value={form.seuilAcclimatation} onChange={handleNumeric} unit="g" min={5} max={50} step={1} />
-                <NumericField label="Croissance debut (fin)" name="seuilCroissanceDebut" value={form.seuilCroissanceDebut} onChange={handleNumeric} unit="g" min={20} max={100} step={1} />
-                <NumericField label="Juvenile (fin)" name="seuilJuvenile" value={form.seuilJuvenile} onChange={handleNumeric} unit="g" min={50} max={300} step={5} />
-                <NumericField label="Grossissement (fin)" name="seuilGrossissement" value={form.seuilGrossissement} onChange={handleNumeric} unit="g" min={150} max={600} step={10} />
-                <NumericField label="Finition (fin)" name="seuilFinition" value={form.seuilFinition} onChange={handleNumeric} unit="g" min={300} max={1500} step={25} />
+                <NumericField label={t("fields.acclimatationFin")} name="seuilAcclimatation" value={form.seuilAcclimatation} onChange={handleNumeric} unit="g" min={5} max={50} step={1} />
+                <NumericField label={t("fields.croissanceDebutFin")} name="seuilCroissanceDebut" value={form.seuilCroissanceDebut} onChange={handleNumeric} unit="g" min={20} max={100} step={1} />
+                <NumericField label={t("fields.juvenileFin")} name="seuilJuvenile" value={form.seuilJuvenile} onChange={handleNumeric} unit="g" min={50} max={300} step={5} />
+                <NumericField label={t("fields.grossissementFin")} name="seuilGrossissement" value={form.seuilGrossissement} onChange={handleNumeric} unit="g" min={150} max={600} step={10} />
+                <NumericField label={t("fields.finitionFin")} name="seuilFinition" value={form.seuilFinition} onChange={handleNumeric} unit="g" min={300} max={1500} step={25} />
               </div>
             )}
             {section.id === "benchmarks" && (
               <div className="space-y-4">
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">FCR (plus bas = meilleur)</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">{t("benchmarks.fcrTitle")}</p>
                   <div className="grid grid-cols-3 gap-2">
-                    <NumericField label="Excellent &lt;" name="fcrExcellentMax" value={form.fcrExcellentMax} onChange={handleNumeric} min={0.5} max={3} step={0.1} />
-                    <NumericField label="Bon &lt;" name="fcrBonMax" value={form.fcrBonMax} onChange={handleNumeric} min={0.5} max={3} step={0.1} />
-                    <NumericField label="Acceptable &lt;" name="fcrAcceptableMax" value={form.fcrAcceptableMax} onChange={handleNumeric} min={0.5} max={5} step={0.1} />
+                    <NumericField label={t("fields.fcrExcellentMax")} name="fcrExcellentMax" value={form.fcrExcellentMax} onChange={handleNumeric} min={0.5} max={3} step={0.1} />
+                    <NumericField label={t("fields.fcrBonMax")} name="fcrBonMax" value={form.fcrBonMax} onChange={handleNumeric} min={0.5} max={3} step={0.1} />
+                    <NumericField label={t("fields.fcrAcceptableMax")} name="fcrAcceptableMax" value={form.fcrAcceptableMax} onChange={handleNumeric} min={0.5} max={5} step={0.1} />
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">SGR %/j (plus haut = meilleur)</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">{t("benchmarks.sgrTitle")}</p>
                   <div className="grid grid-cols-3 gap-2">
-                    <NumericField label="Excellent &gt;" name="sgrExcellentMin" value={form.sgrExcellentMin} onChange={handleNumeric} min={0.5} max={5} step={0.1} />
-                    <NumericField label="Bon &gt;" name="sgrBonMin" value={form.sgrBonMin} onChange={handleNumeric} min={0.5} max={5} step={0.1} />
-                    <NumericField label="Acceptable &gt;" name="sgrAcceptableMin" value={form.sgrAcceptableMin} onChange={handleNumeric} min={0.1} max={3} step={0.1} />
+                    <NumericField label={t("fields.sgrExcellentMin")} name="sgrExcellentMin" value={form.sgrExcellentMin} onChange={handleNumeric} min={0.5} max={5} step={0.1} />
+                    <NumericField label={t("fields.sgrBonMin")} name="sgrBonMin" value={form.sgrBonMin} onChange={handleNumeric} min={0.5} max={5} step={0.1} />
+                    <NumericField label={t("fields.sgrAcceptableMin")} name="sgrAcceptableMin" value={form.sgrAcceptableMin} onChange={handleNumeric} min={0.1} max={3} step={0.1} />
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Survie % (plus haut = meilleur)</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">{t("benchmarks.survieTitle")}</p>
                   <div className="grid grid-cols-3 gap-2">
-                    <NumericField label="Excellent &gt;" name="survieExcellentMin" value={form.survieExcellentMin} onChange={handleNumeric} unit="%" min={50} max={100} step={1} />
-                    <NumericField label="Bon &gt;" name="survieBonMin" value={form.survieBonMin} onChange={handleNumeric} unit="%" min={50} max={100} step={1} />
-                    <NumericField label="Acceptable &gt;" name="survieAcceptableMin" value={form.survieAcceptableMin} onChange={handleNumeric} unit="%" min={40} max={100} step={1} />
+                    <NumericField label={t("fields.survieExcellentMin")} name="survieExcellentMin" value={form.survieExcellentMin} onChange={handleNumeric} unit="%" min={50} max={100} step={1} />
+                    <NumericField label={t("fields.survieBonMin")} name="survieBonMin" value={form.survieBonMin} onChange={handleNumeric} unit="%" min={50} max={100} step={1} />
+                    <NumericField label={t("fields.survieAcceptableMin")} name="survieAcceptableMin" value={form.survieAcceptableMin} onChange={handleNumeric} unit="%" min={40} max={100} step={1} />
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Densite poissons/m³ (plus bas = meilleur)</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">{t("benchmarks.densiteTitle")}</p>
                   <div className="grid grid-cols-3 gap-2">
-                    <NumericField label="Excellent &lt;" name="densiteExcellentMax" value={form.densiteExcellentMax} onChange={handleNumeric} min={1} max={50} step={1} />
-                    <NumericField label="Bon &lt;" name="densiteBonMax" value={form.densiteBonMax} onChange={handleNumeric} min={1} max={100} step={1} />
-                    <NumericField label="Acceptable &lt;" name="densiteAcceptableMax" value={form.densiteAcceptableMax} onChange={handleNumeric} min={1} max={200} step={1} />
+                    <NumericField label={t("fields.densiteExcellentMax")} name="densiteExcellentMax" value={form.densiteExcellentMax} onChange={handleNumeric} min={1} max={50} step={1} />
+                    <NumericField label={t("fields.densiteBonMax")} name="densiteBonMax" value={form.densiteBonMax} onChange={handleNumeric} min={1} max={100} step={1} />
+                    <NumericField label={t("fields.densiteAcceptableMax")} name="densiteAcceptableMax" value={form.densiteAcceptableMax} onChange={handleNumeric} min={1} max={200} step={1} />
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Mortalite cumulative % (plus bas = meilleur)</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">{t("benchmarks.mortaliteTitle")}</p>
                   <div className="grid grid-cols-3 gap-2">
-                    <NumericField label="Excellent &lt;" name="mortaliteExcellentMax" value={form.mortaliteExcellentMax} onChange={handleNumeric} unit="%" min={0} max={20} step={0.5} />
-                    <NumericField label="Bon &lt;" name="mortaliteBonMax" value={form.mortaliteBonMax} onChange={handleNumeric} unit="%" min={0} max={30} step={0.5} />
-                    <NumericField label="Acceptable &lt;" name="mortaliteAcceptableMax" value={form.mortaliteAcceptableMax} onChange={handleNumeric} unit="%" min={0} max={50} step={1} />
+                    <NumericField label={t("fields.mortaliteExcellentMax")} name="mortaliteExcellentMax" value={form.mortaliteExcellentMax} onChange={handleNumeric} unit="%" min={0} max={20} step={0.5} />
+                    <NumericField label={t("fields.mortaliteBonMax")} name="mortaliteBonMax" value={form.mortaliteBonMax} onChange={handleNumeric} unit="%" min={0} max={30} step={0.5} />
+                    <NumericField label={t("fields.mortaliteAcceptableMax")} name="mortaliteAcceptableMax" value={form.mortaliteAcceptableMax} onChange={handleNumeric} unit="%" min={0} max={50} step={1} />
                   </div>
                 </div>
               </div>
@@ -549,85 +577,85 @@ export function ConfigElevageFormClient({ templates }: Props) {
             {section.id === "qualite-eau" && (
               <div className="space-y-3">
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2">pH</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">{t("qualiteEau.phLabel")}</p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <NumericField label="Min lethal" name="phMin" value={form.phMin} onChange={handleNumeric} min={4} max={9} step={0.1} />
-                    <NumericField label="Max lethal" name="phMax" value={form.phMax} onChange={handleNumeric} min={6} max={14} step={0.1} />
-                    <NumericField label="Optimal min" name="phOptimalMin" value={form.phOptimalMin} onChange={handleNumeric} min={5} max={9} step={0.1} />
-                    <NumericField label="Optimal max" name="phOptimalMax" value={form.phOptimalMax} onChange={handleNumeric} min={6} max={10} step={0.1} />
+                    <NumericField label={t("fields.phMinLethal")} name="phMin" value={form.phMin} onChange={handleNumeric} min={4} max={9} step={0.1} />
+                    <NumericField label={t("fields.phMaxLethal")} name="phMax" value={form.phMax} onChange={handleNumeric} min={6} max={14} step={0.1} />
+                    <NumericField label={t("fields.phOptimalMin")} name="phOptimalMin" value={form.phOptimalMin} onChange={handleNumeric} min={5} max={9} step={0.1} />
+                    <NumericField label={t("fields.phOptimalMax")} name="phOptimalMax" value={form.phOptimalMax} onChange={handleNumeric} min={6} max={10} step={0.1} />
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2">Temperature (°C)</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">{t("qualiteEau.temperatureLabel")}</p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <NumericField label="Min lethal" name="temperatureMin" value={form.temperatureMin} onChange={handleNumeric} unit="°C" min={10} max={30} step={0.5} />
-                    <NumericField label="Max lethal" name="temperatureMax" value={form.temperatureMax} onChange={handleNumeric} unit="°C" min={25} max={45} step={0.5} />
-                    <NumericField label="Optimal min" name="temperatureOptimalMin" value={form.temperatureOptimalMin} onChange={handleNumeric} unit="°C" min={18} max={32} step={0.5} />
-                    <NumericField label="Optimal max" name="temperatureOptimalMax" value={form.temperatureOptimalMax} onChange={handleNumeric} unit="°C" min={22} max={38} step={0.5} />
+                    <NumericField label={t("fields.temperatureMinLethal")} name="temperatureMin" value={form.temperatureMin} onChange={handleNumeric} unit="°C" min={10} max={30} step={0.5} />
+                    <NumericField label={t("fields.temperatureMaxLethal")} name="temperatureMax" value={form.temperatureMax} onChange={handleNumeric} unit="°C" min={25} max={45} step={0.5} />
+                    <NumericField label={t("fields.temperatureOptimalMin")} name="temperatureOptimalMin" value={form.temperatureOptimalMin} onChange={handleNumeric} unit="°C" min={18} max={32} step={0.5} />
+                    <NumericField label={t("fields.temperatureOptimalMax")} name="temperatureOptimalMax" value={form.temperatureOptimalMax} onChange={handleNumeric} unit="°C" min={22} max={38} step={0.5} />
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2">Oxygene dissous (mg/L)</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">{t("qualiteEau.oxygeneLabel")}</p>
                   <div className="grid grid-cols-3 gap-2">
-                    <NumericField label="Min lethal" name="oxygeneMin" value={form.oxygeneMin} onChange={handleNumeric} min={0.5} max={5} step={0.1} />
-                    <NumericField label="Alerte" name="oxygeneAlerte" value={form.oxygeneAlerte} onChange={handleNumeric} min={1} max={7} step={0.1} />
-                    <NumericField label="Optimal" name="oxygeneOptimal" value={form.oxygeneOptimal} onChange={handleNumeric} min={3} max={15} step={0.1} />
+                    <NumericField label={t("qualiteEau.oxygeneMin")} name="oxygeneMin" value={form.oxygeneMin} onChange={handleNumeric} min={0.5} max={5} step={0.1} />
+                    <NumericField label={t("qualiteEau.oxygeneAlerte")} name="oxygeneAlerte" value={form.oxygeneAlerte} onChange={handleNumeric} min={1} max={7} step={0.1} />
+                    <NumericField label={t("qualiteEau.oxygeneOptimal")} name="oxygeneOptimal" value={form.oxygeneOptimal} onChange={handleNumeric} min={3} max={15} step={0.1} />
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2">Ammoniac (mg/L)</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">{t("qualiteEau.ammoniacLabel")}</p>
                   <div className="grid grid-cols-3 gap-2">
-                    <NumericField label="Lethal" name="ammoniacMax" value={form.ammoniacMax} onChange={handleNumeric} min={0.1} max={2} step={0.05} />
-                    <NumericField label="Alerte" name="ammoniacAlerte" value={form.ammoniacAlerte} onChange={handleNumeric} min={0.01} max={1} step={0.01} />
-                    <NumericField label="Optimal" name="ammoniacOptimal" value={form.ammoniacOptimal} onChange={handleNumeric} min={0.001} max={0.5} step={0.01} />
+                    <NumericField label={t("fields.ammoniacLethal")} name="ammoniacMax" value={form.ammoniacMax} onChange={handleNumeric} min={0.1} max={2} step={0.05} />
+                    <NumericField label={t("fields.ammoniacAlerte")} name="ammoniacAlerte" value={form.ammoniacAlerte} onChange={handleNumeric} min={0.01} max={1} step={0.01} />
+                    <NumericField label={t("fields.ammoniacOptimal")} name="ammoniacOptimal" value={form.ammoniacOptimal} onChange={handleNumeric} min={0.001} max={0.5} step={0.01} />
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2">Nitrite (mg/L)</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">{t("qualiteEau.nitriteLabel")}</p>
                   <div className="grid grid-cols-2 gap-2">
-                    <NumericField label="Max lethal" name="nitriteMax" value={form.nitriteMax} onChange={handleNumeric} min={0.05} max={2} step={0.05} />
-                    <NumericField label="Alerte" name="nitriteAlerte" value={form.nitriteAlerte} onChange={handleNumeric} min={0.01} max={1} step={0.01} />
+                    <NumericField label={t("qualiteEau.nitriteMax")} name="nitriteMax" value={form.nitriteMax} onChange={handleNumeric} min={0.05} max={2} step={0.05} />
+                    <NumericField label={t("qualiteEau.nitriteAlerte")} name="nitriteAlerte" value={form.nitriteAlerte} onChange={handleNumeric} min={0.01} max={1} step={0.01} />
                   </div>
                 </div>
               </div>
             )}
             {section.id === "alertes-mortalite" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <NumericField label="Alerte mortalite quotidienne" name="mortaliteQuotidienneAlerte" value={form.mortaliteQuotidienneAlerte} onChange={handleNumeric} unit="%" min={0.1} max={10} step={0.1} />
-                <NumericField label="Critique mortalite quotidienne" name="mortaliteQuotidienneCritique" value={form.mortaliteQuotidienneCritique} onChange={handleNumeric} unit="%" min={0.5} max={20} step={0.1} />
-                <NumericField label="FCR alerte max" name="fcrAlerteMax" value={form.fcrAlerteMax} onChange={handleNumeric} min={1} max={5} step={0.1} />
-                <NumericField label="Stock jours restants (alerte)" name="stockJoursAlerte" value={form.stockJoursAlerte} onChange={handleNumeric} unit="jours" min={1} max={30} step={1} />
+                <NumericField label={t("fields.alerteMortaliteQuotidienne")} name="mortaliteQuotidienneAlerte" value={form.mortaliteQuotidienneAlerte} onChange={handleNumeric} unit="%" min={0.1} max={10} step={0.1} />
+                <NumericField label={t("fields.critiqueMortaliteQuotidienne")} name="mortaliteQuotidienneCritique" value={form.mortaliteQuotidienneCritique} onChange={handleNumeric} unit="%" min={0.5} max={20} step={0.1} />
+                <NumericField label={t("fields.fcrAlerteMax")} name="fcrAlerteMax" value={form.fcrAlerteMax} onChange={handleNumeric} min={1} max={5} step={0.1} />
+                <NumericField label={t("fields.stockJoursAlerte")} name="stockJoursAlerte" value={form.stockJoursAlerte} onChange={handleNumeric} unit="jours" min={1} max={30} step={1} />
               </div>
             )}
             {section.id === "tri-biometrie" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <NumericField label="Tri poids min" name="triPoidsMin" value={form.triPoidsMin} onChange={handleNumeric} unit="g" min={1} max={100} step={1} />
-                <NumericField label="Tri poids max" name="triPoidsMax" value={form.triPoidsMax} onChange={handleNumeric} unit="g" min={50} max={500} step={5} />
-                <NumericField label="Tri intervalle" name="triIntervalleJours" value={form.triIntervalleJours} onChange={handleNumeric} unit="jours" min={7} max={60} step={1} />
-                <NumericField label="Biometrie debut" name="biometrieIntervalleDebut" value={form.biometrieIntervalleDebut} onChange={handleNumeric} unit="jours" min={3} max={30} step={1} />
-                <NumericField label="Biometrie fin" name="biometrieIntervalleFin" value={form.biometrieIntervalleFin} onChange={handleNumeric} unit="jours" min={7} max={30} step={1} />
-                <NumericField label="Echantillon biometrie" name="biometrieEchantillonPct" value={form.biometrieEchantillonPct} onChange={handleNumeric} unit="%" min={5} max={30} step={1} />
+                <NumericField label={t("fields.triPoidsMin")} name="triPoidsMin" value={form.triPoidsMin} onChange={handleNumeric} unit="g" min={1} max={100} step={1} />
+                <NumericField label={t("fields.triPoidsMax")} name="triPoidsMax" value={form.triPoidsMax} onChange={handleNumeric} unit="g" min={50} max={500} step={5} />
+                <NumericField label={t("fields.triIntervalle")} name="triIntervalleJours" value={form.triIntervalleJours} onChange={handleNumeric} unit="jours" min={7} max={60} step={1} />
+                <NumericField label={t("fields.biometrieDebut")} name="biometrieIntervalleDebut" value={form.biometrieIntervalleDebut} onChange={handleNumeric} unit="jours" min={3} max={30} step={1} />
+                <NumericField label={t("fields.biometrieFin")} name="biometrieIntervalleFin" value={form.biometrieIntervalleFin} onChange={handleNumeric} unit="jours" min={7} max={30} step={1} />
+                <NumericField label={t("fields.echantillonBiometrie")} name="biometrieEchantillonPct" value={form.biometrieEchantillonPct} onChange={handleNumeric} unit="%" min={5} max={30} step={1} />
               </div>
             )}
             {section.id === "densite" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <NumericField label="Densite max" name="densiteMaxPoissonsM3" value={form.densiteMaxPoissonsM3} onChange={handleNumeric} unit="poissons/m³" min={10} max={300} step={5} />
-                <NumericField label="Densite optimale" name="densiteOptimalePoissonsM3" value={form.densiteOptimalePoissonsM3} onChange={handleNumeric} unit="poissons/m³" min={5} max={200} step={5} />
-                <NumericField label="Changement eau %" name="eauChangementPct" value={form.eauChangementPct} onChange={handleNumeric} unit="%" min={10} max={100} step={5} />
-                <NumericField label="Changement eau frequence" name="eauChangementIntervalleJours" value={form.eauChangementIntervalleJours} onChange={handleNumeric} unit="jours" min={1} max={14} step={1} />
+                <NumericField label={t("fields.densiteMax")} name="densiteMaxPoissonsM3" value={form.densiteMaxPoissonsM3} onChange={handleNumeric} unit="poissons/m³" min={10} max={300} step={5} />
+                <NumericField label={t("fields.densiteOptimale")} name="densiteOptimalePoissonsM3" value={form.densiteOptimalePoissonsM3} onChange={handleNumeric} unit="poissons/m³" min={5} max={200} step={5} />
+                <NumericField label={t("fields.changementEauPct")} name="eauChangementPct" value={form.eauChangementPct} onChange={handleNumeric} unit="%" min={10} max={100} step={5} />
+                <NumericField label={t("fields.changementEauFrequence")} name="eauChangementIntervalleJours" value={form.eauChangementIntervalleJours} onChange={handleNumeric} unit="jours" min={1} max={14} step={1} />
               </div>
             )}
             {section.id === "recolte" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <NumericField label="Poids min recolte partielle" name="recoltePartiellePoidsSeuil" value={form.recoltePartiellePoidsSeuil} onChange={handleNumeric} unit="g" min={100} max={2000} step={50} />
-                <NumericField label="Arret aliment avant recolte" name="recolteJeuneAvantJours" value={form.recolteJeuneAvantJours} onChange={handleNumeric} unit="jours" min={0} max={7} step={1} />
+                <NumericField label={t("fields.poidsMinRecoltePartielle")} name="recoltePartiellePoidsSeuil" value={form.recoltePartiellePoidsSeuil} onChange={handleNumeric} unit="g" min={100} max={2000} step={50} />
+                <NumericField label={t("fields.arretAlimentAvantRecolte")} name="recolteJeuneAvantJours" value={form.recolteJeuneAvantJours} onChange={handleNumeric} unit="jours" min={0} max={7} step={1} />
               </div>
             )}
             {section.id === "gompertz" && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <OptionalNumericField
-                    label="W∞ par defaut"
+                    label={t("fields.gompertzWInfDefault")}
                     name="gompertzWInfDefault"
                     value={form.gompertzWInfDefault}
                     onChange={handleOptionalNumeric}
@@ -638,7 +666,7 @@ export function ConfigElevageFormClient({ templates }: Props) {
                     placeholder="ex: 1200"
                   />
                   <OptionalNumericField
-                    label="K par defaut"
+                    label={t("fields.gompertzKDefault")}
                     name="gompertzKDefault"
                     value={form.gompertzKDefault}
                     onChange={handleOptionalNumeric}
@@ -648,7 +676,7 @@ export function ConfigElevageFormClient({ templates }: Props) {
                     placeholder="ex: 0.018"
                   />
                   <OptionalNumericField
-                    label="ti par defaut"
+                    label={t("fields.gompertzTiDefault")}
                     name="gompertzTiDefault"
                     value={form.gompertzTiDefault}
                     onChange={handleOptionalNumeric}
@@ -660,7 +688,7 @@ export function ConfigElevageFormClient({ templates }: Props) {
                   />
                 </div>
                 <NumericField
-                  label="Points de biometrie minimum pour Gompertz"
+                  label={t("fields.gompertzMinPoints")}
                   name="gompertzMinPoints"
                   value={form.gompertzMinPoints}
                   onChange={handleNumeric}
@@ -669,12 +697,13 @@ export function ConfigElevageFormClient({ templates }: Props) {
                   step={1}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Ces valeurs servent de point de depart pour la calibration. Laissez vide pour utiliser les valeurs par defaut du systeme.
+                  {t("gompertz.hint")}
                 </p>
               </div>
             )}
           </SectionCard>
-        ))}
+          );
+        })}
       </div>
 
       {/* Boutons d'action */}
@@ -685,10 +714,10 @@ export function ConfigElevageFormClient({ templates }: Props) {
           className="flex-1"
           onClick={() => router.push("/settings/config-elevage")}
         >
-          Annuler
+          {t("form.annuler")}
         </Button>
         <Button type="submit" className="flex-1">
-          Creer le profil
+          {t("form.creer")}
         </Button>
       </div>
     </form>

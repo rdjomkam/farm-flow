@@ -1,0 +1,10 @@
+{
+  "quickActions": {
+    "title": "Quick actions",
+    "nouveauReleve": "New record",
+    "mesTaches": "My tasks",
+    "voirVagues": "View batches",
+    "factures": "Invoices",
+    "stock": "Stock"
+  }
+}

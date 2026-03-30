@@ -1,0 +1,26 @@
+{
+  "severites": {
+    "CRITIQUE": "Critique",
+    "AVERTISSEMENT": "Avertissement",
+    "INFO": "Info"
+  },
+  "card": {
+    "nonLu": "Non lu",
+    "ctaLabels": {
+      "CREER_RELEVE": {
+        "QUALITE_EAU": "Mesurer la qualite de l'eau",
+        "RENOUVELLEMENT": "Enregistrer le renouvellement",
+        "BIOMETRIE": "Effectuer la biometrie",
+        "ALIMENTATION": "Saisir l'alimentation",
+        "MORTALITE": "Signaler la mortalite",
+        "COMPTAGE": "Effectuer le comptage",
+        "OBSERVATION": "Faire une observation",
+        "default": "Saisir un releve"
+      },
+      "MODIFIER_BAC": "Configurer le bac",
+      "VOIR_VAGUE": "Voir la vague",
+      "VOIR_STOCK": "Voir le stock",
+      "default": "Voir les details"
+    }
+  }
+}

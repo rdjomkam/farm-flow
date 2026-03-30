@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
 import { ArrowLeft, Trash2 } from "lucide-react";
@@ -25,6 +26,7 @@ interface RoleData {
 }
 
 export default function EditRolePage() {
+  const t = useTranslations("sites");
   const params = useParams<{ id: string; roleId: string }>();
   const siteId = params.id;
   const roleId = params.roleId;
@@ -50,7 +52,7 @@ export default function EditRolePage() {
           setDescription(found.description ?? "");
           setSelectedPerms(new Set(found.permissions));
         } else {
-          toast({ title: "Role introuvable", variant: "error" });
+          toast({ title: t("roles.edit.roleIntrouvable"), variant: "error" });
           router.push(`/settings/sites/${siteId}/roles`);
         }
       }
@@ -71,11 +73,11 @@ export default function EditRolePage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
-      toast({ title: "Le nom du role est obligatoire.", variant: "error" });
+      toast({ title: t("roles.edit.erreurs.nomRequis"), variant: "error" });
       return;
     }
     if (selectedPerms.size === 0) {
-      toast({ title: "Selectionnez au moins une permission.", variant: "error" });
+      toast({ title: t("roles.edit.erreurs.auMoinsUnePermission"), variant: "error" });
       return;
     }
 
@@ -107,7 +109,7 @@ export default function EditRolePage() {
   if (loading) {
     return (
       <>
-        <Header title="Role" />
+        <Header title={t("roles.edit.title")} />
         <div className="p-4 flex flex-col gap-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-12 rounded-lg bg-muted animate-pulse" />
@@ -128,14 +130,14 @@ export default function EditRolePage() {
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
         >
           <ArrowLeft className="h-4 w-4" />
-          Roles
+          {t("roles.edit.rolesLink")}
         </Link>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div className="flex flex-col gap-4">
             <Input
-              label="Nom du role"
-              placeholder="Nom du role"
+              label={t("roles.edit.nomLabel")}
+              placeholder={t("roles.edit.nomPlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -144,19 +146,19 @@ export default function EditRolePage() {
             />
             {role.isSystem && (
               <p className="text-xs text-muted-foreground -mt-2">
-                Le nom d&apos;un role systeme ne peut pas etre modifie.
+                {t("roles.edit.nomSysteme")}
               </p>
             )}
             <Input
-              label="Description (optionnelle)"
-              placeholder="Description du role"
+              label={t("roles.edit.descriptionLabel")}
+              placeholder={t("roles.edit.descriptionPlaceholder")}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
 
           <div className="flex flex-col gap-3">
-            <p className="text-sm font-semibold">Permissions</p>
+            <p className="text-sm font-semibold">{t("roles.edit.permissionsLabel")}</p>
             {Object.entries(PERMISSION_GROUPS).map(([groupKey, groupPerms]) => (
               <div key={groupKey}>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
@@ -193,7 +195,7 @@ export default function EditRolePage() {
           <div className="flex gap-3 pt-2">
             <Link href={`/settings/sites/${siteId}/roles`} className="flex-1">
               <Button type="button" variant="outline" className="w-full">
-                Annuler
+                {t("roles.edit.annuler")}
               </Button>
             </Link>
             <Button
@@ -201,7 +203,7 @@ export default function EditRolePage() {
               className="flex-1"
               disabled={!name.trim() || selectedPerms.size === 0}
             >
-              Enregistrer
+              {t("roles.edit.enregistrer")}
             </Button>
           </div>
 
@@ -216,20 +218,23 @@ export default function EditRolePage() {
                   onClick={() => setConfirmDelete(true)}
                 >
                   <Trash2 className="h-4 w-4" />
-                  Supprimer ce role
+                  {t("roles.edit.supprimerBtn")}
                 </Button>
               ) : (
                 <div className="flex flex-col gap-2 rounded-lg border border-danger/30 bg-danger/5 p-3">
                   <p className="text-sm font-medium text-danger">
-                    Supprimer le role &quot;{role.name}&quot; ?
+                    {t("roles.edit.supprimerTitle", { name: role.name })}
                   </p>
                   {role._count.members > 0 && (
                     <p className="text-xs text-muted-foreground">
-                      {role._count.members} membre{role._count.members > 1 ? "s" : ""} seront reassignes au role le moins privilegie.
+                      {t("roles.edit.supprimerMembres", {
+                        count: role._count.members,
+                        plural: role._count.members > 1 ? "s" : "",
+                      })}
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Cette action est irreversible.
+                    {t("roles.edit.supprimerIrreversible")}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
@@ -238,7 +243,7 @@ export default function EditRolePage() {
                       size="sm"
                       onClick={() => setConfirmDelete(false)}
                     >
-                      Annuler
+                      {t("roles.edit.annulerDialog")}
                     </Button>
                     <Button
                       type="button"
@@ -246,7 +251,7 @@ export default function EditRolePage() {
                       size="sm"
                       onClick={handleDelete}
                     >
-                      Confirmer
+                      {t("roles.edit.confirmerDialog")}
                     </Button>
                   </div>
                 </div>

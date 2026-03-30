@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CheckCircle2, XCircle } from "lucide-react";
@@ -30,6 +31,7 @@ export function StepMortalite({
   onNext,
   onBack,
 }: StepMortaliteProps) {
+  const t = useTranslations("calibrage.stepMortalite");
   const morts = Number(nombreMorts) || 0;
   const total = totalGroupePoissons + morts;
   const isBalanced = total === totalSourcePoissons;
@@ -37,9 +39,9 @@ export function StepMortalite({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-base font-semibold">Mortalite</h2>
+        <h2 className="text-base font-semibold">{t("title")}</h2>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Indiquez le nombre de poissons morts lors du calibrage.
+          {t("description")}
         </p>
       </div>
 
@@ -63,16 +65,16 @@ export function StepMortalite({
               isBalanced ? "text-success" : "text-danger"
             }`}
           >
-            {isBalanced ? "Conservation respectee" : "Conservation non respectee"}
+            {isBalanced ? t("conservationRespectee") : t("conservationNonRespectee")}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm font-mono">
           <span className="bg-card rounded px-2 py-0.5 border border-border">
-            Source : {totalSourcePoissons}
+            {t("source")} : {totalSourcePoissons}
           </span>
           <span className="text-muted-foreground">=</span>
           <span className="bg-card rounded px-2 py-0.5 border border-border">
-            Groupes : {totalGroupePoissons}
+            {t("groupes")} : {totalGroupePoissons}
           </span>
           <span className="text-muted-foreground">+</span>
           <span
@@ -83,7 +85,7 @@ export function StepMortalite({
                 : "bg-card border-border"
             )}
           >
-            Morts : {morts}
+            {t("morts")} : {morts}
           </span>
           <span className="text-muted-foreground">=</span>
           <span
@@ -100,15 +102,15 @@ export function StepMortalite({
         {!isBalanced && (
           <p className="text-xs text-danger mt-2">
             {total < totalSourcePoissons
-              ? `Il manque ${totalSourcePoissons - total} poissons.`
-              : `${total - totalSourcePoissons} poissons en trop.`}
+              ? t("manque", { count: totalSourcePoissons - total })
+              : t("tropDePoissons", { count: total - totalSourcePoissons })}
           </p>
         )}
       </div>
 
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium text-foreground">
-          Date et heure du calibrage
+          {t("dateHeure")}
         </label>
         <input
           type="datetime-local"
@@ -122,7 +124,7 @@ export function StepMortalite({
       </div>
 
       <Input
-        label="Nombre de morts"
+        label={t("nombreMorts")}
         type="number"
         inputMode="numeric"
         min={0}
@@ -133,7 +135,7 @@ export function StepMortalite({
 
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium text-foreground">
-          Notes (optionnel)
+          {t("notes")}
         </label>
         <textarea
           className={cn(
@@ -143,7 +145,7 @@ export function StepMortalite({
             "disabled:cursor-not-allowed disabled:opacity-50",
             "resize-none"
           )}
-          placeholder="Observations, conditions du calibrage..."
+          placeholder={t("notesPlaceholder")}
           value={notes}
           onChange={(e) => onChangeNotes(e.target.value)}
           rows={3}
@@ -152,7 +154,7 @@ export function StepMortalite({
 
       <div className="flex gap-3">
         <Button type="button" variant="outline" onClick={onBack} className="flex-1">
-          Retour
+          {t("retour")}
         </Button>
         <Button
           type="button"
@@ -160,7 +162,7 @@ export function StepMortalite({
           disabled={!isBalanced}
           className="flex-1"
         >
-          Suivant
+          {t("suivant")}
         </Button>
       </div>
     </div>

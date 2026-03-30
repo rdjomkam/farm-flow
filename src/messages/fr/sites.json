@@ -1,0 +1,89 @@
+{
+  "list": {
+    "count": "{count} site(s)",
+    "nouveau": "Nouveau site",
+    "createTitle": "Creer un site",
+    "nomLabel": "Nom du site",
+    "nomPlaceholder": "Ex: Ferme de Douala",
+    "adresseLabel": "Adresse (optionnel)",
+    "adressePlaceholder": "Ex: Douala, Cameroun",
+    "annuler": "Annuler",
+    "creer": "Creer",
+    "empty": "Aucun site",
+    "emptyOwner": "Creez votre premier site pour commencer.",
+    "emptyMember": "Demandez a un administrateur de vous ajouter a un site.",
+    "badgeActif": "Site actif",
+    "actif": "Actif",
+    "selectionner": "Selectionner",
+    "gerer": "Gerer"
+  },
+  "detail": {
+    "mesSites": "Mes sites",
+    "modules": "Modules",
+    "modulesDescription": "Cliquez pour activer ou desactiver un module sur ce site.",
+    "membres": "Membres",
+    "roles": "Roles",
+    "ajouter": "Ajouter",
+    "ajouterMembreTitle": "Ajouter un membre",
+    "emailOuTelephone": "Email ou telephone",
+    "emailOuTelephonePlaceholder": "votre@email.com ou +237 6XX XXX XXX",
+    "roleLabel": "Role",
+    "annuler": "Annuler",
+    "ajouterBtn": "Ajouter",
+    "vous": "(vous)"
+  },
+  "memberActions": {
+    "gererTitle": "Gerer — {name}",
+    "gererDescription": "Modifier le role ou retirer ce membre du site.",
+    "roleLabel": "Role",
+    "voirPermissions": "Voir les permissions du role",
+    "retirer": "Retirer du site",
+    "retirerTitle": "Retirer {name} du site ?",
+    "retirerDescription": "Cette action est irreversible.",
+    "annuler": "Annuler",
+    "confirmer": "Confirmer",
+    "permissionsTitle": "Permissions — {roleName}",
+    "permissionsDescription": "Permissions associees au role de {name}.",
+    "retourBtn": "Retour"
+  },
+  "roles": {
+    "nouveau": {
+      "title": "Nouveau role",
+      "rolesLink": "Roles",
+      "nomLabel": "Nom du role",
+      "nomPlaceholder": "Ex: Technicien eau",
+      "descriptionLabel": "Description (optionnelle)",
+      "descriptionPlaceholder": "Ex: Responsable de la qualite de l'eau",
+      "permissionsLabel": "Permissions",
+      "annuler": "Annuler",
+      "creer": "Creer le role",
+      "erreurs": {
+        "nomRequis": "Le nom du role est obligatoire.",
+        "auMoinsUnePermission": "Selectionnez au moins une permission."
+      }
+    },
+    "edit": {
+      "title": "Role",
+      "rolesLink": "Roles",
+      "nomLabel": "Nom du role",
+      "nomPlaceholder": "Nom du role",
+      "descriptionLabel": "Description (optionnelle)",
+      "descriptionPlaceholder": "Description du role",
+      "nomSysteme": "Le nom d'un role systeme ne peut pas etre modifie.",
+      "permissionsLabel": "Permissions",
+      "annuler": "Annuler",
+      "enregistrer": "Enregistrer",
+      "supprimerBtn": "Supprimer ce role",
+      "supprimerTitle": "Supprimer le role \"{name}\" ?",
+      "supprimerMembres": "{count} membre{plural} seront reassignes au role le moins privilegie.",
+      "supprimerIrreversible": "Cette action est irreversible.",
+      "annulerDialog": "Annuler",
+      "confirmerDialog": "Confirmer",
+      "roleIntrouvable": "Role introuvable",
+      "erreurs": {
+        "nomRequis": "Le nom du role est obligatoire.",
+        "auMoinsUnePermission": "Selectionnez au moins une permission."
+      }
+    }
+  }
+}

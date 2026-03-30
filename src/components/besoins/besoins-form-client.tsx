@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -83,6 +84,7 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const depenseService = useDepenseService();
+  const t = useTranslations("besoins");
 
   const [titre, setTitre] = useState("");
   const [vagueId, setVagueId] = useState("");
@@ -130,27 +132,23 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
     const errors: string[] = [];
 
     if (!titre.trim()) {
-      errors.push("Le titre est obligatoire.");
+      errors.push(t("form.erreurs.titreRequis"));
     }
 
     if (lignes.length === 0) {
-      errors.push("La liste doit contenir au moins une ligne.");
+      errors.push(t("form.erreurs.auMoinsUneLigne"));
     }
 
     for (let i = 0; i < lignes.length; i++) {
       const l = lignes[i];
       if (!l.designation.trim()) {
-        errors.push(`La designation de la ligne ${i + 1} est obligatoire.`);
+        errors.push(t("form.erreurs.designationRequise", { index: i + 1 }));
       }
       if (!l.quantite || parseFloat(l.quantite) <= 0) {
-        errors.push(
-          `La quantite de la ligne ${i + 1} doit etre un nombre positif.`
-        );
+        errors.push(t("form.erreurs.quantitePositive", { index: i + 1 }));
       }
       if (l.prixEstime === "" || parseFloat(l.prixEstime) < 0) {
-        errors.push(
-          `Le prix estime de la ligne ${i + 1} doit etre un nombre positif ou zero.`
-        );
+        errors.push(t("form.erreurs.prixPositif", { index: i + 1 }));
       }
     }
 
@@ -189,7 +187,7 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
         className="flex items-center gap-1 text-sm text-muted-foreground mb-4"
       >
         <ArrowLeft className="h-4 w-4" />
-        Retour aux besoins
+        {t("form.retour")}
       </Link>
 
       {/* Champs principaux */}
@@ -197,28 +195,28 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
         <CardContent className="p-4 space-y-4">
           <div>
             <label className="text-sm font-medium">
-              Titre <span className="text-destructive">*</span>
+              {t("form.titre")} <span className="text-destructive">*</span>
             </label>
             <Input
               value={titre}
               onChange={(e) => setTitre(e.target.value)}
-              placeholder="Ex: Besoins alimentation mars 2026"
+              placeholder={t("form.titrePlaceholder")}
               className="mt-1"
               required
             />
           </div>
 
           <div>
-            <label className="text-sm font-medium">Vague associee</label>
+            <label className="text-sm font-medium">{t("form.vagueAssociee")}</label>
             <Select
               value={vagueId}
               onValueChange={(v) => setVagueId(v === "none" ? "" : v)}
             >
               <SelectTrigger className="mt-1 w-full">
-                <SelectValue placeholder="Selectionnez une vague (optionnel)" />
+                <SelectValue placeholder={t("form.vaguePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">-- Aucune vague --</SelectItem>
+                <SelectItem value="none">{t("form.vagueAucune")}</SelectItem>
                 {vagues.map((v) => (
                   <SelectItem key={v.id} value={v.id}>
                     {v.code}
@@ -229,20 +227,20 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
           </div>
 
           <div>
-            <label className="text-sm font-medium">Notes</label>
+            <label className="text-sm font-medium">{t("form.notes")}</label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Informations complementaires..."
+              placeholder={t("form.notesPlaceholder")}
               rows={2}
               className="mt-1"
             />
           </div>
 
           <div>
-            <label className="text-sm font-medium">Date limite</label>
+            <label className="text-sm font-medium">{t("form.dateLimite")}</label>
             <p className="text-xs text-muted-foreground mb-1">
-              Date jusqu&apos;a laquelle la liste doit etre traitee (optionnel)
+              {t("form.dateLimiteHint")}
             </p>
             <Input
               type="date"
@@ -257,9 +255,9 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
 
       {/* Lignes de besoin */}
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-base font-semibold">Lignes de besoin</h2>
+        <h2 className="text-base font-semibold">{t("form.lignesTitle")}</h2>
         <span className="text-sm text-muted-foreground">
-          {lignes.length} ligne{lignes.length !== 1 ? "s" : ""}
+          {t("form.lignesCount", { count: lignes.length })}
         </span>
       </div>
 
@@ -269,7 +267,7 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-muted-foreground">
-                  Ligne {idx + 1}
+                  {t("form.ligneLabel", { index: idx + 1 })}
                 </p>
                 {lignes.length > 1 && (
                   <Button
@@ -287,7 +285,7 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
               {/* Produit (optionnel) */}
               <div>
                 <label className="text-xs text-muted-foreground">
-                  Produit en stock (optionnel)
+                  {t("form.produit")}
                 </label>
                 <Select
                   value={l.produitId}
@@ -296,10 +294,10 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
                   }
                 >
                   <SelectTrigger className="mt-1 w-full">
-                    <SelectValue placeholder="Selectionner un produit" />
+                    <SelectValue placeholder={t("form.produitPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">-- Aucun produit --</SelectItem>
+                    <SelectItem value="none">{t("form.produitAucun")}</SelectItem>
                     {produits.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.nom}
@@ -312,14 +310,15 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
               {/* Designation */}
               <div>
                 <label className="text-xs text-muted-foreground">
-                  Designation <span className="text-destructive">*</span>
+                  {t("form.designation")}{" "}
+                  <span className="text-destructive">*</span>
                 </label>
                 <Input
                   value={l.designation}
                   onChange={(e) =>
                     updateLigne(l.id, "designation", e.target.value)
                   }
-                  placeholder="Ex: Aliment granules 3mm"
+                  placeholder={t("form.designationPlaceholder")}
                   className="mt-1"
                   required
                 />
@@ -329,7 +328,8 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-muted-foreground">
-                    Quantite <span className="text-destructive">*</span>
+                    {t("form.quantite")}{" "}
+                    <span className="text-destructive">*</span>
                   </label>
                   <Input
                     type="number"
@@ -345,13 +345,13 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground">Unite</label>
+                  <label className="text-xs text-muted-foreground">{t("form.unite")}</label>
                   <Input
                     value={l.unite}
                     onChange={(e) =>
                       updateLigne(l.id, "unite", e.target.value)
                     }
-                    placeholder="kg, litre, sachet..."
+                    placeholder={t("form.unitePlaceholder")}
                     className="mt-1"
                   />
                 </div>
@@ -360,7 +360,7 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
               {/* Prix estime */}
               <div>
                 <label className="text-xs text-muted-foreground">
-                  Prix unitaire estime (FCFA){" "}
+                  {t("form.prixEstime")}{" "}
                   <span className="text-destructive">*</span>
                 </label>
                 <Input
@@ -380,7 +380,7 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
               {/* Sous-total ligne */}
               {l.quantite && l.prixEstime && (
                 <p className="text-xs text-muted-foreground text-right">
-                  Sous-total :{" "}
+                  {t("form.sousTotal")}{" "}
                   <span className="font-medium text-foreground">
                     {formatMontant(
                       (parseFloat(l.quantite) || 0) *
@@ -402,13 +402,13 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
         onClick={addLigne}
       >
         <Plus className="h-4 w-4 mr-1" />
-        Ajouter une ligne
+        {t("form.ajouterLigne")}
       </Button>
 
       {/* Total estime */}
       <Card className="mb-6">
         <CardContent className="p-4 flex items-center justify-between">
-          <span className="text-sm font-medium">Montant total estime</span>
+          <span className="text-sm font-medium">{t("form.montantTotal")}</span>
           <span className="text-lg font-bold">
             {formatMontant(montantEstime)} FCFA
           </span>
@@ -432,7 +432,7 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
         variant="primary"
         className="w-full h-12 text-base"
       >
-        Soumettre la liste
+        {t("form.submit")}
       </Button>
     </form>
   );

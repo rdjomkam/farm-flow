@@ -1,0 +1,19 @@
+{
+  "fab": {
+    "ariaLabel": "Nouveau releve",
+    "toasts": {
+      "selectionnezSite": {
+        "title": "Selectionnez un site d'abord",
+        "description": "Choisissez un site client pour ajouter un releve."
+      },
+      "aucuneVague": {
+        "title": "Aucune vague active sur ce site",
+        "description": "Creez ou activez une vague pour ajouter un releve."
+      },
+      "erreur": {
+        "title": "Erreur",
+        "description": "Impossible de trouver la vague active. Reessayez."
+      }
+    }
+  }
+}

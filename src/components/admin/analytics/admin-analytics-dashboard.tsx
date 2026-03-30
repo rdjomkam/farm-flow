@@ -4,16 +4,17 @@
  * admin-analytics-dashboard.tsx
  *
  * Dashboard KPIs analytics plateforme DKFarm.
- * Mobile-first (360px) : 2 colonnes KPIs → 3 → 6.
- * Graphiques Recharts chargés dynamiquement (SSR incompatible).
+ * Mobile-first (360px) : 2 colonnes KPIs -> 3 -> 6.
+ * Graphiques Recharts charges dynamiquement (SSR incompatible).
  *
- * Story E.1 — Sprint E (ADR-021).
+ * Story E.1 - Sprint E (ADR-021).
  * R2 : enums importes depuis @/types.
  * R6 : couleurs via CSS variables.
  */
 
 import dynamic from "next/dynamic";
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import {
   Building2,
   CheckCircle2,
@@ -27,7 +28,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KPICard } from "@/components/ui/kpi-card";
 import type { AdminAnalyticsResponse } from "@/types";
 
-// Recharts dynamique — SSR incompatible
+// Recharts dynamique - SSR incompatible
 const ResponsiveContainer = dynamic(
   () => import("recharts").then((m) => m.ResponsiveContainer),
   { ssr: false }
@@ -123,29 +124,25 @@ function formatShortDate(dateStr: string): string {
 interface PeriodSelectorProps {
   value: Period;
   onChange: (p: Period) => void;
+  labels: Record<Period, string>;
 }
 
-function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
-  const periods: { label: string; value: Period }[] = [
-    { label: "7j", value: "7d" },
-    { label: "30j", value: "30d" },
-    { label: "90j", value: "90d" },
-    { label: "12m", value: "12m" },
-  ];
+function PeriodSelector({ value, onChange, labels }: PeriodSelectorProps) {
+  const periods: Period[] = ["7d", "30d", "90d", "12m"];
   return (
     <div className="flex gap-1 rounded-lg bg-muted p-1">
       {periods.map((p) => (
         <button
-          key={p.value}
-          onClick={() => onChange(p.value)}
+          key={p}
+          onClick={() => onChange(p)}
           className={[
             "flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors min-h-[36px]",
-            value === p.value
+            value === p
               ? "bg-card text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground",
           ].join(" ")}
         >
-          {p.label}
+          {labels[p]}
         </button>
       ))}
     </div>
@@ -161,18 +158,19 @@ interface ChartWrapperProps {
   isLoading: boolean;
   period?: Period;
   onPeriodChange?: (p: Period) => void;
+  periodLabels?: Record<Period, string>;
   children: React.ReactNode;
 }
 
-function ChartWrapper({ title, isLoading, period, onPeriodChange, children }: ChartWrapperProps) {
+function ChartWrapper({ title, isLoading, period, onPeriodChange, periodLabels, children }: ChartWrapperProps) {
   return (
     <Card>
       <CardHeader className="pb-2">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base">{title}</CardTitle>
-          {period && onPeriodChange && (
+          {period && onPeriodChange && periodLabels && (
             <div className="w-full sm:w-auto sm:min-w-[180px]">
-              <PeriodSelector value={period} onChange={onPeriodChange} />
+              <PeriodSelector value={period} onChange={onPeriodChange} labels={periodLabels} />
             </div>
           )}
         </div>
@@ -196,13 +194,16 @@ function ChartWrapper({ title, isLoading, period, onPeriodChange, children }: Ch
 
 interface SitesGrowthChartProps {
   data: SitesGrowthPoint[];
+  labelTotalCumulatif: string;
+  labelNouveaux: string;
+  labelAucuneDonnee: string;
 }
 
-function SitesGrowthChart({ data }: SitesGrowthChartProps) {
+function SitesGrowthChart({ data, labelTotalCumulatif, labelNouveaux, labelAucuneDonnee }: SitesGrowthChartProps) {
   if (data.length === 0) {
     return (
       <p className="flex h-[180px] items-center justify-center text-sm text-muted-foreground">
-        Aucune donnee disponible
+        {labelAucuneDonnee}
       </p>
     );
   }
@@ -242,7 +243,7 @@ function SitesGrowthChart({ data }: SitesGrowthChartProps) {
           <Line
             type="monotone"
             dataKey="cumul"
-            name="Total cumulatif"
+            name={labelTotalCumulatif}
             stroke="hsl(var(--primary))"
             strokeWidth={2}
             dot={false}
@@ -250,7 +251,7 @@ function SitesGrowthChart({ data }: SitesGrowthChartProps) {
           <Line
             type="monotone"
             dataKey="nouveaux"
-            name="Nouveaux"
+            name={labelNouveaux}
             stroke="hsl(var(--accent-green, 142 76% 36%))"
             strokeWidth={2}
             dot={false}
@@ -268,13 +269,15 @@ function SitesGrowthChart({ data }: SitesGrowthChartProps) {
 
 interface ModulesChartProps {
   data: ModuleDistPoint[];
+  labelSites: string;
+  labelAucuneDonnee: string;
 }
 
-function ModulesDistributionChart({ data }: ModulesChartProps) {
+function ModulesDistributionChart({ data, labelSites, labelAucuneDonnee }: ModulesChartProps) {
   if (data.length === 0) {
     return (
       <p className="flex h-[180px] items-center justify-center text-sm text-muted-foreground">
-        Aucune donnee disponible
+        {labelAucuneDonnee}
       </p>
     );
   }
@@ -318,7 +321,7 @@ function ModulesDistributionChart({ data }: ModulesChartProps) {
           />
           <Bar
             dataKey="sites"
-            name="Sites"
+            name={labelSites}
             fill="hsl(var(--primary))"
             radius={[0, 4, 4, 0]}
           />
@@ -335,13 +338,16 @@ function ModulesDistributionChart({ data }: ModulesChartProps) {
 interface RevenueChartProps {
   data: RevenuePoint[];
   mrr: number;
+  labelRevenus: string;
+  labelMrr: string;
+  labelAucuneDonnee: string;
 }
 
-function RevenueChart({ data, mrr }: RevenueChartProps) {
+function RevenueChart({ data, mrr, labelRevenus, labelMrr, labelAucuneDonnee }: RevenueChartProps) {
   if (data.length === 0) {
     return (
       <p className="flex h-[180px] items-center justify-center text-sm text-muted-foreground">
-        Aucune donnee disponible
+        {labelAucuneDonnee}
       </p>
     );
   }
@@ -387,14 +393,14 @@ function RevenueChart({ data, mrr }: RevenueChartProps) {
           <Legend iconSize={10} wrapperStyle={{ fontSize: "11px" }} />
           <Bar
             dataKey="revenus"
-            name="Revenus"
+            name={labelRevenus}
             fill="hsl(var(--primary))"
             radius={[4, 4, 0, 0]}
           />
           <Line
             type="monotone"
             dataKey="mrr"
-            name="MRR"
+            name={labelMrr}
             stroke="hsl(var(--accent-amber, 38 92% 50%))"
             strokeWidth={2}
             dot={false}
@@ -411,11 +417,12 @@ function RevenueChart({ data, mrr }: RevenueChartProps) {
 
 interface AdminAnalyticsDashboardProps {
   initialKPIs: AdminAnalyticsResponse;
-  /** Base de l'API a utiliser — defaut /api/admin/analytics (backoffice: /api/backoffice/analytics) */
+  /** Base de l'API a utiliser - defaut /api/admin/analytics (backoffice: /api/backoffice/analytics) */
   apiBase?: string;
 }
 
 export function AdminAnalyticsDashboard({ initialKPIs, apiBase = "/api/admin/analytics" }: AdminAnalyticsDashboardProps) {
+  const t = useTranslations("admin.analytics");
   const kpis = initialKPIs;
 
   // Sites Growth
@@ -441,11 +448,11 @@ export function AdminAnalyticsDashboard({ initialKPIs, apiBase = "/api/admin/ana
         setSitesData(json.points ?? []);
       }
     } catch {
-      // silently fail — chart shows empty state
+      // silently fail - chart shows empty state
     } finally {
       setSitesLoading(false);
     }
-  }, []);
+  }, [apiBase]);
 
   const fetchRevenue = useCallback(async (period: Period) => {
     setRevenueLoading(true);
@@ -460,7 +467,7 @@ export function AdminAnalyticsDashboard({ initialKPIs, apiBase = "/api/admin/ana
     } finally {
       setRevenueLoading(false);
     }
-  }, []);
+  }, [apiBase]);
 
   const fetchModules = useCallback(async () => {
     setModulesLoading(true);
@@ -475,7 +482,7 @@ export function AdminAnalyticsDashboard({ initialKPIs, apiBase = "/api/admin/ana
     } finally {
       setModulesLoading(false);
     }
-  }, []);
+  }, [apiBase]);
 
   useEffect(() => {
     void fetchSites(sitesPeriod);
@@ -491,94 +498,120 @@ export function AdminAnalyticsDashboard({ initialKPIs, apiBase = "/api/admin/ana
 
   const totalSites = kpis.sitesActifs + kpis.sitesSuspendus + kpis.sitesBlockes;
 
+  const periodLabels: Record<Period, string> = {
+    "7d": t("periodes.7j"),
+    "30d": t("periodes.30j"),
+    "90d": t("periodes.90j"),
+    "12m": t("periodes.12m"),
+  };
+
+  const aucuneDonnee = t("charts.aucuneDonnee");
+
   return (
     <div className="space-y-6">
-      {/* KPI Cards — 2 cols mobile, 3 tablet, 6 desktop */}
+      {/* KPI Cards - 2 cols mobile, 3 tablet, 6 desktop */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <KPICard
-          title="Total sites"
+          title={t("kpis.totalSites")}
           value={String(totalSites)}
-          subtitle={`+${kpis.sitesCrees30j} ce mois`}
+          subtitle={t("kpis.sitesCeMois", { count: kpis.sitesCrees30j })}
           icon={Building2}
           iconColor="text-primary"
           iconBgColor="bg-primary/10"
         />
         <KPICard
-          title="Sites actifs"
+          title={t("kpis.sitesActifs")}
           value={String(kpis.sitesActifs)}
-          subtitle={`${kpis.sitesSuspendus} suspendus`}
+          subtitle={t("kpis.sitesSuspendus", { count: kpis.sitesSuspendus })}
           icon={CheckCircle2}
           iconColor="text-success"
           iconBgColor="bg-success/10"
         />
         <KPICard
-          title="Total membres"
-          value="—"
-          subtitle="Tous sites confondus"
+          title={t("kpis.totalMembres")}
+          value="&#8212;"
+          subtitle={t("kpis.tousSitesConfondus")}
           icon={Users}
           iconColor="text-accent-blue"
           iconBgColor="bg-accent-blue/10"
         />
         <KPICard
-          title="Abonnements actifs"
+          title={t("kpis.abonnementsActifs")}
           value={String(kpis.abonnementsActifs)}
-          subtitle={`${kpis.abonnementsGrace} en grace`}
+          subtitle={t("kpis.abonnementsGrace", { count: kpis.abonnementsGrace })}
           icon={CreditCard}
           iconColor="text-primary"
           iconBgColor="bg-primary/10"
         />
         <KPICard
-          title="MRR"
+          title={t("kpis.mrr")}
           value={formatXAF(kpis.mrrEstime)}
-          subtitle="Revenu mensuel recurrent"
+          subtitle={t("kpis.mrrSubtitle")}
           icon={TrendingUp}
           iconColor="text-accent-green"
           iconBgColor="bg-accent-green/10"
         />
         <KPICard
-          title="Revenu total 12m"
+          title={t("kpis.revenuTotal")}
           value={formatXAF(kpis.revenusTotal12m)}
-          subtitle={`30j : ${formatXAF(kpis.revenusTotal30j)}`}
+          subtitle={t("kpis.revenu30j", { montant: formatXAF(kpis.revenusTotal30j) })}
           icon={Banknote}
           iconColor="text-accent-amber"
           iconBgColor="bg-accent-amber/10"
         />
       </div>
 
-      {/* Charts row 1 — Sites Growth + Modules Distribution */}
+      {/* Charts row 1 - Sites Growth + Modules Distribution */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartWrapper
-          title="Croissance des sites"
+          title={t("charts.croissanceSites")}
           isLoading={sitesLoading}
           period={sitesPeriod}
           onPeriodChange={(p) => setSitesPeriod(p)}
+          periodLabels={periodLabels}
         >
-          <SitesGrowthChart data={sitesData} />
+          <SitesGrowthChart
+            data={sitesData}
+            labelTotalCumulatif={t("charts.totalCumulatif")}
+            labelNouveaux={t("charts.nouveaux")}
+            labelAucuneDonnee={aucuneDonnee}
+          />
         </ChartWrapper>
 
         <ChartWrapper
-          title="Distribution des modules"
+          title={t("charts.distributionModules")}
           isLoading={modulesLoading}
         >
-          <ModulesDistributionChart data={modulesData} />
+          <ModulesDistributionChart
+            data={modulesData}
+            labelSites={t("charts.sites")}
+            labelAucuneDonnee={aucuneDonnee}
+          />
         </ChartWrapper>
       </div>
 
-      {/* Chart row 2 — Revenue */}
+      {/* Chart row 2 - Revenue */}
       <ChartWrapper
-        title="Revenus par periode"
+        title={t("charts.revenusParPeriode")}
         isLoading={revenueLoading}
         period={revenuePeriod}
         onPeriodChange={(p) => setRevenuePeriod(p)}
+        periodLabels={periodLabels}
       >
-        <RevenueChart data={revenueData} mrr={kpis.mrrEstime} />
+        <RevenueChart
+          data={revenueData}
+          mrr={kpis.mrrEstime}
+          labelRevenus={t("charts.revenus")}
+          labelMrr={t("charts.mrr")}
+          labelAucuneDonnee={aucuneDonnee}
+        />
       </ChartWrapper>
 
       {/* Abonnements par plan */}
       {kpis.abonnementsParPlan.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Abonnements par plan</CardTitle>
+            <CardTitle className="text-base">{t("charts.abonnementsParPlan")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">

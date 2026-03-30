@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import { Pencil, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,25 +27,35 @@ import {
 import { useActiviteService } from "@/services";
 import { TypeActivite, Recurrence, StatutActivite, Permission } from "@/types";
 import type { ActiviteWithRelations } from "@/types";
+import { typeActiviteLabels } from "@/lib/labels/activite";
 
-const typeActiviteOptions: { value: TypeActivite; label: string }[] = [
-  { value: TypeActivite.ALIMENTATION, label: "Alimentation" },
-  { value: TypeActivite.BIOMETRIE, label: "Biometrie" },
-  { value: TypeActivite.QUALITE_EAU, label: "Qualite eau" },
-  { value: TypeActivite.COMPTAGE, label: "Comptage" },
-  { value: TypeActivite.NETTOYAGE, label: "Nettoyage" },
-  { value: TypeActivite.TRAITEMENT, label: "Traitement" },
-  { value: TypeActivite.RECOLTE, label: "Recolte" },
-  { value: TypeActivite.AUTRE, label: "Autre" },
+const recurrenceLabelMap: Record<string, string> = {
+  __none__: "Aucune (ponctuel)",
+  [Recurrence.QUOTIDIEN]: "Quotidien",
+  [Recurrence.HEBDOMADAIRE]: "Hebdomadaire",
+  [Recurrence.BIMENSUEL]: "Bimensuel",
+  [Recurrence.MENSUEL]: "Mensuel",
+  [Recurrence.PERSONNALISE]: "Personnalise",
+};
+
+const recurrenceValues = [
+  { value: "__none__" },
+  { value: Recurrence.QUOTIDIEN },
+  { value: Recurrence.HEBDOMADAIRE },
+  { value: Recurrence.BIMENSUEL },
+  { value: Recurrence.MENSUEL },
+  { value: Recurrence.PERSONNALISE },
 ];
 
-const recurrenceOptions: { value: string; label: string }[] = [
-  { value: "__none__", label: "Aucune (ponctuel)" },
-  { value: Recurrence.QUOTIDIEN, label: "Quotidien" },
-  { value: Recurrence.HEBDOMADAIRE, label: "Hebdomadaire" },
-  { value: Recurrence.BIMENSUEL, label: "Bimensuel" },
-  { value: Recurrence.MENSUEL, label: "Mensuel" },
-  { value: Recurrence.PERSONNALISE, label: "Personnalise" },
+const typeActiviteValues: TypeActivite[] = [
+  TypeActivite.ALIMENTATION,
+  TypeActivite.BIOMETRIE,
+  TypeActivite.QUALITE_EAU,
+  TypeActivite.COMPTAGE,
+  TypeActivite.NETTOYAGE,
+  TypeActivite.TRAITEMENT,
+  TypeActivite.RECOLTE,
+  TypeActivite.AUTRE,
 ];
 
 interface ModifierActiviteDialogProps {
@@ -62,6 +73,7 @@ export function ModifierActiviteDialog({
   bacs,
   members,
 }: ModifierActiviteDialogProps) {
+  const t = useTranslations("planning");
   const queryClient = useQueryClient();
   const activiteService = useActiviteService();
   const [open, setOpen] = useState(false);
@@ -139,19 +151,19 @@ export function ModifierActiviteDialog({
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-1.5">
           <Pencil className="h-3.5 w-3.5" />
-          Modifier
+          {t("modifierActivite.trigger")}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            Modifier l'activite
+            {t("modifierActivite.title")}
             {isLocked && <Lock className="h-4 w-4 text-muted-foreground" />}
           </DialogTitle>
           <DialogDescription>
             {isLocked
-              ? "Activite terminee ou annulee — seuls la description et la note sont modifiables."
-              : "Modifiez les parametres de l'activite."}
+              ? t("modifierActivite.termineeOuAnnulee")
+              : t("modifierActivite.description")}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -171,8 +183,10 @@ export function ModifierActiviteDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {typeActiviteOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                {typeActiviteValues.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {typeActiviteLabels[value]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -204,8 +218,10 @@ export function ModifierActiviteDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {recurrenceOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                {recurrenceValues.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {recurrenceLabelMap[opt.value]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -219,7 +235,7 @@ export function ModifierActiviteDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">Aucune vague</SelectItem>
+                <SelectItem value="__none__">{t("nouvelleActivite.vagueAucune")}</SelectItem>
                 {vagues.map((v) => (
                   <SelectItem key={v.id} value={v.id}>{v.code}</SelectItem>
                 ))}
@@ -235,7 +251,7 @@ export function ModifierActiviteDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">Aucun bac</SelectItem>
+                <SelectItem value="__none__">{t("nouvelleActivite.bacAucun")}</SelectItem>
                 {bacs.map((b) => (
                   <SelectItem key={b.id} value={b.id}>{b.nom}</SelectItem>
                 ))}
@@ -251,7 +267,7 @@ export function ModifierActiviteDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">Non assigne</SelectItem>
+                <SelectItem value="__none__">{t("nouvelleActivite.assigneAucun")}</SelectItem>
                 {members.map((m) => (
                   <SelectItem key={m.userId} value={m.userId}>{m.userName}</SelectItem>
                 ))}
@@ -270,7 +286,7 @@ export function ModifierActiviteDialog({
           {/* Note de completion (visible si locked) */}
           {isLocked && (
             <Textarea
-              label="Note de completion"
+              label={t("modifierActivite.noteCompletion")}
               value={noteCompletion}
               onChange={(e) => setNoteCompletion(e.target.value)}
               rows={3}
@@ -279,10 +295,10 @@ export function ModifierActiviteDialog({
 
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-              Annuler
+              {t("modifierActivite.annuler")}
             </Button>
             <Button type="submit">
-              Enregistrer
+              {t("modifierActivite.enregistrer")}
             </Button>
           </DialogFooter>
         </form>

@@ -282,7 +282,7 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
                               placeholder={t("form.distribution.placeholder")}
                               value={distributionMap[bac.id] ?? ""}
                               onChange={(e) => handleDistributionChange(bac.id, e.target.value)}
-                              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                              className="w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                               required
                             />
                           )}

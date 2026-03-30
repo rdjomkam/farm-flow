@@ -14,6 +14,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   Shield,
   Menu,
@@ -33,18 +34,18 @@ import { cn } from "@/lib/utils";
 
 interface NavItem {
   href: string;
-  label: string;
+  labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { href: "/backoffice/dashboard",    label: "Dashboard",      icon: LayoutDashboard },
-  { href: "/backoffice/sites",        label: "Sites",          icon: Building2 },
-  { href: "/backoffice/abonnements",  label: "Abonnements",    icon: ShieldCheck },
-  { href: "/backoffice/plans",        label: "Plans",          icon: LayoutList },
-  { href: "/backoffice/commissions",  label: "Commissions",    icon: TrendingUp },
-  { href: "/backoffice/remises",      label: "Remises",        icon: Tag },
-  { href: "/backoffice/modules",      label: "Modules",        icon: Boxes },
+const NAV_ITEM_DEFS: NavItem[] = [
+  { href: "/backoffice/dashboard",    labelKey: "dashboard",    icon: LayoutDashboard },
+  { href: "/backoffice/sites",        labelKey: "sites",        icon: Building2 },
+  { href: "/backoffice/abonnements",  labelKey: "abonnements",  icon: ShieldCheck },
+  { href: "/backoffice/plans",        labelKey: "plans",        icon: LayoutList },
+  { href: "/backoffice/commissions",  labelKey: "commissions",  icon: TrendingUp },
+  { href: "/backoffice/remises",      labelKey: "remises",      icon: Tag },
+  { href: "/backoffice/modules",      labelKey: "modules",      icon: Boxes },
 ];
 
 interface BackofficeHeaderProps {
@@ -53,6 +54,7 @@ interface BackofficeHeaderProps {
 }
 
 export function BackofficeHeader({ userName, title }: BackofficeHeaderProps) {
+  const t = useTranslations("backoffice");
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
 
@@ -75,15 +77,15 @@ export function BackofficeHeader({ userName, title }: BackofficeHeaderProps) {
             onClick={() => setMenuOpen(true)}
           >
             <Menu className="h-5 w-5" />
-            <span className="sr-only">Menu backoffice</span>
+            <span className="sr-only">{t("header.menuLabel")}</span>
           </Button>
 
           <Shield className="h-5 w-5 shrink-0 text-primary" />
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-sm font-bold truncate hidden sm:inline">DKFarm Backoffice</span>
-            <span className="text-sm font-bold truncate sm:hidden">Backoffice</span>
+            <span className="text-sm font-bold truncate hidden sm:inline">{t("header.title")}</span>
+            <span className="text-sm font-bold truncate sm:hidden">{t("header.titleMobile")}</span>
             <span className="hidden sm:inline rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary shrink-0">
-              Admin
+              {t("header.badge")}
             </span>
           </div>
           {title && (
@@ -129,7 +131,7 @@ export function BackofficeHeader({ userName, title }: BackofficeHeaderProps) {
 
             {/* Nav items */}
             <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-              {NAV_ITEMS.map((item) => {
+              {NAV_ITEM_DEFS.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
                 return (
@@ -145,7 +147,7 @@ export function BackofficeHeader({ userName, title }: BackofficeHeaderProps) {
                     )}
                   >
                     <Icon className="h-4 w-4 shrink-0" />
-                    {item.label}
+                    {t(`nav.${item.labelKey}`)}
                   </Link>
                 );
               })}
@@ -159,7 +161,7 @@ export function BackofficeHeader({ userName, title }: BackofficeHeaderProps) {
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               >
                 <ArrowLeft className="h-4 w-4 shrink-0" />
-                Retour a l&apos;application
+                {t("header.retourApp")}
               </Link>
             </div>
           </div>

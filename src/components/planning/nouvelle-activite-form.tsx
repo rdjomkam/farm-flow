@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,25 +18,25 @@ import {
 } from "@/components/ui/select";
 import { TypeActivite, Recurrence } from "@/types";
 import { useActiviteService } from "@/services";
+import { typeActiviteLabels } from "@/lib/labels/activite";
 
-const typeActiviteOptions: { value: TypeActivite; label: string }[] = [
-  { value: TypeActivite.ALIMENTATION, label: "Alimentation" },
-  { value: TypeActivite.BIOMETRIE, label: "Biometrie" },
-  { value: TypeActivite.QUALITE_EAU, label: "Qualite eau" },
-  { value: TypeActivite.COMPTAGE, label: "Comptage" },
-  { value: TypeActivite.NETTOYAGE, label: "Nettoyage" },
-  { value: TypeActivite.TRAITEMENT, label: "Traitement" },
-  { value: TypeActivite.RECOLTE, label: "Recolte" },
-  { value: TypeActivite.AUTRE, label: "Autre" },
-];
+// Recurrence labels (inline, planning.json recurrences keys don't fully match the enum)
+const recurrenceLabelMap: Record<string, string> = {
+  none: "Aucune (ponctuel)",
+  [Recurrence.QUOTIDIEN]: "Quotidien",
+  [Recurrence.HEBDOMADAIRE]: "Hebdomadaire",
+  [Recurrence.BIMENSUEL]: "Bimensuel (2x/semaine)",
+  [Recurrence.MENSUEL]: "Mensuel",
+  [Recurrence.PERSONNALISE]: "Personnalise",
+};
 
-const recurrenceOptions: { value: string; label: string }[] = [
-  { value: "none", label: "Aucune (ponctuel)" },
-  { value: Recurrence.QUOTIDIEN, label: "Quotidien" },
-  { value: Recurrence.HEBDOMADAIRE, label: "Hebdomadaire" },
-  { value: Recurrence.BIMENSUEL, label: "Bimensuel (2x/semaine)" },
-  { value: Recurrence.MENSUEL, label: "Mensuel" },
-  { value: Recurrence.PERSONNALISE, label: "Personnalise" },
+const recurrenceValues = [
+  { value: "none" },
+  { value: Recurrence.QUOTIDIEN },
+  { value: Recurrence.HEBDOMADAIRE },
+  { value: Recurrence.BIMENSUEL },
+  { value: Recurrence.MENSUEL },
+  { value: Recurrence.PERSONNALISE },
 ];
 
 interface NouvelleActiviteFormProps {
@@ -51,6 +52,7 @@ interface FormErrors {
 }
 
 export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleActiviteFormProps) {
+  const t = useTranslations("planning");
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
@@ -73,9 +75,9 @@ export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleAct
 
   function validate(): boolean {
     const newErrors: FormErrors = {};
-    if (!titre.trim()) newErrors.titre = "Le titre est obligatoire";
-    if (!typeActivite) newErrors.typeActivite = "Le type d'activite est obligatoire";
-    if (!dateDebut) newErrors.dateDebut = "La date de debut est obligatoire";
+    if (!titre.trim()) newErrors.titre = t("nouvelleActivite.erreurs.titreRequis");
+    if (!typeActivite) newErrors.typeActivite = t("nouvelleActivite.erreurs.typeRequis");
+    if (!dateDebut) newErrors.dateDebut = t("nouvelleActivite.erreurs.dateDebutRequise");
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
@@ -109,8 +111,8 @@ export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleAct
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       {/* Titre */}
       <Input
-        label="Titre *"
-        placeholder="Ex: Alimentation bac 1"
+        label={t("nouvelleActivite.titre")}
+        placeholder={t("nouvelleActivite.titrePlaceholder")}
         value={titre}
         onChange={(e) => setTitre(e.target.value)}
         error={errors.titre}
@@ -119,18 +121,29 @@ export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleAct
       {/* Type d'activite */}
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium text-foreground">
-          Type d'activite *
+          {t("nouvelleActivite.typeActivite")}
         </label>
         <Select value={typeActivite} onValueChange={setTypeActivite}>
           <SelectTrigger error={errors.typeActivite}>
-            <SelectValue placeholder="Choisir un type..." />
+            <SelectValue placeholder={t("nouvelleActivite.typeActivitePlaceholder")} />
           </SelectTrigger>
           <SelectContent>
-            {typeActiviteOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
+            {(Object.keys(typeActiviteLabels) as TypeActivite[])
+              .filter((k) => [
+                TypeActivite.ALIMENTATION,
+                TypeActivite.BIOMETRIE,
+                TypeActivite.QUALITE_EAU,
+                TypeActivite.COMPTAGE,
+                TypeActivite.NETTOYAGE,
+                TypeActivite.TRAITEMENT,
+                TypeActivite.RECOLTE,
+                TypeActivite.AUTRE,
+              ].includes(k))
+              .map((value) => (
+                <SelectItem key={value} value={value}>
+                  {typeActiviteLabels[value]}
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
         {errors.typeActivite && (
@@ -141,7 +154,7 @@ export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleAct
       {/* Date debut */}
       <Input
         type="datetime-local"
-        label="Date de debut *"
+        label={t("nouvelleActivite.dateDebut")}
         value={dateDebut}
         onChange={(e) => setDateDebut(e.target.value)}
         error={errors.dateDebut}
@@ -150,7 +163,7 @@ export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleAct
       {/* Date fin */}
       <Input
         type="datetime-local"
-        label="Date de fin (optionnel)"
+        label={t("nouvelleActivite.dateFin")}
         value={dateFin}
         onChange={(e) => setDateFin(e.target.value)}
       />
@@ -158,16 +171,16 @@ export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleAct
       {/* Recurrence */}
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium text-foreground">
-          Recurrence
+          {t("nouvelleActivite.recurrence")}
         </label>
         <Select value={recurrence} onValueChange={setRecurrence}>
           <SelectTrigger>
-            <SelectValue placeholder="Aucune (ponctuel)" />
+            <SelectValue placeholder={t("nouvelleActivite.recurrenceAucune")} />
           </SelectTrigger>
           <SelectContent>
-            {recurrenceOptions.map((opt) => (
+            {recurrenceValues.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
+                {recurrenceLabelMap[opt.value]}
               </SelectItem>
             ))}
           </SelectContent>
@@ -178,14 +191,14 @@ export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleAct
       {vagues.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-foreground">
-            Vague (optionnel)
+            {t("nouvelleActivite.vague")}
           </label>
           <Select value={vagueId} onValueChange={setVagueId}>
             <SelectTrigger>
-              <SelectValue placeholder="Aucune vague" />
+              <SelectValue placeholder={t("nouvelleActivite.vagueAucune")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">Aucune vague</SelectItem>
+              <SelectItem value="none">{t("nouvelleActivite.vagueAucune")}</SelectItem>
               {vagues.map((v) => (
                 <SelectItem key={v.id} value={v.id}>
                   {v.code}
@@ -200,14 +213,14 @@ export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleAct
       {bacs.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-foreground">
-            Bac (optionnel)
+            {t("nouvelleActivite.bac")}
           </label>
           <Select value={bacId} onValueChange={setBacId}>
             <SelectTrigger>
-              <SelectValue placeholder="Aucun bac" />
+              <SelectValue placeholder={t("nouvelleActivite.bacAucun")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">Aucun bac</SelectItem>
+              <SelectItem value="none">{t("nouvelleActivite.bacAucun")}</SelectItem>
               {bacs.map((b) => (
                 <SelectItem key={b.id} value={b.id}>
                   {b.nom}
@@ -222,14 +235,14 @@ export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleAct
       {members.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-foreground">
-            Assigner a (optionnel)
+            {t("nouvelleActivite.assigneA")}
           </label>
           <Select value={assigneAId} onValueChange={setAssigneAId}>
             <SelectTrigger>
-              <SelectValue placeholder="Non assigne" />
+              <SelectValue placeholder={t("nouvelleActivite.assigneAucun")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__none__">Non assigne</SelectItem>
+              <SelectItem value="__none__">{t("nouvelleActivite.assigneAucun")}</SelectItem>
               {members.map((m) => (
                 <SelectItem key={m.userId} value={m.userId}>
                   {m.userName}
@@ -242,8 +255,8 @@ export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleAct
 
       {/* Description */}
       <Textarea
-        label="Description (optionnel)"
-        placeholder="Details de l'activite..."
+        label={t("nouvelleActivite.description")}
+        placeholder={t("nouvelleActivite.descriptionPlaceholder")}
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         rows={3}
@@ -256,7 +269,7 @@ export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleAct
           disabled={isPending}
           className="flex-1"
         >
-          {isPending ? "Planification..." : "Planifier l'activite"}
+          {isPending ? t("nouvelleActivite.submitting") : t("nouvelleActivite.submit")}
         </Button>
         <Button
           type="button"
@@ -265,7 +278,7 @@ export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleAct
           disabled={isPending}
           className="flex-1"
         >
-          Annuler
+          {t("nouvelleActivite.annuler")}
         </Button>
       </div>
     </form>

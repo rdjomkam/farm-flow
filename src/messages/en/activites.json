@@ -1,0 +1,77 @@
+{
+  "phases": {
+    "ACCLIMATATION": "Acclimatation",
+    "CROISSANCE_DEBUT": "Early growth",
+    "JUVENILE": "Juvenile",
+    "GROSSISSEMENT": "Grow-out",
+    "FINITION": "Finishing",
+    "PRE_RECOLTE": "Pre-harvest"
+  },
+  "instructionViewer": {
+    "mesTaches": "My tasks",
+    "statuts": {
+      "TERMINEE": "Completed",
+      "ANNULEE": "Cancelled",
+      "EN_RETARD": "Overdue",
+      "PLANIFIEE": "Planned"
+    },
+    "badges": {
+      "auto": "Auto"
+    },
+    "sections": {
+      "instructions": "Instructions",
+      "aucuneInstruction": "No detailed instructions for this activity.",
+      "conseilIA": "AI advice",
+      "produitRecommande": "Recommended product",
+      "quantiteRecommandee": "Recommended quantity:",
+      "stockActuel": "Current stock:",
+      "stockInsuffisant": "Insufficient stock",
+      "voirStock": "View stock",
+      "noteCompletion": "Completion note",
+      "termineeLe": "Completed on",
+      "questionCompletion": "Have you performed this activity?",
+      "ou": "or"
+    }
+  },
+  "placeholders": {
+    "retourRegles": "Back to rules",
+    "nouveau": "New placeholder",
+    "empty": "No custom placeholders.",
+    "chargement": "Loading...",
+    "modes": {
+      "MAPPING": "Mapping",
+      "FORMULA": "Formula"
+    },
+    "badgeInactif": "Inactive",
+    "exempleLabel": "Example:",
+    "cheminLabel": "Path:",
+    "formuleLabel": "Formula:",
+    "form": {
+      "createTitle": "New placeholder",
+      "editTitle": "Edit placeholder",
+      "cleLabel": "Key",
+      "cleHint": "Usable in templates as {cle}",
+      "libelleLabel": "Label",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Help text shown in the template editor",
+      "exempleLabel": "Example value",
+      "modeLabel": "Resolution mode",
+      "modeMapping": "Mapping (path in context)",
+      "modeFormule": "Arithmetic formula",
+      "entiteLabel": "Entity",
+      "entitePlaceholder": "Select an entity...",
+      "champLabel": "Field",
+      "champPlaceholder": "Select a field...",
+      "formuleLabel": "Formula",
+      "formuleHint": "Operators: + - * / ( ). Identifiers: placeholder keys or paths (e.g.: indicators.biomass)",
+      "formatLabel": "Format",
+      "formatNombre": "Number",
+      "formatTexte": "Text",
+      "decimalesLabel": "Decimals",
+      "annuler": "Cancel",
+      "creer": "Create",
+      "enregistrer": "Save"
+    },
+    "supprimer": "Delete this custom placeholder?"
+  }
+}

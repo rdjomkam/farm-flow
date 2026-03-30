@@ -12,6 +12,7 @@
  */
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import {
   Dialog,
@@ -90,14 +91,20 @@ function isExpired(remise: RemiseItem): boolean {
   return new Date(remise.dateFin) < new Date();
 }
 
-export function RemisesListClient({ remises: initialRemises }: RemisesListClientProps) {
+export function RemisesListClient({
+  remises: initialRemises,
+}: RemisesListClientProps) {
   const queryClient = useQueryClient();
+  const t = useTranslations("remises");
   const [remises, setRemises] = useState(initialRemises);
-  const [activeTab, setActiveTab] = useState<"actives" | "expirees" | "toutes">("actives");
+  const [activeTab, setActiveTab] = useState<
+    "actives" | "expirees" | "toutes"
+  >("actives");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedForDelete, setSelectedForDelete] = useState<RemiseItem | null>(null);
+  const [selectedForDelete, setSelectedForDelete] =
+    useState<RemiseItem | null>(null);
   const [editingRemise, setEditingRemise] = useState<RemiseItem | null>(null);
   const [formDialogOpen, setFormDialogOpen] = useState(false);
 
@@ -118,17 +125,23 @@ export function RemisesListClient({ remises: initialRemises }: RemisesListClient
     );
 
     try {
-      const res = await fetch(`/api/remises/${remise.id}/toggle`, { method: "PATCH" });
+      const res = await fetch(`/api/remises/${remise.id}/toggle`, {
+        method: "PATCH",
+      });
       if (!res.ok) {
         // Revenir à l'état précédent si erreur
         setRemises((prev) =>
-          prev.map((r) => (r.id === remise.id ? { ...r, isActif: remise.isActif } : r))
+          prev.map((r) =>
+            r.id === remise.id ? { ...r, isActif: remise.isActif } : r
+          )
         );
       }
     } catch {
       // Revenir à l'état précédent
       setRemises((prev) =>
-        prev.map((r) => (r.id === remise.id ? { ...r, isActif: remise.isActif } : r))
+        prev.map((r) =>
+          r.id === remise.id ? { ...r, isActif: remise.isActif } : r
+        )
       );
     } finally {
       setTogglingId(null);
@@ -140,9 +153,13 @@ export function RemisesListClient({ remises: initialRemises }: RemisesListClient
     setDeletingId(selectedForDelete.id);
 
     try {
-      const res = await fetch(`/api/remises/${selectedForDelete.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/remises/${selectedForDelete.id}`, {
+        method: "DELETE",
+      });
       if (res.ok) {
-        setRemises((prev) => prev.filter((r) => r.id !== selectedForDelete.id));
+        setRemises((prev) =>
+          prev.filter((r) => r.id !== selectedForDelete.id)
+        );
         setDeleteDialogOpen(false);
         setSelectedForDelete(null);
       }
@@ -182,14 +199,14 @@ export function RemisesListClient({ remises: initialRemises }: RemisesListClient
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
-              {tab === "actives" ? "Actives" : tab === "expirees" ? "Expirées" : "Toutes"}
+              {t(`list.tabs.${tab}`)}
               <span className="ml-1.5 text-xs opacity-70">
                 (
                 {tab === "actives"
                   ? remises.filter((r) => r.isActif && !isExpired(r)).length
                   : tab === "expirees"
-                  ? remises.filter((r) => isExpired(r) || !r.isActif).length
-                  : remises.length}
+                    ? remises.filter((r) => isExpired(r) || !r.isActif).length
+                    : remises.length}
                 )
               </span>
             </button>
@@ -200,14 +217,14 @@ export function RemisesListClient({ remises: initialRemises }: RemisesListClient
           onClick={handleCreate}
           className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
         >
-          + Nouvelle remise
+          {t("list.nouvelle")}
         </button>
       </div>
 
       {/* Liste des remises */}
       {filteredRemises.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
-          <p>Aucune remise dans cette catégorie.</p>
+          <p>{t("list.empty")}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -223,13 +240,17 @@ export function RemisesListClient({ remises: initialRemises }: RemisesListClient
                 <div className="flex-1 min-w-0">
                   {/* Code promo — en gros, copiable */}
                   <button
-                    onClick={() => navigator.clipboard.writeText(remise.code)}
+                    onClick={() =>
+                      navigator.clipboard.writeText(remise.code)
+                    }
                     className="font-mono text-lg font-bold text-foreground hover:text-primary transition-colors cursor-copy"
-                    title="Copier le code"
+                    title={t("list.copierCode")}
                   >
                     {remise.code}
                   </button>
-                  <p className="text-sm text-muted-foreground mt-0.5">{remise.nom}</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    {remise.nom}
+                  </p>
                 </div>
 
                 {/* Valeur */}
@@ -238,7 +259,9 @@ export function RemisesListClient({ remises: initialRemises }: RemisesListClient
                     {formatValeur(remise.valeur, remise.estPourcentage)}
                   </span>
                   <p className="text-xs text-muted-foreground">
-                    {remise.estPourcentage ? "réduction" : "XAF fixe"}
+                    {remise.estPourcentage
+                      ? t("list.reduction")
+                      : t("list.fixeXAF")}
                   </p>
                 </div>
               </div>
@@ -257,7 +280,7 @@ export function RemisesListClient({ remises: initialRemises }: RemisesListClient
                 {/* Badge global ou site */}
                 {remise.siteId === null && (
                   <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                    Globale
+                    {t("list.globale")}
                   </span>
                 )}
 
@@ -267,17 +290,23 @@ export function RemisesListClient({ remises: initialRemises }: RemisesListClient
                   {remise.limiteUtilisations !== null
                     ? `/${remise.limiteUtilisations}`
                     : ""}{" "}
-                  utilisation{remise.nombreUtilisations > 1 ? "s" : ""}
+                  {remise.nombreUtilisations > 1
+                    ? t("list.utilisationsPluriel")
+                    : t("list.utilisationsSingulier")}
                 </span>
 
                 {/* Date fin */}
                 {remise.dateFin && (
                   <span
                     className={`text-xs ${
-                      isExpired(remise) ? "text-destructive" : "text-muted-foreground"
+                      isExpired(remise)
+                        ? "text-destructive"
+                        : "text-muted-foreground"
                     }`}
                   >
-                    Expire le {formatDate(remise.dateFin)}
+                    {t("list.expireLe", {
+                      date: formatDate(remise.dateFin),
+                    })}
                   </span>
                 )}
               </div>
@@ -296,26 +325,30 @@ export function RemisesListClient({ remises: initialRemises }: RemisesListClient
                 >
                   <span
                     className={`w-2 h-2 rounded-full ${
-                      remise.isActif ? "bg-emerald-500" : "bg-muted-foreground"
+                      remise.isActif
+                        ? "bg-emerald-500"
+                        : "bg-muted-foreground"
                     }`}
                   />
                   {togglingId === remise.id
-                    ? "..."
+                    ? t("list.chargement")
                     : remise.isActif
-                    ? "Active"
-                    : "Inactive"}
+                      ? t("list.badgeActive")
+                      : t("list.badgeInactive")}
                 </button>
 
                 <button
                   onClick={() => handleEdit(remise)}
                   className="px-3 py-1.5 bg-muted text-muted-foreground hover:bg-muted/80 rounded-lg text-xs font-medium transition-colors"
                 >
-                  Modifier
+                  {t("list.modifier")}
                 </button>
 
                 {/* R5 : DialogTrigger asChild pour le bouton Supprimer */}
                 <Dialog
-                  open={deleteDialogOpen && selectedForDelete?.id === remise.id}
+                  open={
+                    deleteDialogOpen && selectedForDelete?.id === remise.id
+                  }
                   onOpenChange={(open) => {
                     if (!open) {
                       setDeleteDialogOpen(false);
@@ -331,16 +364,18 @@ export function RemisesListClient({ remises: initialRemises }: RemisesListClient
                       }}
                       className="px-3 py-1.5 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg text-xs font-medium transition-colors"
                     >
-                      Supprimer
+                      {t("list.supprimer")}
                     </button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Supprimer la remise</DialogTitle>
+                      <DialogTitle>{t("list.supprimerTitle")}</DialogTitle>
                       <DialogDescription>
                         {remise.nombreUtilisations > 0
-                          ? `Cette remise a été utilisée ${remise.nombreUtilisations} fois. Elle sera désactivée (pas supprimée).`
-                          : `Êtes-vous sûr de vouloir supprimer le code "${remise.code}" ? Cette action est irréversible.`}
+                          ? t("list.desactiverConfirmation", {
+                              count: remise.nombreUtilisations,
+                            })
+                          : t("list.supprimerCode", { code: remise.code })}
                       </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -351,7 +386,7 @@ export function RemisesListClient({ remises: initialRemises }: RemisesListClient
                         }}
                         className="px-4 py-2 bg-muted text-muted-foreground rounded-lg text-sm hover:bg-muted/80 transition-colors"
                       >
-                        Annuler
+                        {t("list.annuler")}
                       </button>
                       <button
                         onClick={handleDelete}
@@ -359,10 +394,10 @@ export function RemisesListClient({ remises: initialRemises }: RemisesListClient
                         className="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg text-sm font-medium hover:bg-destructive/90 transition-colors disabled:opacity-50"
                       >
                         {deletingId === remise.id
-                          ? "..."
+                          ? t("list.chargement")
                           : remise.nombreUtilisations > 0
-                          ? "Désactiver"
-                          : "Supprimer"}
+                            ? t("list.desactiver")
+                            : t("list.supprimer")}
                       </button>
                     </DialogFooter>
                   </DialogContent>

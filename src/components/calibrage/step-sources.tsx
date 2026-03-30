@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, Circle, Fish } from "lucide-react";
@@ -20,6 +21,7 @@ export function StepSources({
   onNext,
   error,
 }: StepSourcesProps) {
+  const t = useTranslations("calibrage.stepSources");
   const selectedBacs = bacs.filter((b) => selectedBacIds.includes(b.id));
   const totalPoissons = selectedBacs.reduce(
     (sum, b) => sum + (b.nombrePoissons ?? 0),
@@ -37,15 +39,15 @@ export function StepSources({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-base font-semibold">Bacs sources</h2>
+        <h2 className="text-base font-semibold">{t("title")}</h2>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Selectionnez les bacs dont les poissons seront calibres.
+          {t("description")}
         </p>
       </div>
 
       {bacsAvecPoissons.length === 0 && bacsLegacy.length === 0 && (
         <div className="rounded-xl border border-border bg-muted/50 p-4 text-sm text-muted-foreground text-center">
-          Aucun bac de cette vague ne contient de poissons.
+          {t("noBacsAvailable")}
         </div>
       )}
 
@@ -73,7 +75,7 @@ export function StepSources({
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm">{bac.nom}</p>
                 <p className="text-xs text-muted-foreground">
-                  {bac.nombrePoissons ?? 0} poissons — {bac.volume} L
+                  {t("poissonsVolume", { count: bac.nombrePoissons ?? 0, volume: bac.volume ?? 0 })}
                 </p>
               </div>
             </button>
@@ -103,7 +105,7 @@ export function StepSources({
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm">{bac.nom}</p>
                 <p className="text-xs text-muted-foreground">
-                  Quantite inconnue — {bac.volume} L
+                  {t("quantiteInconnueVolume", { volume: bac.volume ?? 0 })}
                 </p>
               </div>
             </button>
@@ -119,7 +121,7 @@ export function StepSources({
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm">{bac.nom}</p>
               <p className="text-xs text-muted-foreground">
-                Vide — {bac.volume} L
+                {t("videVolume", { volume: bac.volume ?? 0 })}
               </p>
             </div>
           </div>
@@ -131,11 +133,9 @@ export function StepSources({
           <Fish className="h-4 w-4 text-primary shrink-0" />
           <p className="text-sm text-primary font-medium">
             {totalPoissons > 0
-              ? `${totalPoissons} poissons a calibrer`
-              : "Quantite inconnue"}{" "}
-            ({selectedBacIds.length} bac
-            {selectedBacIds.length > 1 ? "s" : ""} selectionne
-            {selectedBacIds.length > 1 ? "s" : ""})
+              ? t("poissonsACalibrer", { count: totalPoissons })
+              : t("quantiteInconnue")}{" "}
+            ({t("bacsSelectionnes", { count: selectedBacIds.length })})
           </p>
         </div>
       )}
@@ -148,7 +148,7 @@ export function StepSources({
         disabled={selectedBacIds.length === 0}
         className="w-full"
       >
-        Suivant
+        {t("suivant")}
       </Button>
     </div>
   );

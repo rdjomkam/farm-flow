@@ -19,6 +19,7 @@
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
 import { StatutVague } from "@/types";
@@ -32,6 +33,7 @@ interface FabReleveProps {
 }
 
 export function FabReleve({ activeSiteId, className }: FabReleveProps) {
+  const t = useTranslations("layout");
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -40,9 +42,8 @@ export function FabReleve({ activeSiteId, className }: FabReleveProps) {
     // Cas 1 : pas de site sélectionné (mode hub multi-fermes)
     if (!activeSiteId) {
       toast({
-        title: "Selectionnez un site d'abord",
-        description:
-          "Choisissez un site client pour ajouter un releve.",
+        title: t("fab.toasts.selectionnezSite.title"),
+        description: t("fab.toasts.selectionnezSite.description"),
         variant: "info",
       });
       return;
@@ -82,8 +83,8 @@ export function FabReleve({ activeSiteId, className }: FabReleveProps) {
 
       if (vagues.length === 0) {
         toast({
-          title: "Aucune vague active sur ce site",
-          description: "Creez ou activez une vague pour ajouter un releve.",
+          title: t("fab.toasts.aucuneVague.title"),
+          description: t("fab.toasts.aucuneVague.description"),
           variant: "info",
         });
         return;
@@ -99,21 +100,21 @@ export function FabReleve({ activeSiteId, className }: FabReleveProps) {
       router.push(`/releves/nouveau?vagueId=${vagueId}`);
     } catch {
       toast({
-        title: "Erreur",
-        description: "Impossible de trouver la vague active. Reessayez.",
+        title: t("fab.toasts.erreur.title"),
+        description: t("fab.toasts.erreur.description"),
         variant: "error",
       });
     } finally {
       setLoading(false);
     }
-  }, [activeSiteId, router, toast]);
+  }, [activeSiteId, router, t, toast]);
 
   return (
     <button
       type="button"
       onClick={handleClick}
       disabled={loading}
-      aria-label="Nouveau releve"
+      aria-label={t("fab.ariaLabel")}
       className={cn(
         // Taille : 56px+ pour touch target mobile
         "flex h-14 w-14 items-center justify-center rounded-full shadow-lg",

@@ -184,7 +184,7 @@ function TraiterDialog({ retrait }: TraiterDialogProps) {
               id="statut-traitement"
               value={statut}
               onChange={(e) => setStatut(e.target.value as "CONFIRME" | "ECHEC")}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-lg bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="CONFIRME">{t("admin.traiterDialog.confirme")}</option>
               <option value="ECHEC">{t("admin.traiterDialog.echec")}</option>
@@ -202,7 +202,7 @@ function TraiterDialog({ retrait }: TraiterDialogProps) {
               value={reference}
               onChange={(e) => setReference(e.target.value)}
               placeholder={t("admin.traiterDialog.referencePlaceholder")}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-lg bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
         </div>

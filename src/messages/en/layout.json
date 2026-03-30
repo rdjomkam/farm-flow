@@ -1,0 +1,19 @@
+{
+  "fab": {
+    "ariaLabel": "New record",
+    "toasts": {
+      "selectionnezSite": {
+        "title": "Select a site first",
+        "description": "Choose a client site to add a record."
+      },
+      "aucuneVague": {
+        "title": "No active batch on this site",
+        "description": "Create or activate a batch to add a record."
+      },
+      "erreur": {
+        "title": "Error",
+        "description": "Unable to find the active batch. Please try again."
+      }
+    }
+  }
+}

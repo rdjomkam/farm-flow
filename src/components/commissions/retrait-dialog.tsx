@@ -165,7 +165,7 @@ export function RetraitDialog({ soldeDisponible }: RetraitDialogProps) {
                   value={montant}
                   onChange={(e) => setMontant(e.target.value)}
                   placeholder={t("retraits.dialog.montantPlaceholder")}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full rounded-lg bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
 
@@ -179,7 +179,7 @@ export function RetraitDialog({ soldeDisponible }: RetraitDialogProps) {
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   placeholder={t("retraits.dialog.telephonePlaceholder")}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full rounded-lg bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
 
@@ -191,7 +191,7 @@ export function RetraitDialog({ soldeDisponible }: RetraitDialogProps) {
                   id="fournisseur-retrait"
                   value={fournisseur}
                   onChange={(e) => setFournisseur(e.target.value as FournisseurPaiement)}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full rounded-lg bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   {FOURNISSEURS.map((f) => (
                     <option key={f.value} value={f.value}>

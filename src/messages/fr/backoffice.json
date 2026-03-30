@@ -1,0 +1,55 @@
+{
+  "header": {
+    "title": "DKFarm Backoffice",
+    "titleMobile": "Backoffice",
+    "badge": "Admin",
+    "menuLabel": "Menu backoffice",
+    "retourApp": "Retour a l'application"
+  },
+  "sidebar": {
+    "badge": "Backoffice",
+    "retourApp": "Retour a l'application"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "sites": "Sites",
+    "abonnements": "Abonnements",
+    "plans": "Plans",
+    "commissions": "Commissions",
+    "remises": "Remises",
+    "modules": "Modules"
+  },
+  "siteStatus": {
+    "title": "Changer le statut du site",
+    "siteLabel": "Site :",
+    "actionLabel": "Action",
+    "actions": {
+      "SUSPEND": {
+        "description": "Le site sera suspendu. Les utilisateurs verront un ecran de suspension a la connexion.",
+        "buttonLabel": "Suspendre"
+      },
+      "BLOCK": {
+        "description": "Le site sera bloque. Toutes les sessions actives seront invalidees immediatement.",
+        "buttonLabel": "Bloquer"
+      },
+      "RESTORE": {
+        "description": "Le site sera restaure a l'etat actif. Les utilisateurs pourront se reconnecter normalement.",
+        "buttonLabel": "Restaurer"
+      },
+      "ARCHIVE": {
+        "description": "Le site sera archive de facon irreversible. Cette action ne peut pas etre annulee.",
+        "buttonLabel": "Archiver definitivement",
+        "confirmLabel": "Je confirme l'archivage definitif de ce site"
+      }
+    },
+    "raisonLabel": "Raison",
+    "raisonPlaceholder": "Expliquez la raison de cette action...",
+    "aucuneAction": "Aucune action disponible pour un site archive.",
+    "annuler": "Annuler",
+    "traitement": "Traitement...",
+    "toastSuccess": "Statut mis a jour",
+    "toastSuccessDesc": "Le site \"{name}\" a ete modifie.",
+    "toastError": "Erreur",
+    "toastErrorDefault": "Une erreur est survenue."
+  }
+}

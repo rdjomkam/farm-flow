@@ -1,0 +1,26 @@
+{
+  "types": {
+    "mortalite": "Abnormal mortality",
+    "eau": "Water quality",
+    "comportement": "Fish behaviour",
+    "alimentation": "Feeding problem",
+    "autre": "Other observation"
+  },
+  "form": {
+    "title": "Send an observation",
+    "description": "Report a problem or anomaly on your site.",
+    "typeLabel": "Observation type",
+    "typePlaceholder": "Choose a type",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Describe your observation in detail...",
+    "descriptionCount": "{count} / 2000 characters",
+    "vagueLabel": "Concerned batch (optional)",
+    "vagueAucune": "No specific batch",
+    "submit": "Send observation",
+    "erreurs": {
+      "typeRequis": "Observation type is required.",
+      "descriptionRequise": "Description is required.",
+      "descriptionTropCourte": "Description must be at least 10 characters."
+    }
+  }
+}

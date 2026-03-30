@@ -12,6 +12,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   LayoutDashboard,
   Building2,
@@ -27,21 +28,22 @@ import { cn } from "@/lib/utils";
 
 interface NavItem {
   href: string;
-  label: string;
+  labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { href: "/backoffice/dashboard",    label: "Dashboard",      icon: LayoutDashboard },
-  { href: "/backoffice/sites",        label: "Sites",          icon: Building2 },
-  { href: "/backoffice/abonnements",  label: "Abonnements",    icon: ShieldCheck },
-  { href: "/backoffice/plans",        label: "Plans",          icon: LayoutList },
-  { href: "/backoffice/commissions",  label: "Commissions",    icon: TrendingUp },
-  { href: "/backoffice/remises",      label: "Remises",        icon: Tag },
-  { href: "/backoffice/modules",      label: "Modules",        icon: Boxes },
+const NAV_ITEM_DEFS: NavItem[] = [
+  { href: "/backoffice/dashboard",    labelKey: "dashboard",    icon: LayoutDashboard },
+  { href: "/backoffice/sites",        labelKey: "sites",        icon: Building2 },
+  { href: "/backoffice/abonnements",  labelKey: "abonnements",  icon: ShieldCheck },
+  { href: "/backoffice/plans",        labelKey: "plans",        icon: LayoutList },
+  { href: "/backoffice/commissions",  labelKey: "commissions",  icon: TrendingUp },
+  { href: "/backoffice/remises",      labelKey: "remises",      icon: Tag },
+  { href: "/backoffice/modules",      labelKey: "modules",      icon: Boxes },
 ];
 
 export function BackofficeSidebar() {
+  const t = useTranslations("backoffice");
   const pathname = usePathname();
 
   function isActive(href: string) {
@@ -59,7 +61,7 @@ export function BackofficeSidebar() {
         <div className="min-w-0">
           <span className="text-sm font-bold leading-tight">DKFarm</span>
           <span className="ml-1.5 rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
-            Backoffice
+            {t("sidebar.badge")}
           </span>
         </div>
       </div>
@@ -67,7 +69,7 @@ export function BackofficeSidebar() {
       {/* Navigation */}
       <nav className="flex flex-1 flex-col overflow-y-auto p-2">
         <div className="space-y-1">
-          {NAV_ITEMS.map((item) => {
+          {NAV_ITEM_DEFS.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
             return (
@@ -82,7 +84,7 @@ export function BackofficeSidebar() {
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" />
-                {item.label}
+                {t(`nav.${item.labelKey}`)}
               </Link>
             );
           })}
@@ -96,7 +98,7 @@ export function BackofficeSidebar() {
           className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4 shrink-0" />
-          Retour a l&apos;application
+          {t("sidebar.retourApp")}
         </Link>
       </div>
     </aside>

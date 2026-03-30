@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
   Calendar,
@@ -37,14 +37,8 @@ import { CategorieDepense, ModePaiement, StatutDepense } from "@/types";
 import { useDepenseService } from "@/services";
 
 // ---------------------------------------------------------------------------
-// Labels
+// Types
 // ---------------------------------------------------------------------------
-
-const statutLabels: Record<StatutDepense, string> = {
-  [StatutDepense.NON_PAYEE]: "Non payee",
-  [StatutDepense.PAYEE_PARTIELLEMENT]: "Partiellement payee",
-  [StatutDepense.PAYEE]: "Payee",
-};
 
 const statutVariants: Record<
   StatutDepense,
@@ -54,32 +48,6 @@ const statutVariants: Record<
   [StatutDepense.PAYEE_PARTIELLEMENT]: "info",
   [StatutDepense.PAYEE]: "en_cours",
 };
-
-const categorieLabels: Record<CategorieDepense, string> = {
-  [CategorieDepense.ALIMENT]: "Aliment",
-  [CategorieDepense.INTRANT]: "Intrant",
-  [CategorieDepense.EQUIPEMENT]: "Equipement",
-  [CategorieDepense.ELECTRICITE]: "Electricite",
-  [CategorieDepense.EAU]: "Eau",
-  [CategorieDepense.LOYER]: "Loyer",
-  [CategorieDepense.SALAIRE]: "Salaire",
-  [CategorieDepense.TRANSPORT]: "Transport",
-  [CategorieDepense.VETERINAIRE]: "Veterinaire",
-  [CategorieDepense.REPARATION]: "Reparation",
-  [CategorieDepense.INVESTISSEMENT]: "Investissement",
-  [CategorieDepense.AUTRE]: "Autre",
-};
-
-const modeLabels: Record<ModePaiement, string> = {
-  [ModePaiement.ESPECES]: "Especes",
-  [ModePaiement.MOBILE_MONEY]: "Mobile Money",
-  [ModePaiement.VIREMENT]: "Virement",
-  [ModePaiement.CHEQUE]: "Cheque",
-};
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 interface PaiementDepenseData {
   id: string;
@@ -137,7 +105,7 @@ function formatDate(dateStr: string): string {
 // ---------------------------------------------------------------------------
 
 export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
-  const router = useRouter();
+  const t = useTranslations("depenses");
   const depenseService = useDepenseService();
 
   const [currentDepense, setCurrentDepense] = useState(depense);
@@ -173,9 +141,7 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
         )
       : 0;
 
-  const canAddPaiement =
-    canPay &&
-    statut !== StatutDepense.PAYEE;
+  const canAddPaiement = canPay && statut !== StatutDepense.PAYEE;
 
   // -------------------------------------------------------------------------
   // Handlers
@@ -192,7 +158,10 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
       reference: paiementRef.trim() || undefined,
     });
     if (result.ok && result.data) {
-      setPaiements((prev) => [result.data!.paiement as unknown as PaiementDepenseData, ...prev]);
+      setPaiements((prev) => [
+        result.data!.paiement as unknown as PaiementDepenseData,
+        ...prev,
+      ]);
       setCurrentDepense((prev) => ({
         ...prev,
         montantPaye: result.data!.montantPaye,
@@ -206,7 +175,10 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
 
   async function handleUploadFacture() {
     if (!uploadFile) return;
-    const result = await depenseService.uploadFactureDepense(currentDepense.id, uploadFile);
+    const result = await depenseService.uploadFactureDepense(
+      currentDepense.id,
+      uploadFile
+    );
     if (result.ok) {
       setCurrentDepense((prev) => ({
         ...prev,
@@ -244,7 +216,7 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
         className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
-        Retour aux depenses
+        {t("detail.retour")}
       </Link>
 
       {/* Info card */}
@@ -252,30 +224,32 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <CardTitle className="text-base">{currentDepense.numero}</CardTitle>
+              <CardTitle className="text-base">
+                {currentDepense.numero}
+              </CardTitle>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {currentDepense.description}
               </p>
             </div>
             <Badge variant={statutVariants[statut]}>
-              {statutLabels[statut]}
+              {t(`statuts.${statut}`)}
             </Badge>
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {/* Categorie */}
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Categorie</span>
-            <Badge variant="default">
-              {categorieLabels[categorie]}
-            </Badge>
+            <span className="text-muted-foreground">
+              {t("detail.categorie")}
+            </span>
+            <Badge variant="default">{t(`categories.${categorie}`)}</Badge>
           </div>
 
           {/* Date */}
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground flex items-center gap-1">
               <Calendar className="h-3.5 w-3.5" />
-              Date
+              {t("detail.date")}
             </span>
             <span>{formatDate(currentDepense.date)}</span>
           </div>
@@ -285,7 +259,7 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5" />
-                Echeance
+                {t("detail.echeance")}
               </span>
               <span>{formatDate(currentDepense.dateEcheance)}</span>
             </div>
@@ -294,7 +268,9 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
           {/* Commande */}
           {currentDepense.commande && (
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Commande</span>
+              <span className="text-muted-foreground">
+                {t("detail.commande")}
+              </span>
               <Link
                 href={`/stock/commandes/${currentDepense.commande.id}`}
                 className="text-primary hover:underline flex items-center gap-1"
@@ -308,7 +284,7 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
           {/* Vague */}
           {currentDepense.vague && (
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Vague</span>
+              <span className="text-muted-foreground">{t("detail.vague")}</span>
               <Link
                 href={`/vagues/${currentDepense.vague.id}`}
                 className="text-primary hover:underline flex items-center gap-1"
@@ -322,7 +298,9 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
           {/* Notes */}
           {currentDepense.notes && (
             <div className="text-sm">
-              <span className="text-muted-foreground block mb-1">Notes</span>
+              <span className="text-muted-foreground block mb-1">
+                {t("detail.notes")}
+              </span>
               <p className="text-sm bg-muted/50 rounded p-2">
                 {currentDepense.notes}
               </p>
@@ -335,20 +313,26 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
           {/* Montants */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Montant total</span>
+              <span className="text-muted-foreground">
+                {t("detail.montantTotal")}
+              </span>
               <span className="font-semibold">
                 {formatMontant(currentDepense.montantTotal)}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Deja paye</span>
+              <span className="text-muted-foreground">
+                {t("detail.dejaPaye")}
+              </span>
               <span className="font-semibold text-primary">
                 {formatMontant(currentDepense.montantPaye)}
               </span>
             </div>
             {statut !== StatutDepense.PAYEE && (
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Reste a payer</span>
+                <span className="text-muted-foreground">
+                  {t("detail.resteAPayer")}
+                </span>
                 <span className="font-semibold text-warning">
                   {formatMontant(resteAPayer)}
                 </span>
@@ -377,16 +361,21 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
               <DialogTrigger asChild>
                 <Button className="w-full gap-2">
                   <Plus className="h-4 w-4" />
-                  Ajouter un paiement
+                  {t("detail.ajouterPaiement")}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Enregistrer un paiement</DialogTitle>
+                  <DialogTitle>{t("detail.paiementTitle")}</DialogTitle>
                 </DialogHeader>
                 <div className="flex flex-col gap-4 py-2">
                   <div className="flex flex-col gap-1.5">
-                    <label htmlFor="paiement-montant" className="text-sm font-medium">Montant (FCFA)</label>
+                    <label
+                      htmlFor="paiement-montant"
+                      className="text-sm font-medium"
+                    >
+                      {t("detail.montantLabel")}
+                    </label>
                     <Input
                       id="paiement-montant"
                       type="number"
@@ -394,11 +383,18 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                       max={resteAPayer}
                       value={paiementMontant}
                       onChange={(e) => setPaiementMontant(e.target.value)}
-                      placeholder={`Max : ${formatMontant(resteAPayer)}`}
+                      placeholder={t("detail.montantMax", {
+                        max: formatMontant(resteAPayer),
+                      })}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label htmlFor="paiement-mode" className="text-sm font-medium">Mode de paiement</label>
+                    <label
+                      htmlFor="paiement-mode"
+                      className="text-sm font-medium"
+                    >
+                      {t("detail.modeLabel")}
+                    </label>
                     <Select
                       value={paiementMode}
                       onValueChange={(v) => setPaiementMode(v as ModePaiement)}
@@ -409,35 +405,36 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                       <SelectContent>
                         {Object.values(ModePaiement).map((mode) => (
                           <SelectItem key={mode} value={mode}>
-                            {modeLabels[mode]}
+                            {t(`modes.${mode}`)}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label htmlFor="paiement-ref" className="text-sm font-medium">
-                      Reference (optionnel)
+                    <label
+                      htmlFor="paiement-ref"
+                      className="text-sm font-medium"
+                    >
+                      {t("detail.referenceLabel")}
                     </label>
                     <Input
                       id="paiement-ref"
                       value={paiementRef}
                       onChange={(e) => setPaiementRef(e.target.value)}
-                      placeholder="N° de recu, transaction..."
+                      placeholder={t("detail.referencePlaceholder")}
                     />
                   </div>
                 </div>
                 <DialogFooter>
                   <DialogClose asChild>
-                    <Button variant="outline">
-                      Annuler
-                    </Button>
+                    <Button variant="outline">{t("detail.annuler")}</Button>
                   </DialogClose>
                   <Button
                     onClick={handlePaiement}
                     disabled={!paiementMontant}
                   >
-                    Confirmer
+                    {t("detail.confirmer")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -452,7 +449,7 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              Facture fournisseur
+              {t("detail.factureFournisseur")}
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
@@ -466,7 +463,7 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                     onClick={handleVoirFacture}
                   >
                     <ExternalLink className="h-4 w-4" />
-                    Voir la facture
+                    {t("detail.voirFacture")}
                   </Button>
                   <Dialog
                     open={deleteFactureOpen}
@@ -479,26 +476,26 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                         className="gap-1.5 text-danger border-danger/30 hover:bg-danger/5"
                       >
                         <Trash2 className="h-4 w-4" />
-                        Supprimer
+                        {t("detail.supprimer")}
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>Supprimer la facture ?</DialogTitle>
+                        <DialogTitle>
+                          {t("detail.supprimerTitle")}
+                        </DialogTitle>
                       </DialogHeader>
                       <p className="text-sm text-muted-foreground">
-                        Cette action est irreversible. Le fichier sera
-                        definitivement supprime.
+                        {t("detail.supprimerFactureDescription")}
                       </p>
                       <DialogFooter>
                         <DialogClose asChild>
-                          <Button variant="outline">Annuler</Button>
+                          <Button variant="outline">
+                            {t("detail.annuler")}
+                          </Button>
                         </DialogClose>
-                        <Button
-                          variant="danger"
-                          onClick={handleDeleteFacture}
-                        >
-                          Supprimer
+                        <Button variant="danger" onClick={handleDeleteFacture}>
+                          {t("detail.supprimer")}
                         </Button>
                       </DialogFooter>
                     </DialogContent>
@@ -510,16 +507,16 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-1.5">
                     <Upload className="h-4 w-4" />
-                    Joindre une facture
+                    {t("detail.joindreFacture")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Upload facture</DialogTitle>
+                    <DialogTitle>{t("detail.uploadLabel")}</DialogTitle>
                   </DialogHeader>
                   <div className="flex flex-col gap-3 py-2">
                     <p className="text-sm text-muted-foreground">
-                      Formats acceptes : PDF, JPG, PNG — max 10 Mo
+                      {t("detail.uploadHint")}
                     </p>
                     <Input
                       type="file"
@@ -531,15 +528,10 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                   </div>
                   <DialogFooter>
                     <DialogClose asChild>
-                      <Button variant="outline">
-                        Annuler
-                      </Button>
+                      <Button variant="outline">{t("detail.annuler")}</Button>
                     </DialogClose>
-                    <Button
-                      onClick={handleUploadFacture}
-                      disabled={!uploadFile}
-                    >
-                      Envoyer
+                    <Button onClick={handleUploadFacture} disabled={!uploadFile}>
+                      {t("detail.envoyer")}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -554,13 +546,13 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
             <CreditCard className="h-4 w-4" />
-            Historique des paiements ({paiements.length})
+            {t("detail.historiqueTitle", { count: paiements.length })}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {paiements.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Aucun paiement enregistre
+              {t("detail.aucunPaiement")}
             </p>
           ) : (
             <div className="flex flex-col gap-3">
@@ -574,12 +566,12 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                       {formatMontant(p.montant)}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {modeLabels[p.mode as ModePaiement]} •{" "}
+                      {t(`modes.${p.mode as ModePaiement}`)} •{" "}
                       {p.user.name}
                     </span>
                     {p.reference && (
                       <span className="text-xs text-muted-foreground">
-                        Ref : {p.reference}
+                        {t("detail.reference")} {p.reference}
                       </span>
                     )}
                   </div>

@@ -1,0 +1,30 @@
+{
+  "clientCard": {
+    "statuts": {
+      "ACTIVE": "Active",
+      "EXPIREE": "Expired",
+      "SUSPENDUE": "Suspended"
+    },
+    "statusLabels": {
+      "critique": "Critical",
+      "attention": "Attention",
+      "ok": "OK"
+    },
+    "badges": {
+      "inactif": "Inactive"
+    },
+    "metriques": {
+      "survie": "Survival",
+      "vagues": "Batches",
+      "vaguesEnCours": "in progress",
+      "alertes": "Alerts",
+      "messages": "Messages",
+      "nonLus": "unread"
+    },
+    "dates": {
+      "aujourdhui": "today",
+      "hier": "yesterday",
+      "ilYAJours": "{count} days ago"
+    }
+  }
+}

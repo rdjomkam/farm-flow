@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Plus, Pencil, Trash2, Variable, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -65,6 +66,7 @@ function findEntityKeyForPath(path: string): string {
 // ---------------------------------------------------------------------------
 
 export function PlaceholdersClient({ canManage }: Props) {
+  const t = useTranslations("activites.placeholders");
   const [placeholders, setPlaceholders] = useState<CustomPlaceholderData[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -96,7 +98,7 @@ export function PlaceholdersClient({ canManage }: Props) {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Supprimer ce placeholder personnalise ?")) return;
+    if (!confirm(t("supprimer"))) return;
     const result = await configService.deletePlaceholder(id);
     if (result.ok) {
       fetchPlaceholders();
@@ -122,7 +124,7 @@ export function PlaceholdersClient({ canManage }: Props) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-sm text-muted-foreground">Chargement...</p>
+        <p className="text-sm text-muted-foreground">{t("chargement")}</p>
       </div>
     );
   }
@@ -135,7 +137,7 @@ export function PlaceholdersClient({ canManage }: Props) {
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
-        Retour aux regles
+        {t("retourRegles")}
       </Link>
 
       {/* Header with add button */}
@@ -145,13 +147,13 @@ export function PlaceholdersClient({ canManage }: Props) {
             <DialogTrigger asChild>
               <Button size="sm" onClick={openCreate}>
                 <Plus className="h-4 w-4 mr-1" />
-                Nouveau placeholder
+                {t("nouveau")}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>
-                  {editing ? "Modifier le placeholder" : "Nouveau placeholder"}
+                  {editing ? t("form.editTitle") : t("form.createTitle")}
                 </DialogTitle>
               </DialogHeader>
               <PlaceholderForm
@@ -169,7 +171,7 @@ export function PlaceholdersClient({ canManage }: Props) {
         <div className="text-center py-12">
           <Variable className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">
-            Aucun placeholder personnalise.
+            {t("empty")}
           </p>
         </div>
       ) : (
@@ -185,11 +187,11 @@ export function PlaceholdersClient({ canManage }: Props) {
                     {`{${ph.key}}`}
                   </code>
                   <span className="text-xs text-muted-foreground">
-                    {ph.mode === "MAPPING" ? "Mapping" : "Formule"}
+                    {ph.mode === "MAPPING" ? t("modes.MAPPING") : t("modes.FORMULA")}
                   </span>
                   {!ph.isActive && (
                     <span className="text-xs text-warning bg-warning/10 px-1.5 py-0.5 rounded">
-                      Inactif
+                      {t("badgeInactif")}
                     </span>
                   )}
                 </div>
@@ -200,12 +202,12 @@ export function PlaceholdersClient({ canManage }: Props) {
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Exemple : {ph.example}
+                  {t("exempleLabel")} {ph.example}
                   {ph.mode === "MAPPING" && ph.sourcePath && (
-                    <> — Chemin : <code>{ph.sourcePath}</code></>
+                    <> — {t("cheminLabel")} <code>{ph.sourcePath}</code></>
                   )}
                   {ph.mode === "FORMULA" && ph.formula && (
-                    <> — Formule : <code>{ph.formula}</code></>
+                    <> — {t("formuleLabel")} <code>{ph.formula}</code></>
                   )}
                 </p>
               </div>
@@ -248,6 +250,7 @@ interface FormProps {
 }
 
 function PlaceholderForm({ initial, onSave, onCancel }: FormProps) {
+  const t = useTranslations("activites.placeholders");
   const [key, setKey] = useState(initial?.key ?? "");
   const [label, setLabel] = useState(initial?.label ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -285,7 +288,7 @@ function PlaceholderForm({ initial, onSave, onCancel }: FormProps) {
       {/* Key */}
       <div>
         <label className="block text-sm font-medium text-foreground mb-1">
-          Cle <span className="text-danger">*</span>
+          {t("form.cleLabel")} <span className="text-danger">*</span>
         </label>
         <Input
           value={key}
@@ -297,14 +300,14 @@ function PlaceholderForm({ initial, onSave, onCancel }: FormProps) {
           disabled={!!initial} // cannot change key after creation
         />
         <p className="text-xs text-muted-foreground mt-1">
-          Utilisable dans les templates comme {`{${key || "cle"}}`}
+          {t("form.cleHint", { cle: key || "cle" })}
         </p>
       </div>
 
       {/* Label */}
       <div>
         <label className="block text-sm font-medium text-foreground mb-1">
-          Libelle <span className="text-danger">*</span>
+          {t("form.libelleLabel")} <span className="text-danger">*</span>
         </label>
         <Input
           value={label}
@@ -317,12 +320,12 @@ function PlaceholderForm({ initial, onSave, onCancel }: FormProps) {
       {/* Description */}
       <div>
         <label className="block text-sm font-medium text-foreground mb-1">
-          Description
+          {t("form.descriptionLabel")}
         </label>
         <Textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Aide affichee dans l'editeur de template"
+          placeholder={t("form.descriptionPlaceholder")}
           rows={2}
         />
       </div>
@@ -330,7 +333,7 @@ function PlaceholderForm({ initial, onSave, onCancel }: FormProps) {
       {/* Example */}
       <div>
         <label className="block text-sm font-medium text-foreground mb-1">
-          Valeur d&apos;exemple <span className="text-danger">*</span>
+          {t("form.exempleLabel")} <span className="text-danger">*</span>
         </label>
         <Input
           value={example}
@@ -343,15 +346,15 @@ function PlaceholderForm({ initial, onSave, onCancel }: FormProps) {
       {/* Mode */}
       <div>
         <label className="block text-sm font-medium text-foreground mb-1">
-          Mode de resolution <span className="text-danger">*</span>
+          {t("form.modeLabel")} <span className="text-danger">*</span>
         </label>
         <Select value={mode} onValueChange={(v) => setMode(v as "MAPPING" | "FORMULA")}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="MAPPING">Mapping (chemin dans le contexte)</SelectItem>
-            <SelectItem value="FORMULA">Formule arithmetique</SelectItem>
+            <SelectItem value="MAPPING">{t("form.modeMapping")}</SelectItem>
+            <SelectItem value="FORMULA">{t("form.modeFormule")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -361,7 +364,7 @@ function PlaceholderForm({ initial, onSave, onCancel }: FormProps) {
         <div className="space-y-3">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              Entite <span className="text-danger">*</span>
+              {t("form.entiteLabel")} <span className="text-danger">*</span>
             </label>
             <Select
               value={entityKey}
@@ -371,7 +374,7 @@ function PlaceholderForm({ initial, onSave, onCancel }: FormProps) {
               }}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selectionnez une entite..." />
+                <SelectValue placeholder={t("form.entitePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {SOURCE_PATH_ENTITIES.map((e) => (
@@ -386,11 +389,11 @@ function PlaceholderForm({ initial, onSave, onCancel }: FormProps) {
           {entityKey && (
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">
-                Champ <span className="text-danger">*</span>
+                {t("form.champLabel")} <span className="text-danger">*</span>
               </label>
               <Select value={sourcePath} onValueChange={setSourcePath}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selectionnez un champ..." />
+                  <SelectValue placeholder={t("form.champPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {SOURCE_PATH_ENTITIES.find((e) => e.key === entityKey)?.fields.map((f) => (
@@ -409,7 +412,7 @@ function PlaceholderForm({ initial, onSave, onCancel }: FormProps) {
       {mode === "FORMULA" && (
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">
-            Formule <span className="text-danger">*</span>
+            {t("form.formuleLabel")} <span className="text-danger">*</span>
           </label>
           <Input
             value={formula}
@@ -419,7 +422,7 @@ function PlaceholderForm({ initial, onSave, onCancel }: FormProps) {
             className="font-mono"
           />
           <p className="text-xs text-muted-foreground mt-1">
-            Operateurs : + - * / ( ). Identifiants : cles de placeholders ou chemins (ex: indicateurs.biomasse)
+            {t("form.formuleHint")}
           </p>
         </div>
       )}
@@ -428,22 +431,22 @@ function PlaceholderForm({ initial, onSave, onCancel }: FormProps) {
       <div className="flex gap-4">
         <div className="flex-1">
           <label className="block text-sm font-medium text-foreground mb-1">
-            Format
+            {t("form.formatLabel")}
           </label>
           <Select value={format} onValueChange={(v) => setFormat(v as "NUMBER" | "TEXT")}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="NUMBER">Nombre</SelectItem>
-              <SelectItem value="TEXT">Texte</SelectItem>
+              <SelectItem value="NUMBER">{t("form.formatNombre")}</SelectItem>
+              <SelectItem value="TEXT">{t("form.formatTexte")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         {format === "NUMBER" && (
           <div className="w-24">
             <label className="block text-sm font-medium text-foreground mb-1">
-              Decimales
+              {t("form.decimalesLabel")}
             </label>
             <Input
               type="number"
@@ -459,10 +462,10 @@ function PlaceholderForm({ initial, onSave, onCancel }: FormProps) {
       {/* Actions */}
       <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="outline" onClick={onCancel}>
-          Annuler
+          {t("form.annuler")}
         </Button>
         <Button type="submit">
-          {initial ? "Enregistrer" : "Creer"}
+          {initial ? t("form.enregistrer") : t("form.creer")}
         </Button>
       </div>
     </form>

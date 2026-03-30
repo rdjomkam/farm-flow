@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2 } from "lucide-react";
@@ -7,13 +8,6 @@ import { FishLoader } from "@/components/ui/fish-loader";
 import { CategorieCalibrage } from "@/types";
 import type { BacResponse } from "@/types";
 import type { GroupeForm } from "./calibrage-form-client";
-
-const categorieLabels: Record<CategorieCalibrage, string> = {
-  [CategorieCalibrage.PETIT]: "Petit",
-  [CategorieCalibrage.MOYEN]: "Moyen",
-  [CategorieCalibrage.GROS]: "Gros",
-  [CategorieCalibrage.TRES_GROS]: "Tres gros",
-};
 
 const categorieBadgeVariants: Record<
   CategorieCalibrage,
@@ -48,6 +42,7 @@ export function StepRecap({
   onSubmit,
   submitting,
 }: StepRecapProps) {
+  const t = useTranslations("calibrage.stepRecap");
   const sourceBacs = bacs.filter((b) => selectedBacIds.includes(b.id));
   const totalSourcePoissons = sourceBacs.reduce(
     (sum, b) => sum + (b.nombrePoissons ?? 0),
@@ -67,15 +62,15 @@ export function StepRecap({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-base font-semibold">Recapitulatif</h2>
+        <h2 className="text-base font-semibold">{t("title")}</h2>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Verifiez les informations avant de confirmer.
+          {t("description")}
         </p>
       </div>
 
       {/* Bacs sources */}
       <section className="rounded-xl border border-border bg-card p-4">
-        <h3 className="text-sm font-semibold mb-3">Bacs sources</h3>
+        <h3 className="text-sm font-semibold mb-3">{t("bacsSources")}</h3>
         <div className="flex flex-col gap-2">
           {sourceBacs.map((bac) => (
             <div
@@ -84,20 +79,20 @@ export function StepRecap({
             >
               <span>{bac.nom}</span>
               <span className="text-muted-foreground">
-                {bac.nombrePoissons ?? 0} poissons
+                {t("poissons", { count: bac.nombrePoissons ?? 0 })}
               </span>
             </div>
           ))}
           <div className="border-t border-border pt-2 flex items-center justify-between text-sm font-semibold">
-            <span>Total</span>
-            <span>{totalSourcePoissons} poissons</span>
+            <span>{t("total")}</span>
+            <span>{t("poissons", { count: totalSourcePoissons })}</span>
           </div>
         </div>
       </section>
 
       {/* Groupes */}
       <section className="rounded-xl border border-border bg-card p-4">
-        <h3 className="text-sm font-semibold mb-3">Groupes de redistribution</h3>
+        <h3 className="text-sm font-semibold mb-3">{t("groupesRedistribution")}</h3>
         <div className="flex flex-col gap-3">
           {groupes.map((g, i) => (
             <div
@@ -111,11 +106,10 @@ export function StepRecap({
                     "default"
                   }
                 >
-                  {categorieLabels[g.categorie as CategorieCalibrage] ??
-                    g.categorie}
+                  {t(`categorieOptions.${g.categorie}` as "categorieOptions.PETIT") ?? g.categorie}
                 </Badge>
                 <span className="text-sm font-semibold">
-                  {g.nombrePoissons} poissons
+                  {t("poissons", { count: Number(g.nombrePoissons) })}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -129,7 +123,7 @@ export function StepRecap({
 
       {/* Date du calibrage */}
       <section className="rounded-xl border border-border bg-card p-4">
-        <h3 className="text-sm font-semibold mb-2">Date du calibrage</h3>
+        <h3 className="text-sm font-semibold mb-2">{t("dateCalibrage")}</h3>
         <p className="text-sm font-semibold">
           {new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeStyle: "short" }).format(new Date(date))}
         </p>
@@ -137,14 +131,14 @@ export function StepRecap({
 
       {/* Mortalite */}
       <section className="rounded-xl border border-border bg-card p-4">
-        <h3 className="text-sm font-semibold mb-2">Mortalite</h3>
+        <h3 className="text-sm font-semibold mb-2">{t("mortalite")}</h3>
         <p className="text-sm">
-          <span className="text-muted-foreground">Morts constates : </span>
+          <span className="text-muted-foreground">{t("mortsConstates")} : </span>
           <span className="font-semibold">{morts}</span>
         </p>
         {notes && (
           <p className="text-sm mt-2">
-            <span className="text-muted-foreground">Notes : </span>
+            <span className="text-muted-foreground">{t("notesMortalite")} : </span>
             {notes}
           </p>
         )}
@@ -155,7 +149,7 @@ export function StepRecap({
         <div className="flex items-center gap-2 rounded-xl border border-success/30 bg-success/5 p-3">
           <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
           <p className="text-sm text-success font-medium">
-            Conservation validee : {totalSourcePoissons} = {totalGroupePoissons}{" "}
+            {t("conservationValidee")} : {totalSourcePoissons} = {totalGroupePoissons}{" "}
             + {morts}
           </p>
         </div>
@@ -169,7 +163,7 @@ export function StepRecap({
           disabled={submitting}
           className="flex-1"
         >
-          Retour
+          {t("retour")}
         </Button>
         <Button
           type="button"
@@ -177,7 +171,7 @@ export function StepRecap({
           disabled={!isBalanced || submitting}
           className="flex-1"
         >
-          {submitting ? <><FishLoader size="sm" /> Enregistrement...</> : "Confirmer"}
+          {submitting ? <><FishLoader size="sm" /> {t("enregistrement")}</> : t("confirmer")}
         </Button>
       </div>
     </div>

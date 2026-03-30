@@ -1,0 +1,26 @@
+{
+  "form": {
+    "sectionInfos": "Note information",
+    "sectionInfosDescription": "Write the note for the client",
+    "titreLabel": "Title",
+    "titrePlaceholder": "E.g.: Biometry results week 12",
+    "contenuLabel": "Content",
+    "contenuPlaceholder": "Write the note content...",
+    "sectionOptions": "Options",
+    "sectionOptionsDescription": "Visibility and additional settings",
+    "visibiliteLabel": "Visibility",
+    "visibilitePlaceholder": "Select visibility",
+    "visibilitePublique": "Public — visible by the client",
+    "visibiliteInterne": "Internal — DKFarm use only",
+    "vagueLabel": "Concerned batch (optional)",
+    "vagueAucune": "No batch",
+    "urgente": "Mark as urgent",
+    "reinitialiser": "Reset",
+    "envoyer": "Send note",
+    "erreurs": {
+      "titreRequis": "Title is required.",
+      "contenuRequis": "Content is required.",
+      "visibiliteRequise": "Visibility is required."
+    }
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "siteStatus": {
+    "title": "Change site status",
+    "siteLabel": "Site:",
+    "actionLabel": "Action",
+    "actions": {
+      "SUSPEND": {
+        "label": "Suspend site",
+        "description": "The site will be suspended. Users will see a suspension screen at login. Data remains accessible in read mode for admins.",
+        "buttonLabel": "Suspend"
+      },
+      "BLOCK": {
+        "label": "Block site",
+        "description": "The site will be blocked. All active sessions will be invalidated immediately. Users will no longer be able to log in.",
+        "buttonLabel": "Block"
+      },
+      "RESTORE": {
+        "label": "Restore site",
+        "description": "The site will be restored to active state. Users will be able to log in normally.",
+        "buttonLabel": "Restore"
+      },
+      "ARCHIVE": {
+        "label": "Archive site",
+        "description": "The site will be irreversibly archived via the interface. This action cannot be undone without direct database intervention.",
+        "buttonLabel": "Archive permanently",
+        "confirmLabel": "I confirm the permanent archiving of this site"
+      }
+    },
+    "raisonLabel": "Reason",
+    "raisonPlaceholder": "Explain the reason for this action...",
+    "aucuneAction": "No actions available for an archived site.",
+    "annuler": "Cancel",
+    "traitement": "Processing...",
+    "toastSuccess": "Status updated",
+    "toastSuccessDesc": "The site \"{name}\" has been modified.",
+    "toastError": "Error",
+    "toastErrorDefault": "An error occurred."
+  },
+  "modules": {
+    "modifierTitle": "Edit module",
+    "modifierDescription": "Update module metadata. The key and level are immutable.",
+    "trigger": "Edit",
+    "cleLabel": "Key (immutable)",
+    "niveauLabel": "Level (immutable)",
+    "libelleLabel": "Label",
+    "libellePlaceholder": "E.g.: Grow-out",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Optional module description...",
+    "iconeLabel": "Icon name (Lucide)",
+    "iconePlaceholder": "E.g.: Package, Fish, BarChart3...",
+    "ordreTriLabel": "Sort order",
+    "categorieLabel": "Category",
+    "categoriePlaceholder": "E.g.: production, finance...",
+    "visibleLabel": "Visible",
+    "visibleDescription": "The module is displayed in selection interfaces",
+    "actifLabel": "Active",
+    "actifDescription": "The module can be activated on sites",
+    "annuler": "Cancel",
+    "enregistrement": "Saving...",
+    "enregistrer": "Save",
+    "erreurs": {
+      "ordreTriInvalide": "Sort order must be an integer.",
+      "libelleRequis": "Label is required.",
+      "erreurReseau": "Network error. Please try again."
+    }
+  },
+  "analytics": {
+    "kpis": {
+      "totalSites": "Total sites",
+      "sitesCeMois": "+{count} this month",
+      "sitesActifs": "Active sites",
+      "sitesSuspendus": "{count} suspended",
+      "totalMembres": "Total members",
+      "tousSitesConfondus": "Across all sites",
+      "abonnementsActifs": "Active subscriptions",
+      "abonnementsGrace": "{count} in grace period",
+      "mrr": "MRR",
+      "mrrSubtitle": "Monthly recurring revenue",
+      "revenuTotal": "Total revenue 12m",
+      "revenu30j": "30d: {montant}"
+    },
+    "charts": {
+      "croissanceSites": "Sites growth",
+      "distributionModules": "Module distribution",
+      "revenusParPeriode": "Revenue by period",
+      "abonnementsParPlan": "Subscriptions by plan",
+      "aucuneDonnee": "No data available",
+      "totalCumulatif": "Cumulative total",
+      "nouveaux": "New",
+      "revenus": "Revenue",
+      "mrr": "MRR",
+      "sites": "Sites"
+    },
+    "periodes": {
+      "7j": "7d",
+      "30j": "30d",
+      "90j": "90d",
+      "12m": "12m"
+    }
+  }
+}

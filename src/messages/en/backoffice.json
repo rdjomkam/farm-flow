@@ -1,0 +1,55 @@
+{
+  "header": {
+    "title": "DKFarm Backoffice",
+    "titleMobile": "Backoffice",
+    "badge": "Admin",
+    "menuLabel": "Backoffice menu",
+    "retourApp": "Back to application"
+  },
+  "sidebar": {
+    "badge": "Backoffice",
+    "retourApp": "Back to application"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "sites": "Sites",
+    "abonnements": "Subscriptions",
+    "plans": "Plans",
+    "commissions": "Commissions",
+    "remises": "Discounts",
+    "modules": "Modules"
+  },
+  "siteStatus": {
+    "title": "Change site status",
+    "siteLabel": "Site:",
+    "actionLabel": "Action",
+    "actions": {
+      "SUSPEND": {
+        "description": "The site will be suspended. Users will see a suspension screen at login.",
+        "buttonLabel": "Suspend"
+      },
+      "BLOCK": {
+        "description": "The site will be blocked. All active sessions will be invalidated immediately.",
+        "buttonLabel": "Block"
+      },
+      "RESTORE": {
+        "description": "The site will be restored to active state. Users will be able to log in normally.",
+        "buttonLabel": "Restore"
+      },
+      "ARCHIVE": {
+        "description": "The site will be irreversibly archived. This action cannot be undone.",
+        "buttonLabel": "Archive permanently",
+        "confirmLabel": "I confirm the permanent archiving of this site"
+      }
+    },
+    "raisonLabel": "Reason",
+    "raisonPlaceholder": "Explain the reason for this action...",
+    "aucuneAction": "No actions available for an archived site.",
+    "annuler": "Cancel",
+    "traitement": "Processing...",
+    "toastSuccess": "Status updated",
+    "toastSuccessDesc": "The site \"{name}\" has been modified.",
+    "toastError": "Error",
+    "toastErrorDefault": "An error occurred."
+  }
+}
