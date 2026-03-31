@@ -12,6 +12,7 @@ import {
 } from "@/lib/benchmarks";
 import type { IndicateursBenchmarkVague } from "@/types";
 import { getTranslations } from "next-intl/server";
+import { formatNumber } from "@/lib/format";
 
 interface IndicateursPanelProps {
   indicateurs: IndicateursBenchmarkVague[];
@@ -197,7 +198,7 @@ export async function IndicateursPanel({ indicateurs }: IndicateursPanelProps) {
                   </div>
                   {ind.nombreVivants !== null && (
                     <p className="text-xs text-muted-foreground">
-                      {ind.nombreVivants.toLocaleString("fr-FR")} {tAnalytics("indicators.livingFish")}
+                      {formatNumber(ind.nombreVivants)} {tAnalytics("indicators.livingFish")}
                     </p>
                   )}
                 </CardHeader>

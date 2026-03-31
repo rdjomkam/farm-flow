@@ -3,6 +3,7 @@ import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { getPacks, createPack } from "@/lib/queries/packs";
+import { apiError } from "@/lib/api-utils";
 
 /**
  * GET /api/packs
@@ -26,15 +27,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ packs, total: packs.length });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation des packs." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation des packs.");
   }
 }
 
@@ -51,28 +49,16 @@ export async function POST(request: NextRequest) {
 
     // Validation business
     if (!body.nom || typeof body.nom !== "string" || body.nom.trim() === "") {
-      return NextResponse.json(
-        { status: 400, message: "Le nom du pack est requis." },
-        { status: 400 }
-      );
+      return apiError(400, "Le nom du pack est requis.");
     }
     if (!body.nombreAlevins || typeof body.nombreAlevins !== "number" || body.nombreAlevins <= 0) {
-      return NextResponse.json(
-        { status: 400, message: "Le nombre d'alevins doit etre superieur a 0." },
-        { status: 400 }
-      );
+      return apiError(400, "Le nombre d'alevins doit etre superieur a 0.");
     }
     if (body.prixTotal !== undefined && (typeof body.prixTotal !== "number" || body.prixTotal < 0)) {
-      return NextResponse.json(
-        { status: 400, message: "Le prix total ne peut pas etre negatif." },
-        { status: 400 }
-      );
+      return apiError(400, "Le prix total ne peut pas etre negatif.");
     }
     if (!body.planId || typeof body.planId !== "string" || body.planId.trim() === "") {
-      return NextResponse.json(
-        { status: 400, message: "L'identifiant du plan d'abonnement est requis." },
-        { status: 400 }
-      );
+      return apiError(400, "L'identifiant du plan d'abonnement est requis.");
     }
 
     const pack = await createPack({
@@ -91,17 +77,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(pack, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     if (error instanceof Error) {
-      return NextResponse.json({ status: 400, message: error.message }, { status: 400 });
+      return apiError(400, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la creation du pack." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la creation du pack.");
   }
 }

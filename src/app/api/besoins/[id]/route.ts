@@ -4,6 +4,7 @@ import {
   updateListeBesoins,
   deleteListeBesoins,
 } from "@/lib/queries/besoins";
+import { apiError } from "@/lib/api-utils";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission } from "@/types";
@@ -26,29 +27,17 @@ export async function GET(
     const { id } = await params;
     const listeBesoins = await getListeBesoinsById(id, auth.activeSiteId);
     if (!listeBesoins) {
-      return NextResponse.json(
-        { status: 404, message: "Liste de besoins introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Liste de besoins introuvable.");
     }
     return NextResponse.json(listeBesoins);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur.");
   }
 }
 
@@ -100,10 +89,7 @@ export async function PUT(
     } else if (body.dateLimite != null) {
       const parsed = new Date(body.dateLimite);
       if (isNaN(parsed.getTime())) {
-        return NextResponse.json(
-          { status: 400, message: "Date limite invalide (format ISO 8601 attendu)." },
-          { status: 400 }
-        );
+        return apiError(400, "Date limite invalide (format ISO 8601 attendu).");
       }
       dateLimite = parsed.toISOString();
     }
@@ -119,33 +105,24 @@ export async function PUT(
     return NextResponse.json(listeBesoins);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     const message =
       error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
     if (
       message.includes("invalide") ||
       message.includes("Impossible") ||
       message.includes("SOUMISE")
     ) {
-      return NextResponse.json({ status: 400, message }, { status: 400 });
+      return apiError(400, message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur.");
   }
 }
 
@@ -169,28 +146,19 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     const message =
       error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
     if (message.includes("Impossible") || message.includes("SOUMISE")) {
-      return NextResponse.json({ status: 400, message }, { status: 400 });
+      return apiError(400, message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur.");
   }
 }

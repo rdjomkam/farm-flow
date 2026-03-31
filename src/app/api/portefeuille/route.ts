@@ -15,6 +15,7 @@ import { getPortefeuille } from "@/lib/queries/commissions";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
 import { Permission } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -39,20 +40,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation du portefeuille." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation du portefeuille.");
   }
 }

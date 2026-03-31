@@ -3,6 +3,7 @@ import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { getClientsIngenieur } from "@/lib/queries/ingenieur";
+import { apiError } from "@/lib/api-utils";
 
 /**
  * GET /api/ingenieur/clients
@@ -31,17 +32,11 @@ export async function GET(request: NextRequest) {
     const limit = limitParam ? parseInt(limitParam, 10) : 10;
 
     if (isNaN(page) || page < 1) {
-      return NextResponse.json(
-        { status: 400, message: "Le parametre 'page' doit etre un entier >= 1." },
-        { status: 400 }
-      );
+      return apiError(400, "Le parametre 'page' doit etre un entier >= 1.");
     }
 
     if (isNaN(limit) || limit < 1 || limit > 100) {
-      return NextResponse.json(
-        { status: 400, message: "Le parametre 'limit' doit etre un entier entre 1 et 100." },
-        { status: 400 }
-      );
+      return apiError(400, "Le parametre 'limit' doit etre un entier entre 1 et 100.");
     }
 
     const result = await getClientsIngenieur(auth.activeSiteId, page, limit);
@@ -49,20 +44,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors du chargement de la liste clients." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors du chargement de la liste clients.");
   }
 }

@@ -7,6 +7,7 @@ import {
   updateCustomPlaceholder,
   deleteCustomPlaceholder,
 } from "@/lib/queries/custom-placeholders";
+import { apiError } from "@/lib/api-utils";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -23,22 +24,19 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     const placeholder = await getCustomPlaceholderById(id);
     if (!placeholder) {
-      return NextResponse.json({ error: "Placeholder introuvable." }, { status: 404 });
+      return apiError(404, "Placeholder introuvable.");
     }
 
     return NextResponse.json(placeholder);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ error: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     console.error("[GET /api/regles-activites/placeholders/[id]]", error);
-    return NextResponse.json(
-      { error: "Erreur serveur lors de la recuperation du placeholder." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation du placeholder.");
   }
 }
 
@@ -58,24 +56,21 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     return NextResponse.json(updated);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ error: (error as Error).message }, { status: 401 });
+      return apiError(401, (error as Error).message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ error: (error as Error).message }, { status: 403 });
+      return apiError(403, (error as Error).message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     // Prisma unique constraint violation
     if (message.includes("Unique constraint")) {
-      return NextResponse.json(
-        { error: "Cette cle existe deja." },
-        { status: 409 }
-      );
+      return apiError(409, "Cette cle existe deja.");
     }
     if (message === "Placeholder introuvable.") {
-      return NextResponse.json({ error: message }, { status: 404 });
+      return apiError(404, message);
     }
     console.error("[PUT /api/regles-activites/placeholders/[id]]", error);
-    return NextResponse.json({ error: message }, { status: 400 });
+    return apiError(400, message);
   }
 }
 
@@ -94,16 +89,16 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ error: (error as Error).message }, { status: 401 });
+      return apiError(401, (error as Error).message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ error: (error as Error).message }, { status: 403 });
+      return apiError(403, (error as Error).message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message === "Placeholder introuvable.") {
-      return NextResponse.json({ error: message }, { status: 404 });
+      return apiError(404, message);
     }
     console.error("[DELETE /api/regles-activites/placeholders/[id]]", error);
-    return NextResponse.json({ error: message }, { status: 400 });
+    return apiError(400, message);
   }
 }

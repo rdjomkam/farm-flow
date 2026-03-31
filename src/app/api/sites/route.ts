@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, AuthError } from "@/lib/auth";
 import { getUserSites, createSite } from "@/lib/queries/sites";
 import { Role } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 /** GET /api/sites — list sites the user is a member of */
 export async function GET(request: NextRequest) {
@@ -24,15 +25,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation des sites." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation des sites.");
   }
 }
 
@@ -42,10 +37,7 @@ export async function POST(request: NextRequest) {
     const session = await requireAuth(request);
 
     if (session.role !== Role.ADMIN) {
-      return NextResponse.json(
-        { status: 403, message: "Seuls les administrateurs peuvent creer des sites." },
-        { status: 403 }
-      );
+      return apiError(403, "Seuls les administrateurs peuvent creer des sites.");
     }
 
     const body = await request.json();
@@ -61,10 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     const site = await createSite(
@@ -84,14 +73,8 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la creation du site." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la creation du site.");
   }
 }

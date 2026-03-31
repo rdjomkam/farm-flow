@@ -5,6 +5,7 @@ import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission, CategorieProduit, UniteStock, TailleGranule, FormeAliment, PhaseElevage } from "@/types";
 import type { CreateProduitDTO, ProduitFilters } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 const VALID_CATEGORIES = Object.values(CategorieProduit);
 const VALID_UNITES = Object.values(UniteStock);
@@ -30,15 +31,12 @@ export async function GET(request: NextRequest) {
     return cachedJson({ produits, total: produits.length }, "medium");
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation des produits." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation des produits.");
   }
 }
 
@@ -163,10 +161,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     const data: CreateProduitDTO = {
@@ -190,18 +185,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(produit, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la creation du produit." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la creation du produit.");
   }
 }

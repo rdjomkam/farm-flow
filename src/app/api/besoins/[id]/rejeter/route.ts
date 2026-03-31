@@ -3,6 +3,7 @@ import { rejeterBesoins } from "@/lib/queries/besoins";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 /**
  * POST /api/besoins/[id]/rejeter
@@ -33,28 +34,19 @@ export async function POST(
     return NextResponse.json(listeBesoins);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     const message =
       error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
     if (message.includes("Transition invalide")) {
-      return NextResponse.json({ status: 400, message }, { status: 400 });
+      return apiError(400, message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur.");
   }
 }

@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getMouvements, createMouvement } from "@/lib/queries/mouvements";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { Permission, TypeMouvement } from "@/types";
+import { Permission, TypeMouvement, parsePaginationQuery } from "@/types";
 import type { CreateMouvementDTO, MouvementFilters } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 const VALID_TYPES = Object.values(TypeMouvement);
 
@@ -11,6 +12,13 @@ export async function GET(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.STOCK_VOIR);
     const { searchParams } = new URL(request.url);
+
+    // Pagination
+    const paginationResult = parsePaginationQuery(searchParams);
+    if (!paginationResult.valid) {
+      return apiError(400, paginationResult.error);
+    }
+    const { limit, offset } = paginationResult.params;
 
     const filters: MouvementFilters = {};
     const produitId = searchParams.get("produitId");
@@ -28,23 +36,17 @@ export async function GET(request: NextRequest) {
     const dateTo = searchParams.get("dateTo");
     if (dateTo) filters.dateTo = dateTo;
 
-    const mouvements = await getMouvements(auth.activeSiteId, filters);
+    const { data, total } = await getMouvements(auth.activeSiteId, filters, { limit, offset });
 
-    return NextResponse.json({
-      mouvements,
-      total: mouvements.length,
-    });
+    return NextResponse.json({ data, total, limit, offset });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation des mouvements." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation des mouvements.");
   }
 }
 
@@ -102,10 +104,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     const data: CreateMouvementDTO = {
@@ -125,21 +124,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(mouvement, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
     if (message.includes("Stock insuffisant")) {
-      return NextResponse.json({ status: 409, message }, { status: 409 });
+      return apiError(409, message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la creation du mouvement." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la creation du mouvement.");
   }
 }

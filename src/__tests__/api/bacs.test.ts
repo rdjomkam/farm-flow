@@ -151,34 +151,34 @@ describe("GET /api/bacs", () => {
         updatedAt: new Date(),
       },
     ];
-    mockGetBacs.mockResolvedValue(fakeBacs);
+    mockGetBacs.mockResolvedValue({ data: fakeBacs, total: 2 });
 
     const response = await GET(makeRequest("/api/bacs"));
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.bacs).toHaveLength(2);
+    expect(data.data).toHaveLength(2);
     expect(data.total).toBe(2);
-    expect(data.bacs[0].nom).toBe("Bac 1");
-    expect(data.bacs[1].vagueCode).toBe("VAGUE-2024-001");
+    expect(data.data[0].nom).toBe("Bac 1");
+    expect(data.data[1].vagueCode).toBe("VAGUE-2024-001");
   });
 
   it("passe le siteId a getBacs", async () => {
-    mockGetBacs.mockResolvedValue([]);
+    mockGetBacs.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/bacs"));
 
-    expect(mockGetBacs).toHaveBeenCalledWith("site-1");
+    expect(mockGetBacs).toHaveBeenCalledWith("site-1", expect.any(Object));
   });
 
   it("retourne une liste vide quand il n'y a pas de bacs", async () => {
-    mockGetBacs.mockResolvedValue([]);
+    mockGetBacs.mockResolvedValue({ data: [], total: 0 });
 
     const response = await GET(makeRequest("/api/bacs"));
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.bacs).toHaveLength(0);
+    expect(data.data).toHaveLength(0);
     expect(data.total).toBe(0);
   });
 
@@ -273,9 +273,7 @@ describe("POST /api/bacs", () => {
     const data = await response.json();
 
     expect(response.status).toBe(402);
-    expect(data.error).toBe("QUOTA_DEPASSE");
-    expect(data.ressource).toBe("bacs");
-    expect(data.limite).toBe(3);
+    expect(data.code).toBe("QUOTA_DEPASSE");
     expect(data.message).toContain("3");
   });
 
@@ -292,8 +290,8 @@ describe("POST /api/bacs", () => {
     const data = await response.json();
 
     expect(response.status).toBe(402);
-    expect(data.error).toBe("QUOTA_DEPASSE");
-    expect(data.limite).toBe(10);
+    expect(data.code).toBe("QUOTA_DEPASSE");
+    expect(data.message).toContain("10");
   });
 
   it("plan ENTREPRISE (limite 999 = illimite) → creation autorisee", async () => {
@@ -333,7 +331,7 @@ describe("POST /api/bacs", () => {
     const data = await response.json();
 
     expect(response.status).toBe(402);
-    expect(data.error).toBe("QUOTA_DEPASSE");
+    expect(data.code).toBe("QUOTA_DEPASSE");
   });
 
   it("retourne 400 si le nom est manquant", async () => {

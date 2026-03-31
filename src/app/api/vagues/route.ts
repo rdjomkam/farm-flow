@@ -4,13 +4,14 @@ import { getVagues, createVague } from "@/lib/queries/vagues";
 import { prisma } from "@/lib/db";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { Permission, StatutVague } from "@/types";
+import { Permission, StatutVague, parsePaginationQuery } from "@/types";
 import type { CreateVagueDTO } from "@/types";
 import { normaliseLimite, isQuotaAtteint } from "@/lib/abonnements/check-quotas";
 import { getAbonnementActif } from "@/lib/queries/abonnements";
 import { PLAN_LIMITES } from "@/lib/abonnements-constants";
 import type { QuotaRessource } from "@/lib/abonnements/check-quotas";
 import { ErrorKeys } from "@/lib/api-error-keys";
+import { apiError } from "@/lib/api-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,9 +19,20 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const statut = searchParams.get("statut");
 
-    const vagues = await getVagues(auth.activeSiteId, statut ? { statut } : undefined);
+    // Pagination
+    const paginationResult = parsePaginationQuery(searchParams);
+    if (!paginationResult.valid) {
+      return apiError(400, paginationResult.error);
+    }
+    const { limit, offset } = paginationResult.params;
 
-    const result = vagues.map((v) => {
+    const { data: vaguesRaw, total } = await getVagues(
+      auth.activeSiteId,
+      statut ? { statut } : undefined,
+      { limit, offset }
+    );
+
+    const data = vaguesRaw.map((v) => {
       const now = v.dateFin ?? new Date();
       const joursEcoules = Math.floor(
         (now.getTime() - v.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
@@ -40,19 +52,16 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return cachedJson({ vagues: result, total: result.length }, "medium");
+    return cachedJson({ data, total, limit, offset }, "medium");
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     console.error("[API GET /vagues]", error);
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation des vagues.", errorKey: ErrorKeys.SERVER_GET_VAGUES },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation des vagues.", { code: ErrorKeys.SERVER_GET_VAGUES });
   }
 }
 
@@ -152,10 +161,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     const data: CreateVagueDTO = {
@@ -213,25 +219,17 @@ export async function POST(request: NextRequest) {
     });
 
     if (!quotaResult.ok) {
-      return NextResponse.json(
-        {
-          status: 402,
-          error: "QUOTA_DEPASSE",
-          ressource: "vagues",
-          limite: quotaResult.limite,
-          message: `Vous avez atteint la limite de ${quotaResult.limite} vague(s) en cours autorisée(s) par votre plan. Terminez une vague existante ou passez à un plan supérieur.`,
-        },
-        { status: 402 }
+      return apiError(
+        402,
+        `Vous avez atteint la limite de ${quotaResult.limite} vague(s) en cours autorisée(s) par votre plan. Terminez une vague existante ou passez à un plan supérieur.`,
+        { code: "QUOTA_DEPASSE" }
       );
     }
 
     const vague = await createVague(auth.activeSiteId, data);
 
     if (!vague) {
-      return NextResponse.json(
-        { status: 500, message: "Erreur lors de la creation de la vague.", errorKey: ErrorKeys.SERVER_CREATE_VAGUE },
-        { status: 500 }
-      );
+      return apiError(500, "Erreur lors de la creation de la vague.", { code: ErrorKeys.SERVER_CREATE_VAGUE });
     }
 
     const now = new Date();
@@ -257,26 +255,23 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message =
       error instanceof Error ? error.message : "Erreur serveur inattendue.";
 
     if (message.includes("deja assigne") || message.includes("deja utilise")) {
-      return NextResponse.json({ status: 409, message }, { status: 409 });
+      return apiError(409, message);
     }
 
     if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
 
     console.error("[API POST /vagues]", error);
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la creation de la vague.", errorKey: ErrorKeys.SERVER_CREATE_VAGUE },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la creation de la vague.", { code: ErrorKeys.SERVER_CREATE_VAGUE });
   }
 }

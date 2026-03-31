@@ -225,7 +225,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
       const dateFin = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
       const res = await activiteService.list({ dateDebut, dateFin });
       if (res.ok && res.data) {
-        const fetched = res.data.activites ?? [];
+        const fetched = res.data.data ?? [];
         monthCacheRef.current.set(cacheKey, fetched);
         setActivitesData(fetched);
       }

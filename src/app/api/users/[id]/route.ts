@@ -3,6 +3,7 @@ import { requireHasPermission, ForbiddenError } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
 import { getUserAdminDetail, updateUserAdmin, countActiveAdmins } from "@/lib/queries/users-admin";
 import { Permission, Role } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const user = await getUserAdminDetail(id);
     if (!user) {
-      return NextResponse.json({ status: 404, message: "Utilisateur introuvable." }, { status: 404 });
+      return apiError(404, "Utilisateur introuvable.");
     }
 
     return NextResponse.json({
@@ -30,12 +31,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json({ status: 500, message: "Erreur serveur." }, { status: 500 });
+    return apiError(500, "Erreur serveur.");
   }
 }
 
@@ -63,25 +64,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     // Load target user
     const target = await getUserAdminDetail(id);
     if (!target) {
-      return NextResponse.json({ status: 404, message: "Utilisateur introuvable." }, { status: 404 });
+      return apiError(404, "Utilisateur introuvable.");
     }
 
     // Block modification of system users
     if (target.isSystem) {
-      return NextResponse.json(
-        { status: 403, message: "Impossible de modifier un utilisateur systeme." },
-        { status: 403 }
-      );
+      return apiError(403, "Impossible de modifier un utilisateur systeme.");
     }
 
     // Guard: cannot deactivate the last ADMIN
     if (body.isActive === false && target.globalRole === Role.ADMIN) {
       const adminCount = await countActiveAdmins();
       if (adminCount <= 1) {
-        return NextResponse.json(
-          { status: 409, message: "Impossible de desactiver le seul administrateur de la plateforme." },
-          { status: 409 }
-        );
+        return apiError(409, "Impossible de desactiver le seul administrateur de la plateforme.");
       }
     }
 
@@ -89,7 +84,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (body.globalRole !== undefined) {
       const validRoles = Object.values(Role);
       if (!validRoles.includes(body.globalRole)) {
-        return NextResponse.json({ status: 400, message: "Role invalide." }, { status: 400 });
+        return apiError(400, "Role invalide.");
       }
     }
 
@@ -114,14 +109,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     if (error && typeof error === "object" && "code" in error && (error as { code: string }).code === "P2002") {
-      return NextResponse.json({ status: 409, message: "Email ou telephone deja utilise." }, { status: 409 });
+      return apiError(409, "Email ou telephone deja utilise.");
     }
-    return NextResponse.json({ status: 500, message: "Erreur serveur lors de la modification." }, { status: 500 });
+    return apiError(500, "Erreur serveur lors de la modification.");
   }
 }

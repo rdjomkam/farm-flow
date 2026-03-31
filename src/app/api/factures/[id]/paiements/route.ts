@@ -4,6 +4,7 @@ import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission, ModePaiement } from "@/types";
 import type { CreatePaiementDTO } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 const VALID_MODES = Object.values(ModePaiement);
 
@@ -28,10 +29,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     const data: CreatePaiementDTO = {
@@ -49,21 +47,18 @@ export async function POST(request: NextRequest, { params }: Params) {
     return NextResponse.json(paiement, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
     if (message.includes("Impossible") || message.includes("depasse") || message.includes("deja")) {
-      return NextResponse.json({ status: 409, message }, { status: 409 });
+      return apiError(409, message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de l'enregistrement du paiement." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de l'enregistrement du paiement.");
   }
 }

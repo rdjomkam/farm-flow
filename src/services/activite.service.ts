@@ -9,7 +9,10 @@ import type { ActiviteWithRelations, CreateActiviteDTO } from "@/types";
 // ---------------------------------------------------------------------------
 
 interface ActiviteListResult {
-  activites: ActiviteWithRelations[];
+  data: ActiviteWithRelations[];
+  total: number;
+  limit: number;
+  offset: number;
 }
 
 interface ActiviteCountResult {

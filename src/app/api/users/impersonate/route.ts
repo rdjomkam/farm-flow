@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, getSessionToken, AuthError } from "@/lib/auth";
 import { ForbiddenError } from "@/lib/permissions";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-utils";
 
 /** DELETE /api/users/impersonate — arreter l'impersonation en cours */
 export async function DELETE(request: NextRequest) {
@@ -9,15 +10,12 @@ export async function DELETE(request: NextRequest) {
     const session = await requireAuth(request);
 
     if (!session.isImpersonating || !session.originalUserId) {
-      return NextResponse.json(
-        { status: 409, message: "Vous n'etes pas en mode impersonation." },
-        { status: 409 }
-      );
+      return apiError(409, "Vous n'etes pas en mode impersonation.");
     }
 
     const sessionToken = getSessionToken(request);
     if (!sessionToken) {
-      return NextResponse.json({ status: 401, message: "Token de session manquant." }, { status: 401 });
+      return apiError(401, "Token de session manquant.");
     }
 
     // Restore original admin user
@@ -33,11 +31,11 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json({ status: 500, message: "Erreur serveur." }, { status: 500 });
+    return apiError(500, "Erreur serveur.");
   }
 }

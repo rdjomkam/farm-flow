@@ -18,12 +18,12 @@ export default async function NouveauRelevePage() {
 
   const t = await getTranslations("releves");
 
-  const [vaguesRaw, produitsRaw] = await Promise.all([
+  const [vaguesResult, produitsRaw] = await Promise.all([
     getVagues(session.activeSiteId, { statut: StatutVague.EN_COURS }),
     getProduits(session.activeSiteId),
   ]);
 
-  const vagues = vaguesRaw.map((v) => ({
+  const vagues = vaguesResult.data.map((v) => ({
     id: v.id,
     code: v.code,
   }));

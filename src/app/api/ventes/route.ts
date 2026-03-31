@@ -3,13 +3,21 @@ import { cachedJson } from "@/lib/api-cache";
 import { getVentes, createVente } from "@/lib/queries/ventes";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { Permission } from "@/types";
+import { Permission, parsePaginationQuery } from "@/types";
 import type { CreateVenteDTO, VenteFilters } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 export async function GET(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.VENTES_VOIR);
     const { searchParams } = new URL(request.url);
+
+    // Pagination
+    const paginationResult = parsePaginationQuery(searchParams);
+    if (!paginationResult.valid) {
+      return apiError(400, paginationResult.error);
+    }
+    const { limit, offset } = paginationResult.params;
 
     const filters: VenteFilters = {};
     const clientId = searchParams.get("clientId");
@@ -21,20 +29,17 @@ export async function GET(request: NextRequest) {
     const dateTo = searchParams.get("dateTo");
     if (dateTo) filters.dateTo = dateTo;
 
-    const ventes = await getVentes(auth.activeSiteId, filters);
+    const { data, total } = await getVentes(auth.activeSiteId, filters, { limit, offset });
 
-    return cachedJson({ ventes, total: ventes.length }, "fast");
+    return cachedJson({ data, total, limit, offset }, "fast");
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation des ventes." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation des ventes.");
   }
 }
 
@@ -76,10 +81,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     const data: CreateVenteDTO = {
@@ -102,21 +104,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(vente, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable") || message.includes("inactif")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
     if (message.includes("insuffisant") || message.includes("annulee")) {
-      return NextResponse.json({ status: 409, message }, { status: 409 });
+      return apiError(409, message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la creation de la vente." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la creation de la vente.");
   }
 }

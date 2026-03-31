@@ -2494,6 +2494,9 @@ model GompertzVague {
    */
   confidenceLevel String
 
+  /** The configElevage.gompertzWInfDefault value used during this calibration */
+  configWInfUsed Float?
+
   siteId         String
   site           Site     @relation(fields: [siteId], references: [id])
 

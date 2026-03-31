@@ -27,7 +27,7 @@ export function useVentesList(
     queryFn: async () => {
       const result = await venteService.listVentes();
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement ventes");
-      return result.data.ventes as VenteWithRelations[];
+      return (result.data as unknown as { data: VenteWithRelations[]; total: number }).data;
     },
     initialData,
     staleTime: 2 * 60_000,
@@ -100,7 +100,7 @@ export function useFacturesList(
     queryFn: async () => {
       const result = await venteService.listFactures();
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement factures");
-      return result.data.factures as FactureWithRelations[];
+      return (result.data as unknown as { data: FactureWithRelations[]; total: number }).data;
     },
     initialData,
     staleTime: 2 * 60_000,

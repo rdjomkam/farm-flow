@@ -145,7 +145,17 @@ export async function getKParAliment(siteId: string): Promise<KParAlimentResult[
       sommeQuantite += vagueData.quantite;
     }
 
-    const kMoyen = sommeQuantite > 0 ? sommeKPondere / sommeQuantite : 0;
+    // Filtre amont : ignorer les produits dont la quantite totale est 0
+    if (sommeQuantite === 0) {
+      continue;
+    }
+
+    const kMoyen = sommeKPondere / sommeQuantite;
+
+    // Garde : kMoyen doit etre un nombre positif fini
+    if (isNaN(kMoyen) || !isFinite(kMoyen) || kMoyen <= 0) {
+      continue;
+    }
 
     const details: KParAlimentDetailVague[] = vaguesEntries.map(([vagueId, vagueData]) => ({
       vagueId,

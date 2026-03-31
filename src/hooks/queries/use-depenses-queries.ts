@@ -40,7 +40,7 @@ export function useDepensesList(filters?: DepenseFilters) {
     queryFn: async () => {
       const result = await depenseService.listDepenses(filters);
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement dépenses");
-      return result.data.depenses;
+      return (result.data as unknown as { data: DepenseWithRelations[]; total: number }).data;
     },
     staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,
@@ -223,7 +223,7 @@ export function useBesoinsList(
     queryFn: async () => {
       const result = await depenseService.listBesoins(filters);
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement besoins");
-      return result.data.listesBesoins;
+      return (result.data as unknown as { data: ListeBesoinsWithRelations[]; total: number }).data;
     },
     staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,

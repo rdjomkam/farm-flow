@@ -88,19 +88,19 @@ describe("GET /api/factures", () => {
         montantPaye: 0,
       },
     ];
-    mockGetFactures.mockResolvedValue(fakeFactures);
+    mockGetFactures.mockResolvedValue({ data: fakeFactures, total: 1 });
 
     const response = await GET_list(makeRequest("/api/factures"));
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.factures).toHaveLength(1);
+    expect(data.data).toHaveLength(1);
     expect(data.total).toBe(1);
-    expect(data.factures[0].numero).toBe("FAC-2026-001");
+    expect(data.data[0].numero).toBe("FAC-2026-001");
   });
 
   it("passe les filtres de statut et dates", async () => {
-    mockGetFactures.mockResolvedValue([]);
+    mockGetFactures.mockResolvedValue({ data: [], total: 0 });
 
     await GET_list(
       makeRequest("/api/factures?statut=BROUILLON&dateFrom=2026-01-01&dateTo=2026-03-31")
@@ -110,15 +110,15 @@ describe("GET /api/factures", () => {
       statut: StatutFacture.BROUILLON,
       dateFrom: "2026-01-01",
       dateTo: "2026-03-31",
-    });
+    }, expect.any(Object));
   });
 
   it("ignore un statut invalide", async () => {
-    mockGetFactures.mockResolvedValue([]);
+    mockGetFactures.mockResolvedValue({ data: [], total: 0 });
 
     await GET_list(makeRequest("/api/factures?statut=INVALID"));
 
-    expect(mockGetFactures).toHaveBeenCalledWith("site-1", {});
+    expect(mockGetFactures).toHaveBeenCalledWith("site-1", {}, expect.any(Object));
   });
 
   it("requiert la permission FACTURES_VOIR", async () => {

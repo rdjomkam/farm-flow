@@ -2,15 +2,26 @@ import { prisma } from "@/lib/db";
 import type { CreateBacDTO, UpdateBacDTO, BacResponse } from "@/types";
 import { TypeSystemeBac } from "@/types";
 
-/** Liste tous les bacs d'un site avec le code vague si assigne */
-export async function getBacs(siteId: string): Promise<BacResponse[]> {
-  const bacs = await prisma.bac.findMany({
-    where: { siteId },
-    include: { vague: { select: { code: true } } },
-    orderBy: { nom: "asc" },
-  });
+/** Liste tous les bacs d'un site avec le code vague si assigne, avec pagination */
+export async function getBacs(
+  siteId: string,
+  pagination?: { limit: number; offset: number }
+): Promise<{ data: BacResponse[]; total: number }> {
+  const limit = pagination?.limit ?? 50;
+  const offset = pagination?.offset ?? 0;
 
-  return bacs.map((b) => ({
+  const [bacs, total] = await Promise.all([
+    prisma.bac.findMany({
+      where: { siteId },
+      include: { vague: { select: { code: true } } },
+      orderBy: { nom: "asc" },
+      take: limit,
+      skip: offset,
+    }),
+    prisma.bac.count({ where: { siteId } }),
+  ]);
+
+  const data = bacs.map((b) => ({
     id: b.id,
     nom: b.nom,
     volume: b.volume,
@@ -24,6 +35,8 @@ export async function getBacs(siteId: string): Promise<BacResponse[]> {
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
   }));
+
+  return { data, total };
 }
 
 /** Recupere un bac par son ID (verifie qu'il appartient au site) */

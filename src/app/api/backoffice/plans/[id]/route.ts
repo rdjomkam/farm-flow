@@ -16,6 +16,7 @@ import {
   getPlanAbonnementById,
   updatePlanAbonnement,
 } from "@/lib/queries/plans-abonnements";
+import { apiError } from "@/lib/api-utils";
 import { requireSuperAdmin } from "@/lib/auth/backoffice";
 import { AuthError } from "@/lib/auth";
 import { ForbiddenError } from "@/lib/permissions";
@@ -36,34 +37,18 @@ export async function GET(
     const plan = await getPlanAbonnementById(id);
 
     if (!plan) {
-      return NextResponse.json(
-        { status: 404, message: "Plan introuvable.", errorKey: ErrorKeys.NOT_FOUND_PLAN },
-        { status: 404 }
-      );
+      return apiError(404, "Plan introuvable.", { code: ErrorKeys.NOT_FOUND_PLAN });
     }
 
     return NextResponse.json(plan);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors de la recuperation du plan.",
-        errorKey: ErrorKeys.SERVER_GET_PLAN,
-      },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation du plan.", { code: ErrorKeys.SERVER_GET_PLAN, });
   }
 }
 
@@ -77,10 +62,7 @@ export async function PUT(
 
     const plan = await getPlanAbonnementById(id);
     if (!plan) {
-      return NextResponse.json(
-        { status: 404, message: "Plan introuvable.", errorKey: ErrorKeys.NOT_FOUND_PLAN },
-        { status: 404 }
-      );
+      return apiError(404, "Plan introuvable.", { code: ErrorKeys.NOT_FOUND_PLAN });
     }
 
     const body = await request.json();
@@ -146,10 +128,7 @@ export async function PUT(
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     const data: UpdatePlanAbonnementDTO = {
@@ -175,25 +154,12 @@ export async function PUT(
     return NextResponse.json(updated);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors de la modification du plan.",
-        errorKey: ErrorKeys.SERVER_UPDATE_PLAN,
-      },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la modification du plan.", { code: ErrorKeys.SERVER_UPDATE_PLAN, });
   }
 }
 
@@ -207,22 +173,12 @@ export async function DELETE(
 
     const plan = await getPlanAbonnementById(id);
     if (!plan) {
-      return NextResponse.json(
-        { status: 404, message: "Plan introuvable.", errorKey: ErrorKeys.NOT_FOUND_PLAN },
-        { status: 404 }
-      );
+      return apiError(404, "Plan introuvable.", { code: ErrorKeys.NOT_FOUND_PLAN });
     }
 
     // Vérifier s'il y a des abonnés actifs — R4 : pas de suppression si abonnés actifs
     if (plan._count.abonnements > 0) {
-      return NextResponse.json(
-        {
-          status: 409,
-          message: "Impossible de desactiver un plan avec des abonnes actifs.",
-          errorKey: ErrorKeys.CONFLICT_CANNOT_DEACTIVATE_WITH_SUBSCRIBERS,
-        },
-        { status: 409 }
-      );
+      return apiError(409, "Impossible de desactiver un plan avec des abonnes actifs.", { code: ErrorKeys.CONFLICT_CANNOT_DEACTIVATE_WITH_SUBSCRIBERS, });
     }
 
     // Soft delete : désactiver le plan (jamais de suppression physique)
@@ -230,24 +186,11 @@ export async function DELETE(
     return NextResponse.json({ message: "Plan desactive avec succes." });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors de la desactivation du plan.",
-        errorKey: ErrorKeys.SERVER_DELETE_PLAN,
-      },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la desactivation du plan.", { code: ErrorKeys.SERVER_DELETE_PLAN, });
   }
 }

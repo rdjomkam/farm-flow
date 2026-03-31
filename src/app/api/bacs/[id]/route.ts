@@ -6,6 +6,7 @@ import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission, TypeSystemeBac } from "@/types";
 import type { UpdateBacDTO } from "@/types";
 import { ErrorKeys } from "@/lib/api-error-keys";
+import { apiError } from "@/lib/api-utils";
 
 export async function GET(
   request: NextRequest,
@@ -17,10 +18,7 @@ export async function GET(
     const bac = await getBacById(id, auth.activeSiteId);
 
     if (!bac) {
-      return NextResponse.json(
-        { status: 404, message: "Bac introuvable.", errorKey: ErrorKeys.NOT_FOUND_BAC },
-        { status: 404 }
-      );
+      return apiError(404, "Bac introuvable.", { code: ErrorKeys.NOT_FOUND_BAC });
     }
 
     return NextResponse.json({
@@ -39,15 +37,12 @@ export async function GET(
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation du bac.", errorKey: ErrorKeys.SERVER_GET_BAC },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation du bac.", { code: ErrorKeys.SERVER_GET_BAC });
   }
 }
 
@@ -101,10 +96,7 @@ export async function PUT(
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     const data: UpdateBacDTO = {};
@@ -116,10 +108,7 @@ export async function PUT(
     if (body.typeSysteme !== undefined) data.typeSysteme = body.typeSysteme ?? null;
 
     if (Object.keys(data).length === 0) {
-      return NextResponse.json(
-        { status: 400, message: "Aucun champ a modifier." },
-        { status: 400 }
-      );
+      return apiError(400, "Aucun champ a modifier.");
     }
 
     const bac = await updateBac(id, auth.activeSiteId, data);
@@ -127,20 +116,17 @@ export async function PUT(
     return NextResponse.json(bac);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur inattendue.";
 
     if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
 
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la mise a jour du bac.", errorKey: ErrorKeys.SERVER_UPDATE_BAC },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la mise a jour du bac.", { code: ErrorKeys.SERVER_UPDATE_BAC });
   }
 }

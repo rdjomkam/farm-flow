@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
+import { formatNumber } from "@/lib/format";
 import {
   ArrowLeft,
   Users,
@@ -135,7 +136,7 @@ export function VenteDetailClient({ vente, permissions }: Props) {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t("ventes.detail.prixKg")}</span>
-              <span>{vente.prixUnitaireKg.toLocaleString("fr-FR")} F</span>
+              <span>{formatNumber(vente.prixUnitaireKg)} F</span>
             </div>
           </div>
         </CardContent>
@@ -144,7 +145,7 @@ export function VenteDetailClient({ vente, permissions }: Props) {
       {/* Total */}
       <div className="rounded-lg bg-muted/50 p-4 text-center">
         <p className="text-2xl font-bold">
-          {vente.montantTotal.toLocaleString("fr-FR")} FCFA
+          {formatNumber(vente.montantTotal)} FCFA
         </p>
         <p className="text-xs text-muted-foreground">{t("ventes.detail.montantTotal")}</p>
       </div>
@@ -164,8 +165,8 @@ export function VenteDetailClient({ vente, permissions }: Props) {
                 <p className="font-semibold text-sm">{vente.facture.numero}</p>
                 <p className="text-xs text-muted-foreground">
                   {t("ventes.detail.payeLabel", {
-                    paye: vente.facture.montantPaye.toLocaleString("fr-FR"),
-                    total: vente.facture.montantTotal.toLocaleString("fr-FR"),
+                    paye: formatNumber(vente.facture.montantPaye),
+                    total: formatNumber(vente.facture.montantTotal),
                   })}
                 </p>
               </div>

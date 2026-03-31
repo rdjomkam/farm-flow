@@ -81,59 +81,59 @@ describe("GET /api/stock/mouvements", () => {
   });
 
   it("retourne la liste des mouvements avec le total", async () => {
-    mockGetMouvements.mockResolvedValue([FAKE_MOUVEMENT]);
+    mockGetMouvements.mockResolvedValue({ data: [FAKE_MOUVEMENT], total: 1 });
 
     const response = await GET(makeRequest("/api/stock/mouvements"));
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.mouvements).toHaveLength(1);
+    expect(data.data).toHaveLength(1);
     expect(data.total).toBe(1);
-    expect(mockGetMouvements).toHaveBeenCalledWith("site-1", {});
+    expect(mockGetMouvements).toHaveBeenCalledWith("site-1", {}, expect.any(Object));
   });
 
   it("passe le filtre produitId", async () => {
-    mockGetMouvements.mockResolvedValue([]);
+    mockGetMouvements.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/stock/mouvements?produitId=prod-1"));
 
     expect(mockGetMouvements).toHaveBeenCalledWith("site-1", {
       produitId: "prod-1",
-    });
+    }, expect.any(Object));
   });
 
   it("passe le filtre type", async () => {
-    mockGetMouvements.mockResolvedValue([]);
+    mockGetMouvements.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/stock/mouvements?type=ENTREE"));
 
     expect(mockGetMouvements).toHaveBeenCalledWith("site-1", {
       type: TypeMouvement.ENTREE,
-    });
+    }, expect.any(Object));
   });
 
   it("passe le filtre vagueId", async () => {
-    mockGetMouvements.mockResolvedValue([]);
+    mockGetMouvements.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/stock/mouvements?vagueId=vague-1"));
 
     expect(mockGetMouvements).toHaveBeenCalledWith("site-1", {
       vagueId: "vague-1",
-    });
+    }, expect.any(Object));
   });
 
   it("passe le filtre commandeId", async () => {
-    mockGetMouvements.mockResolvedValue([]);
+    mockGetMouvements.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/stock/mouvements?commandeId=cmd-1"));
 
     expect(mockGetMouvements).toHaveBeenCalledWith("site-1", {
       commandeId: "cmd-1",
-    });
+    }, expect.any(Object));
   });
 
   it("passe les filtres de date", async () => {
-    mockGetMouvements.mockResolvedValue([]);
+    mockGetMouvements.mockResolvedValue({ data: [], total: 0 });
 
     await GET(
       makeRequest("/api/stock/mouvements?dateFrom=2026-01-01&dateTo=2026-03-31")
@@ -142,15 +142,15 @@ describe("GET /api/stock/mouvements", () => {
     expect(mockGetMouvements).toHaveBeenCalledWith("site-1", {
       dateFrom: "2026-01-01",
       dateTo: "2026-03-31",
-    });
+    }, expect.any(Object));
   });
 
   it("ignore un type invalide", async () => {
-    mockGetMouvements.mockResolvedValue([]);
+    mockGetMouvements.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/stock/mouvements?type=INVALIDE"));
 
-    expect(mockGetMouvements).toHaveBeenCalledWith("site-1", {});
+    expect(mockGetMouvements).toHaveBeenCalledWith("site-1", {}, expect.any(Object));
   });
 
   it("retourne 401 si non authentifie", async () => {

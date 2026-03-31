@@ -4,6 +4,7 @@ import {
   updateClient,
   deleteClient,
 } from "@/lib/queries/clients";
+import { apiError } from "@/lib/api-utils";
 import { AuthError } from "@/lib/auth";
 import { normalizePhone } from "@/lib/auth/phone";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
@@ -19,24 +20,18 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     const client = await getClientById(id, auth.activeSiteId);
     if (!client) {
-      return NextResponse.json(
-        { status: 404, message: "Client introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Client introuvable.");
     }
 
     return NextResponse.json(client);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur.");
   }
 }
 
@@ -57,16 +52,16 @@ export async function PUT(request: NextRequest, { params }: Params) {
     return NextResponse.json(client);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
-    return NextResponse.json({ status: 500, message }, { status: 500 });
+    return apiError(500, message);
   }
 }
 
@@ -79,15 +74,15 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
-    return NextResponse.json({ status: 500, message }, { status: 500 });
+    return apiError(500, message);
   }
 }

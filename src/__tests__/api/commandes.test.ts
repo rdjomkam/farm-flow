@@ -93,39 +93,39 @@ describe("GET /api/commandes", () => {
   });
 
   it("retourne la liste des commandes avec le total", async () => {
-    mockGetCommandes.mockResolvedValue([FAKE_COMMANDE]);
+    mockGetCommandes.mockResolvedValue({ data: [FAKE_COMMANDE], total: 1 });
 
     const response = await GET(makeRequest("/api/commandes"));
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.commandes).toHaveLength(1);
+    expect(data.data).toHaveLength(1);
     expect(data.total).toBe(1);
-    expect(mockGetCommandes).toHaveBeenCalledWith("site-1", {});
+    expect(mockGetCommandes).toHaveBeenCalledWith("site-1", {}, expect.any(Object));
   });
 
   it("passe le filtre statut", async () => {
-    mockGetCommandes.mockResolvedValue([]);
+    mockGetCommandes.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/commandes?statut=ENVOYEE"));
 
     expect(mockGetCommandes).toHaveBeenCalledWith("site-1", {
       statut: StatutCommande.ENVOYEE,
-    });
+    }, expect.any(Object));
   });
 
   it("passe le filtre fournisseurId", async () => {
-    mockGetCommandes.mockResolvedValue([]);
+    mockGetCommandes.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/commandes?fournisseurId=four-1"));
 
     expect(mockGetCommandes).toHaveBeenCalledWith("site-1", {
       fournisseurId: "four-1",
-    });
+    }, expect.any(Object));
   });
 
   it("passe les filtres de date", async () => {
-    mockGetCommandes.mockResolvedValue([]);
+    mockGetCommandes.mockResolvedValue({ data: [], total: 0 });
 
     await GET(
       makeRequest("/api/commandes?dateFrom=2026-01-01&dateTo=2026-03-31")
@@ -134,15 +134,15 @@ describe("GET /api/commandes", () => {
     expect(mockGetCommandes).toHaveBeenCalledWith("site-1", {
       dateFrom: "2026-01-01",
       dateTo: "2026-03-31",
-    });
+    }, expect.any(Object));
   });
 
   it("ignore un statut invalide", async () => {
-    mockGetCommandes.mockResolvedValue([]);
+    mockGetCommandes.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/commandes?statut=INVALIDE"));
 
-    expect(mockGetCommandes).toHaveBeenCalledWith("site-1", {});
+    expect(mockGetCommandes).toHaveBeenCalledWith("site-1", {}, expect.any(Object));
   });
 
   it("retourne 401 si non authentifie", async () => {

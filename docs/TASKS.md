@@ -6708,3 +6708,396 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 - [x] `FAIT` Audit : 43/45 fichiers 100% conformes, 2 anomalies mineures dans planning/ (reportees)
 - [x] `FAIT` Parite fr/en verifiee et corrigee (remises.json 2 cles manquantes ajoutees)
 - [x] `FAIT` Rapports : docs/tests/rapport-sprint-I18N.md + docs/reviews/review-sprint-I18N.md
+
+---
+
+## Sprint CR1 — Code Review : Intégrité données & Validation API
+
+**Objectif :** Corriger les problèmes critiques et hauts identifiés dans la code review du 31 mars 2026 : pagination, validation partagée, gardes de calcul, format d'erreur unifié.
+**Référence :** `docs/reviews/farmflow-code-review-2026-03-31.docx`
+
+---
+
+### Story CR1.1 — Pagination sur tous les endpoints GET
+**Assigné à :** @developer | **Dépend de :** Aucune | **Statut :** `FAIT` | **Type :** FEATURE
+**Priorité :** Critique
+
+**Description :** Les endpoints GET (releves, activites, vagues, bacs, etc.) retournent des résultats non bornés. Un batch avec 1000+ relevés retourne tout d'un coup, ce qui pose un risque de performance et de mémoire côté client.
+
+**Tâches :**
+- [x] `FAIT` Définir une interface `PaginationParams { limit: number; offset: number }` dans `src/types/api.ts`
+- [x] `FAIT` Définir une interface `PaginatedResponse<T> { data: T[]; total: number; limit: number; offset: number }` dans `src/types/api.ts`
+- [x] `FAIT` Ajouter limit/offset (défaut 50, max 200) sur `GET /api/releves`
+- [x] `FAIT` Ajouter limit/offset sur `GET /api/vagues`, `GET /api/bacs`, `GET /api/activites`
+- [x] `FAIT` Ajouter limit/offset sur `GET /api/ventes`, `GET /api/factures`, `GET /api/commandes`
+- [x] `FAIT` Ajouter limit/offset sur `GET /api/stock/mouvements`, `GET /api/depenses`
+- [x] `FAIT` Mettre à jour les hooks React Query pour passer limit/offset
+- [x] `FAIT` Tests : vérifier que limit > 200 retourne 400, que offset fonctionne correctement
+
+**Critères d'acceptation :**
+- Tous les endpoints GET de liste supportent limit/offset
+- Défaut : limit=50, max : 200
+- La réponse inclut `total` pour permettre la pagination côté client
+- Aucune régression sur les pages existantes
+
+---
+
+### Story CR1.2 — Extraction des schémas de validation Zod partagés
+**Assigné à :** @architect + @developer | **Dépend de :** Aucune | **Statut :** `FAIT` | **Type :** REFACTOR
+**Priorité :** Haute
+
+**Description :** La logique de validation pour TypeReleve, dates, consommations est dupliquée 3 fois (POST, PUT, PATCH) dans les routes releves. Extraire dans des schémas Zod partagés.
+
+**Tâches :**
+- [x] `FAIT` Créer `src/lib/validation/releve.schema.ts` avec schémas Zod par type de relevé
+- [x] `FAIT` Créer `src/lib/validation/common.schema.ts` pour date, pagination, consommations
+- [x] `FAIT` Refactoriser `src/app/api/releves/route.ts` POST pour utiliser les schémas Zod
+- [x] `FAIT` Refactoriser `src/app/api/releves/[id]/route.ts` PUT et PATCH pour utiliser les schémas Zod
+- [x] `FAIT` Supprimer le code de validation dupliqué (estimé ~200 lignes)
+- [x] `FAIT` Ajouter validation des bornes numériques : pH [0-14], température [0-50°C], O₂ [0-20 mg/L], NH₃ [0-10 mg/L]
+- [x] `FAIT` Ajouter max-length sur les champs texte (notes: 2000, description: 2000, raison: 500)
+- [x] `FAIT` Tests unitaires sur les schémas Zod
+
+**Critères d'acceptation :**
+- Un seul endroit définit la validation par type de relevé
+- Les bornes numériques sont validées côté API
+- Les champs texte ont des limites de longueur
+- Aucune régression (tous les tests existants passent)
+
+---
+
+### Story CR1.3 — Format d'erreur API unifié
+**Assigné à :** @architect + @developer | **Dépend de :** Aucune | **Statut :** `FAIT` | **Type :** REFACTOR
+**Priorité :** Moyenne
+
+**Description :** Les erreurs API utilisent des formats incohérents : `{status, message, errors}`, `{status, error, ressource, limite}`, `{status, message}`. Unifier dans un seul format.
+
+**Tâches :**
+- [x] `FAIT` Définir `ApiErrorResponse { status: number; message: string; code?: string; errors?: { field: string; message: string }[] }` dans `src/types/api.ts`
+- [x] `FAIT` Créer helper `apiError(status, message, opts?)` dans `src/lib/api-utils.ts`
+- [x] `FAIT` Migrer les routes releves vers le format unifié
+- [x] `FAIT` Migrer les routes vagues, bacs, activites vers le format unifié
+- [x] `FAIT` Migrer les routes stock, ventes, factures vers le format unifié
+- [x] `FAIT` Mettre à jour les hooks React Query pour parser le format unifié
+
+**Critères d'acceptation :**
+- Toutes les réponses d'erreur utilisent la même structure
+- Le helper `apiError()` est utilisé dans toutes les routes
+- Build OK + tests passent
+
+---
+
+### Story CR1.4 — Garde SGR négatif et arrondi vivants par bac
+**Assigné à :** @developer | **Dépend de :** Aucune | **Statut :** `FAIT` | **Type :** BUGFIX
+**Priorité :** Haute
+
+**Description :** Deux problèmes identifiés dans `src/lib/calculs.ts` :
+1. `calculerSGRRequis()` retourne un SGR négatif si poidsObjectif < poidsMoyenActuel (physiquement impossible)
+2. `computeVivantsByBac()` perd des poissons lors de la répartition par arrondi (1000/3 = 333×3 = 999)
+
+**Tâches :**
+- [x] `FAIT` Ajouter garde dans `calculerSGRRequis()` : retourner null si poidsObjectif <= poidsMoyenActuel
+- [x] `FAIT` Corriger `computeVivantsByBac()` : utiliser floor + distribuer le reste au dernier bac
+- [x] `FAIT` Ajouter cap sur `genererCourbeProjection()` : maximum 500 points (éviter boucle infinie)
+- [x] `FAIT` Tests unitaires pour chaque correction
+
+**Critères d'acceptation :**
+- `calculerSGRRequis(50, 30, 10)` retourne null (pas un SGR négatif)
+- `computeVivantsByBac(1000, 3 bacs)` retourne [334, 333, 333] (total = 1000)
+- `genererCourbeProjection(50, 2, 10000)` retourne max 500 points
+
+---
+
+## Sprint CR2 — Code Review : Refinements Gompertz
+
+**Objectif :** Corriger les problèmes spécifiques au modèle de croissance Gompertz identifiés dans la code review.
+**Dépend de :** Sprint CR1 (non bloquant, peut démarrer en parallèle)
+**Référence :** `docs/reviews/farmflow-code-review-2026-03-31.docx`
+
+---
+
+### Story CR2.1 — Correction seuil asymétrique recalibrage W∞
+**Assigné à :** @developer | **Dépend de :** Aucune | **Statut :** `FAIT` | **Type :** BUGFIX
+**Priorité :** Haute
+
+**Description :** Dans `src/app/api/vagues/[id]/gompertz/route.ts`, le seuil de recalibrage compare `|old - new| > new × 0.1`. Ce calcul est asymétrique : une hausse de 8% ne déclenche pas le recalibrage mais une baisse de 8% le déclenche.
+
+**Tâches :**
+- [x] `FAIT` Remplacer la comparaison asymétrique par : `Math.abs(old - new) / Math.max(old, new) > 0.1`
+- [x] `FAIT` Ajouter test unitaire vérifiant le comportement symétrique (hausse et baisse de 10%)
+
+**Critères d'acceptation :**
+- Un changement de W∞ de 1200→1330 (+10.8%) ET de 1200→1070 (-10.8%) déclenchent tous les deux le recalibrage
+- Tests passent
+
+---
+
+### Story CR2.2 — Fallback numérique pour projection proche asymptote
+**Assigné à :** @developer | **Dépend de :** Aucune | **Statut :** `FAIT` | **Type :** FEATURE
+**Priorité :** Moyenne
+
+**Description :** `projeterDateRecolte()` retourne null pour tout poidsObjectif ≥ 99% de W∞. Le seuil de 99% est arbitraire et rejette des projections valides pour les gros poissons. Ajouter un fallback par recherche numérique (bisection) pour la zone asymptotique.
+
+**Tâches :**
+- [x] `FAIT` Implémenter une fonction `numericallyInvertGompertz(params, targetWeight, currentDay)` par bisection dans `src/lib/gompertz.ts`
+- [x] `FAIT` Modifier `projeterDateRecolte()` : utiliser le fallback numérique si poidsObjectif ≥ 95% de W∞ (au lieu de retourner null à 99%)
+- [x] `FAIT` Ajouter tests : objectif à 96%, 98%, 99.5% de W∞
+- [x] `FAIT` Documenter le changement dans le JSDoc
+
+**Critères d'acceptation :**
+- `projeterDateRecolte({wInfinity: 1200, k: 0.03, ti: 60}, 1150, 50)` retourne un nombre > 0 (pas null)
+- Précision du fallback : ±0.5 jour
+- Tests passent
+
+---
+
+### Story CR2.3 — Validation K dans gompertz-analytics
+**Assigné à :** @developer | **Dépend de :** Aucune | **Statut :** `TODO` | **Type :** BUGFIX
+**Priorité :** Moyenne
+
+**Description :** Dans `src/lib/queries/gompertz-analytics.ts`, `kMoyen` n'est pas validé avant d'être passé à `evaluerKGompertz()`. Si kMoyen est NaN, 0 ou Infinity, le résultat est imprévisible.
+
+**Tâches :**
+- [ ] `TODO` Ajouter garde : `if (isNaN(kMoyen) || !isFinite(kMoyen) || kMoyen <= 0) continue;`
+- [ ] `TODO` Filtrer les produits avec `sommeQuantite === 0` en amont (avant le calcul de kMoyen)
+- [ ] `TODO` Test unitaire avec données edge case (quantité 0, K négatif)
+
+**Critères d'acceptation :**
+- Un produit avec 0 quantité totale n'apparaît pas dans les résultats
+- Un K de 0 ou NaN est filtré silencieusement
+- Tests passent
+
+---
+
+### Story CR2.4 — Alignement tests Gompertz avec production
+**Assigné à :** @tester | **Dépend de :** Aucune | **Statut :** `FAIT` | **Type :** TEST
+**Priorité :** Moyenne
+
+**Description :** Le script de test `scripts/test-gompertz-lm.ts` utilise des bornes différentes de la production (`ti: [0, 120]` vs `[0, 300]`) et un K initial différent (0.03 vs 0.018). Les données de test sont parfaites (pas de bruit de mesure).
+
+**Tâches :**
+- [x] `FAIT` Aligner bornes ti du script de test : `[0, 300]` (comme production)
+- [x] `FAIT` Aligner K initial du script de test : `0.018` (comme CLARIAS_DEFAULTS.k)
+- [x] `FAIT` Ajouter un jeu de données bruité (±5-10% variance aléatoire sur les poids)
+- [x] `FAIT` Ajouter un cas de test avec ti > 120 jours
+- [x] `FAIT` Vérifier que tous les cas passent avec R² > 0.90
+
+**Critères d'acceptation :**
+- Bornes et valeurs initiales identiques entre test et production
+- Au moins 1 jeu de données bruité validé
+- `npm run test:gompertz` passe
+
+---
+
+### Story CR2.5 — Revue seuils de confiance Gompertz
+**Assigné à :** @architect | **Dépend de :** CR2.4 | **Statut :** `TODO` | **Type :** RESEARCH
+**Priorité :** Basse
+
+**Description :** Les seuils de confiance actuels semblent trop stricts : 5 points FAO avec R²=0.99 obtiennent MEDIUM au lieu de HIGH. Analyser et proposer des seuils ajustés.
+
+**Tâches :**
+- [ ] `TODO` Analyser la distribution R² sur les données réelles de DK Farm (si disponibles)
+- [ ] `TODO` Proposer des seuils ajustés : ex. LOW (<8 pts), MEDIUM (8-14, R²>0.92), HIGH (15+, R²>0.95)
+- [ ] `TODO` Documenter la décision dans `docs/decisions/ADR-gompertz-confidence-thresholds.md`
+- [ ] `TODO` Implémenter si décision GO
+
+**Critères d'acceptation :**
+- Proposition documentée avec justification
+- Décision GO/NO-GO avant implémentation
+
+---
+
+## Sprint CR3 — Code Review : Qualité Frontend
+
+**Objectif :** Refactoriser le formulaire principal de relevés, ajouter les error boundaries, améliorer l'accessibilité, et extraire les utilitaires dupliqués.
+**Dépend de :** Sprint CR1 (la story CR1.2 Zod est utile mais non bloquante)
+**Référence :** `docs/reviews/farmflow-code-review-2026-03-31.docx`
+
+---
+
+### Story CR3.1 — Refactoring releve-form-client.tsx
+**Assigné à :** @developer | **Dépend de :** CR1.2 (idéalement) | **Statut :** `TODO` | **Type :** REFACTOR
+**Priorité :** Haute
+
+**Description :** Le composant `releve-form-client.tsx` fait 539 lignes avec 10 useState, un état formulaire non typé (`Record<string, string>`), des eslint-disable, et aucune mémoisation. Refactoriser en pattern container/presenter.
+
+**Tâches :**
+- [ ] `TODO` Extraire un hook `useReleveForm()` contenant la logique d'état et validation
+- [ ] `TODO` Typer l'état du formulaire avec un type discriminé par TypeReleve (remplacer Record<string, string>)
+- [ ] `TODO` Séparer en : `ReleveFormContainer` (logique) + `ReleveFormFields` (rendu)
+- [ ] `TODO` Supprimer le cast `as unknown as Parameters<...>` (ligne 254) grâce au typage correct
+- [ ] `TODO` Ajouter `useCallback` sur `updateField` et les handlers onChange
+- [ ] `TODO` Ajouter `useMemo` sur les listes filtrées (bacs, produits)
+- [ ] `TODO` Wrapper les sous-composants (FormBiometrie, FormMortalite, etc.) avec `React.memo`
+- [ ] `TODO` Supprimer les `eslint-disable-next-line` (lignes 105, 116, 143) et corriger les dépendances
+- [ ] `TODO` Build OK + tests existants passent
+
+**Critères d'acceptation :**
+- Aucun fichier ne dépasse 300 lignes
+- Zéro `any` ou cast `as unknown`
+- Zéro `eslint-disable` dans le composant
+- Performance : pas de re-render inutile sur les sous-composants (vérifiable via React DevTools)
+
+---
+
+### Story CR3.2 — Error boundaries par section
+**Assigné à :** @developer | **Dépend de :** Aucune | **Statut :** `TODO` | **Type :** FEATURE
+**Priorité :** Moyenne
+
+**Description :** Seuls les fichiers `error.tsx` au niveau page existent. Un crash dans un graphique Recharts ou un composant analytics fait tomber toute la page. Ajouter des error boundaries par section fonctionnelle.
+
+**Tâches :**
+- [ ] `TODO` Créer `src/components/ui/error-boundary.tsx` — composant réutilisable avec fallback UI
+- [ ] `TODO` Wrapper les composants analytics/graphiques avec l'error boundary
+- [ ] `TODO` Wrapper les formulaires (releves, ventes, stock) avec l'error boundary
+- [ ] `TODO` Wrapper les sections dashboard (KPIs, projections) avec l'error boundary
+- [ ] `TODO` Fallback UI : message d'erreur en français + bouton "Réessayer"
+
+**Critères d'acceptation :**
+- Un crash dans un graphique n'empêche pas l'utilisation du reste de la page
+- Le fallback est en français et cohérent avec le design existant
+- Build OK
+
+---
+
+### Story CR3.3 — Accessibilité ARIA sur les formulaires
+**Assigné à :** @developer | **Dépend de :** CR3.1 (idéalement) | **Statut :** `TODO` | **Type :** FEATURE
+**Priorité :** Moyenne
+
+**Description :** Les formulaires manquent d'attributs ARIA essentiels : `aria-required`, `aria-invalid`, `aria-live` pour les feedbacks de validation. L'accessibilité est niveau A partiel (WCAG 2.1).
+
+**Tâches :**
+- [ ] `TODO` Ajouter `aria-required="true"` sur tous les champs obligatoires des formulaires
+- [ ] `TODO` Ajouter `aria-invalid="true"` sur les champs en erreur
+- [ ] `TODO` Ajouter `aria-live="polite"` sur les zones d'affichage d'erreurs de validation
+- [ ] `TODO` Ajouter `aria-labelledby` sur les sections de formulaire (FormSection)
+- [ ] `TODO` Ajouter `aria-describedby` sur les champs avec description/aide contextuelle
+- [ ] `TODO` Vérifier la navigation clavier sur le formulaire multi-étapes de relevé
+
+**Critères d'acceptation :**
+- Tous les champs obligatoires ont `aria-required`
+- Les erreurs de validation sont annoncées aux lecteurs d'écran
+- Navigation clavier fonctionnelle sur tout le formulaire
+
+---
+
+### Story CR3.4 — Extraction utilitaires de formatage
+**Assigné à :** @developer | **Dépend de :** Aucune | **Statut :** `TODO` | **Type :** REFACTOR
+**Priorité :** Basse
+
+**Description :** `toLocaleString("fr-FR")` apparaît 20+ fois, le formatage de dates est dupliqué dans 3+ fichiers, et le formatage monétaire (FCFA) n'est pas centralisé.
+
+**Tâches :**
+- [ ] `TODO` Créer `src/lib/format.ts` avec : `formatNumber(n)`, `formatCFA(n)`, `formatDate(d)`, `formatDateTime(d)`, `formatWeight(g)`
+- [ ] `TODO` Remplacer les 20+ occurrences de `toLocaleString("fr-FR")` par les utilitaires
+- [ ] `TODO` Remplacer les formatages de date dupliqués dans releve-form, modifier-releve-dialog, layout
+- [ ] `TODO` Tests unitaires sur les fonctions de formatage
+
+**Critères d'acceptation :**
+- Zéro appel direct à `toLocaleString("fr-FR")` en dehors de `format.ts`
+- Les utilitaires sont utilisés partout
+- Build OK + tests passent
+
+---
+
+### Story CR3.5 — Mémoisation et performance React
+**Assigné à :** @developer | **Dépend de :** CR3.1 | **Statut :** `TODO` | **Type :** PERFORMANCE
+**Priorité :** Basse
+
+**Description :** Seulement 45 usages de memo/useMemo/useCallback sur 911 fichiers. Plusieurs composants re-render inutilement, les fonctions de tooltip Recharts sont créées inline.
+
+**Tâches :**
+- [ ] `TODO` Profiler avec React DevTools les pages vagues/[id], releves, et dashboard
+- [ ] `TODO` Ajouter `React.memo` sur les composants de présentation à fort re-render
+- [ ] `TODO` Extraire les fonctions de tooltip Recharts inline en constantes mémorisées
+- [ ] `TODO` Ajouter `useMemo` sur les listes filtrées dans les composants de liste (vagues-list, stock-list)
+- [ ] `TODO` Auditer le bundle size avec `@next/bundle-analyzer`
+
+**Critères d'acceptation :**
+- Les pages principales ne montrent pas de re-renders inutiles dans React DevTools Profiler
+- Le bundle size est documenté (baseline avant/après)
+
+---
+
+## Sprint CR4 — Code Review : Robustesse API & Architecture
+
+**Objectif :** Corriger les problèmes de robustesse API restants : fire-and-forget, soft deletes, idempotence.
+**Dépend de :** Sprint CR1
+**Référence :** `docs/reviews/farmflow-code-review-2026-03-31.docx`
+
+---
+
+### Story CR4.1 — Retry sur hooks async activity engine
+**Assigné à :** @developer | **Dépend de :** Aucune | **Statut :** `FAIT` | **Type :** FEATURE
+**Priorité :** Moyenne
+
+**Description :** `triggerSeuilRulesAsync()` et `runEngineForSite()` sont appelés en fire-and-forget avec `.catch()` mais sans mécanisme de retry. Si la DB échoue pendant l'exécution async, les activités ne sont jamais générées.
+
+**Tâches :**
+- [x] `FAIT` Créer `src/lib/async-retry.ts` avec helper `retryAsync(fn, maxRetries=3, delayMs=1000)`
+- [x] `FAIT` Wrapper `triggerSeuilRulesAsync()` avec le retry dans `src/app/api/releves/route.ts`
+- [x] `FAIT` Wrapper `runEngineForSite()` avec le retry
+- [x] `FAIT` Logger les échecs définitifs (après max retries) avec un niveau ERROR
+- [x] `FAIT` Test unitaire du helper retry
+
+**Critères d'acceptation :**
+- Un échec transitoire de la DB est retenté automatiquement (max 3 fois)
+- Les erreurs définitives sont loggées clairement
+- Pas d'impact sur le temps de réponse HTTP (toujours fire-and-forget)
+
+---
+
+### Story CR4.2 — Idempotence sur les mutations critiques
+**Assigné à :** @developer | **Dépend de :** Aucune | **Statut :** `TODO` | **Type :** FEATURE
+**Priorité :** Basse
+
+**Description :** L'idempotence via `X-Idempotency-Key` n'est implémentée que sur POST releves. Les autres mutations critiques (ventes, commandes, mouvements stock) n'en bénéficient pas.
+
+**Tâches :**
+- [ ] `TODO` Extraire la logique d'idempotence dans un helper réutilisable `withIdempotency(handler)`
+- [ ] `TODO` Appliquer sur `POST /api/ventes`
+- [ ] `TODO` Appliquer sur `POST /api/commandes`
+- [ ] `TODO` Appliquer sur `POST /api/stock/mouvements`
+- [ ] `TODO` Vérifier que le hash du body est inclus dans la clé (éviter réponse stale avec body différent)
+
+**Critères d'acceptation :**
+- Les 4 endpoints de mutation critiques supportent l'idempotence
+- Même clé + même body = même réponse (replay)
+- Même clé + body différent = erreur 409
+
+---
+
+### Story CR4.3 — Parallélisation queries séquentielles
+**Assigné à :** @developer | **Dépend de :** Aucune | **Statut :** `FAIT` | **Type :** PERFORMANCE
+**Priorité :** Basse
+
+**Description :** `triggerSeuilRulesAsync()` effectue 4 queries séquentielles (vague, produits, regles, activites) qui pourraient être parallélisées avec `Promise.all()`. De même, certaines routes rechargent un record après update au lieu de réutiliser le résultat.
+
+**Tâches :**
+- [x] `FAIT` Paralléliser les queries indépendantes dans `triggerSeuilRulesAsync()` avec `Promise.all()`
+- [x] `FAIT` Dans `PATCH /api/releves/[id]`, réutiliser le résultat de `patchReleve()` au lieu de refaire un `findFirst`
+- [x] `FAIT` Identifier et corriger d'autres patterns similaires (query après update)
+
+**Critères d'acceptation :**
+- Les queries indépendantes s'exécutent en parallèle
+- Pas de query redondante après mutation
+- Aucune régression fonctionnelle
+
+---
+
+### Story CR5.0 — Tests et Review Sprint CR
+**Assigné à :** @tester + @code-reviewer | **Dépend de :** CR1.1-CR4.3 | **Statut :** `TODO` | **Type :** TEST + REVIEW
+
+**Tâches :**
+- [ ] `TODO` `npx vitest run` — tous les tests passent (anciens + nouveaux)
+- [ ] `TODO` `npm run build` — build production OK
+- [ ] `TODO` Vérifier checklist R1-R9
+- [ ] `TODO` Test manuel mobile (360px) : formulaire relevé, dashboard, listes paginées
+- [ ] `TODO` Écrire `docs/reviews/review-sprint-CR.md`
+- [ ] `TODO` Écrire `docs/tests/rapport-sprint-CR.md`
+
+**Critères d'acceptation :**
+- Zéro régression sur les tests existants
+- Les nouveaux tests couvrent chaque correction
+- Build production OK
+- Review conforme R1-R9

@@ -6,7 +6,7 @@
  * Permissions requises : FINANCES_VOIR + EXPORT_DONNEES
  */
 
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import {
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     if (!site) {
-      return Response.json({ error: "Site introuvable" }, { status: 404 });
+      return NextResponse.json({ status: 404, message: "Site introuvable" }, { status: 404 });
     }
 
     // Construire le DTO
@@ -108,13 +108,13 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return Response.json({ error: error.message }, { status: 401 });
+      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
     }
     if (error instanceof ForbiddenError) {
-      return Response.json({ error: error.message }, { status: 403 });
+      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
     }
     const message =
       error instanceof Error ? error.message : "Erreur serveur inattendue";
-    return Response.json({ error: message }, { status: 500 });
+    return NextResponse.json({ status: 500, message: message }, { status: 500 });
   }
 }

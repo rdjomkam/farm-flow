@@ -16,6 +16,7 @@ import {
   deleteRemise,
   desactiverRemise,
 } from "@/lib/queries/remises";
+import { apiError } from "@/lib/api-utils";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
 import { Permission } from "@/types";
@@ -31,30 +32,18 @@ export async function GET(
 
     const remise = await getRemiseById(id);
     if (!remise) {
-      return NextResponse.json(
-        { status: 404, message: "Remise introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Remise introuvable.");
     }
 
     return NextResponse.json({ remise });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation de la remise." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation de la remise.");
   }
 }
 
@@ -70,10 +59,7 @@ export async function PUT(
     // Vérifier que la remise existe
     const existing = await getRemiseById(id);
     if (!existing) {
-      return NextResponse.json(
-        { status: 404, message: "Remise introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Remise introuvable.");
     }
 
     // Construire le DTO de mise à jour — ignorer silencieusement code et type
@@ -92,26 +78,17 @@ export async function PUT(
       errors.push({ field: "valeur", message: "La valeur doit être un nombre positif." });
     }
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     const remise = await updateRemise(id, data);
     return NextResponse.json({ remise });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     return NextResponse.json(
@@ -131,10 +108,7 @@ export async function DELETE(
 
     const existing = await getRemiseById(id);
     if (!existing) {
-      return NextResponse.json(
-        { status: 404, message: "Remise introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Remise introuvable.");
     }
 
     // Supprimer si jamais utilisée, sinon désactiver — R4 : desactiverRemise via updateMany
@@ -151,16 +125,10 @@ export async function DELETE(
     }
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     return NextResponse.json(

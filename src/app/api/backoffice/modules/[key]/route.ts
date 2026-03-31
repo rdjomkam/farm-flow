@@ -18,6 +18,7 @@ import { AuthError } from "@/lib/auth";
 import { ForbiddenError } from "@/lib/permissions";
 import { prisma } from "@/lib/db";
 import type { ModuleDefinitionResponse } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 // ---------------------------------------------------------------------------
 // Helper — siteCount + planCount for a given module key
@@ -60,10 +61,7 @@ export async function GET(
 
     const module = await prisma.moduleDefinition.findUnique({ where: { key } });
     if (!module) {
-      return NextResponse.json(
-        { error: `Module '${key}' introuvable.` },
-        { status: 404 }
-      );
+      return apiError(404, `Module '${key}' introuvable.`);
     }
 
     const stats = await getModuleStats(key);
@@ -87,22 +85,13 @@ export async function GET(
     return NextResponse.json(response);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     console.error("[GET /api/backoffice/modules/[key]]", error);
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation du module." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation du module.");
   }
 }
 
@@ -135,40 +124,25 @@ export async function PATCH(
     try {
       body = await request.json();
     } catch {
-      return NextResponse.json(
-        { error: "Corps de requete JSON invalide." },
-        { status: 400 }
-      );
+      return apiError(400, "Corps de requete JSON invalide.");
     }
 
     if ("key" in body && body.key !== undefined) {
-      return NextResponse.json(
-        { error: "Le champ 'key' est immuable apres creation et ne peut pas etre modifie." },
-        { status: 400 }
-      );
+      return apiError(400, "Le champ 'key' est immuable apres creation et ne peut pas etre modifie.");
     }
     if ("level" in body && body.level !== undefined) {
-      return NextResponse.json(
-        { error: "Le champ 'level' est immuable apres creation et ne peut pas etre modifie." },
-        { status: 400 }
-      );
+      return apiError(400, "Le champ 'level' est immuable apres creation et ne peut pas etre modifie.");
     }
 
     const existing = await prisma.moduleDefinition.findUnique({ where: { key } });
     if (!existing) {
-      return NextResponse.json(
-        { error: `Module '${key}' introuvable.` },
-        { status: 404 }
-      );
+      return apiError(404, `Module '${key}' introuvable.`);
     }
 
     const updateData: Record<string, unknown> = {};
     if (body.label !== undefined) {
       if (typeof body.label !== "string" || body.label.trim() === "") {
-        return NextResponse.json(
-          { error: "Le champ 'label' doit etre une chaine non vide." },
-          { status: 400 }
-        );
+        return apiError(400, "Le champ 'label' doit etre une chaine non vide.");
       }
       updateData.label = body.label.trim();
     }
@@ -180,10 +154,7 @@ export async function PATCH(
     }
     if (body.sortOrder !== undefined) {
       if (typeof body.sortOrder !== "number") {
-        return NextResponse.json(
-          { error: "Le champ 'sortOrder' doit etre un nombre." },
-          { status: 400 }
-        );
+        return apiError(400, "Le champ 'sortOrder' doit etre un nombre.");
       }
       updateData.sortOrder = body.sortOrder;
     }
@@ -223,21 +194,12 @@ export async function PATCH(
     return NextResponse.json(response);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     console.error("[PATCH /api/backoffice/modules/[key]]", error);
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la modification du module." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la modification du module.");
   }
 }

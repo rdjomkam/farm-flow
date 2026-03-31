@@ -5,7 +5,7 @@
  * Permissions requises : FACTURES_VOIR + EXPORT_DONNEES
  */
 
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { getFactureById } from "@/lib/queries/factures";
@@ -30,8 +30,8 @@ export async function GET(
     // Récupérer la facture avec toutes ses relations
     const facture = await getFactureById(id, auth.activeSiteId);
     if (!facture) {
-      return Response.json(
-        { error: "Facture introuvable" },
+      return NextResponse.json(
+        { status: 404, message: "Facture introuvable" },
         { status: 404 }
       );
     }
@@ -43,8 +43,8 @@ export async function GET(
     });
 
     if (!site) {
-      return Response.json(
-        { error: "Site introuvable" },
+      return NextResponse.json(
+        { status: 404, message: "Site introuvable" },
         { status: 404 }
       );
     }
@@ -98,13 +98,13 @@ export async function GET(
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return Response.json({ error: error.message }, { status: 401 });
+      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
     }
     if (error instanceof ForbiddenError) {
-      return Response.json({ error: error.message }, { status: 403 });
+      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
     }
     const message =
       error instanceof Error ? error.message : "Erreur serveur inattendue";
-    return Response.json({ error: message }, { status: 500 });
+    return NextResponse.json({ status: 500, message: message }, { status: 500 });
   }
 }

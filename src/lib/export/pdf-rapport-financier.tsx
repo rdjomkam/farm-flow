@@ -16,6 +16,7 @@ import {
   renderToBuffer,
 } from "@react-pdf/renderer";
 import type { CreateRapportFinancierPDFDTO } from "@/types/export";
+import { formatNumber } from "@/lib/format";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -30,7 +31,7 @@ function formatDate(date: Date | string): string {
 }
 
 function formatMontant(n: number): string {
-  return n.toLocaleString("fr-FR") + " FCFA";
+  return formatNumber(n) + " FCFA";
 }
 
 function formatPct(n: number): string {
@@ -351,7 +352,7 @@ export function RapportFinancierPDF({
                 parseInt(annee),
                 parseInt(moisNum) - 1,
                 1
-              ).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+              ).toLocaleDateString("fr-FR", { month: "long", year: "numeric" }); // locale-specific month display, not a number format
               return (
                 <View
                   key={i}

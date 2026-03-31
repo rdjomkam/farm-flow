@@ -18,6 +18,7 @@ import { runEngineForSite } from "@/lib/activity-engine";
 import { runEngineerAlerts } from "@/lib/activity-engine/engineer-alerts";
 import { getOrCreateSystemUser } from "@/lib/queries/users";
 import { runLifecycle } from "@/lib/queries/lifecycle";
+import { apiError } from "@/lib/api-utils";
 
 // ---------------------------------------------------------------------------
 // Utilitaires
@@ -44,19 +45,13 @@ export async function POST(request: NextRequest) {
     const cronSecret = process.env.CRON_SECRET;
     if (!cronSecret) {
       console.error("[CRON /api/activites/generer] CRON_SECRET non configure");
-      return NextResponse.json(
-        { status: 500, message: "Configuration serveur manquante." },
-        { status: 500 }
-      );
+      return apiError(500, "Configuration serveur manquante.");
     }
 
     const authHeader = request.headers.get("authorization");
     const token = authHeader?.replace("Bearer ", "") ?? "";
     if (!timingSafeTokenEqual(token, cronSecret)) {
-      return NextResponse.json(
-        { status: 401, message: "Token CRON invalide." },
-        { status: 401 }
-      );
+      return apiError(401, "Token CRON invalide.");
     }
 
     // ---- Parsing du corps ----
@@ -157,10 +152,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("[CRON /api/activites/generer] Erreur globale:", error);
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la generation." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la generation.");
   }
 }
 

@@ -21,6 +21,7 @@ import {
   PeriodeFacturation,
   FournisseurPaiement,
 } from "@/types";
+import { apiError } from "@/lib/api-utils";
 import {
   PLAN_TARIFS,
   calculerProchaineDate,
@@ -40,10 +41,7 @@ export async function POST(
     // Charger l'abonnement existant — R8 : siteId obligatoire
     const abonnement = await getAbonnementById(id, auth.activeSiteId);
     if (!abonnement) {
-      return NextResponse.json(
-        { status: 404, message: "Abonnement introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Abonnement introuvable.");
     }
 
     // Vérifier que l'abonnement peut être renouvelé
@@ -79,10 +77,7 @@ export async function POST(
     // Charger le plan actuel
     const plan = await getPlanAbonnementById(abonnement.planId);
     if (!plan || !plan.isActif) {
-      return NextResponse.json(
-        { status: 404, message: "Plan de l'abonnement introuvable ou inactif." },
-        { status: 404 }
-      );
+      return apiError(404, "Plan de l'abonnement introuvable ou inactif.");
     }
 
     // Calculer le nouveau prix et les nouvelles dates
@@ -140,16 +135,10 @@ export async function POST(
     );
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     return NextResponse.json(

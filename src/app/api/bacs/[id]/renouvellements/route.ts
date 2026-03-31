@@ -5,6 +5,7 @@ import { Permission, TypeReleve } from "@/types";
 import { prisma } from "@/lib/db";
 import { computeTauxRenouvellement } from "@/lib/calculs";
 import { getConfigElevageDefaut, CONFIG_ELEVAGE_DEFAULTS } from "@/lib/queries/config-elevage";
+import { apiError } from "@/lib/api-utils";
 
 export async function GET(
   request: NextRequest,
@@ -26,10 +27,7 @@ export async function GET(
     });
 
     if (!bac) {
-      return NextResponse.json(
-        { status: 404, message: "Bac introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Bac introuvable.");
     }
 
     // Fenetre de temps
@@ -88,14 +86,11 @@ export async function GET(
   } catch (error) {
     console.error("[GET /api/bacs/[id]/renouvellements] Error:", error);
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation des renouvellements." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation des renouvellements.");
   }
 }

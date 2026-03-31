@@ -3,6 +3,7 @@ import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission, UniteStock } from "@/types";
 import { getPackProduits, addPackProduit, removePackProduit } from "@/lib/queries/packs";
+import { apiError } from "@/lib/api-utils";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -20,21 +21,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const produits = await getPackProduits(id, auth.activeSiteId);
     if (produits === null) {
-      return NextResponse.json({ status: 404, message: "Pack introuvable." }, { status: 404 });
+      return apiError(404, "Pack introuvable.");
     }
 
     return NextResponse.json({ produits, total: produits.length });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation des produits." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation des produits.");
   }
 }
 
@@ -51,26 +49,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
 
     if (!body.produitId || typeof body.produitId !== "string") {
-      return NextResponse.json(
-        { status: 400, message: "L'identifiant du produit est requis." },
-        { status: 400 }
-      );
+      return apiError(400, "L'identifiant du produit est requis.");
     }
     if (!body.quantite || typeof body.quantite !== "number" || body.quantite <= 0) {
-      return NextResponse.json(
-        { status: 400, message: "La quantite doit etre superieure a 0." },
-        { status: 400 }
-      );
+      return apiError(400, "La quantite doit etre superieure a 0.");
     }
 
     // Validate unite if provided
     if (body.unite !== undefined && body.unite !== null) {
       const validUnites = Object.values(UniteStock);
       if (!validUnites.includes(body.unite)) {
-        return NextResponse.json(
-          { status: 400, message: "Unite invalide." },
-          { status: 400 }
-        );
+        return apiError(400, "Unite invalide.");
       }
     }
 
@@ -81,34 +70,28 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     });
 
     if (packProduit === null) {
-      return NextResponse.json({ status: 404, message: "Pack introuvable." }, { status: 404 });
+      return apiError(404, "Pack introuvable.");
     }
 
     return NextResponse.json(packProduit, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     // Contrainte unique violee (packId + produitId)
     if (error instanceof Error && (
       error.message.includes("Unique constraint") ||
       error.message.includes("unique")
     )) {
-      return NextResponse.json(
-        { status: 409, message: "Ce produit est deja dans le pack." },
-        { status: 409 }
-      );
+      return apiError(409, "Ce produit est deja dans le pack.");
     }
     if (error instanceof Error) {
-      return NextResponse.json({ status: 400, message: error.message }, { status: 400 });
+      return apiError(400, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de l'ajout du produit." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de l'ajout du produit.");
   }
 }
 
@@ -126,31 +109,22 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const produitId = searchParams.get("produitId");
 
     if (!produitId) {
-      return NextResponse.json(
-        { status: 400, message: "L'identifiant du produit est requis." },
-        { status: 400 }
-      );
+      return apiError(400, "L'identifiant du produit est requis.");
     }
 
     const deleted = await removePackProduit(id, produitId, auth.activeSiteId);
     if (!deleted) {
-      return NextResponse.json(
-        { status: 404, message: "Produit ou Pack introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Produit ou Pack introuvable.");
     }
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la suppression du produit." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la suppression du produit.");
   }
 }

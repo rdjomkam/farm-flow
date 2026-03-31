@@ -8,6 +8,7 @@ import {
   getSignedUrl,
   extractFileNameFromKey,
 } from "@/lib/storage";
+import { apiError } from "@/lib/api-utils";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission } from "@/types";
@@ -35,18 +36,12 @@ export async function POST(request: NextRequest, { params }: Params) {
     try {
       formData = await request.formData();
     } catch {
-      return NextResponse.json(
-        { status: 400, message: "FormData invalide." },
-        { status: 400 }
-      );
+      return apiError(400, "FormData invalide.");
     }
 
     const fileRaw = formData.get("file");
     if (!(fileRaw instanceof File)) {
-      return NextResponse.json(
-        { status: 400, message: "Le champ 'file' est obligatoire." },
-        { status: 400 }
-      );
+      return apiError(400, "Le champ 'file' est obligatoire.");
     }
 
     // Validate file
@@ -69,10 +64,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     });
 
     if (!depense) {
-      return NextResponse.json(
-        { status: 404, message: "Depense introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Depense introuvable.");
     }
 
     // Delete old file if exists
@@ -103,16 +95,10 @@ export async function POST(request: NextRequest, { params }: Params) {
     return NextResponse.json({ url, fileName }, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     return NextResponse.json(
       {
@@ -141,17 +127,11 @@ export async function GET(request: NextRequest, { params }: Params) {
     });
 
     if (!depense) {
-      return NextResponse.json(
-        { status: 404, message: "Depense introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Depense introuvable.");
     }
 
     if (!depense.factureUrl) {
-      return NextResponse.json(
-        { status: 404, message: "Aucune facture associee a cette depense." },
-        { status: 404 }
-      );
+      return apiError(404, "Aucune facture associee a cette depense.");
     }
 
     const url = await getSignedUrl(depense.factureUrl);
@@ -160,16 +140,10 @@ export async function GET(request: NextRequest, { params }: Params) {
     return NextResponse.json({ url, fileName });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     return NextResponse.json(
       {
@@ -198,17 +172,11 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     });
 
     if (!depense) {
-      return NextResponse.json(
-        { status: 404, message: "Depense introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Depense introuvable.");
     }
 
     if (!depense.factureUrl) {
-      return NextResponse.json(
-        { status: 404, message: "Aucune facture associee a cette depense." },
-        { status: 404 }
-      );
+      return apiError(404, "Aucune facture associee a cette depense.");
     }
 
     // Delete from S3
@@ -223,16 +191,10 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     return NextResponse.json(
       {

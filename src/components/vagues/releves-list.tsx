@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Calendar, ChevronRight, FileText, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { formatDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -226,7 +227,7 @@ export function RelevesList({ releves, produits = [], permissions, limit, vagueI
               <div className="flex items-center gap-2">
                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Calendar className="h-3 w-3" />
-                  {new Date(r.date).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })}
+                  {formatDateTime(r.date)}
                 </span>
                 <ModifierReleveDialog releve={r} produits={produits} permissions={permissions} />
                 {permissions.includes(Permission.RELEVES_SUPPRIMER) && (

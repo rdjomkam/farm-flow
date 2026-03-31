@@ -2,30 +2,46 @@ import { prisma } from "@/lib/db";
 import { StatutVague } from "@/types";
 import type { CreateVenteDTO, VenteFilters } from "@/types";
 
-/** Liste les ventes d'un site avec filtres */
-export async function getVentes(siteId: string, filters?: VenteFilters) {
-  return prisma.vente.findMany({
-    where: {
-      siteId,
-      ...(filters?.clientId && { clientId: filters.clientId }),
-      ...(filters?.vagueId && { vagueId: filters.vagueId }),
-      ...(filters?.dateFrom || filters?.dateTo
-        ? {
-            createdAt: {
-              ...(filters?.dateFrom && { gte: new Date(filters.dateFrom) }),
-              ...(filters?.dateTo && { lte: new Date(filters.dateTo) }),
-            },
-          }
-        : {}),
-    },
-    include: {
-      client: { select: { id: true, nom: true } },
-      vague: { select: { id: true, code: true } },
-      user: { select: { id: true, name: true } },
-      facture: { select: { id: true, numero: true, statut: true, montantPaye: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+/** Liste les ventes d'un site avec filtres et pagination */
+export async function getVentes(
+  siteId: string,
+  filters?: VenteFilters,
+  pagination?: { limit: number; offset: number }
+) {
+  const where = {
+    siteId,
+    ...(filters?.clientId && { clientId: filters.clientId }),
+    ...(filters?.vagueId && { vagueId: filters.vagueId }),
+    ...(filters?.dateFrom || filters?.dateTo
+      ? {
+          createdAt: {
+            ...(filters?.dateFrom && { gte: new Date(filters.dateFrom) }),
+            ...(filters?.dateTo && { lte: new Date(filters.dateTo) }),
+          },
+        }
+      : {}),
+  };
+
+  const limit = pagination?.limit ?? 50;
+  const offset = pagination?.offset ?? 0;
+
+  const [data, total] = await Promise.all([
+    prisma.vente.findMany({
+      where,
+      include: {
+        client: { select: { id: true, nom: true } },
+        vague: { select: { id: true, code: true } },
+        user: { select: { id: true, name: true } },
+        facture: { select: { id: true, numero: true, statut: true, montantPaye: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      skip: offset,
+    }),
+    prisma.vente.count({ where }),
+  ]);
+
+  return { data, total };
 }
 
 /** Recupere une vente par ID avec ses relations */

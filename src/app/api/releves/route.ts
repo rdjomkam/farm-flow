@@ -3,7 +3,7 @@ import { cachedJson } from "@/lib/api-cache";
 import { getReleves, createReleve } from "@/lib/queries/releves";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { TypeReleve, CauseMortalite, TypeAliment, MethodeComptage, Permission, StatutVague, TypeDeclencheur, ComportementAlimentaire } from "@/types";
+import { TypeReleve, Permission, StatutVague, TypeDeclencheur, parsePaginationQuery } from "@/types";
 import type { CreateReleveDTO, ReleveFilters } from "@/types";
 import { prisma } from "@/lib/db";
 import {
@@ -11,12 +11,26 @@ import {
   evaluateRules,
   generateActivities,
 } from "@/lib/activity-engine";
+import { retryAsync } from "@/lib/async-retry";
 import { ErrorKeys } from "@/lib/api-error-keys";
+import { apiError } from "@/lib/api-utils";
+import {
+  createReleveSchema,
+  createRenouvellementSchema,
+  zodErrorToFieldErrors,
+} from "@/lib/validation/releve.schema";
 
 export async function GET(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.RELEVES_VOIR);
     const { searchParams } = new URL(request.url);
+
+    // Pagination
+    const paginationResult = parsePaginationQuery(searchParams);
+    if (!paginationResult.valid) {
+      return NextResponse.json({ status: 400, message: paginationResult.error }, { status: 400 });
+    }
+    const { limit, offset } = paginationResult.params;
 
     const filters: ReleveFilters = {};
     const vagueId = searchParams.get("vagueId");
@@ -44,8 +58,8 @@ export async function GET(request: NextRequest) {
     if (dateTo) filters.dateTo = dateTo;
     if (searchParams.get("nonLie") === "true") filters.nonLie = true;
 
-    const result = await getReleves(auth.activeSiteId, filters);
-    return cachedJson(result, "fast");
+    const { data, total } = await getReleves(auth.activeSiteId, filters, { limit, offset });
+    return cachedJson({ data, total, limit, offset }, "fast");
   } catch (error) {
     console.error("[GET /api/releves] Error:", error);
     if (error instanceof AuthError) {
@@ -76,381 +90,152 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const errors: { field: string; message: string }[] = [];
 
-    // Common required fields
-    if (!body.typeReleve) {
-      errors.push({
-        field: "typeReleve",
-        message: "Le type de releve est obligatoire.",
-      });
-    } else if (
-      !Object.values(TypeReleve).includes(body.typeReleve as TypeReleve)
-    ) {
-      errors.push({
-        field: "typeReleve",
-        message: `Type de releve invalide. Valeurs acceptees : ${Object.values(TypeReleve).join(", ")}.`,
-      });
+    // RENOUVELLEMENT is handled separately because .and() is incompatible with discriminatedUnion
+    if (body.typeReleve === TypeReleve.RENOUVELLEMENT) {
+      const result = createRenouvellementSchema.safeParse(body);
+      if (!result.success) {
+        return apiError(400, "Erreurs de validation", { errors: zodErrorToFieldErrors(result.error) });
+      }
+      const v = result.data;
+      const base = {
+        vagueId: v.vagueId,
+        bacId: v.bacId,
+        ...(v.notes != null && { notes: v.notes }),
+        ...(v.consommations && v.consommations.length > 0 && { consommations: v.consommations }),
+        ...(v.date && { date: new Date(v.date).toISOString() }),
+      };
+      const dto: CreateReleveDTO = {
+        ...base,
+        typeReleve: TypeReleve.RENOUVELLEMENT,
+        ...(v.pourcentageRenouvellement != null && { pourcentageRenouvellement: v.pourcentageRenouvellement }),
+        ...(v.volumeRenouvele != null && { volumeRenouvele: v.volumeRenouvele }),
+        ...(v.nombreRenouvellements != null && { nombreRenouvellements: v.nombreRenouvellements }),
+      };
+      const activiteId = v.activiteId ?? undefined;
+      const releve = await createReleve(auth.activeSiteId, auth.userId, dto, activiteId);
+      retryAsync(
+        () => triggerSeuilRulesAsync(auth.activeSiteId, dto.vagueId, auth.userId),
+        { context: "[POST /api/releves] hook SEUIL (RENOUVELLEMENT)" }
+      );
+      if (idempotencyKey && auth.activeSiteId) {
+        const { storeIdempotency } = await import("@/lib/idempotency");
+        await storeIdempotency(idempotencyKey, auth.activeSiteId, releve, 201);
+      }
+      return NextResponse.json(releve, { status: 201 });
     }
 
-    if (!body.vagueId || typeof body.vagueId !== "string") {
-      errors.push({
-        field: "vagueId",
-        message: "L'identifiant de la vague est obligatoire.",
-      });
-    }
-
-    if (!body.bacId || typeof body.bacId !== "string") {
-      errors.push({
-        field: "bacId",
-        message: "L'identifiant du bac est obligatoire.",
-      });
-    }
-
-    // Type-specific validations
-    if (body.typeReleve === TypeReleve.BIOMETRIE) {
-      if (body.poidsMoyen == null || typeof body.poidsMoyen !== "number" || body.poidsMoyen <= 0) {
-        errors.push({
-          field: "poidsMoyen",
-          message: "Le poids moyen est obligatoire et doit etre superieur a 0.",
-        });
-      }
-      if (body.tailleMoyenne && (typeof body.tailleMoyenne !== "number" || body.tailleMoyenne <= 0)) {
-        errors.push({
-          field: "tailleMoyenne",
-          message: "La taille moyenne doit etre superieure a 0.",
-        });
-      }
-      if (
-        body.echantillonCount == null ||
-        typeof body.echantillonCount !== "number" ||
-        !Number.isInteger(body.echantillonCount) ||
-        body.echantillonCount <= 0
-      ) {
-        errors.push({
-          field: "echantillonCount",
-          message: "Le nombre d'echantillons est obligatoire et doit etre un entier superieur a 0.",
-        });
-      }
-    }
-
-    if (body.typeReleve === TypeReleve.MORTALITE) {
-      if (
-        body.nombreMorts == null ||
-        typeof body.nombreMorts !== "number" ||
-        !Number.isInteger(body.nombreMorts) ||
-        body.nombreMorts < 0
-      ) {
-        errors.push({
-          field: "nombreMorts",
-          message: "Le nombre de morts est obligatoire et doit etre un entier positif ou nul.",
-        });
-      }
-      if (
-        !body.causeMortalite ||
-        !Object.values(CauseMortalite).includes(body.causeMortalite as CauseMortalite)
-      ) {
-        errors.push({
-          field: "causeMortalite",
-          message: `La cause de mortalite est obligatoire. Valeurs acceptees : ${Object.values(CauseMortalite).join(", ")}.`,
-        });
-      }
-    }
-
-    if (body.typeReleve === TypeReleve.ALIMENTATION) {
-      if (
-        body.quantiteAliment == null ||
-        typeof body.quantiteAliment !== "number" ||
-        body.quantiteAliment <= 0
-      ) {
-        errors.push({
-          field: "quantiteAliment",
-          message: "La quantite d'aliment est obligatoire et doit etre superieure a 0.",
-        });
-      }
-      if (
-        !body.typeAliment ||
-        !Object.values(TypeAliment).includes(body.typeAliment as TypeAliment)
-      ) {
-        errors.push({
-          field: "typeAliment",
-          message: `Le type d'aliment est obligatoire. Valeurs acceptees : ${Object.values(TypeAliment).join(", ")}.`,
-        });
-      }
-      if (
-        body.frequenceAliment == null ||
-        typeof body.frequenceAliment !== "number" ||
-        !Number.isInteger(body.frequenceAliment) ||
-        body.frequenceAliment <= 0
-      ) {
-        errors.push({
-          field: "frequenceAliment",
-          message: "La frequence d'alimentation est obligatoire et doit etre un entier superieur a 0.",
-        });
-      }
-    }
-
-    if (body.typeReleve === TypeReleve.COMPTAGE) {
-      if (
-        body.nombreCompte == null ||
-        typeof body.nombreCompte !== "number" ||
-        !Number.isInteger(body.nombreCompte) ||
-        body.nombreCompte < 0
-      ) {
-        errors.push({
-          field: "nombreCompte",
-          message: "Le nombre compte est obligatoire et doit etre un entier positif ou nul.",
-        });
-      }
-      if (
-        !body.methodeComptage ||
-        !Object.values(MethodeComptage).includes(body.methodeComptage as MethodeComptage)
-      ) {
-        errors.push({
-          field: "methodeComptage",
-          message: `La methode de comptage est obligatoire. Valeurs acceptees : ${Object.values(MethodeComptage).join(", ")}.`,
-        });
-      }
-    }
-
-    if (body.typeReleve === TypeReleve.OBSERVATION) {
-      if (!body.description || typeof body.description !== "string" || body.description.trim() === "") {
-        errors.push({
-          field: "description",
-          message: "La description est obligatoire pour une observation.",
-        });
-      }
-    }
-
-    // Validation tauxRefus et comportementAlim — valides uniquement pour ALIMENTATION
-    const TAUX_REFUS_VALIDES = [0, 10, 25, 50];
-
-    if (body.tauxRefus !== undefined && body.tauxRefus !== null) {
-      if (body.typeReleve !== TypeReleve.ALIMENTATION) {
-        errors.push({
+    // Cross-field guard: tauxRefus and comportementAlim are only valid for ALIMENTATION
+    if (body.typeReleve !== TypeReleve.ALIMENTATION) {
+      const alienFields: { field: string; message: string }[] = [];
+      if (body.tauxRefus !== undefined && body.tauxRefus !== null) {
+        alienFields.push({
           field: "tauxRefus",
           message: "Le taux de refus est valide uniquement pour un releve de type ALIMENTATION.",
         });
-      } else if (!TAUX_REFUS_VALIDES.includes(body.tauxRefus)) {
-        errors.push({
-          field: "tauxRefus",
-          message: `Le taux de refus doit etre l'une des valeurs : ${TAUX_REFUS_VALIDES.join(", ")}.`,
-        });
       }
-    }
-
-    if (body.comportementAlim !== undefined && body.comportementAlim !== null) {
-      if (body.typeReleve !== TypeReleve.ALIMENTATION) {
-        errors.push({
+      if (body.comportementAlim !== undefined && body.comportementAlim !== null) {
+        alienFields.push({
           field: "comportementAlim",
           message: "Le comportement alimentaire est valide uniquement pour un releve de type ALIMENTATION.",
         });
-      } else if (!Object.values(ComportementAlimentaire).includes(body.comportementAlim as ComportementAlimentaire)) {
-        errors.push({
-          field: "comportementAlim",
-          message: `Le comportement alimentaire doit etre : ${Object.values(ComportementAlimentaire).join(", ")}.`,
-        });
+      }
+      if (alienFields.length > 0) {
+        return apiError(400, "Erreurs de validation", { errors: alienFields });
       }
     }
 
-    if (body.typeReleve === TypeReleve.RENOUVELLEMENT) {
-      const hasPct = body.pourcentageRenouvellement != null;
-      const hasVol = body.volumeRenouvele != null;
-      if (!hasPct && !hasVol) {
-        errors.push({
-          field: "pourcentageRenouvellement",
-          message: "Au moins un champ est obligatoire : pourcentageRenouvellement ou volumeRenouvele.",
-        });
-      }
-      if (hasPct) {
-        if (
-          typeof body.pourcentageRenouvellement !== "number" ||
-          body.pourcentageRenouvellement < 0 ||
-          body.pourcentageRenouvellement > 100
-        ) {
-          errors.push({
-            field: "pourcentageRenouvellement",
-            message: "Le pourcentage de renouvellement doit etre compris entre 0 et 100.",
-          });
-        }
-      }
-      if (hasVol) {
-        if (typeof body.volumeRenouvele !== "number" || body.volumeRenouvele <= 0) {
-          errors.push({
-            field: "volumeRenouvele",
-            message: "Le volume renouvele doit etre superieur a 0.",
-          });
-        }
-      }
-      if (body.nombreRenouvellements != null) {
-        if (
-          typeof body.nombreRenouvellements !== "number" ||
-          !Number.isInteger(body.nombreRenouvellements) ||
-          body.nombreRenouvellements < 1 ||
-          body.nombreRenouvellements > 20
-        ) {
-          errors.push({
-            field: "nombreRenouvellements",
-            message: "Le nombre de passages doit etre un entier entre 1 et 20.",
-          });
-        }
-      }
+    // Validate all other types with discriminated union schema
+    const parseResult = createReleveSchema.safeParse(body);
+    if (!parseResult.success) {
+      return apiError(400, "Erreurs de validation", { errors: zodErrorToFieldErrors(parseResult.error) });
     }
 
-    // Validation date optionnelle
-    let releveDate: Date | undefined;
-    if (body.date != null) {
-      const parsed = new Date(body.date);
-      if (isNaN(parsed.getTime())) {
-        errors.push({ field: "date", message: "Date invalide (format ISO 8601 attendu)." });
-      } else if (parsed > new Date()) {
-        errors.push({ field: "date", message: "La date du releve ne peut pas etre dans le futur." });
-      } else {
-        releveDate = parsed;
-      }
-    }
-
-    // Validate optional activiteId
-    let activiteId: string | undefined;
-    if (body.activiteId != null) {
-      if (typeof body.activiteId !== "string" || body.activiteId.trim() === "") {
-        errors.push({
-          field: "activiteId",
-          message: "L'identifiant d'activite doit etre une chaine non vide.",
-        });
-      } else {
-        activiteId = body.activiteId.trim();
-      }
-    }
-
-    if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
-    }
-
-    // Validate consommations if present
-    if (body.consommations != null) {
-      if (!Array.isArray(body.consommations)) {
-        errors.push({ field: "consommations", message: "Les consommations doivent etre un tableau." });
-      } else {
-        for (let i = 0; i < body.consommations.length; i++) {
-          const c = body.consommations[i];
-          if (!c.produitId || typeof c.produitId !== "string") {
-            errors.push({ field: `consommations[${i}].produitId`, message: "L'identifiant du produit est obligatoire." });
-          }
-          if (c.quantite == null || typeof c.quantite !== "number" || c.quantite <= 0) {
-            errors.push({ field: `consommations[${i}].quantite`, message: "La quantite doit etre superieure a 0." });
-          }
-        }
-      }
-    }
-
-    if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
-    }
+    const validated = parseResult.data;
+    const activiteId = validated.activiteId ?? undefined;
 
     // Build clean DTO from validated fields
-    const consommations = Array.isArray(body.consommations) && body.consommations.length > 0
-      ? body.consommations.map((c: { produitId: string; quantite: number }) => ({
-          produitId: c.produitId,
-          quantite: c.quantite,
-        }))
-      : undefined;
+    const consommations =
+      validated.consommations && validated.consommations.length > 0
+        ? validated.consommations
+        : undefined;
 
     const base = {
-      vagueId: body.vagueId,
-      bacId: body.bacId,
-      ...(body.notes != null && { notes: body.notes }),
+      vagueId: validated.vagueId,
+      bacId: validated.bacId,
+      ...(validated.notes != null && { notes: validated.notes }),
       ...(consommations && { consommations }),
-      ...(releveDate && { date: releveDate.toISOString() }),
+      ...(validated.date && { date: new Date(validated.date).toISOString() }),
     };
 
     let dto!: CreateReleveDTO;
 
-    switch (body.typeReleve as TypeReleve) {
+    switch (validated.typeReleve) {
       case TypeReleve.BIOMETRIE:
         dto = {
           ...base,
           typeReleve: TypeReleve.BIOMETRIE,
-          poidsMoyen: body.poidsMoyen,
-          tailleMoyenne: body.tailleMoyenne || null,
-          echantillonCount: body.echantillonCount,
+          poidsMoyen: validated.poidsMoyen,
+          tailleMoyenne: validated.tailleMoyenne ?? undefined,
+          echantillonCount: validated.echantillonCount,
         };
         break;
       case TypeReleve.MORTALITE:
         dto = {
           ...base,
           typeReleve: TypeReleve.MORTALITE,
-          nombreMorts: body.nombreMorts,
-          causeMortalite: body.causeMortalite,
+          nombreMorts: validated.nombreMorts,
+          causeMortalite: validated.causeMortalite,
         };
         break;
       case TypeReleve.ALIMENTATION:
         dto = {
           ...base,
           typeReleve: TypeReleve.ALIMENTATION,
-          quantiteAliment: body.quantiteAliment,
-          typeAliment: body.typeAliment,
-          frequenceAliment: body.frequenceAliment,
-          ...(body.tauxRefus != null && { tauxRefus: body.tauxRefus }),
-          ...(body.comportementAlim != null && { comportementAlim: body.comportementAlim }),
+          quantiteAliment: validated.quantiteAliment,
+          typeAliment: validated.typeAliment,
+          frequenceAliment: validated.frequenceAliment,
+          ...(validated.tauxRefus != null && { tauxRefus: validated.tauxRefus }),
+          ...(validated.comportementAlim != null && { comportementAlim: validated.comportementAlim }),
         };
         break;
       case TypeReleve.QUALITE_EAU:
         dto = {
           ...base,
           typeReleve: TypeReleve.QUALITE_EAU,
-          ...(body.temperature != null && { temperature: body.temperature }),
-          ...(body.ph != null && { ph: body.ph }),
-          ...(body.oxygene != null && { oxygene: body.oxygene }),
-          ...(body.ammoniac != null && { ammoniac: body.ammoniac }),
+          ...(validated.temperature != null && { temperature: validated.temperature }),
+          ...(validated.ph != null && { ph: validated.ph }),
+          ...(validated.oxygene != null && { oxygene: validated.oxygene }),
+          ...(validated.ammoniac != null && { ammoniac: validated.ammoniac }),
         };
         break;
       case TypeReleve.COMPTAGE:
         dto = {
           ...base,
           typeReleve: TypeReleve.COMPTAGE,
-          nombreCompte: body.nombreCompte,
-          methodeComptage: body.methodeComptage,
+          nombreCompte: validated.nombreCompte,
+          methodeComptage: validated.methodeComptage,
         };
         break;
       case TypeReleve.OBSERVATION:
         dto = {
           ...base,
           typeReleve: TypeReleve.OBSERVATION,
-          description: body.description.trim(),
+          description: validated.description,
         };
         break;
-      case TypeReleve.RENOUVELLEMENT:
-        dto = {
-          ...base,
-          typeReleve: TypeReleve.RENOUVELLEMENT,
-          ...(body.pourcentageRenouvellement != null && { pourcentageRenouvellement: body.pourcentageRenouvellement }),
-          ...(body.volumeRenouvele != null && { volumeRenouvele: body.volumeRenouvele }),
-          ...(body.nombreRenouvellements != null && { nombreRenouvellements: body.nombreRenouvellements }),
-        };
-        break;
-      default:
-        return NextResponse.json(
-          { status: 400, message: `Type de relevé non supporté: ${body.typeReleve}` },
-          { status: 400 }
-        );
     }
 
     const releve = await createReleve(auth.activeSiteId, auth.userId, dto, activiteId);
 
     // Hook asynchrone : evaluer les regles SEUIL_* pour la vague concernee.
-    // Ne bloque pas la reponse — erreurs loggees silencieusement.
+    // Ne bloque pas la reponse — echecs transitoires retenies, echec definitif logue.
     const vagueId = dto.vagueId;
     const siteId = auth.activeSiteId;
     const userId = auth.userId;
-    triggerSeuilRulesAsync(siteId, vagueId, userId).catch((err) =>
-      console.error("[POST /api/releves] Erreur hook SEUIL:", err)
+    retryAsync(
+      () => triggerSeuilRulesAsync(siteId, vagueId, userId),
+      { context: "[POST /api/releves] hook SEUIL" }
     );
 
     // Store idempotency record
@@ -539,18 +324,7 @@ async function triggerSeuilRulesAsync(
 
   if (!vague) return;
 
-  const produits = await prisma.produit.findMany({
-    where: { siteId, isActive: true },
-    select: {
-      id: true,
-      nom: true,
-      categorie: true,
-      unite: true,
-      seuilAlerte: true,
-      stockActuel: true,
-    },
-  });
-
+  // Paralléliser les queries indépendantes : stock + regles SEUIL
   const seuilTypes = [
     TypeDeclencheur.SEUIL_POIDS,
     TypeDeclencheur.SEUIL_QUALITE,
@@ -559,14 +333,27 @@ async function triggerSeuilRulesAsync(
     TypeDeclencheur.FCR_ELEVE,
   ];
 
-  const regles = await prisma.regleActivite.findMany({
-    where: {
-      isActive: true,
-      firedOnce: false,
-      typeDeclencheur: { in: seuilTypes },
-      OR: [{ siteId }, { siteId: null }],
-    },
-  });
+  const [produits, regles] = await Promise.all([
+    prisma.produit.findMany({
+      where: { siteId, isActive: true },
+      select: {
+        id: true,
+        nom: true,
+        categorie: true,
+        unite: true,
+        seuilAlerte: true,
+        stockActuel: true,
+      },
+    }),
+    prisma.regleActivite.findMany({
+      where: {
+        isActive: true,
+        firedOnce: false,
+        typeDeclencheur: { in: seuilTypes },
+        OR: [{ siteId }, { siteId: null }],
+      },
+    }),
+  ]);
 
   if (regles.length === 0) return;
 

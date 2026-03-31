@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import type { AnalytiqueAliment, SimulationResult } from "@/types";
 import { useAnalyticsService } from "@/services";
 import { useTranslations } from "next-intl";
+import { formatNumber } from "@/lib/format";
 
 interface FeedSimulatorProps {
   aliments: AnalytiqueAliment[];
@@ -165,7 +166,7 @@ function SimulationResultCard({ result }: { result: SimulationResult }) {
             )}
           >
             {isEconomie ? "-" : "+"}
-            {Math.abs(result.economie).toLocaleString("fr-FR")} CFA
+            {formatNumber(Math.abs(result.economie))} CFA
           </p>
         )}
 
@@ -177,14 +178,14 @@ function SimulationResultCard({ result }: { result: SimulationResult }) {
             <p className="text-xs text-muted-foreground mb-1">{result.ancienProduitNom}</p>
             <p className="text-sm">{tAnalytics("simulation.fcrLabel")} : {result.ancienFCR ?? "—"}</p>
             <p className="text-sm">
-              {tAnalytics("simulation.cost")} : {result.ancienCout !== null ? `${result.ancienCout.toLocaleString("fr-FR")} CFA` : "—"}
+              {tAnalytics("simulation.cost")} : {result.ancienCout !== null ? `${formatNumber(result.ancienCout)} CFA` : "—"}
             </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">{result.nouveauProduitNom}</p>
             <p className="text-sm">{tAnalytics("simulation.fcrLabel")} : {result.nouveauFCR ?? "—"}</p>
             <p className="text-sm">
-              {tAnalytics("simulation.cost")} : {result.nouveauCout !== null ? `${result.nouveauCout.toLocaleString("fr-FR")} CFA` : "—"}
+              {tAnalytics("simulation.cost")} : {result.nouveauCout !== null ? `${formatNumber(result.nouveauCout)} CFA` : "—"}
             </p>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { formatNumber } from "@/lib/format";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { queryKeys } from "@/lib/query-keys";
@@ -257,10 +258,10 @@ export function PacksListClient({ packs, permissions, plans = [] }: Props) {
                         <div className="flex flex-wrap gap-3 mt-2 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Package className="h-3.5 w-3.5" />
-                            {t("list.alevins", { count: pack.nombreAlevins.toLocaleString() })}
+                            {t("list.alevins", { count: formatNumber(pack.nombreAlevins) })}
                           </span>
                           <span>{pack.poidsMoyenInitial}g/alevin</span>
-                          <span>{pack.prixTotal.toLocaleString()} FCFA</span>
+                          <span>{formatNumber(pack.prixTotal)} FCFA</span>
                           <span className="flex items-center gap-1">
                             <Users className="h-3.5 w-3.5" />
                             {t("list.activations", { count: pack._count.activations })}

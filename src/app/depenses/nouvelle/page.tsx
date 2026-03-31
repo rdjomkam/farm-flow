@@ -18,13 +18,13 @@ export default async function NouvelleDepensePage() {
   );
   if (!permissions) return <AccessDenied />;
 
-  const [vagues, allCommandes] = await Promise.all([
+  const [vaguesResult, commandesResult] = await Promise.all([
     getVagues(session.activeSiteId),
     getCommandes(session.activeSiteId),
   ]);
 
   // Seules les commandes LIVREES sans depense associee (displayed as optional link)
-  const commandesLivrees = allCommandes.filter(
+  const commandesLivrees = commandesResult.data.filter(
     (c) => c.statut === StatutCommande.LIVREE
   );
 
@@ -32,7 +32,7 @@ export default async function NouvelleDepensePage() {
     <>
       <Header title="Nouvelle depense" />
       <DepenseFormClient
-        vagues={vagues.map((v) => ({ id: v.id, code: v.code }))}
+        vagues={vaguesResult.data.map((v) => ({ id: v.id, code: v.code }))}
         commandesLivrees={commandesLivrees.map((c) => ({
           id: c.id,
           numero: c.numero,

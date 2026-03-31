@@ -480,18 +480,81 @@ export function calibrerGompertz(
 }
 
 /**
+ * Numerically inverts the Gompertz function to find the day t at which
+ * W(t) = targetWeight, using the bisection method.
+ *
+ * This is used as a fallback when the target weight is in the asymptotic zone
+ * (≥ 95% of W∞), where the analytic formula ln(−ln(ratio))/K becomes
+ * numerically unreliable because ln(−ln(ratio)) → −∞ as ratio → 1.
+ *
+ * The bisection method is guaranteed to converge for any monotone function.
+ * It searches in the interval [currentDay, currentDay + maxDays] for the
+ * crossing point where W(t) = targetWeight, to within the specified tolerance.
+ *
+ * @param params       - calibrated Gompertz parameters { wInfinity, k, ti }
+ * @param targetWeight - target weight in grams (must be < wInfinity)
+ * @param currentDay   - current age of the batch in days (search lower bound)
+ * @param tolerance    - convergence tolerance in days (default 0.1, well within ±0.5 day)
+ * @param maxDays      - maximum day offset to search beyond currentDay (default 3000)
+ * @returns the day t at which W(t) = targetWeight, or null if not found in range
+ */
+export function numericallyInvertGompertz(
+  params: GompertzParams,
+  targetWeight: number,
+  currentDay: number,
+  tolerance: number = 0.1,
+  maxDays: number = 3000
+): number | null {
+  const lo = currentDay;
+  const hi = currentDay + maxDays;
+
+  const wLo = gompertzWeight(lo, params);
+  const wHi = gompertzWeight(hi, params);
+
+  // If target is already below current weight, the solution is at or before lo
+  if (wLo >= targetWeight) return lo;
+
+  // If target exceeds what we can reach even at hi, it's unreachable in range
+  if (wHi < targetWeight) return null;
+
+  // Bisection: W is monotone increasing, so W(mid) - target changes sign
+  let left = lo;
+  let right = hi;
+
+  for (let iter = 0; iter < 100; iter++) {
+    const mid = (left + right) / 2;
+    if (right - left < tolerance) {
+      return mid;
+    }
+    const wMid = gompertzWeight(mid, params);
+    if (wMid < targetWeight) {
+      left = mid;
+    } else {
+      right = mid;
+    }
+  }
+
+  return (left + right) / 2;
+}
+
+/**
  * Project the number of days remaining to reach a target weight.
  *
- * Inverts the Gompertz equation analytically:
- *   t = ti − ln(−ln(poidsObjectif / W∞)) / K
+ * For targets below 95% of W∞, uses the analytic inversion:
+ *   t* = ti − ln(−ln(poidsObjectif / W∞)) / K
  *
- * Returns null when W∞ < poidsObjectif (the fish can never reach target weight
- * according to the model).
+ * For targets in the asymptotic zone (≥ 95% of W∞ and < W∞), the analytic
+ * formula becomes numerically unreliable (ln(−ln(ratio)) → −∞ as ratio → 1),
+ * so the function falls back to bisection via `numericallyInvertGompertz()`.
+ * This ensures valid projections for large harvest targets close to the
+ * asymptote (e.g., 96%, 98%, 99.5% of W∞), which were previously rejected.
+ *
+ * Returns null only when W∞ ≤ poidsObjectif (target is physically unreachable).
  *
  * @param params         - calibrated Gompertz parameters
  * @param poidsObjectif  - harvest target weight in grams
  * @param joursActuels   - current age of the batch in days
- * @returns days remaining, or null if target is unreachable
+ * @returns days remaining (≥ 0), or null if target is unreachable
  */
 export function projeterDateRecolte(
   params: GompertzParams,
@@ -505,17 +568,20 @@ export function projeterDateRecolte(
     return null;
   }
 
-  if (poidsObjectif >= 0.99 * wInfinity) {
-    // Target weight is within the asymptotic zone (>= 99% of W∞).
-    // The Gompertz curve flattens here and the analytic inversion becomes
-    // numerically unreliable (ln(-ln(ratio)) → -∞ as ratio → 1).
-    return null;
+  let tStar: number;
+
+  if (poidsObjectif >= 0.95 * wInfinity) {
+    // Asymptotic zone (≥ 95% of W∞): analytic inversion is numerically
+    // unreliable here. Use bisection fallback with ±0.1 day precision.
+    const result = numericallyInvertGompertz(params, poidsObjectif, joursActuels);
+    if (result === null) return null;
+    return Math.max(0, result - joursActuels);
   }
 
   // Analytic inversion: t* = ti - ln(-ln(W_obj / W∞)) / K
   const ratio = poidsObjectif / wInfinity;
   // ratio ∈ (0, 1) because wInfinity > poidsObjectif > 0
-  const tStar = ti - Math.log(-Math.log(ratio)) / k;
+  tStar = ti - Math.log(-Math.log(ratio)) / k;
 
   const joursRestants = tStar - joursActuels;
 

@@ -17,6 +17,7 @@ import { ForbiddenError } from "@/lib/permissions";
 import { updateSiteStatus } from "@/lib/queries/admin-sites";
 import type { SiteLifecycleAction } from "@/lib/queries/admin-sites";
 import { ErrorKeys } from "@/lib/api-error-keys";
+import { apiError } from "@/lib/api-utils";
 
 const VALID_ACTIONS: SiteLifecycleAction[] = ["SUSPEND", "BLOCK", "RESTORE", "ARCHIVE"];
 
@@ -35,17 +36,11 @@ export async function PATCH(
     try {
       body = await request.json();
     } catch {
-      return NextResponse.json(
-        { status: 400, message: "Corps de la requete invalide (JSON attendu)." },
-        { status: 400 }
-      );
+      return apiError(400, "Corps de la requete invalide (JSON attendu).");
     }
 
     if (typeof body !== "object" || body === null) {
-      return NextResponse.json(
-        { status: 400, message: "Corps de la requete invalide." },
-        { status: 400 }
-      );
+      return apiError(400, "Corps de la requete invalide.");
     }
 
     const { action, reason, confirmArchive } = body as Record<string, unknown>;
@@ -69,26 +64,12 @@ export async function PATCH(
       (lifecycleAction === "SUSPEND" || lifecycleAction === "BLOCK") &&
       (typeof reason !== "string" || reason.trim().length === 0)
     ) {
-      return NextResponse.json(
-        {
-          status: 400,
-          message: "Le champ reason est obligatoire pour les actions SUSPEND et BLOCK.",
-          errorKey: ErrorKeys.VALIDATION_FIELD_REQUIRED,
-        },
-        { status: 400 }
-      );
+      return apiError(400, "Le champ reason est obligatoire pour les actions SUSPEND et BLOCK.", { code: ErrorKeys.VALIDATION_FIELD_REQUIRED, });
     }
 
     // confirmArchive: true obligatoire pour ARCHIVE
     if (lifecycleAction === "ARCHIVE" && confirmArchive !== true) {
-      return NextResponse.json(
-        {
-          status: 400,
-          message: "Vous devez confirmer l'archivage en passant confirmArchive: true.",
-          errorKey: ErrorKeys.VALIDATION_FIELD_REQUIRED,
-        },
-        { status: 400 }
-      );
+      return apiError(400, "Vous devez confirmer l'archivage en passant confirmArchive: true.", { code: ErrorKeys.VALIDATION_FIELD_REQUIRED, });
     }
 
     // Appel de la query (transaction atomique)
@@ -102,30 +83,14 @@ export async function PATCH(
     return NextResponse.json(result);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message, errorKey: ErrorKeys.AUTH_UNAUTHORIZED },
-        { status: 401 }
-      );
+      return apiError(401, error.message, { code: ErrorKeys.AUTH_UNAUTHORIZED });
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message, errorKey: ErrorKeys.AUTH_FORBIDDEN },
-        { status: 403 }
-      );
+      return apiError(403, error.message, { code: ErrorKeys.AUTH_FORBIDDEN });
     }
     if (error instanceof Error) {
-      return NextResponse.json(
-        { status: 400, message: error.message },
-        { status: 400 }
-      );
+      return apiError(400, error.message);
     }
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors de la mise a jour du statut du site.",
-        errorKey: ErrorKeys.SERVER_GENERIC,
-      },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la mise a jour du statut du site.", { code: ErrorKeys.SERVER_GENERIC, });
   }
 }

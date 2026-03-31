@@ -28,6 +28,7 @@ import {
 import { StatutPonte, Permission } from "@/types";
 import { useAlevinsService } from "@/services";
 import { useTranslations } from "next-intl";
+import { formatNumber } from "@/lib/format";
 
 function statutBadgeClass(statut: string): string {
   if (statut === StatutPonte.EN_COURS) return "bg-accent-green-muted text-accent-green";
@@ -276,7 +277,7 @@ export function PontesListClient({ pontes, femelles, males, permissions }: Props
                             p.tauxFecondation !== null) && (
                             <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted-foreground">
                               {p.nombreOeufs !== null && (
-                                <span>{p.nombreOeufs.toLocaleString("fr-FR")} {t("pontes.card.oeufs")}</span>
+                                <span>{formatNumber(p.nombreOeufs)} {t("pontes.card.oeufs")}</span>
                               )}
                               {p.tauxFecondation !== null && (
                                 <span>{p.tauxFecondation}% {t("pontes.card.fecondation")}</span>

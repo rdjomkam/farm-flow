@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { formatNumber } from "@/lib/format";
 import {
   ArrowLeft,
   Calendar,
@@ -263,7 +264,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
 
           <div className="mt-3 rounded-lg bg-muted/50 p-3 text-center">
             <p className="text-2xl font-bold">
-              {commande.montantTotal.toLocaleString("fr-FR")} FCFA
+              {formatNumber(commande.montantTotal)} FCFA
             </p>
             <p className="text-xs text-muted-foreground">{t("commandes.fields.montantTotal")}</p>
           </div>
@@ -571,11 +572,11 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
                       {ligne.produit.nom}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {ligne.quantite} {displayUnite} x {ligne.prixUnitaire.toLocaleString("fr-FR")} FCFA
+                      {ligne.quantite} {displayUnite} x {formatNumber(ligne.prixUnitaire)} FCFA
                     </p>
                   </div>
                   <p className="text-sm font-semibold shrink-0">
-                    {sousTotal.toLocaleString("fr-FR")} FCFA
+                    {formatNumber(sousTotal)} FCFA
                   </p>
                 </div>
               );

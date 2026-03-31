@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Users, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { formatNumber } from "@/lib/format";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -101,7 +102,7 @@ export function ActivationsListClient({ activations }: Props) {
                         <p className="font-medium text-sm mt-1">{act.clientSite.name}</p>
                         <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-muted-foreground">
                           <span>Pack : <Link href={`/packs/${act.pack.id}`} className="hover:underline">{act.pack.nom}</Link></span>
-                          <span>{act.pack.nombreAlevins.toLocaleString()} alevins</span>
+                          <span>{formatNumber(act.pack.nombreAlevins)} alevins</span>
                           <span>Active le {new Date(act.dateActivation).toLocaleDateString("fr-FR")}</span>
                           {act.dateExpiration && (
                             <span>Expire le {new Date(act.dateExpiration).toLocaleDateString("fr-FR")}</span>

@@ -11,6 +11,7 @@ import { AuthError } from "@/lib/auth";
 import { ForbiddenError } from "@/lib/permissions";
 import { getAdminSiteById } from "@/lib/queries/admin-sites";
 import { ErrorKeys } from "@/lib/api-error-keys";
+import { apiError } from "@/lib/api-utils";
 
 export async function GET(
   request: NextRequest,
@@ -25,37 +26,17 @@ export async function GET(
     const site = await getAdminSiteById(id);
 
     if (!site) {
-      return NextResponse.json(
-        {
-          status: 404,
-          message: "Site introuvable.",
-          errorKey: ErrorKeys.NOT_FOUND_SITE,
-        },
-        { status: 404 }
-      );
+      return apiError(404, "Site introuvable.", { code: ErrorKeys.NOT_FOUND_SITE, });
     }
 
     return NextResponse.json(site);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message, errorKey: ErrorKeys.AUTH_UNAUTHORIZED },
-        { status: 401 }
-      );
+      return apiError(401, error.message, { code: ErrorKeys.AUTH_UNAUTHORIZED });
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message, errorKey: ErrorKeys.AUTH_FORBIDDEN },
-        { status: 403 }
-      );
+      return apiError(403, error.message, { code: ErrorKeys.AUTH_FORBIDDEN });
     }
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors de la recuperation du site.",
-        errorKey: ErrorKeys.SERVER_GENERIC,
-      },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation du site.", { code: ErrorKeys.SERVER_GENERIC, });
   }
 }

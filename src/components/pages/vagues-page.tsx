@@ -17,7 +17,7 @@ export default async function VaguesPage() {
   if (!session.activeSiteId) redirect("/settings/sites");
 
   try {
-    const [permissions, t, vaguesRaw, bacsLibresRaw, configElevages] = await Promise.all([
+    const [permissions, t, vaguesResult, bacsLibresRaw, configElevages] = await Promise.all([
       checkPagePermission(session, Permission.VAGUES_VOIR),
       getTranslations("vagues"),
       getVagues(session.activeSiteId),
@@ -30,7 +30,7 @@ export default async function VaguesPage() {
     ]);
     if (!permissions) return <AccessDenied />;
 
-    const vagues: VagueSummaryResponse[] = vaguesRaw.map((v) => {
+    const vagues: VagueSummaryResponse[] = vaguesResult.data.map((v) => {
       const now = v.dateFin ?? new Date();
       const joursEcoules = Math.floor(
         (now.getTime() - v.dateDebut.getTime()) / (1000 * 60 * 60 * 24)

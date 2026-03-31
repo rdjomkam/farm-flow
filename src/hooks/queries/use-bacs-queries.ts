@@ -16,7 +16,7 @@ export function useBacsList(
     queryFn: async () => {
       const result = await bacService.list(filters);
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement bacs");
-      return (result.data as BacListResponse).bacs;
+      return (result.data as unknown as { data: BacResponse[]; total: number }).data;
     },
     staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,
@@ -33,7 +33,7 @@ export function useBacsLibres(options?: { enabled?: boolean }) {
     queryFn: async () => {
       const result = await bacService.listLibres();
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement bacs libres");
-      return (result.data as BacListResponse).bacs;
+      return (result.data as unknown as { data: BacResponse[]; total: number }).data;
     },
     staleTime: 30_000,
     gcTime: 2 * 60_000,

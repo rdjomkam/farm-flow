@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { formatNumber } from "@/lib/format";
 import { FileText, Filter } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -121,12 +122,12 @@ export function FacturesListClient({ initialFactures, permissions: _permissions 
                         {new Date(f.dateEmission).toLocaleDateString("fr-FR")}
                       </span>
                       <span className="font-semibold">
-                        {f.montantTotal.toLocaleString("fr-FR")} F
+                        {formatNumber(f.montantTotal)} F
                       </span>
                     </div>
                     {resteAPayer > 0 && statut !== StatutFacture.ANNULEE && (
                       <p className="text-xs text-accent-amber mt-1">
-                        {t("factures.resteAPayer", { montant: resteAPayer.toLocaleString("fr-FR") })}
+                        {t("factures.resteAPayer", { montant: formatNumber(resteAPayer) })}
                       </p>
                     )}
                   </CardContent>

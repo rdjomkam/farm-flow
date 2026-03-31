@@ -3,6 +3,7 @@ import { getConfigAlertes, createConfigAlerte } from "@/lib/queries";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission, TypeAlerte } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 const TYPES_ALERTE_VALIDES = Object.values(TypeAlerte) as string[];
 
@@ -14,16 +15,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ configs, total: configs.length });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     console.error("[GET /api/alertes/config]", error);
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la récupération des configurations d'alerte." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la récupération des configurations d'alerte.");
   }
 }
 
@@ -66,10 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     const config = await createConfigAlerte(auth.activeSiteId, auth.userId, {
@@ -82,15 +77,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(config, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     console.error("[POST /api/alertes/config]", error);
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la création de la configuration d'alerte." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la création de la configuration d'alerte.");
   }
 }

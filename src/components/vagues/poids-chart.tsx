@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChartTooltip } from "@/components/ui/chart-tooltip";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { buildGompertzPanelData } from "@/lib/gompertz-panel";
 import { GompertzInfoPanel } from "./gompertz-info-panel";
 import type { GompertzConfidenceLevel } from "@/lib/gompertz";
@@ -140,75 +141,77 @@ export function PoidsChart({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="text-base">{t("poidsChart.title")}</CardTitle>
-          {hasGompertz && gompertzConfidence && (
-            <div className="flex items-center gap-1">
-              <GompertzBadge confidence={gompertzConfidence} r2={gompertzR2 ?? null} />
-              {panelData && <GompertzInfoPanel data={panelData} />}
-            </div>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="overflow-hidden">
-        <div className="h-[220px] w-full max-w-full">
-          <ResponsiveContainer
-            width="100%"
-            height="100%"
-          >
-            <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis
-                dataKey="jour"
-                tick={{ fontSize: 12 }}
-                tickFormatter={(v) => `J${v}`}
-              />
-              <YAxis
-                tick={{ fontSize: 11 }}
-                tickFormatter={(v) => `${v}g`}
-                width={42}
-              />
-              <Tooltip
-                content={
-                  <ChartTooltip
-                    labelFormatter={(label) => t("poidsChart.tooltipLabel", { label })}
-                    valueFormatter={(v) => `${v} g`}
-                  />
-                }
-              />
-              <Line
-                type="monotone"
-                dataKey="poidsMoyen"
-                name={t("poidsChart.seriesName")}
-                stroke="var(--primary)"
-                strokeWidth={2}
-                dot={{ r: 3 }}
-                activeDot={{ r: 6 }}
-              />
-              {hasGompertz && (
+    <ErrorBoundary section="le graphique d'évolution du poids">
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="text-base">{t("poidsChart.title")}</CardTitle>
+            {hasGompertz && gompertzConfidence && (
+              <div className="flex items-center gap-1">
+                <GompertzBadge confidence={gompertzConfidence} r2={gompertzR2 ?? null} />
+                {panelData && <GompertzInfoPanel data={panelData} />}
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="overflow-hidden">
+          <div className="h-[220px] w-full max-w-full">
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+            >
+              <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis
+                  dataKey="jour"
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(v) => `J${v}`}
+                />
+                <YAxis
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(v) => `${v}g`}
+                  width={42}
+                />
+                <Tooltip
+                  content={
+                    <ChartTooltip
+                      labelFormatter={(label) => t("poidsChart.tooltipLabel", { label })}
+                      valueFormatter={(v) => `${v} g`}
+                    />
+                  }
+                />
                 <Line
                   type="monotone"
-                  dataKey="poidsGompertz"
-                  name="Courbe Gompertz"
-                  stroke="var(--accent-green)"
-                  strokeWidth={1.5}
-                  strokeDasharray="4 3"
-                  dot={false}
-                  activeDot={{ r: 4 }}
-                  connectNulls={true}
+                  dataKey="poidsMoyen"
+                  name={t("poidsChart.seriesName")}
+                  stroke="var(--primary)"
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 6 }}
                 />
-              )}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-        {hasGompertz && (
-          <p className="text-[10px] text-muted-foreground mt-1 text-center">
-            Ligne verte pointillee : courbe Gompertz ajustee sur les mesures agrégées
-          </p>
-        )}
-      </CardContent>
-    </Card>
+                {hasGompertz && (
+                  <Line
+                    type="monotone"
+                    dataKey="poidsGompertz"
+                    name="Courbe Gompertz"
+                    stroke="var(--accent-green)"
+                    strokeWidth={1.5}
+                    strokeDasharray="4 3"
+                    dot={false}
+                    activeDot={{ r: 4 }}
+                    connectNulls={true}
+                  />
+                )}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          {hasGompertz && (
+            <p className="text-[10px] text-muted-foreground mt-1 text-center">
+              Ligne verte pointillee : courbe Gompertz ajustee sur les mesures agrégées
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </ErrorBoundary>
   );
 }

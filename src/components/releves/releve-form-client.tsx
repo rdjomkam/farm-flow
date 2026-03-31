@@ -29,6 +29,7 @@ import { ClipboardCheck } from "lucide-react";
 import { useBacService, useActiviteService, useReleveService } from "@/services";
 import { useBacsList } from "@/hooks/queries/use-bacs-queries";
 import { queryKeys } from "@/lib/query-keys";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 
 /** Inverse de ACTIVITE_RELEVE_TYPE_MAP : TypeReleve → TypeActivite compatible */
 const RELEVE_ACTIVITE_TYPE_MAP: Partial<Record<string, TypeActivite>> = {};
@@ -129,7 +130,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
     setLoadingActivites(true);
     activiteService.list({ vagueId, typeActivite: typeActiviteCompat }).then((result) => {
       if (result.ok && result.data) {
-        const compatibles = (result.data.activites ?? []).filter(
+        const compatibles = (result.data.data ?? []).filter(
           (a: ActivitePlanifiee) =>
             (a.statut === StatutActivite.PLANIFIEE || a.statut === StatutActivite.EN_RETARD) &&
             !a.releveId
@@ -262,6 +263,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
   }
 
   return (
+    <ErrorBoundary section="le formulaire de relevé">
     <section>
       <h2 className="text-base font-semibold mb-4">{t("form.title")}</h2>
 
@@ -535,5 +537,6 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
           </Button>
         </form>
     </section>
+    </ErrorBoundary>
   );
 }

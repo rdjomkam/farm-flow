@@ -17,6 +17,7 @@ import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
 import { Permission, StatutPaiementAbo } from "@/types";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-utils";
 
 export async function GET(
   request: NextRequest,
@@ -40,10 +41,7 @@ export async function GET(
     });
 
     if (!paiement) {
-      return NextResponse.json(
-        { status: 404, message: "Paiement introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Paiement introuvable.");
     }
 
     // Si pas de référence externe, on ne peut pas vérifier auprès de la gateway
@@ -74,20 +72,11 @@ export async function GET(
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la verification du paiement." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la verification du paiement.");
   }
 }

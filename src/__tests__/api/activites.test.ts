@@ -111,14 +111,16 @@ describe("GET /api/activites", () => {
   });
 
   it("retourne la liste des activites avec le total", async () => {
-    mockGetActivites.mockResolvedValue([FAKE_ACTIVITE]);
+    mockGetActivites.mockResolvedValue({ data: [FAKE_ACTIVITE], total: 1 });
 
     const response = await GET(makeRequest("/api/activites"));
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.activites).toHaveLength(1);
+    expect(data.data).toHaveLength(1);
     expect(data.total).toBe(1);
+    expect(data.limit).toBe(50);
+    expect(data.offset).toBe(0);
     expect(mockGetActivites).toHaveBeenCalledWith("site-1", {
       dateDebut: undefined,
       dateFin: undefined,
@@ -126,11 +128,11 @@ describe("GET /api/activites", () => {
       typeActivite: undefined,
       vagueId: undefined,
       assigneAId: undefined,
-    });
+    }, expect.any(Object));
   });
 
   it("passe les filtres a la query", async () => {
-    mockGetActivites.mockResolvedValue([]);
+    mockGetActivites.mockResolvedValue({ data: [], total: 0 });
 
     await GET(
       makeRequest(
@@ -145,11 +147,11 @@ describe("GET /api/activites", () => {
       typeActivite: "ALIMENTATION",
       vagueId: "vague-1",
       assigneAId: undefined,
-    });
+    }, expect.any(Object));
   });
 
   it("filtre par assigneAId", async () => {
-    mockGetActivites.mockResolvedValue([]);
+    mockGetActivites.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/activites?assigneAId=user-2"));
 
@@ -160,11 +162,11 @@ describe("GET /api/activites", () => {
       typeActivite: undefined,
       vagueId: undefined,
       assigneAId: "user-2",
-    });
+    }, expect.any(Object));
   });
 
   it("filtre par plage de dates", async () => {
-    mockGetActivites.mockResolvedValue([]);
+    mockGetActivites.mockResolvedValue({ data: [], total: 0 });
 
     await GET(
       makeRequest("/api/activites?dateDebut=2026-03-01&dateFin=2026-03-31")
@@ -177,7 +179,7 @@ describe("GET /api/activites", () => {
       typeActivite: undefined,
       vagueId: undefined,
       assigneAId: undefined,
-    });
+    }, expect.any(Object));
   });
 
   it("retourne 401 si non authentifie", async () => {

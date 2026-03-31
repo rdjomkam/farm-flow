@@ -3,6 +3,7 @@ import { requireHasPermission, ForbiddenError } from "@/lib/permissions";
 import { AuthError, getSession, getSessionToken } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Permission, Role } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -14,10 +15,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Guard: cannot nest impersonations
     if (session.isImpersonating) {
-      return NextResponse.json(
-        { status: 409, message: "Impossible d'imbriquer des impersonations. Arretez d'abord l'impersonation en cours." },
-        { status: 409 }
-      );
+      return apiError(409, "Impossible d'imbriquer des impersonations. Arretez d'abord l'impersonation en cours.");
     }
 
     // Load target user
@@ -27,28 +25,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     });
 
     if (!targetUser) {
-      return NextResponse.json({ status: 404, message: "Utilisateur introuvable." }, { status: 404 });
+      return apiError(404, "Utilisateur introuvable.");
     }
 
     if (targetUser.isSystem) {
-      return NextResponse.json(
-        { status: 403, message: "Impossible d'impersonner un utilisateur systeme." },
-        { status: 403 }
-      );
+      return apiError(403, "Impossible d'impersonner un utilisateur systeme.");
     }
 
     if (!targetUser.isActive) {
-      return NextResponse.json(
-        { status: 403, message: "Impossible d'impersonner un compte desactive." },
-        { status: 403 }
-      );
+      return apiError(403, "Impossible d'impersonner un compte desactive.");
     }
 
     if (targetUser.role === Role.ADMIN) {
-      return NextResponse.json(
-        { status: 403, message: "Impossible d'impersonner un administrateur." },
-        { status: 403 }
-      );
+      return apiError(403, "Impossible d'impersonner un administrateur.");
     }
 
     // Find first active site for the target user
@@ -65,7 +54,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Get the current session token
     const sessionToken = getSessionToken(request);
     if (!sessionToken) {
-      return NextResponse.json({ status: 401, message: "Token de session manquant." }, { status: 401 });
+      return apiError(401, "Token de session manquant.");
     }
 
     // Update session: swap userId, store originalUserId
@@ -88,11 +77,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json({ status: 500, message: "Erreur serveur." }, { status: 500 });
+    return apiError(500, "Erreur serveur.");
   }
 }

@@ -4,6 +4,7 @@ import {
   updateReproducteur,
   deleteReproducteur,
 } from "@/lib/queries/reproducteurs";
+import { apiError } from "@/lib/api-utils";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission, SexeReproducteur, StatutReproducteur } from "@/types";
@@ -18,25 +19,19 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     const reproducteur = await getReproducteurById(id, auth.activeSiteId);
     if (!reproducteur) {
-      return NextResponse.json(
-        { status: 404, message: "Reproducteur introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Reproducteur introuvable.");
     }
 
     return NextResponse.json(reproducteur);
   } catch (error) {
     console.error("[GET /api/reproducteurs/[id]]", error);
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur.");
   }
 }
 
@@ -91,10 +86,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     const data: UpdateReproducteurDTO = {};
@@ -110,14 +102,14 @@ export async function PUT(request: NextRequest, { params }: Params) {
   } catch (error) {
     console.error("[PUT /api/reproducteurs/[id]]", error);
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable") || message.includes("n'existe pas")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
     // Conflit : code deja utilise ou statut invalide
     if (
@@ -126,9 +118,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
       message.includes("n'est pas ACTIF") ||
       message.includes("statut doit etre")
     ) {
-      return NextResponse.json({ status: 409, message }, { status: 409 });
+      return apiError(409, message);
     }
-    return NextResponse.json({ status: 500, message }, { status: 500 });
+    return apiError(500, message);
   }
 }
 
@@ -142,19 +134,19 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   } catch (error) {
     console.error("[DELETE /api/reproducteurs/[id]]", error);
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
     // pontes liées → 409
     if (message.includes("ponte")) {
-      return NextResponse.json({ status: 409, message }, { status: 409 });
+      return apiError(409, message);
     }
-    return NextResponse.json({ status: 500, message }, { status: 500 });
+    return apiError(500, message);
   }
 }

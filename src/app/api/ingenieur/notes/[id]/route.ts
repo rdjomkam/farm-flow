@@ -4,6 +4,7 @@ import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission, VisibiliteNote } from "@/types";
 import type { UpdateNoteIngenieurDTO } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 /**
  * GET /api/ingenieur/notes/[id]
@@ -21,19 +22,13 @@ export async function GET(
     const { id } = await params;
 
     if (!id || typeof id !== "string") {
-      return NextResponse.json(
-        { status: 400, message: "L'identifiant de la note est requis." },
-        { status: 400 }
-      );
+      return apiError(400, "L'identifiant de la note est requis.");
     }
 
     const note = await getNoteById(id, auth.activeSiteId);
 
     if (!note) {
-      return NextResponse.json(
-        { status: 404, message: "Note introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Note introuvable.");
     }
 
     // Marquer les reponses du thread comme lues quand l'ingenieur ouvre la note
@@ -42,15 +37,12 @@ export async function GET(
     return NextResponse.json(note);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation de la note." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation de la note.");
   }
 }
 
@@ -71,10 +63,7 @@ export async function PUT(
     const { id } = await params;
 
     if (!id || typeof id !== "string") {
-      return NextResponse.json(
-        { status: 400, message: "L'identifiant de la note est requis." },
-        { status: 400 }
-      );
+      return apiError(400, "L'identifiant de la note est requis.");
     }
 
     const body = await request.json();
@@ -111,10 +100,7 @@ export async function PUT(
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     // Fast path: isRead-only update (mark as read) — uses ingenieurId instead of siteId
@@ -123,10 +109,7 @@ export async function PUT(
     if (bodyKeys.length === 1 && bodyKeys[0] === "isRead" && body.isRead === true) {
       const success = await markNoteRead(id, auth.userId);
       if (!success) {
-        return NextResponse.json(
-          { status: 404, message: "Note introuvable ou acces refuse." },
-          { status: 404 }
-        );
+        return apiError(404, "Note introuvable ou acces refuse.");
       }
       return NextResponse.json({ status: 200, message: "Note marquee comme lue." });
     }
@@ -146,19 +129,16 @@ export async function PUT(
     const note = await updateNote(id, auth.activeSiteId, data);
 
     if (!note) {
-      return NextResponse.json(
-        { status: 404, message: "Note introuvable ou acces refuse." },
-        { status: 404 }
-      );
+      return apiError(404, "Note introuvable ou acces refuse.");
     }
 
     return NextResponse.json(note);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message =
       error instanceof Error ? error.message : "Erreur serveur inattendue.";

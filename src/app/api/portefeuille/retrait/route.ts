@@ -18,6 +18,7 @@ import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
 import { Permission, FournisseurPaiement } from "@/types";
 import type { DemandeRetraitDTO } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 const VALID_FOURNISSEURS = Object.values(FournisseurPaiement);
 
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json({ status: 400, errors }, { status: 400 });
+      return apiError(400, "Erreurs de validation.", { errors });
     }
 
     const dto: DemandeRetraitDTO = {
@@ -59,26 +60,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ retrait }, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     if (error instanceof Error && error.message.includes("Solde insuffisant")) {
-      return NextResponse.json(
-        { status: 400, message: error.message },
-        { status: 400 }
-      );
+      return apiError(400, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la demande de retrait." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la demande de retrait.");
   }
 }

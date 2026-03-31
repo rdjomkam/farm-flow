@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { calculerDensiteBac } from "@/lib/calculs";
 import { getConfigElevageDefaut, CONFIG_ELEVAGE_DEFAULTS } from "@/lib/queries/config-elevage";
 import { getStatutDensite, type StatutDensite } from "@/lib/density-thresholds";
+import { apiError } from "@/lib/api-utils";
 
 export interface BacDensiteResponse {
   bacId: string;
@@ -52,10 +53,7 @@ export async function GET(
     });
 
     if (!vague) {
-      return NextResponse.json(
-        { status: 404, message: "Vague introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Vague introuvable.");
     }
 
     if (vague.bacs.length === 0) {
@@ -107,14 +105,11 @@ export async function GET(
   } catch (error) {
     console.error("[GET /api/vagues/[id]/densites] Error:", error);
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors du calcul des densites." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors du calcul des densites.");
   }
 }

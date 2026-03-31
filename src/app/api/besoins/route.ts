@@ -3,9 +3,10 @@ import {
   getListeBesoins,
   createListeBesoins,
 } from "@/lib/queries/besoins";
+import { apiError } from "@/lib/api-utils";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { Permission, StatutBesoins } from "@/types";
+import { Permission, StatutBesoins, parsePaginationQuery } from "@/types";
 import type { CreateListeBesoinsDTO, ListeBesoinsFilters } from "@/types";
 
 const VALID_STATUTS = Object.values(StatutBesoins);
@@ -47,21 +48,21 @@ export async function GET(request: NextRequest) {
     const dateTo = searchParams.get("dateTo");
     if (dateTo) filters.dateTo = dateTo;
 
-    const listesBesoins = await getListeBesoins(auth.activeSiteId, filters);
+    const paginationResult = parsePaginationQuery(searchParams);
+    if (!paginationResult.valid) {
+      return apiError(400, paginationResult.error);
+    }
+    const { limit, offset } = paginationResult.params;
 
-    return NextResponse.json({ listesBesoins, total: listesBesoins.length });
+    const { data, total } = await getListeBesoins(auth.activeSiteId, filters, { limit, offset });
+
+    return NextResponse.json({ data, total, limit, offset });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     return NextResponse.json(
       {
@@ -133,10 +134,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     // Validation dateLimite optionnelle
@@ -144,10 +142,7 @@ export async function POST(request: NextRequest) {
     if (body.dateLimite != null) {
       const parsed = new Date(body.dateLimite);
       if (isNaN(parsed.getTime())) {
-        return NextResponse.json(
-          { status: 400, message: "Date limite invalide (format ISO 8601 attendu)." },
-          { status: 400 }
-        );
+        return apiError(400, "Date limite invalide (format ISO 8601 attendu).");
       }
       dateLimite = parsed.toISOString();
     }
@@ -180,16 +175,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(listeBesoins, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     const message =
       error instanceof Error ? error.message : "Erreur serveur.";

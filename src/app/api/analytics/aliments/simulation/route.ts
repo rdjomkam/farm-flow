@@ -3,6 +3,7 @@ import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { getSimulationChangementAliment } from "@/lib/queries/analytics";
+import { apiError } from "@/lib/api-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,10 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (typeof productionCible !== "number" || productionCible <= 0) {
-      return NextResponse.json(
-        { status: 400, message: "La production cible doit etre un nombre positif." },
-        { status: 400 }
-      );
+      return apiError(400, "La production cible doit etre un nombre positif.");
     }
 
     const simulation = await getSimulationChangementAliment(
@@ -36,23 +34,17 @@ export async function POST(request: NextRequest) {
     );
 
     if (!simulation) {
-      return NextResponse.json(
-        { status: 404, message: "Un ou les deux produits aliments sont introuvables." },
-        { status: 404 }
-      );
+      return apiError(404, "Un ou les deux produits aliments sont introuvables.");
     }
 
     return NextResponse.json(simulation);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la simulation." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la simulation.");
   }
 }

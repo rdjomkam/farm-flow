@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getFactures, createFacture } from "@/lib/queries/factures";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { Permission, StatutFacture } from "@/types";
+import { Permission, StatutFacture, parsePaginationQuery } from "@/types";
 import type { CreateFactureDTO, FactureFilters } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 const VALID_STATUTS = Object.values(StatutFacture);
 
@@ -11,6 +12,13 @@ export async function GET(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.FACTURES_VOIR);
     const { searchParams } = new URL(request.url);
+
+    // Pagination
+    const paginationResult = parsePaginationQuery(searchParams);
+    if (!paginationResult.valid) {
+      return apiError(400, paginationResult.error);
+    }
+    const { limit, offset } = paginationResult.params;
 
     const filters: FactureFilters = {};
     const statut = searchParams.get("statut");
@@ -22,23 +30,17 @@ export async function GET(request: NextRequest) {
     const dateTo = searchParams.get("dateTo");
     if (dateTo) filters.dateTo = dateTo;
 
-    const factures = await getFactures(auth.activeSiteId, filters);
+    const { data, total } = await getFactures(auth.activeSiteId, filters, { limit, offset });
 
-    return NextResponse.json({
-      factures,
-      total: factures.length,
-    });
+    return NextResponse.json({ data, total, limit, offset });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation des factures." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation des factures.");
   }
 }
 
@@ -57,10 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     const data: CreateFactureDTO = {
@@ -73,21 +72,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(facture, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
     if (message.includes("deja une facture")) {
-      return NextResponse.json({ status: 409, message }, { status: 409 });
+      return apiError(409, message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la creation de la facture." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la creation de la facture.");
   }
 }

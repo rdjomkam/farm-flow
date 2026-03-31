@@ -4,6 +4,7 @@ import {
   updateDepenseRecurrente,
   deleteDepenseRecurrente,
 } from "@/lib/queries/depenses-recurrentes";
+import { apiError } from "@/lib/api-utils";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { CategorieDepense, FrequenceRecurrence, Permission } from "@/types";
@@ -27,24 +28,18 @@ export async function GET(
 
     const template = await getDepenseRecurrenteById(id, auth.activeSiteId);
     if (!template) {
-      return NextResponse.json(
-        { status: 404, message: "Template introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Template introuvable.");
     }
 
     return NextResponse.json(template);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur.");
   }
 }
 
@@ -67,37 +62,25 @@ export async function PUT(
       body.categorieDepense !== undefined &&
       !VALID_CATEGORIES.includes(body.categorieDepense)
     ) {
-      return NextResponse.json(
-        { status: 400, message: "categorieDepense invalide." },
-        { status: 400 }
-      );
+      return apiError(400, "categorieDepense invalide.");
     }
     if (
       body.frequence !== undefined &&
       !VALID_FREQUENCES.includes(body.frequence)
     ) {
-      return NextResponse.json(
-        { status: 400, message: "frequence invalide." },
-        { status: 400 }
-      );
+      return apiError(400, "frequence invalide.");
     }
     if (
       body.jourDuMois !== undefined &&
       (typeof body.jourDuMois !== "number" || body.jourDuMois < 1 || body.jourDuMois > 28)
     ) {
-      return NextResponse.json(
-        { status: 400, message: "jourDuMois doit etre compris entre 1 et 28." },
-        { status: 400 }
-      );
+      return apiError(400, "jourDuMois doit etre compris entre 1 et 28.");
     }
     if (
       body.montantEstime !== undefined &&
       (typeof body.montantEstime !== "number" || body.montantEstime <= 0)
     ) {
-      return NextResponse.json(
-        { status: 400, message: "montantEstime doit etre un nombre positif." },
-        { status: 400 }
-      );
+      return apiError(400, "montantEstime doit etre un nombre positif.");
     }
 
     const dto: UpdateDepenseRecurrenteDTO = {
@@ -113,16 +96,16 @@ export async function PUT(
     return NextResponse.json(updated);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
-    return NextResponse.json({ status: 500, message }, { status: 500 });
+    return apiError(500, message);
   }
 }
 
@@ -143,15 +126,15 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
-    return NextResponse.json({ status: 500, message }, { status: 500 });
+    return apiError(500, message);
   }
 }

@@ -631,7 +631,7 @@ describe("POST /api/backoffice/modules", () => {
     const data = await res.json();
 
     expect(res.status).toBe(400);
-    expect(data.error).toMatch(/label/i);
+    expect(data.message).toMatch(/label/i);
   });
 
   it("retourne 400 si label est une chaine vide", async () => {
@@ -651,7 +651,7 @@ describe("POST /api/backoffice/modules", () => {
     const data = await res.json();
 
     expect(res.status).toBe(400);
-    expect(data.error).toMatch(/level/i);
+    expect(data.message).toMatch(/level/i);
   });
 
   it("retourne 400 si level est invalide (ni 'site' ni 'platform')", async () => {
@@ -662,7 +662,7 @@ describe("POST /api/backoffice/modules", () => {
     const data = await res.json();
 
     expect(res.status).toBe(400);
-    expect(data.error).toMatch(/level/i);
+    expect(data.message).toMatch(/level/i);
   });
 
   it("retourne 409 si un module avec la meme cle existe deja", async () => {
@@ -801,7 +801,7 @@ describe("GET /api/backoffice/modules/[key]", () => {
     const data = await res.json();
 
     expect(res.status).toBe(404);
-    expect(data.error).toContain("INEXISTANT");
+    expect(data.message).toContain("INEXISTANT");
   });
 
   it("retourne 200 avec le detail du module et ses stats", async () => {
@@ -884,8 +884,8 @@ describe("PATCH /api/backoffice/modules/[key]", () => {
     const data = await res.json();
 
     expect(res.status).toBe(400);
-    expect(data.error).toMatch(/key/i);
-    expect(data.error).toMatch(/immuable/i);
+    expect(data.message).toMatch(/key/i);
+    expect(data.message).toMatch(/immuable/i);
   });
 
   it("retourne 400 si on tente de changer le level (level immutable)", async () => {
@@ -898,8 +898,8 @@ describe("PATCH /api/backoffice/modules/[key]", () => {
     const data = await res.json();
 
     expect(res.status).toBe(400);
-    expect(data.error).toMatch(/level/i);
-    expect(data.error).toMatch(/immuable/i);
+    expect(data.message).toMatch(/level/i);
+    expect(data.message).toMatch(/immuable/i);
   });
 
   it("retourne 404 si le module n'existe pas", async () => {
@@ -977,7 +977,7 @@ describe("PATCH /api/backoffice/modules/[key]", () => {
     const data = await res.json();
 
     expect(res.status).toBe(400);
-    expect(data.error).toMatch(/sortOrder/i);
+    expect(data.message).toMatch(/sortOrder/i);
   });
 
   it("verifie que requireSuperAdmin est appelee", async () => {

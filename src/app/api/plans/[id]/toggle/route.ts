@@ -12,6 +12,7 @@ import { togglePlanAbonnement } from "@/lib/queries/plans-abonnements";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
 import { Permission } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 export async function PATCH(
   request: NextRequest,
@@ -25,10 +26,7 @@ export async function PATCH(
     const result = await togglePlanAbonnement(id);
 
     if (result.count === 0) {
-      return NextResponse.json(
-        { status: 404, message: "Plan introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Plan introuvable.");
     }
 
     // count === -1 : désactivation bloquée par des abonnés actifs
@@ -50,20 +48,11 @@ export async function PATCH(
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors du changement de statut du plan." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors du changement de statut du plan.");
   }
 }

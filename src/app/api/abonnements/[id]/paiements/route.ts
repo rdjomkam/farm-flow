@@ -15,6 +15,7 @@ import { initierPaiement } from "@/lib/services/billing";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
 import { Permission, FournisseurPaiement } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 const VALID_FOURNISSEURS = Object.values(FournisseurPaiement);
 
@@ -29,10 +30,7 @@ export async function GET(
     // Vérifier que l'abonnement appartient au site actif — R8
     const abonnement = await getAbonnementById(id, auth.activeSiteId);
     if (!abonnement) {
-      return NextResponse.json(
-        { status: 404, message: "Abonnement introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Abonnement introuvable.");
     }
 
     // Récupérer l'historique des paiements (ordonnés par date DESC dans la query)
@@ -40,21 +38,12 @@ export async function GET(
     return NextResponse.json({ paiements, total: paiements.length });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation des paiements." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation des paiements.");
   }
 }
 
@@ -69,10 +58,7 @@ export async function POST(
     // Vérifier que l'abonnement appartient au site actif — R8
     const abonnement = await getAbonnementById(id, auth.activeSiteId);
     if (!abonnement) {
-      return NextResponse.json(
-        { status: 404, message: "Abonnement introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Abonnement introuvable.");
     }
 
     const body = await request.json();
@@ -107,16 +93,10 @@ export async function POST(
     );
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     return NextResponse.json(

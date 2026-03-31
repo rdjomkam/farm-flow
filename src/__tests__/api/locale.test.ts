@@ -131,8 +131,7 @@ describe("PUT /api/locale", () => {
     const res = await PUT(req);
     expect(res.status).toBe(400);
     const data = await res.json();
-    expect(data.success).toBe(false);
-    expect(data.error).toBeTruthy();
+    expect(data.message).toBeTruthy();
   });
 
   it("retourne 400 avec locale invalide 'es'", async () => {
@@ -163,8 +162,8 @@ describe("PUT /api/locale", () => {
     const req = makeRequest({ locale: "zh" });
     const res = await PUT(req);
     const data = await res.json();
-    expect(data.error).toContain("fr");
-    expect(data.error).toContain("en");
+    expect(data.message).toContain("fr");
+    expect(data.message).toContain("en");
   });
 
   it("ne met pas à jour la DB pour une locale invalide", async () => {

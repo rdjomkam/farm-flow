@@ -15,6 +15,7 @@ import { ForbiddenError } from "@/lib/permissions";
 import { updateSiteModulesAdmin } from "@/lib/queries/admin-sites";
 import { SiteModule } from "@/types";
 import { ErrorKeys } from "@/lib/api-error-keys";
+import { apiError } from "@/lib/api-utils";
 
 const ALL_SITE_MODULE_VALUES = Object.values(SiteModule) as SiteModule[];
 
@@ -33,31 +34,18 @@ export async function PATCH(
     try {
       body = await request.json();
     } catch {
-      return NextResponse.json(
-        { status: 400, message: "Corps de la requete invalide (JSON attendu)." },
-        { status: 400 }
-      );
+      return apiError(400, "Corps de la requete invalide (JSON attendu).");
     }
 
     if (typeof body !== "object" || body === null) {
-      return NextResponse.json(
-        { status: 400, message: "Corps de la requete invalide." },
-        { status: 400 }
-      );
+      return apiError(400, "Corps de la requete invalide.");
     }
 
     const { enabledModules } = body as Record<string, unknown>;
 
     // enabledModules doit etre un tableau
     if (!Array.isArray(enabledModules)) {
-      return NextResponse.json(
-        {
-          status: 400,
-          message: "Le champ enabledModules doit etre un tableau.",
-          errorKey: ErrorKeys.VALIDATION_FIELD_REQUIRED,
-        },
-        { status: 400 }
-      );
+      return apiError(400, "Le champ enabledModules doit etre un tableau.", { code: ErrorKeys.VALIDATION_FIELD_REQUIRED, });
     }
 
     // Valider que chaque element est une valeur SiteModule connue
@@ -86,30 +74,14 @@ export async function PATCH(
     return NextResponse.json(result);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message, errorKey: ErrorKeys.AUTH_UNAUTHORIZED },
-        { status: 401 }
-      );
+      return apiError(401, error.message, { code: ErrorKeys.AUTH_UNAUTHORIZED });
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message, errorKey: ErrorKeys.AUTH_FORBIDDEN },
-        { status: 403 }
-      );
+      return apiError(403, error.message, { code: ErrorKeys.AUTH_FORBIDDEN });
     }
     if (error instanceof Error) {
-      return NextResponse.json(
-        { status: 400, message: error.message },
-        { status: 400 }
-      );
+      return apiError(400, error.message);
     }
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors de la mise a jour des modules du site.",
-        errorKey: ErrorKeys.SERVER_GENERIC,
-      },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la mise a jour des modules du site.", { code: ErrorKeys.SERVER_GENERIC, });
   }
 }

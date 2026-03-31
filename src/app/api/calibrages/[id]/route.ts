@@ -3,6 +3,7 @@ import { getCalibrageById, patchCalibrage } from "@/lib/queries/calibrages";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission, CategorieCalibrage } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -16,24 +17,18 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     const calibrage = await getCalibrageById(id, auth.activeSiteId);
     if (!calibrage) {
-      return NextResponse.json(
-        { status: 404, message: "Calibrage introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Calibrage introuvable.");
     }
 
     return NextResponse.json(calibrage);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur.");
   }
 }
 
@@ -70,7 +65,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json({ status: 400, message: "Erreurs de validation", errors }, { status: 400 });
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     // 4. Verification qu'au moins un champ metier est fourni
@@ -122,7 +117,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json({ status: 400, message: "Erreurs de validation", errors }, { status: 400 });
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     // 6. Appeler patchCalibrage
@@ -140,26 +135,23 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   } catch (error) {
     console.error("[PATCH /api/calibrages/[id]] Error:", error);
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur inattendue.";
 
     if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
     if (message.includes("cloturee")) {
-      return NextResponse.json({ status: 409, message }, { status: 409 });
+      return apiError(409, message);
     }
     if (message.includes("Conservation non respectee") || message.includes("bacs de destination") || message.includes("Aucun champ")) {
-      return NextResponse.json({ status: 400, message }, { status: 400 });
+      return apiError(400, message);
     }
 
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la modification du calibrage." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la modification du calibrage.");
   }
 }

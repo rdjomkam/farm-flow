@@ -114,78 +114,84 @@ describe("GET /api/vagues", () => {
   });
 
   it("retourne la liste des vagues avec le total", async () => {
-    mockGetVagues.mockResolvedValue([
-      {
-        id: "vague-1",
-        code: "VAGUE-2026-001",
-        dateDebut: pastDate,
-        dateFin: null,
-        statut: "EN_COURS",
-        nombreInitial: 500,
-        poidsMoyenInitial: 5.0,
-        origineAlevins: "Ecloserie Douala",
-        createdAt: pastDate,
-        updatedAt: now,
-        _count: { bacs: 3, releves: 10 },
-      },
-    ]);
+    mockGetVagues.mockResolvedValue({
+      data: [
+        {
+          id: "vague-1",
+          code: "VAGUE-2026-001",
+          dateDebut: pastDate,
+          dateFin: null,
+          statut: "EN_COURS",
+          nombreInitial: 500,
+          poidsMoyenInitial: 5.0,
+          origineAlevins: "Ecloserie Douala",
+          createdAt: pastDate,
+          updatedAt: now,
+          _count: { bacs: 3, releves: 10 },
+        },
+      ],
+      total: 1,
+    });
 
     const request = makeRequest("/api/vagues");
     const response = await GET(request);
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.vagues).toHaveLength(1);
+    expect(data.data).toHaveLength(1);
     expect(data.total).toBe(1);
-    expect(data.vagues[0].code).toBe("VAGUE-2026-001");
-    expect(data.vagues[0].nombreBacs).toBe(3);
-    expect(data.vagues[0].joursEcoules).toBeGreaterThanOrEqual(0);
+    expect(data.data[0].code).toBe("VAGUE-2026-001");
+    expect(data.data[0].nombreBacs).toBe(3);
+    expect(data.data[0].joursEcoules).toBeGreaterThanOrEqual(0);
   });
 
   it("filtre les vagues par statut EN_COURS", async () => {
-    mockGetVagues.mockResolvedValue([
-      {
-        id: "vague-1",
-        code: "VAGUE-2026-001",
-        dateDebut: pastDate,
-        dateFin: null,
-        statut: "EN_COURS",
-        nombreInitial: 500,
-        poidsMoyenInitial: 5.0,
-        origineAlevins: null,
-        createdAt: pastDate,
-        updatedAt: now,
-        _count: { bacs: 2, releves: 5 },
-      },
-    ]);
+    mockGetVagues.mockResolvedValue({
+      data: [
+        {
+          id: "vague-1",
+          code: "VAGUE-2026-001",
+          dateDebut: pastDate,
+          dateFin: null,
+          statut: "EN_COURS",
+          nombreInitial: 500,
+          poidsMoyenInitial: 5.0,
+          origineAlevins: null,
+          createdAt: pastDate,
+          updatedAt: now,
+          _count: { bacs: 2, releves: 5 },
+        },
+      ],
+      total: 1,
+    });
 
     const request = makeRequest("/api/vagues?statut=EN_COURS");
     const response = await GET(request);
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.vagues).toHaveLength(1);
-    expect(data.vagues[0].statut).toBe("EN_COURS");
-    expect(mockGetVagues).toHaveBeenCalledWith("site-1", { statut: "EN_COURS" });
+    expect(data.data).toHaveLength(1);
+    expect(data.data[0].statut).toBe("EN_COURS");
+    expect(mockGetVagues).toHaveBeenCalledWith("site-1", { statut: "EN_COURS" }, expect.any(Object));
   });
 
   it("passe le siteId a getVagues sans filtre", async () => {
-    mockGetVagues.mockResolvedValue([]);
+    mockGetVagues.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/vagues"));
 
-    expect(mockGetVagues).toHaveBeenCalledWith("site-1", undefined);
+    expect(mockGetVagues).toHaveBeenCalledWith("site-1", undefined, expect.any(Object));
   });
 
   it("retourne une liste vide quand pas de vagues", async () => {
-    mockGetVagues.mockResolvedValue([]);
+    mockGetVagues.mockResolvedValue({ data: [], total: 0 });
 
     const request = makeRequest("/api/vagues");
     const response = await GET(request);
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.vagues).toHaveLength(0);
+    expect(data.data).toHaveLength(0);
     expect(data.total).toBe(0);
   });
 });

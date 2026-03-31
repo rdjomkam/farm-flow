@@ -4,6 +4,7 @@ import { getUserByEmail, getUserByPhone, createUser } from "@/lib/queries/users"
 import { Role } from "@/types";
 import type { AuthResponse } from "@/types";
 import { ErrorKeys } from "@/lib/api-error-keys";
+import { apiError } from "@/lib/api-utils";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_MIN_LENGTH = 6;
@@ -48,10 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     const name = body.name.trim();

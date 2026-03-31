@@ -48,12 +48,12 @@ export default async function NotesPage() {
 // ---------------------------------------------------------------------------
 
 async function ClientNotesView({ siteId }: { siteId: string }) {
-  const [notes, allVagues] = await Promise.all([
+  const [notes, vaguesResult] = await Promise.all([
     getClientFeed(siteId),
     getVagues(siteId, { statut: StatutVague.EN_COURS }),
   ]);
 
-  const vagues = allVagues.map((v) => ({ id: v.id, code: v.code }));
+  const vagues = vaguesResult.data.map((v) => ({ id: v.id, code: v.code }));
 
   const unreadCount = notes.filter((n) => !n.isRead && !n.isFromClient).length;
   const urgentCount = notes.filter((n) => n.isUrgent).length;

@@ -35,7 +35,7 @@ export function useActivitesList(filters?: {
     queryFn: async () => {
       const result = await activiteService.list(filters);
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement activités");
-      return result.data.activites;
+      return result.data.data;
     },
     staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,
@@ -50,7 +50,7 @@ export function useActivitesAujourdhui() {
     queryFn: async () => {
       const result = await activiteService.getAujourdhui();
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement activités du jour");
-      return result.data.activites;
+      return result.data.data;
     },
     staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,
@@ -65,7 +65,7 @@ export function useMesTaches() {
     queryFn: async () => {
       const result = await activiteService.getMesTaches();
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement mes tâches");
-      return result.data.activites;
+      return result.data.data;
     },
     staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,

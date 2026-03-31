@@ -17,6 +17,7 @@ import {
   gompertzVelocity,
   calibrerGompertz,
   projeterDateRecolte,
+  numericallyInvertGompertz,
   genererCourbeGompertz,
   CLARIAS_DEFAULTS,
   type GompertzParams,
@@ -417,6 +418,131 @@ describe("projeterDateRecolte", () => {
     const params: GompertzParams = { wInfinity: 0, k: 0.018, ti: 95 };
     expect(projeterDateRecolte(params, 0, 0)).toBeNull();
   });
+
+  // CR2.2 — Fallback numérique pour projection proche asymptote
+  it("CR2.2 — critère d'acceptation : projeterDateRecolte({wInfinity:1200, k:0.03, ti:60}, 1150, 50) retourne un nombre > 0", () => {
+    const params: GompertzParams = { wInfinity: 1200, k: 0.03, ti: 60 };
+    const result = projeterDateRecolte(params, 1150, 50);
+    // 1150 = 95.8% of 1200 → doit utiliser le fallback numérique
+    expect(result).not.toBeNull();
+    expect(result!).toBeGreaterThan(0);
+  });
+
+  it("CR2.2 — objectif à 96% de W∞ retourne un résultat valide (non null)", () => {
+    const params: GompertzParams = { wInfinity: 1200, k: 0.018, ti: 95 };
+    const objectif96 = 1200 * 0.96; // 1152g
+    const result = projeterDateRecolte(params, objectif96, 0);
+    expect(result).not.toBeNull();
+    expect(result!).toBeGreaterThan(0);
+  });
+
+  it("CR2.2 — objectif à 98% de W∞ retourne un résultat valide (non null)", () => {
+    const params: GompertzParams = { wInfinity: 1200, k: 0.018, ti: 95 };
+    const objectif98 = 1200 * 0.98; // 1176g
+    const result = projeterDateRecolte(params, objectif98, 0);
+    expect(result).not.toBeNull();
+    expect(result!).toBeGreaterThan(0);
+  });
+
+  it("CR2.2 — objectif à 99.5% de W∞ retourne un résultat valide (non null)", () => {
+    const params: GompertzParams = { wInfinity: 1200, k: 0.018, ti: 95 };
+    const objectif995 = 1200 * 0.995; // 1194g
+    const result = projeterDateRecolte(params, objectif995, 0);
+    expect(result).not.toBeNull();
+    expect(result!).toBeGreaterThan(0);
+  });
+
+  it("CR2.2 — précision du fallback : W(t*) ≈ poidsObjectif à ±1g pour objectif à 98%", () => {
+    const params: GompertzParams = { wInfinity: 1200, k: 0.018, ti: 95 };
+    const objectif = 1200 * 0.98; // 1176g
+    const joursActuels = 0;
+    const joursRestants = projeterDateRecolte(params, objectif, joursActuels);
+    expect(joursRestants).not.toBeNull();
+    const tStar = joursActuels + joursRestants!;
+    const poidsATStar = gompertzWeight(tStar, params);
+    // La tolérance bisection est 0.1 jour → erreur poids < ~0.1g à cette zone
+    expect(Math.abs(poidsATStar - objectif)).toBeLessThan(1.0);
+  });
+
+  it("CR2.2 — monotonie préservée : délai 96% < délai 98% < délai 99.5%", () => {
+    const params: GompertzParams = { wInfinity: 1200, k: 0.018, ti: 95 };
+    const r96 = projeterDateRecolte(params, 1200 * 0.96, 0);
+    const r98 = projeterDateRecolte(params, 1200 * 0.98, 0);
+    const r995 = projeterDateRecolte(params, 1200 * 0.995, 0);
+    expect(r96).not.toBeNull();
+    expect(r98).not.toBeNull();
+    expect(r995).not.toBeNull();
+    expect(r98!).toBeGreaterThan(r96!);
+    expect(r995!).toBeGreaterThan(r98!);
+  });
+
+  it("CR2.2 — objectif juste sous 95% utilise toujours la formule analytique", () => {
+    const params: GompertzParams = { wInfinity: 1200, k: 0.018, ti: 95 };
+    const objectif94 = 1200 * 0.94; // 1128g — sous le seuil du fallback
+    const result = projeterDateRecolte(params, objectif94, 0);
+    expect(result).not.toBeNull();
+    expect(result!).toBeGreaterThan(0);
+    // Vérification de cohérence analytique : W(t*) ≈ objectif
+    const tStar = result!;
+    const poidsATStar = gompertzWeight(tStar, params);
+    expect(Math.abs(poidsATStar - objectif94)).toBeLessThan(1.0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// numericallyInvertGompertz — bisection fallback (CR2.2)
+// ---------------------------------------------------------------------------
+
+describe("numericallyInvertGompertz", () => {
+  it("retourne un jour où W(t) ≈ targetWeight à ±0.5 jour", () => {
+    const params: GompertzParams = { wInfinity: 1200, k: 0.018, ti: 95 };
+    const target = 1200 * 0.97; // 1164g — zone asymptotique
+    const result = numericallyInvertGompertz(params, target, 0);
+    expect(result).not.toBeNull();
+    expect(result!).toBeGreaterThan(0);
+    // Vérification de la précision : W(result) doit être très proche de target
+    const wAtResult = gompertzWeight(result!, params);
+    expect(Math.abs(wAtResult - target)).toBeLessThan(0.5);
+  });
+
+  it("retourne lo (currentDay) si le poids courant >= targetWeight", () => {
+    const params: GompertzParams = { wInfinity: 1200, k: 0.018, ti: 95 };
+    // À t=500, W ≈ 1199g (très proche de W∞=1200)
+    const wAt500 = gompertzWeight(500, params);
+    // Chercher un poids inférieur au poids actuel
+    const target = wAt500 - 10;
+    const result = numericallyInvertGompertz(params, target, 500);
+    expect(result).not.toBeNull();
+    // Doit retourner lo=500 car W(500) >= target
+    expect(result).toBe(500);
+  });
+
+  it("retourne null si targetWeight > W(currentDay + maxDays)", () => {
+    const params: GompertzParams = { wInfinity: 1200, k: 0.018, ti: 95 };
+    // Chercher un poids impossible (> W∞)
+    const result = numericallyInvertGompertz(params, 1250, 0, 0.1, 3000);
+    expect(result).toBeNull();
+  });
+
+  it("converge avec tolérance par défaut 0.1 jour (précision bien ≤ 0.5 jour)", () => {
+    const params: GompertzParams = { wInfinity: 1200, k: 0.03, ti: 60 };
+    const target = 1200 * 0.995; // 99.5% de W∞
+    const result = numericallyInvertGompertz(params, target, 0);
+    expect(result).not.toBeNull();
+    // La précision en poids doit être inférieure à celle correspondant à 0.5 jour
+    const wAtResult = gompertzWeight(result!, params);
+    // Dans la zone asymptotique, dW/dt est très faible, donc erreur de poids << 1g
+    expect(Math.abs(wAtResult - target)).toBeLessThan(1.0);
+  });
+
+  it("fonctionne avec k élevé (croissance rapide)", () => {
+    const params: GompertzParams = { wInfinity: 800, k: 0.05, ti: 40 };
+    const target = 800 * 0.96; // 768g
+    const result = numericallyInvertGompertz(params, target, 0);
+    expect(result).not.toBeNull();
+    const wAtResult = gompertzWeight(result!, params);
+    expect(Math.abs(wAtResult - target)).toBeLessThan(1.0);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -489,6 +615,92 @@ describe("genererCourbeGompertz", () => {
     expect(courbe).toHaveLength(2);
     expect(courbe[0].jour).toBe(0);
     expect(courbe[1].jour).toBe(100);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Seuil de recalibrage W∞ — comportement symétrique (CR2.1)
+// ---------------------------------------------------------------------------
+
+/**
+ * Reproduit la formule du seuil de recalibrage utilisée dans
+ * src/app/api/vagues/[id]/gompertz/route.ts
+ *
+ * Condition : Math.abs(old - new) / Math.max(old, new) > 0.1
+ *
+ * Cette formule est plus symétrique que l'ancienne `|old - new| > new * 0.1`
+ * qui était biaisée selon la direction du changement.
+ * Avec max(old, new) comme dénominateur :
+ *   - Pour une HAUSSE : dénominateur = newW (la valeur la plus grande)
+ *   - Pour une BAISSE : dénominateur = oldW (la valeur la plus grande)
+ * Le seuil effectif est donc identique dans les deux directions pour un même
+ * delta absolu, ce qui garantit la symétrie.
+ */
+function needsWInfinityRecalibration(oldW: number, newW: number): boolean {
+  return Math.abs(oldW - newW) / Math.max(oldW, newW) > 0.1;
+}
+
+describe("seuil de recalibrage W∞ — symétrie hausse/baisse (CR2.1)", () => {
+  it("hausse de +15% (1000 → 1150) déclenche le recalibrage", () => {
+    // |1000 - 1150| / max(1000, 1150) = 150/1150 = 0.1304 > 0.1
+    expect(needsWInfinityRecalibration(1000, 1150)).toBe(true);
+  });
+
+  it("baisse de -15% (1150 → 1000) déclenche le recalibrage (symétrie)", () => {
+    // |1150 - 1000| / max(1150, 1000) = 150/1150 = 0.1304 > 0.1
+    expect(needsWInfinityRecalibration(1150, 1000)).toBe(true);
+  });
+
+  it("hausse et baisse du même delta absolu donnent le même résultat (symétrie stricte)", () => {
+    // hausse: 1000 → 1200 (+20%), max=1200, 200/1200 = 0.1667 > 0.1 ✓
+    // baisse: 1200 → 1000 (-16.7%), max=1200, 200/1200 = 0.1667 > 0.1 ✓
+    const hausse = needsWInfinityRecalibration(1000, 1200);
+    const baisse = needsWInfinityRecalibration(1200, 1000);
+    expect(hausse).toBe(true);
+    expect(baisse).toBe(true);
+    expect(hausse).toBe(baisse);
+  });
+
+  it("changement < 5% (1200 → 1240) ne déclenche pas le recalibrage", () => {
+    // 40/1240 = 0.0323 < 0.1
+    expect(needsWInfinityRecalibration(1200, 1240)).toBe(false);
+  });
+
+  it("changement nul (1200 → 1200) ne déclenche pas le recalibrage", () => {
+    // 0/1200 = 0 < 0.1
+    expect(needsWInfinityRecalibration(1200, 1200)).toBe(false);
+  });
+
+  it("changement de ~8% ne déclenche pas le recalibrage (sous le seuil)", () => {
+    // 1200 → 1300 : 100/1300 = 0.0769 < 0.1
+    expect(needsWInfinityRecalibration(1200, 1300)).toBe(false);
+    // 1300 → 1200 : 100/1300 = 0.0769 < 0.1 (symétrique)
+    expect(needsWInfinityRecalibration(1300, 1200)).toBe(false);
+  });
+
+  it("valeurs identiques dans les deux sens confirment la symétrie pour 200g de delta", () => {
+    // Vérifie que la formule avec max() est vraiment symétrique pour un delta donné
+    // 1000 → 1200 : 200/1200 = 0.1667
+    // 1200 → 1000 : 200/1200 = 0.1667 — même dénominateur car max(1200,1000)=1200
+    const ratio_hausse = Math.abs(1000 - 1200) / Math.max(1000, 1200);
+    const ratio_baisse = Math.abs(1200 - 1000) / Math.max(1200, 1000);
+    expect(ratio_hausse).toBeCloseTo(ratio_baisse, 10);
+  });
+
+  it("ancien bug : hausse de 8% via ancienne formule ne déclenchait pas", () => {
+    // Ancienne formule : |old - new| > new * 0.1
+    // 1000 → 1080 : |1000-1080| = 80, new*0.1 = 108 → 80 > 108 = false (bug)
+    // Nouvelle formule : 80/1080 = 0.074 < 0.1 → false (correct, < seuil)
+    // Pour vérifier la symétrie : 1080 → 1000 : 80/1080 = 0.074 (même résultat)
+    expect(needsWInfinityRecalibration(1000, 1080)).toBe(false);
+    expect(needsWInfinityRecalibration(1080, 1000)).toBe(false);
+  });
+
+  it("seuil franchi à 12% dans les deux sens", () => {
+    // 1000 → 1130 : 130/1130 = 0.115 > 0.1 ✓
+    expect(needsWInfinityRecalibration(1000, 1130)).toBe(true);
+    // 1130 → 1000 : 130/1130 = 0.115 > 0.1 ✓ (même dénominateur)
+    expect(needsWInfinityRecalibration(1130, 1000)).toBe(true);
   });
 });
 

@@ -3,6 +3,7 @@ import { genererDepensesRecurrentes } from "@/lib/queries/depenses-recurrentes";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 /**
  * POST /api/depenses-recurrentes/generer
@@ -27,12 +28,12 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
-    return NextResponse.json({ status: 500, message }, { status: 500 });
+    return apiError(500, message);
   }
 }

@@ -4,6 +4,7 @@ import {
   updateProduit,
   deleteProduit,
 } from "@/lib/queries/produits";
+import { apiError } from "@/lib/api-utils";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission, CategorieProduit, UniteStock, TailleGranule, FormeAliment, PhaseElevage } from "@/types";
@@ -24,24 +25,18 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     const produit = await getProduitById(id, auth.activeSiteId);
     if (!produit) {
-      return NextResponse.json(
-        { status: 404, message: "Produit introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Produit introuvable.");
     }
 
     return NextResponse.json(produit);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur.");
   }
 }
 
@@ -164,10 +159,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     const data: UpdateProduitDTO = {};
@@ -190,19 +182,19 @@ export async function PUT(request: NextRequest, { params }: Params) {
     return NextResponse.json(produit);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
     if (message.includes("contenance non modifiable")) {
-      return NextResponse.json({ status: 409, message }, { status: 409 });
+      return apiError(409, message);
     }
-    return NextResponse.json({ status: 500, message }, { status: 500 });
+    return apiError(500, message);
   }
 }
 
@@ -215,15 +207,15 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
-    return NextResponse.json({ status: 500, message }, { status: 500 });
+    return apiError(500, message);
   }
 }

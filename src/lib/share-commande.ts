@@ -1,6 +1,7 @@
 /**
  * Utilitaires pour partager une commande fournisseur via WhatsApp ou le systeme natif.
  */
+import { formatNumber, formatDate } from "@/lib/format";
 
 export interface ShareCommandeData {
   numero: string;
@@ -18,12 +19,12 @@ export interface ShareCommandeData {
  * Formate les donnees d'une commande en message texte lisible.
  */
 export function formatCommandeMessage(commande: ShareCommandeData): string {
-  const date = new Date(commande.dateCommande).toLocaleDateString("fr-FR");
+  const date = formatDate(commande.dateCommande);
   const lignesText = commande.lignes
     .map((l) => {
       const unite = l.produit.uniteAchat || l.produit.unite || "";
       const sousTotal = l.quantite * l.prixUnitaire;
-      return `- ${l.produit.nom} : ${l.quantite} ${unite} x ${l.prixUnitaire.toLocaleString("fr-FR")} FCFA = ${sousTotal.toLocaleString("fr-FR")} FCFA`;
+      return `- ${l.produit.nom} : ${l.quantite} ${unite} x ${formatNumber(l.prixUnitaire)} FCFA = ${formatNumber(sousTotal)} FCFA`;
     })
     .join("\n");
 
@@ -35,7 +36,7 @@ export function formatCommandeMessage(commande: ShareCommandeData): string {
     "*Articles :*",
     lignesText,
     "",
-    `*Total : ${commande.montantTotal.toLocaleString("fr-FR")} FCFA*`,
+    `*Total : ${formatNumber(commande.montantTotal)} FCFA*`,
     "",
     "_(Généré depuis FarmFlow)_",
   ].join("\n");

@@ -15,6 +15,7 @@ import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
 import { Permission, TypeRemise } from "@/types";
 import type { CreateRemiseDTO } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 const VALID_TYPES = Object.values(TypeRemise);
 
@@ -34,21 +35,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ remises, total: remises.length });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation des remises." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation des remises.");
   }
 }
 
@@ -103,10 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     // Normaliser le code
@@ -145,16 +134,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ remise }, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     return NextResponse.json(

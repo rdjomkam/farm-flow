@@ -4,6 +4,7 @@ import { requirePermission, ForbiddenError, canAssignRole } from "@/lib/permissi
 import { AuthError } from "@/lib/auth";
 import { getSiteRoleById, updateSiteRole, deleteSiteRole } from "@/lib/queries/roles";
 import { Permission } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 type RouteParams = { params: Promise<{ id: string; roleId: string }> };
 
@@ -14,23 +15,23 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { id: siteId, roleId } = await params;
 
     if (auth.activeSiteId !== siteId) {
-      return NextResponse.json({ status: 403, message: "Site actif different." }, { status: 403 });
+      return apiError(403, "Site actif different.");
     }
 
     const role = await getSiteRoleById(roleId, siteId);
     if (!role) {
-      return NextResponse.json({ status: 404, message: "Role introuvable." }, { status: 404 });
+      return apiError(404, "Role introuvable.");
     }
 
     return NextResponse.json(role);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json({ status: 500, message: "Erreur serveur." }, { status: 500 });
+    return apiError(500, "Erreur serveur.");
   }
 }
 
@@ -41,19 +42,19 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const { id: siteId, roleId } = await params;
 
     if (auth.activeSiteId !== siteId) {
-      return NextResponse.json({ status: 403, message: "Site actif different." }, { status: 403 });
+      return apiError(403, "Site actif different.");
     }
 
     const role = await getSiteRoleById(roleId, siteId);
     if (!role) {
-      return NextResponse.json({ status: 404, message: "Role introuvable." }, { status: 404 });
+      return apiError(404, "Role introuvable.");
     }
 
     const body = await request.json();
 
     // System roles: name cannot be changed
     if (role.isSystem && body.name !== undefined && body.name !== role.name) {
-      return NextResponse.json({ status: 400, message: "Le nom d'un role systeme ne peut pas etre modifie." }, { status: 400 });
+      return apiError(400, "Le nom d'un role systeme ne peut pas etre modifie.");
     }
 
     // Anti-escalation: can only set permissions the caller has
@@ -72,15 +73,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json(updated);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     if (error && typeof error === "object" && "code" in error && (error as { code: string }).code === "P2002") {
-      return NextResponse.json({ status: 409, message: "Un role avec ce nom existe deja." }, { status: 409 });
+      return apiError(409, "Un role avec ce nom existe deja.");
     }
-    return NextResponse.json({ status: 500, message: "Erreur serveur lors de la modification du role." }, { status: 500 });
+    return apiError(500, "Erreur serveur lors de la modification du role.");
   }
 }
 
@@ -91,17 +92,17 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const { id: siteId, roleId } = await params;
 
     if (auth.activeSiteId !== siteId) {
-      return NextResponse.json({ status: 403, message: "Site actif different." }, { status: 403 });
+      return apiError(403, "Site actif different.");
     }
 
     const role = await getSiteRoleById(roleId, siteId);
     if (!role) {
-      return NextResponse.json({ status: 404, message: "Role introuvable." }, { status: 404 });
+      return apiError(404, "Role introuvable.");
     }
 
     // System roles cannot be deleted
     if (role.isSystem) {
-      return NextResponse.json({ status: 409, message: "Les roles systeme ne peuvent pas etre supprimes." }, { status: 409 });
+      return apiError(409, "Les roles systeme ne peuvent pas etre supprimes.");
     }
 
     await deleteSiteRole(roleId, siteId);
@@ -111,11 +112,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ success: true, reassignedMembers: role._count.members });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json({ status: 500, message: "Erreur serveur lors de la suppression du role." }, { status: 500 });
+    return apiError(500, "Erreur serveur lors de la suppression du role.");
   }
 }

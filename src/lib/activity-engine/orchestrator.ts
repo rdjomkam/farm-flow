@@ -26,79 +26,81 @@ export async function runEngineForSite(
   systemUserId: string,
   options?: { defaultAssigneeId?: string | null }
 ): Promise<{ created: number; skipped: number; errors: string[] }> {
-  // ---- Charger les custom placeholders (globaux) ----
-  const customPlaceholders = await prisma.customPlaceholder.findMany({
-    where: { isActive: true },
-    orderBy: { key: "asc" },
-  }) as unknown as CustomPlaceholder[];
+  // ---- Charger les custom placeholders et les vagues actives en parallèle ----
+  const [customPlaceholdersRaw, vaguesActives] = await Promise.all([
+    prisma.customPlaceholder.findMany({
+      where: { isActive: true },
+      orderBy: { key: "asc" },
+    }),
+    prisma.vague.findMany({
+      where: { siteId, statut: StatutVague.EN_COURS },
+      include: {
+        bacs: {
+          where: { vagueId: { not: null } },
+          select: {
+            id: true,
+            nom: true,
+            volume: true,
+            nombrePoissons: true,
+            nombreInitial: true,
+            poidsMoyenInitial: true,
+          },
+        },
+        releves: {
+          orderBy: { date: "asc" },
+          select: {
+            id: true,
+            typeReleve: true,
+            date: true,
+            poidsMoyen: true,
+            tailleMoyenne: true,
+            nombreMorts: true,
+            quantiteAliment: true,
+            temperature: true,
+            ph: true,
+            oxygene: true,
+            ammoniac: true,
+            nombreCompte: true,
+            bacId: true,
+            pourcentageRenouvellement: true,
+            volumeRenouvele: true,
+          },
+        },
+        configElevage: true,
+      },
+    }),
+  ]);
 
-  // ---- Charger les vagues actives ----
-  const vaguesActives = await prisma.vague.findMany({
-    where: { siteId, statut: StatutVague.EN_COURS },
-    include: {
-      bacs: {
-        where: { vagueId: { not: null } },
-        select: {
-          id: true,
-          nom: true,
-          volume: true,
-          nombrePoissons: true,
-          nombreInitial: true,
-          poidsMoyenInitial: true,
-        },
-      },
-      releves: {
-        orderBy: { date: "asc" },
-        select: {
-          id: true,
-          typeReleve: true,
-          date: true,
-          poidsMoyen: true,
-          tailleMoyenne: true,
-          nombreMorts: true,
-          quantiteAliment: true,
-          temperature: true,
-          ph: true,
-          oxygene: true,
-          ammoniac: true,
-          nombreCompte: true,
-          bacId: true,
-          pourcentageRenouvellement: true,
-          volumeRenouvele: true,
-        },
-      },
-      configElevage: true,
-    },
-  });
+  const customPlaceholders = customPlaceholdersRaw as unknown as CustomPlaceholder[];
 
   if (vaguesActives.length === 0) {
     return { created: 0, skipped: 0, errors: [] };
   }
 
-  // ---- Charger le stock du site ----
-  const produits = await prisma.produit.findMany({
-    where: { siteId, isActive: true },
-    select: {
-      id: true,
-      nom: true,
-      categorie: true,
-      unite: true,
-      seuilAlerte: true,
-      stockActuel: true,
-    },
-  });
-
-  // ---- Charger les regles applicables ----
-  // Regles du site + regles globales (siteId IS NULL)
-  const regles = await prisma.regleActivite.findMany({
-    where: {
-      isActive: true,
-      OR: [{ siteId }, { siteId: null }],
-    },
-    include: {
-      conditions: { orderBy: { ordre: "asc" } },
-    },
-  });
+  // ---- Charger le stock et les regles en parallèle ----
+  const [produits, regles] = await Promise.all([
+    prisma.produit.findMany({
+      where: { siteId, isActive: true },
+      select: {
+        id: true,
+        nom: true,
+        categorie: true,
+        unite: true,
+        seuilAlerte: true,
+        stockActuel: true,
+      },
+    }),
+    // Regles du site + regles globales (siteId IS NULL)
+    prisma.regleActivite.findMany({
+      where: {
+        isActive: true,
+        OR: [{ siteId }, { siteId: null }],
+      },
+      include: {
+        conditions: { orderBy: { ordre: "asc" } },
+      },
+    }),
+  ]);
 
   if (regles.length === 0) {
     return { created: 0, skipped: 0, errors: [] };

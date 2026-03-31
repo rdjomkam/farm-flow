@@ -4,6 +4,7 @@ import { getUserByIdentifier } from "@/lib/queries/users";
 import { Role } from "@/types";
 import type { AuthResponse } from "@/types";
 import { ErrorKeys } from "@/lib/api-error-keys";
+import { apiError } from "@/lib/api-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,10 +20,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     // Generic error message to prevent enumeration
@@ -41,7 +39,7 @@ export async function POST(request: NextRequest) {
     // Find user by email or phone
     const user = await getUserByIdentifier(identifier);
     if (!user) {
-      return NextResponse.json(genericError, { status: 401 });
+      return NextResponse.json(genericError satisfies AuthResponse, { status: 401 });
     }
 
     // Check if user is active
@@ -55,7 +53,7 @@ export async function POST(request: NextRequest) {
     // Verify password
     const isValid = await verifyPassword(body.password, user.passwordHash);
     if (!isValid) {
-      return NextResponse.json(genericError, { status: 401 });
+      return NextResponse.json(genericError satisfies AuthResponse, { status: 401 });
     }
 
     // Create session

@@ -3,6 +3,7 @@ import { requireAuth, AuthError, SESSION_COOKIE_NAME } from "@/lib/auth";
 import { getSiteMember } from "@/lib/queries/sites";
 import { prisma } from "@/lib/db";
 import { ErrorKeys } from "@/lib/api-error-keys";
+import { apiError } from "@/lib/api-utils";
 
 /** PUT /api/auth/site — change the active site for the current session */
 export async function PUT(request: NextRequest) {
@@ -11,19 +12,13 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
 
     if (!body.siteId || typeof body.siteId !== "string") {
-      return NextResponse.json(
-        { status: 400, message: "Le champ 'siteId' est obligatoire." },
-        { status: 400 }
-      );
+      return apiError(400, "Le champ 'siteId' est obligatoire.");
     }
 
     // Verify user is an active member of the target site (with siteRole included)
     const member = await getSiteMember(body.siteId, session.userId);
     if (!member || !member.isActive) {
-      return NextResponse.json(
-        { status: 403, message: "Vous n'etes pas membre de ce site.", errorKey: ErrorKeys.AUTH_NOT_MEMBER },
-        { status: 403 }
-      );
+      return apiError(403, "Vous n'etes pas membre de ce site.", { code: ErrorKeys.AUTH_NOT_MEMBER });
     }
 
     // Update activeSiteId in current session
@@ -46,14 +41,8 @@ export async function PUT(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors du changement de site.", errorKey: ErrorKeys.SERVER_CHANGE_SITE },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors du changement de site.", { code: ErrorKeys.SERVER_CHANGE_SITE });
   }
 }

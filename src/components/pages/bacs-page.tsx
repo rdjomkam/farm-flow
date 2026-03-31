@@ -13,7 +13,7 @@ export default async function BacsPage() {
   if (!session.activeSiteId) redirect("/settings/sites");
 
   try {
-    const [permissions, bacs] = await Promise.all([
+    const [permissions, bacsResult] = await Promise.all([
       checkPagePermission(session, Permission.BACS_GERER),
       getBacs(session.activeSiteId),
     ]);
@@ -23,9 +23,9 @@ export default async function BacsPage() {
       <>
         <Header title="Bacs" />
         <div className="px-4 pt-4">
-          <QuotasUsageBar siteId={session.activeSiteId} precomputedBacsCount={bacs.length} />
+          <QuotasUsageBar siteId={session.activeSiteId} precomputedBacsCount={bacsResult.total} />
         </div>
-        <BacsListClient bacs={bacs} permissions={permissions} />
+        <BacsListClient bacs={bacsResult.data} permissions={permissions} />
       </>
     );
   } catch (error: unknown) {

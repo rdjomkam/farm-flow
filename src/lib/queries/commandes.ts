@@ -27,29 +27,45 @@ function categorieDepenseFromProduit(
   }
 }
 
-/** Liste les commandes d'un site avec filtres */
-export async function getCommandes(siteId: string, filters?: CommandeFilters) {
-  return prisma.commande.findMany({
-    where: {
-      siteId,
-      ...(filters?.statut && { statut: filters.statut }),
-      ...(filters?.fournisseurId && { fournisseurId: filters.fournisseurId }),
-      ...(filters?.dateFrom || filters?.dateTo
-        ? {
-            dateCommande: {
-              ...(filters?.dateFrom && { gte: new Date(filters.dateFrom) }),
-              ...(filters?.dateTo && { lte: new Date(filters.dateTo) }),
-            },
-          }
-        : {}),
-    },
-    include: {
-      fournisseur: { select: { id: true, nom: true } },
-      user: { select: { id: true, name: true } },
-      _count: { select: { lignes: true } },
-    },
-    orderBy: { dateCommande: "desc" },
-  });
+/** Liste les commandes d'un site avec filtres et pagination */
+export async function getCommandes(
+  siteId: string,
+  filters?: CommandeFilters,
+  pagination?: { limit: number; offset: number }
+) {
+  const where = {
+    siteId,
+    ...(filters?.statut && { statut: filters.statut }),
+    ...(filters?.fournisseurId && { fournisseurId: filters.fournisseurId }),
+    ...(filters?.dateFrom || filters?.dateTo
+      ? {
+          dateCommande: {
+            ...(filters?.dateFrom && { gte: new Date(filters.dateFrom) }),
+            ...(filters?.dateTo && { lte: new Date(filters.dateTo) }),
+          },
+        }
+      : {}),
+  };
+
+  const limit = pagination?.limit ?? 50;
+  const offset = pagination?.offset ?? 0;
+
+  const [data, total] = await Promise.all([
+    prisma.commande.findMany({
+      where,
+      include: {
+        fournisseur: { select: { id: true, nom: true } },
+        user: { select: { id: true, name: true } },
+        _count: { select: { lignes: true } },
+      },
+      orderBy: { dateCommande: "desc" },
+      take: limit,
+      skip: offset,
+    }),
+    prisma.commande.count({ where }),
+  ]);
+
+  return { data, total };
 }
 
 /** Recupere une commande par ID avec ses lignes */

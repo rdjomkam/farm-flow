@@ -3,6 +3,7 @@ import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { dupliquerConfigElevage } from "@/lib/queries/config-elevage";
+import { apiError } from "@/lib/api-utils";
 
 /**
  * POST /api/config-elevage/[id]/dupliquer
@@ -22,31 +23,22 @@ export async function POST(
     const nouveauNom = body?.nom;
 
     if (!nouveauNom || typeof nouveauNom !== "string" || nouveauNom.trim().length === 0) {
-      return NextResponse.json(
-        { status: 400, message: "Le champ 'nom' est obligatoire pour la duplication." },
-        { status: 400 }
-      );
+      return apiError(400, "Le champ 'nom' est obligatoire pour la duplication.");
     }
 
     const config = await dupliquerConfigElevage(id, auth.activeSiteId, nouveauNom.trim());
     if (!config) {
-      return NextResponse.json(
-        { status: 404, message: "Profil de configuration source introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Profil de configuration source introuvable.");
     }
 
     return NextResponse.json({ config }, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la duplication du profil." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la duplication du profil.");
   }
 }

@@ -18,6 +18,7 @@ import {
 } from "@react-pdf/renderer";
 import type { CreateFacturePDFDTO } from "@/types/export";
 import { StatutFacture, ModePaiement } from "@/types";
+import { formatNumber } from "@/lib/format";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -32,7 +33,7 @@ function formatDate(date: Date | string): string {
 }
 
 function formatMontant(n: number): string {
-  return n.toLocaleString("fr-FR") + " FCFA";
+  return formatNumber(n) + " FCFA";
 }
 
 const statutLabels: Record<StatutFacture, string> = {
@@ -391,7 +392,7 @@ export function FacturePDF({ data }: { data: CreateFacturePDFDTO }) {
               {data.poidsTotalKg} kg
             </Text>
             <Text style={[styles.tableCell, styles.colPrix]}>
-              {data.prixUnitaireKg.toLocaleString("fr-FR")} F
+              {formatNumber(data.prixUnitaireKg)} F
             </Text>
             <Text style={[styles.tableCell, styles.colTotal, { fontFamily: "Helvetica-Bold" }]}>
               {formatMontant(data.montantTotal)}

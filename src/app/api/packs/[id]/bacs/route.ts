@@ -3,6 +3,7 @@ import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { getPackBacs, replacePackBacs } from "@/lib/queries/packs";
+import { apiError } from "@/lib/api-utils";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -23,15 +24,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ bacs, total: bacs.length });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation des bacs." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation des bacs.");
   }
 }
 
@@ -49,42 +47,27 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
 
     if (!Array.isArray(body.bacs)) {
-      return NextResponse.json(
-        { status: 400, message: "Le champ 'bacs' doit etre un tableau." },
-        { status: 400 }
-      );
+      return apiError(400, "Le champ 'bacs' doit etre un tableau.");
     }
 
     if (body.bacs.length === 0) {
-      return NextResponse.json(
-        { status: 400, message: "Au moins un bac est requis." },
-        { status: 400 }
-      );
+      return apiError(400, "Au moins un bac est requis.");
     }
 
     // Validation de chaque bac
     for (const bac of body.bacs) {
       if (!bac.nom || typeof bac.nom !== "string" || bac.nom.trim() === "") {
-        return NextResponse.json(
-          { status: 400, message: "Le nom du bac est requis." },
-          { status: 400 }
-        );
+        return apiError(400, "Le nom du bac est requis.");
       }
       if (!bac.nombreAlevins || typeof bac.nombreAlevins !== "number" || bac.nombreAlevins <= 0) {
-        return NextResponse.json(
-          { status: 400, message: "Le nombre d'alevins doit etre superieur a 0." },
-          { status: 400 }
-        );
+        return apiError(400, "Le nombre d'alevins doit etre superieur a 0.");
       }
     }
 
     // Vérifier noms uniques
     const noms = body.bacs.map((b: { nom: string }) => b.nom.trim().toLowerCase());
     if (new Set(noms).size !== noms.length) {
-      return NextResponse.json(
-        { status: 400, message: "Les noms de bacs doivent etre uniques." },
-        { status: 400 }
-      );
+      return apiError(400, "Les noms de bacs doivent etre uniques.");
     }
 
     const bacs = await replacePackBacs(
@@ -100,17 +83,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ bacs, total: bacs.length });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     if (error instanceof Error) {
-      return NextResponse.json({ status: 400, message: error.message }, { status: 400 });
+      return apiError(400, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la mise a jour des bacs." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la mise a jour des bacs.");
   }
 }

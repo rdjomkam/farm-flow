@@ -78,8 +78,8 @@ export function FabReleve({ activeSiteId, className }: FabReleveProps) {
       const res = await fetch("/api/vagues?statut=EN_COURS");
       if (!res.ok) throw new Error("Erreur reseau");
 
-      const data = await res.json() as { vagues?: Array<{ id: string }> };
-      const vagues = data.vagues ?? [];
+      const data = await res.json() as { data?: Array<{ id: string }> };
+      const vagues = data.data ?? [];
 
       if (vagues.length === 0) {
         toast({

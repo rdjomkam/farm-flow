@@ -3,6 +3,7 @@ import { getTopClients } from "@/lib/queries";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 const LIMIT_MIN = 1;
 const LIMIT_MAX = 50;
@@ -35,15 +36,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(topClients);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     console.error("[GET /api/finances/top-clients]", error);
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors du calcul du top clients." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors du calcul du top clients.");
   }
 }

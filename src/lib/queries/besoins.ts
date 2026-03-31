@@ -87,42 +87,55 @@ const INCLUDE_LISTE_BESOINS = {
   _count: { select: { lignes: true } },
 };
 
-/** Liste les listes de besoins d'un site avec filtres */
+/** Liste les listes de besoins d'un site avec filtres et pagination */
 export async function getListeBesoins(
   siteId: string,
-  filters?: ListeBesoinsFilters
+  filters?: ListeBesoinsFilters,
+  pagination?: { limit: number; offset: number }
 ) {
   const maintenant = new Date();
-  return prisma.listeBesoins.findMany({
-    where: {
-      siteId,
-      ...(filters?.statut && { statut: filters.statut }),
-      ...(filters?.demandeurId && { demandeurId: filters.demandeurId }),
-      ...(filters?.vagueId && { vagueId: filters.vagueId }),
-      ...(filters?.dateFrom || filters?.dateTo
-        ? {
-            createdAt: {
-              ...(filters.dateFrom && { gte: new Date(filters.dateFrom) }),
-              ...(filters.dateTo && { lte: new Date(filters.dateTo) }),
-            },
-          }
-        : {}),
-      // Filtre enRetard : dateLimite depassee et statut non terminal (ADR-017.2)
-      ...(filters?.enRetard
-        ? {
-            dateLimite: { lt: maintenant, not: null },
-            statut: { in: [StatutBesoins.SOUMISE, StatutBesoins.APPROUVEE] },
-          }
-        : {}),
-    },
-    include: {
-      demandeur: { select: { id: true, name: true } },
-      valideur: { select: { id: true, name: true } },
-      vague: { select: { id: true, code: true } },
-      _count: { select: { lignes: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const where = {
+    siteId,
+    ...(filters?.statut && { statut: filters.statut }),
+    ...(filters?.demandeurId && { demandeurId: filters.demandeurId }),
+    ...(filters?.vagueId && { vagueId: filters.vagueId }),
+    ...(filters?.dateFrom || filters?.dateTo
+      ? {
+          createdAt: {
+            ...(filters.dateFrom && { gte: new Date(filters.dateFrom) }),
+            ...(filters.dateTo && { lte: new Date(filters.dateTo) }),
+          },
+        }
+      : {}),
+    // Filtre enRetard : dateLimite depassee et statut non terminal (ADR-017.2)
+    ...(filters?.enRetard
+      ? {
+          dateLimite: { lt: maintenant, not: null },
+          statut: { in: [StatutBesoins.SOUMISE, StatutBesoins.APPROUVEE] },
+        }
+      : {}),
+  };
+
+  const limit = pagination?.limit ?? 50;
+  const offset = pagination?.offset ?? 0;
+
+  const [data, total] = await Promise.all([
+    prisma.listeBesoins.findMany({
+      where,
+      include: {
+        demandeur: { select: { id: true, name: true } },
+        valideur: { select: { id: true, name: true } },
+        vague: { select: { id: true, code: true } },
+        _count: { select: { lignes: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      skip: offset,
+    }),
+    prisma.listeBesoins.count({ where }),
+  ]);
+
+  return { data, total };
 }
 
 /** Recupere une liste de besoins par ID avec toutes ses relations */

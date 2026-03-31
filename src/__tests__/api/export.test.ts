@@ -386,7 +386,7 @@ describe("GET /api/export/facture/[id]", () => {
 
     expect(response.status).toBe(404);
     const data = await response.json();
-    expect(data.error).toContain("introuvable");
+    expect(data.message).toContain("introuvable");
   });
 
   it("retourne 404 si site inexistant", async () => {
@@ -399,7 +399,7 @@ describe("GET /api/export/facture/[id]", () => {
 
     expect(response.status).toBe(404);
     const data = await response.json();
-    expect(data.error).toContain("Site introuvable");
+    expect(data.message).toContain("Site introuvable");
   });
 
   it("appelle requirePermission avec FACTURES_VOIR et EXPORT_DONNEES", async () => {
@@ -519,7 +519,7 @@ describe("GET /api/export/vague/[id]", () => {
 
     expect(response.status).toBe(404);
     const data = await response.json();
-    expect(data.error).toContain("introuvable");
+    expect(data.message).toContain("introuvable");
   });
 
   it("retourne 404 si site inexistant", async () => {
@@ -743,7 +743,7 @@ describe("GET /api/export/releves", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockGetReleves.mockResolvedValue({ releves: [{ id: "r-1" }] });
+    mockGetReleves.mockResolvedValue({ data: [{ id: "r-1" }], total: 1 });
     mockPrismaReleveFindMany.mockResolvedValue(FAKE_RELEVES_DB);
     const mod = await import("@/app/api/export/releves/route");
     GET = mod.GET;
@@ -864,7 +864,7 @@ describe("GET /api/export/releves", () => {
   });
 
   it("retourne 200 avec liste vide si aucun relevé", async () => {
-    mockGetReleves.mockResolvedValue({ releves: [] });
+    mockGetReleves.mockResolvedValue({ data: [], total: 0 });
     mockPrismaReleveFindMany.mockResolvedValue([]);
 
     const response = await GET(makeRequest("/api/export/releves"));
@@ -1070,7 +1070,7 @@ describe("GET /api/export/ventes", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    mockGetVentes.mockResolvedValue(FAKE_VENTES);
+    mockGetVentes.mockResolvedValue({ data: FAKE_VENTES, total: FAKE_VENTES.length });
     const mod = await import("@/app/api/export/ventes/route");
     GET = mod.GET;
   });
@@ -1173,7 +1173,7 @@ describe("GET /api/export/ventes", () => {
   });
 
   it("retourne 200 avec liste vide si aucune vente", async () => {
-    mockGetVentes.mockResolvedValue([]);
+    mockGetVentes.mockResolvedValue({ data: [], total: 0 });
 
     const response = await GET(makeRequest("/api/export/ventes"));
 
@@ -1181,9 +1181,10 @@ describe("GET /api/export/ventes", () => {
   });
 
   it("gère correctement le statut facture null", async () => {
-    mockGetVentes.mockResolvedValue([
-      { ...FAKE_VENTES[0], facture: null },
-    ]);
+    mockGetVentes.mockResolvedValue({
+      data: [{ ...FAKE_VENTES[0], facture: null }],
+      total: 1,
+    });
 
     const response = await GET(makeRequest("/api/export/ventes"));
 

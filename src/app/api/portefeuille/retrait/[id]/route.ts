@@ -16,6 +16,7 @@ import { prisma } from "@/lib/db";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
 import { Permission } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 export async function GET(
   request: NextRequest,
@@ -45,38 +46,23 @@ export async function GET(
     });
 
     if (!retrait) {
-      return NextResponse.json(
-        { status: 404, message: "Retrait introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Retrait introuvable.");
     }
 
     // Vérifier que l'utilisateur a accès à ce retrait
     const isAdmin = auth.permissions.includes(Permission.PORTEFEUILLE_GERER);
     if (!isAdmin && retrait.portefeuille.ingenieurId !== auth.userId) {
-      return NextResponse.json(
-        { status: 403, message: "Accès refusé à ce retrait." },
-        { status: 403 }
-      );
+      return apiError(403, "Accès refusé à ce retrait.");
     }
 
     return NextResponse.json({ retrait });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation du retrait." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation du retrait.");
   }
 }

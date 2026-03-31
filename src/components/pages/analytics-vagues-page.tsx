@@ -16,7 +16,7 @@ export default async function AnalyticsVaguesPage() {
     if (!permissions) return <AccessDenied />;
 
     // Charger toutes les vagues du site (EN_COURS et TERMINEE) pour le selecteur
-    const vagues = await getVagues(session.activeSiteId);
+    const { data: vagues } = await getVagues(session.activeSiteId);
 
     return (
       <>

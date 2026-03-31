@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
+import { formatNumber } from "@/lib/format";
 import {
   ArrowLeft,
   Calendar,
@@ -191,13 +192,13 @@ export function FactureDetailClient({ facture, permissions }: Props) {
           <div className="grid grid-cols-2 gap-2 mt-3">
             <div className="rounded-lg bg-muted/50 p-3 text-center">
               <p className="text-lg font-bold">
-                {facture.montantTotal.toLocaleString("fr-FR")} F
+                {formatNumber(facture.montantTotal)} F
               </p>
               <p className="text-xs text-muted-foreground">{t("factures.detail.total")}</p>
             </div>
             <div className="rounded-lg bg-muted/50 p-3 text-center">
               <p className="text-lg font-bold">
-                {facture.montantPaye.toLocaleString("fr-FR")} F
+                {formatNumber(facture.montantPaye)} F
               </p>
               <p className="text-xs text-muted-foreground">{t("factures.detail.paye")}</p>
             </div>
@@ -206,7 +207,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
           {resteAPayer > 0 && statut !== StatutFacture.ANNULEE && (
             <div className="rounded-lg bg-accent-amber-muted border border-accent-amber/30 p-3 text-center mt-2">
               <p className="text-lg font-bold text-accent-amber">
-                {resteAPayer.toLocaleString("fr-FR")} F
+                {formatNumber(resteAPayer)} F
               </p>
               <p className="text-xs text-accent-amber">{t("factures.detail.resteAPayer")}</p>
             </div>
@@ -254,7 +255,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
               </DialogHeader>
               <div className="flex flex-col gap-4 py-2">
                 <Input
-                  label={t("paiements.fields.montant", { max: resteAPayer.toLocaleString("fr-FR") })}
+                  label={t("paiements.fields.montant", { max: formatNumber(resteAPayer) })}
                   type="number"
                   min="1"
                   max={resteAPayer}
@@ -313,7 +314,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t("factures.detail.prixKg")}</span>
-              <span>{facture.vente.prixUnitaireKg.toLocaleString("fr-FR")} F</span>
+              <span>{formatNumber(facture.vente.prixUnitaireKg)} F</span>
             </div>
           </div>
         </CardContent>
@@ -348,7 +349,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
                     </p>
                   </div>
                   <p className="text-sm font-semibold shrink-0">
-                    {p.montant.toLocaleString("fr-FR")} F
+                    {formatNumber(p.montant)} F
                   </p>
                 </div>
               ))}

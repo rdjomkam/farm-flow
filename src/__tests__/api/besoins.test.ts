@@ -19,6 +19,7 @@ import { StatutBesoins, Permission } from "@/types";
 const mockListeBesoinsCreate = vi.fn();
 const mockListeBesoinsFindFirst = vi.fn();
 const mockListeBesoinsFindMany = vi.fn();
+const mockListeBesoinsCount = vi.fn();
 const mockListeBesoinsUpdate = vi.fn();
 const mockListeBesoinsDelete = vi.fn();
 const mockListeBesoinsFindUniqueOrThrow = vi.fn();
@@ -37,6 +38,7 @@ vi.mock("@/lib/db", () => ({
       create: (...args: unknown[]) => mockListeBesoinsCreate(...args),
       findFirst: (...args: unknown[]) => mockListeBesoinsFindFirst(...args),
       findMany: (...args: unknown[]) => mockListeBesoinsFindMany(...args),
+      count: (...args: unknown[]) => mockListeBesoinsCount(...args),
       update: (...args: unknown[]) => mockListeBesoinsUpdate(...args),
       delete: (...args: unknown[]) => mockListeBesoinsDelete(...args),
       findUniqueOrThrow: (...args: unknown[]) => mockListeBesoinsFindUniqueOrThrow(...args),
@@ -293,12 +295,13 @@ describe("GET /api/besoins", () => {
   it("retourne 200 avec liste des besoins", async () => {
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
     mockListeBesoinsFindMany.mockResolvedValue([FAKE_LISTE_SOUMISE]);
+    mockListeBesoinsCount.mockResolvedValue(1);
 
     const req = makeRequest("http://localhost:3000/api/besoins");
     const res = await GET(req);
     expect(res.status).toBe(200);
     const data = await res.json();
-    expect(Array.isArray(data.listesBesoins)).toBe(true);
+    expect(Array.isArray(data.data)).toBe(true);
     expect(data.total).toBe(1);
   });
 

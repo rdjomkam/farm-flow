@@ -17,11 +17,13 @@
 import dynamic from "next/dynamic";
 import { TrendingUp, TrendingDown, Calendar, Leaf, DollarSign, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { cn } from "@/lib/utils";
 import type { ProjectionVague } from "@/types";
 import { Role } from "@/types";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { formatCFA, formatDate } from "@/lib/format";
 
 // Recharts chargés dynamiquement (SSR disabled)
 const ResponsiveContainer = dynamic(
@@ -67,19 +69,6 @@ interface ProjectionCardProps {
   userRole?: Role;
 }
 
-/** Formate un nombre en CFA avec separateur de milliers */
-function formatCFA(montant: number): string {
-  return montant.toLocaleString("fr-FR") + " CFA";
-}
-
-/** Formate une date en francais */
-function formatDate(date: Date): string {
-  return new Date(date).toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
 
 /**
  * Badge de comparaison SGR.
@@ -355,7 +344,9 @@ function ProjectionCard({ projection }: ProjectionCardProps) {
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               {tAnalytics("projections.growthCurve")}
             </p>
-            <CourbeProjectionChart projection={projection} />
+            <ErrorBoundary section="le graphique de croissance">
+              <CourbeProjectionChart projection={projection} />
+            </ErrorBoundary>
             <p className="text-[10px] text-muted-foreground mt-1 text-center">
               {tAnalytics("projections.chartLegend")}
             </p>

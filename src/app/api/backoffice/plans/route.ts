@@ -18,6 +18,7 @@ import {
   getPlansAbonnements,
   createPlanAbonnement,
 } from "@/lib/queries/plans-abonnements";
+import { apiError } from "@/lib/api-utils";
 import { TypePlan, SiteModule } from "@/types";
 import type { CreatePlanAbonnementDTO } from "@/types";
 import { ErrorKeys } from "@/lib/api-error-keys";
@@ -34,25 +35,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ plans, total: plans.length });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors de la recuperation des plans.",
-        errorKey: ErrorKeys.SERVER_GET_PLANS,
-      },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation des plans.", { code: ErrorKeys.SERVER_GET_PLANS, });
   }
 }
 
@@ -133,10 +121,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     const data: CreatePlanAbonnementDTO = {
@@ -159,35 +144,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(plan, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("Unique constraint") || message.includes("unique")) {
-      return NextResponse.json(
-        {
-          status: 409,
-          message: "Un plan avec ce type existe deja.",
-          errorKey: ErrorKeys.CONFLICT_PLAN_TYPE_EXISTS,
-        },
-        { status: 409 }
-      );
+      return apiError(409, "Un plan avec ce type existe deja.", { code: ErrorKeys.CONFLICT_PLAN_TYPE_EXISTS, });
     }
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors de la creation du plan.",
-        errorKey: ErrorKeys.SERVER_CREATE_PLAN,
-      },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la creation du plan.", { code: ErrorKeys.SERVER_CREATE_PLAN, });
   }
 }

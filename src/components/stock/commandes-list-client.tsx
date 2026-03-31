@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { formatNumber } from "@/lib/format";
 import { Plus, ShoppingCart, ArrowLeft, Calendar, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -273,7 +274,7 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
 
               {montantTotal > 0 && (
                 <div className="text-right font-semibold">
-                  {t("commandes.fields.total", { montant: montantTotal.toLocaleString("fr-FR") })}
+                  {t("commandes.fields.total", { montant: formatNumber(montantTotal) })}
                 </div>
               )}
             </div>
@@ -324,7 +325,7 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
                           {c.fournisseur.nom}
                         </span>
                         <span className="font-semibold shrink-0">
-                          {c.montantTotal.toLocaleString("fr-FR")} FCFA
+                          {formatNumber(c.montantTotal)} FCFA
                         </span>
                       </div>
                       <div className="flex items-center justify-between mt-1 text-xs text-muted-foreground">

@@ -258,14 +258,13 @@ describe("getKParAliment — calcul K pondere par quantite", () => {
     expect(result[0].kMoyen).toBeCloseTo(5.5 / 300, 6);
   });
 
-  it("retourne kMoyen=0 si toutes les quantites sont 0 (division par zero protegee)", async () => {
+  it("filtre le produit si toutes les quantites sont 0 (sommeQuantite === 0)", async () => {
     mockGompertzVagueFindMany.mockResolvedValue([
       makeGompertzEntry({ vagueId: "v1", vagueCode: "V001", k: 0.025, produitId: "prod-A", produitNom: "A", quantite: 0 }),
       makeGompertzEntry({ vagueId: "v2", vagueCode: "V002", k: 0.020, produitId: "prod-A", produitNom: "A", quantite: 0 }),
     ]);
     const result = await getKParAliment("site-1");
-    expect(result).toHaveLength(1);
-    expect(result[0].kMoyen).toBe(0);
+    expect(result).toHaveLength(0);
   });
 });
 
@@ -489,6 +488,76 @@ describe("getKParAliment — plusieurs produits independants", () => {
     expect(prodA!.kMoyen).toBeCloseTo(0.0235, 6);
     // Produit B : kMoyen = (0.025×50 + 0.010×150) / 200 = (1.25 + 1.5) / 200 = 0.01375
     expect(prodB!.kMoyen).toBeCloseTo(0.01375, 6);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CR2.3 — Validation K : filtrage silencieux des valeurs invalides
+// ---------------------------------------------------------------------------
+
+describe("getKParAliment — validation kMoyen (CR2.3)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("filtre silencieusement un produit dont sommeQuantite === 0", async () => {
+    mockGompertzVagueFindMany.mockResolvedValue([
+      makeGompertzEntry({ vagueId: "v1", vagueCode: "V001", k: 0.025, produitId: "prod-A", produitNom: "A", quantite: 0 }),
+      makeGompertzEntry({ vagueId: "v2", vagueCode: "V002", k: 0.020, produitId: "prod-A", produitNom: "A", quantite: 0 }),
+    ]);
+    const result = await getKParAliment("site-1");
+    expect(result).toHaveLength(0);
+  });
+
+  it("filtre silencieusement un produit dont le K Gompertz est negatif", async () => {
+    // K negatif : kMoyen = (-0.025 * 100 + -0.020 * 100) / 200 = -0.0225 → filtre
+    mockGompertzVagueFindMany.mockResolvedValue([
+      makeGompertzEntry({ vagueId: "v1", vagueCode: "V001", k: -0.025, produitId: "prod-neg", produitNom: "Negatif", quantite: 100 }),
+      makeGompertzEntry({ vagueId: "v2", vagueCode: "V002", k: -0.020, produitId: "prod-neg", produitNom: "Negatif", quantite: 100 }),
+    ]);
+    const result = await getKParAliment("site-1");
+    expect(result).toHaveLength(0);
+  });
+
+  it("filtre silencieusement un produit dont kMoyen vaut exactement 0", async () => {
+    // K = 0 pour toutes les vagues → kMoyen = 0 → filtre (kMoyen <= 0)
+    mockGompertzVagueFindMany.mockResolvedValue([
+      makeGompertzEntry({ vagueId: "v1", vagueCode: "V001", k: 0, produitId: "prod-zero", produitNom: "Zero", quantite: 100 }),
+      makeGompertzEntry({ vagueId: "v2", vagueCode: "V002", k: 0, produitId: "prod-zero", produitNom: "Zero", quantite: 100 }),
+    ]);
+    const result = await getKParAliment("site-1");
+    expect(result).toHaveLength(0);
+  });
+
+  it("retourne normalement un produit valide meme si un autre produit a quantite 0", async () => {
+    // prod-A : quantite=0 → filtre ; prod-B : valide → retenu
+    mockGompertzVagueFindMany.mockResolvedValue([
+      // prod-A : quantite nulle
+      makeGompertzEntry({ vagueId: "v1", vagueCode: "V001", k: 0.025, produitId: "prod-A", produitNom: "A-zero", quantite: 0 }),
+      makeGompertzEntry({ vagueId: "v2", vagueCode: "V002", k: 0.020, produitId: "prod-A", produitNom: "A-zero", quantite: 0 }),
+      // prod-B : valide
+      makeGompertzEntry({ vagueId: "v1", vagueCode: "V001", k: 0.022, produitId: "prod-B", produitNom: "B-valide", quantite: 150 }),
+      makeGompertzEntry({ vagueId: "v2", vagueCode: "V002", k: 0.018, produitId: "prod-B", produitNom: "B-valide", quantite: 250 }),
+    ]);
+    const result = await getKParAliment("site-1");
+    expect(result).toHaveLength(1);
+    expect(result[0].produitId).toBe("prod-B");
+    // K pondere = (0.022×150 + 0.018×250) / 400 = (3.3 + 4.5) / 400 = 7.8 / 400 = 0.0195
+    expect(result[0].kMoyen).toBeCloseTo(0.0195, 6);
+  });
+
+  it("retourne normalement un produit valide meme si un autre produit a K negatif", async () => {
+    mockGompertzVagueFindMany.mockResolvedValue([
+      // prod-neg : K negatif → filtre
+      makeGompertzEntry({ vagueId: "v1", vagueCode: "V001", k: -0.01, produitId: "prod-neg", produitNom: "Neg", quantite: 100 }),
+      makeGompertzEntry({ vagueId: "v2", vagueCode: "V002", k: -0.02, produitId: "prod-neg", produitNom: "Neg", quantite: 100 }),
+      // prod-ok : valide
+      makeGompertzEntry({ vagueId: "v1", vagueCode: "V001", k: 0.020, produitId: "prod-ok", produitNom: "OK", quantite: 200 }),
+      makeGompertzEntry({ vagueId: "v2", vagueCode: "V002", k: 0.016, produitId: "prod-ok", produitNom: "OK", quantite: 200 }),
+    ]);
+    const result = await getKParAliment("site-1");
+    expect(result).toHaveLength(1);
+    expect(result[0].produitId).toBe("prod-ok");
   });
 });
 

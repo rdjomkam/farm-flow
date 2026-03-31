@@ -71,7 +71,7 @@ describe("GET /api/releves", () => {
 
   it("retourne tous les releves sans filtre", async () => {
     mockGetReleves.mockResolvedValue({
-      releves: [
+      data: [
         { id: "rel-1", typeReleve: "BIOMETRIE", date: now },
         { id: "rel-2", typeReleve: "MORTALITE", date: now },
       ],
@@ -83,12 +83,40 @@ describe("GET /api/releves", () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.releves).toHaveLength(2);
+    expect(data.data).toHaveLength(2);
     expect(data.total).toBe(2);
+    expect(data.limit).toBe(50);
+    expect(data.offset).toBe(0);
+  });
+
+  it("retourne 400 si limit > 200", async () => {
+    const request = makeRequest("/api/releves?limit=201");
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.message).toContain("200");
+  });
+
+  it("applique correctement l'offset via pagination", async () => {
+    mockGetReleves.mockResolvedValue({ data: [], total: 10 });
+
+    const request = makeRequest("/api/releves?limit=5&offset=5");
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.limit).toBe(5);
+    expect(data.offset).toBe(5);
+    expect(mockGetReleves).toHaveBeenCalledWith(
+      "site-1",
+      expect.any(Object),
+      { limit: 5, offset: 5 }
+    );
   });
 
   it("filtre les releves par vagueId", async () => {
-    mockGetReleves.mockResolvedValue({ releves: [], total: 0 });
+    mockGetReleves.mockResolvedValue({ data: [], total: 0 });
 
     const request = makeRequest("/api/releves?vagueId=vague-1");
     const response = await GET(request);
@@ -96,12 +124,13 @@ describe("GET /api/releves", () => {
     expect(response.status).toBe(200);
     expect(mockGetReleves).toHaveBeenCalledWith(
       "site-1",
-      expect.objectContaining({ vagueId: "vague-1" })
+      expect.objectContaining({ vagueId: "vague-1" }),
+      expect.any(Object)
     );
   });
 
   it("filtre les releves par typeReleve", async () => {
-    mockGetReleves.mockResolvedValue({ releves: [], total: 0 });
+    mockGetReleves.mockResolvedValue({ data: [], total: 0 });
 
     const request = makeRequest("/api/releves?typeReleve=BIOMETRIE");
     const response = await GET(request);
@@ -109,12 +138,13 @@ describe("GET /api/releves", () => {
     expect(response.status).toBe(200);
     expect(mockGetReleves).toHaveBeenCalledWith(
       "site-1",
-      expect.objectContaining({ typeReleve: "BIOMETRIE" })
+      expect.objectContaining({ typeReleve: "BIOMETRIE" }),
+      expect.any(Object)
     );
   });
 
   it("filtre par bacId et plage de dates", async () => {
-    mockGetReleves.mockResolvedValue({ releves: [], total: 0 });
+    mockGetReleves.mockResolvedValue({ data: [], total: 0 });
 
     const request = makeRequest(
       "/api/releves?bacId=bac-1&dateFrom=2026-01-01&dateTo=2026-03-01"
@@ -128,7 +158,8 @@ describe("GET /api/releves", () => {
         bacId: "bac-1",
         dateFrom: "2026-01-01",
         dateTo: "2026-03-01",
-      })
+      }),
+      expect.any(Object)
     );
   });
 

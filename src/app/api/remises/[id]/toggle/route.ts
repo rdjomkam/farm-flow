@@ -13,6 +13,7 @@ import { getRemiseById, toggleRemise } from "@/lib/queries/remises";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
 import { Permission } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 export async function PATCH(
   request: NextRequest,
@@ -25,10 +26,7 @@ export async function PATCH(
     // Récupérer l'état actuel
     const existing = await getRemiseById(id);
     if (!existing) {
-      return NextResponse.json(
-        { status: 404, message: "Remise introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Remise introuvable.");
     }
 
     // Toggle atomique — R4 : updateMany pour garantir atomicité
@@ -44,16 +42,10 @@ export async function PATCH(
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     return NextResponse.json(

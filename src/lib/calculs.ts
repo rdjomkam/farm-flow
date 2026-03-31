@@ -13,6 +13,7 @@
 
 import type { ConfigElevage, AlimentTailleEntree, AlimentTauxEntree } from "@/types";
 import { PhaseElevage } from "@/types";
+import { formatNumber } from "@/lib/format";
 
 /**
  * Calcule le taux de survie en pourcentage.
@@ -249,9 +250,14 @@ export function computeVivantsByBac(
   releves: { bacId: string | null; typeReleve: string; nombreMorts: number | null; nombreCompte: number | null; date?: string | Date | null }[],
   nombreInitialVague: number
 ): Map<string, number> {
+  // Utiliser floor + distribuer le reste au dernier bac pour eviter la perte de poissons
+  // Exemple : 1000 / 3 = [334, 333, 333] (total = 1000)
   const nombreInitialParBac = bacs.length > 0
-    ? Math.round(nombreInitialVague / bacs.length)
+    ? Math.floor(nombreInitialVague / bacs.length)
     : nombreInitialVague;
+  const reste = bacs.length > 0
+    ? nombreInitialVague - nombreInitialParBac * bacs.length
+    : 0;
 
   // Group comptages by bacId, keep last + its date (assumes releves sorted by date asc)
   const comptagesParBac = new Map<string, { count: number; date: Date }>();
@@ -280,8 +286,13 @@ export function computeVivantsByBac(
   }
 
   const result = new Map<string, number>();
-  for (const bac of bacs) {
-    const initialBac = bac.nombreInitial ?? nombreInitialParBac;
+  for (let idx = 0; idx < bacs.length; idx++) {
+    const bac = bacs[idx];
+    const isLastBac = idx === bacs.length - 1;
+    // Le dernier bac recoit le reste pour garantir total = nombreInitialVague
+    const initialBac = bac.nombreInitial != null
+      ? bac.nombreInitial
+      : nombreInitialParBac + (isLastBac ? reste : 0);
     const comptage = comptagesParBac.get(bac.id);
     if (comptage) {
       const mortsApres = mortsPostComptageParBac.get(bac.id) ?? 0;
@@ -462,7 +473,7 @@ export function genererRecommandation(
       (deuxieme.coutParKgGain - meilleur.coutParKgGain) * 1000
     );
     if (economie > 0) {
-      texte += ` Compare a '${deuxieme.nom}' (FCR ${deuxieme.fcrMoyen.toFixed(2)}, cout ${Math.round(deuxieme.coutParKgGain)} CFA/kg), il vous ferait economiser ${economie.toLocaleString("fr-FR")} CFA par tonne de poisson produit.`;
+      texte += ` Compare a '${deuxieme.nom}' (FCR ${deuxieme.fcrMoyen.toFixed(2)}, cout ${Math.round(deuxieme.coutParKgGain)} CFA/kg), il vous ferait economiser ${formatNumber(economie)} CFA par tonne de poisson produit.`;
     }
   }
 
@@ -620,6 +631,10 @@ export function calculerSGRRequis(
   ) {
     return null;
   }
+  // Guard : objectif deja atteint ou inferieur au poids actuel → SGR negatif physiquement impossible
+  if (poidsObjectif <= poidsMoyenActuel) {
+    return null;
+  }
   return (
     ((Math.log(poidsObjectif) - Math.log(poidsMoyenActuel)) / joursRestants) *
     100
@@ -759,10 +774,14 @@ export function genererCourbeProjection(
     return [];
   }
 
+  const MAX_POINTS = 500;
+  // Cap le nombre de points pour eviter les boucles longues (joursProjection tres grand)
+  const joursEffectifs = Math.min(joursProjection, MAX_POINTS - 1);
+
   const points: { jour: number; poidsProjecte: number }[] = [];
   const sgr = sgrActuel / 100;
 
-  for (let i = 0; i <= joursProjection; i++) {
+  for (let i = 0; i <= joursEffectifs; i++) {
     const poidsProjecte = poidsMoyenActuel * Math.exp(sgr * i);
     points.push({
       jour: jourDepart + i,

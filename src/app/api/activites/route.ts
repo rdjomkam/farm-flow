@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getActivites, createActivite } from "@/lib/queries";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { Permission, StatutActivite, TypeActivite } from "@/types";
+import { Permission, StatutActivite, TypeActivite, parsePaginationQuery } from "@/types";
 import type { ActiviteFilters } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 const TYPES_ACTIVITE_VALIDES = Object.values(TypeActivite) as string[];
 const STATUTS_ACTIVITE_VALIDES = Object.values(StatutActivite) as string[];
@@ -12,6 +13,13 @@ export async function GET(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.PLANNING_VOIR);
     const { searchParams } = new URL(request.url);
+
+    // Pagination
+    const paginationResult = parsePaginationQuery(searchParams);
+    if (!paginationResult.valid) {
+      return apiError(400, paginationResult.error);
+    }
+    const { limit, offset } = paginationResult.params;
 
     const rawStatut = searchParams.get("statut");
     const rawTypeActivite = searchParams.get("typeActivite");
@@ -29,21 +37,18 @@ export async function GET(request: NextRequest) {
       assigneAId: searchParams.get("assigneAId") ?? undefined,
     };
 
-    const activites = await getActivites(auth.activeSiteId, filters);
+    const { data, total } = await getActivites(auth.activeSiteId, filters, { limit, offset });
 
-    return NextResponse.json({ activites, total: activites.length });
+    return NextResponse.json({ data, total, limit, offset });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     console.error("[GET /api/activites]", error);
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la récupération des activités." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la récupération des activités.");
   }
 }
 
@@ -76,10 +81,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     const activite = await createActivite(auth.activeSiteId, auth.userId, {
@@ -97,19 +99,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(activite, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 409, message }, { status: 409 });
+      return apiError(409, message);
     }
     console.error("[POST /api/activites]", error);
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la création de l'activité." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la création de l'activité.");
   }
 }

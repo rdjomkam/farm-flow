@@ -16,14 +16,14 @@ export default async function NouvelleActivitePage() {
   const permissions = await checkPagePermission(session, Permission.PLANNING_GERER);
   if (!permissions) return <AccessDenied />;
 
-  const [vagues, bacs, siteMembers] = await Promise.all([
+  const [vaguesResult, bacsResult, siteMembers] = await Promise.all([
     getVagues(session.activeSiteId),
     getBacs(session.activeSiteId),
     getSiteMembers(session.activeSiteId),
   ]);
 
-  const vagueOptions = vagues.map((v) => ({ id: v.id, code: v.code }));
-  const bacOptions = bacs.map((b) => ({ id: b.id, nom: b.nom }));
+  const vagueOptions = vaguesResult.data.map((v) => ({ id: v.id, code: v.code }));
+  const bacOptions = bacsResult.data.map((b) => ({ id: b.id, nom: b.nom }));
   const memberOptions = siteMembers.map((m) => ({ userId: m.user.id, userName: m.user.name }));
 
   return (

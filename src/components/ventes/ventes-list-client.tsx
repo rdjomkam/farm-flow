@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { formatNumber } from "@/lib/format";
 import { Plus, ShoppingCart, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -131,7 +132,7 @@ export function VentesListClient({ initialVentes, clients, vagues, permissions }
                       {v.quantitePoissons} {t("ventes.detail.poissons")} — {v.poidsTotalKg} kg
                     </span>
                     <span className="font-semibold">
-                      {v.montantTotal.toLocaleString("fr-FR")} F
+                      {formatNumber(v.montantTotal)} F
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">

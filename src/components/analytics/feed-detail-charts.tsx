@@ -3,10 +3,12 @@
 import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartTooltip } from "@/components/ui/chart-tooltip";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { BenchmarkBadge } from "./benchmark-badge";
 import { evaluerBenchmark, BENCHMARK_FCR } from "@/lib/benchmarks";
 import type { DetailAliment, DetailAlimentVague, FCRHebdomadairePoint, ChangementGranule } from "@/types";
 import { useTranslations } from "next-intl";
+import { formatNumber } from "@/lib/format";
 
 const ResponsiveContainer = dynamic(
   () => import("recharts").then((mod) => mod.ResponsiveContainer),
@@ -88,7 +90,7 @@ export function FeedDetailSummary({ detail }: FeedDetailSummaryProps) {
               <span className="text-lg font-bold leading-tight">
                 {m.value !== null
                   ? typeof m.value === "number" && m.value >= 1000
-                    ? m.value.toLocaleString("fr-FR")
+                    ? formatNumber(m.value)
                     : m.value
                   : "—"}
               </span>
@@ -138,38 +140,40 @@ export function FeedFCRChart({ evolutionFCR }: FeedFCRChartProps) {
   }));
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{tAnalytics("aliments.evolutionFCR")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[250px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} width={40} domain={["auto", "auto"]} />
-              <Tooltip
-                content={
-                  <ChartTooltip
-                    valueFormatter={(v) => v.toFixed(2)}
-                  />
-                }
-              />
-              <Line
-                type="monotone"
-                dataKey="fcr"
-                name="FCR"
-                stroke="var(--primary)"
-                strokeWidth={2}
-                dot={{ r: 3 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+    <ErrorBoundary section="le graphique FCR">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{tAnalytics("aliments.evolutionFCR")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} width={40} domain={["auto", "auto"]} />
+                <Tooltip
+                  content={
+                    <ChartTooltip
+                      valueFormatter={(v) => v.toFixed(2)}
+                    />
+                  }
+                />
+                <Line
+                  type="monotone"
+                  dataKey="fcr"
+                  name="FCR"
+                  stroke="var(--primary)"
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+    </ErrorBoundary>
   );
 }
 
@@ -207,13 +211,14 @@ export function FeedVagueBreakdown({ parVague }: FeedVagueBreakdownProps) {
   }));
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{tAnalytics("aliments.performanceParVague")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[250px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
+    <ErrorBoundary section="le graphique par vague">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{tAnalytics("aliments.performanceParVague")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
@@ -248,7 +253,7 @@ export function FeedVagueBreakdown({ parVague }: FeedVagueBreakdownProps) {
                 <span>{tAnalytics("benchmarks.fcr.label")} : {v.fcr !== null ? v.fcr : "—"}</span>
                 <span>{tAnalytics("benchmarks.sgr.label")} : {v.sgr !== null ? `${v.sgr}%/j` : "—"}</span>
                 <span>
-                  {tAnalytics("aliments.cout")} : {v.coutParKgGain !== null ? `${v.coutParKgGain.toLocaleString("fr-FR")} CFA/kg` : "—"}
+                  {tAnalytics("aliments.cout")} : {v.coutParKgGain !== null ? `${formatNumber(v.coutParKgGain)} CFA/kg` : "—"}
                 </span>
               </div>
             </CardContent>
@@ -257,6 +262,7 @@ export function FeedVagueBreakdown({ parVague }: FeedVagueBreakdownProps) {
         </div>
       </CardContent>
     </Card>
+    </ErrorBoundary>
   );
 }
 
@@ -273,7 +279,7 @@ export function FeedDetailMeta({ detail }: FeedDetailMetaProps) {
 
   return (
     <section className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground border-b border-border pb-3">
-      <span>{tAnalytics("aliments.prix")} : {detail.prixUnitaire.toLocaleString("fr-FR")} CFA/kg</span>
+      <span>{tAnalytics("aliments.prix")} : {formatNumber(detail.prixUnitaire)} CFA/kg</span>
       {detail.fournisseurNom && <span>{tAnalytics("aliments.fournisseur")} : {detail.fournisseurNom}</span>}
       <span>{tAnalytics("aliments.vagues", { count: detail.nombreVagues })}</span>
       <span>{tAnalytics("aliments.kgUtilisesMeta", { qty: detail.quantiteTotale })}</span>
@@ -339,11 +345,12 @@ export function FeedFCRHebdoChart({ points, changements = [] }: FeedFCRHebdoChar
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{tAnalytics("aliments.fcrHebdoTitle")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[300px] w-full sm:h-[400px]">
+        <CardHeader>
+          <CardTitle className="text-base">{tAnalytics("aliments.fcrHebdoTitle")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ErrorBoundary section="le graphique FCR hebdomadaire">
+          <div className="h-[300px] w-full sm:h-[400px]">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -440,6 +447,7 @@ export function FeedFCRHebdoChart({ points, changements = [] }: FeedFCRHebdoChar
             </ComposedChart>
           </ResponsiveContainer>
         </div>
+          </ErrorBoundary>
       </CardContent>
     </Card>
   );

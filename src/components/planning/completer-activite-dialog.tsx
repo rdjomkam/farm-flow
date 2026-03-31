@@ -75,12 +75,12 @@ export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActi
       if (activite.vagueId) params.set("vagueId", activite.vagueId);
       params.set("nonLie", "true");
 
-      call<{ releves: UnlinkedReleve[] }>(
+      call<{ data: UnlinkedReleve[]; total: number }>(
         `/api/releves?${params.toString()}`,
         undefined,
         { silentLoading: true, silentError: true }
       ).then((result) => {
-        setUnlinkedReleves(result.data?.releves ?? []);
+        setUnlinkedReleves(result.data?.data ?? []);
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

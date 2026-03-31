@@ -230,10 +230,8 @@ describe("Quota enforcement — Plan DECOUVERTE (limite 3 bacs)", () => {
     const data = await res.json();
 
     expect(res.status).toBe(402);
-    expect(data.error).toBe("QUOTA_DEPASSE");
-    expect(data.ressource).toBe("bacs");
-    // La limite du plan DECOUVERTE est 3
-    expect(data.limite).toBe(PLAN_LIMITES[TypePlan.DECOUVERTE].limitesBacs);
+    expect(data.code).toBe("QUOTA_DEPASSE");
+    expect(data.message).toContain("bac");
   });
 
   it("message d'erreur 402 contient la limite et instructions d'upgrade", async () => {
@@ -266,7 +264,7 @@ describe("Quota enforcement — Plan DECOUVERTE (limite 3 bacs)", () => {
 
     // Sans abonnement, limite DECOUVERTE s'applique → 402
     expect(res.status).toBe(402);
-    expect(data.error).toBe("QUOTA_DEPASSE");
+    expect(data.code).toBe("QUOTA_DEPASSE");
   });
 });
 
@@ -322,7 +320,8 @@ describe("Quota enforcement — Upgrade DECOUVERTE → ELEVEUR", () => {
     const data = await res.json();
 
     expect(res.status).toBe(402);
-    expect(data.limite).toBe(PLAN_LIMITES[TypePlan.ELEVEUR].limitesBacs);
+    expect(data.code).toBe("QUOTA_DEPASSE");
+    expect(data.message).toContain("10");
   });
 
   it("PLAN_LIMITES ELEVEUR : 10 bacs, 3 vagues (vérification des constantes)", () => {

@@ -24,6 +24,7 @@ import {
   Info,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { formatNumber } from "@/lib/format";
 import { UniteStock, PhaseElevage } from "@/types";
 import { convertirUniteStock } from "@/lib/calculs";
 import { FREQUENCES_PAR_PHASE } from "@/lib/activity-engine/feeding";
@@ -427,7 +428,7 @@ export function FeedingRecommendation({
           <MetricRow
             icon={<span className="text-xs">🐟</span>}
             label="Poissons"
-            value={nombreVivantsUtilise.toLocaleString("fr-FR")}
+            value={formatNumber(nombreVivantsUtilise)}
           />
         )}
       </div>

@@ -6,7 +6,9 @@ import {
   CategorieDepense,
   Permission,
   StatutDepense,
+  parsePaginationQuery,
 } from "@/types";
+import { apiError } from "@/lib/api-utils";
 import type { CreateDepenseDTO, DepenseFilters } from "@/types";
 
 const VALID_CATEGORIES = Object.values(CategorieDepense);
@@ -51,21 +53,21 @@ export async function GET(request: NextRequest) {
     const commandeId = searchParams.get("commandeId");
     if (commandeId) filters.commandeId = commandeId;
 
-    const depenses = await getDepenses(auth.activeSiteId, filters);
+    const paginationResult = parsePaginationQuery(searchParams);
+    if (!paginationResult.valid) {
+      return apiError(400, paginationResult.error);
+    }
+    const { limit, offset } = paginationResult.params;
 
-    return NextResponse.json({ depenses, total: depenses.length });
+    const { data, total } = await getDepenses(auth.activeSiteId, filters, { limit, offset });
+
+    return NextResponse.json({ data, total, limit, offset });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     return NextResponse.json(
       {
@@ -151,10 +153,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     const data: CreateDepenseDTO = {
@@ -179,21 +178,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(depense, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     const message =
       error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
     return NextResponse.json(
       {

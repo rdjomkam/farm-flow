@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { formatNumber } from "@/lib/format";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -98,7 +99,7 @@ export function PackActiverClient({ pack }: Props) {
               <div className="py-3">
                 <dt className="text-muted-foreground text-xs">{t("activer.vagueInitialisee")}</dt>
                 <dd className="font-medium font-mono">{result.vague.code}</dd>
-                <dd className="text-xs text-muted-foreground">{t("activer.vagueAlevins", { count: result.vague.nombreInitial.toLocaleString() })}</dd>
+                <dd className="text-xs text-muted-foreground">{t("activer.vagueAlevins", { count: formatNumber(result.vague.nombreInitial) })}</dd>
               </div>
               <div className="py-3">
                 <dt className="text-muted-foreground text-xs">{t("activer.stockInitialise")}</dt>
@@ -140,7 +141,7 @@ export function PackActiverClient({ pack }: Props) {
             <div>
               <p className="font-semibold">{pack.nom}</p>
               <p className="text-sm text-muted-foreground">
-                {pack.nombreAlevins.toLocaleString()} alevins &mdash; {pack.poidsMoyenInitial}g &mdash; {pack.prixTotal.toLocaleString()} FCFA
+                {formatNumber(pack.nombreAlevins)} alevins &mdash; {pack.poidsMoyenInitial}g &mdash; {formatNumber(pack.prixTotal)} FCFA
               </p>
               {pack.produits.length > 0 && (
                 <p className="text-xs text-muted-foreground">

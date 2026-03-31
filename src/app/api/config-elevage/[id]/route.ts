@@ -7,6 +7,7 @@ import {
   updateConfigElevage,
   deleteConfigElevage,
 } from "@/lib/queries/config-elevage";
+import { apiError } from "@/lib/api-utils";
 import { updateConfigElevageSchema } from "@/lib/validation/config-elevage";
 
 /**
@@ -24,24 +25,18 @@ export async function GET(
 
     const config = await getConfigElevageById(id, auth.activeSiteId);
     if (!config) {
-      return NextResponse.json(
-        { status: 404, message: "Profil de configuration introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Profil de configuration introuvable.");
     }
 
     return NextResponse.json({ config });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation du profil." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation du profil.");
   }
 }
 
@@ -77,24 +72,18 @@ export async function PUT(
 
     const config = await updateConfigElevage(id, auth.activeSiteId, parseResult.data);
     if (!config) {
-      return NextResponse.json(
-        { status: 404, message: "Profil de configuration introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Profil de configuration introuvable.");
     }
 
     return NextResponse.json({ config });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la mise a jour du profil." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la mise a jour du profil.");
   }
 }
 
@@ -115,30 +104,21 @@ export async function DELETE(
     const result = await deleteConfigElevage(id, auth.activeSiteId);
 
     if (result === "NOT_FOUND") {
-      return NextResponse.json(
-        { status: 404, message: "Profil de configuration introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Profil de configuration introuvable.");
     }
 
     if (result === "IS_DEFAULT") {
-      return NextResponse.json(
-        { status: 409, message: "Impossible de supprimer le profil par defaut. Definissez un autre profil par defaut d'abord." },
-        { status: 409 }
-      );
+      return apiError(409, "Impossible de supprimer le profil par defaut. Definissez un autre profil par defaut d'abord.");
     }
 
     return NextResponse.json({ message: "Profil supprime avec succes.", id: result.id });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la suppression du profil." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la suppression du profil.");
   }
 }

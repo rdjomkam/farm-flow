@@ -3,32 +3,48 @@ import { TypeMouvement } from "@/types";
 import type { CreateMouvementDTO, MouvementFilters } from "@/types";
 import { convertirQuantiteAchat } from "@/lib/calculs";
 
-/** Liste les mouvements de stock d'un site avec filtres */
-export async function getMouvements(siteId: string, filters?: MouvementFilters) {
-  return prisma.mouvementStock.findMany({
-    where: {
-      siteId,
-      ...(filters?.produitId && { produitId: filters.produitId }),
-      ...(filters?.type && { type: filters.type }),
-      ...(filters?.vagueId && { vagueId: filters.vagueId }),
-      ...(filters?.commandeId && { commandeId: filters.commandeId }),
-      ...(filters?.dateFrom || filters?.dateTo
-        ? {
-            date: {
-              ...(filters?.dateFrom && { gte: new Date(filters.dateFrom) }),
-              ...(filters?.dateTo && { lte: new Date(filters.dateTo) }),
-            },
-          }
-        : {}),
-    },
-    include: {
-      produit: { select: { id: true, nom: true, unite: true, uniteAchat: true, contenance: true } },
-      user: { select: { id: true, name: true } },
-      vague: { select: { id: true, code: true } },
-      commande: { select: { id: true, numero: true } },
-    },
-    orderBy: { date: "desc" },
-  });
+/** Liste les mouvements de stock d'un site avec filtres et pagination */
+export async function getMouvements(
+  siteId: string,
+  filters?: MouvementFilters,
+  pagination?: { limit: number; offset: number }
+) {
+  const where = {
+    siteId,
+    ...(filters?.produitId && { produitId: filters.produitId }),
+    ...(filters?.type && { type: filters.type }),
+    ...(filters?.vagueId && { vagueId: filters.vagueId }),
+    ...(filters?.commandeId && { commandeId: filters.commandeId }),
+    ...(filters?.dateFrom || filters?.dateTo
+      ? {
+          date: {
+            ...(filters?.dateFrom && { gte: new Date(filters.dateFrom) }),
+            ...(filters?.dateTo && { lte: new Date(filters.dateTo) }),
+          },
+        }
+      : {}),
+  };
+
+  const limit = pagination?.limit ?? 50;
+  const offset = pagination?.offset ?? 0;
+
+  const [data, total] = await Promise.all([
+    prisma.mouvementStock.findMany({
+      where,
+      include: {
+        produit: { select: { id: true, nom: true, unite: true, uniteAchat: true, contenance: true } },
+        user: { select: { id: true, name: true } },
+        vague: { select: { id: true, code: true } },
+        commande: { select: { id: true, numero: true } },
+      },
+      orderBy: { date: "desc" },
+      take: limit,
+      skip: offset,
+    }),
+    prisma.mouvementStock.count({ where }),
+  ]);
+
+  return { data, total };
 }
 
 /**

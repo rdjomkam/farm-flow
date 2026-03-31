@@ -9,6 +9,7 @@ import {
   projeterDateRecolte,
   type GompertzParams,
 } from "@/lib/gompertz";
+import { apiError } from "@/lib/api-utils";
 import { computeVivantsByBac } from "@/lib/calculs";
 
 const DEFAULT_TARGET_WEIGHT_G = 800;
@@ -43,10 +44,7 @@ export async function GET(
     });
 
     if (!vague) {
-      return NextResponse.json(
-        { status: 404, message: "Vague introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Vague introuvable.");
     }
 
     // 2. Fetch all BIOMETRIE + MORTALITE + COMPTAGE releves for aggregation
@@ -93,8 +91,8 @@ export async function GET(
       !existingGompertz ||
       existingGompertz.biometrieCount !== biometrieCount ||
       (existingGompertz.confidenceLevel === "INSUFFICIENT_DATA" && biometrieCount >= minPoints) ||
-      // Recalibrate if configElevage W∞ changed and cached value doesn't match
-      (configWInf !== null && existingGompertz != null && Math.abs(existingGompertz.wInfinity - configWInf) > configWInf * 0.1);
+      // Recalibrate if configElevage W∞ changed since last calibration
+      (existingGompertz != null && configWInf !== existingGompertz.configWInfUsed);
 
     let calibrationParams: GompertzParams | null = null;
     let r2: number | null = null;
@@ -129,10 +127,12 @@ export async function GET(
             rmse: 0,
             biometrieCount,
             confidenceLevel: "INSUFFICIENT_DATA",
+            configWInfUsed: configWInf,
           },
           update: {
             biometrieCount,
             confidenceLevel: "INSUFFICIENT_DATA",
+            configWInfUsed: configWInf,
             calculatedAt: new Date(),
           },
         });
@@ -196,6 +196,7 @@ export async function GET(
           rmse: result.rmse,
           biometrieCount: result.biometrieCount,
           confidenceLevel: result.confidenceLevel,
+          configWInfUsed: configWInf,
         },
         update: {
           wInfinity: result.params.wInfinity,
@@ -205,6 +206,7 @@ export async function GET(
           rmse: result.rmse,
           biometrieCount: result.biometrieCount,
           confidenceLevel: result.confidenceLevel,
+          configWInfUsed: configWInf,
           calculatedAt: new Date(),
         },
       });
@@ -256,16 +258,10 @@ export async function GET(
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     console.error("[GET /api/vagues/[id]/gompertz]", error);
     return NextResponse.json(

@@ -3,6 +3,7 @@ import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { getComparaisonAliments } from "@/lib/queries/analytics";
+import { apiError } from "@/lib/api-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,14 +18,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(comparaison);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors du calcul des analytiques aliments." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors du calcul des analytiques aliments.");
   }
 }

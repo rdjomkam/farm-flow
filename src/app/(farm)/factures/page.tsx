@@ -16,7 +16,7 @@ export default async function FacturesPage() {
   if (!permissions) return <AccessDenied />;
 
   const t = await getTranslations("ventes");
-  const factures = await getFactures(session.activeSiteId);
+  const { data: factures } = await getFactures(session.activeSiteId);
 
   return (
     <>

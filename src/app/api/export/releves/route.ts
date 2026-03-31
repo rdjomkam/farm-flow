@@ -6,7 +6,7 @@
  * Permissions requises : RELEVES_VOIR + EXPORT_DONNEES
  */
 
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { getReleves } from "@/lib/queries/releves";
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     const dateFinFilter = dateTo ?? new Date().toISOString().slice(0, 10);
 
     // Récupérer les relevés avec leurs relations (bac + vague)
-    const { releves } = await getReleves(auth.activeSiteId, {
+    const { data: releves } = await getReleves(auth.activeSiteId, {
       ...(vagueId && { vagueId }),
       ...(bacId && { bacId }),
       ...(typeReleve && { typeReleve }),
@@ -118,13 +118,13 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return Response.json({ error: error.message }, { status: 401 });
+      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
     }
     if (error instanceof ForbiddenError) {
-      return Response.json({ error: error.message }, { status: 403 });
+      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
     }
     const message =
       error instanceof Error ? error.message : "Erreur serveur inattendue";
-    return Response.json({ error: message }, { status: 500 });
+    return NextResponse.json({ status: 500, message: message }, { status: 500 });
   }
 }

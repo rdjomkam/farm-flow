@@ -6,6 +6,7 @@ import {
   getCustomPlaceholders,
   createCustomPlaceholder,
 } from "@/lib/queries/custom-placeholders";
+import { apiError } from "@/lib/api-utils";
 
 /**
  * GET /api/regles-activites/placeholders
@@ -26,16 +27,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ placeholders, total: placeholders.length });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ error: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     console.error("[GET /api/regles-activites/placeholders]", error);
-    return NextResponse.json(
-      { error: "Erreur serveur lors de la recuperation des placeholders." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation des placeholders.");
   }
 }
 
@@ -68,20 +66,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ placeholder }, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ error: (error as Error).message }, { status: 401 });
+      return apiError(401, (error as Error).message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ error: (error as Error).message }, { status: 403 });
+      return apiError(403, (error as Error).message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     // Prisma unique constraint violation
     if (message.includes("Unique constraint")) {
-      return NextResponse.json(
-        { error: "Cette cle existe deja." },
-        { status: 409 }
-      );
+      return apiError(409, "Cette cle existe deja.");
     }
     console.error("[POST /api/regles-activites/placeholders]", error);
-    return NextResponse.json({ error: message }, { status: 400 });
+    return apiError(400, message);
   }
 }

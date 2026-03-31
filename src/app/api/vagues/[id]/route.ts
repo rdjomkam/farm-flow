@@ -6,6 +6,7 @@ import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { StatutVague, Permission } from "@/types";
 import type { UpdateVagueDTO } from "@/types";
 import { ErrorKeys } from "@/lib/api-error-keys";
+import { apiError } from "@/lib/api-utils";
 
 export async function GET(
   request: NextRequest,
@@ -17,10 +18,7 @@ export async function GET(
     const vague = await getVagueById(id, auth.activeSiteId);
 
     if (!vague) {
-      return NextResponse.json(
-        { status: 404, message: "Vague introuvable.", errorKey: ErrorKeys.NOT_FOUND_VAGUE },
-        { status: 404 }
-      );
+      return apiError(404, "Vague introuvable.", { code: ErrorKeys.NOT_FOUND_VAGUE });
     }
 
     const indicateurs = await getIndicateursVague(auth.activeSiteId, id);
@@ -56,15 +54,12 @@ export async function GET(
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation de la vague.", errorKey: ErrorKeys.SERVER_GET_VAGUE },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation de la vague.", { code: ErrorKeys.SERVER_GET_VAGUE });
   }
 }
 
@@ -173,10 +168,7 @@ export async function PUT(
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     const data: UpdateVagueDTO = {};
@@ -212,29 +204,26 @@ export async function PUT(
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message =
       error instanceof Error ? error.message : "Erreur serveur inattendue.";
 
     if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
+      return apiError(404, message);
     }
 
     if (message.includes("deja assigne") || message.includes("cloturee") || message.includes("vague cloturee")) {
-      return NextResponse.json({ status: 409, message }, { status: 409 });
+      return apiError(409, message);
     }
 
     if (message.includes("contient") && message.includes("poissons")) {
-      return NextResponse.json({ status: 422, message, errorKey: "TRANSFER_REQUIRED" }, { status: 422 });
+      return apiError(422, message, { code: "TRANSFER_REQUIRED" });
     }
 
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la mise a jour de la vague.", errorKey: ErrorKeys.SERVER_UPDATE_VAGUE },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la mise a jour de la vague.", { code: ErrorKeys.SERVER_UPDATE_VAGUE });
   }
 }

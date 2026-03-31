@@ -29,6 +29,7 @@ import { useAlevinsService } from "@/services";
 import { useApi } from "@/hooks/use-api";
 import { StatutPonte, StatutLotAlevins, Permission } from "@/types";
 import { useTranslations } from "next-intl";
+import { formatNumber } from "@/lib/format";
 
 function statutPonteBadgeClass(statut: string): string {
   if (statut === StatutPonte.EN_COURS) return "bg-accent-green-muted text-accent-green";
@@ -319,7 +320,7 @@ export function PonteDetailClient({ ponte, femelles, males, permissions }: Props
           {ponte.nombreOeufs !== null && (
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t("pontes.detail.oeufs")}</span>
-              <span>{ponte.nombreOeufs.toLocaleString("fr-FR")}</span>
+              <span>{formatNumber(ponte.nombreOeufs)}</span>
             </div>
           )}
           {ponte.tauxFecondation !== null && (

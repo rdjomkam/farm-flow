@@ -4,6 +4,7 @@ import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission, TypeDeclencheur } from "@/types";
 import { SEUIL_TYPES_FIREDONCE } from "@/lib/regles-activites-constants";
+import { apiError } from "@/lib/api-utils";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -28,20 +29,12 @@ export async function POST(request: NextRequest, { params }: Params) {
     // Fetch the rule to verify it exists and check its typeDeclencheur
     const regle = await getRegleActiviteById(id, auth.activeSiteId);
     if (!regle) {
-      return NextResponse.json(
-        { error: "Regle d'activite introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Regle d'activite introuvable.");
     }
 
     // Only SEUIL_* types have a meaningful firedOnce field
     if (!SEUIL_TYPES.includes(regle.typeDeclencheur as TypeDeclencheur)) {
-      return NextResponse.json(
-        {
-          error: `La reinitialisation de firedOnce n'est applicable qu'aux regles de type SEUIL. Ce declencheur est : ${regle.typeDeclencheur}.`,
-        },
-        { status: 400 }
-      );
+      return apiError(400, `La reinitialisation de firedOnce n'est applicable qu'aux regles de type SEUIL. Ce declencheur est : ${regle.typeDeclencheur}.`);
     }
 
     const result = await resetFiredOnce(id);
@@ -49,19 +42,16 @@ export async function POST(request: NextRequest, { params }: Params) {
     return NextResponse.json({ id: result.id, firedOnce: result.firedOnce });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ error: (error as Error).message }, { status: 401 });
+      return apiError(401, (error as Error).message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ error: (error as Error).message }, { status: 403 });
+      return apiError(403, (error as Error).message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
-      return NextResponse.json({ error: message }, { status: 404 });
+      return apiError(404, message);
     }
     console.error("[POST /api/regles-activites/[id]/reset]", error);
-    return NextResponse.json(
-      { error: "Erreur serveur lors de la reinitialisation de firedOnce." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la reinitialisation de firedOnce.");
   }
 }

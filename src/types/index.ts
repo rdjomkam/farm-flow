@@ -227,6 +227,10 @@ export {
   isObservation,
 } from "./releves";
 
+// Pagination API
+export type { PaginationParams, PaginatedResponse } from "./api";
+export { PAGINATION_DEFAULTS, parsePaginationQuery } from "./api";
+
 // DTOs API
 export type {
   CreateBacDTO,
@@ -295,6 +299,7 @@ export type {
   LotAlevinsListResponse,
   ApiError,
   ValidationErrorResponse,
+  ApiErrorResponse,
   // Sprint 11 — Alertes, Planning, Finances
   CreateConfigAlerteDTO,
   UpdateConfigAlerteDTO,

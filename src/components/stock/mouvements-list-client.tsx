@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
+import { formatNumber, formatDateTime } from "@/lib/format";
 import {
   Plus,
   ArrowLeft,
@@ -283,11 +284,11 @@ export function MouvementsListClient({ mouvements, produits, vagues, permissions
                       <div className="text-right shrink-0">
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Calendar className="h-3 w-3" />
-                          {new Date(m.date).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}
+                          {formatDateTime(m.date)}
                         </div>
                         {m.prixTotal != null && (
                           <p className="text-xs text-muted-foreground">
-                            {m.prixTotal.toLocaleString("fr-FR")} FCFA
+                            {formatNumber(m.prixTotal)} FCFA
                           </p>
                         )}
                         <p className="text-xs text-muted-foreground">

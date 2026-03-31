@@ -4,49 +4,65 @@ import { getBacs, getBacsLibres } from "@/lib/queries/bacs";
 import { prisma } from "@/lib/db";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { Permission } from "@/types";
+import { Permission, parsePaginationQuery } from "@/types";
 import type { CreateBacDTO } from "@/types";
 import { normaliseLimite, isQuotaAtteint } from "@/lib/abonnements/check-quotas";
 import { getAbonnementActif } from "@/lib/queries/abonnements";
 import { PLAN_LIMITES } from "@/lib/abonnements-constants";
 import type { QuotaRessource } from "@/lib/abonnements/check-quotas";
 import { ErrorKeys } from "@/lib/api-error-keys";
+import { apiError } from "@/lib/api-utils";
 
 export async function GET(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.BACS_GERER);
     const { searchParams } = new URL(request.url);
     const libre = searchParams.get("libre") === "true";
-    const bacs = libre
-      ? await getBacsLibres(auth.activeSiteId).then((list) =>
-          list.map((b) => ({
-            id: b.id,
-            nom: b.nom,
-            volume: b.volume,
-            nombrePoissons: b.nombrePoissons,
-            nombreInitial: b.nombreInitial,
-            poidsMoyenInitial: b.poidsMoyenInitial,
-            typeSysteme: b.typeSysteme ?? null,
-            vagueId: b.vagueId,
-            siteId: b.siteId,
-            vagueCode: null,
-            createdAt: b.createdAt,
-            updatedAt: b.updatedAt,
-          }))
-        )
-      : await getBacs(auth.activeSiteId);
-    return cachedJson({ bacs, total: bacs.length }, "medium");
+
+    // Pagination
+    const paginationResult = parsePaginationQuery(searchParams);
+    if (!paginationResult.valid) {
+      return apiError(400, paginationResult.error);
+    }
+    const { limit, offset } = paginationResult.params;
+
+    let data: ReturnType<typeof Array.prototype.map>;
+    let total: number;
+
+    if (libre) {
+      const list = await getBacsLibres(auth.activeSiteId);
+      const mapped = list.map((b) => ({
+        id: b.id,
+        nom: b.nom,
+        volume: b.volume,
+        nombrePoissons: b.nombrePoissons,
+        nombreInitial: b.nombreInitial,
+        poidsMoyenInitial: b.poidsMoyenInitial,
+        typeSysteme: b.typeSysteme ?? null,
+        vagueId: b.vagueId,
+        siteId: b.siteId,
+        vagueCode: null,
+        createdAt: b.createdAt,
+        updatedAt: b.updatedAt,
+      }));
+      // Apply pagination manually for libre (small list, no DB-level pagination needed here)
+      total = mapped.length;
+      data = mapped.slice(offset, offset + limit);
+    } else {
+      const result = await getBacs(auth.activeSiteId, { limit, offset });
+      data = result.data;
+      total = result.total;
+    }
+
+    return cachedJson({ data, total, limit, offset }, "medium");
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation des bacs.", errorKey: ErrorKeys.SERVER_GET_BACS },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation des bacs.", { code: ErrorKeys.SERVER_GET_BACS });
   }
 }
 
@@ -79,10 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     const data: CreateBacDTO = {
@@ -139,29 +152,21 @@ export async function POST(request: NextRequest) {
     });
 
     if ("__quotaError" in bac && bac.__quotaError) {
-      return NextResponse.json(
-        {
-          status: 402,
-          error: "QUOTA_DEPASSE",
-          ressource: "bacs",
-          limite: bac.limite,
-          message: `Vous avez atteint la limite de ${bac.limite} bac(s) autorisé(s) par votre plan. Passez à un plan supérieur pour en créer davantage.`,
-        },
-        { status: 402 }
+      return apiError(
+        402,
+        `Vous avez atteint la limite de ${bac.limite} bac(s) autorisé(s) par votre plan. Passez à un plan supérieur pour en créer davantage.`,
+        { code: "QUOTA_DEPASSE" }
       );
     }
 
     return NextResponse.json(bac, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la creation du bac.", errorKey: ErrorKeys.SERVER_CREATE_BAC },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la creation du bac.", { code: ErrorKeys.SERVER_CREATE_BAC });
   }
 }

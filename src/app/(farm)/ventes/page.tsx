@@ -14,7 +14,7 @@ export default async function VentesPage() {
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const [permissions, t, ventes, clients, vagues] = await Promise.all([
+  const [permissions, t, ventesResult, clients, vaguesResult] = await Promise.all([
     checkPagePermission(session, Permission.VENTES_VOIR),
     getTranslations("ventes"),
     getVentes(session.activeSiteId),
@@ -24,14 +24,14 @@ export default async function VentesPage() {
   if (!permissions) return <AccessDenied />;
 
   const clientOptions = clients.map((c) => ({ id: c.id, nom: c.nom }));
-  const vagueOptions = vagues.map((v) => ({ id: v.id, code: v.code }));
+  const vagueOptions = vaguesResult.data.map((v) => ({ id: v.id, code: v.code }));
 
   return (
     <>
       <Header title={t("ventes.title")} />
       <div className="p-4">
         <VentesListClient
-          initialVentes={JSON.parse(JSON.stringify(ventes))}
+          initialVentes={JSON.parse(JSON.stringify(ventesResult.data))}
           clients={clientOptions}
           vagues={vagueOptions}
           permissions={permissions}

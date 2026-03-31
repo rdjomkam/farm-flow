@@ -645,14 +645,14 @@ describe("Test 6 — GET /api/activites inclut releve dans la réponse", () => {
   });
 
   it("retourne les activités avec le champ releve non null quand liée", async () => {
-    mockGetActivites.mockResolvedValue([FAKE_ACTIVITE_AVEC_RELEVE]);
+    mockGetActivites.mockResolvedValue({ data: [FAKE_ACTIVITE_AVEC_RELEVE], total: 1 });
 
     const response = await GET_ACTIVITES(makeRequest("/api/activites"));
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.activites).toHaveLength(1);
-    const activite = data.activites[0];
+    expect(data.data).toHaveLength(1);
+    const activite = data.data[0];
     expect(activite.releve).not.toBeNull();
     expect(activite.releve).toMatchObject({
       id: "releve-1",
@@ -661,57 +661,57 @@ describe("Test 6 — GET /api/activites inclut releve dans la réponse", () => {
   });
 
   it("retourne releve=null pour une activité non liée (PLANIFIEE sans releveId)", async () => {
-    mockGetActivites.mockResolvedValue([FAKE_ACTIVITE_SANS_RELEVE]);
+    mockGetActivites.mockResolvedValue({ data: [FAKE_ACTIVITE_SANS_RELEVE], total: 1 });
 
     const response = await GET_ACTIVITES(makeRequest("/api/activites"));
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.activites).toHaveLength(1);
-    expect(data.activites[0].releve).toBeNull();
+    expect(data.data).toHaveLength(1);
+    expect(data.data[0].releve).toBeNull();
   });
 
   it("inclut le champ releve pour toutes les activités (liées et non liées)", async () => {
-    mockGetActivites.mockResolvedValue([
-      FAKE_ACTIVITE_AVEC_RELEVE,
-      FAKE_ACTIVITE_SANS_RELEVE,
-    ]);
+    mockGetActivites.mockResolvedValue({
+      data: [FAKE_ACTIVITE_AVEC_RELEVE, FAKE_ACTIVITE_SANS_RELEVE],
+      total: 2,
+    });
 
     const response = await GET_ACTIVITES(makeRequest("/api/activites"));
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.activites).toHaveLength(2);
+    expect(data.data).toHaveLength(2);
 
     // Première activité — liée à un relevé
-    expect(data.activites[0].releve).toMatchObject({
+    expect(data.data[0].releve).toMatchObject({
       id: "releve-1",
       typeReleve: TypeReleve.BIOMETRIE,
     });
 
     // Deuxième activité — non liée
-    expect(data.activites[1].releve).toBeNull();
+    expect(data.data[1].releve).toBeNull();
   });
 
   it("la date du releve est incluse dans la reponse", async () => {
-    mockGetActivites.mockResolvedValue([FAKE_ACTIVITE_AVEC_RELEVE]);
+    mockGetActivites.mockResolvedValue({ data: [FAKE_ACTIVITE_AVEC_RELEVE], total: 1 });
 
     const response = await GET_ACTIVITES(makeRequest("/api/activites"));
     const data = await response.json();
 
-    const releve = data.activites[0].releve;
+    const releve = data.data[0].releve;
     expect(releve.date).toBeDefined();
     // La date est sérialisée en string ISO par JSON.stringify
     expect(new Date(releve.date).toISOString()).toContain("2026-03-11");
   });
 
   it("activite TERMINEE avec releveId contient le releve associe", async () => {
-    mockGetActivites.mockResolvedValue([FAKE_ACTIVITE_TERMINEE]);
+    mockGetActivites.mockResolvedValue({ data: [FAKE_ACTIVITE_TERMINEE], total: 1 });
 
     const response = await GET_ACTIVITES(makeRequest("/api/activites"));
     const data = await response.json();
 
-    const activite = data.activites[0];
+    const activite = data.data[0];
     expect(activite.statut).toBe(StatutActivite.TERMINEE);
     expect(activite.releveId).toBe("releve-ancien");
     expect(activite.releve).toMatchObject({
@@ -721,17 +721,16 @@ describe("Test 6 — GET /api/activites inclut releve dans la réponse", () => {
   });
 
   it("retourne le total et la liste", async () => {
-    mockGetActivites.mockResolvedValue([
-      FAKE_ACTIVITE_AVEC_RELEVE,
-      FAKE_ACTIVITE_SANS_RELEVE,
-      FAKE_ACTIVITE_TERMINEE,
-    ]);
+    mockGetActivites.mockResolvedValue({
+      data: [FAKE_ACTIVITE_AVEC_RELEVE, FAKE_ACTIVITE_SANS_RELEVE, FAKE_ACTIVITE_TERMINEE],
+      total: 3,
+    });
 
     const response = await GET_ACTIVITES(makeRequest("/api/activites"));
     const data = await response.json();
 
     expect(data.total).toBe(3);
-    expect(data.activites).toHaveLength(3);
+    expect(data.data).toHaveLength(3);
   });
 });
 
@@ -792,12 +791,12 @@ describe("Test 7 — Activité TERMINEE avec releveId ne peut pas être re-match
   it("GET /api/activites — l'activite TERMINEE garde son releve original (non re-matche)", async () => {
     // Simuler le cas : l'activite TERMINEE a déjà releveId = "releve-ancien"
     // Un nouveau relevé a été créé mais l'activite n'a pas été re-matchée
-    mockGetActivites.mockResolvedValue([FAKE_ACTIVITE_TERMINEE]);
+    mockGetActivites.mockResolvedValue({ data: [FAKE_ACTIVITE_TERMINEE], total: 1 });
 
     const response = await GET_ACTIVITES(makeRequest("/api/activites"));
     const data = await response.json();
 
-    const activite = data.activites[0];
+    const activite = data.data[0];
     // L'activite reste TERMINEE avec son releveId original
     expect(activite.statut).toBe(StatutActivite.TERMINEE);
     expect(activite.releveId).toBe("releve-ancien");

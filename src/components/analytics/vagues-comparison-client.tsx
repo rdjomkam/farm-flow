@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { StatutVague } from "@/types";
 import type { IndicateursVagueComplet, ComparaisonVagues } from "@/types";
-import { formatNum } from "@/lib/format";
+import { formatNum, formatNumber } from "@/lib/format";
 import { useAnalyticsService } from "@/services";
 
 // ---------------------------------------------------------------------------
@@ -235,18 +235,18 @@ function VagueResultCard({ vague, color, allVagues }: VagueResultCardProps) {
         <div>
           <MetricRow
             label={tVagues("comparison.metrics.coutAliment")}
-            value={vague.coutTotalAliment.toLocaleString("fr-FR")}
+            value={formatNumber(vague.coutTotalAliment)}
             unit="CFA"
           />
           <MetricRow
             label={tVagues("comparison.metrics.revenuVentes")}
-            value={vague.revenuVentes.toLocaleString("fr-FR")}
+            value={formatNumber(vague.revenuVentes)}
             unit="CFA"
             best={isBest(vague, allVagues, "revenuVentes", true)}
           />
           <MetricRow
             label={tVagues("comparison.metrics.margeBrute")}
-            value={vague.margeBrute !== null ? vague.margeBrute.toLocaleString("fr-FR") : "—"}
+            value={formatNumber(vague.margeBrute)}
             unit="CFA"
             best={isBest(vague, allVagues, "margeBrute", true)}
             worst={
@@ -376,7 +376,7 @@ function VaguesFinancialChart({ vagues }: { vagues: IndicateursVagueComplet[] })
           <Tooltip
             formatter={(value) =>
               typeof value === "number"
-                ? `${value.toLocaleString("fr-FR")} CFA`
+                ? `${new Intl.NumberFormat("fr-FR").format(value)} CFA`
                 : `${value} CFA`
             }
           />

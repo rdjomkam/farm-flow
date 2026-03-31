@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, AuthError, SESSION_COOKIE_NAME } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { locales, type Locale } from "@/i18n/config";
+import { apiError } from "@/lib/api-utils";
 
 /**
  * PUT /api/locale
@@ -24,13 +25,7 @@ export async function PUT(request: NextRequest) {
 
     // Validate locale
     if (!locale || typeof locale !== "string" || !locales.includes(locale as Locale)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `La locale doit etre l'une des valeurs suivantes : ${locales.join(", ")}.`,
-        },
-        { status: 400 }
-      );
+      return apiError(400, `La locale doit etre l'une des valeurs suivantes : ${locales.join(", ")}.`);
     }
 
     const validLocale = locale as Locale;

@@ -16,6 +16,7 @@ import { traiterRetrait } from "@/lib/queries/commissions";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
 import { Permission, StatutPaiementAbo } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 const VALID_STATUTS = [StatutPaiementAbo.CONFIRME, StatutPaiementAbo.ECHEC] as const;
 
@@ -48,7 +49,7 @@ export async function POST(
     }
 
     if (errors.length > 0) {
-      return NextResponse.json({ status: 400, errors }, { status: 400 });
+      return apiError(400, "Erreurs de validation.", { errors });
     }
 
     const statut = body.statut as typeof StatutPaiementAbo.CONFIRME | typeof StatutPaiementAbo.ECHEC;
@@ -60,29 +61,17 @@ export async function POST(
     );
 
     if (result.count === 0) {
-      return NextResponse.json(
-        { status: 404, message: "Retrait introuvable ou déjà traité." },
-        { status: 404 }
-      );
+      return apiError(404, "Retrait introuvable ou déjà traité.");
     }
 
     return NextResponse.json({ success: true, count: result.count });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors du traitement du retrait." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors du traitement du retrait.");
   }
 }

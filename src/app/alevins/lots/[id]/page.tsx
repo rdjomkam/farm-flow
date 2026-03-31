@@ -20,7 +20,7 @@ export default async function LotAlevinsDetailPage({
   if (!permissions) return <AccessDenied />;
 
   const { id } = await params;
-  const [lot, bacs] = await Promise.all([
+  const [lot, bacsResult] = await Promise.all([
     getLotAlevinsById(id, session.activeSiteId),
     getBacs(session.activeSiteId),
   ]);
@@ -28,7 +28,7 @@ export default async function LotAlevinsDetailPage({
   if (!lot) notFound();
 
   // Bacs libres (sans vague assignee)
-  const bacsLibres = bacs
+  const bacsLibres = bacsResult.data
     .filter((b) => b.vagueId === null)
     .map((b) => ({ id: b.id, nom: b.nom }));
 

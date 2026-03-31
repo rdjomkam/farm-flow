@@ -4,6 +4,7 @@ import {
   updateRegleActivite,
   deleteRegleActivite,
 } from "@/lib/queries/regles-activites";
+import { apiError } from "@/lib/api-utils";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { ActionRegle, SeveriteAlerte, TypeActivite, TypeDeclencheur, OperateurCondition, LogiqueCondition, Permission } from "@/types";
@@ -35,25 +36,19 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     const regle = await getRegleActiviteById(id, auth.activeSiteId);
     if (!regle) {
-      return NextResponse.json(
-        { error: "Regle d'activite introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Regle d'activite introuvable.");
     }
 
     return NextResponse.json({ regle });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ error: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     console.error("[GET /api/regles-activites/[id]]", error);
-    return NextResponse.json(
-      { error: "Erreur serveur lors de la recuperation de la regle d'activite." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation de la regle d'activite.");
   }
 }
 
@@ -278,35 +273,29 @@ export async function PUT(request: NextRequest, { params }: Params) {
       allowGlobal: auth.permissions.includes(Permission.GERER_REGLES_GLOBALES),
     });
     if (!regle) {
-      return NextResponse.json(
-        { error: "Regle d'activite introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Regle d'activite introuvable.");
     }
 
     return NextResponse.json({ regle });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ error: (error as Error).message }, { status: 401 });
+      return apiError(401, (error as Error).message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ error: (error as Error).message }, { status: 403 });
+      return apiError(403, (error as Error).message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
-      return NextResponse.json({ error: message }, { status: 404 });
+      return apiError(404, message);
     }
     if (message.includes("globales DKFarm")) {
-      return NextResponse.json({ error: message }, { status: 403 });
+      return apiError(403, message);
     }
     if (message.includes("phaseMin") || message.includes("inferieure ou egale")) {
-      return NextResponse.json({ error: message }, { status: 400 });
+      return apiError(400, message);
     }
     console.error("[PUT /api/regles-activites/[id]]", error);
-    return NextResponse.json(
-      { error: "Erreur serveur lors de la mise a jour de la regle d'activite." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la mise a jour de la regle d'activite.");
   }
 }
 
@@ -327,35 +316,26 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
     if ("error" in result) {
       if (result.error === "global") {
-        return NextResponse.json(
-          { error: "Les regles globales DKFarm ne peuvent pas etre supprimees. Desactivez-la plutot." },
-          { status: 409 }
-        );
+        return apiError(409, "Les regles globales DKFarm ne peuvent pas etre supprimees. Desactivez-la plutot.");
       }
       if (result.error === "linked") {
-        return NextResponse.json(
-          { error: "Impossible de supprimer cette regle : des activites y sont liees." },
-          { status: 409 }
-        );
+        return apiError(409, "Impossible de supprimer cette regle : des activites y sont liees.");
       }
     }
 
     return NextResponse.json({ success: true, id });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ error: (error as Error).message }, { status: 401 });
+      return apiError(401, (error as Error).message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ error: (error as Error).message }, { status: 403 });
+      return apiError(403, (error as Error).message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
-      return NextResponse.json({ error: message }, { status: 404 });
+      return apiError(404, message);
     }
     console.error("[DELETE /api/regles-activites/[id]]", error);
-    return NextResponse.json(
-      { error: "Erreur serveur lors de la suppression de la regle d'activite." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la suppression de la regle d'activite.");
   }
 }

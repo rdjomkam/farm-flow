@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
+import { formatNumber } from "@/lib/format";
 import { ArrowLeft, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useVenteService } from "@/services";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 
 interface ClientOption {
   id: string;
@@ -82,6 +84,7 @@ export function VenteFormClient({ clients, vagues }: Props) {
     parseFloat(prixUnitaireKg) > 0;
 
   return (
+    <ErrorBoundary section="le formulaire de vente">
     <div className="flex flex-col gap-4">
       <Link
         href="/ventes"
@@ -169,7 +172,7 @@ export function VenteFormClient({ clients, vagues }: Props) {
         {montantTotal > 0 && (
           <div className="rounded-lg bg-muted/50 p-4 text-center">
             <p className="text-2xl font-bold">
-              {montantTotal.toLocaleString("fr-FR")} FCFA
+              {formatNumber(montantTotal)} FCFA
             </p>
             <p className="text-xs text-muted-foreground">{t("ventes.form.montantTotal")}</p>
           </div>
@@ -194,5 +197,6 @@ export function VenteFormClient({ clients, vagues }: Props) {
         </Button>
       </form>
     </div>
+    </ErrorBoundary>
   );
 }

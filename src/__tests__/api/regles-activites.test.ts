@@ -216,7 +216,7 @@ describe("GET /api/regles-activites", () => {
     const data = await response.json();
 
     expect(response.status).toBe(403);
-    expect(data.error).toContain("Permission");
+    expect(data.message).toContain("Permission");
   });
 
   it("verifie la permission REGLES_ACTIVITES_VOIR", async () => {
@@ -237,7 +237,7 @@ describe("GET /api/regles-activites", () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toContain("Erreur serveur");
+    expect(data.message).toContain("Erreur serveur");
   });
 });
 
@@ -532,7 +532,7 @@ describe("POST /api/regles-activites", () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toContain("Erreur serveur");
+    expect(data.message).toContain("Erreur serveur");
   });
 });
 
@@ -577,7 +577,7 @@ describe("GET /api/regles-activites/[id]", () => {
     const data = await response.json();
 
     expect(response.status).toBe(404);
-    expect(data.error).toContain("introuvable");
+    expect(data.message).toContain("introuvable");
   });
 
   it("retourne 500 en cas d'erreur serveur", async () => {
@@ -708,7 +708,7 @@ describe("PUT /api/regles-activites/[id]", () => {
     const data = await response.json();
 
     expect(response.status).toBe(404);
-    expect(data.error).toContain("introuvable");
+    expect(data.message).toContain("introuvable");
   });
 
   it("retourne 403 si tentative de modification d'une regle globale", async () => {
@@ -761,7 +761,7 @@ describe("DELETE /api/regles-activites/[id]", () => {
     const data = await response.json();
 
     expect(response.status).toBe(409);
-    expect(data.error).toContain("globales DKFarm");
+    expect(data.message).toContain("globales DKFarm");
   });
 
   it("retourne 409 si des activites sont liees (count > 0)", async () => {
@@ -774,7 +774,7 @@ describe("DELETE /api/regles-activites/[id]", () => {
     const data = await response.json();
 
     expect(response.status).toBe(409);
-    expect(data.error).toContain("activites");
+    expect(data.message).toContain("activites");
   });
 
   it("retourne 200 si la regle est site-specifique sans activites", async () => {
@@ -802,7 +802,7 @@ describe("DELETE /api/regles-activites/[id]", () => {
     const data = await response.json();
 
     expect(response.status).toBe(404);
-    expect(data.error).toContain("introuvable");
+    expect(data.message).toContain("introuvable");
   });
 
   it("verifie la permission GERER_REGLES_ACTIVITES", async () => {
@@ -890,7 +890,7 @@ describe("PATCH /api/regles-activites/[id]/toggle", () => {
     const data = await response.json();
 
     expect(response.status).toBe(404);
-    expect(data.error).toContain("introuvable");
+    expect(data.message).toContain("introuvable");
   });
 
   it("verifie la permission GERER_REGLES_ACTIVITES", async () => {
@@ -990,7 +990,7 @@ describe("POST /api/regles-activites/[id]/reset", () => {
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toContain("SEUIL");
+    expect(data.message).toContain("SEUIL");
     expect(mockResetFiredOnce).not.toHaveBeenCalled();
   });
 
@@ -1008,7 +1008,7 @@ describe("POST /api/regles-activites/[id]/reset", () => {
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toContain("SEUIL");
+    expect(data.message).toContain("SEUIL");
   });
 
   it("retourne 404 si regle introuvable", async () => {
@@ -1021,7 +1021,7 @@ describe("POST /api/regles-activites/[id]/reset", () => {
     const data = await response.json();
 
     expect(response.status).toBe(404);
-    expect(data.error).toContain("introuvable");
+    expect(data.message).toContain("introuvable");
   });
 
   it("verifie la permission GERER_REGLES_ACTIVITES", async () => {

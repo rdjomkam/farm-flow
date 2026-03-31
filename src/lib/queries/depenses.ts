@@ -7,34 +7,50 @@ import type {
   CreatePaiementDepenseDTO,
 } from "@/types";
 
-/** Liste les depenses d'un site avec filtres optionnels */
-export async function getDepenses(siteId: string, filters?: DepenseFilters) {
-  return prisma.depense.findMany({
-    where: {
-      siteId,
-      ...(filters?.categorieDepense && {
-        categorieDepense: filters.categorieDepense,
-      }),
-      ...(filters?.statut && { statut: filters.statut }),
-      ...(filters?.vagueId && { vagueId: filters.vagueId }),
-      ...(filters?.commandeId && { commandeId: filters.commandeId }),
-      ...(filters?.dateFrom || filters?.dateTo
-        ? {
-            date: {
-              ...(filters.dateFrom && { gte: new Date(filters.dateFrom) }),
-              ...(filters.dateTo && { lte: new Date(filters.dateTo) }),
-            },
-          }
-        : {}),
-    },
-    include: {
-      user: { select: { id: true, name: true } },
-      commande: { select: { id: true, numero: true } },
-      vague: { select: { id: true, code: true } },
-      _count: { select: { paiements: true } },
-    },
-    orderBy: { date: "desc" },
-  });
+/** Liste les depenses d'un site avec filtres optionnels et pagination */
+export async function getDepenses(
+  siteId: string,
+  filters?: DepenseFilters,
+  pagination?: { limit: number; offset: number }
+) {
+  const where = {
+    siteId,
+    ...(filters?.categorieDepense && {
+      categorieDepense: filters.categorieDepense,
+    }),
+    ...(filters?.statut && { statut: filters.statut }),
+    ...(filters?.vagueId && { vagueId: filters.vagueId }),
+    ...(filters?.commandeId && { commandeId: filters.commandeId }),
+    ...(filters?.dateFrom || filters?.dateTo
+      ? {
+          date: {
+            ...(filters.dateFrom && { gte: new Date(filters.dateFrom) }),
+            ...(filters.dateTo && { lte: new Date(filters.dateTo) }),
+          },
+        }
+      : {}),
+  };
+
+  const limit = pagination?.limit ?? 50;
+  const offset = pagination?.offset ?? 0;
+
+  const [data, total] = await Promise.all([
+    prisma.depense.findMany({
+      where,
+      include: {
+        user: { select: { id: true, name: true } },
+        commande: { select: { id: true, numero: true } },
+        vague: { select: { id: true, code: true } },
+        _count: { select: { paiements: true } },
+      },
+      orderBy: { date: "desc" },
+      take: limit,
+      skip: offset,
+    }),
+    prisma.depense.count({ where }),
+  ]);
+
+  return { data, total };
 }
 
 /** Recupere une depense par ID avec ses relations completes */

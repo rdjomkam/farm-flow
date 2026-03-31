@@ -9,6 +9,7 @@
  */
 
 import { prisma } from "@/lib/db";
+import { formatDate } from "@/lib/format";
 import { StatutAlerte, TypeAlerte, TypeReleve } from "@/generated/prisma/enums";
 import { StatutBesoins } from "@/types";
 import type { ConfigElevage } from "@/types";
@@ -346,7 +347,7 @@ export async function verifierBesoinsEnRetard(siteId: string): Promise<void> {
   });
 
   for (const besoin of besoinsEnRetard) {
-    const dateLimiteFormatee = besoin.dateLimite!.toLocaleDateString("fr-FR");
+    const dateLimiteFormatee = formatDate(besoin.dateLimite!);
     await creerNotificationSiAbsente(
       siteId,
       besoin.demandeur.id,

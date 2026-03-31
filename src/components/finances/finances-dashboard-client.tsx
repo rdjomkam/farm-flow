@@ -52,6 +52,7 @@ const Cell = dynamic(
 );
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartTooltip } from "@/components/ui/chart-tooltip";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { ExportButton } from "@/components/ui/export-button";
 import type {
   ResumeFinancier,
@@ -249,6 +250,7 @@ export function FinancesDashboardClient({
       )}
 
       {/* Evolution chart */}
+      <ErrorBoundary section="le graphique d'évolution financière">
       <Card>
         <CardHeader className="pb-0">
           <CardTitle className="text-base">{t("finances.evolution.title")}</CardTitle>
@@ -329,9 +331,11 @@ export function FinancesDashboardClient({
           )}
         </CardContent>
       </Card>
+      </ErrorBoundary>
 
       {/* Profitability by vague */}
       {vagueData.length > 0 && (
+        <ErrorBoundary section="le graphique de rentabilité">
         <Card>
           <CardHeader className="pb-0">
             <CardTitle className="text-base">{t("finances.rentabilite.title")}</CardTitle>
@@ -378,6 +382,7 @@ export function FinancesDashboardClient({
             </ResponsiveContainer>
           </CardContent>
         </Card>
+        </ErrorBoundary>
       )}
 
       {/* Top clients */}

@@ -22,15 +22,15 @@ export default async function PlanningPage() {
     const dateDebut = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
     const dateFin = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString();
 
-    const [activites, vagues, bacs, siteMembers] = await Promise.all([
+    const [activitesResult, vaguesResult, bacsResult, siteMembers] = await Promise.all([
       getActivites(session.activeSiteId, { dateDebut, dateFin }),
       getVagues(session.activeSiteId),
       getBacs(session.activeSiteId),
       getSiteMembers(session.activeSiteId),
     ]);
 
-    const vagueOptions = vagues.map((v) => ({ id: v.id, code: v.code }));
-    const bacOptions = bacs.map((b) => ({ id: b.id, nom: b.nom }));
+    const vagueOptions = vaguesResult.data.map((v) => ({ id: v.id, code: v.code }));
+    const bacOptions = bacsResult.data.map((b) => ({ id: b.id, nom: b.nom }));
     const memberOptions = siteMembers.map((m) => ({ userId: m.user.id, userName: m.user.name }));
 
     return (
@@ -38,7 +38,7 @@ export default async function PlanningPage() {
         <Header title="Planning" />
         <div className="p-4">
           <PlanningClient
-            activites={JSON.parse(JSON.stringify(activites))}
+            activites={JSON.parse(JSON.stringify(activitesResult.data))}
             permissions={permissions}
             vagues={vagueOptions}
             bacs={bacOptions}

@@ -79,37 +79,37 @@ describe("GET /api/ventes", () => {
         vague: { code: "VAGUE-2026-001" },
       },
     ];
-    mockGetVentes.mockResolvedValue(fakeVentes);
+    mockGetVentes.mockResolvedValue({ data: fakeVentes, total: 1 });
 
     const response = await GET_list(makeRequest("/api/ventes"));
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.ventes).toHaveLength(1);
+    expect(data.data).toHaveLength(1);
     expect(data.total).toBe(1);
-    expect(data.ventes[0].numero).toBe("VTE-2026-001");
+    expect(data.data[0].numero).toBe("VTE-2026-001");
   });
 
   it("passe siteId et filtres aux queries", async () => {
-    mockGetVentes.mockResolvedValue([]);
+    mockGetVentes.mockResolvedValue({ data: [], total: 0 });
 
     await GET_list(makeRequest("/api/ventes?clientId=c-1&vagueId=v-1"));
 
     expect(mockGetVentes).toHaveBeenCalledWith("site-1", {
       clientId: "c-1",
       vagueId: "v-1",
-    });
+    }, expect.any(Object));
   });
 
   it("passe les filtres de date", async () => {
-    mockGetVentes.mockResolvedValue([]);
+    mockGetVentes.mockResolvedValue({ data: [], total: 0 });
 
     await GET_list(makeRequest("/api/ventes?dateFrom=2026-01-01&dateTo=2026-03-31"));
 
     expect(mockGetVentes).toHaveBeenCalledWith("site-1", {
       dateFrom: "2026-01-01",
       dateTo: "2026-03-31",
-    });
+    }, expect.any(Object));
   });
 
   it("requiert la permission VENTES_VOIR", async () => {

@@ -15,8 +15,12 @@ import type { CreateReleveDTO, UpdateReleveDTO, ReleveFilters, TypeReleve } from
 import type { ReleveWithModifications, ReleveModificationWithUser } from "@/types";
 import { findMatchingActivite } from "@/lib/queries/activites";
 
-/** Liste les releves d'un site avec filtres optionnels */
-export async function getReleves(siteId: string, filters: ReleveFilters = {}) {
+/** Liste les releves d'un site avec filtres optionnels et pagination */
+export async function getReleves(
+  siteId: string,
+  filters: ReleveFilters = {},
+  pagination?: { limit: number; offset: number }
+) {
   const where: Record<string, unknown> = { siteId };
 
   if (filters.vagueId) where.vagueId = filters.vagueId;
@@ -38,12 +42,20 @@ export async function getReleves(siteId: string, filters: ReleveFilters = {}) {
     where.modifie = filters.modifie;
   }
 
-  const releves = await prisma.releve.findMany({
-    where,
-    orderBy: { date: "desc" },
-  });
+  const limit = pagination?.limit ?? 50;
+  const offset = pagination?.offset ?? 0;
 
-  return { releves, total: releves.length };
+  const [data, total] = await Promise.all([
+    prisma.releve.findMany({
+      where,
+      orderBy: { date: "desc" },
+      take: limit,
+      skip: offset,
+    }),
+    prisma.releve.count({ where }),
+  ]);
+
+  return { data, total };
 }
 
 /** Categories de produit autorisees par type de releve */

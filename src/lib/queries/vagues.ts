@@ -2,18 +2,32 @@ import { prisma } from "@/lib/db";
 import { StatutVague, StatutActivite, TypeReleve, MethodeComptage } from "@/types";
 import type { CreateVagueDTO, UpdateVagueDTO } from "@/types";
 
-/** Liste les vagues d'un site avec filtre optionnel sur le statut */
-export async function getVagues(siteId: string, filters?: { statut?: string }) {
+/** Liste les vagues d'un site avec filtre optionnel sur le statut et pagination */
+export async function getVagues(
+  siteId: string,
+  filters?: { statut?: string },
+  pagination?: { limit: number; offset: number }
+) {
   const where: Record<string, unknown> = { siteId };
   if (filters?.statut) where.statut = filters.statut;
 
-  return prisma.vague.findMany({
-    where,
-    include: {
-      _count: { select: { bacs: true, releves: true } },
-    },
-    orderBy: { dateDebut: "desc" },
-  });
+  const limit = pagination?.limit ?? 50;
+  const offset = pagination?.offset ?? 0;
+
+  const [data, total] = await Promise.all([
+    prisma.vague.findMany({
+      where,
+      include: {
+        _count: { select: { bacs: true, releves: true } },
+      },
+      orderBy: { dateDebut: "desc" },
+      take: limit,
+      skip: offset,
+    }),
+    prisma.vague.count({ where }),
+  ]);
+
+  return { data, total };
 }
 
 /** Recupere une vague par ID (verifie qu'elle appartient au site) */

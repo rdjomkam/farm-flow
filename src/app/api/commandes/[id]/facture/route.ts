@@ -11,6 +11,7 @@ import {
   generateStorageKey,
   extractFileNameFromKey,
 } from "@/lib/storage";
+import { apiError } from "@/lib/api-utils";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -30,28 +31,19 @@ export async function POST(request: NextRequest, { params }: Params) {
     try {
       formData = await request.formData();
     } catch {
-      return NextResponse.json(
-        { status: 400, message: "Le corps de la requête doit être un FormData avec un champ 'file'." },
-        { status: 400 }
-      );
+      return apiError(400, "Le corps de la requête doit être un FormData avec un champ 'file'.");
     }
 
     const file = formData.get("file") as File | null;
     if (!file) {
-      return NextResponse.json(
-        { status: 400, message: "Champ 'file' manquant dans le FormData." },
-        { status: 400 }
-      );
+      return apiError(400, "Champ 'file' manquant dans le FormData.");
     }
 
     // Validation côté serveur (MIME + taille)
     try {
       validateFile({ size: file.size, type: file.type, name: file.name });
     } catch (err) {
-      return NextResponse.json(
-        { status: 400, message: err instanceof Error ? err.message : "Fichier invalide." },
-        { status: 400 }
-      );
+      return apiError(400, err instanceof Error ? err.message : "Fichier invalide.");
     }
 
     // Vérifier que la commande appartient au site
@@ -61,10 +53,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     });
 
     if (!commande) {
-      return NextResponse.json(
-        { status: 404, message: "Commande introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Commande introuvable.");
     }
 
     // Supprimer l'ancienne facture si elle existe
@@ -96,13 +85,13 @@ export async function POST(request: NextRequest, { params }: Params) {
     );
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
-    return NextResponse.json({ status: 500, message }, { status: 500 });
+    return apiError(500, message);
   }
 }
 
@@ -121,17 +110,11 @@ export async function GET(request: NextRequest, { params }: Params) {
     });
 
     if (!commande) {
-      return NextResponse.json(
-        { status: 404, message: "Commande introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Commande introuvable.");
     }
 
     if (!commande.factureUrl) {
-      return NextResponse.json(
-        { status: 404, message: "Aucune facture attachée à cette commande." },
-        { status: 404 }
-      );
+      return apiError(404, "Aucune facture attachée à cette commande.");
     }
 
     const url = await getSignedUrl(commande.factureUrl);
@@ -140,13 +123,13 @@ export async function GET(request: NextRequest, { params }: Params) {
     return NextResponse.json({ url, fileName });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
-    return NextResponse.json({ status: 500, message }, { status: 500 });
+    return apiError(500, message);
   }
 }
 
@@ -165,17 +148,11 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     });
 
     if (!commande) {
-      return NextResponse.json(
-        { status: 404, message: "Commande introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Commande introuvable.");
     }
 
     if (!commande.factureUrl) {
-      return NextResponse.json(
-        { status: 404, message: "Aucune facture attachée à cette commande." },
-        { status: 404 }
-      );
+      return apiError(404, "Aucune facture attachée à cette commande.");
     }
 
     // Supprimer le fichier sur Hetzner
@@ -190,12 +167,12 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
-    return NextResponse.json({ status: 500, message }, { status: 500 });
+    return apiError(500, message);
   }
 }

@@ -22,6 +22,7 @@ import {
   getPaiementByReference,
   confirmerPaiement,
 } from "@/lib/queries/paiements-abonnements";
+import { apiError } from "@/lib/api-utils";
 import { activerAbonnement } from "@/lib/queries/abonnements";
 import { calculerEtCreerCommission } from "@/lib/services/commissions";
 import { applyPlanModules } from "@/lib/abonnements/apply-plan-modules";
@@ -56,10 +57,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!signatureValide) {
     // Signature invalide — rejeter avec 401
     console.warn("[webhook/smobilpay] Signature invalide — requête rejetée");
-    return NextResponse.json(
-      { error: "Signature invalide" },
-      { status: 401 }
-    );
+    return apiError(401, "Signature invalide");
   }
 
   // Étape 4 : parser le payload et traiter le webhook
@@ -180,5 +178,5 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
 // Seul POST est accepté sur cette route
 export async function GET(): Promise<NextResponse> {
-  return NextResponse.json({ error: "Méthode non autorisée" }, { status: 405 });
+  return apiError(405, "Méthode non autorisée");
 }

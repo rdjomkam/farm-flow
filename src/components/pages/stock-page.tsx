@@ -18,7 +18,7 @@ export default async function StockPage() {
   if (!session.activeSiteId) redirect("/settings/sites");
 
   try {
-  const [permissions, t, produits, alertes, fournisseurs, commandes] = await Promise.all([
+  const [permissions, t, produits, alertes, fournisseurs, commandesResult] = await Promise.all([
     checkPagePermission(session, Permission.STOCK_VOIR),
     getTranslations("stock"),
     getProduits(session.activeSiteId),
@@ -28,7 +28,7 @@ export default async function StockPage() {
   ]);
   if (!permissions) return <AccessDenied />;
 
-  const commandesEnCours = commandes.filter(
+  const commandesEnCours = commandesResult.data.filter(
     (c) => c.statut === StatutCommande.BROUILLON || c.statut === StatutCommande.ENVOYEE
   );
 

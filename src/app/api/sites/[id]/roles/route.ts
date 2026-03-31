@@ -4,6 +4,7 @@ import { requirePermission, ForbiddenError, canAssignRole } from "@/lib/permissi
 import { AuthError } from "@/lib/auth";
 import { getSiteRoles, createSiteRole } from "@/lib/queries/roles";
 import { Permission } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -14,19 +15,19 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { id: siteId } = await params;
 
     if (auth.activeSiteId !== siteId) {
-      return NextResponse.json({ status: 403, message: "Site actif different." }, { status: 403 });
+      return apiError(403, "Site actif different.");
     }
 
     const roles = await getSiteRoles(siteId);
     return NextResponse.json({ roles, total: roles.length });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json({ status: 500, message: "Erreur serveur." }, { status: 500 });
+    return apiError(500, "Erreur serveur.");
   }
 }
 
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const { id: siteId } = await params;
 
     if (auth.activeSiteId !== siteId) {
-      return NextResponse.json({ status: 403, message: "Site actif different." }, { status: 403 });
+      return apiError(403, "Site actif different.");
     }
 
     const body = await request.json();
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json({ status: 400, message: "Erreurs de validation", errors }, { status: 400 });
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     // Anti-escalation: caller can only create roles with permissions they have
@@ -70,15 +71,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json(role, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     // Prisma unique constraint error (duplicate name)
     if (error && typeof error === "object" && "code" in error && (error as { code: string }).code === "P2002") {
-      return NextResponse.json({ status: 409, message: "Un role avec ce nom existe deja." }, { status: 409 });
+      return apiError(409, "Un role avec ce nom existe deja.");
     }
-    return NextResponse.json({ status: 500, message: "Erreur serveur lors de la creation du role." }, { status: 500 });
+    return apiError(500, "Erreur serveur lors de la creation du role.");
   }
 }

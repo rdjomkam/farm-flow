@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { RefreshCw, Trash2, AlertCircle, Clock, Loader2 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
+import { formatDateTime } from "@/lib/format";
 import { useTranslations } from "next-intl";
 import type { QueueMeta } from "@/lib/offline/db";
 
@@ -66,12 +67,7 @@ export function SyncStatusPanel({ open, onOpenChange, siteId, onSyncNow }: SyncS
   };
 
   const formatDate = (ts: number) => {
-    return new Date(ts).toLocaleString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return formatDateTime(new Date(ts));
   };
 
   return (

@@ -3,6 +3,7 @@ import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { getPackById, updatePack, deletePack } from "@/lib/queries/packs";
+import { apiError } from "@/lib/api-utils";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -20,21 +21,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const pack = await getPackById(id, auth.activeSiteId);
     if (!pack) {
-      return NextResponse.json({ status: 404, message: "Pack introuvable." }, { status: 404 });
+      return apiError(404, "Pack introuvable.");
     }
 
     return NextResponse.json(pack);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation du pack." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation du pack.");
   }
 }
 
@@ -52,42 +50,33 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Validation
     if (body.nombreAlevins !== undefined && (typeof body.nombreAlevins !== "number" || body.nombreAlevins <= 0)) {
-      return NextResponse.json(
-        { status: 400, message: "Le nombre d'alevins doit etre superieur a 0." },
-        { status: 400 }
-      );
+      return apiError(400, "Le nombre d'alevins doit etre superieur a 0.");
     }
     if (body.prixTotal !== undefined && (typeof body.prixTotal !== "number" || body.prixTotal < 0)) {
-      return NextResponse.json(
-        { status: 400, message: "Le prix total ne peut pas etre negatif." },
-        { status: 400 }
-      );
+      return apiError(400, "Le prix total ne peut pas etre negatif.");
     }
 
     const updated = await updatePack(id, auth.activeSiteId, body);
     if (!updated) {
-      return NextResponse.json({ status: 404, message: "Pack introuvable." }, { status: 404 });
+      return apiError(404, "Pack introuvable.");
     }
 
     return NextResponse.json(updated);
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     if (error instanceof Error && (
       error.message.includes("desactiver") ||
       error.message.includes("alevins") ||
       error.message.includes("negatif")
     )) {
-      return NextResponse.json({ status: 409, message: error.message }, { status: 409 });
+      return apiError(409, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la mise a jour du pack." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la mise a jour du pack.");
   }
 }
 
@@ -103,23 +92,20 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     const deleted = await deletePack(id, auth.activeSiteId);
     if (!deleted) {
-      return NextResponse.json({ status: 404, message: "Pack introuvable." }, { status: 404 });
+      return apiError(404, "Pack introuvable.");
     }
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     if (error instanceof Error && error.message.includes("supprimer")) {
-      return NextResponse.json({ status: 409, message: error.message }, { status: 409 });
+      return apiError(409, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la suppression du pack." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la suppression du pack.");
   }
 }

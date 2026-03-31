@@ -5,6 +5,7 @@ import {
   updateMemberSiteRole,
   removeMember,
 } from "@/lib/queries/sites";
+import { apiError } from "@/lib/api-utils";
 import { getSiteRoleById } from "@/lib/queries/roles";
 import {
   canAssignRole,
@@ -23,16 +24,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Check caller's membership and MEMBRES_GERER permission
     const callerMember = await getSiteMember(siteId, session.userId);
     if (!callerMember || !callerMember.isActive) {
-      return NextResponse.json(
-        { status: 403, message: "Vous n'etes pas membre de ce site." },
-        { status: 403 }
-      );
+      return apiError(403, "Vous n'etes pas membre de ce site.");
     }
     if (!callerMember.siteRole) {
-      return NextResponse.json(
-        { status: 500, message: "Erreur de configuration des roles." },
-        { status: 500 }
-      );
+      return apiError(500, "Erreur de configuration des roles.");
     }
     if (!(callerMember.siteRole.permissions as Permission[]).includes(Permission.MEMBRES_GERER)) {
       throw new ForbiddenError("Permission insuffisante pour gerer les membres.");
@@ -46,28 +41,19 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
 
     if (!body.siteRoleId || typeof body.siteRoleId !== "string" || body.siteRoleId.trim() === "") {
-      return NextResponse.json(
-        { status: 400, message: "L'identifiant du role est obligatoire." },
-        { status: 400 }
-      );
+      return apiError(400, "L'identifiant du role est obligatoire.");
     }
 
     // Load target role and verify it belongs to this site
     const targetRole = await getSiteRoleById(body.siteRoleId, siteId);
     if (!targetRole) {
-      return NextResponse.json(
-        { status: 404, message: "Role introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Role introuvable.");
     }
 
     // Load target member
     const targetMember = await getSiteMember(siteId, targetUserId);
     if (!targetMember) {
-      return NextResponse.json(
-        { status: 404, message: "Membre introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Membre introuvable.");
     }
 
     const callerPerms = callerMember.siteRole.permissions as Permission[];
@@ -94,21 +80,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la modification du role." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la modification du role.");
   }
 }
 
@@ -121,16 +98,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     // Check caller's membership and MEMBRES_GERER permission
     const callerMember = await getSiteMember(siteId, session.userId);
     if (!callerMember || !callerMember.isActive) {
-      return NextResponse.json(
-        { status: 403, message: "Vous n'etes pas membre de ce site." },
-        { status: 403 }
-      );
+      return apiError(403, "Vous n'etes pas membre de ce site.");
     }
     if (!callerMember.siteRole) {
-      return NextResponse.json(
-        { status: 500, message: "Erreur de configuration des roles." },
-        { status: 500 }
-      );
+      return apiError(500, "Erreur de configuration des roles.");
     }
     if (!(callerMember.siteRole.permissions as Permission[]).includes(Permission.MEMBRES_GERER)) {
       throw new ForbiddenError("Permission insuffisante pour gerer les membres.");
@@ -144,10 +115,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     // Load target member
     const targetMember = await getSiteMember(siteId, targetUserId);
     if (!targetMember) {
-      return NextResponse.json(
-        { status: 404, message: "Membre introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Membre introuvable.");
     }
 
     const callerPerms = callerMember.siteRole.permissions as Permission[];
@@ -163,20 +131,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la suppression du membre." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la suppression du membre.");
   }
 }

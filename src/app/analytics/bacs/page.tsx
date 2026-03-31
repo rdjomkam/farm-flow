@@ -26,7 +26,7 @@ export default async function AnalyticsBacsPage({
 
   // If no vagueId, show vague selector
   if (!vagueId) {
-    const vagues = await getVagues(session.activeSiteId, {
+    const { data: vagues } = await getVagues(session.activeSiteId, {
       statut: StatutVague.EN_COURS,
     });
 

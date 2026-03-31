@@ -8,6 +8,7 @@ import { BenchmarkBadge } from "./benchmark-badge";
 import { evaluerBenchmark, BENCHMARK_FCR } from "@/lib/benchmarks";
 import { cn } from "@/lib/utils";
 import type { AnalytiqueAliment } from "@/types";
+import { formatNumber } from "@/lib/format";
 
 // FC.3 — Score badge
 function ScoreBadge({ score }: { score: number }) {
@@ -185,7 +186,7 @@ export function FeedComparisonCards({
                 />
                 <MetricItem
                   label={tAnalytics("aliments.coutKgLabel")}
-                  value={aliment.coutParKgGain !== null ? `${aliment.coutParKgGain.toLocaleString("fr-FR")}` : "—"}
+                  value={aliment.coutParKgGain !== null ? formatNumber(aliment.coutParKgGain) : "—"}
                   unit="CFA"
                 />
                 <MetricItem
@@ -214,7 +215,7 @@ export function FeedComparisonCards({
 
               {/* Footer metadata */}
               <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                <span>{aliment.prixUnitaire.toLocaleString("fr-FR")} CFA/kg</span>
+                <span>{formatNumber(aliment.prixUnitaire)} CFA/kg</span>
                 <span>{aliment.quantiteTotale} {tAnalytics("aliments.kgUtilises")}</span>
                 <span>{aliment.nombreVagues > 1 ? tVagues("list.countPlural", { count: aliment.nombreVagues }) : tVagues("list.count", { count: aliment.nombreVagues })}</span>
                 {aliment.tauxSurvieAssocie !== null && (

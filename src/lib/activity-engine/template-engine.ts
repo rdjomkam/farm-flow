@@ -23,9 +23,6 @@ import type { RuleEvaluationContext } from "@/types/activity-engine";
 
 const UNAVAILABLE = "[donnee non disponible]";
 
-/** Separateur decimal FR */
-const FR_LOCALE = "fr-FR";
-
 // ---------------------------------------------------------------------------
 // Formatage
 // ---------------------------------------------------------------------------
@@ -39,10 +36,10 @@ function formatNumber(
   decimals = 2
 ): string {
   if (value == null) return UNAVAILABLE;
-  return value.toLocaleString(FR_LOCALE, {
+  return new Intl.NumberFormat("fr-FR", {
     minimumFractionDigits: 0,
     maximumFractionDigits: decimals,
-  });
+  }).format(value);
 }
 
 // ---------------------------------------------------------------------------

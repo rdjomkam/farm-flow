@@ -9,6 +9,7 @@
  * Story C.6 — ADR-022 Backoffice
  */
 
+import { formatNumber } from "@/lib/format";
 import { useState } from "react";
 import { Building2, Users, Layers, Database, CheckCircle, XCircle } from "lucide-react";
 import { SiteStatus, SiteModule } from "@/types";
@@ -268,7 +269,7 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
               )}
               <SiteInfoRow
                 label="Prix paye"
-                value={`${site.abonnementActif.prixPaye.toLocaleString("fr-FR")} XAF`}
+                value={`${formatNumber(site.abonnementActif.prixPaye)} XAF`}
               />
             </div>
           )}

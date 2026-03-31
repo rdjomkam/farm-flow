@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { formatNumber } from "@/lib/format";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
@@ -374,7 +375,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 text-sm mt-4">
           <div>
             <dt className="text-muted-foreground">{t("detail.alevins")}</dt>
-            <dd className="font-medium">{pack.nombreAlevins.toLocaleString()}</dd>
+            <dd className="font-medium">{formatNumber(pack.nombreAlevins)}</dd>
           </div>
           <div>
             <dt className="text-muted-foreground">{t("detail.poidsInitial")}</dt>
@@ -382,7 +383,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
           </div>
           <div>
             <dt className="text-muted-foreground">{t("detail.prixTotal")}</dt>
-            <dd className="font-medium">{pack.prixTotal.toLocaleString()} FCFA</dd>
+            <dd className="font-medium">{formatNumber(pack.prixTotal)} FCFA</dd>
           </div>
           <div>
             <dt className="text-muted-foreground">{t("detail.configElevage")}</dt>
@@ -429,7 +430,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
           <div className="flex items-start gap-2 rounded-md border border-warning/50 bg-warning/10 p-3 mb-3 text-sm text-warning">
             <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
             <span>
-              {t("detail.configBacsWarning", { current: bacsSum.toLocaleString(), total: pack.nombreAlevins.toLocaleString() })}
+              {t("detail.configBacsWarning", { current: formatNumber(bacsSum), total: formatNumber(pack.nombreAlevins) })}
             </span>
           </div>
         )}
@@ -445,7 +446,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
                 <div>
                   <p className="font-medium text-sm">{bac.nom}</p>
                   <p className="text-xs text-muted-foreground">
-                    {bac.nombreAlevins.toLocaleString()} alevins
+                    {formatNumber(bac.nombreAlevins)} alevins
                     {bac.poidsMoyenInitial ? ` — ${bac.poidsMoyenInitial} g/alevin` : ""}
                     {bac.volume ? ` — ${bac.volume} m³` : ""}
                   </p>
@@ -525,7 +526,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
                   : "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800",
               ].join(" ")}>
                 <span>
-                  {t("detail.totalAlevins", { current: localBacsSum.toLocaleString(), total: pack.nombreAlevins.toLocaleString() })}
+                  {t("detail.totalAlevins", { current: formatNumber(localBacsSum), total: formatNumber(pack.nombreAlevins) })}
                 </span>
                 {localBacsValid ? (
                   <Check className="h-4 w-4" />
@@ -641,7 +642,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
                 <div>
                   <p className="font-medium text-sm">{pp.produit.nom}</p>
                   <p className="text-xs text-muted-foreground">
-                    Quantite : {pp.quantite} {pp.unite ?? pp.produit.unite} — {pp.produit.prixUnitaire.toLocaleString()} FCFA/{pp.produit.unite}
+                    Quantite : {pp.quantite} {pp.unite ?? pp.produit.unite} — {formatNumber(pp.produit.prixUnitaire)} FCFA/{pp.produit.unite}
                   </p>
                 </div>
                 {canManage && (

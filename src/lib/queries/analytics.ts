@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { formatNumber } from "@/lib/format";
 import { TypeReleve, CategorieProduit, StatutVague, StatutReproducteur, StatutLotAlevins } from "@/types";
 import type {
   IndicateursBac,
@@ -941,9 +942,9 @@ export async function getSimulationChangementAliment(
   if (economie === null) {
     message = "Donnees insuffisantes pour calculer l'economie. Utilisez les deux aliments sur au moins une vague.";
   } else if (economie > 0) {
-    message = `En passant de '${ancien.nom}' a '${nouveau.nom}' pour ${productionCible} kg de production, vous economiseriez ${economie.toLocaleString("fr-FR")} CFA.`;
+    message = `En passant de '${ancien.nom}' a '${nouveau.nom}' pour ${productionCible} kg de production, vous economiseriez ${formatNumber(economie)} CFA.`;
   } else if (economie < 0) {
-    message = `Le passage de '${ancien.nom}' a '${nouveau.nom}' couterait ${Math.abs(economie).toLocaleString("fr-FR")} CFA de plus pour ${productionCible} kg de production.`;
+    message = `Le passage de '${ancien.nom}' a '${nouveau.nom}' couterait ${formatNumber(Math.abs(economie))} CFA de plus pour ${productionCible} kg de production.`;
   } else {
     message = `Les deux aliments ont un cout equivalent pour ${productionCible} kg de production.`;
   }

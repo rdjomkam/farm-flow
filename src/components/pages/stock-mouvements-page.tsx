@@ -20,7 +20,7 @@ export default async function StockMouvementsPage() {
     if (!permissions) return <AccessDenied />;
 
     const t = await getTranslations("stock");
-    const [mouvements, produits, vagues] = await Promise.all([
+    const [mouvementsResult, produits, vaguesResult] = await Promise.all([
       getMouvements(session.activeSiteId),
       getProduits(session.activeSiteId),
       getVagues(session.activeSiteId),
@@ -32,7 +32,7 @@ export default async function StockMouvementsPage() {
       unite: p.unite,
     }));
 
-    const vagueOptions = vagues.map((v) => ({
+    const vagueOptions = vaguesResult.data.map((v) => ({
       id: v.id,
       code: v.code,
     }));
@@ -53,7 +53,7 @@ export default async function StockMouvementsPage() {
         </Header>
         <div className="p-4">
           <MouvementsListClient
-            mouvements={JSON.parse(JSON.stringify(mouvements))}
+            mouvements={JSON.parse(JSON.stringify(mouvementsResult.data))}
             produits={produitOptions}
             vagues={vagueOptions}
             permissions={permissions}

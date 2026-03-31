@@ -120,8 +120,8 @@ export default async function VagueDetailPage({
     gompertzRecord.wInfinity > 0 &&
     gompertzRecord.biometrieCount === currentBiometrieCount &&
     currentBiometrieCount >= gompertzMinPoints &&
-    // Invalidate if configElevage W∞ diverged significantly from cached
-    !(configWInf !== null && Math.abs(gompertzRecord.wInfinity - configWInf) > configWInf * 0.1);
+    // Invalidate if configElevage W∞ changed since last calibration
+    configWInf === gompertzRecord.configWInfUsed;
 
   // Inline calibration: run when we have enough points but no valid cache
   let effectiveGompertz: { params: { wInfinity: number; k: number; ti: number }; r2: number; rmse: number; confidenceLevel: string; biometrieCount: number } | null = null;

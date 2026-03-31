@@ -15,6 +15,7 @@ import {
   getAbonnements,
   createAbonnement,
 } from "@/lib/queries/abonnements";
+import { apiError } from "@/lib/api-utils";
 import { getPlanAbonnementById } from "@/lib/queries/plans-abonnements";
 import {
   verifierRemiseApplicable,
@@ -57,21 +58,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ abonnements, total: abonnements.length });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation des abonnements." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation des abonnements.");
   }
 }
 
@@ -103,19 +95,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        { status: 400, message: "Erreurs de validation", errors },
-        { status: 400 }
-      );
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     // Charger le plan
     const plan = await getPlanAbonnementById(body.planId);
     if (!plan || !plan.isActif) {
-      return NextResponse.json(
-        { status: 404, message: "Plan introuvable ou inactif." },
-        { status: 404 }
-      );
+      return apiError(404, "Plan introuvable ou inactif.");
     }
 
     // Vérifier la remise si fournie
@@ -123,10 +109,7 @@ export async function POST(request: NextRequest) {
     if (body.remiseCode) {
       const result = await verifierRemiseApplicable(body.remiseCode, auth.activeSiteId);
       if (!result.remise) {
-        return NextResponse.json(
-          { status: 400, message: result.erreur ?? "Code promo invalide." },
-          { status: 400 }
-        );
+        return apiError(400, result.erreur ?? "Code promo invalide.");
       }
       remise = result.remise;
     }
@@ -213,16 +196,10 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     return NextResponse.json(

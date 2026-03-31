@@ -9,6 +9,7 @@
  * ADR-021 section 2.3 — SiteAuditLog.
  */
 
+import { formatDateTime } from "@/lib/format";
 import { Clock, User } from "lucide-react";
 
 interface AuditLogEntry {
@@ -74,13 +75,7 @@ export function AdminSiteAuditLog({ logs }: AdminSiteAuditLogProps) {
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {new Date(log.createdAt).toLocaleString("fr-FR", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatDateTime(log.createdAt)}
                 </span>
               </div>
               {detail && (

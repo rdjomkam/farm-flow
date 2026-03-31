@@ -13,6 +13,7 @@
  * ADR-021 section 4.2 — AdminSiteDetailClient.
  */
 
+import { formatNumber } from "@/lib/format";
 import { useState } from "react";
 import { Building2, Users, Layers, Database, CheckCircle, XCircle } from "lucide-react";
 import { SiteStatus, SiteModule } from "@/types";
@@ -257,7 +258,7 @@ export function AdminSiteDetailClient({ site: initialSite }: AdminSiteDetailClie
               )}
               <SiteInfoRow
                 label="Prix payé"
-                value={`${site.abonnementActif.prixPaye.toLocaleString("fr-FR")} XAF`}
+                value={`${formatNumber(site.abonnementActif.prixPaye)} XAF`}
               />
             </div>
           )}

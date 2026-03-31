@@ -19,6 +19,7 @@ import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
 import { Permission, StatutAbonnement } from "@/types";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-utils";
 
 export async function POST(
   request: NextRequest,
@@ -31,10 +32,7 @@ export async function POST(
     // Vérifier l'appartenance au site actif — R8
     const abonnement = await getAbonnementById(id, auth.activeSiteId);
     if (!abonnement) {
-      return NextResponse.json(
-        { status: 404, message: "Abonnement introuvable." },
-        { status: 404 }
-      );
+      return apiError(404, "Abonnement introuvable.");
     }
 
     // Ne pas ré-annuler ou ré-annuler un abonnement déjà terminé
@@ -88,20 +86,11 @@ export async function POST(
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: 401, message: error.message },
-        { status: 401 }
-      );
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { status: 403, message: error.message },
-        { status: 403 }
-      );
+      return apiError(403, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de l'annulation." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de l'annulation.");
   }
 }

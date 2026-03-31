@@ -21,6 +21,8 @@ import {
   calculerAlimentRestantEstime,
   calculerRevenuAttendu,
   genererCourbeProjection,
+  // CR1.4 — arrondi vivants par bac
+  computeVivantsByBac,
 } from "@/lib/calculs";
 
 // ---------------------------------------------------------------------------
@@ -764,9 +766,14 @@ describe("calculerSGRRequis", () => {
     expect(calculerSGRRequis(200, 800, -5)).toBeNull();
   });
 
-  it("retourne 0 si poids actuel == objectif", () => {
-    const sgr = calculerSGRRequis(800, 800, 60);
-    expect(sgr).toBeCloseTo(0, 5);
+  it("retourne null si poids actuel == objectif (objectif deja atteint)", () => {
+    expect(calculerSGRRequis(800, 800, 60)).toBeNull();
+  });
+
+  it("retourne null si poidsObjectif < poidsMoyenActuel (SGR negatif impossible)", () => {
+    // CR1.4 : guard SGR negatif — poidsObjectif=50, poidsMoyenActuel=30 > objectif → impossible
+    // (50, 30, 10) : poidsObjectif=30 <= poidsMoyenActuel=50 → null
+    expect(calculerSGRRequis(50, 30, 10)).toBeNull();
   });
 });
 
@@ -908,5 +915,76 @@ describe("genererCourbeProjection", () => {
 
   it("retourne un tableau vide si joursProjection <= 0", () => {
     expect(genererCourbeProjection(200, 2.31, 0, 0)).toHaveLength(0);
+  });
+
+  // CR1.4 — cap 500 points
+  it("retourne au maximum 500 points meme si joursProjection est tres grand", () => {
+    const points = genererCourbeProjection(50, 2, 10000);
+    expect(points.length).toBeLessThanOrEqual(500);
+  });
+
+  it("retourne exactement 500 points pour joursProjection=10000", () => {
+    const points = genererCourbeProjection(50, 2, 10000);
+    expect(points).toHaveLength(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CR1.4 — computeVivantsByBac : arrondi et conservation du total
+// ---------------------------------------------------------------------------
+describe("computeVivantsByBac (CR1.4 — arrondi vivants par bac)", () => {
+  const makeReleves = () => [] as { bacId: string | null; typeReleve: string; nombreMorts: number | null; nombreCompte: number | null; date?: string | Date | null }[];
+
+  it("repartit 1000 poissons sur 3 bacs sans perte (total = 1000)", () => {
+    const bacs = [
+      { id: "b1", nombreInitial: null },
+      { id: "b2", nombreInitial: null },
+      { id: "b3", nombreInitial: null },
+    ];
+    const result = computeVivantsByBac(bacs, makeReleves(), 1000);
+    const total = [...result.values()].reduce((s, v) => s + v, 0);
+    expect(total).toBe(1000);
+  });
+
+  it("le dernier bac recoit le reste pour 1000/3 = [333, 333, 334]", () => {
+    const bacs = [
+      { id: "b1", nombreInitial: null },
+      { id: "b2", nombreInitial: null },
+      { id: "b3", nombreInitial: null },
+    ];
+    const result = computeVivantsByBac(bacs, makeReleves(), 1000);
+    const values = ["b1", "b2", "b3"].map(id => result.get(id)!);
+    // Les deux premiers bacs ont floor(1000/3)=333, le dernier a 334
+    expect(values[0]).toBe(333);
+    expect(values[1]).toBe(333);
+    expect(values[2]).toBe(334);
+    expect(values[0] + values[1] + values[2]).toBe(1000);
+  });
+
+  it("un seul bac reoit la totalite des poissons", () => {
+    const bacs = [{ id: "b1", nombreInitial: null }];
+    const result = computeVivantsByBac(bacs, makeReleves(), 1000);
+    expect(result.get("b1")).toBe(1000);
+  });
+
+  it("respecte nombreInitial explicite sur le bac (pas de recalcul)", () => {
+    const bacs = [
+      { id: "b1", nombreInitial: 400 },
+      { id: "b2", nombreInitial: 600 },
+    ];
+    const result = computeVivantsByBac(bacs, makeReleves(), 1000);
+    expect(result.get("b1")).toBe(400);
+    expect(result.get("b2")).toBe(600);
+  });
+
+  it("repartition equitable sans reste (1000/2 = [500, 500])", () => {
+    const bacs = [
+      { id: "b1", nombreInitial: null },
+      { id: "b2", nombreInitial: null },
+    ];
+    const result = computeVivantsByBac(bacs, makeReleves(), 1000);
+    expect(result.get("b1")).toBe(500);
+    expect(result.get("b2")).toBe(500);
+    expect([...result.values()].reduce((s, v) => s + v, 0)).toBe(1000);
   });
 });

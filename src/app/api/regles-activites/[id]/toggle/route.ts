@@ -3,6 +3,7 @@ import { toggleRegleActivite } from "@/lib/queries/regles-activites";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -28,22 +29,19 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     return NextResponse.json({ id: result.id, isActive: result.isActive });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ error: (error as Error).message }, { status: 401 });
+      return apiError(401, (error as Error).message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ error: (error as Error).message }, { status: 403 });
+      return apiError(403, (error as Error).message);
     }
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
-      return NextResponse.json({ error: message }, { status: 404 });
+      return apiError(404, message);
     }
     if (message.includes("globales DKFarm")) {
-      return NextResponse.json({ error: message }, { status: 403 });
+      return apiError(403, message);
     }
     console.error("[PATCH /api/regles-activites/[id]/toggle]", error);
-    return NextResponse.json(
-      { error: "Erreur serveur lors du basculement de la regle d'activite." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors du basculement de la regle d'activite.");
   }
 }

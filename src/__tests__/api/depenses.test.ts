@@ -229,14 +229,17 @@ describe("GET /api/depenses", () => {
     vi.clearAllMocks();
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
     mockPrismaDepenseFindMany.mockResolvedValue([FAKE_DEPENSE]);
+    mockPrismaDepenseCount.mockResolvedValue(1);
   });
 
   it("retourne 200 avec liste des depenses", async () => {
     const response = await GET_DEPENSES(makeRequest("/api/depenses"));
     expect(response.status).toBe(200);
     const data = await response.json();
-    expect(data.depenses).toHaveLength(1);
+    expect(data.data).toHaveLength(1);
     expect(data.total).toBe(1);
+    expect(data.limit).toBe(50);
+    expect(data.offset).toBe(0);
   });
 
   it("retourne 403 sans permission DEPENSES_VOIR", async () => {

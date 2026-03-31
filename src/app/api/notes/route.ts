@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getNotesPourClient } from "@/lib/queries/notes";
 import { AuthError, requireAuth } from "@/lib/auth";
+import { apiError } from "@/lib/api-utils";
 
 /**
  * GET /api/notes
@@ -27,10 +28,7 @@ export async function GET(request: NextRequest) {
     const session = await requireAuth(request);
 
     if (!session.activeSiteId) {
-      return NextResponse.json(
-        { status: 403, message: "Aucun site actif selectionne." },
-        { status: 403 }
-      );
+      return apiError(403, "Aucun site actif selectionne.");
     }
 
     const { searchParams } = new URL(request.url);
@@ -46,11 +44,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ notes, total: notes.length });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation des notes." },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur serveur lors de la recuperation des notes.");
   }
 }

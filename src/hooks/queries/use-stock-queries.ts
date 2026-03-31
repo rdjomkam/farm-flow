@@ -78,7 +78,7 @@ export function useCommandesList(options?: { initialData?: CommandeListResponse[
     queryFn: async () => {
       const result = await stockService.listCommandes();
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement commandes");
-      return (result.data as CommandeListResponse).commandes;
+      return (result.data as unknown as { data: CommandeListResponse["commandes"]; total: number }).data;
     },
     staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,

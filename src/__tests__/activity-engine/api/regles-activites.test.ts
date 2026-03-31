@@ -459,7 +459,7 @@ describe("PUT /api/regles-activites/[id]", () => {
     );
     expect(response.status).toBe(403);
     const data = await response.json();
-    expect(data.error).toContain("globales");
+    expect(data.message).toContain("globales");
   });
 
   it("retourne 404 si regle introuvable pour ce site", async () => {
@@ -553,7 +553,7 @@ describe("DELETE /api/regles-activites/[id]", () => {
     );
     expect(response.status).toBe(409);
     const data = await response.json();
-    expect(data.error).toContain("globales");
+    expect(data.message).toContain("globales");
   });
 
   it("retourne 404 si regle introuvable", async () => {

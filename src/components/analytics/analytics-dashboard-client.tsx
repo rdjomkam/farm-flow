@@ -13,6 +13,8 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { formatNumber } from "@/lib/format";
 // Type local compatible avec la valeur retournee par getAnalyticsDashboard
 // (tauxSurvie peut etre null dans la query meme si le type formel dit number)
 interface DashboardMeilleurBac {
@@ -224,7 +226,7 @@ export function AnalyticsDashboardClient({ dashboard }: AnalyticsDashboardClient
               <>
                 <p className="text-base font-bold truncate">{meilleurAliment.nom}</p>
                 <p className="text-xs text-muted-foreground">
-                  {meilleurAliment.coutParKgGain.toLocaleString("fr-FR")} CFA/kg gain
+                  {formatNumber(meilleurAliment.coutParKgGain)} CFA/kg gain
                 </p>
               </>
             ) : (
@@ -254,7 +256,9 @@ export function AnalyticsDashboardClient({ dashboard }: AnalyticsDashboardClient
 
           {/* Tendance FCR */}
           <KpiCard title="Tendance FCR">
-            <SparklineFCR data={tendanceFCR} />
+            <ErrorBoundary section="le graphique FCR">
+              <SparklineFCR data={tendanceFCR} />
+            </ErrorBoundary>
             {tendanceFCR.length > 0 && (
               <p className="text-xs text-muted-foreground">
                 Dernier : FCR {tendanceFCR[tendanceFCR.length - 1]?.fcr}

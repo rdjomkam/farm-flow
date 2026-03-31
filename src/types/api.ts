@@ -10,6 +10,70 @@
  * Aucun `any` — tout est strictement type.
  */
 
+// ---------------------------------------------------------------------------
+// Pagination
+// ---------------------------------------------------------------------------
+
+/** Parametres de pagination offset/limit pour les endpoints GET de liste. */
+export interface PaginationParams {
+  /** Nombre maximum d'elements a retourner. Defaut : 50, max : 200. */
+  limit: number;
+  /** Nombre d'elements a ignorer depuis le debut. Defaut : 0. */
+  offset: number;
+}
+
+/**
+ * Reponse generique paginee.
+ * Tous les endpoints GET de liste renvoient ce format standard.
+ */
+export interface PaginatedResponse<T> {
+  /** Tableau des elements de la page courante. */
+  data: T[];
+  /** Nombre total d'elements (toutes pages confondues). */
+  total: number;
+  /** Limite appliquee (nombre max d'elements retournes). */
+  limit: number;
+  /** Offset applique (index du premier element). */
+  offset: number;
+}
+
+/** Valeurs par defaut et contraintes de pagination. */
+export const PAGINATION_DEFAULTS = {
+  LIMIT: 50,
+  OFFSET: 0,
+  MAX_LIMIT: 200,
+} as const;
+
+/**
+ * Parse et valide les parametres de pagination depuis les query params.
+ * Retourne null si limit > 200 (invalide).
+ */
+export function parsePaginationQuery(
+  searchParams: URLSearchParams
+): { valid: true; params: PaginationParams } | { valid: false; error: string } {
+  const rawLimit = searchParams.get("limit");
+  const rawOffset = searchParams.get("offset");
+
+  const limit = rawLimit !== null
+    ? parseInt(rawLimit, 10)
+    : PAGINATION_DEFAULTS.LIMIT;
+  const offset = rawOffset !== null
+    ? parseInt(rawOffset, 10)
+    : PAGINATION_DEFAULTS.OFFSET;
+
+  if (rawLimit !== null && (isNaN(limit) || limit < 1)) {
+    return { valid: false, error: "Le parametre 'limit' doit etre un entier >= 1." };
+  }
+  if (limit > PAGINATION_DEFAULTS.MAX_LIMIT) {
+    return { valid: false, error: `Le parametre 'limit' ne peut pas depasser ${PAGINATION_DEFAULTS.MAX_LIMIT}.` };
+  }
+  if (rawOffset !== null && (isNaN(offset) || offset < 0)) {
+    return { valid: false, error: "Le parametre 'offset' doit etre un entier >= 0." };
+  }
+
+  return { valid: true, params: { limit, offset } };
+}
+
 import {
   ActionRegle,
   CategorieCalibrage,
@@ -1131,6 +1195,35 @@ export interface ValidationErrorResponse {
   status: 400;
   message: string;
   errors: Array<{
+    field: string;
+    message: string;
+  }>;
+}
+
+/**
+ * Format unifie pour toutes les reponses d'erreur API.
+ *
+ * Structure utilisee par le helper `apiError()` de `@/lib/api-utils`.
+ * Remplace les formats inconsistants precedents.
+ *
+ * @example
+ * // Route handler
+ * return apiError(404, "Vague introuvable.", { code: "NOT_FOUND_VAGUE" });
+ *
+ * // Avec erreurs de validation
+ * return apiError(400, "Erreurs de validation.", {
+ *   errors: [{ field: "nom", message: "Le champ est obligatoire." }]
+ * });
+ */
+export interface ApiErrorResponse {
+  /** Code HTTP de l'erreur */
+  status: number;
+  /** Message d'erreur lisible en francais */
+  message: string;
+  /** Code machine optionnel (ex: "NOT_FOUND_VAGUE", "QUOTA_DEPASSE") */
+  code?: string;
+  /** Erreurs de validation par champ (pour les 400) */
+  errors?: Array<{
     field: string;
     message: string;
   }>;

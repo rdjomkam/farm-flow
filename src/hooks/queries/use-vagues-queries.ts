@@ -6,7 +6,10 @@ import { queryKeys } from "@/lib/query-keys";
 import type { VagueSummaryResponse, VagueDetailResponse, CreateVagueDTO, UpdateVagueDTO } from "@/types";
 
 interface VagueListResult {
-  vagues: VagueSummaryResponse[];
+  data: VagueSummaryResponse[];
+  total: number;
+  limit: number;
+  offset: number;
 }
 
 export function useVaguesList(
@@ -20,7 +23,7 @@ export function useVaguesList(
     queryFn: async () => {
       const result = await vagueService.list();
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement vagues");
-      return (result.data as VagueListResult).vagues;
+      return (result.data as unknown as VagueListResult).data;
     },
     staleTime: 2 * 60_000, // 2 min
     gcTime: 5 * 60_000,

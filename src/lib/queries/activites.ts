@@ -16,7 +16,11 @@ import type { ActiviteFilters, CreateActiviteDTO, UpdateActiviteDTO, CompleteAct
  * @param siteId  - ID du site (R8)
  * @param filters - Filtres optionnels
  */
-export async function getActivites(siteId: string, filters?: ActiviteFilters) {
+export async function getActivites(
+  siteId: string,
+  filters?: ActiviteFilters,
+  pagination?: { limit: number; offset: number }
+) {
   const where: Record<string, unknown> = { siteId };
 
   if (filters?.statut) where.statut = filters.statut;
@@ -32,27 +36,37 @@ export async function getActivites(siteId: string, filters?: ActiviteFilters) {
     };
   }
 
-  return prisma.activite.findMany({
-    where,
-    include: {
-      vague: { select: { id: true, code: true } },
-      bac: { select: { id: true, nom: true } },
-      assigneA: { select: { id: true, name: true } },
-      user: { select: { id: true, name: true } },
-      releve: { select: { id: true, typeReleve: true, date: true } },
-      produitRecommande: {
-        select: {
-          id: true,
-          nom: true,
-          unite: true,
-          uniteAchat: true,
-          contenance: true,
-          stockActuel: true,
+  const limit = pagination?.limit ?? 50;
+  const offset = pagination?.offset ?? 0;
+
+  const [data, total] = await Promise.all([
+    prisma.activite.findMany({
+      where,
+      include: {
+        vague: { select: { id: true, code: true } },
+        bac: { select: { id: true, nom: true } },
+        assigneA: { select: { id: true, name: true } },
+        user: { select: { id: true, name: true } },
+        releve: { select: { id: true, typeReleve: true, date: true } },
+        produitRecommande: {
+          select: {
+            id: true,
+            nom: true,
+            unite: true,
+            uniteAchat: true,
+            contenance: true,
+            stockActuel: true,
+          },
         },
       },
-    },
-    orderBy: { dateDebut: "asc" },
-  });
+      orderBy: { dateDebut: "asc" },
+      take: limit,
+      skip: offset,
+    }),
+    prisma.activite.count({ where }),
+  ]);
+
+  return { data, total };
 }
 
 /**

@@ -18,6 +18,7 @@
  */
 
 import { prisma } from "@/lib/db";
+import { formatDate } from "@/lib/format";
 import { VisibiliteNote, StatutVague, TypeReleve, CategorieProduit, StatutActivation } from "@/types";
 import { calculerTauxSurvie, calculerFCR, calculerBiomasse } from "@/lib/calculs";
 
@@ -280,7 +281,7 @@ function detectInactiviteAlerte(
     return null;
   }
 
-  const dateFormatee = dernierReleveDate.toLocaleDateString("fr-FR");
+  const dateFormatee = formatDate(dernierReleveDate);
 
   return {
     titre: `[ALERTE INACTIVITE] Site client — ${joursOuvresInactifs}j ouvrés sans relevé`,

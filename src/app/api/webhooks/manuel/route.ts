@@ -21,6 +21,7 @@ import {
   confirmerPaiement,
   getPaiementByReference,
 } from "@/lib/queries/paiements-abonnements";
+import { apiError } from "@/lib/api-utils";
 import { activerAbonnement } from "@/lib/queries/abonnements";
 import { applyPlanModules } from "@/lib/abonnements/apply-plan-modules";
 
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (error instanceof ForbiddenError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    return apiError(401, "Non authentifié");
   }
 
   // Lire le corps de la requête
@@ -49,20 +50,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       notes?: string;
     };
   } catch {
-    return NextResponse.json(
-      { error: "Corps de requête JSON invalide" },
-      { status: 400 }
-    );
+    return apiError(400, "Corps de requête JSON invalide");
   }
 
   const { referenceExterne, abonnementId } = body;
 
   // Validation des champs obligatoires
   if (!referenceExterne || !abonnementId) {
-    return NextResponse.json(
-      { error: "referenceExterne et abonnementId sont obligatoires" },
-      { status: 400 }
-    );
+    return apiError(400, "referenceExterne et abonnementId sont obligatoires");
   }
 
   // Vérifier l'idempotence via les fonctions de query Sprint 30
@@ -76,10 +71,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   if (!paiementExistant) {
-    return NextResponse.json(
-      { error: "Paiement introuvable pour cette référence" },
-      { status: 404 }
-    );
+    return apiError(404, "Paiement introuvable pour cette référence");
   }
 
   // Confirmation + activation : R4 via fonctions de query updateMany
@@ -120,9 +112,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       "[webhook/manuel] Erreur :",
       dbError instanceof Error ? dbError.message : "Erreur inconnue"
     );
-    return NextResponse.json(
-      { error: "Erreur lors de la confirmation" },
-      { status: 500 }
-    );
+    return apiError(500, "Erreur lors de la confirmation");
   }
 }

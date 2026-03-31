@@ -4,6 +4,7 @@ import { AuthError, hashPassword } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getUserAdminDetail } from "@/lib/queries/users-admin";
 import { Permission } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -16,22 +17,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
 
     if (!body.newPassword || typeof body.newPassword !== "string" || body.newPassword.length < 6) {
-      return NextResponse.json(
-        { status: 400, message: "Le mot de passe doit contenir au moins 6 caracteres." },
-        { status: 400 }
-      );
+      return apiError(400, "Le mot de passe doit contenir au moins 6 caracteres.");
     }
 
     const target = await getUserAdminDetail(id);
     if (!target) {
-      return NextResponse.json({ status: 404, message: "Utilisateur introuvable." }, { status: 404 });
+      return apiError(404, "Utilisateur introuvable.");
     }
 
     if (target.isSystem) {
-      return NextResponse.json(
-        { status: 403, message: "Impossible de modifier le mot de passe d'un utilisateur systeme." },
-        { status: 403 }
-      );
+      return apiError(403, "Impossible de modifier le mot de passe d'un utilisateur systeme.");
     }
 
     const passwordHash = await hashPassword(body.newPassword);
@@ -43,11 +38,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json({ status: 500, message: "Erreur serveur." }, { status: 500 });
+    return apiError(500, "Erreur serveur.");
   }
 }

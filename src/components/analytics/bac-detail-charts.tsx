@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartTooltip } from "@/components/ui/chart-tooltip";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { BenchmarkBadge } from "./benchmark-badge";
 import {
   evaluerBenchmark,
@@ -159,33 +160,35 @@ export function BacHistoriqueChart({ cycles }: BacHistoriqueChartProps) {
   }));
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{t("historique")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[250px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} width={40} />
-              <Tooltip
-                content={
-                  <ChartTooltip
-                    valueFormatter={(v, name) =>
-                      name === avgWeightGLabel ? `${v} g` : `${v} kg`
-                    }
-                  />
-                }
-              />
-              <Bar dataKey="biomasse" name={biomassKgLabel} fill="var(--primary)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="poidsMoyen" name={avgWeightGLabel} fill="var(--secondary)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+    <ErrorBoundary section="le graphique historique">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("historique")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} width={40} />
+                <Tooltip
+                  content={
+                    <ChartTooltip
+                      valueFormatter={(v, name) =>
+                        name === avgWeightGLabel ? `${v} g` : `${v} kg`
+                      }
+                    />
+                  }
+                />
+                <Bar dataKey="biomasse" name={biomassKgLabel} fill="var(--primary)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="poidsMoyen" name={avgWeightGLabel} fill="var(--secondary)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+    </ErrorBoundary>
   );
 }
 

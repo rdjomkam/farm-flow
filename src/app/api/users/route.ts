@@ -7,6 +7,7 @@ import { normalizePhone } from "@/lib/auth";
 import { getUserByEmail, getUserByPhone, createUser } from "@/lib/queries/users";
 import { listUsers } from "@/lib/queries/users-admin";
 import { Permission, Role } from "@/types";
+import { apiError } from "@/lib/api-utils";
 
 /** GET /api/users — lister les utilisateurs (pagine, filtrable) */
 export async function GET(request: NextRequest) {
@@ -44,12 +45,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ users: result, total, page, limit });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
-    return NextResponse.json({ status: 500, message: "Erreur serveur." }, { status: 500 });
+    return apiError(500, "Erreur serveur.");
   }
 }
 
@@ -72,14 +73,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json({ status: 400, message: "Erreurs de validation", errors }, { status: 400 });
+      return apiError(400, "Erreurs de validation", { errors });
     }
 
     // Check email uniqueness
     if (body.email) {
       const existing = await getUserByEmail(body.email);
       if (existing) {
-        return NextResponse.json({ status: 409, message: "Cet email est deja utilise." }, { status: 409 });
+        return apiError(409, "Cet email est deja utilise.");
       }
     }
 
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
       if (normalizedPhone) {
         const existing = await getUserByPhone(normalizedPhone);
         if (existing) {
-          return NextResponse.json({ status: 409, message: "Ce numero de telephone est deja utilise." }, { status: 409 });
+          return apiError(409, "Ce numero de telephone est deja utilise.");
         }
       }
     }
@@ -128,15 +129,15 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
+      return apiError(401, error.message);
     }
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
+      return apiError(403, error.message);
     }
     // Prisma unique constraint
     if (error && typeof error === "object" && "code" in error && (error as { code: string }).code === "P2002") {
-      return NextResponse.json({ status: 409, message: "Email ou telephone deja utilise." }, { status: 409 });
+      return apiError(409, "Email ou telephone deja utilise.");
     }
-    return NextResponse.json({ status: 500, message: "Erreur serveur lors de la creation." }, { status: 500 });
+    return apiError(500, "Erreur serveur lors de la creation.");
   }
 }
