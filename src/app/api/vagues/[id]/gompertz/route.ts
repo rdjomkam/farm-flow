@@ -88,10 +88,13 @@ export async function GET(
     // 3. Lazy calibration: recalibrate if biometrieCount changed, no record, or config threshold lowered
     const existingGompertz = vague.gompertz;
     const minPoints = vague.configElevage?.gompertzMinPoints ?? 5;
+    const configWInf = vague.configElevage?.gompertzWInfDefault ?? null;
     const needsCalibration =
       !existingGompertz ||
       existingGompertz.biometrieCount !== biometrieCount ||
-      (existingGompertz.confidenceLevel === "INSUFFICIENT_DATA" && biometrieCount >= minPoints);
+      (existingGompertz.confidenceLevel === "INSUFFICIENT_DATA" && biometrieCount >= minPoints) ||
+      // Recalibrate if configElevage W∞ changed and cached value doesn't match
+      (configWInf !== null && existingGompertz != null && Math.abs(existingGompertz.wInfinity - configWInf) > configWInf * 0.1);
 
     let calibrationParams: GompertzParams | null = null;
     let r2: number | null = null;

@@ -391,7 +391,7 @@ function buildInitialGuess(
 /**
  * Physical bounds for Gompertz parameters — Clarias gariepinus pond culture.
  *
- * W∞  ∈ [max(maxObserved, 800), 3000] g — 800g biological floor for the species
+ * W∞  ∈ [max(maxObserved, CLARIAS_DEFAULTS.wInfinity), 3000] g — biological floor for the species
  * K   ∈ [0.005, 0.2]  day⁻¹
  * ti  ∈ [0, 300]       days
  */
@@ -405,7 +405,7 @@ function buildBounds(
     initialGuess.wInfinity >= CLARIAS_DEFAULTS.wInfinity &&
     initialGuess.wInfinity <= 3000
       ? initialGuess.wInfinity
-      : 800;
+      : CLARIAS_DEFAULTS.wInfinity;
   return [
     [Math.max(maxObserved, wInfFloor), 3000],
     [0.005, 0.2],

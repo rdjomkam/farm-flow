@@ -72,7 +72,7 @@ export default async function VagueDetailPage({
   const configElevage = vague.configElevageId
     ? await prisma.configElevage.findUnique({
         where: { id: vague.configElevageId },
-        select: { poidsObjectif: true, gompertzMinPoints: true },
+        select: { poidsObjectif: true, gompertzMinPoints: true, gompertzWInfDefault: true },
       })
     : null;
   const poidsObjectif = configElevage?.poidsObjectif ?? 800;
@@ -113,12 +113,15 @@ export default async function VagueDetailPage({
   const currentBiometrieCount = groupedByDate.size;
 
   // Check if cached record is still valid
+  const configWInf = configElevage?.gompertzWInfDefault ?? null;
   const cachedIsValid =
     gompertzRecord !== null &&
     gompertzRecord.confidenceLevel !== "INSUFFICIENT_DATA" &&
     gompertzRecord.wInfinity > 0 &&
     gompertzRecord.biometrieCount === currentBiometrieCount &&
-    currentBiometrieCount >= gompertzMinPoints;
+    currentBiometrieCount >= gompertzMinPoints &&
+    // Invalidate if configElevage W∞ diverged significantly from cached
+    !(configWInf !== null && Math.abs(gompertzRecord.wInfinity - configWInf) > configWInf * 0.1);
 
   // Inline calibration: run when we have enough points but no valid cache
   let effectiveGompertz: { params: { wInfinity: number; k: number; ti: number }; r2: number; rmse: number; confidenceLevel: string; biometrieCount: number } | null = null;
