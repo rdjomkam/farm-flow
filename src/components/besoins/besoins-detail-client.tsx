@@ -138,6 +138,12 @@ export function BesoinsDetailClient({
   const router = useRouter();
   const depenseService = useDepenseService();
   const t = useTranslations("besoins");
+  const tStock = useTranslations("stock");
+  const uniteLabel = (u: string) => {
+    const key = `unites.${u}` as Parameters<typeof tStock>[0];
+    const label = tStock(key);
+    return label !== `stock.unites.${u}` ? label : u.toLowerCase();
+  };
   const [liste, setListe] = useState(initial);
 
   // Dialog states
@@ -460,7 +466,7 @@ export function BesoinsDetailClient({
                 <div key={l.id} className="border rounded p-3 space-y-2">
                   <p className="text-sm font-medium">{l.designation}</p>
                   <p className="text-xs text-muted-foreground">
-                    {l.quantite} {l.unite ?? (l.produit?.unite ?? "")} &times;{" "}
+                    {l.quantite} {uniteLabel(l.unite ?? l.produit?.unite ?? "")} &times;{" "}
                     {formatMontant(l.prixEstime)} FCFA
                   </p>
                   <Select
@@ -520,7 +526,7 @@ export function BesoinsDetailClient({
                 <div key={l.id} className="border rounded p-3 space-y-2">
                   <p className="text-sm font-medium">{l.designation}</p>
                   <p className="text-xs text-muted-foreground">
-                    {t("detail.quantite")} {l.quantite} {l.unite ?? (l.produit?.unite ?? "")}
+                    {t("detail.quantite")} {l.quantite} {uniteLabel(l.unite ?? l.produit?.unite ?? "")}
                   </p>
                   <div>
                     <label className="text-xs text-muted-foreground">
@@ -582,7 +588,7 @@ export function BesoinsDetailClient({
                         </p>
                       )}
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {l.quantite} {l.unite ?? (l.produit?.unite ?? "")}
+                        {l.quantite} {uniteLabel(l.unite ?? l.produit?.unite ?? "")}
                         {" "}×{" "}
                         {formatMontant(l.prixEstime)} FCFA
                         {" = "}

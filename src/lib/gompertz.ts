@@ -396,11 +396,18 @@ function buildInitialGuess(
  * ti  ∈ [0, 300]       days
  */
 function buildBounds(
-  data: { t: number; w: number }[]
+  data: { t: number; w: number }[],
+  initialGuess?: Partial<GompertzParams>
 ): [[number, number], [number, number], [number, number]] {
   const maxObserved = Math.max(...data.map((d) => d.w));
+  const wInfFloor =
+    initialGuess?.wInfinity !== undefined &&
+    initialGuess.wInfinity >= CLARIAS_DEFAULTS.wInfinity &&
+    initialGuess.wInfinity <= 3000
+      ? initialGuess.wInfinity
+      : 800;
   return [
-    [Math.max(maxObserved, 800), 3000],
+    [Math.max(maxObserved, wInfFloor), 3000],
     [0.005, 0.2],
     [0, 300],
   ];
@@ -456,7 +463,7 @@ export function calibrerGompertz(
   const data = points.map((p) => ({ t: p.jour, w: p.poidsMoyen }));
 
   const initial = buildInitialGuess(data, initialGuess);
-  const bounds = buildBounds(data);
+  const bounds = buildBounds(data, initialGuess);
 
   const { params, r2, rmse } = levenbergMarquardt(data, initial, bounds);
 

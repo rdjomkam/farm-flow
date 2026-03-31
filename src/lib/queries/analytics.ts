@@ -1822,9 +1822,13 @@ export async function getFCRHebdomadaire(
 
     // SGR estime pour extrapolation post-dernier-releve biometrique
     const dernierBio = biometries.at(-1);
+    const joursEcoules =
+      dernierBio
+        ? Math.round((dernierBio.date.getTime() - vague.dateDebut.getTime()) / 86400000)
+        : 0;
     const sgrEstime =
-      dernierBio && dernierBio.poidsMoyen > vague.poidsMoyenInitial
-        ? (calculerSGR(vague.poidsMoyenInitial, dernierBio.poidsMoyen, 1) ?? 2.0)
+      dernierBio && dernierBio.poidsMoyen > vague.poidsMoyenInitial && joursEcoules > 0
+        ? (calculerSGR(vague.poidsMoyenInitial, dernierBio.poidsMoyen, joursEcoules) ?? 2.0)
         : 2.0;
 
     // Interpolation poids debut et fin de semaine
