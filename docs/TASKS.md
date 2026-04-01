@@ -7101,3 +7101,204 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 - Les nouveaux tests couvrent chaque correction
 - Build production OK
 - Review conforme R1-R9
+
+---
+
+## Sprint PERF — Optimisations de Performance Next.js
+
+**Objectif :** Corriger les 7 problèmes de performance identifiés dans `docs/decisions/ADR-PERF-001-nextjs-performance-optimization.md`.
+**Référence :** ADR-PERF-001, tickets `docs/bugs/BUG-PERF-001` à `BUG-PERF-007`
+**Ordre d'implémentation :** PERF-002 → PERF-004 → PERF-003 → PERF-001 → PERF-005 → PERF-006 → PERF-007
+
+---
+
+### Story PERF.1 — Corriger la sur-invalidation React Query (BUG-PERF-002)
+**Assigné à :** @developer
+**Dépend de :** Aucune
+**Priorité :** Critique
+**Statut :** `TODO`
+**Référence bug :** `docs/bugs/BUG-PERF-002.md`
+
+**Description :** Chaque mutation invalide des clés React Query trop larges (`*.all`) déclenchant des refetches en cascade inutiles. Corriger en ciblant les invalidations au niveau `list` ou `detail` selon l'impact réel de la mutation.
+
+**Tâches :**
+- [ ] `TODO` `use-releves-queries.ts` : remplacer `invalidate(vagues.all)` par `invalidate(vagues.detail(vagueId))` dans useCreateReleve/useUpdateReleve/useDeleteReleve
+- [ ] `TODO` `use-releves-queries.ts` : invalider `dashboard.all` uniquement pour les relevés biométrie/mortalité/comptage (impact KPIs), pas pour observation
+- [ ] `TODO` `use-vagues-queries.ts` : utiliser `setQueryData` pour patcher le cache après useUpdateVague au lieu d'invalider tout
+- [ ] `TODO` `use-ventes-queries.ts` : remplacer `invalidate(factures.all)` par `invalidate(factures.list())` dans useCreateVente/useDeleteVente
+- [ ] `TODO` `use-depenses-queries.ts` : remplacer `invalidate(depenses.all)` par `invalidate(depenses.list())` dans les mutations simples
+- [ ] `TODO` Créer un helper `invalidateRelatedQueries` dans `src/lib/query-invalidation.ts` pour centraliser la logique
+- [ ] `TODO` Test de non-régression : après création relevé, la liste ET le détail de la vague se mettent à jour
+- [ ] `TODO` `npx vitest run` + `npm run build` passent
+
+**Critères d'acceptation :**
+- Une mutation useCreateReleve déclenche au maximum 2 refetches réseau (pas 5)
+- Les détails d'entités non affectées ne sont pas invalidés
+- Zéro régression fonctionnelle
+
+---
+
+### Story PERF.2 — Corriger le polling en arrière-plan (BUG-PERF-004)
+**Assigné à :** @developer
+**Dépend de :** Aucune
+**Priorité :** Haute
+**Statut :** `TODO`
+**Référence bug :** `docs/bugs/BUG-PERF-004.md`
+
+**Description :** Trois queries et un setInterval continuent de poller même quand l'onglet est en arrière-plan. Ajouter `refetchIntervalInBackground: false` et conditionner le setInterval à la visibilité.
+
+**Tâches :**
+- [ ] `TODO` `notification-bell.tsx` : ajouter `refetchIntervalInBackground: false`
+- [ ] `TODO` `use-alertes-queries.ts` (useNotificationsCount) : ajouter `refetchIntervalInBackground: false`
+- [ ] `TODO` `use-planning-queries.ts` (useMesTachesCount) : ajouter `refetchIntervalInBackground: false`
+- [ ] `TODO` `use-network-status.ts` : suspendre le `setInterval` quand `document.visibilityState !== "visible"`, reprendre sur `visibilitychange` → visible
+- [ ] `TODO` Test de non-régression : aucun appel API émis pendant 2 minutes avec l'onglet caché
+- [ ] `TODO` `npx vitest run` + `npm run build` passent
+
+**Critères d'acceptation :**
+- 0 appel API réseau pendant que l'onglet est caché (hors reconnexion offline)
+- Le polling reprend immédiatement au retour sur l'onglet
+- Les notifications s'affichent bien à jour au retour
+
+---
+
+### Story PERF.3 — Corriger le double-fetch initialData (BUG-PERF-003)
+**Assigné à :** @developer
+**Dépend de :** Aucune
+**Priorité :** Moyenne
+**Statut :** `TODO`
+**Référence bug :** `docs/bugs/BUG-PERF-003.md`
+
+**Description :** Les hooks React Query recevant `initialData` depuis le SSR ne passent pas `initialDataUpdatedAt`, causant des refetches prématurés.
+
+**Tâches :**
+- [ ] `TODO` Modifier `useVaguesList`, `useVentesList`, `useFacturesList`, `useClientsList`, `useBesoinsList`, `useDashboardData` pour accepter `initialDataUpdatedAt?: number`
+- [ ] `TODO` Passer `initialDataUpdatedAt: Date.now()` depuis tous les Server Components qui fournissent `initialData`
+- [ ] `TODO` Aligner les `staleTime` : vagues→10min, bacs→5min, relevés→2min (inchangé), dashboard→5min
+- [ ] `TODO` Test de non-régression : après SSR, aucun refetch immédiat dans les 5 premières minutes
+- [ ] `TODO` `npx vitest run` + `npm run build` passent
+
+**Critères d'acceptation :**
+- Zéro refetch réseau dans les `staleTime` minutes suivant un rendu SSR avec initialData
+- Aucune régression sur la fraîcheur des données après mutation
+
+---
+
+### Story PERF.4 — Mettre en cache les données serveur avec unstable_cache (BUG-PERF-001)
+**Assigné à :** @developer + @db-specialist
+**Dépend de :** PERF.1 (les invalidations doivent être correctes avant d'ajouter du cache)
+**Priorité :** Haute
+**Statut :** `TODO`
+**Référence bug :** `docs/bugs/BUG-PERF-001.md`
+
+**Description :** Ajouter `unstable_cache` avec `revalidateTag` pour les données qui changent rarement, en suivant le pattern déjà utilisé dans `check-subscription.ts`.
+
+**Tâches :**
+- [ ] `TODO` Envelopper `getResumeFinancier` dans `unstable_cache` (TTL 2min, tag `finances-{siteId}`)
+- [ ] `TODO` Envelopper les queries du dashboard hero section (TTL 1min, tag `dashboard-{siteId}`)
+- [ ] `TODO` Envelopper `getTopClients` (TTL 5min, tag `clients-{siteId}`)
+- [ ] `TODO` Ajouter `revalidateTag("finances-{siteId}")` dans les routes POST /api/ventes, /api/depenses, /api/paiements
+- [ ] `TODO` Ajouter `revalidateTag("dashboard-{siteId}")` dans les routes mutation qui impactent les KPIs dashboard
+- [ ] `TODO` Évaluer et documenter si Prisma Accelerate est activé en production (Prisma Postgres)
+- [ ] `TODO` Test de non-régression : après création d'une vente, le dashboard reflète les nouvelles données en ≤2min
+- [ ] `TODO` `npx vitest run` + `npm run build` passent
+
+**Critères d'acceptation :**
+- Les pages du dashboard ne déclenchent pas de requêtes Prisma lors d'un refresh dans la fenêtre TTL
+- Les données se mettent à jour après mutation (revalidation correcte)
+- Aucune donnée obsolète visible plus de TTL secondes après une mutation
+
+---
+
+### Story PERF.5 — Optimiser GlobalLoadingContext (BUG-PERF-005)
+**Assigné à :** @developer
+**Dépend de :** PERF.1 (réduire les invalidations en cascade d'abord)
+**Priorité :** Moyenne
+**Statut :** `TODO`
+**Référence bug :** `docs/bugs/BUG-PERF-005.md`
+
+**Description :** Réduire les re-renders causés par GlobalLoadingContext en s'assurant que les polls silencieux utilisent `silentLoading: true` et en séparant optionnellement les providers.
+
+**Tâches :**
+- [ ] `TODO` Vérifier que les services de notification et planning passent `silentLoading: true` dans leurs appels polling
+- [ ] `TODO` Séparer `GlobalLoadingProvider` en `LoadingBarProvider` (isLoading) + `MutationOverlayProvider` (isMutating)
+- [ ] `TODO` Mettre à jour `GlobalLoadingBar` pour souscrire uniquement à `LoadingBarProvider`
+- [ ] `TODO` Mettre à jour `LoadingOverlay` pour souscrire uniquement à `MutationOverlayProvider`
+- [ ] `TODO` Test de non-régression via React DevTools Profiler : ≤2 re-renders de la sidebar par mutation
+- [ ] `TODO` `npx vitest run` + `npm run build` passent
+
+**Critères d'acceptation :**
+- La sidebar ne re-rend pas lors d'un poll de notifications (silentLoading)
+- Les composants non-liés au loading ne re-rendent pas lors d'appels API normaux
+
+---
+
+### Story PERF.6 — Lazy-load recharts avec next/dynamic (BUG-PERF-006)
+**Assigné à :** @developer
+**Dépend de :** Aucune
+**Priorité :** Basse
+**Statut :** `TODO`
+**Référence bug :** `docs/bugs/BUG-PERF-006.md`
+
+**Description :** Wrapper les composants de graphiques recharts avec `dynamic()` pour réduire le bundle initial sur les pages sans graphiques.
+
+**Tâches :**
+- [ ] `TODO` Installer `@next/bundle-analyzer` et identifier les chunks affectés
+- [ ] `TODO` Wrapper `FinancesDashboardClient` charts avec `dynamic(() => import(...), { ssr: false })`
+- [ ] `TODO` Wrapper `AnalyticsDashboardClient` charts avec `dynamic()`
+- [ ] `TODO` Wrapper `ProjectionsSection` (recharts dans dashboard) avec `dynamic()`
+- [ ] `TODO` Créer des `ChartSkeleton` avec dimensions fixes pour éviter le layout shift
+- [ ] `TODO` Vérifier avec bundle-analyzer que recharts n'est pas dans le bundle initial des pages sans graphiques
+- [ ] `TODO` `npx vitest run` + `npm run build` passent
+
+**Critères d'acceptation :**
+- recharts n'apparaît pas dans le JS initial des pages sans graphiques (ex: /bacs, /releves)
+- Aucun layout shift (CLS) lors du chargement des graphiques
+- Les graphiques restent fonctionnels
+
+---
+
+### Story PERF.7 — Optimiser sumCoutsParCategorie en GROUP BY (BUG-PERF-007)
+**Assigné à :** @developer
+**Dépend de :** Aucune
+**Priorité :** Basse
+**Statut :** `TODO`
+**Référence bug :** `docs/bugs/BUG-PERF-007.md`
+
+**Description :** Remplacer les 3 appels séparés à `sumCoutsParCategorie` par une seule requête SQL native `GROUP BY` via `prisma.$queryRaw`.
+
+**Tâches :**
+- [ ] `TODO` Créer une fonction `sumCoutsParCategorieGrouped(siteId, dateFilter?)` dans `src/lib/queries/finances.ts` utilisant `prisma.$queryRaw` avec `GROUP BY p."categorie"`
+- [ ] `TODO` Remplacer les 3 appels dans `getResumeFinancier` par un seul appel à la nouvelle fonction
+- [ ] `TODO` Typer correctement le résultat `$queryRaw` avec `Prisma.Decimal` si applicable
+- [ ] `TODO` Test unitaire : les valeurs retournées sont identiques à l'implémentation précédente
+- [ ] `TODO` Test avec filtre de date actif : les totaux sont corrects
+- [ ] `TODO` `npx vitest run` + `npm run build` passent
+
+**Critères d'acceptation :**
+- 1 seule requête SQL au lieu de 3 pour calculer les coûts par catégorie
+- Valeurs identiques à l'implémentation précédente
+- Gestion correcte des catégories sans données (retourne 0, pas null)
+
+---
+
+### Story PERF.8 — Tests et Review Sprint PERF
+**Assigné à :** @tester + @code-reviewer
+**Dépend de :** PERF.1 à PERF.7
+**Priorité :** Critique
+**Statut :** `TODO`
+
+**Tâches :**
+- [ ] `TODO` `npx vitest run` — tous les tests passent (anciens + nouveaux)
+- [ ] `TODO` `npm run build` — build production OK
+- [ ] `TODO` Vérifier checklist R1-R9
+- [ ] `TODO` Test manuel mobile (360px) : dashboard, vagues, finances — vérifier fraîcheur des données après mutation
+- [ ] `TODO` Vérifier avec Network DevTools que le polling ne se produit pas en arrière-plan
+- [ ] `TODO` Écrire `docs/reviews/review-sprint-PERF.md`
+- [ ] `TODO` Écrire `docs/tests/rapport-sprint-PERF.md`
+
+**Critères d'acceptation :**
+- Zéro régression sur les tests existants
+- Les nouveaux tests couvrent chaque correction (invalidation, polling, initialData, GROUP BY)
+- Build production OK
+- Review conforme R1-R9
