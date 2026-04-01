@@ -23,6 +23,7 @@ import {
   Boxes,
   ArrowLeft,
   Shield,
+  Flag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -33,13 +34,14 @@ interface NavItem {
 }
 
 const NAV_ITEM_DEFS: NavItem[] = [
-  { href: "/backoffice/dashboard",    labelKey: "dashboard",    icon: LayoutDashboard },
-  { href: "/backoffice/sites",        labelKey: "sites",        icon: Building2 },
-  { href: "/backoffice/abonnements",  labelKey: "abonnements",  icon: ShieldCheck },
-  { href: "/backoffice/plans",        labelKey: "plans",        icon: LayoutList },
-  { href: "/backoffice/commissions",  labelKey: "commissions",  icon: TrendingUp },
-  { href: "/backoffice/remises",      labelKey: "remises",      icon: Tag },
-  { href: "/backoffice/modules",      labelKey: "modules",      icon: Boxes },
+  { href: "/backoffice/dashboard",      labelKey: "dashboard",      icon: LayoutDashboard },
+  { href: "/backoffice/sites",          labelKey: "sites",          icon: Building2 },
+  { href: "/backoffice/abonnements",    labelKey: "abonnements",    icon: ShieldCheck },
+  { href: "/backoffice/plans",          labelKey: "plans",          icon: LayoutList },
+  { href: "/backoffice/commissions",    labelKey: "commissions",    icon: TrendingUp },
+  { href: "/backoffice/remises",        labelKey: "remises",        icon: Tag },
+  { href: "/backoffice/modules",        labelKey: "modules",        icon: Boxes },
+  { href: "/backoffice/feature-flags",  labelKey: "featureFlags",   icon: Flag },
 ];
 
 export function BackofficeSidebar() {

@@ -2611,3 +2611,44 @@ export interface RecevoirCommandeResponse {
   depense: { id: string; numero: string; montantTotal: number } | null;
   avertissements: string[];
 }
+
+// ---------------------------------------------------------------------------
+// Feature Flags (ADR-maintenance-mode)
+// ---------------------------------------------------------------------------
+
+/** Reponse pour la lecture d'un feature flag (ou liste de flags) */
+export interface FeatureFlagResponse {
+  key: string;
+  enabled: boolean;
+  value: Record<string, unknown> | null;
+  /** ISO 8601 */
+  updatedAt: string;
+  updatedByName: string | null;
+}
+
+/** Requete pour toggler le mode maintenance */
+export interface ToggleMaintenanceModeRequest {
+  enabled: boolean;
+  /** Message affiche aux utilisateurs sur la page /maintenance */
+  message?: string;
+  /** Date de fin prevue (ISO 8601) */
+  estimatedEnd?: string;
+  /** Raison interne (non affichee aux utilisateurs — pour les logs) */
+  internalReason?: string;
+}
+
+/** Reponse du toggle de maintenance */
+export interface ToggleMaintenanceModeResponse {
+  key: "MAINTENANCE_MODE";
+  enabled: boolean;
+  value: import("./models").MaintenanceFlagValue | null;
+  /** ISO 8601 */
+  updatedAt: string;
+}
+
+/** Reponse de la route publique GET /api/feature-flags/maintenance-status */
+export interface MaintenanceStatusResponse {
+  maintenanceMode: boolean;
+  message: string | null;
+  estimatedEnd: string | null;
+}

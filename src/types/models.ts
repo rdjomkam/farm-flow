@@ -2751,3 +2751,51 @@ export interface SiteAuditLog {
   details: Record<string, unknown> | null;
   createdAt: Date;
 }
+
+// ---------------------------------------------------------------------------
+// Modeles — Feature Flags (ADR-maintenance-mode)
+// ---------------------------------------------------------------------------
+
+/**
+ * FeatureFlag — Flag de fonctionnalite de la plateforme.
+ *
+ * Pas de siteId : ces flags sont globaux (exception R8 documentee dans ADR-maintenance-mode).
+ * Lecture par cle primaire : O(1) via index B-tree sur key.
+ */
+export interface FeatureFlag {
+  /** Cle unique identifiant le flag — ex: "MAINTENANCE_MODE" */
+  key: string;
+  /** Flag active ou non */
+  enabled: boolean;
+  /** Metadonnees libres — chaque flag definit sa propre structure dans value */
+  value: Record<string, unknown> | null;
+  updatedAt: Date;
+  /** ID du super-admin qui a modifie en dernier (null si jamais modifie) */
+  updatedBy: string | null;
+}
+
+/** Structure du champ value pour le flag MAINTENANCE_MODE */
+export interface MaintenanceFlagValue {
+  /** Message affiche aux utilisateurs sur la page /maintenance */
+  message?: string;
+  /** Date de debut de la maintenance (ISO 8601) */
+  startedAt?: string;
+  /** Date de fin prevue (ISO 8601) */
+  estimatedEnd?: string;
+  /** Raison interne (non affichee aux utilisateurs) */
+  internalReason?: string;
+}
+
+/**
+ * PlatformAuditLog — trace des actions platform-level effectuees par les super-admins.
+ *
+ * Distinct de SiteAuditLog : ces actions n'appartiennent a aucun site.
+ */
+export interface PlatformAuditLog {
+  id: string;
+  actorId: string;
+  /** Ex: "FEATURE_FLAG_ENABLED", "FEATURE_FLAG_DISABLED" */
+  action: string;
+  details: Record<string, unknown> | null;
+  createdAt: Date;
+}

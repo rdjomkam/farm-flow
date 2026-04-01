@@ -454,6 +454,18 @@ export type {
   RecevoirCommandeDTO,
   RecevoirCommandeResponse,
 } from "./api";
+// ADR-maintenance-mode — Feature Flags
+export type {
+  FeatureFlag,
+  MaintenanceFlagValue,
+  PlatformAuditLog,
+} from "./models";
+export type {
+  FeatureFlagResponse,
+  ToggleMaintenanceModeRequest,
+  ToggleMaintenanceModeResponse,
+  MaintenanceStatusResponse,
+} from "./api";
 export type {
   StockProduitContext,
   IndicateursContext,

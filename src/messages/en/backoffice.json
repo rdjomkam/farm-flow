@@ -17,7 +17,41 @@
     "plans": "Plans",
     "commissions": "Commissions",
     "remises": "Discounts",
-    "modules": "Modules"
+    "modules": "Modules",
+    "featureFlags": "Feature Flags"
+  },
+  "featureFlags": {
+    "title": "Feature Flags",
+    "description": "Enable or disable global platform features for DKFarm.",
+    "noFlags": "No feature flags configured.",
+    "activeLabel": "ACTIVE",
+    "enableLabel": "Enable",
+    "disableLabel": "Disable",
+    "lastUpdated": "Last updated",
+    "messageLabel": "Maintenance message",
+    "estimatedEndLabel": "Estimated end",
+    "toggleSuccessTitle": "Flag updated",
+    "enabledSuccess": "The flag has been enabled.",
+    "disabledSuccess": "The flag has been disabled.",
+    "toggleErrorTitle": "Error",
+    "toggleError": "An error occurred while updating the flag.",
+    "flags": {
+      "MAINTENANCE_MODE": {
+        "label": "Maintenance Mode",
+        "description": "Blocks access to the entire platform for all users (except super-admins). Use only during critical maintenance."
+      }
+    },
+    "confirmDialog": {
+      "title": "Enable maintenance mode?",
+      "description": "All users (except super-admins) will be blocked and redirected to the maintenance page. This action is immediate.",
+      "messageLabel": "Message displayed to users",
+      "messagePlaceholder": "Ex: Scheduled update. Back in 30 minutes.",
+      "estimatedEndLabel": "Estimated end date",
+      "optional": "optional",
+      "cancel": "Cancel",
+      "confirm": "Enable maintenance",
+      "processing": "Enabling..."
+    }
   },
   "siteStatus": {
     "title": "Change site status",

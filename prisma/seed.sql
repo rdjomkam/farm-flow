@@ -55,6 +55,8 @@ DELETE FROM "PlanAbonnement";
 -- ADR-021 — SiteAuditLog avant Site (FK siteId)
 DELETE FROM "SiteAuditLog";
 DELETE FROM "Site";
+-- ADR-maintenance-mode — PlatformAuditLog a FK actorId -> User
+DELETE FROM "PlatformAuditLog";
 DELETE FROM "User";
 -- ADR-021 — ModuleDefinition (registre global, pas de FK)
 DELETE FROM "ModuleDefinition";
@@ -2504,6 +2506,16 @@ INSERT INTO "MouvementStock" (id, "produitId", type, quantite, "prixTotal", "vag
 VALUES
   ('mvt_09', 'prod_07', 'ENTREE', 80.0, 62400, NULL, NULL, NULL, 'user_admin', '2026-03-01', 'Reception lot finition — controle qualite OK', '2027-03-01', 'LOT-2026-F06-001', 'site_01', NOW()),
   ('mvt_10', 'prod_01', 'ENTREE', 50.0, 42500, NULL, NULL, NULL, 'user_admin', '2026-03-10', 'Reapprovisionnement aliment croissance 3mm', '2027-01-15', 'LOT-2026-C03-002', 'site_01', NOW());
+
+-- ──────────────────────────────────────────
+-- FeatureFlags — ADR-maintenance-mode
+-- ──────────────────────────────────────────
+
+DELETE FROM "FeatureFlag";
+
+INSERT INTO "FeatureFlag" ("key", "enabled", "updatedAt")
+VALUES ('MAINTENANCE_MODE', false, NOW())
+ON CONFLICT ("key") DO NOTHING;
 
 COMMIT;
 

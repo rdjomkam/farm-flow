@@ -8,6 +8,7 @@ import { apiError } from "@/lib/api-utils";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission } from "@/types";
+import { checkPlatformMaintenance } from "@/lib/feature-flags";
 
 /**
  * GET /api/besoins/[id]
@@ -56,6 +57,11 @@ export async function PUT(
       request,
       Permission.BESOINS_SOUMETTRE
     );
+
+    // Guard maintenance — super-admin (Role.ADMIN) bypasse le blocage
+    const maintenanceResponse = await checkPlatformMaintenance(auth.globalRole === "ADMIN");
+    if (maintenanceResponse) return maintenanceResponse;
+
     const { id } = await params;
     const body = await request.json();
 
@@ -159,6 +165,11 @@ export async function DELETE(
       request,
       Permission.BESOINS_SOUMETTRE
     );
+
+    // Guard maintenance — super-admin (Role.ADMIN) bypasse le blocage
+    const maintenanceResponse = await checkPlatformMaintenance(auth.globalRole === "ADMIN");
+    if (maintenanceResponse) return maintenanceResponse;
+
     const { id } = await params;
     await deleteListeBesoins(id, auth.activeSiteId);
     return NextResponse.json({ success: true });

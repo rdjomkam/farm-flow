@@ -8,6 +8,7 @@ import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission, StatutBesoins, parsePaginationQuery } from "@/types";
 import type { CreateListeBesoinsDTO, ListeBesoinsFilters, VagueRatioDTO } from "@/types";
+import { checkPlatformMaintenance } from "@/lib/feature-flags";
 
 const VALID_STATUTS = Object.values(StatutBesoins);
 
@@ -86,6 +87,11 @@ export async function POST(request: NextRequest) {
       request,
       Permission.BESOINS_SOUMETTRE
     );
+
+    // Guard maintenance — super-admin (Role.ADMIN) bypasse le blocage
+    const maintenanceResponse = await checkPlatformMaintenance(auth.globalRole === "ADMIN");
+    if (maintenanceResponse) return maintenanceResponse;
+
     const body = await request.json();
     const errors: { field: string; message: string }[] = [];
 

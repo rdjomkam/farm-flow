@@ -797,6 +797,10 @@ model User {
   retraitsTraites         RetraitPortefeuille[]     @relation("RetraitTraiteur")
   // ADR-021 — Audit log des actions admin
   auditLogsActed          SiteAuditLog[]            @relation("AuditLogActor")
+  // ADR-maintenance-mode — FeatureFlags modifies par ce super-admin
+  featureFlags            FeatureFlag[]
+  // ADR-maintenance-mode — PlatformAuditLog
+  platformAuditLogs       PlatformAuditLog[]
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
 }
@@ -2526,4 +2530,47 @@ model GompertzVague {
 
   @@index([siteId])
   @@index([vagueId])
+}
+
+// ──────────────────────────────────────────
+// Modeles — Feature Flags (ADR-maintenance-mode)
+// ──────────────────────────────────────────
+
+/**
+ * FeatureFlag — Flags de fonctionnalites de la plateforme.
+ *
+ * Stockage global sans siteId : intentionnel, ces flags s'appliquent
+ * a toute la plateforme, pas a un site en particulier (R8 exception documentee).
+ *
+ * Flags predefined : MAINTENANCE_MODE (enabled: false par defaut)
+ */
+model FeatureFlag {
+  /// Cle unique identifiant le flag (ex: "MAINTENANCE_MODE", "REGISTRATION_ENABLED")
+  key           String    @id
+  /// Flag active ou non
+  enabled       Boolean   @default(false)
+  /// Metadonnees optionnelles : raison, message d'affichage, date de fin, etc.
+  value         Json?
+  updatedAt     DateTime  @updatedAt
+  /// ID du super-admin qui a modifie en dernier (null si jamais modifie)
+  updatedBy     String?
+  updatedByUser User?     @relation(fields: [updatedBy], references: [id], onDelete: SetNull)
+}
+
+/**
+ * PlatformAuditLog — Trace des actions platform-level effectuees par les super-admins.
+ *
+ * Distinct de SiteAuditLog car ces actions n'appartiennent a aucun site.
+ */
+model PlatformAuditLog {
+  id        String   @id @default(cuid())
+  actorId   String
+  actor     User     @relation(fields: [actorId], references: [id])
+  /// Ex: "FEATURE_FLAG_ENABLED", "FEATURE_FLAG_DISABLED"
+  action    String
+  details   Json?
+  createdAt DateTime @default(now())
+
+  @@index([actorId])
+  @@index([createdAt])
 }

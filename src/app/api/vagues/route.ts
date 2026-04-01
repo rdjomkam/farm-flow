@@ -12,6 +12,7 @@ import { PLAN_LIMITES } from "@/lib/abonnements-constants";
 import type { QuotaRessource } from "@/lib/abonnements/check-quotas";
 import { ErrorKeys } from "@/lib/api-error-keys";
 import { apiError } from "@/lib/api-utils";
+import { checkPlatformMaintenance } from "@/lib/feature-flags";
 
 export async function GET(request: NextRequest) {
   try {
@@ -68,6 +69,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.VAGUES_CREER);
+
+    // Guard maintenance — super-admin (Role.ADMIN) bypasse le blocage
+    const maintenanceResponse = await checkPlatformMaintenance(auth.globalRole === "ADMIN");
+    if (maintenanceResponse) return maintenanceResponse;
+
     const body = await request.json();
     const errors: { field: string; message: string }[] = [];
 

@@ -17,7 +17,41 @@
     "plans": "Plans",
     "commissions": "Commissions",
     "remises": "Remises",
-    "modules": "Modules"
+    "modules": "Modules",
+    "featureFlags": "Feature Flags"
+  },
+  "featureFlags": {
+    "title": "Feature Flags",
+    "description": "Activez ou desactivez les fonctionnalites globales de la plateforme DKFarm.",
+    "noFlags": "Aucun feature flag configure.",
+    "activeLabel": "ACTIF",
+    "enableLabel": "Activer",
+    "disableLabel": "Desactiver",
+    "lastUpdated": "Derniere modification",
+    "messageLabel": "Message de maintenance",
+    "estimatedEndLabel": "Fin prevue",
+    "toggleSuccessTitle": "Flag mis a jour",
+    "enabledSuccess": "Le flag a ete active.",
+    "disabledSuccess": "Le flag a ete desactive.",
+    "toggleErrorTitle": "Erreur",
+    "toggleError": "Une erreur est survenue lors de la mise a jour du flag.",
+    "flags": {
+      "MAINTENANCE_MODE": {
+        "label": "Mode Maintenance",
+        "description": "Bloque l'acces a toute la plateforme pour tous les utilisateurs (sauf les super-admins). Utilisez uniquement lors de maintenances critiques."
+      }
+    },
+    "confirmDialog": {
+      "title": "Activer le mode maintenance ?",
+      "description": "Tous les utilisateurs (hors super-admins) seront bloques et rediriges vers la page de maintenance. Cette action est immediate.",
+      "messageLabel": "Message affiche aux utilisateurs",
+      "messagePlaceholder": "Ex : Mise a jour planifiee. Retour dans 30 minutes.",
+      "estimatedEndLabel": "Date de fin prevue",
+      "optional": "optionnel",
+      "cancel": "Annuler",
+      "confirm": "Activer la maintenance",
+      "processing": "Activation..."
+    }
   },
   "siteStatus": {
     "title": "Changer le statut du site",

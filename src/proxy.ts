@@ -24,6 +24,7 @@ import { Role, StatutAbonnement } from "@/types";
 const SESSION_COOKIE = "session_token";
 const ROLE_COOKIE = "user_role";
 const IS_SUPER_ADMIN_COOKIE = "is_super_admin";
+const PLATFORM_MAINTENANCE_COOKIE = "platform_maintenance";
 
 /** Page d'accueil de l'espace ingénieur */
 const INGENIEUR_HOME = "/monitoring";
@@ -97,6 +98,31 @@ function isNoSiteRoute(pathname: string): boolean {
 }
 
 /**
+ * Whitelist maintenance — jamais bloquees meme si maintenance active.
+ * Ordre : routes exactes d'abord, puis prefixes.
+ */
+const MAINTENANCE_WHITELIST_EXACT = [
+  "/login",
+  "/register",
+  "/maintenance",
+  "/api/health",
+];
+
+const MAINTENANCE_WHITELIST_PREFIXES = [
+  "/backoffice",
+  "/api/auth/",
+  "/api/backoffice/",
+  "/_next/",
+];
+
+function isMaintenanceWhitelisted(pathname: string): boolean {
+  if (MAINTENANCE_WHITELIST_EXACT.includes(pathname)) return true;
+  return MAINTENANCE_WHITELIST_PREFIXES.some((prefix) =>
+    pathname.startsWith(prefix)
+  );
+}
+
+/**
  * Vérifie si le pathname est dans la whitelist d'abonnement.
  * Les routes API et les assets sont toujours exclus de la vérification.
  */
@@ -110,6 +136,41 @@ function isSubscriptionWhitelisted(pathname: string): boolean {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // ── Maintenance mode check ─────────────────────────────────────────────
+  // Couche 1 (UX uniquement) : lecture du cookie platform_maintenance (non-httpOnly).
+  // Si le cookie = "1" et l'utilisateur n'est pas super-admin : bloquer.
+  // Ce check est une garde UX basée sur le cookie — il peut être contourné
+  // si le cookie est absent ou expiré.
+  //
+  // Couche 2 (sécurité réelle) : checkPlatformMaintenance() dans les API routes
+  // (src/lib/feature-flags.ts) lit directement la DB avant chaque mutation.
+  // C'est ce guard qui garantit l'isolation effective en mode maintenance.
+  //
+  // Whitelist : /login, /register, /maintenance, /backoffice/*, /api/auth/*,
+  //             /api/backoffice/*, /api/health, /_next/*
+  const isMaintenance =
+    request.cookies.get(PLATFORM_MAINTENANCE_COOKIE)?.value === "1";
+
+  if (isMaintenance && !isMaintenanceWhitelisted(pathname)) {
+    const isSuperAdmin =
+      request.cookies.get(IS_SUPER_ADMIN_COOKIE)?.value === "true";
+
+    if (!isSuperAdmin) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json(
+          {
+            status: 503,
+            message: "Plateforme en maintenance.",
+            code: "MAINTENANCE_MODE",
+          },
+          { status: 503 }
+        );
+      }
+      return NextResponse.redirect(new URL("/maintenance", request.url));
+    }
+  }
+  // ── Fin maintenance check ──────────────────────────────────────────────
 
   // Public routes — always pass through
   // Note: we do NOT redirect logged-in users away from /login here because

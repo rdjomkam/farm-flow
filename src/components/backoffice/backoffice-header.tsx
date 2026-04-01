@@ -27,6 +27,7 @@ import {
   Tag,
   Boxes,
   ArrowLeft,
+  Flag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -39,13 +40,14 @@ interface NavItem {
 }
 
 const NAV_ITEM_DEFS: NavItem[] = [
-  { href: "/backoffice/dashboard",    labelKey: "dashboard",    icon: LayoutDashboard },
-  { href: "/backoffice/sites",        labelKey: "sites",        icon: Building2 },
-  { href: "/backoffice/abonnements",  labelKey: "abonnements",  icon: ShieldCheck },
-  { href: "/backoffice/plans",        labelKey: "plans",        icon: LayoutList },
-  { href: "/backoffice/commissions",  labelKey: "commissions",  icon: TrendingUp },
-  { href: "/backoffice/remises",      labelKey: "remises",      icon: Tag },
-  { href: "/backoffice/modules",      labelKey: "modules",      icon: Boxes },
+  { href: "/backoffice/dashboard",      labelKey: "dashboard",      icon: LayoutDashboard },
+  { href: "/backoffice/sites",          labelKey: "sites",          icon: Building2 },
+  { href: "/backoffice/abonnements",    labelKey: "abonnements",    icon: ShieldCheck },
+  { href: "/backoffice/plans",          labelKey: "plans",          icon: LayoutList },
+  { href: "/backoffice/commissions",    labelKey: "commissions",    icon: TrendingUp },
+  { href: "/backoffice/remises",        labelKey: "remises",        icon: Tag },
+  { href: "/backoffice/modules",        labelKey: "modules",        icon: Boxes },
+  { href: "/backoffice/feature-flags",  labelKey: "featureFlags",   icon: Flag },
 ];
 
 interface BackofficeHeaderProps {

@@ -7,6 +7,7 @@ import { Permission, parsePaginationQuery } from "@/types";
 import type { CreateVenteDTO, VenteFilters } from "@/types";
 import { apiError } from "@/lib/api-utils";
 import { checkIdempotency, storeIdempotency, hashBody } from "@/lib/idempotency";
+import { checkPlatformMaintenance } from "@/lib/feature-flags";
 
 export async function GET(request: NextRequest) {
   try {
@@ -47,6 +48,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.VENTES_CREER);
+
+    // Guard maintenance — super-admin (Role.ADMIN) bypasse le blocage
+    const maintenanceResponse = await checkPlatformMaintenance(auth.globalRole === "ADMIN");
+    if (maintenanceResponse) return maintenanceResponse;
 
     // Parse body once (needed before idempotency check for body hash)
     const body = await request.json();

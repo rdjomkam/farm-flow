@@ -10,6 +10,7 @@ import {
 } from "@/types";
 import { apiError } from "@/lib/api-utils";
 import type { CreateDepenseDTO, DepenseFilters } from "@/types";
+import { checkPlatformMaintenance } from "@/lib/feature-flags";
 
 const VALID_CATEGORIES = Object.values(CategorieDepense);
 const VALID_STATUTS = Object.values(StatutDepense);
@@ -88,6 +89,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.DEPENSES_CREER);
+
+    // Guard maintenance — super-admin (Role.ADMIN) bypasse le blocage
+    const maintenanceResponse = await checkPlatformMaintenance(auth.globalRole === "ADMIN");
+    if (maintenanceResponse) return maintenanceResponse;
 
     // Idempotency check
     const idempotencyKey = request.headers.get("X-Idempotency-Key");
