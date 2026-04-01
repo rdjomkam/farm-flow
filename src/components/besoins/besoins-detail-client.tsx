@@ -85,11 +85,11 @@ interface ListeBesoinsDetailData {
   motifRejet: string | null;
   notes: string | null;
   dateLimite: string | null;
-  vagueId: string | null;
   createdAt: string;
   demandeur: { id: string; name: string } | null;
   valideur: { id: string; name: string } | null;
-  vague: { id: string; code: string } | null;
+  /** Vagues associees avec ratios (multi-vague) */
+  vagues?: { id: string; vagueId: string; ratio: number; vague?: { id: string; code: string } | null }[];
   lignes: LigneBesoinData[];
   depenses: {
     id: string;
@@ -182,8 +182,7 @@ export function BesoinsDetailClient({
   async function handleApprouver() {
     const result = await depenseService.approuverBesoin(liste.id);
     if (result.ok && result.data) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setListe(result.data as any);
+      setListe(result.data as unknown as ListeBesoinsDetailData);
       queryClient.invalidateQueries({ queryKey: ["besoins"] });
     }
   }
@@ -193,8 +192,7 @@ export function BesoinsDetailClient({
       motif: motifRejet,
     });
     if (result.ok && result.data) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setListe(result.data as any);
+      setListe(result.data as unknown as ListeBesoinsDetailData);
       setRejectOpen(false);
       setMotifRejet("");
       queryClient.invalidateQueries({ queryKey: ["besoins"] });
@@ -209,8 +207,7 @@ export function BesoinsDetailClient({
       ligneActions: ligneActionsArr,
     });
     if (result.ok && result.data) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setListe(result.data as any);
+      setListe(result.data as unknown as ListeBesoinsDetailData);
       setTraitOpen(false);
       queryClient.invalidateQueries({ queryKey: ["besoins"] });
     }
@@ -225,8 +222,7 @@ export function BesoinsDetailClient({
       lignesReelles,
     });
     if (result.ok && result.data) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setListe(result.data as any);
+      setListe(result.data as unknown as ListeBesoinsDetailData);
       setClotureOpen(false);
       queryClient.invalidateQueries({ queryKey: ["besoins"] });
     }
@@ -288,10 +284,33 @@ export function BesoinsDetailClient({
                 </p>
               </div>
             )}
-            {liste.vague && (
+            {/* Vagues associees (multi-vague) */}
+            {liste.vagues && liste.vagues.length > 0 ? (
+              <div className={liste.vagues.length > 1 ? "col-span-2" : ""}>
+                <p className="text-xs text-muted-foreground">{t("detail.vaguesAssociees")}</p>
+                {liste.vagues.length === 1 ? (
+                  <p className="text-primary font-medium">
+                    {liste.vagues[0].vague?.code ?? liste.vagues[0].vagueId}
+                  </p>
+                ) : (
+                  <ul className="space-y-0.5 mt-0.5">
+                    {liste.vagues.map((lbv) => (
+                      <li key={lbv.id} className="flex items-center justify-between text-sm">
+                        <span className="text-primary font-medium">
+                          {lbv.vague?.code ?? lbv.vagueId}
+                        </span>
+                        <span className="text-xs text-muted-foreground ml-2">
+                          {Math.round(lbv.ratio * 1000) / 10} %
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ) : (
               <div>
                 <p className="text-xs text-muted-foreground">{t("detail.vague")}</p>
-                <p className="text-primary font-medium">{liste.vague.code}</p>
+                <p className="text-xs text-muted-foreground italic">{t("detail.depenseGenerale")}</p>
               </div>
             )}
             <div>
@@ -390,8 +409,7 @@ export function BesoinsDetailClient({
           <ModifierBesoinDialog
             liste={liste}
             onSuccess={(updated) => {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              setListe(updated as any);
+              setListe(updated as ListeBesoinsDetailData);
             }}
           />
         </div>
@@ -469,7 +487,7 @@ export function BesoinsDetailClient({
                 {t("detail.traiterDescription")}
               </p>
               {liste.lignes.map((l) => (
-                <div key={l.id} className="border rounded p-3 space-y-2">
+                <div key={l.id} className="border border-border rounded p-3 space-y-2">
                   <p className="text-sm font-medium">{l.designation}</p>
                   <p className="text-xs text-muted-foreground">
                     {l.quantite} {uniteLabel(l.unite ?? l.produit?.unite ?? "")} &times;{" "}
@@ -531,7 +549,7 @@ export function BesoinsDetailClient({
                 {t("detail.cloturerDescription")}
               </p>
               {liste.lignes.map((l) => (
-                <div key={l.id} className="border rounded p-3 space-y-2">
+                <div key={l.id} className="border border-border rounded p-3 space-y-2">
                   <p className="text-sm font-medium">{l.designation}</p>
                   <p className="text-xs text-muted-foreground">
                     {t("detail.quantite")} {l.quantite} {uniteLabel(l.unite ?? l.produit?.unite ?? "")}
@@ -647,7 +665,7 @@ export function BesoinsDetailClient({
                 <Link
                   key={d.id}
                   href={`/depenses/${d.id}`}
-                  className="flex items-center justify-between p-2 border rounded hover:bg-accent transition-colors"
+                  className="flex items-center justify-between p-2 border border-border rounded hover:bg-accent transition-colors"
                 >
                   <div>
                     <p className="text-xs font-mono text-muted-foreground">

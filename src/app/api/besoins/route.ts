@@ -7,7 +7,7 @@ import { apiError } from "@/lib/api-utils";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission, StatutBesoins, parsePaginationQuery } from "@/types";
-import type { CreateListeBesoinsDTO, ListeBesoinsFilters } from "@/types";
+import type { CreateListeBesoinsDTO, ListeBesoinsFilters, VagueRatioDTO } from "@/types";
 
 const VALID_STATUTS = Object.values(StatutBesoins);
 
@@ -133,6 +133,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validation vagues (optionnel)
+    let vagues: VagueRatioDTO[] | undefined;
+    if (body.vagues != null) {
+      if (!Array.isArray(body.vagues)) {
+        errors.push({ field: "vagues", message: "Le champ vagues doit etre un tableau." });
+      } else {
+        const vaguesArr = body.vagues as Array<{ vagueId?: unknown; ratio?: unknown }>;
+        for (let i = 0; i < vaguesArr.length; i++) {
+          const v = vaguesArr[i];
+          if (!v.vagueId || typeof v.vagueId !== "string") {
+            errors.push({ field: `vagues[${i}].vagueId`, message: `vagueId requis pour l'entree vague ${i + 1}.` });
+          }
+          if (v.ratio === undefined || typeof v.ratio !== "number" || (v.ratio as number) <= 0 || (v.ratio as number) > 1) {
+            errors.push({ field: `vagues[${i}].ratio`, message: `Ratio invalide pour la vague ${i + 1} (doit etre > 0 et <= 1).` });
+          }
+        }
+        if (vaguesArr.length > 0) {
+          const vagueIds = vaguesArr.map((v) => v.vagueId);
+          if (new Set(vagueIds).size !== vagueIds.length) {
+            errors.push({ field: "vagues", message: "Chaque vague ne peut apparaitre qu'une seule fois." });
+          }
+          const somme = vaguesArr.reduce((acc, v) => acc + (typeof v.ratio === "number" ? v.ratio : 0), 0);
+          if (Math.abs(somme - 1.0) > 0.001) {
+            errors.push({ field: "vagues", message: `La somme des ratios doit etre egale a 1.0 (somme actuelle : ${somme.toFixed(3)}).` });
+          }
+        }
+        vagues = vaguesArr as VagueRatioDTO[];
+      }
+    }
+
     if (errors.length > 0) {
       return apiError(400, "Erreurs de validation", { errors });
     }
@@ -149,7 +179,7 @@ export async function POST(request: NextRequest) {
 
     const data: CreateListeBesoinsDTO = {
       titre: body.titre.trim(),
-      vagueId: body.vagueId || undefined,
+      vagues: vagues && vagues.length > 0 ? vagues : undefined,
       notes: body.notes?.trim() || undefined,
       lignes: body.lignes.map((l: {
         designation: string;

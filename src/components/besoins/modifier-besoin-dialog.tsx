@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { useDepenseService } from "@/services/depense.service";
 import { useStockService } from "@/services/stock.service";
+import { VagueRatioEditor, type VagueRatioItem } from "./vague-ratio-editor";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -55,9 +56,14 @@ interface ListeBesoinsEditData {
   titre: string;
   notes: string | null;
   dateLimite: string | null;
-  vagueId: string | null;
-  vague: { id: string; code: string } | null;
+  /** Vagues associees avec ratios (multi-vague) */
+  vagues?: { id: string; vagueId: string; ratio: number; vague?: { id: string; code: string } | null }[];
   lignes: LigneBesoinData[];
+}
+
+interface VagueOption {
+  id: string;
+  code: string;
 }
 
 interface LigneForm {
@@ -123,12 +129,18 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
   const [open, setOpen] = useState(false);
   const [produits, setProduits] = useState<ProduitOption[]>([]);
   const [produitsLoading, setProduitsLoading] = useState(false);
+  const [vagues, setVaguesOptions] = useState<VagueOption[]>([]);
 
   // Form state — initialise depuis la liste courante
   const [titre, setTitre] = useState(liste.titre);
   const [notes, setNotes] = useState(liste.notes ?? "");
   const [dateLimite, setDateLimite] = useState(
     liste.dateLimite ? new Date(liste.dateLimite).toISOString().split("T")[0] : ""
+  );
+  const [vaguesRatios, setVaguesRatios] = useState<VagueRatioItem[]>(
+    (liste.vagues ?? [])
+      .filter((lbv) => lbv.vague != null)
+      .map((lbv) => ({ vagueId: lbv.vagueId, ratio: lbv.ratio }))
   );
   const [lignes, setLignes] = useState<LigneForm[]>(
     liste.lignes.length > 0 ? liste.lignes.map(toLigneForm) : [emptyLigne()]
@@ -177,14 +189,30 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
       setDateLimite(
         liste.dateLimite ? new Date(liste.dateLimite).toISOString().split("T")[0] : ""
       );
+      setVaguesRatios(
+        (liste.vagues ?? [])
+          .filter((lbv) => lbv.vague != null)
+          .map((lbv) => ({ vagueId: lbv.vagueId, ratio: lbv.ratio }))
+      );
       setLignes(liste.lignes.length > 0 ? liste.lignes.map(toLigneForm) : [emptyLigne()]);
       setValidationError("");
-      // Charger les produits si pas encore charges
+      // Charger les produits et les vagues si pas encore charges
       if (produits.length === 0) {
         setProduitsLoading(true);
-        const result = await stockService.listProduits();
-        if (result.ok && result.data) {
-          setProduits(result.data.data as ProduitOption[]);
+        const [produitsResult, vaguesResult] = await Promise.all([
+          stockService.listProduits(),
+          fetch("/api/vagues?limit=200").then((r) => r.json()).catch(() => null),
+        ]);
+        if (produitsResult.ok && produitsResult.data) {
+          setProduits(produitsResult.data.data as ProduitOption[]);
+        }
+        if (vaguesResult?.data) {
+          setVaguesOptions(
+            (vaguesResult.data as Array<{ id: string; code: string }>).map((v) => ({
+              id: v.id,
+              code: v.code,
+            }))
+          );
         }
         setProduitsLoading(false);
       }
@@ -227,6 +255,7 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
 
     const result = await depenseService.updateBesoin(liste.id, {
       titre: titre.trim(),
+      vagues: vaguesRatios.length > 0 ? vaguesRatios : [],
       notes: notes.trim() || null,
       dateLimite: dateLimite || null,
       lignes: lignes.map((l) => ({
@@ -293,6 +322,15 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
                 {t("modifierDialog.supprimerDate")}
               </button>
             )}
+          </div>
+
+          {/* Vagues associees */}
+          <div>
+            <VagueRatioEditor
+              vagues={vagues}
+              value={vaguesRatios}
+              onChange={setVaguesRatios}
+            />
           </div>
 
           {/* Notes */}

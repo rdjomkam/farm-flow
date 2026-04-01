@@ -141,6 +141,8 @@ import type {
   LigneBesoin,
   LigneBesoinWithRelations,
   ListeBesoins,
+  ListeBesoinsVague,
+  ListeBesoinsVagueWithRelations,
   ListeBesoinsWithRelations,
   LotAlevins,
   MouvementStock,
@@ -1338,12 +1340,23 @@ export interface CreateLigneBesoinDTO {
   prixEstime: number;
 }
 
+/** Entree d'association vague-ratio dans un DTO Besoins */
+export interface VagueRatioDTO {
+  vagueId: string;
+  /** Valeur entre 0 (exclus) et 1 (inclus). La somme de tous les ratios doit valoir 1.0 */
+  ratio: number;
+}
+
 /** DTO pour creer une liste de besoins */
 export interface CreateListeBesoinsDTO {
   /** Intitule de la demande */
   titre: string;
-  /** Vague associee (optionnel) */
-  vagueId?: string;
+  /**
+   * Vagues associees avec leurs ratios (optionnel).
+   * - Absent ou [] : liste sans vague (frais generaux)
+   * - Present : la somme des ratios doit etre egale a 1.0
+   */
+  vagues?: VagueRatioDTO[];
   /** Lignes de besoin */
   lignes: CreateLigneBesoinDTO[];
   /** Notes libres (optionnel) */
@@ -1355,7 +1368,13 @@ export interface CreateListeBesoinsDTO {
 /** DTO pour modifier une liste de besoins (seulement si SOUMISE) */
 export interface UpdateListeBesoinsDTO {
   titre?: string;
-  vagueId?: string | null;
+  /**
+   * Remplacement complet des associations vague.
+   * - null : supprimer toutes les associations
+   * - [] : idem
+   * - [...] : remplacer par les nouvelles associations (ratios doivent sommer a 1.0)
+   */
+  vagues?: VagueRatioDTO[] | null;
   notes?: string | null;
   lignes?: CreateLigneBesoinDTO[];
   /** Modifier la date limite (null = supprimer) */
@@ -1366,6 +1385,10 @@ export interface UpdateListeBesoinsDTO {
 export interface ListeBesoinsFilters {
   statut?: StatutBesoins;
   demandeurId?: string;
+  /**
+   * Filtrer par vague : retourne les listes ayant au moins une association avec cette vague.
+   * Implementation : EXISTS sur ListeBesoinsVague.vagueId
+   */
   vagueId?: string;
   dateFrom?: string;
   dateTo?: string;
@@ -1421,7 +1444,7 @@ export interface ListeBesoinsDetailResponse {
 }
 
 // Re-export types used in Besoins context
-export type { LigneBesoin, LigneBesoinWithRelations, ListeBesoins, ListeBesoinsWithRelations };
+export type { LigneBesoin, LigneBesoinWithRelations, ListeBesoins, ListeBesoinsVague, ListeBesoinsVagueWithRelations, ListeBesoinsWithRelations };
 
 // Sprint 18 — Depenses Recurrentes
 

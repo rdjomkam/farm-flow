@@ -31,6 +31,9 @@ const mockCommandeCreate = vi.fn();
 const mockCommandeFindFirst = vi.fn();
 const mockDepenseCreate = vi.fn();
 const mockDepenseFindFirst = vi.fn();
+const mockListeBesoinsVagueCreateMany = vi.fn();
+const mockListeBesoinsVagueDeleteMany = vi.fn();
+const mockListeBesoinsVagueFindMany = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -48,6 +51,11 @@ vi.mock("@/lib/db", () => ({
       deleteMany: (...args: unknown[]) => mockLigneBesoinDeleteMany(...args),
       updateMany: (...args: unknown[]) => mockLigneBesoinUpdateMany(...args),
       findMany: (...args: unknown[]) => mockLigneBesoinFindMany(...args),
+    },
+    listeBesoinsVague: {
+      createMany: (...args: unknown[]) => mockListeBesoinsVagueCreateMany(...args),
+      deleteMany: (...args: unknown[]) => mockListeBesoinsVagueDeleteMany(...args),
+      findMany: (...args: unknown[]) => mockListeBesoinsVagueFindMany(...args),
     },
     commande: {
       create: (...args: unknown[]) => mockCommandeCreate(...args),
@@ -71,6 +79,11 @@ vi.mock("@/lib/db", () => ({
           deleteMany: mockLigneBesoinDeleteMany,
           updateMany: mockLigneBesoinUpdateMany,
           findMany: mockLigneBesoinFindMany,
+        },
+        listeBesoinsVague: {
+          createMany: mockListeBesoinsVagueCreateMany,
+          deleteMany: mockListeBesoinsVagueDeleteMany,
+          findMany: mockListeBesoinsVagueFindMany,
         },
         commande: {
           create: mockCommandeCreate,
@@ -315,6 +328,24 @@ describe("GET /api/besoins", () => {
     const res = await GET(req);
     expect(res.status).toBe(403);
   });
+
+  it("filtre par vagueId via vagues some query path", async () => {
+    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
+    mockListeBesoinsFindMany.mockResolvedValue([FAKE_LISTE_SOUMISE]);
+    mockListeBesoinsCount.mockResolvedValue(1);
+
+    const req = makeRequest(
+      "http://localhost:3000/api/besoins?vagueId=vague-42"
+    );
+    const res = await GET(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(Array.isArray(data.data)).toBe(true);
+    // Verify that findMany was called with a filter including the vagueId
+    const callArgs = mockListeBesoinsFindMany.mock.calls[0]?.[0];
+    const whereClause = JSON.stringify(callArgs?.where ?? {});
+    expect(whereClause).toContain("vague-42");
+  });
 });
 
 describe("POST /api/besoins", () => {
@@ -388,6 +419,85 @@ describe("POST /api/besoins", () => {
     });
     const res = await POST(req);
     expect(res.status).toBe(403);
+  });
+
+  it("retourne 201 avec payload multi-vague (deux vagues, ratios = 1.0)", async () => {
+    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
+    mockListeBesoinsFindFirst.mockResolvedValue(null);
+    mockListeBesoinsCreate.mockResolvedValue(FAKE_LISTE_SOUMISE);
+    mockLigneBesoinCreateMany.mockResolvedValue({ count: 1 });
+    mockListeBesoinsVagueCreateMany.mockResolvedValue({ count: 2 });
+    mockListeBesoinsFindUniqueOrThrow.mockResolvedValue({
+      ...FAKE_LISTE_SOUMISE,
+      lignes: [],
+      depenses: [],
+      demandeur: { id: "user-1", name: "Admin" },
+      valideur: null,
+      vagues: [
+        { id: "lbv-1", vagueId: "vague-1", ratio: 0.6 },
+        { id: "lbv-2", vagueId: "vague-2", ratio: 0.4 },
+      ],
+      _count: { lignes: 1 },
+    });
+
+    const req = makeRequest("http://localhost:3000/api/besoins", {
+      method: "POST",
+      body: JSON.stringify({
+        titre: "Besoins multi-vague",
+        lignes: [{ designation: "Aliment 3mm", quantite: 50, prixEstime: 800 }],
+        vagues: [
+          { vagueId: "vague-1", ratio: 0.6 },
+          { vagueId: "vague-2", ratio: 0.4 },
+        ],
+      }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(201);
+    expect(mockListeBesoinsVagueCreateMany).toHaveBeenCalled();
+  });
+
+  it("retourne 400 si la somme des ratios vagues != 1.0", async () => {
+    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
+
+    const req = makeRequest("http://localhost:3000/api/besoins", {
+      method: "POST",
+      body: JSON.stringify({
+        titre: "Besoins mauvais ratios",
+        lignes: [{ designation: "Aliment", quantite: 10, prixEstime: 500 }],
+        vagues: [
+          { vagueId: "vague-1", ratio: 0.5 },
+          { vagueId: "vague-2", ratio: 0.3 },
+        ],
+      }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    // apiError wraps details in the errors array; check the error message there
+    const errorsText = JSON.stringify(data.errors ?? data);
+    expect(errorsText).toMatch(/ratios/i);
+  });
+
+  it("retourne 400 si vagueId duplique dans le payload vagues", async () => {
+    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
+
+    const req = makeRequest("http://localhost:3000/api/besoins", {
+      method: "POST",
+      body: JSON.stringify({
+        titre: "Besoins avec doublons",
+        lignes: [{ designation: "Aliment", quantite: 10, prixEstime: 500 }],
+        vagues: [
+          { vagueId: "vague-1", ratio: 0.5 },
+          { vagueId: "vague-1", ratio: 0.5 },
+        ],
+      }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    // apiError wraps details in the errors array; check the error message there
+    const errorsText = JSON.stringify(data.errors ?? data);
+    expect(errorsText).toMatch(/une seule fois/i);
   });
 });
 

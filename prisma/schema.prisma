@@ -873,7 +873,7 @@ model Vague {
   lotsAlevinsTransferes   LotAlevins[]
   activites               Activite[]
   depenses                Depense[]
-  listesBesoins           ListeBesoins[]
+  listesBesoinVagues      ListeBesoinsVague[]
   // Sprint 23 — Monitoring Ingénieur
   notes                   NoteIngenieur[]
   // Sprint 24 — Calibrage
@@ -1567,8 +1567,6 @@ model ListeBesoins {
   demandeur      User           @relation("ListeBesoinsCreees", fields: [demandeurId], references: [id])
   valideurId     String?
   valideur       User?          @relation("ListeBesoinsValidees", fields: [valideurId], references: [id])
-  vagueId        String?
-  vague          Vague?         @relation(fields: [vagueId], references: [id], onDelete: SetNull)
   statut         StatutBesoins  @default(SOUMISE)
   /** Somme estimée des besoins (SUM quantite * prixEstime) */
   montantEstime  Float          @default(0)
@@ -1583,14 +1581,34 @@ model ListeBesoins {
   site           Site           @relation(fields: [siteId], references: [id])
   lignes         LigneBesoin[]
   depenses       Depense[]
+  /** Vagues associées avec leurs ratios de répartition (remplace vagueId direct) */
+  vagues         ListeBesoinsVague[]
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
   @@index([siteId])
   @@index([siteId, statut])
   @@index([demandeurId])
-  @@index([vagueId])
   @@index([dateLimite])
+}
+
+/** Table de jonction entre ListeBesoins et Vague avec ratio de répartition des coûts */
+model ListeBesoinsVague {
+  id             String       @id @default(cuid())
+  listeBesoinsId String
+  listeBesoins   ListeBesoins @relation(fields: [listeBesoinsId], references: [id], onDelete: Cascade)
+  vagueId        String
+  vague          Vague        @relation(fields: [vagueId], references: [id], onDelete: Cascade)
+  /// Fraction du coût imputée à cette vague. Doit être > 0 et <= 1.
+  /// La somme des ratio pour un même listeBesoinsId doit être = 1.0
+  ratio          Float        @default(1.0)
+  /** ID du site (ferme) — R8 */
+  siteId         String
+  createdAt      DateTime     @default(now())
+
+  @@unique([listeBesoinsId, vagueId])
+  @@index([vagueId])
+  @@index([siteId])
 }
 
 model LigneBesoin {

@@ -90,11 +90,21 @@
       "prixPositif": "Price for line {index} must be positive or zero."
     }
   },
+  "vagueEditor": {
+    "titre": "Associated batches",
+    "ajouter": "Add",
+    "aucuneVague": "General expense (not allocated to a batch)",
+    "selectVague": "Select a batch",
+    "total": "Total:",
+    "equilibrer": "Balance"
+  },
   "detail": {
     "retour": "Back to needs",
     "demandeur": "Requester",
     "valideur": "Validator",
     "vague": "Batch",
+    "vaguesAssociees": "Associated batches",
+    "depenseGenerale": "General expense",
     "creeeLe": "Created on",
     "dateLimite": "Deadline",
     "enRetard": "Overdue",

@@ -15,6 +15,7 @@ DELETE FROM "PaiementDepense";
 DELETE FROM "LigneBesoin";
 DELETE FROM "DepenseRecurrente";
 DELETE FROM "Depense";
+DELETE FROM "ListeBesoinsVague";
 DELETE FROM "ListeBesoins";
 DELETE FROM "Paiement";
 DELETE FROM "Facture";
@@ -1070,37 +1071,47 @@ INSERT INTO "PaiementDepense" (
 
 INSERT INTO "ListeBesoins" (
   "id", "numero", "titre",
-  "demandeurId", "valideurId", "vagueId",
+  "demandeurId", "valideurId",
   "statut", "montantEstime", "montantReel", "motifRejet", "notes",
   "siteId", "createdAt", "updatedAt"
 ) VALUES
-  -- bes_01: SOUMISE — en attente d'approbation
+  -- bes_01: SOUMISE — en attente d'approbation (associee a vague_01 via junction)
   (
     'bes_01', 'BES-2026-001',
     'Besoins alimentation vague Mars 2026',
-    'user_gerant', NULL, 'vague_01',
+    'user_gerant', NULL,
     'SOUMISE', 95000.0, NULL, NULL,
     'Besoins pour le prochain cycle d''alimentation',
     'site_01', NOW(), NOW()
   ),
-  -- bes_02: APPROUVEE — validee, en attente de traitement
+  -- bes_02: APPROUVEE — validee, en attente de traitement (sans vague)
   (
     'bes_02', 'BES-2026-002',
     'Equipements entretien bacs',
-    'user_gerant', 'user_admin', NULL,
+    'user_gerant', 'user_admin',
     'APPROUVEE', 45000.0, NULL, NULL,
     'Materiel d''entretien prioritaire',
     'site_01', NOW(), NOW()
   ),
-  -- bes_03: CLOTUREE — completement traitee
+  -- bes_03: CLOTUREE — completement traitee (associee a vague_01 et vague_02 via junction)
   (
     'bes_03', 'BES-2026-003',
     'Intrants traitement preventif',
-    'user_gerant', 'user_admin', 'vague_01',
+    'user_gerant', 'user_admin',
     'CLOTUREE', 30000.0, 28500.0, NULL,
     'Traitement preventif realise en fevrier',
     'site_01', NOW(), NOW()
   );
+
+-- ListeBesoinsVague — associations vague/ratio pour les listes de besoins
+INSERT INTO "ListeBesoinsVague" (
+  "id", "listeBesoinsId", "vagueId", "ratio", "siteId", "createdAt"
+) VALUES
+  -- bes_01 -> vague_01 (ratio 1.0 — liste mono-vague)
+  ('lbv_01', 'bes_01', 'vague_01', 1.0, 'site_01', NOW()),
+  -- bes_03 -> vague_01 (40%) + vague_02 (60%) — liste multi-vague demo
+  ('lbv_02', 'bes_03', 'vague_01', 0.4, 'site_01', NOW()),
+  ('lbv_03', 'bes_03', 'vague_02', 0.6, 'site_01', NOW());
 
 -- 8 lignes de besoin (réparties sur les 3 listes)
 INSERT INTO "LigneBesoin" (

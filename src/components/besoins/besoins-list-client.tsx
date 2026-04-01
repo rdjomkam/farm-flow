@@ -38,7 +38,8 @@ interface ListeBesoinsData {
   createdAt: string;
   demandeur: { id: string; name: string } | null;
   valideur: { id: string; name: string } | null;
-  vague: { id: string; code: string } | null;
+  /** Vagues associees avec ratios (multi-vague) */
+  vagues?: { id: string; vagueId: string; ratio: number; vague?: { id: string; code: string } | null }[];
   _count: { lignes: number };
 }
 
@@ -209,9 +210,17 @@ export function BesoinsListClient({
                               {lb.demandeur.name}
                             </span>
                           )}
-                          {lb.vague && (
+                          {lb.vagues && lb.vagues.length === 1 && lb.vagues[0].vague && (
                             <span className="text-primary">
-                              {lb.vague.code}
+                              {lb.vagues[0].vague.code}
+                            </span>
+                          )}
+                          {lb.vagues && lb.vagues.length > 1 && lb.vagues[0].vague && (
+                            <span className="text-primary">
+                              {lb.vagues[0].vague.code}{" "}
+                              <span className="text-xs opacity-70">
+                                +{lb.vagues.length - 1}
+                              </span>
                             </span>
                           )}
                           <span className="flex items-center gap-1">

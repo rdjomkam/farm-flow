@@ -6,6 +6,7 @@ import type {
   ListeBesoinsFilters,
   TraiterBesoinsDTO,
   CloturerBesoinsDTO,
+  VagueRatioDTO,
 } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -34,6 +35,30 @@ function calculerMontantEstime(
   lignes: Array<{ quantite: number; prixEstime: number }>
 ): number {
   return lignes.reduce((acc, l) => acc + l.quantite * l.prixEstime, 0);
+}
+
+// ---------------------------------------------------------------------------
+// Validation des ratios vague (R-MV-02, R-MV-04)
+// ---------------------------------------------------------------------------
+
+/**
+ * Valide que les ratios vague sont corrects :
+ * - Chaque ratio doit etre > 0 et <= 1 (R-MV-04)
+ * - Si au moins une vague, la somme doit etre = 1.0 +- 0.001 (R-MV-02)
+ */
+function validerRatios(vagues: VagueRatioDTO[]): void {
+  if (vagues.length === 0) return;
+  for (const v of vagues) {
+    if (v.ratio <= 0 || v.ratio > 1) {
+      throw new Error(`Ratio invalide ${v.ratio} pour la vague ${v.vagueId} (doit etre > 0 et <= 1)`);
+    }
+  }
+  const somme = vagues.reduce((acc, v) => acc + v.ratio, 0);
+  if (Math.abs(somme - 1.0) > 0.001) {
+    throw new Error(
+      `La somme des ratios doit etre egale a 1.0 (somme actuelle : ${somme.toFixed(3)})`
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -68,7 +93,14 @@ function verifierTransition(
 const INCLUDE_LISTE_BESOINS = {
   demandeur: { select: { id: true, name: true } },
   valideur: { select: { id: true, name: true } },
-  vague: { select: { id: true, code: true } },
+  vagues: {
+    select: {
+      id: true,
+      vagueId: true,
+      ratio: true,
+      vague: { select: { id: true, code: true } },
+    },
+  },
   lignes: {
     include: {
       produit: { select: { id: true, nom: true, unite: true } },
@@ -98,7 +130,9 @@ export async function getListeBesoins(
     siteId,
     ...(filters?.statut && { statut: filters.statut }),
     ...(filters?.demandeurId && { demandeurId: filters.demandeurId }),
-    ...(filters?.vagueId && { vagueId: filters.vagueId }),
+    ...(filters?.vagueId && {
+      vagues: { some: { vagueId: filters.vagueId } },
+    }),
     ...(filters?.dateFrom || filters?.dateTo
       ? {
           createdAt: {
@@ -125,7 +159,14 @@ export async function getListeBesoins(
       include: {
         demandeur: { select: { id: true, name: true } },
         valideur: { select: { id: true, name: true } },
-        vague: { select: { id: true, code: true } },
+        vagues: {
+          select: {
+            id: true,
+            vagueId: true,
+            ratio: true,
+            vague: { select: { id: true, code: true } },
+          },
+        },
         _count: { select: { lignes: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -159,6 +200,9 @@ export async function createListeBesoins(
   if (!data.lignes || data.lignes.length === 0) {
     throw new Error("La liste doit contenir au moins une ligne de besoin");
   }
+  if (data.vagues && data.vagues.length > 0) {
+    validerRatios(data.vagues);
+  }
   const numero = await generateNumeroBesoin(siteId);
   const montantEstime = calculerMontantEstime(data.lignes);
 
@@ -168,13 +212,24 @@ export async function createListeBesoins(
         numero,
         titre: data.titre,
         demandeurId: userId,
-        vagueId: data.vagueId ?? null,
         montantEstime,
         notes: data.notes ?? null,
         dateLimite: data.dateLimite ? new Date(data.dateLimite) : null,
         siteId,
       },
     });
+
+    // Creer les associations vague (table de jonction)
+    if (data.vagues && data.vagues.length > 0) {
+      await tx.listeBesoinsVague.createMany({
+        data: data.vagues.map((v) => ({
+          listeBesoinsId: liste.id,
+          vagueId: v.vagueId,
+          ratio: v.ratio,
+          siteId,
+        })),
+      });
+    }
 
     // Creer les lignes
     await tx.ligneBesoin.createMany({
@@ -213,6 +268,27 @@ export async function updateListeBesoins(
       );
     }
 
+    // Mise a jour des vagues (remplacement atomique si fourni)
+    if (data.vagues !== undefined) {
+      const nouvellesVagues = data.vagues ?? [];
+      if (nouvellesVagues.length > 0) {
+        validerRatios(nouvellesVagues);
+      }
+      // Supprimer toutes les associations existantes
+      await tx.listeBesoinsVague.deleteMany({ where: { listeBesoinsId: id } });
+      // Recréer si non null/vide
+      if (nouvellesVagues.length > 0) {
+        await tx.listeBesoinsVague.createMany({
+          data: nouvellesVagues.map((v) => ({
+            listeBesoinsId: id,
+            vagueId: v.vagueId,
+            ratio: v.ratio,
+            siteId: liste.siteId,
+          })),
+        });
+      }
+    }
+
     // Si nouvelles lignes fournies, recalcul montantEstime
     let montantEstime = liste.montantEstime;
     if (data.lignes) {
@@ -236,7 +312,6 @@ export async function updateListeBesoins(
       where: { id },
       data: {
         ...(data.titre !== undefined && { titre: data.titre }),
-        ...(data.vagueId !== undefined && { vagueId: data.vagueId }),
         ...(data.notes !== undefined && { notes: data.notes }),
         // dateLimite : null = supprimer, string = mettre a jour, undefined = inchange (ADR-017.2)
         ...(data.dateLimite !== undefined && {

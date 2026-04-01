@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { useDepenseService } from "@/services";
 import { queryKeys } from "@/lib/query-keys";
+import { VagueRatioEditor, type VagueRatioItem } from "./vague-ratio-editor";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -87,7 +88,7 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
   const t = useTranslations("besoins");
 
   const [titre, setTitre] = useState("");
-  const [vagueId, setVagueId] = useState("");
+  const [vaguesRatios, setVaguesRatios] = useState<VagueRatioItem[]>([]);
   const [notes, setNotes] = useState("");
   const [dateLimite, setDateLimite] = useState("");
   const [lignes, setLignes] = useState<LigneForm[]>([emptyLigne()]);
@@ -161,7 +162,7 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
 
     const result = await depenseService.createBesoin({
       titre: titre.trim(),
-      vagueId: vagueId || undefined,
+      vagues: vaguesRatios.length > 0 ? vaguesRatios : undefined,
       notes: notes.trim() || undefined,
       dateLimite: dateLimite || undefined,
       lignes: lignes.map((l) => ({
@@ -207,23 +208,11 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
           </div>
 
           <div>
-            <label className="text-sm font-medium">{t("form.vagueAssociee")}</label>
-            <Select
-              value={vagueId}
-              onValueChange={(v) => setVagueId(v === "none" ? "" : v)}
-            >
-              <SelectTrigger className="mt-1 w-full">
-                <SelectValue placeholder={t("form.vaguePlaceholder")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">{t("form.vagueAucune")}</SelectItem>
-                {vagues.map((v) => (
-                  <SelectItem key={v.id} value={v.id}>
-                    {v.code}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <VagueRatioEditor
+              vagues={vagues}
+              value={vaguesRatios}
+              onChange={setVaguesRatios}
+            />
           </div>
 
           <div>

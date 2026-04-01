@@ -321,6 +321,27 @@ export async function getRentabiliteParVague(
     select: { vagueId: true, montantTotal: true },
   });
 
+  // Charger les depenses issues de listes de besoins multi-vague (pas de vagueId direct)
+  const depensesBesoinsMultiVague = await prisma.depense.findMany({
+    where: {
+      siteId,
+      listeBesoinsId: { not: null },
+      vagueId: null,
+      commandeId: null,
+    },
+    select: {
+      montantTotal: true,
+      listeBesoins: {
+        select: {
+          vagues: {
+            select: { vagueId: true, ratio: true },
+            where: { vagueId: { in: vagueIds } },
+          },
+        },
+      },
+    },
+  });
+
   // Agreger par vagueId en memoire
   const ventesByVague = new Map<
     string,
@@ -349,6 +370,17 @@ export async function getRentabiliteParVague(
   for (const dep of depensesParVague) {
     if (!dep.vagueId) continue;
     coutsByVague.set(dep.vagueId, (coutsByVague.get(dep.vagueId) ?? 0) + dep.montantTotal);
+  }
+
+  // Imputer les depenses multi-vague au prorata des ratios
+  for (const dep of depensesBesoinsMultiVague) {
+    for (const lbv of dep.listeBesoins?.vagues ?? []) {
+      const montantImpute = dep.montantTotal * lbv.ratio;
+      coutsByVague.set(
+        lbv.vagueId,
+        (coutsByVague.get(lbv.vagueId) ?? 0) + montantImpute
+      );
+    }
   }
 
   // Construire le tableau de rentabilite

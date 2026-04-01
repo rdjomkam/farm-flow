@@ -128,6 +128,8 @@ export type {
   PaiementDepense,
   // Sprint 17 — Besoins
   ListeBesoins,
+  ListeBesoinsVague,
+  ListeBesoinsVagueWithRelations,
   ListeBesoinsWithRelations,
   LigneBesoin,
   LigneBesoinWithRelations,
@@ -329,6 +331,7 @@ export type {
 // Sprint 17 — Besoins
 export type {
   CreateLigneBesoinDTO,
+  VagueRatioDTO,
   CreateListeBesoinsDTO,
   UpdateListeBesoinsDTO,
   ListeBesoinsFilters,

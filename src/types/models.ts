@@ -4,7 +4,7 @@
  * Ces types representent les modeles tels qu'ils sont stockes en base.
  * Ils servent de source de verite TypeScript pour le projet.
  *
- * 32 modeles : Site, SiteRole, SiteMember, User, Session, Bac, Vague, Releve, Fournisseur, Produit, MouvementStock, Commande, LigneCommande, ReleveConsommation, Client, Vente, Facture, Paiement, Reproducteur, Ponte, LotAlevins, ConfigAlerte, Notification, Activite, Depense, PaiementDepense, DepenseRecurrente, ListeBesoins, LigneBesoin, RegleActivite, ConditionRegle, NoteIngenieur
+ * 33 modeles : Site, SiteRole, SiteMember, User, Session, Bac, Vague, Releve, Fournisseur, Produit, MouvementStock, Commande, LigneCommande, ReleveConsommation, Client, Vente, Facture, Paiement, Reproducteur, Ponte, LotAlevins, ConfigAlerte, Notification, Activite, Depense, PaiementDepense, DepenseRecurrente, ListeBesoins, ListeBesoinsVague, LigneBesoin, RegleActivite, ConditionRegle, NoteIngenieur
  * + Sprint 30 : PlanAbonnement, Abonnement, PaiementAbonnement, Remise, RemiseApplication, CommissionIngenieur, PortefeuilleIngenieur, RetraitPortefeuille (8 modeles)
  * 36 enums : Role (+ INGENIEUR), Permission (+ 6 Phase 3), StatutVague, TypeReleve (+ RENOUVELLEMENT), TypeAliment, CauseMortalite, MethodeComptage, CategorieProduit, UniteStock, TypeMouvement, StatutCommande, StatutFacture, ModePaiement, SiteModule, SexeReproducteur, StatutReproducteur, StatutPonte, StatutLotAlevins, TypeAlerte (+ 4 density), StatutAlerte, TypeActivite (+ TRI/MEDICATION/RENOUVELLEMENT), StatutActivite, Recurrence, CategorieDepense, StatutDepense, FrequenceRecurrence, StatutBesoins, PhaseElevage, StatutActivation, TypeDeclencheur (+ 3 density), VisibiliteNote, CategorieCalibrage, TypeSystemeBac, OperateurCondition, LogiqueCondition, SeveriteAlerte
  * + Sprint 30 : TypePlan, PeriodeFacturation, StatutAbonnement, StatutPaiementAbo, TypeRemise, StatutCommissionIng, FournisseurPaiement (7 enums) + 8 nouvelles permissions
@@ -1696,6 +1696,33 @@ export interface DepenseRecurrenteWithRelations extends DepenseRecurrente {
 // ---------------------------------------------------------------------------
 
 /**
+ * ListeBesoinsVague — table de jonction entre ListeBesoins et Vague.
+ *
+ * Permet d'associer une liste de besoins a plusieurs vagues avec un ratio de
+ * repartition des couts (ADR-besoins-multi-vague).
+ *
+ * Regles metier :
+ * - R-MV-01 : 0, 1 ou N vagues associees
+ * - R-MV-02 : si N >= 1, la somme des ratio doit etre = 1.0 (+-0.001)
+ * - R-MV-04 : chaque ratio doit etre > 0 et <= 1
+ */
+export interface ListeBesoinsVague {
+  id: string;
+  listeBesoinsId: string;
+  vagueId: string;
+  /** Fraction du cout imputee a cette vague (0 < ratio <= 1, sum = 1.0 si vagues.length > 0) */
+  ratio: number;
+  /** ID du site (ferme) — R8 */
+  siteId: string;
+  createdAt: Date;
+}
+
+/** ListeBesoinsVague avec ses relations chargees */
+export interface ListeBesoinsVagueWithRelations extends ListeBesoinsVague {
+  vague?: { id: string; code: string };
+}
+
+/**
  * ListeBesoins — demande formelle de biens ou services par un agent de la ferme.
  *
  * Workflow : SOUMISE → APPROUVEE → TRAITEE → CLOTUREE
@@ -1715,8 +1742,6 @@ export interface ListeBesoins {
   demandeurId: string;
   /** Utilisateur ayant approuve ou rejete la demande (nullable) */
   valideurId: string | null;
-  /** Vague concernee (nullable) */
-  vagueId: string | null;
   /** Statut du workflow */
   statut: StatutBesoins;
   /** Montant total estime (SUM quantite * prixEstime) */
@@ -1739,7 +1764,8 @@ export interface ListeBesoins {
 export interface ListeBesoinsWithRelations extends ListeBesoins {
   demandeur?: User;
   valideur?: User | null;
-  vague?: Vague | null;
+  /** Vagues associees avec leurs ratios (remplace vague?: Vague | null) */
+  vagues?: ListeBesoinsVagueWithRelations[];
   lignes?: LigneBesoin[];
   depenses?: Depense[];
   _count?: { lignes: number };

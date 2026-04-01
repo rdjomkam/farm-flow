@@ -94,9 +94,27 @@ export async function PUT(
       dateLimite = parsed.toISOString();
     }
 
+    // Validation vagues si fournies
+    if (body.vagues !== undefined && body.vagues !== null && Array.isArray(body.vagues) && body.vagues.length > 0) {
+      const vaguesArr = body.vagues as Array<{ vagueId?: unknown; ratio?: unknown }>;
+      for (let i = 0; i < vaguesArr.length; i++) {
+        const v = vaguesArr[i];
+        if (!v.vagueId || typeof v.vagueId !== "string") {
+          return apiError(400, `vagueId requis pour l'entree vague ${i + 1}.`);
+        }
+        if (v.ratio === undefined || typeof v.ratio !== "number" || (v.ratio as number) <= 0 || (v.ratio as number) > 1) {
+          return apiError(400, `Ratio invalide pour la vague ${i + 1} (doit etre > 0 et <= 1).`);
+        }
+      }
+      const somme = vaguesArr.reduce((acc, v) => acc + (typeof v.ratio === "number" ? v.ratio : 0), 0);
+      if (Math.abs(somme - 1.0) > 0.001) {
+        return apiError(400, `La somme des ratios doit etre egale a 1.0 (somme actuelle : ${somme.toFixed(3)}).`);
+      }
+    }
+
     const listeBesoins = await updateListeBesoins(id, auth.activeSiteId, {
       titre: body.titre,
-      vagueId: body.vagueId,
+      vagues: body.vagues,
       notes: body.notes,
       lignes: body.lignes,
       ...(dateLimite !== undefined && { dateLimite }),
