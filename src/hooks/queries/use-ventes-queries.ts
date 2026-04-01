@@ -12,6 +12,7 @@ import type {
   CreateClientDTO,
   UpdateClientDTO,
   CreatePaiementDTO,
+  PaginatedResponse,
 } from "@/types";
 
 // --- Ventes ---
@@ -27,7 +28,7 @@ export function useVentesList(
     queryFn: async () => {
       const result = await venteService.listVentes();
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement ventes");
-      return (result.data as unknown as { data: VenteWithRelations[]; total: number }).data;
+      return (result.data as PaginatedResponse<VenteWithRelations>).data;
     },
     initialData,
     staleTime: 2 * 60_000,
@@ -100,7 +101,7 @@ export function useFacturesList(
     queryFn: async () => {
       const result = await venteService.listFactures();
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement factures");
-      return (result.data as unknown as { data: FactureWithRelations[]; total: number }).data;
+      return (result.data as PaginatedResponse<FactureWithRelations>).data;
     },
     initialData,
     staleTime: 2 * 60_000,

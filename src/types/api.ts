@@ -202,11 +202,7 @@ export interface BacResponse extends Bac {
 }
 
 /** Reponse liste des bacs */
-export interface BacListResponse {
-  bacs: BacResponse[];
-  /** Nombre total de bacs */
-  total: number;
-}
+export type BacListResponse = PaginatedResponse<BacResponse>;
 
 // ---------------------------------------------------------------------------
 // Vagues
@@ -276,10 +272,7 @@ export interface VagueSummaryResponse {
 }
 
 /** Reponse liste des vagues */
-export interface VagueListResponse {
-  vagues: VagueSummaryResponse[];
-  total: number;
-}
+export type VagueListResponse = PaginatedResponse<VagueSummaryResponse>;
 
 /** Reponse detaillee d'une vague (GET /api/vagues/[id]) */
 export interface VagueDetailResponse {
@@ -668,10 +661,7 @@ export interface ProduitFilters {
 }
 
 /** Reponse liste des produits */
-export interface ProduitListResponse {
-  produits: Produit[];
-  total: number;
-}
+export type ProduitListResponse = PaginatedResponse<Produit>;
 
 // ---------------------------------------------------------------------------
 // Mouvements de stock
@@ -747,10 +737,7 @@ export interface CommandeFilters {
 }
 
 /** Reponse liste des commandes */
-export interface CommandeListResponse {
-  commandes: Commande[];
-  total: number;
-}
+export type CommandeListResponse = PaginatedResponse<Commande>;
 
 /** Reponse detaillee d'une commande */
 export interface CommandeDetailResponse {
@@ -802,10 +789,7 @@ export interface CreateVenteDTO {
 }
 
 /** Reponse liste des ventes */
-export interface VenteListResponse {
-  ventes: Vente[];
-  total: number;
-}
+export type VenteListResponse = PaginatedResponse<Vente>;
 
 /** Filtres pour lister les ventes */
 export interface VenteFilters {
@@ -841,10 +825,7 @@ export interface FactureFilters {
 }
 
 /** Reponse liste des factures */
-export interface FactureListResponse {
-  factures: Facture[];
-  total: number;
-}
+export type FactureListResponse = PaginatedResponse<Facture>;
 
 /** Reponse detaillee d'une facture */
 export interface FactureDetailResponse {
@@ -916,10 +897,7 @@ export interface ReproducteurFilters {
 }
 
 /** Reponse liste des reproducteurs */
-export interface ReproducteurListResponse {
-  reproducteurs: Reproducteur[];
-  total: number;
-}
+export type ReproducteurListResponse = PaginatedResponse<Reproducteur>;
 
 // ---------------------------------------------------------------------------
 // Pontes
@@ -973,10 +951,7 @@ export interface PonteFilters {
 }
 
 /** Reponse liste des pontes */
-export interface PonteListResponse {
-  pontes: Ponte[];
-  total: number;
-}
+export type PonteListResponse = PaginatedResponse<Ponte>;
 
 // ---------------------------------------------------------------------------
 // Lots d'alevins
@@ -1045,10 +1020,7 @@ export interface LotAlevinsFilters {
 }
 
 /** Reponse liste des lots d'alevins */
-export interface LotAlevinsListResponse {
-  lots: LotAlevins[];
-  total: number;
-}
+export type LotAlevinsListResponse = PaginatedResponse<LotAlevins>;
 
 // ---------------------------------------------------------------------------
 // Alertes — Configuration
@@ -1331,10 +1303,7 @@ export interface CreatePaiementDepenseDTO {
 }
 
 /** Reponse liste des depenses */
-export interface DepenseListResponse {
-  depenses: Depense[];
-  total: number;
-}
+export type DepenseListResponse = PaginatedResponse<Depense>;
 
 /** Reponse detaillee d'une depense avec ses paiements */
 export interface DepenseDetailResponse {
@@ -1444,10 +1413,7 @@ export interface RejeterBesoinsDTO {
 }
 
 /** Reponse liste des listes de besoins */
-export interface ListeBesoinsListResponse {
-  listesBesoins: ListeBesoinsWithRelations[];
-  total: number;
-}
+export type ListeBesoinsListResponse = PaginatedResponse<ListeBesoinsWithRelations>;
 
 /** Reponse detaillee d'une liste de besoins */
 export interface ListeBesoinsDetailResponse {

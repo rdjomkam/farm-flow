@@ -31,7 +31,7 @@ export default async function DepensesPage() {
       <>
         <Header title="Depenses" />
         <DepensesListClient
-          depenses={JSON.parse(JSON.stringify(depenses))}
+          depenses={JSON.parse(JSON.stringify(depenses.data))}
           canManage={canManage}
           canPay={canPay}
           templatesActifsCount={templatesActifs.length}

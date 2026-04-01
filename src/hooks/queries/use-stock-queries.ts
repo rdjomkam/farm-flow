@@ -10,16 +10,17 @@ import type {
   CreateMouvementDTO,
   CreateFournisseurDTO,
   UpdateFournisseurDTO,
-  ProduitListResponse,
+  Produit,
+  Commande,
   FournisseurListResponse,
-  CommandeListResponse,
+  PaginatedResponse,
 } from "@/types";
 
 // --- Produits ---
 
 export function useProduitsList(
   filters?: { categorie?: string },
-  options?: { initialData?: ProduitListResponse["produits"] },
+  options?: { initialData?: Produit[] },
 ) {
   const stockService = useStockService();
 
@@ -28,7 +29,7 @@ export function useProduitsList(
     queryFn: async () => {
       const result = await stockService.listProduits(filters);
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement produits");
-      return (result.data as ProduitListResponse).produits;
+      return (result.data as PaginatedResponse<Produit>).data;
     },
     staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,
@@ -70,7 +71,7 @@ export function useUpdateProduit() {
 
 // --- Commandes ---
 
-export function useCommandesList(options?: { initialData?: CommandeListResponse["commandes"] }) {
+export function useCommandesList(options?: { initialData?: Commande[] }) {
   const stockService = useStockService();
 
   return useQuery({
@@ -78,7 +79,7 @@ export function useCommandesList(options?: { initialData?: CommandeListResponse[
     queryFn: async () => {
       const result = await stockService.listCommandes();
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement commandes");
-      return (result.data as unknown as { data: CommandeListResponse["commandes"]; total: number }).data;
+      return (result.data as PaginatedResponse<Commande>).data;
     },
     staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,

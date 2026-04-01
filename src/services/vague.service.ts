@@ -7,6 +7,7 @@ import type {
   UpdateVagueDTO,
   VagueDetailResponse,
   VagueSummaryResponse,
+  VagueListResponse,
   BacResponse,
   BacListResponse,
 } from "@/types";
@@ -15,9 +16,7 @@ import type {
 // Types internes
 // ---------------------------------------------------------------------------
 
-interface VagueListResult {
-  vagues: VagueSummaryResponse[];
-}
+type VagueListResult = VagueListResponse;
 
 interface CloturerDTO {
   dateFin: string;

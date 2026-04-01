@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StatutCommande, UniteStock, Permission } from "@/types";
-import type { CommandeListResponse } from "@/types";
+import type { Commande } from "@/types";
 import { useCreateCommande, useCommandesList } from "@/hooks/queries/use-stock-queries";
 
 const statutVariants: Record<StatutCommande, "default" | "info" | "en_cours" | "warning"> = {
@@ -66,7 +66,7 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
   const t = useTranslations("stock");
   const createCommandeMutation = useCreateCommande();
   const { data: commandesRaw = initialCommandes } = useCommandesList({
-    initialData: initialCommandes as unknown as CommandeListResponse["commandes"],
+    initialData: initialCommandes as unknown as Commande[],
   });
   const commandes = commandesRaw as unknown as CommandeData[];
   const [tab, setTab] = useState("tous");

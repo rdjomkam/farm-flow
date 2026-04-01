@@ -5,13 +5,16 @@ import { useAlevinsService } from "@/services";
 import { queryKeys } from "@/lib/query-keys";
 import type {
   LotAlevinsWithRelations,
+  LotAlevinsListResponse,
   CreateLotAlevinsDTO,
   UpdateLotAlevinsDTO,
   TransfertLotDTO,
   PonteWithRelations,
+  PonteListResponse,
   CreatePonteDTO,
   UpdatePonteDTO,
   ReproducteurWithRelations,
+  ReproducteurListResponse,
   CreateReproducteurDTO,
   UpdateReproducteurDTO,
 } from "@/types";
@@ -26,7 +29,7 @@ export function useLotsList(filters?: { vagueId?: string; statut?: string }) {
     queryFn: async () => {
       const result = await alevinsService.listLots(filters);
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement lots");
-      return result.data.lots;
+      return (result.data as LotAlevinsListResponse).data;
     },
     staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,
@@ -109,7 +112,7 @@ export function usePontesList(filters?: { reproducteurId?: string; statut?: stri
     queryFn: async () => {
       const result = await alevinsService.listPontes(filters);
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement pontes");
-      return result.data.pontes;
+      return (result.data as PonteListResponse).data;
     },
     staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,
@@ -191,7 +194,7 @@ export function useReproducteursList(filters?: { sexe?: string; statut?: string 
     queryFn: async () => {
       const result = await alevinsService.listReproducteurs(filters);
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement reproducteurs");
-      return result.data.reproducteurs;
+      return (result.data as ReproducteurListResponse).data;
     },
     staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,

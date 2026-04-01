@@ -6,6 +6,7 @@ import { queryKeys } from "@/lib/query-keys";
 import type {
   DepenseWithRelations,
   DepenseDetailResponse,
+  DepenseListResponse,
   CreateDepenseDTO,
   UpdateDepenseDTO,
   DepenseFilters,
@@ -16,6 +17,7 @@ import type {
   UpdateDepenseRecurrenteDTO,
   ListeBesoinsWithRelations,
   ListeBesoinsDetailResponse,
+  ListeBesoinsListResponse,
   CreateListeBesoinsDTO,
   UpdateListeBesoinsDTO,
   TraiterBesoinsDTO,
@@ -40,7 +42,7 @@ export function useDepensesList(filters?: DepenseFilters) {
     queryFn: async () => {
       const result = await depenseService.listDepenses(filters);
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement dépenses");
-      return (result.data as unknown as { data: DepenseWithRelations[]; total: number }).data;
+      return (result.data as DepenseListResponse).data;
     },
     staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,
@@ -223,7 +225,7 @@ export function useBesoinsList(
     queryFn: async () => {
       const result = await depenseService.listBesoins(filters);
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement besoins");
-      return (result.data as unknown as { data: ListeBesoinsWithRelations[]; total: number }).data;
+      return (result.data as ListeBesoinsListResponse).data;
     },
     staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,

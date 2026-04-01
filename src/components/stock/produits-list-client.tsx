@@ -35,7 +35,7 @@ import {
   FormeAliment,
   PhaseElevage,
 } from "@/types";
-import type { ProduitListResponse } from "@/types";
+import type { Produit } from "@/types";
 import { useCreateProduit, useProduitsList } from "@/hooks/queries/use-stock-queries";
 
 interface ProduitData {
@@ -62,7 +62,7 @@ export function ProduitsListClient({ produits: initialProduits, fournisseurs, pe
   const t = useTranslations("stock");
   const createProduitMutation = useCreateProduit();
   const { data: produitsRaw = initialProduits } = useProduitsList(undefined, {
-    initialData: initialProduits as unknown as ProduitListResponse["produits"],
+    initialData: initialProduits as unknown as Produit[],
   });
   const produits = produitsRaw as unknown as ProduitData[];
   const [tab, setTab] = useState("tous");

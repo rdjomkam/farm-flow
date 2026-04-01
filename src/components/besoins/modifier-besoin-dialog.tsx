@@ -184,7 +184,7 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
         setProduitsLoading(true);
         const result = await stockService.listProduits();
         if (result.ok && result.data) {
-          setProduits(result.data.produits as ProduitOption[]);
+          setProduits(result.data.data as ProduitOption[]);
         }
         setProduitsLoading(false);
       }
