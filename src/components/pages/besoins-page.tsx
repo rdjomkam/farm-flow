@@ -28,7 +28,7 @@ export default async function BesoinsPage() {
       <>
         <Header title="Listes de Besoins" />
         <BesoinsListClient
-          listesBesoins={JSON.parse(JSON.stringify(listesBesoins))}
+          listesBesoins={JSON.parse(JSON.stringify(listesBesoins.data))}
           canCreate={canCreate}
           canApprove={canApprove}
           canProcess={canProcess}
