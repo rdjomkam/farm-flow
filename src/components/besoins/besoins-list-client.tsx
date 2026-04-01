@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Plus, ClipboardList, Calendar, User, AlertCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,18 +11,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { StatutBesoins } from "@/types";
 import { useBesoinsList } from "@/hooks/queries/use-depenses-queries";
 import type { ListeBesoinsWithRelations } from "@/types";
-
-// ---------------------------------------------------------------------------
-// Labels & variants
-// ---------------------------------------------------------------------------
-
-const statutLabels: Record<StatutBesoins, string> = {
-  [StatutBesoins.SOUMISE]: "Soumise",
-  [StatutBesoins.APPROUVEE]: "Approuvee",
-  [StatutBesoins.TRAITEE]: "Traitee",
-  [StatutBesoins.CLOTUREE]: "Cloturee",
-  [StatutBesoins.REJETEE]: "Rejetee",
-};
 
 const statutVariants: Record<
   StatutBesoins,
@@ -100,6 +89,7 @@ export function BesoinsListClient({
   listesBesoins: initialListesBesoins,
   canCreate,
 }: Props) {
+  const t = useTranslations("besoins");
   const { data: listesBesoinsRaw = initialListesBesoins } = useBesoinsList(undefined, {
     initialData: initialListesBesoins as unknown as ListeBesoinsWithRelations[],
   });
@@ -107,36 +97,28 @@ export function BesoinsListClient({
   const [activeTab, setActiveTab] = useState("toutes");
 
   const tabs: { value: string; label: string; statuts: string[] | null }[] = [
-    { value: "toutes", label: "Toutes", statuts: null },
-    { value: "soumises", label: "Soumises", statuts: [StatutBesoins.SOUMISE] },
-    {
-      value: "approuvees",
-      label: "Approuvees",
-      statuts: [StatutBesoins.APPROUVEE],
-    },
-    { value: "traitees", label: "Traitees", statuts: [StatutBesoins.TRAITEE] },
-    {
-      value: "cloturees",
-      label: "Cloturees",
-      statuts: [StatutBesoins.CLOTUREE],
-    },
-    { value: "rejetees", label: "Rejetees", statuts: [StatutBesoins.REJETEE] },
+    { value: "toutes", label: t("list.tabs.toutes"), statuts: null },
+    { value: "soumises", label: t("list.tabs.soumises"), statuts: [StatutBesoins.SOUMISE] },
+    { value: "approuvees", label: t("list.tabs.approuvees"), statuts: [StatutBesoins.APPROUVEE] },
+    { value: "traitees", label: t("list.tabs.traitees"), statuts: [StatutBesoins.TRAITEE] },
+    { value: "cloturees", label: t("list.tabs.cloturees"), statuts: [StatutBesoins.CLOTUREE] },
+    { value: "rejetees", label: t("list.tabs.rejetees"), statuts: [StatutBesoins.REJETEE] },
   ];
 
   // filteredListes is computed inside the single TabsContent render below
 
   return (
-    <div className="p-4 pb-24 max-w-2xl mx-auto">
+    <div className="p-4 max-w-2xl mx-auto">
       {/* Header actions */}
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-muted-foreground">
-          {listesBesoins.length} liste{listesBesoins.length !== 1 ? "s" : ""}
+          {t("list.count", { count: listesBesoins.length })}
         </p>
         {canCreate && (
           <Button asChild variant="primary" size="sm">
             <Link href="/besoins/nouveau">
               <Plus className="h-4 w-4 mr-1" />
-              Nouvelle liste
+              {t("list.nouvelle")}
             </Link>
           </Button>
         )}
@@ -144,12 +126,13 @@ export function BesoinsListClient({
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full overflow-x-auto flex mb-4">
+        <div className="overflow-x-auto -mx-4 px-4">
+          <TabsList className="w-max mb-4">
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.value}
               value={tab.value}
-              className="flex-1 text-xs whitespace-nowrap"
+              className="text-xs whitespace-nowrap"
             >
               {tab.label}
               {tab.statuts && (
@@ -165,7 +148,8 @@ export function BesoinsListClient({
               )}
             </TabsTrigger>
           ))}
-        </TabsList>
+          </TabsList>
+        </div>
 
         {/* UN SEUL TabsContent — valeur dynamique liée à activeTab (Pattern C2) */}
         <TabsContent value={activeTab}>
@@ -179,13 +163,13 @@ export function BesoinsListClient({
               <div className="text-center py-12">
                 <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
                 <p className="text-muted-foreground text-sm">
-                  Aucune liste de besoins dans cet onglet
+                  {t("list.empty")}
                 </p>
                 {canCreate && activeTab === "toutes" && (
                   <Button asChild variant="primary" className="mt-4">
                     <Link href="/besoins/nouveau">
                       <Plus className="h-4 w-4 mr-1" />
-                      Creer une liste
+                      {t("list.creer")}
                     </Link>
                   </Button>
                 )}
@@ -212,7 +196,7 @@ export function BesoinsListClient({
                             }
                             className="flex-shrink-0"
                           >
-                            {statutLabels[lb.statut as StatutBesoins] ??
+                            {t(`statuts.${lb.statut as StatutBesoins}` as Parameters<typeof t>[0]) ??
                               lb.statut}
                           </Badge>
                         </div>

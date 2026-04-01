@@ -6852,7 +6852,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story CR2.3 — Validation K dans gompertz-analytics
-**Assigné à :** @developer | **Dépend de :** Aucune | **Statut :** `TODO` | **Type :** BUGFIX
+**Assigné à :** @developer | **Dépend de :** Aucune | **Statut :** `FAIT` | **Type :** BUGFIX
 **Priorité :** Moyenne
 
 **Description :** Dans `src/lib/queries/gompertz-analytics.ts`, `kMoyen` n'est pas validé avant d'être passé à `evaluerKGompertz()`. Si kMoyen est NaN, 0 ou Infinity, le résultat est imprévisible.
@@ -7101,3 +7101,232 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 - Les nouveaux tests couvrent chaque correction
 - Build production OK
 - Review conforme R1-R9
+
+---
+
+## Sprint UX — UI/UX Fixes (Audit Frontend)
+
+> **Objectif :** Corriger les problèmes d'UX mobile identifiés lors de l'audit frontend (safe areas, touch targets, dialogs, cohérence visuelle).
+
+---
+
+### Story UX.1 — Dialog sticky footer avec safe-area
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Priorité :** Critique
+
+**Problème :** Dans `src/components/ui/dialog.tsx`, header+body+footer sont dans un seul `overflow-y-auto`. Les boutons d'action scrollent hors de la vue sur mobile.
+
+**Fix :** Restructurer `DialogContent` : header non-scrollable, body `flex-1 overflow-y-auto`, footer sticky avec `pb-[max(1rem,env(safe-area-inset-bottom))]`. Créer un sous-composant `DialogBody` si nécessaire.
+
+**Fichier(s) :** `src/components/ui/dialog.tsx`
+
+**Critères d'acceptation :**
+- Le footer reste visible en permanence sur mobile (360px)
+- Safe-area-inset-bottom respectée
+- Aucune régression sur les dialogs existants
+
+---
+
+### Story UX.2 — Ajouter max-h/overflow aux dialogs manquants
+**Assigné à :** @developer | **Dépend de :** UX.1 | **Statut :** `FAIT` | **Priorité :** Critique
+
+**Problème :** 6 dialogs n'ont pas de `max-h` ni `overflow`, le contenu dépasse le viewport sur mobile.
+
+**Fix :** Ajouter `max-h-[90dvh] overflow-y-auto` ou adopter le pattern sticky-footer de UX.1.
+
+**Fichier(s) :**
+- `src/components/stock/produits-list-client.tsx`
+- `src/components/stock/produit-detail-client.tsx`
+- `src/components/stock/mouvements-list-client.tsx`
+- `src/components/stock/fournisseurs-list-client.tsx`
+- `src/components/ventes/facture-detail-client.tsx`
+- `src/components/besoins/besoins-detail-client.tsx`
+
+**Critères d'acceptation :**
+- Tous les dialogs restent dans le viewport sur 360px
+- Le contenu long est scrollable dans le body
+
+---
+
+### Story UX.3 — Safe-area-inset-bottom sur bottom sheet nav
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Priorité :** Haute
+
+**Problème :** La section utilisateur du bottom sheet (`farm-bottom-nav.tsx` ligne 466) a `py-3` sans safe-area. Le bouton déconnexion est masqué par l'indicateur home sur iPhone.
+
+**Fix :** Changer `py-3` en `pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]`.
+
+**Fichier(s) :** `src/components/layout/farm-bottom-nav.tsx`
+
+---
+
+### Story UX.4 — Bouton "Annuler" trop étroit sur mobile
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Priorité :** Haute
+
+**Problème :** Le bouton danger "Annuler" dans `commande-detail-client.tsx` (lignes 322-330) n'a pas `flex-1`, créant un déséquilibre avec le bouton primaire.
+
+**Fix :** Ajouter `className="flex-1"` au bouton danger.
+
+**Fichier(s) :** `src/components/stock/commande-detail-client.tsx`
+
+---
+
+### Story UX.5 — Supprimer pb-24 hardcodé dans besoins
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Priorité :** Moyenne
+
+**Problème :** Les 3 composants besoins ont `pb-24` (96px) qui double-stack avec le padding de `app-shell.tsx`.
+
+**Fix :** Supprimer `pb-24` — l'app-shell gère déjà le clearance de la bottom nav.
+
+**Fichier(s) :**
+- `src/components/besoins/besoins-list-client.tsx`
+- `src/components/besoins/besoins-form-client.tsx`
+- `src/components/besoins/besoins-detail-client.tsx`
+
+---
+
+### Story UX.6 — Alignement icône filtre (ventes/factures)
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Priorité :** Moyenne
+
+**Problème :** L'icône `Filter` utilise `mb-2.5` pour s'aligner verticalement — hack fragile.
+
+**Fix :** Utiliser `items-center` sur le container, supprimer `mb-2.5`.
+
+**Fichier(s) :**
+- `src/components/ventes/ventes-list-client.tsx`
+- `src/components/ventes/factures-list-client.tsx`
+
+---
+
+### Story UX.7 — Besoins tabs overflow-x-auto manquant
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Priorité :** Moyenne
+
+**Problème :** 6 tabs besoins débordent sur 360px. Le wrapper `overflow-x-auto -mx-4 px-4` utilisé par commandes est absent.
+
+**Fix :** Appliquer le pattern `<div className="overflow-x-auto -mx-4 px-4"><TabsList className="w-max">`.
+
+**Fichier(s) :** `src/components/besoins/besoins-list-client.tsx`
+
+---
+
+### Story UX.8 — Mouvements tabs overflow wrapper manquant
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Priorité :** Moyenne
+
+**Problème :** Inconsistant avec les autres écrans — pas de wrapper overflow sur les tabs mouvements.
+
+**Fix :** Même pattern overflow que UX.7.
+
+**Fichier(s) :** `src/components/stock/mouvements-list-client.tsx`
+
+---
+
+### Story UX.9 — Bouton X (supprimer fichier) sous 44px WCAG
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Priorité :** Moyenne
+
+**Problème :** Le bouton `<button>` avec icône X (16x16px) est bien en dessous du minimum 44x44px WCAG pour les cibles tactiles.
+
+**Fix :** Ajouter `min-h-[44px] min-w-[44px] flex items-center justify-center` ou utiliser `<Button size="sm" variant="ghost">`.
+
+**Fichier(s) :**
+- `src/components/stock/reception-commande-dialog.tsx`
+- `src/components/stock/commande-detail-client.tsx`
+
+---
+
+### Story UX.10 — Zone scroll max-h-80 trop courte dans dialogs workflow
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Priorité :** Moyenne
+
+**Problème :** `max-h-80` (320px) dans les dialogs "Traiter" est trop court — seulement 2-3 lignes visibles, sans indicateur visuel de scroll.
+
+**Fix :** Utiliser `max-h-[50vh]` et ajouter une ombre inset pour indiquer le scroll.
+
+**Fichier(s) :** `src/components/besoins/besoins-detail-client.tsx` (lignes 461, 521)
+
+---
+
+### Story UX.11 — Bouton Trash sans aria-label ni min-width
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Priorité :** Moyenne
+
+**Problème :** Le bouton icône Trash2 n'a pas d'`aria-label` (inaccessible aux lecteurs d'écran) et est trop étroit.
+
+**Fix :** Ajouter `aria-label={t("commandes.detail.supprimerFacture")}` et `min-w-[44px]`.
+
+**Fichier(s) :** `src/components/stock/commande-detail-client.tsx` (lignes 361-366)
+
+---
+
+### Story UX.12 — Normaliser indentation DialogContent dans les listes
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Priorité :** Basse
+
+**Problème :** `DialogContent` apparaît au mauvais niveau d'indentation dans le code — confus en code review.
+
+**Fix :** Normaliser l'indentation ou extraire les dialog forms dans des sous-composants.
+
+**Fichier(s) :**
+- `src/components/stock/commandes-list-client.tsx`
+- `src/components/stock/produits-list-client.tsx`
+- `src/components/stock/mouvements-list-client.tsx`
+
+---
+
+### Story UX.13 — Labels besoins hardcodés en français (pas i18n)
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Priorité :** Basse
+
+**Problème :** Les statuts et labels des tabs besoins sont des strings hardcodées au lieu d'utiliser `useTranslations("besoins")`.
+
+**Fix :** Utiliser `t("statuts.xxx")` comme les autres écrans. Ajouter les clés dans `src/messages/fr/besoins.json` et `src/messages/en/besoins.json`.
+
+**Fichier(s) :** `src/components/besoins/besoins-list-client.tsx` (lignes 18-24)
+
+---
+
+### Story UX.14 — Inconsistance hover style (ring vs border)
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Priorité :** Basse
+
+**Problème :** Les cards ventes/factures utilisent `hover:border-primary/30` alors que stock utilise `hover:ring-1 hover:ring-primary/30`.
+
+**Fix :** Uniformiser sur `hover:ring-1 hover:ring-primary/30 transition-all`.
+
+**Fichier(s) :**
+- `src/components/ventes/ventes-list-client.tsx`
+- `src/components/ventes/factures-list-client.tsx`
+
+---
+
+### Story UX.15 — max-w-lg inutile sur mobile dans modifier-besoin
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Priorité :** Basse
+
+**Problème :** `max-w-lg` sur `DialogContent` n'a aucun effet sur mobile (full-screen `inset-0`).
+
+**Fix :** Supprimer ou conserver uniquement pour desktop via `md:max-w-lg`.
+
+**Fichier(s) :** `src/components/besoins/modifier-besoin-dialog.tsx` (ligne 255)
+
+---
+
+### Story UX.16 — Texte "Créé par" sans marge bottom sur pages détail
+**Assigné à :** @developer | **Dépend de :** — | **Statut :** `FAIT` | **Priorité :** Basse
+
+**Problème :** Le texte metadata en bas des pages détail colle au bord du padding sans espace de respiration.
+
+**Fix :** Ajouter `mb-2` à la ligne `<p>` "Créé par".
+
+**Fichier(s) :**
+- `src/components/stock/commande-detail-client.tsx`
+- `src/components/ventes/vente-detail-client.tsx`
+- `src/components/ventes/facture-detail-client.tsx`
+
+---
+
+### Story UX.17 — Tests et Review Sprint UX
+**Assigné à :** @tester + @code-reviewer | **Dépend de :** UX.1-UX.16 | **Statut :** `TODO` | **Type :** TEST + REVIEW
+
+**Tâches :**
+- [ ] `TODO` `npm run build` — Build production OK
+- [ ] `TODO` Test manuel mobile (360px) — vérifier safe areas, dialogs, touch targets
+- [ ] `TODO` Vérifier checklist R1-R9
+- [ ] `TODO` Écrire `docs/reviews/review-sprint-UX.md`
+
+**Critères d'acceptation :**
+- Zéro régression sur les tests existants
+- Build production OK
+- Tous les dialogs respectent les safe areas sur mobile
+- Touch targets ≥ 44px sur tous les boutons interactifs

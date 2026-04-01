@@ -24,6 +24,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -180,6 +181,7 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
                 <DialogHeader>
                   <DialogTitle>{t("produits.edit")}</DialogTitle>
                 </DialogHeader>
+                <DialogBody>
                 <div className="flex flex-col gap-4 py-2">
                   <Input
                     label={t("produits.fields.name")}
@@ -354,6 +356,7 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
                     </SelectContent>
                   </Select>
                 </div>
+                </DialogBody>
                 <DialogFooter>
                   <DialogClose asChild>
                     <Button variant="outline">{t("actions.cancel")}</Button>

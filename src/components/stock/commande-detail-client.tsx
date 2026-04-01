@@ -322,6 +322,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
           )}
           <Button
             variant="danger"
+            className="flex-1"
             onClick={() => handleAction("annuler")}
           >
             <X className="h-4 w-4 mr-1" />
@@ -360,6 +361,8 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
                   </Button>
                   <Button
                     variant="danger"
+                    aria-label="Supprimer la facture"
+                    className="min-w-[44px]"
                     onClick={() => setDeleteFactureOpen(true)}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -424,7 +427,8 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
                 </span>
                 <button
                   type="button"
-                  className="text-muted-foreground hover:text-destructive"
+                  aria-label="Supprimer le fichier"
+                  className="min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive"
                   onClick={() => {
                     setSelectedFile(null);
                     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -524,7 +528,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
         </CardContent>
       </Card>
 
-      <p className="text-xs text-muted-foreground text-center">
+      <p className="text-xs text-muted-foreground text-center mb-2">
         {t("commandes.detail.creePar", { name: commande.user.name })}
       </p>
     </div>

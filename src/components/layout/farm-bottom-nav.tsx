@@ -463,7 +463,7 @@ export function FarmBottomNav({
             </nav>
 
             {/* User info + logout */}
-            <div className="border-t border-border px-4 py-3 space-y-2 mt-1">
+            <div className="border-t border-border px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] space-y-2 mt-1">
               {userName && (
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">

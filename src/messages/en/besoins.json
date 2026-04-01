@@ -6,6 +6,20 @@
     "CLOTUREE": "Closed",
     "REJETEE": "Rejected"
   },
+  "list": {
+    "count": "{count} list{count, plural, one {} other {s}}",
+    "empty": "No needs lists in this tab",
+    "nouvelle": "New list",
+    "creer": "Create a list",
+    "tabs": {
+      "toutes": "All",
+      "soumises": "Submitted",
+      "approuvees": "Approved",
+      "traitees": "Processed",
+      "cloturees": "Closed",
+      "rejetees": "Rejected"
+    }
+  },
   "form": {
     "retour": "Back to needs",
     "titre": "Title",

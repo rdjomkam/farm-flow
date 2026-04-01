@@ -25,6 +25,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -240,7 +241,7 @@ export function BesoinsDetailClient({
   }, [depenseService, liste.id, queryClient, router]);
 
   return (
-    <div className="p-4 pb-24 max-w-2xl mx-auto">
+    <div className="p-4 max-w-2xl mx-auto">
       {/* Back nav */}
       <Link
         href="/besoins"
@@ -371,9 +372,11 @@ export function BesoinsDetailClient({
               <DialogHeader>
                 <DialogTitle>{t("detail.supprimerTitle")}</DialogTitle>
               </DialogHeader>
+              <DialogBody>
               <p className="text-sm text-muted-foreground py-2">
                 {t("detail.supprimerDescription", { numero: liste.numero })}
               </p>
+              </DialogBody>
               <DialogFooter>
                 <DialogClose asChild>
                   <Button variant="ghost">{t("detail.annuler")}</Button>
@@ -416,6 +419,7 @@ export function BesoinsDetailClient({
               <DialogHeader>
                 <DialogTitle>{t("detail.rejeterTitle")}</DialogTitle>
               </DialogHeader>
+              <DialogBody>
               <div className="space-y-4 py-2">
                 <div>
                   <label className="text-sm font-medium">
@@ -430,6 +434,7 @@ export function BesoinsDetailClient({
                   />
                 </div>
               </div>
+              </DialogBody>
               <DialogFooter>
                 <DialogClose asChild>
                   <Button variant="ghost">{t("detail.annuler")}</Button>
@@ -458,7 +463,8 @@ export function BesoinsDetailClient({
             <DialogHeader>
               <DialogTitle>{t("detail.traiterTitle")}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-3 py-2 max-h-80 overflow-y-auto">
+            <DialogBody>
+            <div className="space-y-3 py-2">
               <p className="text-sm text-muted-foreground">
                 {t("detail.traiterDescription")}
               </p>
@@ -491,6 +497,7 @@ export function BesoinsDetailClient({
                 </div>
               ))}
             </div>
+            </DialogBody>
             <DialogFooter>
               <DialogClose asChild>
                 <Button variant="ghost">{t("detail.annuler")}</Button>
@@ -518,7 +525,8 @@ export function BesoinsDetailClient({
             <DialogHeader>
               <DialogTitle>{t("detail.cloturerTitle")}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-3 py-2 max-h-80 overflow-y-auto">
+            <DialogBody>
+            <div className="space-y-3 py-2">
               <p className="text-sm text-muted-foreground">
                 {t("detail.cloturerDescription")}
               </p>
@@ -548,6 +556,7 @@ export function BesoinsDetailClient({
                 </div>
               ))}
             </div>
+            </DialogBody>
             <DialogFooter>
               <DialogClose asChild>
                 <Button variant="ghost">{t("detail.annuler")}</Button>

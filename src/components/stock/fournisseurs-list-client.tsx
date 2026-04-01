@@ -13,6 +13,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -125,6 +126,7 @@ export function FournisseursListClient({ fournisseurs: initialFournisseurs, perm
                   {editId ? t("fournisseurs.edit") : t("fournisseurs.add")}
                 </DialogTitle>
               </DialogHeader>
+              <DialogBody>
               <div className="flex flex-col gap-4 py-2">
                 <Input
                   label={t("fournisseurs.fields.nom")}
@@ -154,6 +156,7 @@ export function FournisseursListClient({ fournisseurs: initialFournisseurs, perm
                   onChange={(e) => setAdresse(e.target.value)}
                 />
               </div>
+              </DialogBody>
               <DialogFooter>
                 <DialogClose asChild>
                   <Button variant="outline">{t("actions.cancel")}</Button>

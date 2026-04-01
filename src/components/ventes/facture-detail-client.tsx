@@ -26,6 +26,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -253,6 +254,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
               <DialogHeader>
                 <DialogTitle>{t("paiements.register")}</DialogTitle>
               </DialogHeader>
+              <DialogBody>
               <div className="flex flex-col gap-4 py-2">
                 <Input
                   label={t("paiements.fields.montant", { max: formatNumber(resteAPayer) })}
@@ -281,6 +283,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
                   onChange={(e) => setReference(e.target.value)}
                 />
               </div>
+              </DialogBody>
               <DialogFooter>
                 <DialogClose asChild>
                   <Button variant="outline">{t("paiements.cancel")}</Button>
@@ -362,7 +365,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
         <p className="text-sm text-muted-foreground italic">{facture.notes}</p>
       )}
 
-      <p className="text-xs text-muted-foreground text-center">
+      <p className="text-xs text-muted-foreground text-center mb-2">
         {t("factures.detail.creePar", { name: facture.user.name })}
       </p>
     </div>

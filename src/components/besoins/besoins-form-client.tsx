@@ -180,7 +180,7 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 pb-24 max-w-2xl mx-auto">
+    <form onSubmit={handleSubmit} className="p-4 max-w-2xl mx-auto">
       {/* Back nav */}
       <Link
         href="/besoins"

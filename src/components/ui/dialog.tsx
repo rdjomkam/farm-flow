@@ -48,7 +48,20 @@ const DialogContent = forwardRef<
       )}
       {...props}
     >
-      <div className="flex h-full flex-col overflow-y-auto p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] md:max-h-[85vh] md:p-6 md:pt-6 md:pb-6">
+      {/*
+       * Inner layout: flex column capped at 85dvh.
+       * - DialogHeader: non-scrollable, stays at top
+       * - DialogBody (optional): flex-1 + overflow-y-auto for scrollable content
+       * - DialogFooter: sticky at bottom with safe-area padding
+       * Backward compatible: dialogs without DialogBody render children inline
+       * in the flex column — no independent scroll, but layout is preserved.
+       */}
+      <div
+        className={cn(
+          "flex flex-col h-full md:max-h-[85dvh]",
+          "px-4 pt-[max(1rem,env(safe-area-inset-top))] md:px-6 md:pt-0"
+        )}
+      >
         {children}
       </div>
       <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px] min-w-[44px] flex items-center justify-center">
@@ -63,7 +76,25 @@ DialogContent.displayName = "DialogContent";
 function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("flex flex-col gap-1.5 pb-4", className)}
+      className={cn("flex flex-col gap-1.5 pt-4 pb-4 shrink-0 md:pt-6", className)}
+      {...props}
+    />
+  );
+}
+
+/**
+ * DialogBody — scrollable content area between header and footer.
+ *
+ * Wrap the main form or content of a dialog in this component to make it
+ * independently scrollable while the header and footer stay sticky.
+ *
+ * Dialogs that do NOT use DialogBody remain fully backward compatible:
+ * their content flows in the flex column without independent scrolling.
+ */
+function DialogBody({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn("flex-1 overflow-y-auto -mx-4 px-4 md:-mx-6 md:px-6", className)}
       {...props}
     />
   );
@@ -94,7 +125,13 @@ function DialogDescription({ className, ...props }: React.HTMLAttributes<HTMLPar
 function DialogFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("flex flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-end", className)}
+      className={cn(
+        "flex flex-col-reverse gap-2 pt-4 shrink-0",
+        "pb-[max(1rem,env(safe-area-inset-bottom))]",
+        "sm:flex-row sm:justify-end",
+        "md:pb-6",
+        className
+      )}
       {...props}
     />
   );
@@ -108,5 +145,6 @@ export {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogBody,
   DialogFooter,
 };

@@ -25,6 +25,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -134,11 +135,12 @@ export function MouvementsListClient({ mouvements, produits, vagues, permissions
                 {t("mouvements.new")}
               </Button>
             </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t("mouvements.add")}</DialogTitle>
-            </DialogHeader>
-            <div className="flex flex-col gap-4 py-2">
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t("mouvements.add")}</DialogTitle>
+              </DialogHeader>
+              <DialogBody>
+              <div className="flex flex-col gap-4 py-2">
               <Select value={produitId} onValueChange={setProduitId}>
                 <SelectTrigger label={t("mouvements.fields.produit")}>
                   <SelectValue placeholder={t("mouvements.fields.produitPlaceholder")} />
@@ -202,29 +204,32 @@ export function MouvementsListClient({ mouvements, produits, vagues, permissions
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline">{t("actions.cancel")}</Button>
-              </DialogClose>
-              <Button
-                onClick={handleCreate}
-                disabled={!produitId || !quantite}
-              >
-                {t("mouvements.save")}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
+              </div>
+              </DialogBody>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">{t("actions.cancel")}</Button>
+                </DialogClose>
+                <Button
+                  onClick={handleCreate}
+                  disabled={!produitId || !quantite}
+                >
+                  {t("mouvements.save")}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
           </Dialog>
         )}
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="tous">{t("mouvements.tabs.all")}</TabsTrigger>
-          <TabsTrigger value={TypeMouvement.ENTREE}>{t("mouvements.tabs.entrees")}</TabsTrigger>
-          <TabsTrigger value={TypeMouvement.SORTIE}>{t("mouvements.tabs.sorties")}</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4">
+          <TabsList className="w-max">
+            <TabsTrigger value="tous">{t("mouvements.tabs.all")}</TabsTrigger>
+            <TabsTrigger value={TypeMouvement.ENTREE}>{t("mouvements.tabs.entrees")}</TabsTrigger>
+            <TabsTrigger value={TypeMouvement.SORTIE}>{t("mouvements.tabs.sorties")}</TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value={tab}>
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">

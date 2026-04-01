@@ -207,7 +207,7 @@ export function VenteDetailClient({ vente, permissions }: Props) {
         <p className="text-sm text-muted-foreground italic">{vente.notes}</p>
       )}
 
-      <p className="text-xs text-muted-foreground text-center">
+      <p className="text-xs text-muted-foreground text-center mb-2">
         {t("ventes.detail.creePar", { name: vente.user.name })}
       </p>
     </div>

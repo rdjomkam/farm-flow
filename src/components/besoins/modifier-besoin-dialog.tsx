@@ -252,7 +252,7 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="md:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t("modifierDialog.title")}</DialogTitle>
         </DialogHeader>

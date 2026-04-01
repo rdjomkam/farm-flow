@@ -6,6 +6,20 @@
     "CLOTUREE": "Cloturee",
     "REJETEE": "Rejetee"
   },
+  "list": {
+    "count": "{count} liste{count, plural, one {} other {s}}",
+    "empty": "Aucune liste de besoins dans cet onglet",
+    "nouvelle": "Nouvelle liste",
+    "creer": "Creer une liste",
+    "tabs": {
+      "toutes": "Toutes",
+      "soumises": "Soumises",
+      "approuvees": "Approuvees",
+      "traitees": "Traitees",
+      "cloturees": "Cloturees",
+      "rejetees": "Rejetees"
+    }
+  },
   "form": {
     "retour": "Retour aux besoins",
     "titre": "Titre",

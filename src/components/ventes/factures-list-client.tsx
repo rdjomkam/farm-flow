@@ -74,8 +74,8 @@ export function FacturesListClient({ initialFactures, permissions: _permissions 
       </div>
 
       {/* Filter */}
-      <div className="flex gap-2 items-end">
-        <Filter className="h-4 w-4 text-muted-foreground shrink-0 mb-2.5" />
+      <div className="flex gap-2 items-center">
+        <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
         <div className="flex-1">
           <Select value={filterStatut} onValueChange={setFilterStatut}>
             <SelectTrigger>
@@ -104,7 +104,7 @@ export function FacturesListClient({ initialFactures, permissions: _permissions 
             const resteAPayer = f.montantTotal - f.montantPaye;
             return (
               <Link key={f.id} href={`/factures/${f.id}`}>
-                <Card className="hover:border-primary/30 transition-colors">
+                <Card className="hover:ring-1 hover:ring-primary/30 transition-all">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-2">
                       <div className="min-w-0">

@@ -559,6 +559,39 @@ describe("getKParAliment — validation kMoyen (CR2.3)", () => {
     expect(result).toHaveLength(1);
     expect(result[0].produitId).toBe("prod-ok");
   });
+
+  it("filtre silencieusement un produit dont le kMoyen calcule est NaN (k=NaN en DB)", async () => {
+    // k=NaN dans les deux vagues → kMoyen = NaN → filtre via isNaN(kMoyen)
+    mockGompertzVagueFindMany.mockResolvedValue([
+      makeGompertzEntry({ vagueId: "v1", vagueCode: "V001", k: NaN, produitId: "prod-nan", produitNom: "NaN-K", quantite: 100 }),
+      makeGompertzEntry({ vagueId: "v2", vagueCode: "V002", k: NaN, produitId: "prod-nan", produitNom: "NaN-K", quantite: 100 }),
+    ]);
+    const result = await getKParAliment("site-1");
+    expect(result).toHaveLength(0);
+  });
+
+  it("filtre silencieusement un produit dont le kMoyen est Infinity", async () => {
+    // k=Infinity → kMoyen = Infinity → filtre via !isFinite(kMoyen)
+    mockGompertzVagueFindMany.mockResolvedValue([
+      makeGompertzEntry({ vagueId: "v1", vagueCode: "V001", k: Infinity, produitId: "prod-inf", produitNom: "Inf-K", quantite: 100 }),
+      makeGompertzEntry({ vagueId: "v2", vagueCode: "V002", k: Infinity, produitId: "prod-inf", produitNom: "Inf-K", quantite: 100 }),
+    ]);
+    const result = await getKParAliment("site-1");
+    expect(result).toHaveLength(0);
+  });
+
+  it("retourne le produit valide quand un autre a kMoyen NaN", async () => {
+    // prod-nan : k=NaN → filtre ; prod-ok : valide
+    mockGompertzVagueFindMany.mockResolvedValue([
+      makeGompertzEntry({ vagueId: "v1", vagueCode: "V001", k: NaN, produitId: "prod-nan", produitNom: "NaN-K", quantite: 100 }),
+      makeGompertzEntry({ vagueId: "v2", vagueCode: "V002", k: NaN, produitId: "prod-nan", produitNom: "NaN-K", quantite: 100 }),
+      makeGompertzEntry({ vagueId: "v1", vagueCode: "V001", k: 0.022, produitId: "prod-ok", produitNom: "OK", quantite: 150 }),
+      makeGompertzEntry({ vagueId: "v2", vagueCode: "V002", k: 0.018, produitId: "prod-ok", produitNom: "OK", quantite: 150 }),
+    ]);
+    const result = await getKParAliment("site-1");
+    expect(result).toHaveLength(1);
+    expect(result[0].produitId).toBe("prod-ok");
+  });
 });
 
 // ---------------------------------------------------------------------------
