@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartTooltip } from "@/components/ui/chart-tooltip";
@@ -152,10 +153,35 @@ function buildSurvieData(vague: VagueAvecReleves) {
 }
 
 // ---------------------------------------------------------------------------
+// Tooltip constants (memoised outside render to avoid recreating on each render)
+// ---------------------------------------------------------------------------
+
+const tooltipCroissance = (
+  <ChartTooltip
+    labelFormatter={(label) => String(label)}
+    valueFormatter={(v) => `${v} g`}
+  />
+);
+
+const tooltipSurvie = (
+  <ChartTooltip
+    labelFormatter={(label) => String(label)}
+    valueFormatter={(v) => `${v}%`}
+  />
+);
+
+const tooltipMortalite = (
+  <ChartTooltip
+    labelFormatter={(label) => String(label)}
+    valueFormatter={(v) => `${v} morts`}
+  />
+);
+
+// ---------------------------------------------------------------------------
 // Composant charts par vague
 // ---------------------------------------------------------------------------
 
-function VagueCharts({ vague }: { vague: VagueAvecReleves }) {
+const VagueCharts = memo(function VagueCharts({ vague }: { vague: VagueAvecReleves }) {
   const croissanceData = buildCroissanceData(vague);
   const mortaliteData = buildMortaliteData(vague);
   const survieData = buildSurvieData(vague);
@@ -204,14 +230,7 @@ function VagueCharts({ vague }: { vague: VagueAvecReleves }) {
                     tickFormatter={(v) => `${v}g`}
                     width={44}
                   />
-                  <Tooltip
-                    content={
-                      <ChartTooltip
-                        labelFormatter={(label) => String(label)}
-                        valueFormatter={(v) => `${v} g`}
-                      />
-                    }
-                  />
+                  <Tooltip content={tooltipCroissance} />
                   <Line
                     type="monotone"
                     dataKey="poidsMoyen"
@@ -254,14 +273,7 @@ function VagueCharts({ vague }: { vague: VagueAvecReleves }) {
                     domain={[0, 100]}
                     width={40}
                   />
-                  <Tooltip
-                    content={
-                      <ChartTooltip
-                        labelFormatter={(label) => String(label)}
-                        valueFormatter={(v) => `${v}%`}
-                      />
-                    }
-                  />
+                  <Tooltip content={tooltipSurvie} />
                   <Line
                     type="monotone"
                     dataKey="survie"
@@ -302,14 +314,7 @@ function VagueCharts({ vague }: { vague: VagueAvecReleves }) {
                     tick={{ fontSize: 11 }}
                     width={36}
                   />
-                  <Tooltip
-                    content={
-                      <ChartTooltip
-                        labelFormatter={(label) => String(label)}
-                        valueFormatter={(v) => `${v} morts`}
-                      />
-                    }
-                  />
+                  <Tooltip content={tooltipMortalite} />
                   <Bar
                     dataKey="nombreMorts"
                     name="Morts"
@@ -324,7 +329,7 @@ function VagueCharts({ vague }: { vague: VagueAvecReleves }) {
       )}
     </div>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Composant principal

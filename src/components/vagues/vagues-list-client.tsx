@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Plus, Waves } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -48,9 +48,9 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
   const [distributionMap, setDistributionMap] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const enCours = vagues.filter((v) => v.statut === StatutVague.EN_COURS);
-  const terminees = vagues.filter((v) => v.statut === StatutVague.TERMINEE);
-  const annulees = vagues.filter((v) => v.statut === StatutVague.ANNULEE);
+  const enCours = useMemo(() => vagues.filter((v) => v.statut === StatutVague.EN_COURS), [vagues]);
+  const terminees = useMemo(() => vagues.filter((v) => v.statut === StatutVague.TERMINEE), [vagues]);
+  const annulees = useMemo(() => vagues.filter((v) => v.statut === StatutVague.ANNULEE), [vagues]);
 
   function resetForm() {
     setCode("");

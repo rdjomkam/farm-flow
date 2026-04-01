@@ -94,7 +94,7 @@ export function VenteFormClient({ clients, vagues }: Props) {
         {t("ventes.form.back")}
       </Link>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         {/* Step 1: Client + Vague */}
         <Card>
           <CardHeader className="pb-2">
@@ -102,7 +102,7 @@ export function VenteFormClient({ clients, vagues }: Props) {
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <Select value={clientId} onValueChange={setClientId}>
-              <SelectTrigger label={t("ventes.form.client")}>
+              <SelectTrigger label={t("ventes.form.client")} required aria-required="true">
                 <SelectValue placeholder={t("ventes.form.clientPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
@@ -113,7 +113,7 @@ export function VenteFormClient({ clients, vagues }: Props) {
             </Select>
 
             <Select value={vagueId} onValueChange={setVagueId}>
-              <SelectTrigger label={t("ventes.form.vague")}>
+              <SelectTrigger label={t("ventes.form.vague")} required aria-required="true">
                 <SelectValue placeholder={t("ventes.form.vaguePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
@@ -145,6 +145,7 @@ export function VenteFormClient({ clients, vagues }: Props) {
               min="1"
               max={selectedVague?.poissonsDisponibles ?? undefined}
               placeholder={t("ventes.form.nombrePoissonsPlaceholder")}
+              required
               value={quantitePoissons}
               onChange={(e) => setQuantitePoissons(e.target.value)}
             />
@@ -154,6 +155,7 @@ export function VenteFormClient({ clients, vagues }: Props) {
               min="0.1"
               step="0.1"
               placeholder={t("ventes.form.poidsTotalKgPlaceholder")}
+              required
               value={poidsTotalKg}
               onChange={(e) => setPoidsTotalKg(e.target.value)}
             />
@@ -162,6 +164,7 @@ export function VenteFormClient({ clients, vagues }: Props) {
               type="number"
               min="1"
               placeholder={t("ventes.form.prixUnitaireKgPlaceholder")}
+              required
               value={prixUnitaireKg}
               onChange={(e) => setPrixUnitaireKg(e.target.value)}
             />

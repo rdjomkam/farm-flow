@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { HeartPulse, TrendingUp, Weight, Activity, Scale } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import type { IndicateursVague } from "@/types";
@@ -10,7 +11,7 @@ interface IndicateursCardsProps {
   indicateurs: IndicateursVague;
 }
 
-export function IndicateursCards({ indicateurs }: IndicateursCardsProps) {
+function IndicateursCardsBase({ indicateurs }: IndicateursCardsProps) {
   const tAnalytics = useTranslations("analytics");
   const t = useTranslations("vagues");
 
@@ -71,3 +72,5 @@ export function IndicateursCards({ indicateurs }: IndicateursCardsProps) {
     </Card>
   );
 }
+
+export const IndicateursCards = memo(IndicateursCardsBase);

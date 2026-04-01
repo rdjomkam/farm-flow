@@ -11,9 +11,26 @@ const SelectValue = SelectPrimitive.Value;
 
 const SelectTrigger = forwardRef<
   React.ComponentRef<typeof SelectPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger> & { label?: string; error?: string }
->(({ className, children, label, error, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger> & {
+    label?: string;
+    error?: string;
+    required?: boolean;
+    /** Texte d'aide contextuelle affiché sous le champ et lié via aria-describedby */
+    hint?: string;
+  }
+>(({ className, children, label, error, hint, required, ...props }, ref) => {
   const labelId = useId();
+  const triggerId = useId();
+  const errorId = `${triggerId}-error`;
+  const hintId = `${triggerId}-hint`;
+
+  const describedBy = [
+    error ? errorId : null,
+    hint ? hintId : null,
+  ]
+    .filter(Boolean)
+    .join(" ") || undefined;
+
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
@@ -24,6 +41,9 @@ const SelectTrigger = forwardRef<
       <SelectPrimitive.Trigger
         ref={ref}
         aria-labelledby={label ? labelId : undefined}
+        aria-required={required ? "true" : undefined}
+        aria-invalid={error ? "true" : undefined}
+        aria-describedby={describedBy}
         className={cn(
           "flex h-11 w-full items-center justify-between rounded-lg border px-3 text-base",
           "placeholder:text-muted-foreground",
@@ -40,7 +60,8 @@ const SelectTrigger = forwardRef<
           <ChevronDown className="h-4 w-4 opacity-50" />
         </SelectPrimitive.Icon>
       </SelectPrimitive.Trigger>
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && <p id={errorId} role="alert" aria-live="polite" className="text-sm text-danger">{error}</p>}
+      {hint && !error && <p id={hintId} className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 });

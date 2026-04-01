@@ -2331,6 +2331,7 @@ model IdempotencyRecord {
   site       Site     @relation(fields: [siteId], references: [id])
   response   Json
   statusCode Int
+  bodyHash   String?
   createdAt  DateTime @default(now())
   expiresAt  DateTime
 

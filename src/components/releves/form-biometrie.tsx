@@ -20,6 +20,7 @@ export function FormBiometrie({ values, onChange, errors }: FormBiometrieProps) 
         type="number"
         min="0.1"
         step="0.1"
+        required
         value={values.poidsMoyen}
         onChange={(e) => onChange("poidsMoyen", e.target.value)}
         error={errors.poidsMoyen}

@@ -6,6 +6,7 @@ import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission, parsePaginationQuery } from "@/types";
 import type { CreateVenteDTO, VenteFilters } from "@/types";
 import { apiError } from "@/lib/api-utils";
+import { checkIdempotency, storeIdempotency, hashBody } from "@/lib/idempotency";
 
 export async function GET(request: NextRequest) {
   try {
@@ -47,17 +48,21 @@ export async function POST(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.VENTES_CREER);
 
+    // Parse body once (needed before idempotency check for body hash)
+    const body = await request.json();
+
     // Idempotency check
     const idempotencyKey = request.headers.get("X-Idempotency-Key");
-    if (idempotencyKey && auth.activeSiteId) {
-      const { checkIdempotency } = await import("@/lib/idempotency");
-      const check = await checkIdempotency(idempotencyKey, auth.activeSiteId);
-      if (check.isDuplicate) {
+    if (idempotencyKey) {
+      const bHash = hashBody(body);
+      const check = await checkIdempotency(idempotencyKey, auth.activeSiteId, bHash);
+      if ("isConflict" in check) {
+        return apiError(409, "Cle d'idempotence deja utilisee avec un corps de requete different.");
+      } else if (check.isDuplicate) {
         return NextResponse.json(check.response, { status: check.statusCode });
       }
     }
 
-    const body = await request.json();
     const errors: { field: string; message: string }[] = [];
 
     if (!body.clientId || typeof body.clientId !== "string") {
@@ -96,9 +101,8 @@ export async function POST(request: NextRequest) {
     const vente = await createVente(auth.activeSiteId, auth.userId, data);
 
     // Store idempotency record
-    if (idempotencyKey && auth.activeSiteId) {
-      const { storeIdempotency } = await import("@/lib/idempotency");
-      await storeIdempotency(idempotencyKey, auth.activeSiteId, vente, 201);
+    if (idempotencyKey) {
+      await storeIdempotency(idempotencyKey, auth.activeSiteId, vente, 201, hashBody(body));
     }
 
     return NextResponse.json(vente, { status: 201 });

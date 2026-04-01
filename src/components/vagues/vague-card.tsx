@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import Link from "next/link";
 import { Calendar, Container, Clock } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -18,7 +19,7 @@ interface VagueCardProps {
   vague: VagueSummaryResponse;
 }
 
-export function VagueCard({ vague }: VagueCardProps) {
+function VagueCardBase({ vague }: VagueCardProps) {
   const t = useTranslations("vagues");
   const statut = vague.statut as StatutVague;
 
@@ -52,3 +53,5 @@ export function VagueCard({ vague }: VagueCardProps) {
     </Link>
   );
 }
+
+export const VagueCard = memo(VagueCardBase);

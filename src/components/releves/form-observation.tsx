@@ -18,6 +18,7 @@ export function FormObservation({ values, onChange, errors }: FormObservationPro
       label={t("form.observation.description")}
       rows={4}
       placeholder={t("form.observation.placeholder")}
+      required
       value={values.description}
       onChange={(e) => onChange("description", e.target.value)}
       error={errors.description}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { queryKeys } from "@/lib/query-keys";
@@ -74,10 +74,10 @@ export function MouvementsListClient({ mouvements, produits, vagues, permissions
   const [vagueId, setVagueId] = useState("");
   const [notes, setNotes] = useState("");
 
-  const filtered =
-    tab === "tous"
-      ? mouvements
-      : mouvements.filter((m) => m.type === tab);
+  const filtered = useMemo(
+    () => (tab === "tous" ? mouvements : mouvements.filter((m) => m.type === tab)),
+    [tab, mouvements]
+  );
 
   function resetForm() {
     setProduitId("");

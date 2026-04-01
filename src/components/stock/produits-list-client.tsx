@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Plus, Package, AlertTriangle, ArrowLeft } from "lucide-react";
@@ -86,16 +86,16 @@ export function ProduitsListClient({ produits: initialProduits, fournisseurs, pe
   const [tauxFibres, setTauxFibres] = useState("");
   const [phasesCibles, setPhasesCibles] = useState<string[]>([]);
 
-  const filtered =
-    tab === "tous"
-      ? produits
-      : tab === "alerte"
-        ? produits.filter((p) => p.stockActuel <= p.seuilAlerte)
-        : produits.filter((p) => p.categorie === tab);
+  const alerteCount = useMemo(
+    () => produits.filter((p) => p.stockActuel <= p.seuilAlerte).length,
+    [produits]
+  );
 
-  const alerteCount = produits.filter(
-    (p) => p.stockActuel <= p.seuilAlerte
-  ).length;
+  const filtered = useMemo(() => {
+    if (tab === "tous") return produits;
+    if (tab === "alerte") return produits.filter((p) => p.stockActuel <= p.seuilAlerte);
+    return produits.filter((p) => p.categorie === tab);
+  }, [tab, produits]);
 
   function resetForm() {
     setNom("");

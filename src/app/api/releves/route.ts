@@ -14,6 +14,7 @@ import {
 import { retryAsync } from "@/lib/async-retry";
 import { ErrorKeys } from "@/lib/api-error-keys";
 import { apiError } from "@/lib/api-utils";
+import { checkIdempotency, storeIdempotency, hashBody } from "@/lib/idempotency";
 import {
   createReleveSchema,
   createRenouvellementSchema,
@@ -79,17 +80,23 @@ export async function POST(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.RELEVES_CREER);
 
+    // Parse body once (needed before idempotency check for body hash)
+    const body = await request.json();
+
     // Idempotency check
     const idempotencyKey = request.headers.get("X-Idempotency-Key");
     if (idempotencyKey && auth.activeSiteId) {
-      const { checkIdempotency } = await import("@/lib/idempotency");
-      const check = await checkIdempotency(idempotencyKey, auth.activeSiteId);
-      if (check.isDuplicate) {
+      const bHash = hashBody(body);
+      const check = await checkIdempotency(idempotencyKey, auth.activeSiteId, bHash);
+      if ("isConflict" in check) {
+        return NextResponse.json(
+          { status: 409, message: "Cle d'idempotence deja utilisee avec un corps de requete different." },
+          { status: 409 }
+        );
+      } else if (check.isDuplicate) {
         return NextResponse.json(check.response, { status: check.statusCode });
       }
     }
-
-    const body = await request.json();
 
     // RENOUVELLEMENT is handled separately because .and() is incompatible with discriminatedUnion
     if (body.typeReleve === TypeReleve.RENOUVELLEMENT) {
@@ -119,8 +126,7 @@ export async function POST(request: NextRequest) {
         { context: "[POST /api/releves] hook SEUIL (RENOUVELLEMENT)" }
       );
       if (idempotencyKey && auth.activeSiteId) {
-        const { storeIdempotency } = await import("@/lib/idempotency");
-        await storeIdempotency(idempotencyKey, auth.activeSiteId, releve, 201);
+        await storeIdempotency(idempotencyKey, auth.activeSiteId, releve, 201, hashBody(body));
       }
       return NextResponse.json(releve, { status: 201 });
     }
@@ -240,8 +246,7 @@ export async function POST(request: NextRequest) {
 
     // Store idempotency record
     if (idempotencyKey && auth.activeSiteId) {
-      const { storeIdempotency } = await import("@/lib/idempotency");
-      await storeIdempotency(idempotencyKey, auth.activeSiteId, releve, 201);
+      await storeIdempotency(idempotencyKey, auth.activeSiteId, releve, 201, hashBody(body));
     }
 
     return NextResponse.json(releve, { status: 201 });

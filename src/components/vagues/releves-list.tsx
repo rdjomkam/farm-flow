@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, memo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -38,7 +38,7 @@ const typeVariants: Record<TypeReleve, "info" | "warning" | "default"> = {
   [TypeReleve.RENOUVELLEMENT]: "default",
 };
 
-function ReleveDetails({ releve }: { releve: Releve }) {
+const ReleveDetails = memo(function ReleveDetails({ releve }: { releve: Releve }) {
   const t = useTranslations("releves");
   const type = releve.typeReleve as TypeReleve;
   switch (type) {
@@ -116,9 +116,9 @@ function ReleveDetails({ releve }: { releve: Releve }) {
       );
     }
   }
-}
+});
 
-function DeleteReleveButton({ releveId }: { releveId: string }) {
+const DeleteReleveButton = memo(function DeleteReleveButton({ releveId }: { releveId: string }) {
   const t = useTranslations("releves");
   const router = useRouter();
   const { toast } = useToast();
@@ -175,7 +175,7 @@ function DeleteReleveButton({ releveId }: { releveId: string }) {
       </DialogContent>
     </Dialog>
   );
-}
+});
 
 interface RelevesListProps {
   releves: Releve[];
@@ -193,18 +193,26 @@ export function RelevesList({ releves, produits = [], permissions, limit, vagueI
   const hasMore = isLimited && releves.length > limit;
 
   // In limited mode, show most recent N (already sorted by date desc from API)
-  const displayReleves = hasMore ? releves.slice(0, limit) : releves;
+  const displayReleves = useMemo(
+    () => (hasMore ? releves.slice(0, limit) : releves),
+    [hasMore, releves, limit]
+  );
 
-  const filtered = tab === "tous"
-    ? displayReleves
-    : displayReleves.filter((r) => r.typeReleve === tab);
+  const filtered = useMemo(
+    () => (tab === "tous" ? displayReleves : displayReleves.filter((r) => r.typeReleve === tab)),
+    [tab, displayReleves]
+  );
 
-  const typeCounts = Object.values(TypeReleve).reduce(
-    (acc, tp) => {
-      acc[tp] = displayReleves.filter((r) => r.typeReleve === tp).length;
-      return acc;
-    },
-    {} as Record<TypeReleve, number>
+  const typeCounts = useMemo(
+    () =>
+      Object.values(TypeReleve).reduce(
+        (acc, tp) => {
+          acc[tp] = displayReleves.filter((r) => r.typeReleve === tp).length;
+          return acc;
+        },
+        {} as Record<TypeReleve, number>
+      ),
+    [displayReleves]
   );
 
   const releveItems = (items: Releve[]) => (

@@ -42,12 +42,13 @@ export function FormAlimentation({ values, onChange, errors, uniteAliment }: For
         type="number"
         min="0.01"
         step="0.01"
+        required
         value={values.quantiteAliment}
         onChange={(e) => onChange("quantiteAliment", e.target.value)}
         error={errors.quantiteAliment}
       />
       <Select value={values.typeAliment} onValueChange={(v) => onChange("typeAliment", v)}>
-        <SelectTrigger label={t("form.alimentation.typeAliment")} error={errors.typeAliment}>
+        <SelectTrigger label={t("form.alimentation.typeAliment")} required error={errors.typeAliment}>
           <SelectValue placeholder={t("form.alimentation.typeAlimentPlaceholder")} />
         </SelectTrigger>
         <SelectContent>
@@ -63,6 +64,7 @@ export function FormAlimentation({ values, onChange, errors, uniteAliment }: For
         label={t("form.alimentation.frequenceAliment")}
         type="number"
         min="1"
+        required
         value={values.frequenceAliment}
         onChange={(e) => onChange("frequenceAliment", e.target.value)}
         error={errors.frequenceAliment}

@@ -94,7 +94,9 @@ export async function POST(request: NextRequest) {
     if (idempotencyKey && auth.activeSiteId) {
       const { checkIdempotency } = await import("@/lib/idempotency");
       const check = await checkIdempotency(idempotencyKey, auth.activeSiteId);
-      if (check.isDuplicate) {
+      if ("isConflict" in check) {
+        return NextResponse.json({ status: 409, message: "Cle d'idempotence deja utilisee avec un corps de requete different." }, { status: 409 });
+      } else if (check.isDuplicate) {
         return NextResponse.json(check.response, { status: check.statusCode });
       }
     }

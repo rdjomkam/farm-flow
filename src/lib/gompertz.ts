@@ -418,11 +418,19 @@ function buildBounds(
 /**
  * Determine qualitative confidence level from point count and R².
  *
- * Thresholds are relative to `minPoints` (default 5):
- *   INSUFFICIENT_DATA : n < minPoints
- *   LOW               : minPoints ≤ n ≤ minPoints + 1
- *   MEDIUM            : minPoints + 2 ≤ n ≤ minPoints + 4
- *   HIGH              : n ≥ minPoints + 5 AND R² > 0.95
+ * R²-sensitive thresholds (ADR-gompertz-confidence-thresholds.md):
+ *   INSUFFICIENT_DATA : n < minPoints (system is under-determined)
+ *   HIGH              : n ≥ 8 AND R² > 0.95 — excellent fit, good coverage
+ *   MEDIUM            : n ≥ minPoints AND R² > 0.92 — good fit, acceptable coverage
+ *   LOW               : n ≥ minPoints — calibration possible but low reliability
+ *
+ * The key improvement over previous thresholds is that R² is used at all
+ * levels, not just to discriminate HIGH from MEDIUM. A high R² with fewer
+ * points (e.g. 5 pts, R²=0.99) is promoted to MEDIUM instead of being
+ * penalised as LOW.
+ *
+ * n ≥ 8 is required for HIGH to guard against over-fitting on a single
+ * phase of the sigmoid (e.g. exponential-only early data).
  */
 function resolveConfidenceLevel(
   n: number,
@@ -430,10 +438,9 @@ function resolveConfidenceLevel(
   minPoints: number = 5
 ): GompertzConfidenceLevel {
   if (n < minPoints) return "INSUFFICIENT_DATA";
-  if (n <= minPoints + 1) return "LOW";
-  if (n <= minPoints + 4) return "MEDIUM";
-  // n >= minPoints + 5
-  return r2 > 0.95 ? "HIGH" : "MEDIUM";
+  if (n >= 8 && r2 > 0.95) return "HIGH";
+  if (r2 > 0.92) return "MEDIUM";
+  return "LOW";
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────

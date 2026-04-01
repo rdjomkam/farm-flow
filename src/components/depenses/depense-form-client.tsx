@@ -159,119 +159,78 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm">Informations principales</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             {/* Description */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="description" className="text-sm font-medium">
-                Description <span className="text-destructive">*</span>
-              </label>
-              <Input
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Achat aliment, loyer, salaire..."
-                className={getFieldError("description") ? "border-destructive" : ""}
-              />
-              {getFieldError("description") && (
-                <p className="text-xs text-destructive">
-                  {getFieldError("description")}
-                </p>
-              )}
-            </div>
+            <Input
+              id="description"
+              label="Description"
+              required
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Achat aliment, loyer, salaire..."
+              error={getFieldError("description")}
+            />
 
             {/* Categorie */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="categorie" className="text-sm font-medium">
-                Categorie <span className="text-destructive">*</span>
-              </label>
-              <Select
-                value={categorie}
-                onValueChange={(v) => setCategorie(v as CategorieDepense)}
+            <Select
+              value={categorie}
+              onValueChange={(v) => setCategorie(v as CategorieDepense)}
+            >
+              <SelectTrigger
+                id="categorie"
+                label="Categorie"
+                required
+                error={getFieldError("categorieDepense")}
               >
-                <SelectTrigger
-                  id="categorie"
-                  className={
-                    getFieldError("categorieDepense") ? "border-destructive" : ""
-                  }
-                >
-                  <SelectValue placeholder="Choisir une categorie" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(CategorieDepense).map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {categorieLabels[cat]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {getFieldError("categorieDepense") && (
-                <p className="text-xs text-destructive">
-                  {getFieldError("categorieDepense")}
-                </p>
-              )}
-            </div>
+                <SelectValue placeholder="Choisir une categorie" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(CategorieDepense).map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {categorieLabels[cat]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             {/* Montant */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="montant" className="text-sm font-medium">
-                Montant total (FCFA) <span className="text-destructive">*</span>
-              </label>
-              <Input
-                id="montant"
-                type="number"
-                min={1}
-                step="0.01"
-                value={montantTotal}
-                onChange={(e) => setMontantTotal(e.target.value)}
-                placeholder="Ex: 50000"
-                className={
-                  getFieldError("montantTotal") ? "border-destructive" : ""
-                }
-              />
-              {getFieldError("montantTotal") && (
-                <p className="text-xs text-destructive">
-                  {getFieldError("montantTotal")}
-                </p>
-              )}
-            </div>
+            <Input
+              id="montant"
+              label="Montant total (FCFA)"
+              type="number"
+              min={1}
+              step="0.01"
+              required
+              value={montantTotal}
+              onChange={(e) => setMontantTotal(e.target.value)}
+              placeholder="Ex: 50000"
+              error={getFieldError("montantTotal")}
+            />
 
             {/* Date */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="date" className="text-sm font-medium">
-                Date <span className="text-destructive">*</span>
-              </label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className={getFieldError("date") ? "border-destructive" : ""}
-              />
-              {getFieldError("date") && (
-                <p className="text-xs text-destructive">
-                  {getFieldError("date")}
-                </p>
-              )}
-            </div>
+            <Input
+              id="date"
+              label="Date"
+              type="date"
+              required
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              error={getFieldError("date")}
+            />
 
             {/* Date echeance */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="dateEcheance" className="text-sm font-medium">
-                Date d&apos;echeance{" "}
-                <span className="text-muted-foreground text-xs">(optionnel)</span>
-              </label>
-              <Input
-                id="dateEcheance"
-                type="date"
-                value={dateEcheance}
-                onChange={(e) => setDateEcheance(e.target.value)}
-              />
-            </div>
+            <Input
+              id="dateEcheance"
+              label="Date d'echeance (optionnel)"
+              type="date"
+              value={dateEcheance}
+              onChange={(e) => setDateEcheance(e.target.value)}
+            />
           </CardContent>
         </Card>
 
@@ -288,49 +247,43 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
           <CardContent className="flex flex-col gap-4">
             {/* Vague */}
             {vagues.length > 0 && (
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="vague" className="text-sm font-medium">Vague associee</label>
-                <Select value={vagueId || "__aucune"} onValueChange={(v) => setVagueId(v === "__aucune" ? "" : v)}>
-                  <SelectTrigger id="vague">
-                    <SelectValue placeholder="Aucune vague" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__aucune">Aucune vague</SelectItem>
-                    {vagues.map((v) => (
-                      <SelectItem key={v.id} value={v.id}>
-                        {v.code}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={vagueId || "__aucune"} onValueChange={(v) => setVagueId(v === "__aucune" ? "" : v)}>
+                <SelectTrigger id="vague" label="Vague associee">
+                  <SelectValue placeholder="Aucune vague" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__aucune">Aucune vague</SelectItem>
+                  {vagues.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
 
             {/* Commande */}
             {commandesLivrees.length > 0 && (
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="commande" className="text-sm font-medium">Commande liee</label>
-                <Select
-                  value={commandeId || "__aucune"}
-                  onValueChange={handleCommandeChange}
-                >
-                  <SelectTrigger id="commande">
-                    <SelectValue placeholder="Aucune commande" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__aucune">Aucune commande</SelectItem>
-                    {commandesLivrees.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.numero} —{" "}
-                        {new Intl.NumberFormat("fr-FR").format(
-                          Math.round(c.montantTotal)
-                        )}{" "}
-                        FCFA
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select
+                value={commandeId || "__aucune"}
+                onValueChange={handleCommandeChange}
+              >
+                <SelectTrigger id="commande" label="Commande liee">
+                  <SelectValue placeholder="Aucune commande" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__aucune">Aucune commande</SelectItem>
+                  {commandesLivrees.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.numero} —{" "}
+                      {new Intl.NumberFormat("fr-FR").format(
+                        Math.round(c.montantTotal)
+                      )}{" "}
+                      FCFA
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           </CardContent>
         </Card>
@@ -360,7 +313,7 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
               "date",
             ].includes(e.field)
           ) && (
-            <div className="text-sm text-destructive bg-destructive/10 rounded p-3">
+            <div role="alert" aria-live="assertive" className="text-sm text-destructive bg-destructive/10 rounded p-3">
               {submitErrors[0].message}
             </div>
           )}

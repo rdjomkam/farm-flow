@@ -27,12 +27,13 @@ export function FormComptage({ values, onChange, errors }: FormComptageProps) {
         label={t("form.comptage.nombreCompte")}
         type="number"
         min="0"
+        required
         value={values.nombreCompte}
         onChange={(e) => onChange("nombreCompte", e.target.value)}
         error={errors.nombreCompte}
       />
       <Select value={values.methodeComptage} onValueChange={(v) => onChange("methodeComptage", v)}>
-        <SelectTrigger label={t("form.comptage.methodeComptage")} error={errors.methodeComptage}>
+        <SelectTrigger label={t("form.comptage.methodeComptage")} required error={errors.methodeComptage}>
           <SelectValue placeholder={t("form.comptage.methodePlaceholder")} />
         </SelectTrigger>
         <SelectContent>

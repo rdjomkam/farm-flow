@@ -1,5 +1,6 @@
 "use client";
 
+import { memo, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -61,7 +62,7 @@ interface PoidsChartProps {
 }
 
 /** Badge de fiabilite du modele Gompertz */
-function GompertzBadge({ confidence, r2 }: { confidence: string; r2: number | null }) {
+const GompertzBadge = memo(function GompertzBadge({ confidence, r2 }: { confidence: string; r2: number | null }) {
   const variantMap: Record<string, "terminee" | "warning" | "default"> = {
     HIGH: "terminee",
     MEDIUM: "warning",
@@ -81,7 +82,7 @@ function GompertzBadge({ confidence, r2 }: { confidence: string; r2: number | nu
       {label}{r2Label}
     </Badge>
   );
-}
+});
 
 export function PoidsChart({
   data,
@@ -95,6 +96,18 @@ export function PoidsChart({
   dateDebut,
 }: PoidsChartProps) {
   const t = useTranslations("vagues");
+
+  const tooltipContent = useMemo(
+    () => (
+      <ChartTooltip
+        labelFormatter={(label) => t("poidsChart.tooltipLabel", { label })}
+        valueFormatter={(v) => `${v} g`}
+      />
+    ),
+    // t is stable from next-intl — only re-create when locale changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t]
+  );
 
   const hasGompertz =
     !!gompertzConfidence &&
@@ -172,14 +185,7 @@ export function PoidsChart({
                   tickFormatter={(v) => `${v}g`}
                   width={42}
                 />
-                <Tooltip
-                  content={
-                    <ChartTooltip
-                      labelFormatter={(label) => t("poidsChart.tooltipLabel", { label })}
-                      valueFormatter={(v) => `${v} g`}
-                    />
-                  }
-                />
+                <Tooltip content={tooltipContent} />
                 <Line
                   type="monotone"
                   dataKey="poidsMoyen"

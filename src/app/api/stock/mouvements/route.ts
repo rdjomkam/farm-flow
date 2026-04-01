@@ -5,6 +5,7 @@ import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission, TypeMouvement, parsePaginationQuery } from "@/types";
 import type { CreateMouvementDTO, MouvementFilters } from "@/types";
 import { apiError } from "@/lib/api-utils";
+import { checkIdempotency, storeIdempotency, hashBody } from "@/lib/idempotency";
 
 const VALID_TYPES = Object.values(TypeMouvement);
 
@@ -53,7 +54,22 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.STOCK_GERER);
+
+    // Parse body once (needed before idempotency check for body hash)
     const body = await request.json();
+
+    // Idempotency check
+    const idempotencyKey = request.headers.get("X-Idempotency-Key");
+    if (idempotencyKey) {
+      const bHash = hashBody(body);
+      const check = await checkIdempotency(idempotencyKey, auth.activeSiteId, bHash);
+      if ("isConflict" in check) {
+        return apiError(409, "Cle d'idempotence deja utilisee avec un corps de requete different.");
+      } else if (check.isDuplicate) {
+        return NextResponse.json(check.response, { status: check.statusCode });
+      }
+    }
+
     const errors: { field: string; message: string }[] = [];
 
     if (!body.produitId || typeof body.produitId !== "string") {
@@ -121,6 +137,12 @@ export async function POST(request: NextRequest) {
     };
 
     const mouvement = await createMouvement(auth.activeSiteId, auth.userId, data);
+
+    // Store idempotency record
+    if (idempotencyKey) {
+      await storeIdempotency(idempotencyKey, auth.activeSiteId, mouvement, 201, hashBody(body));
+    }
+
     return NextResponse.json(mouvement, { status: 201 });
   } catch (error) {
     if (error instanceof AuthError) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ArrowRight, AlertTriangle, Info } from "lucide-react";
@@ -16,7 +17,7 @@ interface BacComparisonCardsProps {
   alertes: AlerteBac[];
 }
 
-function MetricRow({
+const MetricRow = memo(function MetricRow({
   label,
   value,
   unit,
@@ -39,7 +40,7 @@ function MetricRow({
       </div>
     </div>
   );
-}
+});
 
 export function BacComparisonCards({
   bacs,

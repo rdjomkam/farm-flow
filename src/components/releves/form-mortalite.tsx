@@ -27,12 +27,13 @@ export function FormMortalite({ values, onChange, errors }: FormMortaliteProps) 
         label={t("form.mortalite.nombreMorts")}
         type="number"
         min="0"
+        required
         value={values.nombreMorts}
         onChange={(e) => onChange("nombreMorts", e.target.value)}
         error={errors.nombreMorts}
       />
       <Select value={values.causeMortalite} onValueChange={(v) => onChange("causeMortalite", v)}>
-        <SelectTrigger label={t("form.mortalite.causeMortalite")} error={errors.causeMortalite}>
+        <SelectTrigger label={t("form.mortalite.causeMortalite")} required error={errors.causeMortalite}>
           <SelectValue placeholder={t("form.mortalite.causePlaceholder")} />
         </SelectTrigger>
         <SelectContent>

@@ -44,7 +44,7 @@ export default async function StockCommandesPage() {
         <Header title={t("commandes.title")} />
         <div className="p-4">
           <CommandesListClient
-            commandes={JSON.parse(JSON.stringify(commandes))}
+            commandes={JSON.parse(JSON.stringify(commandes.data))}
             fournisseurs={fournisseurOptions}
             produits={JSON.parse(JSON.stringify(produitOptions))}
             permissions={permissions}
