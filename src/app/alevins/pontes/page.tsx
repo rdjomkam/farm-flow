@@ -15,16 +15,16 @@ export default async function PontesPage() {
   const permissions = await checkPagePermission(session, Permission.ALEVINS_VOIR);
   if (!permissions) return <AccessDenied />;
 
-  const [pontes, reproducteurs] = await Promise.all([
+  const [pontesResult, reproducteursResult] = await Promise.all([
     getPontes(session.activeSiteId),
     getReproducteurs(session.activeSiteId),
   ]);
 
-  const femelles = reproducteurs
+  const femelles = reproducteursResult.data
     .filter((r) => r.sexe === SexeReproducteur.FEMELLE)
     .map((r) => ({ id: r.id, code: r.code }));
 
-  const males = reproducteurs
+  const males = reproducteursResult.data
     .filter((r) => r.sexe === SexeReproducteur.MALE)
     .map((r) => ({ id: r.id, code: r.code }));
 
@@ -33,7 +33,7 @@ export default async function PontesPage() {
       <Header title="Pontes" />
       <div className="p-4">
         <PontesListClient
-          pontes={JSON.parse(JSON.stringify(pontes))}
+          pontes={JSON.parse(JSON.stringify(pontesResult.data))}
           femelles={femelles}
           males={males}
           permissions={permissions}

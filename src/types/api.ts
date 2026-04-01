@@ -2579,3 +2579,46 @@ export interface BackofficeSession {
   name: string;
   isSuperAdmin: true;
 }
+
+// ---------------------------------------------------------------------------
+// Reception de commande (CR feature)
+// ---------------------------------------------------------------------------
+
+/**
+ * LigneReceptionInput — saisie d'une quantite recue pour une ligne de commande.
+ */
+export interface LigneReceptionInput {
+  ligneId: string;
+  quantiteRecue: number; // >= 0
+}
+
+/**
+ * RecevoirCommandeDTO — corps du POST /api/commandes/[id]/recevoir (cote UI).
+ */
+export interface RecevoirCommandeDTO {
+  dateLivraison?: string;
+  lignes: LigneReceptionInput[]; // obligatoire cote UI, optionnel cote API pour retro-compat
+}
+
+/**
+ * RecevoirCommandeResponse — reponse de POST /api/commandes/[id]/recevoir.
+ */
+export interface RecevoirCommandeResponse {
+  commande: {
+    id: string;
+    numero: string;
+    statut: string;
+    dateLivraison: string;
+    montantTotal: number;
+    montantRecu: number | null;
+    lignes: Array<{
+      id: string;
+      quantite: number;
+      quantiteRecue: number | null;
+      prixUnitaire: number;
+      produit: { id: string; nom: string; unite: string };
+    }>;
+  };
+  depense: { id: string; numero: string; montantTotal: number } | null;
+  avertissements: string[];
+}

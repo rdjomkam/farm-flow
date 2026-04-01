@@ -18,9 +18,9 @@ import {
   Upload,
   Eye,
   Trash2,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -36,6 +36,7 @@ import { useToast } from "@/components/ui/toast";
 import { StatutCommande, Permission } from "@/types";
 import { useStockService } from "@/services";
 import { ShareCommandeButton } from "@/components/stock/share-commande-button";
+import { ReceptionCommandeDialog } from "@/components/stock/reception-commande-dialog";
 
 const statutVariants: Record<StatutCommande, "default" | "info" | "en_cours" | "warning"> = {
   [StatutCommande.BROUILLON]: "default",
@@ -47,6 +48,7 @@ const statutVariants: Record<StatutCommande, "default" | "info" | "en_cours" | "
 interface LigneData {
   id: string;
   quantite: number;
+  quantiteRecue: number | null;
   prixUnitaire: number;
   produit: { id: string; nom: string; unite: string; uniteAchat: string | null; contenance: number | null };
 }
@@ -58,6 +60,7 @@ interface CommandeData {
   dateCommande: string;
   dateLivraison: string | null;
   montantTotal: number;
+  montantRecu: number | null;
   factureUrl: string | null;
   fournisseur: {
     id: string;
@@ -97,17 +100,12 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
   const { toast } = useToast();
   const stockService = useStockService();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const recuFileInputRef = useRef<HTMLInputElement>(null);
 
   const [commande, setCommande] = useState(initialCommande);
   const [recevoirOpen, setRecevoirOpen] = useState(false);
   const [deleteFactureOpen, setDeleteFactureOpen] = useState(false);
   const [uploadFactureOpen, setUploadFactureOpen] = useState(false);
-  const [dateLivraison, setDateLivraison] = useState(
-    new Date().toISOString().split("T")[0]
-  );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [recuFile, setRecuFile] = useState<File | null>(null);
 
   const statut = commande.statut as StatutCommande;
   const canManage = permissions.includes(Permission.APPROVISIONNEMENT_GERER);
@@ -128,20 +126,6 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
     } else if (action === "annuler") {
       const result = await stockService.annulerCommande(commande.id);
       if (result.ok) invalidateCommandes();
-    }
-  }
-
-  // Receive order (with optional file)
-  async function handleRecevoir() {
-    const result = await stockService.recevoirCommande(
-      commande.id,
-      dateLivraison,
-      recuFile ?? undefined
-    );
-    if (result.ok) {
-      setRecevoirOpen(false);
-      setRecuFile(null);
-      invalidateCommandes();
     }
   }
 
@@ -268,6 +252,19 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
             </p>
             <p className="text-xs text-muted-foreground">{t("commandes.fields.montantTotal")}</p>
           </div>
+          {commande.montantRecu !== null && commande.montantRecu !== commande.montantTotal && (
+            <div className="mt-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <Package className="h-3.5 w-3.5 text-warning" />
+                <p className="text-xs font-medium text-warning">
+                  {t("commandes.detail.reception.montantReel")}
+                </p>
+              </div>
+              <p className="text-lg font-bold">
+                {formatNumber(commande.montantRecu)} FCFA
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -312,81 +309,15 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
                 {t("commandes.detail.receptionner")}
               </Button>
 
-              {/* Reception dialog with optional upload */}
-              <Dialog open={recevoirOpen} onOpenChange={setRecevoirOpen}>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{t("commandes.detail.receptionner")}</DialogTitle>
-                    <DialogDescription>
-                      {t("commandes.detail.receptionDescription")}
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  <div className="flex flex-col gap-3">
-                    <Input
-                      label={t("commandes.detail.dateLivraison")}
-                      type="date"
-                      value={dateLivraison}
-                      onChange={(e) => setDateLivraison(e.target.value)}
-                    />
-
-                    {/* Optional file field */}
-                    <div>
-                      <p className="text-sm font-medium mb-1">
-                        {t("commandes.detail.factureOptionnelle")}
-                      </p>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        {t("commandes.detail.factureFormat")}
-                      </p>
-                      <input
-                        ref={recuFileInputRef}
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        className="hidden"
-                        onChange={(e) => handleFileChange(e, setRecuFile)}
-                      />
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        type="button"
-                        onClick={() => recuFileInputRef.current?.click()}
-                      >
-                        <Upload className="h-4 w-4 mr-2" />
-                        {recuFile
-                          ? t("commandes.detail.changerFichier")
-                          : t("commandes.detail.choisirFichier")}
-                      </Button>
-                      {recuFile && (
-                        <div className="flex items-center gap-2 mt-2 p-2 rounded-md bg-muted/50">
-                          <FileIcon mimeOrName={recuFile.name} />
-                          <span className="text-sm truncate flex-1">{recuFile.name}</span>
-                          <button
-                            type="button"
-                            className="text-muted-foreground hover:text-destructive"
-                            onClick={() => {
-                              setRecuFile(null);
-                              if (recuFileInputRef.current) recuFileInputRef.current.value = "";
-                            }}
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button variant="outline" onClick={() => setRecuFile(null)}>
-                        {t("commandes.detail.annuler")}
-                      </Button>
-                    </DialogClose>
-                    <Button onClick={handleRecevoir}>
-                      {t("commandes.detail.confirmerReception")}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              {/* Reception dialog with line-level quantities */}
+              <ReceptionCommandeDialog
+                commande={commande}
+                open={recevoirOpen}
+                onOpenChange={setRecevoirOpen}
+                onSuccess={() => {
+                  invalidateCommandes();
+                }}
+              />
             </>
           )}
           <Button
@@ -565,17 +496,25 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
                 ? uniteLabel(ligne.produit.uniteAchat!)
                 : uniteLabel(ligne.produit.unite);
               const sousTotal = ligne.quantite * ligne.prixUnitaire;
+              // When receptionned, show quantiteRecue if it differs from quantite
+              const qrecue = ligne.quantiteRecue;
+              const hasEcart = qrecue !== null && qrecue !== ligne.quantite;
               return (
                 <div key={ligne.id} className="flex items-center justify-between px-4 py-3">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">
                       {ligne.produit.nom}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {ligne.quantite} {displayUnite} x {formatNumber(ligne.prixUnitaire)} FCFA
                     </p>
+                    {hasEcart && (
+                      <p className="text-xs text-warning mt-0.5">
+                        {t("commandes.detail.reception.recu")} : {qrecue} {displayUnite}
+                      </p>
+                    )}
                   </div>
-                  <p className="text-sm font-semibold shrink-0">
+                  <p className="text-sm font-semibold shrink-0 ml-2">
                     {formatNumber(sousTotal)} FCFA
                   </p>
                 </div>

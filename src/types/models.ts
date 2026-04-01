@@ -727,6 +727,8 @@ export interface Commande {
   dateCommande: Date;
   dateLivraison: Date | null;
   montantTotal: number;
+  /** Montant effectivement recu (null = non encore receptionne) — CR feature */
+  montantRecu: number | null;
   /** URL de la facture fournisseur sur Hetzner Object Storage (null si non uploadee) — Sprint 15 */
   factureUrl: string | null;
   /** Utilisateur ayant cree la commande */
@@ -753,6 +755,8 @@ export interface LigneCommande {
   produitId: string;
   quantite: number;
   prixUnitaire: number;
+  /** Quantite effectivement recue (null = non encore receptionne) — CR feature */
+  quantiteRecue: number | null;
   createdAt: Date;
 }
 

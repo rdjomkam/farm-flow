@@ -14,14 +14,14 @@ export default async function ReproducteursPage() {
   const permissions = await checkPagePermission(session, Permission.ALEVINS_VOIR);
   if (!permissions) return <AccessDenied />;
 
-  const reproducteurs = await getReproducteurs(session.activeSiteId);
+  const reproducteursResult = await getReproducteurs(session.activeSiteId);
 
   return (
     <>
       <Header title="Reproducteurs" />
       <div className="p-4">
         <ReproducteursListClient
-          reproducteurs={JSON.parse(JSON.stringify(reproducteurs))}
+          reproducteurs={JSON.parse(JSON.stringify(reproducteursResult.data))}
           permissions={permissions}
         />
       </div>

@@ -91,43 +91,47 @@ describe("GET /api/produits", () => {
   });
 
   it("retourne la liste des produits avec le total", async () => {
-    mockGetProduits.mockResolvedValue([FAKE_PRODUIT]);
+    mockGetProduits.mockResolvedValue({ data: [FAKE_PRODUIT], total: 1 });
 
     const response = await GET(makeRequest("/api/produits"));
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.produits).toHaveLength(1);
+    expect(data.data).toHaveLength(1);
     expect(data.total).toBe(1);
-    expect(mockGetProduits).toHaveBeenCalledWith("site-1", {});
+    expect(mockGetProduits).toHaveBeenCalledWith("site-1", {}, { limit: 50, offset: 0 });
   });
 
   it("passe le filtre categorie", async () => {
-    mockGetProduits.mockResolvedValue([]);
+    mockGetProduits.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/produits?categorie=ALIMENT"));
 
-    expect(mockGetProduits).toHaveBeenCalledWith("site-1", {
-      categorie: CategorieProduit.ALIMENT,
-    });
+    expect(mockGetProduits).toHaveBeenCalledWith(
+      "site-1",
+      { categorie: CategorieProduit.ALIMENT },
+      { limit: 50, offset: 0 }
+    );
   });
 
   it("passe le filtre fournisseurId", async () => {
-    mockGetProduits.mockResolvedValue([]);
+    mockGetProduits.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/produits?fournisseurId=four-1"));
 
-    expect(mockGetProduits).toHaveBeenCalledWith("site-1", {
-      fournisseurId: "four-1",
-    });
+    expect(mockGetProduits).toHaveBeenCalledWith(
+      "site-1",
+      { fournisseurId: "four-1" },
+      { limit: 50, offset: 0 }
+    );
   });
 
   it("ignore une categorie invalide", async () => {
-    mockGetProduits.mockResolvedValue([]);
+    mockGetProduits.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/produits?categorie=INVALIDE"));
 
-    expect(mockGetProduits).toHaveBeenCalledWith("site-1", {});
+    expect(mockGetProduits).toHaveBeenCalledWith("site-1", {}, { limit: 50, offset: 0 });
   });
 
   it("retourne 401 si non authentifie", async () => {

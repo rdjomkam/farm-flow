@@ -20,13 +20,13 @@ export default async function StockMouvementsPage() {
     if (!permissions) return <AccessDenied />;
 
     const t = await getTranslations("stock");
-    const [mouvementsResult, produits, vaguesResult] = await Promise.all([
+    const [mouvementsResult, produitsResult, vaguesResult] = await Promise.all([
       getMouvements(session.activeSiteId),
       getProduits(session.activeSiteId),
       getVagues(session.activeSiteId),
     ]);
 
-    const produitOptions = produits.map((p) => ({
+    const produitOptions = produitsResult.data.map((p) => ({
       id: p.id,
       nom: p.nom,
       unite: p.unite,

@@ -16,6 +16,8 @@ import type {
   Produit,
   Fournisseur,
   CommandeWithRelations,
+  LigneReceptionInput,
+  RecevoirCommandeResponse,
 } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -179,23 +181,29 @@ export function useStockService() {
   // -- Commandes avancees --
 
   const recevoirCommande = useCallback(
-    async (id: string, dateLivraison: string, file?: File) => {
+    async (
+      id: string,
+      dateLivraison: string,
+      lignes: LigneReceptionInput[],
+      file?: File
+    ) => {
       if (file) {
         const formData = new FormData();
         formData.set("dateLivraison", dateLivraison);
+        formData.set("lignes", JSON.stringify(lignes));
         formData.set("file", file);
-        return call<CommandeWithRelations>(
+        return call<RecevoirCommandeResponse>(
           `/api/commandes/${id}/recevoir`,
           { method: "POST", body: formData },
           { successMessage: "Commande réceptionnée." }
         );
       }
-      return call<CommandeWithRelations>(
+      return call<RecevoirCommandeResponse>(
         `/api/commandes/${id}/recevoir`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ dateLivraison }),
+          body: JSON.stringify({ dateLivraison, lignes }),
         },
         { successMessage: "Commande réceptionnée." }
       );

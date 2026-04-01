@@ -19,7 +19,7 @@ export default async function StockCommandesPage() {
     const permissions = await checkPagePermission(session, Permission.APPROVISIONNEMENT_VOIR);
     if (!permissions) return <AccessDenied />;
 
-    const [commandes, fournisseurs, produits] = await Promise.all([
+    const [commandes, fournisseurs, produitsResult] = await Promise.all([
       getCommandes(session.activeSiteId),
       getFournisseurs(session.activeSiteId),
       getProduits(session.activeSiteId),
@@ -30,7 +30,7 @@ export default async function StockCommandesPage() {
       nom: f.nom,
     }));
 
-    const produitOptions = produits.map((p) => ({
+    const produitOptions = produitsResult.data.map((p) => ({
       id: p.id,
       nom: p.nom,
       unite: p.unite,

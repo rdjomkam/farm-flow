@@ -29,15 +29,22 @@ export async function GET(request: NextRequest) {
         ? (statutParam as StatutReproducteur)
         : undefined;
 
-    const reproducteurs = await getReproducteurs(auth.activeSiteId, {
-      sexe,
-      statut,
-      search,
-    });
+    const limitParam = parseInt(searchParams.get("limit") ?? "50", 10);
+    const offsetParam = parseInt(searchParams.get("offset") ?? "0", 10);
+    const limit = Math.min(isNaN(limitParam) || limitParam < 1 ? 50 : limitParam, 200);
+    const offset = isNaN(offsetParam) || offsetParam < 0 ? 0 : offsetParam;
+
+    const result = await getReproducteurs(
+      auth.activeSiteId,
+      { sexe, statut, search },
+      { limit, offset }
+    );
 
     return NextResponse.json({
-      reproducteurs,
-      total: reproducteurs.length,
+      data: result.data,
+      total: result.total,
+      limit,
+      offset,
     });
   } catch (error) {
     console.error("[GET /api/reproducteurs]", error);

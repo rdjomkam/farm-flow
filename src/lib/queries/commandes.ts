@@ -182,15 +182,21 @@ export async function envoyerCommande(id: string, siteId: string) {
 /**
  * Recoit une commande :
  * 1. Verifie que la commande est en statut ENVOYEE
- * 2. Cree un mouvement ENTREE pour chaque ligne
- * 3. Met a jour le stockActuel de chaque produit
- * 4. Change le statut en LIVREE + date de livraison
+ * 2. Valide les lignesRecues si fournies (tous les ligneId doivent appartenir a la commande)
+ * 3. Cree un mouvement ENTREE pour chaque ligne avec quantiteRecue > 0
+ * 4. Met a jour le stockActuel de chaque produit
+ * 5. Met a jour quantiteRecue sur chaque LigneCommande
+ * 6. Change le statut en LIVREE + date de livraison + montantRecu
+ * 7. Auto-cree une Depense base sur montantRecu
+ *
+ * Si lignesRecues absent, fallback vers quantite commandee (retro-compat).
  */
 export async function recevoirCommande(
   id: string,
   siteId: string,
   userId: string,
-  dateLivraison?: string
+  dateLivraison?: string,
+  lignesRecues?: { ligneId: string; quantiteRecue: number }[]
 ) {
   return prisma.$transaction(async (tx) => {
     // Get commande with lignes + product conversion info + product categorie
@@ -200,7 +206,12 @@ export async function recevoirCommande(
         lignes: {
           include: {
             produit: {
-              select: { uniteAchat: true, contenance: true, categorie: true },
+              select: {
+                uniteAchat: true,
+                contenance: true,
+                categorie: true,
+                nom: true,
+              },
             },
           },
         },
@@ -216,37 +227,100 @@ export async function recevoirCommande(
     }
 
     const livraisonDate = dateLivraison ? new Date(dateLivraison) : new Date();
+    const avertissements: string[] = [];
 
-    // Create ENTREE mouvement for each ligne + update stock (with unit conversion)
+    // Build quantiteRecue map per ligneId
+    let ligneMap: Map<string, number>;
+
+    if (lignesRecues && lignesRecues.length > 0) {
+      // Validate that all provided ligneIds belong to this commande
+      const commandeLigneIds = new Set(commande.lignes.map((l) => l.id));
+      for (const lr of lignesRecues) {
+        if (!commandeLigneIds.has(lr.ligneId)) {
+          throw new Error(
+            `La ligne ${lr.ligneId} n'appartient pas a cette commande.`
+          );
+        }
+        if (lr.quantiteRecue < 0) {
+          throw new Error(
+            `La quantite recue ne peut pas etre negative (ligne ${lr.ligneId}).`
+          );
+        }
+      }
+
+      // Validate that all lignes are covered
+      const providedIds = new Set(lignesRecues.map((lr) => lr.ligneId));
+      for (const ligne of commande.lignes) {
+        if (!providedIds.has(ligne.id)) {
+          throw new Error(
+            `La ligne ${ligne.id} (${ligne.produit.nom}) n'est pas couverte dans les quantites recues. Toutes les lignes doivent etre renseignees.`
+          );
+        }
+      }
+
+      ligneMap = new Map(lignesRecues.map((lr) => [lr.ligneId, lr.quantiteRecue]));
+    } else {
+      // Fallback: use quantite commandee
+      ligneMap = new Map(commande.lignes.map((l) => [l.id, l.quantite]));
+    }
+
+    // Detect surlivraisons
     for (const ligne of commande.lignes) {
-      const quantiteBase = convertirQuantiteAchat(ligne.quantite, ligne.produit);
+      const qrecue = ligneMap.get(ligne.id) ?? ligne.quantite;
+      if (qrecue > ligne.quantite) {
+        avertissements.push(
+          `${ligne.produit.nom} : surlivraison detectee (commande: ${ligne.quantite}, recu: ${qrecue}).`
+        );
+      }
+    }
 
-      await tx.mouvementStock.create({
-        data: {
-          produitId: ligne.produitId,
-          type: TypeMouvement.ENTREE,
-          quantite: ligne.quantite,
-          prixTotal: ligne.quantite * ligne.prixUnitaire,
-          commandeId: commande.id,
-          userId,
-          date: livraisonDate,
-          notes: `Reception commande ${commande.numero}`,
-          siteId,
-        },
-      });
+    // Create ENTREE mouvement for each ligne with quantiteRecue > 0 + update stock
+    for (const ligne of commande.lignes) {
+      const qrecue = ligneMap.get(ligne.id) ?? ligne.quantite;
 
-      await tx.produit.update({
-        where: { id: ligne.produitId },
-        data: { stockActuel: { increment: quantiteBase } },
+      if (qrecue > 0) {
+        const quantiteBase = convertirQuantiteAchat(qrecue, ligne.produit);
+
+        await tx.mouvementStock.create({
+          data: {
+            produitId: ligne.produitId,
+            type: TypeMouvement.ENTREE,
+            quantite: qrecue,
+            prixTotal: qrecue * ligne.prixUnitaire,
+            commandeId: commande.id,
+            userId,
+            date: livraisonDate,
+            notes: `Reception commande ${commande.numero}`,
+            siteId,
+          },
+        });
+
+        await tx.produit.update({
+          where: { id: ligne.produitId },
+          data: { stockActuel: { increment: quantiteBase } },
+        });
+      }
+
+      // Update ligne with quantiteRecue (including 0)
+      await tx.ligneCommande.update({
+        where: { id: ligne.id },
+        data: { quantiteRecue: qrecue },
       });
     }
 
-    // Update commande statut + date livraison
+    // Calculate montantRecu
+    const montantRecu = commande.lignes.reduce((sum, ligne) => {
+      const qrecue = ligneMap.get(ligne.id) ?? ligne.quantite;
+      return sum + qrecue * ligne.prixUnitaire;
+    }, 0);
+
+    // Update commande statut + date livraison + montantRecu
     const commandeMiseAJour = await tx.commande.update({
       where: { id: commande.id },
       data: {
         statut: StatutCommande.LIVREE,
         dateLivraison: livraisonDate,
+        montantRecu,
       },
       include: {
         fournisseur: { select: { id: true, nom: true } },
@@ -262,13 +336,14 @@ export async function recevoirCommande(
       select: { id: true },
     });
 
-    let depense = null;
-    if (!depenseExistante && commande.montantTotal > 0) {
-      // Determine dominant category from lignes (most expensive)
+    let depense = null as { id: string; numero: string; montantTotal: number } | null;
+    if (!depenseExistante && montantRecu > 0) {
+      // Determine dominant category from lignes (most expensive based on received quantities)
       const categoriesDominantes = commande.lignes.reduce(
         (acc, ligne) => {
+          const qrecue = ligneMap.get(ligne.id) ?? ligne.quantite;
           const cat = ligne.produit.categorie;
-          acc[cat] = (acc[cat] ?? 0) + ligne.quantite * ligne.prixUnitaire;
+          acc[cat] = (acc[cat] ?? 0) + qrecue * ligne.prixUnitaire;
           return acc;
         },
         {} as Record<string, number>
@@ -289,7 +364,7 @@ export async function recevoirCommande(
           numero: depNumero,
           description: `Commande ${commande.numero}`,
           categorieDepense: categorieDepenseFromProduit(categorieDominante),
-          montantTotal: commande.montantTotal,
+          montantTotal: montantRecu,
           date: livraisonDate,
           commandeId: commande.id,
           userId,
@@ -298,7 +373,7 @@ export async function recevoirCommande(
       });
     }
 
-    return { commande: commandeMiseAJour, depense };
+    return { commande: commandeMiseAJour, depense, avertissements };
   });
 }
 

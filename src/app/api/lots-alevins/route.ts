@@ -21,15 +21,22 @@ export async function GET(request: NextRequest) {
         ? (statutParam as StatutLotAlevins)
         : undefined;
 
-    const lots = await getLotsAlevins(auth.activeSiteId, {
-      statut,
-      ponteId,
-      search,
-    });
+    const limitParam = parseInt(searchParams.get("limit") ?? "50", 10);
+    const offsetParam = parseInt(searchParams.get("offset") ?? "0", 10);
+    const limit = Math.min(isNaN(limitParam) || limitParam < 1 ? 50 : limitParam, 200);
+    const offset = isNaN(offsetParam) || offsetParam < 0 ? 0 : offsetParam;
+
+    const result = await getLotsAlevins(
+      auth.activeSiteId,
+      { statut, ponteId, search },
+      { limit, offset }
+    );
 
     return NextResponse.json({
-      lots,
-      total: lots.length,
+      data: result.data,
+      total: result.total,
+      limit,
+      offset,
     });
   } catch (error) {
     console.error("[GET /api/lots-alevins]", error);

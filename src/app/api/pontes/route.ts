@@ -21,15 +21,22 @@ export async function GET(request: NextRequest) {
         ? (statutParam as StatutPonte)
         : undefined;
 
-    const pontes = await getPontes(auth.activeSiteId, {
-      statut,
-      femelleId,
-      search,
-    });
+    const limitParam = parseInt(searchParams.get("limit") ?? "50", 10);
+    const offsetParam = parseInt(searchParams.get("offset") ?? "0", 10);
+    const limit = Math.min(isNaN(limitParam) || limitParam < 1 ? 50 : limitParam, 200);
+    const offset = isNaN(offsetParam) || offsetParam < 0 ? 0 : offsetParam;
+
+    const result = await getPontes(
+      auth.activeSiteId,
+      { statut, femelleId, search },
+      { limit, offset }
+    );
 
     return NextResponse.json({
-      pontes,
-      total: pontes.length,
+      data: result.data,
+      total: result.total,
+      limit,
+      offset,
     });
   } catch (error) {
     console.error("[GET /api/pontes]", error);

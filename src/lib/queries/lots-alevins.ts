@@ -14,10 +14,11 @@ export type {
   TransfertLotDTO,
 };
 
-/** Liste les lots d'alevins d'un site avec filtres optionnels */
+/** Liste les lots d'alevins d'un site avec filtres optionnels et pagination */
 export async function getLotsAlevins(
   siteId: string,
-  filters?: LotAlevinsFilters
+  filters?: LotAlevinsFilters,
+  pagination?: { limit: number; offset: number }
 ) {
   const where: Record<string, unknown> = { siteId };
 
@@ -30,15 +31,25 @@ export async function getLotsAlevins(
     ];
   }
 
-  return prisma.lotAlevins.findMany({
-    where,
-    include: {
-      ponte: { select: { id: true, code: true } },
-      bac: { select: { id: true, nom: true } },
-      vagueDestination: { select: { id: true, code: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const limit = Math.min(pagination?.limit ?? 50, 200);
+  const offset = pagination?.offset ?? 0;
+
+  const [data, total] = await Promise.all([
+    prisma.lotAlevins.findMany({
+      where,
+      include: {
+        ponte: { select: { id: true, code: true } },
+        bac: { select: { id: true, nom: true } },
+        vagueDestination: { select: { id: true, code: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      skip: offset,
+    }),
+    prisma.lotAlevins.count({ where }),
+  ]);
+
+  return { data, total };
 }
 
 /** Recupere un lot d'alevins par ID (verifie siteId), detail complet */

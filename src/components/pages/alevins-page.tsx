@@ -28,11 +28,15 @@ export default async function AlevinsPage() {
 
   const t = await getTranslations("alevins");
 
-  const [reproducteurs, pontes, lots] = await Promise.all([
+  const [reproducteursResult, pontesResult, lotsResult] = await Promise.all([
     getReproducteurs(session.activeSiteId),
     getPontes(session.activeSiteId),
     getLotsAlevins(session.activeSiteId),
   ]);
+
+  const reproducteurs = reproducteursResult.data;
+  const pontes = pontesResult.data;
+  const lots = lotsResult.data;
 
   const reproducteursActifs = reproducteurs.filter(
     (r) => r.statut === StatutReproducteur.ACTIF

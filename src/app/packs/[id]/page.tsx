@@ -22,7 +22,7 @@ export default async function PackDetailPage({ params }: PageProps) {
   const permissions = await checkPagePermission(session, Permission.DASHBOARD_VOIR);
   if (!permissions) return <AccessDenied />;
 
-  const [pack, produits, configs, plans] = await Promise.all([
+  const [pack, produitsResult, configs, plans] = await Promise.all([
     getPackById(id, session.activeSiteId),
     getProduits(session.activeSiteId),
     getConfigsElevage(session.activeSiteId),
@@ -31,7 +31,7 @@ export default async function PackDetailPage({ params }: PageProps) {
 
   if (!pack) notFound();
 
-  const produitOptions = produits.map((p) => ({
+  const produitOptions = produitsResult.data.map((p) => ({
     id: p.id,
     nom: p.nom,
     categorie: p.categorie,

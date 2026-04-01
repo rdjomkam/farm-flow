@@ -96,79 +96,79 @@ describe("GET /api/reproducteurs", () => {
   });
 
   it("retourne la liste des reproducteurs avec le total", async () => {
-    mockGetReproducteurs.mockResolvedValue([FAKE_REPRODUCTEUR]);
+    mockGetReproducteurs.mockResolvedValue({ data: [FAKE_REPRODUCTEUR], total: 1 });
 
     const response = await GET(makeRequest("/api/reproducteurs"));
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.reproducteurs).toHaveLength(1);
+    expect(data.data).toHaveLength(1);
     expect(data.total).toBe(1);
-    expect(mockGetReproducteurs).toHaveBeenCalledWith("site-1", {
-      sexe: undefined,
-      statut: undefined,
-      search: undefined,
-    });
+    expect(mockGetReproducteurs).toHaveBeenCalledWith(
+      "site-1",
+      { sexe: undefined, statut: undefined, search: undefined },
+      { limit: 50, offset: 0 }
+    );
   });
 
   it("passe le filtre sexe valide", async () => {
-    mockGetReproducteurs.mockResolvedValue([]);
+    mockGetReproducteurs.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/reproducteurs?sexe=FEMELLE"));
 
-    expect(mockGetReproducteurs).toHaveBeenCalledWith("site-1", {
-      sexe: SexeReproducteur.FEMELLE,
-      statut: undefined,
-      search: undefined,
-    });
+    expect(mockGetReproducteurs).toHaveBeenCalledWith(
+      "site-1",
+      { sexe: SexeReproducteur.FEMELLE, statut: undefined, search: undefined },
+      { limit: 50, offset: 0 }
+    );
   });
 
   it("passe le filtre statut valide", async () => {
-    mockGetReproducteurs.mockResolvedValue([]);
+    mockGetReproducteurs.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/reproducteurs?statut=ACTIF"));
 
-    expect(mockGetReproducteurs).toHaveBeenCalledWith("site-1", {
-      sexe: undefined,
-      statut: StatutReproducteur.ACTIF,
-      search: undefined,
-    });
+    expect(mockGetReproducteurs).toHaveBeenCalledWith(
+      "site-1",
+      { sexe: undefined, statut: StatutReproducteur.ACTIF, search: undefined },
+      { limit: 50, offset: 0 }
+    );
   });
 
   it("passe le filtre search", async () => {
-    mockGetReproducteurs.mockResolvedValue([]);
+    mockGetReproducteurs.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/reproducteurs?search=REP-F"));
 
-    expect(mockGetReproducteurs).toHaveBeenCalledWith("site-1", {
-      sexe: undefined,
-      statut: undefined,
-      search: "REP-F",
-    });
+    expect(mockGetReproducteurs).toHaveBeenCalledWith(
+      "site-1",
+      { sexe: undefined, statut: undefined, search: "REP-F" },
+      { limit: 50, offset: 0 }
+    );
   });
 
   it("ignore un sexe invalide", async () => {
-    mockGetReproducteurs.mockResolvedValue([]);
+    mockGetReproducteurs.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/reproducteurs?sexe=HERMAPHRODITE"));
 
-    expect(mockGetReproducteurs).toHaveBeenCalledWith("site-1", {
-      sexe: undefined,
-      statut: undefined,
-      search: undefined,
-    });
+    expect(mockGetReproducteurs).toHaveBeenCalledWith(
+      "site-1",
+      { sexe: undefined, statut: undefined, search: undefined },
+      { limit: 50, offset: 0 }
+    );
   });
 
   it("ignore un statut invalide", async () => {
-    mockGetReproducteurs.mockResolvedValue([]);
+    mockGetReproducteurs.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/reproducteurs?statut=INVALIDE"));
 
-    expect(mockGetReproducteurs).toHaveBeenCalledWith("site-1", {
-      sexe: undefined,
-      statut: undefined,
-      search: undefined,
-    });
+    expect(mockGetReproducteurs).toHaveBeenCalledWith(
+      "site-1",
+      { sexe: undefined, statut: undefined, search: undefined },
+      { limit: 50, offset: 0 }
+    );
   });
 
   it("retourne 401 si non authentifie", async () => {

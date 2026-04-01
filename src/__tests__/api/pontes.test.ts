@@ -98,67 +98,67 @@ describe("GET /api/pontes", () => {
   });
 
   it("retourne la liste des pontes avec le total", async () => {
-    mockGetPontes.mockResolvedValue([FAKE_PONTE]);
+    mockGetPontes.mockResolvedValue({ data: [FAKE_PONTE], total: 1 });
 
     const response = await GET(makeRequest("/api/pontes"));
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.pontes).toHaveLength(1);
+    expect(data.data).toHaveLength(1);
     expect(data.total).toBe(1);
-    expect(mockGetPontes).toHaveBeenCalledWith("site-1", {
-      statut: undefined,
-      femelleId: undefined,
-      search: undefined,
-    });
+    expect(mockGetPontes).toHaveBeenCalledWith(
+      "site-1",
+      { statut: undefined, femelleId: undefined, search: undefined },
+      { limit: 50, offset: 0 }
+    );
   });
 
   it("passe le filtre statut valide", async () => {
-    mockGetPontes.mockResolvedValue([]);
+    mockGetPontes.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/pontes?statut=TERMINEE"));
 
-    expect(mockGetPontes).toHaveBeenCalledWith("site-1", {
-      statut: StatutPonte.TERMINEE,
-      femelleId: undefined,
-      search: undefined,
-    });
+    expect(mockGetPontes).toHaveBeenCalledWith(
+      "site-1",
+      { statut: StatutPonte.TERMINEE, femelleId: undefined, search: undefined },
+      { limit: 50, offset: 0 }
+    );
   });
 
   it("passe le filtre femelleId", async () => {
-    mockGetPontes.mockResolvedValue([]);
+    mockGetPontes.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/pontes?femelleId=rep-f-1"));
 
-    expect(mockGetPontes).toHaveBeenCalledWith("site-1", {
-      statut: undefined,
-      femelleId: "rep-f-1",
-      search: undefined,
-    });
+    expect(mockGetPontes).toHaveBeenCalledWith(
+      "site-1",
+      { statut: undefined, femelleId: "rep-f-1", search: undefined },
+      { limit: 50, offset: 0 }
+    );
   });
 
   it("passe le filtre search", async () => {
-    mockGetPontes.mockResolvedValue([]);
+    mockGetPontes.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/pontes?search=PONTE-2026"));
 
-    expect(mockGetPontes).toHaveBeenCalledWith("site-1", {
-      statut: undefined,
-      femelleId: undefined,
-      search: "PONTE-2026",
-    });
+    expect(mockGetPontes).toHaveBeenCalledWith(
+      "site-1",
+      { statut: undefined, femelleId: undefined, search: "PONTE-2026" },
+      { limit: 50, offset: 0 }
+    );
   });
 
   it("ignore un statut invalide", async () => {
-    mockGetPontes.mockResolvedValue([]);
+    mockGetPontes.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/pontes?statut=INVALIDE"));
 
-    expect(mockGetPontes).toHaveBeenCalledWith("site-1", {
-      statut: undefined,
-      femelleId: undefined,
-      search: undefined,
-    });
+    expect(mockGetPontes).toHaveBeenCalledWith(
+      "site-1",
+      { statut: undefined, femelleId: undefined, search: undefined },
+      { limit: 50, offset: 0 }
+    );
   });
 
   it("retourne 401 si non authentifie", async () => {

@@ -18,7 +18,7 @@ export default async function StockPage() {
   if (!session.activeSiteId) redirect("/settings/sites");
 
   try {
-  const [permissions, t, produits, alertes, fournisseurs, commandesResult] = await Promise.all([
+  const [permissions, t, produitsResult, alertes, fournisseurs, commandesResult] = await Promise.all([
     checkPagePermission(session, Permission.STOCK_VOIR),
     getTranslations("stock"),
     getProduits(session.activeSiteId),
@@ -36,7 +36,7 @@ export default async function StockPage() {
     {
       href: "/stock/produits",
       label: t("sections.produits"),
-      description: t("sections.produitsDesc", { count: produits.length }),
+      description: t("sections.produitsDesc", { count: produitsResult.data.length }),
       icon: Package,
       color: "text-accent-blue",
       bgColor: "bg-accent-blue-muted",

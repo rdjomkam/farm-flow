@@ -8,8 +8,12 @@ import type {
 
 export type { CreatePonteDTO, UpdatePonteDTO, PonteFilters };
 
-/** Liste les pontes d'un site avec filtres optionnels */
-export async function getPontes(siteId: string, filters?: PonteFilters) {
+/** Liste les pontes d'un site avec filtres optionnels et pagination */
+export async function getPontes(
+  siteId: string,
+  filters?: PonteFilters,
+  pagination?: { limit: number; offset: number }
+) {
   const where: Record<string, unknown> = { siteId };
 
   if (filters?.statut) where.statut = filters.statut;
@@ -21,15 +25,25 @@ export async function getPontes(siteId: string, filters?: PonteFilters) {
     ];
   }
 
-  return prisma.ponte.findMany({
-    where,
-    include: {
-      femelle: { select: { id: true, code: true, sexe: true, poids: true } },
-      male: { select: { id: true, code: true, sexe: true, poids: true } },
-      _count: { select: { lots: true } },
-    },
-    orderBy: { datePonte: "desc" },
-  });
+  const limit = Math.min(pagination?.limit ?? 50, 200);
+  const offset = pagination?.offset ?? 0;
+
+  const [data, total] = await Promise.all([
+    prisma.ponte.findMany({
+      where,
+      include: {
+        femelle: { select: { id: true, code: true, sexe: true, poids: true } },
+        male: { select: { id: true, code: true, sexe: true, poids: true } },
+        _count: { select: { lots: true } },
+      },
+      orderBy: { datePonte: "desc" },
+      take: limit,
+      skip: offset,
+    }),
+    prisma.ponte.count({ where }),
+  ]);
+
+  return { data, total };
 }
 
 /** Recupere une ponte par ID (verifie siteId), avec femelle, male et lots */

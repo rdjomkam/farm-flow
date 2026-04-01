@@ -445,6 +445,12 @@ export type {
 } from "./api";
 // ADR-022 — Backoffice Separation
 export type { BackofficeSession } from "./api";
+// CR feature — Reception de commande
+export type {
+  LigneReceptionInput,
+  RecevoirCommandeDTO,
+  RecevoirCommandeResponse,
+} from "./api";
 export type {
   StockProduitContext,
   IndicateursContext,

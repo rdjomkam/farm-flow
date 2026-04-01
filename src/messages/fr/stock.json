@@ -161,10 +161,25 @@
       "receptionner": "Receptionner",
       "annuler": "Annuler",
       "confirmerReception": "Confirmer la reception",
-      "receptionDescription": "Cette action va creer des mouvements d'entree et mettre a jour le stock.",
+      "receptionDescription": "Verifiez les quantites reellement recues pour chaque article.",
       "dateLivraison": "Date de livraison",
       "creePar": "Cree par {name}",
-      "lignes": "Lignes ({count})"
+      "lignes": "Lignes ({count})",
+      "reception": {
+        "title": "Receptionner la commande {numero}",
+        "description": "Verifiez les quantites reellement recues pour chaque article.",
+        "quantitesRecues": "Quantites recues",
+        "commande": "Commande",
+        "recu": "Recu",
+        "commandeLabel": "{quantite} {unite}",
+        "montantReel": "Montant reel",
+        "montantValue": "{montant} FCFA",
+        "avertissements": "Avertissements",
+        "badgeComplet": "Complet",
+        "badgePartiel": "Partiel",
+        "badgeZero": "Non recu",
+        "badgeSurlivraison": "Surlivraison"
+      }
     },
     "formatNonAutorise": "Format non autorise. Utiliser PDF, JPG ou PNG.",
     "fichierTropVolumineux": "Fichier trop volumineux ({taille} Mo). Max 10 Mo."

@@ -20,18 +20,18 @@ export default async function PonteDetailPage({
   if (!permissions) return <AccessDenied />;
 
   const { id } = await params;
-  const [ponte, reproducteurs] = await Promise.all([
+  const [ponte, reproducteursResult] = await Promise.all([
     getPonteById(id, session.activeSiteId),
     getReproducteurs(session.activeSiteId),
   ]);
 
   if (!ponte) notFound();
 
-  const femelles = reproducteurs
+  const femelles = reproducteursResult.data
     .filter((r) => r.sexe === SexeReproducteur.FEMELLE)
     .map((r) => ({ id: r.id, code: r.code }));
 
-  const males = reproducteurs
+  const males = reproducteursResult.data
     .filter((r) => r.sexe === SexeReproducteur.MALE)
     .map((r) => ({ id: r.id, code: r.code }));
 

@@ -26,9 +26,14 @@ export async function GET(request: NextRequest) {
     const fournisseurId = searchParams.get("fournisseurId");
     if (fournisseurId) filters.fournisseurId = fournisseurId;
 
-    const produits = await getProduits(auth.activeSiteId, filters);
+    const limitParam = parseInt(searchParams.get("limit") ?? "50", 10);
+    const offsetParam = parseInt(searchParams.get("offset") ?? "0", 10);
+    const limit = Math.min(isNaN(limitParam) || limitParam < 1 ? 50 : limitParam, 200);
+    const offset = isNaN(offsetParam) || offsetParam < 0 ? 0 : offsetParam;
 
-    return cachedJson({ produits, total: produits.length }, "medium");
+    const result = await getProduits(auth.activeSiteId, filters, { limit, offset });
+
+    return cachedJson({ data: result.data, total: result.total, limit, offset }, "medium");
   } catch (error) {
     if (error instanceof AuthError) {
       return apiError(401, error.message);

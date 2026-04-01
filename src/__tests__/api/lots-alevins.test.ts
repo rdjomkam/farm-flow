@@ -111,67 +111,67 @@ describe("GET /api/lots-alevins", () => {
   });
 
   it("retourne la liste des lots avec le total", async () => {
-    mockGetLotsAlevins.mockResolvedValue([FAKE_LOT]);
+    mockGetLotsAlevins.mockResolvedValue({ data: [FAKE_LOT], total: 1 });
 
     const response = await GET(makeRequest("/api/lots-alevins"));
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.lots).toHaveLength(1);
+    expect(data.data).toHaveLength(1);
     expect(data.total).toBe(1);
-    expect(mockGetLotsAlevins).toHaveBeenCalledWith("site-1", {
-      statut: undefined,
-      ponteId: undefined,
-      search: undefined,
-    });
+    expect(mockGetLotsAlevins).toHaveBeenCalledWith(
+      "site-1",
+      { statut: undefined, ponteId: undefined, search: undefined },
+      { limit: 50, offset: 0 }
+    );
   });
 
   it("passe le filtre statut valide", async () => {
-    mockGetLotsAlevins.mockResolvedValue([]);
+    mockGetLotsAlevins.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/lots-alevins?statut=TRANSFERE"));
 
-    expect(mockGetLotsAlevins).toHaveBeenCalledWith("site-1", {
-      statut: StatutLotAlevins.TRANSFERE,
-      ponteId: undefined,
-      search: undefined,
-    });
+    expect(mockGetLotsAlevins).toHaveBeenCalledWith(
+      "site-1",
+      { statut: StatutLotAlevins.TRANSFERE, ponteId: undefined, search: undefined },
+      { limit: 50, offset: 0 }
+    );
   });
 
   it("passe le filtre ponteId", async () => {
-    mockGetLotsAlevins.mockResolvedValue([]);
+    mockGetLotsAlevins.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/lots-alevins?ponteId=ponte-1"));
 
-    expect(mockGetLotsAlevins).toHaveBeenCalledWith("site-1", {
-      statut: undefined,
-      ponteId: "ponte-1",
-      search: undefined,
-    });
+    expect(mockGetLotsAlevins).toHaveBeenCalledWith(
+      "site-1",
+      { statut: undefined, ponteId: "ponte-1", search: undefined },
+      { limit: 50, offset: 0 }
+    );
   });
 
   it("passe le filtre search", async () => {
-    mockGetLotsAlevins.mockResolvedValue([]);
+    mockGetLotsAlevins.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/lots-alevins?search=LOT-2026"));
 
-    expect(mockGetLotsAlevins).toHaveBeenCalledWith("site-1", {
-      statut: undefined,
-      ponteId: undefined,
-      search: "LOT-2026",
-    });
+    expect(mockGetLotsAlevins).toHaveBeenCalledWith(
+      "site-1",
+      { statut: undefined, ponteId: undefined, search: "LOT-2026" },
+      { limit: 50, offset: 0 }
+    );
   });
 
   it("ignore un statut invalide", async () => {
-    mockGetLotsAlevins.mockResolvedValue([]);
+    mockGetLotsAlevins.mockResolvedValue({ data: [], total: 0 });
 
     await GET(makeRequest("/api/lots-alevins?statut=INCONNU"));
 
-    expect(mockGetLotsAlevins).toHaveBeenCalledWith("site-1", {
-      statut: undefined,
-      ponteId: undefined,
-      search: undefined,
-    });
+    expect(mockGetLotsAlevins).toHaveBeenCalledWith(
+      "site-1",
+      { statut: undefined, ponteId: undefined, search: undefined },
+      { limit: 50, offset: 0 }
+    );
   });
 
   it("retourne 401 si non authentifie", async () => {

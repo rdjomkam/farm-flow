@@ -161,10 +161,25 @@
       "receptionner": "Receive",
       "annuler": "Cancel",
       "confirmerReception": "Confirm reception",
-      "receptionDescription": "This will create inflow movements and update stock levels.",
+      "receptionDescription": "Verify the quantities actually received for each item.",
       "dateLivraison": "Delivery date",
       "creePar": "Created by {name}",
-      "lignes": "Lines ({count})"
+      "lignes": "Lines ({count})",
+      "reception": {
+        "title": "Receive order {numero}",
+        "description": "Verify the quantities actually received for each item.",
+        "quantitesRecues": "Received quantities",
+        "commande": "Ordered",
+        "recu": "Received",
+        "commandeLabel": "{quantite} {unite}",
+        "montantReel": "Actual amount",
+        "montantValue": "{montant} FCFA",
+        "avertissements": "Warnings",
+        "badgeComplet": "Complete",
+        "badgePartiel": "Partial",
+        "badgeZero": "Not received",
+        "badgeSurlivraison": "Overdelivery"
+      }
     },
     "formatNonAutorise": "Format not allowed. Use PDF, JPG or PNG.",
     "fichierTropVolumineux": "File too large ({taille} MB). Max 10 MB."

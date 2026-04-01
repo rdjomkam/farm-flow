@@ -17,11 +17,17 @@ type Params = { params: Promise<{ id: string }> };
  * POST /api/commandes/[id]/recevoir
  * Réceptionne une commande ENVOYEE : met à jour le stock (mouvements ENTREE) et passe la commande en LIVREE.
  *
- * Accepte JSON (comportement inchangé) ou FormData avec un fichier facture optionnel.
+ * Accepte JSON ou FormData avec un fichier facture optionnel.
  * Si un fichier est fourni, il est uploadé sur Hetzner et factureUrl est sauvegardé en DB.
+ *
+ * JSON body :
+ *   - dateLivraison (string, optionnel) — date de livraison ISO
+ *   - lignes (array, optionnel) — quantites reçues par ligne [{ ligneId, quantiteRecue }]
+ *     Si absent, fallback vers quantite commandee (retro-compat)
  *
  * FormData champs :
  *   - dateLivraison (string, optionnel) — date de livraison ISO
+ *   - lignes (string, optionnel) — JSON stringifie du tableau [{ ligneId, quantiteRecue }]
  *   - file (File, optionnel) — facture fournisseur (PDF, JPG, PNG — max 10 Mo)
  */
 export async function POST(request: NextRequest, { params }: Params) {
@@ -33,6 +39,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     const contentType = request.headers.get("content-type") ?? "";
     let dateLivraison: string | undefined;
     let file: File | null = null;
+    let lignesRecues: { ligneId: string; quantiteRecue: number }[] | undefined;
 
     if (contentType.includes("multipart/form-data")) {
       // FormData — peut contenir un fichier facture
@@ -52,17 +59,46 @@ export async function POST(request: NextRequest, { params }: Params) {
       if (fileRaw instanceof File) {
         file = fileRaw;
       }
+
+      // Parse lignes from JSON string in FormData
+      const lignesRaw = formData.get("lignes");
+      if (lignesRaw && typeof lignesRaw === "string") {
+        try {
+          lignesRecues = JSON.parse(lignesRaw);
+        } catch {
+          return apiError(400, "Le champ 'lignes' n'est pas un JSON valide.");
+        }
+      }
     } else {
       // JSON — comportement inchangé (rétro-compatible)
       const body = await request.json().catch(() => ({}));
       if (body.dateLivraison && typeof body.dateLivraison === "string") {
         dateLivraison = body.dateLivraison;
       }
+      if (Array.isArray(body.lignes)) {
+        lignesRecues = body.lignes;
+      }
     }
 
     // Valider la date de livraison si fournie
     if (dateLivraison && isNaN(Date.parse(dateLivraison))) {
       return apiError(400, "La date de livraison n'est pas valide.");
+    }
+
+    // Valider les lignes si fournies
+    if (lignesRecues !== undefined) {
+      if (!Array.isArray(lignesRecues) || lignesRecues.length === 0) {
+        return apiError(400, "Le champ 'lignes' doit etre un tableau non vide.");
+      }
+      for (let i = 0; i < lignesRecues.length; i++) {
+        const lr = lignesRecues[i];
+        if (!lr.ligneId || typeof lr.ligneId !== "string") {
+          return apiError(400, `lignes[${i}].ligneId est obligatoire.`);
+        }
+        if (typeof lr.quantiteRecue !== "number" || lr.quantiteRecue < 0) {
+          return apiError(400, `lignes[${i}].quantiteRecue doit etre un nombre >= 0.`);
+        }
+      }
     }
 
     // Valider le fichier facture si fourni
@@ -75,11 +111,12 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     // Réceptionner la commande (transaction : mouvements stock + statut LIVREE + dépense auto-créée)
-    const { commande, depense } = await recevoirCommande(
+    const { commande, depense, avertissements } = await recevoirCommande(
       id,
       auth.activeSiteId,
       auth.userId,
-      dateLivraison
+      dateLivraison,
+      lignesRecues
     );
 
     // Si un fichier facture est fourni, l'uploader et sauvegarder l'URL
@@ -100,7 +137,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       }
     }
 
-    return NextResponse.json({ commande, depense });
+    return NextResponse.json({ commande, depense, avertissements });
   } catch (error) {
     if (error instanceof AuthError) {
       return apiError(401, error.message);
@@ -111,6 +148,9 @@ export async function POST(request: NextRequest, { params }: Params) {
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     if (message.includes("introuvable")) {
       return apiError(404, message);
+    }
+    if (message.includes("n'appartient pas") || message.includes("n'est pas couverte") || message.includes("negative")) {
+      return apiError(400, message);
     }
     if (message.includes("Impossible")) {
       return apiError(409, message);

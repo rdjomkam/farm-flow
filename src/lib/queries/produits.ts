@@ -2,21 +2,37 @@ import { prisma } from "@/lib/db";
 import { CategorieProduit } from "@/types";
 import type { CreateProduitDTO, UpdateProduitDTO, ProduitFilters } from "@/types";
 
-/** Liste tous les produits actifs d'un site */
-export async function getProduits(siteId: string, filters?: ProduitFilters) {
-  return prisma.produit.findMany({
-    where: {
-      siteId,
-      isActive: true,
-      ...(filters?.categorie && { categorie: filters.categorie }),
-      ...(filters?.fournisseurId && { fournisseurId: filters.fournisseurId }),
-    },
-    include: {
-      fournisseur: { select: { id: true, nom: true } },
-      _count: { select: { mouvements: true } },
-    },
-    orderBy: { nom: "asc" },
-  });
+/** Liste tous les produits actifs d'un site avec pagination */
+export async function getProduits(
+  siteId: string,
+  filters?: ProduitFilters,
+  pagination?: { limit: number; offset: number }
+) {
+  const where = {
+    siteId,
+    isActive: true,
+    ...(filters?.categorie && { categorie: filters.categorie }),
+    ...(filters?.fournisseurId && { fournisseurId: filters.fournisseurId }),
+  };
+
+  const limit = Math.min(pagination?.limit ?? 50, 200);
+  const offset = pagination?.offset ?? 0;
+
+  const [data, total] = await Promise.all([
+    prisma.produit.findMany({
+      where,
+      include: {
+        fournisseur: { select: { id: true, nom: true } },
+        _count: { select: { mouvements: true } },
+      },
+      orderBy: { nom: "asc" },
+      take: limit,
+      skip: offset,
+    }),
+    prisma.produit.count({ where }),
+  ]);
+
+  return { data, total };
 }
 
 /** Recupere un produit par ID (verifie siteId) */

@@ -17,7 +17,7 @@ export default async function ProduitsPage() {
   if (!permissions) return <AccessDenied />;
 
   const t = await getTranslations("stock");
-  const [produits, fournisseurs] = await Promise.all([
+  const [produitsResult, fournisseurs] = await Promise.all([
     getProduits(session.activeSiteId),
     getFournisseurs(session.activeSiteId),
   ]);
@@ -32,7 +32,7 @@ export default async function ProduitsPage() {
       <Header title={t("produits.title")} />
       <div className="p-4">
         <ProduitsListClient
-          produits={produits}
+          produits={produitsResult.data}
           fournisseurs={fournisseurOptions}
           permissions={permissions}
         />

@@ -16,19 +16,19 @@ export default async function AlevinsLotsPage() {
     const permissions = await checkPagePermission(session, Permission.ALEVINS_VOIR);
     if (!permissions) return <AccessDenied />;
 
-    const [lots, pontes] = await Promise.all([
+    const [lotsResult, pontesResult] = await Promise.all([
       getLotsAlevins(session.activeSiteId),
       getPontes(session.activeSiteId),
     ]);
 
-    const ponteOptions = pontes.map((p) => ({ id: p.id, code: p.code }));
+    const ponteOptions = pontesResult.data.map((p) => ({ id: p.id, code: p.code }));
 
     return (
       <>
         <Header title="Lots d'alevins" />
         <div className="p-4">
           <LotsAlevinsListClient
-            lots={JSON.parse(JSON.stringify(lots))}
+            lots={JSON.parse(JSON.stringify(lotsResult.data))}
             pontes={ponteOptions}
             permissions={permissions}
           />

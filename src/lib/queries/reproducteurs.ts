@@ -8,10 +8,11 @@ import type {
 
 export type { CreateReproducteurDTO, UpdateReproducteurDTO, ReproducteurFilters };
 
-/** Liste les reproducteurs d'un site avec filtres optionnels */
+/** Liste les reproducteurs d'un site avec filtres optionnels et pagination */
 export async function getReproducteurs(
   siteId: string,
-  filters?: ReproducteurFilters
+  filters?: ReproducteurFilters,
+  pagination?: { limit: number; offset: number }
 ) {
   const where: Record<string, unknown> = { siteId };
 
@@ -24,18 +25,28 @@ export async function getReproducteurs(
     ];
   }
 
-  return prisma.reproducteur.findMany({
-    where,
-    include: {
-      _count: {
-        select: {
-          pontesAsFemelle: true,
-          pontesAsMale: true,
+  const limit = Math.min(pagination?.limit ?? 50, 200);
+  const offset = pagination?.offset ?? 0;
+
+  const [data, total] = await Promise.all([
+    prisma.reproducteur.findMany({
+      where,
+      include: {
+        _count: {
+          select: {
+            pontesAsFemelle: true,
+            pontesAsMale: true,
+          },
         },
       },
-    },
-    orderBy: { code: "asc" },
-  });
+      orderBy: { code: "asc" },
+      take: limit,
+      skip: offset,
+    }),
+    prisma.reproducteur.count({ where }),
+  ]);
+
+  return { data, total };
 }
 
 /** Recupere un reproducteur par ID (verifie siteId), avec ses pontes recentes */
