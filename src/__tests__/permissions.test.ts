@@ -27,6 +27,7 @@ import { ITEM_VIEW_PERMISSIONS } from "@/lib/permissions-constants";
 const mockRequireAuth = vi.fn();
 const mockGetSiteMember = vi.fn();
 const mockUserFindUnique = vi.fn();
+const mockFeatureFlagFindUnique = vi.fn();
 
 vi.mock("@/lib/auth", () => ({
   requireAuth: (...args: unknown[]) => mockRequireAuth(...args),
@@ -47,6 +48,9 @@ vi.mock("@/lib/db", () => ({
   prisma: {
     user: {
       findUnique: (...args: unknown[]) => mockUserFindUnique(...args),
+    },
+    featureFlag: {
+      findUnique: (...args: unknown[]) => mockFeatureFlagFindUnique(...args),
     },
   },
 }));
@@ -123,6 +127,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   // Par defaut, l'utilisateur n'est pas super-admin
   mockUserFindUnique.mockResolvedValue({ isSuperAdmin: false });
+  // Par defaut, maintenance desactivee
+  mockFeatureFlagFindUnique.mockResolvedValue(null);
 });
 
 // ===== SYSTEM_ROLE_DEFINITIONS =============================================
@@ -585,6 +591,51 @@ describe("requirePermission", () => {
     expect(ctx).toHaveProperty("isSuperAdmin");
     // Verifier que l'ancienne propriete plate n'existe pas
     expect(ctx).not.toHaveProperty("siteRole");
+  });
+
+  // --- Maintenance mode ---
+
+  it("lance ForbiddenError si maintenance active et utilisateur non-ADMIN", async () => {
+    mockRequireAuth.mockResolvedValue(makeSession({ role: Role.GERANT }));
+    mockFeatureFlagFindUnique.mockResolvedValue({ enabled: true });
+
+    await expect(
+      requirePermission(makeRequest(), Permission.VAGUES_VOIR)
+    ).rejects.toThrow("Plateforme en maintenance");
+  });
+
+  it("lance ForbiddenError si maintenance active et ADMIN non-super-admin", async () => {
+    mockRequireAuth.mockResolvedValue(makeSession({ role: Role.ADMIN }));
+    mockUserFindUnique.mockResolvedValue({ isSuperAdmin: false });
+    mockFeatureFlagFindUnique.mockResolvedValue({ enabled: true });
+
+    await expect(
+      requirePermission(makeRequest(), Permission.VAGUES_VOIR)
+    ).rejects.toThrow("Plateforme en maintenance");
+  });
+
+  it("passe si maintenance active et super-admin", async () => {
+    mockRequireAuth.mockResolvedValue(makeSession({ role: Role.ADMIN }));
+    mockUserFindUnique.mockResolvedValue({ isSuperAdmin: true });
+    mockFeatureFlagFindUnique.mockResolvedValue({ enabled: true });
+
+    const ctx = await requirePermission(makeRequest(), Permission.VAGUES_VOIR);
+    expect(ctx.isSuperAdmin).toBe(true);
+  });
+
+  it("passe si maintenance desactivee pour utilisateur normal", async () => {
+    mockRequireAuth.mockResolvedValue(makeSession({ role: Role.GERANT }));
+    mockGetSiteMember.mockResolvedValue(
+      makeMember({
+        siteRoleId: "sr-gerant-1",
+        siteRoleName: "Gerant",
+        siteRolePerms: GERANT_PERMS,
+      })
+    );
+    mockFeatureFlagFindUnique.mockResolvedValue({ enabled: false });
+
+    const ctx = await requirePermission(makeRequest(), Permission.VAGUES_VOIR);
+    expect(ctx.userId).toBe("user-1");
   });
 });
 

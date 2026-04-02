@@ -16,6 +16,21 @@ export {
 export type { AuthContext };
 
 // ---------------------------------------------------------------------------
+// Maintenance guard — blocks non-super-admin when MAINTENANCE_MODE is enabled
+// ---------------------------------------------------------------------------
+
+async function checkMaintenanceGuard(isSuperAdmin: boolean): Promise<void> {
+  if (isSuperAdmin) return;
+  const flag = await prisma.featureFlag.findUnique({
+    where: { key: "MAINTENANCE_MODE" },
+    select: { enabled: true },
+  });
+  if (flag?.enabled) {
+    throw new ForbiddenError("Plateforme en maintenance");
+  }
+}
+
+// ---------------------------------------------------------------------------
 // ForbiddenError — 403 for permission checks
 // ---------------------------------------------------------------------------
 
@@ -47,10 +62,18 @@ export async function requireHasPermission(
 ): Promise<UserSession> {
   const session = await requireAuth(request);
 
-  // Global ADMIN always passes
+  // Global ADMIN — check maintenance for non-super-admins
   if (session.role === Role.ADMIN) {
+    const userRow = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { isSuperAdmin: true },
+    });
+    await checkMaintenanceGuard(userRow?.isSuperAdmin ?? false);
     return session;
   }
+
+  // Non-ADMIN — always check maintenance (never super-admin)
+  await checkMaintenanceGuard(false);
 
   if (!session.activeSiteId) {
     throw new ForbiddenError("Aucun site actif selectionne.");
@@ -88,19 +111,25 @@ export async function requirePermission(
       where: { id: session.userId },
       select: { isSuperAdmin: true },
     });
+    const isSuperAdmin = userRow?.isSuperAdmin ?? false;
+    // Maintenance guard — only super-admins bypass
+    await checkMaintenanceGuard(isSuperAdmin);
     return {
       userId: session.userId,
       email: session.email,
       phone: session.phone,
       name: session.name,
       globalRole: session.role,
-      isSuperAdmin: userRow?.isSuperAdmin ?? false,
+      isSuperAdmin,
       activeSiteId,
       siteRoleId: "",
       siteRoleName: "Super Admin",
       permissions: Object.values(Permission),
     };
   }
+
+  // Non-ADMIN — always check maintenance (never super-admin)
+  await checkMaintenanceGuard(false);
 
   if (!session.activeSiteId) {
     throw new ForbiddenError("Aucun site actif selectionne.");

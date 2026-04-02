@@ -12,7 +12,7 @@ import type { Permission, Role, SiteModule } from "@/types";
 import { Role as RoleEnum } from "@/types";
 
 const AUTH_ROUTES = ["/login", "/register"];
-const NO_NAV_ROUTES = ["/select-site"];
+const NO_NAV_ROUTES = ["/select-site", "/maintenance"];
 const BACKOFFICE_PREFIX = "/backoffice";
 
 /** Roles that use the farm-specific navigation */
