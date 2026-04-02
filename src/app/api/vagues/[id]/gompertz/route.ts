@@ -7,6 +7,7 @@ import {
   calibrerGompertz,
   genererCourbeGompertz,
   projeterDateRecolte,
+  CLARIAS_DEFAULTS,
   type GompertzParams,
 } from "@/lib/gompertz";
 import { apiError } from "@/lib/api-utils";
@@ -92,7 +93,9 @@ export async function GET(
       existingGompertz.biometrieCount !== biometrieCount ||
       (existingGompertz.confidenceLevel === "INSUFFICIENT_DATA" && biometrieCount >= minPoints) ||
       // Recalibrate if configElevage W∞ changed since last calibration
-      (existingGompertz != null && configWInf !== existingGompertz.configWInfUsed);
+      (existingGompertz != null && configWInf !== existingGompertz.configWInfUsed) ||
+      // Stale cache: W∞ below biological minimum
+      (existingGompertz != null && existingGompertz.wInfinity < CLARIAS_DEFAULTS.wInfinity);
 
     let calibrationParams: GompertzParams | null = null;
     let r2: number | null = null;
