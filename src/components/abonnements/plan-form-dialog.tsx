@@ -21,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogBody,
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
@@ -298,7 +299,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
         {children}
       </DialogTrigger>
 
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "Modifier le plan" : "Créer un plan d'abonnement"}
@@ -310,6 +311,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
           </DialogDescription>
         </DialogHeader>
 
+        <DialogBody>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
           {/* Erreur globale */}
           {getError("global") && (
@@ -632,6 +634,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
             </div>
           </div>
         </form>
+        </DialogBody>
 
         <DialogFooter className="gap-2 mt-4">
           <button

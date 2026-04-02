@@ -52,7 +52,7 @@ export function AppShell({
   if (role === RoleEnum.INGENIEUR) {
     return (
       <>
-<div className="flex min-h-dvh overflow-x-hidden">
+<div className="flex min-h-dvh overflow-x-clip">
           <IngenieurSidebar
             permissions={permissions}
             siteModules={siteModules}
@@ -86,7 +86,7 @@ export function AppShell({
   if (role !== null && FARM_ROLES.includes(role)) {
     return (
       <>
-<div className="flex min-h-dvh overflow-x-hidden">
+<div className="flex min-h-dvh overflow-x-clip">
           <FarmSidebar
             permissions={permissions}
             siteModules={siteModules}

@@ -112,7 +112,7 @@
 }
 
 html, body {
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* Prevent native overscroll/pull-to-refresh in PWA standalone mode */

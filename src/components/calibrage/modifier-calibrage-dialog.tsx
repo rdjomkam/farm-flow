@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -219,7 +220,7 @@ export function ModifierCalibrageDialog({
           {t("trigger")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-full sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t("title")}</DialogTitle>
           <DialogDescription>
@@ -227,7 +228,8 @@ export function ModifierCalibrageDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0">
+          <DialogBody className="flex flex-col gap-5">
 
           {/* Section 1 — Raison obligatoire (EN PREMIER) */}
           <div className="flex flex-col gap-1.5">
@@ -442,6 +444,7 @@ export function ModifierCalibrageDialog({
             />
           </div>
 
+          </DialogBody>
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               {t("annuler")}

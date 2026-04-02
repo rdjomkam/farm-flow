@@ -16,6 +16,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -170,11 +171,11 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
                 {t("commandes.new")}
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-h-[90dvh] overflow-y-auto">
+            <DialogContent>
               <DialogHeader>
                 <DialogTitle>{t("commandes.add")}</DialogTitle>
               </DialogHeader>
-              <div className="flex flex-col gap-4 py-2">
+              <DialogBody className="flex flex-col gap-4 py-2">
                 <Select value={fournisseurId} onValueChange={setFournisseurId}>
                   <SelectTrigger label={t("commandes.fields.fournisseur")}>
                     <SelectValue placeholder={t("commandes.fields.choix")} />
@@ -277,7 +278,7 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
                     {t("commandes.fields.total", { montant: formatNumber(montantTotal) })}
                   </div>
                 )}
-              </div>
+              </DialogBody>
               <DialogFooter>
                 <DialogClose asChild>
                   <Button variant="outline">{t("actions.cancel")}</Button>

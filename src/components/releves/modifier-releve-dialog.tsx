@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -262,14 +263,15 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
           <Pencil className="h-3.5 w-3.5" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-full sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{t("modify.title")}</DialogTitle>
           <DialogDescription>
             {t("modify.description", { type: t(`types.${type}`) })}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0">
+          <DialogBody className="flex flex-col gap-4">
 
           {/* Section 1 — Raison obligatoire (EN PREMIER, ADR-014) */}
           <div className="flex flex-col gap-1.5">
@@ -541,6 +543,7 @@ export function ModifierReleveDialog({ releve, produits = [], permissions }: Mod
             />
           </div>
 
+          </DialogBody>
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               {t("modify.cancel")}

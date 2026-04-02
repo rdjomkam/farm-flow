@@ -58,7 +58,7 @@ const DialogContent = forwardRef<
        */}
       <div
         className={cn(
-          "flex flex-col h-full md:max-h-[85dvh]",
+          "flex flex-col h-full md:max-h-[85dvh] overflow-x-clip",
           "px-4 pt-[max(1rem,env(safe-area-inset-top))] md:px-6 md:pt-0"
         )}
       >

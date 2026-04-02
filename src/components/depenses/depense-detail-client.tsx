@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { CategorieDepense, ModePaiement, StatutDepense } from "@/types";
 import { useDepenseService } from "@/services";
+import { useToast } from "@/components/ui/toast";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -72,8 +73,10 @@ interface DepenseData {
   notes: string | null;
   commandeId: string | null;
   vagueId: string | null;
+  listeBesoinsId?: string | null;
   commande: { id: string; numero: string; statut: string } | null;
   vague: { id: string; code: string } | null;
+  listeBesoins?: { id: string; numero: string; titre: string } | null;
   user: { id: string; name: string };
   paiements: PaiementDepenseData[];
 }
@@ -107,6 +110,7 @@ function formatDate(dateStr: string): string {
 export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
   const t = useTranslations("depenses");
   const depenseService = useDepenseService();
+  const { toast } = useToast();
 
   const [currentDepense, setCurrentDepense] = useState(depense);
   const [paiements, setPaiements] = useState<PaiementDepenseData[]>(
@@ -120,6 +124,7 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
     ModePaiement.ESPECES
   );
   const [paiementRef, setPaiementRef] = useState("");
+  const [paiementPending, setPaiementPending] = useState(false);
 
   // Upload facture state
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -149,27 +154,41 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
 
   async function handlePaiement() {
     const montant = parseFloat(paiementMontant);
-    if (isNaN(montant) || montant <= 0) return;
-    if (montant > resteAPayer) return;
+    if (isNaN(montant) || montant <= 0) {
+      toast({ title: "Montant invalide", variant: "error" });
+      return;
+    }
+    if (montant > resteAPayer) {
+      toast({
+        title: "Le montant dépasse le reste à payer",
+        variant: "error",
+      });
+      return;
+    }
 
-    const result = await depenseService.addPaiementDepense(currentDepense.id, {
-      montant,
-      mode: paiementMode,
-      reference: paiementRef.trim() || undefined,
-    });
-    if (result.ok && result.data) {
-      setPaiements((prev) => [
-        result.data!.paiement as unknown as PaiementDepenseData,
-        ...prev,
-      ]);
-      setCurrentDepense((prev) => ({
-        ...prev,
-        montantPaye: result.data!.montantPaye,
-        statut: result.data!.statut,
-      }));
-      setPaiementOpen(false);
-      setPaiementMontant("");
-      setPaiementRef("");
+    setPaiementPending(true);
+    try {
+      const result = await depenseService.addPaiementDepense(currentDepense.id, {
+        montant,
+        mode: paiementMode,
+        reference: paiementRef.trim() || undefined,
+      });
+      if (result.ok && result.data) {
+        setPaiements((prev) => [
+          result.data!.paiement as unknown as PaiementDepenseData,
+          ...prev,
+        ]);
+        setCurrentDepense((prev) => ({
+          ...prev,
+          montantPaye: result.data!.montantPaye,
+          statut: result.data!.statut,
+        }));
+        setPaiementOpen(false);
+        setPaiementMontant("");
+        setPaiementRef("");
+      }
+    } finally {
+      setPaiementPending(false);
     }
   }
 
@@ -290,6 +309,22 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                 className="text-primary hover:underline flex items-center gap-1"
               >
                 {currentDepense.vague.code}
+                <ExternalLink className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          )}
+
+          {/* Liste de besoins */}
+          {currentDepense.listeBesoins && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">
+                Liste de besoins
+              </span>
+              <Link
+                href={`/besoins/${currentDepense.listeBesoins.id}`}
+                className="text-primary hover:underline flex items-center gap-1"
+              >
+                {currentDepense.listeBesoins.numero}
                 <ExternalLink className="h-3.5 w-3.5" />
               </Link>
             </div>
@@ -432,9 +467,16 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                   </DialogClose>
                   <Button
                     onClick={handlePaiement}
-                    disabled={!paiementMontant}
+                    disabled={
+                      paiementPending ||
+                      !paiementMontant ||
+                      parseFloat(paiementMontant) <= 0 ||
+                      parseFloat(paiementMontant) > resteAPayer
+                    }
                   >
-                    {t("detail.confirmer")}
+                    {paiementPending
+                      ? t("detail.enCours")
+                      : t("detail.confirmer")}
                   </Button>
                 </DialogFooter>
               </DialogContent>

@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogBody,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -230,7 +231,7 @@ export function ReceptionCommandeDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[85dvh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>
             {t("commandes.detail.reception.title", { numero: commande.numero })}
@@ -240,7 +241,7 @@ export function ReceptionCommandeDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4">
+        <DialogBody className="flex flex-col gap-4">
           {/* Date de livraison */}
           <Input
             label={t("commandes.detail.dateLivraison")}
@@ -398,7 +399,7 @@ export function ReceptionCommandeDialog({
               </div>
             </div>
           )}
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <DialogClose asChild>

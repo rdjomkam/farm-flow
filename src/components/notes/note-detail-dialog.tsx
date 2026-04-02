@@ -20,6 +20,7 @@ import {
   DialogContent,
   DialogTitle,
   DialogDescription,
+  DialogBody,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { VisibiliteNote } from "@/types";
@@ -135,7 +136,7 @@ export function NoteDetailDialog({
   return (
     <Dialog onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="overflow-hidden flex flex-col max-h-[90vh]">
+      <DialogContent>
           {/* ── Header zone ── */}
           <div
             className={cn(
@@ -216,7 +217,7 @@ export function NoteDetailDialog({
           <hr className="border-border my-3 -mx-4 md:-mx-6" />
 
           {/* ── Scrollable body ── */}
-          <div className="overflow-y-auto flex-1 -mx-4 md:-mx-6 px-4 md:px-6">
+          <DialogBody>
             {/* ── Content area ── */}
             <div className="rounded-lg bg-muted/30 p-4 -mx-1">
               <div className="prose-sm max-w-none">
@@ -252,7 +253,7 @@ export function NoteDetailDialog({
               isClientView={isClientView}
               onSuccess={() => queryClient.invalidateQueries({ queryKey: queryKeys.notes.all })}
             />
-          </div>
+          </DialogBody>
 
         {/* Hidden description for accessibility */}
         <DialogDescription className="sr-only">

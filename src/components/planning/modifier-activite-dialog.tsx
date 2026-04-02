@@ -22,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useActiviteService } from "@/services";
@@ -154,7 +155,7 @@ export function ModifierActiviteDialog({
           {t("modifierActivite.trigger")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {t("modifierActivite.title")}
@@ -166,7 +167,8 @@ export function ModifierActiviteDialog({
               : t("modifierActivite.description")}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0">
+          <DialogBody className="flex flex-col gap-4">
           {/* Titre */}
           <Input
             label="Titre"
@@ -293,6 +295,7 @@ export function ModifierActiviteDialog({
             />
           )}
 
+          </DialogBody>
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               {t("modifierActivite.annuler")}

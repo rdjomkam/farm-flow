@@ -13,6 +13,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -281,12 +282,12 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="md:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="md:max-w-lg">
         <DialogHeader>
           <DialogTitle>{t("modifierDialog.title")}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <DialogBody className="space-y-4 py-2">
           {/* Titre */}
           <div>
             <label className="text-sm font-medium">
@@ -504,7 +505,7 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
               {validationError}
             </p>
           )}
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <DialogClose asChild>

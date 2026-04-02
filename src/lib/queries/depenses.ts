@@ -69,6 +69,7 @@ export async function getDepenseById(id: string, siteId: string) {
         },
       },
       vague: { select: { id: true, code: true } },
+      listeBesoins: { select: { id: true, numero: true, titre: true } },
       paiements: {
         include: {
           user: { select: { id: true, name: true } },

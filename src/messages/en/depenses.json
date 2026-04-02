@@ -44,6 +44,7 @@
     "referencePlaceholder": "Receipt no., transaction...",
     "annuler": "Cancel",
     "confirmer": "Confirm",
+    "enCours": "Processing...",
     "factureFournisseur": "Supplier invoice",
     "voirFacture": "View invoice",
     "supprimer": "Delete",
