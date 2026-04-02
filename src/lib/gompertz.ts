@@ -71,6 +71,28 @@ export interface GompertzCalibrationResult {
   biometrieCount: number;
 }
 
+// ─── Cache validity check ─────────────────────────────────────────────────────
+
+/**
+ * Returns true when an existing GompertzVague record can be used as-is,
+ * without recalibration. Centralises the guard logic so the API route and
+ * the server-rendered page never drift.
+ */
+export function isCachedGompertzValid(
+  record: { wInfinity: number; confidenceLevel: string; biometrieCount: number; configWInfUsed: number | null } | null,
+  currentBiometrieCount: number,
+  minPoints: number,
+  configWInf: number | null
+): boolean {
+  if (record === null) return false;
+  if (record.confidenceLevel === "INSUFFICIENT_DATA") return false;
+  if (record.wInfinity < CLARIAS_DEFAULTS.wInfinity) return false; // biological floor
+  if (record.biometrieCount !== currentBiometrieCount) return false;
+  if (currentBiometrieCount < minPoints) return false;
+  if (configWInf !== record.configWInfUsed) return false;
+  return true;
+}
+
 // ─── Gompertz model evaluation ────────────────────────────────────────────────
 
 /**

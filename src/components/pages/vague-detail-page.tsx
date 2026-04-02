@@ -18,7 +18,7 @@ import { getIndicateursVague } from "@/lib/queries/indicateurs";
 import { getCalibrages } from "@/lib/queries/calibrages";
 import { prisma } from "@/lib/db";
 import { computeVivantsByBac } from "@/lib/calculs";
-import { genererCourbeGompertz, calibrerGompertz } from "@/lib/gompertz";
+import { genererCourbeGompertz, calibrerGompertz, isCachedGompertzValid } from "@/lib/gompertz";
 import { StatutVague, TypeReleve, CategorieProduit, Permission } from "@/types";
 import type { Bac, Releve, EvolutionPoidsPoint, IndicateursVague as IndicateursType, CalibrageWithRelations } from "@/types";
 import type { ProduitOption } from "@/components/releves/consommation-fields";
@@ -114,14 +114,12 @@ export default async function VagueDetailPage({
 
   // Check if cached record is still valid
   const configWInf = configElevage?.gompertzWInfDefault ?? null;
-  const cachedIsValid =
-    gompertzRecord !== null &&
-    gompertzRecord.confidenceLevel !== "INSUFFICIENT_DATA" &&
-    gompertzRecord.wInfinity > 0 &&
-    gompertzRecord.biometrieCount === currentBiometrieCount &&
-    currentBiometrieCount >= gompertzMinPoints &&
-    // Invalidate if configElevage W∞ changed since last calibration
-    configWInf === gompertzRecord.configWInfUsed;
+  const cachedIsValid = isCachedGompertzValid(
+    gompertzRecord,
+    currentBiometrieCount,
+    gompertzMinPoints,
+    configWInf
+  );
 
   // Inline calibration: run when we have enough points but no valid cache
   let effectiveGompertz: { params: { wInfinity: number; k: number; ti: number }; r2: number; rmse: number; confidenceLevel: string; biometrieCount: number } | null = null;
