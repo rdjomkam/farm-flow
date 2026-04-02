@@ -74,6 +74,7 @@ export enum Permission {
   // Depenses
   DEPENSES_VOIR = "DEPENSES_VOIR",
   DEPENSES_CREER = "DEPENSES_CREER",
+  DEPENSES_MODIFIER = "DEPENSES_MODIFIER",
   DEPENSES_PAYER = "DEPENSES_PAYER",
   // Besoins
   BESOINS_SOUMETTRE = "BESOINS_SOUMETTRE",
@@ -1634,6 +1635,8 @@ export interface Depense {
   siteId: string;
   createdAt: Date;
   updatedAt: Date;
+  /** Ajustements de montant (optionnel, charge par include) */
+  ajustements?: AjustementDepense[];
 }
 
 /** Depense avec ses relations chargees */
@@ -1643,6 +1646,31 @@ export interface DepenseWithRelations extends Depense {
   listeBesoins?: ListeBesoins | null;
   user?: User;
   paiements?: PaiementDepense[];
+  ajustements?: AjustementDepense[];
+}
+
+/**
+ * AjustementDepense — trace chaque modification du montant d'une depense.
+ *
+ * Immutable audit trail : chaque appel a PATCH /depenses/:id/ajuster
+ * cree un enregistrement avec montantAvant, montantApres et la raison.
+ * La suppression d'une Depense supprime en cascade ses AjustementDepense.
+ */
+export interface AjustementDepense {
+  id: string;
+  /** Depense concernee */
+  depenseId: string;
+  /** Montant avant ajustement */
+  montantAvant: number;
+  /** Montant apres ajustement */
+  montantApres: number;
+  /** Raison justifiant l'ajustement */
+  raison: string;
+  /** Utilisateur ayant effectue l'ajustement */
+  userId: string;
+  /** ID du site (ferme) — R8 */
+  siteId: string;
+  createdAt: Date;
 }
 
 /**

@@ -69,6 +69,19 @@
     "fraisNotesPlaceholder": "Ex: transport depuis Douala",
     "supprimerFrais": "Supprimer ce frais"
   },
+  "ajustement": {
+    "title": "Ajuster le montant",
+    "montantLabel": "Nouveau montant",
+    "raisonLabel": "Raison de l'ajustement",
+    "raisonPlaceholder": "Ex: prix reel different du devis",
+    "montantMinInfo": "Minimum : {min} (deja paye)",
+    "confirmer": "Confirmer l'ajustement",
+    "montantInvalide": "Montant invalide",
+    "raisonRequise": "La raison est obligatoire",
+    "montantInferieur": "Le montant ne peut pas etre inferieur au montant deja paye",
+    "enCours": "En cours...",
+    "historique": "Historique des ajustements"
+  },
   "motif": {
     "TRANSPORT": "Transport",
     "FRAIS_MOBILE_MONEY": "Frais Mobile Money",

@@ -135,6 +135,7 @@ import type {
   Commande,
   ConfigElevage,
   ConfigElevageWithRelations,
+  AjustementDepense,
   Depense,
   Facture,
   Fournisseur,
@@ -1335,6 +1336,26 @@ export interface PaiementDepenseResponse {
   montantPaye: number;
   /** Nouveau montant total des frais supplementaires apres paiement */
   montantFraisSupp: number;
+}
+
+/** DTO pour ajuster le montant d'une depense existante */
+export interface AjusterDepenseDTO {
+  /** Nouveau montant total de la depense */
+  montantTotal: number;
+  /** Raison justifiant l'ajustement (obligatoire pour l'audit trail) */
+  raison: string;
+  /** Nouvelle description (optionnel) */
+  description?: string;
+  /** Nouvelle date d'echeance ISO 8601, null pour la supprimer (optionnel) */
+  dateEcheance?: string | null;
+  /** Notes libres (optionnel) */
+  notes?: string;
+}
+
+/** Reponse d'un ajustement de depense */
+export interface AjustementDepenseResponse {
+  depense: Depense;
+  ajustement: AjustementDepense;
 }
 
 // ---------------------------------------------------------------------------

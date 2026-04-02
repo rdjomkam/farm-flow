@@ -5,9 +5,12 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
+  ArrowRight,
   Calendar,
   CreditCard,
   FileText,
+  History,
+  PencilLine,
   Upload,
   ExternalLink,
   Trash2,
@@ -23,6 +26,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -89,6 +93,16 @@ interface DepenseData {
   listeBesoins?: { id: string; numero: string; titre: string } | null;
   user: { id: string; name: string };
   paiements: PaiementDepenseData[];
+  ajustements?: AjustementData[];
+}
+
+interface AjustementData {
+  id: string;
+  montantAvant: number;
+  montantApres: number;
+  raison: string;
+  user: { id: string; name: string };
+  createdAt: string;
 }
 
 interface FraisSuppRow {
@@ -132,6 +146,9 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
   const [paiements, setPaiements] = useState<PaiementDepenseData[]>(
     depense.paiements
   );
+  const [ajustements, setAjustements] = useState<AjustementData[]>(
+    depense.ajustements ?? []
+  );
 
   // Paiement form state
   const [paiementOpen, setPaiementOpen] = useState(false);
@@ -144,6 +161,12 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
 
   // Frais supplementaires state
   const [fraisSupp, setFraisSupp] = useState<FraisSuppRow[]>([]);
+
+  // Ajustement form state
+  const [ajustementOpen, setAjustementOpen] = useState(false);
+  const [ajustementMontant, setAjustementMontant] = useState("");
+  const [ajustementRaison, setAjustementRaison] = useState("");
+  const [ajustementPending, setAjustementPending] = useState(false);
 
   // Upload facture state
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -274,6 +297,63 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
     if (result.ok) {
       setCurrentDepense((prev) => ({ ...prev, factureUrl: null }));
       setDeleteFactureOpen(false);
+    }
+  }
+
+  async function handleAjustement() {
+    const montant = parseFloat(ajustementMontant);
+    if (isNaN(montant) || montant <= 0) {
+      toast({ title: t("ajustement.montantInvalide"), variant: "error" });
+      return;
+    }
+    if (!ajustementRaison.trim()) {
+      toast({ title: t("ajustement.raisonRequise"), variant: "error" });
+      return;
+    }
+    if (montant < currentDepense.montantPaye) {
+      toast({ title: t("ajustement.montantInferieur"), variant: "error" });
+      return;
+    }
+
+    setAjustementPending(true);
+    try {
+      const result = await depenseService.ajusterDepense(currentDepense.id, {
+        montantTotal: montant,
+        raison: ajustementRaison.trim(),
+      });
+      if (result.ok && result.data) {
+        const rawAjustement = result.data.ajustement as unknown as {
+          id: string;
+          montantAvant: number;
+          montantApres: number;
+          raison: string;
+          userId: string;
+          user?: { id: string; name: string };
+          createdAt: string | Date;
+        };
+        const newAjustement: AjustementData = {
+          id: rawAjustement.id,
+          montantAvant: rawAjustement.montantAvant,
+          montantApres: rawAjustement.montantApres,
+          raison: rawAjustement.raison,
+          user: rawAjustement.user ?? { id: rawAjustement.userId, name: "—" },
+          createdAt:
+            typeof rawAjustement.createdAt === "string"
+              ? rawAjustement.createdAt
+              : (rawAjustement.createdAt as Date).toISOString(),
+        };
+        setAjustements((prev) => [newAjustement, ...prev]);
+        setCurrentDepense((prev) => ({
+          ...prev,
+          montantTotal: montant,
+          statut: result.data!.depense.statut,
+        }));
+        setAjustementOpen(false);
+        setAjustementMontant("");
+        setAjustementRaison("");
+      }
+    } finally {
+      setAjustementPending(false);
     }
   }
 
@@ -464,6 +544,93 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
             </div>
           )}
 
+          {/* CTA ajustement montant */}
+          {canManage && (
+            <Dialog open={ajustementOpen} onOpenChange={setAjustementOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={() =>
+                    setAjustementMontant(
+                      String(currentDepense.montantTotal)
+                    )
+                  }
+                >
+                  <PencilLine className="h-4 w-4" />
+                  {t("ajustement.title")}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{t("ajustement.title")}</DialogTitle>
+                </DialogHeader>
+                <DialogBody>
+                  {/* Nouveau montant */}
+                  <div className="flex flex-col gap-1.5">
+                    <label
+                      htmlFor="ajustement-montant"
+                      className="text-sm font-medium"
+                    >
+                      {t("ajustement.montantLabel")}
+                    </label>
+                    <Input
+                      id="ajustement-montant"
+                      type="number"
+                      min={currentDepense.montantPaye || 1}
+                      value={ajustementMontant}
+                      onChange={(e) => setAjustementMontant(e.target.value)}
+                      placeholder="0"
+                    />
+                    {currentDepense.montantPaye > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {t("ajustement.montantMinInfo", {
+                          min: formatMontant(currentDepense.montantPaye),
+                        })}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Raison */}
+                  <div className="flex flex-col gap-1.5">
+                    <label
+                      htmlFor="ajustement-raison"
+                      className="text-sm font-medium"
+                    >
+                      {t("ajustement.raisonLabel")}
+                    </label>
+                    <textarea
+                      id="ajustement-raison"
+                      rows={3}
+                      className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                      value={ajustementRaison}
+                      onChange={(e) => setAjustementRaison(e.target.value)}
+                      placeholder={t("ajustement.raisonPlaceholder")}
+                    />
+                  </div>
+                </DialogBody>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="outline">{t("detail.annuler")}</Button>
+                  </DialogClose>
+                  <Button
+                    onClick={handleAjustement}
+                    disabled={
+                      ajustementPending ||
+                      !ajustementMontant ||
+                      parseFloat(ajustementMontant) <= 0 ||
+                      !ajustementRaison.trim()
+                    }
+                  >
+                    {ajustementPending
+                      ? t("ajustement.enCours")
+                      : t("ajustement.confirmer")}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+
           {/* CTA paiement */}
           {canAddPaiement && (
             <Dialog open={paiementOpen} onOpenChange={setPaiementOpen}>
@@ -477,7 +644,7 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                 <DialogHeader>
                   <DialogTitle>{t("detail.paiementTitle")}</DialogTitle>
                 </DialogHeader>
-                <div className="flex flex-col gap-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
+                <DialogBody>
                   {/* Montant */}
                   <div className="flex flex-col gap-1.5">
                     <label
@@ -649,7 +816,7 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                       </div>
                     )}
                   </div>
-                </div>
+                </DialogBody>
                 <DialogFooter>
                   <DialogClose asChild>
                     <Button variant="outline">{t("detail.annuler")}</Button>
@@ -833,6 +1000,40 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
           )}
         </CardContent>
       </Card>
+      {/* Historique des ajustements */}
+      {ajustements.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <History className="h-4 w-4" />
+              {t("ajustement.historique")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-3">
+              {ajustements.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex flex-col gap-1 border-b last:border-b-0 pb-3 last:pb-0"
+                >
+                  <div className="flex items-start justify-between gap-2 text-xs text-muted-foreground">
+                    <span>{a.user.name}</span>
+                    <span className="shrink-0">{formatDate(a.createdAt)}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-sm font-medium flex-wrap">
+                    <span>{formatMontant(a.montantAvant)}</span>
+                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="text-primary">
+                      {formatMontant(a.montantApres)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{a.raison}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

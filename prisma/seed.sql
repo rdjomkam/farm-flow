@@ -12,6 +12,7 @@ DELETE FROM "Activite";
 DELETE FROM "Notification";
 DELETE FROM "ConfigAlerte";
 DELETE FROM "FraisPaiementDepense";
+DELETE FROM "AjustementDepense";
 DELETE FROM "PaiementDepense";
 DELETE FROM "LigneBesoin";
 DELETE FROM "DepenseRecurrente";
@@ -1097,6 +1098,27 @@ INSERT INTO "FraisPaiementDepense" (
 -- Mise à jour du montantFraisSupp sur les dépenses concernées
 UPDATE "Depense" SET "montantFraisSupp" = 2375.0 WHERE id = 'dep_01';  -- frais_01 + frais_02
 UPDATE "Depense" SET "montantFraisSupp" = 2000.0 WHERE id = 'dep_05';  -- frais_03
+
+-- ──────────────────────────────────────────
+-- AjustementDepense (2 ajustements de montant)
+-- ──────────────────────────────────────────
+
+INSERT INTO "AjustementDepense" (
+  "id", "depenseId", "montantAvant", "montantApres", "raison",
+  "userId", "siteId", "createdAt"
+) VALUES
+  -- dep_02 (électricité) : prix réel à la livraison différent du devis
+  (
+    'adj_01', 'dep_02', 40000.0, 45000.0,
+    'Prix réel à la livraison différent du devis — facture Camtel reçue le 2026-02-10',
+    'user_admin', 'site_01', NOW()
+  ),
+  -- dep_04 (réparation pompe) : coût supplémentaire découvert pendant intervention
+  (
+    'adj_02', 'dep_04', 20000.0, 25000.0,
+    'Roulement supplémentaire à remplacer découvert pendant l''intervention',
+    'user_gerant', 'site_01', NOW()
+  );
 
 -- ──────────────────────────────────────────
 -- ListeBesoins (3 listes — statuts variés) + LigneBesoin (8 lignes)

@@ -166,9 +166,10 @@ enum Permission {
   EXPORT_DONNEES
   // Alertes (1)
   ALERTES_CONFIGURER
-  // Dépenses (3)
+  // Dépenses (4)
   DEPENSES_VOIR
   DEPENSES_CREER
+  DEPENSES_MODIFIER
   DEPENSES_PAYER
   // Besoins (3)
   BESOINS_SOUMETTRE
@@ -494,6 +495,7 @@ model Site {
   depenses             Depense[]
   paiementsDepense     PaiementDepense[]
   fraisPaiementDepense FraisPaiementDepense[]
+  ajustementsDepense   AjustementDepense[]
   depensesRecurrentes  DepenseRecurrente[]
   listesBesoins        ListeBesoins[]
   configsElevage       ConfigElevage[]
@@ -775,6 +777,7 @@ model User {
   activitesAssignees  Activite[]       @relation("ActivitesAssignees")
   depenses              Depense[]
   paiementsDepense      PaiementDepense[]
+  ajustementsDepense    AjustementDepense[]
   depensesRecurrentes   DepenseRecurrente[]
   listesBesoinsCreees   ListeBesoins[]     @relation("ListeBesoinsCreees")
   listesBesoinsValidees ListeBesoins[]     @relation("ListeBesoinsValidees")
@@ -1513,6 +1516,7 @@ model Depense {
   siteId           String
   site             Site             @relation(fields: [siteId], references: [id])
   paiements        PaiementDepense[]
+  ajustements      AjustementDepense[]
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
@@ -1560,6 +1564,27 @@ model FraisPaiementDepense {
   createdAt  DateTime        @default(now())
 
   @@index([paiementId])
+  @@index([siteId])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Ajustements de dépenses
+// ──────────────────────────────────────────
+
+model AjustementDepense {
+  id            String   @id @default(cuid())
+  depenseId     String
+  depense       Depense  @relation(fields: [depenseId], references: [id], onDelete: Cascade)
+  montantAvant  Float
+  montantApres  Float
+  raison        String
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  siteId        String
+  site          Site     @relation(fields: [siteId], references: [id])
+  createdAt     DateTime @default(now())
+
+  @@index([depenseId])
   @@index([siteId])
 }
 

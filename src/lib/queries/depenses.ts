@@ -5,6 +5,7 @@ import type {
   UpdateDepenseDTO,
   DepenseFilters,
   CreatePaiementDepenseDTO,
+  AjusterDepenseDTO,
 } from "@/types";
 
 // Re-export for use in API validation
@@ -79,6 +80,10 @@ export async function getDepenseById(id: string, siteId: string) {
           fraisSupp: true,
         },
         orderBy: { date: "desc" },
+      },
+      ajustements: {
+        include: { user: { select: { id: true, name: true } } },
+        orderBy: { createdAt: "desc" },
       },
     },
   });
@@ -344,5 +349,81 @@ export async function ajouterPaiementDepense(
       montantPaye: newMontantPaye,
       montantFraisSupp: newMontantFraisSupp,
     };
+  });
+}
+
+/**
+ * Ajuste le montant total d'une depense (transaction atomique — R4).
+ *
+ * Regles metier :
+ * 1. La depense doit appartenir au site
+ * 2. Le nouveau montantTotal ne peut pas etre inferieur au montantPaye existant
+ * 3. Cree un enregistrement AjustementDepense (audit trail immuable — R8 : siteId)
+ * 4. Recalcule le statut :
+ *    - montantPaye >= montantTotal → PAYEE
+ *    - montantPaye > 0 → PAYEE_PARTIELLEMENT
+ *    - sinon → NON_PAYEE
+ * 5. Met a jour montantTotal + champs optionnels (description, dateEcheance, notes)
+ */
+export async function ajusterDepense(
+  id: string,
+  siteId: string,
+  userId: string,
+  data: AjusterDepenseDTO
+) {
+  return prisma.$transaction(async (tx) => {
+    // 1. Fetch current depense
+    const depense = await tx.depense.findFirst({
+      where: { id, siteId },
+    });
+    if (!depense) throw new Error("Dépense introuvable");
+
+    // 3. Validate: new montantTotal >= montantPaye
+    if (data.montantTotal < depense.montantPaye) {
+      throw new Error(
+        "Le nouveau montant ne peut pas être inférieur au montant déjà payé"
+      );
+    }
+
+    // 3. Create AjustementDepense record (R8: siteId)
+    const ajustement = await tx.ajustementDepense.create({
+      data: {
+        depenseId: id,
+        montantAvant: depense.montantTotal,
+        montantApres: data.montantTotal,
+        raison: data.raison,
+        userId,
+        siteId,
+      },
+      include: {
+        user: { select: { id: true, name: true } },
+      },
+    });
+
+    // 4. Recalculate statut
+    let newStatut: StatutDepense;
+    if (depense.montantPaye >= data.montantTotal) {
+      newStatut = StatutDepense.PAYEE;
+    } else if (depense.montantPaye > 0) {
+      newStatut = StatutDepense.PAYEE_PARTIELLEMENT;
+    } else {
+      newStatut = StatutDepense.NON_PAYEE;
+    }
+
+    // 5. Update depense
+    const updatedDepense = await tx.depense.update({
+      where: { id, siteId },
+      data: {
+        montantTotal: data.montantTotal,
+        statut: newStatut,
+        ...(data.description !== undefined && { description: data.description }),
+        ...(data.dateEcheance !== undefined && {
+          dateEcheance: data.dateEcheance ? new Date(data.dateEcheance) : null,
+        }),
+        ...(data.notes !== undefined && { notes: data.notes }),
+      },
+    });
+
+    return { depense: updatedDepense, ajustement };
   });
 }

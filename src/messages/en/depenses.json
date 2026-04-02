@@ -69,6 +69,19 @@
     "fraisNotesPlaceholder": "E.g.: transport from Douala",
     "supprimerFrais": "Remove this fee"
   },
+  "ajustement": {
+    "title": "Adjust amount",
+    "montantLabel": "New amount",
+    "raisonLabel": "Reason for adjustment",
+    "raisonPlaceholder": "E.g.: actual price different from quote",
+    "montantMinInfo": "Minimum: {min} (already paid)",
+    "confirmer": "Confirm adjustment",
+    "montantInvalide": "Invalid amount",
+    "raisonRequise": "Reason is required",
+    "montantInferieur": "Amount cannot be less than the amount already paid",
+    "enCours": "Processing...",
+    "historique": "Adjustment history"
+  },
   "motif": {
     "TRANSPORT": "Transport",
     "FRAIS_MOBILE_MONEY": "Mobile Money fees",

@@ -126,6 +126,7 @@ export type {
   // Sprint 16 — Depenses
   Depense,
   DepenseWithRelations,
+  AjustementDepense,
   PaiementDepense,
   FraisPaiementDepense,
   // Sprint 17 — Besoins
@@ -330,6 +331,8 @@ export type {
   DepenseListResponse,
   DepenseDetailResponse,
   PaiementDepenseResponse,
+  AjusterDepenseDTO,
+  AjustementDepenseResponse,
 } from "./api";
 // Sprint 17 — Besoins
 export type {

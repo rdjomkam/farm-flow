@@ -1,0 +1,2 @@
+-- Add DEPENSES_MODIFIER to Permission enum
+ALTER TYPE "Permission" ADD VALUE 'DEPENSES_MODIFIER';

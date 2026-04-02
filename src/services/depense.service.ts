@@ -11,6 +11,8 @@ import type {
   DepenseFilters,
   CreatePaiementDepenseDTO,
   PaiementDepenseResponse,
+  AjusterDepenseDTO,
+  AjustementDepenseResponse,
   DepenseRecurrenteWithRelations,
   CreateDepenseRecurrenteDTO,
   UpdateDepenseRecurrenteDTO,
@@ -145,6 +147,21 @@ export function useDepenseService() {
           body: JSON.stringify(dto),
         },
         { successMessage: "Paiement enregistre." }
+      ),
+    [call]
+  );
+
+  /** Ajuster le montant total d'une depense (audit trail) */
+  const ajusterDepense = useCallback(
+    (depenseId: string, dto: AjusterDepenseDTO) =>
+      call<AjustementDepenseResponse>(
+        `/api/depenses/${depenseId}/ajustements`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dto),
+        },
+        { successMessage: "Montant ajuste." }
       ),
     [call]
   );
@@ -321,6 +338,7 @@ export function useDepenseService() {
     getFactureDepenseUrl,
     deleteFactureDepense,
     addPaiementDepense,
+    ajusterDepense,
     listDepensesRecurrentes,
     createDepenseRecurrente,
     updateDepenseRecurrente,
