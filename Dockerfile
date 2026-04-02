@@ -5,8 +5,10 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 COPY prisma ./prisma/
+COPY prisma.config.ts ./
 
 RUN npm ci
+# prisma generate already runs via postinstall, but ensure it ran
 RUN npx prisma generate
 
 # Stage 2: Build the Next.js application
@@ -45,8 +47,9 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
-# Copy Prisma schema and migrations (needed for migrate deploy at startup)
+# Copy Prisma schema, migrations, and config (needed for migrate deploy at startup)
 COPY --from=builder /app/prisma ./prisma/
+COPY --from=builder /app/prisma.config.ts ./
 
 # Copy generated Prisma client
 COPY --from=builder /app/src/generated ./src/generated/
