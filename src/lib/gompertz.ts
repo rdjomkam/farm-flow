@@ -392,9 +392,9 @@ function buildInitialGuess(
   const wInf =
     initialGuess?.wInfinity !== undefined &&
     initialGuess.wInfinity >= CLARIAS_DEFAULTS.wInfinity &&
-    initialGuess.wInfinity <= 3000
+    initialGuess.wInfinity <= 1800
       ? initialGuess.wInfinity
-      : Math.min(wInfHeuristic, 3000);
+      : Math.min(wInfHeuristic, 1800);
 
   // K: must be within [0.005, 0.2] day⁻¹
   const k =
@@ -421,7 +421,7 @@ function buildInitialGuess(
  * W∞  ∈ [max(maxObserved, wInfFloor), wInfCeiling] g
  *
  *   Floor   = configWInf when provided (trusted farm default), else CLARIAS_DEFAULTS.wInfinity (1200 g)
- *   Ceiling = configWInf × 1.5 when configWInf is provided, else 3000 g
+ *   Ceiling = configWInf × 1.5 when configWInf is provided, else 1800 g
  *
  * Rationale for the tightened ceiling: with only early-phase (pre-inflection)
  * data the LM solver cannot independently identify W∞ — residuals decrease
@@ -429,8 +429,8 @@ function buildInitialGuess(
  * has configured a trusted W∞ default (e.g. 1200 g from literature + local
  * knowledge), constraining the ceiling to 1.5 × configWInf (= 1800 g) keeps
  * the fit biologically plausible while still allowing ±50% headroom for
- * outstanding performers. Without a configWInf the original 3000 g ceiling is
- * preserved to avoid over-constraining unknown populations.
+ * outstanding performers. Without a configWInf the 1800 g ceiling is
+ * preserved as the biological maximum for Clarias pond culture.
  *
  * K   ∈ [0.005, 0.2]  day⁻¹
  * ti  ∈ [0, 300]       days
@@ -444,16 +444,16 @@ function buildBounds(
   const configWInf =
     initialGuess?.wInfinity !== undefined &&
     initialGuess.wInfinity >= CLARIAS_DEFAULTS.wInfinity &&
-    initialGuess.wInfinity <= 3000
+    initialGuess.wInfinity <= 1800
       ? initialGuess.wInfinity
       : null;
 
   const wInfFloor = configWInf ?? CLARIAS_DEFAULTS.wInfinity;
 
   // When a trusted config value exists, cap the ceiling at configWInf × 1.5 to
-  // prevent the solver from escaping to the hardcoded 3000 g ceiling on
+  // prevent the solver from escaping to the hardcoded 1800 g ceiling on
   // early-phase data where W∞ is under-identified.
-  const wInfCeiling = configWInf !== null ? configWInf * 1.5 : 3000;
+  const wInfCeiling = configWInf !== null ? configWInf * 1.5 : 1800;
 
   return [
     [Math.max(maxObserved, wInfFloor), wInfCeiling],
