@@ -371,7 +371,12 @@ function levenbergMarquardt(
  * K₀  = CLARIAS_DEFAULTS.k (0.018)
  * ti₀ = CLARIAS_DEFAULTS.ti (95)
  *
- * If initialGuess.* is provided and within bounds, it takes precedence.
+ * If initialGuess.* is provided and within physical bounds, it takes precedence.
+ *
+ * Note: the upper bound applied during LM optimisation is controlled by
+ * `buildBounds()`, not here. When configElevage supplies a trusted W∞, the
+ * ceiling is tightened to configWInf × 1.5 to prevent solver run-away on
+ * early-phase data. The initial guess is always clamped to the tighter ceiling.
  *
  * @param data           - observed data points {t, w}
  * @param initialGuess   - optional caller-supplied starting values (from ConfigElevage)
@@ -413,7 +418,20 @@ function buildInitialGuess(
 /**
  * Physical bounds for Gompertz parameters — Clarias gariepinus pond culture.
  *
- * W∞  ∈ [max(maxObserved, CLARIAS_DEFAULTS.wInfinity), 3000] g — biological floor for the species
+ * W∞  ∈ [max(maxObserved, wInfFloor), wInfCeiling] g
+ *
+ *   Floor   = configWInf when provided (trusted farm default), else CLARIAS_DEFAULTS.wInfinity (1200 g)
+ *   Ceiling = configWInf × 1.5 when configWInf is provided, else 3000 g
+ *
+ * Rationale for the tightened ceiling: with only early-phase (pre-inflection)
+ * data the LM solver cannot independently identify W∞ — residuals decrease
+ * monotonically as W∞ rises, so the solver walks to the ceiling. When the farm
+ * has configured a trusted W∞ default (e.g. 1200 g from literature + local
+ * knowledge), constraining the ceiling to 1.5 × configWInf (= 1800 g) keeps
+ * the fit biologically plausible while still allowing ±50% headroom for
+ * outstanding performers. Without a configWInf the original 3000 g ceiling is
+ * preserved to avoid over-constraining unknown populations.
+ *
  * K   ∈ [0.005, 0.2]  day⁻¹
  * ti  ∈ [0, 300]       days
  */
@@ -422,14 +440,23 @@ function buildBounds(
   initialGuess?: Partial<GompertzParams>
 ): [[number, number], [number, number], [number, number]] {
   const maxObserved = Math.max(...data.map((d) => d.w));
-  const wInfFloor =
+
+  const configWInf =
     initialGuess?.wInfinity !== undefined &&
     initialGuess.wInfinity >= CLARIAS_DEFAULTS.wInfinity &&
     initialGuess.wInfinity <= 3000
       ? initialGuess.wInfinity
-      : CLARIAS_DEFAULTS.wInfinity;
+      : null;
+
+  const wInfFloor = configWInf ?? CLARIAS_DEFAULTS.wInfinity;
+
+  // When a trusted config value exists, cap the ceiling at configWInf × 1.5 to
+  // prevent the solver from escaping to the hardcoded 3000 g ceiling on
+  // early-phase data where W∞ is under-identified.
+  const wInfCeiling = configWInf !== null ? configWInf * 1.5 : 3000;
+
   return [
-    [Math.max(maxObserved, wInfFloor), 3000],
+    [Math.max(maxObserved, wInfFloor), wInfCeiling],
     [0.005, 0.2],
     [0, 300],
   ];

@@ -8,7 +8,8 @@ const withNextIntl = createNextIntlPlugin({
 });
 
 const revision =
-  spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf-8" }).stdout?.trim() ??
+  process.env.COMMIT_SHA ||
+  spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf-8" }).stdout?.trim() ||
   crypto.randomUUID();
 
 const withSerwist = withSerwistInit({
@@ -20,6 +21,7 @@ const withSerwist = withSerwistInit({
 });
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   reactCompiler: true,
   experimental: {
     serverSourceMaps: true,

@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dkfarm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-farm-flow}
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dkfarm} -d ${POSTGRES_DB:-farm-flow}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        COMMIT_SHA: ${COMMIT_SHA:-}
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+
+  cron:
+    image: alpine:3.19
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      APP_URL: ${APP_URL:-http://app:3000}
+      CRON_SECRET: ${CRON_SECRET}
+    entrypoint: >
+      /bin/sh -c "
+        apk add --no-cache curl &&
+        echo '0 5 * * * curl -sf -X POST \$$APP_URL/api/activites/generer -H \"Authorization: Bearer \$$CRON_SECRET\" >> /var/log/cron.log 2>&1' > /etc/crontabs/root &&
+        echo '0 8 * * * curl -sf -X POST \$$APP_URL/api/cron/subscription-lifecycle -H \"Authorization: Bearer \$$CRON_SECRET\" >> /var/log/cron.log 2>&1' >> /etc/crontabs/root &&
+        crond -f -l 6
+      "
+
+volumes:
+  pgdata_prod:
