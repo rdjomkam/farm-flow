@@ -374,9 +374,9 @@ function levenbergMarquardt(
  * If initialGuess.* is provided and within physical bounds, it takes precedence.
  *
  * Note: the upper bound applied during LM optimisation is controlled by
- * `buildBounds()`, not here. When configElevage supplies a trusted W∞, the
- * ceiling is tightened to configWInf × 1.5 to prevent solver run-away on
- * early-phase data. The initial guess is always clamped to the tighter ceiling.
+ * `buildBounds()`, not here. When configElevage supplies a trusted W∞, it is
+ * used directly as the ceiling to prevent solver run-away on early-phase data.
+ * The initial guess is always clamped to the ceiling.
  *
  * @param data           - observed data points {t, w}
  * @param initialGuess   - optional caller-supplied starting values (from ConfigElevage)
@@ -421,16 +421,16 @@ function buildInitialGuess(
  * W∞  ∈ [max(maxObserved, wInfFloor), wInfCeiling] g
  *
  *   Floor   = configWInf when provided (trusted farm default), else CLARIAS_DEFAULTS.wInfinity (1200 g)
- *   Ceiling = configWInf × 1.5 when configWInf is provided, else 1800 g
+ *   Ceiling = configWInf when provided (trusted farm value IS the ceiling), else 1800 g
  *
- * Rationale for the tightened ceiling: with only early-phase (pre-inflection)
- * data the LM solver cannot independently identify W∞ — residuals decrease
- * monotonically as W∞ rises, so the solver walks to the ceiling. When the farm
- * has configured a trusted W∞ default (e.g. 1200 g from literature + local
- * knowledge), constraining the ceiling to 1.5 × configWInf (= 1800 g) keeps
- * the fit biologically plausible while still allowing ±50% headroom for
- * outstanding performers. Without a configWInf the 1800 g ceiling is
- * preserved as the biological maximum for Clarias pond culture.
+ * Rationale: with only early-phase (pre-inflection) data the LM solver cannot
+ * independently identify W∞ — residuals decrease monotonically as W∞ rises, so
+ * the solver walks to the ceiling. When the farm has configured a trusted W∞
+ * default (e.g. 1200 g or 1500 g from literature + local knowledge), using it
+ * directly as the ceiling keeps the fit biologically plausible — the farmer's
+ * value represents the biological maximum for their conditions. Without a
+ * configWInf the 1800 g ceiling is preserved as the default biological maximum
+ * for Clarias pond culture.
  *
  * K   ∈ [0.005, 0.2]  day⁻¹
  * ti  ∈ [0, 300]       days
@@ -450,10 +450,9 @@ function buildBounds(
 
   const wInfFloor = configWInf ?? CLARIAS_DEFAULTS.wInfinity;
 
-  // When a trusted config value exists, cap the ceiling at configWInf × 1.5 to
-  // prevent the solver from escaping to the hardcoded 1800 g ceiling on
-  // early-phase data where W∞ is under-identified.
-  const wInfCeiling = configWInf !== null ? configWInf * 1.5 : 1800;
+  // When a trusted config value exists, use it directly as the ceiling —
+  // the farmer's W∞ IS the biological maximum for their conditions.
+  const wInfCeiling = configWInf !== null ? configWInf : 1800;
 
   return [
     [Math.max(maxObserved, wInfFloor), wInfCeiling],
