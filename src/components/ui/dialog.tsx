@@ -64,7 +64,7 @@ const DialogContent = forwardRef<
       >
         {children}
       </div>
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px] min-w-[44px] flex items-center justify-center">
+      <DialogPrimitive.Close className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] md:top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px] min-w-[44px] flex items-center justify-center">
         <X className="h-5 w-5" />
         <span className="sr-only">Fermer</span>
       </DialogPrimitive.Close>

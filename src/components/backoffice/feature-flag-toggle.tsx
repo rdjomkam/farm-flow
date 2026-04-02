@@ -18,7 +18,7 @@
  * R6 : CSS variables du theme
  */
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import {
@@ -69,7 +69,7 @@ export function FeatureFlagToggle({
   const router = useRouter();
 
   const [optimisticEnabled, setOptimisticEnabled] = useState(enabled);
-  const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(false);
 
   // Dialog state — confirmation pour l'activation
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -117,26 +117,32 @@ export function FeatureFlagToggle({
     return true;
   }
 
-  function handleToggleClick() {
+  async function handleToggleClick() {
     if (isMaintenanceFlag && !optimisticEnabled) {
       // Activation du mode maintenance — confirmation requise
       setDialogOpen(true);
     } else {
       // Desactivation ou flag non-critique — pas de confirmation
-      startTransition(async () => {
+      setIsLoading(true);
+      try {
         await performToggle(!optimisticEnabled);
-      });
+      } finally {
+        setIsLoading(false);
+      }
     }
   }
 
   async function handleConfirmActivation() {
     setDialogOpen(false);
-    startTransition(async () => {
+    setIsLoading(true);
+    try {
       await performToggle(true, {
         ...(maintenanceMessage.trim() && { message: maintenanceMessage.trim() }),
         ...(estimatedEnd && { estimatedEnd: estimatedEnd }),
       });
-    });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -199,7 +205,7 @@ export function FeatureFlagToggle({
             role="switch"
             aria-checked={optimisticEnabled}
             aria-label={`${label} — ${optimisticEnabled ? t("disableLabel") : t("enableLabel")}`}
-            disabled={isPending}
+            disabled={isLoading}
             onClick={handleToggleClick}
             className={cn(
               "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
@@ -283,10 +289,10 @@ export function FeatureFlagToggle({
             <Button
               variant="danger"
               onClick={handleConfirmActivation}
-              disabled={isPending}
+              disabled={isLoading}
               className="w-full sm:w-auto"
             >
-              {isPending ? t("confirmDialog.processing") : t("confirmDialog.confirm")}
+              {isLoading ? t("confirmDialog.processing") : t("confirmDialog.confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>

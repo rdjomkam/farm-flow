@@ -8,6 +8,7 @@ import {
   DialogDescription,
   DialogTitle,
   DialogTrigger,
+  DialogBody,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -357,12 +358,12 @@ export function GompertzInfoPanel({ data }: GompertzInfoPanelProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-6">
+        <DialogBody className="flex flex-col gap-6">
           <StatutSection data={data} />
           <ParamsSection data={data} />
           <ComparaisonSection data={data} />
           <ProjectionsSection data={data} />
-        </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );
