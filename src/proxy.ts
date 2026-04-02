@@ -64,7 +64,11 @@ const FARM_ROLES = [Role.ADMIN, Role.GERANT, Role.PISCICULTEUR];
 /** Routes that don't require authentication */
 const PUBLIC_ROUTES = ["/login", "/register"];
 const PUBLIC_API_PREFIX = "/api/auth/";
-const PUBLIC_API_ROUTES = ["/api/health"];
+const PUBLIC_API_ROUTES = [
+  "/api/health",
+  "/api/activites/generer",
+  "/api/cron/subscription-lifecycle",
+];
 
 /** Routes accessible without an active site selected */
 const NO_SITE_ROUTES = ["/settings/sites", "/select-site"];
