@@ -1,11 +1,14 @@
 import { prisma } from "@/lib/db";
-import { StatutDepense, ModePaiement } from "@/types";
+import { StatutDepense, ModePaiement, MotifFraisSupp } from "@/types";
 import type {
   CreateDepenseDTO,
   UpdateDepenseDTO,
   DepenseFilters,
   CreatePaiementDepenseDTO,
 } from "@/types";
+
+// Re-export for use in API validation
+export { MotifFraisSupp };
 
 /** Liste les depenses d'un site avec filtres optionnels et pagination */
 export async function getDepenses(
@@ -73,6 +76,7 @@ export async function getDepenseById(id: string, siteId: string) {
       paiements: {
         include: {
           user: { select: { id: true, name: true } },
+          fraisSupp: true,
         },
         orderBy: { date: "desc" },
       },
@@ -235,12 +239,13 @@ export async function deleteDepense(id: string, siteId: string) {
 /**
  * Ajoute un paiement a une depense (transaction atomique).
  *
- * Regles metier (identiques au pattern Facture/Paiement) :
+ * Regles metier :
  * 1. La depense doit appartenir au site
  * 2. La depense ne doit pas etre PAYEE
- * 3. Le montant du paiement ne doit pas depasser le reste a payer
- * 4. Recalcule montantPaye = SUM(paiements)
- * 5. Met a jour le statut :
+ * 3. Le montant du paiement doit etre > 0 (pas de plafond — frais suppl. peuvent depasser)
+ * 4. Cree les FraisPaiementDepense attaches si fournis (R8: siteId sur chaque enregistrement)
+ * 5. Recalcule montantPaye = SUM(paiements) et montantFraisSupp = SUM(fraisSupp)
+ * 6. Met a jour le statut en fonction du montant de base uniquement :
  *    - montantPaye >= montantTotal → PAYEE
  *    - montantPaye > 0 → PAYEE_PARTIELLEMENT
  *    - sinon → NON_PAYEE
@@ -262,12 +267,8 @@ export async function ajouterPaiementDepense(
       throw new Error("Cette depense est deja entierement payee");
     }
 
-    // Check remaining amount
-    const resteAPayer = depense.montantTotal - depense.montantPaye;
-    if (data.montant > resteAPayer) {
-      throw new Error(
-        `Le montant depasse le reste a payer. Reste : ${resteAPayer} FCFA, saisi : ${data.montant} FCFA`
-      );
+    if (data.montant <= 0) {
+      throw new Error("Le montant du paiement doit etre superieur a 0");
     }
 
     // Create paiement
@@ -282,17 +283,44 @@ export async function ajouterPaiementDepense(
       },
       include: {
         user: { select: { id: true, name: true } },
+        fraisSupp: true,
       },
     });
 
-    // Recalculate montantPaye from all paiements
+    // Create frais supplementaires if provided (R8: siteId on each record)
+    if (data.fraisSupp && data.fraisSupp.length > 0) {
+      await tx.fraisPaiementDepense.createMany({
+        data: data.fraisSupp.map((f) => ({
+          paiementId: paiement.id,
+          motif: f.motif as MotifFraisSupp,
+          montant: f.montant,
+          notes: f.notes ?? null,
+          siteId: depense.siteId,
+        })),
+      });
+    }
+
+    // Re-fetch paiement to include frais created above
+    const fullPaiement = await tx.paiementDepense.findUniqueOrThrow({
+      where: { id: paiement.id },
+      include: { fraisSupp: true, user: { select: { id: true, name: true } } },
+    });
+
+    // Recalculate montantPaye from all paiements (base amount only)
     const aggregation = await tx.paiementDepense.aggregate({
       where: { depenseId },
       _sum: { montant: true },
     });
     const newMontantPaye = aggregation._sum.montant ?? 0;
 
-    // Determine new statut
+    // Aggregate total frais supplementaires across all paiements for this depense
+    const totalFraisAgg = await tx.fraisPaiementDepense.aggregate({
+      where: { paiement: { depenseId } },
+      _sum: { montant: true },
+    });
+    const newMontantFraisSupp = totalFraisAgg._sum.montant ?? 0;
+
+    // Determine new statut based on base paiements only (fraisSupp excluded)
     const newStatut =
       newMontantPaye >= depense.montantTotal
         ? StatutDepense.PAYEE
@@ -300,19 +328,21 @@ export async function ajouterPaiementDepense(
           ? StatutDepense.PAYEE_PARTIELLEMENT
           : StatutDepense.NON_PAYEE;
 
-    // Update depense
+    // Update depense with new montantPaye and montantFraisSupp
     await tx.depense.update({
       where: { id: depenseId },
       data: {
         montantPaye: newMontantPaye,
+        montantFraisSupp: newMontantFraisSupp,
         ...(newStatut !== depense.statut && { statut: newStatut }),
       },
     });
 
     return {
-      paiement,
+      paiement: fullPaiement,
       statut: newStatut,
       montantPaye: newMontantPaye,
+      montantFraisSupp: newMontantFraisSupp,
     };
   });
 }

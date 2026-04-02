@@ -285,6 +285,14 @@ enum StatutDepense {
   PAYEE
 }
 
+enum MotifFraisSupp {
+  TRANSPORT
+  FRAIS_MOBILE_MONEY
+  FRAIS_BANCAIRES
+  PENALITE_RETARD
+  AUTRE
+}
+
 enum FrequenceRecurrence {
   MENSUEL
   TRIMESTRIEL
@@ -485,6 +493,7 @@ model Site {
   activites            Activite[]
   depenses             Depense[]
   paiementsDepense     PaiementDepense[]
+  fraisPaiementDepense FraisPaiementDepense[]
   depensesRecurrentes  DepenseRecurrente[]
   listesBesoins        ListeBesoins[]
   configsElevage       ConfigElevage[]
@@ -1482,6 +1491,8 @@ model Depense {
   categorieDepense CategorieDepense
   montantTotal     Float
   montantPaye      Float            @default(0)
+  /** Cumul des frais supplémentaires de tous les paiements associés */
+  montantFraisSupp Float            @default(0)
   statut           StatutDepense    @default(NON_PAYEE)
   date             DateTime
   dateEcheance     DateTime?
@@ -1526,9 +1537,29 @@ model PaiementDepense {
   user      User         @relation(fields: [userId], references: [id])
   siteId    String
   site      Site         @relation(fields: [siteId], references: [id])
+  fraisSupp FraisPaiementDepense[]
   createdAt DateTime     @default(now())
 
   @@index([depenseId])
+  @@index([siteId])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Frais supplémentaires sur paiements dépenses
+// ──────────────────────────────────────────
+
+model FraisPaiementDepense {
+  id         String          @id @default(cuid())
+  paiementId String
+  paiement   PaiementDepense @relation(fields: [paiementId], references: [id], onDelete: Cascade)
+  motif      MotifFraisSupp
+  montant    Float
+  notes      String?
+  siteId     String
+  site       Site            @relation(fields: [siteId], references: [id])
+  createdAt  DateTime        @default(now())
+
+  @@index([paiementId])
   @@index([siteId])
 }
 

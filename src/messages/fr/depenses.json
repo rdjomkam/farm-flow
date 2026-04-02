@@ -1,7 +1,7 @@
 {
   "statuts": {
     "NON_PAYEE": "Non payee",
-    "PARTIELLEMENT_PAYEE": "Partiellement payee",
+    "PAYEE_PARTIELLEMENT": "Partiellement payee",
     "PAYEE": "Payee"
   },
   "categories": {
@@ -57,7 +57,24 @@
     "historiqueTitle": "Historique des paiements ({count})",
     "aucunPaiement": "Aucun paiement enregistre",
     "reference": "Ref :",
-    "supprimerFactureDescription": "Cette action est irreversible. Le fichier sera definitivement supprime."
+    "supprimerFactureDescription": "Cette action est irreversible. Le fichier sera definitivement supprime.",
+    "fraisSupp": "Frais supplementaires",
+    "ajouterFrais": "Ajouter des frais",
+    "motif": "Motif",
+    "totalFrais": "Total frais",
+    "totalPaiement": "Total paiement",
+    "coutReelTotal": "Cout total reel",
+    "notesOptionnel": "Notes (optionnel)",
+    "listeBesoins": "Liste de besoins",
+    "fraisNotesPlaceholder": "Ex: transport depuis Douala",
+    "supprimerFrais": "Supprimer ce frais"
+  },
+  "motif": {
+    "TRANSPORT": "Transport",
+    "FRAIS_MOBILE_MONEY": "Frais Mobile Money",
+    "FRAIS_BANCAIRES": "Frais bancaires",
+    "PENALITE_RETARD": "Penalite retard",
+    "AUTRE": "Autre"
   },
   "recurrentes": {
     "frequences": {

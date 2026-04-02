@@ -36,6 +36,7 @@ export {
   CategorieDepense,
   StatutDepense,
   FrequenceRecurrence,
+  MotifFraisSupp,
   // Sprint 17 — Besoins
   StatutBesoins,
   // Sprint 19 — ConfigElevage
@@ -126,6 +127,7 @@ export type {
   Depense,
   DepenseWithRelations,
   PaiementDepense,
+  FraisPaiementDepense,
   // Sprint 17 — Besoins
   ListeBesoins,
   ListeBesoinsVague,
@@ -323,6 +325,7 @@ export type {
   CreateDepenseDTO,
   UpdateDepenseDTO,
   DepenseFilters,
+  CreateFraisSupp,
   CreatePaiementDepenseDTO,
   DepenseListResponse,
   DepenseDetailResponse,

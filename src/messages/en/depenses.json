@@ -1,7 +1,7 @@
 {
   "statuts": {
     "NON_PAYEE": "Unpaid",
-    "PARTIELLEMENT_PAYEE": "Partially paid",
+    "PAYEE_PARTIELLEMENT": "Partially paid",
     "PAYEE": "Paid"
   },
   "categories": {
@@ -57,7 +57,24 @@
     "historiqueTitle": "Payment history ({count})",
     "aucunPaiement": "No payments recorded",
     "reference": "Ref:",
-    "supprimerFactureDescription": "This action is irreversible. The file will be permanently deleted."
+    "supprimerFactureDescription": "This action is irreversible. The file will be permanently deleted.",
+    "fraisSupp": "Additional fees",
+    "ajouterFrais": "Add fees",
+    "motif": "Reason",
+    "totalFrais": "Total fees",
+    "totalPaiement": "Total payment",
+    "coutReelTotal": "Total actual cost",
+    "notesOptionnel": "Notes (optional)",
+    "listeBesoins": "Needs list",
+    "fraisNotesPlaceholder": "E.g.: transport from Douala",
+    "supprimerFrais": "Remove this fee"
+  },
+  "motif": {
+    "TRANSPORT": "Transport",
+    "FRAIS_MOBILE_MONEY": "Mobile Money fees",
+    "FRAIS_BANCAIRES": "Bank fees",
+    "PENALITE_RETARD": "Late penalty",
+    "AUTRE": "Other"
   },
   "recurrentes": {
     "frequences": {

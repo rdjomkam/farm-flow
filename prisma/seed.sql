@@ -11,6 +11,7 @@ DELETE FROM "NoteIngenieur";
 DELETE FROM "Activite";
 DELETE FROM "Notification";
 DELETE FROM "ConfigAlerte";
+DELETE FROM "FraisPaiementDepense";
 DELETE FROM "PaiementDepense";
 DELETE FROM "LigneBesoin";
 DELETE FROM "DepenseRecurrente";
@@ -1066,6 +1067,36 @@ INSERT INTO "PaiementDepense" (
     'pdep_04', 'dep_04', 12500.0, 'ESPECES', NULL,
     '2026-02-20 10:00:00', 'user_gerant', 'site_01', NOW()
   );
+
+-- ──────────────────────────────────────────
+-- FraisPaiementDepense (3 frais supplémentaires sur paiements)
+-- ──────────────────────────────────────────
+
+INSERT INTO "FraisPaiementDepense" (
+  "id", "paiementId", "motif", "montant", "notes", "siteId", "createdAt"
+) VALUES
+  -- Transport lors du paiement Mobile Money (pdep_01)
+  (
+    'frais_01', 'pdep_01', 'TRANSPORT', 1500.0,
+    'Frais de déplacement pour dépôt Mobile Money',
+    'site_01', NOW()
+  ),
+  -- Frais Mobile Money sur pdep_01
+  (
+    'frais_02', 'pdep_01', 'FRAIS_MOBILE_MONEY', 875.0,
+    'Commission MTN MoMo 1%',
+    'site_01', NOW()
+  ),
+  -- Frais bancaires sur virement (pdep_03)
+  (
+    'frais_03', 'pdep_03', 'FRAIS_BANCAIRES', 2000.0,
+    'Frais de virement bancaire',
+    'site_01', NOW()
+  );
+
+-- Mise à jour du montantFraisSupp sur les dépenses concernées
+UPDATE "Depense" SET "montantFraisSupp" = 2375.0 WHERE id = 'dep_01';  -- frais_01 + frais_02
+UPDATE "Depense" SET "montantFraisSupp" = 2000.0 WHERE id = 'dep_05';  -- frais_03
 
 -- ──────────────────────────────────────────
 -- ListeBesoins (3 listes — statuts variés) + LigneBesoin (8 lignes)

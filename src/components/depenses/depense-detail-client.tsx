@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Trash2,
   Plus,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,7 +34,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { CategorieDepense, ModePaiement, StatutDepense } from "@/types";
+import { CategorieDepense, ModePaiement, MotifFraisSupp, StatutDepense } from "@/types";
 import { useDepenseService } from "@/services";
 import { useToast } from "@/components/ui/toast";
 
@@ -50,6 +51,13 @@ const statutVariants: Record<
   [StatutDepense.PAYEE]: "en_cours",
 };
 
+interface FraisData {
+  id: string;
+  motif: MotifFraisSupp;
+  montant: number;
+  notes: string | null;
+}
+
 interface PaiementDepenseData {
   id: string;
   montant: number;
@@ -57,6 +65,7 @@ interface PaiementDepenseData {
   reference: string | null;
   date: string;
   user: { id: string; name: string };
+  fraisSupp?: FraisData[];
 }
 
 interface DepenseData {
@@ -66,6 +75,7 @@ interface DepenseData {
   categorieDepense: string;
   montantTotal: number;
   montantPaye: number;
+  montantFraisSupp: number;
   statut: string;
   date: string;
   dateEcheance: string | null;
@@ -79,6 +89,12 @@ interface DepenseData {
   listeBesoins?: { id: string; numero: string; titre: string } | null;
   user: { id: string; name: string };
   paiements: PaiementDepenseData[];
+}
+
+interface FraisSuppRow {
+  motif: string;
+  montant: string;
+  notes: string;
 }
 
 interface Props {
@@ -126,6 +142,9 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
   const [paiementRef, setPaiementRef] = useState("");
   const [paiementPending, setPaiementPending] = useState(false);
 
+  // Frais supplementaires state
+  const [fraisSupp, setFraisSupp] = useState<FraisSuppRow[]>([]);
+
   // Upload facture state
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -148,6 +167,37 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
 
   const canAddPaiement = canPay && statut !== StatutDepense.PAYEE;
 
+  // Computed frais totals
+  const totalFrais = fraisSupp.reduce((sum, f) => {
+    const v = parseFloat(f.montant);
+    return sum + (isNaN(v) ? 0 : v);
+  }, 0);
+  const totalPaiement = (parseFloat(paiementMontant) || 0) + totalFrais;
+
+  const coutRealTotal =
+    currentDepense.montantTotal + (currentDepense.montantFraisSupp ?? 0);
+
+  // -------------------------------------------------------------------------
+  // Frais rows helpers
+  // -------------------------------------------------------------------------
+
+  function addFraisRow() {
+    setFraisSupp((prev) => [
+      ...prev,
+      { motif: MotifFraisSupp.TRANSPORT, montant: "", notes: "" },
+    ]);
+  }
+
+  function removeFraisRow(index: number) {
+    setFraisSupp((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateFraisRow(index: number, field: keyof FraisSuppRow, value: string) {
+    setFraisSupp((prev) =>
+      prev.map((row, i) => (i === index ? { ...row, [field]: value } : row))
+    );
+  }
+
   // -------------------------------------------------------------------------
   // Handlers
   // -------------------------------------------------------------------------
@@ -158,13 +208,14 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
       toast({ title: "Montant invalide", variant: "error" });
       return;
     }
-    if (montant > resteAPayer) {
-      toast({
-        title: "Le montant dépasse le reste à payer",
-        variant: "error",
-      });
-      return;
-    }
+
+    const fraisSuppData = fraisSupp
+      .filter((f) => f.montant && parseFloat(f.montant) > 0 && f.motif)
+      .map((f) => ({
+        motif: f.motif as MotifFraisSupp,
+        montant: parseFloat(f.montant),
+        notes: f.notes || undefined,
+      }));
 
     setPaiementPending(true);
     try {
@@ -172,6 +223,7 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
         montant,
         mode: paiementMode,
         reference: paiementRef.trim() || undefined,
+        fraisSupp: fraisSuppData.length > 0 ? fraisSuppData : undefined,
       });
       if (result.ok && result.data) {
         setPaiements((prev) => [
@@ -182,10 +234,12 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
           ...prev,
           montantPaye: result.data!.montantPaye,
           statut: result.data!.statut,
+          montantFraisSupp: result.data!.montantFraisSupp,
         }));
         setPaiementOpen(false);
         setPaiementMontant("");
         setPaiementRef("");
+        setFraisSupp([]);
       }
     } finally {
       setPaiementPending(false);
@@ -318,7 +372,7 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
           {currentDepense.listeBesoins && (
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
-                Liste de besoins
+                {t("detail.listeBesoins")}
               </span>
               <Link
                 href={`/besoins/${currentDepense.listeBesoins.id}`}
@@ -373,6 +427,26 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                 </span>
               </div>
             )}
+            {(currentDepense.montantFraisSupp ?? 0) > 0 && (
+              <>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    {t("detail.fraisSupp")}
+                  </span>
+                  <span className="font-semibold text-muted-foreground">
+                    {formatMontant(currentDepense.montantFraisSupp)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm border-t pt-2">
+                  <span className="font-medium">
+                    {t("detail.coutReelTotal")}
+                  </span>
+                  <span className="font-bold">
+                    {formatMontant(coutRealTotal)}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Barre de progression */}
@@ -403,7 +477,8 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                 <DialogHeader>
                   <DialogTitle>{t("detail.paiementTitle")}</DialogTitle>
                 </DialogHeader>
-                <div className="flex flex-col gap-4 py-2">
+                <div className="flex flex-col gap-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
+                  {/* Montant */}
                   <div className="flex flex-col gap-1.5">
                     <label
                       htmlFor="paiement-montant"
@@ -415,7 +490,6 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                       id="paiement-montant"
                       type="number"
                       min={1}
-                      max={resteAPayer}
                       value={paiementMontant}
                       onChange={(e) => setPaiementMontant(e.target.value)}
                       placeholder={t("detail.montantMax", {
@@ -423,6 +497,8 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                       })}
                     />
                   </div>
+
+                  {/* Mode */}
                   <div className="flex flex-col gap-1.5">
                     <label
                       htmlFor="paiement-mode"
@@ -446,6 +522,8 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Reference */}
                   <div className="flex flex-col gap-1.5">
                     <label
                       htmlFor="paiement-ref"
@@ -460,6 +538,117 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                       placeholder={t("detail.referencePlaceholder")}
                     />
                   </div>
+
+                  {/* Frais supplementaires section */}
+                  <div className="flex flex-col gap-2 border-t pt-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">
+                        {t("detail.fraisSupp")}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 h-7 text-xs"
+                        onClick={addFraisRow}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        {t("detail.ajouterFrais")}
+                      </Button>
+                    </div>
+
+                    {fraisSupp.length > 0 && (
+                      <div className="flex flex-col gap-3">
+                        {fraisSupp.map((row, index) => (
+                          <div
+                            key={index}
+                            className="flex flex-col gap-2 p-2.5 bg-muted/40 rounded-md relative"
+                          >
+                            <button
+                              type="button"
+                              className="absolute top-2 right-2 text-muted-foreground hover:text-foreground transition-colors"
+                              onClick={() => removeFraisRow(index)}
+                              aria-label={t("detail.supprimerFrais")}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* Motif select */}
+                            <div className="flex flex-col gap-1">
+                              <label className="text-xs text-muted-foreground">
+                                {t("detail.motif")}
+                              </label>
+                              <Select
+                                value={row.motif}
+                                onValueChange={(v) =>
+                                  updateFraisRow(index, "motif", v)
+                                }
+                              >
+                                <SelectTrigger className="h-8 text-sm">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Object.values(MotifFraisSupp).map((m) => (
+                                    <SelectItem key={m} value={m}>
+                                      {t(`motif.${m}`)}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {/* Montant */}
+                            <div className="flex flex-col gap-1">
+                              <label className="text-xs text-muted-foreground">
+                                {t("detail.montantLabel")}
+                              </label>
+                              <Input
+                                type="number"
+                                min={1}
+                                className="h-8 text-sm"
+                                value={row.montant}
+                                onChange={(e) =>
+                                  updateFraisRow(index, "montant", e.target.value)
+                                }
+                                placeholder="0"
+                              />
+                            </div>
+
+                            {/* Notes optionnelles */}
+                            <div className="flex flex-col gap-1">
+                              <label className="text-xs text-muted-foreground">
+                                {t("detail.notesOptionnel")}
+                              </label>
+                              <Input
+                                className="h-8 text-sm"
+                                value={row.notes}
+                                onChange={(e) =>
+                                  updateFraisRow(index, "notes", e.target.value)
+                                }
+                                placeholder={t("detail.fraisNotesPlaceholder")}
+                              />
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Totaux */}
+                        <div className="flex flex-col gap-1 text-sm border-t pt-2">
+                          {totalFrais > 0 && (
+                            <div className="flex justify-between text-muted-foreground">
+                              <span>{t("detail.totalFrais")}</span>
+                              <span>{formatMontant(totalFrais)}</span>
+                            </div>
+                          )}
+                          {totalPaiement > 0 && (
+                            <div className="flex justify-between font-semibold">
+                              <span>{t("detail.totalPaiement")}</span>
+                              <span>{formatMontant(totalPaiement)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <DialogFooter>
                   <DialogClose asChild>
@@ -470,8 +659,7 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
                     disabled={
                       paiementPending ||
                       !paiementMontant ||
-                      parseFloat(paiementMontant) <= 0 ||
-                      parseFloat(paiementMontant) > resteAPayer
+                      parseFloat(paiementMontant) <= 0
                     }
                   >
                     {paiementPending
@@ -601,25 +789,44 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
               {paiements.map((p) => (
                 <div
                   key={p.id}
-                  className="flex items-start justify-between gap-2 text-sm border-b last:border-b-0 pb-3 last:pb-0"
+                  className="flex flex-col gap-1.5 border-b last:border-b-0 pb-3 last:pb-0"
                 >
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-semibold">
-                      {formatMontant(p.montant)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {t(`modes.${p.mode as ModePaiement}`)} •{" "}
-                      {p.user.name}
-                    </span>
-                    {p.reference && (
-                      <span className="text-xs text-muted-foreground">
-                        {t("detail.reference")} {p.reference}
+                  <div className="flex items-start justify-between gap-2 text-sm">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-semibold">
+                        {formatMontant(p.montant)}
                       </span>
-                    )}
+                      <span className="text-xs text-muted-foreground">
+                        {t(`modes.${p.mode as ModePaiement}`)} •{" "}
+                        {p.user.name}
+                      </span>
+                      {p.reference && (
+                        <span className="text-xs text-muted-foreground">
+                          {t("detail.reference")} {p.reference}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {formatDate(p.date)}
+                    </span>
                   </div>
-                  <span className="text-xs text-muted-foreground shrink-0">
-                    {formatDate(p.date)}
-                  </span>
+
+                  {/* Frais supplementaires du paiement */}
+                  {p.fraisSupp && p.fraisSupp.length > 0 && (
+                    <div className="flex flex-col gap-0.5 ml-2 pl-2 border-l-2 border-muted">
+                      {p.fraisSupp.map((f) => (
+                        <div
+                          key={f.id}
+                          className="flex items-center justify-between text-xs text-muted-foreground"
+                        >
+                          <span>{t(`motif.${f.motif}`)}</span>
+                          <span className="font-medium">
+                            + {formatMontant(f.montant)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

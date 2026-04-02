@@ -1563,6 +1563,15 @@ export enum FrequenceRecurrence {
   ANNUEL = "ANNUEL",
 }
 
+/** Motif des frais supplementaires sur un paiement de depense */
+export enum MotifFraisSupp {
+  TRANSPORT = "TRANSPORT",
+  FRAIS_MOBILE_MONEY = "FRAIS_MOBILE_MONEY",
+  FRAIS_BANCAIRES = "FRAIS_BANCAIRES",
+  PENALITE_RETARD = "PENALITE_RETARD",
+  AUTRE = "AUTRE",
+}
+
 // ---------------------------------------------------------------------------
 // Enums — Besoins (Sprint 17)
 // ---------------------------------------------------------------------------
@@ -1601,6 +1610,8 @@ export interface Depense {
   montantTotal: number;
   /** Montant deja paye (recalcule par aggregation) */
   montantPaye: number;
+  /** Montant total des frais supplementaires (recalcule par aggregation) */
+  montantFraisSupp: number;
   /** Statut de paiement (NON_PAYEE → PAYEE_PARTIELLEMENT → PAYEE) */
   statut: StatutDepense;
   /** Date de la depense */
@@ -1654,6 +1665,29 @@ export interface PaiementDepense {
   date: Date;
   /** Utilisateur ayant enregistre le paiement */
   userId: string;
+  /** ID du site (ferme) — R8 */
+  siteId: string;
+  createdAt: Date;
+  /** Frais supplementaires associes a ce paiement (optionnel, charge par include) */
+  fraisSupp?: FraisPaiementDepense[];
+}
+
+/**
+ * FraisPaiementDepense — frais supplementaires attaches a un paiement de depense.
+ *
+ * Exemples : frais de transport, commission Mobile Money, penalites de retard.
+ * La suppression d'un PaiementDepense supprime en cascade ses FraisPaiementDepense.
+ */
+export interface FraisPaiementDepense {
+  id: string;
+  /** Paiement auquel ces frais sont rattaches */
+  paiementId: string;
+  /** Motif / nature des frais */
+  motif: MotifFraisSupp;
+  /** Montant des frais en FCFA */
+  montant: number;
+  /** Notes libres (nullable) */
+  notes: string | null;
   /** ID du site (ferme) — R8 */
   siteId: string;
   createdAt: Date;

@@ -87,6 +87,7 @@ import {
   LogiqueCondition,
   MethodeComptage,
   ModePaiement,
+  MotifFraisSupp,
   OperateurCondition,
   PeriodeFacturation,
   PhaseElevage,
@@ -1294,6 +1295,16 @@ export interface DepenseFilters {
   commandeId?: string;
 }
 
+/** DTO pour creer un frais supplementaire sur un paiement de depense */
+export interface CreateFraisSupp {
+  /** Motif / nature des frais */
+  motif: MotifFraisSupp;
+  /** Montant des frais en FCFA */
+  montant: number;
+  /** Notes libres (optionnel) */
+  notes?: string;
+}
+
 /** DTO pour creer un paiement sur une depense */
 export interface CreatePaiementDepenseDTO {
   /** Montant du paiement en FCFA */
@@ -1302,6 +1313,8 @@ export interface CreatePaiementDepenseDTO {
   mode: ModePaiement;
   /** Reference de transaction (optionnel) */
   reference?: string;
+  /** Frais supplementaires attaches a ce paiement (optionnel) */
+  fraisSupp?: CreateFraisSupp[];
 }
 
 /** Reponse liste des depenses */
@@ -1320,6 +1333,8 @@ export interface PaiementDepenseResponse {
   statut: StatutDepense;
   /** Nouveau montantPaye apres paiement */
   montantPaye: number;
+  /** Nouveau montant total des frais supplementaires apres paiement */
+  montantFraisSupp: number;
 }
 
 // ---------------------------------------------------------------------------
