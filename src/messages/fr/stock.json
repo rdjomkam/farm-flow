@@ -11,7 +11,11 @@
     "MILLILITRE": "mL",
     "LITRE": "L",
     "UNITE": "unite",
-    "SACS": "sacs"
+    "SACS": "sacs",
+    "FLACONS": "flacons",
+    "BOITES": "boites",
+    "ROULEAUX": "rouleaux",
+    "METRES": "m"
   },
   "statuts": {
     "BROUILLON": "Brouillon",

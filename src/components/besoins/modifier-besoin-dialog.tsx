@@ -27,6 +27,7 @@ import {
 import { useDepenseService } from "@/services/depense.service";
 import { useStockService } from "@/services/stock.service";
 import { VagueRatioEditor, type VagueRatioItem } from "./vague-ratio-editor";
+import { UniteBesoin } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -44,7 +45,7 @@ interface LigneBesoinData {
   designation: string;
   produitId: string | null;
   quantite: number;
-  unite: string | null;
+  unite: UniteBesoin | null;
   prixEstime: number;
   prixReel: number | null;
   commandeId: string | null;
@@ -72,7 +73,7 @@ interface LigneForm {
   designation: string;
   produitId: string;
   quantite: string;
-  unite: string;
+  unite: UniteBesoin | "";
   prixEstime: string;
 }
 
@@ -102,7 +103,7 @@ function toLigneForm(l: LigneBesoinData): LigneForm {
     designation: l.designation,
     produitId: l.produitId ?? "",
     quantite: String(l.quantite),
-    unite: l.unite ?? "",
+    unite: (l.unite ?? "") as UniteBesoin | "",
     prixEstime: String(l.prixEstime),
   };
 }
@@ -113,7 +114,7 @@ function emptyLigne(): LigneForm {
     designation: "",
     produitId: "",
     quantite: "",
-    unite: "",
+    unite: "" as UniteBesoin | "",
     prixEstime: "",
   };
 }
@@ -126,6 +127,7 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
   const depenseService = useDepenseService();
   const stockService = useStockService();
   const t = useTranslations("besoins");
+  const tStock = useTranslations("stock");
 
   const [open, setOpen] = useState(false);
   const [produits, setProduits] = useState<ProduitOption[]>([]);
@@ -172,7 +174,8 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
           const produit = produits.find((p) => p.id === value);
           if (produit) {
             updated.designation = produit.nom;
-            updated.unite = produit.unite;
+            // UniteStock values are a subset of UniteBesoin — cast directly
+            updated.unite = produit.unite as UniteBesoin | "";
             updated.prixEstime = String(produit.prixUnitaire);
           }
         }
@@ -263,7 +266,7 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
         designation: l.designation.trim(),
         produitId: l.produitId || undefined,
         quantite: parseFloat(l.quantite),
-        unite: l.unite.trim() || undefined,
+        unite: l.unite || undefined,
         prixEstime: parseFloat(l.prixEstime) || 0,
       })),
     });
@@ -440,12 +443,24 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
                       </div>
                       <div>
                         <label className="text-xs text-muted-foreground">{t("modifierDialog.unite")}</label>
-                        <Input
-                          value={l.unite}
-                          onChange={(e) => updateLigne(l.id, "unite", e.target.value)}
-                          placeholder={t("modifierDialog.unitePlaceholder")}
-                          className="mt-0.5 h-9 text-sm"
-                        />
+                        <Select
+                          value={l.unite || "none"}
+                          onValueChange={(v) =>
+                            updateLigne(l.id, "unite", v === "none" ? "" : v)
+                          }
+                        >
+                          <SelectTrigger className="mt-0.5 h-9 text-sm w-full">
+                            <SelectValue placeholder={t("modifierDialog.uniteAucune")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">{t("modifierDialog.uniteAucune")}</SelectItem>
+                            {Object.values(UniteBesoin).map((u) => (
+                              <SelectItem key={u} value={u}>
+                                {tStock(`unites.${u}` as Parameters<typeof tStock>[0])}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
 

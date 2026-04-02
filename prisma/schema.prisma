@@ -71,6 +71,19 @@ enum UniteStock {
   SACS
 }
 
+enum UniteBesoin {
+  GRAMME
+  KG
+  MILLILITRE
+  LITRE
+  UNITE
+  SACS
+  FLACONS
+  BOITES
+  ROULEAUX
+  METRES
+}
+
 enum TypeMouvement {
   ENTREE
   SORTIE
@@ -1682,7 +1695,7 @@ model LigneBesoin {
   produit          Produit?      @relation(fields: [produitId], references: [id], onDelete: SetNull)
   quantite         Float
   /** Unité libre (nullable si produit avec unité définie) */
-  unite            String?
+  unite            UniteBesoin?
   /** Prix unitaire estimé */
   prixEstime       Float         @default(0)
   /** Prix unitaire réel après clôture (nullable) */

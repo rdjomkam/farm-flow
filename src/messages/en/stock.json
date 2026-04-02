@@ -11,7 +11,11 @@
     "MILLILITRE": "mL",
     "LITRE": "L",
     "UNITE": "unit",
-    "SACS": "bags"
+    "SACS": "bags",
+    "FLACONS": "vials",
+    "BOITES": "boxes",
+    "ROULEAUX": "rolls",
+    "METRES": "m"
   },
   "statuts": {
     "BROUILLON": "Draft",

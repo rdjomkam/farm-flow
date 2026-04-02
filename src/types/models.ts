@@ -220,6 +220,20 @@ export enum UniteStock {
   SACS = "SACS",
 }
 
+/** Unite de mesure pour les lignes de besoins (superset de UniteStock + unités de conditionnement) */
+export enum UniteBesoin {
+  GRAMME     = "GRAMME",
+  KG         = "KG",
+  MILLILITRE = "MILLILITRE",
+  LITRE      = "LITRE",
+  UNITE      = "UNITE",
+  SACS       = "SACS",
+  FLACONS    = "FLACONS",
+  BOITES     = "BOITES",
+  ROULEAUX   = "ROULEAUX",
+  METRES     = "METRES",
+}
+
 /** Type de mouvement de stock */
 export enum TypeMouvement {
   ENTREE = "ENTREE",
@@ -1850,8 +1864,8 @@ export interface LigneBesoin {
   produitId: string | null;
   /** Quantite demandee */
   quantite: number;
-  /** Unite libre (nullable si produit avec unite definie) */
-  unite: string | null;
+  /** Unite de l'article (enum UniteBesoin, nullable si non precisee) */
+  unite: UniteBesoin | null;
   /** Prix unitaire estime */
   prixEstime: number;
   /** Prix unitaire reel apres cloture (nullable) */

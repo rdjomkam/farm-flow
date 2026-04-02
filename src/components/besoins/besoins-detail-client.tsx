@@ -39,7 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTranslations } from "next-intl";
-import { StatutBesoins } from "@/types";
+import { StatutBesoins, UniteBesoin } from "@/types";
 import { useDepenseService } from "@/services";
 import { ModifierBesoinDialog } from "./modifier-besoin-dialog";
 
@@ -67,7 +67,7 @@ interface LigneBesoinData {
   designation: string;
   produitId: string | null;
   quantite: number;
-  unite: string | null;
+  unite: UniteBesoin | null;
   prixEstime: number;
   prixReel: number | null;
   commandeId: string | null;
@@ -140,10 +140,9 @@ export function BesoinsDetailClient({
   const depenseService = useDepenseService();
   const t = useTranslations("besoins");
   const tStock = useTranslations("stock");
-  const uniteLabel = (u: string) => {
-    const key = `unites.${u}` as Parameters<typeof tStock>[0];
-    const label = tStock(key);
-    return label !== `stock.unites.${u}` ? label : u.toLowerCase();
+  const uniteLabel = (u: UniteBesoin | string | null): string => {
+    if (!u) return "";
+    return tStock(`unites.${u}` as Parameters<typeof tStock>[0]);
   };
   const [liste, setListe] = useState(initial);
 

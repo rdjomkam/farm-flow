@@ -7,7 +7,9 @@ import {
 import { apiError } from "@/lib/api-utils";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { Permission } from "@/types";
+import { Permission, UniteBesoin } from "@/types";
+
+const VALID_UNITES = Object.values(UniteBesoin);
 
 /**
  * GET /api/besoins/[id]
@@ -76,6 +78,19 @@ export async function PUT(
               status: 400,
               message:
                 "Ligne invalide : designation requise, quantite > 0, prixEstime >= 0.",
+            },
+            { status: 400 }
+          );
+        }
+        if (
+          ligne.unite !== undefined &&
+          ligne.unite !== null &&
+          !VALID_UNITES.includes(ligne.unite as UniteBesoin)
+        ) {
+          return NextResponse.json(
+            {
+              status: 400,
+              message: `Unite invalide : "${ligne.unite}". Valeurs autorisees : ${VALID_UNITES.join(", ")}.`,
             },
             { status: 400 }
           );

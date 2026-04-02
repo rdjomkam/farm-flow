@@ -39,6 +39,7 @@ export {
   MotifFraisSupp,
   // Sprint 17 — Besoins
   StatutBesoins,
+  UniteBesoin,
   // Sprint 19 — ConfigElevage
   PhaseElevage,
   // Sprint 20 — Packs & Provisioning

@@ -120,6 +120,7 @@ import {
   TypePlan,
   TypeReleve,
   TypeRemise,
+  UniteBesoin,
   UniteStock,
   VisibiliteNote,
 } from "./models";
@@ -1370,8 +1371,8 @@ export interface CreateLigneBesoinDTO {
   produitId?: string;
   /** Quantite demandee */
   quantite: number;
-  /** Unite libre (optionnel si produit avec unite definie) */
-  unite?: string;
+  /** Unite de l'article (enum UniteBesoin, optionnel) */
+  unite?: UniteBesoin;
   /** Prix unitaire estime en FCFA */
   prixEstime: number;
 }

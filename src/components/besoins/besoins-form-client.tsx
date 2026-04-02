@@ -20,6 +20,7 @@ import {
 import { useDepenseService } from "@/services";
 import { queryKeys } from "@/lib/query-keys";
 import { VagueRatioEditor, type VagueRatioItem } from "./vague-ratio-editor";
+import { UniteBesoin } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -42,7 +43,7 @@ interface LigneForm {
   designation: string;
   produitId: string;
   quantite: string;
-  unite: string;
+  unite: UniteBesoin | "";
   prixEstime: string;
 }
 
@@ -72,7 +73,7 @@ function emptyLigne(): LigneForm {
     designation: "",
     produitId: "",
     quantite: "",
-    unite: "",
+    unite: "" as UniteBesoin | "",
     prixEstime: "",
   };
 }
@@ -86,6 +87,7 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
   const queryClient = useQueryClient();
   const depenseService = useDepenseService();
   const t = useTranslations("besoins");
+  const tStock = useTranslations("stock");
 
   const [titre, setTitre] = useState("");
   const [vaguesRatios, setVaguesRatios] = useState<VagueRatioItem[]>([]);
@@ -119,7 +121,8 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
           const produit = produits.find((p) => p.id === value);
           if (produit) {
             updated.designation = produit.nom;
-            updated.unite = produit.unite;
+            // UniteStock values are a subset of UniteBesoin — cast directly
+            updated.unite = produit.unite as UniteBesoin | "";
             updated.prixEstime = String(produit.prixUnitaire);
           }
         }
@@ -169,7 +172,7 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
         designation: l.designation.trim(),
         produitId: l.produitId || undefined,
         quantite: parseFloat(l.quantite),
-        unite: l.unite.trim() || undefined,
+        unite: l.unite || undefined,
         prixEstime: parseFloat(l.prixEstime) || 0,
       })),
     });
@@ -335,14 +338,24 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground">{t("form.unite")}</label>
-                  <Input
-                    value={l.unite}
-                    onChange={(e) =>
-                      updateLigne(l.id, "unite", e.target.value)
+                  <Select
+                    value={l.unite || "none"}
+                    onValueChange={(v) =>
+                      updateLigne(l.id, "unite", v === "none" ? "" : v)
                     }
-                    placeholder={t("form.unitePlaceholder")}
-                    className="mt-1"
-                  />
+                  >
+                    <SelectTrigger className="mt-1 w-full">
+                      <SelectValue placeholder={t("form.uniteAucune")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">{t("form.uniteAucune")}</SelectItem>
+                      {Object.values(UniteBesoin).map((u) => (
+                        <SelectItem key={u} value={u}>
+                          {tStock(`unites.${u}` as Parameters<typeof tStock>[0])}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

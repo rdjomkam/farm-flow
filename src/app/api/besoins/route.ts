@@ -6,8 +6,10 @@ import {
 import { apiError } from "@/lib/api-utils";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { Permission, StatutBesoins, parsePaginationQuery } from "@/types";
+import { Permission, StatutBesoins, UniteBesoin, parsePaginationQuery } from "@/types";
 import type { CreateListeBesoinsDTO, ListeBesoinsFilters, VagueRatioDTO } from "@/types";
+
+const VALID_UNITES = Object.values(UniteBesoin);
 
 const VALID_STATUTS = Object.values(StatutBesoins);
 
@@ -105,7 +107,7 @@ export async function POST(request: NextRequest) {
     } else {
       body.lignes.forEach(
         (
-          l: { designation?: unknown; quantite?: unknown; prixEstime?: unknown },
+          l: { designation?: unknown; quantite?: unknown; prixEstime?: unknown; unite?: unknown },
           i: number
         ) => {
           if (!l.designation || typeof l.designation !== "string") {
@@ -128,6 +130,12 @@ export async function POST(request: NextRequest) {
             errors.push({
               field: `lignes[${i}].prixEstime`,
               message: `Le prix estime de la ligne ${i + 1} doit etre un nombre positif ou zero.`,
+            });
+          }
+          if (l.unite !== undefined && l.unite !== null && !VALID_UNITES.includes(l.unite as UniteBesoin)) {
+            errors.push({
+              field: `lignes[${i}].unite`,
+              message: `L'unite de la ligne ${i + 1} est invalide. Valeurs autorisees : ${VALID_UNITES.join(", ")}.`,
             });
           }
         }
@@ -186,7 +194,7 @@ export async function POST(request: NextRequest) {
         designation: string;
         produitId?: string;
         quantite: number;
-        unite?: string;
+        unite?: UniteBesoin;
         prixEstime: number;
       }) => ({
         designation: l.designation.trim(),

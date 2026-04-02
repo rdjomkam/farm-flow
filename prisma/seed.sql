@@ -1193,7 +1193,7 @@ INSERT INTO "LigneBesoin" (
   (
     'lb_03', 'bes_01',
     'Vitamines et supplement', NULL,
-    5.0, 'flacons',
+    5.0, 'FLACONS',
     2000.0, NULL, NULL,
     NOW()
   ),
@@ -1201,14 +1201,14 @@ INSERT INTO "LigneBesoin" (
   (
     'lb_04', 'bes_02',
     'Filet de protection bacs', NULL,
-    2.0, 'rouleaux',
+    2.0, 'ROULEAUX',
     8000.0, NULL, NULL,
     NOW()
   ),
   (
     'lb_05', 'bes_02',
     'Tuyaux PVC 20mm', NULL,
-    10.0, 'metres',
+    10.0, 'METRES',
     500.0, NULL, NULL,
     NOW()
   ),
@@ -1223,14 +1223,14 @@ INSERT INTO "LigneBesoin" (
   (
     'lb_07', 'bes_03',
     'Sel marin traitement eau', NULL,
-    20.0, 'kg',
+    20.0, 'KG',
     600.0, 570.0, NULL,
     NOW()
   ),
   (
     'lb_08', 'bes_03',
     'Antibiotique preventif', NULL,
-    2.0, 'boites',
+    2.0, 'BOITES',
     9000.0, 8430.0, NULL,
     NOW()
   );
