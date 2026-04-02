@@ -4,15 +4,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { VagueSummaryCard } from "@/components/dashboard/vague-summary-card";
-import { getDashboardData } from "@/lib/queries/dashboard";
+import type { DashboardData } from "@/types";
 
 interface DashboardHeroSectionProps {
-  siteId: string;
+  data: DashboardData;
   sessionName: string;
 }
 
-export async function DashboardHeroSection({ siteId, sessionName }: DashboardHeroSectionProps) {
-  const data = await getDashboardData(siteId);
+export function DashboardHeroSection({ data, sessionName }: DashboardHeroSectionProps) {
 
   return (
     <>

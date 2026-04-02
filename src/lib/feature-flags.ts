@@ -6,8 +6,9 @@
  * - getFeatureFlag(key)          — lecture DB avec React.cache() (une seule requete par render)
  * - isMaintenanceModeEnabled()   — raccourci cache pour le flag MAINTENANCE_MODE
  * - checkPlatformMaintenance()   — guard API (retourne 503 NextResponse ou null)
- * - setPlatformMaintenanceCookie()   — pose le cookie platform_maintenance=1
- * - clearPlatformMaintenanceCookie() — efface le cookie platform_maintenance
+ *
+ * Le mode maintenance est verifie directement en DB (pas de cookie).
+ * Le layout root (src/app/layout.tsx) lit la DB directement (Server Component, Node.js runtime).
  *
  * ADR-maintenance-mode
  */
@@ -16,13 +17,6 @@ import { cache } from "react";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import type { FeatureFlag } from "@/types";
-
-// ---------------------------------------------------------------------------
-// Cookie constants
-// ---------------------------------------------------------------------------
-
-export const PLATFORM_MAINTENANCE_COOKIE = "platform_maintenance";
-export const PLATFORM_MAINTENANCE_MAX_AGE = 7 * 24 * 60 * 60; // 7 jours
 
 // ---------------------------------------------------------------------------
 // DB helpers — cachees par requete HTTP (React.cache)
@@ -103,33 +97,3 @@ export async function checkPlatformMaintenance(
   return null;
 }
 
-// ---------------------------------------------------------------------------
-// Cookie helpers — appelee par la route PATCH /api/backoffice/feature-flags/[key]
-// ---------------------------------------------------------------------------
-
-/**
- * Pose le cookie platform_maintenance=1 sur une NextResponse.
- * httpOnly: false pour que proxy.ts (Edge Runtime) puisse le lire.
- */
-export function setPlatformMaintenanceCookie(response: NextResponse): void {
-  response.cookies.set(PLATFORM_MAINTENANCE_COOKIE, "1", {
-    httpOnly: false,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: PLATFORM_MAINTENANCE_MAX_AGE,
-  });
-}
-
-/**
- * Efface le cookie platform_maintenance sur une NextResponse.
- */
-export function clearPlatformMaintenanceCookie(response: NextResponse): void {
-  response.cookies.set(PLATFORM_MAINTENANCE_COOKIE, "", {
-    httpOnly: false,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
-}

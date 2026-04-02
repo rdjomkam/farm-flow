@@ -41,6 +41,12 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 
+vi.mock("@/lib/feature-flags", () => ({
+  checkPlatformMaintenance: vi.fn().mockResolvedValue(null),
+  getFeatureFlag: vi.fn().mockResolvedValue(null),
+  isMaintenanceModeEnabled: vi.fn().mockResolvedValue(false),
+}));
+
 const AUTH_CONTEXT = {
   userId: "user-1",
   email: "test@dkfarm.cm",
@@ -48,6 +54,7 @@ const AUTH_CONTEXT = {
   name: "Test User",
   globalRole: "PISCICULTEUR",
   activeSiteId: "site-1",
+  isSuperAdmin: false,
   siteRoleId: "role-1",
   siteRoleName: "Pisciculteur",
   permissions: [Permission.VENTES_VOIR, Permission.VENTES_CREER],

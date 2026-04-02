@@ -120,6 +120,12 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 
+vi.mock("@/lib/feature-flags", () => ({
+  checkPlatformMaintenance: vi.fn().mockResolvedValue(null),
+  getFeatureFlag: vi.fn().mockResolvedValue(null),
+  isMaintenanceModeEnabled: vi.fn().mockResolvedValue(false),
+}));
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -132,6 +138,7 @@ const AUTH_CONTEXT = {
   phone: null,
   name: "Admin",
   globalRole: "ADMIN",
+  isSuperAdmin: false,
   siteRoleId: "role-1",
   siteRoleName: "Administrateur",
 };

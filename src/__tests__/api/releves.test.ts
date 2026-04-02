@@ -43,6 +43,12 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 
+vi.mock("@/lib/feature-flags", () => ({
+  checkPlatformMaintenance: vi.fn().mockResolvedValue(null),
+  getFeatureFlag: vi.fn().mockResolvedValue(null),
+  isMaintenanceModeEnabled: vi.fn().mockResolvedValue(false),
+}));
+
 const AUTH_CONTEXT = {
   userId: "user-1",
   email: "test@dkfarm.cm",
@@ -51,6 +57,7 @@ const AUTH_CONTEXT = {
   globalRole: "PISCICULTEUR",
   activeSiteId: "site-1",
   siteRole: "PISCICULTEUR",
+  isSuperAdmin: false,
   permissions: [Permission.RELEVES_VOIR, Permission.RELEVES_CREER],
 };
 
@@ -955,6 +962,7 @@ describe("PUT /api/releves/[id]", () => {
     globalRole: "PISCICULTEUR",
     activeSiteId: "site-1",
     siteRole: "PISCICULTEUR",
+    isSuperAdmin: false,
     permissions: [Permission.RELEVES_MODIFIER],
   };
 

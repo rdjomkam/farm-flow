@@ -50,6 +50,12 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 
+vi.mock("@/lib/feature-flags", () => ({
+  checkPlatformMaintenance: vi.fn().mockResolvedValue(null),
+  getFeatureFlag: vi.fn().mockResolvedValue(null),
+  isMaintenanceModeEnabled: vi.fn().mockResolvedValue(false),
+}));
+
 vi.mock("@/lib/db", () => ({
   prisma: {
     vague: { findFirst: vi.fn().mockResolvedValue(null) },
@@ -73,6 +79,7 @@ const AUTH_CONTEXT_RELEVES = {
   globalRole: "PISCICULTEUR",
   activeSiteId: "site-1",
   siteRole: "PISCICULTEUR",
+  isSuperAdmin: false,
   permissions: [Permission.RELEVES_VOIR, Permission.RELEVES_CREER],
 };
 
@@ -84,6 +91,7 @@ const AUTH_CONTEXT_STOCK = {
   globalRole: "PISCICULTEUR",
   activeSiteId: "site-1",
   siteRole: "PISCICULTEUR",
+  isSuperAdmin: false,
   permissions: [Permission.STOCK_VOIR, Permission.STOCK_GERER],
 };
 

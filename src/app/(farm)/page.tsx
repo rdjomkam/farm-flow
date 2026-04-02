@@ -18,6 +18,12 @@ import {
 import { IngenieurDashboardMultiFarm } from "@/components/ingenieur/ingenieur-dashboard-multi-farm";
 import { IngenieurDashboardSingleFarm } from "@/components/ingenieur/ingenieur-dashboard-single-farm";
 import { prisma } from "@/lib/db";
+import {
+  getDashboardData,
+  getDashboardIndicateurs,
+  getProjectionsDashboard,
+  getRecentActivity,
+} from "@/lib/queries/dashboard";
 
 /**
  * Unified dashboard page — entry point for both (farm) and (ingenieur) route groups.
@@ -151,26 +157,36 @@ export default async function FarmDashboardPage() {
 
   const siteId = session.activeSiteId;
 
+  // Fetch all dashboard data in parallel. The heavy vague+releves query is
+  // deduplicated by React.cache() in getVaguesWithReleves, so the DB is only
+  // hit once even though four functions share the same data source.
+  const [dashboardData, indicateurs, projections, recentReleves] = await Promise.all([
+    getDashboardData(siteId),
+    getDashboardIndicateurs(siteId),
+    getProjectionsDashboard(siteId),
+    getRecentActivity(siteId),
+  ]);
+
   return (
     <>
       <Header title="Dashboard" />
       <div className="flex flex-col gap-4 p-4">
         <Suspense fallback={<HeroSectionSkeleton />}>
-          <DashboardHeroSection siteId={siteId} sessionName={session.name} />
+          <DashboardHeroSection data={dashboardData} sessionName={session.name} />
         </Suspense>
 
         <QuickActions permissions={permissions} />
 
         <Suspense fallback={<IndicateursSkeleton />}>
-          <IndicateursSection siteId={siteId} />
+          <IndicateursSection indicateurs={indicateurs} />
         </Suspense>
 
         <Suspense fallback={<ProjectionsSkeleton />}>
-          <ProjectionsSection siteId={siteId} />
+          <ProjectionsSection projections={projections} userRole={session.role} />
         </Suspense>
 
         <Suspense fallback={<RecentActivitySkeleton />}>
-          <RecentActivitySection siteId={siteId} />
+          <RecentActivitySection releves={recentReleves} />
         </Suspense>
       </div>
     </>

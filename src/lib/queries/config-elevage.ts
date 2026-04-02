@@ -8,6 +8,7 @@
  * pour Clarias gariepinus (section 6.5 du REQ). Adresse EC-5.1.
  */
 
+import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { PhaseElevage } from "@/types";
 import type { CreateConfigElevageDTO, UpdateConfigElevageDTO } from "@/types";
@@ -123,12 +124,14 @@ export async function getConfigElevageById(id: string, siteId: string) {
  * Recupere le profil par defaut du site.
  * Retourne null si aucun profil isDefault=true n'existe.
  * Le caller doit appliquer le fallback CONFIG_ELEVAGE_DEFAULTS si null (EC-5.1).
+ *
+ * Wrapped with React.cache() to deduplicate calls within a single server request.
  */
-export async function getConfigElevageDefaut(siteId: string) {
+export const getConfigElevageDefaut = cache(async (siteId: string) => {
   return prisma.configElevage.findFirst({
     where: { siteId, isDefault: true },
   });
-}
+});
 
 /**
  * Cree un nouveau profil ConfigElevage.

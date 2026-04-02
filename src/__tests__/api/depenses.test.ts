@@ -84,6 +84,12 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 
+vi.mock("@/lib/feature-flags", () => ({
+  checkPlatformMaintenance: vi.fn().mockResolvedValue(null),
+  getFeatureFlag: vi.fn().mockResolvedValue(null),
+  isMaintenanceModeEnabled: vi.fn().mockResolvedValue(false),
+}));
+
 vi.mock("@/lib/storage", () => ({
   validateFile: vi.fn(),
   generateStorageKey: vi.fn().mockReturnValue("farm-flow/site-1/depenses/dep-test/1234-facture.pdf"),
@@ -105,6 +111,7 @@ const AUTH_CONTEXT = {
   phone: null,
   name: "Admin",
   globalRole: "ADMIN",
+  isSuperAdmin: false,
   siteRoleId: "role-1",
   siteRoleName: "Administrateur",
 };

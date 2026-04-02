@@ -59,7 +59,7 @@ export async function PUT(
     );
 
     // Guard maintenance — super-admin (Role.ADMIN) bypasse le blocage
-    const maintenanceResponse = await checkPlatformMaintenance(auth.globalRole === "ADMIN");
+    const maintenanceResponse = await checkPlatformMaintenance(auth.isSuperAdmin);
     if (maintenanceResponse) return maintenanceResponse;
 
     const { id } = await params;
@@ -167,7 +167,7 @@ export async function DELETE(
     );
 
     // Guard maintenance — super-admin (Role.ADMIN) bypasse le blocage
-    const maintenanceResponse = await checkPlatformMaintenance(auth.globalRole === "ADMIN");
+    const maintenanceResponse = await checkPlatformMaintenance(auth.isSuperAdmin);
     if (maintenanceResponse) return maintenanceResponse;
 
     const { id } = await params;

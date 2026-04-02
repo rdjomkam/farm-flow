@@ -1,12 +1,18 @@
 import { RecentActivity } from "@/components/dashboard/recent-activity";
-import { getRecentActivity } from "@/lib/queries/dashboard";
 
-interface RecentActivitySectionProps {
-  siteId: string;
+interface RecentReleve {
+  id: string;
+  typeReleve: string;
+  date: Date;
+  createdAt: Date;
+  vague: { code: string } | null;
+  bac: { nom: string } | null;
 }
 
-export async function RecentActivitySection({ siteId }: RecentActivitySectionProps) {
-  const recentReleves = await getRecentActivity(siteId);
+interface RecentActivitySectionProps {
+  releves: RecentReleve[];
+}
 
-  return <RecentActivity releves={recentReleves} />;
+export function RecentActivitySection({ releves }: RecentActivitySectionProps) {
+  return <RecentActivity releves={releves} />;
 }

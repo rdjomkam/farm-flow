@@ -89,6 +89,12 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 
+vi.mock("@/lib/feature-flags", () => ({
+  checkPlatformMaintenance: vi.fn().mockResolvedValue(null),
+  getFeatureFlag: vi.fn().mockResolvedValue(null),
+  isMaintenanceModeEnabled: vi.fn().mockResolvedValue(false),
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -101,6 +107,7 @@ const AUTH_CONTEXT = {
   globalRole: "ADMIN",
   activeSiteId: "site-1",
   siteRole: "ADMIN",
+  isSuperAdmin: false,
   permissions: [
     Permission.RELEVES_VOIR,
     Permission.RELEVES_CREER,

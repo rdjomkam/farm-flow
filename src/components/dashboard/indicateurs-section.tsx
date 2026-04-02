@@ -1,13 +1,11 @@
 import { IndicateursPanel } from "@/components/dashboard/indicateurs-panel";
-import { getDashboardIndicateurs } from "@/lib/queries/dashboard";
+import type { IndicateursBenchmarkVague } from "@/types";
 
 interface IndicateursSectionProps {
-  siteId: string;
+  indicateurs: IndicateursBenchmarkVague[];
 }
 
-export async function IndicateursSection({ siteId }: IndicateursSectionProps) {
-  const indicateurs = await getDashboardIndicateurs(siteId);
-
+export function IndicateursSection({ indicateurs }: IndicateursSectionProps) {
   if (indicateurs.length === 0) return null;
 
   return <IndicateursPanel indicateurs={indicateurs} />;

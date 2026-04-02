@@ -8,9 +8,9 @@
  *   { enabled: boolean; value?: Record<string, unknown> | null }
  *
  * Sur PATCH du flag MAINTENANCE_MODE :
- *   - pose le cookie platform_maintenance=1 si enabled=true
- *   - efface le cookie si enabled=false
+ *   - met a jour enabled + value en DB (transaction atomique)
  *   - cree une entree PlatformAuditLog
+ *   - pas de cookie : le layout root lit la DB directement (Server Component, Node.js runtime)
  *
  * ADR-maintenance-mode
  * R4 : transaction atomique (update + auditLog.create)
@@ -24,10 +24,6 @@ import { ForbiddenError } from "@/lib/permissions";
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-utils";
 import { ErrorKeys } from "@/lib/api-error-keys";
-import {
-  setPlatformMaintenanceCookie,
-  clearPlatformMaintenanceCookie,
-} from "@/lib/feature-flags";
 import type { FeatureFlagResponse } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -182,18 +178,7 @@ export async function PATCH(
       updatedByName: updatedFlag.updatedByUser?.name ?? null,
     };
 
-    const nextResponse = NextResponse.json(response);
-
-    // Gestion du cookie platform_maintenance
-    if (key === "MAINTENANCE_MODE") {
-      if (enabled) {
-        setPlatformMaintenanceCookie(nextResponse);
-      } else {
-        clearPlatformMaintenanceCookie(nextResponse);
-      }
-    }
-
-    return nextResponse;
+    return NextResponse.json(response);
   } catch (error) {
     if (error instanceof AuthError) {
       return apiError(401, error.message, { code: ErrorKeys.AUTH_UNAUTHORIZED });

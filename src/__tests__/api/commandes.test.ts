@@ -51,6 +51,12 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 
+vi.mock("@/lib/feature-flags", () => ({
+  checkPlatformMaintenance: vi.fn().mockResolvedValue(null),
+  getFeatureFlag: vi.fn().mockResolvedValue(null),
+  isMaintenanceModeEnabled: vi.fn().mockResolvedValue(false),
+}));
+
 const AUTH_CONTEXT = {
   userId: "user-1",
   email: "test@dkfarm.cm",
@@ -59,6 +65,7 @@ const AUTH_CONTEXT = {
   globalRole: "PISCICULTEUR",
   activeSiteId: "site-1",
   siteRole: "PISCICULTEUR",
+  isSuperAdmin: false,
   permissions: [Permission.APPROVISIONNEMENT_VOIR, Permission.APPROVISIONNEMENT_GERER],
 };
 
@@ -536,6 +543,7 @@ describe("POST /api/commandes/[id]/recevoir", () => {
       "cmd-1",
       "site-1",
       "user-1",
+      undefined,
       undefined
     );
   });
@@ -562,7 +570,8 @@ describe("POST /api/commandes/[id]/recevoir", () => {
       "cmd-1",
       "site-1",
       "user-1",
-      "2026-03-09T00:00:00.000Z"
+      "2026-03-09T00:00:00.000Z",
+      undefined
     );
   });
 

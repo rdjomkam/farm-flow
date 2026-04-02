@@ -50,6 +50,8 @@ export interface AuthContext {
   name: string;
   /** Role global de l'utilisateur (ADMIN = super-admin multi-site) */
   globalRole: Role;
+  /** true si l'utilisateur est super-admin plateforme (user.isSuperAdmin en DB) */
+  isSuperAdmin: boolean;
   /** ID du site actif */
   activeSiteId: string;
   /** ID du SiteRole de l'utilisateur sur le site actif */

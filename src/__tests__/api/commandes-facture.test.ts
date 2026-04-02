@@ -69,6 +69,12 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 
+vi.mock("@/lib/feature-flags", () => ({
+  checkPlatformMaintenance: vi.fn().mockResolvedValue(null),
+  getFeatureFlag: vi.fn().mockResolvedValue(null),
+  isMaintenanceModeEnabled: vi.fn().mockResolvedValue(false),
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -81,6 +87,7 @@ const AUTH_CONTEXT = {
   globalRole: "PISCICULTEUR",
   activeSiteId: "site-1",
   siteRole: "PISCICULTEUR",
+  isSuperAdmin: false,
   permissions: [Permission.APPROVISIONNEMENT_VOIR, Permission.APPROVISIONNEMENT_GERER],
 };
 
@@ -378,7 +385,7 @@ describe("POST /api/commandes/[id]/recevoir — avec fichier facture", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(mockRecevoirCommande).toHaveBeenCalledWith("cmd-1", "site-1", "user-1", "2026-03-15");
+    expect(mockRecevoirCommande).toHaveBeenCalledWith("cmd-1", "site-1", "user-1", "2026-03-15", undefined);
     expect(mockUploadFile).not.toHaveBeenCalled();
   });
 

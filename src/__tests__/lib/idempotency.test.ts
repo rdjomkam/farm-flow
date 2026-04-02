@@ -58,6 +58,12 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 
+vi.mock("@/lib/feature-flags", () => ({
+  checkPlatformMaintenance: vi.fn().mockResolvedValue(null),
+  getFeatureFlag: vi.fn().mockResolvedValue(null),
+  isMaintenanceModeEnabled: vi.fn().mockResolvedValue(false),
+}));
+
 // ---------------------------------------------------------------------------
 // Mock query functions
 // ---------------------------------------------------------------------------
@@ -98,6 +104,7 @@ const AUTH_CONTEXT = {
   globalRole: "PISCICULTEUR",
   activeSiteId: "site-1",
   siteRole: "PISCICULTEUR",
+  isSuperAdmin: false,
   permissions: [
     Permission.VENTES_VOIR,
     Permission.VENTES_CREER,

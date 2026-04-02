@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import { getSiteMember } from "@/lib/queries/sites";
 import { Role, Permission } from "@/types";
 import type { AuthContext, UserSession } from "@/types/auth";
+import { prisma } from "@/lib/db";
 
 // Re-export constants for server-side consumers
 export {
@@ -82,12 +83,18 @@ export async function requirePermission(
   // Global ADMIN has all permissions — bypass membership and activeSiteId check
   if (session.role === Role.ADMIN) {
     const activeSiteId = session.activeSiteId ?? "";
+    // Load isSuperAdmin from DB for accurate AuthContext
+    const userRow = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { isSuperAdmin: true },
+    });
     return {
       userId: session.userId,
       email: session.email,
       phone: session.phone,
       name: session.name,
       globalRole: session.role,
+      isSuperAdmin: userRow?.isSuperAdmin ?? false,
       activeSiteId,
       siteRoleId: "",
       siteRoleName: "Super Admin",
@@ -122,6 +129,7 @@ export async function requirePermission(
     phone: session.phone,
     name: session.name,
     globalRole: session.role,
+    isSuperAdmin: false,
     activeSiteId: session.activeSiteId,
     siteRoleId: member.siteRoleId,
     siteRoleName: member.siteRole.name,

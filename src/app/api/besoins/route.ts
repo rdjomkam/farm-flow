@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Guard maintenance — super-admin (Role.ADMIN) bypasse le blocage
-    const maintenanceResponse = await checkPlatformMaintenance(auth.globalRole === "ADMIN");
+    const maintenanceResponse = await checkPlatformMaintenance(auth.isSuperAdmin);
     if (maintenanceResponse) return maintenanceResponse;
 
     const body = await request.json();

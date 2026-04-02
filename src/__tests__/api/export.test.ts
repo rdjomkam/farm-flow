@@ -150,6 +150,12 @@ vi.mock("@/lib/export/excel-ventes", () => ({
   genererExcelVentes: vi.fn().mockReturnValue(FAKE_EXCEL_BUFFER),
 }));
 
+vi.mock("@/lib/feature-flags", () => ({
+  checkPlatformMaintenance: vi.fn().mockResolvedValue(null),
+  getFeatureFlag: vi.fn().mockResolvedValue(null),
+  isMaintenanceModeEnabled: vi.fn().mockResolvedValue(false),
+}));
+
 // ---------------------------------------------------------------------------
 // Contexte d'authentification commun
 // ---------------------------------------------------------------------------
@@ -161,6 +167,7 @@ const AUTH_CONTEXT = {
   name: "Test User",
   globalRole: "ADMIN",
   activeSiteId: "site-1",
+  isSuperAdmin: false,
   siteRoleId: "role-1",
   siteRoleName: "Admin",
   permissions: [

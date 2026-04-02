@@ -1,19 +1,12 @@
 import { Projections } from "@/components/dashboard/projections";
-import { getProjectionsDashboard } from "@/lib/queries/dashboard";
-import { getServerSession } from "@/lib/auth";
+import type { ProjectionVague } from "@/types";
 import { Role } from "@/types";
 
 interface ProjectionsSectionProps {
-  siteId: string;
+  projections: ProjectionVague[];
+  userRole: Role;
 }
 
-export async function ProjectionsSection({ siteId }: ProjectionsSectionProps) {
-  const [projections, session] = await Promise.all([
-    getProjectionsDashboard(siteId),
-    getServerSession(),
-  ]);
-
-  const userRole: Role = session?.role ?? Role.GERANT;
-
+export function ProjectionsSection({ projections, userRole }: ProjectionsSectionProps) {
   return <Projections projections={projections} userRole={userRole} />;
 }

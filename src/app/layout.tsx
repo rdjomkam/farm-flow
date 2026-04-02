@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import { cache } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { ToastProvider } from "@/components/ui/toast";
 import { ImpersonationBanner } from "@/components/users/impersonation-banner";
@@ -17,6 +20,23 @@ import { Permission, Role, SiteModule } from "@/types";
 import { SwRegister } from "@/components/pwa/sw-register";
 import { AppleSplashLinks } from "@/components/pwa/apple-splash-links";
 import "./globals.css";
+
+/**
+ * Lit le flag MAINTENANCE_MODE en DB.
+ * Cachée par React.cache() — une seule requête DB par render.
+ */
+const getMaintenanceStatus = cache(async (): Promise<boolean> => {
+  try {
+    const flag = await prisma.featureFlag.findUnique({
+      where: { key: "MAINTENANCE_MODE" },
+      select: { enabled: true },
+    });
+    return flag?.enabled ?? false;
+  } catch {
+    // Fail-open : ne pas bloquer si la DB est indisponible
+    return false;
+  }
+});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -110,6 +130,35 @@ export default async function RootLayout({
     console.error("[RootLayout] Failed to load session/messages:", error);
     // Continue with safe defaults — the page will still render
   }
+
+  // ── Maintenance mode check ────────────────────────────────────────────────
+  // Effectué ici (Server Component, Node.js runtime) plutôt que dans le
+  // middleware Edge Runtime qui n'a pas accès à Prisma.
+  // Whitelist : /maintenance, /login, /register, /backoffice/*, /api/*
+  // Les super-admins ne sont jamais redirigés.
+  try {
+    const headersList = await headers();
+    const pathname = headersList.get("x-pathname") ?? "";
+    const isWhitelisted =
+      pathname === "/maintenance" ||
+      pathname === "/login" ||
+      pathname === "/register" ||
+      pathname.startsWith("/backoffice") ||
+      pathname.startsWith("/api/");
+
+    if (!isWhitelisted) {
+      const inMaintenance = await getMaintenanceStatus();
+      if (inMaintenance && !isSuperAdmin) {
+        redirect("/maintenance");
+      }
+    }
+  } catch (error: unknown) {
+    // Re-throw Next.js redirect (NEXT_REDIRECT) — it must propagate
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
+    // Fail-open for any other error (DB unavailable, etc.)
+  }
+  // ── Fin maintenance check ─────────────────────────────────────────────────
 
   try {
     return (

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { StatutVague, TypeReleve, StatutActivite } from "@/types";
 import type { DashboardData, VagueDashboardSummary, ProjectionVague, CourbeCroissancePoint, IndicateursBenchmarkVague, ConfigElevage } from "@/types";
@@ -23,6 +24,36 @@ import {
 } from "@/lib/benchmarks";
 
 /**
+ * Cached per-request fetch of all active vagues with their releves and bacs.
+ * This is a superset of fields needed by getDashboardData, getDashboardIndicateurs,
+ * and getProjectionsDashboard. React.cache() deduplicates the heavy Prisma query
+ * so it only runs once per server request regardless of how many callers invoke it.
+ */
+const getVaguesWithReleves = cache(async (siteId: string) => {
+  return prisma.vague.findMany({
+    where: { siteId, statut: StatutVague.EN_COURS },
+    include: {
+      _count: { select: { bacs: true } },
+      bacs: { select: { id: true, volume: true, nombreInitial: true } },
+      releves: {
+        orderBy: { date: "asc" },
+        select: {
+          typeReleve: true,
+          date: true,
+          poidsMoyen: true,
+          nombreMorts: true,
+          nombreCompte: true,
+          quantiteAliment: true,
+          bacId: true,
+        },
+      },
+      configElevage: { select: { poidsObjectif: true } },
+    },
+    orderBy: { dateDebut: "desc" },
+  });
+});
+
+/**
  * Charge les donnees du dashboard pour un site :
  * - Nombre de vagues actives
  * - Biomasse totale et taux de survie moyen
@@ -31,25 +62,7 @@ import {
  */
 export async function getDashboardData(siteId: string): Promise<DashboardData> {
   const [vaguesActives, bacsTotal, bacsOccupes] = await Promise.all([
-    prisma.vague.findMany({
-      where: { siteId, statut: StatutVague.EN_COURS },
-      include: {
-        _count: { select: { bacs: true } },
-        bacs: { select: { id: true, nombreInitial: true } },
-        releves: {
-          orderBy: { date: "asc" },
-          select: {
-            typeReleve: true,
-            date: true,
-            poidsMoyen: true,
-            nombreMorts: true,
-            nombreCompte: true,
-            bacId: true,
-          },
-        },
-      },
-      orderBy: { dateDebut: "desc" },
-    }),
+    getVaguesWithReleves(siteId),
     prisma.bac.count({ where: { siteId } }),
     prisma.bac.count({ where: { siteId, vagueId: { not: null } } }),
   ]);
@@ -144,25 +157,7 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
  */
 export async function getProjectionsDashboard(siteId: string): Promise<ProjectionVague[]> {
   const [vaguesActives, configElevage] = await Promise.all([
-    prisma.vague.findMany({
-      where: { siteId, statut: StatutVague.EN_COURS },
-      include: {
-        bacs: { select: { id: true, nombreInitial: true } },
-        releves: {
-          orderBy: { date: "asc" },
-          select: {
-            typeReleve: true,
-            date: true,
-            poidsMoyen: true,
-            nombreMorts: true,
-            nombreCompte: true,
-            quantiteAliment: true,
-            bacId: true,
-          },
-        },
-        configElevage: { select: { poidsObjectif: true } },
-      },
-    }),
+    getVaguesWithReleves(siteId),
     getConfigElevageDefaut(siteId),
   ]);
 
@@ -370,28 +365,9 @@ export async function getDashboardIndicateurs(
   siteId: string
 ): Promise<IndicateursBenchmarkVague[]> {
   // Charger les vagues actives et la config en parallele (independants)
+  // getVaguesWithReleves est cache par React.cache() — pas de double requete DB
   const [vagues, configRaw] = await Promise.all([
-    prisma.vague.findMany({
-      where: { siteId, statut: StatutVague.EN_COURS },
-      include: {
-        bacs: {
-          select: { id: true, volume: true, nombreInitial: true },
-        },
-        releves: {
-          orderBy: { date: "asc" },
-          select: {
-            typeReleve: true,
-            date: true,
-            poidsMoyen: true,
-            nombreMorts: true,
-            quantiteAliment: true,
-            nombreCompte: true,
-            bacId: true,
-          },
-        },
-      },
-      orderBy: { dateDebut: "desc" },
-    }),
+    getVaguesWithReleves(siteId),
     getConfigElevageDefaut(siteId),
   ]);
 

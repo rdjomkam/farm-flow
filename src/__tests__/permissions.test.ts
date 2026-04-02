@@ -26,6 +26,7 @@ import { ITEM_VIEW_PERMISSIONS } from "@/lib/permissions-constants";
 
 const mockRequireAuth = vi.fn();
 const mockGetSiteMember = vi.fn();
+const mockUserFindUnique = vi.fn();
 
 vi.mock("@/lib/auth", () => ({
   requireAuth: (...args: unknown[]) => mockRequireAuth(...args),
@@ -40,6 +41,14 @@ vi.mock("@/lib/auth", () => ({
 
 vi.mock("@/lib/queries/sites", () => ({
   getSiteMember: (...args: unknown[]) => mockGetSiteMember(...args),
+}));
+
+vi.mock("@/lib/db", () => ({
+  prisma: {
+    user: {
+      findUnique: (...args: unknown[]) => mockUserFindUnique(...args),
+    },
+  },
 }));
 
 // ---------------------------------------------------------------------------
@@ -112,6 +121,8 @@ function makeMember(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Par defaut, l'utilisateur n'est pas super-admin
+  mockUserFindUnique.mockResolvedValue({ isSuperAdmin: false });
 });
 
 // ===== SYSTEM_ROLE_DEFINITIONS =============================================
@@ -457,6 +468,7 @@ describe("requirePermission", () => {
 
   it("retourne AuthContext avec siteRoleId vide et siteRoleName='Super Admin' pour un ADMIN global (bypass membership)", async () => {
     mockRequireAuth.mockResolvedValue(makeSession({ role: Role.ADMIN }));
+    mockUserFindUnique.mockResolvedValue({ isSuperAdmin: false });
 
     const ctx = await requirePermission(
       makeRequest(),
@@ -470,6 +482,7 @@ describe("requirePermission", () => {
     expect(ctx.permissions).toEqual(ALL_PERMISSIONS);
     expect(ctx.activeSiteId).toBe("site-1");
     expect(ctx.userId).toBe("user-1");
+    expect(ctx.isSuperAdmin).toBe(false);
     // getSiteMember ne doit PAS etre appele pour un ADMIN global
     expect(mockGetSiteMember).not.toHaveBeenCalled();
   });
@@ -563,11 +576,13 @@ describe("requirePermission", () => {
 
   it("AuthContext n'a pas de propriete siteRole (ancienne API supprimee)", async () => {
     mockRequireAuth.mockResolvedValue(makeSession({ role: Role.ADMIN }));
+    mockUserFindUnique.mockResolvedValue({ isSuperAdmin: false });
 
     const ctx = await requirePermission(makeRequest());
     // Verifier que les nouvelles proprietes existent
     expect(ctx).toHaveProperty("siteRoleId");
     expect(ctx).toHaveProperty("siteRoleName");
+    expect(ctx).toHaveProperty("isSuperAdmin");
     // Verifier que l'ancienne propriete plate n'existe pas
     expect(ctx).not.toHaveProperty("siteRole");
   });

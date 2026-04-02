@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     const auth = await requirePermission(request, Permission.RELEVES_CREER);
 
     // Guard maintenance — super-admin (Role.ADMIN) bypasse le blocage
-    const maintenanceResponse = await checkPlatformMaintenance(auth.globalRole === "ADMIN");
+    const maintenanceResponse = await checkPlatformMaintenance(auth.isSuperAdmin);
     if (maintenanceResponse) return maintenanceResponse;
 
     // Parse body once (needed before idempotency check for body hash)
