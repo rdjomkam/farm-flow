@@ -7,7 +7,7 @@ import {
   calibrerGompertz,
   genererCourbeGompertz,
   projeterDateRecolte,
-  CLARIAS_DEFAULTS,
+  isCachedGompertzValid,
   type GompertzParams,
 } from "@/lib/gompertz";
 import { apiError } from "@/lib/api-utils";
@@ -89,13 +89,9 @@ export async function GET(
     const minPoints = vague.configElevage?.gompertzMinPoints ?? 5;
     const configWInf = vague.configElevage?.gompertzWInfDefault ?? null;
     const needsCalibration =
-      !existingGompertz ||
-      existingGompertz.biometrieCount !== biometrieCount ||
-      (existingGompertz.confidenceLevel === "INSUFFICIENT_DATA" && biometrieCount >= minPoints) ||
-      // Recalibrate if configElevage W∞ changed since last calibration
-      (existingGompertz != null && configWInf !== existingGompertz.configWInfUsed) ||
-      // Stale cache: W∞ below biological minimum
-      (existingGompertz != null && existingGompertz.wInfinity < CLARIAS_DEFAULTS.wInfinity);
+      !isCachedGompertzValid(existingGompertz, biometrieCount, minPoints, configWInf) ||
+      // Also recalibrate when INSUFFICIENT_DATA but we now have enough points
+      (existingGompertz?.confidenceLevel === "INSUFFICIENT_DATA" && biometrieCount >= minPoints);
 
     let calibrationParams: GompertzParams | null = null;
     let r2: number | null = null;
