@@ -374,6 +374,9 @@ const baseConfigElevageObject = z.object({
     recolteJeuneAvantJours: z.number().int().min(0).optional(),
 
     // Gompertz
+    gompertzWInfDefault: z.number().min(100).max(3000).nullable().optional(),
+    gompertzKDefault: z.number().min(0.005).max(0.2).nullable().optional(),
+    gompertzTiDefault: z.number().min(0).max(300).nullable().optional(),
     gompertzMinPoints: z.number().int().min(3).max(20).default(5),
 
     // Metadonnees
