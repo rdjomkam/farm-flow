@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { FeedSimulator } from "@/components/analytics/feed-simulator";
@@ -18,10 +19,11 @@ export default async function AnalyticsSimulationPage() {
   if (!permissions) return <AccessDenied />;
 
   const comparaison = await getComparaisonAliments(session.activeSiteId);
+  const t = await getTranslations("analytics.page");
 
   return (
     <>
-      <Header title="Simulateur aliments" />
+      <Header title={t("alimSimulator")} />
       <div className="flex flex-col gap-4 p-4">
         {comparaison.aliments.length < 2 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
