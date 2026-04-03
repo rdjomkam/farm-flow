@@ -12,7 +12,12 @@
     "packExpired": "Pack expiré",
     "packSuspended": "Pack suspendu",
     "back": "Retour",
-    "vagueEnCours": "En cours"
+    "vagueEnCours": "En cours",
+    "vagueStatuts": {
+      "EN_COURS": "En cours",
+      "TERMINEE": "Terminée",
+      "ANNULEE": "Annulée"
+    }
   },
   "greeting": "Bonjour, {name}",
   "emptyStates": {
