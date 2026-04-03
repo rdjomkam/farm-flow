@@ -31,6 +31,7 @@ const mockCommandeCreate = vi.fn();
 const mockCommandeFindFirst = vi.fn();
 const mockDepenseCreate = vi.fn();
 const mockDepenseFindFirst = vi.fn();
+const mockLigneDepenseCreateMany = vi.fn();
 const mockListeBesoinsVagueCreateMany = vi.fn();
 const mockListeBesoinsVagueDeleteMany = vi.fn();
 const mockListeBesoinsVagueFindMany = vi.fn();
@@ -65,6 +66,9 @@ vi.mock("@/lib/db", () => ({
       create: (...args: unknown[]) => mockDepenseCreate(...args),
       findFirst: (...args: unknown[]) => mockDepenseFindFirst(...args),
     },
+    ligneDepense: {
+      createMany: (...args: unknown[]) => mockLigneDepenseCreateMany(...args),
+    },
     $transaction: vi.fn(async (fn: (tx: unknown) => unknown) =>
       fn({
         listeBesoins: {
@@ -92,6 +96,9 @@ vi.mock("@/lib/db", () => ({
         depense: {
           create: mockDepenseCreate,
           findFirst: mockDepenseFindFirst,
+        },
+        ligneDepense: {
+          createMany: mockLigneDepenseCreateMany,
         },
       })
     ),
@@ -187,6 +194,7 @@ const FAKE_LIGNES = [
     produit: {
       id: "prod-1",
       nom: "Aliment 3mm",
+      categorie: "ALIMENT",
       fournisseur: { id: "fourn-1" },
     },
   },
@@ -699,9 +707,14 @@ describe("POST /api/besoins/[id]/traiter", () => {
     });
     mockCommandeFindFirst.mockResolvedValue(null);
     mockDepenseFindFirst.mockResolvedValue(null);
-    mockCommandeCreate.mockResolvedValue({ id: "cmd-new", numero: "CMD-2026-010" });
+    mockCommandeCreate.mockResolvedValue({
+      id: "cmd-new",
+      numero: "CMD-2026-010",
+      lignes: [{ id: "lc-new-1", produitId: "prod-1" }],
+    });
     mockLigneBesoinUpdateMany.mockResolvedValue({ count: 1 });
     mockDepenseCreate.mockResolvedValue({ id: "dep-new", numero: "DEP-2026-010" });
+    mockLigneDepenseCreateMany.mockResolvedValue({ count: 2 });
     mockListeBesoinsUpdate.mockResolvedValue({
       ...FAKE_LISTE_APPROUVEE,
       statut: StatutBesoins.TRAITEE,

@@ -522,6 +522,7 @@ model Site {
   ajustementsDepense     AjustementDepense[]
   depensesRecurrentes    DepenseRecurrente[]
   listesBesoins          ListeBesoins[]
+  lignesDepense          LigneDepense[]
   configsElevage         ConfigElevage[]
   // Sprint 20 — Packs & Provisioning
   packs                  Pack[]
@@ -1123,6 +1124,8 @@ model Produit {
   lignesCommande        LigneCommande[]
   consommations         ReleveConsommation[]
   lignesBesoins         LigneBesoin[]
+  // ADR-027 — LigneDepense
+  lignesDepense         LigneDepense[]
   // Sprint 20 — Packs & Provisioning
   packProduits          PackProduit[]
   // Sprint 21 — Moteur d'activités
@@ -1199,15 +1202,19 @@ model Commande {
 }
 
 model LigneCommande {
-  id            String   @id @default(cuid())
+  id            String         @id @default(cuid())
   commandeId    String
-  commande      Commande @relation(fields: [commandeId], references: [id], onDelete: Cascade)
+  commande      Commande       @relation(fields: [commandeId], references: [id], onDelete: Cascade)
   produitId     String
-  produit       Produit  @relation(fields: [produitId], references: [id])
+  produit       Produit        @relation(fields: [produitId], references: [id])
   quantite      Float
   prixUnitaire  Float
   quantiteRecue Float?
-  createdAt     DateTime @default(now())
+  /**
+   * Lignes de dépense issues de cette ligne de commande (ADR-027)
+   */
+  lignesDepense LigneDepense[]
+  createdAt     DateTime       @default(now())
 
   @@index([commandeId])
   @@index([produitId])
@@ -1672,6 +1679,10 @@ model Depense {
   site             Site                @relation(fields: [siteId], references: [id])
   paiements        PaiementDepense[]
   ajustements      AjustementDepense[]
+  /**
+   * Lignes de détail catégorielles (ADR-027) — optionnelles pour les dépenses manuelles
+   */
+  lignes           LigneDepense[]
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
 
@@ -1764,6 +1775,67 @@ model AjustementDepense {
 
   @@index([depenseId])
   @@index([siteId])
+}
+
+// ──────────────────────────────────────────
+// Modèle — LigneDepense (ADR-027)
+// ──────────────────────────────────────────
+
+/**
+ * LigneDepense — ligne de détail catégorielle d'une dépense.
+ *
+ * Satellite analytique de Depense : permet la ventilation des coûts
+ * par CategorieDepense au sein d'une même dépense.
+ * Auto-populé par traiterBesoins() ; optionnel pour les dépenses manuelles.
+ * montantTotal est calculé et persisté (quantite * prixUnitaire).
+ */
+model LigneDepense {
+  id               String           @id @default(cuid())
+  depenseId        String
+  depense          Depense          @relation(fields: [depenseId], references: [id], onDelete: Cascade)
+  /**
+   * Désignation de l'article (repris de LigneBesoin.designation ou saisie manuelle)
+   */
+  designation      String
+  /**
+   * Catégorie de cette ligne — sous-ensemble de CategorieDepense
+   */
+  categorieDepense CategorieDepense
+  quantite         Float
+  prixUnitaire     Float
+  /**
+   * quantite * prixUnitaire — calculé et persisté à la création/mise à jour
+   */
+  montantTotal     Float
+  /**
+   * Produit en stock d'origine (nullable)
+   */
+  produitId        String?
+  produit          Produit?         @relation(fields: [produitId], references: [id], onDelete: SetNull)
+  /**
+   * Ligne de besoin d'origine (nullable)
+   */
+  ligneBesoinId    String?
+  ligneBesoin      LigneBesoin?     @relation(fields: [ligneBesoinId], references: [id], onDelete: SetNull)
+  /**
+   * Ligne de commande d'origine (nullable)
+   */
+  ligneCommandeId  String?
+  ligneCommande    LigneCommande?   @relation(fields: [ligneCommandeId], references: [id], onDelete: SetNull)
+  /**
+   * R8 — siteId obligatoire, identique au siteId de la Depense parente
+   */
+  siteId           String
+  site             Site             @relation(fields: [siteId], references: [id])
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([depenseId])
+  @@index([siteId])
+  @@index([siteId, categorieDepense])
+  @@index([produitId])
+  @@index([ligneBesoinId])
+  @@index([ligneCommandeId])
 }
 
 // ──────────────────────────────────────────
@@ -1868,9 +1940,9 @@ model ListeBesoinsVague {
 }
 
 model LigneBesoin {
-  id             String       @id @default(cuid())
+  id             String         @id @default(cuid())
   listeBesoinsId String
-  listeBesoins   ListeBesoins @relation(fields: [listeBesoinsId], references: [id], onDelete: Cascade)
+  listeBesoins   ListeBesoins   @relation(fields: [listeBesoinsId], references: [id], onDelete: Cascade)
   /**
    * Désignation libre de l'article
    */
@@ -1879,7 +1951,7 @@ model LigneBesoin {
    * Produit en stock lié (nullable — libre si null)
    */
   produitId      String?
-  produit        Produit?     @relation(fields: [produitId], references: [id], onDelete: SetNull)
+  produit        Produit?       @relation(fields: [produitId], references: [id], onDelete: SetNull)
   quantite       Float
   /**
    * Unité libre (nullable si produit avec unité définie)
@@ -1888,7 +1960,7 @@ model LigneBesoin {
   /**
    * Prix unitaire estimé
    */
-  prixEstime     Float        @default(0)
+  prixEstime     Float          @default(0)
   /**
    * Prix unitaire réel après clôture (nullable)
    */
@@ -1897,8 +1969,12 @@ model LigneBesoin {
    * Commande générée lors du traitement (nullable)
    */
   commandeId     String?
-  commande       Commande?    @relation(fields: [commandeId], references: [id], onDelete: SetNull)
-  createdAt      DateTime     @default(now())
+  commande       Commande?      @relation(fields: [commandeId], references: [id], onDelete: SetNull)
+  /**
+   * Lignes de dépense issues de cette ligne de besoin (ADR-027)
+   */
+  lignesDepense  LigneDepense[]
+  createdAt      DateTime       @default(now())
 
   @@index([listeBesoinsId])
   @@index([produitId])

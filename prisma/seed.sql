@@ -1236,6 +1236,52 @@ INSERT INTO "LigneBesoin" (
   );
 
 -- ──────────────────────────────────────────
+-- LigneDepense (ADR-027) — ventilation catégorielle
+-- dep_01 (ALIMENT, liée à cmd_01) → 2 lignes produit ALIMENT
+-- dep_04 (REPARATION, liée à vague_01) → 2 lignes REPARATION (sans produit)
+-- ──────────────────────────────────────────
+
+INSERT INTO "LigneDepense" (
+  "id", "depenseId",
+  "designation", "categorieDepense",
+  "quantite", "prixUnitaire", "montantTotal",
+  "produitId", "ligneBesoinId", "ligneCommandeId",
+  "siteId", "createdAt", "updatedAt"
+) VALUES
+  -- dep_01 — ligne 1 : Aliment Coppens 3mm (prod_01, lc_01) — 75 kg à 850 FCFA
+  (
+    'ldep_01', 'dep_01',
+    'Aliment commercial Coppens 3mm', 'ALIMENT',
+    75.0, 850.0, 63750.0,
+    'prod_01', NULL, 'lc_01',
+    'site_01', NOW(), NOW()
+  ),
+  -- dep_01 — ligne 2 : Vitamines et complements (prod_03, lc_02) — fraction de commande
+  (
+    'ldep_02', 'dep_01',
+    'Vitamines et complements nutritifs', 'INTRANT',
+    1.0, 23750.0, 23750.0,
+    'prod_03', NULL, 'lc_02',
+    'site_01', NOW(), NOW()
+  ),
+  -- dep_04 — ligne 1 : Joint pompe (sans produit stock)
+  (
+    'ldep_03', 'dep_04',
+    'Joint de pompe submersible 40mm', 'REPARATION',
+    1.0, 8000.0, 8000.0,
+    NULL, NULL, NULL,
+    'site_01', NOW(), NOW()
+  ),
+  -- dep_04 — ligne 2 : Filtre de remplacement (sans produit stock)
+  (
+    'ldep_04', 'dep_04',
+    'Filtre mecanique de remplacement', 'REPARATION',
+    2.0, 3500.0, 7000.0,
+    NULL, NULL, NULL,
+    'site_01', NOW(), NOW()
+  );
+
+-- ──────────────────────────────────────────
 -- DepenseRecurrente (3 templates — Sprint 18)
 -- ──────────────────────────────────────────
 

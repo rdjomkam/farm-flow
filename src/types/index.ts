@@ -132,6 +132,9 @@ export type {
   AjustementDepense,
   PaiementDepense,
   FraisPaiementDepense,
+  // ADR-027 — LigneDepense
+  LigneDepense,
+  LigneDepenseWithRelations,
   // Sprint 17 — Besoins
   ListeBesoins,
   ListeBesoinsVague,

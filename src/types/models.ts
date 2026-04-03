@@ -1618,6 +1618,46 @@ export enum StatutBesoins {
 // ---------------------------------------------------------------------------
 
 /**
+ * LigneDepense — satellite analytique d'une Depense (ADR-027).
+ *
+ * Chaque ligne porte la categorie et le montant au niveau le plus fin.
+ * Auto-creee par traiterBesoins() ; optionnelle pour les depenses manuelles.
+ * montantTotal = quantite * prixUnitaire, calcule et persiste.
+ */
+export interface LigneDepense {
+  id: string;
+  /** Depense parente */
+  depenseId: string;
+  /** Designation de l'article */
+  designation: string;
+  /** Categorie de cette ligne (sous-ensemble de CategorieDepense) */
+  categorieDepense: CategorieDepense;
+  /** Quantite de l'article */
+  quantite: number;
+  /** Prix unitaire de l'article */
+  prixUnitaire: number;
+  /** Montant total calcule et persiste (quantite * prixUnitaire) */
+  montantTotal: number;
+  /** Produit en stock d'origine (nullable) */
+  produitId: string | null;
+  /** Ligne de besoin d'origine (nullable) */
+  ligneBesoinId: string | null;
+  /** Ligne de commande d'origine (nullable) */
+  ligneCommandeId: string | null;
+  /** R8 — identique au siteId de la Depense parente */
+  siteId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** LigneDepense avec ses relations chargees */
+export interface LigneDepenseWithRelations extends LigneDepense {
+  produit?: Produit | null;
+  ligneBesoin?: LigneBesoin | null;
+  ligneCommande?: LigneCommande | null;
+}
+
+/**
  * Depense — charge operationnelle de la ferme.
  *
  * Peut etre liee a une Commande (auto-creee a la reception),
@@ -1664,6 +1704,8 @@ export interface Depense {
   updatedAt: Date;
   /** Ajustements de montant (optionnel, charge par include) */
   ajustements?: AjustementDepense[];
+  /** Lignes de detail categoriel ADR-027 (optionnel, charge par include) */
+  lignes?: LigneDepense[];
 }
 
 /** Depense avec ses relations chargees */
@@ -1674,6 +1716,8 @@ export interface DepenseWithRelations extends Depense {
   user?: User;
   paiements?: PaiementDepense[];
   ajustements?: AjustementDepense[];
+  /** Lignes de detail categoriel ADR-027 (optionnel, charge par include) */
+  lignes?: LigneDepenseWithRelations[];
 }
 
 /**
