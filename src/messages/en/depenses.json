@@ -159,6 +159,10 @@
     "derniereGeneration": "Last generated:",
     "desactiver": "Deactivate",
     "activer": "Activate",
-    "supprimer": "Delete"
+    "supprimer": "Delete",
+    "retour": "Back to expenses",
+    "editTitle": "Edit template",
+    "modifier": "Edit",
+    "enregistrer": "Save"
   }
 }

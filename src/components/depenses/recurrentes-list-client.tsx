@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import {
+  ArrowLeft,
+  Pencil,
   Plus,
   RefreshCw,
   Clock,
@@ -90,6 +93,11 @@ export function RecurrentesListClient({
     isActive: true,
   });
 
+  // Dialog edition
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<TemplateData | null>(null);
+  const [editForm, setEditForm] = useState<Partial<CreateDepenseRecurrenteDTO>>({});
+
   // Dialog suppression
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -142,6 +150,37 @@ export function RecurrentesListClient({
     }
   }
 
+  function openEdit(template: TemplateData) {
+    setEditingTemplate(template);
+    setEditForm({
+      description: template.description,
+      categorieDepense: template.categorieDepense as CategorieDepense,
+      montantEstime: template.montantEstime,
+      frequence: template.frequence as FrequenceRecurrence,
+      jourDuMois: template.jourDuMois,
+    });
+    setEditOpen(true);
+  }
+
+  async function handleEdit() {
+    if (!editingTemplate) return;
+    const result = await depenseService.updateDepenseRecurrente(
+      editingTemplate.id,
+      editForm
+    );
+    if (result.ok && result.data) {
+      setTemplates((prev) =>
+        prev.map((tmpl) =>
+          tmpl.id === editingTemplate.id
+            ? (result.data! as unknown as TemplateData)
+            : tmpl
+        )
+      );
+      setEditOpen(false);
+      setEditingTemplate(null);
+    }
+  }
+
   async function handleDelete() {
     if (!deletingId) return;
     const result = await depenseService.deleteDepenseRecurrente(deletingId);
@@ -157,6 +196,15 @@ export function RecurrentesListClient({
 
   return (
     <div className="flex flex-col gap-4 p-4">
+      {/* Back navigation */}
+      <Link
+        href="/depenses"
+        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        {t("recurrentes.retour")}
+      </Link>
+
       {/* Header actions */}
       <div className="flex items-center justify-between gap-2">
         <Button
@@ -311,6 +359,7 @@ export function RecurrentesListClient({
                 template={tmpl}
                 canManage={canManage}
                 onToggle={handleToggleActive}
+                onEdit={openEdit}
                 onDelete={(id) => {
                   setDeletingId(id);
                   setDeleteOpen(true);
@@ -334,6 +383,7 @@ export function RecurrentesListClient({
                 template={tmpl}
                 canManage={canManage}
                 onToggle={handleToggleActive}
+                onEdit={openEdit}
                 onDelete={(id) => {
                   setDeletingId(id);
                   setDeleteOpen(true);
@@ -353,6 +403,128 @@ export function RecurrentesListClient({
           )}
         </div>
       )}
+
+      {/* Dialog edition */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("recurrentes.editTitle")}</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 py-2">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">
+                {t("recurrentes.descriptionLabel")} *
+              </label>
+              <Input
+                value={editForm.description ?? ""}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, description: e.target.value }))
+                }
+                placeholder={t("recurrentes.descriptionPlaceholder")}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">
+                {t("recurrentes.categorieLabel")} *
+              </label>
+              <Select
+                value={editForm.categorieDepense as string | undefined}
+                onValueChange={(v) =>
+                  setEditForm((f) => ({
+                    ...f,
+                    categorieDepense: v as CategorieDepense,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={t("recurrentes.categoriePlaceholder")}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(CategorieDepense).map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {t(`categories.${cat}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">
+                {t("recurrentes.montantLabel")} *
+              </label>
+              <Input
+                type="number"
+                min={1}
+                value={editForm.montantEstime ?? ""}
+                onChange={(e) =>
+                  setEditForm((f) => ({
+                    ...f,
+                    montantEstime: parseFloat(e.target.value) || 0,
+                  }))
+                }
+                placeholder="Ex: 150000"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">
+                {t("recurrentes.frequenceLabel")} *
+              </label>
+              <Select
+                value={editForm.frequence as string | undefined}
+                onValueChange={(v) =>
+                  setEditForm((f) => ({
+                    ...f,
+                    frequence: v as FrequenceRecurrence,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(FrequenceRecurrence).map((freq) => (
+                    <SelectItem key={freq} value={freq}>
+                      {t(`recurrentes.frequences.${freq}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">
+                {t("recurrentes.jourLabel")}
+              </label>
+              <Input
+                type="number"
+                min={1}
+                max={28}
+                value={editForm.jourDuMois ?? 1}
+                onChange={(e) =>
+                  setEditForm((f) => ({
+                    ...f,
+                    jourDuMois: Math.min(
+                      28,
+                      Math.max(1, parseInt(e.target.value) || 1)
+                    ),
+                  }))
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">
+                {t("recurrentes.annuler")}
+              </Button>
+            </DialogClose>
+            <Button onClick={handleEdit}>
+              {t("recurrentes.enregistrer")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog confirmation suppression */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
@@ -392,11 +564,13 @@ function TemplateCard({
   template,
   canManage,
   onToggle,
+  onEdit,
   onDelete,
 }: {
   template: TemplateData;
   canManage: boolean;
   onToggle: (t: TemplateData) => void;
+  onEdit: (t: TemplateData) => void;
   onDelete: (id: string) => void;
 }) {
   const t = useTranslations("depenses");
@@ -470,6 +644,15 @@ function TemplateCard({
                   {t("recurrentes.activer")}
                 </>
               )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => onEdit(template)}
+            >
+              <Pencil className="h-4 w-4" />
+              {t("recurrentes.modifier")}
             </Button>
             <Button
               variant="outline"

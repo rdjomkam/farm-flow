@@ -18,6 +18,7 @@ import { runEngineForSite } from "@/lib/activity-engine";
 import { runEngineerAlerts } from "@/lib/activity-engine/engineer-alerts";
 import { getOrCreateSystemUser } from "@/lib/queries/users";
 import { runLifecycle } from "@/lib/queries/lifecycle";
+import { genererDepensesRecurrentes } from "@/lib/queries/depenses-recurrentes";
 import { apiError } from "@/lib/api-utils";
 
 // ---------------------------------------------------------------------------
@@ -85,6 +86,9 @@ export async function POST(request: NextRequest) {
     let totalAlertesCreees = 0;
     let totalAlertesSautees = 0;
 
+    // Compteurs pour les depenses recurrentes
+    let totalDepensesGenerees = 0;
+
     // Compteurs pour le lifecycle
     let totalExpirationsPackActivation = 0;
     let totalSuspensionsPackActivation = 0;
@@ -111,6 +115,16 @@ export async function POST(request: NextRequest) {
           const msg = alertError instanceof Error ? alertError.message : String(alertError);
           allErrors.push(`[Alertes ingenieur] Site ${site.id} : ${msg}`);
           console.error(`[CRON] Erreur alertes ingenieur site ${site.id}:`, alertError);
+        }
+
+        // ---- Generer les depenses recurrentes pour ce site ----
+        try {
+          const depensesResult = await genererDepensesRecurrentes(site.id, systemUserId);
+          totalDepensesGenerees += depensesResult.length;
+        } catch (depenseError) {
+          const msg = depenseError instanceof Error ? depenseError.message : String(depenseError);
+          allErrors.push(`[Depenses recurrentes] Site ${site.id} : ${msg}`);
+          console.error(`[CRON] Erreur depenses recurrentes site ${site.id}:`, depenseError);
         }
 
         // ---- Lifecycle PackActivation + archivage activites ----
@@ -141,6 +155,7 @@ export async function POST(request: NextRequest) {
         activitesSautees: totalSkipped,
         alertesIngenieurCreees: totalAlertesCreees,
         alertesIngenieurSautees: totalAlertesSautees,
+        depensesRecurrentesGenerees: totalDepensesGenerees,
         lifecycle: {
           expirationsPackActivation: totalExpirationsPackActivation,
           suspensionsPackActivation: totalSuspensionsPackActivation,

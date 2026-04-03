@@ -159,6 +159,10 @@
     "derniereGeneration": "Derniere generation :",
     "desactiver": "Desactiver",
     "activer": "Activer",
-    "supprimer": "Supprimer"
+    "supprimer": "Supprimer",
+    "retour": "Retour aux depenses",
+    "editTitle": "Modifier le template",
+    "modifier": "Modifier",
+    "enregistrer": "Enregistrer"
   }
 }
