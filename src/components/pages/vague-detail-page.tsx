@@ -192,27 +192,45 @@ export default async function VagueDetailPage({
     }
   }
 
-  const poidsData: EvolutionPoidsPoint[] = Array.from(groupedByDate.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([dateKey, releves]) => {
-      let sumWeighted = 0;
-      let sumWeights = 0;
-      for (const r of releves) {
-        const weight = (r.bacId ? vivantsByBac.get(r.bacId) : undefined) ?? 1;
-        sumWeighted += r.poidsMoyen! * weight;
-        sumWeights += weight;
-      }
-      const dateObj = new Date(dateKey + "T00:00:00");
-      const jour = Math.floor(
-        (dateObj.getTime() - vague.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      return {
-        date: dateObj.toISOString(),
-        poidsMoyen: Math.round((sumWeighted / sumWeights) * 100) / 100,
-        jour,
-        poidsGompertz: hasGompertz ? (gompertzByJour.get(jour) ?? null) : undefined,
-      };
+  // Build observation map: jour -> weighted average poidsMoyen
+  const HORIZON_PREDICTION_JOURS = 120;
+  const vagueStartMs = new Date(vague.dateDebut).getTime();
+
+  const observationByJour = new Map<number, number>();
+  for (const [dateKey, releves] of groupedByDate) {
+    let sumWeighted = 0;
+    let sumWeights = 0;
+    for (const r of releves) {
+      const weight = (r.bacId ? vivantsByBac.get(r.bacId) : undefined) ?? 1;
+      sumWeighted += r.poidsMoyen! * weight;
+      sumWeights += weight;
+    }
+    const dateMs = new Date(dateKey + "T00:00:00").getTime();
+    const jour = Math.floor((dateMs - vagueStartMs) / 86400000);
+    observationByJour.set(jour, Math.round((sumWeighted / sumWeights) * 100) / 100);
+  }
+
+  // Dense dataset: one point per day from J0 to horizon
+  // Allows tooltip on any day when touching the chart
+  const dernierJourObserve = observationByJour.size > 0
+    ? Math.max(...observationByJour.keys())
+    : 0;
+  const joursHorizon = hasGompertz
+    ? Math.max(HORIZON_PREDICTION_JOURS, dernierJourObserve + 30)
+    : dernierJourObserve;
+
+  const poidsData: EvolutionPoidsPoint[] = [];
+  for (let j = 0; j <= joursHorizon; j++) {
+    const obs = observationByJour.get(j) ?? null;
+    const gompertz = hasGompertz ? (gompertzByJour.get(j) ?? null) : undefined;
+    poidsData.push({
+      date: new Date(vagueStartMs + j * 86400000).toISOString(),
+      poidsMoyen: obs,
+      jour: j,
+      poidsGompertz: gompertz,
+      isPrediction: obs === null && j > dernierJourObserve,
     });
+  }
 
   const nombreBacs = vague.bacs.length;
 

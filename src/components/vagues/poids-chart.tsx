@@ -63,18 +63,16 @@ interface PoidsChartProps {
 
 /** Badge de fiabilite du modele Gompertz */
 const GompertzBadge = memo(function GompertzBadge({ confidence, r2 }: { confidence: string; r2: number | null }) {
+  const t = useTranslations("vagues");
   const variantMap: Record<string, "terminee" | "warning" | "default"> = {
     HIGH: "terminee",
     MEDIUM: "warning",
     LOW: "default",
   };
-  const labelMap: Record<string, string> = {
-    HIGH: "Gompertz haute fiabilite",
-    MEDIUM: "Gompertz fiabilite moyenne",
-    LOW: "Gompertz faible fiabilite",
-  };
   const variant = variantMap[confidence] ?? "default";
-  const label = labelMap[confidence] ?? "Gompertz";
+  const label = (["HIGH", "MEDIUM", "LOW"].includes(confidence)
+    ? t(`poidsChart.gompertzBadge.${confidence as "HIGH" | "MEDIUM" | "LOW"}`)
+    : "Gompertz");
   const r2Label = r2 !== null ? ` (R²=${r2.toFixed(2)})` : "";
 
   return (
@@ -97,16 +95,24 @@ export function PoidsChart({
 }: PoidsChartProps) {
   const t = useTranslations("vagues");
 
+  const pointByJour = useMemo(
+    () => new Map(data.map((d) => [d.jour, d])),
+    [data]
+  );
+
   const tooltipContent = useMemo(
     () => (
       <ChartTooltip
-        labelFormatter={(label) => t("poidsChart.tooltipLabel", { label })}
+        labelFormatter={(label) => {
+          const point = pointByJour.get(Number(label));
+          if (point?.isPrediction) return t("poidsChart.tooltipLabelPrediction", { label });
+          return t("poidsChart.tooltipLabel", { label });
+        }}
         valueFormatter={(v) => `${v} g`}
       />
     ),
-    // t is stable from next-intl — only re-create when locale changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t]
+    [t, pointByJour]
   );
 
   const hasGompertz =
@@ -179,6 +185,7 @@ export function PoidsChart({
                   dataKey="jour"
                   tick={{ fontSize: 12 }}
                   tickFormatter={(v) => `J${v}`}
+                  tickCount={8}
                 />
                 <YAxis
                   tick={{ fontSize: 11 }}
@@ -194,12 +201,13 @@ export function PoidsChart({
                   strokeWidth={2}
                   dot={{ r: 3 }}
                   activeDot={{ r: 6 }}
+                  connectNulls={false}
                 />
                 {hasGompertz && (
                   <Line
                     type="monotone"
                     dataKey="poidsGompertz"
-                    name="Courbe Gompertz"
+                    name={t("poidsChart.gompertzSeriesName")}
                     stroke="var(--accent-green)"
                     strokeWidth={1.5}
                     strokeDasharray="4 3"
@@ -213,7 +221,7 @@ export function PoidsChart({
           </div>
           {hasGompertz && (
             <p className="text-[10px] text-muted-foreground mt-1 text-center">
-              Ligne verte pointillee : courbe Gompertz ajustee sur les mesures agrégées
+              {t("poidsChart.gompertzLegend")}
             </p>
           )}
         </CardContent>

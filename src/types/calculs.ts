@@ -131,12 +131,14 @@ export interface BilanVague {
 export interface EvolutionPoidsPoint {
   /** Date du releve (ISO string pour Recharts) */
   date: string;
-  /** Poids moyen en grammes */
-  poidsMoyen: number;
+  /** Poids moyen en grammes (null pour les points de prediction pure) */
+  poidsMoyen: number | null;
   /** Jour depuis le debut de la vague (J0, J1, ...) */
   jour: number;
   /** Poids predit par le modele Gompertz en grammes (null si modele non calibre) */
   poidsGompertz?: number | null;
+  /** true pour les points de prediction au-dela de la derniere biometrie */
+  isPrediction?: boolean;
 }
 
 /**

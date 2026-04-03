@@ -149,7 +149,15 @@
     "title": "Evolution du poids moyen",
     "noData": "Aucune donnee biometrique disponible.",
     "tooltipLabel": "Jour {label}",
-    "seriesName": "Poids moyen"
+    "tooltipLabelPrediction": "Prédiction J{label}",
+    "seriesName": "Poids moyen",
+    "gompertzSeriesName": "Courbe Gompertz",
+    "gompertzLegend": "Ligne pointillée : prédiction Gompertz (projection 120j)",
+    "gompertzBadge": {
+      "HIGH": "Gompertz haute fiabilite",
+      "MEDIUM": "Gompertz fiabilite moyenne",
+      "LOW": "Gompertz faible fiabilite"
+    }
   },
   "gompertz": {
     "modelParams": "Paramètres du modèle",

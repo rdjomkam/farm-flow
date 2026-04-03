@@ -86,26 +86,42 @@ export default async function IngenieurVagueDetailPage({
     if (group) group.push(r);
     else groupedByDate.set(key, [r]);
   }
-  const poidsData: EvolutionPoidsPoint[] = Array.from(groupedByDate.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([dateKey, releves]) => {
-      let sumWeighted = 0;
-      let sumWeights = 0;
-      for (const r of releves) {
-        const bac = r.bacId ? bacsMap.get(r.bacId) : undefined;
-        const weight = bac?.nombrePoissons ?? 1;
-        sumWeighted += r.poidsMoyen! * weight;
-        sumWeights += weight;
-      }
-      const dateObj = new Date(dateKey + "T00:00:00");
-      return {
-        date: dateObj.toISOString(),
-        poidsMoyen: Math.round((sumWeighted / sumWeights) * 100) / 100,
-        jour: Math.floor(
-          (dateObj.getTime() - vague.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
-        ),
-      };
+
+  // Build observation map: jour -> weighted average poidsMoyen
+  const HORIZON_PREDICTION_JOURS = 120;
+  const vagueStartMs = vague.dateDebut.getTime();
+
+  const observationByJour = new Map<number, number>();
+  for (const [dateKey, releves] of groupedByDate) {
+    let sumWeighted = 0;
+    let sumWeights = 0;
+    for (const r of releves) {
+      const bac = r.bacId ? bacsMap.get(r.bacId) : undefined;
+      const weight = bac?.nombrePoissons ?? 1;
+      sumWeighted += r.poidsMoyen! * weight;
+      sumWeights += weight;
+    }
+    const dateMs = new Date(dateKey + "T00:00:00").getTime();
+    const jour = Math.floor((dateMs - vagueStartMs) / 86400000);
+    observationByJour.set(jour, Math.round((sumWeighted / sumWeights) * 100) / 100);
+  }
+
+  // Dense dataset: one point per day from J0 to max(120, dernierJour+30)
+  const dernierJourObserve = observationByJour.size > 0
+    ? Math.max(...observationByJour.keys())
+    : 0;
+  const joursHorizon = Math.max(HORIZON_PREDICTION_JOURS, dernierJourObserve + 30);
+
+  const poidsData: EvolutionPoidsPoint[] = [];
+  for (let j = 0; j <= joursHorizon; j++) {
+    const obs = observationByJour.get(j) ?? null;
+    poidsData.push({
+      date: new Date(vagueStartMs + j * 86400000).toISOString(),
+      poidsMoyen: obs,
+      jour: j,
+      isPrediction: obs === null && j > dernierJourObserve,
     });
+  }
 
   return (
     <>
