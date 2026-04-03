@@ -12,6 +12,7 @@ import {
   Clock,
   Plus,
 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { Badge } from "@/components/ui/badge";
@@ -93,6 +94,8 @@ export default async function IngenieurClientDetailPage({
     clientSiteId,
   });
 
+  const t = await getTranslations("ingenieur");
+
   // Serialiser pour les composants client
   const vaguesDetailSerialized = JSON.parse(JSON.stringify(vaguesDetail));
   const notesSerialized = JSON.parse(JSON.stringify(notes));
@@ -143,7 +146,7 @@ export default async function IngenieurClientDetailPage({
         <Link href="/monitoring">
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4" />
-            <span className="sr-only sm:not-sr-only">Retour</span>
+            <span className="sr-only sm:not-sr-only">{t("monitoring.back")}</span>
           </Button>
         </Link>
       </Header>
@@ -168,10 +171,10 @@ export default async function IngenieurClientDetailPage({
                 }
               >
                 {clientSummary.activationStatut === StatutActivation.ACTIVE
-                  ? "Pack actif"
+                  ? t("monitoring.packActive")
                   : clientSummary.activationStatut === StatutActivation.EXPIREE
-                  ? "Pack expire"
-                  : "Pack suspendu"}
+                  ? t("monitoring.packExpired")
+                  : t("monitoring.packSuspended")}
               </Badge>
               {clientSummary.necessiteAttention && (
                 <Badge variant="annulee">
@@ -314,7 +317,7 @@ export default async function IngenieurClientDetailPage({
         {alertesSerialized.length === 0 && (
           <div className="flex items-center gap-2 rounded-xl border border-success/30 bg-success/5 p-3">
             <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
-            <p className="text-sm text-success font-medium">Aucune alerte active pour ce client.</p>
+            <p className="text-sm text-success font-medium">{t("monitoring.noActiveAlertsClient")}</p>
           </div>
         )}
 
@@ -328,7 +331,7 @@ export default async function IngenieurClientDetailPage({
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-8 text-center p-4">
                 <Fish className="h-8 w-8 text-muted-foreground/30 mb-2" />
-                <p className="text-sm text-muted-foreground">Aucune vague en cours.</p>
+                <p className="text-sm text-muted-foreground">{t("monitoring.noWavesInProgress")}</p>
               </CardContent>
             </Card>
           ) : (
@@ -339,7 +342,7 @@ export default async function IngenieurClientDetailPage({
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-base">{vague.code}</CardTitle>
-                        <Badge variant="en_cours">En cours</Badge>
+                        <Badge variant="en_cours">{t("monitoring.vagueEnCours")}</Badge>
                       </div>
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 gap-2 sm:grid-cols-4 pt-0">
@@ -510,7 +513,7 @@ export default async function IngenieurClientDetailPage({
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-8 text-center p-4">
                 <MessageSquare className="h-8 w-8 text-muted-foreground/30 mb-2" />
-                <p className="text-sm text-muted-foreground">Aucune note pour ce client.</p>
+                <p className="text-sm text-muted-foreground">{t("monitoring.noNotesForClient")}</p>
               </CardContent>
             </Card>
           )}
@@ -521,7 +524,7 @@ export default async function IngenieurClientDetailPage({
           <Button variant="ghost" size="sm" asChild>
             <Link href="/monitoring">
               <ArrowLeft className="h-4 w-4" />
-              Retour au monitoring
+              {t("monitoring.back")}
             </Link>
           </Button>
         </div>

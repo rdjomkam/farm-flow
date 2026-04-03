@@ -11,7 +11,8 @@
     "packActive": "Active pack",
     "packExpired": "Expired pack",
     "packSuspended": "Suspended pack",
-    "back": "Back"
+    "back": "Back",
+    "vagueEnCours": "In progress"
   },
   "greeting": "Hello, {name}",
   "emptyStates": {
