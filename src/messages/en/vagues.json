@@ -161,9 +161,7 @@
     "zoomIn": "Zoom +",
     "zoomOut": "Zoom -",
     "zoomReset": "Global view",
-    "zoomRange": "D{from} – D{to}",
-    "panLeft": "Pan left",
-    "panRight": "Pan right"
+    "zoomLevel": "x{level}"
   },
   "gompertz": {
     "modelParams": "Model parameters",
