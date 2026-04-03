@@ -33,7 +33,7 @@ export default async function NouvelleDepensePage() {
 
   return (
     <>
-      <Header title="Nouvelle depense" />
+      <Header title={t("newExpense")} />
       <DepenseFormClient
         vagues={vaguesResult.data.map((v) => ({ id: v.id, code: v.code }))}
         commandesLivrees={commandesLivrees.map((c) => ({
