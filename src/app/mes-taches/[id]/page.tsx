@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { InstructionViewer } from "@/components/activites/instruction-viewer";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -53,12 +54,14 @@ export default async function ActiviteDetailPage({ params }: PageProps) {
     }
   }
 
+  const t = await getTranslations("planning.page");
+
   // Serialiser pour eviter les erreurs de serialisation Next.js (dates → JSON)
   const activiteSerialized = JSON.parse(JSON.stringify(activite));
 
   return (
     <>
-      <Header title="Detail de l'activite" />
+      <Header title={t("taskDetail")} />
       <div className="p-4">
         <InstructionViewer
           activite={activiteSerialized}

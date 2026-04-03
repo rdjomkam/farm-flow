@@ -150,7 +150,7 @@ export default async function CalibrageDetailPage({
                       ] ?? "default"
                     }
                   >
-                    {categorieLabels[groupe.categorie as CategorieCalibrage] ??
+                    {t(`categories.${groupe.categorie}`) ??
                       groupe.categorie}
                   </Badge>
                   <span className="text-sm font-semibold">
