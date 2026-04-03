@@ -13,6 +13,7 @@
  */
 
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import {
   AlertTriangle,
   Bell,
@@ -68,6 +69,8 @@ export async function IngenieurDashboardMultiFarm({
   userId,
   sessionName,
 }: IngenieurDashboardMultiFarmProps) {
+  const t = await getTranslations("ingenieur");
+
   // Charger les données en parallèle
   const [metrics, clientsResult, portefeuilleData] = await Promise.all([
     getIngenieurDashboardMetrics(vendeurSiteId),
@@ -119,7 +122,7 @@ export async function IngenieurDashboardMultiFarm({
       >
         <div className="relative z-10 text-white">
           <p className="text-sm font-medium text-white/70 capitalize">{today}</p>
-          <h1 className="text-xl font-bold mt-1">Bonjour, {sessionName}</h1>
+          <h1 className="text-xl font-bold mt-1">{t("greeting", { name: sessionName })}</h1>
           <p className="text-sm text-white/80 mt-1">
             {metrics.totalClientsActives} client
             {metrics.totalClientsActives > 1 ? "s" : ""} actif

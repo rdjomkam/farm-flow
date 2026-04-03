@@ -115,6 +115,7 @@ function TogglePlanButton({
   className = "",
 }: ToggleButtonProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const t = useTranslations("abonnements");
   const needsConfirm = plan.isActif && plan._count.abonnements > 0;
 
   const handleDirectToggle = async () => {
@@ -126,7 +127,7 @@ function TogglePlanButton({
     await onToggle(plan.id);
   };
 
-  const buttonLabel = plan.isActif ? "Désactiver" : "Activer";
+  const buttonLabel = plan.isActif ? t("admin.toggleDeactivate") : t("admin.toggleActivate");
   const ariaLabel = `${buttonLabel} le plan ${plan.nom}`;
 
   if (needsConfirm) {
@@ -146,7 +147,7 @@ function TogglePlanButton({
 
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Désactiver le plan ?</DialogTitle>
+            <DialogTitle>{t("admin.toggleDeactivateTitle")}</DialogTitle>
             <DialogDescription>
               Le plan <strong>{plan.nom}</strong> a{" "}
               <strong>{plan._count.abonnements}</strong> abonné
@@ -169,7 +170,7 @@ function TogglePlanButton({
               className="min-h-[44px]"
               onClick={() => setConfirmOpen(false)}
             >
-              Annuler
+              {t("admin.dialogCancel")}
             </Button>
             <Button
               variant="outline"
@@ -177,7 +178,7 @@ function TogglePlanButton({
               disabled={isLoading}
               onClick={handleConfirmedToggle}
             >
-              {isLoading ? "Désactivation..." : "Confirmer la désactivation"}
+              {isLoading ? t("admin.toggleDeactivating") : t("admin.toggleDeactivateConfirm")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -447,7 +448,7 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
                           className="min-h-[44px] px-2 text-xs"
                           aria-label={`Modifier le plan ${p.nom}`}
                         >
-                          Modifier
+                          {t("admin.edit")}
                         </Button>
                       </PlanFormDialog>
                       {/* Story 38.3 — toggle actif */}
@@ -470,7 +471,7 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={12} className="px-4 py-8 text-center text-muted-foreground">
-                  Aucun plan trouvé.
+                  {t("admin.noPlanFound")}
                 </td>
               </tr>
             )}
@@ -482,7 +483,7 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
       <div className="space-y-3 md:hidden">
         {filtered.length === 0 && (
           <p className="text-center text-sm text-muted-foreground py-8">
-            Aucun plan trouvé.
+            {t("admin.noPlanFound")}
           </p>
         )}
         {filtered.map((p) => (
@@ -580,7 +581,7 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
                     className="min-h-[44px] text-xs px-3"
                     aria-label={`Modifier le plan ${p.nom}`}
                   >
-                    Modifier
+                    {t("admin.edit")}
                   </Button>
                 </PlanFormDialog>
                 {/* Story 38.3 — toggle actif */}

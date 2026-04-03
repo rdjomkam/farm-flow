@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { NouvelleActiviteForm } from "@/components/planning/nouvelle-activite-form";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -16,6 +17,8 @@ export default async function NouvelleActivitePage() {
   const permissions = await checkPagePermission(session, Permission.PLANNING_GERER);
   if (!permissions) return <AccessDenied />;
 
+  const t = await getTranslations("planning.page");
+
   const [vaguesResult, bacsResult, siteMembers] = await Promise.all([
     getVagues(session.activeSiteId),
     getBacs(session.activeSiteId),
@@ -28,7 +31,7 @@ export default async function NouvelleActivitePage() {
 
   return (
     <>
-      <Header title="Nouvelle activite" />
+      <Header title={t("newActivity")} />
       <div className="p-4">
         <NouvelleActiviteForm vagues={vagueOptions} bacs={bacOptions} members={memberOptions} />
       </div>

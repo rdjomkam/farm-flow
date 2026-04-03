@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { getServerSession } from "@/lib/auth";
 import { getUserSites } from "@/lib/queries/sites";
@@ -9,6 +10,7 @@ export default async function SitesPage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
 
+  const t = await getTranslations("settings.page");
   const sites = await getUserSites(session.userId);
 
   const sitesData = sites.map((s) => ({
@@ -24,7 +26,7 @@ export default async function SitesPage() {
 
   return (
     <>
-      <Header title="Mes sites" />
+      <Header title={t("mySites")} />
       <div className="p-4">
         <SitesListClient
           sites={sitesData}

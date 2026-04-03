@@ -1,4 +1,14 @@
 {
+  "page": {
+    "siteRoles": "Site roles",
+    "mySites": "My sites",
+    "configProfiles": "Configuration profiles",
+    "newConfigProfile": "New configuration profile",
+    "activityRules": "Activity rules",
+    "newActivityRule": "New activity rule",
+    "customPlaceholders": "Custom placeholders",
+    "noRoleConfigured": "No role configured."
+  },
   "triggers": {
     "CALENDRIER": "Calendar",
     "RECURRENT": "Recurring",
@@ -63,6 +73,40 @@
     "MODIFIER_BAC": "Edit tank",
     "VOIR_VAGUE": "View batch",
     "VOIR_STOCK": "View stock"
+  },
+  "rules": {
+    "backToRules": "Back to rules",
+    "globalRuleTitle": "Global DKFarm rule",
+    "globalRuleDescGlobal": "Your changes will be visible on all farms.",
+    "globalRuleDescReadOnly": "This rule is managed by the DKFarm team. Contact support for any changes.",
+    "firedOnceBanner": "Already triggered (firedOnce = true)",
+    "firedOnceDescription": "This threshold rule has already been triggered once. It will not trigger again while firedOnce is true.",
+    "sections": {
+      "identity": "Identity",
+      "triggerParams": "Trigger parameters",
+      "triggerConditions": "Trigger conditions",
+      "activityTemplates": "Activity templates",
+      "internalIdentity": "Internal identity"
+    },
+    "dialogs": {
+      "resetFiredOnce": "Reset firedOnce",
+      "deleteRule": "Delete rule"
+    },
+    "buttons": {
+      "deleteCondition": "Delete this condition",
+      "createRule": "Create a rule"
+    },
+    "phases": {
+      "allPhases": "All phases"
+    },
+    "actions": {
+      "none": "No action"
+    },
+    "emptyStates": {
+      "noActiveRules": "No active rules.",
+      "noInactiveRules": "No inactive rules.",
+      "noRules": "No activity rules."
+    }
   },
   "placeholders": {
     "quantite_calculee": {

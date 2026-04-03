@@ -1,4 +1,13 @@
 {
+  "page": {
+    "packs": "Packs",
+    "activations": "Activations Packs"
+  },
+  "emptyState": {
+    "noActivations": "Aucune activation",
+    "noSearchResults": "Aucun résultat pour cette recherche.",
+    "noActivationsFiltered": "Aucune activation pour ce filtre."
+  },
   "statutsActivation": {
     "ACTIVE": "Active",
     "EXPIREE": "Expiree",

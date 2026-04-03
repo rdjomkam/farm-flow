@@ -1,4 +1,7 @@
 {
+  "page": {
+    "somethingWentWrong": "Quelque chose s'est mal passé. Veuillez réessayer."
+  },
   "validation": {
     "required": "Champ obligatoire",
     "invalidValue": "Valeur invalide",

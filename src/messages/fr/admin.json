@@ -36,6 +36,13 @@
     "toastError": "Erreur",
     "toastErrorDefault": "Une erreur est survenue."
   },
+  "modulesEditor": {
+    "updateError": "Erreur lors de la mise à jour des modules.",
+    "updateSuccess": "Modules mis à jour"
+  },
+  "buttons": {
+    "saving": "Enregistrement..."
+  },
   "modules": {
     "modifierTitle": "Modifier le module",
     "modifierDescription": "Mise a jour des metadonnees du module. La cle et le niveau sont immuables.",

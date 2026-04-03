@@ -1,4 +1,8 @@
 {
+  "buttons": {
+    "deleteInvoice": "Supprimer la facture",
+    "deleteFile": "Supprimer le fichier"
+  },
   "title": "Stock",
   "categories": {
     "ALIMENT": "Aliment",

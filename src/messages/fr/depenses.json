@@ -1,4 +1,9 @@
 {
+  "page": {
+    "newExpense": "Nouvelle dépense",
+    "recurringExpenses": "Dépenses récurrentes",
+    "finances": "Finances"
+  },
   "statuts": {
     "NON_PAYEE": "Non payee",
     "PAYEE_PARTIELLEMENT": "Partiellement payee",
@@ -88,6 +93,29 @@
     "FRAIS_BANCAIRES": "Frais bancaires",
     "PENALITE_RETARD": "Penalite retard",
     "AUTRE": "Autre"
+  },
+  "validation": {
+    "descriptionRequired": "La description est obligatoire.",
+    "categoryRequired": "La categorie est obligatoire.",
+    "amountPositive": "Le montant doit etre un nombre positif.",
+    "dateRequired": "La date est obligatoire."
+  },
+  "form": {
+    "mainInfo": "Informations principales",
+    "descriptionPlaceholder": "Achat aliment, loyer, salaire...",
+    "categoryPlaceholder": "Choisir une categorie",
+    "amountPlaceholder": "Ex: 50000",
+    "dueDateLabel": "Date d'echeance (optionnel)",
+    "optionalLinks": "Liens optionnels",
+    "optional": "(facultatif)",
+    "noWave": "Aucune vague",
+    "noOrder": "Aucune commande",
+    "notes": "Notes",
+    "notesPlaceholder": "Informations complementaires...",
+    "createExpense": "Creer la depense"
+  },
+  "emptyState": {
+    "noExpenses": "Aucune depense"
   },
   "recurrentes": {
     "frequences": {

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { Settings } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { AccessDenied } from "@/components/ui/access-denied";
@@ -20,10 +21,11 @@ export default async function ConfigElevageNouveauPage() {
 
   // Charger les profils existants pour le select de template
   const templates = await getConfigsElevage(session.activeSiteId);
+  const t = await getTranslations("settings.page");
 
   return (
     <>
-      <Header title="Nouveau profil de configuration">
+      <Header title={t("newConfigProfile")}>
         <Settings className="h-5 w-5 text-muted-foreground" />
       </Header>
       <div className="p-4">

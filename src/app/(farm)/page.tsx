@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { AccessDenied } from "@/components/ui/access-denied";
@@ -42,6 +43,8 @@ export default async function FarmDashboardPage() {
 
   if (!session.activeSiteId) redirect("/settings/sites");
 
+  const t = await getTranslations("dashboard.page");
+
   try {
   // -------------------------------------------------------------------------
   // Ingénieur — dual-mode dashboard
@@ -67,7 +70,7 @@ export default async function FarmDashboardPage() {
       // Multi-farm (hub) mode — engineer sees all supervised clients
       return (
         <>
-          <Header title="Accueil" />
+          <Header title={t("home")} />
           <Suspense
             fallback={
               <div className="flex flex-col gap-6 p-4">
@@ -102,7 +105,7 @@ export default async function FarmDashboardPage() {
       // Fallback: treat as hub mode with no clients yet
       return (
         <>
-          <Header title="Accueil" />
+          <Header title={t("home")} />
           <Suspense
             fallback={
               <div className="flex flex-col gap-6 p-4">
@@ -122,7 +125,7 @@ export default async function FarmDashboardPage() {
 
     return (
       <>
-        <Header title="Accueil" />
+        <Header title={t("home")} />
         <Suspense
           fallback={
             <div className="flex flex-col gap-6 p-4">
@@ -169,7 +172,7 @@ export default async function FarmDashboardPage() {
 
   return (
     <>
-      <Header title="Dashboard" />
+      <Header title={t("dashboard")} />
       <div className="flex flex-col gap-4 p-4">
         <Suspense fallback={<HeroSectionSkeleton />}>
           <DashboardHeroSection data={dashboardData} sessionName={session.name} />

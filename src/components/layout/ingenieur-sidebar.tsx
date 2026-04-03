@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   LayoutDashboard,
   Waves,
@@ -34,67 +35,18 @@ import { ITEM_VIEW_PERMISSIONS } from "@/lib/permissions-constants";
 
 interface NavItem {
   href: string;
-  label: string;
+  labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
 }
 
 interface NavGroup {
-  label: string;
+  labelKey: string;
   items: NavItem[];
   permissionRequired?: Permission;
   permissionsAny?: Permission[];
   moduleRequired?: SiteModule;
 }
-
-const NAV_GROUPS: NavGroup[] = [
-  // 1. MONITORING — shown only if user has MONITORING_CLIENTS permission
-  {
-    label: "Monitoring",
-    items: [
-      { href: "/monitoring", label: "Clients supervisés", icon: Eye },
-      { href: "/notes", label: "Notes", icon: NotebookPen },
-    ],
-    permissionRequired: Permission.MONITORING_CLIENTS,
-  },
-  // 2. OPÉRATIONS — always visible for INGENIEUR; individual items gated by ITEM_VIEW_PERMISSIONS
-  {
-    label: "Opérations",
-    items: [
-      { href: "/", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/mes-taches", label: "Tâches", icon: CheckSquare },
-      { href: "/vagues", label: "Vagues", icon: Waves },
-      { href: "/bacs", label: "Bacs", icon: Container },
-      { href: "/releves", label: "Relevés", icon: NotebookPen },
-      { href: "/stock", label: "Vue stock", icon: Package },
-      { href: "/stock/produits", label: "Produits", icon: Tag },
-      { href: "/stock/mouvements", label: "Mouvements", icon: ArrowUpDown },
-      { href: "/stock/fournisseurs", label: "Fournisseurs", icon: Truck },
-      { href: "/stock/commandes", label: "Commandes", icon: ShoppingCart },
-      { href: "/planning", label: "Planning", icon: Calendar },
-      { href: "/analytics", label: "Analytics", icon: BarChart3 },
-    ],
-  },
-  // 3. COMMERCIAL — shown if user has ACTIVER_PACKS OR PORTEFEUILLE_VOIR
-  {
-    label: "Commercial",
-    items: [
-      { href: "/packs", label: "Packs", icon: Boxes },
-      { href: "/activations", label: "Activations", icon: PackageCheck },
-      { href: "/mon-portefeuille", label: "Portefeuille", icon: Wallet },
-    ],
-    permissionsAny: [Permission.ACTIVER_PACKS, Permission.PORTEFEUILLE_VOIR],
-  },
-  // 4. CONFIGURATION — always shown; individual items gated by ITEM_VIEW_PERMISSIONS
-  {
-    label: "Configuration",
-    items: [
-      { href: "/settings/alertes", label: "Alertes", icon: BellRing },
-      { href: "/settings/config-elevage", label: "Config élevage", icon: Settings },
-      { href: "/settings/regles-activites", label: "Règles activités", icon: Zap },
-    ],
-  },
-];
 
 interface IngenieurSidebarProps {
   permissions: Permission[];
@@ -112,6 +64,56 @@ export function IngenieurSidebar({
   isSuperAdmin,
 }: IngenieurSidebarProps) {
   const pathname = usePathname();
+  const t = useTranslations("navigation");
+
+  const NAV_GROUPS: NavGroup[] = useMemo(() => [
+    // 1. MONITORING — shown only if user has MONITORING_CLIENTS permission
+    {
+      labelKey: "groups.monitoring",
+      items: [
+        { href: "/monitoring", labelKey: "items.dashboardClients", icon: Eye },
+        { href: "/notes", labelKey: "items.notes", icon: NotebookPen },
+      ],
+      permissionRequired: Permission.MONITORING_CLIENTS,
+    },
+    // 2. OPÉRATIONS — always visible for INGENIEUR; individual items gated by ITEM_VIEW_PERMISSIONS
+    {
+      labelKey: "groups.operations",
+      items: [
+        { href: "/", labelKey: "items.dashboard", icon: LayoutDashboard },
+        { href: "/mes-taches", labelKey: "items.taches", icon: CheckSquare },
+        { href: "/vagues", labelKey: "items.vagues", icon: Waves },
+        { href: "/bacs", labelKey: "items.bacs", icon: Container },
+        { href: "/releves", labelKey: "items.releves", icon: NotebookPen },
+        { href: "/stock", labelKey: "items.vueStock", icon: Package },
+        { href: "/stock/produits", labelKey: "items.produits", icon: Tag },
+        { href: "/stock/mouvements", labelKey: "items.mouvements", icon: ArrowUpDown },
+        { href: "/stock/fournisseurs", labelKey: "items.fournisseurs", icon: Truck },
+        { href: "/stock/commandes", labelKey: "items.commandes", icon: ShoppingCart },
+        { href: "/planning", labelKey: "items.planning", icon: Calendar },
+        { href: "/analytics", labelKey: "items.analyse", icon: BarChart3 },
+      ],
+    },
+    // 3. COMMERCIAL — shown if user has ACTIVER_PACKS OR PORTEFEUILLE_VOIR
+    {
+      labelKey: "groups.commercial",
+      items: [
+        { href: "/packs", labelKey: "items.packs", icon: Boxes },
+        { href: "/activations", labelKey: "items.activationsItem", icon: PackageCheck },
+        { href: "/mon-portefeuille", labelKey: "items.monPortefeuille", icon: Wallet },
+      ],
+      permissionsAny: [Permission.ACTIVER_PACKS, Permission.PORTEFEUILLE_VOIR],
+    },
+    // 4. CONFIGURATION — always shown; individual items gated by ITEM_VIEW_PERMISSIONS
+    {
+      labelKey: "groups.configuration",
+      items: [
+        { href: "/settings/alertes", labelKey: "items.alertes", icon: BellRing },
+        { href: "/settings/config-elevage", labelKey: "items.configElevage", icon: Settings },
+        { href: "/settings/regles-activites", labelKey: "items.reglesActivites", icon: Zap },
+      ],
+    },
+  ], []);
 
   const visibleGroups = useMemo(() => {
     return NAV_GROUPS.map((group) => {
@@ -133,7 +135,7 @@ export function IngenieurSidebar({
       if (visibleItems.length === 0) return null;
       return { ...group, items: visibleItems };
     }).filter(Boolean) as (NavGroup & { items: NavItem[] })[];
-  }, [permissions, siteModules]);
+  }, [NAV_GROUPS, permissions, siteModules]);
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
@@ -169,9 +171,9 @@ export function IngenieurSidebar({
       {/* Navigation groups */}
       <nav className="flex flex-1 flex-col overflow-y-auto p-2 gap-4">
         {visibleGroups.map((group) => (
-          <div key={group.label}>
+          <div key={group.labelKey}>
             <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {group.label}
+              {t(group.labelKey as Parameters<typeof t>[0])}
             </p>
             <div className="space-y-0.5">
               {group.items.map((item) => {
@@ -184,7 +186,7 @@ export function IngenieurSidebar({
                       className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground/40 cursor-not-allowed"
                     >
                       <Icon className="h-4 w-4" />
-                      {item.label}
+                      {t(item.labelKey as Parameters<typeof t>[0])}
                     </span>
                   );
                 }
@@ -200,7 +202,7 @@ export function IngenieurSidebar({
                     )}
                   >
                     <Icon className="h-4 w-4" />
-                    {item.label}
+                    {t(item.labelKey as Parameters<typeof t>[0])}
                   </Link>
                 );
               })}
@@ -212,7 +214,7 @@ export function IngenieurSidebar({
         {isSuperAdmin && (
           <div>
             <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Super Admin
+              {t("groups.superAdmin")}
             </p>
             <Link
               href="/backoffice"
@@ -224,7 +226,7 @@ export function IngenieurSidebar({
               )}
             >
               <Shield className="h-4 w-4" />
-              Backoffice
+              {t("items.backoffice")}
             </Link>
           </div>
         )}

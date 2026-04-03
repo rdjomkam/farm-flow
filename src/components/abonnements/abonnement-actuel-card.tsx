@@ -110,13 +110,13 @@ export function AbonnementActuelCard({ abonnement }: AbonnementActuelCardProps) 
       });
       if (!res.ok) {
         const data = await res.json();
-        setAnnulationError(data.message ?? "Impossible d'annuler l'abonnement.");
+        setAnnulationError(data.message ?? t("errors.cancelFailed"));
         return;
       }
       setAnnulationDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: queryKeys.abonnements.all });
     } catch {
-      setAnnulationError("Erreur réseau. Veuillez réessayer.");
+      setAnnulationError(t("errors.networkError"));
     } finally {
       setAnnulationLoading(false);
     }
@@ -144,14 +144,14 @@ export function AbonnementActuelCard({ abonnement }: AbonnementActuelCardProps) 
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Calendar className="h-3.5 w-3.5 shrink-0" />
           <div>
-            <p className="font-medium text-foreground">Début</p>
+            <p className="font-medium text-foreground">{t("card.startDate")}</p>
             <p>{new Date(abonnement.dateDebut).toLocaleDateString("fr-FR")}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Clock className="h-3.5 w-3.5 shrink-0" />
           <div>
-            <p className="font-medium text-foreground">Expiration</p>
+            <p className="font-medium text-foreground">{t("card.expirationDate")}</p>
             <p>{new Date(abonnement.dateFin).toLocaleDateString("fr-FR")}</p>
           </div>
         </div>
@@ -160,7 +160,7 @@ export function AbonnementActuelCard({ abonnement }: AbonnementActuelCardProps) 
       {/* Barre de progression */}
       <div>
         <div className="flex justify-between text-xs text-muted-foreground mb-1">
-          <span>Progression</span>
+          <span>{t("card.progression")}</span>
           <span
             className={
               joursRestants < 14
@@ -168,7 +168,11 @@ export function AbonnementActuelCard({ abonnement }: AbonnementActuelCardProps) 
                 : "text-foreground"
             }
           >
-            {joursRestants === 0 ? "Expiré" : `${joursRestants} jour${joursRestants > 1 ? "s" : ""} restant${joursRestants > 1 ? "s" : ""}`}
+            {joursRestants === 0
+              ? t("card.expired")
+              : joursRestants > 1
+              ? t("card.daysRemainingPlural", { count: joursRestants })
+              : t("card.daysRemaining", { count: joursRestants })}
           </span>
         </div>
         <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -193,7 +197,7 @@ export function AbonnementActuelCard({ abonnement }: AbonnementActuelCardProps) 
       {/* Période de grâce */}
       {abonnement.statut === StatutAbonnement.EN_GRACE && abonnement.dateFinGrace && (
         <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 text-xs">
-          <p className="font-medium text-warning">Période de grâce</p>
+          <p className="font-medium text-warning">{t("card.gracePeriod")}</p>
           <p className="text-muted-foreground mt-0.5">
             Accès limité jusqu&apos;au{" "}
             {new Date(abonnement.dateFinGrace).toLocaleDateString("fr-FR")}
@@ -207,14 +211,14 @@ export function AbonnementActuelCard({ abonnement }: AbonnementActuelCardProps) 
           <Link href={`/checkout?planId=${abonnement.planId}&renouvellement=true`} className="flex-1">
             <Button className="w-full min-h-[44px] gap-2">
               <RefreshCw className="h-4 w-4" />
-              Renouveler
+              {t("buttons.renew")}
             </Button>
           </Link>
         )}
         <Link href="/tarifs" className="flex-1">
           <Button variant="outline" className="w-full min-h-[44px] gap-2">
             <ExternalLink className="h-4 w-4" />
-            Changer de plan
+            {t("buttons.changePlan")}
           </Button>
         </Link>
         {showAnnuler && (
@@ -226,16 +230,14 @@ export function AbonnementActuelCard({ abonnement }: AbonnementActuelCardProps) 
                 className="flex-1 min-h-[44px] gap-2 text-danger border-danger/30 hover:bg-danger/10"
               >
                 <XCircle className="h-4 w-4" />
-                Annuler
+                {t("buttons.cancel")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Annuler l&apos;abonnement</DialogTitle>
+                <DialogTitle>{t("dialogs.cancelTitle")}</DialogTitle>
                 <DialogDescription>
-                  Êtes-vous sûr de vouloir annuler votre abonnement{" "}
-                  <strong>{t(PLAN_LABELS[abonnement.plan.typePlan])}</strong> ? Cette action est
-                  irréversible.
+                  {t("dialogs.cancelConfirmation")}
                 </DialogDescription>
               </DialogHeader>
               {annulationError && (
@@ -247,7 +249,7 @@ export function AbonnementActuelCard({ abonnement }: AbonnementActuelCardProps) 
                   onClick={() => setAnnulationDialogOpen(false)}
                   className="min-h-[44px]"
                 >
-                  Conserver
+                  {t("buttons.keep")}
                 </Button>
                 <Button
                   variant="outline"
@@ -255,7 +257,7 @@ export function AbonnementActuelCard({ abonnement }: AbonnementActuelCardProps) 
                   onClick={handleAnnuler}
                   disabled={annulationLoading}
                 >
-                  {annulationLoading ? "Annulation..." : "Confirmer l'annulation"}
+                  {annulationLoading ? t("buttons.cancelling") : t("buttons.confirmCancel")}
                 </Button>
               </DialogFooter>
             </DialogContent>

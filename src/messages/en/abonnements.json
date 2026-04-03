@@ -92,6 +92,72 @@
     },
     "noModules": "No modules",
     "modulesInclus": "Included Modules",
-    "modulesHelp": "Checked modules will be automatically activated on the promoter's site upon subscription"
+    "modulesHelp": "Checked modules will be automatically activated on the promoter's site upon subscription",
+    "toggleActivate": "Activate",
+    "toggleDeactivate": "Deactivate",
+    "toggleDeactivating": "Deactivating...",
+    "toggleDeactivateTitle": "Deactivate plan?",
+    "toggleDeactivateConfirm": "Confirm deactivation",
+    "edit": "Edit",
+    "dialogCancel": "Cancel",
+    "dialogKeep": "Keep",
+    "dialogConfirm": "Confirm",
+    "saving": "Saving...",
+    "createPlan": "Create plan",
+    "allStatuts": "All statuses",
+    "allPlans": "All plans",
+    "resetFilters": "Reset",
+    "activate": "Activate",
+    "activation": "Activating...",
+    "forceActivationTitle": "Force activation",
+    "noSubscriptionFound": "No subscription found.",
+    "noPlanFound": "No plan found."
+  },
+  "card": {
+    "startDate": "Start",
+    "expirationDate": "Expiration",
+    "progression": "Progression",
+    "expired": "Expired",
+    "daysRemaining": "{count} day remaining",
+    "daysRemainingPlural": "{count} days remaining",
+    "gracePeriod": "Grace period"
+  },
+  "buttons": {
+    "renew": "Renew",
+    "changePlan": "Change plan",
+    "cancel": "Cancel",
+    "keep": "Keep",
+    "cancelling": "Cancelling...",
+    "confirmCancel": "Confirm cancellation"
+  },
+  "dialogs": {
+    "cancelTitle": "Cancel subscription",
+    "cancelConfirmation": "Are you sure you want to cancel your subscription? You will lose access to all premium features at the end of your current period."
+  },
+  "errors": {
+    "cancelFailed": "Unable to cancel subscription.",
+    "networkError": "Network error. Please try again.",
+    "promoVerificationFailed": "Unable to verify promo code.",
+    "paymentInitFailed": "Unable to initiate payment. Please try again.",
+    "networkErrorPayment": "Network error. Please check your connection and try again."
+  },
+  "planFormDialog": {
+    "titleCreate": "Create a subscription plan",
+    "titleEdit": "Edit plan",
+    "descriptionCreate": "Create a new subscription plan for your clients.",
+    "descriptionEdit": "Edit plan properties. The plan type is immutable."
+  },
+  "paiements": {
+    "none": "No payments recorded.",
+    "ref": "Ref:",
+    "confirmedOn": "Confirmed on",
+    "statuts": {
+      "EN_ATTENTE": "Pending",
+      "INITIE": "Initiated",
+      "CONFIRME": "Confirmed",
+      "ECHEC": "Failed",
+      "REMBOURSE": "Refunded",
+      "EXPIRE": "Expired"
+    }
   }
 }

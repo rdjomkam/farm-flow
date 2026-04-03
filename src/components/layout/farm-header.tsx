@@ -1,6 +1,7 @@
 "use client";
 
 import { Fish } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { NotificationBell } from "./notification-bell";
 import { cn } from "@/lib/utils";
 import { useNetworkStatus } from "@/hooks/use-network-status";
@@ -17,6 +18,7 @@ export function FarmHeader({
   onSiteChange,
 }: FarmHeaderProps) {
   const { isOnline } = useNetworkStatus();
+  const t = useTranslations("navigation");
 
   const showSiteSelector = userSites.length > 1;
 
@@ -34,7 +36,7 @@ export function FarmHeader({
               "ml-1 h-2 w-2 rounded-full",
               isOnline ? "bg-success" : "bg-destructive"
             )}
-            aria-label={isOnline ? "En ligne" : "Hors ligne"}
+            aria-label={isOnline ? t("items.enLigne") : t("items.horsLigne")}
             role="status"
           />
         </div>
@@ -47,7 +49,7 @@ export function FarmHeader({
               value={activeSiteId ?? ""}
               onChange={(e) => onSiteChange?.(e.target.value)}
               className="h-8 rounded-md border border-border bg-card px-2 text-xs text-foreground"
-              aria-label="Sélectionner un site"
+              aria-label={t("items.selectionnerSite")}
             >
               {userSites.map((site) => (
                 <option key={site.id} value={site.id}>

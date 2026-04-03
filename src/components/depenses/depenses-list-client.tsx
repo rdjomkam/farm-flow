@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Plus, Receipt, Calendar, ArrowUpRight, RefreshCw, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,12 +21,6 @@ import { CategorieDepense, StatutDepense } from "@/types";
 // Labels & variants
 // ---------------------------------------------------------------------------
 
-const statutLabels: Record<StatutDepense, string> = {
-  [StatutDepense.NON_PAYEE]: "Non payee",
-  [StatutDepense.PAYEE_PARTIELLEMENT]: "Partiellement payee",
-  [StatutDepense.PAYEE]: "Payee",
-};
-
 const statutVariants: Record<
   StatutDepense,
   "default" | "warning" | "info" | "en_cours"
@@ -33,21 +28,6 @@ const statutVariants: Record<
   [StatutDepense.NON_PAYEE]: "warning",
   [StatutDepense.PAYEE_PARTIELLEMENT]: "info",
   [StatutDepense.PAYEE]: "en_cours",
-};
-
-const categorieLabels: Record<CategorieDepense, string> = {
-  [CategorieDepense.ALIMENT]: "Aliment",
-  [CategorieDepense.INTRANT]: "Intrant",
-  [CategorieDepense.EQUIPEMENT]: "Equipement",
-  [CategorieDepense.ELECTRICITE]: "Electricite",
-  [CategorieDepense.EAU]: "Eau",
-  [CategorieDepense.LOYER]: "Loyer",
-  [CategorieDepense.SALAIRE]: "Salaire",
-  [CategorieDepense.TRANSPORT]: "Transport",
-  [CategorieDepense.VETERINAIRE]: "Veterinaire",
-  [CategorieDepense.REPARATION]: "Reparation",
-  [CategorieDepense.INVESTISSEMENT]: "Investissement",
-  [CategorieDepense.AUTRE]: "Autre",
 };
 
 // ---------------------------------------------------------------------------
@@ -76,6 +56,19 @@ interface Props {
   templatesActifsCount?: number;
 }
 
+interface DepensesListProps {
+  depenses: DepenseData[];
+  noExpensesLabel: string;
+  statutLabels: Record<StatutDepense, string>;
+  categorieLabels: Record<CategorieDepense, string>;
+}
+
+interface DepenseCardProps {
+  depense: DepenseData;
+  statutLabels: Record<StatutDepense, string>;
+  categorieLabels: Record<CategorieDepense, string>;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -97,8 +90,30 @@ function formatDate(dateStr: string): string {
 // ---------------------------------------------------------------------------
 
 export function DepensesListClient({ depenses, canManage, templatesActifsCount = 0 }: Props) {
+  const t = useTranslations("depenses");
   const [categorieFilter, setCategorieFilter] = useState<string>("TOUTES");
   const [activeTab, setActiveTab] = useState("toutes");
+
+  const statutLabels: Record<StatutDepense, string> = {
+    [StatutDepense.NON_PAYEE]: t("statuts.NON_PAYEE"),
+    [StatutDepense.PAYEE_PARTIELLEMENT]: t("statuts.PAYEE_PARTIELLEMENT"),
+    [StatutDepense.PAYEE]: t("statuts.PAYEE"),
+  };
+
+  const categorieLabels: Record<CategorieDepense, string> = {
+    [CategorieDepense.ALIMENT]: t("categories.ALIMENT"),
+    [CategorieDepense.INTRANT]: t("categories.INTRANT"),
+    [CategorieDepense.EQUIPEMENT]: t("categories.EQUIPEMENT"),
+    [CategorieDepense.ELECTRICITE]: t("categories.ELECTRICITE"),
+    [CategorieDepense.EAU]: t("categories.EAU"),
+    [CategorieDepense.LOYER]: t("categories.LOYER"),
+    [CategorieDepense.SALAIRE]: t("categories.SALAIRE"),
+    [CategorieDepense.TRANSPORT]: t("categories.TRANSPORT"),
+    [CategorieDepense.VETERINAIRE]: t("categories.VETERINAIRE"),
+    [CategorieDepense.REPARATION]: t("categories.REPARATION"),
+    [CategorieDepense.INVESTISSEMENT]: t("categories.INVESTISSEMENT"),
+    [CategorieDepense.AUTRE]: t("categories.AUTRE"),
+  };
 
   function handleCategorieChange(value: string) {
     setCategorieFilter(value);
@@ -147,10 +162,10 @@ export function DepensesListClient({ depenses, canManage, templatesActifsCount =
             onValueChange={handleCategorieChange}
           >
             <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder="Toutes categories" />
+              <SelectValue placeholder={t("recurrentes.categoriePlaceholder")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="TOUTES">Toutes categories</SelectItem>
+              <SelectItem value="TOUTES">{t("recurrentes.categoriePlaceholder")}</SelectItem>
               {Object.values(CategorieDepense).map((cat) => (
                 <SelectItem key={cat} value={cat}>
                   {categorieLabels[cat as CategorieDepense]}
@@ -197,16 +212,16 @@ export function DepensesListClient({ depenses, canManage, templatesActifsCount =
         </TabsList>
 
         <TabsContent value="toutes" className="mt-3">
-          <DepensesList depenses={depensesFiltrees} />
+          <DepensesList depenses={depensesFiltrees} noExpensesLabel={t("emptyState.noExpenses")} statutLabels={statutLabels} categorieLabels={categorieLabels} />
         </TabsContent>
         <TabsContent value="non_payees" className="mt-3">
-          <DepensesList depenses={nonPayees} />
+          <DepensesList depenses={nonPayees} noExpensesLabel={t("emptyState.noExpenses")} statutLabels={statutLabels} categorieLabels={categorieLabels} />
         </TabsContent>
         <TabsContent value="partielles" className="mt-3">
-          <DepensesList depenses={partiellesPay} />
+          <DepensesList depenses={partiellesPay} noExpensesLabel={t("emptyState.noExpenses")} statutLabels={statutLabels} categorieLabels={categorieLabels} />
         </TabsContent>
         <TabsContent value="payees" className="mt-3">
-          <DepensesList depenses={payees} />
+          <DepensesList depenses={payees} noExpensesLabel={t("emptyState.noExpenses")} statutLabels={statutLabels} categorieLabels={categorieLabels} />
         </TabsContent>
       </Tabs>
     </div>
@@ -217,12 +232,12 @@ export function DepensesListClient({ depenses, canManage, templatesActifsCount =
 // DepensesList sub-component
 // ---------------------------------------------------------------------------
 
-function DepensesList({ depenses }: { depenses: DepenseData[] }) {
+function DepensesList({ depenses, noExpensesLabel, statutLabels, categorieLabels }: DepensesListProps) {
   if (depenses.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground">
         <Receipt className="h-10 w-10 opacity-30" />
-        <p className="text-sm">Aucune depense</p>
+        <p className="text-sm">{noExpensesLabel}</p>
       </div>
     );
   }
@@ -230,7 +245,7 @@ function DepensesList({ depenses }: { depenses: DepenseData[] }) {
   return (
     <div className="flex flex-col gap-3">
       {depenses.map((dep) => (
-        <DepenseCard key={dep.id} depense={dep} />
+        <DepenseCard key={dep.id} depense={dep} statutLabels={statutLabels} categorieLabels={categorieLabels} />
       ))}
     </div>
   );
@@ -240,7 +255,7 @@ function DepensesList({ depenses }: { depenses: DepenseData[] }) {
 // DepenseCard sub-component
 // ---------------------------------------------------------------------------
 
-function DepenseCard({ depense }: { depense: DepenseData }) {
+function DepenseCard({ depense, statutLabels, categorieLabels }: DepenseCardProps) {
   const statut = depense.statut as StatutDepense;
   const categorie = depense.categorieDepense as CategorieDepense;
   const resteAPayer = depense.montantTotal - depense.montantPaye;

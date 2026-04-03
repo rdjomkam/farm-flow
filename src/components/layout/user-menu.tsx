@@ -2,22 +2,23 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { LogOut, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Role } from "@/types";
 import type { UserSession } from "@/types";
 import { useAuthService } from "@/services";
 
-const roleLabels: Record<Role, string> = {
-  ADMIN: "Administrateur",
-  GERANT: "Gerant",
-  PISCICULTEUR: "Pisciculteur",
-  INGENIEUR: "Ingénieur",
+const roleKeyMap: Record<string, string> = {
+  ADMIN: "admin",
+  GERANT: "gerant",
+  PISCICULTEUR: "pisciculteur",
+  INGENIEUR: "ingenieur",
 };
 
 export function UserMenu() {
   const router = useRouter();
   const authService = useAuthService();
+  const t = useTranslations("navigation");
   const [user, setUser] = useState<UserSession | null>(null);
 
   useEffect(() => {
@@ -42,7 +43,7 @@ export function UserMenu() {
           {user.name}
         </span>
         <span className="text-xs text-muted-foreground">
-          {roleLabels[user.role] ?? user.role}
+          {roleKeyMap[user.role] ? t(`roles.${roleKeyMap[user.role]}` as Parameters<typeof t>[0]) : user.role}
         </span>
         {(user.email || user.phone) && (
           <span className="text-xs text-muted-foreground truncate max-w-[160px]">
@@ -66,8 +67,8 @@ export function UserMenu() {
             "hover:bg-muted hover:text-foreground transition-colors",
             "min-h-[44px] min-w-[44px]"
           )}
-          aria-label="Se deconnecter"
-          title="Se deconnecter"
+          aria-label={t("actions.logout")}
+          title={t("actions.logout")}
         >
           <LogOut className="h-5 w-5" />
         </button>

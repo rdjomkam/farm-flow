@@ -1,4 +1,16 @@
 {
+  "page": {
+    "alimAnalytics": "Feed analytics",
+    "alimSimulator": "Feed simulator",
+    "alimDetail": "Feed detail",
+    "bacDetail": "Tank detail",
+    "bacAnalytics": "Analytics by tank"
+  },
+  "emptyStates": {
+    "noData": "No data",
+    "noWavesInProgress": "No waves in progress",
+    "noDataAvailable": "No data available"
+  },
   "benchmarks": {
     "fcr": {
       "label": "FCR",

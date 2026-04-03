@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { MessageSquare, Bell } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { NotesList } from "@/components/notes/notes-list";
@@ -124,6 +125,7 @@ async function ClientNotesView({ siteId }: { siteId: string }) {
 // ---------------------------------------------------------------------------
 
 async function DKFarmNotesView({ siteId }: { siteId: string }) {
+  const t = await getTranslations("notes");
   const notes = await getNotes(siteId);
   const notesJson = JSON.parse(JSON.stringify(notes)) as NoteIngenieurWithRelations[];
 
@@ -157,7 +159,7 @@ async function DKFarmNotesView({ siteId }: { siteId: string }) {
         {notes.length === 0 ? (
           <EmptyState
             icon={<MessageSquare className="h-7 w-7" />}
-            title="Aucune note envoyee"
+            title={t("emptyState.noNotesSent")}
             description="Vous n'avez pas encore envoye de notes a vos clients. Rendez-vous sur la fiche d'un client pour envoyer une note."
           />
         ) : (

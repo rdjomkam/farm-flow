@@ -10,6 +10,7 @@
  */
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Save } from "lucide-react";
 import { SiteModule } from "@/types";
 import { SITE_MODULES_CONFIG } from "@/lib/site-modules-config";
@@ -27,6 +28,7 @@ export function BackofficeSiteModulesEditor({
   enabledModules: initialModules,
   onSaved,
 }: BackofficeSiteModulesEditorProps) {
+  const t = useTranslations("backoffice");
   const [enabled, setEnabled] = useState<Set<SiteModule>>(new Set(initialModules));
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -54,15 +56,15 @@ export function BackofficeSiteModulesEditor({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? data.message ?? "Erreur lors de la mise a jour des modules.");
+        throw new Error(data.error ?? data.message ?? t("modulesEditor.updateError"));
       }
       const data = await res.json();
-      toast({ title: "Modules mis a jour", variant: "success" });
+      toast({ title: t("siteStatus.toastSuccess"), variant: "success" });
       onSaved?.(data.enabledModules ?? [...enabled]);
     } catch (err) {
       toast({
-        title: "Erreur",
-        description: err instanceof Error ? err.message : "Une erreur est survenue.",
+        title: t("siteStatus.toastError"),
+        description: err instanceof Error ? err.message : t("siteStatus.toastErrorDefault"),
         variant: "error",
       });
     } finally {
@@ -109,7 +111,7 @@ export function BackofficeSiteModulesEditor({
         className="w-full sm:w-auto"
       >
         <Save className="h-4 w-4" />
-        {loading ? "Enregistrement..." : "Appliquer les modules"}
+        {loading ? t("buttons.saving") : "Appliquer les modules"}
       </Button>
     </div>
   );

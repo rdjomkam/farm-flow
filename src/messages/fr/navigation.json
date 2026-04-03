@@ -81,7 +81,20 @@
     "notificationsItem": "Notifications",
     "portefeuilleItem": "Portefeuille",
     "alevins": "Alevins",
-    "backoffice": "Backoffice"
+    "backoffice": "Backoffice",
+    "releves": "Relevés",
+    "vueStock": "Vue stock",
+    "dashboardFinances": "Dashboard finances",
+    "vueAlevins": "Vue alevins",
+    "planning": "Planning",
+    "aliments": "Aliments",
+    "gestionSites": "Gestion sites",
+    "configElevage": "Config élevage",
+    "profil": "Profil",
+    "choisirSite": "Choisir un site",
+    "selectionnerSite": "Sélectionner un site",
+    "enLigne": "En ligne",
+    "horsLigne": "Hors ligne"
   },
   "roles": {
     "admin": "Administrateur",
@@ -101,6 +114,11 @@
     "monitoring": "Monitoring",
     "commercial": "Commercial",
     "portefeuille": "Portefeuille",
-    "configuration": "Configuration"
+    "configuration": "Configuration",
+    "elevage": "Élevage",
+    "planningTasks": "Planning & Tâches",
+    "analytics": "Analytics",
+    "administration": "Administration",
+    "superAdmin": "Super Admin"
   }
 }

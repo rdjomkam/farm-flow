@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Building2, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthService, useUserService } from "@/services";
@@ -19,6 +20,7 @@ export function SiteSelector({ fullWidth }: SiteSelectorProps) {
   const router = useRouter();
   const authService = useAuthService();
   const userService = useUserService();
+  const t = useTranslations("navigation");
   const [sites, setSites] = useState<SiteInfo[]>([]);
   const [activeSiteId, setActiveSiteId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -68,7 +70,7 @@ export function SiteSelector({ fullWidth }: SiteSelectorProps) {
           "truncate font-medium",
           fullWidth ? "flex-1 text-left" : "max-w-[80px] sm:max-w-[140px]"
         )}>
-          {activeSite?.name ?? "Choisir un site"}
+          {activeSite?.name ?? t("items.choisirSite")}
         </span>
         <ChevronDown className={cn("h-3 w-3 text-muted-foreground transition-transform shrink-0", open && "rotate-180")} />
       </button>

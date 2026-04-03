@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -15,12 +16,13 @@ export default async function DepensesRecurrentesPage() {
   if (!permissions) return <AccessDenied />;
 
   const templates = await getDepensesRecurrentes(session.activeSiteId);
+  const t = await getTranslations("depenses.page");
 
   const canManage = permissions.includes(Permission.DEPENSES_CREER);
 
   return (
     <>
-      <Header title="Depenses recurrentes" />
+      <Header title={t("recurringExpenses")} />
       <RecurrentesListClient
         templates={JSON.parse(JSON.stringify(templates))}
         canManage={canManage}

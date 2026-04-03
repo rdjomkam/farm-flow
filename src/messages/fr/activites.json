@@ -1,4 +1,60 @@
 {
+  "filters": {
+    "allTypes": "Tous les types",
+    "allStatuses": "Tous les statuts",
+    "allPriorities": "Toutes les priorites",
+    "types": {
+      "ALIMENTATION": "Alimentation",
+      "BIOMETRIE": "Biometrie",
+      "QUALITE_EAU": "Qualite eau",
+      "COMPTAGE": "Comptage",
+      "NETTOYAGE": "Nettoyage",
+      "TRAITEMENT": "Traitement",
+      "RECOLTE": "Recolte",
+      "TRI": "Tri",
+      "MEDICATION": "Medication",
+      "RENOUVELLEMENT": "Renouvellement eau",
+      "AUTRE": "Autre"
+    },
+    "statuses": {
+      "PLANIFIEE": "Planifiee",
+      "EN_RETARD": "En retard",
+      "TERMINEE": "Terminee",
+      "ANNULEE": "Annulee"
+    },
+    "priorities": {
+      "URGENTE": "Urgente (critique)",
+      "MOYENNE": "Moyenne",
+      "BASSE": "Basse"
+    }
+  },
+  "summary": {
+    "tasksToday": "{count} tache aujourd'hui",
+    "tasksTodayPlural": "{count} taches aujourd'hui",
+    "urgent": "urgente",
+    "urgentPlural": "urgentes"
+  },
+  "buttons": {
+    "filters": "Filtres",
+    "resetFilters": "Reinitialiser"
+  },
+  "filterPanel": {
+    "title": "Filtres"
+  },
+  "emptyState": {
+    "noActivities": "Aucune activite",
+    "noActivitiesFiltered": "Aucune activite ne correspond aux filtres selectionnes.",
+    "noTasksAssigned": "Vous n'avez pas de tache assignee pour le moment."
+  },
+  "sections": {
+    "late": "En retard ({count})",
+    "planned": "Planifiees ({count})",
+    "other": "Autres ({count})"
+  },
+  "statuses": {
+    "late": "En retard",
+    "planned": "Planifiee"
+  },
   "phases": {
     "ACCLIMATATION": "Acclimatation",
     "CROISSANCE_DEBUT": "Croissance debut",

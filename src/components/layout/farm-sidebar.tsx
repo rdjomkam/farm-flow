@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   LayoutDashboard,
   Waves,
@@ -43,106 +44,17 @@ import { ITEM_VIEW_PERMISSIONS } from "@/lib/permissions-constants";
 
 interface NavItem {
   href: string;
-  label: string;
+  labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
 }
 
 interface NavGroup {
-  label: string;
+  labelKey: string;
   items: NavItem[];
   permissionRequired?: Permission;
   moduleRequired?: SiteModule;
 }
-
-/** Farm sidebar groups — visible conditions checked at render */
-const NAV_GROUPS: NavGroup[] = [
-  {
-    label: "Élevage",
-    items: [
-      { href: "/", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/vagues", label: "Vagues", icon: Waves },
-      { href: "/bacs", label: "Bacs", icon: Container },
-      { href: "/releves", label: "Relevés", icon: NotebookPen },
-      { href: "/observations", label: "Observations", icon: Eye },
-    ],
-    permissionRequired: Permission.VAGUES_VOIR,
-    moduleRequired: SiteModule.GROSSISSEMENT,
-  },
-  {
-    label: "Stock",
-    items: [
-      { href: "/stock", label: "Vue stock", icon: Package },
-      { href: "/stock/produits", label: "Produits", icon: Tag },
-      { href: "/stock/mouvements", label: "Mouvements", icon: ArrowUpDown },
-      { href: "/stock/fournisseurs", label: "Fournisseurs", icon: Truck },
-      { href: "/stock/commandes", label: "Commandes", icon: ShoppingCart },
-      { href: "/besoins", label: "Besoins", icon: ClipboardList },
-    ],
-    permissionRequired: Permission.STOCK_VOIR,
-    moduleRequired: SiteModule.INTRANTS,
-  },
-  {
-    label: "Finances",
-    items: [
-      { href: "/finances", label: "Dashboard finances", icon: Wallet },
-      { href: "/ventes", label: "Ventes", icon: Banknote },
-      { href: "/factures", label: "Factures", icon: FileText },
-      { href: "/clients", label: "Clients", icon: UserRound },
-      { href: "/depenses", label: "Dépenses", icon: Receipt },
-    ],
-    permissionRequired: Permission.FINANCES_VOIR,
-    moduleRequired: SiteModule.VENTES,
-  },
-  {
-    label: "Alevins",
-    items: [
-      { href: "/alevins", label: "Vue alevins", icon: Egg },
-      { href: "/alevins/reproducteurs", label: "Reproducteurs", icon: Fish },
-      { href: "/alevins/pontes", label: "Pontes", icon: Egg },
-      { href: "/alevins/lots", label: "Lots", icon: Layers },
-    ],
-    permissionRequired: Permission.ALEVINS_VOIR,
-    moduleRequired: SiteModule.REPRODUCTION,
-  },
-  {
-    label: "Planning & Tâches",
-    items: [
-      { href: "/planning", label: "Planning", icon: Calendar },
-      { href: "/mes-taches", label: "Mes tâches", icon: ClipboardCheck },
-    ],
-    permissionRequired: Permission.PLANNING_VOIR,
-  },
-  {
-    label: "Analytics",
-    items: [
-      { href: "/analytics", label: "Vue globale", icon: BarChart3 },
-      { href: "/analytics/vagues", label: "Vagues", icon: LineChart },
-      { href: "/analytics/aliments", label: "Aliments", icon: BarChart3 },
-      { href: "/analytics/bacs", label: "Bacs", icon: Container },
-    ],
-    permissionRequired: Permission.DASHBOARD_VOIR,
-  },
-  {
-    label: "Administration",
-    items: [
-      { href: "/settings/sites", label: "Gestion sites", icon: Building2 },
-      { href: "/settings/alertes", label: "Alertes", icon: BellRing },
-      { href: "/settings/config-elevage", label: "Config élevage", icon: ClipboardCheck },
-      { href: "/users", label: "Utilisateurs", icon: Users },
-    ],
-    permissionRequired: Permission.SITE_GERER,
-  },
-  {
-    label: "Abonnement",
-    items: [
-      { href: "/mon-abonnement", label: "Mon abonnement", icon: CreditCard },
-      { href: "/packs", label: "Packs", icon: Boxes },
-      { href: "/activations", label: "Activations", icon: PackageCheck },
-    ],
-    permissionRequired: Permission.ABONNEMENTS_VOIR,
-  },
-];
 
 interface FarmSidebarProps {
   permissions: Permission[];
@@ -160,6 +72,95 @@ export function FarmSidebar({
   isSuperAdmin,
 }: FarmSidebarProps) {
   const pathname = usePathname();
+  const t = useTranslations("navigation");
+
+  const NAV_GROUPS: NavGroup[] = useMemo(() => [
+    {
+      labelKey: "groups.elevage",
+      items: [
+        { href: "/", labelKey: "items.dashboard", icon: LayoutDashboard },
+        { href: "/vagues", labelKey: "items.vagues", icon: Waves },
+        { href: "/bacs", labelKey: "items.bacs", icon: Container },
+        { href: "/releves", labelKey: "items.releves", icon: NotebookPen },
+        { href: "/observations", labelKey: "items.observations", icon: Eye },
+      ],
+      permissionRequired: Permission.VAGUES_VOIR,
+      moduleRequired: SiteModule.GROSSISSEMENT,
+    },
+    {
+      labelKey: "items.stock",
+      items: [
+        { href: "/stock", labelKey: "items.vueStock", icon: Package },
+        { href: "/stock/produits", labelKey: "items.produits", icon: Tag },
+        { href: "/stock/mouvements", labelKey: "items.mouvements", icon: ArrowUpDown },
+        { href: "/stock/fournisseurs", labelKey: "items.fournisseurs", icon: Truck },
+        { href: "/stock/commandes", labelKey: "items.commandes", icon: ShoppingCart },
+        { href: "/besoins", labelKey: "items.besoins", icon: ClipboardList },
+      ],
+      permissionRequired: Permission.STOCK_VOIR,
+      moduleRequired: SiteModule.INTRANTS,
+    },
+    {
+      labelKey: "items.finances",
+      items: [
+        { href: "/finances", labelKey: "items.dashboardFinances", icon: Wallet },
+        { href: "/ventes", labelKey: "items.ventesItem", icon: Banknote },
+        { href: "/factures", labelKey: "items.factures", icon: FileText },
+        { href: "/clients", labelKey: "items.clientsItem", icon: UserRound },
+        { href: "/depenses", labelKey: "items.depenses", icon: Receipt },
+      ],
+      permissionRequired: Permission.FINANCES_VOIR,
+      moduleRequired: SiteModule.VENTES,
+    },
+    {
+      labelKey: "items.alevins",
+      items: [
+        { href: "/alevins", labelKey: "items.vueAlevins", icon: Egg },
+        { href: "/alevins/reproducteurs", labelKey: "items.reproducteurs", icon: Fish },
+        { href: "/alevins/pontes", labelKey: "items.pontes", icon: Egg },
+        { href: "/alevins/lots", labelKey: "items.lots", icon: Layers },
+      ],
+      permissionRequired: Permission.ALEVINS_VOIR,
+      moduleRequired: SiteModule.REPRODUCTION,
+    },
+    {
+      labelKey: "groups.planningTasks",
+      items: [
+        { href: "/planning", labelKey: "items.planning", icon: Calendar },
+        { href: "/mes-taches", labelKey: "items.mesTaches", icon: ClipboardCheck },
+      ],
+      permissionRequired: Permission.PLANNING_VOIR,
+    },
+    {
+      labelKey: "groups.analytics",
+      items: [
+        { href: "/analytics", labelKey: "items.vueGlobale", icon: BarChart3 },
+        { href: "/analytics/vagues", labelKey: "items.vagues", icon: LineChart },
+        { href: "/analytics/aliments", labelKey: "items.aliments", icon: BarChart3 },
+        { href: "/analytics/bacs", labelKey: "items.bacs", icon: Container },
+      ],
+      permissionRequired: Permission.DASHBOARD_VOIR,
+    },
+    {
+      labelKey: "groups.administration",
+      items: [
+        { href: "/settings/sites", labelKey: "items.gestionSites", icon: Building2 },
+        { href: "/settings/alertes", labelKey: "items.alertes", icon: BellRing },
+        { href: "/settings/config-elevage", labelKey: "items.configElevage", icon: ClipboardCheck },
+        { href: "/users", labelKey: "modules.utilisateurs", icon: Users },
+      ],
+      permissionRequired: Permission.SITE_GERER,
+    },
+    {
+      labelKey: "modules.abonnement",
+      items: [
+        { href: "/mon-abonnement", labelKey: "items.monAbonnement", icon: CreditCard },
+        { href: "/packs", labelKey: "items.packs", icon: Boxes },
+        { href: "/activations", labelKey: "items.activations", icon: PackageCheck },
+      ],
+      permissionRequired: Permission.ABONNEMENTS_VOIR,
+    },
+  ], []);
 
   const visibleGroups = useMemo(() => {
     return NAV_GROUPS.map((group) => {
@@ -181,7 +182,7 @@ export function FarmSidebar({
       if (visibleItems.length === 0) return null;
       return { ...group, items: visibleItems };
     }).filter(Boolean) as (NavGroup & { items: NavItem[] })[];
-  }, [permissions, siteModules]);
+  }, [NAV_GROUPS, permissions, siteModules]);
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
@@ -223,10 +224,10 @@ export function FarmSidebar({
           // E5: if only 1 visible item, render without group header
           const showHeader = group.items.length > 1;
           return (
-            <div key={group.label}>
+            <div key={group.labelKey}>
               {showHeader && (
                 <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {group.label}
+                  {t(group.labelKey as Parameters<typeof t>[0])}
                 </p>
               )}
               <div className="space-y-0.5">
@@ -240,7 +241,7 @@ export function FarmSidebar({
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground/40 cursor-not-allowed"
                       >
                         <Icon className="h-4 w-4" />
-                        {item.label}
+                        {t(item.labelKey as Parameters<typeof t>[0])}
                       </span>
                     );
                   }
@@ -256,7 +257,7 @@ export function FarmSidebar({
                       )}
                     >
                       <Icon className="h-4 w-4" />
-                      {item.label}
+                      {t(item.labelKey as Parameters<typeof t>[0])}
                     </Link>
                   );
                 })}
@@ -269,7 +270,7 @@ export function FarmSidebar({
         {isSuperAdmin && (
           <div>
             <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Super Admin
+              {t("groups.superAdmin")}
             </p>
             <Link
               href="/backoffice"
@@ -281,7 +282,7 @@ export function FarmSidebar({
               )}
             >
               <Shield className="h-4 w-4" />
-              Backoffice
+              {t("items.backoffice")}
             </Link>
           </div>
         )}

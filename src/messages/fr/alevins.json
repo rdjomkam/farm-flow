@@ -1,6 +1,8 @@
 {
   "page": {
     "title": "Production Alevins",
+    "pontes": "Pontes",
+    "reproducteurs": "Reproducteurs",
     "tabs": {
       "reproducteurs": "Reproducteurs",
       "pontes": "Pontes",

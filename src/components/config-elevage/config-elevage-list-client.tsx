@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Settings, Star, Copy, Trash2, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function ConfigElevageListClient({ configs: initialConfigs }: Props) {
+  const t = useTranslations("config-elevage");
   const [configs, setConfigs] = useState(initialConfigs);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const configService = useConfigService();
@@ -42,7 +44,7 @@ export function ConfigElevageListClient({ configs: initialConfigs }: Props) {
         <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
         <p className="text-muted-foreground mb-4">Aucun profil de configuration.</p>
         <Link href="/settings/config-elevage/nouveau">
-          <Button>Creer un profil</Button>
+          <Button>{t("buttons.createProfile")}</Button>
         </Link>
       </div>
     );

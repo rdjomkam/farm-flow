@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Plus, Shield, Users } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/layout/header";
@@ -29,10 +30,11 @@ export default async function SiteRolesPage({
 
   await syncSystemRolePermissions(siteId);
   const roles = await getSiteRoles(siteId);
+  const t = await getTranslations("settings.page");
 
   return (
     <>
-      <Header title="Roles du site" />
+      <Header title={t("siteRoles")} />
       <div className="p-4 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <Link
@@ -53,7 +55,7 @@ export default async function SiteRolesPage({
         {roles.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
             <Shield className="h-10 w-10 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Aucun role configure.</p>
+            <p className="text-sm text-muted-foreground">{t("noRoleConfigured")}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-2">

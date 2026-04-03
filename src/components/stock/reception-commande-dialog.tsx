@@ -348,7 +348,7 @@ export function ReceptionCommandeDialog({
                 <span className="text-sm truncate flex-1">{selectedFile.name}</span>
                 <button
                   type="button"
-                  aria-label="Supprimer le fichier"
+                  aria-label={t("buttons.deleteFile")}
                   className="min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive"
                   onClick={() => {
                     setSelectedFile(null);

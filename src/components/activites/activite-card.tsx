@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   Utensils,
   Scale,
@@ -63,7 +64,6 @@ interface PrioriteConfig {
   badgeBgClass: string;
   badgeTextClass: string;
   dotClass: string;
-  label: string;
 }
 
 function getPrioriteConfig(priorite: number): PrioriteConfig {
@@ -75,7 +75,6 @@ function getPrioriteConfig(priorite: number): PrioriteConfig {
       badgeBgClass: "bg-danger/10",
       badgeTextClass: "text-danger",
       dotClass: "bg-danger",
-      label: "Urgente",
     };
   }
   if (priorite === 2) {
@@ -86,7 +85,6 @@ function getPrioriteConfig(priorite: number): PrioriteConfig {
       badgeBgClass: "bg-warning/10",
       badgeTextClass: "text-warning",
       dotClass: "bg-warning",
-      label: "Moyenne",
     };
   }
   return {
@@ -96,7 +94,6 @@ function getPrioriteConfig(priorite: number): PrioriteConfig {
     badgeBgClass: "bg-accent-blue/10",
     badgeTextClass: "text-accent-blue",
     dotClass: "bg-accent-blue",
-    label: "Basse",
   };
 }
 
@@ -117,21 +114,6 @@ function getStatutBadgeVariant(
   }
 }
 
-function getStatutLabel(statut: StatutActivite): string {
-  switch (statut) {
-    case StatutActivite.PLANIFIEE:
-      return "Planifiee";
-    case StatutActivite.TERMINEE:
-      return "Terminee";
-    case StatutActivite.ANNULEE:
-      return "Annulee";
-    case StatutActivite.EN_RETARD:
-      return "En retard";
-    default:
-      return statut;
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Composant ActiviteCard
 // ---------------------------------------------------------------------------
@@ -142,6 +124,9 @@ export interface ActiviteCardProps {
 }
 
 export function ActiviteCard({ activite, permissions }: ActiviteCardProps) {
+  const t = useTranslations("activites");
+  const tPlanning = useTranslations("planning");
+
   const priorite = activite.priorite ?? 1;
   const config = getPrioriteConfig(priorite);
   const isEnRetard = activite.statut === StatutActivite.EN_RETARD;
@@ -149,6 +134,27 @@ export function ActiviteCard({ activite, permissions }: ActiviteCardProps) {
   const typeActivite = activite.typeActivite as TypeActivite;
   const icon = typeActiviteIcons[typeActivite] ?? <MoreHorizontal className="h-4 w-4" />;
   const typeLabel = typeActiviteLabels[typeActivite] ?? activite.typeActivite;
+
+  function getPrioriteLabel(): string {
+    if (priorite >= 3) return t("filters.priorities.URGENTE");
+    if (priorite === 2) return t("filters.priorities.MOYENNE");
+    return t("filters.priorities.BASSE");
+  }
+
+  function getStatutLabel(statut: StatutActivite): string {
+    switch (statut) {
+      case StatutActivite.PLANIFIEE:
+        return tPlanning("statuts.PLANIFIEE");
+      case StatutActivite.TERMINEE:
+        return tPlanning("statuts.TERMINEE");
+      case StatutActivite.ANNULEE:
+        return tPlanning("statuts.ANNULEE");
+      case StatutActivite.EN_RETARD:
+        return t("statuses.late");
+      default:
+        return statut;
+    }
+  }
 
   const canComplete =
     permissions.includes(Permission.PLANNING_GERER) &&
@@ -265,7 +271,7 @@ export function ActiviteCard({ activite, permissions }: ActiviteCardProps) {
                 " "
               )}
             />
-            {config.label}
+            {getPrioriteLabel()}
           </span>
         </div>
 

@@ -39,23 +39,16 @@ function statutPaiementVariant(
   }
 }
 
-function statutPaiementLabel(statut: StatutPaiementAbo): string {
-  switch (statut) {
-    case StatutPaiementAbo.EN_ATTENTE:
-      return "En attente";
-    case StatutPaiementAbo.INITIE:
-      return "Initié";
-    case StatutPaiementAbo.CONFIRME:
-      return "Confirmé";
-    case StatutPaiementAbo.ECHEC:
-      return "Échoué";
-    case StatutPaiementAbo.REMBOURSE:
-      return "Remboursé";
-    case StatutPaiementAbo.EXPIRE:
-      return "Expiré";
-    default:
-      return statut;
-  }
+function getStatutPaiementI18nKey(statut: StatutPaiementAbo): string {
+  const map: Record<StatutPaiementAbo, string> = {
+    [StatutPaiementAbo.EN_ATTENTE]: "paiements.statuts.EN_ATTENTE",
+    [StatutPaiementAbo.INITIE]: "paiements.statuts.INITIE",
+    [StatutPaiementAbo.CONFIRME]: "paiements.statuts.CONFIRME",
+    [StatutPaiementAbo.ECHEC]: "paiements.statuts.ECHEC",
+    [StatutPaiementAbo.REMBOURSE]: "paiements.statuts.REMBOURSE",
+    [StatutPaiementAbo.EXPIRE]: "paiements.statuts.EXPIRE",
+  };
+  return map[statut] ?? statut;
 }
 
 function truncateRef(ref: string | null): string {
@@ -69,7 +62,7 @@ export async function PaiementsHistoryList({ paiements }: PaiementsHistoryListPr
   if (paiements.length === 0) {
     return (
       <p className="text-sm text-muted-foreground text-center py-4">
-        Aucun paiement enregistré.
+        {t("paiements.none")}
       </p>
     );
   }
@@ -89,9 +82,9 @@ export async function PaiementsHistoryList({ paiements }: PaiementsHistoryListPr
                 </span>
                 <Badge
                   variant={statutPaiementVariant(paiement.statut)}
-                  aria-label={`Statut : ${statutPaiementLabel(paiement.statut)}`}
+                  aria-label={`Statut : ${t(getStatutPaiementI18nKey(paiement.statut) as Parameters<typeof t>[0])}`}
                 >
-                  {statutPaiementLabel(paiement.statut)}
+                  {t(getStatutPaiementI18nKey(paiement.statut) as Parameters<typeof t>[0])}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
@@ -101,7 +94,7 @@ export async function PaiementsHistoryList({ paiements }: PaiementsHistoryListPr
               </p>
               {paiement.referenceExterne && (
                 <p className="text-xs text-muted-foreground mt-0.5 font-mono">
-                  Réf : {truncateRef(paiement.referenceExterne)}
+                  {t("paiements.ref")} {truncateRef(paiement.referenceExterne)}
                 </p>
               )}
             </div>
@@ -111,7 +104,7 @@ export async function PaiementsHistoryList({ paiements }: PaiementsHistoryListPr
               </p>
               {paiement.dateConfirmation && (
                 <p className="text-xs text-success mt-0.5">
-                  Confirmé le {new Date(paiement.dateConfirmation).toLocaleDateString("fr-FR")}
+                  {t("paiements.confirmedOn")} {new Date(paiement.dateConfirmation).toLocaleDateString("fr-FR")}
                 </p>
               )}
             </div>

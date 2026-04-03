@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { ClipboardCheck, AlertTriangle, CalendarDays, Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,40 +29,6 @@ interface Filters {
   statut: StatutActivite | "TOUS";
   priorite: "1" | "2" | "3" | "TOUS";
 }
-
-// ---------------------------------------------------------------------------
-// Labels de filtre
-// ---------------------------------------------------------------------------
-
-const typeActiviteFilterLabels: Record<TypeActivite | "TOUS", string> = {
-  TOUS: "Tous les types",
-  [TypeActivite.ALIMENTATION]: "Alimentation",
-  [TypeActivite.BIOMETRIE]: "Biometrie",
-  [TypeActivite.QUALITE_EAU]: "Qualite eau",
-  [TypeActivite.COMPTAGE]: "Comptage",
-  [TypeActivite.NETTOYAGE]: "Nettoyage",
-  [TypeActivite.TRAITEMENT]: "Traitement",
-  [TypeActivite.RECOLTE]: "Recolte",
-  [TypeActivite.TRI]: "Tri",
-  [TypeActivite.MEDICATION]: "Medication",
-  [TypeActivite.RENOUVELLEMENT]: "Renouvellement eau",
-  [TypeActivite.AUTRE]: "Autre",
-};
-
-const statutFilterLabels: Record<StatutActivite | "TOUS", string> = {
-  TOUS: "Tous les statuts",
-  [StatutActivite.PLANIFIEE]: "Planifiee",
-  [StatutActivite.EN_RETARD]: "En retard",
-  [StatutActivite.TERMINEE]: "Terminee",
-  [StatutActivite.ANNULEE]: "Annulee",
-};
-
-const prioriteFilterLabels: Record<"1" | "2" | "3" | "TOUS", string> = {
-  TOUS: "Toutes les priorites",
-  "3": "Urgente (critique)",
-  "2": "Moyenne",
-  "1": "Basse",
-};
 
 // ---------------------------------------------------------------------------
 // Tri : priorite desc, puis dateDebut asc
@@ -131,6 +98,8 @@ export function ActiviteListClient({
   activites,
   permissions,
 }: ActiviteListClientProps) {
+  const t = useTranslations("activites");
+
   const [filters, setFilters] = useState<Filters>({
     typeActivite: "TOUS",
     statut: "TOUS",
@@ -184,6 +153,37 @@ export function ActiviteListClient({
     setFilters({ typeActivite: "TOUS", statut: "TOUS", priorite: "TOUS" });
   }
 
+  // Filter options built from enums + translations
+  const typeActiviteOptions: { value: TypeActivite | "TOUS"; label: string }[] = [
+    { value: "TOUS", label: t("filters.allTypes") },
+    { value: TypeActivite.ALIMENTATION, label: t("filters.types.ALIMENTATION") },
+    { value: TypeActivite.BIOMETRIE, label: t("filters.types.BIOMETRIE") },
+    { value: TypeActivite.QUALITE_EAU, label: t("filters.types.QUALITE_EAU") },
+    { value: TypeActivite.COMPTAGE, label: t("filters.types.COMPTAGE") },
+    { value: TypeActivite.NETTOYAGE, label: t("filters.types.NETTOYAGE") },
+    { value: TypeActivite.TRAITEMENT, label: t("filters.types.TRAITEMENT") },
+    { value: TypeActivite.RECOLTE, label: t("filters.types.RECOLTE") },
+    { value: TypeActivite.TRI, label: t("filters.types.TRI") },
+    { value: TypeActivite.MEDICATION, label: t("filters.types.MEDICATION") },
+    { value: TypeActivite.RENOUVELLEMENT, label: t("filters.types.RENOUVELLEMENT") },
+    { value: TypeActivite.AUTRE, label: t("filters.types.AUTRE") },
+  ];
+
+  const statutOptions: { value: StatutActivite | "TOUS"; label: string }[] = [
+    { value: "TOUS", label: t("filters.allStatuses") },
+    { value: StatutActivite.PLANIFIEE, label: t("filters.statuses.PLANIFIEE") },
+    { value: StatutActivite.EN_RETARD, label: t("filters.statuses.EN_RETARD") },
+    { value: StatutActivite.TERMINEE, label: t("filters.statuses.TERMINEE") },
+    { value: StatutActivite.ANNULEE, label: t("filters.statuses.ANNULEE") },
+  ];
+
+  const prioriteOptions: { value: "1" | "2" | "3" | "TOUS"; label: string }[] = [
+    { value: "TOUS", label: t("filters.allPriorities") },
+    { value: "3", label: t("filters.priorities.URGENTE") },
+    { value: "2", label: t("filters.priorities.MOYENNE") },
+    { value: "1", label: t("filters.priorities.BASSE") },
+  ];
+
   // -------------------------------------------------------------------
   // Render
   // -------------------------------------------------------------------
@@ -212,11 +212,15 @@ export function ActiviteListClient({
                 todayUrgentes > 0 ? "text-danger" : "text-primary",
               ].join(" ")}
             >
-              {todayCount} tache{todayCount > 1 ? "s" : ""} aujourd&apos;hui
+              {todayCount > 1
+                ? t("summary.tasksTodayPlural", { count: todayCount })
+                : t("summary.tasksToday", { count: todayCount })}
               {todayUrgentes > 0 && (
                 <span className="ml-1">
-                  &mdash; {todayUrgentes} urgente
-                  {todayUrgentes > 1 ? "s" : ""}
+                  &mdash; {todayUrgentes}{" "}
+                  {todayUrgentes > 1
+                    ? t("summary.urgentPlural")
+                    : t("summary.urgent")}
                 </span>
               )}
             </p>
@@ -237,7 +241,7 @@ export function ActiviteListClient({
           className="gap-1.5"
         >
           <Filter className="h-4 w-4" />
-          Filtres
+          {t("buttons.filters")}
           {hasActiveFilters && (
             <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
               {[
@@ -254,14 +258,14 @@ export function ActiviteListClient({
       {showFilters && (
         <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Filtres</p>
+            <p className="text-sm font-medium">{t("filterPanel.title")}</p>
             {hasActiveFilters && (
               <button
                 onClick={resetFilters}
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
               >
                 <X className="h-3 w-3" />
-                Reinitialiser
+                {t("buttons.resetFilters")}
               </button>
             )}
           </div>
@@ -281,14 +285,9 @@ export function ActiviteListClient({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {(
-                  Object.keys(typeActiviteFilterLabels) as (
-                    | TypeActivite
-                    | "TOUS"
-                  )[]
-                ).map((key) => (
-                  <SelectItem key={key} value={key}>
-                    {typeActiviteFilterLabels[key]}
+                {typeActiviteOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -308,11 +307,9 @@ export function ActiviteListClient({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {(
-                  Object.keys(statutFilterLabels) as (StatutActivite | "TOUS")[]
-                ).map((key) => (
-                  <SelectItem key={key} value={key}>
-                    {statutFilterLabels[key]}
+                {statutOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -332,16 +329,9 @@ export function ActiviteListClient({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {(
-                  Object.keys(prioriteFilterLabels) as (
-                    | "1"
-                    | "2"
-                    | "3"
-                    | "TOUS"
-                  )[]
-                ).map((key) => (
-                  <SelectItem key={key} value={key}>
-                    {prioriteFilterLabels[key]}
+                {prioriteOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -354,11 +344,11 @@ export function ActiviteListClient({
       {filtered.length === 0 && (
         <EmptyState
           icon={<ClipboardCheck className="h-8 w-8" />}
-          title="Aucune activite"
+          title={t("emptyState.noActivities")}
           description={
             hasActiveFilters
-              ? "Aucune activite ne correspond aux filtres selectionnes."
-              : "Vous n'avez pas de tache assignee pour le moment."
+              ? t("emptyState.noActivitiesFiltered")
+              : t("emptyState.noTasksAssigned")
           }
         />
       )}
@@ -369,7 +359,7 @@ export function ActiviteListClient({
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="h-4 w-4 text-danger" />
             <h2 className="text-sm font-semibold text-danger">
-              En retard ({enRetard.length})
+              {t("sections.late", { count: enRetard.length })}
             </h2>
           </div>
           <div className="flex flex-col gap-3">
@@ -386,7 +376,7 @@ export function ActiviteListClient({
           <div className="flex items-center gap-2 mb-3">
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
             <h2 className="text-sm font-semibold text-muted-foreground">
-              Planifiees ({planifiees.length})
+              {t("sections.planned", { count: planifiees.length })}
             </h2>
           </div>
           <div className="flex flex-col gap-3">
@@ -403,7 +393,7 @@ export function ActiviteListClient({
           <div className="flex items-center gap-2 mb-3">
             <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
             <h2 className="text-sm font-semibold text-muted-foreground">
-              Autres ({autres.length})
+              {t("sections.other", { count: autres.length })}
             </h2>
           </div>
           <div className="flex flex-col gap-3">

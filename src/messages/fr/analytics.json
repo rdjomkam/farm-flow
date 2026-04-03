@@ -1,4 +1,16 @@
 {
+  "page": {
+    "alimAnalytics": "Analytiques aliments",
+    "alimSimulator": "Simulateur aliments",
+    "alimDetail": "Détail aliment",
+    "bacDetail": "Détail bac",
+    "bacAnalytics": "Analytiques par bac"
+  },
+  "emptyStates": {
+    "noData": "Aucune donnée",
+    "noWavesInProgress": "Aucune vague en cours",
+    "noDataAvailable": "Aucune donnée disponible"
+  },
   "benchmarks": {
     "fcr": {
       "label": "ICA",

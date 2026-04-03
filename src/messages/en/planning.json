@@ -1,4 +1,9 @@
 {
+  "page": {
+    "newActivity": "New activity",
+    "taskDetail": "Activity detail",
+    "myTasks": "My tasks"
+  },
   "jours": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
   "mois": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
   "chargement": "Loading...",
@@ -100,6 +105,12 @@
     "noteCompletion": "Completion note",
     "annuler": "Cancel",
     "enregistrer": "Save"
+  },
+  "emptyState": {
+    "noTasks": "No pending tasks"
+  },
+  "options": {
+    "noneOneTime": "None (one-time)"
   },
   "completerActivite": {
     "trigger": "Complete",

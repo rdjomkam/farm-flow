@@ -158,7 +158,7 @@ export function AbonnementsAdminList({
             router.push(buildUrl({ statut: val || null, page: "1" }));
           }}
         >
-          <option value="">Tous les statuts</option>
+          <option value="">{t("admin.allStatuses")}</option>
           {validStatuts.map((s) => (
             <option key={s} value={s}>
               {t(STATUT_ABONNEMENT_LABELS[s])}
@@ -173,7 +173,7 @@ export function AbonnementsAdminList({
             router.push(buildUrl({ planId: val || null, page: "1" }));
           }}
         >
-          <option value="">Tous les plans</option>
+          <option value="">{t("admin.allPlans")}</option>
           {plans.map((p) => (
             <option key={p.id} value={p.id}>
               {t(PLAN_LABELS[p.typePlan])}
@@ -186,7 +186,7 @@ export function AbonnementsAdminList({
             className="text-xs min-h-[40px]"
             onClick={() => router.push(buildUrl({ statut: null, planId: null, page: "1" }))}
           >
-            Réinitialiser
+            {t("admin.reset")}
           </Button>
         )}
       </div>
@@ -242,12 +242,12 @@ export function AbonnementsAdminList({
                             onClick={() => setActivationId(a.id)}
                           >
                             <CheckCircle className="h-3 w-3" />
-                            Activer
+                            {t("admin.activate")}
                           </Button>
                         </DialogTrigger>
                         <DialogContent>
                           <DialogHeader>
-                            <DialogTitle>Forcer l&apos;activation</DialogTitle>
+                            <DialogTitle>{t("admin.forceActivationTitle")}</DialogTitle>
                             <DialogDescription>
                               Activer manuellement l&apos;abonnement pour le site{" "}
                               <strong>{a.site.name}</strong> ?
@@ -255,14 +255,14 @@ export function AbonnementsAdminList({
                           </DialogHeader>
                           <DialogFooter>
                             <Button variant="outline" onClick={() => setActivationId(null)} className="min-h-[44px]">
-                              Annuler
+                              {t("admin.dialogCancel")}
                             </Button>
                             <Button
                               onClick={() => handleForceActivation(a.id)}
                               disabled={activationLoading}
                               className="min-h-[44px]"
                             >
-                              {activationLoading ? "Activation..." : "Confirmer"}
+                              {activationLoading ? t("admin.activation") : t("admin.dialogConfirm")}
                             </Button>
                           </DialogFooter>
                         </DialogContent>
@@ -287,12 +287,12 @@ export function AbonnementsAdminList({
                             onClick={() => setAnnulationId(a.id)}
                           >
                             <AlertCircle className="h-3 w-3" />
-                            Annuler
+                            {t("buttons.cancel")}
                           </Button>
                         </DialogTrigger>
                         <DialogContent>
                           <DialogHeader>
-                            <DialogTitle>Annuler l&apos;abonnement</DialogTitle>
+                            <DialogTitle>{t("dialogs.cancelTitle")}</DialogTitle>
                             <DialogDescription>
                               Annuler l&apos;abonnement de <strong>{a.site.name}</strong> ? Cette
                               action est irréversible.
@@ -307,7 +307,7 @@ export function AbonnementsAdminList({
                               onClick={() => setAnnulationId(null)}
                               className="min-h-[44px]"
                             >
-                              Conserver
+                              {t("buttons.keep")}
                             </Button>
                             <Button
                               variant="outline"
@@ -315,7 +315,7 @@ export function AbonnementsAdminList({
                               onClick={() => handleAnnuler(a.id)}
                               disabled={annulationLoading}
                             >
-                              {annulationLoading ? "Annulation..." : "Confirmer"}
+                              {annulationLoading ? t("buttons.cancelling") : t("admin.dialogConfirm")}
                             </Button>
                           </DialogFooter>
                         </DialogContent>
@@ -328,7 +328,7 @@ export function AbonnementsAdminList({
             {abonnements.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
-                  Aucun abonnement trouvé.
+                  {t("admin.noSubscriptionFound")}
                 </td>
               </tr>
             )}
@@ -340,7 +340,7 @@ export function AbonnementsAdminList({
       <div className="space-y-3 md:hidden">
         {abonnements.length === 0 && (
           <p className="text-center text-sm text-muted-foreground py-8">
-            Aucun abonnement trouvé.
+            {t("admin.noSubscriptionFound")}
           </p>
         )}
         {abonnements.map((a) => (

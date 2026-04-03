@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Info } from "lucide-react";
 import {
   Dialog,
@@ -123,12 +124,13 @@ function StatutSection({ data }: { data: GompertzPanelData }) {
 // ─── Section 2: Paramètres ────────────────────────────────────────────────────
 
 function ParamsSection({ data }: { data: GompertzPanelData }) {
+  const t = useTranslations("vagues");
   const { wInfinity, k, ti } = data.params;
   const kInfo = kComment(k);
 
   return (
     <div>
-      <SectionTitle>Parametres du modele</SectionTitle>
+      <SectionTitle>{t("gompertz.modelParams")}</SectionTitle>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {/* W∞ */}
         <Card>
@@ -183,13 +185,14 @@ function ParamsSection({ data }: { data: GompertzPanelData }) {
 // ─── Section 3: Prédictions vs Réalité ────────────────────────────────────────
 
 function ComparaisonSection({ data }: { data: GompertzPanelData }) {
+  const t = useTranslations("vagues");
   const rows = data.comparaison;
 
   if (rows.length === 0) {
     return (
       <div>
         <SectionTitle>Predictions vs Realite</SectionTitle>
-        <p className="text-sm text-muted-foreground">Aucune mesure biometrique disponible.</p>
+        <p className="text-sm text-muted-foreground">{t("gompertz.noBiometricData")}</p>
       </div>
     );
   }

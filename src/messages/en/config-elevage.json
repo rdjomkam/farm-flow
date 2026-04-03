@@ -102,6 +102,9 @@
   "gompertz": {
     "hint": "These values serve as a starting point for calibration. Leave empty to use the system's default values."
   },
+  "buttons": {
+    "createProfile": "Create a profile"
+  },
   "form": {
     "partirProfil": "Start from an existing profile (optional)",
     "profilFao": "-- FAO Clarias default values --",

@@ -1,4 +1,60 @@
 {
+  "filters": {
+    "allTypes": "All types",
+    "allStatuses": "All statuses",
+    "allPriorities": "All priorities",
+    "types": {
+      "ALIMENTATION": "Feeding",
+      "BIOMETRIE": "Biometrics",
+      "QUALITE_EAU": "Water quality",
+      "COMPTAGE": "Count",
+      "NETTOYAGE": "Cleaning",
+      "TRAITEMENT": "Treatment",
+      "RECOLTE": "Harvest",
+      "TRI": "Sorting",
+      "MEDICATION": "Medication",
+      "RENOUVELLEMENT": "Water renewal",
+      "AUTRE": "Other"
+    },
+    "statuses": {
+      "PLANIFIEE": "Scheduled",
+      "EN_RETARD": "Late",
+      "TERMINEE": "Completed",
+      "ANNULEE": "Cancelled"
+    },
+    "priorities": {
+      "URGENTE": "Urgent (critical)",
+      "MOYENNE": "Medium",
+      "BASSE": "Low"
+    }
+  },
+  "summary": {
+    "tasksToday": "{count} task today",
+    "tasksTodayPlural": "{count} tasks today",
+    "urgent": "urgent",
+    "urgentPlural": "urgent"
+  },
+  "buttons": {
+    "filters": "Filters",
+    "resetFilters": "Reset"
+  },
+  "filterPanel": {
+    "title": "Filters"
+  },
+  "emptyState": {
+    "noActivities": "No activities",
+    "noActivitiesFiltered": "No activities match the selected filters.",
+    "noTasksAssigned": "You have no assigned tasks at the moment."
+  },
+  "sections": {
+    "late": "Late ({count})",
+    "planned": "Scheduled ({count})",
+    "other": "Other ({count})"
+  },
+  "statuses": {
+    "late": "Late",
+    "planned": "Scheduled"
+  },
   "phases": {
     "ACCLIMATATION": "Acclimatation",
     "CROISSANCE_DEBUT": "Early growth",

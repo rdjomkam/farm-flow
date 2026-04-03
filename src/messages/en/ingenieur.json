@@ -1,4 +1,25 @@
 {
+  "page": {
+    "monitoring": "Client monitoring",
+    "portfolio": "My Wallet"
+  },
+  "monitoring": {
+    "noActiveAlerts": "No active alerts on client sites.",
+    "noActiveAlertsClient": "No active alerts for this client.",
+    "noWavesInProgress": "No waves in progress.",
+    "noNotesForClient": "No notes for this client.",
+    "packActive": "Active pack",
+    "packExpired": "Expired pack",
+    "packSuspended": "Suspended pack",
+    "back": "Back"
+  },
+  "greeting": "Hello, {name}",
+  "emptyStates": {
+    "noTasksToday": "No tasks for today."
+  },
+  "statuses": {
+    "late": "Late"
+  },
   "clientCard": {
     "statuts": {
       "ACTIVE": "Active",
