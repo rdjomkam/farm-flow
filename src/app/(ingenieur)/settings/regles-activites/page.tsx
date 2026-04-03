@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Zap, Variable } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { AccessDenied } from "@/components/ui/access-denied";
@@ -20,10 +21,11 @@ export default async function ReglesActivitesPage() {
   if (!permissions) return <AccessDenied />;
 
   const regles = await getReglesActivites(session.activeSiteId);
+  const t = await getTranslations("settings.page");
 
   return (
     <>
-      <Header title="Regles d'activites">
+      <Header title={t("activityRules")}>
         <Zap className="h-5 w-5 text-muted-foreground" />
       </Header>
       <div className="p-4">

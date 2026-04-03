@@ -55,7 +55,8 @@ export default async function IngenieurVagueDetailPage({
   if (!vague) notFound();
 
   const indicateurs = await getIndicateursVague(clientSiteId, vagueId);
-  const t = await getTranslations("ingenieur.monitoring");
+  const tVagues = await getTranslations("vagues");
+  const tIngenieur = await getTranslations("ingenieur");
 
   const statut = vague.statut as StatutVague;
 
