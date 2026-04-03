@@ -141,6 +141,20 @@ export function PoidsChart({
     gompertzConfidence !== "INSUFFICIENT_DATA" &&
     data.some((d) => d.poidsGompertz != null);
 
+  /** Max Y for prediction chart — rounded up to nearest 50 or 100 */
+  const predictionMaxY = useMemo(() => {
+    const maxVal = Math.max(
+      ...data.map((d) => d.poidsGompertz ?? 0),
+      ...data.map((d) => d.poidsMoyen ?? 0)
+    );
+    if (maxVal <= 0) return 100;
+    const step = maxVal > 500 ? 100 : 50;
+    return Math.ceil(maxVal / step) * step;
+  }, [data]);
+
+  const predictionTickFormatter = (v: number) =>
+    v >= 1000 ? `${(v / 1000).toFixed(1)}kg` : `${v}g`;
+
   const panelData =
     hasGompertz &&
     gompertzParams != null &&
@@ -239,8 +253,9 @@ export function PoidsChart({
       />
       <YAxis
         tick={{ fontSize: 11 }}
-        tickFormatter={(v) => `${v}g`}
-        width={42}
+        tickFormatter={predictionTickFormatter}
+        width={52}
+        domain={[0, predictionMaxY]}
       />
       <Tooltip content={tooltipContent} />
       <Line
