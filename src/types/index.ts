@@ -37,6 +37,8 @@ export {
   StatutDepense,
   FrequenceRecurrence,
   MotifFraisSupp,
+  TypeAjustementDepense,
+  ActionAjustementFrais,
   // Sprint 17 — Besoins
   StatutBesoins,
   UniteBesoin,
@@ -334,6 +336,8 @@ export type {
   PaiementDepenseResponse,
   AjusterDepenseDTO,
   AjustementDepenseResponse,
+  AjusterFraisDepenseDTO,
+  AjustementFraisDepenseResponse,
 } from "./api";
 // Sprint 17 — Besoins
 export type {

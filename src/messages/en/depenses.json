@@ -85,7 +85,18 @@
     "raisonRequise": "Reason is required",
     "montantInferieur": "Amount cannot be less than the amount already paid",
     "enCours": "Processing...",
-    "historique": "Adjustment history"
+    "historique": "Adjustment history",
+    "tabMontant": "Amount",
+    "tabFrais": "Fees",
+    "ajouterFrais": "Add fee",
+    "modifierFrais": "Edit fee",
+    "supprimerFrais": "Delete fee",
+    "paiementDu": "Payment from",
+    "fraisModifie": "Fee modified",
+    "fraisSupprime": "Fee deleted",
+    "fraisAjoute": "Fee added",
+    "selectPaiement": "Select a payment",
+    "aucunFrais": "No additional fees"
   },
   "motif": {
     "TRANSPORT": "Transport",

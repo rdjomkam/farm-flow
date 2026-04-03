@@ -88,6 +88,8 @@ import {
   MethodeComptage,
   ModePaiement,
   MotifFraisSupp,
+  TypeAjustementDepense,
+  ActionAjustementFrais,
   OperateurCondition,
   PeriodeFacturation,
   PhaseElevage,
@@ -138,6 +140,7 @@ import type {
   ConfigElevageWithRelations,
   AjustementDepense,
   Depense,
+  FraisPaiementDepense,
   Facture,
   Fournisseur,
   LigneCommande,
@@ -1357,6 +1360,34 @@ export interface AjusterDepenseDTO {
 export interface AjustementDepenseResponse {
   depense: Depense;
   ajustement: AjustementDepense;
+}
+
+/** DTO pour ajuster un frais supplementaire d'un paiement de depense */
+export interface AjusterFraisDepenseDTO {
+  /** ID du paiement auquel appartient le frais */
+  paiementId: string;
+  /** Action a effectuer : AJOUTE, MODIFIE ou SUPPRIME */
+  action: ActionAjustementFrais;
+  /** ID du frais a modifier ou supprimer (obligatoire pour MODIFIE et SUPPRIME) */
+  fraisId?: string;
+  /** Motif du frais (obligatoire pour AJOUTE, optionnel pour MODIFIE) */
+  motif?: MotifFraisSupp;
+  /** Montant du frais (obligatoire pour AJOUTE et MODIFIE, doit etre > 0) */
+  montant?: number;
+  /** Notes libres (optionnel) */
+  notes?: string | null;
+  /** Raison justifiant l'ajustement (obligatoire pour l'audit trail) */
+  raison: string;
+}
+
+/** Reponse d'un ajustement de frais supplementaire */
+export interface AjustementFraisDepenseResponse {
+  /** Le frais resultant (null pour SUPPRIME) */
+  frais: FraisPaiementDepense | null;
+  /** Enregistrement d'audit de l'ajustement */
+  ajustement: AjustementDepense;
+  /** Nouveau total des frais supplementaires actifs pour la depense */
+  montantFraisSupp: number;
 }
 
 // ---------------------------------------------------------------------------

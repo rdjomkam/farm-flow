@@ -13,6 +13,8 @@ import type {
   PaiementDepenseResponse,
   AjusterDepenseDTO,
   AjustementDepenseResponse,
+  AjusterFraisDepenseDTO,
+  AjustementFraisDepenseResponse,
   DepenseRecurrenteWithRelations,
   CreateDepenseRecurrenteDTO,
   UpdateDepenseRecurrenteDTO,
@@ -162,6 +164,21 @@ export function useDepenseService() {
           body: JSON.stringify(dto),
         },
         { successMessage: "Montant ajuste." }
+      ),
+    [call]
+  );
+
+  /** Ajuster un frais supplementaire d'un paiement de depense (audit trail) */
+  const ajusterFraisDepense = useCallback(
+    (depenseId: string, dto: AjusterFraisDepenseDTO) =>
+      call<AjustementFraisDepenseResponse>(
+        `/api/depenses/${depenseId}/ajustements/frais`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dto),
+        },
+        { successMessage: "Frais ajuste." }
       ),
     [call]
   );
@@ -339,6 +356,7 @@ export function useDepenseService() {
     deleteFactureDepense,
     addPaiementDepense,
     ajusterDepense,
+    ajusterFraisDepense,
     listDepensesRecurrentes,
     createDepenseRecurrente,
     updateDepenseRecurrente,

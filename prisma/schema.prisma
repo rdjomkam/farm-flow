@@ -313,6 +313,17 @@ enum FrequenceRecurrence {
   ANNUEL
 }
 
+enum TypeAjustementDepense {
+  MONTANT_TOTAL
+  FRAIS_SUPP
+}
+
+enum ActionAjustementFrais {
+  AJOUTE
+  MODIFIE
+  SUPPRIME
+}
+
 enum StatutBesoins {
   SOUMISE
   APPROUVEE
@@ -478,78 +489,84 @@ enum ComportementAlimentaire {
 // ──────────────────────────────────────────
 
 model Site {
-  id             String           @id @default(cuid())
-  name           String
-  address        String?
-  isActive       Boolean          @default(true)
-  supervised     Boolean          @default(false)
-  enabledModules SiteModule[]     @default([])
-  members      SiteMember[]
-  roles        SiteRole[]
-  bacs         Bac[]
-  vagues       Vague[]
-  releves      Releve[]
-  sessions     Session[]
-  fournisseurs Fournisseur[]
-  produits     Produit[]
-  mouvements           MouvementStock[]
-  commandes            Commande[]
-  releveConsommations  ReleveConsommation[]
-  clients              Client[]
-  ventes               Vente[]
-  factures             Facture[]
-  paiements            Paiement[]
-  reproducteurs        Reproducteur[]
-  pontes               Ponte[]
-  lotsAlevins          LotAlevins[]
-  configAlertes        ConfigAlerte[]
-  notifications        Notification[]
-  activites            Activite[]
-  depenses             Depense[]
-  paiementsDepense     PaiementDepense[]
-  fraisPaiementDepense FraisPaiementDepense[]
-  ajustementsDepense   AjustementDepense[]
-  depensesRecurrentes  DepenseRecurrente[]
-  listesBesoins        ListeBesoins[]
-  configsElevage       ConfigElevage[]
+  id                     String                   @id @default(cuid())
+  name                   String
+  address                String?
+  isActive               Boolean                  @default(true)
+  supervised             Boolean                  @default(false)
+  enabledModules         SiteModule[]             @default([])
+  members                SiteMember[]
+  roles                  SiteRole[]
+  bacs                   Bac[]
+  vagues                 Vague[]
+  releves                Releve[]
+  sessions               Session[]
+  fournisseurs           Fournisseur[]
+  produits               Produit[]
+  mouvements             MouvementStock[]
+  commandes              Commande[]
+  releveConsommations    ReleveConsommation[]
+  clients                Client[]
+  ventes                 Vente[]
+  factures               Facture[]
+  paiements              Paiement[]
+  reproducteurs          Reproducteur[]
+  pontes                 Ponte[]
+  lotsAlevins            LotAlevins[]
+  configAlertes          ConfigAlerte[]
+  notifications          Notification[]
+  activites              Activite[]
+  depenses               Depense[]
+  paiementsDepense       PaiementDepense[]
+  fraisPaiementDepense   FraisPaiementDepense[]
+  ajustementsDepense     AjustementDepense[]
+  depensesRecurrentes    DepenseRecurrente[]
+  listesBesoins          ListeBesoins[]
+  configsElevage         ConfigElevage[]
   // Sprint 20 — Packs & Provisioning
-  packs                Pack[]
-  packActivationsVendeur   PackActivation[]  @relation("PackActivationsVendeur")
-  packActivationsClient    PackActivation[]  @relation("PackActivationsClient")
+  packs                  Pack[]
+  packActivationsVendeur PackActivation[]         @relation("PackActivationsVendeur")
+  packActivationsClient  PackActivation[]         @relation("PackActivationsClient")
   // Sprint 21 — Moteur d'activités
-  reglesActivite       RegleActivite[]
+  reglesActivite         RegleActivite[]
   // Sprint 23 — Monitoring Ingénieur
-  notesRecues          NoteIngenieur[]  @relation("NotesRecues")
-  notes                NoteIngenieur[]  @relation("NotesDKFarm")
+  notesRecues            NoteIngenieur[]          @relation("NotesRecues")
+  notes                  NoteIngenieur[]          @relation("NotesDKFarm")
   // Sprint 24 — Calibrage
-  calibrages           Calibrage[]
+  calibrages             Calibrage[]
   // Sprint 26 — Modification tracking (ADR-014/ADR-015)
-  releveModifications  ReleveModification[]
+  releveModifications    ReleveModification[]
   calibrageModifications CalibrageModification[]
   // Sprint FD — Feed Analytics
   historiqueNutritionnel HistoriqueNutritionnel[]
   // Sprint Gompertz
   gompertzVagues         GompertzVague[]
   // Sprint 30 — Abonnements
-  abonnements          Abonnement[]              @relation("AbonnementsSite")
-  paiementsAbo         PaiementAbonnement[]      @relation("PaiementsAboSite")
-  remises              Remise[]                  @relation("RemisesSite")
-  commissions          CommissionIngenieur[]     @relation("CommissionsDKFarm")
-  commissionsClient    CommissionIngenieur[]     @relation("CommissionsSiteClient")
-  portefeuilles        PortefeuilleIngenieur[]   @relation("PortefeuillesSite")
-  retraits             RetraitPortefeuille[]     @relation("RetraitsSite")
+  abonnements            Abonnement[]             @relation("AbonnementsSite")
+  paiementsAbo           PaiementAbonnement[]     @relation("PaiementsAboSite")
+  remises                Remise[]                 @relation("RemisesSite")
+  commissions            CommissionIngenieur[]    @relation("CommissionsDKFarm")
+  commissionsClient      CommissionIngenieur[]    @relation("CommissionsSiteClient")
+  portefeuilles          PortefeuilleIngenieur[]  @relation("PortefeuillesSite")
+  retraits               RetraitPortefeuille[]    @relation("RetraitsSite")
   // Sprint 30.4 — Idempotency
-  idempotencyRecords   IdempotencyRecord[]
+  idempotencyRecords     IdempotencyRecord[]
   // ADR-021 — Cycle de vie & audit
-  /** Null si non suspendu. Non-null = site suspendu (accès restreint). */
-  suspendedAt          DateTime?
-  /** Raison de la suspension — obligatoire lors de la suspension. */
-  suspendedReason      String?
-  /** Soft delete — null = actif, non-null = archivé (lecture seule). */
-  deletedAt            DateTime?
-  auditLogs            SiteAuditLog[]
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
+  /**
+   * /** Null si non suspendu. Non-null = site suspendu (accès restreint).
+   */
+  suspendedAt            DateTime?
+  /**
+   * Raison de la suspension — obligatoire lors de la suspension.
+   */
+  suspendedReason        String?
+  /**
+   * Soft delete — null = actif, non-null = archivé (lecture seule).
+   */
+  deletedAt              DateTime?
+  auditLogs              SiteAuditLog[]
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
 
   @@index([deletedAt])
   @@index([suspendedAt])
@@ -561,78 +578,101 @@ model Site {
 
 /**
  * ConfigElevage — Parametres configurables par site pour piloter le moteur d'elevage.
- *
  * Chaque site peut avoir plusieurs profils. Un seul peut etre isDefault=true par site.
  * Les valeurs par defaut correspondent aux benchmarks FAO pour Clarias gariepinus.
  */
 model ConfigElevage {
   id          String  @id @default(cuid())
-  /** Nom du profil — ex: "Clarias Standard Cameroun" */
+  /**
+   * Nom du profil — ex: "Clarias Standard Cameroun"
+   */
   nom         String
   description String?
 
   // ── Objectif de production ──────────────────────
-  /** Poids cible par poisson a la recolte (g) — ex: 800 */
-  poidsObjectif        Float
-  /** Duree estimee du cycle en jours — ex: 180 */
-  dureeEstimeeCycle    Int
-  /** Taux de survie cible en % — ex: 85 */
-  tauxSurvieObjectif   Float
+  /**
+   * /** Poids cible par poisson a la recolte (g) — ex: 800
+   */
+  poidsObjectif      Float
+  /**
+   * Duree estimee du cycle en jours — ex: 180
+   */
+  dureeEstimeeCycle  Int
+  /**
+   * Taux de survie cible en % — ex: 85
+   */
+  tauxSurvieObjectif Float
 
   // ── Phases de croissance (seuils de poids en g) ─
-  /** 0 → seuilAcclimatation g */
+  /**
+   * /** 0 → seuilAcclimatation g
+   */
   seuilAcclimatation   Float @default(15)
-  /** seuilAcclimatation → seuilCroissanceDebut g */
+  /**
+   * seuilAcclimatation → seuilCroissanceDebut g
+   */
   seuilCroissanceDebut Float @default(50)
-  /** seuilCroissanceDebut → seuilJuvenile g */
+  /**
+   * seuilCroissanceDebut → seuilJuvenile g
+   */
   seuilJuvenile        Float @default(150)
-  /** seuilJuvenile → seuilGrossissement g */
+  /**
+   * seuilJuvenile → seuilGrossissement g
+   */
   seuilGrossissement   Float @default(350)
-  /** seuilGrossissement → seuilFinition g */
+  /**
+   * seuilGrossissement → seuilFinition g
+   */
   seuilFinition        Float @default(700)
   // Au-dela de seuilFinition → PRE_RECOLTE
 
   // ── Alimentation : taille de granule par poids ──
-  /** JSON: [{poidsMin, poidsMax, tailleGranule, description, proteines}] */
+  /**
+   * /** JSON: [{poidsMin, poidsMax, tailleGranule, description, proteines}]
+   */
   alimentTailleConfig Json
-  /** JSON: [{phase, tauxMin, tauxMax, frequence, notes}] */
+  /**
+   * JSON: [{phase, tauxMin, tauxMax, frequence, notes}]
+   */
   alimentTauxConfig   Json
-  /** JSON: [{phase, scoreMin, scoreMax, label, couleur}] — Feed Analytics (Sprint FA) */
+  /**
+   * JSON: [{phase, scoreMin, scoreMax, label, couleur}] — Feed Analytics (Sprint FA)
+   */
   scoreAlimentConfig  Json?
 
   // ── Benchmarks : FCR (lower is better) ──────────
-  fcrExcellentMax    Float @default(1.5)
-  fcrBonMax          Float @default(1.8)
-  fcrAcceptableMax   Float @default(2.2)
+  fcrExcellentMax  Float @default(1.5)
+  fcrBonMax        Float @default(1.8)
+  fcrAcceptableMax Float @default(2.2)
 
   // ── Benchmarks : SGR (%/jour, higher is better) ─
-  sgrExcellentMin    Float @default(2.0)
-  sgrBonMin          Float @default(1.5)
-  sgrAcceptableMin   Float @default(1.0)
+  sgrExcellentMin  Float @default(2.0)
+  sgrBonMin        Float @default(1.5)
+  sgrAcceptableMin Float @default(1.0)
 
   // ── Benchmarks : Taux de survie (%) ─────────────
-  survieExcellentMin    Float @default(90)
-  survieBonMin          Float @default(85)
-  survieAcceptableMin   Float @default(80)
+  survieExcellentMin  Float @default(90)
+  survieBonMin        Float @default(85)
+  survieAcceptableMin Float @default(80)
 
   // ── Benchmarks : Densite (kg/m3, lower is better)
-  densiteExcellentMax   Float @default(7)
-  densiteBonMax         Float @default(10)
-  densiteAcceptableMax  Float @default(15)
+  densiteExcellentMax  Float @default(7)
+  densiteBonMax        Float @default(10)
+  densiteAcceptableMax Float @default(15)
 
   // ── Benchmarks : Mortalite cumulative (%) ───────
-  mortaliteExcellentMax   Float @default(3)
-  mortaliteBonMax         Float @default(5)
-  mortaliteAcceptableMax  Float @default(10)
+  mortaliteExcellentMax  Float @default(3)
+  mortaliteBonMax        Float @default(5)
+  mortaliteAcceptableMax Float @default(10)
 
   // ── Qualite eau : seuils d'alerte ───────────────
-  phMin                Float @default(6.5)
-  phMax                Float @default(8.5)
-  phOptimalMin         Float @default(6.5)
-  phOptimalMax         Float @default(7.5)
+  phMin        Float @default(6.5)
+  phMax        Float @default(8.5)
+  phOptimalMin Float @default(6.5)
+  phOptimalMax Float @default(7.5)
 
-  temperatureMin       Float @default(22)
-  temperatureMax       Float @default(36)
+  temperatureMin        Float @default(22)
+  temperatureMax        Float @default(36)
   temperatureOptimalMin Float @default(26)
   temperatureOptimalMax Float @default(32)
 
@@ -648,51 +688,73 @@ model ConfigElevage {
   nitriteAlerte Float @default(0.5)
 
   // ── Mortalite : seuils d'alerte quotidiens ──────
-  /** % morts/jour → investigation */
+  /**
+   * /** % morts/jour → investigation
+   */
   mortaliteQuotidienneAlerte   Float @default(1.0)
-  /** % morts/jour → urgence */
+  /**
+   * % morts/jour → urgence
+   */
   mortaliteQuotidienneCritique Float @default(3.0)
 
   // ── Alimentation : seuils d'alerte ──────────────
-  /** FCR au-dela de ce seuil → reduire dose */
-  fcrAlerteMax       Float @default(2.0)
-  /** Jours restants de stock → alerte */
-  stockJoursAlerte   Int   @default(5)
+  /**
+   * /** FCR au-dela de ce seuil → reduire dose
+   */
+  fcrAlerteMax     Float @default(2.0)
+  /**
+   * Jours restants de stock → alerte
+   */
+  stockJoursAlerte Int   @default(5)
 
   // ── Tri / Grading ───────────────────────────────
-  triPoidsMin          Float @default(5)
-  triPoidsMax          Float @default(150)
-  triIntervalleJours   Int   @default(14)
+  triPoidsMin        Float @default(5)
+  triPoidsMax        Float @default(150)
+  triIntervalleJours Int   @default(14)
 
   // ── Biometrie ───────────────────────────────────
-  biometrieIntervalleDebut  Int   @default(7)
-  biometrieIntervalleFin    Int   @default(14)
-  biometrieEchantillonPct   Float @default(10)
+  biometrieIntervalleDebut Int   @default(7)
+  biometrieIntervalleFin   Int   @default(14)
+  biometrieEchantillonPct  Float @default(10)
 
   // ── Changement d'eau ────────────────────────────
-  eauChangementPct               Float @default(30)
-  eauChangementIntervalleJours   Int   @default(3)
+  eauChangementPct             Float @default(30)
+  eauChangementIntervalleJours Int   @default(3)
 
   // ── Densite d'elevage ───────────────────────────
-  densiteMaxPoissonsM3       Float @default(100)
-  densiteOptimalePoissonsM3  Float @default(50)
+  densiteMaxPoissonsM3      Float @default(100)
+  densiteOptimalePoissonsM3 Float @default(50)
 
   // ── Seuils de densité par type de système (kg/m3) — utilisés par le UI badge ─
-  /** Bac béton / plastique — seuil alerte orange */
-  densiteBacBetonAlerte      Float @default(150)
-  /** Bac béton / plastique — seuil alerte rouge */
-  densiteBacBetonCritique    Float @default(200)
-  /** Étang en terre — seuil alerte orange */
-  densiteEtangAlerte         Float @default(30)
-  /** Étang en terre — seuil alerte rouge */
-  densiteEtangCritique       Float @default(40)
-  /** RAS — seuil alerte orange */
-  densiteRasAlerte           Float @default(350)
-  /** RAS — seuil alerte rouge */
-  densiteRasCritique         Float @default(500)
+  /**
+   * /** Bac béton / plastique — seuil alerte orange
+   */
+  densiteBacBetonAlerte   Float @default(150)
+  /**
+   * Bac béton / plastique — seuil alerte rouge
+   */
+  densiteBacBetonCritique Float @default(200)
+  /**
+   * Étang en terre — seuil alerte orange
+   */
+  densiteEtangAlerte      Float @default(30)
+  /**
+   * Étang en terre — seuil alerte rouge
+   */
+  densiteEtangCritique    Float @default(40)
+  /**
+   * RAS — seuil alerte orange
+   */
+  densiteRasAlerte        Float @default(350)
+  /**
+   * RAS — seuil alerte rouge
+   */
+  densiteRasCritique      Float @default(500)
 
   // ── Renouvellement ───────────────────────────────
-  /** Fenêtre temporelle pour le calcul du taux de renouvellement effectif (jours) */
+  /**
+   * /** Fenêtre temporelle pour le calcul du taux de renouvellement effectif (jours)
+   */
   fenetreRenouvellementJours Int @default(7)
 
   // ── Recolte ─────────────────────────────────────
@@ -700,27 +762,43 @@ model ConfigElevage {
   recolteJeuneAvantJours     Int   @default(2)
 
   // ── Calibrage Gompertz : parametres initiaux par defaut ─────────────────
-  /** Valeur initiale de W∞ (poids asymptotique en g) pour le calibrage Gompertz — ex: 1200 */
+  /**
+   * /** Valeur initiale de W∞ (poids asymptotique en g) pour le calibrage Gompertz — ex: 1200
+   */
   gompertzWInfDefault Float?
-  /** Valeur initiale de K (constante de croissance) pour le calibrage Gompertz — ex: 0.018 */
+  /**
+   * Valeur initiale de K (constante de croissance) pour le calibrage Gompertz — ex: 0.018
+   */
   gompertzKDefault    Float?
-  /** Valeur initiale de tᵢ (point d'inflexion en jours) pour le calibrage Gompertz — ex: 95 */
+  /**
+   * Valeur initiale de tᵢ (point d'inflexion en jours) pour le calibrage Gompertz — ex: 95
+   */
   gompertzTiDefault   Float?
-  /** Nombre minimum de biometries (dates uniques) pour declencher le calcul Gompertz */
-  gompertzMinPoints   Int     @default(5)
+  /**
+   * Nombre minimum de biometries (dates uniques) pour declencher le calcul Gompertz
+   */
+  gompertzMinPoints   Int    @default(5)
 
   // ── Metadonnees ─────────────────────────────────
-  /** Profil par defaut du site (un seul isDefault=true par site) */
+  /**
+   * /** Profil par defaut du site (un seul isDefault=true par site)
+   */
   isDefault Boolean @default(false)
   isActive  Boolean @default(true)
 
-  /** ID du site (ferme) — R8 */
+  /**
+   * ID du site (ferme) — R8
+   */
   siteId String
   site   Site   @relation(fields: [siteId], references: [id])
 
-  /** Vagues utilisant ce profil */
+  /**
+   * Vagues utilisant ce profil
+   */
   vagues Vague[]
-  /** Packs utilisant ce profil */
+  /**
+   * Packs utilisant ce profil
+   */
   packs  Pack[]
 
   createdAt DateTime @default(now())
@@ -748,16 +826,16 @@ model SiteRole {
 }
 
 model SiteMember {
-  id          String       @id @default(cuid())
-  userId      String
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  siteId      String
-  site        Site         @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  siteRoleId  String
-  siteRole    SiteRole     @relation(fields: [siteRoleId], references: [id], onDelete: Restrict)
-  isActive    Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  siteId     String
+  site       Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  siteRoleId String
+  siteRole   SiteRole @relation(fields: [siteRoleId], references: [id], onDelete: Restrict)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@unique([userId, siteId])
   @@index([userId])
@@ -770,64 +848,65 @@ model SiteMember {
 // ──────────────────────────────────────────
 
 model User {
-  id                  String           @id @default(cuid())
-  email               String?          @unique
-  phone               String?          @unique
-  name                String
-  passwordHash        String
-  role                Role             @default(PISCICULTEUR)
-  isActive            Boolean          @default(true)
-  sessions            Session[]
-  memberships         SiteMember[]
-  mouvements          MouvementStock[]
-  commandes           Commande[]
-  ventes              Vente[]          @relation("VenteUser")
-  factures            Facture[]        @relation("FactureUser")
-  paiements           Paiement[]       @relation("PaiementUser")
-  configAlertes       ConfigAlerte[]
-  notifications       Notification[]
-  activitesCreees     Activite[]       @relation("ActivitesCreees")
-  activitesAssignees  Activite[]       @relation("ActivitesAssignees")
-  depenses              Depense[]
-  paiementsDepense      PaiementDepense[]
-  ajustementsDepense    AjustementDepense[]
-  depensesRecurrentes   DepenseRecurrente[]
-  listesBesoinsCreees   ListeBesoins[]     @relation("ListeBesoinsCreees")
-  listesBesoinsValidees ListeBesoins[]     @relation("ListeBesoinsValidees")
+  id                     String                  @id @default(cuid())
+  email                  String?                 @unique
+  phone                  String?                 @unique
+  name                   String
+  passwordHash           String
+  role                   Role                    @default(PISCICULTEUR)
+  isActive               Boolean                 @default(true)
+  sessions               Session[]
+  memberships            SiteMember[]
+  mouvements             MouvementStock[]
+  commandes              Commande[]
+  ventes                 Vente[]                 @relation("VenteUser")
+  factures               Facture[]               @relation("FactureUser")
+  paiements              Paiement[]              @relation("PaiementUser")
+  configAlertes          ConfigAlerte[]
+  notifications          Notification[]
+  activitesCreees        Activite[]              @relation("ActivitesCreees")
+  activitesAssignees     Activite[]              @relation("ActivitesAssignees")
+  depenses               Depense[]
+  paiementsDepense       PaiementDepense[]
+  ajustementsDepense     AjustementDepense[]
+  depensesRecurrentes    DepenseRecurrente[]
+  listesBesoinsCreees    ListeBesoins[]          @relation("ListeBesoinsCreees")
+  listesBesoinsValidees  ListeBesoins[]          @relation("ListeBesoinsValidees")
   // Sprint 20 — Packs & Provisioning
-  packsCreated          Pack[]
-  packActivationsCreees PackActivation[]
+  packsCreated           Pack[]
+  packActivationsCreees  PackActivation[]
   // Sprint 21 — Moteur d'activités
-  reglesActivite        RegleActivite[]
+  reglesActivite         RegleActivite[]
   // Sprint 23 — Monitoring Ingénieur
-  notesEnvoyees         NoteIngenieur[]    @relation("NotesEnvoyees")
+  notesEnvoyees          NoteIngenieur[]         @relation("NotesEnvoyees")
   // Sprint 24 — Calibrage
-  calibrages            Calibrage[]        @relation("CalibrageUser")
+  calibrages             Calibrage[]             @relation("CalibrageUser")
   // Sprint 26 — Modification tracking (ADR-014/ADR-015)
-  releveModifications   ReleveModification[]
+  releveModifications    ReleveModification[]
   calibrageModifications CalibrageModification[]
-  isSystem              Boolean            @default(false)
+  isSystem               Boolean                 @default(false)
   // ADR-022 — Backoffice separation
-  isSuperAdmin          Boolean            @default(false)
+  isSuperAdmin           Boolean                 @default(false)
   // Sprint — Impersonation
-  originalSessions      Session[]          @relation("OriginalUser")
+  originalSessions       Session[]               @relation("OriginalUser")
   // Sprint 30 — Abonnements
-  abonnementsUser         Abonnement[]              @relation("AbonnementsUser")
-  paiementsAboInities     PaiementAbonnement[]      @relation("PaiementsAboUser")
-  commissionsIngenieur    CommissionIngenieur[]     @relation("CommissionsIngenieur")
-  remisesCreees           Remise[]                  @relation("RemisesUser")
-  remisesApplications     RemiseApplication[]       @relation("RemisesApplicationsUser")
-  portefeuille            PortefeuilleIngenieur?    @relation("PortefeuilleIngenieur")
-  retraitsDemandes        RetraitPortefeuille[]     @relation("RetraitDemandeur")
-  retraitsTraites         RetraitPortefeuille[]     @relation("RetraitTraiteur")
+  abonnementsUser        Abonnement[]            @relation("AbonnementsUser")
+  paiementsAboInities    PaiementAbonnement[]    @relation("PaiementsAboUser")
+  commissionsIngenieur   CommissionIngenieur[]   @relation("CommissionsIngenieur")
+  remisesCreees          Remise[]                @relation("RemisesUser")
+  remisesApplications    RemiseApplication[]     @relation("RemisesApplicationsUser")
+  portefeuille           PortefeuilleIngenieur?  @relation("PortefeuilleIngenieur")
+  retraitsDemandes       RetraitPortefeuille[]   @relation("RetraitDemandeur")
+  retraitsTraites        RetraitPortefeuille[]   @relation("RetraitTraiteur")
   // ADR-021 — Audit log des actions admin
-  auditLogsActed          SiteAuditLog[]            @relation("AuditLogActor")
+  auditLogsActed         SiteAuditLog[]          @relation("AuditLogActor")
   // ADR-maintenance-mode — FeatureFlags modifies par ce super-admin
-  featureFlags            FeatureFlag[]
+  featureFlags           FeatureFlag[]
   // ADR-maintenance-mode — PlatformAuditLog
-  platformAuditLogs       PlatformAuditLog[]
-  createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
+  platformAuditLogs      PlatformAuditLog[]
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  fraisPaiementDepenses  FraisPaiementDepense[]
 }
 
 model Session {
@@ -854,65 +933,71 @@ model Session {
 // ──────────────────────────────────────────
 
 model Bac {
-  id                  String          @id @default(cuid())
+  id                  String            @id @default(cuid())
   nom                 String
   volume              Float?
   nombrePoissons      Int?
   nombreInitial       Int?
   poidsMoyenInitial   Float?
   vagueId             String?
-  vague               Vague?          @relation(fields: [vagueId], references: [id])
-  /** Type de système d'élevage — détermine les seuils de densité applicables.
-   *  Null = BAC_BETON par défaut dans le moteur d'alertes. */
+  vague               Vague?            @relation(fields: [vagueId], references: [id])
+  /**
+   * Type de système d'élevage — détermine les seuils de densité applicables.
+   * Null = BAC_BETON par défaut dans le moteur d'alertes.
+   */
   typeSysteme         TypeSystemeBac?
   siteId              String
-  site                Site            @relation(fields: [siteId], references: [id])
+  site                Site              @relation(fields: [siteId], references: [id])
   releves             Releve[]
   lotsAlevins         LotAlevins[]
   activites           Activite[]
   calibrageGroupesDst CalibrageGroupe[] @relation("GroupeDestBac")
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 
   @@index([vagueId])
   @@index([siteId])
 }
 
 model Vague {
-  id                  String           @id @default(cuid())
-  code                String           @unique
-  dateDebut           DateTime
-  dateFin             DateTime?
-  nombreInitial       Int
-  poidsMoyenInitial   Float
-  origineAlevins      String?
-  statut              StatutVague      @default(EN_COURS)
-  siteId              String
-  site                Site             @relation(fields: [siteId], references: [id])
-  /** Config d'elevage associee (nullable — liee lors du provisioning Pack ou manuellement) */
-  configElevageId     String?
-  configElevage       ConfigElevage?   @relation(fields: [configElevageId], references: [id], onDelete: SetNull)
-  /** PackActivation source (nullable — renseigné si vague créée via provisioning) */
-  packActivationId    String?
-  packActivation      PackActivation?  @relation(fields: [packActivationId], references: [id], onDelete: SetNull)
-  bacs                    Bac[]
-  releves                 Releve[]
-  mouvements              MouvementStock[]
-  ventes                  Vente[]
-  lotsAlevinsTransferes   LotAlevins[]
-  activites               Activite[]
-  depenses                Depense[]
-  listesBesoinVagues      ListeBesoinsVague[]
+  id                     String                   @id @default(cuid())
+  code                   String                   @unique
+  dateDebut              DateTime
+  dateFin                DateTime?
+  nombreInitial          Int
+  poidsMoyenInitial      Float
+  origineAlevins         String?
+  statut                 StatutVague              @default(EN_COURS)
+  siteId                 String
+  site                   Site                     @relation(fields: [siteId], references: [id])
+  /**
+   * Config d'elevage associee (nullable — liee lors du provisioning Pack ou manuellement)
+   */
+  configElevageId        String?
+  configElevage          ConfigElevage?           @relation(fields: [configElevageId], references: [id], onDelete: SetNull)
+  /**
+   * PackActivation source (nullable — renseigné si vague créée via provisioning)
+   */
+  packActivationId       String?
+  packActivation         PackActivation?          @relation(fields: [packActivationId], references: [id], onDelete: SetNull)
+  bacs                   Bac[]
+  releves                Releve[]
+  mouvements             MouvementStock[]
+  ventes                 Vente[]
+  lotsAlevinsTransferes  LotAlevins[]
+  activites              Activite[]
+  depenses               Depense[]
+  listesBesoinVagues     ListeBesoinsVague[]
   // Sprint 23 — Monitoring Ingénieur
-  notes                   NoteIngenieur[]
+  notes                  NoteIngenieur[]
   // Sprint 24 — Calibrage
-  calibrages              Calibrage[]
+  calibrages             Calibrage[]
   // Sprint FD — Feed Analytics
-  historiqueNutritionnel  HistoriqueNutritionnel[]
+  historiqueNutritionnel HistoriqueNutritionnel[]
   // Sprint Gompertz
-  gompertz                GompertzVague?
-  createdAt               DateTime         @default(now())
-  updatedAt               DateTime         @updatedAt
+  gompertz               GompertzVague?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
 
   @@index([siteId])
   @@index([configElevageId])
@@ -920,69 +1005,69 @@ model Vague {
 }
 
 model Releve {
-  id          String     @id @default(cuid())
-  date        DateTime
-  typeReleve  TypeReleve
-  vagueId     String
-  vague       Vague      @relation(fields: [vagueId], references: [id])
-  bacId       String
-  bac         Bac        @relation(fields: [bacId], references: [id])
-  siteId      String
-  site        Site       @relation(fields: [siteId], references: [id])
-  notes       String?
+  id         String     @id @default(cuid())
+  date       DateTime
+  typeReleve TypeReleve
+  vagueId    String
+  vague      Vague      @relation(fields: [vagueId], references: [id])
+  bacId      String
+  bac        Bac        @relation(fields: [bacId], references: [id])
+  siteId     String
+  site       Site       @relation(fields: [siteId], references: [id])
+  notes      String?
 
   // Champs biométrie
-  poidsMoyen        Float?
-  tailleMoyenne     Float?
-  echantillonCount  Int?
+  poidsMoyen       Float?
+  tailleMoyenne    Float?
+  echantillonCount Int?
 
   // Champs mortalité
-  nombreMorts       Int?
-  causeMortalite    CauseMortalite?
+  nombreMorts    Int?
+  causeMortalite CauseMortalite?
 
   // Champs alimentation
-  typeAliment       TypeAliment?
-  quantiteAliment   Float?
-  frequenceAliment  Int?
+  typeAliment      TypeAliment?
+  quantiteAliment  Float?
+  frequenceAliment Int?
   // Feed Analytics (Sprint FA)
-  tauxRefus         Float?                   // valeurs : 0, 10, 25, 50
-  comportementAlim  ComportementAlimentaire?
+  tauxRefus        Float? // valeurs : 0, 10, 25, 50
+  comportementAlim ComportementAlimentaire?
 
   // Champs qualité eau
-  temperature       Float?
-  ph                Float?
-  oxygene           Float?
-  ammoniac          Float?
+  temperature Float?
+  ph          Float?
+  oxygene     Float?
+  ammoniac    Float?
 
   // Champs comptage
-  nombreCompte      Int?
-  methodeComptage   MethodeComptage?
+  nombreCompte    Int?
+  methodeComptage MethodeComptage?
 
   // Champs observation
-  description       String?
+  description String?
 
   // Champs renouvellement eau — remplis uniquement quand typeReleve = RENOUVELLEMENT
   // L'un ou l'autre est renseigné (ou les deux si le formulaire calcule automatiquement)
-  pourcentageRenouvellement Float?  // % du volume du bac renouvelée (ex: 50 = 50%)
-  volumeRenouvele           Float?  // Volume réel en litres (alternative à pourcentageRenouvellement)
-  nombreRenouvellements     Int?    @default(1)  // Nombre de passages de renouvellement (ex: 25% × 4 = 100%)
+  pourcentageRenouvellement Float? // % du volume du bac renouvelée (ex: 50 = 50%)
+  volumeRenouvele           Float? // Volume réel en litres (alternative à pourcentageRenouvellement)
+  nombreRenouvellements     Int?   @default(1) // Nombre de passages de renouvellement (ex: 25% × 4 = 100%)
 
-  consommations   ReleveConsommation[]
-  mouvements      MouvementStock[]
+  consommations ReleveConsommation[]
+  mouvements    MouvementStock[]
 
   // Relation inverse : un releve peut etre lie a au plus une activite (1:1 optionnelle)
-  activite        Activite?
+  activite Activite?
 
   // Lien vers le calibrage source (nullable — rempli si auto-cree lors d'un calibrage)
-  calibrageId     String?
-  calibrage       Calibrage? @relation("CalibrageReleves", fields: [calibrageId], references: [id], onDelete: SetNull)
+  calibrageId String?
+  calibrage   Calibrage? @relation("CalibrageReleves", fields: [calibrageId], references: [id], onDelete: SetNull)
 
   // Traçabilité modification (Sprint 26, ADR-014)
-  modifie         Boolean              @default(false)
-  modifications   ReleveModification[]
+  modifie       Boolean              @default(false)
+  modifications ReleveModification[]
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([vagueId, typeReleve])
   @@index([bacId])
@@ -1013,37 +1098,37 @@ model Fournisseur {
 }
 
 model Produit {
-  id             String           @id @default(cuid())
-  nom            String
-  categorie      CategorieProduit
-  unite          UniteStock
-  uniteAchat     UniteStock?
-  contenance     Float?
-  prixUnitaire   Float
-  stockActuel    Float            @default(0)
-  seuilAlerte    Float            @default(0)
-  fournisseurId  String?
-  fournisseur    Fournisseur?     @relation(fields: [fournisseurId], references: [id], onDelete: SetNull)
-  isActive       Boolean          @default(true)
+  id                    String               @id @default(cuid())
+  nom                   String
+  categorie             CategorieProduit
+  unite                 UniteStock
+  uniteAchat            UniteStock?
+  contenance            Float?
+  prixUnitaire          Float
+  stockActuel           Float                @default(0)
+  seuilAlerte           Float                @default(0)
+  fournisseurId         String?
+  fournisseur           Fournisseur?         @relation(fields: [fournisseurId], references: [id], onDelete: SetNull)
+  isActive              Boolean              @default(true)
   // Feed Analytics (Sprint FA) — caractéristiques nutritionnelles aliment
-  tailleGranule  TailleGranule?
-  formeAliment   FormeAliment?
-  tauxProteines  Float?
-  tauxLipides    Float?
-  tauxFibres     Float?
-  phasesCibles   PhaseElevage[]
-  siteId         String
-  site           Site             @relation(fields: [siteId], references: [id])
-  mouvements     MouvementStock[]
-  lignesCommande LigneCommande[]
-  consommations  ReleveConsommation[]
-  lignesBesoins  LigneBesoin[]
+  tailleGranule         TailleGranule?
+  formeAliment          FormeAliment?
+  tauxProteines         Float?
+  tauxLipides           Float?
+  tauxFibres            Float?
+  phasesCibles          PhaseElevage[]
+  siteId                String
+  site                  Site                 @relation(fields: [siteId], references: [id])
+  mouvements            MouvementStock[]
+  lignesCommande        LigneCommande[]
+  consommations         ReleveConsommation[]
+  lignesBesoins         LigneBesoin[]
   // Sprint 20 — Packs & Provisioning
-  packProduits   PackProduit[]
+  packProduits          PackProduit[]
   // Sprint 21 — Moteur d'activités
-  activitesRecommandees Activite[] @relation("ActiviteProduitRecommande")
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  activitesRecommandees Activite[]           @relation("ActiviteProduitRecommande")
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
 
   @@index([siteId])
   @@index([fournisseurId])
@@ -1051,28 +1136,28 @@ model Produit {
 }
 
 model MouvementStock {
-  id         String        @id @default(cuid())
-  produitId  String
-  produit    Produit       @relation(fields: [produitId], references: [id])
-  type       TypeMouvement
-  quantite   Float
-  prixTotal  Float?
-  vagueId    String?
-  vague      Vague?        @relation(fields: [vagueId], references: [id])
-  commandeId String?
-  commande   Commande?     @relation(fields: [commandeId], references: [id])
-  releveId   String?
-  releve     Releve?       @relation(fields: [releveId], references: [id])
-  userId     String
-  user       User          @relation(fields: [userId], references: [id])
+  id             String        @id @default(cuid())
+  produitId      String
+  produit        Produit       @relation(fields: [produitId], references: [id])
+  type           TypeMouvement
+  quantite       Float
+  prixTotal      Float?
+  vagueId        String?
+  vague          Vague?        @relation(fields: [vagueId], references: [id])
+  commandeId     String?
+  commande       Commande?     @relation(fields: [commandeId], references: [id])
+  releveId       String?
+  releve         Releve?       @relation(fields: [releveId], references: [id])
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
   date           DateTime
   notes          String?
   // Feed Analytics (Sprint FA) — traçabilité lot
   datePeremption DateTime?
   lotFabrication String?
-  siteId     String
-  site       Site          @relation(fields: [siteId], references: [id])
-  createdAt  DateTime      @default(now())
+  siteId         String
+  site           Site          @relation(fields: [siteId], references: [id])
+  createdAt      DateTime      @default(now())
 
   @@index([siteId])
   @@index([produitId])
@@ -1083,27 +1168,29 @@ model MouvementStock {
 }
 
 model Commande {
-  id             String          @id @default(cuid())
-  numero         String          @unique
-  fournisseurId  String
-  fournisseur    Fournisseur     @relation(fields: [fournisseurId], references: [id])
-  statut         StatutCommande  @default(BROUILLON)
-  dateCommande   DateTime
-  dateLivraison  DateTime?
-  montantTotal   Float           @default(0)
-  montantRecu    Float?
-  /** URL de la facture fournisseur stockee sur Hetzner Object Storage (nullable) */
-  factureUrl     String?
-  userId         String
-  user           User            @relation(fields: [userId], references: [id])
-  siteId         String
-  site           Site            @relation(fields: [siteId], references: [id])
-  lignes         LigneCommande[]
-  mouvements     MouvementStock[]
-  depenses       Depense[]
-  lignesBesoins  LigneBesoin[]
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id            String           @id @default(cuid())
+  numero        String           @unique
+  fournisseurId String
+  fournisseur   Fournisseur      @relation(fields: [fournisseurId], references: [id])
+  statut        StatutCommande   @default(BROUILLON)
+  dateCommande  DateTime
+  dateLivraison DateTime?
+  montantTotal  Float            @default(0)
+  montantRecu   Float?
+  /**
+   * URL de la facture fournisseur stockee sur Hetzner Object Storage (nullable)
+   */
+  factureUrl    String?
+  userId        String
+  user          User             @relation(fields: [userId], references: [id])
+  siteId        String
+  site          Site             @relation(fields: [siteId], references: [id])
+  lignes        LigneCommande[]
+  mouvements    MouvementStock[]
+  depenses      Depense[]
+  lignesBesoins LigneBesoin[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   @@index([siteId])
   @@index([fournisseurId])
@@ -1112,11 +1199,11 @@ model Commande {
 }
 
 model LigneCommande {
-  id           String   @id @default(cuid())
-  commandeId   String
-  commande     Commande @relation(fields: [commandeId], references: [id], onDelete: Cascade)
-  produitId    String
-  produit      Produit  @relation(fields: [produitId], references: [id])
+  id            String   @id @default(cuid())
+  commandeId    String
+  commande      Commande @relation(fields: [commandeId], references: [id], onDelete: Cascade)
+  produitId     String
+  produit       Produit  @relation(fields: [produitId], references: [id])
   quantite      Float
   prixUnitaire  Float
   quantiteRecue Float?
@@ -1258,22 +1345,22 @@ model Reproducteur {
 }
 
 model Ponte {
-  id              String      @id @default(cuid())
-  code            String      @unique
+  id              String        @id @default(cuid())
+  code            String        @unique
   femelleId       String
-  femelle         Reproducteur @relation("PonteFemelle", fields: [femelleId], references: [id])
+  femelle         Reproducteur  @relation("PonteFemelle", fields: [femelleId], references: [id])
   maleId          String?
   male            Reproducteur? @relation("PonteMale", fields: [maleId], references: [id])
   datePonte       DateTime
   nombreOeufs     Int?
   tauxFecondation Float?
-  statut          StatutPonte @default(EN_COURS)
+  statut          StatutPonte   @default(EN_COURS)
   notes           String?
   siteId          String
-  site            Site        @relation(fields: [siteId], references: [id])
+  site            Site          @relation(fields: [siteId], references: [id])
   lots            LotAlevins[]
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   @@index([siteId])
   @@index([femelleId])
@@ -1281,25 +1368,25 @@ model Ponte {
 }
 
 model LotAlevins {
-  id                  String           @id @default(cuid())
-  code                String           @unique
-  ponteId             String
-  ponte               Ponte            @relation(fields: [ponteId], references: [id])
-  nombreInitial       Int
-  nombreActuel        Int
-  ageJours            Int              @default(0)
-  poidsMoyen          Float?
-  statut              StatutLotAlevins @default(EN_INCUBATION)
-  bacId               String?
-  bac                 Bac?             @relation(fields: [bacId], references: [id])
-  vagueDestinationId  String?
-  vagueDestination    Vague?           @relation(fields: [vagueDestinationId], references: [id])
-  dateTransfert       DateTime?
-  notes               String?
-  siteId              String
-  site                Site             @relation(fields: [siteId], references: [id])
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  id                 String           @id @default(cuid())
+  code               String           @unique
+  ponteId            String
+  ponte              Ponte            @relation(fields: [ponteId], references: [id])
+  nombreInitial      Int
+  nombreActuel       Int
+  ageJours           Int              @default(0)
+  poidsMoyen         Float?
+  statut             StatutLotAlevins @default(EN_INCUBATION)
+  bacId              String?
+  bac                Bac?             @relation(fields: [bacId], references: [id])
+  vagueDestinationId String?
+  vagueDestination   Vague?           @relation(fields: [vagueDestinationId], references: [id])
+  dateTransfert      DateTime?
+  notes              String?
+  siteId             String
+  site               Site             @relation(fields: [siteId], references: [id])
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
   @@index([siteId])
   @@index([ponteId])
@@ -1311,42 +1398,46 @@ model LotAlevins {
 // ──────────────────────────────────────────
 
 model ConfigAlerte {
-  id                String     @id @default(cuid())
-  typeAlerte        TypeAlerte
-  seuilValeur       Float?
-  seuilPourcentage  Float?
-  enabled           Boolean    @default(true)
-  userId            String
-  user              User       @relation(fields: [userId], references: [id])
-  siteId            String
-  site              Site       @relation(fields: [siteId], references: [id])
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  id               String     @id @default(cuid())
+  typeAlerte       TypeAlerte
+  seuilValeur      Float?
+  seuilPourcentage Float?
+  enabled          Boolean    @default(true)
+  userId           String
+  user             User       @relation(fields: [userId], references: [id])
+  siteId           String
+  site             Site       @relation(fields: [siteId], references: [id])
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 
   @@unique([userId, siteId, typeAlerte])
   @@index([siteId])
 }
 
 model Notification {
-  id         String         @id @default(cuid())
-  typeAlerte TypeAlerte
-  titre      String
-  message    String
-  statut     StatutAlerte   @default(ACTIVE)
-  lien       String?
-  /** Severite de l'alerte pour le tri visuel */
-  severite   SeveriteAlerte @default(INFO)
-  /** Action directe recommandee (null si notification informative seulement)
-   *  Format : JSON { type: "CREER_RELEVE", typeReleve?, bacId?, vagueId? }
-   *         ou { type: "MODIFIER_BAC", bacId, champsAModifier? }
-   *         ou { type: "VOIR_VAGUE", vagueId }
-   *         ou { type: "VOIR_STOCK", produitId? } */
+  id            String         @id @default(cuid())
+  typeAlerte    TypeAlerte
+  titre         String
+  message       String
+  statut        StatutAlerte   @default(ACTIVE)
+  lien          String?
+  /**
+   * Severite de l'alerte pour le tri visuel
+   */
+  severite      SeveriteAlerte @default(INFO)
+  /**
+   * Action directe recommandee (null si notification informative seulement)
+   * Format : JSON { type: "CREER_RELEVE", typeReleve?, bacId?, vagueId? }
+   * ou { type: "MODIFIER_BAC", bacId, champsAModifier? }
+   * ou { type: "VOIR_VAGUE", vagueId }
+   * ou { type: "VOIR_STOCK", produitId? }
+   */
   actionPayload Json?
-  userId     String
-  user       User           @relation(fields: [userId], references: [id])
-  siteId     String
-  site       Site           @relation(fields: [siteId], references: [id])
-  createdAt  DateTime       @default(now())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id])
+  siteId        String
+  site          Site           @relation(fields: [siteId], references: [id])
+  createdAt     DateTime       @default(now())
 
   @@index([userId, siteId, statut])
   @@index([siteId])
@@ -1354,28 +1445,28 @@ model Notification {
 }
 
 model Activite {
-  id           String         @id @default(cuid())
-  titre        String
-  description  String?
-  typeActivite TypeActivite
-  statut       StatutActivite @default(PLANIFIEE)
-  dateDebut    DateTime
-  dateFin      DateTime?
-  recurrence   Recurrence?
-  vagueId      String?
-  vague        Vague?         @relation(fields: [vagueId], references: [id])
-  bacId        String?
-  bac          Bac?           @relation(fields: [bacId], references: [id])
-  assigneAId   String?
-  assigneA     User?          @relation("ActivitesAssignees", fields: [assigneAId], references: [id])
-  userId       String
-  user         User           @relation("ActivitesCreees", fields: [userId], references: [id])
-  siteId       String
-  site         Site           @relation(fields: [siteId], references: [id])
-  releveId       String?        @unique
-  releve         Releve?        @relation(fields: [releveId], references: [id])
-  dateTerminee   DateTime?
-  noteCompletion String?
+  id                     String         @id @default(cuid())
+  titre                  String
+  description            String?
+  typeActivite           TypeActivite
+  statut                 StatutActivite @default(PLANIFIEE)
+  dateDebut              DateTime
+  dateFin                DateTime?
+  recurrence             Recurrence?
+  vagueId                String?
+  vague                  Vague?         @relation(fields: [vagueId], references: [id])
+  bacId                  String?
+  bac                    Bac?           @relation(fields: [bacId], references: [id])
+  assigneAId             String?
+  assigneA               User?          @relation("ActivitesAssignees", fields: [assigneAId], references: [id])
+  userId                 String
+  user                   User           @relation("ActivitesCreees", fields: [userId], references: [id])
+  siteId                 String
+  site                   Site           @relation(fields: [siteId], references: [id])
+  releveId               String?        @unique
+  releve                 Releve?        @relation(fields: [releveId], references: [id])
+  dateTerminee           DateTime?
+  noteCompletion         String?
   // Sprint 21 — Moteur d'activités
   regleId                String?
   regle                  RegleActivite? @relation(fields: [regleId], references: [id], onDelete: SetNull)
@@ -1387,8 +1478,8 @@ model Activite {
   priorite               Int?
   isAutoGenerated        Boolean        @default(false)
   phaseElevage           PhaseElevage?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
 
   @@index([siteId, dateDebut])
   @@index([siteId, statut])
@@ -1404,61 +1495,96 @@ model Activite {
 
 /**
  * RegleActivite — Règle de déclenchement automatique d'activités planifiées.
- *
  * siteId est nullable (F-15) : null = règle globale DKFarm applicable à tous les sites.
  * Un site peut surcharger une règle globale en créant sa propre règle avec le même
  * typeActivite + typeDeclencheur.
  */
 model RegleActivite {
-  id          String           @id @default(cuid())
-  nom         String
-  description String?
-  typeActivite     TypeActivite
-  typeDeclencheur  TypeDeclencheur
-  /** Seuil de déclenchement selon le type (ex: poids en g, % mortalité, FCR) */
-  conditionValeur  Float?
-  /** Seuil haut pour SEUIL_QUALITE (ex: pH max) */
-  conditionValeur2 Float?
-  /** Phase d'élevage minimale (null = toutes phases) */
-  phaseMin         PhaseElevage?
-  /** Phase d'élevage maximale (null = borne haute non contrainte) */
-  phaseMax         PhaseElevage?
-  /** Intervalle en jours entre déclenchements (pour RECURRENT) */
-  intervalleJours  Int?
-  /** Template du titre de l'activité générée */
-  titreTemplate         String
-  /** Template de la description de l'activité générée */
-  descriptionTemplate   String?
-  /** Template des instructions détaillées de l'activité générée */
-  instructionsTemplate  String?
-  /** Priorité de l'activité générée (1=haute, 10=basse) */
-  priorite     Int             @default(5)
-  isActive     Boolean         @default(true)
-  /** EC-3.2 : one-shot pour les seuils — désactivé après premier déclenchement */
-  firedOnce    Boolean         @default(false)
-  /** Logique d'évaluation des conditions composées : ET = toutes, OU = au moins une.
-   *  N'a d'effet que si conditions.length > 0 (sinon evaluation legacy via typeDeclencheur). */
-  logique      LogiqueCondition @default(ET)
-  /** Action à effectuer quand la règle se déclenche (Sprint 29) */
-  actionType   ActionRegle     @default(ACTIVITE)
-  /** Sévérité de la notification (requis si actionType = NOTIFICATION ou LES_DEUX) */
-  severite     SeveriteAlerte?
-  /** Template du titre de la notification (requis si actionType = NOTIFICATION ou LES_DEUX) */
-  titreNotificationTemplate         String?
-  /** Template de la description de la notification (optionnel) */
-  descriptionNotificationTemplate   String?
-  /** Type du CTA dans la notification : null = aucun bouton d'action */
-  actionPayloadType                 String?
-  /** F-15 : null = règle globale DKFarm, non null = règle propre au site */
-  siteId       String?
-  site         Site?           @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  userId       String?
-  user         User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
-  activites    Activite[]
-  /** Conditions composées (Sprint 27-28). Si vide, évaluation legacy via typeDeclencheur. */
-  conditions   ConditionRegle[]
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  id                              String           @id @default(cuid())
+  nom                             String
+  description                     String?
+  typeActivite                    TypeActivite
+  typeDeclencheur                 TypeDeclencheur
+  /**
+   * Seuil de déclenchement selon le type (ex: poids en g, % mortalité, FCR)
+   */
+  conditionValeur                 Float?
+  /**
+   * Seuil haut pour SEUIL_QUALITE (ex: pH max)
+   */
+  conditionValeur2                Float?
+  /**
+   * Phase d'élevage minimale (null = toutes phases)
+   */
+  phaseMin                        PhaseElevage?
+  /**
+   * Phase d'élevage maximale (null = borne haute non contrainte)
+   */
+  phaseMax                        PhaseElevage?
+  /**
+   * Intervalle en jours entre déclenchements (pour RECURRENT)
+   */
+  intervalleJours                 Int?
+  /**
+   * Template du titre de l'activité générée
+   */
+  titreTemplate                   String
+  /**
+   * Template de la description de l'activité générée
+   */
+  descriptionTemplate             String?
+  /**
+   * Template des instructions détaillées de l'activité générée
+   */
+  instructionsTemplate            String?
+  /**
+   * Priorité de l'activité générée (1=haute, 10=basse)
+   */
+  priorite                        Int              @default(5)
+  isActive                        Boolean          @default(true)
+  /**
+   * EC-3.2 : one-shot pour les seuils — désactivé après premier déclenchement
+   */
+  firedOnce                       Boolean          @default(false)
+  /**
+   * Logique d'évaluation des conditions composées : ET = toutes, OU = au moins une.
+   * N'a d'effet que si conditions.length > 0 (sinon evaluation legacy via typeDeclencheur).
+   */
+  logique                         LogiqueCondition @default(ET)
+  /**
+   * Action à effectuer quand la règle se déclenche (Sprint 29)
+   */
+  actionType                      ActionRegle      @default(ACTIVITE)
+  /**
+   * Sévérité de la notification (requis si actionType = NOTIFICATION ou LES_DEUX)
+   */
+  severite                        SeveriteAlerte?
+  /**
+   * Template du titre de la notification (requis si actionType = NOTIFICATION ou LES_DEUX)
+   */
+  titreNotificationTemplate       String?
+  /**
+   * Template de la description de la notification (optionnel)
+   */
+  descriptionNotificationTemplate String?
+  /**
+   * Type du CTA dans la notification : null = aucun bouton d'action
+   */
+  actionPayloadType               String?
+  /**
+   * F-15 : null = règle globale DKFarm, non null = règle propre au site
+   */
+  siteId                          String?
+  site                            Site?            @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  userId                          String?
+  user                            User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  activites                       Activite[]
+  /**
+   * Conditions composées (Sprint 27-28). Si vide, évaluation legacy via typeDeclencheur.
+   */
+  conditions                      ConditionRegle[]
+  createdAt                       DateTime         @default(now())
+  updatedAt                       DateTime         @updatedAt
 
   @@index([siteId])
   @@index([typeActivite])
@@ -1472,11 +1598,9 @@ model RegleActivite {
 
 /**
  * ConditionRegle — Condition élémentaire d'une règle à conditions composées.
- *
  * Une RegleActivite peut avoir N ConditionRegle enfants.
  * Si conditions.length > 0, l'évaluation utilise la logique ET/OU définie sur la règle.
  * Si conditions.length == 0, l'évaluation legacy (typeDeclencheur + conditionValeur) s'applique.
- *
  * Backward compatible : toutes les règles existantes ont 0 conditions.
  */
 model ConditionRegle {
@@ -1485,11 +1609,17 @@ model ConditionRegle {
   regle            RegleActivite      @relation(fields: [regleId], references: [id], onDelete: Cascade)
   typeDeclencheur  TypeDeclencheur
   operateur        OperateurCondition @default(SUPERIEUR)
-  /** Seuil de déclenchement (ex: 50 pour 50 kg/m3, 3 pour 3 jours) */
+  /**
+   * Seuil de déclenchement (ex: 50 pour 50 kg/m3, 3 pour 3 jours)
+   */
   conditionValeur  Float?
-  /** Seuil haut — utilisé uniquement par l'opérateur ENTRE */
+  /**
+   * Seuil haut — utilisé uniquement par l'opérateur ENTRE
+   */
   conditionValeur2 Float?
-  /** Ordre d'évaluation dans la liste de conditions (0 = premier) */
+  /**
+   * Ordre d'évaluation dans la liste de conditions (0 = premier)
+   */
   ordre            Int                @default(0)
 
   @@index([regleId])
@@ -1500,38 +1630,50 @@ model ConditionRegle {
 // ──────────────────────────────────────────
 
 model Depense {
-  id               String           @id @default(cuid())
-  /** Numéro auto-généré format DEP-YYYY-NNN */
-  numero           String           @unique
+  id               String              @id @default(cuid())
+  /**
+   * Numéro auto-généré format DEP-YYYY-NNN
+   */
+  numero           String              @unique
   description      String
   categorieDepense CategorieDepense
   montantTotal     Float
-  montantPaye      Float            @default(0)
-  /** Cumul des frais supplémentaires de tous les paiements associés */
-  montantFraisSupp Float            @default(0)
-  statut           StatutDepense    @default(NON_PAYEE)
+  montantPaye      Float               @default(0)
+  /**
+   * Cumul des frais supplémentaires de tous les paiements associés
+   */
+  montantFraisSupp Float               @default(0)
+  statut           StatutDepense       @default(NON_PAYEE)
   date             DateTime
   dateEcheance     DateTime?
-  /** URL facture fournisseur sur Hetzner Object Storage */
+  /**
+   * URL facture fournisseur sur Hetzner Object Storage
+   */
   factureUrl       String?
   notes            String?
-  /** Lien optionnel vers la commande d'origine */
+  /**
+   * Lien optionnel vers la commande d'origine
+   */
   commandeId       String?
-  commande         Commande?        @relation(fields: [commandeId], references: [id], onDelete: SetNull)
-  /** Lien optionnel vers la vague concernée */
+  commande         Commande?           @relation(fields: [commandeId], references: [id], onDelete: SetNull)
+  /**
+   * Lien optionnel vers la vague concernée
+   */
   vagueId          String?
-  vague            Vague?           @relation(fields: [vagueId], references: [id], onDelete: SetNull)
-  /** Lien optionnel vers la liste de besoins d'origine */
+  vague            Vague?              @relation(fields: [vagueId], references: [id], onDelete: SetNull)
+  /**
+   * Lien optionnel vers la liste de besoins d'origine
+   */
   listeBesoinsId   String?
-  listeBesoins     ListeBesoins?    @relation(fields: [listeBesoinsId], references: [id], onDelete: SetNull)
+  listeBesoins     ListeBesoins?       @relation(fields: [listeBesoinsId], references: [id], onDelete: SetNull)
   userId           String
-  user             User             @relation(fields: [userId], references: [id])
+  user             User                @relation(fields: [userId], references: [id])
   siteId           String
-  site             Site             @relation(fields: [siteId], references: [id])
+  site             Site                @relation(fields: [siteId], references: [id])
   paiements        PaiementDepense[]
   ajustements      AjustementDepense[]
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
 
   @@index([siteId])
   @@index([siteId, categorieDepense])
@@ -1543,19 +1685,19 @@ model Depense {
 }
 
 model PaiementDepense {
-  id        String       @id @default(cuid())
+  id        String                 @id @default(cuid())
   depenseId String
-  depense   Depense      @relation(fields: [depenseId], references: [id], onDelete: Cascade)
+  depense   Depense                @relation(fields: [depenseId], references: [id], onDelete: Cascade)
   montant   Float
   mode      ModePaiement
   reference String?
-  date      DateTime     @default(now())
+  date      DateTime               @default(now())
   userId    String
-  user      User         @relation(fields: [userId], references: [id])
+  user      User                   @relation(fields: [userId], references: [id])
   siteId    String
-  site      Site         @relation(fields: [siteId], references: [id])
+  site      Site                   @relation(fields: [siteId], references: [id])
   fraisSupp FraisPaiementDepense[]
-  createdAt DateTime     @default(now())
+  createdAt DateTime               @default(now())
 
   @@index([depenseId])
   @@index([siteId])
@@ -1572,12 +1714,19 @@ model FraisPaiementDepense {
   motif      MotifFraisSupp
   montant    Float
   notes      String?
+  userId     String?
+  user       User?           @relation(fields: [userId], references: [id])
   siteId     String
   site       Site            @relation(fields: [siteId], references: [id])
+  /**
+   * Soft-delete pour l'audit trail — null = actif, non-null = supprime
+   */
+  deletedAt  DateTime?
   createdAt  DateTime        @default(now())
 
   @@index([paiementId])
   @@index([siteId])
+  @@index([deletedAt])
 }
 
 // ──────────────────────────────────────────
@@ -1585,17 +1734,33 @@ model FraisPaiementDepense {
 // ──────────────────────────────────────────
 
 model AjustementDepense {
-  id            String   @id @default(cuid())
-  depenseId     String
-  depense       Depense  @relation(fields: [depenseId], references: [id], onDelete: Cascade)
-  montantAvant  Float
-  montantApres  Float
-  raison        String
-  userId        String
-  user          User     @relation(fields: [userId], references: [id])
-  siteId        String
-  site          Site     @relation(fields: [siteId], references: [id])
-  createdAt     DateTime @default(now())
+  id             String                 @id @default(cuid())
+  depenseId      String
+  depense        Depense                @relation(fields: [depenseId], references: [id], onDelete: Cascade)
+  montantAvant   Float
+  montantApres   Float
+  raison         String
+  userId         String
+  user           User                   @relation(fields: [userId], references: [id])
+  siteId         String
+  site           Site                   @relation(fields: [siteId], references: [id])
+  /**
+   * Type d'ajustement : MONTANT_TOTAL ou FRAIS_SUPP
+   */
+  typeAjustement TypeAjustementDepense  @default(MONTANT_TOTAL)
+  /**
+   * Paiement concerne pour un ajustement de type FRAIS_SUPP
+   */
+  paiementId     String?
+  /**
+   * Frais concerne (peut etre un ancien frais soft-deleted) pour FRAIS_SUPP
+   */
+  fraisId        String?
+  /**
+   * Action effectuee sur le frais : AJOUTE, MODIFIE, SUPPRIME
+   */
+  actionFrais    ActionAjustementFrais?
+  createdAt      DateTime               @default(now())
 
   @@index([depenseId])
   @@index([siteId])
@@ -1606,21 +1771,23 @@ model AjustementDepense {
 // ──────────────────────────────────────────
 
 model DepenseRecurrente {
-  id                  String              @id @default(cuid())
-  description         String
-  categorieDepense    CategorieDepense
-  montantEstime       Float
-  frequence           FrequenceRecurrence
-  /** Jour du mois de génération (1-28, contraint par CHECK côté SQL) */
-  jourDuMois          Int                 @default(1)
-  isActive            Boolean             @default(true)
-  derniereGeneration  DateTime?
-  userId              String
-  user                User                @relation(fields: [userId], references: [id])
-  siteId              String
-  site                Site                @relation(fields: [siteId], references: [id])
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
+  id                 String              @id @default(cuid())
+  description        String
+  categorieDepense   CategorieDepense
+  montantEstime      Float
+  frequence          FrequenceRecurrence
+  /**
+   * Jour du mois de génération (1-28, contraint par CHECK côté SQL)
+   */
+  jourDuMois         Int                 @default(1)
+  isActive           Boolean             @default(true)
+  derniereGeneration DateTime?
+  userId             String
+  user               User                @relation(fields: [userId], references: [id])
+  siteId             String
+  site               Site                @relation(fields: [siteId], references: [id])
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   @@index([siteId])
   @@index([siteId, isActive])
@@ -1632,32 +1799,44 @@ model DepenseRecurrente {
 // ──────────────────────────────────────────
 
 model ListeBesoins {
-  id             String         @id @default(cuid())
-  /** Numéro auto-généré format BES-YYYY-NNN */
-  numero         String         @unique
-  titre          String
-  demandeurId    String
-  demandeur      User           @relation("ListeBesoinsCreees", fields: [demandeurId], references: [id])
-  valideurId     String?
-  valideur       User?          @relation("ListeBesoinsValidees", fields: [valideurId], references: [id])
-  statut         StatutBesoins  @default(SOUMISE)
-  /** Somme estimée des besoins (SUM quantite * prixEstime) */
-  montantEstime  Float          @default(0)
-  /** Montant réel après clôture (nullable) */
-  montantReel    Float?
-  /** Motif de rejet (nullable, rempli si REJETEE) */
-  motifRejet     String?
-  notes          String?
-  /** Date limite de traitement (optionnelle — R7 nullabilite explicite) */
-  dateLimite     DateTime?
-  siteId         String
-  site           Site           @relation(fields: [siteId], references: [id])
-  lignes         LigneBesoin[]
-  depenses       Depense[]
-  /** Vagues associées avec leurs ratios de répartition (remplace vagueId direct) */
-  vagues         ListeBesoinsVague[]
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id            String              @id @default(cuid())
+  /**
+   * Numéro auto-généré format BES-YYYY-NNN
+   */
+  numero        String              @unique
+  titre         String
+  demandeurId   String
+  demandeur     User                @relation("ListeBesoinsCreees", fields: [demandeurId], references: [id])
+  valideurId    String?
+  valideur      User?               @relation("ListeBesoinsValidees", fields: [valideurId], references: [id])
+  statut        StatutBesoins       @default(SOUMISE)
+  /**
+   * Somme estimée des besoins (SUM quantite * prixEstime)
+   */
+  montantEstime Float               @default(0)
+  /**
+   * Montant réel après clôture (nullable)
+   */
+  montantReel   Float?
+  /**
+   * Motif de rejet (nullable, rempli si REJETEE)
+   */
+  motifRejet    String?
+  notes         String?
+  /**
+   * Date limite de traitement (optionnelle — R7 nullabilite explicite)
+   */
+  dateLimite    DateTime?
+  siteId        String
+  site          Site                @relation(fields: [siteId], references: [id])
+  lignes        LigneBesoin[]
+  depenses      Depense[]
+  /**
+   * Vagues associées avec leurs ratios de répartition (remplace vagueId direct)
+   */
+  vagues        ListeBesoinsVague[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
 
   @@index([siteId])
   @@index([siteId, statut])
@@ -1665,7 +1844,9 @@ model ListeBesoins {
   @@index([dateLimite])
 }
 
-/** Table de jonction entre ListeBesoins et Vague avec ratio de répartition des coûts */
+/**
+ * Table de jonction entre ListeBesoins et Vague avec ratio de répartition des coûts
+ */
 model ListeBesoinsVague {
   id             String       @id @default(cuid())
   listeBesoinsId String
@@ -1675,7 +1856,9 @@ model ListeBesoinsVague {
   /// Fraction du coût imputée à cette vague. Doit être > 0 et <= 1.
   /// La somme des ratio pour un même listeBesoinsId doit être = 1.0
   ratio          Float        @default(1.0)
-  /** ID du site (ferme) — R8 */
+  /**
+   * ID du site (ferme) — R8
+   */
   siteId         String
   createdAt      DateTime     @default(now())
 
@@ -1685,25 +1868,37 @@ model ListeBesoinsVague {
 }
 
 model LigneBesoin {
-  id               String        @id @default(cuid())
-  listeBesoinsId   String
-  listeBesoins     ListeBesoins  @relation(fields: [listeBesoinsId], references: [id], onDelete: Cascade)
-  /** Désignation libre de l'article */
-  designation      String
-  /** Produit en stock lié (nullable — libre si null) */
-  produitId        String?
-  produit          Produit?      @relation(fields: [produitId], references: [id], onDelete: SetNull)
-  quantite         Float
-  /** Unité libre (nullable si produit avec unité définie) */
-  unite            UniteBesoin?
-  /** Prix unitaire estimé */
-  prixEstime       Float         @default(0)
-  /** Prix unitaire réel après clôture (nullable) */
-  prixReel         Float?
-  /** Commande générée lors du traitement (nullable) */
-  commandeId       String?
-  commande         Commande?     @relation(fields: [commandeId], references: [id], onDelete: SetNull)
-  createdAt        DateTime      @default(now())
+  id             String       @id @default(cuid())
+  listeBesoinsId String
+  listeBesoins   ListeBesoins @relation(fields: [listeBesoinsId], references: [id], onDelete: Cascade)
+  /**
+   * Désignation libre de l'article
+   */
+  designation    String
+  /**
+   * Produit en stock lié (nullable — libre si null)
+   */
+  produitId      String?
+  produit        Produit?     @relation(fields: [produitId], references: [id], onDelete: SetNull)
+  quantite       Float
+  /**
+   * Unité libre (nullable si produit avec unité définie)
+   */
+  unite          UniteBesoin?
+  /**
+   * Prix unitaire estimé
+   */
+  prixEstime     Float        @default(0)
+  /**
+   * Prix unitaire réel après clôture (nullable)
+   */
+  prixReel       Float?
+  /**
+   * Commande générée lors du traitement (nullable)
+   */
+  commandeId     String?
+  commande       Commande?    @relation(fields: [commandeId], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now())
 
   @@index([listeBesoinsId])
   @@index([produitId])
@@ -1716,36 +1911,51 @@ model LigneBesoin {
 
 /**
  * Pack — Kit de démarrage vendu aux clients pisciculteurs.
- *
  * Un Pack regroupe une ConfigElevage + une liste de Produits (aliments, intrants)
  * et configure la vague initiale (nombre d'alevins, poids initial).
  * Basé sur la section 3.2 du REQ-STARTER-PACKS.md.
  */
 model Pack {
-  id                  String         @id @default(cuid())
-  /** Nom commercial du pack — ex: "Starter 300" */
-  nom                 String
-  description         String?
-  /** Nombre d'alevins fournis (> 0) */
-  nombreAlevins       Int
-  /** Poids moyen initial des alevins (g) */
-  poidsMoyenInitial   Float          @default(5)
-  /** Prix total du pack en FCFA (>= 0) */
-  prixTotal           Float          @default(0)
-  /** ConfigElevage recommandée pour ce pack */
-  configElevageId     String?
-  configElevage       ConfigElevage? @relation(fields: [configElevageId], references: [id], onDelete: SetNull)
-  isActive            Boolean        @default(true)
-  /** Créateur du pack (ADMIN DKFarm) */
-  userId              String
-  user                User           @relation(fields: [userId], references: [id])
-  /** Site DKFarm propriétaire du pack — R8 */
-  siteId              String
-  site                Site           @relation(fields: [siteId], references: [id])
+  id                String         @id @default(cuid())
+  /**
+   * Nom commercial du pack — ex: "Starter 300"
+   */
+  nom               String
+  description       String?
+  /**
+   * Nombre d'alevins fournis (> 0)
+   */
+  nombreAlevins     Int
+  /**
+   * Poids moyen initial des alevins (g)
+   */
+  poidsMoyenInitial Float          @default(5)
+  /**
+   * Prix total du pack en FCFA (>= 0)
+   */
+  prixTotal         Float          @default(0)
+  /**
+   * ConfigElevage recommandée pour ce pack
+   */
+  configElevageId   String?
+  configElevage     ConfigElevage? @relation(fields: [configElevageId], references: [id], onDelete: SetNull)
+  isActive          Boolean        @default(true)
+  /**
+   * Créateur du pack (ADMIN DKFarm)
+   */
+  userId            String
+  user              User           @relation(fields: [userId], references: [id])
+  /**
+   * Site DKFarm propriétaire du pack — R8
+   */
+  siteId            String
+  site              Site           @relation(fields: [siteId], references: [id])
 
-  /** Plan d'abonnement associé à ce pack */
-  planId              String
-  plan                PlanAbonnement @relation(fields: [planId], references: [id])
+  /**
+   * Plan d'abonnement associé à ce pack
+   */
+  planId String
+  plan   PlanAbonnement @relation(fields: [planId], references: [id])
 
   produits    PackProduit[]
   bacs        PackBac[]
@@ -1762,19 +1972,22 @@ model Pack {
 
 /**
  * PackProduit — Ligne de produit incluse dans un Pack.
- *
  * Un même Produit ne peut figurer qu'une fois par Pack (contrainte unique).
  * onDelete: Restrict sur Produit pour éviter les suppressions orphelines (EC-1.6).
  */
 model PackProduit {
-  id        String  @id @default(cuid())
+  id        String      @id @default(cuid())
   packId    String
-  pack      Pack    @relation(fields: [packId], references: [id], onDelete: Cascade)
+  pack      Pack        @relation(fields: [packId], references: [id], onDelete: Cascade)
   produitId String
-  produit   Produit @relation(fields: [produitId], references: [id], onDelete: Restrict)
-  /** Quantité incluse dans le pack (> 0) */
+  produit   Produit     @relation(fields: [produitId], references: [id], onDelete: Restrict)
+  /**
+   * Quantité incluse dans le pack (> 0)
+   */
   quantite  Float
-  /** Unité choisie (NULL = unité par défaut du produit) */
+  /**
+   * Unité choisie (NULL = unité par défaut du produit)
+   */
   unite     UniteStock?
 
   @@unique([packId, produitId])
@@ -1784,19 +1997,18 @@ model PackProduit {
 
 /**
  * PackBac — Bac modele inclus dans un Pack.
- *
  * Decrit le nombre et la configuration des bacs fournis dans le pack.
  * Un meme nom de bac ne peut figurer qu'une fois par Pack.
  */
 model PackBac {
-  id                String  @id @default(cuid())
+  id                String @id @default(cuid())
   packId            String
-  pack              Pack    @relation(fields: [packId], references: [id], onDelete: Cascade)
+  pack              Pack   @relation(fields: [packId], references: [id], onDelete: Cascade)
   nom               String
   volume            Float?
   nombreAlevins     Int
-  poidsMoyenInitial Float   @default(5)
-  position          Int     @default(0)
+  poidsMoyenInitial Float  @default(5)
+  position          Int    @default(0)
 
   @@unique([packId, nom])
   @@index([packId])
@@ -1804,7 +2016,6 @@ model PackBac {
 
 /**
  * PackActivation — Enregistrement d'une vente de pack à un client.
- *
  * Créée lors du provisioning transactionnel.
  * - siteId = site DKFarm vendeur (R8)
  * - clientSiteId = site créé pour le client
@@ -1812,30 +2023,40 @@ model PackBac {
  * IMPORTANT : Pas de @unique sur vagueId (une vague peut être splitée après tri — F-06)
  */
 model PackActivation {
-  id            String           @id @default(cuid())
-  /** Code d'activation généré ACT-YYYY-NNN */
-  code          String           @unique
-  packId        String
-  pack          Pack             @relation(fields: [packId], references: [id], onDelete: Restrict)
-  /** Utilisateur ayant activé le pack (ingénieur ou admin DKFarm) */
-  userId        String
-  user          User             @relation(fields: [userId], references: [id])
-  /** Site DKFarm vendeur — R8 */
-  siteId        String
-  site          Site             @relation("PackActivationsVendeur", fields: [siteId], references: [id])
-  /** Site client créé lors du provisioning */
-  clientSiteId  String
-  clientSite    Site             @relation("PackActivationsClient", fields: [clientSiteId], references: [id])
-  statut        StatutActivation @default(ACTIVE)
-  dateActivation DateTime        @default(now())
+  id             String           @id @default(cuid())
+  /**
+   * Code d'activation généré ACT-YYYY-NNN
+   */
+  code           String           @unique
+  packId         String
+  pack           Pack             @relation(fields: [packId], references: [id], onDelete: Restrict)
+  /**
+   * Utilisateur ayant activé le pack (ingénieur ou admin DKFarm)
+   */
+  userId         String
+  user           User             @relation(fields: [userId], references: [id])
+  /**
+   * Site DKFarm vendeur — R8
+   */
+  siteId         String
+  site           Site             @relation("PackActivationsVendeur", fields: [siteId], references: [id])
+  /**
+   * Site client créé lors du provisioning
+   */
+  clientSiteId   String
+  clientSite     Site             @relation("PackActivationsClient", fields: [clientSiteId], references: [id])
+  statut         StatutActivation @default(ACTIVE)
+  dateActivation DateTime         @default(now())
   dateExpiration DateTime?
-  notes         String?
+  notes          String?
 
-  /** Vagues créées lors du provisioning pour cette activation */
-  vagues        Vague[]
+  /**
+   * Vagues créées lors du provisioning pour cette activation
+   */
+  vagues Vague[]
 
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([siteId])
   @@index([clientSiteId])
@@ -1851,55 +2072,77 @@ model PackActivation {
 
 /**
  * NoteIngenieur — note ou observation envoyee par un ingenieur DKFarm vers un site client.
- *
  * Deux usages :
  * 1. Note de suivi (isFromClient=false) : l'ingenieur redige une note technique (PUBLIC ou INTERNE).
  * 2. Observation client (isFromClient=true) : le client remonte une observation via observationTexte.
- *
  * Deux relations vers Site :
  * - siteId : site DKFarm de l'ingenieur (R8 — chaque modele a un siteId)
  * - clientSiteId : site client destinataire de la note
  */
 model NoteIngenieur {
   id               String         @id @default(cuid())
-  /** Titre court de la note */
+  /**
+   * Titre court de la note
+   */
   titre            String
-  /** Contenu en Markdown */
+  /**
+   * Contenu en Markdown
+   */
   contenu          String
-  /** Visibilite : PUBLIC (visible client) ou INTERNE (DKFarm uniquement) */
+  /**
+   * Visibilite : PUBLIC (visible client) ou INTERNE (DKFarm uniquement)
+   */
   visibility       VisibiliteNote
-  /** Marquer la note comme urgente */
+  /**
+   * Marquer la note comme urgente
+   */
   isUrgent         Boolean        @default(false)
-  /** Marquer la note comme lue par le destinataire */
+  /**
+   * Marquer la note comme lue par le destinataire
+   */
   isRead           Boolean        @default(false)
-  /** True si cette note est une observation soumise par le client */
+  /**
+   * True si cette note est une observation soumise par le client
+   */
   isFromClient     Boolean        @default(false)
-  /** Texte libre de l'observation client (nullable, utilise si isFromClient=true) */
+  /**
+   * Texte libre de l'observation client (nullable, utilise si isFromClient=true)
+   */
   observationTexte String?
 
-  /** Ingenieur auteur de la note */
-  ingenieurId   String
-  ingenieur     User   @relation("NotesEnvoyees", fields: [ingenieurId], references: [id])
+  /**
+   * Ingenieur auteur de la note
+   */
+  ingenieurId String
+  ingenieur   User   @relation("NotesEnvoyees", fields: [ingenieurId], references: [id])
 
-  /** Site client destinataire */
-  clientSiteId  String
-  clientSite    Site   @relation("NotesRecues", fields: [clientSiteId], references: [id])
+  /**
+   * Site client destinataire
+   */
+  clientSiteId String
+  clientSite   Site   @relation("NotesRecues", fields: [clientSiteId], references: [id])
 
-  /** Vague concernee (nullable) */
-  vagueId       String?
-  vague         Vague? @relation(fields: [vagueId], references: [id], onDelete: SetNull)
+  /**
+   * Vague concernee (nullable)
+   */
+  vagueId String?
+  vague   Vague?  @relation(fields: [vagueId], references: [id], onDelete: SetNull)
 
-  /** Site DKFarm de l'ingenieur — R8 */
-  siteId        String
-  site          Site   @relation("NotesDKFarm", fields: [siteId], references: [id])
+  /**
+   * Site DKFarm de l'ingenieur — R8
+   */
+  siteId String
+  site   Site   @relation("NotesDKFarm", fields: [siteId], references: [id])
 
-  /** Reponse a une note parente (thread one-level deep) */
-  replyToId     String?
-  replyTo       NoteIngenieur?  @relation("NoteReplies", fields: [replyToId], references: [id], onDelete: SetNull)
-  replies       NoteIngenieur[] @relation("NoteReplies")
+  /**
+   * Reponse a une note parente (thread one-level deep)
+   */
+  replyToId String?
+  replyTo   NoteIngenieur?  @relation("NoteReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   NoteIngenieur[] @relation("NoteReplies")
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([siteId])
   @@index([clientSiteId])
@@ -1918,32 +2161,32 @@ model NoteIngenieur {
 // ──────────────────────────────────────────
 
 model Calibrage {
-  id            String            @id @default(cuid())
-  date          DateTime
-  vagueId       String
-  vague         Vague             @relation(fields: [vagueId], references: [id])
-  sourceBacIds  String[]
-  nombreMorts   Int               @default(0)
-  notes         String?
-  siteId        String
-  site          Site              @relation(fields: [siteId], references: [id])
-  userId        String
-  user          User              @relation("CalibrageUser", fields: [userId], references: [id])
-  groupes       CalibrageGroupe[]
+  id           String            @id @default(cuid())
+  date         DateTime
+  vagueId      String
+  vague        Vague             @relation(fields: [vagueId], references: [id])
+  sourceBacIds String[]
+  nombreMorts  Int               @default(0)
+  notes        String?
+  siteId       String
+  site         Site              @relation(fields: [siteId], references: [id])
+  userId       String
+  user         User              @relation("CalibrageUser", fields: [userId], references: [id])
+  groupes      CalibrageGroupe[]
 
   // Traçabilité modification (Sprint 26, ADR-015)
-  modifie       Boolean                @default(false)
+  modifie       Boolean                 @default(false)
   modifications CalibrageModification[]
 
   // Relevés auto-créés lors du calibrage
-  releves       Releve[]          @relation("CalibrageReleves")
+  releves Releve[] @relation("CalibrageReleves")
 
   // Snapshots — état vague+bacs avant création / avant modification (Fix 5)
   snapshotAvant      Json?
   snapshotAvantModif Json?
 
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([vagueId])
   @@index([siteId])
@@ -1970,7 +2213,6 @@ model CalibrageGroupe {
 
 /**
  * ReleveModification — trace d'une modification de relevé avec raison d'audit.
- *
  * Une ligne par champ modifié.
  * Cascade DELETE avec Releve (si un relevé est supprimé, ses traces le sont aussi).
  */
@@ -1995,7 +2237,6 @@ model ReleveModification {
 
 /**
  * CalibrageModification — trace d'une modification de calibrage avec raison d'audit.
- *
  * Une ligne par champ modifié (nombreMorts, notes, groupes).
  * Pour "groupes" : ancienneValeur/nouvelleValeur contiennent du JSON sérialisé.
  * Cascade DELETE avec Calibrage.
@@ -2101,39 +2342,55 @@ enum FournisseurPaiement {
 
 /**
  * CustomPlaceholder — variable personnalisee utilisable dans les templates de regles d'activites.
- *
  * Deux modes :
  * - MAPPING : le placeholder pointe vers un champ de la base via sourcePath
  * - FORMULA : le placeholder est calcule via une formule mathematique (formula)
- *
  * Ces placeholders sont globaux (pas de siteId) — geres par DKFarm.
  */
 model CustomPlaceholder {
-  id          String            @id @default(cuid())
-  /** Cle unique du placeholder — ex: "poids_moyen", "fcr_actuel" */
-  key         String            @unique
-  /** Libelle affiche dans l'editeur de regles */
+  id          String  @id @default(cuid())
+  /**
+   * Cle unique du placeholder — ex: "poids_moyen", "fcr_actuel"
+   */
+  key         String  @unique
+  /**
+   * Libelle affiche dans l'editeur de regles
+   */
   label       String
-  /** Description de l'usage du placeholder (nullable) */
+  /**
+   * Description de l'usage du placeholder (nullable)
+   */
   description String?
-  /** Exemple de valeur affichee dans l'interface */
+  /**
+   * Exemple de valeur affichee dans l'interface
+   */
   example     String
 
-  /** Mode de resolution : MAPPING (champ DB) ou FORMULA (calcul) */
-  mode        PlaceholderMode
-  /** Chemin vers le champ source (mode MAPPING) — ex: "vague.poidsMoyen" */
-  sourcePath  String?
-  /** Expression de calcul (mode FORMULA) — ex: "alimentation / biomasse" */
-  formula     String?
+  /**
+   * Mode de resolution : MAPPING (champ DB) ou FORMULA (calcul)
+   */
+  mode       PlaceholderMode
+  /**
+   * Chemin vers le champ source (mode MAPPING) — ex: "vague.poidsMoyen"
+   */
+  sourcePath String?
+  /**
+   * Expression de calcul (mode FORMULA) — ex: "alimentation / biomasse"
+   */
+  formula    String?
 
-  /** Format de la valeur resolue */
-  format      PlaceholderFormat @default(NUMBER)
-  /** Nombre de decimales pour le format NUMBER */
-  decimals    Int               @default(2)
+  /**
+   * Format de la valeur resolue
+   */
+  format   PlaceholderFormat @default(NUMBER)
+  /**
+   * Nombre de decimales pour le format NUMBER
+   */
+  decimals Int               @default(2)
 
-  isActive    Boolean           @default(true)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ──────────────────────────────────────────
@@ -2146,28 +2403,30 @@ model CustomPlaceholder {
  * Prix null = plan gratuit ou période non disponible.
  */
 model PlanAbonnement {
-  id               String             @id @default(cuid())
+  id               String       @id @default(cuid())
   nom              String
-  typePlan         TypePlan           @unique
+  typePlan         TypePlan     @unique
   description      String?
   prixMensuel      Decimal?
   prixTrimestriel  Decimal?
   prixAnnuel       Decimal?
-  limitesSites     Int                @default(1)
-  limitesBacs      Int                @default(3)
-  limitesVagues    Int                @default(1)
+  limitesSites     Int          @default(1)
+  limitesBacs      Int          @default(3)
+  limitesVagues    Int          @default(1)
   limitesIngFermes Int?
-  isActif          Boolean            @default(true)
-  isPublic         Boolean            @default(true)
-  /** Modules fonctionnels inclus dans ce plan — COMMISSIONS/REMISES exclus (platform-only) */
-  modulesInclus    SiteModule[]       @default([])
+  isActif          Boolean      @default(true)
+  isPublic         Boolean      @default(true)
+  /**
+   * Modules fonctionnels inclus dans ce plan — COMMISSIONS/REMISES exclus (platform-only)
+   */
+  modulesInclus    SiteModule[] @default([])
 
-  abonnements      Abonnement[]
-  remises          Remise[]
-  packs            Pack[]
+  abonnements Abonnement[]
+  remises     Remise[]
+  packs       Pack[]
 
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([typePlan])
 }
@@ -2182,29 +2441,29 @@ model PlanAbonnement {
  * R7 : dateFinGrace nullable (absent pour plan gratuit).
  */
 model Abonnement {
-  id                          String             @id @default(cuid())
-  siteId                      String
-  site                        Site               @relation("AbonnementsSite", fields: [siteId], references: [id])
-  planId                      String
-  plan                        PlanAbonnement     @relation(fields: [planId], references: [id])
-  periode                     PeriodeFacturation
-  statut                      StatutAbonnement   @default(EN_ATTENTE_PAIEMENT)
-  dateDebut                   DateTime
-  dateFin                     DateTime
-  dateProchainRenouvellement  DateTime
-  dateFinGrace                DateTime?
-  prixPaye                    Decimal
-  userId                      String
-  user                        User               @relation("AbonnementsUser", fields: [userId], references: [id])
-  remiseId                    String?
-  remise                      Remise?            @relation(fields: [remiseId], references: [id])
+  id                         String             @id @default(cuid())
+  siteId                     String
+  site                       Site               @relation("AbonnementsSite", fields: [siteId], references: [id])
+  planId                     String
+  plan                       PlanAbonnement     @relation(fields: [planId], references: [id])
+  periode                    PeriodeFacturation
+  statut                     StatutAbonnement   @default(EN_ATTENTE_PAIEMENT)
+  dateDebut                  DateTime
+  dateFin                    DateTime
+  dateProchainRenouvellement DateTime
+  dateFinGrace               DateTime?
+  prixPaye                   Decimal
+  userId                     String
+  user                       User               @relation("AbonnementsUser", fields: [userId], references: [id])
+  remiseId                   String?
+  remise                     Remise?            @relation(fields: [remiseId], references: [id])
 
-  paiements                   PaiementAbonnement[]
-  remisesAppliquees           RemiseApplication[]
-  commissions                 CommissionIngenieur[]
+  paiements         PaiementAbonnement[]
+  remisesAppliquees RemiseApplication[]
+  commissions       CommissionIngenieur[]
 
-  createdAt                   DateTime           @default(now())
-  updatedAt                   DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([siteId])
   @@index([statut])
@@ -2238,10 +2497,10 @@ model PaiementAbonnement {
   siteId           String
   site             Site                @relation("PaiementsAboSite", fields: [siteId], references: [id])
 
-  commissions      CommissionIngenieur[]
+  commissions CommissionIngenieur[]
 
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([abonnementId])
   @@index([siteId])
@@ -2277,11 +2536,11 @@ model Remise {
   planId             String?
   plan               PlanAbonnement? @relation(fields: [planId], references: [id])
 
-  abonnements        Abonnement[]
-  applications       RemiseApplication[]
+  abonnements  Abonnement[]
+  applications RemiseApplication[]
 
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([siteId])
   @@index([code])
@@ -2321,25 +2580,25 @@ model RemiseApplication {
  * R8 : siteId obligatoire.
  */
 model CommissionIngenieur {
-  id                   String               @id @default(cuid())
+  id                   String              @id @default(cuid())
   ingenieurId          String
-  ingenieur            User                 @relation("CommissionsIngenieur", fields: [ingenieurId], references: [id])
+  ingenieur            User                @relation("CommissionsIngenieur", fields: [ingenieurId], references: [id])
   siteClientId         String
-  siteClient           Site                 @relation("CommissionsSiteClient", fields: [siteClientId], references: [id])
+  siteClient           Site                @relation("CommissionsSiteClient", fields: [siteClientId], references: [id])
   abonnementId         String
-  abonnement           Abonnement           @relation(fields: [abonnementId], references: [id])
+  abonnement           Abonnement          @relation(fields: [abonnementId], references: [id])
   paiementAbonnementId String
-  paiementAbonnement   PaiementAbonnement   @relation(fields: [paiementAbonnementId], references: [id])
+  paiementAbonnement   PaiementAbonnement  @relation(fields: [paiementAbonnementId], references: [id])
   montant              Decimal
   taux                 Decimal
-  statut               StatutCommissionIng  @default(EN_ATTENTE)
+  statut               StatutCommissionIng @default(EN_ATTENTE)
   periodeDebut         DateTime
   periodeFin           DateTime
   siteId               String
-  site                 Site                 @relation("CommissionsDKFarm", fields: [siteId], references: [id])
+  site                 Site                @relation("CommissionsDKFarm", fields: [siteId], references: [id])
 
-  createdAt            DateTime             @default(now())
-  updatedAt            DateTime             @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([ingenieurId])
   @@index([abonnementId])
@@ -2357,19 +2616,19 @@ model CommissionIngenieur {
  * R8 : siteId obligatoire (site DKFarm gestionnaire).
  */
 model PortefeuilleIngenieur {
-  id             String               @id @default(cuid())
-  ingenieurId    String               @unique
-  ingenieur      User                 @relation("PortefeuilleIngenieur", fields: [ingenieurId], references: [id])
-  solde          Decimal              @default(0)
-  soldePending   Decimal              @default(0)
-  totalGagne     Decimal              @default(0)
-  totalPaye      Decimal              @default(0)
-  siteId         String
-  site           Site                 @relation("PortefeuillesSite", fields: [siteId], references: [id])
+  id           String  @id @default(cuid())
+  ingenieurId  String  @unique
+  ingenieur    User    @relation("PortefeuilleIngenieur", fields: [ingenieurId], references: [id])
+  solde        Decimal @default(0)
+  soldePending Decimal @default(0)
+  totalGagne   Decimal @default(0)
+  totalPaye    Decimal @default(0)
+  siteId       String
+  site         Site    @relation("PortefeuillesSite", fields: [siteId], references: [id])
 
-  retraits       RetraitPortefeuille[]
+  retraits RetraitPortefeuille[]
 
-  updatedAt      DateTime             @updatedAt
+  updatedAt DateTime @updatedAt
 
   @@index([siteId])
 }
@@ -2384,23 +2643,23 @@ model PortefeuilleIngenieur {
  * R8 : siteId obligatoire.
  */
 model RetraitPortefeuille {
-  id               String               @id @default(cuid())
+  id               String                @id @default(cuid())
   portefeuilleId   String
   portefeuille     PortefeuilleIngenieur @relation(fields: [portefeuilleId], references: [id])
   montant          Decimal
   fournisseur      FournisseurPaiement
   phoneNumber      String
-  statut           StatutPaiementAbo    @default(EN_ATTENTE)
+  statut           StatutPaiementAbo     @default(EN_ATTENTE)
   referenceExterne String?
   demandeLeBy      String
-  demandeur        User                 @relation("RetraitDemandeur", fields: [demandeLeBy], references: [id])
+  demandeur        User                  @relation("RetraitDemandeur", fields: [demandeLeBy], references: [id])
   traitePar        String?
-  traiteur         User?                @relation("RetraitTraiteur", fields: [traitePar], references: [id])
+  traiteur         User?                 @relation("RetraitTraiteur", fields: [traitePar], references: [id])
   dateTraitement   DateTime?
   siteId           String
-  site             Site                 @relation("RetraitsSite", fields: [siteId], references: [id])
+  site             Site                  @relation("RetraitsSite", fields: [siteId], references: [id])
 
-  createdAt        DateTime             @default(now())
+  createdAt DateTime @default(now())
 
   @@index([portefeuilleId])
   @@index([siteId])
@@ -2438,33 +2697,51 @@ model IdempotencyRecord {
 
 /**
  * ModuleDefinition — Registre des métadonnées des modules de la plateforme.
- *
  * Approche hybride : l'enum SiteModule reste la clé forte (type-safety).
  * Ce modèle compléte l'enum avec les métadonnées (label, icône, visibilité, catégorie).
- *
  * Note R8 : pas de siteId — registre global, exception documentée dans ADR-021 section 2.2.
  */
 model ModuleDefinition {
   id          String   @id @default(cuid())
-  /** Clé unique — valeur de l'enum SiteModule. Source de vérité. */
+  /**
+   * Clé unique — valeur de l'enum SiteModule. Source de vérité.
+   */
   key         String   @unique
-  /** Label affiché dans l'UI */
+  /**
+   * Label affiché dans l'UI
+   */
   label       String
-  /** Description de ce que le module offre */
+  /**
+   * Description de ce que le module offre
+   */
   description String?
-  /** Nom de l'icône Lucide (ex: "Fish", "Package") */
+  /**
+   * Nom de l'icône Lucide (ex: "Fish", "Package")
+   */
   iconName    String   @default("Package")
-  /** Ordre d'affichage dans les interfaces d'administration */
+  /**
+   * Ordre d'affichage dans les interfaces d'administration
+   */
   sortOrder   Int      @default(0)
-  /** platform = réservé au site DKFarm, site = activable par sites clients */
+  /**
+   * platform = réservé au site DKFarm, site = activable par sites clients
+   */
   level       String   @default("site")
-  /** Modules requis pour activer celui-ci (dépendances, valeurs SiteModule) */
+  /**
+   * Modules requis pour activer celui-ci (dépendances, valeurs SiteModule)
+   */
   dependsOn   String[] @default([])
-  /** Si false : masqué dans les interfaces sans le supprimer */
+  /**
+   * Si false : masqué dans les interfaces sans le supprimer
+   */
   isVisible   Boolean  @default(true)
-  /** Si false : ne peut plus être assigné à de nouveaux plans ou sites */
+  /**
+   * Si false : ne peut plus être assigné à de nouveaux plans ou sites
+   */
   isActive    Boolean  @default(true)
-  /** Catégorie fonctionnelle pour regroupement UI */
+  /**
+   * Catégorie fonctionnelle pour regroupement UI
+   */
   category    String?
 
   createdAt DateTime @default(now())
@@ -2477,7 +2754,6 @@ model ModuleDefinition {
 
 /**
  * SiteAuditLog — Journal d'audit des actions admin sur les sites.
- *
  * Toute action admin (suspension, blocage, modification de modules) est loguée ici
  * dans la même transaction que la mutation principale (R4).
  * R8 : siteId obligatoire.
@@ -2488,9 +2764,13 @@ model SiteAuditLog {
   site      Site     @relation(fields: [siteId], references: [id])
   actorId   String
   actor     User     @relation("AuditLogActor", fields: [actorId], references: [id])
-  /** ex: SITE_SUSPENDED, MODULE_ADDED, ABONNEMENT_FORCED */
+  /**
+   * ex: SITE_SUSPENDED, MODULE_ADDED, ABONNEMENT_FORCED
+   */
   action    String
-  /** Payload before/after pour l'action */
+  /**
+   * Payload before/after pour l'action
+   */
   details   Json?
   createdAt DateTime @default(now())
 
@@ -2505,7 +2785,6 @@ model SiteAuditLog {
 
 /**
  * HistoriqueNutritionnel — Matérialisation des données nutritionnelles par vague et phase.
- *
  * Table de cache analytique : évite de recalculer FCR, SGR, ADG, PER à chaque requête.
  * Les données peuvent être recalculées à tout moment depuis les relevés bruts.
  * R8 : siteId obligatoire.
@@ -2518,23 +2797,41 @@ model HistoriqueNutritionnel {
   phase   PhaseElevage
 
   // Métriques agrégées pour cette phase
-  /** FCR moyen sur la phase (kg aliment / kg gain) */
+  /**
+   * /** FCR moyen sur la phase (kg aliment / kg gain)
+   */
   fcrMoyen          Float?
-  /** SGR moyen sur la phase (% poids vif / jour) */
+  /**
+   * SGR moyen sur la phase (% poids vif / jour)
+   */
   sgrMoyen          Float?
-  /** ADG moyen sur la phase (g / jour) — Gain Quotidien Moyen */
+  /**
+   * ADG moyen sur la phase (g / jour) — Gain Quotidien Moyen
+   */
   adgMoyen          Float?
-  /** PER moyen sur la phase (kg gain / kg protéines) */
+  /**
+   * PER moyen sur la phase (kg gain / kg protéines)
+   */
   perMoyen          Float?
-  /** Quantité totale d'aliment distribué sur la phase (kg) */
+  /**
+   * Quantité totale d'aliment distribué sur la phase (kg)
+   */
   quantiteAlimentKg Float?
-  /** Poids moyen des poissons au début de la phase (g) */
+  /**
+   * Poids moyen des poissons au début de la phase (g)
+   */
   poidsMoyenDebut   Float?
-  /** Poids moyen des poissons à la fin de la phase (g) */
+  /**
+   * Poids moyen des poissons à la fin de la phase (g)
+   */
   poidsMoyenFin     Float?
-  /** Taux de survie sur la phase (%) */
+  /**
+   * Taux de survie sur la phase (%)
+   */
   tauxSurvie        Float?
-  /** Durée effective de la phase en jours */
+  /**
+   * Durée effective de la phase en jours
+   */
   dureeJours        Int?
 
   siteId    String
@@ -2553,30 +2850,40 @@ model HistoriqueNutritionnel {
 /**
  * GompertzVague — Parametres du modele de croissance de Gompertz calibres sur les
  * releves biometriques d'une vague.
- *
  * W(t) = W∞ × exp(−exp(−k × (t − ti)))
- *
  * Un seul enregistrement par vague (@@unique vagueId).
  * Supprime en cascade avec la vague (onDelete: Cascade).
  * R8 : siteId obligatoire.
  */
 model GompertzVague {
-  id             String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  vagueId        String   @unique
-  vague          Vague    @relation(fields: [vagueId], references: [id], onDelete: Cascade)
+  vagueId String @unique
+  vague   Vague  @relation(fields: [vagueId], references: [id], onDelete: Cascade)
 
-  /** W∞ — Poids asymptotique (g) */
+  /**
+   * W∞ — Poids asymptotique (g)
+   */
   wInfinity      Float
-  /** k — Constante de taux de croissance (1/jour) */
+  /**
+   * k — Constante de taux de croissance (1/jour)
+   */
   k              Float
-  /** ti — Point d'inflexion (jours depuis le debut de la vague) */
+  /**
+   * ti — Point d'inflexion (jours depuis le debut de la vague)
+   */
   ti             Float
-  /** R² — Coefficient de determination (0-1) */
+  /**
+   * R² — Coefficient de determination (0-1)
+   */
   r2             Float
-  /** RMSE — Erreur quadratique moyenne (g) */
+  /**
+   * RMSE — Erreur quadratique moyenne (g)
+   */
   rmse           Float
-  /** Nombre de releves biometriques utilises pour le calibrage */
+  /**
+   * Nombre de releves biometriques utilises pour le calibrage
+   */
   biometrieCount Int
 
   /**
@@ -2588,14 +2895,16 @@ model GompertzVague {
    */
   confidenceLevel String
 
-  /** The configElevage.gompertzWInfDefault value used during this calibration */
+  /**
+   * The configElevage.gompertzWInfDefault value used during this calibration
+   */
   configWInfUsed Float?
 
-  siteId         String
-  site           Site     @relation(fields: [siteId], references: [id])
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id])
 
-  calculatedAt   DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  calculatedAt DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([siteId])
   @@index([vagueId])
@@ -2607,28 +2916,25 @@ model GompertzVague {
 
 /**
  * FeatureFlag — Flags de fonctionnalites de la plateforme.
- *
  * Stockage global sans siteId : intentionnel, ces flags s'appliquent
  * a toute la plateforme, pas a un site en particulier (R8 exception documentee).
- *
  * Flags predefined : MAINTENANCE_MODE (enabled: false par defaut)
  */
 model FeatureFlag {
   /// Cle unique identifiant le flag (ex: "MAINTENANCE_MODE", "REGISTRATION_ENABLED")
-  key           String    @id
+  key           String   @id
   /// Flag active ou non
-  enabled       Boolean   @default(false)
+  enabled       Boolean  @default(false)
   /// Metadonnees optionnelles : raison, message d'affichage, date de fin, etc.
   value         Json?
-  updatedAt     DateTime  @updatedAt
+  updatedAt     DateTime @updatedAt
   /// ID du super-admin qui a modifie en dernier (null si jamais modifie)
   updatedBy     String?
-  updatedByUser User?     @relation(fields: [updatedBy], references: [id], onDelete: SetNull)
+  updatedByUser User?    @relation(fields: [updatedBy], references: [id], onDelete: SetNull)
 }
 
 /**
  * PlatformAuditLog — Trace des actions platform-level effectuees par les super-admins.
- *
  * Distinct de SiteAuditLog car ces actions n'appartiennent a aucun site.
  */
 model PlatformAuditLog {

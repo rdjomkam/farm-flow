@@ -1587,6 +1587,19 @@ export enum MotifFraisSupp {
   AUTRE = "AUTRE",
 }
 
+/** Type d'ajustement sur une depense : montant total ou frais supplementaires */
+export enum TypeAjustementDepense {
+  MONTANT_TOTAL = "MONTANT_TOTAL",
+  FRAIS_SUPP = "FRAIS_SUPP",
+}
+
+/** Action effectuee sur un frais lors d'un ajustement de type FRAIS_SUPP */
+export enum ActionAjustementFrais {
+  AJOUTE = "AJOUTE",
+  MODIFIE = "MODIFIE",
+  SUPPRIME = "SUPPRIME",
+}
+
 // ---------------------------------------------------------------------------
 // Enums — Besoins (Sprint 17)
 // ---------------------------------------------------------------------------
@@ -1674,7 +1687,7 @@ export interface AjustementDepense {
   id: string;
   /** Depense concernee */
   depenseId: string;
-  /** Montant avant ajustement */
+  /** Montant avant ajustement (montantTotal pour MONTANT_TOTAL, montant du frais pour FRAIS_SUPP) */
   montantAvant: number;
   /** Montant apres ajustement */
   montantApres: number;
@@ -1684,6 +1697,14 @@ export interface AjustementDepense {
   userId: string;
   /** ID du site (ferme) — R8 */
   siteId: string;
+  /** Type d'ajustement : montant total ou frais supplementaire */
+  typeAjustement: TypeAjustementDepense;
+  /** Paiement concerne pour un ajustement FRAIS_SUPP */
+  paiementId: string | null;
+  /** Frais concerne pour un ajustement FRAIS_SUPP */
+  fraisId: string | null;
+  /** Action effectuee sur le frais */
+  actionFrais: ActionAjustementFrais | null;
   createdAt: Date;
 }
 
@@ -1730,8 +1751,12 @@ export interface FraisPaiementDepense {
   montant: number;
   /** Notes libres (nullable) */
   notes: string | null;
+  /** Utilisateur ayant cree ou ajuste ce frais (nullable pour compat ascendante) */
+  userId: string | null;
   /** ID du site (ferme) — R8 */
   siteId: string;
+  /** Soft-delete pour l'audit trail — null = actif, non-null = supprime (via ajustement) */
+  deletedAt: Date | null;
   createdAt: Date;
 }
 

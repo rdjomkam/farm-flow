@@ -1074,25 +1074,25 @@ INSERT INTO "PaiementDepense" (
 -- ──────────────────────────────────────────
 
 INSERT INTO "FraisPaiementDepense" (
-  "id", "paiementId", "motif", "montant", "notes", "siteId", "createdAt"
+  "id", "paiementId", "motif", "montant", "notes", "userId", "siteId", "createdAt"
 ) VALUES
   -- Transport lors du paiement Mobile Money (pdep_01)
   (
     'frais_01', 'pdep_01', 'TRANSPORT', 1500.0,
     'Frais de déplacement pour dépôt Mobile Money',
-    'site_01', NOW()
+    'user_admin', 'site_01', NOW()
   ),
   -- Frais Mobile Money sur pdep_01
   (
     'frais_02', 'pdep_01', 'FRAIS_MOBILE_MONEY', 875.0,
     'Commission MTN MoMo 1%',
-    'site_01', NOW()
+    'user_admin', 'site_01', NOW()
   ),
   -- Frais bancaires sur virement (pdep_03)
   (
     'frais_03', 'pdep_03', 'FRAIS_BANCAIRES', 2000.0,
     'Frais de virement bancaire',
-    'site_01', NOW()
+    'user_admin', 'site_01', NOW()
   );
 
 -- Mise à jour du montantFraisSupp sur les dépenses concernées

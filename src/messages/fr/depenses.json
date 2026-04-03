@@ -85,7 +85,18 @@
     "raisonRequise": "La raison est obligatoire",
     "montantInferieur": "Le montant ne peut pas etre inferieur au montant deja paye",
     "enCours": "En cours...",
-    "historique": "Historique des ajustements"
+    "historique": "Historique des ajustements",
+    "tabMontant": "Montant",
+    "tabFrais": "Frais",
+    "ajouterFrais": "Ajouter un frais",
+    "modifierFrais": "Modifier le frais",
+    "supprimerFrais": "Supprimer le frais",
+    "paiementDu": "Paiement du",
+    "fraisModifie": "Frais modifie",
+    "fraisSupprime": "Frais supprime",
+    "fraisAjoute": "Frais ajoute",
+    "selectPaiement": "Selectionner un paiement",
+    "aucunFrais": "Aucun frais supplementaire"
   },
   "motif": {
     "TRANSPORT": "Transport",

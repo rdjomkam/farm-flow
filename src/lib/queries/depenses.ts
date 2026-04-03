@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/db";
-import { StatutDepense, ModePaiement, MotifFraisSupp } from "@/types";
+import { StatutDepense, ModePaiement, MotifFraisSupp, TypeAjustementDepense, ActionAjustementFrais } from "@/types";
 import type {
   CreateDepenseDTO,
   UpdateDepenseDTO,
   DepenseFilters,
   CreatePaiementDepenseDTO,
   AjusterDepenseDTO,
+  AjusterFraisDepenseDTO,
 } from "@/types";
 
 // Re-export for use in API validation
@@ -77,7 +78,9 @@ export async function getDepenseById(id: string, siteId: string) {
       paiements: {
         include: {
           user: { select: { id: true, name: true } },
-          fraisSupp: true,
+          fraisSupp: {
+            where: { deletedAt: null },
+          },
         },
         orderBy: { date: "desc" },
       },
@@ -300,15 +303,19 @@ export async function ajouterPaiementDepense(
           motif: f.motif as MotifFraisSupp,
           montant: f.montant,
           notes: f.notes ?? null,
+          userId,
           siteId: depense.siteId,
         })),
       });
     }
 
-    // Re-fetch paiement to include frais created above
+    // Re-fetch paiement to include frais created above (only active frais)
     const fullPaiement = await tx.paiementDepense.findUniqueOrThrow({
       where: { id: paiement.id },
-      include: { fraisSupp: true, user: { select: { id: true, name: true } } },
+      include: {
+        fraisSupp: { where: { deletedAt: null } },
+        user: { select: { id: true, name: true } },
+      },
     });
 
     // Recalculate montantPaye from all paiements (base amount only)
@@ -318,9 +325,9 @@ export async function ajouterPaiementDepense(
     });
     const newMontantPaye = aggregation._sum.montant ?? 0;
 
-    // Aggregate total frais supplementaires across all paiements for this depense
+    // Aggregate total frais supplementaires across all paiements for this depense (only active)
     const totalFraisAgg = await tx.fraisPaiementDepense.aggregate({
-      where: { paiement: { depenseId } },
+      where: { paiement: { depenseId }, deletedAt: null },
       _sum: { montant: true },
     });
     const newMontantFraisSupp = totalFraisAgg._sum.montant ?? 0;
@@ -425,5 +432,151 @@ export async function ajusterDepense(
     });
 
     return { depense: updatedDepense, ajustement };
+  });
+}
+
+/**
+ * Ajuste un frais supplementaire d'un paiement de depense (transaction atomique — R4).
+ *
+ * Regles metier :
+ * 1. La depense doit appartenir au site (R8)
+ * 2. Le paiement doit appartenir a la depense
+ * 3. Pour SUPPRIME : le frais doit appartenir au paiement et ne pas deja etre supprime
+ * 4. Pour MODIFIE : soft-delete de l'ancien frais + creation d'un nouveau
+ * 5. Pour AJOUTE : creation d'un nouveau frais
+ * 6. Cree un AjustementDepense de type FRAIS_SUPP (audit trail immuable — R8 : siteId)
+ * 7. Recalcule Depense.montantFraisSupp = SUM(montant WHERE deletedAt IS NULL)
+ */
+export async function ajusterFraisDepense(
+  id: string,
+  siteId: string,
+  userId: string,
+  data: AjusterFraisDepenseDTO
+) {
+  return prisma.$transaction(async (tx) => {
+    // 1. Verify depense belongs to site
+    const depense = await tx.depense.findFirst({
+      where: { id, siteId },
+    });
+    if (!depense) throw new Error("Depense introuvable");
+
+    // 2. Verify paiement belongs to the depense
+    const paiement = await tx.paiementDepense.findFirst({
+      where: { id: data.paiementId, depenseId: id },
+    });
+    if (!paiement) throw new Error("Paiement introuvable ou n'appartient pas a cette depense");
+
+    let montantAvant = 0;
+    let montantApres = 0;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let resultFrais: any = null;
+
+    if (data.action === ActionAjustementFrais.SUPPRIME) {
+      // 3. Verify frais belongs to paiement and is not already deleted
+      if (!data.fraisId) throw new Error("fraisId est obligatoire pour l'action SUPPRIME");
+      const frais = await tx.fraisPaiementDepense.findFirst({
+        where: { id: data.fraisId, paiementId: data.paiementId, deletedAt: null },
+      });
+      if (!frais) throw new Error("Frais introuvable ou deja supprime");
+
+      montantAvant = frais.montant;
+      montantApres = 0;
+
+      // Soft-delete
+      await tx.fraisPaiementDepense.update({
+        where: { id: data.fraisId },
+        data: { deletedAt: new Date() },
+      });
+      resultFrais = null;
+
+    } else if (data.action === ActionAjustementFrais.MODIFIE) {
+      // 4. Soft-delete old frais + create new one
+      if (!data.fraisId) throw new Error("fraisId est obligatoire pour l'action MODIFIE");
+      if (!data.montant || data.montant <= 0) throw new Error("montant est obligatoire et doit etre > 0 pour MODIFIE");
+
+      const oldFrais = await tx.fraisPaiementDepense.findFirst({
+        where: { id: data.fraisId, paiementId: data.paiementId, deletedAt: null },
+      });
+      if (!oldFrais) throw new Error("Frais introuvable ou deja supprime");
+
+      montantAvant = oldFrais.montant;
+      montantApres = data.montant;
+
+      // Soft-delete old record
+      await tx.fraisPaiementDepense.update({
+        where: { id: data.fraisId },
+        data: { deletedAt: new Date() },
+      });
+
+      // Create new record with updated values
+      resultFrais = await tx.fraisPaiementDepense.create({
+        data: {
+          paiementId: data.paiementId,
+          motif: (data.motif ?? oldFrais.motif) as MotifFraisSupp,
+          montant: data.montant,
+          notes: data.notes !== undefined ? data.notes : oldFrais.notes,
+          userId,
+          siteId,
+        },
+      });
+
+    } else {
+      // AJOUTE
+      if (!data.motif) throw new Error("motif est obligatoire pour l'action AJOUTE");
+      if (!data.montant || data.montant <= 0) throw new Error("montant est obligatoire et doit etre > 0 pour AJOUTE");
+
+      montantAvant = 0;
+      montantApres = data.montant;
+
+      resultFrais = await tx.fraisPaiementDepense.create({
+        data: {
+          paiementId: data.paiementId,
+          motif: data.motif as MotifFraisSupp,
+          montant: data.montant,
+          notes: data.notes ?? null,
+          userId,
+          siteId,
+        },
+      });
+    }
+
+    // 6. Create AjustementDepense record (audit trail — R8: siteId)
+    const ajustement = await tx.ajustementDepense.create({
+      data: {
+        depenseId: id,
+        montantAvant,
+        montantApres,
+        raison: data.raison,
+        userId,
+        siteId,
+        typeAjustement: TypeAjustementDepense.FRAIS_SUPP,
+        paiementId: data.paiementId,
+        fraisId: data.action === ActionAjustementFrais.SUPPRIME
+          ? data.fraisId!  // deleted record ID (only option)
+          : resultFrais?.id ?? null,  // live record ID for AJOUTE and MODIFIE
+        actionFrais: data.action,
+      },
+      include: {
+        user: { select: { id: true, name: true } },
+      },
+    });
+
+    // 7. Recalculate montantFraisSupp = SUM(montant WHERE deletedAt IS NULL) across all payments
+    const totalFraisAgg = await tx.fraisPaiementDepense.aggregate({
+      where: { paiement: { depenseId: id }, deletedAt: null },
+      _sum: { montant: true },
+    });
+    const newMontantFraisSupp = totalFraisAgg._sum.montant ?? 0;
+
+    await tx.depense.update({
+      where: { id },
+      data: { montantFraisSupp: newMontantFraisSupp },
+    });
+
+    return {
+      frais: resultFrais,
+      ajustement,
+      montantFraisSupp: newMontantFraisSupp,
+    };
   });
 }
