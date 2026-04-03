@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -17,6 +18,8 @@ export default async function NouvelleDepensePage() {
     Permission.DEPENSES_CREER
   );
   if (!permissions) return <AccessDenied />;
+
+  const t = await getTranslations("depenses.page");
 
   const [vaguesResult, commandesResult] = await Promise.all([
     getVagues(session.activeSiteId),
