@@ -36,22 +36,22 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const t = useTranslations("common");
 
-  const toast = useCallback((t: Omit<Toast, "id">) => {
+  const toast = useCallback((props: Omit<Toast, "id">) => {
     const id = crypto.randomUUID();
-    setToasts((prev) => [...prev, { ...t, id }]);
+    setToasts((prev) => [...prev, { ...props, id }]);
   }, []);
 
   const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+    setToasts((prev) => prev.filter((item) => item.id !== id));
   }, []);
 
   return (
     <ToastContext value={{ toast }}>
       <ToastPrimitive.Provider swipeDirection="right" duration={2000}>
         {children}
-        {toasts.map((t) => (
+        {toasts.map((item) => (
           <ToastPrimitive.Root
-            key={t.id}
+            key={item.id}
             duration={2000}
             className={cn(
               "group pointer-events-auto relative flex w-full items-center gap-3 overflow-hidden rounded-lg border p-4 shadow-lg transition-all",
@@ -59,19 +59,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               "data-[state=closed]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full",
               "data-[swipe=cancel]:translate-x-0 data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)]",
               "data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)]",
-              variants[t.variant ?? "default"]
+              variants[item.variant ?? "default"]
             )}
             onOpenChange={(open) => {
-              if (!open) removeToast(t.id);
+              if (!open) removeToast(item.id);
             }}
           >
             <div className="flex-1">
               <ToastPrimitive.Title className="text-sm font-semibold">
-                {t.title}
+                {item.title}
               </ToastPrimitive.Title>
-              {t.description && (
+              {item.description && (
                 <ToastPrimitive.Description className="mt-1 text-sm opacity-80">
-                  {t.description}
+                  {item.description}
                 </ToastPrimitive.Description>
               )}
             </div>
