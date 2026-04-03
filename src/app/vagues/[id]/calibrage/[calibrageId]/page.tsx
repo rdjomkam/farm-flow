@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Scissors, Fish, AlertTriangle, Calendar, User } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,12 +14,6 @@ import { ModifierCalibrageDialog } from "@/components/calibrage/modifier-calibra
 import { CalibrageModificationsList } from "@/components/calibrage/calibrage-modifications-list";
 import type { CalibrageWithRelations, CalibrageModificationWithUser } from "@/types";
 
-const categorieLabels: Record<CategorieCalibrage, string> = {
-  [CategorieCalibrage.PETIT]: "Petit",
-  [CategorieCalibrage.MOYEN]: "Moyen",
-  [CategorieCalibrage.GROS]: "Gros",
-  [CategorieCalibrage.TRES_GROS]: "Tres gros",
-};
 
 const categorieBadgeVariants: Record<
   CategorieCalibrage,
@@ -60,6 +55,8 @@ export default async function CalibrageDetailPage({
   // Verify the calibrage belongs to the vague in the URL
   if (calibrage.vagueId !== id) notFound();
 
+  const t = await getTranslations("calibrage");
+
   const totalPoissons = calibrage.groupes.reduce(
     (sum, g) => sum + g.nombrePoissons,
     0
@@ -79,7 +76,7 @@ export default async function CalibrageDetailPage({
 
   return (
     <>
-      <Header title="Detail du calibrage" />
+      <Header title={t("page.detail")} />
       <div className="p-4 flex flex-col gap-4">
         {/* Navigation : retour + bouton Modifier */}
         <div className="flex items-center justify-between gap-2">
@@ -153,7 +150,7 @@ export default async function CalibrageDetailPage({
                       ] ?? "default"
                     }
                   >
-                    {categorieLabels[groupe.categorie as CategorieCalibrage] ??
+                    {t(`categories.${groupe.categorie}`) ??
                       groupe.categorie}
                   </Badge>
                   <span className="text-sm font-semibold">

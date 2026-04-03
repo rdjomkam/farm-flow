@@ -1,4 +1,14 @@
 {
+  "page": {
+    "siteRoles": "Rôles du site",
+    "mySites": "Mes sites",
+    "configProfiles": "Profils de configuration",
+    "newConfigProfile": "Nouveau profil de configuration",
+    "activityRules": "Règles d'activités",
+    "newActivityRule": "Nouvelle règle d'activité",
+    "customPlaceholders": "Placeholders personnalisés",
+    "noRoleConfigured": "Aucun rôle configuré."
+  },
   "triggers": {
     "CALENDRIER": "Calendrier",
     "RECURRENT": "Récurrent",
@@ -63,6 +73,40 @@
     "MODIFIER_BAC": "Modifier le bac",
     "VOIR_VAGUE": "Voir la vague",
     "VOIR_STOCK": "Voir le stock"
+  },
+  "rules": {
+    "backToRules": "Retour aux règles",
+    "globalRuleTitle": "Règle globale DKFarm",
+    "globalRuleDescGlobal": "Vos modifications seront visibles sur toutes les fermes.",
+    "globalRuleDescReadOnly": "Cette règle est gérée par l'équipe DKFarm. Contactez le support pour toute modification.",
+    "firedOnceBanner": "Déjà déclenchée (firedOnce = true)",
+    "firedOnceDescription": "Cette règle de type seuil a déjà été déclenchée une fois. Elle ne se déclenchera pas à nouveau tant que firedOnce est true.",
+    "sections": {
+      "identity": "Identité",
+      "triggerParams": "Paramètres de déclenchement",
+      "triggerConditions": "Conditions de déclenchement",
+      "activityTemplates": "Templates activité",
+      "internalIdentity": "Identité interne"
+    },
+    "dialogs": {
+      "resetFiredOnce": "Réinitialiser firedOnce",
+      "deleteRule": "Supprimer la règle"
+    },
+    "buttons": {
+      "deleteCondition": "Supprimer cette condition",
+      "createRule": "Créer une règle"
+    },
+    "phases": {
+      "allPhases": "Toutes les phases"
+    },
+    "actions": {
+      "none": "Aucune action"
+    },
+    "emptyStates": {
+      "noActiveRules": "Aucune règle active.",
+      "noInactiveRules": "Aucune règle inactive.",
+      "noRules": "Aucune règle d'activité."
+    }
   },
   "placeholders": {
     "quantite_calculee": {

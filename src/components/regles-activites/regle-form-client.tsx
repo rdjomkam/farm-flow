@@ -666,7 +666,7 @@ export function RegleFormClient() {
                           );
                         }}
                         className="inline-flex items-center justify-center h-8 w-8 rounded-md text-danger hover:bg-danger/10 transition-colors"
-                        aria-label="Supprimer cette condition"
+                        aria-label={t("rules.buttons.deleteCondition")}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -894,7 +894,7 @@ export function RegleFormClient() {
                   onValueChange={(v) => setField("actionPayloadType", v === "__none__" ? "" : v)}
                 >
                   <SelectTrigger label="Bouton d'action dans l'alerte (optionnel)">
-                    <SelectValue placeholder="Aucune action" />
+                    <SelectValue placeholder={t("rules.actions.none")} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">

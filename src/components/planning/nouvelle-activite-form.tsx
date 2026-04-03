@@ -21,8 +21,7 @@ import { useActiviteService } from "@/services";
 import { typeActiviteLabels } from "@/lib/labels/activite";
 
 // Recurrence labels (inline, planning.json recurrences keys don't fully match the enum)
-const recurrenceLabelMap: Record<string, string> = {
-  none: "Aucune (ponctuel)",
+const recurrenceStaticLabels: Record<string, string> = {
   [Recurrence.QUOTIDIEN]: "Quotidien",
   [Recurrence.HEBDOMADAIRE]: "Hebdomadaire",
   [Recurrence.BIMENSUEL]: "Bimensuel (2x/semaine)",
@@ -180,7 +179,9 @@ export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleAct
           <SelectContent>
             {recurrenceValues.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
-                {recurrenceLabelMap[opt.value]}
+                {opt.value === "none"
+                  ? t("options.noneOneTime")
+                  : recurrenceStaticLabels[opt.value]}
               </SelectItem>
             ))}
           </SelectContent>

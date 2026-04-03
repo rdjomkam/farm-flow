@@ -2,6 +2,7 @@
 
 import { useGlobalLoading } from "@/contexts/global-loading.context";
 import { FishLoader } from "@/components/ui/fish-loader";
+import { useTranslations } from "next-intl";
 
 /**
  * LoadingOverlay — Overlay plein ecran bloquant.
@@ -25,6 +26,7 @@ import { FishLoader } from "@/components/ui/fish-loader";
 export function LoadingOverlay() {
   // Ne s'affiche QUE pour les mutations bloquantes, pas pour la navigation
   const { isMutating } = useGlobalLoading();
+  const t = useTranslations("common");
 
   if (!isMutating) return null;
 
@@ -32,9 +34,9 @@ export function LoadingOverlay() {
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/70 backdrop-blur-sm"
       aria-busy="true"
-      aria-label="Chargement en cours"
+      aria-label={t("loading.ariaLabel")}
     >
-      <FishLoader size="lg" text="Chargement..." />
+      <FishLoader size="lg" text={t("loading.text")} />
     </div>
   );
 }

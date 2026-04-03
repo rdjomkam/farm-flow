@@ -302,12 +302,12 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? "Modifier le plan" : "Créer un plan d'abonnement"}
+            {isEditing ? t("planFormDialog.titleEdit") : t("planFormDialog.titleCreate")}
           </DialogTitle>
           <DialogDescription>
             {isEditing
-              ? "Modifiez les propriétés du plan. Le type de plan est immuable."
-              : "Créez un nouveau plan d'abonnement pour vos clients."}
+              ? t("planFormDialog.descriptionEdit")
+              : t("planFormDialog.descriptionCreate")}
           </DialogDescription>
         </DialogHeader>
 
@@ -642,7 +642,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
             onClick={() => setOpen(false)}
             className="flex-1 sm:flex-none px-4 min-h-[44px] bg-muted text-muted-foreground rounded-lg text-sm hover:bg-muted/80 transition-colors"
           >
-            Annuler
+            {t("admin.dialogCancel")}
           </button>
           <button
             type="button"
@@ -650,7 +650,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
             disabled={loading}
             className="flex-1 sm:flex-none px-4 min-h-[44px] bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
-            {loading ? "Enregistrement..." : isEditing ? "Enregistrer" : "Créer le plan"}
+            {loading ? t("admin.saving") : isEditing ? t("admin.edit") : t("admin.createPlan")}
           </button>
         </DialogFooter>
       </DialogContent>

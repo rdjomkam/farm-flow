@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { AccessDenied } from "@/components/ui/access-denied";
@@ -34,6 +35,8 @@ export default async function NouveauCalibragePage({
     redirect(`/vagues/${id}`);
   }
 
+  const t = await getTranslations("calibrage.page");
+
   const bacs: BacResponse[] = vague.bacs.map((b) => ({
     id: b.id,
     nom: b.nom,
@@ -51,7 +54,7 @@ export default async function NouveauCalibragePage({
 
   return (
     <>
-      <Header title="Nouveau calibrage" />
+      <Header title={t("new")} />
       <div className="p-4 flex flex-col gap-4">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" asChild>

@@ -92,6 +92,72 @@
     },
     "noModules": "Aucun module",
     "modulesInclus": "Modules inclus",
-    "modulesHelp": "Les modules cochés seront activés automatiquement sur le site du promoteur lors de la souscription"
+    "modulesHelp": "Les modules cochés seront activés automatiquement sur le site du promoteur lors de la souscription",
+    "toggleActivate": "Activer",
+    "toggleDeactivate": "Désactiver",
+    "toggleDeactivating": "Désactivation...",
+    "toggleDeactivateTitle": "Désactiver le plan ?",
+    "toggleDeactivateConfirm": "Confirmer la désactivation",
+    "edit": "Modifier",
+    "dialogCancel": "Annuler",
+    "dialogKeep": "Conserver",
+    "dialogConfirm": "Confirmer",
+    "saving": "Enregistrement...",
+    "createPlan": "Créer le plan",
+    "allStatuts": "Tous les statuts",
+    "allPlans": "Tous les plans",
+    "resetFilters": "Réinitialiser",
+    "activate": "Activer",
+    "activation": "Activation...",
+    "forceActivationTitle": "Forcer l'activation",
+    "noSubscriptionFound": "Aucun abonnement trouvé.",
+    "noPlanFound": "Aucun plan trouvé."
+  },
+  "card": {
+    "startDate": "Début",
+    "expirationDate": "Expiration",
+    "progression": "Progression",
+    "expired": "Expiré",
+    "daysRemaining": "{count} jour restant",
+    "daysRemainingPlural": "{count} jours restants",
+    "gracePeriod": "Période de grâce"
+  },
+  "buttons": {
+    "renew": "Renouveler",
+    "changePlan": "Changer de plan",
+    "cancel": "Annuler",
+    "keep": "Conserver",
+    "cancelling": "Annulation...",
+    "confirmCancel": "Confirmer l'annulation"
+  },
+  "dialogs": {
+    "cancelTitle": "Annuler l'abonnement",
+    "cancelConfirmation": "Êtes-vous sûr de vouloir annuler votre abonnement ? Vous perdrez l'accès à toutes les fonctionnalités premium à la fin de votre période en cours."
+  },
+  "errors": {
+    "cancelFailed": "Impossible d'annuler l'abonnement.",
+    "networkError": "Erreur réseau. Veuillez réessayer.",
+    "promoVerificationFailed": "Impossible de vérifier le code promo.",
+    "paymentInitFailed": "Impossible d'initier le paiement. Veuillez réessayer.",
+    "networkErrorPayment": "Erreur réseau. Veuillez vérifier votre connexion et réessayer."
+  },
+  "planFormDialog": {
+    "titleCreate": "Créer un plan d'abonnement",
+    "titleEdit": "Modifier le plan",
+    "descriptionCreate": "Créez un nouveau plan d'abonnement pour vos clients.",
+    "descriptionEdit": "Modifiez les propriétés du plan. Le type de plan est immuable."
+  },
+  "paiements": {
+    "none": "Aucun paiement enregistré.",
+    "ref": "Réf :",
+    "confirmedOn": "Confirmé le",
+    "statuts": {
+      "EN_ATTENTE": "En attente",
+      "INITIE": "Initié",
+      "CONFIRME": "Confirmé",
+      "ECHEC": "Échoué",
+      "REMBOURSE": "Remboursé",
+      "EXPIRE": "Expiré"
+    }
   }
 }

@@ -151,6 +151,10 @@
     "tooltipLabel": "Day {label}",
     "seriesName": "Avg. weight"
   },
+  "gompertz": {
+    "modelParams": "Model parameters",
+    "noBiometricData": "No biometric measurements available."
+  },
   "comparison": {
     "selectTitle": "Select 2 to 4 batches",
     "hide": "Hide",

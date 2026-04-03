@@ -1,6 +1,7 @@
 "use client";
 
 import { useGlobalLoading } from "@/contexts/global-loading.context";
+import { useTranslations } from "next-intl";
 
 /**
  * GlobalLoadingBar — Barre de progression indéterminée en haut de page.
@@ -26,14 +27,15 @@ import { useGlobalLoading } from "@/contexts/global-loading.context";
  */
 export function GlobalLoadingBar() {
   const { isLoading } = useGlobalLoading();
+  const t = useTranslations("common");
 
   if (!isLoading) return null;
 
   return (
     <div
       role="progressbar"
-      aria-label="Chargement en cours"
-      aria-valuetext="Chargement..."
+      aria-label={t("loading.ariaLabel")}
+      aria-valuetext={t("loading.text")}
       aria-valuemin={0}
       aria-valuemax={100}
       className="fixed top-0 left-0 right-0 z-[200] h-0.5 overflow-hidden bg-primary/20"

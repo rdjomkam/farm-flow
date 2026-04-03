@@ -121,5 +121,14 @@
     "errorPasswordTooShort": "Password must be at least 6 characters.",
     "errorPasswordMismatch": "Passwords do not match.",
     "errorGeneric": "Error during registration."
+  },
+  "accessDenied": {
+    "title": "Access denied",
+    "description": "You do not have the required permissions to access this page. Contact an administrator if you believe this is an error.",
+    "backButton": "Back to dashboard"
+  },
+  "loading": {
+    "ariaLabel": "Loading",
+    "text": "Loading..."
   }
 }

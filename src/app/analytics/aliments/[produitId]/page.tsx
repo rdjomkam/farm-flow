@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,10 +47,12 @@ export default async function AnalyticsAlimentDetailPage({
       : Promise.resolve([]),
   ]);
 
+  const t = await getTranslations("analytics.page");
+
   if (!detail) {
     return (
       <>
-        <Header title="Detail aliment" />
+        <Header title={t("alimDetail")} />
         <div className="p-4">
           <p className="py-8 text-center text-sm text-muted-foreground">
             Produit aliment introuvable.

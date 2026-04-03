@@ -361,7 +361,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
                   </Button>
                   <Button
                     variant="danger"
-                    aria-label="Supprimer la facture"
+                    aria-label={t("buttons.deleteInvoice")}
                     className="min-w-[44px]"
                     onClick={() => setDeleteFactureOpen(true)}
                   >
@@ -427,7 +427,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
                 </span>
                 <button
                   type="button"
-                  aria-label="Supprimer le fichier"
+                  aria-label={t("buttons.deleteFile")}
                   className="min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive"
                   onClick={() => {
                     setSelectedFile(null);

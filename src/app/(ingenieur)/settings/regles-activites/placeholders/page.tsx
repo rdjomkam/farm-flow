@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { Variable } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { AccessDenied } from "@/components/ui/access-denied";
@@ -18,10 +19,11 @@ export default async function PlaceholdersPage() {
   if (!permissions) return <AccessDenied />;
 
   const canManage = permissions.includes(Permission.GERER_REGLES_GLOBALES);
+  const t = await getTranslations("settings.page");
 
   return (
     <>
-      <Header title="Placeholders personnalises">
+      <Header title={t("customPlaceholders")}>
         <Variable className="h-5 w-5 text-muted-foreground" />
       </Header>
       <div className="p-4">

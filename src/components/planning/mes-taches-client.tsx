@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ClipboardCheck, Calendar, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -41,6 +42,9 @@ interface MesTachesClientProps {
 }
 
 export function MesTachesClient({ activites, permissions }: MesTachesClientProps) {
+  const t = useTranslations("planning");
+  const tActivites = useTranslations("activites");
+
   // Group: EN_RETARD first, then PLANIFIEE by date
   const enRetard = activites.filter((a) => a.statut === StatutActivite.EN_RETARD);
   const planifiees = activites.filter((a) => a.statut === StatutActivite.PLANIFIEE);
@@ -49,8 +53,8 @@ export function MesTachesClient({ activites, permissions }: MesTachesClientProps
     return (
       <EmptyState
         icon={<ClipboardCheck className="h-8 w-8" />}
-        title="Aucune tache en attente"
-        description="Vous n'avez pas de tache assignee pour le moment."
+        title={t("emptyState.noTasks")}
+        description={tActivites("emptyState.noTasksAssigned")}
       />
     );
   }
@@ -63,12 +67,12 @@ export function MesTachesClient({ activites, permissions }: MesTachesClientProps
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="h-4 w-4 text-danger" />
             <h2 className="text-sm font-semibold text-danger">
-              En retard ({enRetard.length})
+              {tActivites("sections.late", { count: enRetard.length })}
             </h2>
           </div>
           <div className="flex flex-col gap-2">
             {enRetard.map((a) => (
-              <TaskCard key={a.id} activite={a} permissions={permissions} />
+              <TaskCard key={a.id} activite={a} permissions={permissions} t={t} tActivites={tActivites} />
             ))}
           </div>
         </section>
@@ -80,12 +84,12 @@ export function MesTachesClient({ activites, permissions }: MesTachesClientProps
           <div className="flex items-center gap-2 mb-3">
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <h2 className="text-sm font-semibold text-muted-foreground">
-              Planifiees ({planifiees.length})
+              {tActivites("sections.planned", { count: planifiees.length })}
             </h2>
           </div>
           <div className="flex flex-col gap-2">
             {planifiees.map((a) => (
-              <TaskCard key={a.id} activite={a} permissions={permissions} />
+              <TaskCard key={a.id} activite={a} permissions={permissions} t={t} tActivites={tActivites} />
             ))}
           </div>
         </section>
@@ -94,7 +98,17 @@ export function MesTachesClient({ activites, permissions }: MesTachesClientProps
   );
 }
 
-function TaskCard({ activite, permissions }: { activite: ActiviteWithRelations; permissions: Permission[] }) {
+function TaskCard({
+  activite,
+  permissions,
+  t,
+  tActivites,
+}: {
+  activite: ActiviteWithRelations;
+  permissions: Permission[];
+  t: ReturnType<typeof useTranslations>;
+  tActivites: ReturnType<typeof useTranslations>;
+}) {
   const colorDot = typeActiviteColors[activite.typeActivite as TypeActivite] ?? "bg-muted-foreground";
   const isEnRetard = activite.statut === StatutActivite.EN_RETARD;
 
@@ -106,7 +120,7 @@ function TaskCard({ activite, permissions }: { activite: ActiviteWithRelations; 
           <div className="flex items-start justify-between gap-2 mb-1">
             <p className="font-medium text-sm leading-tight">{activite.titre}</p>
             <Badge variant={isEnRetard ? "default" : "en_cours"}>
-              {isEnRetard ? "En retard" : "Planifiee"}
+              {isEnRetard ? tActivites("statuses.late") : t("statuts.PLANIFIEE")}
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground">
@@ -125,7 +139,7 @@ function TaskCard({ activite, permissions }: { activite: ActiviteWithRelations; 
           </p>
           {activite.user && (
             <p className="text-xs text-muted-foreground mt-0.5">
-              Cree par {activite.user.name}
+              {t("creePar", { name: activite.user.name })}
             </p>
           )}
         </div>

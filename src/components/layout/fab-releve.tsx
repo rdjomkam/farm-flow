@@ -34,6 +34,7 @@ interface FabReleveProps {
 
 export function FabReleve({ activeSiteId, className }: FabReleveProps) {
   const t = useTranslations("layout");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -76,7 +77,7 @@ export function FabReleve({ activeSiteId, className }: FabReleveProps) {
 
       // Appel API pour trouver la première vague EN_COURS du site actif (session)
       const res = await fetch("/api/vagues?statut=EN_COURS");
-      if (!res.ok) throw new Error("Erreur reseau");
+      if (!res.ok) throw new Error(tCommon("errors.networkError"));
 
       const data = await res.json() as { data?: Array<{ id: string }> };
       const vagues = data.data ?? [];

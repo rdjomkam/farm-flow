@@ -1,4 +1,8 @@
 {
+  "page": {
+    "home": "Accueil",
+    "dashboard": "Dashboard"
+  },
   "quickActions": {
     "title": "Actions rapides",
     "nouveauReleve": "Nouveau releve",
@@ -6,5 +10,14 @@
     "voirVagues": "Voir les vagues",
     "factures": "Factures",
     "stock": "Stock"
+  },
+  "hero": {
+    "greeting": "Bonjour, {sessionName}",
+    "wavesCount": "{count} vague en cours",
+    "wavesCountPlural": "{count} vagues en cours",
+    "sectionTitle": "Vagues en cours",
+    "emptyTitle": "Aucune vague en cours",
+    "emptyDescription": "Créez une vague pour commencer le suivi de vos silures.",
+    "createWave": "Créer une vague"
   }
 }

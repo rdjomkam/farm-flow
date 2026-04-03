@@ -1,4 +1,14 @@
 {
+  "page": {
+    "detail": "Détail du calibrage",
+    "new": "Nouveau calibrage"
+  },
+  "categories": {
+    "PETIT": "Petit",
+    "MOYEN": "Moyen",
+    "GROS": "Gros",
+    "TRES_GROS": "Très gros"
+  },
   "stepSources": {
     "title": "Bacs sources",
     "description": "Selectionnez les bacs dont les poissons seront calibres.",

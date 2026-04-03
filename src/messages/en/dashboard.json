@@ -1,4 +1,8 @@
 {
+  "page": {
+    "home": "Home",
+    "dashboard": "Dashboard"
+  },
   "quickActions": {
     "title": "Quick actions",
     "nouveauReleve": "New record",
@@ -6,5 +10,14 @@
     "voirVagues": "View batches",
     "factures": "Invoices",
     "stock": "Stock"
+  },
+  "hero": {
+    "greeting": "Hello, {sessionName}",
+    "wavesCount": "{count} wave in progress",
+    "wavesCountPlural": "{count} waves in progress",
+    "sectionTitle": "Waves in progress",
+    "emptyTitle": "No waves in progress",
+    "emptyDescription": "Create a wave to start tracking your catfish.",
+    "createWave": "Create a wave"
   }
 }

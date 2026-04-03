@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Calendar, Fish, Container } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,11 +16,6 @@ import { prisma } from "@/lib/db";
 import { Permission, StatutVague, TypeReleve } from "@/types";
 import type { Releve, EvolutionPoidsPoint, IndicateursVague as IndicateursType } from "@/types";
 
-const statutLabels: Record<StatutVague, string> = {
-  [StatutVague.EN_COURS]: "En cours",
-  [StatutVague.TERMINEE]: "Terminee",
-  [StatutVague.ANNULEE]: "Annulee",
-};
 
 const statutVariants: Record<StatutVague, "en_cours" | "terminee" | "annulee"> = {
   [StatutVague.EN_COURS]: "en_cours",
@@ -59,6 +55,8 @@ export default async function IngenieurVagueDetailPage({
   if (!vague) notFound();
 
   const indicateurs = await getIndicateursVague(clientSiteId, vagueId);
+  const tVagues = await getTranslations("vagues");
+  const tIngenieur = await getTranslations("ingenieur");
 
   const statut = vague.statut as StatutVague;
 
@@ -115,7 +113,7 @@ export default async function IngenieurVagueDetailPage({
         <Link href={`/monitoring/${clientSiteId}`}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4" />
-            <span className="sr-only sm:not-sr-only">Retour</span>
+            <span className="sr-only sm:not-sr-only">{tIngenieur("monitoring.back")}</span>
           </Button>
         </Link>
       </Header>
@@ -123,7 +121,7 @@ export default async function IngenieurVagueDetailPage({
       <div className="flex flex-col gap-4 p-4 min-w-0 overflow-hidden">
         {/* Info section */}
         <section className="flex flex-wrap items-center gap-2 border-b border-border pb-3 min-w-0">
-          <Badge variant={statutVariants[statut]}>{statutLabels[statut]}</Badge>
+          <Badge variant={statutVariants[statut]}>{tVagues(`statuts.${statut}`)}</Badge>
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Calendar className="h-3.5 w-3.5" />
             {new Date(vague.dateDebut).toLocaleDateString("fr-FR")}
@@ -159,7 +157,7 @@ export default async function IngenieurVagueDetailPage({
           <Button variant="ghost" size="sm" asChild>
             <Link href={`/monitoring/${clientSiteId}`}>
               <ArrowLeft className="h-4 w-4" />
-              Retour au client
+              {tIngenieur("monitoring.back")}
             </Link>
           </Button>
         </div>

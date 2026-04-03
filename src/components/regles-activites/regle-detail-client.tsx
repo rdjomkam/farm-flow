@@ -151,6 +151,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
   const queryClient = useQueryClient();
   const configService = useConfigService();
   const t = useTranslations("settings");
+  const tCommon = useTranslations("common");
 
   const [editMode, setEditMode] = useState(false);
 
@@ -295,7 +296,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          Retour aux regles
+          {t("rules.backToRules")}
         </Link>
 
         {/* Global rule banner */}
@@ -304,12 +305,12 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
             <Globe className="h-4 w-4 text-accent-blue shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-medium text-accent-blue">
-                Regle globale DKFarm
+                {t("rules.globalRuleTitle")}
               </p>
               <p className="text-xs text-accent-blue/80 mt-0.5">
                 {canManageGlobal
-                  ? "Vos modifications seront visibles sur toutes les fermes."
-                  : "Cette regle est geree par l\u2019equipe DKFarm. Contactez le support pour toute modification."}
+                  ? t("rules.globalRuleDescGlobal")
+                  : t("rules.globalRuleDescReadOnly")}
               </p>
             </div>
           </div>
@@ -321,17 +322,17 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
             <Zap className="h-4 w-4 text-warning shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-warning">
-                Deja declenchee (firedOnce = true)
+                {t("rules.firedOnceBanner")}
               </p>
               <p className="text-xs text-warning/80 mt-0.5">
-                Cette regle de type seuil a deja ete declenchee une fois. Elle ne se declenchera pas a nouveau tant que firedOnce est true.
+                {t("rules.firedOnceDescription")}
               </p>
             </div>
           </div>
         )}
 
         {/* Header section */}
-        <SectionCard title="Identite">
+        <SectionCard title={t("rules.sections.identity")}>
           <InfoRow label="Nom">{regle.nom}</InfoRow>
           {regle.description && (
             <InfoRow label="Description">{regle.description}</InfoRow>
@@ -406,7 +407,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
         </SectionCard>
 
         {/* Declencheur params */}
-        <SectionCard title="Parametres de declenchement">
+        <SectionCard title={t("rules.sections.triggerParams")}>
           <InfoRow label="Priorite">{regle.priorite} / 10</InfoRow>
           {regle.intervalleJours != null && (
             <InfoRow label="Intervalle">
@@ -430,7 +431,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
         </SectionCard>
 
         {/* Conditions de declenchement */}
-        <SectionCard title={`Conditions de declenchement${regle.conditions && regle.conditions.length > 0 ? ` (${regle.conditions.length})` : ""}`}>
+        <SectionCard title={`${t("rules.sections.triggerConditions")}${regle.conditions && regle.conditions.length > 0 ? ` (${regle.conditions.length})` : ""}`}>
           {regle.conditions && regle.conditions.length > 0 ? (
             <>
               {regle.conditions.length > 1 && (
@@ -481,7 +482,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
 
         {/* Templates activite — visibles si ACTIVITE ou LES_DEUX */}
         {((regle.actionType as ActionRegle) === ActionRegle.ACTIVITE || (regle.actionType as ActionRegle) === ActionRegle.LES_DEUX || !regle.actionType) && (
-          <SectionCard title="Templates activite">
+          <SectionCard title={t("rules.sections.activityTemplates")}>
             <div className="space-y-4">
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Titre</p>
@@ -594,14 +595,14 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Reinitialiser firedOnce</DialogTitle>
+                    <DialogTitle>{t("rules.dialogs.resetFiredOnce")}</DialogTitle>
                     <DialogDescription>
                       Cette regle se declenchera a nouveau au prochain cycle d&apos;evaluation du moteur. Confirmez-vous cette action ?
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter>
                     <DialogClose asChild>
-                      <Button variant="outline">Annuler</Button>
+                      <Button variant="outline">{tCommon("buttons.cancel")}</Button>
                     </DialogClose>
                     <Button
                       variant="primary"
@@ -625,7 +626,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Supprimer la regle</DialogTitle>
+                    <DialogTitle>{t("rules.dialogs.deleteRule")}</DialogTitle>
                     <DialogDescription>
                       Cette action est irreversible. La regle &quot;{regle.nom}&quot; sera definitivement supprimee.
                     </DialogDescription>
@@ -638,7 +639,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                   </div>
                   <DialogFooter>
                     <DialogClose asChild>
-                      <Button variant="outline">Annuler</Button>
+                      <Button variant="outline">{tCommon("buttons.cancel")}</Button>
                     </DialogClose>
                     <Button
                       variant="danger"
@@ -675,7 +676,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
         className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
-        Retour aux regles
+        {t("rules.backToRules")}
       </Link>
 
     <form
@@ -690,14 +691,14 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
         <div className="flex items-start gap-3 rounded-lg border border-accent-blue/30 bg-accent-blue/10 p-3">
           <Globe className="h-4 w-4 text-accent-blue shrink-0 mt-0.5" />
           <p className="text-sm text-accent-blue">
-            Regle globale DKFarm. Les modifications affectent tous les sites.
+            {t("rules.globalRuleTitle")}. {t("rules.globalRuleDescGlobal")}
           </p>
         </div>
       )}
 
       {/* Section Identite */}
       <div className="rounded-xl border border-border bg-card p-4 space-y-4">
-        <h3 className="text-sm font-semibold text-foreground">Identite</h3>
+        <h3 className="text-sm font-semibold text-foreground">{t("rules.sections.identity")}</h3>
 
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">
@@ -754,7 +755,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
       {/* Section Declencheur */}
       <div className="rounded-xl border border-border bg-card p-4 space-y-4">
         <h3 className="text-sm font-semibold text-foreground">
-          Parametres de declenchement
+          {t("rules.sections.triggerParams")}
         </h3>
 
         {/* Priorite */}
@@ -815,10 +816,10 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="Toutes les phases" />
+                <SelectValue placeholder={t("rules.phases.allPhases")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">Toutes les phases</SelectItem>
+                <SelectItem value="__none__">{t("rules.phases.allPhases")}</SelectItem>
                 {PHASE_ELEVAGE_ORDER.map((phase) => (
                   <SelectItem key={phase} value={phase}>
                     {t(PHASE_ELEVAGE_LABELS[phase])}
@@ -841,10 +842,10 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="Toutes les phases" />
+                <SelectValue placeholder={t("rules.phases.allPhases")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">Toutes les phases</SelectItem>
+                <SelectItem value="__none__">{t("rules.phases.allPhases")}</SelectItem>
                 {PHASE_ELEVAGE_ORDER.map((phase) => (
                   <SelectItem key={phase} value={phase}>
                     {t(PHASE_ELEVAGE_LABELS[phase])}
@@ -858,7 +859,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
 
       {/* Section Conditions de declenchement */}
       <div className="rounded-xl border border-border bg-card p-4 space-y-4">
-        <h3 className="text-sm font-semibold text-foreground">Conditions de declenchement</h3>
+        <h3 className="text-sm font-semibold text-foreground">{t("rules.sections.triggerConditions")}</h3>
 
         <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
           <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
@@ -905,7 +906,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                       }))
                     }
                     className="inline-flex items-center justify-center h-8 w-8 rounded-md text-danger hover:bg-danger/10 transition-colors"
-                    aria-label="Supprimer cette condition"
+                    aria-label={t("rules.buttons.deleteCondition")}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -1137,7 +1138,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
       {/* Section Templates activite */}
       {(form.actionType === ActionRegle.ACTIVITE || form.actionType === ActionRegle.LES_DEUX) && (
       <div className="rounded-xl border border-border bg-card p-4 space-y-5">
-        <h3 className="text-sm font-semibold text-foreground">Templates activite</h3>
+        <h3 className="text-sm font-semibold text-foreground">{t("rules.sections.activityTemplates")}</h3>
 
         <TemplateEditor
           label="Titre de l'activite"
@@ -1178,7 +1179,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
       {/* Section Templates NOTIFICATION only — titre template = internal name */}
       {form.actionType === ActionRegle.NOTIFICATION && (
       <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-foreground">Identite interne</h3>
+        <h3 className="text-sm font-semibold text-foreground">{t("rules.sections.internalIdentity")}</h3>
         <Input
           label="Titre interne (pour les logs)"
           value={form.titreTemplate}
@@ -1207,7 +1208,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           className="flex-1 sm:flex-none"
         >
           <X className="h-4 w-4" />
-          Annuler
+          {tCommon("buttons.cancel")}
         </Button>
 
         {/* Delete from edit mode (same conditions) */}
@@ -1225,14 +1226,14 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Supprimer la regle</DialogTitle>
+                <DialogTitle>{t("rules.dialogs.deleteRule")}</DialogTitle>
                 <DialogDescription>
                   Cette action est irreversible. La regle &quot;{regle.nom}&quot; sera definitivement supprimee.
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button variant="outline">Annuler</Button>
+                  <Button variant="outline">{tCommon("buttons.cancel")}</Button>
                 </DialogClose>
                 <Button
                   variant="danger"
@@ -1250,7 +1251,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           variant="primary"
           className="flex-1 sm:flex-none"
         >
-          <Check className="h-4 w-4" /> Enregistrer
+          <Check className="h-4 w-4" /> {tCommon("buttons.save")}
         </Button>
       </div>
     </form>

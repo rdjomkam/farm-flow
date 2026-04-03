@@ -81,12 +81,14 @@ function EmptyState({
   tab: FilterTab;
   canManage: boolean;
 }) {
+  const t = useTranslations("settings");
+
   const message =
     tab === "active"
-      ? "Aucune regle active."
+      ? t("rules.emptyStates.noActiveRules")
       : tab === "inactive"
-      ? "Aucune regle inactive."
-      : "Aucune regle d'activite.";
+      ? t("rules.emptyStates.noInactiveRules")
+      : t("rules.emptyStates.noRules");
 
   return (
     <div className="text-center py-12">
@@ -94,7 +96,7 @@ function EmptyState({
       <p className="text-muted-foreground mb-4">{message}</p>
       {tab === "all" && canManage && (
         <Link href="/settings/regles-activites/nouvelle">
-          <Button>Creer une regle</Button>
+          <Button>{t("rules.buttons.createRule")}</Button>
         </Link>
       )}
     </div>
@@ -157,7 +159,7 @@ export function ReglesListClient({ regles: initialRegles, canManage, canManageGl
           <Link href="/settings/regles-activites/nouvelle">
             <Button size="sm" className="shrink-0">
               <Plus className="h-4 w-4 mr-2" />
-              Nouvelle regle
+              {t("rules.buttons.createRule")}
             </Button>
           </Link>
         )}

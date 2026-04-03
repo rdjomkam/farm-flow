@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Zap, ArrowLeft } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { AccessDenied } from "@/components/ui/access-denied";
@@ -18,9 +19,11 @@ export default async function NouvelleRegleActivitePage() {
   );
   if (!permissions) return <AccessDenied />;
 
+  const t = await getTranslations("settings.page");
+
   return (
     <>
-      <Header title="Nouvelle regle d'activite">
+      <Header title={t("newActivityRule")}>
         <Zap className="h-5 w-5 text-muted-foreground" />
       </Header>
       <div className="p-4">
@@ -29,7 +32,7 @@ export default async function NouvelleRegleActivitePage() {
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6"
         >
           <ArrowLeft className="h-4 w-4" />
-          Retour aux regles
+          {t("activityRules")}
         </Link>
         <RegleFormClient />
       </div>

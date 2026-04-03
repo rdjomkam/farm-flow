@@ -37,6 +37,8 @@ export default async function MonPortefeuillePage() {
     redirect("/");
   }
 
+  const tIngenieur = await getTranslations("ingenieur.page");
+
   // Charger le portefeuille + commissions récentes
   const { portefeuille, commissionsRecentes } = await getPortefeuille(session.userId);
 
@@ -69,7 +71,7 @@ export default async function MonPortefeuillePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header title="Mon Portefeuille" />
+      <Header title={tIngenieur("portfolio")} />
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
         {/* Résumé financier */}
         <PortefeuilleSummary

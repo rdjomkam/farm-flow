@@ -36,6 +36,13 @@
     "toastError": "Error",
     "toastErrorDefault": "An error occurred."
   },
+  "modulesEditor": {
+    "updateError": "Error updating modules.",
+    "updateSuccess": "Modules updated"
+  },
+  "buttons": {
+    "saving": "Saving..."
+  },
   "modules": {
     "modifierTitle": "Edit module",
     "modifierDescription": "Update module metadata. The key and level are immutable.",

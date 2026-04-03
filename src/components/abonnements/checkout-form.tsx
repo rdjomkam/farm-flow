@@ -190,7 +190,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
       }
     } catch {
       setRemise(null);
-      setPromoError("Impossible de vérifier le code promo.");
+      setPromoError(t("errors.promoVerificationFailed"));
     } finally {
       setPromoLoading(false);
     }
@@ -257,7 +257,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
 
       const pid = data.paiement?.paiementId;
       if (!pid) {
-        setError("Impossible d'initier le paiement. Veuillez réessayer.");
+        setError(t("errors.paymentInitFailed"));
         setLoading(false);
         return;
       }
@@ -269,7 +269,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
       // Démarrer le polling
       lancerPolling(pid);
     } catch {
-      setError("Erreur réseau. Veuillez vérifier votre connexion et réessayer.");
+      setError(t("errors.networkErrorPayment"));
     } finally {
       setLoading(false);
     }

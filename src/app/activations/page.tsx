@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { ActivationsListClient } from "@/components/packs/activations-list-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -15,10 +16,11 @@ export default async function ActivationsPage() {
   if (!permissions) return <AccessDenied />;
 
   const activations = await getPackActivations(session.activeSiteId);
+  const t = await getTranslations("packs.page");
 
   return (
     <>
-      <Header title="Activations Packs" />
+      <Header title={t("activations")} />
       <div className="p-4">
         <ActivationsListClient
           activations={JSON.parse(JSON.stringify(activations))}

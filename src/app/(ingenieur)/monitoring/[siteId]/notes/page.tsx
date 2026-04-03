@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ export default async function IngenieurClientNotesPage({
 
   const notesSerialized = JSON.parse(JSON.stringify(notes));
   const vaguesPourNotes = vagues.map((v) => ({ id: v.id, code: v.code }));
+  const t = await getTranslations("ingenieur.monitoring");
 
   return (
     <>
@@ -45,7 +47,7 @@ export default async function IngenieurClientNotesPage({
         <Link href={`/monitoring/${clientSiteId}`}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4" />
-            <span className="sr-only sm:not-sr-only">Retour</span>
+            <span className="sr-only sm:not-sr-only">{t("back")}</span>
           </Button>
         </Link>
       </Header>
@@ -66,7 +68,7 @@ export default async function IngenieurClientNotesPage({
           <Button variant="ghost" size="sm" asChild>
             <Link href={`/monitoring/${clientSiteId}`}>
               <ArrowLeft className="h-4 w-4" />
-              Retour au client
+              {t("back")}
             </Link>
           </Button>
         </div>

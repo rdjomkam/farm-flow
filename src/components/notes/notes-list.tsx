@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { useTranslations } from "next-intl";
 import { FileText, AlertTriangle, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -193,6 +194,7 @@ function NoteCard({
  * Mode client (isClientView) : notes PUBLIC uniquement, sans actions de gestion.
  */
 export function NotesList({ notes, isClientView = false, onRefresh }: NotesListProps) {
+  const t = useTranslations("notes");
   const urgentNotes = notes.filter((n) => n.isUrgent);
   const unreadNotes = notes.filter((n) => !n.isRead);
   const myObservations = notes.filter((n) => n.isFromClient);
@@ -202,8 +204,8 @@ export function NotesList({ notes, isClientView = false, onRefresh }: NotesListP
       return (
         <EmptyState
           icon={<FileText className="h-7 w-7" />}
-          title="Aucune note"
-          description="Aucune note ne correspond a ce filtre."
+          title={t("emptyState.noNotes")}
+          description={t("emptyState.noNotesFiltered")}
         />
       );
     }

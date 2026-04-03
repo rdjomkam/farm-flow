@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,25 +16,6 @@ import {
 } from "@/components/ui/select";
 import { CategorieDepense } from "@/types";
 import { useDepenseService } from "@/services";
-
-// ---------------------------------------------------------------------------
-// Labels
-// ---------------------------------------------------------------------------
-
-const categorieLabels: Record<CategorieDepense, string> = {
-  [CategorieDepense.ALIMENT]: "Aliment",
-  [CategorieDepense.INTRANT]: "Intrant",
-  [CategorieDepense.EQUIPEMENT]: "Equipement",
-  [CategorieDepense.ELECTRICITE]: "Electricite",
-  [CategorieDepense.EAU]: "Eau",
-  [CategorieDepense.LOYER]: "Loyer",
-  [CategorieDepense.SALAIRE]: "Salaire",
-  [CategorieDepense.TRANSPORT]: "Transport",
-  [CategorieDepense.VETERINAIRE]: "Veterinaire",
-  [CategorieDepense.REPARATION]: "Reparation",
-  [CategorieDepense.INVESTISSEMENT]: "Investissement",
-  [CategorieDepense.AUTRE]: "Autre",
-};
 
 // ---------------------------------------------------------------------------
 // Types
@@ -62,6 +44,7 @@ interface Props {
 export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
   const router = useRouter();
   const depenseService = useDepenseService();
+  const t = useTranslations("depenses");
 
   // Form fields
   const [description, setDescription] = useState("");
@@ -105,24 +88,24 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
     if (!description.trim()) {
       clientErrors.push({
         field: "description",
-        message: "La description est obligatoire.",
+        message: t("validation.descriptionRequired"),
       });
     }
     if (!categorie) {
       clientErrors.push({
         field: "categorieDepense",
-        message: "La categorie est obligatoire.",
+        message: t("validation.categoryRequired"),
       });
     }
     const montantNum = parseFloat(montantTotal);
     if (isNaN(montantNum) || montantNum <= 0) {
       clientErrors.push({
         field: "montantTotal",
-        message: "Le montant doit etre un nombre positif.",
+        message: t("validation.amountPositive"),
       });
     }
     if (!date) {
-      clientErrors.push({ field: "date", message: "La date est obligatoire." });
+      clientErrors.push({ field: "date", message: t("validation.dateRequired") });
     }
 
     if (clientErrors.length > 0) {
@@ -162,7 +145,7 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Informations principales</CardTitle>
+            <CardTitle className="text-sm">{t("form.mainInfo")}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             {/* Description */}
@@ -172,7 +155,7 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
               required
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Achat aliment, loyer, salaire..."
+              placeholder={t("form.descriptionPlaceholder")}
               error={getFieldError("description")}
             />
 
@@ -187,12 +170,12 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
                 required
                 error={getFieldError("categorieDepense")}
               >
-                <SelectValue placeholder="Choisir une categorie" />
+                <SelectValue placeholder={t("form.categoryPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {Object.values(CategorieDepense).map((cat) => (
                   <SelectItem key={cat} value={cat}>
-                    {categorieLabels[cat]}
+                    {t(`categories.${cat}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -208,7 +191,7 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
               required
               value={montantTotal}
               onChange={(e) => setMontantTotal(e.target.value)}
-              placeholder="Ex: 50000"
+              placeholder={t("form.amountPlaceholder")}
               error={getFieldError("montantTotal")}
             />
 
@@ -226,7 +209,7 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
             {/* Date echeance */}
             <Input
               id="dateEcheance"
-              label="Date d'echeance (optionnel)"
+              label={t("form.dueDateLabel")}
               type="date"
               value={dateEcheance}
               onChange={(e) => setDateEcheance(e.target.value)}
@@ -238,9 +221,9 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm">
-              Liens optionnels{" "}
+              {t("form.optionalLinks")}{" "}
               <span className="text-muted-foreground font-normal text-xs">
-                (facultatif)
+                {t("form.optional")}
               </span>
             </CardTitle>
           </CardHeader>
@@ -249,10 +232,10 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
             {vagues.length > 0 && (
               <Select value={vagueId || "__aucune"} onValueChange={(v) => setVagueId(v === "__aucune" ? "" : v)}>
                 <SelectTrigger id="vague" label="Vague associee">
-                  <SelectValue placeholder="Aucune vague" />
+                  <SelectValue placeholder={t("form.noWave")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__aucune">Aucune vague</SelectItem>
+                  <SelectItem value="__aucune">{t("form.noWave")}</SelectItem>
                   {vagues.map((v) => (
                     <SelectItem key={v.id} value={v.id}>
                       {v.code}
@@ -269,10 +252,10 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
                 onValueChange={handleCommandeChange}
               >
                 <SelectTrigger id="commande" label="Commande liee">
-                  <SelectValue placeholder="Aucune commande" />
+                  <SelectValue placeholder={t("form.noOrder")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__aucune">Aucune commande</SelectItem>
+                  <SelectItem value="__aucune">{t("form.noOrder")}</SelectItem>
                   {commandesLivrees.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.numero} —{" "}
@@ -291,13 +274,13 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
         {/* Notes */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Notes</CardTitle>
+            <CardTitle className="text-sm">{t("form.notes")}</CardTitle>
           </CardHeader>
           <CardContent>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Informations complementaires..."
+              placeholder={t("form.notesPlaceholder")}
               rows={3}
             />
           </CardContent>
@@ -320,7 +303,7 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
 
         {/* Submit */}
         <Button type="submit" className="w-full h-12 text-base">
-          Creer la depense
+          {t("form.createExpense")}
         </Button>
       </form>
     </div>

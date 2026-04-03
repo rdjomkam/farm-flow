@@ -1,4 +1,9 @@
 {
+  "emptyState": {
+    "noNotes": "No notes",
+    "noNotesFiltered": "No notes match this filter.",
+    "noNotesSent": "No notes sent"
+  },
   "form": {
     "sectionInfos": "Note information",
     "sectionInfosDescription": "Write the note for the client",

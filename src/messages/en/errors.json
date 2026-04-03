@@ -1,4 +1,7 @@
 {
+  "page": {
+    "somethingWentWrong": "Something went wrong. Please try again."
+  },
   "validation": {
     "required": "Required field",
     "invalidValue": "Invalid value",

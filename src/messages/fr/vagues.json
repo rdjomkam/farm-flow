@@ -151,6 +151,10 @@
     "tooltipLabel": "Jour {label}",
     "seriesName": "Poids moyen"
   },
+  "gompertz": {
+    "modelParams": "Paramètres du modèle",
+    "noBiometricData": "Aucune mesure biométrique disponible."
+  },
   "comparison": {
     "selectTitle": "Selectionnez 2 a 4 vagues",
     "hide": "Masquer",

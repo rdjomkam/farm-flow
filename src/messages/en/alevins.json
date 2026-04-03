@@ -1,6 +1,8 @@
 {
   "page": {
     "title": "Fry Production",
+    "pontes": "Spawnings",
+    "reproducteurs": "Broodstock",
     "tabs": {
       "reproducteurs": "Broodstock",
       "pontes": "Spawnings",

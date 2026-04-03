@@ -385,7 +385,7 @@ export function IngenieurBottomNav({
                     )}
                   >
                     <User className="h-5 w-5" />
-                    <span>Profil</span>
+                    <span>{t("items.profil")}</span>
                   </Link>
 
                   {/* Backoffice — super admin only */}
@@ -401,7 +401,7 @@ export function IngenieurBottomNav({
                       )}
                     >
                       <Shield className="h-5 w-5" />
-                      <span>Backoffice</span>
+                      <span>{t("items.backoffice")}</span>
                     </Link>
                   )}
                 </div>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import {
   Container,
   Package,
@@ -96,9 +97,10 @@ interface SparklineFCRProps {
 }
 
 function SparklineFCR({ data }: SparklineFCRProps) {
+  const t = useTranslations("analytics");
   if (data.length === 0) {
     return (
-      <p className="text-xs text-muted-foreground py-4 text-center">Aucune donnee</p>
+      <p className="text-xs text-muted-foreground py-4 text-center">{t("emptyStates.noData")}</p>
     );
   }
 
@@ -196,6 +198,7 @@ interface AnalyticsDashboardClientProps {
 }
 
 export function AnalyticsDashboardClient({ dashboard }: AnalyticsDashboardClientProps) {
+  const t = useTranslations("analytics");
   const { meilleurBac, meilleurAliment, alertesPerformance, tendanceFCR, stats } = dashboard;
 
   return (
@@ -216,7 +219,7 @@ export function AnalyticsDashboardClient({ dashboard }: AnalyticsDashboardClient
                 </p>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">Aucune vague en cours</p>
+              <p className="text-sm text-muted-foreground">{t("emptyStates.noWavesInProgress")}</p>
             )}
           </KpiCard>
 
@@ -230,7 +233,7 @@ export function AnalyticsDashboardClient({ dashboard }: AnalyticsDashboardClient
                 </p>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">Aucune donnee disponible</p>
+              <p className="text-sm text-muted-foreground">{t("emptyStates.noDataAvailable")}</p>
             )}
           </KpiCard>
 

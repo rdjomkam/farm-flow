@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { DollarSign } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { FinancesDashboardClient } from "@/components/finances/finances-dashboard-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -27,6 +28,8 @@ export default async function FinancesPage() {
   // Errors are silenced — generation failure must not break the dashboard.
   await genererDepensesRecurrentes(siteId, session.userId).catch(() => null);
 
+  const t = await getTranslations("depenses.page");
+
   const [resume, parVague, evolution, topClients] = await Promise.all([
     getResumeFinancier(siteId),
     getRentabiliteParVague(siteId),
@@ -36,7 +39,7 @@ export default async function FinancesPage() {
 
   return (
     <>
-      <Header title="Finances">
+      <Header title={t("finances")}>
         <DollarSign className="h-5 w-5 text-muted-foreground" />
       </Header>
       <div className="p-4">

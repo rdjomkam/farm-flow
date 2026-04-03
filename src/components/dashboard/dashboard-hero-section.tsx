@@ -1,5 +1,6 @@
 import { Waves } from "lucide-react";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { StatsCards } from "@/components/dashboard/stats-cards";
@@ -11,7 +12,8 @@ interface DashboardHeroSectionProps {
   sessionName: string;
 }
 
-export function DashboardHeroSection({ data, sessionName }: DashboardHeroSectionProps) {
+export async function DashboardHeroSection({ data, sessionName }: DashboardHeroSectionProps) {
+  const t = await getTranslations("dashboard");
 
   return (
     <>
@@ -28,9 +30,11 @@ export function DashboardHeroSection({ data, sessionName }: DashboardHeroSection
               month: "long",
             })}
           </p>
-          <h1 className="text-xl font-bold mt-1">Bonjour, {sessionName}</h1>
+          <h1 className="text-xl font-bold mt-1">{t("hero.greeting", { sessionName })}</h1>
           <p className="text-sm text-white/80 mt-1">
-            {data.vaguesActives} vague{data.vaguesActives > 1 ? "s" : ""} en cours
+            {data.vaguesActives > 1
+              ? t("hero.wavesCountPlural", { count: data.vaguesActives })
+              : t("hero.wavesCount", { count: data.vaguesActives })}
             {data.biomasseTotale ? ` \u00b7 ${data.biomasseTotale} kg de biomasse` : ""}
           </p>
         </div>
@@ -42,16 +46,16 @@ export function DashboardHeroSection({ data, sessionName }: DashboardHeroSection
 
       <section>
         <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-          Vagues en cours
+          {t("hero.sectionTitle")}
         </h2>
         {data.vagues.length === 0 ? (
           <EmptyState
             icon={<Waves className="h-7 w-7" />}
-            title="Aucune vague en cours"
-            description="Creez une vague pour commencer le suivi de vos silures."
+            title={t("hero.emptyTitle")}
+            description={t("hero.emptyDescription")}
             action={
               <Link href="/vagues">
-                <Button size="sm">Creer une vague</Button>
+                <Button size="sm">{t("hero.createWave")}</Button>
               </Link>
             }
           />

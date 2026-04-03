@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -18,6 +19,8 @@ export default async function NouvelleDepensePage() {
   );
   if (!permissions) return <AccessDenied />;
 
+  const t = await getTranslations("depenses.page");
+
   const [vaguesResult, commandesResult] = await Promise.all([
     getVagues(session.activeSiteId),
     getCommandes(session.activeSiteId),
@@ -30,7 +33,7 @@ export default async function NouvelleDepensePage() {
 
   return (
     <>
-      <Header title="Nouvelle depense" />
+      <Header title={t("newExpense")} />
       <DepenseFormClient
         vagues={vaguesResult.data.map((v) => ({ id: v.id, code: v.code }))}
         commandesLivrees={commandesLivrees.map((c) => ({

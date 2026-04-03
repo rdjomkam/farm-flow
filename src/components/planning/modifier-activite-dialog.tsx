@@ -30,8 +30,7 @@ import { TypeActivite, Recurrence, StatutActivite, Permission } from "@/types";
 import type { ActiviteWithRelations } from "@/types";
 import { typeActiviteLabels } from "@/lib/labels/activite";
 
-const recurrenceLabelMap: Record<string, string> = {
-  __none__: "Aucune (ponctuel)",
+const recurrenceStaticLabels: Record<string, string> = {
   [Recurrence.QUOTIDIEN]: "Quotidien",
   [Recurrence.HEBDOMADAIRE]: "Hebdomadaire",
   [Recurrence.BIMENSUEL]: "Bimensuel",
@@ -222,7 +221,9 @@ export function ModifierActiviteDialog({
               <SelectContent>
                 {recurrenceValues.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
-                    {recurrenceLabelMap[opt.value]}
+                    {opt.value === "__none__"
+                      ? t("options.noneOneTime")
+                      : recurrenceStaticLabels[opt.value]}
                   </SelectItem>
                 ))}
               </SelectContent>

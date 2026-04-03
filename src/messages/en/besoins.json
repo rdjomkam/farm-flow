@@ -1,4 +1,7 @@
 {
+  "page": {
+    "newNeedsList": "New needs list"
+  },
   "statuts": {
     "SOUMISE": "Submitted",
     "APPROUVEE": "Approved",

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { ActiviteListClient } from "@/components/activites/activite-list-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -14,6 +15,8 @@ export default async function MesTachesPage() {
   const permissions = await checkPagePermission(session, Permission.DASHBOARD_VOIR);
   if (!permissions) return <AccessDenied />;
 
+  const t = await getTranslations("planning.page");
+
   // Marquer les activites en retard avant le chargement
   await marquerActivitesEnRetard(session.activeSiteId);
 
@@ -22,7 +25,7 @@ export default async function MesTachesPage() {
 
   return (
     <>
-      <Header title="Mes taches" />
+      <Header title={t("myTasks")} />
       <div className="p-4">
         <ActiviteListClient
           activites={JSON.parse(JSON.stringify(tasks))}

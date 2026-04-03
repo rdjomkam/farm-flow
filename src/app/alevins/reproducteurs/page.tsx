@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { ReproducteursListClient } from "@/components/alevins/reproducteurs-list-client";
 import { AccessDenied } from "@/components/ui/access-denied";
@@ -15,10 +16,11 @@ export default async function ReproducteursPage() {
   if (!permissions) return <AccessDenied />;
 
   const reproducteursResult = await getReproducteurs(session.activeSiteId);
+  const t = await getTranslations("alevins.page");
 
   return (
     <>
-      <Header title="Reproducteurs" />
+      <Header title={t("reproducteurs")} />
       <div className="p-4">
         <ReproducteursListClient
           reproducteurs={JSON.parse(JSON.stringify(reproducteursResult.data))}

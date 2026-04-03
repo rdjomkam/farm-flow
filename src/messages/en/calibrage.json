@@ -1,4 +1,14 @@
 {
+  "page": {
+    "detail": "Calibration detail",
+    "new": "New calibration"
+  },
+  "categories": {
+    "PETIT": "Small",
+    "MOYEN": "Medium",
+    "GROS": "Large",
+    "TRES_GROS": "Extra large"
+  },
   "stepSources": {
     "title": "Source tanks",
     "description": "Select the tanks whose fish will be graded.",

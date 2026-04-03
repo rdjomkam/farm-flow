@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useState } from "react";
 import * as ToastPrimitive from "@radix-ui/react-toast";
 import { X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 const variants = {
@@ -33,6 +34,7 @@ export function useToast() {
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const t = useTranslations("common");
 
   const toast = useCallback((t: Omit<Toast, "id">) => {
     const id = crypto.randomUUID();
@@ -73,7 +75,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 </ToastPrimitive.Description>
               )}
             </div>
-            <ToastPrimitive.Close aria-label="Fermer" className="rounded-md p-1 opacity-50 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px] min-w-[44px] flex items-center justify-center">
+            <ToastPrimitive.Close aria-label={t("buttons.close")} className="rounded-md p-1 opacity-50 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px] min-w-[44px] flex items-center justify-center">
               <X className="h-4 w-4" />
             </ToastPrimitive.Close>
           </ToastPrimitive.Root>

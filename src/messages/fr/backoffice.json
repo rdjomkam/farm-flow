@@ -1,4 +1,10 @@
 {
+  "modulesEditor": {
+    "updateError": "Erreur lors de la mise à jour des modules."
+  },
+  "buttons": {
+    "saving": "Enregistrement..."
+  },
   "header": {
     "title": "DKFarm Backoffice",
     "titleMobile": "Backoffice",

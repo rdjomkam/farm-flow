@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, Bell, CheckCircle2 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { Badge } from "@/components/ui/badge";
@@ -58,9 +59,11 @@ export default async function IngenieurPage() {
   const clientsSerialized = JSON.parse(JSON.stringify(clientsResult.clients));
   const metricsSerialized = JSON.parse(JSON.stringify(metrics));
 
+  const t = await getTranslations("ingenieur");
+
   return (
     <>
-      <Header title="Monitoring clients" />
+      <Header title={t("page.monitoring")} />
 
       <div className="flex flex-col gap-6 p-4">
 
@@ -132,7 +135,7 @@ export default async function IngenieurPage() {
         {alertesTriees.length === 0 && (
           <div className="flex items-center gap-2 rounded-xl border border-success/30 bg-success/5 p-3">
             <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
-            <p className="text-sm text-success font-medium">Aucune alerte active sur les sites clients.</p>
+            <p className="text-sm text-success font-medium">{t("monitoring.noActiveAlerts")}</p>
           </div>
         )}
 

@@ -121,5 +121,14 @@
     "errorPasswordTooShort": "Le mot de passe doit contenir au moins 6 caractères.",
     "errorPasswordMismatch": "Les mots de passe ne correspondent pas.",
     "errorGeneric": "Erreur lors de l'inscription."
+  },
+  "accessDenied": {
+    "title": "Accès refusé",
+    "description": "Vous n'avez pas les permissions nécessaires pour accéder à cette page. Contactez un administrateur si vous pensez qu'il s'agit d'une erreur.",
+    "backButton": "Retour au dashboard"
+  },
+  "loading": {
+    "ariaLabel": "Chargement en cours",
+    "text": "Chargement..."
   }
 }

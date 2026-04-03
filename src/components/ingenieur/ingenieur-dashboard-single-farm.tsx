@@ -12,6 +12,7 @@
  */
 
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import {
   AlertTriangle,
   Bell,
@@ -53,8 +54,9 @@ export async function IngenieurDashboardSingleFarm({
   sessionName,
 }: IngenieurDashboardSingleFarmProps) {
   // Charger en parallèle
-  const [clientSummary, alertesActives, tasks, dashboardData] =
+  const [t, clientSummary, alertesActives, tasks, dashboardData] =
     await Promise.all([
+      getTranslations("ingenieur"),
       getClientIngenieurDetail(vendeurSiteId, clientSiteId),
       prisma.notification.findMany({
         where: {
@@ -94,7 +96,7 @@ export async function IngenieurDashboardSingleFarm({
       >
         <div className="relative z-10 text-white">
           <p className="text-sm font-medium text-white/70 capitalize">{today}</p>
-          <h1 className="text-xl font-bold mt-1">Bonjour, {sessionName}</h1>
+          <h1 className="text-xl font-bold mt-1">{t("greeting", { name: sessionName })}</h1>
           <p className="text-sm text-white/80 mt-1 truncate">
             Vue : {siteName}
           </p>
@@ -244,7 +246,7 @@ export async function IngenieurDashboardSingleFarm({
         </div>
         {tachesAujourdhui.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">
-            Aucune tache pour aujourd'hui.
+            {t("emptyStates.noTasksToday")}
           </p>
         ) : (
           <div className="flex flex-col gap-2">
@@ -270,7 +272,7 @@ export async function IngenieurDashboardSingleFarm({
                     className="shrink-0 text-[10px]"
                   >
                     {tache.statut === StatutActivite.EN_RETARD
-                      ? "En retard"
+                      ? t("statuses.late")
                       : "Aujourd'hui"}
                   </Badge>
                 </CardContent>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Users, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { formatNumber } from "@/lib/format";
@@ -40,6 +41,7 @@ interface Props {
 }
 
 export function ActivationsListClient({ activations }: Props) {
+  const t = useTranslations("packs");
   const [tab, setTab] = useState("actives");
   const [search, setSearch] = useState("");
 
@@ -83,8 +85,8 @@ export function ActivationsListClient({ activations }: Props) {
           {filtered.length === 0 ? (
             <EmptyState
               icon={<Users className="h-8 w-8 text-muted-foreground" />}
-              title="Aucune activation"
-              description={search ? "Aucun resultat pour cette recherche." : "Aucune activation pour ce filtre."}
+              title={t("emptyState.noActivations")}
+              description={search ? t("emptyState.noSearchResults") : t("emptyState.noActivationsFiltered")}
             />
           ) : (
             <div className="space-y-3">

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { PacksListClient } from "@/components/packs/packs-list-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -15,6 +16,8 @@ export default async function PacksPage() {
   const permissions = await checkPagePermission(session, Permission.DASHBOARD_VOIR);
   if (!permissions) return <AccessDenied />;
 
+  const t = await getTranslations("packs.page");
+
   const [packs, plans] = await Promise.all([
     getPacks(session.activeSiteId),
     getPlansAbonnements(),
@@ -22,7 +25,7 @@ export default async function PacksPage() {
 
   return (
     <>
-      <Header title="Packs" />
+      <Header title={t("packs")} />
       <div className="p-4">
         <PacksListClient
           packs={JSON.parse(JSON.stringify(packs))}

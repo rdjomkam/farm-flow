@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { BacComparisonCards } from "@/components/analytics/bac-comparison-cards";
@@ -23,6 +24,7 @@ export default async function AnalyticsBacsPage({
   if (!permissions) return <AccessDenied />;
 
   const { vagueId } = await searchParams;
+  const t = await getTranslations("analytics.page");
 
   // If no vagueId, show vague selector
   if (!vagueId) {
@@ -32,7 +34,7 @@ export default async function AnalyticsBacsPage({
 
     return (
       <>
-        <Header title="Analytiques par bac" />
+        <Header title={t("bacAnalytics")} />
         <div className="flex flex-col gap-3 p-4">
           <p className="text-sm text-muted-foreground">
             Sélectionnez une vague pour voir la comparaison des bacs.
@@ -71,7 +73,7 @@ export default async function AnalyticsBacsPage({
   if (!comparaison) {
     return (
       <>
-        <Header title="Analytiques par bac" />
+        <Header title={t("bacAnalytics")} />
         <div className="p-4">
           <p className="py-8 text-center text-sm text-muted-foreground">
             Vague introuvable.
