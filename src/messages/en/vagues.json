@@ -148,8 +148,22 @@
   "poidsChart": {
     "title": "Average weight evolution",
     "noData": "No biometric data available.",
-    "tooltipLabel": "Day {label}",
-    "seriesName": "Avg. weight"
+    "tooltipLabel": "D{label} — {date}",
+    "tooltipLabelPrediction": "Prediction D{label} — {date}",
+    "seriesName": "Avg. weight",
+    "gompertzSeriesName": "Gompertz curve",
+    "gompertzLegend": "Dashed line: Gompertz prediction (120-day projection)",
+    "gompertzBadge": {
+      "HIGH": "Gompertz high reliability",
+      "MEDIUM": "Gompertz medium reliability",
+      "LOW": "Gompertz low reliability"
+    },
+    "zoomIn": "Zoom +",
+    "zoomOut": "Zoom -",
+    "zoomReset": "Global view",
+    "zoomRange": "D{from} – D{to}",
+    "panLeft": "Pan left",
+    "panRight": "Pan right"
   },
   "gompertz": {
     "modelParams": "Model parameters",

@@ -1,8 +1,9 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
+import { ZoomIn, ZoomOut, Maximize2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChartTooltip } from "@/components/ui/chart-tooltip";
@@ -40,6 +41,8 @@ const Tooltip = dynamic(
   () => import("recharts").then((mod) => mod.Tooltip),
   { ssr: false }
 );
+
+const ZOOM_WINDOW = 30;
 
 interface PoidsChartProps {
   data: EvolutionPoidsPoint[];
@@ -95,9 +98,30 @@ export function PoidsChart({
 }: PoidsChartProps) {
   const t = useTranslations("vagues");
 
+  // Zoom state: null = vue globale, [from, to] = fenetre zoomee
+  const [zoomDomain, setZoomDomain] = useState<[number, number] | null>(null);
+
   const pointByJour = useMemo(
     () => new Map(data.map((d) => [d.jour, d])),
     [data]
+  );
+
+  // Dataset filtré : seulement les points avec une observation réelle (poidsMoyen != null)
+  // Utilisé pour la Line poidsMoyen afin de connecter les observations entre elles
+  const dataObservations = useMemo(
+    () => data.filter((d) => d.poidsMoyen != null),
+    [data]
+  );
+
+  // Formatter de date pour le tooltip (Intl, pas de dépendance supplémentaire)
+  const dateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat("fr-FR", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }),
+    []
   );
 
   const tooltipContent = useMemo(
@@ -105,15 +129,74 @@ export function PoidsChart({
       <ChartTooltip
         labelFormatter={(label) => {
           const point = pointByJour.get(Number(label));
-          if (point?.isPrediction) return t("poidsChart.tooltipLabelPrediction", { label });
-          return t("poidsChart.tooltipLabel", { label });
+          const dateStr = point?.date
+            ? dateFormatter.format(new Date(point.date))
+            : "";
+          if (point?.isPrediction)
+            return t("poidsChart.tooltipLabelPrediction", { label, date: dateStr });
+          return t("poidsChart.tooltipLabel", { label, date: dateStr });
         }}
         valueFormatter={(v) => `${v} g`}
       />
     ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, pointByJour]
+    [t, pointByJour, dateFormatter]
   );
+
+  // Bornes du dataset complet
+  const dataMin = useMemo(() => (data.length > 0 ? data[0].jour : 0), [data]);
+  const dataMax = useMemo(
+    () => (data.length > 0 ? data[data.length - 1].jour : 0),
+    [data]
+  );
+
+  // Handlers de zoom
+  const handleZoomIn = () => {
+    const [from, to] = zoomDomain ?? [dataMin, dataMax];
+    const mid = Math.round((from + to) / 2);
+    const half = Math.floor(ZOOM_WINDOW / 2);
+    const rawFrom = mid - half;
+    const rawTo = rawFrom + ZOOM_WINDOW;
+    const newTo = Math.min(dataMax, rawTo);
+    const newFrom = Math.max(dataMin, newTo - ZOOM_WINDOW);
+    setZoomDomain([newFrom, newTo]);
+  };
+
+  const handleZoomOut = () => {
+    if (!zoomDomain) return;
+    const [from, to] = zoomDomain;
+    const mid = Math.round((from + to) / 2);
+    const currentWindow = to - from;
+    const newWindow = Math.min(dataMax - dataMin, currentWindow * 2);
+    const half = Math.floor(newWindow / 2);
+    const newFrom = Math.max(dataMin, mid - half);
+    const newTo = Math.min(dataMax, newFrom + newWindow);
+    if (newFrom <= dataMin && newTo >= dataMax) {
+      setZoomDomain(null);
+    } else {
+      setZoomDomain([newFrom, newTo]);
+    }
+  };
+
+  const handleReset = () => setZoomDomain(null);
+
+  const handlePanLeft = () => {
+    if (!zoomDomain) return;
+    const [from, to] = zoomDomain;
+    const rangeSize = to - from;
+    const step = Math.max(1, Math.floor(rangeSize / 4));
+    const newFrom = Math.max(dataMin, from - step);
+    setZoomDomain([newFrom, Math.min(dataMax, newFrom + rangeSize)]);
+  };
+
+  const handlePanRight = () => {
+    if (!zoomDomain) return;
+    const [from, to] = zoomDomain;
+    const rangeSize = to - from;
+    const step = Math.max(1, Math.floor(rangeSize / 4));
+    const newTo = Math.min(dataMax, to + step);
+    setZoomDomain([Math.max(dataMin, newTo - rangeSize), newTo]);
+  };
 
   const hasGompertz =
     !!gompertzConfidence &&
@@ -159,6 +242,11 @@ export function PoidsChart({
     );
   }
 
+  const isZoomed = zoomDomain !== null;
+  const xDomain: [number | string, number | string] = isZoomed
+    ? zoomDomain
+    : ["dataMin", "dataMax"];
+
   return (
     <ErrorBoundary section="le graphique d'évolution du poids">
       <Card>
@@ -186,6 +274,9 @@ export function PoidsChart({
                   tick={{ fontSize: 12 }}
                   tickFormatter={(v) => `J${v}`}
                   tickCount={8}
+                  domain={xDomain}
+                  type="number"
+                  allowDataOverflow
                 />
                 <YAxis
                   tick={{ fontSize: 11 }}
@@ -193,7 +284,9 @@ export function PoidsChart({
                   width={42}
                 />
                 <Tooltip content={tooltipContent} />
+                {/* Courbe poids moyen : utilise dataObservations pour connecter les points réels */}
                 <Line
+                  data={dataObservations}
                   type="monotone"
                   dataKey="poidsMoyen"
                   name={t("poidsChart.seriesName")}
@@ -219,11 +312,81 @@ export function PoidsChart({
               </LineChart>
             </ResponsiveContainer>
           </div>
+
           {hasGompertz && (
             <p className="text-[10px] text-muted-foreground mt-1 text-center">
               {t("poidsChart.gompertzLegend")}
             </p>
           )}
+
+          {/* Barre de zoom */}
+          <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
+            {isZoomed && (
+              <button
+                type="button"
+                onClick={handlePanLeft}
+                disabled={zoomDomain[0] <= dataMin}
+                aria-label={t("poidsChart.panLeft")}
+                className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-md border border-border bg-background text-foreground hover:bg-muted disabled:opacity-40 transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleZoomIn}
+              aria-label={t("poidsChart.zoomIn")}
+              className="flex items-center justify-center gap-1 min-h-[44px] px-3 rounded-md border border-border bg-background text-foreground hover:bg-muted transition-colors text-sm"
+            >
+              <ZoomIn className="h-4 w-4" />
+              <span className="hidden sm:inline">{t("poidsChart.zoomIn")}</span>
+            </button>
+
+            {isZoomed ? (
+              <span className="text-xs text-muted-foreground font-mono px-2 min-h-[44px] flex items-center">
+                {t("poidsChart.zoomRange", { from: zoomDomain[0], to: zoomDomain[1] })}
+              </span>
+            ) : (
+              <span className="text-xs text-muted-foreground px-2 min-h-[44px] flex items-center">
+                {t("poidsChart.zoomReset")}
+              </span>
+            )}
+
+            <button
+              type="button"
+              onClick={handleZoomOut}
+              disabled={!isZoomed}
+              aria-label={t("poidsChart.zoomOut")}
+              className="flex items-center justify-center gap-1 min-h-[44px] px-3 rounded-md border border-border bg-background text-foreground hover:bg-muted disabled:opacity-40 transition-colors text-sm"
+            >
+              <ZoomOut className="h-4 w-4" />
+              <span className="hidden sm:inline">{t("poidsChart.zoomOut")}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleReset}
+              disabled={!isZoomed}
+              aria-label={t("poidsChart.zoomReset")}
+              className="flex items-center justify-center gap-1 min-h-[44px] px-3 rounded-md border border-border bg-background text-foreground hover:bg-muted disabled:opacity-40 transition-colors text-sm"
+            >
+              <Maximize2 className="h-4 w-4" />
+              <span className="hidden sm:inline">{t("poidsChart.zoomReset")}</span>
+            </button>
+
+            {isZoomed && (
+              <button
+                type="button"
+                onClick={handlePanRight}
+                disabled={zoomDomain[1] >= dataMax}
+                aria-label={t("poidsChart.panRight")}
+                className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-md border border-border bg-background text-foreground hover:bg-muted disabled:opacity-40 transition-colors"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </CardContent>
       </Card>
     </ErrorBoundary>
