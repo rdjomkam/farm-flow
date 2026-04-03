@@ -158,10 +158,8 @@
       "MEDIUM": "Gompertz medium reliability",
       "LOW": "Gompertz low reliability"
     },
-    "zoomIn": "Zoom +",
-    "zoomOut": "Zoom -",
-    "zoomReset": "Global view",
-    "zoomLevel": "x{level}"
+    "tabObservations": "Observations",
+    "tabPrediction": "120-day prediction"
   },
   "gompertz": {
     "modelParams": "Model parameters",

@@ -8,6 +8,7 @@ import type {
   AjusterDepenseDTO,
   AjusterFraisDepenseDTO,
 } from "@/types";
+import { categorieProduitToDepense, computeDominantCategorie } from "./besoins";
 
 // Re-export for use in API validation
 export { MotifFraisSupp };
@@ -579,4 +580,174 @@ export async function ajusterFraisDepense(
       montantFraisSupp: newMontantFraisSupp,
     };
   });
+}
+
+// ---------------------------------------------------------------------------
+// Backfill LigneDepense for existing Depenses (ADR-027)
+// ---------------------------------------------------------------------------
+
+/**
+ * Backfill LigneDepense records for existing Depenses that were created
+ * before ADR-027 (linked to ListeBesoins or Commande but have no lines).
+ *
+ * Idempotent: skips Depenses that already have LigneDepense records.
+ * Each Depense is processed in its own transaction for isolation.
+ */
+export async function backfillLignesDepense(siteId?: string): Promise<{
+  processed: number;
+  skipped: number;
+  errors: Array<{ depenseId: string; numero: string; error: string }>;
+}> {
+  // Find all depenses linked to besoins or commandes but with no lignes
+  const depenses = await prisma.depense.findMany({
+    where: {
+      ...(siteId && { siteId }),
+      OR: [
+        { listeBesoinsId: { not: null } },
+        { commandeId: { not: null } },
+      ],
+      lignes: { none: {} },
+    },
+    select: {
+      id: true,
+      numero: true,
+      siteId: true,
+      listeBesoinsId: true,
+      commandeId: true,
+    },
+  });
+
+  let processed = 0;
+  let skipped = 0;
+  const errors: Array<{ depenseId: string; numero: string; error: string }> = [];
+
+  for (const dep of depenses) {
+    try {
+      await prisma.$transaction(async (tx) => {
+        // Case 1: listeBesoinsId set (priority over commandeId)
+        if (dep.listeBesoinsId) {
+          const liste = await tx.listeBesoins.findUnique({
+            where: { id: dep.listeBesoinsId },
+            include: {
+              lignes: {
+                include: {
+                  produit: { select: { id: true, categorie: true } },
+                },
+              },
+            },
+          });
+
+          if (!liste) {
+            skipped++;
+            return; // orphan FK — skip
+          }
+
+          if (liste.lignes.length === 0) {
+            skipped++;
+            return; // no source lines
+          }
+
+          // Build LigneDepense data from LigneBesoin
+          const lignesData = await Promise.all(
+            liste.lignes.map(async (lb) => {
+              const prixUnitaire = lb.prixReel ?? lb.prixEstime;
+              const montantTotal = lb.quantite * prixUnitaire;
+              const cat = categorieProduitToDepense(lb.produit?.categorie);
+
+              // Try to find matching LigneCommande via (commandeId, produitId)
+              let ligneCommandeId: string | null = null;
+              if (dep.commandeId && lb.produitId) {
+                const lc = await tx.ligneCommande.findFirst({
+                  where: {
+                    commandeId: dep.commandeId,
+                    produitId: lb.produitId,
+                  },
+                  select: { id: true },
+                });
+                ligneCommandeId = lc?.id ?? null;
+              }
+
+              return {
+                depenseId: dep.id,
+                designation: lb.designation,
+                categorieDepense: cat,
+                quantite: lb.quantite,
+                prixUnitaire,
+                montantTotal,
+                produitId: lb.produitId ?? null,
+                ligneBesoinId: lb.id,
+                ligneCommandeId,
+                siteId: dep.siteId,
+              };
+            })
+          );
+
+          await tx.ligneDepense.createMany({ data: lignesData });
+
+          // Recompute dominant category
+          const categorieDepense = computeDominantCategorie(lignesData);
+          await tx.depense.update({
+            where: { id: dep.id },
+            data: { categorieDepense },
+          });
+
+        // Case 2: commandeId set, no listeBesoinsId
+        } else if (dep.commandeId) {
+          const commande = await tx.commande.findUnique({
+            where: { id: dep.commandeId },
+            include: {
+              lignes: {
+                include: {
+                  produit: { select: { id: true, categorie: true, nom: true } },
+                },
+              },
+            },
+          });
+
+          if (!commande) {
+            skipped++;
+            return; // orphan FK — skip
+          }
+
+          if (commande.lignes.length === 0) {
+            skipped++;
+            return; // no source lines
+          }
+
+          const lignesData = commande.lignes.map((lc) => {
+            const montantTotal = lc.quantite * lc.prixUnitaire;
+            const cat = categorieProduitToDepense(lc.produit?.categorie);
+            return {
+              depenseId: dep.id,
+              designation: lc.produit?.nom ?? `Ligne commande ${lc.id}`,
+              categorieDepense: cat,
+              quantite: lc.quantite,
+              prixUnitaire: lc.prixUnitaire,
+              montantTotal,
+              produitId: lc.produitId,
+              ligneBesoinId: null,
+              ligneCommandeId: lc.id,
+              siteId: dep.siteId,
+            };
+          });
+
+          await tx.ligneDepense.createMany({ data: lignesData });
+
+          // Recompute dominant category
+          const categorieDepense = computeDominantCategorie(lignesData);
+          await tx.depense.update({
+            where: { id: dep.id },
+            data: { categorieDepense },
+          });
+        }
+      });
+
+      processed++;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      errors.push({ depenseId: dep.id, numero: dep.numero, error: message });
+    }
+  }
+
+  return { processed, skipped, errors };
 }

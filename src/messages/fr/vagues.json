@@ -158,10 +158,8 @@
       "MEDIUM": "Gompertz fiabilite moyenne",
       "LOW": "Gompertz faible fiabilite"
     },
-    "zoomIn": "Zoom +",
-    "zoomOut": "Zoom -",
-    "zoomReset": "Vue globale",
-    "zoomLevel": "x{level}"
+    "tabObservations": "Observations",
+    "tabPrediction": "Prédiction 120j"
   },
   "gompertz": {
     "modelParams": "Paramètres du modèle",

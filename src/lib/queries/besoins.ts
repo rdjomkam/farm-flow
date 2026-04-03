@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { StatutBesoins, StatutCommande, CategorieDepense } from "@/types";
+import { StatutBesoins, StatutCommande, CategorieDepense, CategorieProduit } from "@/types";
 import type {
   CreateListeBesoinsDTO,
   UpdateListeBesoinsDTO,
@@ -35,6 +35,71 @@ function calculerMontantEstime(
   lignes: Array<{ quantite: number; prixEstime: number }>
 ): number {
   return lignes.reduce((acc, l) => acc + l.quantite * l.prixEstime, 0);
+}
+
+/**
+ * Mappe une CategorieProduit vers la CategorieDepense correspondante.
+ * CategorieProduit est un sous-ensemble strict de CategorieDepense (mêmes noms).
+ * Les lignes sans produit reçoivent AUTRE.
+ */
+export function categorieProduitToDepense(
+  categorie: CategorieProduit | null | undefined | string
+): CategorieDepense {
+  if (!categorie) return CategorieDepense.AUTRE;
+  // Cast direct : ALIMENT, INTRANT, EQUIPEMENT ont le même nom dans les deux enums
+  return categorie as unknown as CategorieDepense;
+}
+
+/**
+ * Calcule la catégorie dominante parmi les lignes de dépense (ADR-027 section 2).
+ * Critère : somme des montantTotal par catégorie.
+ * En cas d'égalité : priorité selon l'ordre de PRIORITE (index plus bas = priorité plus haute).
+ * Les catégories absentes du tableau reçoivent une priorité Infinity (la plus basse).
+ */
+export function computeDominantCategorie(
+  lignes: Array<{ categorieDepense: CategorieDepense; montantTotal: number }>
+): CategorieDepense {
+  // Ordre complet de toutes les valeurs CategorieDepense : index plus bas = priorité plus haute
+  const PRIORITE: CategorieDepense[] = [
+    CategorieDepense.ALIMENT,
+    CategorieDepense.INTRANT,
+    CategorieDepense.EQUIPEMENT,
+    CategorieDepense.SALAIRE,
+    CategorieDepense.VETERINAIRE,
+    CategorieDepense.TRANSPORT,
+    CategorieDepense.ELECTRICITE,
+    CategorieDepense.EAU,
+    CategorieDepense.LOYER,
+    CategorieDepense.REPARATION,
+    CategorieDepense.INVESTISSEMENT,
+    CategorieDepense.AUTRE,
+  ];
+
+  const totaux = new Map<CategorieDepense, number>();
+  for (const l of lignes) {
+    totaux.set(l.categorieDepense, (totaux.get(l.categorieDepense) ?? 0) + l.montantTotal);
+  }
+
+  if (totaux.size === 0) return CategorieDepense.AUTRE;
+
+  let dominant: CategorieDepense = CategorieDepense.AUTRE;
+  let maxMontant = -1;
+
+  for (const [cat, montant] of totaux.entries()) {
+    const estPlusGrand = montant > maxMontant;
+    const indexCat = PRIORITE.indexOf(cat);
+    const indexDominant = PRIORITE.indexOf(dominant);
+    const prioriteCat = indexCat === -1 ? Infinity : indexCat;
+    const prioriteDominant = indexDominant === -1 ? Infinity : indexDominant;
+    const estEgalAvecPriorite =
+      montant === maxMontant && prioriteCat < prioriteDominant;
+    if (estPlusGrand || estEgalAvecPriorite) {
+      dominant = cat;
+      maxMontant = montant;
+    }
+  }
+
+  return dominant;
 }
 
 // ---------------------------------------------------------------------------
@@ -412,6 +477,7 @@ export async function traiterBesoins(
     );
 
     // Grouper les lignes COMMANDE par fournisseurId
+    // Lignes sans fournisseurId valide sont exclues du groupement (pas de sentinel "INCONNU")
     const groupesFournisseur = new Map<
       string,
       Array<{
@@ -426,7 +492,9 @@ export async function traiterBesoins(
       const action = actionsMap.get(ligne.id) ?? "LIBRE";
       if (action === "COMMANDE" && ligne.produitId && ligne.produit) {
         const fournisseurId =
-          ligne.produit.fournisseur?.id ?? dto.fournisseurId ?? "INCONNU";
+          ligne.produit.fournisseur?.id ?? dto.fournisseurId ?? null;
+        // Ignorer les lignes sans fournisseurId valide
+        if (!fournisseurId) continue;
         if (!groupesFournisseur.has(fournisseurId)) {
           groupesFournisseur.set(fournisseurId, []);
         }
@@ -439,8 +507,10 @@ export async function traiterBesoins(
       }
     }
 
-    // Generer le numero de commande
+    // Année partagée pour la numérotation commandes et dépenses (évite deux appels new Date())
     const annee = new Date().getFullYear();
+
+    // Generer le numero de commande
     const dernierCmd = await tx.commande.findFirst({
       where: { siteId, numero: { startsWith: `CMD-${annee}-` } },
       orderBy: { numero: "desc" },
@@ -452,11 +522,11 @@ export async function traiterBesoins(
       seqCmd = (parseInt(p, 10) || 0) + 1;
     }
 
-    // Creer une commande par groupe fournisseur
-    const commandesCreees: string[] = [];
-    for (const [fournisseurId, lignes] of groupesFournisseur.entries()) {
-      if (fournisseurId === "INCONNU") continue;
+    // Map ligneBesoinId → ligneCommandeId, construit pendant la boucle de création (BUG-1)
+    const ligneBesoinToLigneCommande = new Map<string, string>();
 
+    // Creer une commande par groupe fournisseur
+    for (const [fournisseurId, lignes] of groupesFournisseur.entries()) {
       const montantCmd = lignes.reduce(
         (s, l) => s + l.quantite * l.prixUnitaire,
         0
@@ -481,8 +551,17 @@ export async function traiterBesoins(
             })),
           },
         },
+        include: { lignes: { select: { id: true, produitId: true } } },
       });
-      commandesCreees.push(commande.id);
+
+      // Construire le mapping ligneBesoinId → ligneCommandeId
+      // On récupère les lignes de commande créées dans le même ordre que les lignes du groupe
+      for (let i = 0; i < lignes.length; i++) {
+        const ligneCmd = commande.lignes[i];
+        if (ligneCmd) {
+          ligneBesoinToLigneCommande.set(lignes[i].ligneId, ligneCmd.id);
+        }
+      }
 
       // Lier commandeId sur chaque LigneBesoin
       await tx.ligneBesoin.updateMany({
@@ -492,9 +571,8 @@ export async function traiterBesoins(
     }
 
     // Creer la depense liee a la liste de besoins
-    const anneeD = new Date().getFullYear();
     const dernierDep = await tx.depense.findFirst({
-      where: { siteId, numero: { startsWith: `DEP-${anneeD}-` } },
+      where: { siteId, numero: { startsWith: `DEP-${annee}-` } },
       orderBy: { numero: "desc" },
       select: { numero: true },
     });
@@ -503,20 +581,66 @@ export async function traiterBesoins(
       const p = dernierDep.numero.split("-")[2];
       seqDep = (parseInt(p, 10) || 0) + 1;
     }
-    const numeroDep = `DEP-${anneeD}-${String(seqDep).padStart(3, "0")}`;
+    const numeroDep = `DEP-${annee}-${String(seqDep).padStart(3, "0")}`;
 
-    await tx.depense.create({
+    // Construire les lignes de dépense depuis les LigneBesoin (ADR-027)
+    // Construction APRÈS la boucle commande pour que ligneBesoinToLigneCommande soit complet (BUG-1)
+    const lignesDepenseData = liste.lignes.map((lb) => {
+      const prixUnitaire = lb.prixReel ?? lb.prixEstime;
+      const montantLigne = lb.quantite * prixUnitaire;
+      const cat = categorieProduitToDepense(lb.produit?.categorie);
+      return {
+        designation: lb.designation,
+        categorieDepense: cat,
+        quantite: lb.quantite,
+        prixUnitaire,
+        montantTotal: montantLigne,
+        produitId: lb.produitId ?? null,
+        ligneBesoinId: lb.id,
+        ligneCommandeId: ligneBesoinToLigneCommande.get(lb.id) ?? null,
+        siteId,
+      };
+    });
+
+    // Montant total = somme des lignes (plus précis que montantEstime)
+    const montantTotalDepense =
+      lignesDepenseData.length > 0
+        ? lignesDepenseData.reduce((acc, l) => acc + l.montantTotal, 0)
+        : liste.montantEstime;
+
+    // Catégorie dominante par montant
+    const categorieDepense = computeDominantCategorie(lignesDepenseData);
+
+    const depense = await tx.depense.create({
       data: {
         numero: numeroDep,
         description: `Depense — ${liste.titre}`,
-        categorieDepense: CategorieDepense.AUTRE,
-        montantTotal: liste.montantEstime,
+        categorieDepense,
+        montantTotal: montantTotalDepense,
         date: new Date(),
         listeBesoinsId: liste.id,
         userId,
         siteId,
       },
     });
+
+    // Créer les LigneDepense dans la même transaction (R4 — atomique)
+    if (lignesDepenseData.length > 0) {
+      await tx.ligneDepense.createMany({
+        data: lignesDepenseData.map((l) => ({
+          depenseId: depense.id,
+          designation: l.designation,
+          categorieDepense: l.categorieDepense,
+          quantite: l.quantite,
+          prixUnitaire: l.prixUnitaire,
+          montantTotal: l.montantTotal,
+          produitId: l.produitId,
+          ligneBesoinId: l.ligneBesoinId,
+          ligneCommandeId: l.ligneCommandeId,
+          siteId,
+        })),
+      });
+    }
 
     // Mettre a jour le statut de la liste
     return tx.listeBesoins.update({

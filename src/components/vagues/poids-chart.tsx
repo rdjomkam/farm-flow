@@ -1,9 +1,8 @@
 "use client";
 
-import { memo, useMemo, useState, useRef, useEffect, useCallback } from "react";
+import { memo, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
-import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChartTooltip } from "@/components/ui/chart-tooltip";
@@ -41,9 +40,6 @@ const Tooltip = dynamic(
   () => import("recharts").then((mod) => mod.Tooltip),
   { ssr: false }
 );
-
-const ZOOM_STEPS = [1, 1.5, 2, 3, 4] as const;
-const BASE_HEIGHT = 220;
 
 interface PoidsChartProps {
   data: EvolutionPoidsPoint[];
@@ -99,37 +95,7 @@ export function PoidsChart({
 }: PoidsChartProps) {
   const t = useTranslations("vagues");
 
-  // Zoom state: index into ZOOM_STEPS
-  const [zoomIndex, setZoomIndex] = useState(0);
-  const zoomLevel = ZOOM_STEPS[zoomIndex];
-  const isZoomed = zoomLevel > 1;
-
-  // Measure container width with ResizeObserver
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState(0);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (entry) setContainerWidth(entry.contentRect.width);
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  const handleZoomIn = useCallback(() => {
-    setZoomIndex((i) => Math.min(i + 1, ZOOM_STEPS.length - 1));
-  }, []);
-
-  const handleZoomOut = useCallback(() => {
-    setZoomIndex((i) => Math.max(i - 1, 0));
-  }, []);
-
-  const handleReset = useCallback(() => {
-    setZoomIndex(0);
-  }, []);
+  const [activeChart, setActiveChart] = useState<0 | 1>(0);
 
   const pointByJour = useMemo(
     () => new Map(data.map((d) => [d.jour, d])),
@@ -214,11 +180,10 @@ export function PoidsChart({
     );
   }
 
-  const scaledWidth = Math.round(containerWidth * zoomLevel);
-  const scaledHeight = Math.round(BASE_HEIGHT * zoomLevel);
+  const maxDataJour = Math.max(...data.map((d) => d.jour));
 
-  const chartContent = (
-    <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }} width={isZoomed ? scaledWidth : undefined} height={isZoomed ? scaledHeight : undefined}>
+  const observationsChart = (
+    <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
       <XAxis
         dataKey="jour"
@@ -261,6 +226,48 @@ export function PoidsChart({
     </LineChart>
   );
 
+  const predictionChart = (
+    <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+      <XAxis
+        dataKey="jour"
+        tick={{ fontSize: 12 }}
+        tickFormatter={(v) => `J${v}`}
+        tickCount={8}
+        domain={[0, Math.max(maxDataJour, 120)]}
+        type="number"
+      />
+      <YAxis
+        tick={{ fontSize: 11 }}
+        tickFormatter={(v) => `${v}g`}
+        width={42}
+      />
+      <Tooltip content={tooltipContent} />
+      <Line
+        data={dataObservations}
+        type="monotone"
+        dataKey="poidsMoyen"
+        name={t("poidsChart.seriesName")}
+        stroke="var(--primary)"
+        strokeWidth={2}
+        dot={{ r: 3 }}
+        activeDot={{ r: 6 }}
+        connectNulls={false}
+      />
+      <Line
+        type="monotone"
+        dataKey="poidsGompertz"
+        name={t("poidsChart.gompertzSeriesName")}
+        stroke="var(--accent-green)"
+        strokeWidth={1.5}
+        strokeDasharray="4 3"
+        dot={false}
+        activeDot={{ r: 4 }}
+        connectNulls={true}
+      />
+    </LineChart>
+  );
+
   return (
     <ErrorBoundary section="le graphique d'évolution du poids">
       <Card>
@@ -276,23 +283,39 @@ export function PoidsChart({
           </div>
         </CardHeader>
         <CardContent>
-          {/* Scrollable container */}
-          <div
-            ref={containerRef}
-            className="w-full max-w-full overflow-auto"
-            style={{ height: `${BASE_HEIGHT}px`, overscrollBehavior: "contain" }}
-          >
-            {isZoomed && containerWidth > 0 ? (
-              <div style={{ width: scaledWidth, height: scaledHeight }}>
-                {chartContent}
-              </div>
-            ) : (
-              <div className="h-full w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  {chartContent}
-                </ResponsiveContainer>
-              </div>
-            )}
+          {/* Tab pills — only when Gompertz is available */}
+          {hasGompertz && (
+            <div className="mb-3 flex gap-1">
+              <button
+                type="button"
+                onClick={() => setActiveChart(0)}
+                className={`min-h-[44px] rounded-md px-3 text-sm font-medium transition-colors ${
+                  activeChart === 0
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                {t("poidsChart.tabObservations")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveChart(1)}
+                className={`min-h-[44px] rounded-md px-3 text-sm font-medium transition-colors ${
+                  activeChart === 1
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                {t("poidsChart.tabPrediction")}
+              </button>
+            </div>
+          )}
+
+          {/* Chart */}
+          <div className="w-full" style={{ height: 220 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              {activeChart === 0 || !hasGompertz ? observationsChart : predictionChart}
+            </ResponsiveContainer>
           </div>
 
           {hasGompertz && (
@@ -300,48 +323,6 @@ export function PoidsChart({
               {t("poidsChart.gompertzLegend")}
             </p>
           )}
-
-          {/* Zoom toolbar */}
-          <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={handleZoomIn}
-              disabled={zoomIndex >= ZOOM_STEPS.length - 1}
-              aria-label={t("poidsChart.zoomIn")}
-              className="flex items-center justify-center gap-1 min-h-[44px] px-3 rounded-md border border-border bg-background text-foreground hover:bg-muted disabled:opacity-40 transition-colors text-sm"
-            >
-              <ZoomIn className="h-4 w-4" />
-              <span className="hidden sm:inline">{t("poidsChart.zoomIn")}</span>
-            </button>
-
-            <span className="text-xs text-muted-foreground font-mono px-2 min-h-[44px] flex items-center">
-              {isZoomed
-                ? t("poidsChart.zoomLevel", { level: String(zoomLevel) })
-                : t("poidsChart.zoomReset")}
-            </span>
-
-            <button
-              type="button"
-              onClick={handleZoomOut}
-              disabled={!isZoomed}
-              aria-label={t("poidsChart.zoomOut")}
-              className="flex items-center justify-center gap-1 min-h-[44px] px-3 rounded-md border border-border bg-background text-foreground hover:bg-muted disabled:opacity-40 transition-colors text-sm"
-            >
-              <ZoomOut className="h-4 w-4" />
-              <span className="hidden sm:inline">{t("poidsChart.zoomOut")}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleReset}
-              disabled={!isZoomed}
-              aria-label={t("poidsChart.zoomReset")}
-              className="flex items-center justify-center gap-1 min-h-[44px] px-3 rounded-md border border-border bg-background text-foreground hover:bg-muted disabled:opacity-40 transition-colors text-sm"
-            >
-              <Maximize2 className="h-4 w-4" />
-              <span className="hidden sm:inline">{t("poidsChart.zoomReset")}</span>
-            </button>
-          </div>
         </CardContent>
       </Card>
     </ErrorBoundary>
