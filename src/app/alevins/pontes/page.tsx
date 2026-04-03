@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { PontesListClient } from "@/components/alevins/pontes-list-client";
 import { AccessDenied } from "@/components/ui/access-denied";
@@ -15,6 +16,8 @@ export default async function PontesPage() {
   const permissions = await checkPagePermission(session, Permission.ALEVINS_VOIR);
   if (!permissions) return <AccessDenied />;
 
+  const t = await getTranslations("alevins.page");
+
   const [pontesResult, reproducteursResult] = await Promise.all([
     getPontes(session.activeSiteId),
     getReproducteurs(session.activeSiteId),
@@ -30,7 +33,7 @@ export default async function PontesPage() {
 
   return (
     <>
-      <Header title="Pontes" />
+      <Header title={t("pontes")} />
       <div className="p-4">
         <PontesListClient
           pontes={JSON.parse(JSON.stringify(pontesResult.data))}
