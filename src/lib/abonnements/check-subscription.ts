@@ -62,7 +62,7 @@ function _buildSubscriptionStatus(
   }
 
   const planType = abonnement.plan.typePlan as TypePlan;
-  const isDecouverte = planType === TypePlan.DECOUVERTE;
+  const isDecouverte = planType === TypePlan.DECOUVERTE || planType === TypePlan.EXONERATION;
 
   const maintenant = new Date();
   const dateFin = new Date(abonnement.dateFin);
