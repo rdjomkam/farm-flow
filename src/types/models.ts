@@ -760,6 +760,8 @@ export interface Commande {
   userId: string;
   /** ID du site (ferme) — R8 */
   siteId: string;
+  /** ID de la liste de besoins d'origine (null si commande manuelle) */
+  listeBesoinsId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -769,6 +771,7 @@ export interface CommandeWithRelations extends Commande {
   fournisseur: Fournisseur;
   lignes: LigneCommande[];
   user: User;
+  listeBesoins?: ListeBesoins | null;
 }
 
 /**
@@ -1925,6 +1928,7 @@ export interface ListeBesoinsWithRelations extends ListeBesoins {
   vagues?: ListeBesoinsVagueWithRelations[];
   lignes?: LigneBesoin[];
   depenses?: Depense[];
+  commandes?: Commande[];
   _count?: { lignes: number };
 }
 

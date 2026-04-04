@@ -1220,6 +1220,8 @@ model Commande {
   lignes        LigneCommande[]
   mouvements    MouvementStock[]
   depenses      Depense[]
+  listeBesoinsId String?
+  listeBesoins   ListeBesoins?   @relation(fields: [listeBesoinsId], references: [id], onDelete: SetNull)
   lignesBesoins LigneBesoin[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
@@ -1228,6 +1230,7 @@ model Commande {
   @@index([fournisseurId])
   @@index([statut])
   @@index([dateCommande])
+  @@index([listeBesoinsId])
 }
 
 model LigneCommande {
@@ -1932,6 +1935,7 @@ model ListeBesoins {
   site          Site                @relation(fields: [siteId], references: [id])
   lignes        LigneBesoin[]
   depenses      Depense[]
+  commandes     Commande[]
   /**
    * Vagues associées avec leurs ratios de répartition (remplace vagueId direct)
    */
