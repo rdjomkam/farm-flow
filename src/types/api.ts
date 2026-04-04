@@ -1336,7 +1336,10 @@ export interface DepenseDetailResponse {
 
 /** Reponse creation d'un paiement depense */
 export interface PaiementDepenseResponse {
-  paiement: PaiementDepense;
+  paiement: PaiementDepense & {
+    user: { id: string; name: string };
+    fraisSupp: FraisPaiementDepense[];
+  };
   /** Nouveau statut de la depense apres paiement */
   statut: StatutDepense;
   /** Nouveau montantPaye apres paiement */
@@ -1362,7 +1365,9 @@ export interface AjusterDepenseDTO {
 /** Reponse d'un ajustement de depense */
 export interface AjustementDepenseResponse {
   depense: Depense;
-  ajustement: AjustementDepense;
+  ajustement: AjustementDepense & {
+    user: { id: string; name: string };
+  };
 }
 
 /** DTO pour ajuster un frais supplementaire d'un paiement de depense */

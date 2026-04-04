@@ -286,10 +286,22 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
         fraisSupp: fraisSuppData.length > 0 ? fraisSuppData : undefined,
       });
       if (result.ok && result.data) {
-        setPaiements((prev) => [
-          result.data!.paiement as unknown as PaiementDepenseData,
-          ...prev,
-        ]);
+        const p = result.data.paiement;
+        const newPaiement: PaiementDepenseData = {
+          id: p.id,
+          montant: p.montant,
+          mode: p.mode,
+          reference: p.reference,
+          date: typeof p.date === "string" ? p.date : (p.date as unknown as Date).toISOString(),
+          user: p.user,
+          fraisSupp: p.fraisSupp?.map((f) => ({
+            id: f.id,
+            motif: f.motif,
+            montant: f.montant,
+            notes: f.notes,
+          })),
+        };
+        setPaiements((prev) => [newPaiement, ...prev]);
         setCurrentDepense((prev) => ({
           ...prev,
           montantPaye: result.data!.montantPaye,
@@ -359,25 +371,17 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
         raison: ajustementRaison.trim(),
       });
       if (result.ok && result.data) {
-        const rawAjustement = result.data.ajustement as unknown as {
-          id: string;
-          montantAvant: number;
-          montantApres: number;
-          raison: string;
-          userId: string;
-          user?: { id: string; name: string };
-          createdAt: string | Date;
-        };
+        const a = result.data.ajustement;
         const newAjustement: AjustementData = {
-          id: rawAjustement.id,
-          montantAvant: rawAjustement.montantAvant,
-          montantApres: rawAjustement.montantApres,
-          raison: rawAjustement.raison,
-          user: rawAjustement.user ?? { id: rawAjustement.userId, name: "—" },
+          id: a.id,
+          montantAvant: a.montantAvant,
+          montantApres: a.montantApres,
+          raison: a.raison,
+          user: a.user,
           createdAt:
-            typeof rawAjustement.createdAt === "string"
-              ? rawAjustement.createdAt
-              : (rawAjustement.createdAt as Date).toISOString(),
+            typeof a.createdAt === "string"
+              ? a.createdAt
+              : (a.createdAt as unknown as Date).toISOString(),
         };
         setAjustements((prev) => [newAjustement, ...prev]);
         setCurrentDepense((prev) => ({
@@ -1303,7 +1307,7 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
 
                   {/* Frais supplementaires du paiement */}
                   {p.fraisSupp && p.fraisSupp.length > 0 && (
-                    <div className="flex flex-col gap-0.5 ml-2 pl-2 border-l-2 border-muted">
+                    <div className="flex flex-col gap-0.5 ml-2 pl-2 border-l-2 border-border">
                       {p.fraisSupp.map((f) => (
                         <div
                           key={f.id}
@@ -1332,9 +1336,9 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
           <DialogBody>
             {/* Paiement */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium">{t("ajustement.selectPaiement")}</label>
+              <label htmlFor="frais-ajout-paiement" className="text-sm font-medium">{t("ajustement.selectPaiement")}</label>
               <Select value={fraisAjoutPaiementId} onValueChange={setFraisAjoutPaiementId}>
-                <SelectTrigger>
+                <SelectTrigger id="frais-ajout-paiement">
                   <SelectValue placeholder={t("ajustement.selectPaiement")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -1348,9 +1352,9 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
             </div>
             {/* Motif */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium">{t("detail.motif")}</label>
+              <label htmlFor="frais-ajout-motif" className="text-sm font-medium">{t("detail.motif")}</label>
               <Select value={fraisAjoutMotif} onValueChange={(v) => setFraisAjoutMotif(v as MotifFraisSupp)}>
-                <SelectTrigger>
+                <SelectTrigger id="frais-ajout-motif">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1362,8 +1366,9 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
             </div>
             {/* Montant */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium">{t("detail.montantLabel")}</label>
+              <label htmlFor="frais-ajout-montant" className="text-sm font-medium">{t("detail.montantLabel")}</label>
               <Input
+                id="frais-ajout-montant"
                 type="number"
                 min={1}
                 value={fraisAjoutMontant}
@@ -1373,8 +1378,9 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
             </div>
             {/* Notes */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium">{t("detail.notesOptionnel")}</label>
+              <label htmlFor="frais-ajout-notes" className="text-sm font-medium">{t("detail.notesOptionnel")}</label>
               <Input
+                id="frais-ajout-notes"
                 value={fraisAjoutNotes}
                 onChange={(e) => setFraisAjoutNotes(e.target.value)}
                 placeholder={t("detail.fraisNotesPlaceholder")}
@@ -1382,8 +1388,9 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
             </div>
             {/* Raison */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium">{t("ajustement.raisonLabel")}</label>
+              <label htmlFor="frais-ajout-raison" className="text-sm font-medium">{t("ajustement.raisonLabel")}</label>
               <textarea
+                id="frais-ajout-raison"
                 rows={2}
                 className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                 value={fraisAjoutRaison}
@@ -1421,9 +1428,9 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
           <DialogBody>
             {/* Motif */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium">{t("detail.motif")}</label>
+              <label htmlFor="frais-edit-motif" className="text-sm font-medium">{t("detail.motif")}</label>
               <Select value={fraisEditMotif} onValueChange={(v) => setFraisEditMotif(v as MotifFraisSupp)}>
-                <SelectTrigger>
+                <SelectTrigger id="frais-edit-motif">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1435,8 +1442,9 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
             </div>
             {/* Montant */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium">{t("detail.montantLabel")}</label>
+              <label htmlFor="frais-edit-montant" className="text-sm font-medium">{t("detail.montantLabel")}</label>
               <Input
+                id="frais-edit-montant"
                 type="number"
                 min={1}
                 value={fraisEditMontant}
@@ -1446,8 +1454,9 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
             </div>
             {/* Notes */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium">{t("detail.notesOptionnel")}</label>
+              <label htmlFor="frais-edit-notes" className="text-sm font-medium">{t("detail.notesOptionnel")}</label>
               <Input
+                id="frais-edit-notes"
                 value={fraisEditNotes}
                 onChange={(e) => setFraisEditNotes(e.target.value)}
                 placeholder={t("detail.fraisNotesPlaceholder")}
@@ -1455,8 +1464,9 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
             </div>
             {/* Raison */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium">{t("ajustement.raisonLabel")}</label>
+              <label htmlFor="frais-edit-raison" className="text-sm font-medium">{t("ajustement.raisonLabel")}</label>
               <textarea
+                id="frais-edit-raison"
                 rows={2}
                 className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                 value={fraisEditRaison}
@@ -1492,8 +1502,9 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
           </DialogHeader>
           <DialogBody>
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium">{t("ajustement.raisonLabel")}</label>
+              <label htmlFor="frais-delete-raison" className="text-sm font-medium">{t("ajustement.raisonLabel")}</label>
               <textarea
+                id="frais-delete-raison"
                 rows={2}
                 className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                 value={fraisDeleteRaison}

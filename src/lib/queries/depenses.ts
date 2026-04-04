@@ -8,6 +8,7 @@ import type {
   AjusterDepenseDTO,
   AjusterFraisDepenseDTO,
 } from "@/types";
+import type { FraisPaiementDepense as PrismaFraisPaiementDepense } from "@/generated/prisma/client";
 import { categorieProduitToDepense, computeDominantCategorie } from "./besoins";
 
 // Re-export for use in API validation
@@ -481,8 +482,7 @@ export async function ajusterFraisDepense(
 
     let montantAvant = 0;
     let montantApres = 0;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let resultFrais: any = null;
+    let resultFrais: PrismaFraisPaiementDepense | null = null;
 
     if (data.action === ActionAjustementFrais.SUPPRIME) {
       // 3. Verify frais belongs to paiement and is not already deleted
