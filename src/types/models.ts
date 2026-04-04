@@ -308,6 +308,10 @@ export interface Site {
   suspendedReason?: string | null;
   /** Soft delete — null = site actif. Renseigne lors d'une action ARCHIVE (ADR-021 section 2.4). */
   deletedAt?: Date | string | null;
+  /** ID du propriétaire/créateur du site — Sprint 45 refactoring abonnements */
+  ownerId: string;
+  /** True si le site est bloqué (accès restreint suite à abonnement expiré) */
+  isBlocked: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -387,6 +391,8 @@ export interface User {
   isSuperAdmin: boolean;
   /** True pour les comptes systeme internes (ex: auto-generation d'activites). Ces comptes ne peuvent pas se connecter. */
   isSystem: boolean;
+  /** Solde de crédits de l'utilisateur (utilisé pour les paiements d'abonnement) — Sprint 45 */
+  soldeCredit: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -443,6 +449,8 @@ export interface Bac {
    * Sprint 27-28 (ADR-density-alerts, section 5.2)
    */
   typeSysteme: TypeSystemeBac | null;
+  /** True si le bac est bloqué (accès restreint suite à abonnement expiré) — Sprint 45 */
+  isBlocked: boolean;
   /** ID du site (ferme) — R8 */
   siteId: string;
   createdAt: Date;
@@ -477,6 +485,8 @@ export interface Vague {
   origineAlevins: string | null;
   /** Statut actuel de la vague */
   statut: StatutVague;
+  /** True si la vague est bloquée (accès restreint suite à abonnement expiré) — Sprint 45 */
+  isBlocked: boolean;
   /** ID du site (ferme) — R8 */
   siteId: string;
   createdAt: Date;
@@ -2578,6 +2588,8 @@ export enum TypePlan {
   INGENIEUR_STARTER = "INGENIEUR_STARTER",
   INGENIEUR_PRO = "INGENIEUR_PRO",
   INGENIEUR_EXPERT = "INGENIEUR_EXPERT",
+  /** Plan gratuit accordé manuellement (partenaires, ONG, etc.) — Sprint 45 */
+  EXONERATION = "EXONERATION",
 }
 
 /** Période de facturation d'un abonnement — R1 : MAJUSCULES */
@@ -2672,9 +2684,24 @@ export interface PlanAbonnement {
    * et ne doivent JAMAIS figurer dans cette liste.
    */
   modulesInclus: SiteModule[];
+  /** Durée de la période d'essai en jours (null = pas d'essai pour ce plan) — Sprint 45 */
+  dureeEssaiJours: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
+
+/**
+ * Ressources à conserver lors d'un downgrade de plan.
+ * Sprint 45 — refactoring abonnements.
+ */
+export type DowngradeRessourcesAGarder = {
+  /** IDs des sites à conserver */
+  sites: string[];
+  /** IDs des bacs à conserver, indexés par siteId */
+  bacs: Record<string, string[]>;
+  /** IDs des vagues à conserver, indexés par siteId */
+  vagues: Record<string, string[]>;
+};
 
 /**
  * Abonnement — Instance d'un abonnement liant un site à un PlanAbonnement.
@@ -2698,8 +2725,51 @@ export interface Abonnement {
   userId: string;
   /** ID de la remise appliquée (null si aucune remise) */
   remiseId: string | null;
+  /** Motif de l'exonération (null si pas d'exonération) — Sprint 45 */
+  motifExoneration: string | null;
+  /** True si cet abonnement est une période d'essai — Sprint 45 */
+  isEssai: boolean;
+  /** Durée de l'essai en jours (null si pas un essai) — Sprint 45 */
+  dureeEssaiJours: number | null;
+  /** ID du plan cible lors d'un downgrade programmé (null si aucun) — Sprint 45 */
+  downgradeVersId: string | null;
+  /** Période de facturation cible lors du downgrade (null si aucun) — Sprint 45 */
+  downgradePeriode: PeriodeFacturation | null;
+  /** Ressources à garder lors du downgrade (null si aucun) — Sprint 45 */
+  downgradeRessourcesAGarder: DowngradeRessourcesAGarder | null;
+  /** Prochaine période de facturation programmée (null si pas de changement) — Sprint 45 */
+  prochainePeriode: PeriodeFacturation | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/**
+ * EssaiUtilise — Enregistre qu'un utilisateur a déjà utilisé un essai pour un type de plan.
+ * Permet d'éviter qu'un utilisateur ne multiplie les essais gratuits.
+ * Sprint 45 — refactoring abonnements.
+ */
+export interface EssaiUtilise {
+  id: string;
+  userId: string;
+  /** Type de plan pour lequel l'essai a été utilisé — R2 : utiliser TypePlan.DECOUVERTE */
+  typePlan: TypePlan;
+  createdAt: Date;
+}
+
+/**
+ * AbonnementAudit — Journal d'audit des actions sur un abonnement.
+ * Sprint 45 — refactoring abonnements.
+ */
+export interface AbonnementAudit {
+  id: string;
+  abonnementId: string;
+  /** Action effectuée (ex: "SOUSCRIPTION", "UPGRADE", "DOWNGRADE", "ANNULATION") */
+  action: string;
+  /** Métadonnées additionnelles (null si aucune) */
+  metadata: Record<string, unknown> | null;
+  /** ID de l'utilisateur ayant effectué l'action */
+  userId: string;
+  createdAt: Date;
 }
 
 /** Abonnement avec son plan chargé */

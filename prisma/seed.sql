@@ -51,6 +51,9 @@ DELETE FROM "PortefeuilleIngenieur";
 DELETE FROM "CommissionIngenieur";
 DELETE FROM "RemiseApplication";
 DELETE FROM "PaiementAbonnement";
+-- Story 45.2 — AbonnementAudit + EssaiUtilise avant Abonnement (FK abonnementId / pas de FK)
+DELETE FROM "AbonnementAudit";
+DELETE FROM "EssaiUtilise";
 DELETE FROM "Abonnement";
 DELETE FROM "Remise";
 DELETE FROM "PlanAbonnement";
@@ -84,11 +87,11 @@ VALUES
 -- Sites (site_01 = DKFarm, site_client_01 = ferme client)
 -- ──────────────────────────────────────────
 
-INSERT INTO "Site" (id, name, address, "isActive", supervised, "enabledModules", "createdAt", "updatedAt")
+INSERT INTO "Site" (id, name, address, "isActive", supervised, "enabledModules", "ownerId", "createdAt", "updatedAt")
 VALUES
-  ('site_01', 'Ferme Douala', 'Douala, Littoral, Cameroun', true, false, '{}', NOW(), NOW()),
+  ('site_01', 'Ferme Douala', 'Douala, Littoral, Cameroun', true, false, '{}', 'user_admin', NOW(), NOW()),
   -- Site client cree lors du provisioning d'un Pack (Sprint 20) — supervised avec modules limites
-  ('site_client_01', 'Ferme Essomba', 'Yaoundé, Centre, Cameroun', true, true, '{GROSSISSEMENT,ANALYSE_PILOTAGE,NOTES}', NOW(), NOW());
+  ('site_client_01', 'Ferme Essomba', 'Yaoundé, Centre, Cameroun', true, true, '{GROSSISSEMENT,ANALYSE_PILOTAGE,NOTES}', 'user_client_01', NOW(), NOW());
 
 -- ADR-022: Mark platform admin as super admin
 UPDATE "User" SET "isSuperAdmin" = true WHERE id = 'user_admin';
@@ -2337,20 +2340,23 @@ VALUES
 -- Sprint 30 — Abonnements & Plans (seed données de test)
 -- ============================================================
 
--- Plans d'abonnement (7 plans — Story 43.1 : ajout modulesInclus)
+-- Plans d'abonnement (8 plans — Story 43.1 : modulesInclus, Story 45.2 : EXONERATION)
 -- Règle : ABONNEMENTS, COMMISSIONS, REMISES sont des modules platform-only — jamais dans modulesInclus
-INSERT INTO "PlanAbonnement" (id, nom, "typePlan", description, "prixMensuel", "prixTrimestriel", "prixAnnuel", "limitesSites", "limitesBacs", "limitesVagues", "limitesIngFermes", "isActif", "isPublic", "modulesInclus", "createdAt", "updatedAt")
+INSERT INTO "PlanAbonnement" (id, nom, "typePlan", description, "prixMensuel", "prixTrimestriel", "prixAnnuel", "limitesSites", "limitesBacs", "limitesVagues", "limitesIngFermes", "isActif", "isPublic", "modulesInclus", "dureeEssaiJours", "createdAt", "updatedAt")
 VALUES
-  ('plan_decouverte',      'Découverte',       'DECOUVERTE',        'Plan gratuit pour démarrer',                    NULL,  NULL,   NULL,   1, 3,  1,  NULL, true, true, ARRAY['GROSSISSEMENT']::"SiteModule"[],                                                                        NOW(), NOW()),
-  ('plan_eleveur',         'Éleveur',          'ELEVEUR',           'Pour les petits éleveurs',                      3000,  7500,   25000,  1, 10, 3,  NULL, true, true, ARRAY['GROSSISSEMENT','INTRANTS','VENTES']::"SiteModule"[],                                                      NOW(), NOW()),
-  ('plan_professionnel',   'Professionnel',    'PROFESSIONNEL',     'Pour les éleveurs professionnels',              8000,  20000,  70000,  3, 30, 10, NULL, true, true, ARRAY['GROSSISSEMENT','INTRANTS','VENTES','REPRODUCTION','ANALYSE_PILOTAGE','NOTES']::"SiteModule"[],            NOW(), NOW()),
-  ('plan_entreprise',      'Entreprise',       'ENTREPRISE',        'Pour les structures d''élevage avancées',       20000, 50000,  180000, 5, 50, 20, NULL, true, true, ARRAY['GROSSISSEMENT','INTRANTS','VENTES','REPRODUCTION','ANALYSE_PILOTAGE','NOTES','CONFIGURATION']::"SiteModule"[], NOW(), NOW()),
-  ('plan_ing_starter',     'Ingénieur Starter','INGENIEUR_STARTER', 'Pour les ingénieurs débutant leur activité',   5000,  NULL,   50000,  1, 3,  1,  5,    true, true, ARRAY['GROSSISSEMENT','INGENIEUR']::"SiteModule"[],                                                              NOW(), NOW()),
-  ('plan_ing_pro',         'Ingénieur Pro',    'INGENIEUR_PRO',     'Pour les ingénieurs piscicoles supervisants',  15000, NULL,   135000, 1, 3,  1,  20,   true, true, ARRAY['GROSSISSEMENT','INTRANTS','VENTES','INGENIEUR']::"SiteModule"[],                                          NOW(), NOW()),
-  ('plan_ing_expert',      'Ingénieur Expert', 'INGENIEUR_EXPERT',  'Pour les ingénieurs avec expertise avancée',   25000, NULL,   225000, 1, 3,  1,  NULL, true, true, ARRAY['GROSSISSEMENT','INTRANTS','VENTES','REPRODUCTION','ANALYSE_PILOTAGE','INGENIEUR']::"SiteModule"[],        NOW(), NOW())
+  ('plan_decouverte',      'Découverte',       'DECOUVERTE',        'Plan gratuit pour démarrer',                    NULL,  NULL,   NULL,   1, 3,  1,  NULL, true, true, ARRAY['GROSSISSEMENT']::"SiteModule"[],                                                                                        14,   NOW(), NOW()),
+  ('plan_eleveur',         'Éleveur',          'ELEVEUR',           'Pour les petits éleveurs',                      3000,  7500,   25000,  1, 10, 3,  NULL, true, true, ARRAY['GROSSISSEMENT','INTRANTS','VENTES']::"SiteModule"[],                                                                      NULL, NOW(), NOW()),
+  ('plan_professionnel',   'Professionnel',    'PROFESSIONNEL',     'Pour les éleveurs professionnels',              8000,  20000,  70000,  3, 30, 10, NULL, true, true, ARRAY['GROSSISSEMENT','INTRANTS','VENTES','REPRODUCTION','ANALYSE_PILOTAGE','NOTES']::"SiteModule"[],                            NULL, NOW(), NOW()),
+  ('plan_entreprise',      'Entreprise',       'ENTREPRISE',        'Pour les structures d''élevage avancées',       20000, 50000,  180000, 5, 50, 20, NULL, true, true, ARRAY['GROSSISSEMENT','INTRANTS','VENTES','REPRODUCTION','ANALYSE_PILOTAGE','NOTES','CONFIGURATION']::"SiteModule"[],           NULL, NOW(), NOW()),
+  ('plan_ing_starter',     'Ingénieur Starter','INGENIEUR_STARTER', 'Pour les ingénieurs débutant leur activité',   5000,  NULL,   50000,  1, 3,  1,  5,    true, true, ARRAY['GROSSISSEMENT','INGENIEUR']::"SiteModule"[],                                                                              NULL, NOW(), NOW()),
+  ('plan_ing_pro',         'Ingénieur Pro',    'INGENIEUR_PRO',     'Pour les ingénieurs piscicoles supervisants',  15000, NULL,   135000, 1, 3,  1,  20,   true, true, ARRAY['GROSSISSEMENT','INTRANTS','VENTES','INGENIEUR']::"SiteModule"[],                                                          NULL, NOW(), NOW()),
+  ('plan_ing_expert',      'Ingénieur Expert', 'INGENIEUR_EXPERT',  'Pour les ingénieurs avec expertise avancée',   25000, NULL,   225000, 1, 3,  1,  NULL, true, true, ARRAY['GROSSISSEMENT','INTRANTS','VENTES','REPRODUCTION','ANALYSE_PILOTAGE','INGENIEUR']::"SiteModule"[],                        NULL, NOW(), NOW()),
+  -- Story 45.2 — Plan EXONERATION : réservé admin plateforme, non public, prix 0, limites 999
+  ('plan_exoneration',     'Exonération',      'EXONERATION',       'Plan réservé aux sites fondateurs et partenaires DKFarm — accès complet exonéré', NULL, NULL, NULL, 999, 999, 999, NULL, true, false, ARRAY['GROSSISSEMENT','INTRANTS','VENTES','REPRODUCTION','ANALYSE_PILOTAGE','NOTES','CONFIGURATION','INGENIEUR']::"SiteModule"[], NULL, NOW(), NOW())
 ON CONFLICT ("typePlan") DO UPDATE SET
-  "modulesInclus" = EXCLUDED."modulesInclus",
-  "updatedAt"     = NOW();
+  "modulesInclus"     = EXCLUDED."modulesInclus",
+  "dureeEssaiJours"   = EXCLUDED."dureeEssaiJours",
+  "updatedAt"         = NOW();
 
 -- ============================================================
 -- SPRINT 20 (suite) : Packs & Provisioning
@@ -2444,32 +2450,50 @@ VALUES
   ('remise_bienvenue', 'Bienvenue', 'BIENVENUE10', 'MANUELLE', 10, true, NOW(), NULL, NULL, 0, true, 'user_admin', NOW(), NOW())
 ON CONFLICT (code) DO NOTHING;
 
--- Abonnements : 1 ACTIF (site_01) + 1 EN_GRACE (site_client_01)
-INSERT INTO "Abonnement" (id, "siteId", "planId", periode, statut, "dateDebut", "dateFin", "dateProchainRenouvellement", "prixPaye", "userId", "createdAt", "updatedAt")
+-- Abonnements : 1 ACTIF EXONERATION (site_01) + 1 EN_GRACE DECOUVERTE (site_client_01)
+-- Story 45.2 : site_01 est le site fondateur DKFarm — exonéré (motif obligatoire pour EXONERATION)
+INSERT INTO "Abonnement" (id, "siteId", "planId", periode, statut, "dateDebut", "dateFin", "dateProchainRenouvellement", "prixPaye", "motifExoneration", "userId", "createdAt", "updatedAt")
 VALUES
-  -- Abonnement ACTIF — site principal DKFarm (plan Eleveur, mensuel)
-  ('abo_site_01', 'site_01', 'plan_eleveur', 'MENSUEL', 'ACTIF', NOW() - INTERVAL '1 month', NOW() + INTERVAL '1 month', NOW() + INTERVAL '1 month', 3000, 'user_admin', NOW() - INTERVAL '1 month', NOW()),
+  -- Abonnement ACTIF EXONERATION — site fondateur DKFarm (accès complet, prixPaye = 0)
+  ('abo_site_01', 'site_01', 'plan_exoneration', 'MENSUEL', 'ACTIF', NOW() - INTERVAL '1 month', NOW() + INTERVAL '11 months', NOW() + INTERVAL '11 months', 0, 'Site fondateur DKFarm', 'user_admin', NOW() - INTERVAL '1 month', NOW()),
   -- Abonnement EN_GRACE — site client Essomba (plan Découverte, mensuel, expiré depuis 3j)
-  ('abo_client_01', 'site_client_01', 'plan_decouverte', 'MENSUEL', 'EN_GRACE', NOW() - INTERVAL '33 days', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days', 0, 'user_client_01', NOW() - INTERVAL '33 days', NOW())
+  ('abo_client_01', 'site_client_01', 'plan_decouverte', 'MENSUEL', 'EN_GRACE', NOW() - INTERVAL '33 days', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days', 0, NULL, 'user_client_01', NOW() - INTERVAL '33 days', NOW())
 ON CONFLICT DO NOTHING;
 
--- Paiements : 1 CONFIRME pour abo_site_01
+-- Paiements abonnement :
+--   paie_abo_01 : CONFIRME pour abo_site_01 (montant 0 — exonération, enregistrement comptable)
+--   paie_abo_02 : CONFIRME pour abo_client_01 (montant 0 — plan Découverte gratuit)
 INSERT INTO "PaiementAbonnement" (id, "abonnementId", montant, fournisseur, statut, "initiePar", "dateInitiation", "dateConfirmation", "siteId", "createdAt", "updatedAt")
 VALUES
-  ('paie_abo_01', 'abo_site_01', 3000, 'MANUEL', 'CONFIRME', 'user_admin', NOW() - INTERVAL '1 month', NOW() - INTERVAL '1 month', 'site_01', NOW() - INTERVAL '1 month', NOW())
+  ('paie_abo_01', 'abo_site_01', 0, 'MANUEL', 'CONFIRME', 'user_admin', NOW() - INTERVAL '1 month', NOW() - INTERVAL '1 month', 'site_01', NOW() - INTERVAL '1 month', NOW()),
+  ('paie_abo_02', 'abo_client_01', 0, 'MANUEL', 'CONFIRME', 'user_client_01', NOW() - INTERVAL '33 days', NOW() - INTERVAL '33 days', 'site_client_01', NOW() - INTERVAL '33 days', NOW())
 ON CONFLICT DO NOTHING;
 
--- Commission ingénieur (pour user_ingenieur, sur l''abonnement abo_site_01)
+-- Commission ingénieur (pour user_ingenieur, sur l''abonnement abo_client_01 site_client_01)
 -- L''ingénieur suit site_client_01 ; la commission est rattachée au site DKFarm (site_01)
+-- Note: abo_client_01 (DECOUVERTE) est gratuit (prixPaye=0), donc commission = 0 pour demo
 INSERT INTO "CommissionIngenieur" (id, "ingenieurId", "siteClientId", "abonnementId", "paiementAbonnementId", montant, taux, statut, "periodeDebut", "periodeFin", "siteId", "createdAt", "updatedAt")
 VALUES
-  ('comm_ing_01', 'user_ingenieur', 'site_client_01', 'abo_site_01', 'paie_abo_01', 300, 0.10, 'DISPONIBLE', NOW() - INTERVAL '1 month', NOW(), 'site_01', NOW(), NOW())
+  ('comm_ing_01', 'user_ingenieur', 'site_client_01', 'abo_client_01', 'paie_abo_02', 0, 0.10, 'DISPONIBLE', NOW() - INTERVAL '1 month', NOW(), 'site_01', NOW(), NOW())
 ON CONFLICT DO NOTHING;
 
 -- Portefeuille ingénieur (1 par ingénieur — @@unique sur ingenieurId)
 INSERT INTO "PortefeuilleIngenieur" (id, "ingenieurId", solde, "soldePending", "totalGagne", "totalPaye", "siteId", "updatedAt")
 VALUES
-  ('portefeuille_ing', 'user_ingenieur', 300, 0, 300, 0, 'site_01', NOW())
+  ('portefeuille_ing', 'user_ingenieur', 0, 0, 0, 0, 'site_01', NOW())
+ON CONFLICT DO NOTHING;
+
+-- Story 45.2 — AbonnementAudit : enregistrement de la création d''exonération
+INSERT INTO "AbonnementAudit" (id, "abonnementId", action, metadata, "userId", "createdAt")
+VALUES
+  (
+    'audit_abo_01',
+    'abo_site_01',
+    'EXONERATION',
+    '{"motif": "Site fondateur DKFarm", "planPrecedent": null, "planNouveau": "EXONERATION"}'::jsonb,
+    'user_admin',
+    NOW() - INTERVAL '1 month'
+  )
 ON CONFLICT DO NOTHING;
 
 -- ──────────────────────────────────────────

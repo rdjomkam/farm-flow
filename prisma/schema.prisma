@@ -552,6 +552,16 @@ model Site {
   retraits               RetraitPortefeuille[]    @relation("RetraitsSite")
   // Sprint 30.4 — Idempotency
   idempotencyRecords     IdempotencyRecord[]
+  // ADR-020 — Subscription refactoring
+  /**
+   * Propriétaire du site — administrateur principal responsable de l'abonnement.
+   */
+  ownerId                String
+  owner                  User                     @relation("SiteOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  /**
+   * Site bloqué (accès entièrement restreint, ex: impayé critique).
+   */
+  isBlocked              Boolean                  @default(false)
   // ADR-021 — Cycle de vie & audit
   /**
    * /** Null si non suspendu. Non-null = site suspendu (accès restreint).
@@ -571,6 +581,7 @@ model Site {
 
   @@index([deletedAt])
   @@index([suspendedAt])
+  @@index([ownerId])
 }
 
 // ──────────────────────────────────────────
@@ -905,6 +916,14 @@ model User {
   featureFlags           FeatureFlag[]
   // ADR-maintenance-mode — PlatformAuditLog
   platformAuditLogs      PlatformAuditLog[]
+  // ADR-020 — Subscription refactoring
+  /**
+   * Solde de crédit prépayé (FCFA) — utilisé pour les plans EXONERATION ou crédits offerts.
+   */
+  soldeCredit            Decimal                 @default(0)
+  ownedSites             Site[]                  @relation("SiteOwner")
+  essaisUtilises         EssaiUtilise[]          @relation("EssaisUtilises")
+  auditsAbonnement       AbonnementAudit[]       @relation("AuditsAbonnement")
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
   fraisPaiementDepenses  FraisPaiementDepense[]
@@ -947,6 +966,10 @@ model Bac {
    * Null = BAC_BETON par défaut dans le moteur d'alertes.
    */
   typeSysteme         TypeSystemeBac?
+  /**
+   * Bac bloqué — ADR-020.
+   */
+  isBlocked           Boolean           @default(false)
   siteId              String
   site                Site              @relation(fields: [siteId], references: [id])
   releves             Releve[]
@@ -969,6 +992,10 @@ model Vague {
   poidsMoyenInitial      Float
   origineAlevins         String?
   statut                 StatutVague              @default(EN_COURS)
+  /**
+   * Vague bloquée — ADR-020.
+   */
+  isBlocked              Boolean                  @default(false)
   siteId                 String
   site                   Site                     @relation(fields: [siteId], references: [id])
   /**
@@ -2362,6 +2389,7 @@ enum TypePlan {
   INGENIEUR_STARTER
   INGENIEUR_PRO
   INGENIEUR_EXPERT
+  EXONERATION
 }
 
 enum PeriodeFacturation {
@@ -2496,10 +2524,15 @@ model PlanAbonnement {
    * Modules fonctionnels inclus dans ce plan — COMMISSIONS/REMISES exclus (platform-only)
    */
   modulesInclus    SiteModule[] @default([])
+  /**
+   * Durée de l'essai gratuit en jours (null = pas d'essai pour ce plan).
+   */
+  dureeEssaiJours  Int?
 
-  abonnements Abonnement[]
-  remises     Remise[]
-  packs       Pack[]
+  abonnements          Abonnement[]
+  downgradeAbonnements Abonnement[] @relation("DowngradeVers")
+  remises              Remise[]
+  packs                Pack[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2533,10 +2566,41 @@ model Abonnement {
   user                       User               @relation("AbonnementsUser", fields: [userId], references: [id])
   remiseId                   String?
   remise                     Remise?            @relation(fields: [remiseId], references: [id])
+  // ADR-020 — Subscription refactoring fields
+  /**
+   * Motif de l'exonération (obligatoire si typePlan = EXONERATION).
+   */
+  motifExoneration           String?
+  /**
+   * Vrai si cet abonnement est un essai gratuit.
+   */
+  isEssai                    Boolean            @default(false)
+  /**
+   * Durée de l'essai en jours (null si pas un essai).
+   */
+  dureeEssaiJours            Int?
+  /**
+   * Plan de downgrade programmé (null si aucun downgrade en attente).
+   */
+  downgradeVersId            String?
+  downgradeVers              PlanAbonnement?    @relation("DowngradeVers", fields: [downgradeVersId], references: [id])
+  /**
+   * Période de facturation du downgrade.
+   */
+  downgradePeriode           PeriodeFacturation?
+  /**
+   * Ressources à garder lors du downgrade (JSON : bacs, vagues, membres conservés).
+   */
+  downgradeRessourcesAGarder Json?
+  /**
+   * Prochaine période de facturation choisie (changement en fin de cycle).
+   */
+  prochainePeriode           PeriodeFacturation?
 
   paiements         PaiementAbonnement[]
   remisesAppliquees RemiseApplication[]
   commissions       CommissionIngenieur[]
+  audits            AbonnementAudit[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2545,6 +2609,7 @@ model Abonnement {
   @@index([statut])
   @@index([planId])
   @@index([dateFin])
+  @@index([downgradeVersId])
 }
 
 // ──────────────────────────────────────────
@@ -3023,5 +3088,48 @@ model PlatformAuditLog {
   createdAt DateTime @default(now())
 
   @@index([actorId])
+  @@index([createdAt])
+}
+
+// ──────────────────────────────────────────
+// Modèles — ADR-020 : Subscription refactoring
+// ──────────────────────────────────────────
+
+/**
+ * EssaiUtilise — Mémorise les essais gratuits consommés par utilisateur et par typePlan.
+ * Exception R8 documentée : pas de siteId car l'essai est lié à l'utilisateur, pas au site.
+ * @@unique([userId, typePlan]) garantit un seul essai par plan par utilisateur.
+ */
+model EssaiUtilise {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("EssaisUtilises", fields: [userId], references: [id])
+  typePlan  TypePlan
+  createdAt DateTime @default(now())
+
+  @@unique([userId, typePlan])
+  @@index([userId])
+}
+
+/**
+ * AbonnementAudit — Journal d'audit des transitions d'abonnement.
+ * Exception R8 documentée : pas de siteId car l'audit porte sur l'abonnement lui-même,
+ * qui est déjà lié à un site via abonnement.siteId.
+ * onDelete: Restrict sur abonnement (pas de suppression silencieuse d'un abonnement audité).
+ * Actions possibles : CREATION, UPGRADE, DOWNGRADE, RENOUVELLEMENT, ANNULATION,
+ *   ESSAI_DEBUT, ESSAI_CONVERSION, EXONERATION, CHANGEMENT_PERIODE, DOWNGRADE_ANNULE.
+ */
+model AbonnementAudit {
+  id           String     @id @default(cuid())
+  abonnementId String
+  abonnement   Abonnement @relation(fields: [abonnementId], references: [id], onDelete: Restrict)
+  action       String
+  metadata     Json?
+  userId       String
+  user         User       @relation("AuditsAbonnement", fields: [userId], references: [id])
+  createdAt    DateTime   @default(now())
+
+  @@index([abonnementId])
+  @@index([userId])
   @@index([createdAt])
 }

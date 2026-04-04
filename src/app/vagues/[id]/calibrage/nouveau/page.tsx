@@ -45,6 +45,7 @@ export default async function NouveauCalibragePage({
     nombreInitial: b.nombreInitial ?? null,
     poidsMoyenInitial: b.poidsMoyenInitial ?? null,
     typeSysteme: (b.typeSysteme as TypeSystemeBac | null) ?? null,
+    isBlocked: (b as { isBlocked?: boolean }).isBlocked ?? false,
     vagueId: b.vagueId ?? null,
     siteId: b.siteId,
     createdAt: b.createdAt,

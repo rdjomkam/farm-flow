@@ -178,7 +178,23 @@ export async function activerPack(
     }
 
     // ──────────────────────────────────────────
-    // 1. Creer le site client
+    // 1. Creer l'utilisateur client (avant le site — ownerId requis)
+    // ──────────────────────────────────────────
+    const passwordHash = await hashPassword(dto.clientUserPassword);
+    const clientUser = await tx.user.create({
+      data: {
+        name: dto.clientUserName,
+        phone: dto.clientUserPhone,
+        email: dto.clientUserEmail ?? null,
+        passwordHash,
+        role: Role.GERANT,
+        isActive: true,
+        isSystem: false,
+      },
+    });
+
+    // ──────────────────────────────────────────
+    // 2. Creer le site client (ownerId = clientUser.id — R8 + Story 45.2)
     // ──────────────────────────────────────────
     const clientSite = await tx.site.create({
       data: {
@@ -186,6 +202,7 @@ export async function activerPack(
         address: dto.clientSiteAddress ?? null,
         isActive: true,
         supervised: true,
+        ownerId: clientUser.id,
         enabledModules: pack.plan.modulesInclus.length > 0
           ? [...pack.plan.modulesInclus]
           : DEFAULT_SUPERVISED_MODULES,
@@ -213,22 +230,6 @@ export async function activerPack(
     if (!adminRole || !pisciculteurRole) {
       throw new Error("Roles systeme introuvables apres creation du site client.");
     }
-
-    // ──────────────────────────────────────────
-    // 2. Creer l'utilisateur client
-    // ──────────────────────────────────────────
-    const passwordHash = await hashPassword(dto.clientUserPassword);
-    const clientUser = await tx.user.create({
-      data: {
-        name: dto.clientUserName,
-        phone: dto.clientUserPhone,
-        email: dto.clientUserEmail ?? null,
-        passwordHash,
-        role: Role.GERANT,
-        isActive: true,
-        isSystem: false,
-      },
-    });
 
     // Assigner le client comme admin de son propre site
     await tx.siteMember.create({

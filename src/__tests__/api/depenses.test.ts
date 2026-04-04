@@ -25,6 +25,9 @@ const mockPrismaDepenseCount = vi.fn();
 const mockPrismaDepenseUpdate = vi.fn();
 const mockPrismaPaiementDepenseCreate = vi.fn();
 const mockPrismaPaiementDepenseAggregate = vi.fn();
+const mockPrismaPaiementDepenseFindUniqueOrThrow = vi.fn();
+const mockPrismaFraisPaiementDepenseCreateMany = vi.fn();
+const mockPrismaFraisPaiementDepenseAggregate = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -41,6 +44,11 @@ vi.mock("@/lib/db", () => ({
     paiementDepense: {
       create: (...args: unknown[]) => mockPrismaPaiementDepenseCreate(...args),
       aggregate: (...args: unknown[]) => mockPrismaPaiementDepenseAggregate(...args),
+      findUniqueOrThrow: (...args: unknown[]) => mockPrismaPaiementDepenseFindUniqueOrThrow(...args),
+    },
+    fraisPaiementDepense: {
+      createMany: (...args: unknown[]) => mockPrismaFraisPaiementDepenseCreateMany(...args),
+      aggregate: (...args: unknown[]) => mockPrismaFraisPaiementDepenseAggregate(...args),
     },
     vague: { findFirst: vi.fn() },
     commande: { findFirst: vi.fn() },
@@ -55,6 +63,11 @@ vi.mock("@/lib/db", () => ({
       paiementDepense: {
         create: mockPrismaPaiementDepenseCreate,
         aggregate: mockPrismaPaiementDepenseAggregate,
+        findUniqueOrThrow: mockPrismaPaiementDepenseFindUniqueOrThrow,
+      },
+      fraisPaiementDepense: {
+        createMany: mockPrismaFraisPaiementDepenseCreateMany,
+        aggregate: mockPrismaFraisPaiementDepenseAggregate,
       },
       vague: { findFirst: vi.fn() },
       commande: { findFirst: vi.fn() },
@@ -153,9 +166,12 @@ describe("ajouterPaiementDepense — paiement partiel", () => {
 
   it("cree un paiement partiel et passe en PAYEE_PARTIELLEMENT", async () => {
     mockPrismaDepenseFindFirst.mockResolvedValue(FAKE_DEPENSE);
-    const paiementCree = { id: "pdep-1", montant: 20000, mode: ModePaiement.ESPECES, depenseId: "dep-1", userId: "user-1", siteId: "site-1", reference: null, date: new Date(), createdAt: new Date(), user: { id: "user-1", name: "Admin" } };
+    const paiementCree = { id: "pdep-1", montant: 20000, mode: ModePaiement.ESPECES, depenseId: "dep-1", userId: "user-1", siteId: "site-1", reference: null, date: new Date(), createdAt: new Date(), fraisSupp: [], user: { id: "user-1", name: "Admin" } };
     mockPrismaPaiementDepenseCreate.mockResolvedValue(paiementCree);
+    mockPrismaPaiementDepenseFindUniqueOrThrow.mockResolvedValue(paiementCree);
     mockPrismaPaiementDepenseAggregate.mockResolvedValue({ _sum: { montant: 20000 } });
+    mockPrismaFraisPaiementDepenseCreateMany.mockResolvedValue({ count: 0 });
+    mockPrismaFraisPaiementDepenseAggregate.mockResolvedValue({ _sum: { montant: 0 } });
     mockPrismaDepenseUpdate.mockResolvedValue({ ...FAKE_DEPENSE, montantPaye: 20000, statut: StatutDepense.PAYEE_PARTIELLEMENT });
 
     const result = await ajouterPaiementDepense("site-1", "dep-1", "user-1", {
@@ -170,9 +186,12 @@ describe("ajouterPaiementDepense — paiement partiel", () => {
 
   it("passe en PAYEE quand montant total est atteint", async () => {
     mockPrismaDepenseFindFirst.mockResolvedValue(FAKE_DEPENSE);
-    const paiementCree = { id: "pdep-1", montant: 50000, mode: ModePaiement.VIREMENT, depenseId: "dep-1", userId: "user-1", siteId: "site-1", reference: null, date: new Date(), createdAt: new Date(), user: { id: "user-1", name: "Admin" } };
+    const paiementCree = { id: "pdep-1", montant: 50000, mode: ModePaiement.VIREMENT, depenseId: "dep-1", userId: "user-1", siteId: "site-1", reference: null, date: new Date(), createdAt: new Date(), fraisSupp: [], user: { id: "user-1", name: "Admin" } };
     mockPrismaPaiementDepenseCreate.mockResolvedValue(paiementCree);
+    mockPrismaPaiementDepenseFindUniqueOrThrow.mockResolvedValue(paiementCree);
     mockPrismaPaiementDepenseAggregate.mockResolvedValue({ _sum: { montant: 50000 } });
+    mockPrismaFraisPaiementDepenseCreateMany.mockResolvedValue({ count: 0 });
+    mockPrismaFraisPaiementDepenseAggregate.mockResolvedValue({ _sum: { montant: 0 } });
     mockPrismaDepenseUpdate.mockResolvedValue({ ...FAKE_DEPENSE, montantPaye: 50000, statut: StatutDepense.PAYEE });
 
     const result = await ajouterPaiementDepense("site-1", "dep-1", "user-1", {
@@ -184,16 +203,26 @@ describe("ajouterPaiementDepense — paiement partiel", () => {
     expect(result.montantPaye).toBe(50000);
   });
 
-  it("refuse un surpaiement (montant > resteAPayer)", async () => {
+  it("accepte un paiement superieur au reste (frais supplementaires possibles)", async () => {
+    // La logique metier permet desormais les surpaiements pour couvrir les frais supplementaires.
     const depensePartielle = { ...FAKE_DEPENSE, montantPaye: 30000, statut: StatutDepense.PAYEE_PARTIELLEMENT };
     mockPrismaDepenseFindFirst.mockResolvedValue(depensePartielle);
+    const paiementCree = { id: "pdep-2", montant: 25000, mode: ModePaiement.ESPECES, depenseId: "dep-1", userId: "user-1", siteId: "site-1", reference: null, date: new Date(), createdAt: new Date(), fraisSupp: [], user: { id: "user-1", name: "Admin" } };
+    mockPrismaPaiementDepenseCreate.mockResolvedValue(paiementCree);
+    mockPrismaPaiementDepenseFindUniqueOrThrow.mockResolvedValue(paiementCree);
+    // Total paye apres: 30000 + 25000 = 55000 > montantTotal (50000) => PAYEE
+    mockPrismaPaiementDepenseAggregate.mockResolvedValue({ _sum: { montant: 55000 } });
+    mockPrismaFraisPaiementDepenseCreateMany.mockResolvedValue({ count: 0 });
+    mockPrismaFraisPaiementDepenseAggregate.mockResolvedValue({ _sum: { montant: 0 } });
+    mockPrismaDepenseUpdate.mockResolvedValue({ ...depensePartielle, montantPaye: 55000, statut: StatutDepense.PAYEE });
 
-    await expect(
-      ajouterPaiementDepense("site-1", "dep-1", "user-1", {
-        montant: 25000, // reste = 20000, donc surpaiement
-        mode: ModePaiement.ESPECES,
-      })
-    ).rejects.toThrow("depasse le reste a payer");
+    const result = await ajouterPaiementDepense("site-1", "dep-1", "user-1", {
+      montant: 25000,
+      mode: ModePaiement.ESPECES,
+    });
+
+    expect(result.statut).toBe(StatutDepense.PAYEE);
+    expect(result.montantPaye).toBe(55000);
   });
 
   it("refuse d'ajouter un paiement sur une depense PAYEE", async () => {
@@ -382,8 +411,12 @@ describe("POST /api/depenses/[id]/paiements", () => {
     vi.clearAllMocks();
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
     mockPrismaDepenseFindFirst.mockResolvedValue(FAKE_DEPENSE);
-    mockPrismaPaiementDepenseCreate.mockResolvedValue({ id: "pdep-1", montant: 20000, mode: ModePaiement.ESPECES, depenseId: "dep-1", userId: "user-1", siteId: "site-1", reference: null, date: new Date(), createdAt: new Date(), user: { id: "user-1", name: "Admin" } });
+    const paiementCree = { id: "pdep-1", montant: 20000, mode: ModePaiement.ESPECES, depenseId: "dep-1", userId: "user-1", siteId: "site-1", reference: null, date: new Date(), createdAt: new Date(), fraisSupp: [], user: { id: "user-1", name: "Admin" } };
+    mockPrismaPaiementDepenseCreate.mockResolvedValue(paiementCree);
+    mockPrismaPaiementDepenseFindUniqueOrThrow.mockResolvedValue(paiementCree);
     mockPrismaPaiementDepenseAggregate.mockResolvedValue({ _sum: { montant: 20000 } });
+    mockPrismaFraisPaiementDepenseCreateMany.mockResolvedValue({ count: 0 });
+    mockPrismaFraisPaiementDepenseAggregate.mockResolvedValue({ _sum: { montant: 0 } });
     mockPrismaDepenseUpdate.mockResolvedValue({ ...FAKE_DEPENSE, montantPaye: 20000, statut: StatutDepense.PAYEE_PARTIELLEMENT });
   });
 

@@ -29,6 +29,7 @@ export async function getBacs(
     nombreInitial: b.nombreInitial,
     poidsMoyenInitial: b.poidsMoyenInitial,
     typeSysteme: (b.typeSysteme as TypeSystemeBac | null) ?? null,
+    isBlocked: (b as { isBlocked?: boolean }).isBlocked ?? false,
     vagueId: b.vagueId,
     siteId: b.siteId,
     vagueCode: b.vague?.code ?? null,

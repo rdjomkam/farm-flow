@@ -140,6 +140,7 @@ import type {
   ConfigElevageWithRelations,
   AjustementDepense,
   Depense,
+  DowngradeRessourcesAGarder,
   FraisPaiementDepense,
   Facture,
   Fournisseur,
@@ -2250,6 +2251,8 @@ export interface CreateAbonnementDTO {
   fournisseur: FournisseurPaiement;
   /** Code de remise optionnel */
   remiseCode?: string;
+  /** True pour démarrer une période d'essai (si éligible) — Sprint 45 */
+  isEssai?: boolean;
 }
 
 /** DTO de création d'un plan d'abonnement (ADMIN uniquement) */
@@ -2348,6 +2351,36 @@ export interface AbonnementFilters {
   siteId?: string;
   dateDebutAfter?: string;
   dateFinBefore?: string;
+}
+
+/** DTO pour upgrader un abonnement vers un plan supérieur — Sprint 45 */
+export interface UpgradeDTO {
+  nouveauPlanId: string;
+  /** R2 : utiliser PeriodeFacturation.MENSUEL */
+  periode: PeriodeFacturation;
+  /** Code promo optionnel */
+  codePromo?: string;
+}
+
+/** DTO pour downgrader un abonnement vers un plan inférieur — Sprint 45 */
+export interface DowngradeDTO {
+  nouveauPlanId: string;
+  /** R2 : utiliser PeriodeFacturation.MENSUEL */
+  periode: PeriodeFacturation;
+  /** Ressources à conserver lors du downgrade (bacs, vagues, sites en excès supprimés) */
+  ressourcesAGarder: DowngradeRessourcesAGarder;
+}
+
+/** DTO pour changer la période de facturation d'un abonnement — Sprint 45 */
+export interface ChangerPeriodeDTO {
+  /** R2 : utiliser PeriodeFacturation.ANNUEL */
+  nouvellePeriode: PeriodeFacturation;
+}
+
+/** DTO pour convertir un essai en abonnement payant — Sprint 45 */
+export interface EssaiToPaidDTO {
+  /** R2 : utiliser PeriodeFacturation.MENSUEL */
+  periode: PeriodeFacturation;
 }
 
 // ---------------------------------------------------------------------------

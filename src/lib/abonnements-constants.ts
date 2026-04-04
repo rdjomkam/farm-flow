@@ -61,6 +61,11 @@ export const PLAN_TARIFS: Record<
     [PeriodeFacturation.TRIMESTRIEL]: null,
     [PeriodeFacturation.ANNUEL]: 270000,
   },
+  [TypePlan.EXONERATION]: {
+    [PeriodeFacturation.MENSUEL]: 0,
+    [PeriodeFacturation.TRIMESTRIEL]: null,
+    [PeriodeFacturation.ANNUEL]: null,
+  },
 };
 
 /**
@@ -118,6 +123,12 @@ export const PLAN_LIMITES: Record<
     limitesVagues: 1,
     limitesIngFermes: null,
   },
+  [TypePlan.EXONERATION]: {
+    limitesSites: 999,
+    limitesBacs: 999,
+    limitesVagues: 999,
+    limitesIngFermes: null,
+  },
 };
 
 /**
@@ -133,6 +144,7 @@ export const PLAN_LABELS: Record<TypePlan, string> = {
   [TypePlan.INGENIEUR_STARTER]: "plans.INGENIEUR_STARTER",
   [TypePlan.INGENIEUR_PRO]: "plans.INGENIEUR_PRO",
   [TypePlan.INGENIEUR_EXPERT]: "plans.INGENIEUR_EXPERT",
+  [TypePlan.EXONERATION]: "plans.EXONERATION",
 };
 
 /**

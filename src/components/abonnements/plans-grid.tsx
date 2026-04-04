@@ -79,6 +79,7 @@ const PLAN_FEATURES: Record<TypePlan, string[]> = {
   [TypePlan.INGENIEUR_STARTER]: ["5 fermes supervisées", "Dashboard clients"],
   [TypePlan.INGENIEUR_PRO]: ["20 fermes supervisées", "Dashboard clients"],
   [TypePlan.INGENIEUR_EXPERT]: ["Fermes illimitées", "Dashboard clients"],
+  [TypePlan.EXONERATION]: ["Accès complet", "Plan accordé manuellement"],
 };
 
 function formatPrix(montant: number | null | undefined): string {

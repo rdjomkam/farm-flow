@@ -48,6 +48,7 @@ export async function createSite(
       data: {
         name: data.name,
         address: data.address ?? null,
+        ownerId: userId,
       },
     });
 

@@ -6,7 +6,8 @@
     "ENTREPRISE": "Enterprise",
     "INGENIEUR_STARTER": "Engineer Starter",
     "INGENIEUR_PRO": "Engineer Pro",
-    "INGENIEUR_EXPERT": "Engineer Expert"
+    "INGENIEUR_EXPERT": "Engineer Expert",
+    "EXONERATION": "Exemption"
   },
   "periods": {
     "MENSUEL": "Monthly",

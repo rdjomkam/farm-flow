@@ -191,6 +191,10 @@ export type {
   CommissionIngenieur,
   PortefeuilleIngenieur,
   RetraitPortefeuille,
+  // Sprint 45 — Refactoring abonnements
+  DowngradeRessourcesAGarder,
+  EssaiUtilise,
+  AbonnementAudit,
   // ADR-021 — Admin Plateforme
   ModuleDefinition,
   SiteAuditLog,
@@ -445,6 +449,11 @@ export type {
   CreateCommissionDTO,
   DemandeRetraitDTO,
   AbonnementFilters,
+  // Sprint 45 — Refactoring abonnements
+  UpgradeDTO,
+  DowngradeDTO,
+  ChangerPeriodeDTO,
+  EssaiToPaidDTO,
 } from "./api";
 // ADR-021 — Admin Plateforme (Sites & Modules)
 export type {

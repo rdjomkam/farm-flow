@@ -58,6 +58,7 @@ export default async function VaguesPage() {
       nombreInitial: b.nombreInitial,
       poidsMoyenInitial: b.poidsMoyenInitial,
       typeSysteme: (b.typeSysteme as TypeSystemeBac | null) ?? null,
+      isBlocked: (b as { isBlocked?: boolean }).isBlocked ?? false,
       vagueId: b.vagueId,
       siteId: b.siteId,
       vagueCode: null,

@@ -38,8 +38,40 @@ vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
 }));
 
+const dialogTranslations: Record<string, string> = {
+  "planFormDialog.titleCreate": "Créer un plan d'abonnement",
+  "planFormDialog.titleEdit": "Modifier le plan",
+  "planFormDialog.descriptionCreate": "Remplissez les informations du nouveau plan.",
+  "planFormDialog.descriptionEdit": "Modifiez les informations du plan.",
+  "admin.dialogCancel": "Annuler",
+  "admin.createPlan": "Créer le plan",
+  "admin.edit": "Enregistrer",
+  "admin.saving": "Enregistrement...",
+  "admin.modulesInclus": "Modules inclus",
+  "admin.modulesHelp": "Modules disponibles",
+  "plans.DECOUVERTE": "Découverte",
+  "plans.ELEVEUR": "Éleveur",
+  "plans.PROFESSIONNEL": "Professionnel",
+  "plans.ENTREPRISE": "Entreprise",
+  "plans.INGENIEUR_STARTER": "Ingénieur Starter",
+  "plans.INGENIEUR_PRO": "Ingénieur Pro",
+  "plans.INGENIEUR_EXPERT": "Ingénieur Expert",
+  "modules.reproduction": "Reproduction",
+  "modules.grossissement": "Grossissement",
+  "modules.intrants": "Intrants",
+  "modules.ventes": "Ventes",
+  "modules.analysePilotage": "Analyse & Pilotage",
+  "modules.packsProvisioning": "Packs",
+  "modules.configuration": "Configuration",
+  "modules.ingenieur": "Ingénieur",
+  "modules.notes": "Notes",
+  "modules.abonnement": "Abonnements",
+  "modules.adminCommissions": "Commissions",
+  "modules.adminRemises": "Remises",
+};
+
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key,
+  useTranslations: () => (key: string) => dialogTranslations[key] ?? key,
 }));
 
 // Mock global fetch
