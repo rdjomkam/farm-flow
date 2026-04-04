@@ -31,3 +31,11 @@ export type { QuotaRessource, QuotasUsage, QuotaSites } from "./check-quotas";
 export { applyPlanModules, applyPlanModulesTx } from "./apply-plan-modules";
 
 export { createAbonnementFromPack } from "./create-from-pack";
+
+export {
+  calculerCreditRestant,
+  calculerPrixPlan,
+  calculerDeltaUpgrade,
+} from "./prorata";
+
+export type { DeltaUpgrade } from "./prorata";
