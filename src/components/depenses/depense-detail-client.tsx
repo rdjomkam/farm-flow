@@ -129,8 +129,9 @@ interface FraisSuppRow {
 
 interface Props {
   depense: DepenseData;
-  canManage: boolean;
+  canEdit: boolean;
   canPay: boolean;
+  canDelete: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -153,7 +154,7 @@ function formatDate(dateStr: string): string {
 // Component
 // ---------------------------------------------------------------------------
 
-export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
+export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Props) {
   const t = useTranslations("depenses");
   const router = useRouter();
   const depenseService = useDepenseService();
@@ -588,7 +589,7 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
           {t("detail.retour")}
         </Link>
 
-        {canManage && statut === StatutDepense.NON_PAYEE && (
+        {canDelete && statut === StatutDepense.NON_PAYEE && (
           <Dialog open={deleteDepenseOpen} onOpenChange={setDeleteDepenseOpen}>
             <DialogTrigger asChild>
               <Button variant="danger" size="sm">
@@ -797,7 +798,7 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
           )}
 
           {/* CTA ajustement montant / frais */}
-          {canManage && (
+          {canEdit && (
             <Dialog open={ajustementOpen} onOpenChange={setAjustementOpen}>
               <DialogTrigger asChild>
                 <Button
@@ -1191,7 +1192,7 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
       </Card>
 
       {/* Facture fournisseur */}
-      {canManage && (
+      {canEdit && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
