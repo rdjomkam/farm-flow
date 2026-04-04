@@ -156,26 +156,35 @@ function buildSurvieData(vague: VagueAvecReleves) {
 }
 
 // ---------------------------------------------------------------------------
-// Tooltip constants (memoised outside render to avoid recreating on each render)
+// Tooltip helpers — use date from payload for label
 // ---------------------------------------------------------------------------
+
+const dateFormat = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+
+function formatTooltipLabel(label: string, payload?: Array<{ payload?: Record<string, unknown> }>) {
+  const dateStr = payload?.[0]?.payload?.date
+    ? dateFormat.format(new Date(payload[0].payload.date as string))
+    : "";
+  return dateStr ? `${label} — ${dateStr}` : String(label);
+}
 
 const tooltipCroissance = (
   <ChartTooltip
-    labelFormatter={(label) => String(label)}
+    labelFormatter={formatTooltipLabel}
     valueFormatter={(v) => `${v} g`}
   />
 );
 
 const tooltipSurvie = (
   <ChartTooltip
-    labelFormatter={(label) => String(label)}
+    labelFormatter={formatTooltipLabel}
     valueFormatter={(v) => `${v}%`}
   />
 );
 
 const tooltipMortalite = (
   <ChartTooltip
-    labelFormatter={(label) => String(label)}
+    labelFormatter={formatTooltipLabel}
     valueFormatter={(v) => `${v} morts`}
   />
 );
@@ -233,7 +242,7 @@ const VagueCharts = memo(function VagueCharts({ vague }: { vague: VagueAvecRelev
                     tickFormatter={(v) => `${v}g`}
                     width={44}
                   />
-                  <Tooltip content={tooltipCroissance} />
+                  <Tooltip content={tooltipCroissance} cursor={<ChartCrosshair />} />
                   <Line
                     type="monotone"
                     dataKey="poidsMoyen"
@@ -276,7 +285,7 @@ const VagueCharts = memo(function VagueCharts({ vague }: { vague: VagueAvecRelev
                     domain={[0, 100]}
                     width={40}
                   />
-                  <Tooltip content={tooltipSurvie} />
+                  <Tooltip content={tooltipSurvie} cursor={<ChartCrosshair />} />
                   <Line
                     type="monotone"
                     dataKey="survie"
@@ -317,7 +326,7 @@ const VagueCharts = memo(function VagueCharts({ vague }: { vague: VagueAvecRelev
                     tick={{ fontSize: 11 }}
                     width={36}
                   />
-                  <Tooltip content={tooltipMortalite} />
+                  <Tooltip content={tooltipMortalite} cursor={<ChartCrosshair />} />
                   <Bar
                     dataKey="nombreMorts"
                     name="Morts"

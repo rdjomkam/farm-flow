@@ -17,6 +17,7 @@
 import dynamic from "next/dynamic";
 import { TrendingUp, TrendingDown, Calendar, Leaf, DollarSign, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { ChartCrosshair } from "@/components/ui/chart-tooltip";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { cn } from "@/lib/utils";
 import type { ProjectionVague } from "@/types";
@@ -193,15 +194,27 @@ function CourbeProjectionChart({ projection }: { projection: ProjectionVague }) 
             width={44}
           />
           <Tooltip
+            cursor={<ChartCrosshair />}
             content={({ active, payload, label }) => {
               if (!active || !payload || payload.length === 0) return null;
+              // Compute date from vague start: today - joursEcoules + jour
+              const jour = Number(label);
+              const dateDebut = new Date();
+              dateDebut.setDate(dateDebut.getDate() - joursEcoules);
+              const pointDate = new Date(dateDebut);
+              pointDate.setDate(pointDate.getDate() + jour);
+              const dateStr = pointDate.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
               return (
-                <div className="rounded-lg border border-border bg-card p-2 shadow text-xs">
-                  <p className="font-medium mb-1">Jour {label}</p>
+                <div className="rounded-xl border border-border bg-card p-3 shadow-[var(--shadow-elevated)] text-xs">
+                  <p className="font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                    Jour {label} — {dateStr}
+                  </p>
                   {payload.map((p) => (
-                    <p key={p.name} style={{ color: p.color }}>
-                      {p.name} : {p.value}g
-                    </p>
+                    <div key={p.name} className="flex items-center gap-2 text-sm">
+                      <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+                      <span className="text-muted-foreground">{p.name} :</span>
+                      <span className="font-bold">{p.value}g</span>
+                    </div>
                   ))}
                 </div>
               );

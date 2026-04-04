@@ -153,6 +153,7 @@ export function FeedFCRChart({ evolutionFCR }: FeedFCRChartProps) {
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} width={40} domain={["auto", "auto"]} />
                 <Tooltip
+                  cursor={<ChartCrosshair />}
                   content={
                     <ChartTooltip
                       valueFormatter={(v) => v.toFixed(2)}
@@ -224,6 +225,7 @@ export function FeedVagueBreakdown({ parVague }: FeedVagueBreakdownProps) {
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} width={40} />
               <Tooltip
+                cursor={<ChartCrosshair />}
                 content={
                   <ChartTooltip
                     valueFormatter={(v, name) =>
@@ -386,6 +388,7 @@ export function FeedFCRHebdoChart({ points, changements = [] }: FeedFCRHebdoChar
                 }}
               />
               <Tooltip
+                cursor={<ChartCrosshair />}
                 content={
                   <ChartTooltip
                     valueFormatter={(v, name) => {

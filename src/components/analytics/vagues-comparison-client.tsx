@@ -7,6 +7,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ChartCrosshair } from "@/components/ui/chart-tooltip";
 import { StatutVague } from "@/types";
 import type { IndicateursVagueComplet, ComparaisonVagues } from "@/types";
 import { formatNum, formatNumber } from "@/lib/format";
@@ -374,6 +375,7 @@ function VaguesFinancialChart({ vagues }: { vagues: IndicateursVagueComplet[] })
             tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`}
           />
           <Tooltip
+            cursor={<ChartCrosshair />}
             formatter={(value) =>
               typeof value === "number"
                 ? `${new Intl.NumberFormat("fr-FR").format(value)} CFA`

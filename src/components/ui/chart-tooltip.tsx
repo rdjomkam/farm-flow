@@ -1,15 +1,19 @@
 "use client";
 
+interface PayloadEntry {
+  name: string;
+  value: number;
+  color: string;
+  dataKey: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  payload?: Record<string, any>;
+}
+
 interface ChartTooltipProps {
   active?: boolean;
-  payload?: Array<{
-    name: string;
-    value: number;
-    color: string;
-    dataKey: string;
-  }>;
+  payload?: PayloadEntry[];
   label?: string;
-  labelFormatter?: (label: string) => string;
+  labelFormatter?: (label: string, payload?: PayloadEntry[]) => string;
   valueFormatter?: (value: number, name: string) => string;
 }
 
@@ -22,7 +26,7 @@ export function ChartTooltip({
 }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
 
-  const formattedLabel = labelFormatter ? labelFormatter(String(label ?? "")) : label;
+  const formattedLabel = labelFormatter ? labelFormatter(String(label ?? ""), payload) : label;
 
   return (
     <div className="animate-scale-in rounded-xl border border-border bg-card p-3 shadow-[var(--shadow-elevated)]">

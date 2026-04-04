@@ -173,6 +173,7 @@ export function BacHistoriqueChart({ cycles }: BacHistoriqueChartProps) {
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} width={40} />
                 <Tooltip
+                  cursor={<ChartCrosshair />}
                   content={
                     <ChartTooltip
                       valueFormatter={(v, name) =>

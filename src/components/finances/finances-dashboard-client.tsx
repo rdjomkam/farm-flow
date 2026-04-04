@@ -295,6 +295,7 @@ export function FinancesDashboardClient({
                   width={60}
                 />
                 <Tooltip
+                  cursor={<ChartCrosshair />}
                   content={
                     <ChartTooltip
                       labelFormatter={(label) => t("finances.evolution.moisLabel", { label })}
@@ -364,6 +365,7 @@ export function FinancesDashboardClient({
                   width={80}
                 />
                 <Tooltip
+                  cursor={<ChartCrosshair />}
                   content={
                     <ChartTooltip
                       valueFormatter={(v) => `${v.toFixed(1)}%`}
