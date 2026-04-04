@@ -102,6 +102,11 @@ export function PoidsChart({
     [data]
   );
 
+  const dataObservations = useMemo(
+    () => data.filter((d) => d.poidsMoyen != null),
+    [data]
+  );
+
   /** Custom dot: only render on days with actual biometry data */
   const biometryDot = (props: Record<string, unknown>) => {
     const { cx, cy, payload } = props as { cx: number; cy: number; payload: EvolutionPoidsPoint };
@@ -216,14 +221,15 @@ export function PoidsChart({
       />
       <Tooltip content={tooltipContent} cursor={<ChartCrosshair />} />
       <Line
+        data={dataObservations}
         type="monotone"
         dataKey="poidsMoyen"
         name={t("poidsChart.seriesName")}
         stroke="var(--primary)"
         strokeWidth={2}
-        dot={biometryDot}
+        dot={{ r: 3 }}
         activeDot={{ r: 6 }}
-        connectNulls={true}
+        connectNulls={false}
       />
       {hasGompertz && (
         <Line
