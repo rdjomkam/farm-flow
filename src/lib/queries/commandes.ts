@@ -81,6 +81,7 @@ export async function getCommandeById(id: string, siteId: string) {
         },
         orderBy: { createdAt: "asc" },
       },
+      listeBesoins: { select: { id: true, numero: true, titre: true } },
       mouvements: {
         include: {
           produit: { select: { id: true, nom: true } },

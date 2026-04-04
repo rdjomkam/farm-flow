@@ -127,6 +127,12 @@
     "notesPlaceholder": "Additional information...",
     "createExpense": "Create expense"
   },
+  "deleteDepense": {
+    "supprimer": "Delete",
+    "title": "Delete this expense?",
+    "description": "This action is irreversible. The expense and all its data will be permanently deleted.",
+    "confirmer": "Delete permanently"
+  },
   "emptyState": {
     "noExpenses": "No expenses"
   },

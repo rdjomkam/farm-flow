@@ -172,6 +172,7 @@
       "receptionDescription": "Verifiez les quantites reellement recues pour chaque article.",
       "dateLivraison": "Date de livraison",
       "creePar": "Cree par {name}",
+      "listeBesoins": "Besoin : {numero}",
       "lignes": "Lignes ({count})",
       "reception": {
         "title": "Receptionner la commande {numero}",
