@@ -89,6 +89,18 @@ export async function getDepenseById(id: string, siteId: string) {
         include: { user: { select: { id: true, name: true } } },
         orderBy: { createdAt: "desc" },
       },
+      lignes: {
+        select: {
+          id: true,
+          designation: true,
+          categorieDepense: true,
+          quantite: true,
+          prixUnitaire: true,
+          montantTotal: true,
+          produit: { select: { id: true, nom: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
 }

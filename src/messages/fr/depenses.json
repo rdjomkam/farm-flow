@@ -85,6 +85,7 @@
     "raisonRequise": "La raison est obligatoire",
     "montantInferieur": "Le montant ne peut pas etre inferieur au montant deja paye",
     "enCours": "En cours...",
+    "montantActuel": "Montant actuel",
     "historique": "Historique des ajustements",
     "tabMontant": "Montant",
     "tabFrais": "Frais",
@@ -97,6 +98,9 @@
     "fraisAjoute": "Frais ajoute",
     "selectPaiement": "Selectionner un paiement",
     "aucunFrais": "Aucun frais supplementaire"
+  },
+  "lignes": {
+    "titre": "Detail des lignes ({count})"
   },
   "motif": {
     "TRANSPORT": "Transport",

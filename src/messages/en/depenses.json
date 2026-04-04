@@ -85,6 +85,7 @@
     "raisonRequise": "Reason is required",
     "montantInferieur": "Amount cannot be less than the amount already paid",
     "enCours": "Processing...",
+    "montantActuel": "Current amount",
     "historique": "Adjustment history",
     "tabMontant": "Amount",
     "tabFrais": "Fees",
@@ -97,6 +98,9 @@
     "fraisAjoute": "Fee added",
     "selectPaiement": "Select a payment",
     "aucunFrais": "No additional fees"
+  },
+  "lignes": {
+    "titre": "Line items ({count})"
   },
   "motif": {
     "TRANSPORT": "Transport",
