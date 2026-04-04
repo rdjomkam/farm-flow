@@ -3,7 +3,7 @@
 import { memo } from "react";
 import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartTooltip } from "@/components/ui/chart-tooltip";
+import { ChartTooltip, ChartCrosshair } from "@/components/ui/chart-tooltip";
 import { TypeReleve } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -84,11 +84,12 @@ function buildCroissanceData(vague: VagueAvecReleves) {
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   // Point initial
-  const points: { jour: number; poidsMoyen: number; label: string }[] = [
+  const points: { jour: number; poidsMoyen: number; label: string; date: string }[] = [
     {
       jour: 0,
       poidsMoyen: vague.poidsMoyenInitial,
       label: "J0",
+      date: vague.dateDebut,
     },
   ];
 
@@ -101,6 +102,7 @@ function buildCroissanceData(vague: VagueAvecReleves) {
       jour,
       poidsMoyen: r.poidsMoyen!,
       label: `J${jour}`,
+      date: r.date,
     });
   }
 
@@ -121,6 +123,7 @@ function buildMortaliteData(vague: VagueAvecReleves) {
       jour,
       nombreMorts: r.nombreMorts!,
       label: `J${jour}`,
+      date: r.date,
     };
   });
 }
@@ -131,10 +134,10 @@ function buildSurvieData(vague: VagueAvecReleves) {
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   let totalMorts = 0;
-  const points: { jour: number; survie: number; label: string }[] = [];
+  const points: { jour: number; survie: number; label: string; date: string }[] = [];
 
   // Point initial
-  points.push({ jour: 0, survie: 100, label: "J0" });
+  points.push({ jour: 0, survie: 100, label: "J0", date: vague.dateDebut });
 
   for (const r of mortalites) {
     totalMorts += r.nombreMorts ?? 0;
@@ -146,7 +149,7 @@ function buildSurvieData(vague: VagueAvecReleves) {
       (new Date(r.date).getTime() - new Date(vague.dateDebut).getTime()) /
         (1000 * 60 * 60 * 24)
     );
-    points.push({ jour, survie, label: `J${jour}` });
+    points.push({ jour, survie, label: `J${jour}`, date: r.date });
   }
 
   return points;

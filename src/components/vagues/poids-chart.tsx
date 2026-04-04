@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ChartTooltip } from "@/components/ui/chart-tooltip";
+import { ChartTooltip, ChartCrosshair } from "@/components/ui/chart-tooltip";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { buildGompertzPanelData } from "@/lib/gompertz-panel";
 import { GompertzInfoPanel } from "./gompertz-info-panel";
@@ -212,7 +212,7 @@ export function PoidsChart({
         tickFormatter={(v) => `${v}g`}
         width={42}
       />
-      <Tooltip content={tooltipContent} />
+      <Tooltip content={tooltipContent} cursor={<ChartCrosshair />} />
       <Line
         data={dataObservations}
         type="monotone"
@@ -257,7 +257,7 @@ export function PoidsChart({
         width={52}
         domain={[0, predictionMaxY]}
       />
-      <Tooltip content={tooltipContent} />
+      <Tooltip content={tooltipContent} cursor={<ChartCrosshair />} />
       <Line
         data={dataObservations}
         type="monotone"

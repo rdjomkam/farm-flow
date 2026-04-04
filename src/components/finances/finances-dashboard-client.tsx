@@ -51,7 +51,7 @@ const Cell = dynamic(
   { ssr: false }
 );
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartTooltip } from "@/components/ui/chart-tooltip";
+import { ChartTooltip, ChartCrosshair } from "@/components/ui/chart-tooltip";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { ExportButton } from "@/components/ui/export-button";
 import type {

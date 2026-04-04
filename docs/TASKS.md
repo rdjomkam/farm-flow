@@ -7317,13 +7317,13 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 ---
 
 ### Story UX.17 — Tests et Review Sprint UX
-**Assigné à :** @tester + @code-reviewer | **Dépend de :** UX.1-UX.16 | **Statut :** `TODO` | **Type :** TEST + REVIEW
+**Assigné à :** @tester + @code-reviewer | **Dépend de :** UX.1-UX.16 | **Statut :** `FAIT` | **Type :** TEST + REVIEW
 
 **Tâches :**
-- [ ] `TODO` `npm run build` — Build production OK
-- [ ] `TODO` Test manuel mobile (360px) — vérifier safe areas, dialogs, touch targets
-- [ ] `TODO` Vérifier checklist R1-R9
-- [ ] `TODO` Écrire `docs/reviews/review-sprint-UX.md`
+- [x] `FAIT` `npm run build` — Build production OK
+- [x] `FAIT` Test manuel mobile (360px) — vérifier safe areas, dialogs, touch targets
+- [x] `FAIT` Vérifier checklist R1-R9
+- [x] `FAIT` Écrire `docs/reviews/review-sprint-UX.md`
 
 **Critères d'acceptation :**
 - Zéro régression sur les tests existants

@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartTooltip } from "@/components/ui/chart-tooltip";
+import { ChartTooltip, ChartCrosshair } from "@/components/ui/chart-tooltip";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { BenchmarkBadge } from "./benchmark-badge";
 import { evaluerBenchmark, BENCHMARK_FCR } from "@/lib/benchmarks";
