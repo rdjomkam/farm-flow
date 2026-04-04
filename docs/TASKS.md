@@ -7349,4 +7349,4 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 | **50** | Upgrade / Downgrade | 50.1–50.7 | `FAIT` |
 | **51** | Backoffice Exonération | 51.1–51.3 | `FAIT` |
 | **52** | Cleanup migration + retrait fallback | 52.1–52.3 | `FAIT` |
-| **53** | Tests intégration + Review finale | 53.1–53.4 | `TODO` |
+| **53** | Tests intégration + Review finale | 53.1–53.4 | `FAIT` |

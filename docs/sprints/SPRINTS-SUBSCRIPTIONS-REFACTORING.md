@@ -900,7 +900,7 @@
 **Assigné à :** @db-specialist
 **Priorité :** Critique
 **Complexité :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Rendre `Abonnement.siteId` nullable (si pas déjà fait)
@@ -924,7 +924,7 @@
 **Dépend de :** Story 52.1
 **Priorité :** Haute
 **Complexité :** Moyenne
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` `resolvePlanLimites()` : retirer le fallback DECOUVERTE → erreur si pas d'abonnement
@@ -948,7 +948,7 @@
 **Assigné à :** @tester + @code-reviewer
 **Dépend de :** Stories 52.1-52.2
 **Priorité :** Haute
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Vérifier qu'aucun site ne fonctionne sans abonnement
@@ -969,7 +969,7 @@
 **Assigné à :** @tester
 **Priorité :** Haute
 **Complexité :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Tests `calculerCreditRestant` : div/0, prixPaye=0, cas normaux
@@ -988,7 +988,7 @@
 **Assigné à :** @tester
 **Priorité :** Haute
 **Complexité :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Test intégration upgrade : DECOUVERTE → ELEVEUR (delta positif), ELEVEUR annuel → PROFESSIONNEL mensuel (delta négatif → soldeCredit)
@@ -1008,7 +1008,7 @@
 **Assigné à :** @tester
 **Priorité :** Haute
 **Complexité :** Moyenne
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Tests non-régression : créer bac, vague, relevé, site — tout fonctionne avec le nouveau système
@@ -1022,7 +1022,7 @@
 **Assigné à :** @code-reviewer
 **Dépend de :** Stories 53.1-53.3
 **Priorité :** Critique
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Review complète du refactoring selon checklist R1-R9
