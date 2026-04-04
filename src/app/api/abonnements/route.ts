@@ -5,14 +5,15 @@
  * POST /api/abonnements   — souscrire à un plan (auth + ABONNEMENTS_GERER)
  *
  * Story 32.2 — Sprint 32
- * R2 : enums importés depuis @/types
- * R4 : opérations atomiques via les fonctions query
+ * Story 47.2 — Sprint 47 : garde-fou 409 EN_ATTENTE_PAIEMENT + logAbonnementAudit
+ * R2 : enums importés depuis @/types — TypePlan pour accès PLAN_TARIFS (ERR-031)
+ * R4 : garde-fou + création dans la même $transaction (ERR-016)
  * R8 : siteId = auth.activeSiteId sur toutes les queries
  */
 import { NextRequest, NextResponse } from "next/server";
 import {
   getAbonnements,
-  createAbonnement,
+  logAbonnementAudit,
 } from "@/lib/queries/abonnements";
 import { apiError } from "@/lib/api-utils";
 import { getPlanAbonnementById } from "@/lib/queries/plans-abonnements";
@@ -25,7 +26,14 @@ import { verifierEtAppliquerRemiseAutomatique } from "@/lib/services/remises-aut
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { invalidateSubscriptionCaches } from "@/lib/abonnements/invalidate-caches";
 import { AuthError } from "@/lib/auth";
-import { Permission, StatutAbonnement, PeriodeFacturation, FournisseurPaiement } from "@/types";
+import { prisma } from "@/lib/db";
+import {
+  Permission,
+  StatutAbonnement,
+  PeriodeFacturation,
+  FournisseurPaiement,
+  TypePlan,
+} from "@/types";
 import {
   PLAN_TARIFS,
   calculerMontantRemise,
@@ -115,7 +123,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculer le prix selon la période
-    const tarifsType = PLAN_TARIFS[plan.typePlan as keyof typeof PLAN_TARIFS];
+    // R2/ERR-031 : cast as TypePlan, jamais as keyof typeof PLAN_TARIFS
+    const tarifsType = PLAN_TARIFS[plan.typePlan as TypePlan];
     const prixBase = tarifsType?.[body.periode as PeriodeFacturation] ?? 0;
 
     // Appliquer la remise si présente
@@ -146,7 +155,6 @@ export async function POST(request: NextRequest) {
     const dateFin = calculerProchaineDate(dateDebut, body.periode as PeriodeFacturation);
     const dateProchainRenouvellement = dateFin;
 
-    // Créer l'abonnement
     const data: CreateAbonnementDTO = {
       planId: body.planId,
       periode: body.periode as PeriodeFacturation,
@@ -155,15 +163,58 @@ export async function POST(request: NextRequest) {
       remiseCode: body.remiseCode,
     };
 
-    const abonnement = await createAbonnement(
-      auth.activeSiteId,
-      auth.userId,
-      data,
-      dateDebut,
-      dateFin,
-      dateProchainRenouvellement,
-      prixFinal
-    );
+    // Garde-fou 409 + création atomique (R4 / ERR-016)
+    // Vérifier l'absence d'EN_ATTENTE_PAIEMENT ET créer dans la même $transaction.
+    let abonnement: Awaited<ReturnType<typeof prisma.abonnement.create>>;
+    try {
+      abonnement = await prisma.$transaction(async (tx) => {
+        // Garde-fou : un seul EN_ATTENTE_PAIEMENT autorisé par utilisateur
+        const enAttente = await tx.abonnement.count({
+          where: {
+            userId: auth.userId,
+            statut: StatutAbonnement.EN_ATTENTE_PAIEMENT,
+          },
+        });
+        if (enAttente > 0) {
+          throw new Error("EN_ATTENTE_PAIEMENT_EXISTE");
+        }
+
+        return tx.abonnement.create({
+          data: {
+            siteId: auth.activeSiteId,
+            planId: data.planId,
+            periode: data.periode,
+            statut: StatutAbonnement.EN_ATTENTE_PAIEMENT,
+            dateDebut,
+            dateFin,
+            dateProchainRenouvellement,
+            prixPaye: prixFinal,
+            userId: auth.userId,
+          },
+        });
+      });
+    } catch (txError) {
+      if (txError instanceof Error && txError.message === "EN_ATTENTE_PAIEMENT_EXISTE") {
+        return NextResponse.json(
+          {
+            status: 409,
+            message:
+              "Un changement de plan est deja en cours. Veuillez finaliser ou annuler le paiement en attente avant de souscrire un nouvel abonnement.",
+          },
+          { status: 409 }
+        );
+      }
+      throw txError;
+    }
+
+    // Journaliser la création de l'abonnement (fire-and-forget — ne bloque pas la réponse)
+    logAbonnementAudit(abonnement.id, "CREATION", auth.userId, {
+      planId: data.planId,
+      periode: data.periode,
+      prixFinal,
+    }).catch((err) => {
+      console.error("[abonnements] Erreur logAbonnementAudit (ignorée) :", err);
+    });
 
     // Appliquer la remise en DB si présente
     if (remise) {
@@ -191,7 +242,14 @@ export async function POST(request: NextRequest) {
     await invalidateSubscriptionCaches(auth.userId);
 
     return NextResponse.json(
-      { abonnement, paiement: { referenceExterne: paiement.referenceExterne, statut: paiement.statut, paiementId: paiement.paiementId } },
+      {
+        abonnement,
+        paiement: {
+          referenceExterne: paiement.referenceExterne,
+          statut: paiement.statut,
+          paiementId: paiement.paiementId,
+        },
+      },
       { status: 201 }
     );
   } catch (error) {

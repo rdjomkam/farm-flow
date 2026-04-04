@@ -93,6 +93,8 @@ vi.mock("@/lib/queries/abonnements", () => ({
   getAbonnementActif: (...args: unknown[]) => mockGetAbonnementActif(...args),
   getAbonnementActifPourSite: (...args: unknown[]) => mockGetAbonnementActif(...args),
   getAbonnements: vi.fn(),
+  // logAbonnementAudit est fire-and-forget dans billing.ts (Story 47.3)
+  logAbonnementAudit: vi.fn().mockResolvedValue(undefined),
 }));
 
 const mockGetPlanAbonnementById = vi.fn();
@@ -131,6 +133,14 @@ vi.mock("@/lib/queries/commissions", () => ({
 }));
 
 vi.mock("@/lib/queries/sites", () => ({}));
+
+// ---------------------------------------------------------------------------
+// Mocks — Cache invalidation (Story 47.3)
+// ---------------------------------------------------------------------------
+
+vi.mock("@/lib/abonnements/invalidate-caches", () => ({
+  invalidateSubscriptionCaches: vi.fn().mockResolvedValue(undefined),
+}));
 
 // ---------------------------------------------------------------------------
 // Mocks — Gateway de paiement

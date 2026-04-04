@@ -6,6 +6,7 @@
  *
  * ADR-016 : Idempotence + atomicité
  * Story 31.4 — Sprint 31
+ * Story 47.3 — Ownership check adapté au user-level (userId au lieu de siteId)
  *
  * R2 : Utiliser les enums importés depuis "@/types"
  * R4 : Opérations atomiques via fonctions de query (updateMany)
@@ -19,7 +20,8 @@ import {
   confirmerPaiement,
   updatePaiementApresInitiation,
 } from "@/lib/queries/paiements-abonnements";
-import { getAbonnementById, activerAbonnement } from "@/lib/queries/abonnements";
+import { getAbonnementById, activerAbonnement, logAbonnementAudit } from "@/lib/queries/abonnements";
+import { invalidateSubscriptionCaches } from "@/lib/abonnements/invalidate-caches";
 import { prisma } from "@/lib/db";
 import {
   FournisseurPaiement,
@@ -46,15 +48,15 @@ export interface InitierPaiementResult {
  * Initie un paiement pour un abonnement donné.
  *
  * Étapes :
- * 1. Vérifier que l'abonnement appartient au siteId (sécurité R8)
+ * 1. Vérifier que l'abonnement appartient au userId (sécurité user-level — Story 47.3)
  * 2. Vérifier l'idempotence (pas de paiement EN_ATTENTE/INITIE existant)
  * 3. Créer un PaiementAbonnement EN_ATTENTE en DB
  * 4. Appeler la gateway pour initier le paiement
  * 5. Mettre à jour le PaiementAbonnement avec referenceExterne + statut INITIE ou ECHEC
  *
  * @param abonnementId - ID de l'abonnement à payer
- * @param userId - ID de l'utilisateur qui initie le paiement
- * @param siteId - ID du site (vérification d'appartenance R8)
+ * @param userId - ID de l'utilisateur propriétaire de l'abonnement (vérification ownership)
+ * @param siteId - ID du site actif (utilisé pour créer le PaiementAbonnement en DB)
  * @param params - Détails du paiement (fournisseur, numéro de téléphone)
  */
 export async function initierPaiement(
@@ -63,14 +65,24 @@ export async function initierPaiement(
   siteId: string,
   params: InitierPaiementDTO
 ): Promise<InitierPaiementResult> {
-  // Étape 1 : vérifier que l'abonnement appartient au siteId
-  const abonnement = await getAbonnementById(abonnementId, siteId);
+  // Étape 1 : vérifier que l'abonnement appartient à l'utilisateur (user-level — Story 47.3)
+  // On ne filtre plus par siteId car l'abonnement est désormais au niveau user.
+  // Le siteId reste utilisé pour créer le PaiementAbonnement en DB (compatibilité schéma Sprint 52).
+  const abonnement = await getAbonnementById(abonnementId);
 
   if (!abonnement) {
     return {
       paiementId: "",
       statut: StatutPaiementAbo.ECHEC,
-      message: "Abonnement introuvable pour ce site",
+      message: "Abonnement introuvable",
+    };
+  }
+
+  if (abonnement.userId !== userId) {
+    return {
+      paiementId: "",
+      statut: StatutPaiementAbo.ECHEC,
+      message: "Accès refusé : cet abonnement n'appartient pas à cet utilisateur",
     };
   }
 
@@ -127,6 +139,16 @@ export async function initierPaiement(
         paiement.id,
         gatewayResult.referenceExterne
       );
+
+      // Audit : paiement initié (fire-and-forget — ne pas bloquer la réponse)
+      logAbonnementAudit(abonnementId, "PAIEMENT_INITIE", userId, {
+        paiementId: paiementMisAJour.id,
+        referenceExterne: paiementMisAJour.referenceExterne,
+        fournisseur: params.fournisseur,
+        montant,
+      }).catch((auditError) => {
+        console.error("[billing] Erreur logAbonnementAudit (non-bloquant) :", auditError);
+      });
 
       return {
         paiementId: paiementMisAJour.id,
@@ -202,6 +224,12 @@ export async function verifierEtActiverPaiement(
   // Confirmer le paiement puis activer l'abonnement (R4 : via fonctions de query updateMany)
   await confirmerPaiement(referenceExterne);
   await activerAbonnement(paiement.abonnementId);
+
+  // Invalider le cache d'abonnement user-level + sites (Story 47.3)
+  // paiement.abonnement est inclus par getPaiementByReference (include: { abonnement: true })
+  if (paiement.abonnement?.userId) {
+    await invalidateSubscriptionCaches(paiement.abonnement.userId);
+  }
 
   return true;
 }

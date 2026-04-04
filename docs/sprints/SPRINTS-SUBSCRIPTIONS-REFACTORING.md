@@ -41,7 +41,7 @@
 **Assigné à :** @db-specialist
 **Priorité :** Critique
 **Complexité :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Migration additive du schéma Prisma. Ajouter tous les champs et modèles nécessaires au refactoring sans rien supprimer de l'existant.
 
@@ -73,7 +73,7 @@
 **Dépend de :** Story 45.1
 **Priorité :** Critique
 **Complexité :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Script SQL qui peuple les nouveaux champs sur les données existantes et crée les enregistrements nécessaires.
 
@@ -102,7 +102,7 @@
 **Dépend de :** Story 45.1
 **Priorité :** Haute
 **Complexité :** Moyenne
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Mettre à jour les interfaces TypeScript pour refléter les nouveaux champs du schéma.
 
@@ -134,7 +134,7 @@
 **Dépend de :** Story 45.3
 **Priorité :** Haute
 **Complexité :** Simple
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Ajouter les entrées EXONERATION dans toutes les constantes de plans.
 
@@ -158,7 +158,7 @@
 **Assigné à :** @tester + @code-reviewer
 **Dépend de :** Stories 45.1-45.4
 **Priorité :** Haute
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` `npx prisma migrate dev` sans erreur
@@ -261,7 +261,7 @@
 **Assigné à :** @tester + @code-reviewer
 **Dépend de :** Stories 46.1-46.3
 **Priorité :** Haute
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Tests unitaires : getAbonnementActif par userId, résolution owner, exclusion isBlocked
@@ -283,7 +283,7 @@
 **Assigné à :** @developer
 **Priorité :** Critique
 **Complexité :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Adapter les routes de création bacs/vagues/sites pour utiliser le nouveau système de quota via owner, et différencier les messages d'erreur selon le rôle.
 
@@ -313,7 +313,7 @@
 **Dépend de :** Story 47.1
 **Priorité :** Critique
 **Complexité :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Adapter la route POST /api/abonnements pour le user-level. Ajouter le garde-fou contre les changements concurrents.
 
@@ -342,7 +342,7 @@
 **Dépend de :** Story 47.2
 **Priorité :** Haute
 **Complexité :** Moyenne
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Adapter les services de billing, webhooks et rappels pour le user-level.
 
@@ -367,7 +367,7 @@
 **Assigné à :** @tester + @code-reviewer
 **Dépend de :** Stories 47.1-47.3
 **Priorité :** Haute
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Tests API : création bacs/vagues bloquée quand quota atteint (via owner)

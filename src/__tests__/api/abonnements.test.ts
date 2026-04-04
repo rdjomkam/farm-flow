@@ -2,14 +2,18 @@
  * Tests d'intégration — Routes /api/abonnements (Sprint 32)
  *
  * Couvre :
- * - POST /abonnements — crée abonnement + initie paiement
+ * - POST /abonnements — crée abonnement + initie paiement (via $transaction)
+ * - POST /abonnements — garde-fou 409 EN_ATTENTE_PAIEMENT existant
  * - POST /abonnements — code remise invalide → 400
  * - GET /abonnements/actif — retourne l'abonnement ACTIF
  * - POST /abonnements/[id]/renouveler — depuis EXPIRE → EN_ATTENTE_PAIEMENT
+ * - POST /abonnements/[id]/renouveler — soldeCredit déduit atomiquement
  * - POST /abonnements/[id]/annuler — statut → ANNULE (R4 atomique)
  *
  * Story 32.5 — Sprint 32
+ * Story 47.2 — Sprint 47 : garde-fou 409 + soldeCredit renouvellement
  * R2 : enums StatutAbonnement, Permission importés depuis @/types
+ * ERR-017 : mocks mis à jour pour les nouvelles $transactions (garde-fou + soldeCredit)
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -18,7 +22,14 @@ import { GET as GET_ACTIF } from "@/app/api/abonnements/actif/route";
 import { POST as POST_ANNULER } from "@/app/api/abonnements/[id]/annuler/route";
 import { POST as POST_RENOUVELER } from "@/app/api/abonnements/[id]/renouveler/route";
 import { NextRequest } from "next/server";
-import { Permission, StatutAbonnement, PeriodeFacturation, FournisseurPaiement, TypePlan, StatutPaiementAbo } from "@/types";
+import {
+  Permission,
+  StatutAbonnement,
+  PeriodeFacturation,
+  FournisseurPaiement,
+  TypePlan,
+  StatutPaiementAbo,
+} from "@/types";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -27,7 +38,9 @@ import { Permission, StatutAbonnement, PeriodeFacturation, FournisseurPaiement, 
 const mockGetAbonnements = vi.fn();
 const mockGetAbonnementById = vi.fn();
 const mockGetAbonnementActif = vi.fn();
+// mockCreateAbonnement kept for backward-compat (annuler route may call it indirectly via mocks)
 const mockCreateAbonnement = vi.fn();
+const mockLogAbonnementAudit = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("@/lib/queries/abonnements", () => ({
   getAbonnements: (...args: unknown[]) => mockGetAbonnements(...args),
@@ -36,6 +49,7 @@ vi.mock("@/lib/queries/abonnements", () => ({
   getAbonnementActifPourSite: (...args: unknown[]) => mockGetAbonnementActif(...args),
   createAbonnement: (...args: unknown[]) => mockCreateAbonnement(...args),
   activerAbonnement: vi.fn(),
+  logAbonnementAudit: (...args: unknown[]) => mockLogAbonnementAudit(...args),
 }));
 
 const mockGetPlanAbonnementById = vi.fn();
@@ -62,8 +76,6 @@ vi.mock("@/lib/services/remises-automatiques", () => ({
   verifierEtAppliquerRemiseAutomatique: vi.fn().mockResolvedValue(undefined),
 }));
 
-// Story 46.1 — invalidateSubscriptionCaches utilise prisma.site.findMany
-// On le mock directement pour éviter de simuler toute la table site
 vi.mock("@/lib/abonnements/invalidate-caches", () => ({
   invalidateSubscriptionCaches: vi.fn().mockResolvedValue(undefined),
 }));
@@ -97,21 +109,43 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 
+// ---------------------------------------------------------------------------
+// Mock prisma avec support $transaction (Story 47.2)
+//
+// POST /api/abonnements : $transaction(async tx => { tx.abonnement.count, tx.abonnement.create })
+// POST /api/abonnements/[id]/renouveler : $transaction(async tx => {
+//   tx.user.findUniqueOrThrow, tx.user.update, tx.abonnement.create
+// })
+// ---------------------------------------------------------------------------
+const mockTxAbonnementCount = vi.fn();
+const mockTxAbonnementCreate = vi.fn();
+const mockTxUserFindUniqueOrThrow = vi.fn();
+const mockTxUserUpdate = vi.fn();
+
+const mockTx = {
+  abonnement: {
+    count: (...args: unknown[]) => mockTxAbonnementCount(...args),
+    create: (...args: unknown[]) => mockTxAbonnementCreate(...args),
+  },
+  user: {
+    findUniqueOrThrow: (...args: unknown[]) => mockTxUserFindUniqueOrThrow(...args),
+    update: (...args: unknown[]) => mockTxUserUpdate(...args),
+  },
+};
+
 vi.mock("@/lib/db", () => ({
   prisma: {
     abonnement: {
       updateMany: (...args: unknown[]) => mockPrismaUpdateMany(...args),
       findFirst: vi.fn(),
     },
+    $transaction: async (fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx),
   },
 }));
 
-// Story 46.1 : invalidateSubscriptionCaches est appelé par les routes POST après
-// chaque mutation (souscription, annulation, renouvellement). Mock nécessaire pour
-// éviter un appel Prisma non mockable (site.findMany) et une erreur 500 dans les tests.
-vi.mock("@/lib/abonnements/invalidate-caches", () => ({
-  invalidateSubscriptionCaches: vi.fn().mockResolvedValue(undefined),
-}));
+// ---------------------------------------------------------------------------
+// Fixtures
+// ---------------------------------------------------------------------------
 
 const AUTH_CONTEXT = {
   userId: "user-1",
@@ -174,13 +208,18 @@ const FAKE_ABONNEMENT = {
 describe("POST /api/abonnements", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Réinitialiser les mocks de transaction : aucun EN_ATTENTE_PAIEMENT par défaut
+    mockTxAbonnementCount.mockResolvedValue(0);
+    mockTxAbonnementCreate.mockResolvedValue(FAKE_ABONNEMENT);
+    mockLogAbonnementAudit.mockResolvedValue(undefined);
   });
 
-  it("souscription valide → créer abonnement + initier paiement → 201", async () => {
+  it("souscription valide → garde-fou OK + créer abonnement (via $transaction) + initier paiement → 201", async () => {
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
     mockGetPlanAbonnementById.mockResolvedValue(FAKE_PLAN);
     mockVerifierRemiseApplicable.mockResolvedValue({ remise: null, erreur: undefined });
-    mockCreateAbonnement.mockResolvedValue(FAKE_ABONNEMENT);
+    mockTxAbonnementCount.mockResolvedValue(0); // Pas d'EN_ATTENTE_PAIEMENT existant
+    mockTxAbonnementCreate.mockResolvedValue(FAKE_ABONNEMENT);
     mockInitierPaiement.mockResolvedValue({
       paiementId: "paiement-1",
       referenceExterne: "ref-123",
@@ -202,8 +241,31 @@ describe("POST /api/abonnements", () => {
     expect(res.status).toBe(201);
     expect(data.abonnement).toBeDefined();
     expect(data.paiement.paiementId).toBe("paiement-1");
-    expect(mockCreateAbonnement).toHaveBeenCalledOnce();
+    // La création passe par tx.abonnement.create (dans $transaction)
+    expect(mockTxAbonnementCreate).toHaveBeenCalledOnce();
     expect(mockInitierPaiement).toHaveBeenCalledOnce();
+  });
+
+  it("EN_ATTENTE_PAIEMENT existant → garde-fou 409 (R4 / ERR-016)", async () => {
+    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
+    mockGetPlanAbonnementById.mockResolvedValue(FAKE_PLAN);
+    mockVerifierRemiseApplicable.mockResolvedValue({ remise: null, erreur: undefined });
+    // Simuler qu'un EN_ATTENTE_PAIEMENT existe déjà pour cet utilisateur
+    mockTxAbonnementCount.mockResolvedValue(1);
+
+    const req = makeRequest("http://localhost:3000/api/abonnements", {
+      method: "POST",
+      body: JSON.stringify({
+        planId: "plan-eleveur",
+        periode: PeriodeFacturation.MENSUEL,
+        fournisseur: FournisseurPaiement.MANUEL,
+      }),
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(409);
+    expect(mockTxAbonnementCreate).not.toHaveBeenCalled();
+    expect(mockInitierPaiement).not.toHaveBeenCalled();
   });
 
   it("code remise invalide → 400", async () => {
@@ -226,7 +288,7 @@ describe("POST /api/abonnements", () => {
     const res = await POST(req);
 
     expect(res.status).toBe(400);
-    expect(mockCreateAbonnement).not.toHaveBeenCalled();
+    expect(mockTxAbonnementCreate).not.toHaveBeenCalled();
   });
 
   it("planId manquant → 400", async () => {
@@ -374,17 +436,26 @@ describe("POST /api/abonnements/[id]/annuler", () => {
 describe("POST /api/abonnements/[id]/renouveler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Réinitialiser les mocks de transaction pour chaque test
+    mockTxUserFindUniqueOrThrow.mockResolvedValue({ soldeCredit: 0 });
+    mockTxUserUpdate.mockResolvedValue({});
+    mockLogAbonnementAudit.mockResolvedValue(undefined);
   });
 
-  it("renouveler depuis EXPIRE → crée nouvel abonnement EN_ATTENTE_PAIEMENT → 201", async () => {
+  it("renouveler depuis EXPIRE (solde=0) → crée nouvel abonnement EN_ATTENTE_PAIEMENT via $transaction → 201", async () => {
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
     mockGetAbonnementById.mockResolvedValue({
       ...FAKE_ABONNEMENT,
       statut: StatutAbonnement.EXPIRE,
     });
     mockGetPlanAbonnementById.mockResolvedValue(FAKE_PLAN);
-    const newAbonnement = { ...FAKE_ABONNEMENT, id: "abo-2", statut: StatutAbonnement.EN_ATTENTE_PAIEMENT };
-    mockCreateAbonnement.mockResolvedValue(newAbonnement);
+    const newAbonnement = {
+      ...FAKE_ABONNEMENT,
+      id: "abo-2",
+      statut: StatutAbonnement.EN_ATTENTE_PAIEMENT,
+    };
+    mockTxAbonnementCreate.mockResolvedValue(newAbonnement);
+    mockTxUserFindUniqueOrThrow.mockResolvedValue({ soldeCredit: 0 }); // Pas de crédit
     mockInitierPaiement.mockResolvedValue({
       paiementId: "paiement-2",
       referenceExterne: "ref-456",
@@ -401,8 +472,102 @@ describe("POST /api/abonnements/[id]/renouveler", () => {
     expect(res.status).toBe(201);
     expect(data.abonnement.id).toBe("abo-2");
     expect(data.paiement.paiementId).toBe("paiement-2");
-    expect(mockCreateAbonnement).toHaveBeenCalledOnce();
+    // Création passe par tx.abonnement.create (dans $transaction)
+    expect(mockTxAbonnementCreate).toHaveBeenCalledOnce();
     expect(mockInitierPaiement).toHaveBeenCalledOnce();
+    // Pas de mise à jour solde (solde = 0, rien à déduire)
+    expect(mockTxUserUpdate).not.toHaveBeenCalled();
+  });
+
+  it("renouveler avec soldeCredit > prixPlan → prixFinal=0, solde déduit atomiquement dans $transaction", async () => {
+    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
+    mockGetAbonnementById.mockResolvedValue({
+      ...FAKE_ABONNEMENT,
+      statut: StatutAbonnement.EXPIRE,
+    });
+    mockGetPlanAbonnementById.mockResolvedValue(FAKE_PLAN); // prixMensuel ELEVEUR = 3000
+    const newAbonnement = {
+      ...FAKE_ABONNEMENT,
+      id: "abo-3",
+      prixPaye: 0,
+      statut: StatutAbonnement.EN_ATTENTE_PAIEMENT,
+    };
+    mockTxAbonnementCreate.mockResolvedValue(newAbonnement);
+    // Solde de 5000 FCFA (> prixPlan de 3000 → prixFinal = 0, nouveauSolde = 2000)
+    mockTxUserFindUniqueOrThrow.mockResolvedValue({ soldeCredit: 5000 });
+    mockTxUserUpdate.mockResolvedValue({});
+    mockInitierPaiement.mockResolvedValue({
+      paiementId: "paiement-3",
+      referenceExterne: "ref-789",
+      statut: StatutPaiementAbo.INITIE,
+    });
+
+    const req = makeRequest("http://localhost:3000/api/abonnements/abo-1/renouveler", {
+      method: "POST",
+      body: JSON.stringify({ fournisseur: FournisseurPaiement.MANUEL }),
+    });
+    const res = await POST_RENOUVELER(req, { params: Promise.resolve({ id: "abo-1" }) });
+    const data = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(data.abonnement.id).toBe("abo-3");
+    // Le solde est mis à jour (5000 - 3000 = 2000)
+    expect(mockTxUserUpdate).toHaveBeenCalledOnce();
+    expect(mockTxUserUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ soldeCredit: 2000 }),
+      })
+    );
+    // L'abonnement est créé avec prixPaye = 0 (entièrement couvert par le crédit)
+    expect(mockTxAbonnementCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ prixPaye: 0 }),
+      })
+    );
+  });
+
+  it("renouveler avec soldeCredit partiel → prixFinal réduit, solde mis à zéro", async () => {
+    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
+    mockGetAbonnementById.mockResolvedValue({
+      ...FAKE_ABONNEMENT,
+      statut: StatutAbonnement.EXPIRE,
+    });
+    mockGetPlanAbonnementById.mockResolvedValue(FAKE_PLAN); // prixMensuel ELEVEUR = 3000
+    const newAbonnement = {
+      ...FAKE_ABONNEMENT,
+      id: "abo-4",
+      prixPaye: 1000,
+      statut: StatutAbonnement.EN_ATTENTE_PAIEMENT,
+    };
+    mockTxAbonnementCreate.mockResolvedValue(newAbonnement);
+    // Solde de 2000 FCFA (< prixPlan de 3000 → prixFinal = 1000, nouveauSolde = 0)
+    mockTxUserFindUniqueOrThrow.mockResolvedValue({ soldeCredit: 2000 });
+    mockTxUserUpdate.mockResolvedValue({});
+    mockInitierPaiement.mockResolvedValue({
+      paiementId: "paiement-4",
+      referenceExterne: "ref-101",
+      statut: StatutPaiementAbo.INITIE,
+    });
+
+    const req = makeRequest("http://localhost:3000/api/abonnements/abo-1/renouveler", {
+      method: "POST",
+      body: JSON.stringify({ fournisseur: FournisseurPaiement.MANUEL }),
+    });
+    const res = await POST_RENOUVELER(req, { params: Promise.resolve({ id: "abo-1" }) });
+
+    expect(res.status).toBe(201);
+    // Le solde est mis à 0
+    expect(mockTxUserUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ soldeCredit: 0 }),
+      })
+    );
+    // L'abonnement est créé avec prixPaye = 1000 (3000 - 2000)
+    expect(mockTxAbonnementCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ prixPaye: 1000 }),
+      })
+    );
   });
 
   it("renouveler un abonnement ACTIF → 400 (ne peut pas renouveler un abonnement actif)", async () => {
@@ -419,6 +584,6 @@ describe("POST /api/abonnements/[id]/renouveler", () => {
     const res = await POST_RENOUVELER(req, { params: Promise.resolve({ id: "abo-1" }) });
 
     expect(res.status).toBe(400);
-    expect(mockCreateAbonnement).not.toHaveBeenCalled();
+    expect(mockTxAbonnementCreate).not.toHaveBeenCalled();
   });
 });

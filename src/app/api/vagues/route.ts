@@ -183,8 +183,7 @@ export async function POST(request: NextRequest) {
       let limitesVagues: number;
 
       if (abonnement) {
-        const typePlan = abonnement.plan.typePlan as string;
-        const planLimites = (PLAN_LIMITES as Record<string, (typeof PLAN_LIMITES)[keyof typeof PLAN_LIMITES]>)[typePlan];
+        const planLimites = PLAN_LIMITES[abonnement.plan.typePlan as TypePlan];
         limitesVagues = planLimites
           ? planLimites.limitesVagues
           : PLAN_LIMITES[TypePlan.DECOUVERTE].limitesVagues;

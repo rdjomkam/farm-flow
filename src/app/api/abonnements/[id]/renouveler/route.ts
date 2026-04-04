@@ -4,29 +4,31 @@
  * POST /api/abonnements/[id]/renouveler — renouveler un abonnement expiré ou en grâce
  *
  * Story 32.2 — Sprint 32
- * R2 : enums importés depuis @/types
- * R4 : transitions de statut atomiques
+ * Story 47.2 — Sprint 47 : déduction soldeCredit atomique + logAbonnementAudit + fix R2
+ * R2 : TypePlan importé pour accès PLAN_TARIFS — jamais as keyof typeof (ERR-031)
+ * R4 : soldeCredit deduction + abonnement creation dans la même $transaction (ERR-016)
  * R8 : siteId = auth.activeSiteId
  */
 import { NextRequest, NextResponse } from "next/server";
-import { getAbonnementById, createAbonnement } from "@/lib/queries/abonnements";
+import { getAbonnementById, logAbonnementAudit } from "@/lib/queries/abonnements";
 import { getPlanAbonnementById } from "@/lib/queries/plans-abonnements";
 import { initierPaiement } from "@/lib/services/billing";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { invalidateSubscriptionCaches } from "@/lib/abonnements/invalidate-caches";
 import { AuthError } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import {
   Permission,
   StatutAbonnement,
   PeriodeFacturation,
   FournisseurPaiement,
+  TypePlan,
 } from "@/types";
 import { apiError } from "@/lib/api-utils";
 import {
   PLAN_TARIFS,
   calculerProchaineDate,
 } from "@/lib/abonnements-constants";
-import type { CreateAbonnementDTO } from "@/types";
 
 const VALID_FOURNISSEURS = Object.values(FournisseurPaiement);
 
@@ -45,17 +47,19 @@ export async function POST(
     }
 
     // Vérifier que l'abonnement peut être renouvelé
-    const statutsRenouvellables: string[] = [
+    const statutsRenouvellables: StatutAbonnement[] = [
       StatutAbonnement.EXPIRE,
       StatutAbonnement.EN_GRACE,
       StatutAbonnement.SUSPENDU,
       StatutAbonnement.ANNULE,
     ];
-    if (!statutsRenouvellables.includes(abonnement.statut as string)) {
+    if (!statutsRenouvellables.includes(abonnement.statut as StatutAbonnement)) {
       return NextResponse.json(
         {
           status: 400,
-          message: "Cet abonnement ne peut pas etre renouvel\u00e9. Statut actuel : " + abonnement.statut,
+          message:
+            "Cet abonnement ne peut pas etre renouvel\u00e9. Statut actuel : " +
+            abonnement.statut,
         },
         { status: 400 }
       );
@@ -64,7 +68,10 @@ export async function POST(
     const body = await request.json();
 
     // Validation du fournisseur (obligatoire pour le paiement)
-    if (!body.fournisseur || !VALID_FOURNISSEURS.includes(body.fournisseur as FournisseurPaiement)) {
+    if (
+      !body.fournisseur ||
+      !VALID_FOURNISSEURS.includes(body.fournisseur as FournisseurPaiement)
+    ) {
       return NextResponse.json(
         {
           status: 400,
@@ -80,32 +87,70 @@ export async function POST(
       return apiError(404, "Plan de l'abonnement introuvable ou inactif.");
     }
 
-    // Calculer le nouveau prix et les nouvelles dates
+    // Calculer le prix de base selon la période
+    // R2/ERR-031 : cast as TypePlan, jamais as keyof typeof PLAN_TARIFS
     const periode = abonnement.periode as PeriodeFacturation;
-    const tarifsType = PLAN_TARIFS[plan.typePlan as keyof typeof PLAN_TARIFS];
-    const prixFinal = (tarifsType?.[periode] ?? 0) as number;
+    const tarifsType = PLAN_TARIFS[plan.typePlan as TypePlan];
+    const prixPlan = (tarifsType?.[periode] ?? 0) as number;
 
     const dateDebut = new Date();
     const dateFin = calculerProchaineDate(dateDebut, periode);
     const dateProchainRenouvellement = dateFin;
 
-    // Créer un nouvel abonnement (renouvellement = nouvel abonnement lié au même plan)
-    const data: CreateAbonnementDTO = {
-      planId: abonnement.planId,
-      periode,
-      fournisseur: body.fournisseur as FournisseurPaiement,
-      phoneNumber: body.phoneNumber,
-    };
+    // Déduire le soldeCredit atomiquement avec la création de l'abonnement (R4 / ERR-016)
+    // Si la transaction échoue, le crédit n'est pas consommé.
+    const { nouvelAbonnement, soldeCrediteUtilise, prixFinal } =
+      await prisma.$transaction(async (tx) => {
+        // Lire le solde actuel
+        const user = await tx.user.findUniqueOrThrow({
+          where: { id: auth.userId },
+          select: { soldeCredit: true },
+        });
+        const soldeCredit = Number(user.soldeCredit);
 
-    const nouvelAbonnement = await createAbonnement(
-      auth.activeSiteId,
-      auth.userId,
-      data,
-      dateDebut,
-      dateFin,
-      dateProchainRenouvellement,
-      prixFinal
-    );
+        // Calculer les montants
+        const crediteUtilise = Math.min(soldeCredit, prixPlan);
+        const prixApresCredit = Math.max(0, prixPlan - soldeCredit);
+        const nouveauSolde = Math.max(0, soldeCredit - prixPlan);
+
+        // Mettre à jour le soldeCredit si une déduction est nécessaire
+        if (crediteUtilise > 0) {
+          await tx.user.update({
+            where: { id: auth.userId },
+            data: { soldeCredit: nouveauSolde },
+          });
+        }
+
+        // Créer le nouvel abonnement avec le prix après déduction du crédit
+        const createdAbonnement = await tx.abonnement.create({
+          data: {
+            siteId: auth.activeSiteId,
+            planId: abonnement.planId,
+            periode,
+            statut: StatutAbonnement.EN_ATTENTE_PAIEMENT,
+            dateDebut,
+            dateFin,
+            dateProchainRenouvellement,
+            prixPaye: prixApresCredit,
+            userId: auth.userId,
+          },
+        });
+
+        return {
+          nouvelAbonnement: createdAbonnement,
+          soldeCrediteUtilise: crediteUtilise,
+          prixFinal: prixApresCredit,
+        };
+      });
+
+    // Journaliser le renouvellement (fire-and-forget)
+    logAbonnementAudit(nouvelAbonnement.id, "RENOUVELLEMENT", auth.userId, {
+      abonnementPrecedentId: abonnement.id,
+      soldeCrediteUtilise,
+      prixFinal,
+    }).catch((err) => {
+      console.error("[renouveler] Erreur logAbonnementAudit (ignorée) :", err);
+    });
 
     // Initier le paiement pour le renouvellement
     const paiement = await initierPaiement(

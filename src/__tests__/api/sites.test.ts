@@ -38,6 +38,8 @@ const {
   mockUpdateSiteRole,
   mockDeleteSiteRole,
   mockCanAssignRole,
+  mockGetQuotaSites,
+  mockGetSubscriptionStatus,
 } = vi.hoisted(() => ({
   mockRequireAuth: vi.fn(),
   mockRequirePermission: vi.fn(),
@@ -57,6 +59,8 @@ const {
   mockUpdateSiteRole: vi.fn(),
   mockDeleteSiteRole: vi.fn(),
   mockCanAssignRole: vi.fn(),
+  mockGetQuotaSites: vi.fn(),
+  mockGetSubscriptionStatus: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -120,6 +124,15 @@ vi.mock("@/lib/db", () => ({
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
   revalidateTag: vi.fn(),
+  unstable_cache: (fn: (...args: unknown[]) => unknown) => fn,
+}));
+
+vi.mock("@/lib/abonnements/check-quotas", () => ({
+  getQuotaSites: (...args: unknown[]) => mockGetQuotaSites(...args),
+}));
+
+vi.mock("@/lib/abonnements/check-subscription", () => ({
+  getSubscriptionStatus: (...args: unknown[]) => mockGetSubscriptionStatus(...args),
 }));
 
 import { GET as getSites, POST as postSite } from "@/app/api/sites/route";
@@ -281,6 +294,14 @@ describe("POST /api/sites", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRequireAuth.mockResolvedValue(SESSION);
+    // Default: active subscription with remaining quota
+    mockGetSubscriptionStatus.mockResolvedValue({
+      statut: "ACTIF",
+      daysRemaining: 25,
+      planType: "ELEVEUR",
+      isDecouverte: false,
+    });
+    mockGetQuotaSites.mockResolvedValue({ used: 0, limit: 1, remaining: 1 });
   });
 
   it("cree un site — createSite appele avec (data, userId) sans permissions", async () => {
@@ -330,6 +351,37 @@ describe("POST /api/sites", () => {
 
     const response = await postSite(request);
     expect(response.status).toBe(400);
+  });
+
+  it("retourne 403 si quota de sites atteint", async () => {
+    mockGetQuotaSites.mockResolvedValue({ used: 1, limit: 1, remaining: 0 });
+
+    const request = makeRequest("/api/sites", {
+      method: "POST",
+      body: JSON.stringify({ name: "Ferme C" }),
+    });
+
+    const response = await postSite(request);
+    expect(response.status).toBe(403);
+    expect(mockCreateSite).not.toHaveBeenCalled();
+  });
+
+  it("retourne 402 si pas d'abonnement actif", async () => {
+    mockGetSubscriptionStatus.mockResolvedValue({
+      statut: null,
+      daysRemaining: null,
+      planType: null,
+      isDecouverte: false,
+    });
+
+    const request = makeRequest("/api/sites", {
+      method: "POST",
+      body: JSON.stringify({ name: "Ferme C" }),
+    });
+
+    const response = await postSite(request);
+    expect(response.status).toBe(402);
+    expect(mockCreateSite).not.toHaveBeenCalled();
   });
 });
 
