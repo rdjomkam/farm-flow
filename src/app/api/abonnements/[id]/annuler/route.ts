@@ -29,10 +29,13 @@ export async function POST(
     const { id } = await params;
     const auth = await requirePermission(request, Permission.ABONNEMENTS_GERER);
 
-    // Vérifier l'appartenance au site actif — R8
-    const abonnement = await getAbonnementById(id, auth.activeSiteId);
+    // Charger l'abonnement — Sprint 52 : ownership via userId (Decision 3)
+    const abonnement = await getAbonnementById(id);
     if (!abonnement) {
       return apiError(404, "Abonnement introuvable.");
+    }
+    if (abonnement.userId !== auth.userId) {
+      return apiError(403, "Accès refusé : cet abonnement n'appartient pas à votre compte.");
     }
 
     // Ne pas ré-annuler ou ré-annuler un abonnement déjà terminé
@@ -51,11 +54,12 @@ export async function POST(
     }
 
     // R4 : updateMany atomique avec condition — ne met à jour que les statuts valides
+    // Sprint 52 : ownership vérifié via userId (siteId supprimé d'Abonnement)
     // ERR-008 : comparaison via string cast pour éviter le conflit enum Prisma vs TypeScript
     const result = await prisma.abonnement.updateMany({
       where: {
         id,
-        siteId: auth.activeSiteId,
+        userId: auth.userId,
         statut: {
           notIn: [
             StatutAbonnement.ANNULE as never,

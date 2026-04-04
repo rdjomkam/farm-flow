@@ -11,6 +11,8 @@
  * - Deduplication via creerNotificationSiAbsente (une seule notification par type par jour)
  * - Seuils declencheurs : IN [14, 7, 3, 1]
  *
+ * Sprint 52 : siteId supprimé d'Abonnement — résolution via userId → site.ownerId (Decision 1)
+ *
  * R1 : enums MAJUSCULES
  * R2 : importer les enums depuis "@/types" (sauf TypeAlerte Prisma pour creerNotificationSiAbsente)
  * R4 : creerNotificationSiAbsente est atomique — pas de check-then-update sequentiel
@@ -120,6 +122,28 @@ export async function envoyerRappelsRenouvellement(): Promise<RappelsRenouvellem
     const titre = `Renouvellement dans ${jourTexte}`;
     const message = `Votre abonnement ${abonnement.plan.nom} expire dans ${jourTexte}. Renouvelez maintenant pour eviter l'interruption de service.`;
 
+    // Sprint 52 (Decision 1) : siteId n'est plus sur Abonnement.
+    // Résoudre le siteId via le premier site actif appartenant à l'utilisateur.
+    // Si aucun site trouvé : passer (edge case — utilisateur sans site).
+    let siteId: string | null = null;
+    try {
+      const site = await prisma.site.findFirst({
+        where: { ownerId: abonnement.userId },
+        select: { id: true },
+        orderBy: { createdAt: "asc" },
+      });
+      siteId = site?.id ?? null;
+    } catch {
+      // Erreur lors de la résolution du site — on passe
+    }
+
+    if (!siteId) {
+      console.warn(
+        `[rappels-abonnement] Aucun site trouvé pour userId=${abonnement.userId} — notification ignorée`
+      );
+      continue;
+    }
+
     // Exception R4 justifiée : pas de $transaction car chaque appel est
     // idempotent — creerNotificationSiAbsente effectue elle-même une
     // déduplication atomique (count + createIfNotExists) par jour/type.
@@ -127,7 +151,7 @@ export async function envoyerRappelsRenouvellement(): Promise<RappelsRenouvellem
     // repris à la prochaine exécution du CRON.
     try {
       await creerNotificationSiAbsente(
-        abonnement.siteId,
+        siteId,
         abonnement.userId,
         TypeAlerte.ABONNEMENT_RAPPEL_RENOUVELLEMENT,
         titre,
@@ -137,7 +161,7 @@ export async function envoyerRappelsRenouvellement(): Promise<RappelsRenouvellem
       envoyes++;
     } catch (err) {
       console.error(
-        `[rappels-abonnement] Échec notification pour abonnement ${abonnement.id} (siteId=${abonnement.siteId}, userId=${abonnement.userId}):`,
+        `[rappels-abonnement] Échec notification pour abonnement ${abonnement.id} (userId=${abonnement.userId}):`,
         err
       );
       // On continue : les autres abonnements ne doivent pas être bloqués

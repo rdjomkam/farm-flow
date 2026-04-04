@@ -482,9 +482,9 @@ export async function activerPack(
       prixPaye = Number(pack.plan.prixMensuel);
     }
 
+    // Sprint 52 : siteId supprimé de l'abonnement (user-level)
     await tx.abonnement.create({
       data: {
-        siteId: clientSite.id,
         planId: pack.plan.id,
         periode: periodeAbo,
         statut: StatutAbonnement.ACTIF,

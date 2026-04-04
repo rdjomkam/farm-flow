@@ -8,10 +8,10 @@
  *
  * POST — champs requis :
  *   - userId    : ID de l'utilisateur bénéficiaire
- *   - siteId    : ID du site (TEMPORAIRE — requis jusqu'au Sprint 52 où siteId
- *                 sera rendu nullable sur Abonnement)
  *   - motif     : raison de l'exonération (obligatoire)
  *   - dateFin?  : date de fin (optionnel — si absent → permanent = 2099-12-31)
+ *
+ * Sprint 52 : siteId supprimé — l'abonnement EXONERATION est au niveau user.
  *
  * Logique :
  *   1. Trouve le PlanAbonnement où typePlan = EXONERATION
@@ -21,7 +21,6 @@
  *
  * R2 : enums importés depuis @/types
  * R4 : opérations atomiques ($transaction)
- * R8 : siteId obligatoire (temporaire, voir workaround)
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireSuperAdmin } from "@/lib/auth/backoffice";
@@ -83,13 +82,6 @@ export async function POST(request: NextRequest) {
       errors.push({ field: "userId", message: "L'identifiant de l'utilisateur est obligatoire." });
     }
 
-    if (!body.siteId || typeof body.siteId !== "string" || body.siteId.trim() === "") {
-      errors.push({
-        field: "siteId",
-        message: "L'identifiant du site est obligatoire (temporaire jusqu'au Sprint 52).",
-      });
-    }
-
     if (!body.motif || typeof body.motif !== "string" || body.motif.trim() === "") {
       errors.push({ field: "motif", message: "Le motif de l'exoneration est obligatoire." });
     }
@@ -99,7 +91,6 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = body.userId.trim() as string;
-    const siteId = body.siteId.trim() as string;
     const motif = body.motif.trim() as string;
 
     // dateFin : si absente → permanent (2099-12-31)
@@ -127,17 +118,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Vérifier que le site existe
-    const site = await prisma.site.findUnique({
-      where: { id: siteId },
-      select: { id: true, name: true },
-    });
-    if (!site) {
-      return apiError(404, "Site introuvable.", {
-        errors: [{ field: "siteId", message: "Aucun site avec cet identifiant." }],
-      });
-    }
-
     // Trouver le plan EXONERATION (doit exister — créé lors du seed)
     const planExoneration = await prisma.planAbonnement.findFirst({
       where: { typePlan: TypePlan.EXONERATION },
@@ -147,12 +127,12 @@ export async function POST(request: NextRequest) {
     }
 
     // R4 : création atomique dans une $transaction
+    // Sprint 52 : siteId supprimé de l'abonnement (user-level)
     const abonnement = await prisma.$transaction(async (tx) => {
       const dateDebut = new Date();
 
       const newAbonnement = await tx.abonnement.create({
         data: {
-          siteId,
           planId: planExoneration.id,
           // R2 : enums via TypeScript enum
           periode: PeriodeFacturation.MENSUEL,
@@ -168,7 +148,6 @@ export async function POST(request: NextRequest) {
         },
         include: {
           plan: { select: { id: true, nom: true, typePlan: true } },
-          site: { select: { id: true, name: true } },
           user: { select: { id: true, name: true, email: true } },
         },
       });
@@ -180,7 +159,6 @@ export async function POST(request: NextRequest) {
     await logAbonnementAudit(abonnement.id, "EXONERATION", adminSession.userId, {
       motif,
       userId,
-      siteId,
       dateFin: dateFin.toISOString(),
       createdByAdmin: adminSession.userId,
     }).catch(() => {

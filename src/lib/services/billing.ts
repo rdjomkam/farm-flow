@@ -7,6 +7,7 @@
  * ADR-016 : Idempotence + atomicité
  * Story 31.4 — Sprint 31
  * Story 47.3 — Ownership check adapté au user-level (userId au lieu de siteId)
+ * Sprint 52 — siteId supprimé de initierPaiement et createPaiementAbonnement
  *
  * R2 : Utiliser les enums importés depuis "@/types"
  * R4 : Opérations atomiques via fonctions de query (updateMany)
@@ -48,7 +49,7 @@ export interface InitierPaiementResult {
  * Initie un paiement pour un abonnement donné.
  *
  * Étapes :
- * 1. Vérifier que l'abonnement appartient au userId (sécurité user-level — Story 47.3)
+ * 1. Vérifier que l'abonnement appartient au userId (sécurité user-level)
  * 2. Vérifier l'idempotence (pas de paiement EN_ATTENTE/INITIE existant)
  * 3. Créer un PaiementAbonnement EN_ATTENTE en DB
  * 4. Appeler la gateway pour initier le paiement
@@ -56,18 +57,14 @@ export interface InitierPaiementResult {
  *
  * @param abonnementId - ID de l'abonnement à payer
  * @param userId - ID de l'utilisateur propriétaire de l'abonnement (vérification ownership)
- * @param siteId - ID du site actif (utilisé pour créer le PaiementAbonnement en DB)
  * @param params - Détails du paiement (fournisseur, numéro de téléphone)
  */
 export async function initierPaiement(
   abonnementId: string,
   userId: string,
-  siteId: string,
   params: InitierPaiementDTO
 ): Promise<InitierPaiementResult> {
-  // Étape 1 : vérifier que l'abonnement appartient à l'utilisateur (user-level — Story 47.3)
-  // On ne filtre plus par siteId car l'abonnement est désormais au niveau user.
-  // Le siteId reste utilisé pour créer le PaiementAbonnement en DB (compatibilité schéma Sprint 52).
+  // Étape 1 : vérifier que l'abonnement appartient à l'utilisateur (user-level)
   const abonnement = await getAbonnementById(abonnementId);
 
   if (!abonnement) {
@@ -112,7 +109,6 @@ export async function initierPaiement(
     montant,
     fournisseur: params.fournisseur,
     initiePar: userId,
-    siteId,
     phoneNumber: params.phoneNumber,
   });
 

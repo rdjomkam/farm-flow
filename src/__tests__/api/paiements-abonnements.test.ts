@@ -7,8 +7,8 @@
  * - GET  /api/paiements/[id]/verifier     — vérifier statut paiement → 200 / 401 / 404
  *
  * Story 32.3 — Sprint 32
+ * Sprint 52 : siteId supprimé d'Abonnement/PaiementAbonnement — ownership via userId
  * R2 : enums StatutPaiementAbo, FournisseurPaiement, Permission importés depuis @/types
- * R8 : siteId = auth.activeSiteId
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -112,7 +112,7 @@ const FAKE_PLAN = {
 
 const FAKE_ABONNEMENT = {
   id: "abo-1",
-  siteId: "site-1",
+  // Sprint 52 : siteId supprimé d'Abonnement
   planId: "plan-eleveur",
   plan: FAKE_PLAN,
   periode: PeriodeFacturation.MENSUEL,
@@ -128,7 +128,7 @@ const FAKE_PAIEMENTS = [
   {
     id: "paiement-1",
     abonnementId: "abo-1",
-    siteId: "site-1",
+    // Sprint 52 : siteId supprimé de PaiementAbonnement
     statut: StatutPaiementAbo.CONFIRME,
     montant: 3000,
     fournisseur: FournisseurPaiement.MANUEL,
@@ -141,14 +141,14 @@ const FAKE_PAIEMENTS = [
 const FAKE_PAIEMENT_EN_ATTENTE = {
   id: "paiement-2",
   abonnementId: "abo-1",
-  siteId: "site-1",
+  // Sprint 52 : siteId supprimé de PaiementAbonnement
   statut: StatutPaiementAbo.INITIE,
   montant: 3000,
   fournisseur: FournisseurPaiement.MTN_MOMO,
   referenceExterne: "ref-mtn-002",
   dateConfirmation: null,
   createdAt: new Date(),
-  abonnement: { id: "abo-1", siteId: "site-1", statut: StatutAbonnement.ACTIF },
+  abonnement: { id: "abo-1", statut: StatutAbonnement.ACTIF },
 };
 
 function makeRequest(url: string, init?: RequestInit) {
@@ -176,8 +176,8 @@ describe("GET /api/abonnements/[id]/paiements", () => {
     expect(res.status).toBe(200);
     expect(data.paiements).toHaveLength(1);
     expect(data.total).toBe(1);
-    // R8 : siteId vérifié dans getAbonnementById
-    expect(mockGetAbonnementById).toHaveBeenCalledWith("abo-1", "site-1");
+    // Sprint 52 : ownership via userId — getAbonnementById sans siteId
+    expect(mockGetAbonnementById).toHaveBeenCalledWith("abo-1");
     expect(mockGetPaiementsByAbonnement).toHaveBeenCalledWith("abo-1");
   });
 
@@ -236,11 +236,10 @@ describe("POST /api/abonnements/[id]/paiements", () => {
     expect(data.paiementId).toBe("paiement-3");
     expect(data.referenceExterne).toBe("ref-mtn-003");
     expect(data.statut).toBe(StatutPaiementAbo.INITIE);
-    // Vérifier que initierPaiement est appelé avec les bons arguments
+    // Sprint 52 : initierPaiement sans siteId
     expect(mockInitierPaiement).toHaveBeenCalledWith(
       "abo-1",
       "user-1",
-      "site-1",
       expect.objectContaining({ fournisseur: FournisseurPaiement.MTN_MOMO })
     );
   });

@@ -2706,13 +2706,14 @@ export type DowngradeRessourcesAGarder = {
 };
 
 /**
- * Abonnement — Instance d'un abonnement liant un site à un PlanAbonnement.
+ * Abonnement — Instance d'un abonnement lié à un utilisateur.
  * R3 : miroir exact du modèle Prisma Abonnement.
- * R8 : siteId obligatoire.
+ * Sprint 52 : siteId rendu optionnel — l'abonnement est au niveau user, pas site.
  */
 export interface Abonnement {
   id: string;
-  siteId: string;
+  /** ID du site associé (optionnel depuis Sprint 52 — abonnement au niveau user) */
+  siteId?: string | null;
   planId: string;
   periode: PeriodeFacturation;
   /** Statut courant — R2 : utiliser StatutAbonnement.ACTIF */
@@ -2782,7 +2783,7 @@ export interface AbonnementWithPlan extends Abonnement {
 /**
  * PaiementAbonnement — Transaction de paiement pour un abonnement.
  * R3 : miroir exact du modèle Prisma PaiementAbonnement.
- * R8 : siteId obligatoire.
+ * Sprint 52 : siteId rendu optionnel — le paiement est lié à l'abonnement user-level.
  */
 export interface PaiementAbonnement {
   id: string;
@@ -2801,7 +2802,8 @@ export interface PaiementAbonnement {
   initiePar: string;
   dateInitiation: Date;
   dateConfirmation: Date | null;
-  siteId: string;
+  /** ID du site associé (optionnel depuis Sprint 52 — paiement au niveau user) */
+  siteId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -53,7 +53,8 @@ export default async function MonAbonnementPage() {
   // Charger les paiements si un abonnement actif existe
   let paiements: import("@/types").PaiementAbonnement[] = [];
   if (abonnementActif) {
-    const detail = await getAbonnementById(abonnementActif.id, session.activeSiteId);
+    // Sprint 52 : getAbonnementById sans siteId (ownership via userId)
+    const detail = await getAbonnementById(abonnementActif.id);
     paiements = (detail?.paiements ?? []).map((p) => ({
       ...p,
       montant: Number(p.montant),

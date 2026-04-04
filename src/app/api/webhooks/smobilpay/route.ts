@@ -121,32 +121,43 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           await invalidateSubscriptionCaches(paiementApresConfirm.abonnement.userId);
         }
 
-        // Story 43.5 : appliquer les modules du plan au site
-        // Fire-and-forget : ne pas bloquer le webhook si erreur module
-        if (paiementApresConfirm.abonnement?.planId) {
-          applyPlanModules(
-            paiementApresConfirm.siteId,
-            paiementApresConfirm.abonnement.planId
-          ).catch((modulesError) => {
+        // Story 43.5 : appliquer les modules du plan + commission ingénieur
+        // Sprint 52 (Decision 4) : siteId supprimé — résolution via userId → site.ownerId
+        // Fire-and-forget : ne pas bloquer le webhook si erreur
+        const userId = paiementApresConfirm.abonnement?.userId;
+        if (userId && paiementApresConfirm.abonnement?.planId) {
+          const planId = paiementApresConfirm.abonnement.planId;
+          prisma.site.findFirst({
+            where: { ownerId: userId },
+            select: { id: true },
+            orderBy: { createdAt: "asc" },
+          }).then((site) => {
+            if (!site) return;
+            // applyPlanModules
+            applyPlanModules(site.id, planId).catch((modulesError) => {
+              console.error(
+                "[webhook/smobilpay] Erreur applyPlanModules (non-bloquant) :",
+                modulesError instanceof Error ? modulesError.message : "Erreur inconnue"
+              );
+            });
+            // calculerEtCreerCommission
+            calculerEtCreerCommission(
+              paiementApresConfirm.abonnementId,
+              paiementApresConfirm.id,
+              site.id
+            ).catch((commissionError) => {
+              console.error(
+                "[webhook/smobilpay] Erreur commission (non-bloquant) :",
+                commissionError instanceof Error ? commissionError.message : "Erreur inconnue"
+              );
+            });
+          }).catch((siteError) => {
             console.error(
-              "[webhook/smobilpay] Erreur applyPlanModules (non-bloquant) :",
-              modulesError instanceof Error ? modulesError.message : "Erreur inconnue"
+              "[webhook/smobilpay] Erreur résolution siteId (non-bloquant) :",
+              siteError instanceof Error ? siteError.message : "Erreur inconnue"
             );
           });
         }
-
-        // Sprint 34 : calculer et créer la commission ingénieur si applicable
-        // Fire-and-forget : ne pas bloquer le webhook si erreur commission
-        calculerEtCreerCommission(
-          paiementApresConfirm.abonnementId,
-          paiementApresConfirm.id,
-          paiementApresConfirm.siteId
-        ).catch((commissionError) => {
-          console.error(
-            "[webhook/smobilpay] Erreur commission (non-bloquant) :",
-            commissionError instanceof Error ? commissionError.message : "Erreur inconnue"
-          );
-        });
       }
     } else if (
       statut === StatutPaiementAbo.ECHEC ||

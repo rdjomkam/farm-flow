@@ -62,7 +62,8 @@ export async function GET(request: NextRequest) {
     const dateFinBefore = searchParams.get("dateFinBefore");
     if (dateFinBefore) filters.dateFinBefore = dateFinBefore;
 
-    const abonnements = await getAbonnements(auth.activeSiteId, filters);
+    // Sprint 52 : getAbonnements par userId (user-level)
+    const abonnements = await getAbonnements(auth.userId, filters);
     return NextResponse.json({ abonnements, total: abonnements.length });
   } catch (error) {
     if (error instanceof AuthError) {
@@ -179,9 +180,9 @@ export async function POST(request: NextRequest) {
           throw new Error("EN_ATTENTE_PAIEMENT_EXISTE");
         }
 
+        // Sprint 52 : siteId supprimé de l'abonnement (user-level)
         return tx.abonnement.create({
           data: {
-            siteId: auth.activeSiteId,
             planId: data.planId,
             periode: data.periode,
             statut: StatutAbonnement.EN_ATTENTE_PAIEMENT,
@@ -231,8 +232,8 @@ export async function POST(request: NextRequest) {
       console.error("[abonnements] Erreur remise automatique (ignorée) :", err);
     });
 
-    // Initier le paiement
-    const paiement = await initierPaiement(abonnement.id, auth.userId, auth.activeSiteId, {
+    // Initier le paiement (Sprint 52 : siteId supprimé de initierPaiement)
+    const paiement = await initierPaiement(abonnement.id, auth.userId, {
       abonnementId: abonnement.id,
       phoneNumber: body.phoneNumber,
       fournisseur: body.fournisseur as FournisseurPaiement,

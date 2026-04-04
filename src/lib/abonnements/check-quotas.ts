@@ -5,6 +5,7 @@
  *
  * Story 36.4 — Sprint 36
  * Story 46.2 — Sprint 46 : isBlocked exclusion + getQuotaSites(userId)
+ * Sprint 52 — retrait du fallback DECOUVERTE dans resolvePlanLimites (lève une erreur si pas d'abonnement)
  * R2 : enums importés depuis @/types
  * R8 : siteId obligatoire
  *
@@ -87,17 +88,23 @@ export function isQuotaAtteint(ressource: QuotaRessource): boolean {
 /**
  * Résout les limites du plan à partir de l'abonnement actif.
  * Factorisé pour être partagé entre getQuotasUsage et getQuotasUsageWithCounts.
+ *
+ * Sprint 52 : retrait du fallback DECOUVERTE.
+ * Si aucun abonnement actif → lève QUOTA_NO_ABONNEMENT.
+ * Si le typePlan est inconnu → lève QUOTA_PLAN_INCONNU.
+ *
+ * @throws {Error} "QUOTA_NO_ABONNEMENT" si aucun abonnement actif
+ * @throws {Error} "QUOTA_PLAN_INCONNU" si le typePlan n'est pas dans PLAN_LIMITES
  */
 function resolvePlanLimites(abonnement: AbonnementAvecPlan) {
-  const decouverte = PLAN_LIMITES[TypePlan.DECOUVERTE];
   if (!abonnement) {
-    return { limitesBacs: decouverte.limitesBacs, limitesVagues: decouverte.limitesVagues, limitesSites: decouverte.limitesSites };
+    throw new Error("QUOTA_NO_ABONNEMENT");
   }
   const planLimites = PLAN_LIMITES[abonnement.plan.typePlan as TypePlan];
-  if (planLimites) {
-    return { limitesBacs: planLimites.limitesBacs, limitesVagues: planLimites.limitesVagues, limitesSites: planLimites.limitesSites };
+  if (!planLimites) {
+    throw new Error(`QUOTA_PLAN_INCONNU:${abonnement.plan.typePlan}`);
   }
-  return { limitesBacs: decouverte.limitesBacs, limitesVagues: decouverte.limitesVagues, limitesSites: decouverte.limitesSites };
+  return { limitesBacs: planLimites.limitesBacs, limitesVagues: planLimites.limitesVagues, limitesSites: planLimites.limitesSites };
 }
 
 export async function getQuotasUsage(siteId: string): Promise<QuotasUsage> {
@@ -166,10 +173,11 @@ export interface QuotaSites {
  *
  * - Compte les sites non-bloqués dont l'utilisateur est propriétaire (ownerId)
  * - Récupère la limite via getAbonnementActif(userId) → plan.limitesSites
- * - Fallback DECOUVERTE si aucun abonnement actif
+ * - Sprint 52 : lève une erreur si pas d'abonnement actif (fallback DECOUVERTE supprimé)
  *
  * @param userId - ID de l'utilisateur propriétaire des sites
  * @returns QuotaSites avec used, limit, remaining
+ * @throws {Error} "QUOTA_NO_ABONNEMENT" si aucun abonnement actif
  */
 export async function getQuotaSites(userId: string): Promise<QuotaSites> {
   const [abonnement, used] = await Promise.all([

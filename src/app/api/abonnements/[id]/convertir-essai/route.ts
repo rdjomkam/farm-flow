@@ -50,10 +50,13 @@ export async function POST(
     const { id } = await params;
     const auth = await requirePermission(request, Permission.ABONNEMENTS_GERER);
 
-    // Charger l'abonnement — R8 : siteId obligatoire
-    const abonnement = await getAbonnementById(id, auth.activeSiteId);
+    // Charger l'abonnement — Sprint 52 : ownership via userId (Decision 3)
+    const abonnement = await getAbonnementById(id);
     if (!abonnement) {
       return apiError(404, "Abonnement introuvable.");
+    }
+    if (abonnement.userId !== auth.userId) {
+      return apiError(403, "Accès refusé : cet abonnement n'appartient pas à votre compte.");
     }
 
     // Vérifier que c'est bien un essai
@@ -121,11 +124,11 @@ export async function POST(
     // R4 : Mettre à jour l'abonnement existant dans une $transaction
     // RISQUE-3 : on update l'abonnement existant (isEssai=false) au lieu d'en créer un nouveau
     // L'essai reste en statut EN_ATTENTE_PAIEMENT jusqu'à confirmation du paiement
+    // Sprint 52 : ownership déjà vérifié via userId ci-dessus
     const abonnementMisAJour = await prisma.$transaction(async (tx) => {
       return tx.abonnement.update({
         where: {
           id: abonnement.id,
-          siteId: auth.activeSiteId,
         },
         data: {
           isEssai: false,
@@ -151,8 +154,8 @@ export async function POST(
       console.error("[convertir-essai] Erreur logAbonnementAudit (ignoree) :", err);
     });
 
-    // Initier le paiement
-    const paiement = await initierPaiement(abonnement.id, auth.userId, auth.activeSiteId, {
+    // Initier le paiement (Sprint 52 : siteId supprimé de initierPaiement)
+    const paiement = await initierPaiement(abonnement.id, auth.userId, {
       abonnementId: abonnement.id,
       phoneNumber: body.phoneNumber,
       fournisseur: body.fournisseur as FournisseurPaiement,

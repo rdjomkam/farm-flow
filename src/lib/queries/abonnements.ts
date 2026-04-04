@@ -3,11 +3,11 @@
  *
  * R2 : importer les enums depuis @/types
  * R4 : toutes les transitions de statut via updateMany avec condition (jamais check-then-update)
- * R8 : siteId obligatoire sur toutes les queries
  *
  * Sprint 46 : getAbonnementActif prend userId (user-level).
  * getAbonnementActifPourSite résout site.ownerId → getAbonnementActif(ownerId).
- * getAbonnementActifParSite est l'alias de compatibilité ascendante.
+ * Sprint 52 : siteId supprimé de createAbonnement et getAbonnementById.
+ *             getAbonnementActifParSite (deprecated) supprimé.
  */
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db";
@@ -69,16 +69,6 @@ export function getAbonnementActifPourSite(siteId: string) {
   )();
 }
 
-/**
- * Alias de compatibilité ascendante pour les anciens appelants qui utilisaient
- * getAbonnementActif(siteId). À supprimer au Sprint 52.
- *
- * @deprecated Utiliser getAbonnementActifPourSite(siteId) à la place.
- */
-export function getAbonnementActifParSite(siteId: string) {
-  return getAbonnementActifPourSite(siteId);
-}
-
 // ---------------------------------------------------------------------------
 // getAbonnements — liste par userId avec filtres
 // ---------------------------------------------------------------------------
@@ -107,13 +97,13 @@ export async function getAbonnements(
   });
 }
 
-/** Récupère un abonnement par ID avec plan + paiements */
-export async function getAbonnementById(id: string, siteId?: string) {
+/**
+ * Récupère un abonnement par ID avec plan + paiements.
+ * Sprint 52 : siteId supprimé — l'ownership est vérifié via abonnement.userId côté appelant.
+ */
+export async function getAbonnementById(id: string) {
   return prisma.abonnement.findFirst({
-    where: {
-      id,
-      ...(siteId && { siteId }),
-    },
+    where: { id },
     include: {
       plan: true,
       paiements: {
@@ -128,10 +118,10 @@ export async function getAbonnementById(id: string, siteId?: string) {
 
 /**
  * Crée un abonnement en statut EN_ATTENTE_PAIEMENT.
+ * Sprint 52 : siteId supprimé — l'abonnement est au niveau user.
  * Le paiement doit être confirmé séparément pour activer l'abonnement.
  */
 export async function createAbonnement(
-  siteId: string,
   userId: string,
   data: CreateAbonnementDTO,
   dateDebut: Date,
@@ -141,7 +131,6 @@ export async function createAbonnement(
 ) {
   return prisma.abonnement.create({
     data: {
-      siteId,
       planId: data.planId,
       periode: data.periode,
       statut: StatutAbonnement.EN_ATTENTE_PAIEMENT,
@@ -277,7 +266,7 @@ export async function getEssaisExpires() {
     },
     include: {
       plan: { select: { nom: true, typePlan: true } },
-      site: { select: { id: true, name: true } },
+      // Sprint 52 : site supprimé (relation nullable depuis la suppression de siteId)
       user: { select: { id: true, name: true, email: true, phone: true } },
     },
   });

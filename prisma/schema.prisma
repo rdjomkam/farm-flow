@@ -2547,14 +2547,14 @@ model PlanAbonnement {
 // ──────────────────────────────────────────
 
 /**
- * Abonnement — Instance d'un abonnement liant un site à un PlanAbonnement.
- * R8 : siteId obligatoire.
+ * Abonnement — Instance d'un abonnement lié à un utilisateur.
+ * Sprint 52 : siteId rendu nullable — l'abonnement est au niveau user, pas site.
  * R7 : dateFinGrace nullable (absent pour plan gratuit).
  */
 model Abonnement {
   id                         String             @id @default(cuid())
-  siteId                     String
-  site                       Site               @relation("AbonnementsSite", fields: [siteId], references: [id])
+  siteId                     String?
+  site                       Site?              @relation("AbonnementsSite", fields: [siteId], references: [id])
   planId                     String
   plan                       PlanAbonnement     @relation(fields: [planId], references: [id])
   periode                    PeriodeFacturation
@@ -2621,7 +2621,7 @@ model Abonnement {
 /**
  * PaiementAbonnement — Transaction de paiement pour un abonnement.
  * Idempotence : referenceExterne (unique côté gateway).
- * R8 : siteId obligatoire.
+ * Sprint 52 : siteId rendu nullable — le paiement est lié à l'abonnement user-level.
  */
 model PaiementAbonnement {
   id               String              @id @default(cuid())
@@ -2637,8 +2637,8 @@ model PaiementAbonnement {
   user             User                @relation("PaiementsAboUser", fields: [initiePar], references: [id])
   dateInitiation   DateTime
   dateConfirmation DateTime?
-  siteId           String
-  site             Site                @relation("PaiementsAboSite", fields: [siteId], references: [id])
+  siteId           String?
+  site             Site?               @relation("PaiementsAboSite", fields: [siteId], references: [id])
 
   commissions CommissionIngenieur[]
 
@@ -3115,8 +3115,8 @@ model EssaiUtilise {
 
 /**
  * AbonnementAudit — Journal d'audit des transitions d'abonnement.
- * Exception R8 documentée : pas de siteId car l'audit porte sur l'abonnement lui-même,
- * qui est déjà lié à un site via abonnement.siteId.
+ * Exception R8 documentée : pas de siteId car l'audit porte sur l'abonnement lui-même.
+ * Sprint 52 : abonnement.siteId est désormais nullable (abonnement au niveau user).
  * onDelete: Restrict sur abonnement (pas de suppression silencieuse d'un abonnement audité).
  * Actions possibles : CREATION, UPGRADE, DOWNGRADE, RENOUVELLEMENT, ANNULATION,
  *   ESSAI_DEBUT, ESSAI_CONVERSION, EXONERATION, CHANGEMENT_PERIODE, DOWNGRADE_ANNULE.

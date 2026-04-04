@@ -27,10 +27,13 @@ export async function GET(
     const { id } = await params;
     const auth = await requirePermission(request, Permission.ABONNEMENTS_VOIR);
 
-    // Vérifier que l'abonnement appartient au site actif — R8
-    const abonnement = await getAbonnementById(id, auth.activeSiteId);
+    // Sprint 52 : ownership via userId (Decision 3)
+    const abonnement = await getAbonnementById(id);
     if (!abonnement) {
       return apiError(404, "Abonnement introuvable.");
+    }
+    if (abonnement.userId !== auth.userId) {
+      return apiError(403, "Accès refusé : cet abonnement n'appartient pas à votre compte.");
     }
 
     // Récupérer l'historique des paiements (ordonnés par date DESC dans la query)
@@ -55,10 +58,13 @@ export async function POST(
     const { id } = await params;
     const auth = await requirePermission(request, Permission.ABONNEMENTS_GERER);
 
-    // Vérifier que l'abonnement appartient au site actif — R8
-    const abonnement = await getAbonnementById(id, auth.activeSiteId);
+    // Sprint 52 : ownership via userId (Decision 3)
+    const abonnement = await getAbonnementById(id);
     if (!abonnement) {
       return apiError(404, "Abonnement introuvable.");
+    }
+    if (abonnement.userId !== auth.userId) {
+      return apiError(403, "Accès refusé : cet abonnement n'appartient pas à votre compte.");
     }
 
     const body = await request.json();
@@ -74,9 +80,9 @@ export async function POST(
       );
     }
 
-    // Initier un nouveau paiement
+    // Initier un nouveau paiement (Sprint 52 : siteId supprimé de initierPaiement)
     // billing.initierPaiement gère l'idempotence : retourne le paiement en cours si existant
-    const paiement = await initierPaiement(id, auth.userId, auth.activeSiteId, {
+    const paiement = await initierPaiement(id, auth.userId, {
       abonnementId: id,
       phoneNumber: body.phoneNumber,
       fournisseur: body.fournisseur as FournisseurPaiement,

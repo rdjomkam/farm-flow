@@ -48,10 +48,13 @@ export async function POST(
     const { id } = await params;
     const auth = await requirePermission(request, Permission.ABONNEMENTS_GERER);
 
-    // Charger l'abonnement à upgrader — R8 : siteId obligatoire
-    const abonnement = await getAbonnementById(id, auth.activeSiteId);
+    // Charger l'abonnement — Sprint 52 : ownership via userId (Decision 3)
+    const abonnement = await getAbonnementById(id);
     if (!abonnement) {
       return apiError(404, "Abonnement introuvable.");
+    }
+    if (abonnement.userId !== auth.userId) {
+      return apiError(403, "Accès refusé : cet abonnement n'appartient pas à votre compte.");
     }
 
     // Vérifier que l'abonnement est actif ou en grâce
@@ -160,10 +163,9 @@ export async function POST(
           data: { soldeCredit: nouveauSolde },
         });
 
-        // 3. Créer le nouvel abonnement directement ACTIF
+        // 3. Créer le nouvel abonnement directement ACTIF (Sprint 52 : siteId supprimé)
         const nouvelAbonnement = await tx.abonnement.create({
           data: {
-            siteId: auth.activeSiteId,
             planId: nouveauPlan.id,
             periode,
             statut: StatutAbonnement.ACTIF,
@@ -193,10 +195,9 @@ export async function POST(
           );
         }
 
-        // Créer le nouvel abonnement en attente de paiement
+        // Créer le nouvel abonnement en attente de paiement (Sprint 52 : siteId supprimé)
         const nouvelAbonnement = await tx.abonnement.create({
           data: {
-            siteId: auth.activeSiteId,
             planId: nouveauPlan.id,
             periode,
             statut: StatutAbonnement.EN_ATTENTE_PAIEMENT,
@@ -236,10 +237,10 @@ export async function POST(
     // Si paiement requis : initier le paiement
     let paiementResult = null;
     if (result.type === "PAIEMENT_REQUIS") {
+      // Sprint 52 : siteId supprimé de initierPaiement
       paiementResult = await initierPaiement(
         result.nouvelAbonnement.id,
         auth.userId,
-        auth.activeSiteId,
         {
           abonnementId: result.nouvelAbonnement.id,
           phoneNumber: body.phoneNumber,

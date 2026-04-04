@@ -12,7 +12,7 @@
  * Story 44.4 — Sprint 44
  * R2 : enums importes depuis @/types
  * R4 : operation atomique dans $transaction
- * R8 : siteId obligatoire sur Abonnement
+ * Sprint 52 : siteId supprimé d'Abonnement — ownership via userId
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -185,7 +185,8 @@ describe("createAbonnementFromPack — pack DECOUVERTE", () => {
     expect(createCall.data.statut).toBe(StatutAbonnement.ACTIF);
     expect(createCall.data.planId).toBe(PLAN_DECOUVERTE.id);
     expect(createCall.data.prixPaye).toBe(0);
-    expect(createCall.data.siteId).toBe("site-client");
+    // Sprint 52 : siteId supprimé d'Abonnement — ownership via userId
+    expect(createCall.data.userId).toBe("user-1");
   });
 
   it("la dateFin est environ 1 mois apres dateDebut (MENSUEL)", async () => {
