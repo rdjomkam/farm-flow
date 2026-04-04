@@ -37,11 +37,11 @@ export default async function AnalyticsBacsPage({
         <Header title={t("bacAnalytics")} />
         <div className="flex flex-col gap-3 p-4">
           <p className="text-sm text-muted-foreground">
-            Sélectionnez une vague pour voir la comparaison des bacs.
+            {t("selectWave")}
           </p>
           {vagues.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              Aucune vague en cours.
+              {t("noWaveInProgress")}
             </p>
           ) : (
             <div className="flex flex-col gap-2">
@@ -58,7 +58,7 @@ export default async function AnalyticsBacsPage({
                       {v.nombreInitial} alevins
                     </p>
                   </div>
-                  <span className="text-xs text-primary">Comparer →</span>
+                  <span className="text-xs text-primary">{t("comparer")}</span>
                 </Link>
               ))}
             </div>
@@ -76,7 +76,7 @@ export default async function AnalyticsBacsPage({
         <Header title={t("bacAnalytics")} />
         <div className="p-4">
           <p className="py-8 text-center text-sm text-muted-foreground">
-            Vague introuvable.
+            {t("waveNotFound")}
           </p>
         </div>
       </>
@@ -96,7 +96,7 @@ export default async function AnalyticsBacsPage({
           <Button variant="ghost" size="sm" asChild>
             <Link href="/analytics/bacs">
               <ArrowLeft className="h-4 w-4" />
-              Changer de vague
+              {t("changerVague")}
             </Link>
           </Button>
         </div>

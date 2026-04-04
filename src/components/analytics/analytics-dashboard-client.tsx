@@ -206,16 +206,16 @@ export function AnalyticsDashboardClient({ dashboard }: AnalyticsDashboardClient
       {/* Section KPIs — 4 cartes */}
       <section>
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          Indicateurs cles
+          {t("dashboard.indicateursCles")}
         </h2>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {/* Meilleur bac */}
-          <KpiCard title="Meilleur bac" href="/analytics/bacs">
+          <KpiCard title={t("dashboard.meilleurBac")} href="/analytics/bacs">
             {meilleurBac ? (
               <>
                 <p className="text-base font-bold truncate">{meilleurBac.nom}</p>
                 <p className="text-xs text-muted-foreground">
-                  Densite {meilleurBac.densite} kg/m³
+                  {t("dashboard.densite")} {meilleurBac.densite} kg/m³
                 </p>
               </>
             ) : (
@@ -224,7 +224,7 @@ export function AnalyticsDashboardClient({ dashboard }: AnalyticsDashboardClient
           </KpiCard>
 
           {/* Meilleur aliment */}
-          <KpiCard title="Meilleur aliment" href="/analytics/aliments">
+          <KpiCard title={t("dashboard.meilleurAliment")} href="/analytics/aliments">
             {meilleurAliment ? (
               <>
                 <p className="text-base font-bold truncate">{meilleurAliment.nom}</p>
@@ -238,33 +238,33 @@ export function AnalyticsDashboardClient({ dashboard }: AnalyticsDashboardClient
           </KpiCard>
 
           {/* Alertes performance */}
-          <KpiCard title="Alertes performance">
+          <KpiCard title={t("dashboard.alertesPerformance")}>
             <div className="flex items-center gap-2">
               {alertesPerformance > 0 ? (
                 <>
                   <AlertTriangle className="h-5 w-5 text-danger shrink-0" />
                   <span className="text-2xl font-bold text-danger">{alertesPerformance}</span>
                   <span className="inline-flex items-center rounded-full bg-danger/10 px-2 py-0.5 text-[10px] font-medium text-danger">
-                    Actives
+                    {t("dashboard.actives")}
                   </span>
                 </>
               ) : (
                 <>
                   <span className="text-2xl font-bold text-success">0</span>
-                  <span className="text-xs text-muted-foreground">Tout est OK</span>
+                  <span className="text-xs text-muted-foreground">{t("dashboard.toutEstOk")}</span>
                 </>
               )}
             </div>
           </KpiCard>
 
           {/* Tendance FCR */}
-          <KpiCard title="Tendance FCR">
+          <KpiCard title={t("dashboard.tendanceFCR")}>
             <ErrorBoundary section="le graphique FCR">
               <SparklineFCR data={tendanceFCR} />
             </ErrorBoundary>
             {tendanceFCR.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                Dernier : FCR {tendanceFCR[tendanceFCR.length - 1]?.fcr}
+                {t("dashboard.dernierFCR", { value: tendanceFCR[tendanceFCR.length - 1]?.fcr })}
               </p>
             )}
           </KpiCard>
@@ -274,52 +274,52 @@ export function AnalyticsDashboardClient({ dashboard }: AnalyticsDashboardClient
       {/* Section stats secondaires */}
       <section>
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          Vue generale
+          {t("dashboard.vueGenerale")}
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatItem label="Vagues en cours" value={stats.vaguesEnCours} icon={Waves} />
-          <StatItem label="Bacs actifs" value={stats.bacsActifs} icon={Container} />
-          <StatItem label="Reproducteurs" value={stats.totalReproducteurs} icon={Package} />
-          <StatItem label="Lots en elevage" value={stats.totalLotsEnElevage} icon={BarChart3} />
+          <StatItem label={t("dashboard.vaguesEnCours")} value={stats.vaguesEnCours} icon={Waves} />
+          <StatItem label={t("dashboard.bacsActifs")} value={stats.bacsActifs} icon={Container} />
+          <StatItem label={t("dashboard.reproducteurs")} value={stats.totalReproducteurs} icon={Package} />
+          <StatItem label={t("dashboard.lotsEnElevage")} value={stats.totalLotsEnElevage} icon={BarChart3} />
         </div>
       </section>
 
       {/* Section liens rapides */}
       <section>
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          Accès rapide
+          {t("dashboard.accesRapide")}
         </h2>
         <div className="flex flex-col gap-2">
           <QuickLink
             href="/analytics/bacs"
             label="Par bac"
             icon={Container}
-            description="Comparer les indicateurs par bac"
+            description={t("dashboard.comparerBacs")}
           />
           <QuickLink
             href="/analytics/aliments"
             label="Par aliment"
             icon={Package}
-            description="Analyser l'efficacite des aliments"
+            description={t("dashboard.analyserAliments")}
           />
           <QuickLink
             href="/analytics/vagues"
             label="Par vague"
             icon={Waves}
-            description="Comparer les performances inter-vagues"
+            description={t("dashboard.comparerVagues")}
           />
           <QuickLink
             href="/analytics/finances"
             label="Finances"
             icon={Banknote}
-            description="Dashboard financier — bientot disponible"
+            description={`Dashboard financier — ${t("dashboard.bientotDisponible")}`}
             disabled
           />
           <QuickLink
             href="/analytics/tendances"
             label="Tendances"
             icon={TrendingUp}
-            description="Analyse des tendances — bientot disponible"
+            description={`Analyse des tendances — ${t("dashboard.bientotDisponible")}`}
             disabled
           />
         </div>

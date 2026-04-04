@@ -15,7 +15,8 @@
     "print": "Print",
     "search": "Search",
     "filter": "Filter",
-    "reset": "Reset"
+    "reset": "Reset",
+    "retry": "Retry"
   },
   "empty": {
     "noResults": "No results",

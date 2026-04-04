@@ -4,6 +4,12 @@
     "AVERTISSEMENT": "Warning",
     "INFO": "Info"
   },
+  "notifications": {
+    "aucuneNotification": "No notifications",
+    "aucuneActive": "No active notifications",
+    "aucuneLue": "No read notifications",
+    "aucuneTraitee": "No processed notifications"
+  },
   "card": {
     "nonLu": "Unread",
     "ctaLabels": {

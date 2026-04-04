@@ -1,4 +1,23 @@
 {
+  "sites": {
+    "aucunPlan": "Aucun plan",
+    "bloques": "Bloques",
+    "aucunSiteTrouve": "Aucun site trouve",
+    "releves": "Releves",
+    "supervise": "Supervise",
+    "creeLe": "Cree le",
+    "modifieLe": "Modifie le",
+    "aucunMembre": "Aucun membre.",
+    "aucunAbonnementActif": "Aucun abonnement actif.",
+    "periode": "Periode",
+    "debut": "Debut",
+    "finDeGrace": "Fin de grace",
+    "prixPaye": "Prix paye",
+    "aucunEvenementAudit": "Aucun evenement dans le journal d'audit."
+  },
+  "modules": {
+    "aucunModuleFiltre": "Aucun module ne correspond aux filtres."
+  },
   "siteStatus": {
     "title": "Changer le statut du site",
     "siteLabel": "Site :",

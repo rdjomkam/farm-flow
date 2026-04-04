@@ -42,12 +42,12 @@ export default async function SiteRolesPage({
             className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
           >
             <ArrowLeft className="h-4 w-4" />
-            Retour au site
+            {t("retourAuSite")}
           </Link>
           <Link href={`/settings/sites/${siteId}/roles/nouveau`}>
             <Button size="sm">
               <Plus className="h-4 w-4 mr-1" />
-              Nouveau role
+              {t("nouveauRole")}
             </Button>
           </Link>
         </div>
@@ -73,7 +73,7 @@ export default async function SiteRolesPage({
                     <span className="text-sm font-medium">{role.name}</span>
                     {role.isSystem && (
                       <Badge className="text-xs bg-primary/10 text-primary">
-                        Systeme
+                        {t("systeme")}
                       </Badge>
                     )}
                   </div>
@@ -84,9 +84,9 @@ export default async function SiteRolesPage({
                   )}
                   <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                     <Users className="h-3 w-3" />
-                    {role._count.members} membre{role._count.members !== 1 ? "s" : ""}
+                    {role._count.members} {role._count.members !== 1 ? t("membres") : t("membre")}
                     {" · "}
-                    {role.permissions.length} permission{role.permissions.length !== 1 ? "s" : ""}
+                    {role.permissions.length} {role.permissions.length !== 1 ? t("permissions") : t("permission")}
                   </p>
                 </div>
               </Link>

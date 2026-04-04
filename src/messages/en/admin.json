@@ -1,4 +1,23 @@
 {
+  "sites": {
+    "aucunPlan": "No plan",
+    "bloques": "Blocked",
+    "aucunSiteTrouve": "No site found",
+    "releves": "Records",
+    "supervise": "Supervised",
+    "creeLe": "Created on",
+    "modifieLe": "Modified on",
+    "aucunMembre": "No members.",
+    "aucunAbonnementActif": "No active subscription.",
+    "periode": "Period",
+    "debut": "Start",
+    "finDeGrace": "Grace period end",
+    "prixPaye": "Price paid",
+    "aucunEvenementAudit": "No events in the audit log."
+  },
+  "modules": {
+    "aucunModuleFiltre": "No module matches the filters."
+  },
   "siteStatus": {
     "title": "Change site status",
     "siteLabel": "Site:",

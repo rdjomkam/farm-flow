@@ -1,7 +1,11 @@
 {
   "page": {
     "detail": "Calibration detail",
-    "new": "New calibration"
+    "new": "New calibration",
+    "nouveau": "New",
+    "retourVague": "Back to batch",
+    "aucunCalibrage": "No grading records",
+    "aucunCalibrageDescription": "The first grading of this batch will appear here."
   },
   "categories": {
     "PETIT": "Small",

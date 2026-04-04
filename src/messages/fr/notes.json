@@ -2,7 +2,21 @@
   "emptyState": {
     "noNotes": "Aucune note",
     "noNotesFiltered": "Aucune note ne correspond à ce filtre.",
-    "noNotesSent": "Aucune note envoyée"
+    "noNotesSent": "Aucune note envoyée",
+    "noEchanges": "Aucun echange"
+  },
+  "observationDialog": {
+    "trigger": "Signaler un probleme",
+    "title": "Signaler un probleme"
+  },
+  "replyForm": {
+    "successMessage": "Reponse envoyee !",
+    "repondreLabel": "Repondre",
+    "reponsePlaceholder": "Votre reponse...",
+    "visibiliteLabel": "Visibilite",
+    "visibilitePublic": "Public (visible par le client)",
+    "visibiliteInterne": "Interne (DKFarm uniquement)",
+    "repondreButton": "Repondre"
   },
   "form": {
     "sectionInfos": "Informations de la note",

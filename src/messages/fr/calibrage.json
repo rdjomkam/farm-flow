@@ -1,7 +1,11 @@
 {
   "page": {
     "detail": "Détail du calibrage",
-    "new": "Nouveau calibrage"
+    "new": "Nouveau calibrage",
+    "nouveau": "Nouveau",
+    "retourVague": "Retour à la vague",
+    "aucunCalibrage": "Aucun calibrage",
+    "aucunCalibrageDescription": "Le premier calibrage de cette vague apparaitra ici."
   },
   "categories": {
     "PETIT": "Petit",

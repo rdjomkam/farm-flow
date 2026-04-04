@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ChevronRight, Scissors } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CalibrageCard } from "./calibrage-card";
 import type { CalibrageWithRelations } from "@/types";
@@ -13,12 +14,14 @@ interface CalibragesListProps {
 }
 
 export function CalibragesList({ calibrages, limit, vagueId }: CalibragesListProps) {
+  const t = useTranslations("calibrage.page");
+
   if (calibrages.length === 0) {
     return (
       <EmptyState
         icon={<Scissors className="h-7 w-7" />}
-        title="Aucun calibrage"
-        description="Le premier calibrage de cette vague apparaitra ici."
+        title={t("aucunCalibrage")}
+        description={t("aucunCalibrageDescription")}
       />
     );
   }

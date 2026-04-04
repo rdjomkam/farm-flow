@@ -2,7 +2,21 @@
   "emptyState": {
     "noNotes": "No notes",
     "noNotesFiltered": "No notes match this filter.",
-    "noNotesSent": "No notes sent"
+    "noNotesSent": "No notes sent",
+    "noEchanges": "No exchanges"
+  },
+  "observationDialog": {
+    "trigger": "Report an issue",
+    "title": "Report an issue"
+  },
+  "replyForm": {
+    "successMessage": "Reply sent!",
+    "repondreLabel": "Reply",
+    "reponsePlaceholder": "Your reply...",
+    "visibiliteLabel": "Visibility",
+    "visibilitePublic": "Public (visible to client)",
+    "visibiliteInterne": "Internal (DKFarm only)",
+    "repondreButton": "Reply"
   },
   "form": {
     "sectionInfos": "Note information",

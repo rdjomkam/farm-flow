@@ -73,7 +73,7 @@ export default async function IngenieurPage() {
             <div className="flex items-center gap-2 mb-3">
               <Bell className="h-4 w-4 text-danger" />
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Alertes actives ({alertesTriees.length})
+                {t("monitoring.alertesActives", { count: alertesTriees.length })}
               </h2>
             </div>
             <div className="flex flex-col gap-2">

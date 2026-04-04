@@ -49,9 +49,10 @@ export default async function NotesPage() {
 // ---------------------------------------------------------------------------
 
 async function ClientNotesView({ siteId }: { siteId: string }) {
-  const [notes, vaguesResult] = await Promise.all([
+  const [notes, vaguesResult, t] = await Promise.all([
     getClientFeed(siteId),
     getVagues(siteId, { statut: StatutVague.EN_COURS }),
+    getTranslations("notes"),
   ]);
 
   const vagues = vaguesResult.data.map((v) => ({ id: v.id, code: v.code }));
@@ -109,7 +110,7 @@ async function ClientNotesView({ siteId }: { siteId: string }) {
         {notes.length === 0 ? (
           <EmptyState
             icon={<MessageSquare className="h-7 w-7" />}
-            title="Aucun echange"
+            title={t("emptyState.noEchanges")}
             description="Signalez un probleme pour commencer la conversation avec votre ingenieur DKFarm."
           />
         ) : (

@@ -3,6 +3,7 @@
 import { forwardRef } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 const Dialog = DialogPrimitive.Root;
@@ -29,48 +30,51 @@ DialogOverlay.displayName = "DialogOverlay";
 const DialogContent = forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DialogPrimitive.Portal>
-    <DialogOverlay />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed z-50 bg-card shadow-lg",
-        "data-[state=open]:animate-in data-[state=open]:fade-in-0",
-        "data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
-        // Mobile : plein écran
-        "inset-0 rounded-none",
-        // Desktop : centré avec max-width
-        "md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2",
-        "md:max-w-lg md:w-full md:rounded-xl md:border md:border-border",
-        "md:data-[state=open]:zoom-in-95 md:data-[state=closed]:zoom-out-95",
-        className
-      )}
-      {...props}
-    >
-      {/*
-       * Inner layout: flex column capped at 85dvh.
-       * - DialogHeader: non-scrollable, stays at top
-       * - DialogBody (optional): flex-1 + overflow-y-auto for scrollable content
-       * - DialogFooter: sticky at bottom with safe-area padding
-       * Backward compatible: dialogs without DialogBody render children inline
-       * in the flex column — no independent scroll, but layout is preserved.
-       */}
-      <div
+>(({ className, children, ...props }, ref) => {
+  const tCommon = useTranslations("common.buttons");
+  return (
+    <DialogPrimitive.Portal>
+      <DialogOverlay />
+      <DialogPrimitive.Content
+        ref={ref}
         className={cn(
-          "flex flex-col h-full md:max-h-[85dvh] overflow-x-clip",
-          "px-4 pt-[max(1rem,env(safe-area-inset-top))] md:px-6 md:pt-0"
+          "fixed z-50 bg-card shadow-lg",
+          "data-[state=open]:animate-in data-[state=open]:fade-in-0",
+          "data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
+          // Mobile : plein écran
+          "inset-0 rounded-none",
+          // Desktop : centré avec max-width
+          "md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2",
+          "md:max-w-lg md:w-full md:rounded-xl md:border md:border-border",
+          "md:data-[state=open]:zoom-in-95 md:data-[state=closed]:zoom-out-95",
+          className
         )}
+        {...props}
       >
-        {children}
-      </div>
-      <DialogPrimitive.Close className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] md:top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px] min-w-[44px] flex items-center justify-center">
-        <X className="h-5 w-5" />
-        <span className="sr-only">Fermer</span>
-      </DialogPrimitive.Close>
-    </DialogPrimitive.Content>
-  </DialogPrimitive.Portal>
-));
+        {/*
+         * Inner layout: flex column capped at 85dvh.
+         * - DialogHeader: non-scrollable, stays at top
+         * - DialogBody (optional): flex-1 + overflow-y-auto for scrollable content
+         * - DialogFooter: sticky at bottom with safe-area padding
+         * Backward compatible: dialogs without DialogBody render children inline
+         * in the flex column — no independent scroll, but layout is preserved.
+         */}
+        <div
+          className={cn(
+            "flex flex-col h-full md:max-h-[85dvh] overflow-x-clip",
+            "px-4 pt-[max(1rem,env(safe-area-inset-top))] md:px-6 md:pt-0"
+          )}
+        >
+          {children}
+        </div>
+        <DialogPrimitive.Close className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] md:top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px] min-w-[44px] flex items-center justify-center">
+          <X className="h-5 w-5" />
+          <span className="sr-only">{tCommon("close")}</span>
+        </DialogPrimitive.Close>
+      </DialogPrimitive.Content>
+    </DialogPrimitive.Portal>
+  );
+});
 DialogContent.displayName = "DialogContent";
 
 function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {

@@ -226,7 +226,7 @@ export async function IngenieurDashboardSingleFarm({
         <div className="flex items-center gap-2 rounded-xl border border-success/30 bg-success/5 p-3">
           <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
           <p className="text-sm text-success font-medium">
-            Aucune alerte active pour ce site.
+            {t("emptyStates.noAlertesActiveSite")}
           </p>
         </div>
       )}

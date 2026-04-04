@@ -108,6 +108,28 @@
       "processing": "Enabling..."
     }
   },
+  "sites": {
+    "aucunPlan": "No plan",
+    "aucunSiteTrouve": "No site found",
+    "creeLe": "Created on",
+    "assignerA": "Assign to",
+    "siteIntrouvable": "Site not found",
+    "retourAuxSites": "Back to sites",
+    "aucunMembre": "No members.",
+    "aucunAbonnementActif": "No active subscription.",
+    "supervise": "Supervised",
+    "modifieLe": "Modified on",
+    "periode": "Period",
+    "debut": "Start",
+    "finDeGrace": "Grace period end",
+    "prixPaye": "Price paid"
+  },
+  "exonerationPage": {
+    "metaTitle": "Exemptions — DKFarm Backoffice",
+    "title": "Exemptions",
+    "description": "Free access granted manually (partners, NGOs, pilot projects).",
+    "newButton": "+ New exemption"
+  },
   "siteStatus": {
     "title": "Change site status",
     "siteLabel": "Site:",

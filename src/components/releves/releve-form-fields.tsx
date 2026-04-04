@@ -118,7 +118,10 @@ export function ReleveFormFields({
       {/* Zone d'annonce globale des erreurs pour les lecteurs d'écran */}
       {Object.keys(errors).length > 0 && (
         <div role="alert" aria-live="assertive" aria-atomic="true" className="sr-only">
-          {`Le formulaire contient ${Object.keys(errors).length} erreur${Object.keys(errors).length > 1 ? "s" : ""}. Veuillez corriger les champs indiqués.`}
+          {t("form.erreurFormulaire", {
+            count: Object.keys(errors).length,
+            plural: Object.keys(errors).length > 1 ? "s" : "",
+          })}
         </div>
       )}
 

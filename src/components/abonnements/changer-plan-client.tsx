@@ -14,6 +14,7 @@
  * Mobile-first (360px)
  */
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { ArrowUp, ArrowDown, Calendar, Check, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -86,6 +87,7 @@ export function ChangerPlanClient({
   bacs,
   vagues,
 }: ChangerPlanClientProps) {
+  const t = useTranslations("abonnements");
   const [selectedPlan, setSelectedPlan] = useState<PlanAbonnement | null>(null);
   const [selectedPeriode, setSelectedPeriode] = useState<PeriodeFacturation>(
     abonnement.periode
@@ -172,7 +174,7 @@ export function ChangerPlanClient({
       {/* Plan actuel */}
       <div className="rounded-lg border border-border bg-card p-4">
         <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
-          Plan actuel
+          {t("changerPlan.currentPlan")}
         </p>
         <div className="flex items-center justify-between">
           <div>
@@ -187,7 +189,7 @@ export function ChangerPlanClient({
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <Calendar className="h-3.5 w-3.5" />
             <span>
-              Expire le{" "}
+              {t("changerPlan.expiresOn")}{" "}
               {abonnement.dateFin.toLocaleDateString("fr-FR", {
                 day: "2-digit",
                 month: "2-digit",
@@ -200,7 +202,7 @@ export function ChangerPlanClient({
           <div className="mt-3 flex items-center gap-2 rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
             <Info className="h-3.5 w-3.5 shrink-0" />
             <span>
-              Crédit prorata disponible pour un upgrade :{" "}
+              {t("changerPlan.prorataCredit")}{" "}
               <strong>{formatXAF(creditProrata)}</strong>
             </span>
           </div>
@@ -212,7 +214,7 @@ export function ChangerPlanClient({
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <ArrowUp className="h-4 w-4 text-primary" />
-            Plans supérieurs (Upgrade)
+            {t("changerPlan.upgradePlans")}
           </h2>
           <div className="space-y-2">
             {plansUpgrade.map(({ plan, prix }) => {
@@ -235,11 +237,11 @@ export function ChangerPlanClient({
                       )}
                       {delta.montantAPayer === 0 ? (
                         <p className="mt-1 text-xs text-primary font-medium">
-                          Upgrade gratuit (couvert par votre crédit)
+                          {t("changerPlan.upgradeGratuit")}
                         </p>
                       ) : (
                         <p className="mt-1 text-xs text-muted-foreground">
-                          A payer aujourd'hui :{" "}
+                          {t("changerPlan.amountDueToday")}{" "}
                           <span className="font-medium text-foreground">
                             {formatXAF(delta.montantAPayer)}
                           </span>
@@ -252,7 +254,7 @@ export function ChangerPlanClient({
                       onClick={() => handleSelectPlanUpgrade(plan)}
                     >
                       <ArrowUp className="mr-1.5 h-3.5 w-3.5" />
-                      Upgrader
+                      {t("changerPlan.upgradeButton")}
                     </Button>
                   </div>
                 </div>
@@ -267,10 +269,10 @@ export function ChangerPlanClient({
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <ArrowDown className="h-4 w-4 text-muted-foreground" />
-            Plans inférieurs (Downgrade)
+            {t("changerPlan.downgradePlans")}
           </h2>
           <p className="text-xs text-muted-foreground">
-            Le downgrade sera appliqué au prochain renouvellement de votre abonnement.
+            {t("changerPlan.downgradeNote")}
           </p>
           <div className="space-y-2">
             {plansDowngrade.map(({ plan, prix }) => (
@@ -289,14 +291,14 @@ export function ChangerPlanClient({
                       </p>
                     )}
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Application le{" "}
+                      {t("changerPlan.applicationDate")}{" "}
                       {abonnement.dateProchainRenouvellement.toLocaleDateString("fr-FR")}
                     </p>
                   </div>
                   {(abonnement.downgradeVersId === plan.id) ? (
                     <div className="flex items-center gap-1.5 text-xs text-primary shrink-0">
                       <Check className="h-3.5 w-3.5" />
-                      Programmé
+                      {t("changerPlan.scheduled")}
                     </div>
                   ) : (
                     <Button
@@ -306,7 +308,7 @@ export function ChangerPlanClient({
                       onClick={() => handleSelectPlanDowngrade(plan)}
                     >
                       <ArrowDown className="mr-1.5 h-3.5 w-3.5" />
-                      Downgrader
+                      {t("changerPlan.downgradeButton")}
                     </Button>
                   )}
                 </div>
@@ -320,7 +322,7 @@ export function ChangerPlanClient({
       {plansUpgrade.length === 0 && plansDowngrade.length === 0 && (
         <div className="rounded-lg border border-border bg-card p-6 text-center">
           <p className="text-sm text-muted-foreground">
-            Aucun autre plan disponible pour votre catégorie.
+            {t("changerPlan.noOtherPlan")}
           </p>
         </div>
       )}
@@ -329,10 +331,10 @@ export function ChangerPlanClient({
       <Dialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
         <DialogContent className="max-w-md w-full mx-4">
           <DialogHeader>
-            <DialogTitle>Upgrader votre plan</DialogTitle>
+            <DialogTitle>{t("changerPlan.upgradeDialogTitle")}</DialogTitle>
             <DialogDescription>
               {selectedPlan &&
-                `Passer au plan ${PLAN_LABELS[selectedPlan.typePlan as TypePlan]}`}
+                t("changerPlan.upgradeDialogDesc", { planName: PLAN_LABELS[selectedPlan.typePlan as TypePlan] })}
             </DialogDescription>
           </DialogHeader>
           {selectedPlan && (
@@ -340,7 +342,7 @@ export function ChangerPlanClient({
               {/* Sélecteur de période */}
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-foreground">
-                  Période de facturation
+                  {t("changerPlan.billingPeriod")}
                 </label>
                 <Select
                   value={selectedPeriode}
@@ -378,16 +380,12 @@ export function ChangerPlanClient({
       <Dialog open={downgradeDialogOpen} onOpenChange={setDowngradeDialogOpen}>
         <DialogContent className="max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Programmer un downgrade</DialogTitle>
+            <DialogTitle>{t("changerPlan.downgradeDialogTitle")}</DialogTitle>
             <DialogDescription>
               {selectedPlan && downgradeStep === "select" && (
-                <>
-                  Sélectionnez les ressources à conserver avec le plan{" "}
-                  {PLAN_LABELS[selectedPlan.typePlan as TypePlan]}.
-                  Les autres seront bloquées.
-                </>
+                t("changerPlan.downgradeDialogSelectDesc", { planName: PLAN_LABELS[selectedPlan.typePlan as TypePlan] })
               )}
-              {downgradeStep === "confirm" && "Confirmez votre downgrade."}
+              {downgradeStep === "confirm" && t("changerPlan.downgradeDialogConfirmDesc")}
             </DialogDescription>
           </DialogHeader>
 
@@ -397,9 +395,9 @@ export function ChangerPlanClient({
                 <Check className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="font-semibold text-foreground">Downgrade programmé !</p>
+                <p className="font-semibold text-foreground">{t("changerPlan.downgradeSuccess")}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Le downgrade sera appliqué au prochain renouvellement.
+                  {t("changerPlan.downgradeSuccessDesc")}
                 </p>
               </div>
               <Button
@@ -407,7 +405,7 @@ export function ChangerPlanClient({
                 onClick={() => setDowngradeDialogOpen(false)}
                 className="min-h-[44px]"
               >
-                Fermer
+                {t("changerPlan.close")}
               </Button>
             </div>
           ) : (
@@ -439,8 +437,8 @@ export function ChangerPlanClient({
                       className="w-full min-h-[44px]"
                     >
                       {downgradeLoading
-                        ? "Enregistrement..."
-                        : "Confirmer le downgrade programmé"}
+                        ? t("changerPlan.saving")
+                        : t("changerPlan.confirmDowngrade")}
                     </Button>
                     <Button
                       type="button"
@@ -448,7 +446,7 @@ export function ChangerPlanClient({
                       onClick={() => setDowngradeStep("select")}
                       className="w-full"
                     >
-                      Modifier la sélection
+                      {t("changerPlan.editSelection")}
                     </Button>
                   </div>
                 )}

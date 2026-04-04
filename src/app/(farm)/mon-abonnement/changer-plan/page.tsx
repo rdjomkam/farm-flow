@@ -12,6 +12,7 @@
  */
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getAbonnementActifPourSite } from "@/lib/queries/abonnements";
@@ -35,6 +36,8 @@ export default async function ChangerPlanPage() {
 
   const permissions = await checkPagePermission(session, Permission.ABONNEMENTS_GERER);
   if (!permissions) redirect("/mon-abonnement");
+
+  const t = await getTranslations("abonnements");
 
   // Charger l'abonnement actif
   const abonnementActif = await getAbonnementActifPourSite(session.activeSiteId);
@@ -93,13 +96,13 @@ export default async function ChangerPlanPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header title="Changer de plan" />
+      <Header title={t("changerPlan.pageTitle")} />
       <main className="max-w-2xl mx-auto px-4 py-6">
         <Link
           href="/mon-abonnement"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4"
         >
-          ← Retour a mon abonnement
+          {t("changerPlan.backToSubscription")}
         </Link>
         <ChangerPlanClient
           abonnement={abonnementSerialise}

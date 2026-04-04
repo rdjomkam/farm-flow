@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import {
   Bell,
@@ -118,6 +119,7 @@ interface NotificationsListClientProps {
 export function NotificationsListClient({ notifications }: NotificationsListClientProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const t = useTranslations("alertes.notifications");
   const notificationService = useNotificationService();
   const [localNotifications, setLocalNotifications] = useState<Notification[]>(notifications);
 
@@ -247,7 +249,7 @@ export function NotificationsListClient({ notifications }: NotificationsListClie
 
         <TabsContent value="toutes">
           {localNotifications.length === 0 ? (
-            <EmptyState message="Aucune notification" />
+            <EmptyState message={t("aucuneNotification")} />
           ) : (
             <div className="flex flex-col gap-2">
               {localNotifications.map((n) => (
@@ -259,7 +261,7 @@ export function NotificationsListClient({ notifications }: NotificationsListClie
 
         <TabsContent value="actives">
           {actives.length === 0 ? (
-            <EmptyState message="Aucune notification active" />
+            <EmptyState message={t("aucuneActive")} />
           ) : (
             <div className="flex flex-col gap-2">
               {actives.map((n) => (
@@ -271,7 +273,7 @@ export function NotificationsListClient({ notifications }: NotificationsListClie
 
         <TabsContent value="lues">
           {lues.length === 0 ? (
-            <EmptyState message="Aucune notification lue" />
+            <EmptyState message={t("aucuneLue")} />
           ) : (
             <div className="flex flex-col gap-2">
               {lues.map((n) => (
@@ -283,7 +285,7 @@ export function NotificationsListClient({ notifications }: NotificationsListClie
 
         <TabsContent value="traitees">
           {traitees.length === 0 ? (
-            <EmptyState message="Aucune notification traitee" />
+            <EmptyState message={t("aucuneTraitee")} />
           ) : (
             <div className="flex flex-col gap-2">
               {traitees.map((n) => (

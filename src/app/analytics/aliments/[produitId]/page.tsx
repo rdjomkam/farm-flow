@@ -55,7 +55,7 @@ export default async function AnalyticsAlimentDetailPage({
         <Header title={t("alimDetail")} />
         <div className="p-4">
           <p className="py-8 text-center text-sm text-muted-foreground">
-            Produit aliment introuvable.
+            {t("feedNotFound")}
           </p>
         </div>
       </>
@@ -82,7 +82,7 @@ export default async function AnalyticsAlimentDetailPage({
           <Button variant="ghost" size="sm" asChild>
             <Link href="/analytics/aliments">
               <ArrowLeft className="h-4 w-4" />
-              Retour a la comparaison
+              {t("backToComparison")}
             </Link>
           </Button>
         </div>

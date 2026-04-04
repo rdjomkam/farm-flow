@@ -14,6 +14,7 @@
  */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Loader2, TrendingUp, AlertCircle, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +63,7 @@ export function UpgradeCheckoutForm({
   soldeCreditActuel,
 }: UpgradeCheckoutFormProps) {
   const router = useRouter();
+  const t = useTranslations("abonnements");
   const [fournisseur, setFournisseur] = useState<FournisseurPaiement>(
     FournisseurPaiement.MTN_MOMO
   );
@@ -95,7 +97,7 @@ export function UpgradeCheckoutForm({
 
   const handleUpgrade = async () => {
     if (!upgradeGratuit && !phoneNumber.trim()) {
-      setError("Veuillez entrer votre numéro de téléphone Mobile Money.");
+      setError(t("upgradeForm.phoneRequired"));
       return;
     }
 
@@ -117,7 +119,7 @@ export function UpgradeCheckoutForm({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message ?? "Erreur lors de l'upgrade.");
+        throw new Error(data.message ?? t("upgradeForm.upgradeError"));
       }
 
       setSuccess(true);
@@ -128,7 +130,7 @@ export function UpgradeCheckoutForm({
         router.refresh();
       }, 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue.");
+      setError(err instanceof Error ? err.message : t("upgradeForm.unknownError"));
     } finally {
       setLoading(false);
     }
@@ -141,11 +143,11 @@ export function UpgradeCheckoutForm({
           <Check className="h-6 w-6 text-primary" />
         </div>
         <div>
-          <p className="font-semibold text-foreground">Upgrade effectué !</p>
+          <p className="font-semibold text-foreground">{t("upgradeForm.upgradeSuccess")}</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {upgradeGratuit
-              ? "Votre plan a été mis à jour immédiatement."
-              : "Paiement initié. Redirection en cours..."}
+              ? t("upgradeForm.upgradeFreeSuccess")
+              : t("upgradeForm.upgradePaidSuccess")}
           </p>
         </div>
       </div>
@@ -158,24 +160,24 @@ export function UpgradeCheckoutForm({
       <div className="rounded-lg border border-border bg-card p-4 space-y-3">
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
           <TrendingUp className="h-4 w-4 text-primary" />
-          Résumé de votre upgrade
+          {t("upgradeForm.summaryTitle")}
         </div>
 
         <div className="space-y-2 text-sm">
           <div className="flex justify-between text-muted-foreground">
-            <span>Plan actuel</span>
+            <span>{t("upgradeForm.currentPlan")}</span>
             <span className="font-medium text-foreground">
               {PLAN_LABELS[abonnementActuel.plan.typePlan as TypePlan]}
             </span>
           </div>
           <div className="flex justify-between text-muted-foreground">
-            <span>Nouveau plan</span>
+            <span>{t("upgradeForm.newPlan")}</span>
             <span className="font-medium text-foreground">
               {PLAN_LABELS[nouveauPlan.typePlan as TypePlan]}
             </span>
           </div>
           <div className="flex justify-between text-muted-foreground">
-            <span>Période</span>
+            <span>{t("upgradeForm.period")}</span>
             <span className="font-medium text-foreground">
               {PERIODE_LABELS[periode]}
             </span>
@@ -184,14 +186,14 @@ export function UpgradeCheckoutForm({
           <hr className="border-border" />
 
           <div className="flex justify-between text-muted-foreground">
-            <span>Prix nouveau plan</span>
+            <span>{t("upgradeForm.newPlanPrice")}</span>
             <span className="font-medium text-foreground">
               {formatXAF(prixNouveauPlan)}
             </span>
           </div>
           {creditProrata > 0 && (
             <div className="flex justify-between text-muted-foreground">
-              <span>Crédit prorata (plan actuel)</span>
+              <span>{t("upgradeForm.prorataCredit")}</span>
               <span className="font-medium text-success">
                 -{formatXAF(creditProrata)}
               </span>
@@ -199,7 +201,7 @@ export function UpgradeCheckoutForm({
           )}
           {soldeCreditActuel > 0 && (
             <div className="flex justify-between text-muted-foreground">
-              <span>Solde crédit</span>
+              <span>{t("upgradeForm.creditBalance")}</span>
               <span className="font-medium text-success">
                 -{formatXAF(Math.min(soldeCreditActuel, prixNouveauPlan - creditProrata))}
               </span>
@@ -210,16 +212,16 @@ export function UpgradeCheckoutForm({
 
           <div className="flex justify-between text-base font-semibold">
             <span className="text-foreground">
-              {upgradeGratuit ? "A payer" : "Montant à payer"}
+              {upgradeGratuit ? t("upgradeForm.amountDue") : t("upgradeForm.amountToPay")}
             </span>
             <span className={upgradeGratuit ? "text-primary" : "text-foreground"}>
-              {upgradeGratuit ? "Gratuit" : formatXAF(delta.montantAPayer)}
+              {upgradeGratuit ? t("upgradeForm.free") : formatXAF(delta.montantAPayer)}
             </span>
           </div>
 
           {upgradeGratuit && delta.creditRestant > 0 && (
             <div className="flex justify-between text-sm text-muted-foreground">
-              <span>Crédit restant après upgrade</span>
+              <span>{t("upgradeForm.creditAfterUpgrade")}</span>
               <span className="font-medium text-success">
                 {formatXAF(delta.creditRestant)}
               </span>
@@ -234,7 +236,7 @@ export function UpgradeCheckoutForm({
           {/* Sélection du fournisseur */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-foreground">
-              Mode de paiement
+              {t("upgradeForm.paymentMode")}
             </label>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {FOURNISSEURS_DISPONIBLES.map((f) => (
@@ -261,7 +263,7 @@ export function UpgradeCheckoutForm({
               htmlFor="phone-upgrade"
               className="block text-sm font-medium text-foreground"
             >
-              Numéro Mobile Money
+              {t("upgradeForm.mobileMoneyNumber")}
             </label>
             <Input
               id="phone-upgrade"
@@ -273,7 +275,7 @@ export function UpgradeCheckoutForm({
               autoComplete="tel"
             />
             <p className="text-xs text-muted-foreground">
-              Format camerounais : 6XXXXXXXX (9 chiffres)
+              {t("upgradeForm.phoneFormat")}
             </p>
           </div>
         </div>
@@ -298,19 +300,19 @@ export function UpgradeCheckoutForm({
         {loading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Traitement en cours...
+            {t("upgradeForm.processing")}
           </>
         ) : upgradeGratuit ? (
-          "Confirmer l'upgrade gratuit"
+          t("upgradeForm.confirmFreeUpgrade")
         ) : (
-          `Payer ${formatXAF(delta.montantAPayer)}`
+          t("upgradeForm.payAmount", { amount: formatXAF(delta.montantAPayer) })
         )}
       </Button>
 
       <p className="text-center text-xs text-muted-foreground">
         {upgradeGratuit
-          ? "Le changement de plan sera effectif immédiatement."
-          : "Vous recevrez une demande de paiement sur votre téléphone."}
+          ? t("upgradeForm.upgradeEffectiveNow")
+          : t("upgradeForm.paymentRequestSent")}
       </p>
     </div>
   );

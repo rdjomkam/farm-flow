@@ -5,6 +5,7 @@
   },
   "monitoring": {
     "noActiveAlerts": "Aucune alerte active sur les sites clients.",
+    "alertesActives": "Alertes actives ({count})",
     "noActiveAlertsClient": "Aucune alerte active pour ce client.",
     "noWavesInProgress": "Aucune vague en cours.",
     "noNotesForClient": "Aucune note pour ce client.",
@@ -21,7 +22,14 @@
   },
   "greeting": "Bonjour, {name}",
   "emptyStates": {
-    "noTasksToday": "Aucune tâche pour aujourd'hui."
+    "noTasksToday": "Aucune tâche pour aujourd'hui.",
+    "noBiometrieData": "Aucune donnee de biometrie ou mortalite disponible pour",
+    "noAlertesActiveSite": "Aucune alerte active pour ce site.",
+    "noAlertesActiveClients": "Aucune alerte active sur les sites clients."
+  },
+  "commissions": {
+    "mesCommissions": "Mes commissions",
+    "aucuneCommission": "Aucune commission pour le moment."
   },
   "statuses": {
     "late": "En retard"

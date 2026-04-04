@@ -13,23 +13,21 @@
  * R2 : enums importés depuis @/types
  */
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { checkBackofficeAccess } from "@/lib/auth/backoffice";
 import { prisma } from "@/lib/db";
 import { ExonerationsList } from "@/components/backoffice/exonerations-list";
 import { ExonerationFormDialog } from "@/components/backoffice/exoneration-form-dialog";
 import { Button } from "@/components/ui/button";
 import { TypePlan, StatutAbonnement } from "@/types";
-import type { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "Exonerations — DKFarm Backoffice",
-};
 
 export const dynamic = "force-dynamic";
 
 export default async function BackofficeExonerationsPage() {
   const session = await checkBackofficeAccess();
   if (!session) redirect("/login");
+
+  const t = await getTranslations("backoffice.exonerationPage");
 
   // Récupérer tous les abonnements EXONERATION (tous statuts)
   // R2 : TypePlan.EXONERATION (enum importé)
@@ -70,16 +68,16 @@ export default async function BackofficeExonerationsPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-foreground">
-            Exonerations
+            {t("title")}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Acces gratuits accordes manuellement (partenaires, ONG, projets pilotes).
+            {t("description")}
           </p>
         </div>
         <ExonerationFormDialog
           trigger={
             <Button variant="primary">
-              + Nouvelle exoneration
+              {t("newButton")}
             </Button>
           }
         />

@@ -108,6 +108,28 @@
       "processing": "Activation..."
     }
   },
+  "sites": {
+    "aucunPlan": "Aucun plan",
+    "aucunSiteTrouve": "Aucun site trouve",
+    "creeLe": "Cree le",
+    "assignerA": "Assigner a",
+    "siteIntrouvable": "Site introuvable",
+    "retourAuxSites": "Retour aux sites",
+    "aucunMembre": "Aucun membre.",
+    "aucunAbonnementActif": "Aucun abonnement actif.",
+    "supervise": "Supervise",
+    "modifieLe": "Modifie le",
+    "periode": "Periode",
+    "debut": "Debut",
+    "finDeGrace": "Fin de grace",
+    "prixPaye": "Prix paye"
+  },
+  "exonerationPage": {
+    "metaTitle": "Exonerations — DKFarm Backoffice",
+    "title": "Exonerations",
+    "description": "Acces gratuits accordes manuellement (partenaires, ONG, projets pilotes).",
+    "newButton": "+ Nouvelle exoneration"
+  },
   "siteStatus": {
     "title": "Changer le statut du site",
     "siteLabel": "Site :",

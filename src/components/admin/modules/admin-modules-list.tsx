@@ -16,6 +16,7 @@
  */
 
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { Search, Package, Eye, EyeOff, Globe, Monitor } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -193,6 +194,7 @@ interface AdminModulesListProps {
 }
 
 export function AdminModulesList({ initialData }: AdminModulesListProps) {
+  const t = useTranslations("admin.modules");
   const [modules, setModules] = useState<ModuleDefinitionResponse[]>(
     initialData.modules
   );
@@ -279,7 +281,7 @@ export function AdminModulesList({ initialData }: AdminModulesListProps) {
       </p>
 
       {filtered.length === 0 ? (
-        <EmptyState label="Aucun module ne correspond aux filtres." />
+        <EmptyState label={t("aucunModuleFiltre")} />
       ) : (
         <>
           {/* Mobile cards */}

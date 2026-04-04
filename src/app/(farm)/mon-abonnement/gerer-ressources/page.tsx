@@ -10,6 +10,7 @@
  */
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { Permission } from "@/types";
@@ -31,6 +32,8 @@ export default async function GererRessourcesPage() {
   const permissions = await checkPagePermission(session, Permission.ABONNEMENTS_GERER);
   if (!permissions) redirect("/mon-abonnement");
 
+  const t = await getTranslations("abonnements");
+
   // Charger les ressources bloquées du site
   const [bacsBloqués, vaguesBloquées] = await Promise.all([
     prisma.bac.findMany({
@@ -49,19 +52,19 @@ export default async function GererRessourcesPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header title="Ressources bloquées" />
+      <Header title={t("gererRessources.blockedResources")} />
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
         <Link
           href="/mon-abonnement"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
         >
-          ← Retour a mon abonnement
+          {t("gererRessources.backToSubscription")}
         </Link>
         {nbBloques === 0 ? (
           <div className="rounded-lg border border-border bg-card p-6 text-center">
-            <p className="font-medium text-foreground mb-1">Aucune ressource bloquée</p>
+            <p className="font-medium text-foreground mb-1">{t("gererRessources.noBlockedResources")}</p>
             <p className="text-sm text-muted-foreground">
-              Toutes vos ressources sont actives.
+              {t("gererRessources.allResourcesActive")}
             </p>
           </div>
         ) : (

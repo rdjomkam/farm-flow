@@ -7,7 +7,17 @@
     "activityRules": "Activity rules",
     "newActivityRule": "New activity rule",
     "customPlaceholders": "Custom placeholders",
-    "noRoleConfigured": "No role configured."
+    "noRoleConfigured": "No role configured.",
+    "retourAuSite": "Back to site",
+    "nouveauRole": "New role",
+    "systeme": "System",
+    "membre": "member",
+    "membres": "members",
+    "permission": "permission",
+    "permissions": "permissions",
+    "reglesDescription": "Manage rules that automatically trigger activities on your batches. Global DKFarm rules apply to all sites, while this site's rules are your own.",
+    "placeholders": "Placeholders",
+    "alertesActives": "Active alerts ({count})"
   },
   "triggers": {
     "CALENDRIER": "Calendar",
@@ -106,7 +116,17 @@
       "noActiveRules": "No active rules.",
       "noInactiveRules": "No inactive rules.",
       "noRules": "No activity rules."
-    }
+    },
+    "firedOnceBadge": "Already triggered",
+    "noConditionSimple": "No composite condition — simple trigger:",
+    "titreAlerte": "Alert title",
+    "descriptionAlerte": "Alert description",
+    "notificationTemplates": "Alert templates",
+    "modifier": "Edit",
+    "reinitialiserFiredOnce": "Reset firedOnce",
+    "confirmer": "Confirm",
+    "supprimer": "Delete",
+    "resetFiredOnceDescription": "This rule will trigger again on the next evaluation cycle. Do you confirm this action?"
   },
   "placeholders": {
     "quantite_calculee": {

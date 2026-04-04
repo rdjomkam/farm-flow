@@ -106,6 +106,7 @@
       "notesPlaceholder": "Additional remarks...",
       "submit": "Save record"
     },
+    "erreurFormulaire": "The form contains {count} error{plural}. Please fix the indicated fields.",
     "errors": {
       "vagueId": "Select a batch.",
       "bacId": "Select a tank.",

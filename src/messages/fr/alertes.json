@@ -4,6 +4,12 @@
     "AVERTISSEMENT": "Avertissement",
     "INFO": "Info"
   },
+  "notifications": {
+    "aucuneNotification": "Aucune notification",
+    "aucuneActive": "Aucune notification active",
+    "aucuneLue": "Aucune notification lue",
+    "aucuneTraitee": "Aucune notification traitee"
+  },
   "card": {
     "nonLu": "Non lu",
     "ctaLabels": {

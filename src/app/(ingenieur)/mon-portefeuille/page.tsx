@@ -38,6 +38,7 @@ export default async function MonPortefeuillePage() {
   }
 
   const tIngenieur = await getTranslations("ingenieur.page");
+  const tCommissions = await getTranslations("ingenieur.commissions");
 
   // Charger le portefeuille + commissions récentes
   const { portefeuille, commissionsRecentes } = await getPortefeuille(session.userId);
@@ -84,11 +85,11 @@ export default async function MonPortefeuillePage() {
         {/* Historique des commissions */}
         <section>
           <h2 className="text-base font-semibold text-foreground mb-3">
-            Mes commissions
+            {tCommissions("mesCommissions")}
           </h2>
           {commissionsFormatted.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">
-              Aucune commission pour le moment.
+              {tCommissions("aucuneCommission")}
             </p>
           ) : (
             <CommissionsList commissions={commissionsFormatted} />

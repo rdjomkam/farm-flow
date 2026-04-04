@@ -115,5 +115,21 @@
     "creer": "Creer le profil",
     "enregistrer": "Enregistrer",
     "annuler": "Annuler"
+  },
+  "list": {
+    "deleteConfirm": "Supprimer le profil \"{nom}\" ?",
+    "duplicatePrompt": "Nom du profil duplique :",
+    "noProfiles": "Aucun profil de configuration.",
+    "default": "Par defaut",
+    "inactive": "Inactif",
+    "objective": "Objectif",
+    "duration": "Duree",
+    "survivalTarget": "Survie cible",
+    "excellent": "excellent",
+    "edit": "Modifier"
+  },
+  "page": {
+    "description": "Gerez les profils de configuration d'elevage de votre site. Chaque profil definit les benchmarks, les seuils d'alerte et les parametres d'alimentation.",
+    "newProfile": "Nouveau profil"
   }
 }

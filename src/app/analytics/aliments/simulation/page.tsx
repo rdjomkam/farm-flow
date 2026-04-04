@@ -27,7 +27,7 @@ export default async function AnalyticsSimulationPage() {
       <div className="flex flex-col gap-4 p-4">
         {comparaison.aliments.length < 2 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            Il faut au moins 2 aliments utilises pour lancer une simulation.
+            {t("minTwoFeeds")}
           </p>
         ) : (
           <FeedSimulator aliments={comparaison.aliments} />
@@ -37,7 +37,7 @@ export default async function AnalyticsSimulationPage() {
           <Button variant="ghost" size="sm" asChild>
             <Link href="/analytics/aliments">
               <ArrowLeft className="h-4 w-4" />
-              Retour a la comparaison
+              {t("backToComparison")}
             </Link>
           </Button>
         </div>

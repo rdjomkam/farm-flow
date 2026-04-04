@@ -11,6 +11,7 @@
 
 import { formatNumber } from "@/lib/format";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Building2, Users, Layers, Database, CheckCircle, XCircle } from "lucide-react";
 import { SiteStatus, SiteModule } from "@/types";
 import type { AdminSiteDetailResponse } from "@/types";
@@ -67,6 +68,7 @@ interface BackofficeSiteDetailClientProps {
 }
 
 export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSiteDetailClientProps) {
+  const t = useTranslations("backoffice.sites");
   const [site, setSite] = useState(initialSite);
 
   function handleModulesSaved(modules: SiteModule[]) {
@@ -133,9 +135,9 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
               <SiteInfoRow label="ID" value={site.id} mono />
               <SiteInfoRow label="Nom" value={site.name} />
               <SiteInfoRow label="Adresse" value={site.address ?? "—"} />
-              <SiteInfoRow label="Supervise" value={site.supervised ? "Oui" : "Non"} />
+              <SiteInfoRow label={t("supervise")} value={site.supervised ? "Oui" : "Non"} />
               <SiteInfoRow
-                label="Cree le"
+                label={t("creeLe")}
                 value={new Date(site.createdAt).toLocaleDateString("fr-FR", {
                   day: "2-digit",
                   month: "long",
@@ -143,7 +145,7 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
                 })}
               />
               <SiteInfoRow
-                label="Modifie le"
+                label={t("modifieLe")}
                 value={new Date(site.updatedAt).toLocaleDateString("fr-FR", {
                   day: "2-digit",
                   month: "long",
@@ -182,7 +184,7 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
             {site.members.length === 0 ? (
               <div className="flex flex-col items-center py-10 text-center">
                 <Users className="h-10 w-10 text-muted-foreground/40" />
-                <p className="mt-3 text-sm text-muted-foreground">Aucun membre.</p>
+                <p className="mt-3 text-sm text-muted-foreground">{t("aucunMembre")}</p>
               </div>
             ) : (
               <>
@@ -239,16 +241,16 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
           {!site.abonnementActif ? (
             <div className="flex flex-col items-center py-10 text-center">
               <XCircle className="h-10 w-10 text-muted-foreground/40" />
-              <p className="mt-3 text-sm text-muted-foreground">Aucun abonnement actif.</p>
+              <p className="mt-3 text-sm text-muted-foreground">{t("aucunAbonnementActif")}</p>
             </div>
           ) : (
             <div className="rounded-xl border border-border bg-card divide-y divide-border overflow-hidden">
               <SiteInfoRow label="Plan" value={site.abonnementActif.planNom} />
               <SiteInfoRow label="Type" value={site.abonnementActif.typePlan} />
               <SiteInfoRow label="Statut" value={site.abonnementActif.statut} />
-              <SiteInfoRow label="Periode" value={site.abonnementActif.periode} />
+              <SiteInfoRow label={t("periode")} value={site.abonnementActif.periode} />
               <SiteInfoRow
-                label="Debut"
+                label={t("debut")}
                 value={new Date(site.abonnementActif.dateDebut).toLocaleDateString("fr-FR", {
                   day: "2-digit", month: "long", year: "numeric",
                 })}
@@ -261,14 +263,14 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
               />
               {site.abonnementActif.dateFinGrace && (
                 <SiteInfoRow
-                  label="Fin de grace"
+                  label={t("finDeGrace")}
                   value={new Date(site.abonnementActif.dateFinGrace).toLocaleDateString("fr-FR", {
                     day: "2-digit", month: "long", year: "numeric",
                   })}
                 />
               )}
               <SiteInfoRow
-                label="Prix paye"
+                label={t("prixPaye")}
                 value={`${formatNumber(site.abonnementActif.prixPaye)} XAF`}
               />
             </div>

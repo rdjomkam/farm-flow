@@ -10,6 +10,7 @@
  */
 
 import { formatDateTime } from "@/lib/format";
+import { useTranslations } from "next-intl";
 import { Clock, User } from "lucide-react";
 
 interface AuditLogEntry {
@@ -46,11 +47,13 @@ function formatDetails(details: Record<string, unknown> | null): string | null {
 }
 
 export function AdminSiteAuditLog({ logs }: AdminSiteAuditLogProps) {
+  const t = useTranslations("admin.sites");
+
   if (logs.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-10 text-center">
         <Clock className="h-10 w-10 text-muted-foreground/40" />
-        <p className="mt-3 text-sm text-muted-foreground">Aucun événement dans le journal d&apos;audit.</p>
+        <p className="mt-3 text-sm text-muted-foreground">{t("aucunEvenementAudit")}</p>
       </div>
     );
   }

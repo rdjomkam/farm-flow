@@ -31,9 +31,7 @@ export default async function ReglesActivitesPage() {
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-muted-foreground flex-1">
-            Gerez les regles qui declenchent automatiquement des activites sur vos
-            vagues. Les regles globales DKFarm s&apos;appliquent a tous les sites,
-            les regles de ce site vous sont propres.
+            {t("reglesDescription")}
           </p>
           {permissions.includes(Permission.GERER_REGLES_GLOBALES) && (
             <Link
@@ -41,7 +39,7 @@ export default async function ReglesActivitesPage() {
               className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors ml-4 shrink-0"
             >
               <Variable className="h-4 w-4" />
-              Placeholders
+              {t("placeholders")}
             </Link>
           )}
         </div>

@@ -5,6 +5,7 @@
   },
   "monitoring": {
     "noActiveAlerts": "No active alerts on client sites.",
+    "alertesActives": "Active alerts ({count})",
     "noActiveAlertsClient": "No active alerts for this client.",
     "noWavesInProgress": "No waves in progress.",
     "noNotesForClient": "No notes for this client.",
@@ -21,7 +22,14 @@
   },
   "greeting": "Hello, {name}",
   "emptyStates": {
-    "noTasksToday": "No tasks for today."
+    "noTasksToday": "No tasks for today.",
+    "noBiometrieData": "No biometry or mortality data available for",
+    "noAlertesActiveSite": "No active alerts for this site.",
+    "noAlertesActiveClients": "No active alerts on client sites."
+  },
+  "commissions": {
+    "mesCommissions": "My commissions",
+    "aucuneCommission": "No commissions yet."
   },
   "statuses": {
     "late": "Late"

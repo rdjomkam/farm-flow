@@ -398,7 +398,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           </InfoRow>
           {showFiredOnce && (
             <InfoRow label="firedOnce">
-              <Badge variant="warning">Deja declenchee</Badge>
+              <Badge variant="warning">{t("rules.firedOnceBadge")}</Badge>
             </InfoRow>
           )}
           <InfoRow label="Activites generees">
@@ -476,7 +476,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
               </div>
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">Aucune condition composee — declencheur simple : {TYPE_DECLENCHEUR_LABELS[regle.typeDeclencheur as keyof typeof TYPE_DECLENCHEUR_LABELS] ? t(TYPE_DECLENCHEUR_LABELS[regle.typeDeclencheur as keyof typeof TYPE_DECLENCHEUR_LABELS]) : regle.typeDeclencheur}</p>
+            <p className="text-sm text-muted-foreground">{t("rules.noConditionSimple")} {TYPE_DECLENCHEUR_LABELS[regle.typeDeclencheur as keyof typeof TYPE_DECLENCHEUR_LABELS] ? t(TYPE_DECLENCHEUR_LABELS[regle.typeDeclencheur as keyof typeof TYPE_DECLENCHEUR_LABELS]) : regle.typeDeclencheur}</p>
           )}
         </SectionCard>
 
@@ -512,11 +512,11 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
 
         {/* Templates notification — visibles si NOTIFICATION ou LES_DEUX */}
         {((regle.actionType as ActionRegle) === ActionRegle.NOTIFICATION || (regle.actionType as ActionRegle) === ActionRegle.LES_DEUX) && (
-          <SectionCard title="Templates alerte">
+          <SectionCard title={t("rules.notificationTemplates")}>
             <div className="space-y-3">
               {regle.titreNotificationTemplate && (
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Titre de l&apos;alerte</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("rules.titreAlerte")}</p>
                   <p className="text-sm font-mono bg-muted/50 rounded-md px-3 py-2 break-all">
                     {regle.titreNotificationTemplate}
                   </p>
@@ -524,7 +524,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
               )}
               {regle.descriptionNotificationTemplate && (
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Description de l&apos;alerte</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("rules.descriptionAlerte")}</p>
                   <p className="text-sm font-mono bg-muted/50 rounded-md px-3 py-2 break-all whitespace-pre-wrap">
                     {regle.descriptionNotificationTemplate}
                   </p>
@@ -580,7 +580,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                 className="flex-1 sm:flex-none"
               >
                 <Pencil className="h-4 w-4" />
-                Modifier
+                {t("rules.modifier")}
               </Button>
             )}
 
@@ -590,14 +590,14 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                 <DialogTrigger asChild>
                   <Button variant="outline" className="flex-1 sm:flex-none">
                     <RotateCcw className="h-4 w-4" />
-                    Reinitialiser firedOnce
+                    {t("rules.reinitialiserFiredOnce")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>{t("rules.dialogs.resetFiredOnce")}</DialogTitle>
                     <DialogDescription>
-                      Cette regle se declenchera a nouveau au prochain cycle d&apos;evaluation du moteur. Confirmez-vous cette action ?
+                      {t("rules.resetFiredOnceDescription")}
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter>
@@ -608,7 +608,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                       variant="primary"
                       onClick={handleResetFiredOnce}
                     >
-                      Confirmer
+                      {t("rules.confirmer")}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -621,7 +621,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                 <DialogTrigger asChild>
                   <Button variant="danger" className="flex-1 sm:flex-none">
                     <Trash2 className="h-4 w-4" />
-                    Supprimer
+                    {t("rules.supprimer")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
@@ -645,7 +645,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                       variant="danger"
                       onClick={handleDelete}
                     >
-                      Supprimer
+                      {t("rules.supprimer")}
                     </Button>
                   </DialogFooter>
                 </DialogContent>

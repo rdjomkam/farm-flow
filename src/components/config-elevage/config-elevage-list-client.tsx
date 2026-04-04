@@ -20,7 +20,7 @@ export function ConfigElevageListClient({ configs: initialConfigs }: Props) {
   const configService = useConfigService();
 
   const handleDelete = async (id: string, nom: string) => {
-    if (!confirm(`Supprimer le profil "${nom}" ?`)) return;
+    if (!confirm(t("list.deleteConfirm", { nom }))) return;
     setDeletingId(id);
     const result = await configService.deleteConfig(id);
     if (result.ok) {
@@ -30,7 +30,7 @@ export function ConfigElevageListClient({ configs: initialConfigs }: Props) {
   };
 
   const handleDupliquer = async (id: string, nom: string) => {
-    const nouveauNom = prompt(`Nom du profil duplique :`, `${nom} (copie)`);
+    const nouveauNom = prompt(t("list.duplicatePrompt"), `${nom} (copie)`);
     if (!nouveauNom) return;
     const result = await configService.dupliquerConfig(id, { nom: nouveauNom });
     if (result.ok && result.data) {
@@ -42,7 +42,7 @@ export function ConfigElevageListClient({ configs: initialConfigs }: Props) {
     return (
       <div className="text-center py-12">
         <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground mb-4">Aucun profil de configuration.</p>
+        <p className="text-muted-foreground mb-4">{t("list.noProfiles")}</p>
         <Link href="/settings/config-elevage/nouveau">
           <Button>{t("buttons.createProfile")}</Button>
         </Link>
@@ -67,10 +67,10 @@ export function ConfigElevageListClient({ configs: initialConfigs }: Props) {
             </div>
             <div className="flex items-center gap-1 shrink-0">
               {config.isDefault && (
-                <Badge variant="warning" className="text-xs">Par defaut</Badge>
+                <Badge variant="warning" className="text-xs">{t("list.default")}</Badge>
               )}
               {!config.isActive && (
-                <Badge variant="default" className="text-xs">Inactif</Badge>
+                <Badge variant="default" className="text-xs">{t("list.inactive")}</Badge>
               )}
             </div>
           </div>
@@ -85,23 +85,23 @@ export function ConfigElevageListClient({ configs: initialConfigs }: Props) {
           {/* KPIs rapides */}
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div className="text-center">
-              <p className="text-xs text-muted-foreground">Objectif</p>
+              <p className="text-xs text-muted-foreground">{t("list.objective")}</p>
               <p className="text-sm font-semibold">{config.poidsObjectif}g</p>
             </div>
             <div className="text-center">
-              <p className="text-xs text-muted-foreground">Duree</p>
+              <p className="text-xs text-muted-foreground">{t("list.duration")}</p>
               <p className="text-sm font-semibold">{config.dureeEstimeeCycle}j</p>
             </div>
             <div className="text-center">
-              <p className="text-xs text-muted-foreground">Survie cible</p>
+              <p className="text-xs text-muted-foreground">{t("list.survivalTarget")}</p>
               <p className="text-sm font-semibold">{config.tauxSurvieObjectif}%</p>
             </div>
           </div>
 
           {/* Benchmarks FCR/SGR */}
           <div className="flex gap-3 mb-3 text-xs text-muted-foreground">
-            <span>FCR : <span className="text-accent-green font-medium">&lt;{config.fcrExcellentMax}</span> excellent</span>
-            <span>SGR : <span className="text-accent-green font-medium">&gt;{config.sgrExcellentMin}%/j</span> excellent</span>
+            <span>FCR : <span className="text-accent-green font-medium">&lt;{config.fcrExcellentMax}</span> {t("list.excellent")}</span>
+            <span>SGR : <span className="text-accent-green font-medium">&gt;{config.sgrExcellentMin}%/j</span> {t("list.excellent")}</span>
           </div>
 
           {/* Actions */}
@@ -109,7 +109,7 @@ export function ConfigElevageListClient({ configs: initialConfigs }: Props) {
             <Link href={`/settings/config-elevage/${config.id}`} className="flex-1">
               <Button variant="outline" size="sm" className="w-full text-xs">
                 <ChevronRight className="h-3 w-3 mr-1" />
-                Modifier
+                {t("list.edit")}
               </Button>
             </Link>
             <Button
