@@ -1399,6 +1399,133 @@ export interface AjustementFraisDepenseResponse {
 }
 
 // ---------------------------------------------------------------------------
+// ADR-028 — Fusion de depenses
+// ---------------------------------------------------------------------------
+
+/**
+ * DTO pour fusionner deux depenses dupliquees en une seule.
+ *
+ * La depense survivante est determinee automatiquement (la plus ancienne par date,
+ * puis par createdAt) sauf si survivantId est fourni explicitement.
+ *
+ * Regles de validation :
+ * - Les deux depenses doivent appartenir au meme siteId
+ * - survivantId != absorbeeId
+ * - commandeId, vagueId, listeBesoinsId doivent etre compatibles (identiques ou
+ *   au moins un null sur chaque paire)
+ * - Si montantTotalFinal est fourni, il doit etre >= somme des montantPaye des deux
+ */
+export interface MergeDepensesDTO {
+  /**
+   * ID de la premiere depense.
+   * Si survivantId n'est pas fourni, la survivante est determinee automatiquement
+   * (la plus ancienne par date puis createdAt).
+   */
+  depenseAId: string;
+  /** ID de la deuxieme depense */
+  depenseBId: string;
+  /**
+   * Force le choix de la depense survivante.
+   * Doit etre egal a depenseAId ou depenseBId.
+   * Optionnel : si absent, la survivante est la plus ancienne.
+   */
+  survivantId?: string;
+  /**
+   * Montant total final de la depense fusionnee.
+   * Si absent : montantTotal(A) + montantTotal(B).
+   * Doit etre >= somme des montantPaye des deux depenses.
+   */
+  montantTotalFinal?: number;
+  /**
+   * Description de la depense fusionnee.
+   * Si absent : description de la survivante est conservee.
+   */
+  description?: string;
+  /**
+   * Raison justifiant la fusion (obligatoire — tracee dans l'audit trail).
+   * Exemple : "Doublon de saisie sur la commande CMD-2026-005"
+   */
+  raison: string;
+  /**
+   * Autorise la fusion quand l'une ou les deux depenses sont PAYEE.
+   * Par defaut false — la fusion d'une depense PAYEE est bloquee pour securite.
+   * Mettre true si l'utilisateur confirme explicitement.
+   */
+  allowMergePayees?: boolean;
+}
+
+/**
+ * Reponse de la fusion de deux depenses.
+ *
+ * Retourne la depense survivante dans son etat final avec toutes ses relations.
+ * Les ajustements incluent les deux entrees d'audit creees par la fusion.
+ */
+export interface MergeDepensesResponse {
+  /** La depense survivante dans son etat apres fusion */
+  depense: DepenseDetailResponse;
+  /** Numero de la depense absorbee (pour confirmation UI) */
+  absorbeeNumero: string;
+  /** Montant total final apres fusion */
+  montantTotalFinal: number;
+  /** Montant paye cumule apres fusion */
+  montantPayeFinal: number;
+  /** Statut recalcule apres fusion */
+  statutFinal: StatutDepense;
+  /** Nombre de LigneDepense transferees depuis l'absorbee */
+  lignesTransferees: number;
+  /** Nombre de PaiementDepense transferes depuis l'absorbee */
+  paiementsTransferes: number;
+  /** Nombre d'AjustementDepense transferes depuis l'absorbee */
+  ajustementsTransferes: number;
+}
+
+/**
+ * Donnees de previsualisation d'une fusion, retournees avant confirmation.
+ *
+ * Permet a l'UI d'afficher le resultat prevu sans executer la fusion.
+ * Endpoint dedie : POST /api/depenses/merge/preview
+ */
+export interface MergeDepensesPreviewResponse {
+  survivante: {
+    id: string;
+    numero: string;
+    description: string;
+    montantTotal: number;
+    montantPaye: number;
+    statut: StatutDepense;
+    nbLignes: number;
+    nbPaiements: number;
+  };
+  absorbee: {
+    id: string;
+    numero: string;
+    description: string;
+    montantTotal: number;
+    montantPaye: number;
+    statut: StatutDepense;
+    nbLignes: number;
+    nbPaiements: number;
+    /**
+     * Vrai si la factureUrl de l'absorbee sera perdue
+     * (la survivante a aussi une factureUrl non-null).
+     */
+    factureUrlPerdue: boolean;
+  };
+  resultatPrevu: {
+    montantTotalFinal: number;
+    montantPayeFinal: number;
+    statutFinal: StatutDepense;
+    nbLignesTotal: number;
+    nbPaiementsTotal: number;
+    categorieDepense: CategorieDepense;
+    /** Avertissements non bloquants (ex: factureUrl perdue, notes concatenees) */
+    avertissements: string[];
+  };
+  /** Erreurs de validation bloquantes — si non vide, la fusion est impossible */
+  erreurs: string[];
+}
+
+// ---------------------------------------------------------------------------
 // Sprint 17 — Besoins
 // ---------------------------------------------------------------------------
 

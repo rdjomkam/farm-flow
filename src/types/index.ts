@@ -345,6 +345,10 @@ export type {
   AjustementDepenseResponse,
   AjusterFraisDepenseDTO,
   AjustementFraisDepenseResponse,
+  // ADR-028 — Fusion de depenses
+  MergeDepensesDTO,
+  MergeDepensesResponse,
+  MergeDepensesPreviewResponse,
 } from "./api";
 // Sprint 17 — Besoins
 export type {
