@@ -86,6 +86,7 @@ const SUBSCRIPTION_WHITELIST_ROUTES = [
   "/mon-abonnement",
   "/abonnement-expire",
   "/checkout",
+  "/backoffice",
 ];
 
 function isPublicRoute(pathname: string): boolean {
@@ -116,6 +117,7 @@ const SUBSCRIPTION_WHITELIST_API_PREFIXES = [
   "/api/sites",
   "/api/cron/",
   "/api/activites/generer",
+  "/api/backoffice/",
 ];
 
 function isSubscriptionWhitelisted(pathname: string): boolean {
