@@ -68,6 +68,7 @@ const PUBLIC_API_ROUTES = [
   "/api/health",
   "/api/activites/generer",
   "/api/cron/subscription-lifecycle",
+  "/api/depenses/backfill",
 ];
 
 /** Routes accessible without an active site selected */
