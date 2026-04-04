@@ -180,16 +180,13 @@ export async function POST(request: NextRequest) {
     const vagueResult = await prisma.$transaction(async (tx) => {
       // 1. Charger l'abonnement actif pour déterminer la limite
       const abonnement = await getAbonnementActifPourSite(auth.activeSiteId);
-      let limitesVagues: number;
-
-      if (abonnement) {
-        const planLimites = PLAN_LIMITES[abonnement.plan.typePlan as TypePlan];
-        limitesVagues = planLimites
-          ? planLimites.limitesVagues
-          : PLAN_LIMITES[TypePlan.DECOUVERTE].limitesVagues;
-      } else {
-        limitesVagues = PLAN_LIMITES[TypePlan.DECOUVERTE].limitesVagues;
+      if (!abonnement) {
+        throw new Error("NO_SUBSCRIPTION");
       }
+      const planLimites = PLAN_LIMITES[abonnement.plan.typePlan as TypePlan];
+      const limitesVagues = planLimites
+        ? planLimites.limitesVagues
+        : PLAN_LIMITES[TypePlan.DECOUVERTE].limitesVagues;
 
       // 2. Compter les vagues EN_COURS (dans la transaction pour éviter la race condition)
       const nombreVagues = await tx.vague.count({
@@ -264,8 +261,19 @@ export async function POST(request: NextRequest) {
       if (err.message === "QUOTA_DEPASSE") {
         return { __quotaError: true, limite: err.quotaLimite } as const;
       }
+      if (err.message === "NO_SUBSCRIPTION") {
+        return { __noSubscription: true } as const;
+      }
       throw err;
     });
+
+    if (vagueResult && "__noSubscription" in vagueResult) {
+      return apiError(
+        402,
+        "Aucun abonnement actif. Souscrivez un plan pour créer des ressources.",
+        { code: "NO_SUBSCRIPTION" }
+      );
+    }
 
     if (vagueResult && "__quotaError" in vagueResult && vagueResult.__quotaError) {
       return apiError(

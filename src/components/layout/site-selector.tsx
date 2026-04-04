@@ -3,13 +3,14 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Building2, ChevronDown } from "lucide-react";
+import { Building2, ChevronDown, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthService, useUserService } from "@/services";
 
 interface SiteInfo {
   id: string;
   name: string;
+  isBlocked?: boolean;
 }
 
 interface SiteSelectorProps {
@@ -79,21 +80,30 @@ export function SiteSelector({ fullWidth }: SiteSelectorProps) {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute left-0 top-full mt-1 z-50 min-w-[200px] rounded-lg border border-border bg-card shadow-md py-1">
-            {sites.map((site) => (
-              <button
-                key={site.id}
-                onClick={() => handleSwitch(site.id)}
-                className={cn(
-                  "flex w-full items-center gap-2 px-3 py-2.5 text-sm text-left",
-                  "hover:bg-muted transition-colors",
-                  "min-h-[44px]",
-                  site.id === activeSiteId && "bg-primary/10 text-primary font-medium"
-                )}
-              >
-                <Building2 className="h-4 w-4 shrink-0" />
-                <span className="truncate">{site.name}</span>
-              </button>
-            ))}
+            {sites.map((site) => {
+              const siteBlocked = site.isBlocked === true;
+              return (
+                <button
+                  key={site.id}
+                  onClick={() => !siteBlocked && handleSwitch(site.id)}
+                  disabled={siteBlocked}
+                  className={cn(
+                    "flex w-full items-center gap-2 px-3 py-2.5 text-sm text-left",
+                    "hover:bg-muted transition-colors",
+                    "min-h-[44px]",
+                    site.id === activeSiteId && "bg-primary/10 text-primary font-medium",
+                    siteBlocked && "opacity-50 cursor-not-allowed hover:bg-transparent"
+                  )}
+                >
+                  {siteBlocked ? (
+                    <Lock className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  ) : (
+                    <Building2 className="h-4 w-4 shrink-0" />
+                  )}
+                  <span className="truncate">{site.name}</span>
+                </button>
+              );
+            })}
           </div>
         </>
       )}
