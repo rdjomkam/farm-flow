@@ -116,6 +116,7 @@ export const PERMISSION_GROUPS = {
     Permission.DEPENSES_CREER,
     Permission.DEPENSES_MODIFIER,
     Permission.DEPENSES_PAYER,
+    Permission.DEPENSES_SUPPRIMER,
     Permission.BESOINS_SOUMETTRE,
     Permission.BESOINS_APPROUVER,
     Permission.BESOINS_TRAITER,
