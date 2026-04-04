@@ -391,7 +391,7 @@
 **Assigné à :** @developer
 **Priorité :** Haute
 **Complexité :** Simple
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Retirer `QuotasUsageBar` de `src/components/pages/vagues-page.tsx`
@@ -412,7 +412,7 @@
 **Assigné à :** @developer
 **Priorité :** Haute
 **Complexité :** Moyenne
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Messages i18n pour owner : "Vous avez atteint la limite de X. Mettez à niveau votre plan."
@@ -432,7 +432,7 @@
 **Assigné à :** @developer
 **Priorité :** Critique
 **Complexité :** Moyenne
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Bloquer la création de site si l'utilisateur n'a pas d'abonnement actif. Rediriger vers /tarifs avec returnUrl.
 
@@ -456,7 +456,7 @@
 **Assigné à :** @developer
 **Priorité :** Haute
 **Complexité :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Afficher les ressources bloquées dans les listes avec badge cadenas, grisé. Clic → dialog avec message + bouton "Mettre à niveau".
 
@@ -484,7 +484,7 @@
 **Assigné à :** @tester + @code-reviewer
 **Dépend de :** Stories 48.1-48.4
 **Priorité :** Haute
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Test manuel mobile (360px) : QuotasUsageBar sur mon-abonnement, ressources bloquées
@@ -506,7 +506,7 @@
 **Assigné à :** @developer
 **Priorité :** Critique
 **Complexité :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Permettre la souscription d'un essai gratuit. Vérifier que l'utilisateur n'a pas déjà utilisé un essai pour ce plan.
 
@@ -534,7 +534,7 @@
 **Dépend de :** Story 49.1
 **Priorité :** Haute
 **Complexité :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Permettre la conversion d'un essai actif en abonnement payant. L'essai ne doit PAS être annulé tant que le paiement n'est pas confirmé.
 
@@ -562,7 +562,7 @@
 **Dépend de :** Story 49.1
 **Priorité :** Haute
 **Complexité :** Moyenne
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Ajouter le bouton "Essayer gratuitement" dans le checkout, afficher la durée d'essai sur /tarifs, et adapter la carte abonnement.
 
@@ -589,7 +589,7 @@
 **Assigné à :** @tester + @code-reviewer
 **Dépend de :** Stories 49.1-49.3
 **Priorité :** Haute
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Tests : création essai, conversion essai → payant (succès + échec paiement), essai déjà utilisé
@@ -611,7 +611,7 @@
 **Assigné à :** @developer
 **Priorité :** Critique
 **Complexité :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Créer les fonctions pures de calcul du prorata et de détection des dépassements.
 
@@ -638,7 +638,7 @@
 **Dépend de :** Story 50.1
 **Priorité :** Critique
 **Complexité :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Créer les endpoints d'upgrade avec prorata et gestion du solde créditeur.
 
@@ -671,7 +671,7 @@
 **Dépend de :** Story 50.1
 **Priorité :** Critique
 **Complexité :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Créer les endpoints de downgrade (programmé fin de période) et de changement de période.
 
@@ -706,7 +706,7 @@
 **Dépend de :** Story 50.2
 **Priorité :** Haute
 **Complexité :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Page de comparaison des plans avec calcul prorata en temps réel et checkout d'upgrade.
 
@@ -739,7 +739,7 @@
 **Dépend de :** Story 50.3
 **Priorité :** Haute
 **Complexité :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Composant de sélection des ressources en 3 étapes (sites → bacs → vagues) et page de gestion des ressources bloquées après upgrade.
 
@@ -773,7 +773,7 @@
 **Dépend de :** Stories 50.2, 50.3
 **Priorité :** Critique
 **Complexité :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Adapter le CRON de renouvellement pour gérer les downgrades programmés, les changements de période et le solde créditeur.
 
@@ -803,7 +803,7 @@
 **Assigné à :** @tester + @code-reviewer
 **Dépend de :** Stories 50.1-50.6
 **Priorité :** Haute
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Tests prorata : div/0, prixPaye=0, delta négatif, soldeCredit
@@ -827,7 +827,7 @@
 **Assigné à :** @developer
 **Priorité :** Haute
 **Complexité :** Moyenne
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Créer `GET /api/admin/exonerations` : liste des exonérations actives (avec user + plan)
@@ -856,7 +856,7 @@
 **Dépend de :** Story 51.1
 **Priorité :** Haute
 **Complexité :** Moyenne
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Page backoffice : liste des exonérations (user, motif, date début, date fin, statut)
@@ -879,7 +879,7 @@
 **Assigné à :** @tester + @code-reviewer
 **Dépend de :** Stories 51.1-51.2
 **Priorité :** Haute
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Tâches :**
 - [ ] `TODO` Tests : création exonération, annulation, vérification permissions

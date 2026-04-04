@@ -24,6 +24,7 @@ import {
   ArrowLeft,
   Shield,
   Flag,
+  ShieldOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +43,7 @@ const NAV_ITEM_DEFS: NavItem[] = [
   { href: "/backoffice/remises",        labelKey: "remises",        icon: Tag },
   { href: "/backoffice/modules",        labelKey: "modules",        icon: Boxes },
   { href: "/backoffice/feature-flags",  labelKey: "featureFlags",   icon: Flag },
+  { href: "/backoffice/exonerations",   labelKey: "exonerations",   icon: ShieldOff },
 ];
 
 export function BackofficeSidebar() {

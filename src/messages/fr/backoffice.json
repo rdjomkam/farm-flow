@@ -24,7 +24,56 @@
     "commissions": "Commissions",
     "remises": "Remises",
     "modules": "Modules",
-    "featureFlags": "Feature Flags"
+    "featureFlags": "Feature Flags",
+    "exonerations": "Exonerations"
+  },
+  "exonerations": {
+    "title": "Exonerations",
+    "description": "Accordez un acces gratuit a des utilisateurs selectionnes (partenaires, ONG, essai prolonge).",
+    "newButton": "Nouvelle exoneration",
+    "totalLabel": "exoneration",
+    "totalLabelPlural": "exonerations",
+    "empty": "Aucune exoneration en cours.",
+    "emptyDesc": "Utilisez le bouton ci-dessus pour accorder un acces gratuit a un utilisateur.",
+    "card": {
+      "user": "Utilisateur",
+      "site": "Site",
+      "motif": "Motif",
+      "dateDebut": "Depuis le",
+      "dateFin": "Jusqu'au",
+      "statut": "Statut",
+      "permanent": "Permanent (jusqu'en 2099)",
+      "annuler": "Annuler",
+      "annulation": "Annulation..."
+    },
+    "form": {
+      "title": "Nouvelle exoneration",
+      "description": "Accorder un acces gratuit a un utilisateur. Le siteId est requis temporairement jusqu'au Sprint 52.",
+      "userIdLabel": "Identifiant utilisateur (userId)",
+      "userIdPlaceholder": "ex: clxxx...",
+      "siteIdLabel": "Identifiant site (siteId)",
+      "siteIdPlaceholder": "ex: clxxx...",
+      "motifLabel": "Motif de l'exoneration",
+      "motifPlaceholder": "Ex : Partenaire ONG, projet pilote, accord commercial...",
+      "dateFinLabel": "Date de fin (laisser vide = permanent jusqu'en 2099)",
+      "submit": "Accorder l'exoneration",
+      "submitting": "Enregistrement...",
+      "cancel": "Annuler",
+      "successTitle": "Exoneration accordee",
+      "successDesc": "L'acces gratuit a ete accorde avec succes.",
+      "errorTitle": "Erreur",
+      "errorDefault": "Une erreur est survenue lors de la creation de l'exoneration."
+    },
+    "cancelDialog": {
+      "title": "Annuler l'exoneration ?",
+      "description": "L'acces gratuit sera revoque. L'utilisateur devra souscrire a un plan payant pour continuer.",
+      "confirm": "Confirmer l'annulation",
+      "cancel": "Retour",
+      "successTitle": "Exoneration annulee",
+      "successDesc": "L'acces gratuit a ete revoque.",
+      "errorTitle": "Erreur",
+      "errorDefault": "Une erreur est survenue lors de l'annulation."
+    }
   },
   "featureFlags": {
     "title": "Feature Flags",

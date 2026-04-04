@@ -7344,9 +7344,9 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 | **45** | Migration additive (Schema + Data + Types + Constants) | 45.1–45.5 | `FAIT` |
 | **46** | Queries et check functions (user-level) | 46.1–46.4 | `FAIT` |
 | **47** | API routes adaptation | 47.1–47.4 | `FAIT` |
-| **48** | UI cleanup + messages + flow création site + UI bloqué | 48.1–48.5 | `TODO` |
-| **49** | Essais (Trial) | 49.1–49.4 | `TODO` |
-| **50** | Upgrade / Downgrade | 50.1–50.7 | `TODO` |
-| **51** | Backoffice Exonération | 51.1–51.3 | `TODO` |
+| **48** | UI cleanup + messages + flow création site + UI bloqué | 48.1–48.5 | `FAIT` |
+| **49** | Essais (Trial) | 49.1–49.4 | `FAIT` |
+| **50** | Upgrade / Downgrade | 50.1–50.7 | `FAIT` |
+| **51** | Backoffice Exonération | 51.1–51.3 | `FAIT` |
 | **52** | Cleanup migration + retrait fallback | 52.1–52.3 | `TODO` |
 | **53** | Tests intégration + Review finale | 53.1–53.4 | `TODO` |

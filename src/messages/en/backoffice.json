@@ -24,7 +24,56 @@
     "commissions": "Commissions",
     "remises": "Discounts",
     "modules": "Modules",
-    "featureFlags": "Feature Flags"
+    "featureFlags": "Feature Flags",
+    "exonerations": "Exemptions"
+  },
+  "exonerations": {
+    "title": "Exemptions",
+    "description": "Grant free access to selected users (partners, NGOs, extended trials).",
+    "newButton": "New exemption",
+    "totalLabel": "exemption",
+    "totalLabelPlural": "exemptions",
+    "empty": "No active exemptions.",
+    "emptyDesc": "Use the button above to grant free access to a user.",
+    "card": {
+      "user": "User",
+      "site": "Site",
+      "motif": "Reason",
+      "dateDebut": "Since",
+      "dateFin": "Until",
+      "statut": "Status",
+      "permanent": "Permanent (until 2099)",
+      "annuler": "Cancel",
+      "annulation": "Cancelling..."
+    },
+    "form": {
+      "title": "New exemption",
+      "description": "Grant free access to a user. The siteId is temporarily required until Sprint 52.",
+      "userIdLabel": "User ID (userId)",
+      "userIdPlaceholder": "e.g.: clxxx...",
+      "siteIdLabel": "Site ID (siteId)",
+      "siteIdPlaceholder": "e.g.: clxxx...",
+      "motifLabel": "Reason for exemption",
+      "motifPlaceholder": "E.g.: NGO partner, pilot project, commercial agreement...",
+      "dateFinLabel": "End date (leave empty = permanent until 2099)",
+      "submit": "Grant exemption",
+      "submitting": "Saving...",
+      "cancel": "Cancel",
+      "successTitle": "Exemption granted",
+      "successDesc": "Free access has been successfully granted.",
+      "errorTitle": "Error",
+      "errorDefault": "An error occurred while creating the exemption."
+    },
+    "cancelDialog": {
+      "title": "Cancel exemption?",
+      "description": "Free access will be revoked. The user will need to subscribe to a paid plan to continue.",
+      "confirm": "Confirm cancellation",
+      "cancel": "Go back",
+      "successTitle": "Exemption cancelled",
+      "successDesc": "Free access has been revoked.",
+      "errorTitle": "Error",
+      "errorDefault": "An error occurred while cancelling the exemption."
+    }
   },
   "featureFlags": {
     "title": "Feature Flags",
