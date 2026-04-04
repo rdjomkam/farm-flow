@@ -543,6 +543,7 @@ export async function traiterBesoins(
           montantTotal: montantCmd,
           userId,
           siteId,
+          listeBesoinsId: liste.id,
           lignes: {
             create: lignes.map((l) => ({
               produitId: l.produitId,
@@ -570,62 +571,67 @@ export async function traiterBesoins(
       });
     }
 
-    // Creer la depense liee a la liste de besoins
-    const dernierDep = await tx.depense.findFirst({
-      where: { siteId, numero: { startsWith: `DEP-${annee}-` } },
-      orderBy: { numero: "desc" },
-      select: { numero: true },
-    });
-    let seqDep = 1;
-    if (dernierDep) {
-      const p = dernierDep.numero.split("-")[2];
-      seqDep = (parseInt(p, 10) || 0) + 1;
-    }
-    const numeroDep = `DEP-${annee}-${String(seqDep).padStart(3, "0")}`;
-
-    // Construire les lignes de dépense depuis les LigneBesoin (ADR-027)
-    // Construction APRÈS la boucle commande pour que ligneBesoinToLigneCommande soit complet (BUG-1)
-    const lignesDepenseData = liste.lignes.map((lb) => {
-      const prixUnitaire = lb.prixReel ?? lb.prixEstime;
-      const montantLigne = lb.quantite * prixUnitaire;
-      const cat = categorieProduitToDepense(lb.produit?.categorie);
-      return {
-        designation: lb.designation,
-        categorieDepense: cat,
-        quantite: lb.quantite,
-        prixUnitaire,
-        montantTotal: montantLigne,
-        produitId: lb.produitId ?? null,
-        ligneBesoinId: lb.id,
-        ligneCommandeId: ligneBesoinToLigneCommande.get(lb.id) ?? null,
-        siteId,
-      };
+    // Creer la depense liee a la liste de besoins — UNIQUEMENT pour les lignes LIBRE
+    // Les lignes COMMANDE auront leur depense creee lors de recevoirCommande()
+    const lignesLibres = liste.lignes.filter((lb) => {
+      const action = actionsMap.get(lb.id) ?? "LIBRE";
+      return action === "LIBRE";
     });
 
-    // Montant total = somme des lignes (plus précis que montantEstime)
-    const montantTotalDepense =
-      lignesDepenseData.length > 0
-        ? lignesDepenseData.reduce((acc, l) => acc + l.montantTotal, 0)
-        : liste.montantEstime;
+    if (lignesLibres.length > 0) {
+      const dernierDep = await tx.depense.findFirst({
+        where: { siteId, numero: { startsWith: `DEP-${annee}-` } },
+        orderBy: { numero: "desc" },
+        select: { numero: true },
+      });
+      let seqDep = 1;
+      if (dernierDep) {
+        const p = dernierDep.numero.split("-")[2];
+        seqDep = (parseInt(p, 10) || 0) + 1;
+      }
+      const numeroDep = `DEP-${annee}-${String(seqDep).padStart(3, "0")}`;
 
-    // Catégorie dominante par montant
-    const categorieDepense = computeDominantCategorie(lignesDepenseData);
+      // Construire les lignes de dépense depuis les LigneBesoin LIBRE uniquement (ADR-027)
+      const lignesDepenseData = lignesLibres.map((lb) => {
+        const prixUnitaire = lb.prixReel ?? lb.prixEstime;
+        const montantLigne = lb.quantite * prixUnitaire;
+        const cat = categorieProduitToDepense(lb.produit?.categorie);
+        return {
+          designation: lb.designation,
+          categorieDepense: cat,
+          quantite: lb.quantite,
+          prixUnitaire,
+          montantTotal: montantLigne,
+          produitId: lb.produitId ?? null,
+          ligneBesoinId: lb.id,
+          ligneCommandeId: ligneBesoinToLigneCommande.get(lb.id) ?? null,
+          siteId,
+        };
+      });
 
-    const depense = await tx.depense.create({
-      data: {
-        numero: numeroDep,
-        description: `Depense — ${liste.titre}`,
-        categorieDepense,
-        montantTotal: montantTotalDepense,
-        date: new Date(),
-        listeBesoinsId: liste.id,
-        userId,
-        siteId,
-      },
-    });
+      // Montant total = somme des lignes LIBRE uniquement
+      const montantTotalDepense = lignesDepenseData.reduce(
+        (acc, l) => acc + l.montantTotal,
+        0
+      );
 
-    // Créer les LigneDepense dans la même transaction (R4 — atomique)
-    if (lignesDepenseData.length > 0) {
+      // Catégorie dominante par montant
+      const categorieDepense = computeDominantCategorie(lignesDepenseData);
+
+      const depense = await tx.depense.create({
+        data: {
+          numero: numeroDep,
+          description: `Depense — ${liste.titre}`,
+          categorieDepense,
+          montantTotal: montantTotalDepense,
+          date: new Date(),
+          listeBesoinsId: liste.id,
+          userId,
+          siteId,
+        },
+      });
+
+      // Créer les LigneDepense dans la même transaction (R4 — atomique)
       await tx.ligneDepense.createMany({
         data: lignesDepenseData.map((l) => ({
           depenseId: depense.id,

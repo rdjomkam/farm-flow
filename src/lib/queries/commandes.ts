@@ -202,7 +202,18 @@ export async function recevoirCommande(
     // Get commande with lignes + product conversion info + product categorie
     const commande = await tx.commande.findFirst({
       where: { id, siteId },
-      include: {
+      select: {
+        id: true,
+        numero: true,
+        fournisseurId: true,
+        statut: true,
+        dateCommande: true,
+        dateLivraison: true,
+        montantTotal: true,
+        montantRecu: true,
+        userId: true,
+        siteId: true,
+        listeBesoinsId: true,
         lignes: {
           include: {
             produit: {
@@ -367,6 +378,7 @@ export async function recevoirCommande(
           montantTotal: montantRecu,
           date: livraisonDate,
           commandeId: commande.id,
+          listeBesoinsId: commande.listeBesoinsId ?? undefined,
           userId,
           siteId,
         },
