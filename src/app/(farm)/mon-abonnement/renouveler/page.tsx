@@ -8,14 +8,14 @@
  */
 import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/auth";
-import { getAbonnementActif } from "@/lib/queries/abonnements";
+import { getAbonnementActifPourSite } from "@/lib/queries/abonnements";
 
 export default async function RenouvelerPage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const abonnement = await getAbonnementActif(session.activeSiteId);
+  const abonnement = await getAbonnementActifPourSite(session.activeSiteId);
 
   if (!abonnement) {
     redirect("/tarifs");

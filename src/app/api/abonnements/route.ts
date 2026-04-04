@@ -10,7 +10,6 @@
  * R8 : siteId = auth.activeSiteId sur toutes les queries
  */
 import { NextRequest, NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
 import {
   getAbonnements,
   createAbonnement,
@@ -24,6 +23,7 @@ import {
 import { initierPaiement } from "@/lib/services/billing";
 import { verifierEtAppliquerRemiseAutomatique } from "@/lib/services/remises-automatiques";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { invalidateSubscriptionCaches } from "@/lib/abonnements/invalidate-caches";
 import { AuthError } from "@/lib/auth";
 import { Permission, StatutAbonnement, PeriodeFacturation, FournisseurPaiement } from "@/types";
 import {
@@ -187,8 +187,8 @@ export async function POST(request: NextRequest) {
       fournisseur: body.fournisseur as FournisseurPaiement,
     });
 
-    // Invalider le cache d'abonnement du site
-    revalidateTag(`subscription-${auth.activeSiteId}`, {});
+    // Invalider le cache d'abonnement (user-level + tous ses sites)
+    await invalidateSubscriptionCaches(auth.userId);
 
     return NextResponse.json(
       { abonnement, paiement: { referenceExterne: paiement.referenceExterne, statut: paiement.statut, paiementId: paiement.paiementId } },

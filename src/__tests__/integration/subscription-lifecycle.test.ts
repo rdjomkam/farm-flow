@@ -50,6 +50,7 @@ vi.mock("@/lib/queries/abonnements", () => ({
   getAbonnementsEnGraceExpires: (...args: unknown[]) =>
     mockGetAbonnementsEnGraceExpires(...args),
   getAbonnementActif: vi.fn(),
+  getAbonnementActifPourSite: vi.fn(),
   activerAbonnement: vi.fn(),
 }));
 

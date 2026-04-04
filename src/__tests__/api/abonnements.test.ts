@@ -33,6 +33,7 @@ vi.mock("@/lib/queries/abonnements", () => ({
   getAbonnements: (...args: unknown[]) => mockGetAbonnements(...args),
   getAbonnementById: (...args: unknown[]) => mockGetAbonnementById(...args),
   getAbonnementActif: (...args: unknown[]) => mockGetAbonnementActif(...args),
+  getAbonnementActifPourSite: (...args: unknown[]) => mockGetAbonnementActif(...args),
   createAbonnement: (...args: unknown[]) => mockCreateAbonnement(...args),
   activerAbonnement: vi.fn(),
 }));
@@ -59,6 +60,12 @@ vi.mock("@/lib/services/billing", () => ({
 
 vi.mock("@/lib/services/remises-automatiques", () => ({
   verifierEtAppliquerRemiseAutomatique: vi.fn().mockResolvedValue(undefined),
+}));
+
+// Story 46.1 — invalidateSubscriptionCaches utilise prisma.site.findMany
+// On le mock directement pour éviter de simuler toute la table site
+vi.mock("@/lib/abonnements/invalidate-caches", () => ({
+  invalidateSubscriptionCaches: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("next/cache", () => ({
@@ -97,6 +104,13 @@ vi.mock("@/lib/db", () => ({
       findFirst: vi.fn(),
     },
   },
+}));
+
+// Story 46.1 : invalidateSubscriptionCaches est appelé par les routes POST après
+// chaque mutation (souscription, annulation, renouvellement). Mock nécessaire pour
+// éviter un appel Prisma non mockable (site.findMany) et une erreur 500 dans les tests.
+vi.mock("@/lib/abonnements/invalidate-caches", () => ({
+  invalidateSubscriptionCaches: vi.fn().mockResolvedValue(undefined),
 }));
 
 const AUTH_CONTEXT = {

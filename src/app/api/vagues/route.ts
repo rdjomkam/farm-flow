@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cachedJson } from "@/lib/api-cache";
-import { getVagues, createVague } from "@/lib/queries/vagues";
+import { getVagues } from "@/lib/queries/vagues";
 import { prisma } from "@/lib/db";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { Permission, StatutVague, parsePaginationQuery } from "@/types";
+import { Permission, StatutVague, TypePlan, parsePaginationQuery } from "@/types";
 import type { CreateVagueDTO } from "@/types";
 import { normaliseLimite, isQuotaAtteint } from "@/lib/abonnements/check-quotas";
-import { getAbonnementActif } from "@/lib/queries/abonnements";
+import { getAbonnementActifPourSite } from "@/lib/queries/abonnements";
 import { PLAN_LIMITES } from "@/lib/abonnements-constants";
 import type { QuotaRessource } from "@/lib/abonnements/check-quotas";
 import { ErrorKeys } from "@/lib/api-error-keys";
@@ -176,12 +176,10 @@ export async function POST(request: NextRequest) {
     };
 
     // Vérifier le quota et créer la vague dans une transaction atomique (R4)
-    // Note : createVague utilise déjà prisma.$transaction en interne pour les bacs,
-    // mais le check quota doit aussi être atomique avec la création.
-    // On effectue le check dans une transaction séparée avant d'appeler createVague.
-    const quotaResult = await prisma.$transaction(async (tx) => {
+    // Check quota + création sont dans la même transaction pour éviter les race conditions.
+    const vagueResult = await prisma.$transaction(async (tx) => {
       // 1. Charger l'abonnement actif pour déterminer la limite
-      const abonnement = await getAbonnementActif(auth.activeSiteId);
+      const abonnement = await getAbonnementActifPourSite(auth.activeSiteId);
       let limitesVagues: number;
 
       if (abonnement) {
@@ -189,9 +187,9 @@ export async function POST(request: NextRequest) {
         const planLimites = (PLAN_LIMITES as Record<string, (typeof PLAN_LIMITES)[keyof typeof PLAN_LIMITES]>)[typePlan];
         limitesVagues = planLimites
           ? planLimites.limitesVagues
-          : PLAN_LIMITES["DECOUVERTE" as keyof typeof PLAN_LIMITES].limitesVagues;
+          : PLAN_LIMITES[TypePlan.DECOUVERTE].limitesVagues;
       } else {
-        limitesVagues = PLAN_LIMITES["DECOUVERTE" as keyof typeof PLAN_LIMITES].limitesVagues;
+        limitesVagues = PLAN_LIMITES[TypePlan.DECOUVERTE].limitesVagues;
       }
 
       // 2. Compter les vagues EN_COURS (dans la transaction pour éviter la race condition)
@@ -211,27 +209,80 @@ export async function POST(request: NextRequest) {
         throw err;
       }
 
-      return { ok: true } as const;
+      // 4. Créer la vague dans la même transaction (atomique avec le check)
+      const bacIds = data.bacDistribution.map((e) => e.bacId);
+
+      const bacs = await tx.bac.findMany({
+        where: { id: { in: bacIds }, siteId: auth.activeSiteId },
+      });
+
+      if (bacs.length !== bacIds.length) {
+        throw new Error("Un ou plusieurs bacs sont introuvables");
+      }
+
+      const bacsOccupes = bacs.filter((b) => b.vagueId !== null);
+      if (bacsOccupes.length > 0) {
+        const noms = bacsOccupes.map((b) => b.nom).join(", ");
+        throw new Error(`Bacs déjà assignés à une vague : ${noms}`);
+      }
+
+      const existingVague = await tx.vague.findUnique({
+        where: { code: data.code },
+      });
+      if (existingVague) {
+        throw new Error(`Le code "${data.code}" est déjà utilisé`);
+      }
+
+      const vague = await tx.vague.create({
+        data: {
+          code: data.code,
+          dateDebut: new Date(data.dateDebut),
+          nombreInitial: data.nombreInitial,
+          poidsMoyenInitial: data.poidsMoyenInitial,
+          origineAlevins: data.origineAlevins ?? null,
+          configElevageId: data.configElevageId,
+          siteId: auth.activeSiteId,
+        },
+      });
+
+      for (const entry of data.bacDistribution) {
+        await tx.bac.update({
+          where: { id: entry.bacId, siteId: auth.activeSiteId },
+          data: {
+            vagueId: vague.id,
+            nombrePoissons: entry.nombrePoissons,
+            nombreInitial: entry.nombrePoissons,
+            poidsMoyenInitial: data.poidsMoyenInitial,
+          },
+        });
+      }
+
+      return tx.vague.findUnique({
+        where: { id: vague.id },
+        include: { bacs: true },
+      });
     }).catch((err: Error & { quotaLimite?: number | null }) => {
       if (err.message === "QUOTA_DEPASSE") {
-        return { ok: false, limite: err.quotaLimite } as const;
+        return { __quotaError: true, limite: err.quotaLimite } as const;
       }
       throw err;
     });
 
-    if (!quotaResult.ok) {
+    if (vagueResult && "__quotaError" in vagueResult && vagueResult.__quotaError) {
       return apiError(
         402,
-        `Vous avez atteint la limite de ${quotaResult.limite} vague(s) en cours autorisée(s) par votre plan. Terminez une vague existante ou passez à un plan supérieur.`,
+        `Vous avez atteint la limite de ${vagueResult.limite} vague(s) en cours autorisée(s) par votre plan. Terminez une vague existante ou passez à un plan supérieur.`,
         { code: "QUOTA_DEPASSE" }
       );
     }
 
-    const vague = await createVague(auth.activeSiteId, data);
-
-    if (!vague) {
+    // Type narrowed : vagueResult ne peut plus être le quota error après la vérification ci-dessus.
+    // On utilise une assertion de type explicite pour aider TypeScript.
+    if (!vagueResult || "__quotaError" in vagueResult) {
       return apiError(500, "Erreur lors de la creation de la vague.", { code: ErrorKeys.SERVER_CREATE_VAGUE });
     }
+
+    const vague = vagueResult;
 
     const now = new Date();
     const joursEcoules = Math.floor(
@@ -264,7 +315,12 @@ export async function POST(request: NextRequest) {
     const message =
       error instanceof Error ? error.message : "Erreur serveur inattendue.";
 
-    if (message.includes("deja assigne") || message.includes("deja utilise")) {
+    if (
+      message.includes("deja assigne") ||
+      message.includes("déjà assigné") ||
+      message.includes("deja utilise") ||
+      message.includes("déjà utilisé")
+    ) {
       return apiError(409, message);
     }
 

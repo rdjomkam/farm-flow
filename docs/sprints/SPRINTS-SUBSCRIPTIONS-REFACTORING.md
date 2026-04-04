@@ -181,17 +181,17 @@
 **Assigné à :** @db-specialist
 **Priorité :** Critique
 **Complexité :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Adapter les queries d'abonnement pour le user-level. Créer le wrapper qui résout site → owner → abonnement avec cache.
 
 **Tâches :**
-- [ ] `TODO` Modifier `getAbonnementActif(userId)` : chercher par userId, ORDER BY statut ASC (ACTIF prioritaire sur EN_GRACE), createdAt DESC, LIMIT 1
-- [ ] `TODO` Créer `getAbonnementActifPourSite(siteId)` : site.ownerId → getAbonnementActif(ownerId), avec `unstable_cache` taggé `subscription-site-${siteId}`, TTL 3600s
-- [ ] `TODO` Adapter `getAbonnements(userId, filters)` : filtrer par userId au lieu de siteId
-- [ ] `TODO` Adapter `getAbonnementsExpirantAvant(date)` : ne plus inclure la relation `site`, inclure `user`
-- [ ] `TODO` Adapter `getAbonnementsEnGraceExpires()` : idem, ne plus sélectionner `siteId`
-- [ ] `TODO` Créer `logAbonnementAudit()` helper
+- [x] `FAIT` Modifier `getAbonnementActif(userId)` : chercher par userId, ORDER BY statut ASC (ACTIF prioritaire sur EN_GRACE), createdAt DESC, LIMIT 1
+- [x] `FAIT` Créer `getAbonnementActifPourSite(siteId)` : site.ownerId → getAbonnementActif(ownerId), avec `unstable_cache` taggé `subscription-site-${siteId}`, TTL 3600s
+- [x] `FAIT` Adapter `getAbonnements(userId, filters)` : filtrer par userId au lieu de siteId
+- [x] `FAIT` Adapter `getAbonnementsExpirantAvant(date)` : ne plus inclure la relation `site`, inclure `user`
+- [x] `FAIT` Adapter `getAbonnementsEnGraceExpires()` : idem, ne plus sélectionner `siteId`
+- [x] `FAIT` Créer `logAbonnementAudit()` helper
 
 **Fichiers impactés :**
 - `src/lib/queries/abonnements.ts`
@@ -209,16 +209,16 @@
 **Dépend de :** Story 46.1
 **Priorité :** Critique
 **Complexité :** Complex
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Adapter la vérification des quotas pour résoudre l'abonnement via le propriétaire du site et exclure les ressources bloquées des comptages.
 
 **Tâches :**
-- [ ] `TODO` `getQuotasUsage(siteId)` : utiliser `getAbonnementActifPourSite(siteId)` au lieu de `getAbonnementActif(siteId)`
-- [ ] `TODO` Les comptages de bacs excluent `isBlocked = true` : `prisma.bac.count({ where: { siteId, isBlocked: false } })`
-- [ ] `TODO` Les comptages de vagues excluent `isBlocked = true` : `prisma.vague.count({ where: { siteId, statut: EN_COURS, isBlocked: false } })`
-- [ ] `TODO` Créer `getQuotaSites(userId)` : compte les sites non-bloqués du user vs `limitesSites`
-- [ ] `TODO` Garder le fallback DECOUVERTE dans `resolvePlanLimites()` (sera retiré en Sprint 52)
+- [x] `FAIT` `getQuotasUsage(siteId)` : utiliser `getAbonnementActifPourSite(siteId)` au lieu de `getAbonnementActif(siteId)`
+- [x] `FAIT` Les comptages de bacs excluent `isBlocked = true` : `prisma.bac.count({ where: { siteId, isBlocked: false } })`
+- [x] `FAIT` Les comptages de vagues excluent `isBlocked = true` : `prisma.vague.count({ where: { siteId, statut: EN_COURS, isBlocked: false } })`
+- [x] `FAIT` Créer `getQuotaSites(userId)` : compte les sites non-bloqués du user vs `limitesSites`
+- [x] `FAIT` Garder le fallback DECOUVERTE dans `resolvePlanLimites()` (sera retiré en Sprint 52)
 
 **Fichiers impactés :**
 - `src/lib/abonnements/check-quotas.ts`
@@ -235,16 +235,16 @@
 **Dépend de :** Story 46.1
 **Priorité :** Haute
 **Complexité :** Moyenne
-**Statut :** `TODO`
+**Statut :** `FAIT`
 
 **Description :** Adapter les fonctions de vérification de statut et créer le système d'invalidation de cache centralisé.
 
 **Tâches :**
-- [ ] `TODO` `getSubscriptionStatus(userId)` au lieu de siteId, cache taggé `subscription-${userId}`
-- [ ] `TODO` Créer `getSubscriptionStatusForSite(siteId)` : wrapper via owner
-- [ ] `TODO` Créer `src/lib/abonnements/invalidate-caches.ts` :
+- [x] `FAIT` `getSubscriptionStatus(userId)` au lieu de siteId, cache taggé `subscription-${userId}`
+- [x] `FAIT` Créer `getSubscriptionStatusForSite(siteId)` : wrapper via owner
+- [x] `FAIT` Créer `src/lib/abonnements/invalidate-caches.ts` :
   - `invalidateSubscriptionCaches(userId)` → invalide `subscription-${userId}` + `subscription-site-${siteId}` pour chaque site du user
-- [ ] `TODO` Adapter `SubscriptionBanner` pour utiliser le nouveau `getSubscriptionStatusForSite`
+- [x] `FAIT` Adapter `SubscriptionBanner` pour utiliser le nouveau `getSubscriptionStatusForSite`
 
 **Fichiers impactés :**
 - `src/lib/abonnements/check-subscription.ts`

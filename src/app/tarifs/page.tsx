@@ -12,7 +12,7 @@ import { PlansGrid } from "@/components/abonnements/plans-grid";
 import { PlanComparaisonTable } from "@/components/abonnements/plan-comparaison-table";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { getServerSession } from "@/lib/auth";
-import { getAbonnementActif } from "@/lib/queries/abonnements";
+import { getAbonnementActifPourSite } from "@/lib/queries/abonnements";
 import { getPlansAbonnements } from "@/lib/queries/plans-abonnements";
 import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
@@ -45,10 +45,10 @@ export default async function TarifsPage() {
   // Vérifier si l'utilisateur est connecté et quel est son abonnement actif
   const session = await getServerSession();
   // abonnementActif est le retour Prisma brut — on ne caste pas pour éviter les erreurs de type
-  let abonnementActif: Awaited<ReturnType<typeof getAbonnementActif>> = null;
+  let abonnementActif: Awaited<ReturnType<typeof getAbonnementActifPourSite>> = null;
   if (session?.activeSiteId) {
     try {
-      abonnementActif = await getAbonnementActif(session.activeSiteId);
+      abonnementActif = await getAbonnementActifPourSite(session.activeSiteId);
     } catch {
       // Silencieux — pas bloquant
     }

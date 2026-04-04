@@ -30,10 +30,10 @@ import { PLAN_LIMITES } from "@/lib/abonnements-constants";
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockGetAbonnementActif = vi.fn();
+const mockGetAbonnementActifPourSite = vi.fn();
 
 vi.mock("@/lib/queries/abonnements", () => ({
-  getAbonnementActif: (...args: unknown[]) => mockGetAbonnementActif(...args),
+  getAbonnementActifPourSite: (...args: unknown[]) => mockGetAbonnementActifPourSite(...args),
 }));
 
 const mockPrismaBacCount = vi.fn();
@@ -121,7 +121,7 @@ describe("getQuotasUsage", () => {
 
   it("plan DECOUVERTE avec 3 bacs → quota bacs plein (isQuotaAtteint = true)", async () => {
     // DECOUVERTE : limitesBacs = 3, limitesVagues = 1
-    mockGetAbonnementActif.mockResolvedValue({
+    mockGetAbonnementActifPourSite.mockResolvedValue({
       id: "abo-decouverte",
       plan: { typePlan: TypePlan.DECOUVERTE },
     });
@@ -136,7 +136,7 @@ describe("getQuotasUsage", () => {
   });
 
   it("plan DECOUVERTE avec 1 bac → quota bacs non plein (isQuotaAtteint = false)", async () => {
-    mockGetAbonnementActif.mockResolvedValue({
+    mockGetAbonnementActifPourSite.mockResolvedValue({
       id: "abo-decouverte",
       plan: { typePlan: TypePlan.DECOUVERTE },
     });
@@ -151,7 +151,7 @@ describe("getQuotasUsage", () => {
 
   it("plan ELEVEUR avec 2 bacs sur 10 → quota non plein", async () => {
     // ELEVEUR : limitesBacs = 10, limitesVagues = 3
-    mockGetAbonnementActif.mockResolvedValue({
+    mockGetAbonnementActifPourSite.mockResolvedValue({
       id: "abo-eleveur",
       plan: { typePlan: TypePlan.ELEVEUR },
     });
@@ -169,7 +169,7 @@ describe("getQuotasUsage", () => {
 
   it("plan ENTREPRISE → limite null (illimité) sur bacs, vagues, sites", async () => {
     // ENTREPRISE : limitesBacs = 999 → normalisé null
-    mockGetAbonnementActif.mockResolvedValue({
+    mockGetAbonnementActifPourSite.mockResolvedValue({
       id: "abo-entreprise",
       plan: { typePlan: TypePlan.ENTREPRISE },
     });
@@ -187,7 +187,7 @@ describe("getQuotasUsage", () => {
   });
 
   it("pas d'abonnement actif → limites par défaut DECOUVERTE", async () => {
-    mockGetAbonnementActif.mockResolvedValue(null);
+    mockGetAbonnementActifPourSite.mockResolvedValue(null);
     mockPrismaBacCount.mockResolvedValue(0);
     mockPrismaVagueCount.mockResolvedValue(0);
 
@@ -199,7 +199,7 @@ describe("getQuotasUsage", () => {
   });
 
   it("sites.actuel est toujours 1 (un site ne gère que lui-même)", async () => {
-    mockGetAbonnementActif.mockResolvedValue({
+    mockGetAbonnementActifPourSite.mockResolvedValue({
       id: "abo-eleveur",
       plan: { typePlan: TypePlan.ELEVEUR },
     });
@@ -212,7 +212,7 @@ describe("getQuotasUsage", () => {
   });
 
   it("plan PROFESSIONNEL — limites bacs=30, vagues=10", async () => {
-    mockGetAbonnementActif.mockResolvedValue({
+    mockGetAbonnementActifPourSite.mockResolvedValue({
       id: "abo-pro",
       plan: { typePlan: TypePlan.PROFESSIONNEL },
     });
@@ -228,7 +228,7 @@ describe("getQuotasUsage", () => {
   });
 
   it("plan DECOUVERTE, 1 vague active → quota vagues plein (limite=1)", async () => {
-    mockGetAbonnementActif.mockResolvedValue({
+    mockGetAbonnementActifPourSite.mockResolvedValue({
       id: "abo-decouverte-2",
       plan: { typePlan: TypePlan.DECOUVERTE },
     });
@@ -243,7 +243,7 @@ describe("getQuotasUsage", () => {
   });
 
   it("plan inconnu (fallback) → limites DECOUVERTE", async () => {
-    mockGetAbonnementActif.mockResolvedValue({
+    mockGetAbonnementActifPourSite.mockResolvedValue({
       id: "abo-inconnu",
       // typePlan invalide non présent dans PLAN_LIMITES
       plan: { typePlan: "PLAN_INEXISTANT" },
@@ -258,7 +258,7 @@ describe("getQuotasUsage", () => {
   });
 
   it("les comptes Prisma sont appelés avec le bon siteId", async () => {
-    mockGetAbonnementActif.mockResolvedValue({
+    mockGetAbonnementActifPourSite.mockResolvedValue({
       id: "abo-1",
       plan: { typePlan: TypePlan.ELEVEUR },
     });
@@ -268,11 +268,11 @@ describe("getQuotasUsage", () => {
     await getQuotasUsage("site-xyz");
 
     expect(mockPrismaBacCount).toHaveBeenCalledWith({
-      where: { siteId: "site-xyz" },
+      where: { siteId: "site-xyz", isBlocked: false },
     });
     expect(mockPrismaVagueCount).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ siteId: "site-xyz" }),
+        where: expect.objectContaining({ siteId: "site-xyz", isBlocked: false }),
       })
     );
   });

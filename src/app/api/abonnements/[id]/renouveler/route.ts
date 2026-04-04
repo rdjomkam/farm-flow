@@ -9,11 +9,11 @@
  * R8 : siteId = auth.activeSiteId
  */
 import { NextRequest, NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
 import { getAbonnementById, createAbonnement } from "@/lib/queries/abonnements";
 import { getPlanAbonnementById } from "@/lib/queries/plans-abonnements";
 import { initierPaiement } from "@/lib/services/billing";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { invalidateSubscriptionCaches } from "@/lib/abonnements/invalidate-caches";
 import { AuthError } from "@/lib/auth";
 import {
   Permission,
@@ -119,8 +119,8 @@ export async function POST(
       }
     );
 
-    // Invalider le cache d'abonnement du site
-    revalidateTag(`subscription-${auth.activeSiteId}`, {});
+    // Invalider le cache d'abonnement (user-level + tous ses sites)
+    await invalidateSubscriptionCaches(auth.userId);
 
     return NextResponse.json(
       {

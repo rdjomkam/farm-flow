@@ -4,10 +4,10 @@ import { getBacs, getBacsLibres } from "@/lib/queries/bacs";
 import { prisma } from "@/lib/db";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { Permission, parsePaginationQuery } from "@/types";
+import { Permission, TypePlan, parsePaginationQuery } from "@/types";
 import type { CreateBacDTO } from "@/types";
 import { normaliseLimite, isQuotaAtteint } from "@/lib/abonnements/check-quotas";
-import { getAbonnementActif } from "@/lib/queries/abonnements";
+import { getAbonnementActifPourSite } from "@/lib/queries/abonnements";
 import { PLAN_LIMITES } from "@/lib/abonnements-constants";
 import type { QuotaRessource } from "@/lib/abonnements/check-quotas";
 import { ErrorKeys } from "@/lib/api-error-keys";
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     // Vérifier le quota et créer le bac dans une transaction atomique (R4)
     const bac = await prisma.$transaction(async (tx) => {
       // 1. Charger l'abonnement actif pour déterminer la limite
-      const abonnement = await getAbonnementActif(auth.activeSiteId);
+      const abonnement = await getAbonnementActifPourSite(auth.activeSiteId);
       let limitesBacs: number;
 
       if (abonnement) {
@@ -115,9 +115,9 @@ export async function POST(request: NextRequest) {
         const planLimites = (PLAN_LIMITES as Record<string, (typeof PLAN_LIMITES)[keyof typeof PLAN_LIMITES]>)[typePlan];
         limitesBacs = planLimites
           ? planLimites.limitesBacs
-          : PLAN_LIMITES["DECOUVERTE" as keyof typeof PLAN_LIMITES].limitesBacs;
+          : PLAN_LIMITES[TypePlan.DECOUVERTE].limitesBacs;
       } else {
-        limitesBacs = PLAN_LIMITES["DECOUVERTE" as keyof typeof PLAN_LIMITES].limitesBacs;
+        limitesBacs = PLAN_LIMITES[TypePlan.DECOUVERTE].limitesBacs;
       }
 
       // 2. Compter les bacs existants (dans la transaction pour éviter la race condition)

@@ -12,7 +12,7 @@
 import { redirect } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
-import { getAbonnementActif, getAbonnementById } from "@/lib/queries/abonnements";
+import { getAbonnementActifPourSite, getAbonnementById } from "@/lib/queries/abonnements";
 import { AbonnementActuelCard } from "@/components/abonnements/abonnement-actuel-card";
 import { PaiementsHistoryList } from "@/components/abonnements/paiements-history-list";
 import { Permission } from "@/types";
@@ -37,8 +37,8 @@ export default async function MonAbonnementPage() {
     redirect("/");
   }
 
-  // Charger l'abonnement actif (inclut plan)
-  const abonnementActif = await getAbonnementActif(session.activeSiteId);
+  // Charger l'abonnement actif (inclut plan) — résout via site.ownerId
+  const abonnementActif = await getAbonnementActifPourSite(session.activeSiteId);
 
   // Charger les paiements si un abonnement actif existe
   let paiements: import("@/types").PaiementAbonnement[] = [];

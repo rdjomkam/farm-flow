@@ -702,6 +702,129 @@ Ne pas utiliser `navigator.platform` dans le nouveau code. Utiliser `navigator.u
 
 ---
 
+### ERR-032 — Next.js 16+ : `revalidateTag` requiert 2 arguments (faux positif de review)
+**Sprint :** 46 | **Date :** 2026-04-04
+**Sévérité :** Basse (faux positif)
+**Fichier(s) :** `src/app/api/*/route.ts`, tout fichier appelant `revalidateTag`
+
+**Symptôme :**
+Un reviewer signale `revalidateTag(tag, {})` comme un bug ("le deuxième argument n'existe pas"). Mais le build passe sans erreur et l'invalidation fonctionne correctement.
+
+**Cause racine :**
+L'API `revalidateTag` a changé entre les versions Next.js. En Next.js 14, la signature est `revalidateTag(tag: string)` (1 argument). En Next.js 16.1.6+, la signature est `revalidateTag(tag: string, profile: string | CacheLifeConfig)` (2 arguments requis). Passer `{}` comme deuxième argument est valide pour le profil par défaut.
+
+**Fix :**
+Aucun fix nécessaire si le projet utilise Next.js 16.1.6+. Vérifier la version dans `package.json` avant de signaler ce pattern comme bug.
+
+**Leçon / Règle :**
+Avant de signaler l'usage d'un argument "non existant" sur une API Next.js, vérifier la version du package dans `package.json`. Les signatures des APIs Next.js évoluent entre versions majeures. Un appel à `revalidateTag(tag, {})` est correct en Next.js 16+ et incorrect en Next.js 14. Ne pas supposer la version à partir de la documentation en ligne — lire `package.json` en priorité.
+
+---
+
+### ERR-031 — R2 : `as keyof typeof` pour accéder à un objet constant indexé par enum (Story 46.1)
+**Sprint :** 46 | **Date :** 2026-04-04
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/abonnements/check-subscription.ts`
+
+**Symptôme :**
+Accès à `PLAN_LIMITES` via `PLAN_LIMITES[plan.typePlan as keyof typeof PLAN_LIMITES]`. Pas d'erreur TypeScript immédiate mais le cast `as keyof typeof` contourne le système de types : si la valeur de l'enum ou le type de l'objet constant divergent, le compilateur ne détecte pas la régression.
+
+Variante additionnelle (Stories 46.2-46.3) : `PLAN_LIMITES[plan.typePlan as string]`. Le cast `as string` est encore plus permissif que `as keyof typeof` — TypeScript n'émet aucune erreur mais l'accès est complètement découplé du système de types. Les deux casts (`as string` et `as keyof typeof`) sont des violations R2 équivalentes.
+
+**Cause racine :**
+Variante de la violation R2 déjà documentée en ERR-018 : au lieu d'une string littérale en dur, on utilise ici un cast de type pour accéder à l'objet constant. Le résultat est identique — la valeur d'enum n'est pas utilisée via l'enum importé, ce qui découple l'accès du système de types.
+
+**Fix :**
+```typescript
+// Incorrect — cast as keyof typeof :
+const limites = PLAN_LIMITES[plan.typePlan as keyof typeof PLAN_LIMITES];
+
+// Incorrect — cast as string (tout aussi problématique) :
+const limites = PLAN_LIMITES[plan.typePlan as string];
+
+// Correct (enum comme clé, avec import explicite) :
+import { TypePlan } from "@/types";
+const limites = PLAN_LIMITES[plan.typePlan as TypePlan];
+// ou, si la valeur est une constante connue :
+const limites = PLAN_LIMITES[TypePlan.DECOUVERTE];
+```
+
+**Leçon / Règle :**
+Voir ERR-018 pour la règle générale. Cette entrée couvre deux variantes du même anti-pattern : `as keyof typeof OBJ` et `as string`. Les deux sont des violations R2. Toujours utiliser `as TypeEnum` (le type de l'enum importé) si un cast est nécessaire. Si l'objet constant est `Record<TypePlan, ...>`, TypeScript accepte directement `PLAN_LIMITES[valeurTypee]` sans cast dès que la variable est typée `TypePlan`.
+
+**Voir aussi :** ERR-018 (même pattern avec string littérale en dur), Sprint 37.
+
+---
+
+### ERR-030 — R4 : quota check + création de ressource dans des transactions séparées (Story 46.1)
+**Sprint :** 46 | **Date :** 2026-04-04
+**Sévérité :** Haute
+**Fichier(s) :** `src/app/api/vagues/route.ts`
+
+**Symptôme :**
+La route `POST /api/vagues` effectuait le check de quota dans une fonction externe (`checkSubscription`) puis créait la vague dans un appel Prisma séparé. Deux requêtes concurrentes peuvent passer le check simultanément et créer toutes les deux une vague, dépassant silencieusement la limite du plan.
+
+**Cause racine :**
+Nouveau pattern de violation R4 : la séparation n'est pas un `findFirst` + `update` classique (ERR-005) mais un appel de service externe + create. La logique de quota est encapsulée dans `checkSubscription`, ce qui masque le fait que check et création ne sont pas dans la même transaction.
+
+**Fix :**
+Inliner la création de la vague à l'intérieur de la même `$transaction` que le check de quota, sur le modèle de la route `/api/bacs` :
+
+```typescript
+// Avant (non-atomique) :
+const quotaCheck = await checkSubscription(siteId, "VAGUE");
+if (!quotaCheck.allowed) return NextResponse.json(..., { status: 403 });
+const vague = await prisma.vague.create({ data });
+
+// Après (atomique) :
+const vague = await prisma.$transaction(async (tx) => {
+  const count = await tx.vague.count({ where: { siteId } });
+  if (count >= plan.limiteVagues) throw new Error("QUOTA_ATTEINT");
+  return tx.vague.create({ data });
+});
+```
+
+**Leçon / Règle :**
+R4 s'applique dès que la décision de créer/modifier dépend d'un état lu en base, même si le check est encapsulé dans une fonction de service externe. L'encapsulation ne confère pas l'atomicité. Avant d'appeler un service de check suivi d'une mutation, se demander : "ces deux opérations sont-elles dans la même transaction ?". Si non, et si la cohérence est requise, les réunir dans `prisma.$transaction`.
+
+**Voir aussi :** ERR-016 (même pattern sur `/api/bacs`, fix de référence), ERR-005 (R4 générale).
+
+---
+
+### ERR-029 — Double `unstable_cache` imbriqué sur le même tag (anti-pattern cache)
+**Sprint :** 46 | **Date :** 2026-04-04
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/queries/abonnements.ts`, `src/lib/abonnements/check-subscription.ts`
+
+**Symptôme :**
+Deux fonctions wrappent leur résultat avec `unstable_cache` en utilisant le même tag (ex: `["abonnement", siteId]`). La fonction de plus haut niveau (`checkSubscription`) encapsule une fonction déjà cachée (`getAbonnementActif`). Les deux caches peuvent diverger : une invalidation via `revalidateTag` purge le cache interne mais pas nécessairement le cache externe, ou vice versa, selon l'ordre d'appel et la durée de vie respective.
+
+**Cause racine :**
+Le wrapping `unstable_cache` a été appliqué mécaniquement à plusieurs niveaux d'abstraction sans vérifier si les niveaux inférieurs étaient déjà cachés. Le cache Next.js `unstable_cache` est composable mais pas transparent : deux caches imbriqués avec le même tag ne se comportent pas comme un seul cache — ils créent deux entrées distinctes dans le cache Next.js.
+
+**Fix :**
+Cacher uniquement au niveau le plus bas (la requête Prisma), pas au niveau du wrapper de service :
+
+```typescript
+// src/lib/queries/abonnements.ts — cache ici (niveau bas) :
+export const getAbonnementActif = unstable_cache(
+  async (siteId: string) => prisma.abonnement.findFirst({ where: { siteId, statut: "ACTIF" } }),
+  ["abonnement-actif"],
+  { tags: ["abonnement"] }
+);
+
+// src/lib/abonnements/check-subscription.ts — PAS de cache ici (niveau haut) :
+export async function checkSubscription(siteId: string, ressource: string) {
+  const abonnement = await getAbonnementActif(siteId); // déjà caché
+  // ... logique de check ...
+}
+```
+
+**Leçon / Règle :**
+`unstable_cache` se place au niveau de la requête de données (queries), pas au niveau des fonctions de service ou des wrappers de logique métier. Si une fonction de service appelle une query déjà cachée, ne pas ajouter un deuxième `unstable_cache` sur le service. Un seul niveau de cache par chemin de données. Les tags d'invalidation (`revalidateTag`) ne traversent pas les caches imbriqués de façon fiable.
+
+---
+
 ### ERR-028 — SW : listener controllerchange non retire au cleanup du composant React
 **Sprint :** 27 | **Date :** 2026-03-21
 **Sévérité :** Basse (fuite memoire)

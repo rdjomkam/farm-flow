@@ -227,6 +227,8 @@ export {
 export {
   getAbonnements,
   getAbonnementActif,
+  getAbonnementActifPourSite,
+  getAbonnementActifParSite,
   getAbonnementById,
   createAbonnement,
   activerAbonnement,
@@ -234,6 +236,7 @@ export {
   expirerAbonnement,
   getAbonnementsExpirantAvant,
   getAbonnementsEnGraceExpires,
+  logAbonnementAudit,
 } from "./abonnements";
 
 export {
@@ -260,3 +263,13 @@ export {
   demanderRetrait,
   traiterRetrait,
 } from "./commissions";
+
+// Sprint 46 — Quota sites (user-level)
+export {
+  getQuotaSites,
+  getQuotasUsage,
+  getQuotasUsageWithCounts,
+  normaliseLimite,
+  isQuotaAtteint,
+} from "@/lib/abonnements/check-quotas";
+export type { QuotaRessource, QuotasUsage, QuotaSites } from "@/lib/abonnements/check-quotas";

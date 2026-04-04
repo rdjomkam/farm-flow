@@ -91,6 +91,7 @@ vi.mock("@/lib/queries/abonnements", () => ({
   createAbonnement: (...args: unknown[]) => mockCreateAbonnement(...args),
   activerAbonnement: (...args: unknown[]) => mockActiverAbonnement(...args),
   getAbonnementActif: (...args: unknown[]) => mockGetAbonnementActif(...args),
+  getAbonnementActifPourSite: (...args: unknown[]) => mockGetAbonnementActif(...args),
   getAbonnements: vi.fn(),
 }));
 

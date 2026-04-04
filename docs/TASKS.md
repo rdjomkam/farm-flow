@@ -7342,7 +7342,7 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 | Sprint | Titre | Stories | Statut |
 |--------|-------|---------|--------|
 | **45** | Migration additive (Schema + Data + Types + Constants) | 45.1–45.5 | `TODO` |
-| **46** | Queries et check functions (user-level) | 46.1–46.4 | `TODO` |
+| **46** | Queries et check functions (user-level) | 46.1–46.4 | `EN COURS` |
 | **47** | API routes adaptation | 47.1–47.4 | `TODO` |
 | **48** | UI cleanup + messages + flow création site + UI bloqué | 48.1–48.5 | `TODO` |
 | **49** | Essais (Trial) | 49.1–49.4 | `TODO` |

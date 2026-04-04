@@ -13,8 +13,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { invalidateSubscriptionCaches } from "@/lib/abonnements/invalidate-caches";
 import { prisma } from "@/lib/db";
 import { Permission, StatutPaiementAbo } from "@/types";
 import {
@@ -83,12 +83,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Récupère l'abonnement pour obtenir siteId et planId
     const abonnement = await prisma.abonnement.findUnique({
       where: { id: abonnementId },
-      select: { siteId: true, planId: true },
+      select: { siteId: true, planId: true, userId: true },
     });
 
     if (abonnement) {
-      // Invalider le cache d'abonnement du site (TTL 1h via unstable_cache)
-      revalidateTag(`subscription-${abonnement.siteId}`, {});
+      // Invalider le cache d'abonnement (user-level + tous ses sites)
+      await invalidateSubscriptionCaches(abonnement.userId);
 
       // Fire-and-forget : ne pas bloquer la réponse si erreur module
       applyPlanModules(abonnement.siteId, abonnement.planId).catch((modulesError) => {

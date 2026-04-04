@@ -16,8 +16,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
 import { getPaymentGateway } from "@/lib/payment/factory";
+import { invalidateSubscriptionCaches } from "@/lib/abonnements/invalidate-caches";
 import {
   getPaiementByReference,
   confirmerPaiement,
@@ -116,8 +116,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // R4 : activerAbonnement via updateMany conditionnel
         await activerAbonnement(paiementApresConfirm.abonnementId);
 
-        // Invalider le cache d'abonnement du site (TTL 1h via unstable_cache)
-        revalidateTag(`subscription-${paiementApresConfirm.siteId}`, {});
+        // Invalider le cache d'abonnement (user-level + tous ses sites)
+        if (paiementApresConfirm.abonnement?.userId) {
+          await invalidateSubscriptionCaches(paiementApresConfirm.abonnement.userId);
+        }
 
         // Story 43.5 : appliquer les modules du plan au site
         // Fire-and-forget : ne pas bloquer le webhook si erreur module

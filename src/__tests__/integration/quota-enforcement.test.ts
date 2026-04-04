@@ -31,6 +31,7 @@ vi.mock("@/lib/queries/bacs", () => ({
 
 vi.mock("@/lib/queries/abonnements", () => ({
   getAbonnementActif: (...args: unknown[]) => mockGetAbonnementActif(...args),
+  getAbonnementActifPourSite: (...args: unknown[]) => mockGetAbonnementActif(...args),
 }));
 
 // Mock check-quotas (fonctions pures utilisées réellement dans la route)

@@ -5,13 +5,21 @@
  * Utilisées par les Server Components pour conditionner l'affichage et l'accès.
  *
  * Story 32.4 — Sprint 32
+ * Story 46.3 — Sprint 46 : ajout getSubscriptionStatus(userId) + getSubscriptionStatusForSite(siteId)
  * R2 : enums importés depuis @/types (StatutAbonnement)
  *
- * Cache : unstable_cache avec TTL 1h + revalidation par tag `subscription-{siteId}`.
- * Invalidé par les routes mutation (POST /abonnements, annuler, renouveler, webhooks, cron).
+ * Cache :
+ *   - getSubscriptionStatus(userId)        → tag `subscription-${userId}`       TTL 1h
+ *   - getSubscriptionStatusForSite(siteId) → tag `subscription-site-${siteId}`  TTL 1h
+ * Invalidé par invalidateSubscriptionCaches(userId) depuis les routes mutation.
  */
 import { unstable_cache } from "next/cache";
-import { getAbonnementActif } from "@/lib/queries/abonnements";
+import {
+  getAbonnementActif,
+  getAbonnementActifPourSite,
+} from "@/lib/queries/abonnements";
+// Note : getAbonnementActifPourSite est déjà mis en cache côté query (tag subscription-site-${siteId}).
+// getSubscriptionStatusForSite ne doit PAS ajouter un second cache — c'est un anti-pattern double cache.
 import { StatutAbonnement, TypePlan } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -30,18 +38,20 @@ export interface SubscriptionStatus {
 }
 
 // ---------------------------------------------------------------------------
-// getSubscriptionStatus — Charge l'abonnement actif et calcule les jours restants
+// Helpers internes non-cachés
 // ---------------------------------------------------------------------------
 
 /**
- * Version interne non-cachée.
- * Ne pas exporter directement — utiliser getSubscriptionStatus (cachée) à la place.
+ * Calcule un SubscriptionStatus à partir d'un abonnement Prisma (+ plan inclus).
+ * Utilisé par les deux variantes cachées.
  */
-async function _getSubscriptionStatusUncached(
-  siteId: string
-): Promise<SubscriptionStatus> {
-  const abonnement = await getAbonnementActif(siteId);
-
+function _buildSubscriptionStatus(
+  abonnement: {
+    statut: string;
+    dateFin: Date;
+    plan: { typePlan: string };
+  } | null
+): SubscriptionStatus {
   if (!abonnement) {
     return {
       statut: null,
@@ -54,7 +64,6 @@ async function _getSubscriptionStatusUncached(
   const planType = abonnement.plan.typePlan as TypePlan;
   const isDecouverte = planType === TypePlan.DECOUVERTE;
 
-  // Calculer les jours restants
   const maintenant = new Date();
   const dateFin = new Date(abonnement.dateFin);
   const diffMs = dateFin.getTime() - maintenant.getTime();
@@ -68,25 +77,53 @@ async function _getSubscriptionStatusUncached(
   };
 }
 
+// ---------------------------------------------------------------------------
+// getSubscriptionStatus — par userId (user-level)
+// ---------------------------------------------------------------------------
+
 /**
- * Charge l'abonnement actif du site et retourne son statut.
- * Résultat mis en cache 1 heure (TTL 3600s) par siteId.
- * Invalidé par revalidateTag(`subscription-${siteId}`) depuis les routes mutation.
+ * Charge l'abonnement actif de l'utilisateur et retourne son statut.
+ * Résultat mis en cache 1 heure (TTL 3600s) par userId.
+ * Invalidé par revalidateTag(`subscription-${userId}`) via invalidateSubscriptionCaches().
+ *
+ * @param userId - ID de l'utilisateur propriétaire de l'abonnement
+ * @returns SubscriptionStatus avec statut + jours restants
+ */
+export const getSubscriptionStatus = (
+  userId: string
+): Promise<SubscriptionStatus> =>
+  unstable_cache(
+    async () => {
+      const abonnement = await getAbonnementActif(userId);
+      return _buildSubscriptionStatus(abonnement);
+    },
+    [`subscription-status-${userId}`],
+    {
+      revalidate: 3600,
+      tags: [`subscription-${userId}`],
+    }
+  )();
+
+// ---------------------------------------------------------------------------
+// getSubscriptionStatusForSite — wrapper siteId → ownerId → getSubscriptionStatus
+// ---------------------------------------------------------------------------
+
+/**
+ * Charge l'abonnement actif du propriétaire d'un site et retourne son statut.
+ * Délègue directement à getAbonnementActifPourSite (déjà mis en cache 1h côté query,
+ * tag `subscription-site-${siteId}`). Pas de cache supplémentaire ici — double
+ * unstable_cache avec le même tag est un anti-pattern.
+ * Invalidé via revalidateTag(`subscription-site-${siteId}`) dans invalidateSubscriptionCaches().
  *
  * @param siteId - ID du site (R8)
  * @returns SubscriptionStatus avec statut + jours restants
  */
-export const getSubscriptionStatus = (
+export async function getSubscriptionStatusForSite(
   siteId: string
-): Promise<SubscriptionStatus> =>
-  unstable_cache(
-    () => _getSubscriptionStatusUncached(siteId),
-    [`subscription-status-${siteId}`],
-    {
-      revalidate: 3600, // 1 heure
-      tags: [`subscription-${siteId}`],
-    }
-  )();
+): Promise<SubscriptionStatus> {
+  const abonnement = await getAbonnementActifPourSite(siteId);
+  return _buildSubscriptionStatus(abonnement);
+}
 
 // ---------------------------------------------------------------------------
 // Fonctions pures de vérification de statut

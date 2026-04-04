@@ -13,9 +13,9 @@
  * avec updateMany R4-atomique.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
 import { getAbonnementById } from "@/lib/queries/abonnements";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { invalidateSubscriptionCaches } from "@/lib/abonnements/invalidate-caches";
 import { AuthError } from "@/lib/auth";
 import { Permission, StatutAbonnement } from "@/types";
 import { prisma } from "@/lib/db";
@@ -78,8 +78,8 @@ export async function POST(
       );
     }
 
-    // Invalider le cache d'abonnement du site
-    revalidateTag(`subscription-${auth.activeSiteId}`, {});
+    // Invalider le cache d'abonnement (user-level + tous ses sites)
+    await invalidateSubscriptionCaches(auth.userId);
 
     return NextResponse.json({
       message: "Abonnement annul\u00e9. Il restera actif jusqu'\u00e0 la date d'expiration.",

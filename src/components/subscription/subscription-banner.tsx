@@ -16,7 +16,7 @@
  */
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { getSubscriptionStatus, isReadOnlyMode } from "@/lib/abonnements/check-subscription";
+import { getSubscriptionStatusForSite, isReadOnlyMode } from "@/lib/abonnements/check-subscription";
 import { StatutAbonnement } from "@/types";
 
 interface SubscriptionBannerProps {
@@ -32,7 +32,7 @@ export async function SubscriptionBanner({ siteId }: SubscriptionBannerProps) {
   try {
     [t, { statut, daysRemaining, isDecouverte }] = await Promise.all([
       getTranslations("abonnements"),
-      getSubscriptionStatus(siteId),
+      getSubscriptionStatusForSite(siteId),
     ]);
   } catch (error: unknown) {
     const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;

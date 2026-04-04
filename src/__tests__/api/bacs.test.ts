@@ -25,10 +25,10 @@ vi.mock("@/lib/abonnements/check-quotas", () => ({
   getQuotasUsage: vi.fn(),
 }));
 
-// Mock getAbonnementActif — utilisé dans la transaction POST
+// Mock getAbonnementActifPourSite — utilisé dans la transaction POST
 const mockGetAbonnementActif = vi.fn();
 vi.mock("@/lib/queries/abonnements", () => ({
-  getAbonnementActif: (...args: unknown[]) => mockGetAbonnementActif(...args),
+  getAbonnementActifPourSite: (...args: unknown[]) => mockGetAbonnementActif(...args),
 }));
 
 // Mock prisma.$transaction + tx.bac.count + tx.bac.create

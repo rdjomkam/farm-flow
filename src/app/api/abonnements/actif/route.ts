@@ -11,7 +11,7 @@
  * Retourne null si aucun abonnement actif (plan DECOUVERTE ou aucun abonnement).
  */
 import { NextRequest, NextResponse } from "next/server";
-import { getAbonnementActif } from "@/lib/queries/abonnements";
+import { getAbonnementActifPourSite } from "@/lib/queries/abonnements";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { AuthError } from "@/lib/auth";
 import { Permission } from "@/types";
@@ -21,8 +21,8 @@ export async function GET(request: NextRequest) {
   try {
     const auth = await requirePermission(request, Permission.ABONNEMENTS_VOIR);
 
-    // R8 : siteId = auth.activeSiteId
-    const abonnement = await getAbonnementActif(auth.activeSiteId);
+    // R8 : siteId = auth.activeSiteId → résout via ownerId
+    const abonnement = await getAbonnementActifPourSite(auth.activeSiteId);
 
     // Retourner null si aucun abonnement actif (pas d'erreur 404 — comportement normal)
     return NextResponse.json({ abonnement: abonnement ?? null });

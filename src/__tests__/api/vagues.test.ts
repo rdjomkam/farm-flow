@@ -9,14 +9,12 @@ import { Permission } from "@/types";
 // ---------------------------------------------------------------------------
 
 const mockGetVagues = vi.fn();
-const mockCreateVague = vi.fn();
 const mockGetVagueById = vi.fn();
 const mockUpdateVague = vi.fn();
 const mockGetIndicateursVague = vi.fn();
 
 vi.mock("@/lib/queries/vagues", () => ({
   getVagues: (...args: unknown[]) => mockGetVagues(...args),
-  createVague: (...args: unknown[]) => mockCreateVague(...args),
   getVagueById: (...args: unknown[]) => mockGetVagueById(...args),
   updateVague: (...args: unknown[]) => mockUpdateVague(...args),
 }));
@@ -25,10 +23,8 @@ vi.mock("@/lib/queries/indicateurs", () => ({
   getIndicateursVague: (...args: unknown[]) => mockGetIndicateursVague(...args),
 }));
 
-// Mock check-quotas : quota non atteint par défaut
-const mockGetQuotasUsage = vi.fn();
+// Mock check-quotas : fonctions pures utilisées dans la transaction
 vi.mock("@/lib/abonnements/check-quotas", () => ({
-  getQuotasUsage: (...args: unknown[]) => mockGetQuotasUsage(...args),
   isQuotaAtteint: (ressource: { actuel: number; limite: number | null }) => {
     if (ressource.limite === null) return false;
     return ressource.actuel >= ressource.limite;
@@ -39,8 +35,12 @@ vi.mock("@/lib/abonnements/check-quotas", () => ({
   },
 }));
 
-// Mock prisma for transaction
+// Mock prisma — la transaction inline réalise le check quota + création
 const mockPrismaVagueCount = vi.fn();
+const mockPrismaVagueFindUnique = vi.fn();
+const mockPrismaVagueCreate = vi.fn();
+const mockPrismaBacFindMany = vi.fn();
+const mockPrismaBacUpdate = vi.fn();
 const mockPrismaTransaction = vi.fn();
 
 vi.mock("@/lib/db", () => ({
@@ -55,7 +55,7 @@ vi.mock("@/lib/db", () => ({
 // Mock abonnements queries
 const mockGetAbonnementActif = vi.fn();
 vi.mock("@/lib/queries/abonnements", () => ({
-  getAbonnementActif: (...args: unknown[]) => mockGetAbonnementActif(...args),
+  getAbonnementActifPourSite: (...args: unknown[]) => mockGetAbonnementActif(...args),
   getAbonnements: vi.fn(),
 }));
 
@@ -207,26 +207,71 @@ describe("GET /api/vagues", () => {
 // POST /api/vagues
 // ---------------------------------------------------------------------------
 describe("POST /api/vagues", () => {
+  // Vague créée par défaut dans la transaction
+  const createdVague = {
+    id: "vague-new",
+    code: "VAGUE-2026-003",
+    dateDebut: new Date("2026-03-01"),
+    dateFin: null,
+    statut: "EN_COURS",
+    nombreInitial: 1000,
+    poidsMoyenInitial: 3.5,
+    origineAlevins: "Production locale",
+    createdAt: now,
+    updatedAt: now,
+    bacs: [{ id: "bac-1" }, { id: "bac-2" }],
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
-    // Quota non atteint par défaut (limites non atteintes)
-    mockGetQuotasUsage.mockResolvedValue({
-      bacs: { actuel: 2, limite: 10 },
-      vagues: { actuel: 0, limite: 3 },
-      sites: { actuel: 1, limite: 1 },
-    });
     // No active subscription (uses default DECOUVERTE plan limits)
     mockGetAbonnementActif.mockResolvedValue(null);
     // Quota: 0 vagues EN_COURS
     mockPrismaVagueCount.mockResolvedValue(0);
-    // Transaction exécute le callback avec un tx mock qui expose vague.count
+    // Transaction exécute le callback avec un tx mock complet (check quota + création inline)
     mockPrismaTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
       const txMock = {
-        vague: { count: (...args: unknown[]) => mockPrismaVagueCount(...args) },
+        vague: {
+          count: (...args: unknown[]) => mockPrismaVagueCount(...args),
+          findUnique: (...args: unknown[]) => mockPrismaVagueFindUnique(...args),
+          create: (...args: unknown[]) => mockPrismaVagueCreate(...args),
+        },
+        bac: {
+          findMany: (...args: unknown[]) => mockPrismaBacFindMany(...args),
+          update: (...args: unknown[]) => mockPrismaBacUpdate(...args),
+        },
       };
       return fn(txMock);
     });
+    // Par défaut : bacs libres disponibles
+    mockPrismaBacFindMany.mockResolvedValue([
+      { id: "bac-1", nom: "Bac 1", vagueId: null, siteId: "site-1" },
+      { id: "bac-2", nom: "Bac 2", vagueId: null, siteId: "site-1" },
+    ]);
+    // Pas de code en double
+    mockPrismaVagueFindUnique.mockResolvedValue(null);
+    // Création retourne la vague
+    mockPrismaVagueCreate.mockResolvedValue({
+      id: "vague-new",
+      code: "VAGUE-2026-003",
+      dateDebut: new Date("2026-03-01"),
+      dateFin: null,
+      statut: "EN_COURS",
+      nombreInitial: 1000,
+      poidsMoyenInitial: 3.5,
+      origineAlevins: "Production locale",
+      configElevageId: "config-1",
+      siteId: "site-1",
+      createdAt: now,
+      updatedAt: now,
+    });
+    // findUnique après création retourne la vague avec bacs
+    mockPrismaVagueFindUnique.mockImplementation(({ where }: { where: { code?: string; id?: string } }) => {
+      if (where.id) return Promise.resolve(createdVague);
+      return Promise.resolve(null); // vérification d'unicité du code
+    });
+    mockPrismaBacUpdate.mockResolvedValue({});
   });
 
   const validBody = {
@@ -243,20 +288,6 @@ describe("POST /api/vagues", () => {
   };
 
   it("cree une vague avec des donnees valides", async () => {
-    mockCreateVague.mockResolvedValue({
-      id: "vague-new",
-      code: "VAGUE-2026-003",
-      dateDebut: new Date("2026-03-01"),
-      dateFin: null,
-      statut: "EN_COURS",
-      nombreInitial: 1000,
-      poidsMoyenInitial: 3.5,
-      origineAlevins: "Production locale",
-      createdAt: now,
-      updatedAt: now,
-      bacs: [{ id: "bac-1" }, { id: "bac-2" }],
-    });
-
     const request = makeRequest("/api/vagues", {
       method: "POST",
       body: JSON.stringify(validBody),
@@ -268,13 +299,16 @@ describe("POST /api/vagues", () => {
     expect(response.status).toBe(201);
     expect(data.code).toBe("VAGUE-2026-003");
     expect(data.nombreBacs).toBe(2);
-    expect(mockCreateVague).toHaveBeenCalledWith("site-1", expect.objectContaining({
-      code: "VAGUE-2026-003",
-      bacDistribution: [
-        { bacId: "bac-1", nombrePoissons: 500 },
-        { bacId: "bac-2", nombrePoissons: 500 },
-      ],
-    }));
+    // La création est maintenant inline dans la transaction atomique
+    expect(mockPrismaTransaction).toHaveBeenCalled();
+    expect(mockPrismaVagueCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          code: "VAGUE-2026-003",
+          siteId: "site-1",
+        }),
+      })
+    );
   });
 
   it("retourne 400 si le code est manquant", async () => {
@@ -364,9 +398,11 @@ describe("POST /api/vagues", () => {
   });
 
   it("retourne 409 quand un bac est deja assigne", async () => {
-    mockCreateVague.mockRejectedValue(
-      new Error("Bacs deja assigne a une vague : Bac 1")
-    );
+    // Simuler un bac déjà assigné à une vague via la transaction inline
+    mockPrismaBacFindMany.mockResolvedValue([
+      { id: "bac-1", nom: "Bac 1", vagueId: "vague-existante", siteId: "site-1" },
+      { id: "bac-2", nom: "Bac 2", vagueId: null, siteId: "site-1" },
+    ]);
 
     const request = makeRequest("/api/vagues", {
       method: "POST",
@@ -377,13 +413,16 @@ describe("POST /api/vagues", () => {
     const data = await response.json();
 
     expect(response.status).toBe(409);
-    expect(data.message).toContain("deja assigne");
+    // Le message contient "assigné" (avec accent) depuis la transaction inline
+    expect(data.message).toMatch(/assign[eé]/i);
   });
 
   it("retourne 409 quand le code est deja utilise", async () => {
-    mockCreateVague.mockRejectedValue(
-      new Error('Le code "VAGUE-2026-003" est deja utilise')
-    );
+    // Simuler un code existant via la vérification d'unicité dans la transaction
+    mockPrismaVagueFindUnique.mockImplementation(({ where }: { where: { code?: string; id?: string } }) => {
+      if (where.code) return Promise.resolve({ id: "vague-existante", code: where.code });
+      return Promise.resolve(null);
+    });
 
     const request = makeRequest("/api/vagues", {
       method: "POST",
@@ -394,13 +433,16 @@ describe("POST /api/vagues", () => {
     const data = await response.json();
 
     expect(response.status).toBe(409);
-    expect(data.message).toContain("deja utilise");
+    // Le message contient "utilisé" (avec accent) depuis la transaction inline
+    expect(data.message).toMatch(/utilis[eé]/i);
   });
 
   it("retourne 404 quand un bac est introuvable", async () => {
-    mockCreateVague.mockRejectedValue(
-      new Error("Un ou plusieurs bacs sont introuvables")
-    );
+    // Simuler des bacs introuvables (moins de bacs retournés que demandés)
+    mockPrismaBacFindMany.mockResolvedValue([
+      { id: "bac-1", nom: "Bac 1", vagueId: null, siteId: "site-1" },
+      // bac-2 manquant
+    ]);
 
     const request = makeRequest("/api/vagues", {
       method: "POST",
