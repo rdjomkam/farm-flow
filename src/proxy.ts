@@ -208,9 +208,13 @@ export async function proxy(request: NextRequest) {
   // Routes in NO_SITE_ROUTES/NO_SITE_API_PREFIXES work without active site.
 
   // Vérification d'abonnement — uniquement pour les routes non whitelistées
-  if (!isSubscriptionWhitelisted(pathname) && !isNoSiteRoute(pathname)) {
+  const shouldCheckSubscription = !isSubscriptionWhitelisted(pathname) && !isNoSiteRoute(pathname);
+  console.log(`[proxy] pathname=${pathname} whitelisted=${isSubscriptionWhitelisted(pathname)} noSiteRoute=${isNoSiteRoute(pathname)} shouldCheck=${shouldCheckSubscription}`);
+
+  if (shouldCheckSubscription) {
     try {
       const apiUrl = new URL("/api/abonnements/statut-middleware", request.url);
+      console.log(`[proxy] Fetching subscription status from ${apiUrl.toString()}`);
       const response = await fetch(apiUrl.toString(), {
         method: "GET",
         headers: {
@@ -219,6 +223,8 @@ export async function proxy(request: NextRequest) {
         },
       });
 
+      console.log(`[proxy] Subscription API response: status=${response.status} ok=${response.ok}`);
+
       if (response.ok) {
         const data = (await response.json()) as {
           statut: string | null;
@@ -226,6 +232,8 @@ export async function proxy(request: NextRequest) {
           planId: string | null;
           isBlocked: boolean;
         };
+
+        console.log(`[proxy] Subscription data: statut=${data.statut} isDecouverte=${data.isDecouverte} isBlocked=${data.isBlocked}`);
 
         // Plan DECOUVERTE → jamais bloqué
         // Statut null → pas d'abonnement → bloqué (redirect)
@@ -250,11 +258,29 @@ export async function proxy(request: NextRequest) {
           return NextResponse.redirect(expireUrl);
         }
         // SUSPENDU → NE PAS rediriger (mode lecture seule géré côté composant)
+      } else {
+        // API returned non-OK status — fail closed: block access
+        console.error(`[proxy] Subscription API returned non-OK status ${response.status} — blocking access (fail-closed)`);
+        if (pathname.startsWith("/api/")) {
+          return NextResponse.json(
+            { status: 403, message: "Impossible de vérifier l'abonnement.", code: "SUBSCRIPTION_CHECK_FAILED" },
+            { status: 403 }
+          );
+        }
+        const expireUrl = new URL("/abonnement-expire", request.url);
+        return NextResponse.redirect(expireUrl);
       }
-      // En cas d'erreur de l'API → fail open (laisser passer)
-    } catch {
-      // Fail open : ne pas bloquer l'utilisateur si le check d'abonnement échoue
-      // Erreur loguée côté serveur dans la route API
+    } catch (error) {
+      // Fail closed: block access when subscription check fails
+      console.error("[proxy] Subscription check fetch failed — blocking access (fail-closed):", error);
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json(
+          { status: 403, message: "Impossible de vérifier l'abonnement.", code: "SUBSCRIPTION_CHECK_FAILED" },
+          { status: 403 }
+        );
+      }
+      const expireUrl = new URL("/abonnement-expire", request.url);
+      return NextResponse.redirect(expireUrl);
     }
   }
 
