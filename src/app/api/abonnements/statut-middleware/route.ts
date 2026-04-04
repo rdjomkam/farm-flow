@@ -22,7 +22,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
-import { getSubscriptionStatus, isBlocked } from "@/lib/abonnements/check-subscription";
+import { getSubscriptionStatusForSite, isBlocked } from "@/lib/abonnements/check-subscription";
 import { prisma } from "@/lib/db";
 import { StatutAbonnement, TypePlan } from "@/types";
 
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const status = await getSubscriptionStatus(session.activeSiteId);
+    const status = await getSubscriptionStatusForSite(session.activeSiteId);
 
     // isDecouverte : plan DECOUVERTE ne bloque jamais
     // R2 : comparaison via enum TypePlan.DECOUVERTE

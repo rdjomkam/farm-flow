@@ -157,7 +157,7 @@ export function isReadOnlyMode(statut: StatutAbonnement | null): boolean {
  * R2 : compare avec StatutAbonnement.EXPIRE et StatutAbonnement.ANNULE.
  */
 export function isBlocked(statut: StatutAbonnement | null): boolean {
-  if (!statut) return false;
+  if (!statut) return true;
   return (
     (statut as string) === StatutAbonnement.EXPIRE ||
     (statut as string) === StatutAbonnement.ANNULE

@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
         name: s.name,
         address: s.address,
         isActive: s.isActive,
+        isBlocked: s.isBlocked,
         memberCount: s._count.members,
         bacCount: s._count.bacs,
         vagueCount: s._count.vagues,

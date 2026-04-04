@@ -108,16 +108,13 @@ export async function POST(request: NextRequest) {
     const bac = await prisma.$transaction(async (tx) => {
       // 1. Charger l'abonnement actif pour déterminer la limite
       const abonnement = await getAbonnementActifPourSite(auth.activeSiteId);
-      let limitesBacs: number;
-
-      if (abonnement) {
-        const planLimites = PLAN_LIMITES[abonnement.plan.typePlan as TypePlan];
-        limitesBacs = planLimites
-          ? planLimites.limitesBacs
-          : PLAN_LIMITES[TypePlan.DECOUVERTE].limitesBacs;
-      } else {
-        limitesBacs = PLAN_LIMITES[TypePlan.DECOUVERTE].limitesBacs;
+      if (!abonnement) {
+        throw new Error("NO_SUBSCRIPTION");
       }
+      const planLimites = PLAN_LIMITES[abonnement.plan.typePlan as TypePlan];
+      const limitesBacs = planLimites
+        ? planLimites.limitesBacs
+        : PLAN_LIMITES[TypePlan.DECOUVERTE].limitesBacs;
 
       // 2. Compter les bacs existants (dans la transaction pour éviter la race condition)
       const nombreBacs = await tx.bac.count({ where: { siteId: auth.activeSiteId } });
@@ -147,8 +144,19 @@ export async function POST(request: NextRequest) {
       if (err.message === "QUOTA_DEPASSE") {
         return { __quotaError: true, limite: err.quotaLimite } as const;
       }
+      if (err.message === "NO_SUBSCRIPTION") {
+        return { __noSubscription: true } as const;
+      }
       throw err;
     });
+
+    if ("__noSubscription" in bac) {
+      return apiError(
+        402,
+        "Aucun abonnement actif. Souscrivez un plan pour créer des ressources.",
+        { code: "NO_SUBSCRIPTION" }
+      );
+    }
 
     if ("__quotaError" in bac && bac.__quotaError) {
       return apiError(
