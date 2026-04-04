@@ -108,9 +108,23 @@ function isNoSiteRoute(pathname: string): boolean {
  * Vérifie si le pathname est dans la whitelist d'abonnement.
  * Les routes API et les assets sont toujours exclus de la vérification.
  */
+/** API routes whitelisted from subscription checks (auth, subscription management, public) */
+const SUBSCRIPTION_WHITELIST_API_PREFIXES = [
+  "/api/auth/",
+  "/api/abonnements/",
+  "/api/health",
+  "/api/sites",
+  "/api/cron/",
+  "/api/activites/generer",
+];
+
 function isSubscriptionWhitelisted(pathname: string): boolean {
-  // API routes — jamais vérifiées pour l'abonnement
-  if (pathname.startsWith("/api/")) return true;
+  // Only specific API routes are whitelisted — most API routes ARE subscription-gated
+  if (pathname.startsWith("/api/")) {
+    return SUBSCRIPTION_WHITELIST_API_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(prefix)
+    );
+  }
   return SUBSCRIPTION_WHITELIST_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(route + "/")
   );
@@ -214,14 +228,24 @@ export async function proxy(request: NextRequest) {
         };
 
         // Plan DECOUVERTE → jamais bloqué
-        // Statut null → pas d'abonnement enregistré → laisser passer
+        // Statut null → pas d'abonnement → bloqué (redirect)
+        // Statut EXPIRE ou ANNULE → bloqué (redirect)
         if (
           !data.isDecouverte &&
-          data.isBlocked &&
-          (data.statut === StatutAbonnement.EXPIRE ||
-            data.statut === StatutAbonnement.ANNULE)
+          data.isBlocked
         ) {
-          // Statut EXPIRE ou ANNULE → redirect /abonnement-expire
+          // API routes → 403 JSON response
+          if (pathname.startsWith("/api/")) {
+            return NextResponse.json(
+              {
+                status: 403,
+                message: "Abonnement inactif. Veuillez renouveler votre abonnement.",
+                code: "SUBSCRIPTION_BLOCKED",
+              },
+              { status: 403 }
+            );
+          }
+          // Pages → redirect to /abonnement-expire
           const expireUrl = new URL("/abonnement-expire", request.url);
           return NextResponse.redirect(expireUrl);
         }

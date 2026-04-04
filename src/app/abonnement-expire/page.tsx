@@ -17,7 +17,7 @@
  * Mobile first (360px)
  */
 import { getServerSession } from "@/lib/auth/session";
-import { getSubscriptionStatus } from "@/lib/abonnements/check-subscription";
+import { getSubscriptionStatusForSite } from "@/lib/abonnements/check-subscription";
 import { StatutAbonnement } from "@/types";
 import { prisma } from "@/lib/db";
 import { getTranslations } from "next-intl/server";
@@ -39,7 +39,7 @@ export default async function AbonnementExpirePage() {
   let lastPlanId: string | null = null;
 
   if (session?.activeSiteId) {
-    const status = await getSubscriptionStatus(session.activeSiteId);
+    const status = await getSubscriptionStatusForSite(session.activeSiteId);
     statut = status.statut;
     daysRemaining = status.daysRemaining;
 
