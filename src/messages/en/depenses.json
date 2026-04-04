@@ -87,8 +87,6 @@
     "enCours": "Processing...",
     "montantActuel": "Current amount",
     "historique": "Adjustment history",
-    "tabMontant": "Amount",
-    "tabFrais": "Fees",
     "ajouterFrais": "Add fee",
     "modifierFrais": "Edit fee",
     "supprimerFrais": "Delete fee",
