@@ -25,16 +25,18 @@ export default async function DepensePage({ params }: Props) {
   const depense = await getDepenseById(id, session.activeSiteId);
   if (!depense) notFound();
 
-  const canManage = permissions.includes(Permission.DEPENSES_CREER);
+  const canEdit = permissions.includes(Permission.DEPENSES_MODIFIER);
   const canPay = permissions.includes(Permission.DEPENSES_PAYER);
+  const canDelete = permissions.includes(Permission.DEPENSES_SUPPRIMER);
 
   return (
     <>
       <Header title={depense.numero} />
       <DepenseDetailClient
         depense={JSON.parse(JSON.stringify(depense))}
-        canManage={canManage}
+        canEdit={canEdit}
         canPay={canPay}
+        canDelete={canDelete}
       />
     </>
   );

@@ -127,6 +127,12 @@
     "notesPlaceholder": "Informations complementaires...",
     "createExpense": "Creer la depense"
   },
+  "deleteDepense": {
+    "supprimer": "Supprimer",
+    "title": "Supprimer cette depense ?",
+    "description": "Cette action est irreversible. La depense et toutes ses donnees seront definitivement supprimees.",
+    "confirmer": "Supprimer definitivement"
+  },
   "emptyState": {
     "noExpenses": "Aucune depense"
   },

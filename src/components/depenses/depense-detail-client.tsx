@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
@@ -128,8 +129,9 @@ interface FraisSuppRow {
 
 interface Props {
   depense: DepenseData;
-  canManage: boolean;
+  canEdit: boolean;
   canPay: boolean;
+  canDelete: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -152,8 +154,9 @@ function formatDate(dateStr: string): string {
 // Component
 // ---------------------------------------------------------------------------
 
-export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
+export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Props) {
   const t = useTranslations("depenses");
+  const router = useRouter();
   const depenseService = useDepenseService();
   const { toast } = useToast();
 
@@ -211,6 +214,10 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
 
   // Delete facture
   const [deleteFactureOpen, setDeleteFactureOpen] = useState(false);
+
+  // Delete depense
+  const [deleteDepenseOpen, setDeleteDepenseOpen] = useState(false);
+  const [deleteDepensePending, setDeleteDepensePending] = useState(false);
 
   const statut = currentDepense.statut as StatutDepense;
   const categorie = currentDepense.categorieDepense as CategorieDepense;
@@ -346,6 +353,18 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
     if (result.ok) {
       setCurrentDepense((prev) => ({ ...prev, factureUrl: null }));
       setDeleteFactureOpen(false);
+    }
+  }
+
+  async function handleDeleteDepense() {
+    setDeleteDepensePending(true);
+    try {
+      const result = await depenseService.deleteDepense(currentDepense.id);
+      if (result.ok) {
+        router.push("/depenses");
+      }
+    } finally {
+      setDeleteDepensePending(false);
     }
   }
 
@@ -560,14 +579,51 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      {/* Back link */}
-      <Link
-        href="/depenses"
-        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        {t("detail.retour")}
-      </Link>
+      {/* Back link + delete */}
+      <div className="flex items-center justify-between">
+        <Link
+          href="/depenses"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {t("detail.retour")}
+        </Link>
+
+        {canDelete && statut === StatutDepense.NON_PAYEE && (
+          <Dialog open={deleteDepenseOpen} onOpenChange={setDeleteDepenseOpen}>
+            <DialogTrigger asChild>
+              <Button variant="danger" size="sm">
+                <Trash2 className="h-4 w-4 mr-1" />
+                {t("deleteDepense.supprimer")}
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t("deleteDepense.title")}</DialogTitle>
+              </DialogHeader>
+              <DialogBody>
+                <p className="text-sm text-muted-foreground">
+                  {t("deleteDepense.description")}
+                </p>
+              </DialogBody>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">{t("detail.annuler")}</Button>
+                </DialogClose>
+                <Button
+                  variant="danger"
+                  onClick={handleDeleteDepense}
+                  disabled={deleteDepensePending}
+                >
+                  {deleteDepensePending
+                    ? t("detail.enCours")
+                    : t("deleteDepense.confirmer")}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
 
       {/* Info card */}
       <Card>
@@ -742,7 +798,7 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
           )}
 
           {/* CTA ajustement montant / frais */}
-          {canManage && (
+          {canEdit && (
             <Dialog open={ajustementOpen} onOpenChange={setAjustementOpen}>
               <DialogTrigger asChild>
                 <Button
@@ -1136,7 +1192,7 @@ export function DepenseDetailClient({ depense, canManage, canPay }: Props) {
       </Card>
 
       {/* Facture fournisseur */}
-      {canManage && (
+      {canEdit && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
