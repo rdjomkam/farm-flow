@@ -215,7 +215,8 @@ export async function proxy(request: NextRequest) {
 
   if (shouldCheckSubscription) {
     try {
-      const apiUrl = new URL("/api/abonnements/statut-middleware", request.url);
+      const internalBase = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+      const apiUrl = new URL("/api/abonnements/statut-middleware", internalBase);
       console.log(`[proxy] Fetching subscription status from ${apiUrl.toString()}`);
       const response = await fetch(apiUrl.toString(), {
         method: "GET",
