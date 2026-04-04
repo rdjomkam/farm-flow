@@ -20,12 +20,15 @@ import { NextRequest } from "next/server";
 // ---------------------------------------------------------------------------
 
 const mockTransitionnerStatuts = vi.fn();
+const mockAppliquerDowngradeProgramme = vi.fn();
 const mockRendreCommissionsDisponiblesCron = vi.fn();
 const mockEnvoyerRappelsRenouvellement = vi.fn();
 
 vi.mock("@/lib/services/abonnement-lifecycle", () => ({
   transitionnerStatuts: (...args: unknown[]) =>
     mockTransitionnerStatuts(...args),
+  appliquerDowngradeProgramme: (...args: unknown[]) =>
+    mockAppliquerDowngradeProgramme(...args),
 }));
 
 vi.mock("@/lib/services/commissions", () => ({
@@ -73,8 +76,9 @@ describe("GET /api/cron/subscription-lifecycle", () => {
     vi.clearAllMocks();
     // Configurer CRON_SECRET par défaut pour chaque test
     process.env = { ...originalEnv, CRON_SECRET: VALID_SECRET };
-    // Valeur par défaut pour envoyerRappelsRenouvellement
+    // Valeur par défaut pour envoyerRappelsRenouvellement et downgrades
     mockEnvoyerRappelsRenouvellement.mockResolvedValue({ envoyes: 0 });
+    mockAppliquerDowngradeProgramme.mockResolvedValue({ appliques: 0, ignores: 0 });
   });
 
   afterEach(() => {
@@ -244,14 +248,16 @@ describe("GET /api/cron/subscription-lifecycle", () => {
 
   // ---- Structure de réponse ----
 
-  it("la réponse 200 contient exactement les 5 clés attendues dans processed", async () => {
+  it("la réponse 200 contient exactement les clés attendues dans processed", async () => {
     mockTransitionnerStatuts.mockResolvedValue({
       graces: 10,
       suspendus: 5,
       expires: 2,
+      essaisExpires: 1,
     });
     mockRendreCommissionsDisponiblesCron.mockResolvedValue(7);
     mockEnvoyerRappelsRenouvellement.mockResolvedValue({ envoyes: 3 });
+    mockAppliquerDowngradeProgramme.mockResolvedValue({ appliques: 2, ignores: 0 });
 
     const req = makeRequest(`Bearer ${VALID_SECRET}`);
     const res = await GET(req);
@@ -259,7 +265,7 @@ describe("GET /api/cron/subscription-lifecycle", () => {
 
     const processedKeys = Object.keys(data.processed).sort();
     expect(processedKeys).toEqual(
-      ["commissionsDisponibles", "expires", "graces", "rappelsRenouvellement", "suspendus"]
+      ["commissionsDisponibles", "downgradesAppliques", "downgradesIgnores", "essaisExpires", "expires", "graces", "rappelsRenouvellement", "suspendus"]
     );
   });
 });

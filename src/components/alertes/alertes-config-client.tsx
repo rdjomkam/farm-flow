@@ -143,6 +143,15 @@ const typeAlerteConfig: Record<
     hasSeuilValeur: false,
     hasSeuilPourcentage: false,
   },
+  // Sprint 49 — Fin d'essai
+  [TypeAlerte.ABONNEMENT_ESSAI_EXPIRE]: {
+    label: "Essai gratuit expire",
+    description: "Notification envoyee quand un essai gratuit arrive a expiration",
+    icon: Bell,
+    color: "text-warning",
+    hasSeuilValeur: false,
+    hasSeuilPourcentage: false,
+  },
 };
 
 interface AlerteConfigItem {

@@ -41,6 +41,8 @@ const typeAlerteLabels: Record<TypeAlerte, string> = {
   [TypeAlerte.DENSITE_CRITIQUE_QUALITE_EAU]: "Densite + qualite eau critiques",
   // Sprint 36 — Rappels abonnement
   [TypeAlerte.ABONNEMENT_RAPPEL_RENOUVELLEMENT]: "Rappel renouvellement abonnement",
+  // Sprint 49 — Fin d'essai
+  [TypeAlerte.ABONNEMENT_ESSAI_EXPIRE]: "Essai gratuit expire",
 };
 
 const typeAlerteIcons: Record<TypeAlerte, React.ComponentType<{ className?: string }>> = {
@@ -58,6 +60,8 @@ const typeAlerteIcons: Record<TypeAlerte, React.ComponentType<{ className?: stri
   [TypeAlerte.DENSITE_CRITIQUE_QUALITE_EAU]: AlertTriangle,
   // Sprint 36 — Rappels abonnement
   [TypeAlerte.ABONNEMENT_RAPPEL_RENOUVELLEMENT]: Bell,
+  // Sprint 49 — Fin d'essai
+  [TypeAlerte.ABONNEMENT_ESSAI_EXPIRE]: Bell,
 };
 
 const typeAlerteColors: Record<TypeAlerte, string> = {
@@ -75,6 +79,8 @@ const typeAlerteColors: Record<TypeAlerte, string> = {
   [TypeAlerte.DENSITE_CRITIQUE_QUALITE_EAU]: "text-danger bg-danger/10",
   // Sprint 36 — Rappels abonnement
   [TypeAlerte.ABONNEMENT_RAPPEL_RENOUVELLEMENT]: "text-primary bg-primary/10",
+  // Sprint 49 — Fin d'essai
+  [TypeAlerte.ABONNEMENT_ESSAI_EXPIRE]: "text-warning bg-warning/10",
 };
 
 const statutLabels: Record<StatutAlerte, string> = {

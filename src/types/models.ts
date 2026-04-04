@@ -1108,6 +1108,8 @@ export enum TypeAlerte {
   DENSITE_CRITIQUE_QUALITE_EAU = "DENSITE_CRITIQUE_QUALITE_EAU",
   /** Rappel de renouvellement d'abonnement (J-14, J-7, J-3, J-1) — Sprint 36 */
   ABONNEMENT_RAPPEL_RENOUVELLEMENT = "ABONNEMENT_RAPPEL_RENOUVELLEMENT",
+  /** Notification envoyee quand un essai gratuit expire — Sprint 49 */
+  ABONNEMENT_ESSAI_EXPIRE = "ABONNEMENT_ESSAI_EXPIRE",
 }
 
 /** Statut du cycle de vie d'une notification */

@@ -228,6 +228,81 @@ export async function getAbonnementsExpirantAvant(date: Date) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// EssaiUtilise — Helpers (Sprint 49)
+// ---------------------------------------------------------------------------
+
+/**
+ * Vérifie si un utilisateur a déjà utilisé un essai pour un plan donné.
+ * Utilisé dans la $transaction de création d'essai pour la vérification atomique.
+ *
+ * @param userId  - ID de l'utilisateur
+ * @param typePlan - TypePlan pour lequel vérifier l'essai
+ */
+export async function getEssaiUtilise(userId: string, typePlan: string) {
+  return prisma.essaiUtilise.findUnique({
+    where: {
+      userId_typePlan: { userId, typePlan: typePlan as import("@/generated/prisma/enums").TypePlan },
+    },
+  });
+}
+
+/**
+ * Marque un essai comme utilisé pour un utilisateur et un plan donnés.
+ * Doit être appelé dans la même $transaction que la création de l'abonnement essai.
+ * La contrainte @@unique([userId, typePlan]) en DB empêche les doublons.
+ *
+ * @param userId  - ID de l'utilisateur
+ * @param typePlan - TypePlan pour lequel marquer l'essai
+ */
+export async function marquerEssaiUtilise(userId: string, typePlan: string) {
+  return prisma.essaiUtilise.create({
+    data: {
+      userId,
+      typePlan: typePlan as import("@/generated/prisma/enums").TypePlan,
+    },
+  });
+}
+
+/**
+ * Récupère les abonnements essai ACTIF dont la dateFin est dépassée.
+ * Utilisé par le CRON job de fin d'essai (Story 49.3).
+ */
+export async function getEssaisExpires() {
+  return prisma.abonnement.findMany({
+    where: {
+      isEssai: true,
+      statut: StatutAbonnement.ACTIF,
+      dateFin: { lt: new Date() },
+    },
+    include: {
+      plan: { select: { nom: true, typePlan: true } },
+      site: { select: { id: true, name: true } },
+      user: { select: { id: true, name: true, email: true, phone: true } },
+    },
+  });
+}
+
+/**
+ * Expire un abonnement essai directement : ACTIF → EXPIRE (sans période de grâce).
+ * R4 : updateMany avec condition — atomique.
+ * Accepte uniquement les abonnements isEssai=true en statut ACTIF.
+ *
+ * @param id - ID de l'abonnement essai
+ */
+export async function expirerEssai(id: string) {
+  return prisma.abonnement.updateMany({
+    where: {
+      id,
+      isEssai: true,
+      statut: StatutAbonnement.ACTIF,
+    },
+    data: {
+      statut: StatutAbonnement.EXPIRE,
+    },
+  });
+}
+
 /**
  * Récupère les abonnements EN_GRACE dont la dateFinGrace est dépassée.
  * Utilisé par le CRON job de suspension.

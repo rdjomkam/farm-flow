@@ -21,7 +21,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import * as crypto from "crypto";
-import { transitionnerStatuts } from "@/lib/services/abonnement-lifecycle";
+import { transitionnerStatuts, appliquerDowngradeProgramme } from "@/lib/services/abonnement-lifecycle";
 import { rendreCommissionsDisponiblesCron } from "@/lib/services/commissions";
 import { envoyerRappelsRenouvellement } from "@/lib/services/rappels-abonnement";
 import { apiError } from "@/lib/api-utils";
@@ -71,6 +71,9 @@ export async function GET(request: NextRequest) {
     // ---- Rappels de renouvellement (J-14, J-7, J-3, J-1) ----
     const { envoyes: rappelsEnvoyes } = await envoyerRappelsRenouvellement();
 
+    // ---- Application des downgrades programmes (Story 50.5) ----
+    const downgrades = await appliquerDowngradeProgramme();
+
     return NextResponse.json({
       status: 200,
       message: "Lifecycle traite avec succes.",
@@ -78,8 +81,11 @@ export async function GET(request: NextRequest) {
         graces: transitions.graces,
         suspendus: transitions.suspendus,
         expires: transitions.expires,
+        essaisExpires: transitions.essaisExpires,
         commissionsDisponibles,
         rappelsRenouvellement: rappelsEnvoyes,
+        downgradesAppliques: downgrades.appliques,
+        downgradesIgnores: downgrades.ignores,
       },
     });
   } catch (error) {

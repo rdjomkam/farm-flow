@@ -241,6 +241,8 @@ enum TypeAlerte {
   AUCUN_RELEVE_QUALITE_EAU
   DENSITE_CRITIQUE_QUALITE_EAU
   ABONNEMENT_RAPPEL_RENOUVELLEMENT
+  /** Notification envoyee quand un essai gratuit expire — Sprint 49 */
+  ABONNEMENT_ESSAI_EXPIRE
 }
 
 enum StatutAlerte {

@@ -45,10 +45,14 @@ vi.mock("@/lib/db", () => ({
 // ---------------------------------------------------------------------------
 
 const mockGetAbonnementsEnGraceExpires = vi.fn();
+const mockGetEssaisExpires = vi.fn();
+const mockExpirerEssai = vi.fn();
 
 vi.mock("@/lib/queries/abonnements", () => ({
   getAbonnementsEnGraceExpires: (...args: unknown[]) =>
     mockGetAbonnementsEnGraceExpires(...args),
+  getEssaisExpires: (...args: unknown[]) => mockGetEssaisExpires(...args),
+  expirerEssai: (...args: unknown[]) => mockExpirerEssai(...args),
   getAbonnementActif: vi.fn(),
   getAbonnementActifPourSite: vi.fn(),
   activerAbonnement: vi.fn(),
@@ -118,6 +122,9 @@ function makeAbonnement(overrides: {
 describe("CRON quotidien — transitionnerStatuts()", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    // Essais : par défaut aucun essai expiré
+    mockGetEssaisExpires.mockResolvedValue([]);
+    mockExpirerEssai.mockResolvedValue({ count: 0 });
   });
 
   it("Transition 1 : ACTIF avec dateFin dépassée → EN_GRACE (updateMany count=1)", async () => {
@@ -198,7 +205,7 @@ describe("CRON quotidien — transitionnerStatuts()", () => {
 
     const result = await transitionnerStatuts();
 
-    expect(result).toEqual({ graces: 0, suspendus: 0, expires: 0 });
+    expect(result).toEqual({ graces: 0, suspendus: 0, expires: 0, essaisExpires: 0 });
   });
 
   it("les conditions de date sont correctement calculées (GRACE_PERIOD_JOURS = 7)", () => {
@@ -260,6 +267,8 @@ describe("Réactivation depuis SUSPENDU via paiement", () => {
     // Valeurs par défaut pour éviter les erreurs "no mock configured"
     mockPrismaAbonnementUpdateMany.mockResolvedValue({ count: 0 });
     mockGetAbonnementsEnGraceExpires.mockResolvedValue([]);
+    mockGetEssaisExpires.mockResolvedValue([]);
+    mockExpirerEssai.mockResolvedValue({ count: 0 });
     mockCreerNotificationSiAbsente.mockResolvedValue(undefined);
   });
 
