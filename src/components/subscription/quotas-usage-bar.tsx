@@ -100,6 +100,22 @@ export async function QuotasUsageBar({ siteId, precomputedBacsCount, precomputed
     vaguesCount: precomputedVaguesCount,
   });
 
+  // Aucun abonnement actif → message d'invitation
+  if (!quotas) {
+    return (
+      <div className="rounded-lg border bg-card p-4 flex flex-col gap-3">
+        <h3 className="text-sm font-semibold">Utilisation de votre plan</h3>
+        <p className="text-sm text-muted-foreground">
+          Aucun abonnement actif.{" "}
+          <Link href="/tarifs" className="underline underline-offset-2 font-medium text-primary">
+            Souscrire à un plan
+          </Link>{" "}
+          pour gérer vos ressources.
+        </p>
+      </div>
+    );
+  }
+
   const bacsAtteint = isQuotaAtteint(quotas.bacs);
   const vaguesAtteint = isQuotaAtteint(quotas.vagues);
   const limiteAtteinte = bacsAtteint || vaguesAtteint;

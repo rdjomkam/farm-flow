@@ -90,15 +90,15 @@ export function isQuotaAtteint(ressource: QuotaRessource): boolean {
  * Factorisé pour être partagé entre getQuotasUsage et getQuotasUsageWithCounts.
  *
  * Sprint 52 : retrait du fallback DECOUVERTE.
- * Si aucun abonnement actif → lève QUOTA_NO_ABONNEMENT.
+ * Retourne null si aucun abonnement actif (pas de crash).
  * Si le typePlan est inconnu → lève QUOTA_PLAN_INCONNU.
  *
- * @throws {Error} "QUOTA_NO_ABONNEMENT" si aucun abonnement actif
+ * @returns limites du plan ou null si aucun abonnement actif
  * @throws {Error} "QUOTA_PLAN_INCONNU" si le typePlan n'est pas dans PLAN_LIMITES
  */
-function resolvePlanLimites(abonnement: AbonnementAvecPlan) {
+function resolvePlanLimites(abonnement: AbonnementAvecPlan): { limitesBacs: number; limitesVagues: number; limitesSites: number } | null {
   if (!abonnement) {
-    throw new Error("QUOTA_NO_ABONNEMENT");
+    return null;
   }
   const planLimites = PLAN_LIMITES[abonnement.plan.typePlan as TypePlan];
   if (!planLimites) {
@@ -107,7 +107,7 @@ function resolvePlanLimites(abonnement: AbonnementAvecPlan) {
   return { limitesBacs: planLimites.limitesBacs, limitesVagues: planLimites.limitesVagues, limitesSites: planLimites.limitesSites };
 }
 
-export async function getQuotasUsage(siteId: string): Promise<QuotasUsage> {
+export async function getQuotasUsage(siteId: string): Promise<QuotasUsage | null> {
   return getQuotasUsageWithCounts(siteId);
 }
 
@@ -121,9 +121,11 @@ export async function getQuotasUsage(siteId: string): Promise<QuotasUsage> {
 export async function getQuotasUsageWithCounts(
   siteId: string,
   precomputedCounts?: { bacsCount?: number; vaguesCount?: number }
-): Promise<QuotasUsage> {
+): Promise<QuotasUsage | null> {
   const abonnement = await getAbonnementActifPourSite(siteId);
-  const { limitesBacs, limitesVagues, limitesSites } = resolvePlanLimites(abonnement);
+  const planLimites = resolvePlanLimites(abonnement);
+  if (!planLimites) return null;
+  const { limitesBacs, limitesVagues, limitesSites } = planLimites;
 
   // Utiliser les comptages pré-calculés ou faire les requêtes DB
   // Les ressources bloquées (isBlocked=true) sont exclues des quotas — ADR-020
@@ -173,11 +175,11 @@ export interface QuotaSites {
  *
  * - Compte les sites non-bloqués dont l'utilisateur est propriétaire (ownerId)
  * - Récupère la limite via getAbonnementActif(userId) → plan.limitesSites
- * - Sprint 52 : lève une erreur si pas d'abonnement actif (fallback DECOUVERTE supprimé)
+ * - Sprint 52 : fallback DECOUVERTE supprimé
+ * - Si aucun abonnement actif : retourne { used, limit: 0, remaining: 0 } (bloque la création)
  *
  * @param userId - ID de l'utilisateur propriétaire des sites
  * @returns QuotaSites avec used, limit, remaining
- * @throws {Error} "QUOTA_NO_ABONNEMENT" si aucun abonnement actif
  */
 export async function getQuotaSites(userId: string): Promise<QuotaSites> {
   const [abonnement, used] = await Promise.all([
@@ -185,8 +187,11 @@ export async function getQuotaSites(userId: string): Promise<QuotaSites> {
     prisma.site.count({ where: { ownerId: userId, isBlocked: false } }),
   ]);
 
-  const { limitesSites } = resolvePlanLimites(abonnement);
-  const limit = normaliseLimite(limitesSites);
+  const planLimites = resolvePlanLimites(abonnement);
+  if (!planLimites) {
+    return { used, limit: 0, remaining: 0 };
+  }
+  const limit = normaliseLimite(planLimites.limitesSites);
   const remaining = limit === null ? null : Math.max(0, limit - used);
 
   return { used, limit, remaining };

@@ -186,12 +186,13 @@ describe("getQuotasUsage", () => {
     expect(isQuotaAtteint(result.sites)).toBe(false);
   });
 
-  it("pas d'abonnement actif → lève QUOTA_NO_ABONNEMENT (Sprint 52 : fallback supprimé)", async () => {
+  it("pas d'abonnement actif → retourne null (pas de crash)", async () => {
     mockGetAbonnementActifPourSite.mockResolvedValue(null);
     mockPrismaBacCount.mockResolvedValue(0);
     mockPrismaVagueCount.mockResolvedValue(0);
 
-    await expect(getQuotasUsage("site-sans-abo")).rejects.toThrow("QUOTA_NO_ABONNEMENT");
+    const result = await getQuotasUsage("site-sans-abo");
+    expect(result).toBeNull();
   });
 
   it("sites.actuel est toujours 1 (un site ne gère que lui-même)", async () => {

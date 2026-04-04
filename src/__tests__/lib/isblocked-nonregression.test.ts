@@ -216,10 +216,11 @@ describe("Comptages — exclure les ressources bloquées (isBlocked=true)", () =
     expect(result.bacs.limite).toBe(30); // PROFESSIONNEL = 30
   });
 
-  it("getQuotasUsageWithCounts : aucun abonnement actif → lève QUOTA_NO_ABONNEMENT", async () => {
+  it("getQuotasUsageWithCounts : aucun abonnement actif → retourne null", async () => {
     mockGetAbonnementActifPourSite.mockResolvedValue(null);
 
-    await expect(getQuotasUsageWithCounts("site-sans-abo")).rejects.toThrow("QUOTA_NO_ABONNEMENT");
+    const result = await getQuotasUsageWithCounts("site-sans-abo");
+    expect(result).toBeNull();
   });
 
   it("getQuotasUsageWithCounts : typePlan inconnu → lève QUOTA_PLAN_INCONNU", async () => {
@@ -278,10 +279,14 @@ describe("getQuotaSites — exclure les sites bloqués (isBlocked=true)", () => 
     expect(result.remaining).toBeNull(); // illimité
   });
 
-  it("aucun abonnement actif → lève QUOTA_NO_ABONNEMENT", async () => {
+  it("aucun abonnement actif → retourne { used, limit: 0, remaining: 0 }", async () => {
     mockGetAbonnementActif.mockResolvedValue(null);
+    mockSiteCount.mockResolvedValue(2);
 
-    await expect(getQuotaSites("user-sans-abo")).rejects.toThrow("QUOTA_NO_ABONNEMENT");
+    const result = await getQuotaSites("user-sans-abo");
+    expect(result.used).toBe(2);
+    expect(result.limit).toBe(0);
+    expect(result.remaining).toBe(0);
   });
 
   it("remaining ne peut pas être négatif (même si actuel > limite)", async () => {
