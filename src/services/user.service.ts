@@ -125,7 +125,7 @@ export function useUserService() {
   );
 
   const createSite = useCallback(
-    (dto: CreateSiteDTO) =>
+    (dto: CreateSiteDTO, callOptions?: { silentError?: boolean }) =>
       call<SiteWithMembers>(
         "/api/sites",
         {
@@ -133,7 +133,7 @@ export function useUserService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Site cree." }
+        { successMessage: "Site cree.", ...callOptions }
       ),
     [call]
   );

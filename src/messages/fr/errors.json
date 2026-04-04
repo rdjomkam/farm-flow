@@ -67,6 +67,10 @@
   "quota": {
     "exceeded": "Quota depasse",
     "vaguesLimit": "Vous avez atteint la limite de vagues en cours autorisees par votre plan",
-    "bacsLimit": "Vous avez atteint la limite de bacs autorises par votre plan"
+    "bacsLimit": "Vous avez atteint la limite de bacs autorises par votre plan",
+    "upgradeOwner": "Vous avez atteint la limite de {resource}. Mettez a niveau votre plan.",
+    "contactOwner": "La limite de {resource} a ete atteinte. Contactez le proprietaire du site.",
+    "subscriptionRequired": "Un abonnement actif est requis pour creer cette ressource.",
+    "viewPlans": "Voir les plans"
   }
 }

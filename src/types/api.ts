@@ -278,6 +278,8 @@ export interface VagueSummaryResponse {
   /** Nombre de jours depuis le debut */
   joursEcoules: number;
   createdAt: Date;
+  /** Vague bloquee par le plan d'abonnement — ADR-020 */
+  isBlocked: boolean;
 }
 
 /** Reponse liste des vagues */

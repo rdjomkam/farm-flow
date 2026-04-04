@@ -15,7 +15,10 @@
     "badgeActif": "Site actif",
     "actif": "Actif",
     "selectionner": "Selectionner",
-    "gerer": "Gerer"
+    "gerer": "Gerer",
+    "blocked": "Bloque",
+    "resourceName": "sites",
+    "upgradeButton": "Mettre a niveau"
   },
   "detail": {
     "mesSites": "Mes sites",

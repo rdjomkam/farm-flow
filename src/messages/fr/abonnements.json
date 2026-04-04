@@ -61,7 +61,9 @@
     "title": "Mon Abonnement",
     "paymentHistory": "Historique des paiements",
     "noSubscription": "Vous n'avez pas d'abonnement actif.",
-    "viewPlans": "Voir les plans"
+    "viewPlans": "Voir les plans",
+    "soldeCredit": "Solde de crédit",
+    "soldeCreditDesc": "Crédit disponible applicable à votre prochain abonnement"
   },
   "admin": {
     "active": "Actif",

@@ -67,6 +67,10 @@
   "quota": {
     "exceeded": "Quota exceeded",
     "vaguesLimit": "You have reached the maximum number of active batches allowed by your plan",
-    "bacsLimit": "You have reached the maximum number of tanks allowed by your plan"
+    "bacsLimit": "You have reached the maximum number of tanks allowed by your plan",
+    "upgradeOwner": "You have reached the limit for {resource}. Upgrade your plan.",
+    "contactOwner": "The limit for {resource} has been reached. Contact the site owner.",
+    "subscriptionRequired": "An active subscription is required to create this resource.",
+    "viewPlans": "View plans"
   }
 }

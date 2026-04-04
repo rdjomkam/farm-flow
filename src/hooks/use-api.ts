@@ -41,6 +41,8 @@ export interface ApiResult<T> {
   error: string | null;
   /** true si la requête a réussi (res.ok) */
   ok: boolean;
+  /** Code HTTP de la réponse (null si erreur réseau) */
+  status?: number;
   /** True if item was queued offline instead of sent */
   offline?: boolean;
   /** Temporary ID assigned to offline item */
@@ -132,14 +134,14 @@ export function useApi() {
             toast({ title: message, variant: "error" });
           }
 
-          return { data: null, error: message, ok: false };
+          return { data: null, error: message, ok: false, status: res.status };
         }
 
         if (successMessage) {
           toast({ title: successMessage, variant: "success" });
         }
 
-        return { data, error: null, ok: true };
+        return { data, error: null, ok: true, status: res.status };
       } catch {
         // Offline queue: if mutation + offlineCapable, queue instead of error
         if (

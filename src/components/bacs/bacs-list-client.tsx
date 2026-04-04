@@ -24,6 +24,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
+import { BlockedResourceOverlay } from "@/components/ui/blocked-resource-overlay";
 import { Permission, TypeSystemeBac } from "@/types";
 import type { BacResponse } from "@/types";
 import { useCreateBac, useUpdateBac, useBacsList } from "@/hooks/queries/use-bacs-queries";
@@ -186,6 +187,34 @@ export function BacsListClient({ bacs: initialBacs, permissions }: BacsListClien
         ) : (
           bacs.map((bac) => {
             const isOccupe = bac.vagueId !== null;
+
+            if (bac.isBlocked) {
+              return (
+                <BlockedResourceOverlay key={bac.id} resourceName={bac.nom}>
+                  <Card className="opacity-60">
+                    <CardContent className="flex items-center justify-between gap-3 p-3">
+                      <div className="min-w-0">
+                        <p className="font-medium">{bac.nom}</p>
+                        <p className="text-sm text-muted-foreground">{bac.volume} L</p>
+                        {bac.nombrePoissons != null && (
+                          <p className="text-sm text-muted-foreground">
+                            {t("list.poissons", { count: bac.nombrePoissons })}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isOccupe ? (
+                          <Badge variant="warning">{bac.vagueCode ?? t("list.occupe")}</Badge>
+                        ) : (
+                          <Badge variant="info">{t("list.libre")}</Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </BlockedResourceOverlay>
+              );
+            }
+
             return (
               <Card key={bac.id}>
                 <CardContent className="flex items-center justify-between gap-3 p-3">

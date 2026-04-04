@@ -150,6 +150,7 @@ const fakeVagues: VagueSummaryResponse[] = [
     nombreBacs: 3,
     joursEcoules: 52,
     createdAt: pastDate,
+    isBlocked: false,
   },
   {
     id: "vague-2",
@@ -163,6 +164,7 @@ const fakeVagues: VagueSummaryResponse[] = [
     nombreBacs: 1,
     joursEcoules: 52,
     createdAt: pastDate,
+    isBlocked: false,
   },
 ];
 

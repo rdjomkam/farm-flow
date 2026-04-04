@@ -3,7 +3,6 @@ import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { VaguesListClient } from "@/components/vagues/vagues-list-client";
 import { AccessDenied } from "@/components/ui/access-denied";
-import { QuotasUsageBar } from "@/components/subscription/quotas-usage-bar";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getVagues } from "@/lib/queries/vagues";
 import { getBacsLibres } from "@/lib/queries/bacs";
@@ -47,6 +46,7 @@ export default async function VaguesPage() {
         nombreBacs: v._count.bacs,
         joursEcoules,
         createdAt: v.createdAt,
+        isBlocked: (v as { isBlocked?: boolean }).isBlocked ?? false,
       };
     });
 
@@ -69,9 +69,6 @@ export default async function VaguesPage() {
     return (
       <>
         <Header title={t("page.title")} />
-        <div className="px-4 pt-4">
-          <QuotasUsageBar siteId={session.activeSiteId} precomputedVaguesCount={vagues.filter((v) => v.statut === StatutVague.EN_COURS).length} />
-        </div>
         <VaguesListClient vagues={vagues} bacsLibres={bacsLibres} permissions={permissions} configElevages={configElevages} />
       </>
     );

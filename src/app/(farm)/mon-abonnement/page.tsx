@@ -15,7 +15,9 @@ import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getAbonnementActifPourSite, getAbonnementById } from "@/lib/queries/abonnements";
 import { AbonnementActuelCard } from "@/components/abonnements/abonnement-actuel-card";
 import { PaiementsHistoryList } from "@/components/abonnements/paiements-history-list";
+import { QuotasUsageBar } from "@/components/subscription/quotas-usage-bar";
 import { Permission } from "@/types";
+import { prisma } from "@/lib/db";
 import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 
@@ -37,8 +39,16 @@ export default async function MonAbonnementPage() {
     redirect("/");
   }
 
-  // Charger l'abonnement actif (inclut plan) — résout via site.ownerId
-  const abonnementActif = await getAbonnementActifPourSite(session.activeSiteId);
+  // Charger l'abonnement actif + soldeCredit utilisateur en parallèle
+  const [abonnementActif, userData] = await Promise.all([
+    getAbonnementActifPourSite(session.activeSiteId),
+    prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { soldeCredit: true },
+    }),
+  ]);
+
+  const soldeCredit = userData?.soldeCredit ? Number(userData.soldeCredit) : 0;
 
   // Charger les paiements si un abonnement actif existe
   let paiements: import("@/types").PaiementAbonnement[] = [];
@@ -54,6 +64,19 @@ export default async function MonAbonnementPage() {
     <div className="min-h-screen bg-background">
       <Header title={t("monAbonnement.title")} />
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+        {/* Solde de crédit disponible */}
+        {soldeCredit > 0 && (
+          <div className="rounded-lg border bg-card p-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-foreground">{t("monAbonnement.soldeCredit")}</p>
+              <p className="text-xs text-muted-foreground">{t("monAbonnement.soldeCreditDesc")}</p>
+            </div>
+            <span className="text-lg font-bold text-primary">
+              {soldeCredit.toLocaleString("fr-FR", { style: "currency", currency: "XAF", minimumFractionDigits: 0 })}
+            </span>
+          </div>
+        )}
+
         <AbonnementActuelCard
           abonnement={abonnementActif
             ? ({
@@ -73,6 +96,9 @@ export default async function MonAbonnementPage() {
               } as import("@/types").AbonnementWithPlan)
             : null}
         />
+        {/* Utilisation des quotas */}
+        <QuotasUsageBar siteId={session.activeSiteId} />
+
         {paiements.length > 0 && (
           <div>
             <h2 className="text-base font-semibold text-foreground mb-3">

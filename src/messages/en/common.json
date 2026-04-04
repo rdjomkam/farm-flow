@@ -130,5 +130,14 @@
   "loading": {
     "ariaLabel": "Loading",
     "text": "Loading..."
+  },
+  "blockedResource": {
+    "badgeLabel": "Blocked",
+    "title": "Blocked resource",
+    "description": "This resource is blocked by your current subscription plan.",
+    "descriptionWithName": "{name} is blocked by your current subscription plan.",
+    "upgradeMessage": "Upgrade your plan to access this resource and other advanced features.",
+    "upgradeButton": "Upgrade plan",
+    "closeButton": "Close"
   }
 }

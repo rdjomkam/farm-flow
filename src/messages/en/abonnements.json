@@ -61,7 +61,9 @@
     "title": "My Subscription",
     "paymentHistory": "Payment History",
     "noSubscription": "You don't have an active subscription.",
-    "viewPlans": "View Plans"
+    "viewPlans": "View Plans",
+    "soldeCredit": "Credit Balance",
+    "soldeCreditDesc": "Available credit applicable to your next subscription"
   },
   "admin": {
     "active": "Active",

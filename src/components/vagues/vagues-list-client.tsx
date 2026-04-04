@@ -19,6 +19,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FormSection } from "@/components/ui/form-section";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { VagueCard } from "./vague-card";
+import { BlockedResourceOverlay } from "@/components/ui/blocked-resource-overlay";
 import { StatutVague, Permission } from "@/types";
 import type { VagueSummaryResponse, BacResponse, BacStockingEntry } from "@/types";
 import { useCreateVague, useVaguesList } from "@/hooks/queries/use-vagues-queries";
@@ -172,9 +173,15 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
     }
     return (
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {items.map((v) => (
-          <VagueCard key={v.id} vague={v} />
-        ))}
+        {items.map((v) =>
+          v.isBlocked ? (
+            <BlockedResourceOverlay key={v.id} resourceName={v.code}>
+              <VagueCard vague={v} />
+            </BlockedResourceOverlay>
+          ) : (
+            <VagueCard key={v.id} vague={v} />
+          )
+        )}
       </div>
     );
   }

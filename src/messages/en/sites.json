@@ -15,7 +15,10 @@
     "badgeActif": "Active site",
     "actif": "Active",
     "selectionner": "Select",
-    "gerer": "Manage"
+    "gerer": "Manage",
+    "blocked": "Blocked",
+    "resourceName": "sites",
+    "upgradeButton": "Upgrade plan"
   },
   "detail": {
     "mesSites": "My sites",

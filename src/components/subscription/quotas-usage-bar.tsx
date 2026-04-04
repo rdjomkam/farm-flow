@@ -80,7 +80,7 @@ function RessourceBar({ label, ressource }: RessourceBarProps) {
             atteint
               ? "bg-destructive"
               : pourcentage >= 80
-                ? "bg-amber-500"
+                ? "bg-warning"
                 : "bg-primary",
           ].join(" ")}
           style={{ width: `${pourcentage}%` }}

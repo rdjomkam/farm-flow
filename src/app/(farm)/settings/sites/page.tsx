@@ -18,11 +18,15 @@ export default async function SitesPage() {
     name: s.name,
     address: s.address,
     isActive: s.isActive,
+    isBlocked: s.isBlocked,
     memberCount: s._count.members,
     bacCount: s._count.bacs,
     vagueCount: s._count.vagues,
     createdAt: s.createdAt,
   }));
+
+  // isOwner : l'utilisateur est propriétaire d'au moins un site
+  const isOwner = sites.some((s) => s.ownerId === session.userId);
 
   return (
     <>
@@ -32,6 +36,7 @@ export default async function SitesPage() {
           sites={sitesData}
           activeSiteId={session.activeSiteId}
           canCreate={session.role === Role.ADMIN}
+          isOwner={isOwner}
         />
       </div>
     </>

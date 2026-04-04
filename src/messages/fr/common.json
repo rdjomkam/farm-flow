@@ -130,5 +130,14 @@
   "loading": {
     "ariaLabel": "Chargement en cours",
     "text": "Chargement..."
+  },
+  "blockedResource": {
+    "badgeLabel": "Bloqué",
+    "title": "Ressource bloquée",
+    "description": "Cette ressource est bloquée par votre plan d'abonnement actuel.",
+    "descriptionWithName": "{name} est bloqué par votre plan d'abonnement actuel.",
+    "upgradeMessage": "Mettez à niveau votre plan pour accéder à cette ressource et à d'autres fonctionnalités avancées.",
+    "upgradeButton": "Mettre à niveau",
+    "closeButton": "Fermer"
   }
 }

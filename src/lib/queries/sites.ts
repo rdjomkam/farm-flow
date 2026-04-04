@@ -11,7 +11,14 @@ export async function getUserSites(userId: string) {
       },
       isActive: true,
     },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      address: true,
+      isActive: true,
+      isBlocked: true,
+      ownerId: true,
+      createdAt: true,
       _count: { select: { members: true, bacs: true, vagues: true } },
     },
     orderBy: { name: "asc" },
