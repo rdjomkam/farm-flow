@@ -4,13 +4,7 @@
  * ExonerationFormDialog — formulaire de création d'une exonération (backoffice).
  *
  * Ouvre un Dialog Radix avec un formulaire pour accorder un accès gratuit à un
- * utilisateur (userId + siteId + motif + dateFin optionnelle).
- *
- * NOTE TEMPORAIRE (Sprint 51) :
- * Le champ siteId est requis car Abonnement.siteId est encore NOT NULL dans le
- * schéma Prisma. Au Sprint 52 (Story 52.1), ce champ sera rendu nullable pour
- * les abonnements user-level (dont EXONERATION). Ce formulaire sera mis à jour
- * à ce moment pour supprimer le champ siteId du formulaire.
+ * utilisateur (userId + motif + dateFin optionnelle).
  *
  * R5 : DialogTrigger asChild
  * R6 : CSS variables du thème (pas de couleurs Tailwind directes)
@@ -45,13 +39,11 @@ export function ExonerationFormDialog({ trigger, onSuccess }: ExonerationFormDia
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState("");
-  const [siteId, setSiteId] = useState("");
   const [motif, setMotif] = useState("");
   const [dateFin, setDateFin] = useState("");
 
   function resetForm() {
     setUserId("");
-    setSiteId("");
     setMotif("");
     setDateFin("");
   }
@@ -69,7 +61,6 @@ export function ExonerationFormDialog({ trigger, onSuccess }: ExonerationFormDia
     try {
       const body: Record<string, unknown> = {
         userId: userId.trim(),
-        siteId: siteId.trim(),
         motif: motif.trim(),
       };
       if (dateFin.trim()) {
@@ -107,7 +98,6 @@ export function ExonerationFormDialog({ trigger, onSuccess }: ExonerationFormDia
 
   const canSubmit =
     userId.trim().length > 0 &&
-    siteId.trim().length > 0 &&
     motif.trim().length > 0 &&
     !loading;
 
@@ -140,28 +130,6 @@ export function ExonerationFormDialog({ trigger, onSuccess }: ExonerationFormDia
               required
               className="w-full rounded-lg border border-border bg-input px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
-          </div>
-
-          {/* siteId — temporaire jusqu'au Sprint 52 */}
-          <div className="space-y-1.5">
-            <label
-              htmlFor="exo-siteId"
-              className="text-sm font-medium text-foreground"
-            >
-              {t("siteIdLabel")} <span className="text-danger">*</span>
-            </label>
-            <input
-              id="exo-siteId"
-              type="text"
-              value={siteId}
-              onChange={(e) => setSiteId(e.target.value)}
-              placeholder={t("siteIdPlaceholder")}
-              required
-              className="w-full rounded-lg border border-border bg-input px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-            <p className="text-xs text-muted-foreground">
-              Requis temporairement (Sprint 51). Sera supprime au Sprint 52.
-            </p>
           </div>
 
           {/* motif */}

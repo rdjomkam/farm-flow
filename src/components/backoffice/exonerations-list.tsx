@@ -55,13 +55,13 @@ interface ExonerationPlan {
 export interface ExonerationItem {
   id: string;
   userId: string;
-  siteId: string;
+  siteId: string | null;
   statut: string;
   dateDebut: string | Date;
   dateFin: string | Date;
   motifExoneration: string | null;
   user: ExonerationUser;
-  site: ExonerationSite;
+  site: ExonerationSite | null;
   plan: ExonerationPlan;
 }
 
@@ -225,10 +225,12 @@ function ExonerationCard({
       </div>
 
       {/* Site */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Building2 className="h-4 w-4 shrink-0" />
-        <span className="truncate">{item.site.name}</span>
-      </div>
+      {item.site && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Building2 className="h-4 w-4 shrink-0" />
+          <span className="truncate">{item.site.name}</span>
+        </div>
+      )}
 
       {/* Motif */}
       {item.motifExoneration && (
@@ -296,7 +298,7 @@ function ExonerationTableRow({
           )}
         </div>
       </td>
-      <td className="px-4 py-3 text-sm text-muted-foreground">{item.site.name}</td>
+      <td className="px-4 py-3 text-sm text-muted-foreground">{item.site?.name ?? "-"}</td>
       <td className="px-4 py-3 text-sm text-foreground max-w-xs">
         <p className="truncate" title={item.motifExoneration ?? ""}>
           {item.motifExoneration ?? <span className="text-muted-foreground italic">-</span>}

@@ -4,11 +4,6 @@
  * Page backoffice — gestion des exonérations (accès gratuits accordés manuellement).
  * Server Component — guard checkBackofficeAccess().
  *
- * WORKAROUND TEMPORAIRE (Sprint 51) :
- * Abonnement.siteId est encore NOT NULL dans le schéma (Sprint 52 le rendra nullable).
- * L'administrateur doit donc fournir un siteId lors de la création d'une exonération.
- * Au Sprint 52 (Story 52.1), ce champ sera supprimé du formulaire d'exonération.
- *
  * Story 51.2 — Sprint 51
  * R2 : enums importés depuis @/types
  */
@@ -107,13 +102,6 @@ export default async function BackofficeExonerationsPage() {
             {total - totalActives}
           </p>
         </div>
-      </div>
-
-      {/* Notice technique — workaround Sprint 51 */}
-      <div className="rounded-lg border border-accent-amber/40 bg-accent-amber/10 p-3 text-sm text-foreground">
-        <strong>Note technique (Sprint 51) :</strong> Le champ siteId est requis
-        temporairement lors de la creation d&apos;une exoneration. Ce champ sera supprime
-        au Sprint 52 lorsque <code>Abonnement.siteId</code> sera rendu nullable.
       </div>
 
       {/* Liste des exonérations */}
