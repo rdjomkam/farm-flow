@@ -15,7 +15,7 @@
  *     - Releve sans consommation -> ignore
  *     - Calcul du gainBiomasseKg verifie sur des donnees reelles
  *   - segmenterPeriodesAlimentaires (ADR-029) : options Gompertz transmises, methodeEstimation
- *   - methodeRank : ordre de priorite 0-4 (VALEUR_INITIALE < LINEAIRE < GOMPERTZ < BIOMETRIE_EXACTE < BIOMETRIE_INTERPOLEE)
+ *   - methodeRank : ordre de priorite 0-3 (VALEUR_INITIALE < LINEAIRE < GOMPERTZ_VAGUE < BIOMETRIE_EXACTE)
  *
  * ADR-028 — FCR feed-switching accuracy.
  * ADR-029 — Configurable interpolation strategy (LINEAIRE vs GOMPERTZ_VAGUE).
@@ -1041,7 +1041,7 @@ describe("segmenterPeriodesAlimentaires — strategie GOMPERTZ_VAGUE (ADR-029)",
 // ADR-029 — methodeRank : verification de l'ordre de priorite (0-3)
 // ---------------------------------------------------------------------------
 
-describe("methodeRank — ordre de priorite 0-4 (ADR-029 legacy — see ADR-030 for 5 levels)", () => {
+describe("methodeRank — ordre de priorite 0-3 (ADR-029, ADR-032)", () => {
   /**
    * On teste l'ordre via le comportement de segmenterPeriodesAlimentaires :
    * la methodeEstimation retournee est celle de la borne avec le rang le plus bas
@@ -1452,5 +1452,309 @@ describe("interpolerPoidsBac — detail FCRTraceEstimationDetail (ADR-031)", () 
     if (r4!.detail.methode === "GOMPERTZ_VAGUE") {
       expect(r4!.poids).toBeCloseTo(r4!.detail.resultatG, 6);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ADR-032 — estimerNombreVivantsADate : calibrage-aware
+// ---------------------------------------------------------------------------
+
+describe("estimerNombreVivantsADate — calibrage-aware (ADR-032)", () => {
+  /**
+   * VagueContext de base pour ces tests.
+   * Vague commencee le J0, 1300 poissons initiaux, 2 bacs (650 chacun).
+   */
+  const vagueContext3Bacs: VagueContext = {
+    dateDebut: makeDate(0),
+    nombreInitial: 1300,
+    poidsMoyenInitial: 15,
+    bacs: [
+      { id: "bac-01", nombreInitial: 650 },
+      { id: "bac-03", nombreInitial: 650 },
+    ],
+  };
+
+  it("retourne nombreInitial du bac si aucun calibrage avant la date", () => {
+    // Pas de calibrages -> utilise bac.nombreInitial
+    const result = estimerNombreVivantsADate(
+      "bac-01",
+      makeDate(10),
+      vagueContext3Bacs
+    );
+    expect(result).toBe(650);
+  });
+
+  it("utilise groupe.nombrePoissons du dernier calibrage avant la date", () => {
+    // Calibrage au J25 : bac-01 recoit 130 poissons (redistribution)
+    const calibrages: CalibragePoint[] = [
+      {
+        date: makeDate(25),
+        nombreMorts: 0,
+        groupes: [
+          { destinationBacId: "bac-01", nombrePoissons: 130, poidsMoyen: 200 },
+          { destinationBacId: "bac-03", nombrePoissons: 520, poidsMoyen: 200 },
+        ],
+      },
+    ];
+    const ctx: VagueContext = { ...vagueContext3Bacs, calibrages };
+
+    // Avant calibrage (J20) -> utilise nombreInitial
+    const avant = estimerNombreVivantsADate("bac-01", makeDate(20), ctx);
+    expect(avant).toBe(650);
+
+    // Apres calibrage (J26) -> utilise groupe.nombrePoissons = 130
+    const apres = estimerNombreVivantsADate("bac-01", makeDate(26), ctx);
+    expect(apres).toBe(130);
+  });
+
+  it("soustrait les mortalites post-calibrage", () => {
+    // Calibrage au J25 : bac-01 = 130 poissons
+    // Mortalite de 5 poissons au J28
+    const calibrages: CalibragePoint[] = [
+      {
+        date: makeDate(25),
+        nombreMorts: 0,
+        groupes: [
+          { destinationBacId: "bac-01", nombrePoissons: 130, poidsMoyen: 200 },
+        ],
+      },
+    ];
+    const ctx: VagueContext = { ...vagueContext3Bacs, calibrages };
+
+    const mortalitesParBac = new Map([
+      [
+        "bac-01",
+        [{ nombreMorts: 5, date: makeDate(28) }],
+      ],
+    ]);
+
+    // A J29 : 130 - 5 = 125
+    const result = estimerNombreVivantsADate("bac-01", makeDate(29), ctx, mortalitesParBac);
+    expect(result).toBe(125);
+  });
+
+  it("gere un bac nouveau (jamais source) apparu lors d'un calibrage", () => {
+    // bac-04 n'existe pas dans vagueContext3Bacs.bacs, mais apparait comme destination
+    const ctx: VagueContext = {
+      dateDebut: makeDate(0),
+      nombreInitial: 1300,
+      poidsMoyenInitial: 15,
+      bacs: [
+        { id: "bac-01", nombreInitial: 650 },
+        { id: "bac-03", nombreInitial: 650 },
+        { id: "bac-04", nombreInitial: null }, // nouveau bac cree lors du calibrage
+      ],
+      calibrages: [
+        {
+          date: makeDate(25),
+          nombreMorts: 0,
+          groupes: [
+            { destinationBacId: "bac-01", nombrePoissons: 130, poidsMoyen: 200 },
+            { destinationBacId: "bac-03", nombrePoissons: 520, poidsMoyen: 200 },
+            { destinationBacId: "bac-04", nombrePoissons: 650, poidsMoyen: 200 },
+          ],
+        },
+      ],
+    };
+
+    // bac-04 apres calibrage (J26) -> 650 poissons depuis le calibrageGroupe
+    const result = estimerNombreVivantsADate("bac-04", makeDate(26), ctx);
+    expect(result).toBe(650);
+  });
+
+  it("ignore les calibrages dont date > targetDate", () => {
+    // Calibrage au J30, targetDate = J20 -> le calibrage est dans le futur -> ignorer
+    const calibrages: CalibragePoint[] = [
+      {
+        date: makeDate(30),
+        nombreMorts: 0,
+        groupes: [
+          { destinationBacId: "bac-01", nombrePoissons: 130, poidsMoyen: 200 },
+        ],
+      },
+    ];
+    const ctx: VagueContext = { ...vagueContext3Bacs, calibrages };
+
+    // A J20, le calibrage futur est ignore -> utilise nombreInitial = 650
+    const result = estimerNombreVivantsADate("bac-01", makeDate(20), ctx);
+    expect(result).toBe(650);
+  });
+
+  it("retombe sur nombreInitial si calibrage.groupes ne contient pas ce bacId", () => {
+    // Calibrage au J25 ne mentionne que bac-03, pas bac-01
+    const calibrages: CalibragePoint[] = [
+      {
+        date: makeDate(25),
+        nombreMorts: 0,
+        groupes: [
+          { destinationBacId: "bac-03", nombrePoissons: 1000, poidsMoyen: 200 },
+          // bac-01 absent -> pas de mise a jour pour bac-01
+        ],
+      },
+    ];
+    const ctx: VagueContext = { ...vagueContext3Bacs, calibrages };
+
+    // bac-01 apres calibrage -> utilise nombreInitial car il n'est pas destination
+    const result = estimerNombreVivantsADate("bac-01", makeDate(26), ctx);
+    expect(result).toBe(650); // toujours le nombreInitial de bac-01
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ADR-032 — segmenterPeriodesAlimentaires avec calibrages
+// ---------------------------------------------------------------------------
+
+describe("segmenterPeriodesAlimentaires — avec calibrages (ADR-032)", () => {
+  /**
+   * Scenario realiste base sur Vague 26-01 :
+   * - 1300 poissons initiaux repartis sur 2 bacs (650 chacun)
+   * - Calibrage au J25 : bac-01 garde 130, bac-03 recoit 520, nouveau bac-04 recoit 650
+   * - Alimentation post-calibrage avec Skretting 3mm
+   * - Poids au J25 ~ 200g, poids au J35 ~ 350g (Gompertz vague)
+   * - Aliment : ~50kg par bac sur 10 jours
+   */
+
+  // Contexte vague avec calibrage
+  const vagueAvecCalibrage: VagueContext = {
+    dateDebut: makeDate(0),
+    nombreInitial: 1300,
+    poidsMoyenInitial: 15,
+    bacs: [
+      { id: "bac-01", nombreInitial: 650 },
+      { id: "bac-03", nombreInitial: 650 },
+      { id: "bac-04", nombreInitial: null }, // cree au calibrage J25
+    ],
+    calibrages: [
+      {
+        date: makeDate(25),
+        nombreMorts: 20,
+        groupes: [
+          { destinationBacId: "bac-01", nombrePoissons: 130, poidsMoyen: 200 },
+          { destinationBacId: "bac-03", nombrePoissons: 520, poidsMoyen: 200 },
+          { destinationBacId: "bac-04", nombrePoissons: 650, poidsMoyen: 200 },
+        ],
+      },
+    ],
+  };
+
+  it("FCR plausible (0.5 < FCR < 3.0) pour bac ayant perdu 60% de population lors d'un calibrage", () => {
+    // bac-01 passe de 650 a 130 poissons lors du calibrage J25.
+    // Sans calibrage-aware, nombreVivants = 650 -> FCR artificiel < 0.5.
+    // Avec calibrage-aware, nombreVivants = 130 -> FCR biologiquement plausible.
+    //
+    // Biometries : J25 = 200g, J35 = 350g
+    // Aliment post-calibrage : 50kg sur la periode J26-J35
+    const biometries: BiometriePoint[] = [
+      makeBio("bac-01", 25, 200),
+      makeBio("bac-01", 35, 350),
+    ];
+    const releves: ReleveAlimPoint[] = [
+      makeReleve("r1", "bac-01", 26, [{ produitId: "skretting-3mm", quantiteKg: 10 }]),
+      makeReleve("r2", "bac-01", 29, [{ produitId: "skretting-3mm", quantiteKg: 15 }]),
+      makeReleve("r3", "bac-01", 32, [{ produitId: "skretting-3mm", quantiteKg: 15 }]),
+      makeReleve("r4", "bac-01", 35, [{ produitId: "skretting-3mm", quantiteKg: 10 }]),
+    ];
+
+    const periodes = segmenterPeriodesAlimentaires(releves, biometries, vagueAvecCalibrage);
+
+    expect(periodes).toHaveLength(1);
+    const periode = periodes[0];
+
+    // nombreVivants doit reflechir la population post-calibrage (130) et non pre-calibrage (650)
+    expect(periode.nombreVivants).toBe(130);
+
+    // gainBiomasseKg = (350 - 200) * 130 / 1000 = 19.5 kg
+    // FCR = 50 / 19.5 ~ 2.56 (plausible pour Clarias)
+    expect(periode.gainBiomasseKg).not.toBeNull();
+    if (periode.gainBiomasseKg !== null) {
+      const fcr = periode.quantiteKg / periode.gainBiomasseKg;
+      expect(fcr).toBeGreaterThan(0.5);
+      expect(fcr).toBeLessThan(3.0);
+    }
+  });
+
+  it("pas de FCR < 0.5 sur donnees synthetiques de calibrage realiste", () => {
+    // Scenario complet 3 bacs post-calibrage J25
+    // bac-01 : 130 poissons, bac-03 : 520, bac-04 : 650
+    // Biometries identiques pour tous : J25 = 200g, J35 = 350g
+    // Aliment : 50kg par bac sur J26-J35
+
+    const makeBioForBac = (bacId: string, day: number, poids: number) =>
+      makeBio(bacId, day, poids);
+
+    const biometries: BiometriePoint[] = [
+      makeBioForBac("bac-01", 25, 200), makeBioForBac("bac-01", 35, 350),
+      makeBioForBac("bac-03", 25, 200), makeBioForBac("bac-03", 35, 350),
+      makeBioForBac("bac-04", 25, 200), makeBioForBac("bac-04", 35, 350),
+    ];
+
+    const makeRelevesForBac = (bacId: string, id: string): ReleveAlimPoint[] => [
+      makeReleve(`${id}-r1`, bacId, 26, [{ produitId: "skretting-3mm", quantiteKg: 10 }]),
+      makeReleve(`${id}-r2`, bacId, 29, [{ produitId: "skretting-3mm", quantiteKg: 15 }]),
+      makeReleve(`${id}-r3`, bacId, 32, [{ produitId: "skretting-3mm", quantiteKg: 15 }]),
+      makeReleve(`${id}-r4`, bacId, 35, [{ produitId: "skretting-3mm", quantiteKg: 10 }]),
+    ];
+
+    const releves: ReleveAlimPoint[] = [
+      ...makeRelevesForBac("bac-01", "b01"),
+      ...makeRelevesForBac("bac-03", "b03"),
+      ...makeRelevesForBac("bac-04", "b04"),
+    ];
+
+    const periodes = segmenterPeriodesAlimentaires(releves, biometries, vagueAvecCalibrage);
+
+    // 3 bacs, 1 periode chacun
+    expect(periodes).toHaveLength(3);
+
+    for (const p of periodes) {
+      if (p.gainBiomasseKg !== null && p.gainBiomasseKg > 0) {
+        const fcr = p.quantiteKg / p.gainBiomasseKg;
+        // Aucun FCR ne doit etre biologiquement implausible (< 0.5)
+        expect(fcr).toBeGreaterThan(0.5);
+        // FCR inferieur a 4 pour donnees synthetiques propres
+        expect(fcr).toBeLessThan(4.0);
+      }
+    }
+  });
+
+  it("periodes pre-calibrage et post-calibrage utilisent des nombreVivants differents", () => {
+    // bac-01 :
+    //   - Pre-calibrage (J10) : nombreVivants = 650 (nombreInitial)
+    //   - Post-calibrage (J26) : nombreVivants = 130 (groupe du calibrage J25)
+
+    const biometries: BiometriePoint[] = [
+      makeBio("bac-01", 5, 50),
+      makeBio("bac-01", 15, 100),
+      makeBio("bac-01", 25, 200),
+      makeBio("bac-01", 35, 350),
+    ];
+
+    // Deux periodes distinctes (changement de produit au J25 pour distinguer)
+    const releves: ReleveAlimPoint[] = [
+      // Pre-calibrage : produit A
+      makeReleve("r1", "bac-01", 5, [{ produitId: "prod-A", quantiteKg: 10 }]),
+      makeReleve("r2", "bac-01", 15, [{ produitId: "prod-A", quantiteKg: 10 }]),
+      // Post-calibrage : produit B
+      makeReleve("r3", "bac-01", 26, [{ produitId: "prod-B", quantiteKg: 10 }]),
+      makeReleve("r4", "bac-01", 35, [{ produitId: "prod-B", quantiteKg: 10 }]),
+    ];
+
+    const periodes = segmenterPeriodesAlimentaires(releves, biometries, vagueAvecCalibrage);
+    expect(periodes).toHaveLength(2);
+
+    const periodeA = periodes.find((p) => p.produitId === "prod-A");
+    const periodeB = periodes.find((p) => p.produitId === "prod-B");
+
+    expect(periodeA).toBeDefined();
+    expect(periodeB).toBeDefined();
+
+    // Pre-calibrage : dateDebut = J5 < J25 -> pas de calibrage applicable -> 650
+    expect(periodeA!.nombreVivants).toBe(650);
+
+    // Post-calibrage : dateDebut = J26 > J25 -> calibrage applicable -> 130
+    expect(periodeB!.nombreVivants).toBe(130);
+
+    // Les deux periodes doivent avoir des nombreVivants differents
+    expect(periodeA!.nombreVivants).not.toBe(periodeB!.nombreVivants);
   });
 });

@@ -8,6 +8,46 @@
 
 ## Catégorie : Schema
 
+### ERR-049 — Suppression de valeur d'enum : CAST échoue si des lignes portent encore l'ancienne valeur
+**Sprint :** ADR-032 | **Date :** 2026-04-05
+**Sévérité :** Critique
+**Fichier(s) :** `prisma/migrations/*/migration.sql`, `prisma/schema.prisma`
+
+**Symptôme :**
+La migration RECREATE pour supprimer `GOMPERTZ_BAC` de l'enum `StrategieInterpolation` échoue au moment du `ALTER COLUMN ... USING ... ::new_enum_type` avec une erreur PostgreSQL du type `invalid input value for enum` ou `cannot cast type text to enum`. Les lignes `ConfigElevage` qui contiennent encore la valeur `GOMPERTZ_BAC` font échouer le CAST.
+
+**Cause racine :**
+L'approche RECREATE (rename old → create new → cast columns → drop old) presuppose que toutes les lignes existantes portent des valeurs présentes dans le nouvel enum. Si une valeur est supprimée sans avoir d'abord migré les lignes qui la portent, le CAST échoue à l'exécution avec des données réelles (la shadow DB est vide, donc le problème ne se manifeste pas lors du `migrate diff`).
+
+**Fix :**
+Ajouter un `UPDATE` qui remplace l'ancienne valeur par sa valeur de remplacement AVANT le CAST, dans la même migration :
+```sql
+-- 1. Renommer l'ancien type
+ALTER TYPE "StrategieInterpolation" RENAME TO "StrategieInterpolation_old";
+
+-- 2. Créer le nouveau type sans la valeur supprimée
+CREATE TYPE "StrategieInterpolation" AS ENUM ('LINEAIRE', 'GOMPERTZ_VAGUE');
+
+-- 3. Migrer les données AVANT de caster la colonne
+UPDATE "ConfigElevage"
+SET "interpolationStrategy" = 'GOMPERTZ_VAGUE'
+WHERE "interpolationStrategy"::text = 'GOMPERTZ_BAC';
+
+-- 4. Caster la colonne vers le nouveau type
+ALTER TABLE "ConfigElevage"
+  ALTER COLUMN "interpolationStrategy"
+  TYPE "StrategieInterpolation"
+  USING "interpolationStrategy"::text::"StrategieInterpolation";
+
+-- 5. Supprimer l'ancien type
+DROP TYPE "StrategieInterpolation_old";
+```
+
+**Leçon / Règle :**
+Quand une valeur d'enum est supprimée, toujours inclure un `UPDATE` de migration des données existantes vers la valeur de remplacement AVANT l'étape CAST de la colonne. La shadow DB étant vide, les tests de migration ne détectent pas ce problème — il faut anticiper les données de production. Voir aussi ERR-001 pour le pattern RECREATE général.
+
+---
+
 ### ERR-038 — migrate diff regroupe la dérive de schéma non liée dans la nouvelle migration
 **Sprint :** ADR-029 | **Date :** 2026-04-05
 **Sévérité :** Haute
@@ -91,6 +131,59 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 ---
 
 ## Catégorie : Code
+
+### ERR-048 — GOMPERTZ_BAC : code mort car le fallback vers GOMPERTZ_VAGUE s'active systématiquement
+**Sprint :** ADR-032 | **Date :** 2026-04-05
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/feed-periods.ts`, `src/lib/queries/analytics.ts`, `src/app/api/vagues/[id]/gompertz/route.ts`, `prisma/schema.prisma`
+
+**Symptôme :**
+L'option `GOMPERTZ_BAC` dans `StrategieInterpolation` (introduite par ADR-030) n'est jamais effectivement utilisée. Quand elle est sélectionnée dans `ConfigElevage`, le code de `interpolerPoidsBac` tombe systématiquement dans le fallback `GOMPERTZ_VAGUE`. Le FCR affiché est identique à `GOMPERTZ_VAGUE` quel que soit le choix de l'éleveur.
+
+**Cause racine :**
+Les calibrages (redistribution des poissons entre bacs) sont une opération courante dans l'élevage de Clarias gariepinus — toute vague au-delà de J20-J25 en subit au moins un. Les biométries per-bac incluent alors des discontinuités (le poids moyen "recule" après un calibrage) qui ne reflètent pas une vraie perte de poids. Le modèle Gompertz per-bac ne peut pas converger correctement sur ces données (R² faible), ce qui déclenche le fallback vers `GOMPERTZ_VAGUE`. En pratique, `GOMPERTZ_BAC` n'est jamais utilisé sur des données réelles.
+
+**Fix (ADR-032) :**
+Suppression complète de `GOMPERTZ_BAC` :
+- Enum `StrategieInterpolation` réduit à `LINEAIRE` + `GOMPERTZ_VAGUE` (migration RECREATE)
+- Modèle `GompertzBac` supprimé du schéma Prisma
+- Branche `GOMPERTZ_BAC` supprimée de `interpolerPoidsBac` dans `feed-periods.ts`
+- Chargement `gompertzBacs` supprimé de `analytics.ts`
+- Boucle de calibration per-bac supprimée de la route `/api/vagues/[id]/gompertz`
+- Option supprimée du formulaire `config-elevage-form-client.tsx` et du dialog `fcr-transparency-dialog.tsx`
+- ConfigElevage existants avec `interpolationStrategy = GOMPERTZ_BAC` migrés vers `GOMPERTZ_VAGUE` par la migration SQL
+
+**Leçon / Règle :**
+Avant d'implémenter une stratégie d'interpolation per-entité (per-bac, per-lot), vérifier si les données terrain contiennent des discontinuités qui empêcheraient le modèle de converger. Si le fallback vers la stratégie vague/globale s'activera systématiquement, la stratégie per-entité est du code mort. Il vaut mieux une chaîne d'interpolation simple et fiable qu'une chaîne complexe dont les niveaux supérieurs ne sont jamais atteints. Voir ADR-032 qui supersède ADR-030 sur ce point.
+
+---
+
+### ERR-047 — nombreVivants figé au démarrage de la vague : FCR 2.5× trop bas après calibrage
+**Sprint :** ADR-032 | **Date :** 2026-04-05
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/feed-periods.ts` (fonction `estimerNombreVivants`, remplacée par `estimerNombreVivantsADate`)
+
+**Symptôme :**
+Le FCR calculé par `computeAlimentMetrics` et `getFCRTrace` est biologiquement implausible (< 0.5) pour les bacs ayant subi un calibrage. Pour Clarias gariepinus, un FCR normal est entre 1.0 et 2.0. Un FCR de 0.4 signifie que les poissons ont pris plus de biomasse que d'aliment consommé — impossible.
+
+**Cause racine :**
+La fonction `estimerNombreVivants` dans `src/lib/feed-periods.ts` calculait le nombre de vivants d'un bac une seule fois pour toute sa durée de vie, à partir de `bac.nombreInitial ?? round(vague.nombreInitial / nbBacs)`. Cette valeur ne changeait jamais entre les périodes d'alimentation. Or, après un calibrage, `bac.nombreInitial` est périmé : il reflète la population au moment de la création du bac, pas la population post-calibrage.
+
+Exemple concret (Vague 26-01) : Bac 01 part de 325 poissons, en perd 195 lors d'un calibrage à J25 (redistribués vers Bac 03 et Bac 04). Post-calibrage, Bac 01 ne contient plus que 130 poissons. Mais l'algorithme continuait d'utiliser `nombreVivants = 325`. Le gain de biomasse calculé était donc `poidsMoyenGain × 325` au lieu de `poidsMoyenGain × 130`, soit 2.5× trop élevé. Un gain surestimé → FCR sous-estimé.
+
+**Fix (ADR-032) :**
+Remplacement de `estimerNombreVivants` par `estimerNombreVivantsADate(bacId, targetDate, vagueContext, mortalitesParBac)` :
+1. Chercher le dernier `CalibrageGroupe` dont `destinationBacId = bacId` et `calibrage.date <= targetDate`
+2. Si trouvé, partir de `groupe.nombrePoissons` (source de vérité post-calibrage depuis le modèle `Calibrage` existant depuis Sprint 24)
+3. Sinon, partir de `bac.nombreInitial ?? round(vague.nombreInitial / nbBacs)` (comportement précédent)
+4. Soustraire les mortalités enregistrées pour ce bac entre la date de base et `targetDate`
+
+Les requêtes Prisma dans `computeAlimentMetrics` et `getFCRTrace` incluent désormais `calibrages { groupes { destinationBacId, nombrePoissons, poidsMoyen } }`. Aucune migration de schéma requise — toutes les données nécessaires existaient déjà dans le modèle `Calibrage`.
+
+**Leçon / Règle :**
+Tout calcul de population par bac sur une vague doit être calibrage-aware. La source de vérité pour la population d'un bac après un calibrage est `CalibrageGroupe.nombrePoissons` (dernier calibrage avant la date cible), et non `Bac.nombreInitial` ni `Bac.nombrePoissons` (ce dernier est un champ legacy Phase 1 non fiable). Ne jamais utiliser une population "initiale" figée quand des opérations de redistribution peuvent avoir eu lieu. Voir `VagueContext.calibrages` et l'interface `CalibragePoint` dans `src/lib/feed-periods.ts`.
+
+---
 
 ### ERR-046 — Suppression de paiement : le message d'erreur "n'appartient pas" est masqué par "introuvable"
 **Sprint :** ADR-032 feature | **Date :** 2026-04-05
