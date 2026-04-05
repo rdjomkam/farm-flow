@@ -92,6 +92,69 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-043 — Variables mortes issues d'un copy-paste : supprimées avec `void` faute d'être câblées
+**Sprint :** ADR-031 | **Date :** 2026-04-05
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/calculs/fcr-trace.ts`
+
+**Symptôme :**
+Une variable `bacBios` est construite par filtrage des biométries sur un bac précis, puis immédiatement supprimée avec `void bacBios` pour éviter un avertissement TypeScript "variable déclarée mais non utilisée". Le résultat de ce filtrage n'alimente aucun calcul.
+
+**Cause racine :**
+Code adapté depuis un contexte où `bacBios` était consommé (traitement bac par bac). Dans le nouveau contexte (`getFCRTrace`), la logique avait été réécrite pour opérer sur l'ensemble des biométries ; `bacBios` n'avait donc plus de consommateur. L'auteur a masqué l'avertissement avec `void` au lieu de supprimer la variable.
+
+**Fix :**
+Supprimer la déclaration de `bacBios` et l'expression `void bacBios`. Tracer chaque variable jusqu'à son consommateur avant de valider l'adaptation.
+
+**Leçon / Règle :**
+Quand on adapte du code d'un contexte à un autre, tracer chaque variable locale jusqu'à son consommateur. Si une variable n'a aucun consommateur dans le nouveau contexte, la supprimer entièrement. Masquer un avertissement avec `void` est un signal d'alarme : soit la variable est nécessaire et doit être câblée, soit elle est morte et doit être retirée.
+
+---
+
+### ERR-042 — Fetch de données déclenché dans le corps de rendu React au lieu d'un `useEffect`
+**Sprint :** ADR-031 | **Date :** 2026-04-05
+**Sévérité :** Haute
+**Fichier(s) :** `src/components/releves/fcr-transparency-dialog.tsx`
+
+**Symptôme :**
+`loadTrace()` est appelée directement dans le corps du composant avec un garde `if (!loaded && !loading && !error)`. En React Strict Mode (développement), le composant est rendu deux fois, déclenchant deux appels réseau simultanés. En production, le comportement dépend du timing du premier rendu.
+
+**Cause racine :**
+Le développeur a tenté d'éviter un `useEffect` vide en plaçant la logique de fetch directement dans le render avec des gardes booléennes. Cette approche est incorrecte : les effets de bord (appels réseau, mutations d'état dérivées) ne doivent jamais être produits dans le corps de rendu.
+
+**Fix :**
+Déplacer l'appel dans un `useEffect` sans dépendances (ou avec `[open]` si le fetch doit se déclencher à l'ouverture du dialog) :
+```tsx
+useEffect(() => {
+  loadTrace();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+```
+
+**Leçon / Règle :**
+Ne jamais déclencher de side effects (fetch, setTimeout, mutation d'état externe) dans le corps de rendu d'un composant React, même avec des gardes booléennes. Toujours utiliser `useEffect`. En React Strict Mode, le corps de rendu est exécuté deux fois — toute logique conditionnelle y placée sera invoquée deux fois avant que l'état ne soit mis à jour.
+
+---
+
+### ERR-041 — Arrondi intermédiaire qui se propage dans les calculs suivants (rounding leak)
+**Sprint :** ADR-031 | **Date :** 2026-04-05
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/calculs/fcr-trace.ts`
+
+**Symptôme :**
+Le `fcrMoyenFinal` affiché dans le dialog de transparence FCR diffère légèrement du `fcrMoyen` affiché sur la carte de synthèse (ex : `2.34` vs `2.35`). Les deux valeurs sont calculées à partir des mêmes données source mais divergent d'un epsilon visible.
+
+**Cause racine :**
+Dans `getFCRTrace`, les valeurs de biomasse intermédiaires (`biomasseCourante`, `biomassePrecedente`) étaient arrondies à 2 décimales pour alimenter les lignes du tableau de détail. Ces valeurs arrondies étaient ensuite réutilisées pour calculer `gainBiomasseKg` et `fcrPeriode`. L'erreur d'arrondi s'accumulait à chaque période et produisait un `fcrMoyenFinal` légèrement différent du FCR calculé depuis les valeurs brutes dans la carte.
+
+**Fix :**
+Conserver les valeurs brutes non arrondies dans toutes les variables intermédiaires de calcul. N'appliquer `toFixed()` ou `Math.round()` qu'au moment de construire l'objet destiné à l'affichage, jamais avant.
+
+**Leçon / Règle :**
+L'arrondi est une opération d'affichage, pas de calcul. Dans toute chaîne de calcul multi-étapes, les valeurs intermédiaires doivent rester en virgule flottante native. Une valeur arrondie ne doit jamais servir d'entrée à un calcul ultérieur. Appliquer l'arrondi uniquement à la dernière étape, sur la valeur finale destinée à être affichée ou sérialisée.
+
+---
+
 ### ERR-037 — TypeScript : Array.includes() rejette une union plus large que le tuple readonly
 **Sprint :** ADR-029 | **Date :** 2026-04-05
 **Sévérité :** Moyenne

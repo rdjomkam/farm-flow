@@ -8,7 +8,7 @@
  * per period, then aggregate with weighted sum.
  */
 
-import type { PeriodeAlimentaire } from "@/types";
+import type { PeriodeAlimentaire, FCRTraceEstimationDetail } from "@/types";
 import { StrategieInterpolation } from "@/types";
 import { gompertzWeight } from "@/lib/gompertz";
 
@@ -115,7 +115,7 @@ export interface GompertzBacContext {
  * @param biometries         - time series of biometries for the tank, sorted ascending by date
  * @param poidsInitial       - initial average weight of the vague (fallback)
  * @param options            - optional strategy options (ADR-029 + ADR-030)
- * @returns { poids, methode } or null if no data at all
+ * @returns { poids, methode, detail } or null if no data at all
  */
 export function interpolerPoidsBac(
   targetDate: Date,
@@ -130,7 +130,7 @@ export function interpolerPoidsBac(
     gompertzBacContexts?: Map<string, GompertzBacContext>;
     gompertzMinPoints?: number;
   }
-): { poids: number; methode: PeriodeAlimentaire["methodeEstimation"] } | null {
+): { poids: number; methode: PeriodeAlimentaire["methodeEstimation"]; detail: FCRTraceEstimationDetail } | null {
   // Filter biometries for this tank
   const bacBios = biometries
     .filter((b) => b.bacId === bacId)
@@ -138,7 +138,11 @@ export function interpolerPoidsBac(
 
   if (bacBios.length === 0) {
     // No biometry for this tank at all — use initial weight
-    return { poids: poidsInitial, methode: "VALEUR_INITIALE" };
+    return {
+      poids: poidsInitial,
+      methode: "VALEUR_INITIALE",
+      detail: { methode: "VALEUR_INITIALE", poidsMoyenInitialG: poidsInitial },
+    };
   }
 
   const targetMs = targetDate.getTime();
@@ -151,7 +155,11 @@ export function interpolerPoidsBac(
       b.date.getDate() === targetDate.getDate()
   );
   if (exact) {
-    return { poids: exact.poidsMoyen, methode: "BIOMETRIE_EXACTE" };
+    return {
+      poids: exact.poidsMoyen,
+      methode: "BIOMETRIE_EXACTE",
+      detail: { methode: "BIOMETRIE_EXACTE", dateBiometrie: exact.date, poidsMesureG: exact.poidsMoyen },
+    };
   }
 
   const strategie = options?.strategie ?? StrategieInterpolation.LINEAIRE;
@@ -173,7 +181,23 @@ export function interpolerPoidsBac(
             ti: bacCtx.ti,
           });
           if (poids > 0 && !isNaN(poids)) {
-            return { poids, methode: "GOMPERTZ_BAC" };
+            return {
+              poids,
+              methode: "GOMPERTZ_BAC",
+              detail: {
+                methode: "GOMPERTZ_BAC",
+                tJours: tDays,
+                params: {
+                  wInfinity: bacCtx.wInfinity,
+                  k: bacCtx.k,
+                  ti: bacCtx.ti,
+                  r2: bacCtx.r2,
+                  biometrieCount: bacCtx.biometrieCount,
+                  confidenceLevel: bacCtx.confidenceLevel,
+                },
+                resultatG: poids,
+              },
+            };
           }
         }
       }
@@ -204,7 +228,23 @@ export function interpolerPoidsBac(
         });
 
         if (poids > 0 && !isNaN(poids)) {
-          return { poids, methode: "GOMPERTZ_VAGUE" };
+          return {
+            poids,
+            methode: "GOMPERTZ_VAGUE",
+            detail: {
+              methode: "GOMPERTZ_VAGUE",
+              tJours: tDays,
+              params: {
+                wInfinity: ctx.wInfinity,
+                k: ctx.k,
+                ti: ctx.ti,
+                r2: ctx.r2,
+                biometrieCount: ctx.biometrieCount,
+                confidenceLevel: ctx.confidenceLevel,
+              },
+              resultatG: poids,
+            },
+          };
         }
       }
       // If Gompertz result is invalid (t < 0, NaN, poids <= 0), fall through to linear
@@ -221,21 +261,47 @@ export function interpolerPoidsBac(
     const elapsed = targetMs - before.date.getTime();
     const ratio = elapsed / span;
     const poids = before.poidsMoyen + (after.poidsMoyen - before.poidsMoyen) * ratio;
-    return { poids, methode: "INTERPOLATION_LINEAIRE" };
+    return {
+      poids,
+      methode: "INTERPOLATION_LINEAIRE",
+      detail: {
+        methode: "INTERPOLATION_LINEAIRE",
+        pointAvant: { date: before.date, poidsMoyenG: before.poidsMoyen },
+        pointApres: { date: after.date, poidsMoyenG: after.poidsMoyen },
+        ratio,
+      },
+    };
   }
 
   // 3. Target date is before all biometries — use initial weight
   if (!before && after) {
-    return { poids: poidsInitial, methode: "VALEUR_INITIALE" };
+    return {
+      poids: poidsInitial,
+      methode: "VALEUR_INITIALE",
+      detail: { methode: "VALEUR_INITIALE", poidsMoyenInitialG: poidsInitial },
+    };
   }
 
   // 4. Target date is after all biometries — extrapolate using last known biometry
   if (before && !after) {
-    return { poids: before.poidsMoyen, methode: "INTERPOLATION_LINEAIRE" };
+    return {
+      poids: before.poidsMoyen,
+      methode: "INTERPOLATION_LINEAIRE",
+      detail: {
+        methode: "INTERPOLATION_LINEAIRE",
+        pointAvant: { date: before.date, poidsMoyenG: before.poidsMoyen },
+        pointApres: null,
+        ratio: null,
+      },
+    };
   }
 
   // Fallback (should not occur if bacBios.length > 0)
-  return { poids: poidsInitial, methode: "VALEUR_INITIALE" };
+  return {
+    poids: poidsInitial,
+    methode: "VALEUR_INITIALE",
+    detail: { methode: "VALEUR_INITIALE", poidsMoyenInitialG: poidsInitial },
+  };
 }
 
 // ---------------------------------------------------------------------------

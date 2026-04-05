@@ -1774,3 +1774,315 @@ describe("methodeRank — ordre de priorite 5 niveaux (ADR-030)", () => {
     expect(resExact!.methode).toBe("BIOMETRIE_EXACTE");
   });
 });
+
+// ---------------------------------------------------------------------------
+// ADR-031 — interpolerPoidsBac : champ detail enrichi (FCRTraceEstimationDetail)
+// ---------------------------------------------------------------------------
+
+describe("interpolerPoidsBac — detail FCRTraceEstimationDetail (ADR-031)", () => {
+  // ---- BIOMETRIE_EXACTE -----------------------------------------------
+
+  it("BIOMETRIE_EXACTE : detail contient methode, dateBiometrie et poidsMesureG", () => {
+    const bioDate = makeDate(10);
+    const biometries: BiometriePoint[] = [{ bacId: "bac-A", date: bioDate, poidsMoyen: 145 }];
+    const result = interpolerPoidsBac(makeDate(10), "bac-A", biometries, 10);
+
+    expect(result).not.toBeNull();
+    expect(result!.methode).toBe("BIOMETRIE_EXACTE");
+    expect(result!.detail).not.toBeNull();
+    expect(result!.detail.methode).toBe("BIOMETRIE_EXACTE");
+    // Narrowing via discriminant
+    if (result!.detail.methode === "BIOMETRIE_EXACTE") {
+      expect(result!.detail.dateBiometrie.getTime()).toBe(bioDate.getTime());
+      expect(result!.detail.poidsMesureG).toBe(145);
+    }
+  });
+
+  it("BIOMETRIE_EXACTE : poidsMesureG correspond exactement a la valeur de la biometrie", () => {
+    const biometries: BiometriePoint[] = [makeBio("bac-A", 7, 88)];
+    const result = interpolerPoidsBac(makeDate(7), "bac-A", biometries, 10);
+
+    expect(result!.detail.methode).toBe("BIOMETRIE_EXACTE");
+    if (result!.detail.methode === "BIOMETRIE_EXACTE") {
+      expect(result!.detail.poidsMesureG).toBe(88);
+    }
+  });
+
+  // ---- INTERPOLATION_LINEAIRE : cas standard (deux bornes) ---------------
+
+  it("INTERPOLATION_LINEAIRE : detail contient methode, pointAvant, pointApres et ratio", () => {
+    const dateAvant = makeDate(0);
+    const dateApres = makeDate(10);
+    const biometries: BiometriePoint[] = [
+      { bacId: "bac-A", date: dateAvant, poidsMoyen: 100 },
+      { bacId: "bac-A", date: dateApres, poidsMoyen: 200 },
+    ];
+    // cible = J5 (milieu) -> ratio = 0.5
+    const result = interpolerPoidsBac(makeDate(5), "bac-A", biometries, 10);
+
+    expect(result!.methode).toBe("INTERPOLATION_LINEAIRE");
+    expect(result!.detail.methode).toBe("INTERPOLATION_LINEAIRE");
+
+    if (result!.detail.methode === "INTERPOLATION_LINEAIRE") {
+      // pointAvant
+      expect(result!.detail.pointAvant).not.toBeNull();
+      expect(result!.detail.pointAvant!.date.getTime()).toBe(dateAvant.getTime());
+      expect(result!.detail.pointAvant!.poidsMoyenG).toBe(100);
+      // pointApres
+      expect(result!.detail.pointApres).not.toBeNull();
+      expect(result!.detail.pointApres!.date.getTime()).toBe(dateApres.getTime());
+      expect(result!.detail.pointApres!.poidsMoyenG).toBe(200);
+      // ratio
+      expect(result!.detail.ratio).toBeCloseTo(0.5, 6);
+    }
+  });
+
+  it("INTERPOLATION_LINEAIRE : ratio reflete la position proportionnelle dans l'intervalle", () => {
+    // J0=100g, J30=160g, cible=J20 -> ratio = 20/30 = 0.6667
+    const biometries: BiometriePoint[] = [
+      makeBio("bac-A", 0, 100),
+      makeBio("bac-A", 30, 160),
+    ];
+    const result = interpolerPoidsBac(makeDate(20), "bac-A", biometries, 50);
+
+    expect(result!.methode).toBe("INTERPOLATION_LINEAIRE");
+    if (result!.detail.methode === "INTERPOLATION_LINEAIRE") {
+      expect(result!.detail.ratio).toBeCloseTo(20 / 30, 6);
+      expect(result!.detail.pointAvant).not.toBeNull();
+      expect(result!.detail.pointApres).not.toBeNull();
+    }
+  });
+
+  it("INTERPOLATION_LINEAIRE : extrapolation (date apres toutes les biometries) -> pointApres null et ratio null", () => {
+    // Seule une biometrie avant la date cible -> extrapolation vers la fin
+    const biometries: BiometriePoint[] = [
+      makeBio("bac-A", 5, 40),
+      makeBio("bac-A", 10, 60),
+    ];
+    const result = interpolerPoidsBac(makeDate(15), "bac-A", biometries, 10);
+
+    expect(result!.methode).toBe("INTERPOLATION_LINEAIRE");
+    if (result!.detail.methode === "INTERPOLATION_LINEAIRE") {
+      // pointAvant = derniere biometrie connue (J10)
+      expect(result!.detail.pointAvant).not.toBeNull();
+      expect(result!.detail.pointAvant!.poidsMoyenG).toBe(60);
+      // pointApres = null (aucune biometrie apres J15)
+      expect(result!.detail.pointApres).toBeNull();
+      // ratio = null (extrapolation, pas d'intervalle)
+      expect(result!.detail.ratio).toBeNull();
+    }
+  });
+
+  // ---- GOMPERTZ_BAC -------------------------------------------------------
+
+  it("GOMPERTZ_BAC : detail contient methode, tJours, params et resultatG", () => {
+    const targetDate = makeDate(50); // t = 50 jours depuis vagueDebut = makeDate(0)
+    const biometries: BiometriePoint[] = [makeBio("bac-A", 10, 80)];
+    const bacContexts = new Map<string, GompertzBacContext>([
+      ["bac-A", GOMPERTZ_BAC_CTX_HIGH],
+    ]);
+
+    const result = interpolerPoidsBac(targetDate, "bac-A", biometries, 10, {
+      strategie: StrategieInterpolation.GOMPERTZ_BAC,
+      gompertzBacContexts: bacContexts,
+      gompertzMinPoints: 5,
+    });
+
+    expect(result).not.toBeNull();
+    expect(result!.methode).toBe("GOMPERTZ_BAC");
+    expect(result!.detail.methode).toBe("GOMPERTZ_BAC");
+
+    if (result!.detail.methode === "GOMPERTZ_BAC") {
+      // tJours = (targetDate - vagueDebut) / ms_per_day = 50
+      expect(result!.detail.tJours).toBeCloseTo(50, 6);
+      // params : wInfinity, k, ti correspondent au contexte bac
+      expect(result!.detail.params.wInfinity).toBe(GOMPERTZ_BAC_CTX_HIGH.wInfinity);
+      expect(result!.detail.params.k).toBe(GOMPERTZ_BAC_CTX_HIGH.k);
+      expect(result!.detail.params.ti).toBe(GOMPERTZ_BAC_CTX_HIGH.ti);
+      expect(result!.detail.params.r2).toBe(GOMPERTZ_BAC_CTX_HIGH.r2);
+      expect(result!.detail.params.biometrieCount).toBe(GOMPERTZ_BAC_CTX_HIGH.biometrieCount);
+      expect(result!.detail.params.confidenceLevel).toBe(GOMPERTZ_BAC_CTX_HIGH.confidenceLevel);
+      // resultatG = poids calcule par Gompertz
+      const expected = gompertzWeight(50, {
+        wInfinity: GOMPERTZ_BAC_CTX_HIGH.wInfinity,
+        k: GOMPERTZ_BAC_CTX_HIGH.k,
+        ti: GOMPERTZ_BAC_CTX_HIGH.ti,
+      });
+      expect(result!.detail.resultatG).toBeCloseTo(expected, 6);
+      // resultatG doit etre coherent avec poids retourne
+      expect(result!.detail.resultatG).toBeCloseTo(result!.poids, 6);
+    }
+  });
+
+  it("GOMPERTZ_BAC : params.wInfinity correspond au contexte bac (pas au contexte vague)", () => {
+    // Deux contextes differents : bac wInfinity=1100, vague wInfinity=1200
+    const bacCtxDistinct: GompertzBacContext = {
+      ...GOMPERTZ_BAC_CTX_MEDIUM, // wInfinity=1100
+    };
+    const biometries: BiometriePoint[] = [makeBio("bac-A", 5, 30)];
+    const bacContexts = new Map<string, GompertzBacContext>([
+      ["bac-A", bacCtxDistinct],
+    ]);
+
+    const result = interpolerPoidsBac(makeDate(40), "bac-A", biometries, 10, {
+      strategie: StrategieInterpolation.GOMPERTZ_BAC,
+      gompertzContext: GOMPERTZ_CTX_HIGH, // vague : wInfinity=1200
+      gompertzBacContexts: bacContexts,
+      gompertzMinPoints: 5,
+    });
+
+    expect(result!.methode).toBe("GOMPERTZ_BAC");
+    if (result!.detail.methode === "GOMPERTZ_BAC") {
+      // Les params du detail doivent correspondre au contexte BAC (wInfinity=1100)
+      expect(result!.detail.params.wInfinity).toBe(1100);
+    }
+  });
+
+  // ---- GOMPERTZ_VAGUE -----------------------------------------------------
+
+  it("GOMPERTZ_VAGUE : detail contient methode, tJours, params et resultatG", () => {
+    const targetDate = makeDate(60); // t = 60 jours
+    const biometries: BiometriePoint[] = [makeBio("bac-A", 10, 80)];
+
+    const result = interpolerPoidsBac(targetDate, "bac-A", biometries, 10, {
+      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
+      gompertzContext: GOMPERTZ_CTX_HIGH,
+      gompertzMinPoints: 5,
+    });
+
+    expect(result).not.toBeNull();
+    expect(result!.methode).toBe("GOMPERTZ_VAGUE");
+    expect(result!.detail.methode).toBe("GOMPERTZ_VAGUE");
+
+    if (result!.detail.methode === "GOMPERTZ_VAGUE") {
+      // tJours = 60 jours depuis vagueDebut = makeDate(0)
+      expect(result!.detail.tJours).toBeCloseTo(60, 6);
+      // params : correspond au contexte vague
+      expect(result!.detail.params.wInfinity).toBe(GOMPERTZ_CTX_HIGH.wInfinity);
+      expect(result!.detail.params.k).toBe(GOMPERTZ_CTX_HIGH.k);
+      expect(result!.detail.params.ti).toBe(GOMPERTZ_CTX_HIGH.ti);
+      expect(result!.detail.params.r2).toBe(GOMPERTZ_CTX_HIGH.r2);
+      expect(result!.detail.params.biometrieCount).toBe(GOMPERTZ_CTX_HIGH.biometrieCount);
+      expect(result!.detail.params.confidenceLevel).toBe(GOMPERTZ_CTX_HIGH.confidenceLevel);
+      // resultatG doit etre coherent avec poids retourne
+      const expected = gompertzWeight(60, {
+        wInfinity: GOMPERTZ_CTX_HIGH.wInfinity,
+        k: GOMPERTZ_CTX_HIGH.k,
+        ti: GOMPERTZ_CTX_HIGH.ti,
+      });
+      expect(result!.detail.resultatG).toBeCloseTo(expected, 6);
+      expect(result!.detail.resultatG).toBeCloseTo(result!.poids, 6);
+    }
+  });
+
+  it("GOMPERTZ_VAGUE : tJours calcule correctement a partir de vagueDebut", () => {
+    // vagueDebut = makeDate(0), targetDate = makeDate(35) -> tJours = 35
+    const result = interpolerPoidsBac(makeDate(35), "bac-A", [makeBio("bac-A", 5, 40)], 10, {
+      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
+      gompertzContext: GOMPERTZ_CTX_HIGH,
+      gompertzMinPoints: 5,
+    });
+
+    expect(result!.methode).toBe("GOMPERTZ_VAGUE");
+    if (result!.detail.methode === "GOMPERTZ_VAGUE") {
+      expect(result!.detail.tJours).toBeCloseTo(35, 6);
+    }
+  });
+
+  it("GOMPERTZ_VAGUE (fallback depuis GOMPERTZ_BAC sans contexte bac) : detail.methode = GOMPERTZ_VAGUE", () => {
+    // Strategie GOMPERTZ_BAC mais pas de contexte bac pour bac-A -> fallback GOMPERTZ_VAGUE
+    const biometries: BiometriePoint[] = [makeBio("bac-A", 5, 40)];
+    const emptyBacContexts = new Map<string, GompertzBacContext>(); // vide
+
+    const result = interpolerPoidsBac(makeDate(50), "bac-A", biometries, 10, {
+      strategie: StrategieInterpolation.GOMPERTZ_BAC,
+      gompertzContext: GOMPERTZ_CTX_HIGH,
+      gompertzBacContexts: emptyBacContexts,
+      gompertzMinPoints: 5,
+    });
+
+    expect(result!.methode).toBe("GOMPERTZ_VAGUE");
+    expect(result!.detail.methode).toBe("GOMPERTZ_VAGUE");
+    if (result!.detail.methode === "GOMPERTZ_VAGUE") {
+      // Les params correspondent au contexte vague (pas bac)
+      expect(result!.detail.params.wInfinity).toBe(GOMPERTZ_CTX_HIGH.wInfinity);
+    }
+  });
+
+  // ---- VALEUR_INITIALE -----------------------------------------------------
+
+  it("VALEUR_INITIALE : detail contient methode et poidsMoyenInitialG quand aucune biometrie", () => {
+    const result = interpolerPoidsBac(makeDate(5), "bac-A", [], 42);
+
+    expect(result).not.toBeNull();
+    expect(result!.methode).toBe("VALEUR_INITIALE");
+    expect(result!.detail.methode).toBe("VALEUR_INITIALE");
+
+    if (result!.detail.methode === "VALEUR_INITIALE") {
+      expect(result!.detail.poidsMoyenInitialG).toBe(42);
+    }
+  });
+
+  it("VALEUR_INITIALE : detail contient la valeur poidsInitial correcte", () => {
+    // Aucune biometrie pour ce bac (biometrie d'un autre bac)
+    const biometries: BiometriePoint[] = [makeBio("bac-B", 5, 50)];
+    const result = interpolerPoidsBac(makeDate(5), "bac-A", biometries, 25);
+
+    expect(result!.methode).toBe("VALEUR_INITIALE");
+    if (result!.detail.methode === "VALEUR_INITIALE") {
+      expect(result!.detail.poidsMoyenInitialG).toBe(25);
+    }
+  });
+
+  it("VALEUR_INITIALE : date avant toutes les biometries -> detail.poidsMoyenInitialG = poidsInitial", () => {
+    // Seule biometrie a J10, targetDate = J3 (avant) -> VALEUR_INITIALE
+    const biometries: BiometriePoint[] = [makeBio("bac-A", 10, 80)];
+    const result = interpolerPoidsBac(makeDate(3), "bac-A", biometries, 15);
+
+    expect(result!.methode).toBe("VALEUR_INITIALE");
+    if (result!.detail.methode === "VALEUR_INITIALE") {
+      expect(result!.detail.poidsMoyenInitialG).toBe(15);
+    }
+  });
+
+  // ---- Compatibilite retrograde : le champ detail est additif ---------------
+
+  it("backward compat : les champs poids et methode sont toujours presentes (detail est additif)", () => {
+    // Verifier que les proprietes existantes (poids, methode) restent inchangees
+    // quand detail est ajoute. On teste les 4 cas.
+
+    // BIOMETRIE_EXACTE
+    const r1 = interpolerPoidsBac(makeDate(5), "bac-A", [makeBio("bac-A", 5, 50)], 10);
+    expect(r1!.poids).toBe(50);
+    expect(r1!.methode).toBe("BIOMETRIE_EXACTE");
+    expect(r1!.detail).toBeDefined();
+
+    // INTERPOLATION_LINEAIRE
+    const r2 = interpolerPoidsBac(makeDate(5), "bac-A", [
+      makeBio("bac-A", 0, 10),
+      makeBio("bac-A", 10, 30),
+    ], 10);
+    expect(r2!.poids).toBeCloseTo(20, 5);
+    expect(r2!.methode).toBe("INTERPOLATION_LINEAIRE");
+    expect(r2!.detail).toBeDefined();
+
+    // VALEUR_INITIALE
+    const r3 = interpolerPoidsBac(makeDate(5), "bac-A", [], 99);
+    expect(r3!.poids).toBe(99);
+    expect(r3!.methode).toBe("VALEUR_INITIALE");
+    expect(r3!.detail).toBeDefined();
+
+    // GOMPERTZ_VAGUE
+    const r4 = interpolerPoidsBac(makeDate(50), "bac-A", [makeBio("bac-A", 5, 40)], 10, {
+      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
+      gompertzContext: GOMPERTZ_CTX_HIGH,
+      gompertzMinPoints: 5,
+    });
+    expect(r4!.methode).toBe("GOMPERTZ_VAGUE");
+    expect(r4!.detail).toBeDefined();
+    // poids et detail.resultatG doivent etre coherents
+    if (r4!.detail.methode === "GOMPERTZ_VAGUE") {
+      expect(r4!.poids).toBeCloseTo(r4!.detail.resultatG, 6);
+    }
+  });
+});

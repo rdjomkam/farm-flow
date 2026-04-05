@@ -11,6 +11,7 @@ import {
   FormeAliment,
   PhaseElevage,
   ScoreAlimentConfig,
+  StrategieInterpolation,
 } from "./models";
 import type { GompertzKLevel } from "@/lib/benchmarks";
 
@@ -731,3 +732,262 @@ export interface AlerteRation {
 
 // ScoreAlimentConfig est definie dans models.ts (evite la dependance circulaire)
 // et re-exportee depuis ce fichier via le re-export en haut.
+
+// ---------------------------------------------------------------------------
+// ADR-031 — FCR Transparency Dialog
+// ---------------------------------------------------------------------------
+
+/**
+ * Methode d'estimation du poids a une borne de periode alimentaire.
+ * Alias du discriminant de PeriodeAlimentaire pour reutilisation.
+ */
+export type MethodeEstimationPoids =
+  | "BIOMETRIE_EXACTE"
+  | "GOMPERTZ_BAC"
+  | "GOMPERTZ_VAGUE"
+  | "INTERPOLATION_LINEAIRE"
+  | "VALEUR_INITIALE";
+
+/**
+ * Parametres d'un modele Gompertz calibre (au niveau vague ou bac).
+ *
+ * Affiches dans le dialog de transparence FCR pour montrer la formule
+ * avec les valeurs reelles : W(t) = W∞ × exp(−exp(−k × (t − ti)))
+ */
+export interface FCRTraceGompertzParams {
+  /** W∞ — poids asymptotique en grammes */
+  wInfinity: number;
+  /** k — constante de taux de croissance en 1/jour */
+  k: number;
+  /** ti — point d'inflexion en jours depuis le debut de la vague */
+  ti: number;
+  /** R² — coefficient de determination du calibrage */
+  r2: number;
+  /** Nombre de biometries utilisees pour calibrer le modele */
+  biometrieCount: number;
+  /** Niveau de confiance du calibrage */
+  confidenceLevel: "HIGH" | "MEDIUM" | "LOW" | "INSUFFICIENT_DATA";
+}
+
+/**
+ * Detail de l'estimation pour la methode BIOMETRIE_EXACTE.
+ */
+export interface FCRTraceEstimationBiometrieExacte {
+  methode: "BIOMETRIE_EXACTE";
+  /** Date du releve biometrique utilise */
+  dateBiometrie: Date;
+  /** Poids moyen mesure en grammes */
+  poidsMesureG: number;
+}
+
+/**
+ * Detail de l'estimation pour la methode INTERPOLATION_LINEAIRE.
+ *
+ * Formule : poidsDebut + (poidsFin - poidsDebut) × ratio
+ * ou ratio = (targetDate - dateAvant) / (dateApres - dateAvant)
+ */
+export interface FCRTraceEstimationInterpolationLineaire {
+  methode: "INTERPOLATION_LINEAIRE";
+  /** Biometrie precedant la date cible (null si absent — extrapolation) */
+  pointAvant: { date: Date; poidsMoyenG: number } | null;
+  /** Biometrie suivant la date cible (null si absent — extrapolation) */
+  pointApres: { date: Date; poidsMoyenG: number } | null;
+  /**
+   * Ratio d'interpolation entre 0 et 1.
+   * Null si un seul point disponible (extrapolation vers la fin).
+   */
+  ratio: number | null;
+}
+
+/**
+ * Detail de l'estimation pour les methodes GOMPERTZ_VAGUE ou GOMPERTZ_BAC.
+ *
+ * Formule : W(t) = W∞ × exp(−exp(−k × (t − ti)))
+ */
+export interface FCRTraceEstimationGompertz {
+  methode: "GOMPERTZ_BAC" | "GOMPERTZ_VAGUE";
+  /** t en jours depuis le debut de la vague jusqu'a la date cible */
+  tJours: number;
+  /** Parametres Gompertz utilises pour l'evaluation */
+  params: FCRTraceGompertzParams;
+  /** Resultat de l'evaluation en grammes */
+  resultatG: number;
+}
+
+/**
+ * Detail de l'estimation pour la methode VALEUR_INITIALE.
+ *
+ * Utilise quand aucune biometrie n'est disponible avant la periode.
+ */
+export interface FCRTraceEstimationValeurInitiale {
+  methode: "VALEUR_INITIALE";
+  /** Poids moyen initial de la vague, utilise comme fallback */
+  poidsMoyenInitialG: number;
+}
+
+/**
+ * Union discriminee des details d'estimation de poids a une borne.
+ */
+export type FCRTraceEstimationDetail =
+  | FCRTraceEstimationBiometrieExacte
+  | FCRTraceEstimationInterpolationLineaire
+  | FCRTraceEstimationGompertz
+  | FCRTraceEstimationValeurInitiale;
+
+/**
+ * Trace d'audit d'une periode alimentaire.
+ *
+ * Etend PeriodeAlimentaire avec tous les details de calcul intermediaires
+ * necessaires a l'audit complet du FCR. Produite par getFCRTrace().
+ */
+export interface FCRTracePeriode {
+  /** Identifiant du bac ("unknown" pour les donnees legacy sans bacId) */
+  bacId: string;
+  /** Nom du bac pour l'affichage */
+  bacNom: string;
+
+  dateDebut: Date;
+  dateFin: Date;
+  /** Nombre de jours de la periode (dateFin - dateDebut) */
+  dureeJours: number;
+
+  /** Quantite d'aliment distribue pendant la periode en kg */
+  quantiteKg: number;
+
+  // --- Borne debut ---
+  /** Poids moyen estime au debut de la periode en grammes */
+  poidsMoyenDebut: number | null;
+  /** Methode utilisee pour estimer poidsMoyenDebut */
+  methodeDebut: MethodeEstimationPoids;
+  /** Detail de l'estimation au debut (biometrie, interpolation, Gompertz...) */
+  detailEstimationDebut: FCRTraceEstimationDetail | null;
+
+  // --- Borne fin ---
+  /** Poids moyen estime a la fin de la periode en grammes */
+  poidsMoyenFin: number | null;
+  /** Methode utilisee pour estimer poidsMoyenFin */
+  methodeFin: MethodeEstimationPoids;
+  /** Detail de l'estimation a la fin (biometrie, interpolation, Gompertz...) */
+  detailEstimationFin: FCRTraceEstimationDetail | null;
+
+  /**
+   * Methode retenue pour qualifier la periode.
+   * Correspond a la moins precise des deux bornes (conservative).
+   */
+  methodeRetenue: MethodeEstimationPoids;
+
+  // --- Calcul biomasse ---
+  /** Nombre de poissons vivants utilise dans le calcul (au debut de la periode) */
+  nombreVivants: number | null;
+  /** Biomasse au debut = poidsMoyenDebut × nombreVivants / 1000 en kg */
+  biomasseDebutKg: number | null;
+  /** Biomasse a la fin = poidsMoyenFin × nombreVivants / 1000 en kg */
+  biomasseFinKg: number | null;
+  /**
+   * Gain de biomasse = biomasseFinKg - biomasseDebutKg en kg.
+   * Null si les poids sont indisponibles ou si le gain est negatif (exclu).
+   */
+  gainBiomasseKg: number | null;
+  /**
+   * true si le gain brut calcule etait negatif.
+   * Explique pourquoi la periode ne contribue pas au FCR agregee.
+   */
+  gainNegatifExclu: boolean;
+
+  // --- FCR periode ---
+  /** FCR de la periode = quantiteKg / gainBiomasseKg (null si gain indisponible) */
+  fcrPeriode: number | null;
+
+  /**
+   * Parametres Gompertz du bac si methodeDebut ou methodeFin = GOMPERTZ_BAC.
+   * Null pour toute autre methode.
+   */
+  gompertzBac: FCRTraceGompertzParams | null;
+}
+
+/**
+ * Contribution d'une vague au FCR final d'un aliment.
+ *
+ * Contient le resume de la vague et la liste des periodes alimentaires
+ * segmentees pour cet aliment.
+ */
+export interface FCRTraceVague {
+  vagueId: string;
+  vagueCode: string;
+  dateDebut: Date;
+  /** Null si la vague est encore en cours */
+  dateFin: Date | null;
+  /** Nombre d'alevins places en debut de vague */
+  nombreInitial: number;
+  /** Poids moyen initial de la vague en grammes */
+  poidsMoyenInitial: number;
+  /** Nombre de poissons vivants estime a la fin de la periode */
+  nombreVivantsEstime: number | null;
+
+  /** Quantite totale de cet aliment dans cette vague en kg */
+  quantiteKg: number;
+  /** Gain de biomasse agregee des periodes valides en kg (null si aucun gain positif) */
+  gainBiomasseKg: number | null;
+  /** FCR calcule pour cette vague (null si gainBiomasseKg est null) */
+  fcrVague: number | null;
+
+  /**
+   * Parametres Gompertz au niveau vague si la strategie GOMPERTZ_VAGUE ou
+   * GOMPERTZ_BAC est active et que le modele est calibre.
+   * Null si strategie = LINEAIRE ou modele non calibre.
+   */
+  gompertzVague: FCRTraceGompertzParams | null;
+
+  /** Periodes alimentaires pour cet aliment dans cette vague */
+  periodes: FCRTracePeriode[];
+
+  /**
+   * true si des releves alimentation de cette vague n'ont pas de bacId
+   * (donnees legacy anterieures a l'identifiant de bac par releve).
+   */
+  modeLegacy: boolean;
+}
+
+/**
+ * Trace d'audit complete du calcul FCR pour un produit aliment.
+ *
+ * Retournee par GET /api/analytics/aliments/[produitId]/fcr-trace.
+ * Structuree en 3 niveaux : produit → vagues → periodes.
+ *
+ * Permet a un pisciculteur ou agronome de reproduire manuellement
+ * le FCR affiche sur la page de comparaison des aliments.
+ */
+export interface FCRTrace {
+  produitId: string;
+  produitNom: string;
+  fournisseurNom: string | null;
+  /** Prix unitaire en CFA/kg (base d'achat) */
+  prixUnitaire: number;
+
+  /**
+   * Strategie d'interpolation configuree (ConfigElevage).
+   * Contextualise les methodes d'estimation affichees dans les periodes.
+   */
+  strategieInterpolation: StrategieInterpolation;
+
+  /**
+   * Nombre minimal de biometries requis pour activer Gompertz.
+   * Null si ConfigElevage n'est pas renseignee (utilise le defaut = 5).
+   */
+  gompertzMinPoints: number | null;
+
+  /** FCR final agrege (identique a AnalytiqueAliment.fcrMoyen) */
+  fcrMoyenFinal: number | null;
+
+  /** Quantite totale aliment sur toutes les vagues en kg */
+  quantiteTotaleFinal: number;
+
+  /**
+   * Gain de biomasse total agrege (somme des gains positifs de toutes les periodes)
+   * en kg. Null si aucune periode n'a un gain positif.
+   */
+  gainBiomasseTotalFinal: number | null;
+
+  /** Ventilation par vague */
+  parVague: FCRTraceVague[];
+}

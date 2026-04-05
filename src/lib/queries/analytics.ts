@@ -18,6 +18,10 @@ import type {
   ChangementGranule,
   AlerteRation,
   ConfigElevage,
+  FCRTrace,
+  FCRTraceVague,
+  FCRTracePeriode,
+  FCRTraceGompertzParams,
 } from "@/types";
 import {
   calculerTauxSurvie,
@@ -42,6 +46,7 @@ import {
 } from "@/lib/calculs";
 import {
   segmenterPeriodesAlimentaires,
+  interpolerPoidsBac,
   type ReleveAlimPoint,
   type BiometriePoint,
   type VagueContext,
@@ -2401,4 +2406,478 @@ export async function getScoresFournisseurs(siteId: string): Promise<
   });
 
   return result;
+}
+
+// ===========================================================================
+// FCR Trace — ADR-031
+// ===========================================================================
+
+/**
+ * Construit la trace d'audit complete du calcul FCR pour un produit aliment.
+ *
+ * Reproduit le meme pipeline que computeAlimentMetrics mais collecte les
+ * details intermediaires de chaque estimation de poids pour permettre
+ * l'inspection complete du calcul dans le dialog de transparence FCR.
+ *
+ * @param siteId    - ID du site
+ * @param produitId - ID du produit aliment
+ */
+export async function getFCRTrace(
+  siteId: string,
+  produitId: string
+): Promise<FCRTrace | null> {
+  // Fetch the product
+  const produit = await prisma.produit.findFirst({
+    where: { id: produitId, siteId, categorie: CategorieProduit.ALIMENT },
+    select: {
+      id: true,
+      nom: true,
+      prixUnitaire: true,
+      uniteAchat: true,
+      contenance: true,
+      fournisseur: { select: { nom: true } },
+    },
+  });
+
+  if (!produit) return null;
+
+  // Fetch all ReleveConsommation for this product on this site
+  const allConsommations = await prisma.releveConsommation.findMany({
+    where: { produitId, siteId },
+    select: {
+      quantite: true,
+      releve: {
+        select: {
+          id: true,
+          vagueId: true,
+          date: true,
+          bacId: true,
+        },
+      },
+    },
+  });
+
+  if (allConsommations.length === 0) {
+    return {
+      produitId: produit.id,
+      produitNom: produit.nom,
+      fournisseurNom: produit.fournisseur?.nom ?? null,
+      prixUnitaire: getPrixParUniteBase(produit),
+      strategieInterpolation: StrategieInterpolation.LINEAIRE,
+      gompertzMinPoints: null,
+      fcrMoyenFinal: null,
+      quantiteTotaleFinal: 0,
+      gainBiomasseTotalFinal: null,
+      parVague: [],
+    };
+  }
+
+  // Group by vagueId
+  const consoByVague = new Map<string, number>();
+  for (const c of allConsommations) {
+    const vagueId = c.releve.vagueId;
+    consoByVague.set(vagueId, (consoByVague.get(vagueId) ?? 0) + c.quantite);
+  }
+
+  const vagueIds = [...consoByVague.keys()];
+
+  // Fetch vague data with Gompertz and config
+  const vagues = await prisma.vague.findMany({
+    where: { id: { in: vagueIds }, siteId },
+    select: {
+      id: true,
+      code: true,
+      nombreInitial: true,
+      poidsMoyenInitial: true,
+      dateDebut: true,
+      dateFin: true,
+      bacs: { select: { id: true, nom: true, nombreInitial: true } },
+      configElevage: {
+        select: {
+          interpolationStrategy: true,
+          gompertzMinPoints: true,
+        },
+      },
+      gompertz: {
+        select: {
+          wInfinity: true,
+          k: true,
+          ti: true,
+          r2: true,
+          biometrieCount: true,
+          confidenceLevel: true,
+        },
+      },
+      gompertzBacs: {
+        select: {
+          bacId: true,
+          wInfinity: true,
+          k: true,
+          ti: true,
+          r2: true,
+          biometrieCount: true,
+          confidenceLevel: true,
+        },
+      },
+    },
+  });
+
+  // Fetch biometrie relevés for these vagues
+  const vagueReleves = await prisma.releve.findMany({
+    where: {
+      vagueId: { in: vagueIds },
+      siteId,
+      typeReleve: { in: [TypeReleve.BIOMETRIE, TypeReleve.MORTALITE, TypeReleve.COMPTAGE] },
+    },
+    orderBy: { date: "asc" },
+    select: {
+      vagueId: true,
+      bacId: true,
+      typeReleve: true,
+      date: true,
+      poidsMoyen: true,
+      nombreMorts: true,
+      nombreCompte: true,
+    },
+  });
+
+  // Fetch ALIMENTATION relevés with all consommations
+  const alimentReleves = await prisma.releve.findMany({
+    where: {
+      vagueId: { in: vagueIds },
+      siteId,
+      typeReleve: TypeReleve.ALIMENTATION,
+    },
+    orderBy: { date: "asc" },
+    select: {
+      id: true,
+      vagueId: true,
+      bacId: true,
+      date: true,
+      consommations: {
+        select: {
+          produitId: true,
+          quantite: true,
+        },
+      },
+    },
+  });
+
+  // Group by vagueId
+  const relevesByVague = new Map<string, typeof vagueReleves>();
+  for (const r of vagueReleves) {
+    const existing = relevesByVague.get(r.vagueId) ?? [];
+    existing.push(r);
+    relevesByVague.set(r.vagueId, existing);
+  }
+
+  const alimentRelevesByVague = new Map<string, typeof alimentReleves>();
+  for (const r of alimentReleves) {
+    const existing = alimentRelevesByVague.get(r.vagueId) ?? [];
+    existing.push(r);
+    alimentRelevesByVague.set(r.vagueId, existing);
+  }
+
+  const parVague: FCRTraceVague[] = [];
+  let quantiteTotaleGlobale = 0;
+  let gainBiomasseTotalGlobale: number | null = null;
+
+  for (const vague of vagues) {
+    const quantiteVague = consoByVague.get(vague.id) ?? 0;
+    const releves = relevesByVague.get(vague.id) ?? [];
+    const vagueAlimReleves = alimentRelevesByVague.get(vague.id) ?? [];
+
+    const biometries = releves
+      .filter((r) => r.typeReleve === TypeReleve.BIOMETRIE)
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    const biometriePoints: BiometriePoint[] = biometries
+      .filter((b) => b.poidsMoyen !== null && b.poidsMoyen > 0)
+      .map((b) => ({
+        date: b.date,
+        bacId: b.bacId,
+        poidsMoyen: b.poidsMoyen as number,
+      }));
+
+    const vagueCtx: VagueContext = {
+      dateDebut: vague.dateDebut,
+      nombreInitial: vague.nombreInitial,
+      poidsMoyenInitial: vague.poidsMoyenInitial,
+      bacs: vague.bacs,
+    };
+
+    // Build Gompertz contexts
+    const config = vague.configElevage;
+    const gompertz = vague.gompertz;
+    const interpolStrategy =
+      (config?.interpolationStrategy as StrategieInterpolation | null) ??
+      StrategieInterpolation.LINEAIRE;
+
+    const gompertzContext: GompertzVagueContext | undefined =
+      gompertz &&
+      (interpolStrategy === StrategieInterpolation.GOMPERTZ_VAGUE ||
+        interpolStrategy === StrategieInterpolation.GOMPERTZ_BAC)
+        ? {
+            wInfinity: gompertz.wInfinity,
+            k: gompertz.k,
+            ti: gompertz.ti,
+            r2: gompertz.r2,
+            biometrieCount: gompertz.biometrieCount,
+            confidenceLevel: gompertz.confidenceLevel as GompertzVagueContext["confidenceLevel"],
+            vagueDebut: vague.dateDebut,
+          }
+        : undefined;
+
+    let gompertzBacContexts: Map<string, GompertzBacContext> | undefined;
+    if (interpolStrategy === StrategieInterpolation.GOMPERTZ_BAC) {
+      const bacRows = vague.gompertzBacs ?? [];
+      if (bacRows.length > 0) {
+        gompertzBacContexts = new Map(
+          bacRows
+            .filter((b) => b.confidenceLevel !== "INSUFFICIENT_DATA")
+            .map((b) => [
+              b.bacId,
+              {
+                wInfinity: b.wInfinity,
+                k: b.k,
+                ti: b.ti,
+                r2: b.r2,
+                biometrieCount: b.biometrieCount,
+                confidenceLevel: b.confidenceLevel as GompertzBacContext["confidenceLevel"],
+                vagueDebut: vague.dateDebut,
+              },
+            ])
+        );
+      }
+    }
+
+    const interpolOptions = {
+      strategie: interpolStrategy,
+      gompertzContext,
+      gompertzBacContexts,
+      gompertzMinPoints: config?.gompertzMinPoints ?? undefined,
+    };
+
+    // Build ReleveAlimPoints for segmentation
+    const relevsAlimPoints: ReleveAlimPoint[] = vagueAlimReleves.map((r) => ({
+      releveId: r.id,
+      date: r.date,
+      bacId: r.bacId,
+      consommations: r.consommations.map((c) => ({
+        produitId: c.produitId,
+        quantiteKg: c.quantite,
+      })),
+    }));
+
+    // Segment all periods (needed to know modeLegacy)
+    const allPeriodes = segmenterPeriodesAlimentaires(
+      relevsAlimPoints,
+      biometriePoints,
+      vagueCtx,
+      interpolOptions
+    );
+    const periodesProduct = allPeriodes.filter((p) => p.produitId === produitId);
+
+    // Check legacy mode (bacId was null in original records)
+    const modeLegacy = vagueAlimReleves.some((r) => r.bacId === null);
+
+    // Build map from bacId to nom
+    const bacNomMap = new Map<string, string>(vague.bacs.map((b) => [b.id, b.nom]));
+
+    // Build FCRTracePeriode for each period of this product
+    const tracePeriodes: FCRTracePeriode[] = [];
+    for (const periode of periodesProduct) {
+      const resolvedBacId = periode.bacId === "unknown" ? null : periode.bacId;
+
+      const debutEstim = interpolerPoidsBac(
+        periode.dateDebut,
+        resolvedBacId,
+        biometriePoints,
+        vague.poidsMoyenInitial,
+        interpolOptions
+      );
+      const finEstim = interpolerPoidsBac(
+        periode.dateFin,
+        resolvedBacId,
+        biometriePoints,
+        vague.poidsMoyenInitial,
+        interpolOptions
+      );
+
+      const poidsMoyenDebut = debutEstim?.poids ?? null;
+      const poidsMoyenFin = finEstim?.poids ?? null;
+      const methodeDebut = debutEstim?.methode ?? "VALEUR_INITIALE";
+      const methodeFin = finEstim?.methode ?? "VALEUR_INITIALE";
+
+      const dureeJours = Math.max(
+        0,
+        Math.round(
+          (periode.dateFin.getTime() - periode.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
+        )
+      );
+
+      const nombreVivants = periode.nombreVivants;
+      // Raw (unrounded) biomasse values used for gain and FCR computation
+      const biomasseDebutKgRaw =
+        poidsMoyenDebut !== null && nombreVivants !== null
+          ? (poidsMoyenDebut * nombreVivants) / 1000
+          : null;
+      const biomasseFinKgRaw =
+        poidsMoyenFin !== null && nombreVivants !== null
+          ? (poidsMoyenFin * nombreVivants) / 1000
+          : null;
+
+      // Gain computed from raw values to avoid rounding-induced distortion
+      let gainBiomasseKgRaw: number | null = null;
+      let gainNegatifExclu = false;
+      if (biomasseDebutKgRaw !== null && biomasseFinKgRaw !== null) {
+        const rawGain = biomasseFinKgRaw - biomasseDebutKgRaw;
+        if (rawGain > 0) {
+          gainBiomasseKgRaw = rawGain;
+        } else {
+          gainNegatifExclu = true;
+        }
+      }
+
+      const fcrPeriode =
+        gainBiomasseKgRaw !== null && gainBiomasseKgRaw > 0
+          ? Math.round((periode.quantiteKg / gainBiomasseKgRaw) * 100) / 100
+          : null;
+
+      // Methode retenue = moins precise des deux bornes
+      const methodeRank = (m: string): number => {
+        if (m === "BIOMETRIE_EXACTE") return 4;
+        if (m === "GOMPERTZ_BAC") return 3;
+        if (m === "GOMPERTZ_VAGUE") return 2;
+        if (m === "INTERPOLATION_LINEAIRE") return 1;
+        return 0;
+      };
+      const methodeRetenue =
+        methodeRank(methodeDebut) <= methodeRank(methodeFin) ? methodeDebut : methodeFin;
+
+      // Gompertz bac params if applicable
+      let gompertzBacParams: FCRTraceGompertzParams | null = null;
+      if (
+        (methodeDebut === "GOMPERTZ_BAC" || methodeFin === "GOMPERTZ_BAC") &&
+        gompertzBacContexts &&
+        resolvedBacId !== null
+      ) {
+        const bacCtx = gompertzBacContexts.get(resolvedBacId);
+        if (bacCtx) {
+          gompertzBacParams = {
+            wInfinity: bacCtx.wInfinity,
+            k: bacCtx.k,
+            ti: bacCtx.ti,
+            r2: bacCtx.r2,
+            biometrieCount: bacCtx.biometrieCount,
+            confidenceLevel: bacCtx.confidenceLevel,
+          };
+        }
+      }
+
+      tracePeriodes.push({
+        bacId: periode.bacId,
+        bacNom: bacNomMap.get(periode.bacId) ?? (periode.bacId === "unknown" ? "inconnu" : periode.bacId),
+        dateDebut: periode.dateDebut,
+        dateFin: periode.dateFin,
+        dureeJours,
+        quantiteKg: periode.quantiteKg,
+        poidsMoyenDebut,
+        methodeDebut,
+        detailEstimationDebut: debutEstim?.detail ?? null,
+        poidsMoyenFin,
+        methodeFin,
+        detailEstimationFin: finEstim?.detail ?? null,
+        methodeRetenue,
+        nombreVivants,
+        // Display values rounded to 2 decimals; gain uses raw values above for FCR accuracy
+        biomasseDebutKg: biomasseDebutKgRaw !== null ? Math.round(biomasseDebutKgRaw * 100) / 100 : null,
+        biomasseFinKg: biomasseFinKgRaw !== null ? Math.round(biomasseFinKgRaw * 100) / 100 : null,
+        gainBiomasseKg: gainBiomasseKgRaw !== null ? Math.round(gainBiomasseKgRaw * 100) / 100 : null,
+        gainNegatifExclu,
+        fcrPeriode,
+        gompertzBac: gompertzBacParams,
+      });
+    }
+
+    // Vague-level FCR aggregation
+    const totalAlimentVague = tracePeriodes.reduce((s, p) => s + p.quantiteKg, 0);
+    const totalGainVague = tracePeriodes.reduce(
+      (s, p) => s + (p.gainBiomasseKg != null ? p.gainBiomasseKg : 0),
+      0
+    );
+    const gainBiomasseVague = totalGainVague > 0 ? totalGainVague : null;
+    const fcrVague =
+      totalGainVague > 0 && totalAlimentVague > 0
+        ? Math.round((totalAlimentVague / totalGainVague) * 100) / 100
+        : null;
+
+    // Estimate nombre vivants at end of vague
+    const nombreVivants = computeNombreVivantsVague(vague.bacs, releves, vague.nombreInitial);
+
+    // Gompertz vague params
+    let gompertzVagueParams: FCRTraceGompertzParams | null = null;
+    if (gompertz) {
+      gompertzVagueParams = {
+        wInfinity: gompertz.wInfinity,
+        k: gompertz.k,
+        ti: gompertz.ti,
+        r2: gompertz.r2,
+        biometrieCount: gompertz.biometrieCount,
+        confidenceLevel: gompertz.confidenceLevel as FCRTraceGompertzParams["confidenceLevel"],
+      };
+    }
+
+    quantiteTotaleGlobale += quantiteVague;
+    if (gainBiomasseVague !== null) {
+      gainBiomasseTotalGlobale = (gainBiomasseTotalGlobale ?? 0) + gainBiomasseVague;
+    }
+
+    parVague.push({
+      vagueId: vague.id,
+      vagueCode: vague.code,
+      dateDebut: vague.dateDebut,
+      dateFin: vague.dateFin,
+      nombreInitial: vague.nombreInitial,
+      poidsMoyenInitial: vague.poidsMoyenInitial,
+      nombreVivantsEstime: nombreVivants,
+      quantiteKg: quantiteVague,
+      gainBiomasseKg: gainBiomasseVague !== null ? Math.round(gainBiomasseVague * 100) / 100 : null,
+      fcrVague,
+      gompertzVague: gompertzVagueParams,
+      periodes: tracePeriodes,
+      modeLegacy,
+    });
+  }
+
+  // Global FCR
+  const fcrMoyenFinal =
+    gainBiomasseTotalGlobale !== null && gainBiomasseTotalGlobale > 0
+      ? Math.round((quantiteTotaleGlobale / gainBiomasseTotalGlobale) * 100) / 100
+      : null;
+
+  // Pick interpolation strategy from the first vague that has a config.
+  // This assumes all vagues for a given product share the same strategy.
+  // In theory a product could span vagues with different strategies, but this
+  // scenario is extremely unlikely and not yet supported — a single strategy
+  // is applied uniformly across the whole FCR trace.
+  const firstConfig = vagues.find((v) => v.configElevage)?.configElevage;
+  const strategieInterpolation =
+    (firstConfig?.interpolationStrategy as StrategieInterpolation | null) ??
+    StrategieInterpolation.LINEAIRE;
+  const gompertzMinPoints = firstConfig?.gompertzMinPoints ?? null;
+
+  return {
+    produitId: produit.id,
+    produitNom: produit.nom,
+    fournisseurNom: produit.fournisseur?.nom ?? null,
+    prixUnitaire: getPrixParUniteBase(produit),
+    strategieInterpolation,
+    gompertzMinPoints,
+    fcrMoyenFinal,
+    quantiteTotaleFinal: Math.round(quantiteTotaleGlobale * 100) / 100,
+    gainBiomasseTotalFinal:
+      gainBiomasseTotalGlobale !== null ? Math.round(gainBiomasseTotalGlobale * 100) / 100 : null,
+    parVague,
+  };
 }
