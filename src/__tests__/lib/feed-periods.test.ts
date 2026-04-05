@@ -32,7 +32,7 @@ import {
   type GompertzVagueContext,
   type CalibragePoint,
 } from "@/lib/feed-periods";
-import { gompertzWeight, CLARIAS_DEFAULTS } from "@/lib/gompertz";
+import { gompertzWeight } from "@/lib/gompertz";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -758,69 +758,20 @@ describe("interpolerPoidsBac — strategie GOMPERTZ_VAGUE (ADR-029)", () => {
 
   // ---- ADR-034: fallback context with ConfigElevage defaults produces valid Gompertz ---
 
-  it("fallback context (r2=0, biometrieCount=0, LOW) with CLARIAS_DEFAULTS produces valid Gompertz", () => {
-    // Simulates what happens when vague.gompertz is NULL in DB —
-    // analytics.ts builds a fallback context from ConfigElevage/CLARIAS_DEFAULTS
-    const fallbackCtx: GompertzVagueContext = {
-      wInfinity: CLARIAS_DEFAULTS.wInfinity, // 1200
-      k: CLARIAS_DEFAULTS.k,                 // 0.018
-      ti: CLARIAS_DEFAULTS.ti,               // 95
-      r2: 0,
-      biometrieCount: 0,
-      confidenceLevel: "LOW",
-      vagueDebut: makeDate(0),
-    };
+  it("no gompertzContext -> falls through to linear interpolation between biometries", () => {
+    // ADR-034 fix: when vague.gompertz is NULL in DB, no fallback context is built.
+    // The system falls through to linear interpolation using actual biometry points.
     const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 5, 40),
+      makeBio("bac-A", 0, 10),
+      makeBio("bac-A", 60, 200),
     ];
-    const result = interpolerPoidsBac(makeDate(50), "bac-A", biometries, 10, {
-      gompertzContext: fallbackCtx,
-    });
+    const result = interpolerPoidsBac(makeDate(30), "bac-A", biometries, 10);
 
     expect(result).not.toBeNull();
-    expect(result!.methode).toBe("GOMPERTZ_VAGUE");
-    const expectedPoids = gompertzWeight(50, {
-      wInfinity: CLARIAS_DEFAULTS.wInfinity,
-      k: CLARIAS_DEFAULTS.k,
-      ti: CLARIAS_DEFAULTS.ti,
-    });
-    expect(result!.poids).toBeCloseTo(expectedPoids, 6);
-    expect(result!.poids).toBeGreaterThan(0);
-  });
-
-  it("fallback context with custom wInfDefault (1500g) produces different Gompertz weight", () => {
-    const fallbackCustom: GompertzVagueContext = {
-      wInfinity: 1500, // config.gompertzWInfDefault = 1500
-      k: CLARIAS_DEFAULTS.k,
-      ti: CLARIAS_DEFAULTS.ti,
-      r2: 0,
-      biometrieCount: 0,
-      confidenceLevel: "LOW",
-      vagueDebut: makeDate(0),
-    };
-    const fallbackDefault: GompertzVagueContext = {
-      wInfinity: CLARIAS_DEFAULTS.wInfinity, // 1200
-      k: CLARIAS_DEFAULTS.k,
-      ti: CLARIAS_DEFAULTS.ti,
-      r2: 0,
-      biometrieCount: 0,
-      confidenceLevel: "LOW",
-      vagueDebut: makeDate(0),
-    };
-
-    const biometries: BiometriePoint[] = [makeBio("bac-A", 5, 40)];
-
-    const resultCustom = interpolerPoidsBac(makeDate(60), "bac-A", biometries, 10, {
-      gompertzContext: fallbackCustom,
-    });
-    const resultDefault = interpolerPoidsBac(makeDate(60), "bac-A", biometries, 10, {
-      gompertzContext: fallbackDefault,
-    });
-
-    expect(resultCustom!.methode).toBe("GOMPERTZ_VAGUE");
-    expect(resultDefault!.methode).toBe("GOMPERTZ_VAGUE");
-    // Higher wInfinity should produce a higher weight at same t
-    expect(resultCustom!.poids).toBeGreaterThan(resultDefault!.poids);
+    // Without Gompertz context, uses linear interpolation between actual biometries
+    expect(result!.methode).toBe("INTERPOLATION_LINEAIRE");
+    // 10 + (200-10) * (30/60) = 105g — based on real measurements
+    expect(result!.poids).toBeCloseTo(105, 3);
   });
 });
 

@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/db";
 import { formatNumber } from "@/lib/format";
 import { TypeReleve, CategorieProduit, StatutVague, StatutReproducteur, StatutLotAlevins } from "@/types";
-import { CLARIAS_DEFAULTS } from "@/lib/gompertz";
 import type {
   IndicateursBac,
   ComparaisonBacs,
@@ -683,8 +682,11 @@ async function computeAlimentMetrics(
       bacs: vague.bacs,
     };
 
-    // ADR-034: build Gompertz context ALWAYS — from DB record if available,
-    // otherwise from ConfigElevage defaults (wInfDefault) + CLARIAS_DEFAULTS.
+    // ADR-034: build Gompertz context only when calibrated (DB record exists).
+    // When vague.gompertz is NULL, leave context undefined so that the system
+    // falls through to linear interpolation between actual biometry points.
+    // Using uncalibrated CLARIAS_DEFAULTS produces predictions that diverge
+    // massively from real measurements (e.g. 43g predicted vs 100g measured).
     const config = vague.configElevage;
     const gompertz = vague.gompertz;
 
@@ -698,15 +700,7 @@ async function computeAlimentMetrics(
           confidenceLevel: gompertz.confidenceLevel as GompertzVagueContext["confidenceLevel"],
           vagueDebut: vague.dateDebut,
         }
-      : {
-          wInfinity: config?.gompertzWInfDefault ?? CLARIAS_DEFAULTS.wInfinity,
-          k: CLARIAS_DEFAULTS.k,
-          ti: CLARIAS_DEFAULTS.ti,
-          r2: 0,
-          biometrieCount: 0,
-          confidenceLevel: "LOW" as const,
-          vagueDebut: vague.dateDebut,
-        };
+      : undefined;
 
     // ADR-033 DISC-09: build mortalitesParBac (flat Map) for per-tank nombreVivants
     // (each tank tracks its own mortality separately via estimerNombreVivantsADate)
@@ -2624,8 +2618,8 @@ export async function getFCRTrace(
       bacs: vague.bacs,
     };
 
-    // ADR-034: build Gompertz context ALWAYS — from DB record if available,
-    // otherwise from ConfigElevage defaults (wInfDefault) + CLARIAS_DEFAULTS.
+    // ADR-034: build Gompertz context only when calibrated (DB record exists).
+    // When vague.gompertz is NULL, leave undefined → falls through to linear interpolation.
     const config = vague.configElevage;
     const gompertz = vague.gompertz;
 
@@ -2639,15 +2633,7 @@ export async function getFCRTrace(
           confidenceLevel: gompertz.confidenceLevel as GompertzVagueContext["confidenceLevel"],
           vagueDebut: vague.dateDebut,
         }
-      : {
-          wInfinity: config?.gompertzWInfDefault ?? CLARIAS_DEFAULTS.wInfinity,
-          k: CLARIAS_DEFAULTS.k,
-          ti: CLARIAS_DEFAULTS.ti,
-          r2: 0,
-          biometrieCount: 0,
-          confidenceLevel: "LOW" as const,
-          vagueDebut: vague.dateDebut,
-        };
+      : undefined;
 
     // ADR-032: build mortalitesParBac for per-tank nombreVivants
     // (per-tank mortality tracking is correct per ADR-033 — each tank has different fish count)
