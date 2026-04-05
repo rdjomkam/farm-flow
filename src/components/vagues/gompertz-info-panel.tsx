@@ -89,9 +89,10 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 // ─── Section 1: Statut ────────────────────────────────────────────────────────
 
 function StatutSection({ data }: { data: GompertzPanelData }) {
+  const t = useTranslations("vagues");
   return (
     <div>
-      <SectionTitle>Statut du modele</SectionTitle>
+      <SectionTitle>{t("gompertz.modelStatus")}</SectionTitle>
       <div className="flex flex-wrap items-center gap-2 mb-3">
         <Badge variant={confidenceBadgeVariant(data.confidenceLevel)}>
           {confidenceBadgeLabel(data.confidenceLevel)}
@@ -170,7 +171,7 @@ function ParamsSection({ data }: { data: GompertzPanelData }) {
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
               Point d&apos;inflexion (ti)
             </p>
-            <p className="text-xl font-bold mb-2">Jour {Math.round(ti)}</p>
+            <p className="text-xl font-bold mb-2">{t("gompertz.day", { day: Math.round(ti) })}</p>
             <p className="text-xs text-muted-foreground leading-relaxed">
               Le jour ou la croissance est la plus rapide. Avant ce jour, la croissance
               accelere. Apres, elle ralentit progressivement jusqu&apos;au poids maximum.
@@ -191,7 +192,7 @@ function ComparaisonSection({ data }: { data: GompertzPanelData }) {
   if (rows.length === 0) {
     return (
       <div>
-        <SectionTitle>Predictions vs Realite</SectionTitle>
+        <SectionTitle>{t("gompertz.predictionsVsReality")}</SectionTitle>
         <p className="text-sm text-muted-foreground">{t("gompertz.noBiometricData")}</p>
       </div>
     );
@@ -199,7 +200,7 @@ function ComparaisonSection({ data }: { data: GompertzPanelData }) {
 
   return (
     <div>
-      <SectionTitle>Predictions vs Realite</SectionTitle>
+      <SectionTitle>{t("gompertz.predictionsVsReality")}</SectionTitle>
 
       {/* Mobile: stacked cards */}
       <div className="flex flex-col gap-2 md:hidden">
@@ -214,15 +215,15 @@ function ComparaisonSection({ data }: { data: GompertzPanelData }) {
                   <span className="text-muted-foreground text-xs">J{row.jour}</span>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Reel</p>
+                  <p className="text-xs text-muted-foreground">{t("gompertz.actual")}</p>
                   <p className="font-medium">{row.poidsReel} g</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Predit</p>
+                  <p className="text-xs text-muted-foreground">{t("gompertz.predicted")}</p>
                   <p className="font-medium">{row.poidsPredits} g</p>
                 </div>
                 <div className="col-span-2">
-                  <p className="text-xs text-muted-foreground">Ecart</p>
+                  <p className="text-xs text-muted-foreground">{t("gompertz.deviation")}</p>
                   <p className={cn("font-medium", color)}>
                     {sign}{row.ecartG} g ({sign}{row.ecartPct} %)
                   </p>
@@ -239,10 +240,10 @@ function ComparaisonSection({ data }: { data: GompertzPanelData }) {
           <thead>
             <tr className="border-b border-border text-muted-foreground text-left">
               <th className="py-2 pr-4 font-medium">Date</th>
-              <th className="py-2 pr-4 font-medium">Jour</th>
-              <th className="py-2 pr-4 font-medium text-right">Reel</th>
-              <th className="py-2 pr-4 font-medium text-right">Predit</th>
-              <th className="py-2 font-medium text-right">Ecart</th>
+              <th className="py-2 pr-4 font-medium">{t("gompertz.dayHeader")}</th>
+              <th className="py-2 pr-4 font-medium text-right">{t("gompertz.actual")}</th>
+              <th className="py-2 pr-4 font-medium text-right">{t("gompertz.predicted")}</th>
+              <th className="py-2 font-medium text-right">{t("gompertz.deviation")}</th>
             </tr>
           </thead>
           <tbody>
@@ -271,6 +272,7 @@ function ComparaisonSection({ data }: { data: GompertzPanelData }) {
 // ─── Section 4: Projections ───────────────────────────────────────────────────
 
 function ProjectionsSection({ data }: { data: GompertzPanelData }) {
+  const t = useTranslations("vagues");
   const { projections, poidsObjectif, joursAvantObjectif, dateObjectif, params } = data;
   const gainJ7 = projections.j7 - projections.poidsActuel;
   const gainJ14 = projections.j14 - projections.poidsActuel;
@@ -278,7 +280,7 @@ function ProjectionsSection({ data }: { data: GompertzPanelData }) {
 
   return (
     <div>
-      <SectionTitle>Projections</SectionTitle>
+      <SectionTitle>{t("gompertz.projections")}</SectionTitle>
 
       {/* Short-term projections */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 mb-4">

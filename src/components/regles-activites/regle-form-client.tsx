@@ -655,7 +655,7 @@ export function RegleFormClient() {
                   <div key={idx} className="flex flex-col gap-2 p-3 rounded-lg border border-border bg-muted/20">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-muted-foreground">
-                        Condition {idx + 1}
+                        {t("rules.detail.condition", { idx: idx + 1 })}
                       </span>
                       <button
                         type="button"
@@ -794,7 +794,7 @@ export function RegleFormClient() {
       {/* ------------------------------------------------------------------ */}
       <div className="flex flex-col gap-2">
         <SectionHeader
-          title="Action au declenchement"
+          title={t("rules.detail.triggerAction")}
           open={sectionActionOpen}
           onToggle={() => setSectionActionOpen(!sectionActionOpen)}
           badge="requis"
@@ -806,7 +806,7 @@ export function RegleFormClient() {
               value={form.actionType}
               onValueChange={(v) => setField("actionType", v as ActionRegle)}
             >
-              <SelectTrigger label="Type d'action">
+              <SelectTrigger label={t("rules.detail.actionType")}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -821,7 +821,7 @@ export function RegleFormClient() {
             {/* Activite section — visible si ACTIVITE ou LES_DEUX */}
             {(form.actionType === ActionRegle.ACTIVITE || form.actionType === ActionRegle.LES_DEUX) && (
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
-                <p className="text-xs font-medium text-primary mb-1">Section activite</p>
+                <p className="text-xs font-medium text-primary mb-1">{t("rules.form.activitySection")}</p>
                 <p className="text-xs text-muted-foreground">
                   Les templates d&apos;activite (titre, description, instructions) sont configures dans la section suivante.
                 </p>

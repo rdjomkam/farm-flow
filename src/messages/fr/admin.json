@@ -13,10 +13,29 @@
     "debut": "Debut",
     "finDeGrace": "Fin de grace",
     "prixPaye": "Prix paye",
-    "aucunEvenementAudit": "Aucun evenement dans le journal d'audit."
-  },
-  "modules": {
-    "aucunModuleFiltre": "Aucun module ne correspond aux filtres."
+    "aucunEvenementAudit": "Aucun evenement dans le journal d'audit.",
+    "tabs": {
+      "all": "Tous ({count})",
+      "active": "Actifs ({count})",
+      "suspended": "Suspendus ({count})",
+      "blocked": "Bloques ({count})",
+      "archived": "Archives ({count})"
+    },
+    "detail": {
+      "tabs": {
+        "summary": "Resume",
+        "modules": "Modules",
+        "members": "Membres",
+        "subscription": "Abonnement",
+        "audit": "Audit"
+      },
+      "table": {
+        "name": "Nom",
+        "email": "Email",
+        "phone": "Telephone",
+        "role": "Role"
+      }
+    }
   },
   "siteStatus": {
     "title": "Changer le statut du site",
@@ -63,6 +82,7 @@
     "saving": "Enregistrement..."
   },
   "modules": {
+    "aucunModuleFiltre": "Aucun module ne correspond aux filtres.",
     "modifierTitle": "Modifier le module",
     "modifierDescription": "Mise a jour des metadonnees du module. La cle et le niveau sont immuables.",
     "trigger": "Modifier",
@@ -88,7 +108,21 @@
       "ordreTriInvalide": "L'ordre de tri doit etre un nombre entier.",
       "libelleRequis": "Le libelle est obligatoire.",
       "erreurReseau": "Erreur reseau. Veuillez reessayer."
-    }
+    },
+    "active": "Actif",
+    "inactive": "Inactif",
+    "sites": "site",
+    "sitesPlural": "sites",
+    "plans": "plan",
+    "plansPlural": "plans",
+    "visibility": "Visibilite",
+    "all": "Tous",
+    "visible": "Visible",
+    "hidden": "Cache",
+    "level": "Niveau",
+    "site": "Site",
+    "platform": "Platform",
+    "siteModules": "Modules du site"
   },
   "analytics": {
     "kpis": {

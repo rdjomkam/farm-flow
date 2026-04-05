@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Lock, AlertTriangle } from "lucide-react";
 
@@ -22,6 +23,7 @@ export function PinUnlockDialog({
   onUnlock,
   onForgotPin,
 }: PinUnlockDialogProps) {
+  const t = useTranslations("pwa");
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -120,7 +122,7 @@ export function PinUnlockDialog({
             {lockoutUntil ? (
               <div className="flex items-center gap-2 rounded-lg bg-warning/10 p-3 text-sm text-warning">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
-                <span>Verrouillé pendant {lockoutRemaining}</span>
+                <span>{t("lockedFor", { duration: lockoutRemaining })}</span>
               </div>
             ) : (
               <>

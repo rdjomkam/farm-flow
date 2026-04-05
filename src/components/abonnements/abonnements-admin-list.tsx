@@ -196,14 +196,14 @@ export function AbonnementsAdminList({
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Site</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Plan</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Statut</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Période</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Début</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Fin</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Montant</th>
-              <th className="px-4 py-3 text-center font-medium text-muted-foreground">Actions</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("admin.table.site")}</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("admin.columns.plan")}</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("admin.table.status")}</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("admin.table.period")}</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("admin.table.start")}</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("admin.table.end")}</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">{t("admin.table.amount")}</th>
+              <th className="px-4 py-3 text-center font-medium text-muted-foreground">{t("admin.table.actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -359,19 +359,19 @@ export function AbonnementsAdminList({
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
-                <p className="text-muted-foreground">Période</p>
+                <p className="text-muted-foreground">{t("admin.table.period")}</p>
                 <p className="font-medium text-foreground">{t(PERIODE_LABELS[a.periode])}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Montant</p>
+                <p className="text-muted-foreground">{t("admin.table.amount")}</p>
                 <p className="font-medium text-foreground">{formatXAF(a.prixPaye)}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Début</p>
+                <p className="text-muted-foreground">{t("admin.table.start")}</p>
                 <p className="font-medium text-foreground">{new Date(a.dateDebut).toLocaleDateString("fr-FR")}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Fin</p>
+                <p className="text-muted-foreground">{t("admin.table.end")}</p>
                 <p className="font-medium text-foreground">{new Date(a.dateFin).toLocaleDateString("fr-FR")}</p>
               </div>
             </div>
@@ -383,21 +383,21 @@ export function AbonnementsAdminList({
       {totalPages > 1 && (
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm text-muted-foreground">
-            Page {currentPage} sur {totalPages} ({total} résultats)
+            {t("admin.table.pageInfo", { current: currentPage, total: totalPages, count: total })}
           </p>
           <div className="flex gap-2">
             {currentPage > 1 && (
               <Link href={buildUrl({ page: String(currentPage - 1) })}>
                 <Button variant="outline" className="min-h-[44px] gap-1">
                   <ChevronLeft className="h-4 w-4" />
-                  Préc.
+                  {t("admin.table.prev")}
                 </Button>
               </Link>
             )}
             {currentPage < totalPages && (
               <Link href={buildUrl({ page: String(currentPage + 1) })}>
                 <Button variant="outline" className="min-h-[44px] gap-1">
-                  Suiv.
+                  {t("admin.table.next")}
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </Link>

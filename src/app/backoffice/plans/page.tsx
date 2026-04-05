@@ -8,6 +8,7 @@
  * R2 : enums importes depuis @/types
  */
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { checkBackofficeAccess } from "@/lib/auth/backoffice";
 import { getPlansAbonnements } from "@/lib/queries/plans-abonnements";
 import { PlansAdminList } from "@/components/abonnements/plans-admin-list";
@@ -23,6 +24,8 @@ export default async function BackofficePlansPage() {
   const session = await checkBackofficeAccess();
   if (!session) redirect("/login");
 
+  const t = await getTranslations("backoffice");
+
   const plansRaw = await getPlansAbonnements(true);
 
   const plans = plansRaw.map((p) => ({
@@ -37,7 +40,7 @@ export default async function BackofficePlansPage() {
     <div className="max-w-6xl mx-auto px-4 py-6">
       <div className="mb-4 flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-xl font-bold text-foreground">Plans d&apos;abonnement</h1>
+          <h1 className="text-xl font-bold text-foreground">{t("pages.plans.title")}</h1>
           <p className="text-sm text-muted-foreground">
             {plans.length} plan{plans.length > 1 ? "s" : ""} au total
           </p>

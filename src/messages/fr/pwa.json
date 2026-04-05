@@ -44,9 +44,15 @@
     },
     "tentatives": "{count} tentative(s)"
   },
+  "offlineIndicator": {
+    "offline": "Hors ligne",
+    "syncing": "Synchronisation...",
+    "pending": "en attente"
+  },
   "pullToRefresh": {
     "tirer": "Tirer pour rafraichir",
     "relacher": "Relacher pour rafraichir",
     "rafraichissement": "Rafraichissement..."
-  }
+  },
+  "lockedFor": "Verrouillé pendant {duration}"
 }

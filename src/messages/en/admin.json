@@ -13,10 +13,29 @@
     "debut": "Start",
     "finDeGrace": "Grace period end",
     "prixPaye": "Price paid",
-    "aucunEvenementAudit": "No events in the audit log."
-  },
-  "modules": {
-    "aucunModuleFiltre": "No module matches the filters."
+    "aucunEvenementAudit": "No events in the audit log.",
+    "tabs": {
+      "all": "All ({count})",
+      "active": "Active ({count})",
+      "suspended": "Suspended ({count})",
+      "blocked": "Blocked ({count})",
+      "archived": "Archived ({count})"
+    },
+    "detail": {
+      "tabs": {
+        "summary": "Summary",
+        "modules": "Modules",
+        "members": "Members",
+        "subscription": "Subscription",
+        "audit": "Audit"
+      },
+      "table": {
+        "name": "Name",
+        "email": "Email",
+        "phone": "Phone",
+        "role": "Role"
+      }
+    }
   },
   "siteStatus": {
     "title": "Change site status",
@@ -63,6 +82,7 @@
     "saving": "Saving..."
   },
   "modules": {
+    "aucunModuleFiltre": "No module matches the filters.",
     "modifierTitle": "Edit module",
     "modifierDescription": "Update module metadata. The key and level are immutable.",
     "trigger": "Edit",
@@ -88,7 +108,21 @@
       "ordreTriInvalide": "Sort order must be an integer.",
       "libelleRequis": "Label is required.",
       "erreurReseau": "Network error. Please try again."
-    }
+    },
+    "active": "Active",
+    "inactive": "Inactive",
+    "sites": "site",
+    "sitesPlural": "sites",
+    "plans": "plan",
+    "plansPlural": "plans",
+    "visibility": "Visibility",
+    "all": "All",
+    "visible": "Visible",
+    "hidden": "Hidden",
+    "level": "Level",
+    "site": "Site",
+    "platform": "Platform",
+    "siteModules": "Site modules"
   },
   "analytics": {
     "kpis": {

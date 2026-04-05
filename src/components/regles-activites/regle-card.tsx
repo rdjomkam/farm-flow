@@ -182,7 +182,7 @@ export function RegleCard({ regle, onToggle, isToggling, canManage, canManageGlo
                 : "bg-muted text-muted-foreground",
             ].join(" ")}
           >
-            {regle.isActive ? "Active" : "Inactive"}
+            {regle.isActive ? "Active" : t("rules.detail.inactive")}
           </span>
         )}
       </div>
@@ -198,7 +198,7 @@ export function RegleCard({ regle, onToggle, isToggling, canManage, canManageGlo
         </span>
 
         {/* Priorite */}
-        <span>Priorite {regle.priorite}/10</span>
+        <span>{t("rules.card.priority", { priority: regle.priorite })}</span>
 
         {/* intervalleJours */}
         {showIntervalle && (
@@ -210,7 +210,7 @@ export function RegleCard({ regle, onToggle, isToggling, canManage, canManageGlo
 
         {/* conditionValeur */}
         {showCondition && (
-          <span>Seuil : {regle.conditionValeur}</span>
+          <span>{t("rules.card.threshold", { value: regle.conditionValeur ?? 0 })}</span>
         )}
 
         {/* Conditions composees */}

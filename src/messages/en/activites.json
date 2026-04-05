@@ -89,6 +89,17 @@
       "ou": "or"
     }
   },
+  "feeding": {
+    "quantity": "Quantity",
+    "granule": "Pellet",
+    "mealsPerDay": "Meals/day",
+    "avgWeight": "Avg. weight",
+    "dailyQuantity": "Daily quantity",
+    "beforeStockout": "before stockout",
+    "stockUnknown": "Stock unknown",
+    "criticalStock": "Critical stock — order quickly",
+    "lowStock": "Low stock — plan an order"
+  },
   "placeholders": {
     "retourRegles": "Back to rules",
     "nouveau": "New placeholder",

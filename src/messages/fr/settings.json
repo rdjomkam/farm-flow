@@ -126,7 +126,25 @@
     "reinitialiserFiredOnce": "Reinitialiser firedOnce",
     "confirmer": "Confirmer",
     "supprimer": "Supprimer",
-    "resetFiredOnceDescription": "Cette regle se declenchera a nouveau au prochain cycle d'evaluation du moteur. Confirmez-vous cette action ?"
+    "resetFiredOnceDescription": "Cette regle se declenchera a nouveau au prochain cycle d'evaluation du moteur. Confirmez-vous cette action ?",
+    "detail": {
+      "inactive": "Inactive",
+      "logic": "Logique :",
+      "templateTitle": "Titre",
+      "templateDescription": "Description",
+      "templateInstructions": "Instructions",
+      "actionButton": "Bouton d'action",
+      "condition": "Condition {idx}",
+      "triggerAction": "Action au declenchement",
+      "actionType": "Type d'action"
+    },
+    "card": {
+      "priority": "Priorite {priority}/10",
+      "threshold": "Seuil : {value}"
+    },
+    "form": {
+      "activitySection": "Section activite"
+    }
   },
   "placeholders": {
     "quantite_calculee": {

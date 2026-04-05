@@ -112,6 +112,38 @@
   "options": {
     "noneOneTime": "None (one-time)"
   },
+  "editDialog": {
+    "type": "Type",
+    "recurrence": "Recurrence",
+    "batch": "Batch",
+    "tank": "Tank",
+    "assignTo": "Assign to"
+  },
+  "rules": {
+    "detail": {
+      "inactive": "Inactive",
+      "logic": "Logic:",
+      "title": "Title",
+      "description": "Description",
+      "instructions": "Instructions",
+      "actionButton": "Action button",
+      "condition": "Condition {idx}",
+      "triggerAction": "Trigger action",
+      "actionType": "Action type"
+    },
+    "template": {
+      "title": "Title",
+      "description": "Description",
+      "instructions": "Instructions"
+    },
+    "card": {
+      "priority": "Priority {priority}/10",
+      "threshold": "Threshold: {value}"
+    },
+    "form": {
+      "activitySection": "Activity section"
+    }
+  },
   "completerActivite": {
     "trigger": "Complete",
     "title": "Complete activity",

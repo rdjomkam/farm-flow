@@ -393,7 +393,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                 Active
               </span>
             ) : (
-              <span className="text-muted-foreground">Inactive</span>
+              <span className="text-muted-foreground">{t("rules.detail.inactive")}</span>
             )}
           </InfoRow>
           {showFiredOnce && (
@@ -436,7 +436,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
             <>
               {regle.conditions.length > 1 && (
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-xs text-muted-foreground">Logique :</span>
+                  <span className="text-xs text-muted-foreground">{t("rules.detail.logic")}</span>
                   <Badge variant="default">
                     {t(LOGIQUE_CONDITION_LABELS[(regle.logique as LogiqueCondition) ?? LogiqueCondition.ET])}
                   </Badge>
@@ -449,7 +449,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                     className="flex flex-col gap-0.5 rounded-md bg-muted/40 px-3 py-2 text-sm"
                   >
                     <span className="text-xs text-muted-foreground font-medium">
-                      Condition {idx + 1}
+                      {t("rules.detail.condition", { idx: idx + 1 })}
                     </span>
                     <span className="text-foreground">
                       <span className="font-medium">
@@ -485,14 +485,14 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           <SectionCard title={t("rules.sections.activityTemplates")}>
             <div className="space-y-4">
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Titre</p>
+                <p className="text-xs text-muted-foreground mb-1">{t("rules.detail.templateTitle")}</p>
                 <p className="text-sm font-mono bg-muted/50 rounded-md px-3 py-2 break-all">
                   {regle.titreTemplate}
                 </p>
               </div>
               {regle.descriptionTemplate && (
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Description</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("rules.detail.templateDescription")}</p>
                   <p className="text-sm font-mono bg-muted/50 rounded-md px-3 py-2 break-all whitespace-pre-wrap">
                     {regle.descriptionTemplate}
                   </p>
@@ -500,7 +500,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
               )}
               {regle.instructionsTemplate && (
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Instructions</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("rules.detail.templateInstructions")}</p>
                   <div className="bg-muted/50 rounded-md px-3 py-3">
                     <InstructionSteps text={regle.instructionsTemplate} />
                   </div>
@@ -532,7 +532,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
               )}
               {regle.actionPayloadType && (
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Bouton d&apos;action</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("rules.detail.actionButton")}</p>
                   <p className="text-sm">{ACTION_PAYLOAD_TYPE_LABELS[regle.actionPayloadType] ? t(ACTION_PAYLOAD_TYPE_LABELS[regle.actionPayloadType]) : regle.actionPayloadType}</p>
                 </div>
               )}
@@ -747,7 +747,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
             <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-4" />
           </div>
           <span className="text-sm font-medium text-foreground">
-            {form.isActive ? "Active" : "Inactive"}
+            {form.isActive ? "Active" : t("rules.detail.inactive")}
           </span>
         </label>
       </div>
@@ -896,7 +896,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
             {form.conditions.map((cond, idx) => (
               <div key={idx} className="flex flex-col gap-2 p-3 rounded-lg border border-border bg-muted/20">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">Condition {idx + 1}</span>
+                  <span className="text-xs font-medium text-muted-foreground">{t("rules.detail.condition", { idx: idx + 1 })}</span>
                   <button
                     type="button"
                     onClick={() =>
@@ -1032,10 +1032,10 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
 
       {/* Section Action */}
       <div className="rounded-xl border border-border bg-card p-4 space-y-4">
-        <h3 className="text-sm font-semibold text-foreground">Action au declenchement</h3>
+        <h3 className="text-sm font-semibold text-foreground">{t("rules.detail.triggerAction")}</h3>
 
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Type d&apos;action</label>
+          <label className="block text-sm font-medium text-foreground mb-1">{t("rules.detail.actionType")}</label>
           <Select
             value={form.actionType}
             onValueChange={(v) => setForm((f) => ({ ...f, actionType: v as ActionRegle }))}

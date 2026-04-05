@@ -126,7 +126,25 @@
     "reinitialiserFiredOnce": "Reset firedOnce",
     "confirmer": "Confirm",
     "supprimer": "Delete",
-    "resetFiredOnceDescription": "This rule will trigger again on the next evaluation cycle. Do you confirm this action?"
+    "resetFiredOnceDescription": "This rule will trigger again on the next evaluation cycle. Do you confirm this action?",
+    "detail": {
+      "inactive": "Inactive",
+      "logic": "Logic:",
+      "templateTitle": "Title",
+      "templateDescription": "Description",
+      "templateInstructions": "Instructions",
+      "actionButton": "Action button",
+      "condition": "Condition {idx}",
+      "triggerAction": "Trigger action",
+      "actionType": "Action type"
+    },
+    "card": {
+      "priority": "Priority {priority}/10",
+      "threshold": "Threshold: {value}"
+    },
+    "form": {
+      "activitySection": "Activity section"
+    }
   },
   "placeholders": {
     "quantite_calculee": {

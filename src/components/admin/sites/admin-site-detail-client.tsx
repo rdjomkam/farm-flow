@@ -98,11 +98,11 @@ export function AdminSiteDetailClient({ site: initialSite }: AdminSiteDetailClie
       {/* Tabs */}
       <Tabs defaultValue="resume">
         <TabsList className="w-full overflow-x-auto">
-          <TabsTrigger value="resume">Résumé</TabsTrigger>
-          <TabsTrigger value="modules">Modules</TabsTrigger>
-          <TabsTrigger value="membres">Membres</TabsTrigger>
-          <TabsTrigger value="abonnement">Abonnement</TabsTrigger>
-          <TabsTrigger value="audit">Audit</TabsTrigger>
+          <TabsTrigger value="resume">{t("detail.tabs.summary")}</TabsTrigger>
+          <TabsTrigger value="modules">{t("detail.tabs.modules")}</TabsTrigger>
+          <TabsTrigger value="membres">{t("detail.tabs.members")}</TabsTrigger>
+          <TabsTrigger value="abonnement">{t("detail.tabs.subscription")}</TabsTrigger>
+          <TabsTrigger value="audit">{t("detail.tabs.audit")}</TabsTrigger>
         </TabsList>
 
         {/* ── Résumé ─────────────────────────────────────────────────────── */}
@@ -198,10 +198,10 @@ export function AdminSiteDetailClient({ site: initialSite }: AdminSiteDetailClie
                   <table className="w-full text-left">
                     <thead className="bg-muted/50">
                       <tr>
-                        <th className="px-4 py-3 text-xs font-semibold uppercase text-muted-foreground">Nom</th>
-                        <th className="px-4 py-3 text-xs font-semibold uppercase text-muted-foreground">Email</th>
-                        <th className="px-4 py-3 text-xs font-semibold uppercase text-muted-foreground">Téléphone</th>
-                        <th className="px-4 py-3 text-xs font-semibold uppercase text-muted-foreground">Rôle</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase text-muted-foreground">{t("detail.table.name")}</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase text-muted-foreground">{t("detail.table.email")}</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase text-muted-foreground">{t("detail.table.phone")}</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase text-muted-foreground">{t("detail.table.role")}</th>
                       </tr>
                     </thead>
                     <tbody className="bg-card divide-y divide-border">

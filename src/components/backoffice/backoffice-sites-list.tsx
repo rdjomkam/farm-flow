@@ -240,11 +240,11 @@ export function BackofficeSitesList({ initialData }: BackofficeSitesListProps) {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
         <TabsList className="w-full overflow-x-auto">
-          <TabsTrigger value="all">Tous ({data.sites.length})</TabsTrigger>
-          <TabsTrigger value="active">Actifs ({stats.totalActive})</TabsTrigger>
-          <TabsTrigger value="suspended">Suspendus ({stats.totalSuspended})</TabsTrigger>
-          <TabsTrigger value="blocked">Bloques ({stats.totalBlocked})</TabsTrigger>
-          <TabsTrigger value="archived">Archives ({stats.totalArchived})</TabsTrigger>
+          <TabsTrigger value="all">{t("tabs.all", { count: data.sites.length })}</TabsTrigger>
+          <TabsTrigger value="active">{t("tabs.active", { count: stats.totalActive })}</TabsTrigger>
+          <TabsTrigger value="suspended">{t("tabs.suspended", { count: stats.totalSuspended })}</TabsTrigger>
+          <TabsTrigger value="blocked">{t("tabs.blocked", { count: stats.totalBlocked })}</TabsTrigger>
+          <TabsTrigger value="archived">{t("tabs.archived", { count: stats.totalArchived })}</TabsTrigger>
         </TabsList>
 
         {(["all", "active", "suspended", "blocked", "archived"] as TabValue[]).map((tab) => (
@@ -268,13 +268,13 @@ export function BackofficeSitesList({ initialData }: BackofficeSitesListProps) {
                   <table className="w-full text-left">
                     <thead className="bg-muted/50">
                       <tr>
-                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nom</th>
-                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Statut</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("table.name")}</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("table.status")}</th>
                         <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Plan</th>
-                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Membres</th>
-                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Modules</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("table.members")}</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("table.modules")}</th>
                         <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("creeLe")}</th>
-                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Actions</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("table.actions")}</th>
                       </tr>
                     </thead>
                     <tbody className="bg-card">

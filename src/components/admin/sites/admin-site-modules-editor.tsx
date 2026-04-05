@@ -80,7 +80,7 @@ export function AdminSiteModulesEditor({
     <div className="space-y-6">
       {/* Modules site-level */}
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-foreground">Modules du site</h3>
+        <h3 className="text-sm font-semibold text-foreground">{t("modules.siteModules")}</h3>
         <div className="divide-y divide-border rounded-xl border border-border overflow-hidden">
           {SITE_MODULES_CONFIG.map((mod) => {
             const Icon = mod.icon;

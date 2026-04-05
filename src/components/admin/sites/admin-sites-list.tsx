@@ -256,11 +256,11 @@ export function AdminSitesList({ initialData }: AdminSitesListProps) {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
         <TabsList className="w-full overflow-x-auto">
-          <TabsTrigger value="all">Tous ({data.sites.length})</TabsTrigger>
-          <TabsTrigger value="active">Actifs ({stats.totalActive})</TabsTrigger>
-          <TabsTrigger value="suspended">Suspendus ({stats.totalSuspended})</TabsTrigger>
-          <TabsTrigger value="blocked">Bloqués ({stats.totalBlocked})</TabsTrigger>
-          <TabsTrigger value="archived">Archivés ({stats.totalArchived})</TabsTrigger>
+          <TabsTrigger value="all">{t("tabs.all", { count: data.sites.length })}</TabsTrigger>
+          <TabsTrigger value="active">{t("tabs.active", { count: stats.totalActive })}</TabsTrigger>
+          <TabsTrigger value="suspended">{t("tabs.suspended", { count: stats.totalSuspended })}</TabsTrigger>
+          <TabsTrigger value="blocked">{t("tabs.blocked", { count: stats.totalBlocked })}</TabsTrigger>
+          <TabsTrigger value="archived">{t("tabs.archived", { count: stats.totalArchived })}</TabsTrigger>
         </TabsList>
 
         {(["all", "active", "suspended", "blocked", "archived"] as TabValue[]).map((tab) => (

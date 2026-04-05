@@ -179,7 +179,7 @@ export function DepensesListClient({ depenses, canManage, templatesActifsCount =
             <Link href="/depenses/recurrentes">
               <Button variant="outline" size="sm" className="gap-1.5">
                 <RefreshCw className="h-4 w-4" />
-                <span className="hidden sm:inline">Recurrentes</span>
+                <span className="hidden sm:inline">{t("list.recurring")}</span>
               </Button>
             </Link>
           )}
@@ -256,6 +256,7 @@ function DepensesList({ depenses, noExpensesLabel, statutLabels, categorieLabels
 // ---------------------------------------------------------------------------
 
 function DepenseCard({ depense, statutLabels, categorieLabels }: DepenseCardProps) {
+  const t = useTranslations("depenses");
   const statut = depense.statut as StatutDepense;
   const categorie = depense.categorieDepense as CategorieDepense;
   const resteAPayer = depense.montantTotal - depense.montantPaye;
@@ -294,14 +295,14 @@ function DepenseCard({ depense, statutLabels, categorieLabels }: DepenseCardProp
           {/* Montants */}
           <div className="flex items-center justify-between text-sm">
             <div>
-              <span className="text-muted-foreground text-xs">Total : </span>
+              <span className="text-muted-foreground text-xs">{t("list.total")}</span>
               <span className="font-semibold">
                 {formatMontant(depense.montantTotal)}
               </span>
             </div>
             {statut !== StatutDepense.PAYEE && (
               <div className="text-right">
-                <span className="text-muted-foreground text-xs">Reste : </span>
+                <span className="text-muted-foreground text-xs">{t("list.remaining")}</span>
                 <span className="font-semibold text-warning">
                   {formatMontant(resteAPayer)}
                 </span>

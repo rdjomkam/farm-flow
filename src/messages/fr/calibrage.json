@@ -90,6 +90,24 @@
       "TRES_GROS": "Tres gros"
     }
   },
+  "card": {
+    "modified": "Modifie"
+  },
+  "modifications": {
+    "title": "Historique des modifications",
+    "before": "Avant :",
+    "after": "Apres :"
+  },
+  "detail": {
+    "title": "Calibrage",
+    "byUser": "Par {name}",
+    "redistributionGroups": "Groupes de redistribution",
+    "destination": "Destination : {name}",
+    "avgWeight": "Poids moyen : {weight} g",
+    "avgSize": "Taille moyenne : {size} cm",
+    "notes": "Notes",
+    "modifiedAfterCreation": "Ce calibrage a ete modifie apres sa creation."
+  },
   "modifierDialog": {
     "trigger": "Modifier",
     "title": "Modifier le calibrage",

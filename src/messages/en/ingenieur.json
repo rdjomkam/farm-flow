@@ -3,6 +3,21 @@
     "monitoring": "Client monitoring",
     "portfolio": "My Wallet"
   },
+  "dashboard": {
+    "avgSurvival": "Avg. survival",
+    "batches": "Batches",
+    "alerts": "Alerts",
+    "tanks": "Tanks",
+    "inProgress": "in progress",
+    "siteView": "View: {name}",
+    "alertesCount": "Alerts ({count})",
+    "tachesAujourdhui": "Today's tasks ({count})",
+    "toutVoir": "View all",
+    "vagueCode": "Batch {code}",
+    "aujourdhui": "Today",
+    "voirFicheComplete": "View full site profile",
+    "details": "Details"
+  },
   "monitoring": {
     "noActiveAlerts": "No active alerts on client sites.",
     "alertesActives": "Active alerts ({count})",
@@ -18,7 +33,28 @@
       "EN_COURS": "In progress",
       "TERMINEE": "Completed",
       "ANNULEE": "Cancelled"
-    }
+    },
+    "avgSurvival": "Avg. survival",
+    "batches": "Batches",
+    "inProgress": "in progress",
+    "alerts": "Alerts",
+    "messages": "Messages",
+    "unread": "{count, plural, one {unread} other {unread}}",
+    "start": "Start",
+    "day": "Day",
+    "dayLabel": "D{day}",
+    "livingInitial": "Living / Initial",
+    "survival": "Survival",
+    "avgWeight": "Avg. weight",
+    "biomass": "Biomass",
+    "sgr": "SGR",
+    "fcr": "FCR",
+    "records": "Records",
+    "mortalities": "Mortalities",
+    "tanks": "Tanks",
+    "urgent": "Urgent",
+    "client": "Client",
+    "allNotes": "All notes"
   },
   "greeting": "Hello, {name}",
   "emptyStates": {

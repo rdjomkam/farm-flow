@@ -323,13 +323,13 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
           {/* Nom */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              Nom <span className="text-destructive">*</span>
+              {t("admin.form.nameLabel")} <span className="text-destructive">*</span>
             </label>
             <input
               type="text"
               value={nom}
               onChange={(e) => setNom(e.target.value)}
-              placeholder="Ex : Plan Éleveur Standard"
+              placeholder={t("admin.form.namePlaceholder")}
               className="w-full h-11 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
             {getError("nom") && (
@@ -340,7 +340,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
           {/* Type de plan — désactivé en mode édition */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              Type de plan <span className="text-destructive">*</span>
+              {t("admin.form.typeLabel")} <span className="text-destructive">*</span>
             </label>
             <select
               value={typePlan}
@@ -356,7 +356,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
             </select>
             {isEditing && (
               <p className="text-xs text-muted-foreground mt-1">
-                Le type de plan ne peut pas être modifié après création.
+                {t("admin.form.typeImmutable")}
               </p>
             )}
             {getError("typePlan") && (
@@ -367,12 +367,12 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              Description (optionnel)
+              {t("admin.form.descriptionLabel")}
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Description visible sur la page de tarification"
+              placeholder={t("admin.form.descriptionPlaceholder")}
               rows={2}
               className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
             />
@@ -381,13 +381,13 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
           {/* Prix */}
           <fieldset className="space-y-3">
             <legend className="text-sm font-medium text-foreground">
-              Tarifs (en XAF — laisser vide si non disponible)
+              {t("admin.form.tariffsLegend")}
             </legend>
 
             {/* Prix mensuel */}
             <div>
               <label className="block text-xs text-muted-foreground mb-1">
-                Prix mensuel
+                {t("admin.form.prixMensuelLabel")}
               </label>
               <div className="relative">
                 <input
@@ -396,7 +396,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
                   onChange={(e) => setPrixMensuel(e.target.value)}
                   min="0"
                   step="100"
-                  placeholder="Ex: 3000"
+                  placeholder={t("admin.form.prixMensuelPlaceholder")}
                   className="w-full h-11 px-3 pr-16 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
@@ -411,7 +411,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
             {/* Prix trimestriel */}
             <div>
               <label className="block text-xs text-muted-foreground mb-1">
-                Prix trimestriel
+                {t("admin.form.prixTrimestrielLabel")}
               </label>
               <div className="relative">
                 <input
@@ -420,7 +420,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
                   onChange={(e) => setPrixTrimestriel(e.target.value)}
                   min="0"
                   step="100"
-                  placeholder="Ex: 7500"
+                  placeholder={t("admin.form.prixTrimestrielPlaceholder")}
                   className="w-full h-11 px-3 pr-16 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
@@ -435,7 +435,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
             {/* Prix annuel */}
             <div>
               <label className="block text-xs text-muted-foreground mb-1">
-                Prix annuel
+                {t("admin.form.prixAnnuelLabel")}
               </label>
               <div className="relative">
                 <input
@@ -444,7 +444,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
                   onChange={(e) => setPrixAnnuel(e.target.value)}
                   min="0"
                   step="100"
-                  placeholder="Ex: 25000"
+                  placeholder={t("admin.form.prixAnnuelPlaceholder")}
                   className="w-full h-11 px-3 pr-14 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
@@ -460,14 +460,14 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
           {/* Limites */}
           <fieldset className="space-y-3">
             <legend className="text-sm font-medium text-foreground">
-              Limites (999 = illimité)
+              {t("admin.form.limitesLegend")}
             </legend>
 
             <div className="grid grid-cols-3 gap-3">
               {/* Limite sites */}
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
-                  Sites max
+                  {t("admin.form.maxSitesLabel")}
                 </label>
                 <input
                   type="number"
@@ -485,7 +485,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
               {/* Limite bacs */}
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
-                  Bacs max
+                  {t("admin.form.maxTanksLabel")}
                 </label>
                 <input
                   type="number"
@@ -503,7 +503,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
               {/* Limite vagues */}
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
-                  Vagues max
+                  {t("admin.form.maxBatchesLabel")}
                 </label>
                 <input
                   type="number"
@@ -523,7 +523,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
             {isIngenieurType && (
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
-                  Fermes ingénieur max (optionnel)
+                  {t("admin.form.maxIngFermesLabel")}
                 </label>
                 <input
                   type="number"
@@ -531,7 +531,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
                   onChange={(e) => setLimitesIngFermes(e.target.value)}
                   min="1"
                   step="1"
-                  placeholder="Ex: 5"
+                  placeholder={t("admin.form.maxIngFermesPlaceholder")}
                   className="w-full h-11 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
                 {getError("limitesIngFermes") && (
@@ -586,9 +586,9 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
             {/* isActif */}
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-medium text-foreground">Plan actif</p>
+                <p className="text-sm font-medium text-foreground">{t("admin.activePlan")}</p>
                 <p className="text-xs text-muted-foreground">
-                  Un plan inactif ne peut pas être souscrit.
+                  {t("admin.activePlanHint")}
                 </p>
               </div>
               <button
@@ -611,9 +611,9 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
             {/* isPublic */}
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-medium text-foreground">Plan public</p>
+                <p className="text-sm font-medium text-foreground">{t("admin.publicPlan")}</p>
                 <p className="text-xs text-muted-foreground">
-                  Un plan privé est visible uniquement via lien direct.
+                  {t("admin.publicPlanHint")}
                 </p>
               </div>
               <button

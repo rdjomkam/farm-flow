@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Scissors, Fish, AlertTriangle } from "lucide-react";
@@ -19,6 +20,7 @@ interface CalibrageCardProps {
 }
 
 export function CalibrageCard({ calibrage }: CalibrageCardProps) {
+  const t = useTranslations("calibrage");
   const totalPoissons = calibrage.groupes.reduce(
     (sum, g) => sum + g.nombrePoissons,
     0
@@ -42,7 +44,7 @@ export function CalibrageCard({ calibrage }: CalibrageCardProps) {
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               {(calibrage as { modifie?: boolean }).modifie && (
-                <Badge variant="warning">Modifie</Badge>
+                <Badge variant="warning">{t("card.modified")}</Badge>
               )}
               <Badge variant="info">
                 {calibrage.groupes.length} groupe

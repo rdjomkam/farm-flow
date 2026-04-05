@@ -322,7 +322,7 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
             className="text-sm border border-border rounded-lg px-3 py-2 bg-card text-foreground min-h-[44px]"
             value={filterType}
             onChange={(e) => setFilterType(e.target.value as TypePlan | "")}
-            aria-label="Filtrer par type de plan"
+            aria-label={t("admin.filterByType")}
           >
             <option value="">{t("admin.allTypes")}</option>
             {validTypes.map((typePlan) => (
@@ -338,7 +338,7 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
             onChange={(e) =>
               setFilterStatut(e.target.value as "actif" | "inactif" | "")
             }
-            aria-label="Filtrer par statut"
+            aria-label={t("admin.filterByStatus")}
           >
             <option value="">{t("admin.allStatuses")}</option>
             <option value="actif">{t("admin.active")}</option>
@@ -359,7 +359,7 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
         </div>
         {/* Nouveau plan — Story 38.2 */}
         <PlanFormDialog>
-          <Button className="min-h-[44px] gap-2" aria-label="Créer un nouveau plan">
+          <Button className="min-h-[44px] gap-2" aria-label={t("admin.createNewPlan")}>
             <Plus className="h-4 w-4" />
             {t("admin.newPlan")}
           </Button>
@@ -446,7 +446,7 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
                         <Button
                           variant="outline"
                           className="min-h-[44px] px-2 text-xs"
-                          aria-label={`Modifier le plan ${p.nom}`}
+                          aria-label={t("admin.editPlanAriaLabel", { name: p.nom })}
                         >
                           {t("admin.edit")}
                         </Button>
@@ -533,19 +533,19 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
             {/* Limites */}
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
-                <p className="text-muted-foreground">Sites max</p>
+                <p className="text-muted-foreground">{t("admin.maxSites")}</p>
                 <p className="font-medium text-foreground">{formatLimite(p.limitesSites)}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Bacs max</p>
+                <p className="text-muted-foreground">{t("admin.maxTanks")}</p>
                 <p className="font-medium text-foreground">{formatLimite(p.limitesBacs)}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Vagues max</p>
+                <p className="text-muted-foreground">{t("admin.maxBatches")}</p>
                 <p className="font-medium text-foreground">{formatLimite(p.limitesVagues)}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Fermes ingénieur</p>
+                <p className="text-muted-foreground">{t("admin.maxIngFermes")}</p>
                 <p className="font-medium text-foreground">
                   {p.limitesIngFermes !== null ? `${p.limitesIngFermes}` : "—"}
                 </p>
@@ -571,7 +571,9 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
             {/* Abonnés + actions */}
             <div className="flex items-center justify-between pt-2 border-t border-border">
               <p className="text-xs text-muted-foreground">
-                <span className="font-semibold text-foreground">{p._count.abonnements}</span> abonné{p._count.abonnements > 1 ? "s" : ""}
+                {p._count.abonnements > 1
+                  ? t("admin.subscribersPlural", { count: p._count.abonnements })
+                  : t("admin.subscribers", { count: p._count.abonnements })}
               </p>
               <div className="flex gap-2">
                 {/* Story 38.2 — dialog modifier */}

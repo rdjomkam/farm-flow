@@ -3,6 +3,21 @@
     "monitoring": "Monitoring clients",
     "portfolio": "Mon Portefeuille"
   },
+  "dashboard": {
+    "avgSurvival": "Survie moy.",
+    "batches": "Vagues",
+    "alerts": "Alertes",
+    "tanks": "Bacs",
+    "inProgress": "en cours",
+    "siteView": "Vue : {name}",
+    "alertesCount": "Alertes ({count})",
+    "tachesAujourdhui": "Taches du jour ({count})",
+    "toutVoir": "Tout voir",
+    "vagueCode": "Vague {code}",
+    "aujourdhui": "Aujourd'hui",
+    "voirFicheComplete": "Voir la fiche complete du site",
+    "details": "Details"
+  },
   "monitoring": {
     "noActiveAlerts": "Aucune alerte active sur les sites clients.",
     "alertesActives": "Alertes actives ({count})",
@@ -18,7 +33,28 @@
       "EN_COURS": "En cours",
       "TERMINEE": "Terminée",
       "ANNULEE": "Annulée"
-    }
+    },
+    "avgSurvival": "Survie moy.",
+    "batches": "Vagues",
+    "inProgress": "en cours",
+    "alerts": "Alertes",
+    "messages": "Messages",
+    "unread": "{count, plural, one {non lu} other {non lus}}",
+    "start": "Debut",
+    "day": "Jour",
+    "dayLabel": "J{day}",
+    "livingInitial": "Vivants / Initial",
+    "survival": "Survie",
+    "avgWeight": "Poids moy.",
+    "biomass": "Biomasse",
+    "sgr": "SGR",
+    "fcr": "FCR",
+    "records": "Releves",
+    "mortalities": "Mortalites",
+    "tanks": "Bacs",
+    "urgent": "Urgent",
+    "client": "Client",
+    "allNotes": "Toutes les notes"
   },
   "greeting": "Bonjour, {name}",
   "emptyStates": {

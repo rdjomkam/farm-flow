@@ -48,11 +48,11 @@ function LevelBadge({ level }: { level: "site" | "platform" }) {
 // Status badge
 // ---------------------------------------------------------------------------
 
-function StatusBadge({ isActive }: { isActive: boolean }) {
+function StatusBadge({ isActive, t }: { isActive: boolean; t: ReturnType<typeof useTranslations> }) {
   if (isActive) {
-    return <Badge variant="terminee">Actif</Badge>;
+    return <Badge variant="terminee">{t("active")}</Badge>;
   }
-  return <Badge variant="annulee">Inactif</Badge>;
+  return <Badge variant="annulee">{t("inactive")}</Badge>;
 }
 
 // ---------------------------------------------------------------------------
@@ -62,9 +62,10 @@ function StatusBadge({ isActive }: { isActive: boolean }) {
 interface ModuleCardProps {
   module: ModuleDefinitionResponse;
   onUpdated: (updated: ModuleDefinitionResponse) => void;
+  t: ReturnType<typeof useTranslations>;
 }
 
-function ModuleCard({ module, onUpdated }: ModuleCardProps) {
+function ModuleCard({ module, onUpdated, t }: ModuleCardProps) {
   return (
     <div className="rounded-xl border border-border bg-card p-4 space-y-3">
       {/* Header */}
@@ -75,7 +76,7 @@ function ModuleCard({ module, onUpdated }: ModuleCardProps) {
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
           <LevelBadge level={module.level} />
-          <StatusBadge isActive={module.isActive} />
+          <StatusBadge isActive={module.isActive} t={t} />
         </div>
       </div>
 
@@ -94,11 +95,11 @@ function ModuleCard({ module, onUpdated }: ModuleCardProps) {
         </span>
         {module.isVisible ? (
           <span className="flex items-center gap-1 rounded-md bg-muted px-2 py-0.5">
-            <Eye className="h-3 w-3" /> Visible
+            <Eye className="h-3 w-3" /> {t("visible")}
           </span>
         ) : (
           <span className="flex items-center gap-1 rounded-md bg-muted px-2 py-0.5">
-            <EyeOff className="h-3 w-3" /> Cache
+            <EyeOff className="h-3 w-3" /> {t("hidden")}
           </span>
         )}
       </div>
@@ -107,11 +108,11 @@ function ModuleCard({ module, onUpdated }: ModuleCardProps) {
       <div className="flex gap-4 text-xs">
         <span>
           <strong className="text-foreground">{module.siteCount}</strong>{" "}
-          <span className="text-muted-foreground">site{module.siteCount !== 1 ? "s" : ""}</span>
+          <span className="text-muted-foreground">{module.siteCount !== 1 ? t("sitesPlural") : t("sites")}</span>
         </span>
         <span>
           <strong className="text-foreground">{module.planCount}</strong>{" "}
-          <span className="text-muted-foreground">plan{module.planCount !== 1 ? "s" : ""}</span>
+          <span className="text-muted-foreground">{module.planCount !== 1 ? t("plansPlural") : t("plans")}</span>
         </span>
       </div>
 
@@ -130,9 +131,10 @@ function ModuleCard({ module, onUpdated }: ModuleCardProps) {
 interface ModuleRowProps {
   module: ModuleDefinitionResponse;
   onUpdated: (updated: ModuleDefinitionResponse) => void;
+  t: ReturnType<typeof useTranslations>;
 }
 
-function ModuleRow({ module, onUpdated }: ModuleRowProps) {
+function ModuleRow({ module, onUpdated, t }: ModuleRowProps) {
   return (
     <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
       <td className="py-3 pl-4 pr-2">
@@ -154,7 +156,7 @@ function ModuleRow({ module, onUpdated }: ModuleRowProps) {
         )}
       </td>
       <td className="py-3 px-2">
-        <StatusBadge isActive={module.isActive} />
+        <StatusBadge isActive={module.isActive} t={t} />
       </td>
       <td className="py-3 px-2 text-center text-sm">
         <strong>{module.siteCount}</strong>
@@ -251,24 +253,24 @@ export function AdminModulesList({ initialData }: AdminModulesListProps) {
       <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
         {/* Visibility filter */}
         <div className="flex-1">
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Visibilite</p>
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">{t("visibility")}</p>
           <Tabs value={visibilityTab} onValueChange={(v) => setVisibilityTab(v as VisibilityTab)}>
             <TabsList>
-              <TabsTrigger value="tous">Tous</TabsTrigger>
-              <TabsTrigger value="visible">Visible</TabsTrigger>
-              <TabsTrigger value="cache">Cache</TabsTrigger>
+              <TabsTrigger value="tous">{t("all")}</TabsTrigger>
+              <TabsTrigger value="visible">{t("visible")}</TabsTrigger>
+              <TabsTrigger value="cache">{t("hidden")}</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
 
         {/* Level filter */}
         <div className="flex-1">
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Niveau</p>
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">{t("level")}</p>
           <Tabs value={levelTab} onValueChange={(v) => setLevelTab(v as LevelTab)}>
             <TabsList>
-              <TabsTrigger value="tous">Tous</TabsTrigger>
-              <TabsTrigger value="site">Site</TabsTrigger>
-              <TabsTrigger value="platform">Platform</TabsTrigger>
+              <TabsTrigger value="tous">{t("all")}</TabsTrigger>
+              <TabsTrigger value="site">{t("site")}</TabsTrigger>
+              <TabsTrigger value="platform">{t("platform")}</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -287,7 +289,7 @@ export function AdminModulesList({ initialData }: AdminModulesListProps) {
           {/* Mobile cards */}
           <div className="space-y-3 md:hidden">
             {filtered.map((m) => (
-              <ModuleCard key={m.key} module={m} onUpdated={handleUpdated} />
+              <ModuleCard key={m.key} module={m} onUpdated={handleUpdated} t={t} />
             ))}
           </div>
 
@@ -327,7 +329,7 @@ export function AdminModulesList({ initialData }: AdminModulesListProps) {
               </thead>
               <tbody className="bg-card">
                 {filtered.map((m) => (
-                  <ModuleRow key={m.key} module={m} onUpdated={handleUpdated} />
+                  <ModuleRow key={m.key} module={m} onUpdated={handleUpdated} t={t} />
                 ))}
               </tbody>
             </table>

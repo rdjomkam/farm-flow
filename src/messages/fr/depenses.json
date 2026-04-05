@@ -128,6 +128,11 @@
   "emptyState": {
     "noExpenses": "Aucune depense"
   },
+  "list": {
+    "recurring": "Recurrentes",
+    "total": "Total : ",
+    "remaining": "Reste : "
+  },
   "recurrentes": {
     "frequences": {
       "MENSUEL": "Mensuel",
