@@ -33,78 +33,20 @@ const PLANS_ORDER: TypePlan[] = [
   TypePlan.ENTREPRISE,
 ];
 
-const FEATURES: FeatureRow[] = [
-  {
-    label: "Bacs",
-    getValue: (p) => (p.limitesBacs >= 999 ? "Illimité" : `${p.limitesBacs}`),
-  },
-  {
-    label: "Vagues simultanées",
-    getValue: (p) => (p.limitesVagues >= 999 ? "Illimité" : `${p.limitesVagues}`),
-  },
-  {
-    label: "Sites",
-    getValue: (p) => (p.limitesSites >= 999 ? "Illimité" : `${p.limitesSites}`),
-  },
-  {
-    label: "Relevés (biométrie, mortalité...)",
-    getValue: () => true,
-  },
-  {
-    label: "Tableau de bord",
-    getValue: () => true,
-  },
-  {
-    label: "Alertes personnalisées",
-    getValue: (p) => p.typePlan !== TypePlan.DECOUVERTE,
-  },
-  {
-    label: "Gestion des stocks",
-    getValue: (p) =>
-      p.typePlan === TypePlan.PROFESSIONNEL || p.typePlan === TypePlan.ENTREPRISE,
-  },
-  {
-    label: "Ventes & Facturation",
-    getValue: (p) =>
-      p.typePlan === TypePlan.PROFESSIONNEL || p.typePlan === TypePlan.ENTREPRISE,
-  },
-  {
-    label: "Analyses avancées",
-    getValue: (p) =>
-      p.typePlan === TypePlan.PROFESSIONNEL || p.typePlan === TypePlan.ENTREPRISE,
-  },
-  {
-    label: "API Access",
-    getValue: (p) => p.typePlan === TypePlan.ENTREPRISE,
-  },
-  {
-    label: "Support",
-    getValue: (p) => {
-      switch (p.typePlan) {
-        case TypePlan.DECOUVERTE:
-          return "Communauté";
-        case TypePlan.ELEVEUR:
-          return "Email";
-        case TypePlan.PROFESSIONNEL:
-          return "Prioritaire";
-        case TypePlan.ENTREPRISE:
-          return "Dédié";
-        default:
-          return null;
-      }
-    },
-  },
-];
-
-function FeatureCell({ value }: { value: FeatureValue }) {
+function FeatureCell({ value, included, notIncluded, notApplicable }: {
+  value: FeatureValue;
+  included: string;
+  notIncluded: string;
+  notApplicable: string;
+}) {
   if (value === true) {
-    return <Check className="h-5 w-5 text-success mx-auto" aria-label="Inclus" />;
+    return <Check className="h-5 w-5 text-success mx-auto" aria-label={included} />;
   }
   if (value === false) {
-    return <X className="h-5 w-5 text-muted-foreground/40 mx-auto" aria-label="Non inclus" />;
+    return <X className="h-5 w-5 text-muted-foreground/40 mx-auto" aria-label={notIncluded} />;
   }
   if (value === null) {
-    return <Minus className="h-4 w-4 text-muted-foreground/40 mx-auto" aria-label="Non applicable" />;
+    return <Minus className="h-4 w-4 text-muted-foreground/40 mx-auto" aria-label={notApplicable} />;
   }
   return <span className="text-sm text-foreground">{value}</span>;
 }
@@ -117,13 +59,80 @@ export async function PlanComparaisonTable({ plans }: PlanComparaisonTableProps)
 
   if (plansOrdered.length === 0) return null;
 
+  const FEATURES: FeatureRow[] = [
+    {
+      label: t("comparaison.features.tanks"),
+      getValue: (p) => (p.limitesBacs >= 999 ? t("admin.unlimited") : `${p.limitesBacs}`),
+    },
+    {
+      label: t("comparaison.features.concurrentWaves"),
+      getValue: (p) => (p.limitesVagues >= 999 ? t("admin.unlimited") : `${p.limitesVagues}`),
+    },
+    {
+      label: t("comparaison.features.sites"),
+      getValue: (p) => (p.limitesSites >= 999 ? t("admin.unlimited") : `${p.limitesSites}`),
+    },
+    {
+      label: t("comparaison.features.records"),
+      getValue: () => true,
+    },
+    {
+      label: t("comparaison.features.dashboard"),
+      getValue: () => true,
+    },
+    {
+      label: t("comparaison.features.customAlerts"),
+      getValue: (p) => p.typePlan !== TypePlan.DECOUVERTE,
+    },
+    {
+      label: t("comparaison.features.stockManagement"),
+      getValue: (p) =>
+        p.typePlan === TypePlan.PROFESSIONNEL || p.typePlan === TypePlan.ENTREPRISE,
+    },
+    {
+      label: t("comparaison.features.salesBilling"),
+      getValue: (p) =>
+        p.typePlan === TypePlan.PROFESSIONNEL || p.typePlan === TypePlan.ENTREPRISE,
+    },
+    {
+      label: t("comparaison.features.advancedAnalytics"),
+      getValue: (p) =>
+        p.typePlan === TypePlan.PROFESSIONNEL || p.typePlan === TypePlan.ENTREPRISE,
+    },
+    {
+      label: t("comparaison.features.apiAccess"),
+      getValue: (p) => p.typePlan === TypePlan.ENTREPRISE,
+    },
+    {
+      label: t("comparaison.features.support"),
+      getValue: (p) => {
+        switch (p.typePlan) {
+          case TypePlan.DECOUVERTE:
+            return t("comparaison.support.community");
+          case TypePlan.ELEVEUR:
+            return t("comparaison.support.email");
+          case TypePlan.PROFESSIONNEL:
+            return t("comparaison.support.priority");
+          case TypePlan.ENTREPRISE:
+            return t("comparaison.support.dedicated");
+          default:
+            return null;
+        }
+      },
+    },
+  ];
+
+  const featureIncluded = t("comparaison.featureIncluded");
+  const featureNotIncluded = t("comparaison.featureNotIncluded");
+  const featureNotApplicable = t("comparaison.featureNotApplicable");
+
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-muted/50">
             <th className="px-4 py-3 text-left font-medium text-muted-foreground w-1/3">
-              Fonctionnalité
+              {t("comparaison.featureColumn")}
             </th>
             {plansOrdered.map((plan) => (
               <th
@@ -151,7 +160,12 @@ export async function PlanComparaisonTable({ plans }: PlanComparaisonTableProps)
               </td>
               {plansOrdered.map((plan) => (
                 <td key={plan.id} className="px-4 py-3 text-center">
-                  <FeatureCell value={feature.getValue(plan)} />
+                  <FeatureCell
+                    value={feature.getValue(plan)}
+                    included={featureIncluded}
+                    notIncluded={featureNotIncluded}
+                    notApplicable={featureNotApplicable}
+                  />
                 </td>
               ))}
             </tr>

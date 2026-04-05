@@ -1,4 +1,12 @@
 {
+  "types": {
+    "earlyAdopter": "Early Adopter",
+    "seasonal": "Saisonniere",
+    "referral": "Parrainage",
+    "cooperative": "Cooperative",
+    "volume": "Volume",
+    "manual": "Manuelle"
+  },
   "list": {
     "tabs": {
       "actives": "Actives",

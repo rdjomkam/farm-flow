@@ -61,7 +61,18 @@
     "AUCUNE": "None",
     "QUOTIDIENNE": "Daily",
     "HEBDOMADAIRE": "Weekly",
-    "MENSUELLE": "Monthly"
+    "MENSUELLE": "Monthly",
+    "BIMENSUEL": "Biweekly",
+    "PERSONNALISE": "Custom"
+  },
+  "recordTypes": {
+    "biometry": "Biometry",
+    "mortality": "Mortality",
+    "feeding": "Feeding",
+    "waterQuality": "Water quality",
+    "count": "Count",
+    "observation": "Observation",
+    "renewal": "Renewal"
   },
   "phases": {
     "ACCLIMATATION": "Acclimatation",

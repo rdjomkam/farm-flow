@@ -39,13 +39,14 @@ interface RemiseFormDialogProps {
   onSuccess: () => void;
 }
 
-const TYPES_OPTIONS = [
-  { value: TypeRemise.EARLY_ADOPTER, label: "Early Adopter" },
-  { value: TypeRemise.SAISONNIERE, label: "Saisonnière" },
-  { value: TypeRemise.PARRAINAGE, label: "Parrainage" },
-  { value: TypeRemise.COOPERATIVE, label: "Coopérative" },
-  { value: TypeRemise.VOLUME, label: "Volume" },
-  { value: TypeRemise.MANUELLE, label: "Manuelle" },
+/** Les clés de type de remise (les labels sont résolus via t() dans le composant) */
+const TYPES_REMISE_VALUES = [
+  { value: TypeRemise.EARLY_ADOPTER, key: "types.earlyAdopter" },
+  { value: TypeRemise.SAISONNIERE, key: "types.seasonal" },
+  { value: TypeRemise.PARRAINAGE, key: "types.referral" },
+  { value: TypeRemise.COOPERATIVE, key: "types.cooperative" },
+  { value: TypeRemise.VOLUME, key: "types.volume" },
+  { value: TypeRemise.MANUELLE, key: "types.manual" },
 ];
 
 function toDateInput(date: Date | string | null | undefined): string {
@@ -286,9 +287,9 @@ export function RemiseFormDialog({
               disabled={isEditing}
               className="w-full h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {TYPES_OPTIONS.map((opt) => (
+              {TYPES_REMISE_VALUES.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  {opt.label}
+                  {t(opt.key as Parameters<typeof t>[0])}
                 </option>
               ))}
             </select>

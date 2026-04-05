@@ -282,12 +282,15 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
           const nb = data.abonnesActifs ?? 0;
           setErrors((prev) => ({
             ...prev,
-            [planId]: `Impossible de désactiver un plan avec ${nb} abonné${nb > 1 ? "s" : ""} actif${nb > 1 ? "s" : ""}.`,
+            [planId]: t("admin.cannotDisableWithSubscribers", {
+              count: nb,
+              plural: nb > 1 ? "s" : "",
+            }),
           }));
         } else {
           setErrors((prev) => ({
             ...prev,
-            [planId]: data.message ?? "Erreur lors du changement de statut.",
+            [planId]: data.message ?? t("admin.toggleStatusError"),
           }));
         }
         return;
@@ -300,7 +303,7 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
       setPlans(previousPlans);
       setErrors((prev) => ({
         ...prev,
-        [planId]: "Erreur réseau. Veuillez réessayer.",
+        [planId]: t("admin.networkErrorRetry"),
       }));
     } finally {
       setLoadingIds((prev) => {
@@ -417,7 +420,7 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
                   {formatLimite(p.limitesVagues)}
                 </td>
                 <td className="px-4 py-3 text-center text-muted-foreground text-xs">
-                  {p.limitesIngFermes !== null ? `${p.limitesIngFermes} fermes` : "—"}
+                  {p.limitesIngFermes !== null ? t("admin.engineerFarms", { count: p.limitesIngFermes }) : "—"}
                 </td>
                 <td className="px-4 py-3 text-center font-medium text-foreground">
                   {p._count.abonnements}

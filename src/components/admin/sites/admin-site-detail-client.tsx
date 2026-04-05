@@ -87,7 +87,7 @@ export function AdminSiteDetailClient({ site: initialSite }: AdminSiteDetailClie
             currentStatus={site.status}
             trigger={
               <Button variant="outline" size="sm">
-                Changer le statut
+                {t("changeStatus")}
               </Button>
             }
             onSuccess={handleStatusChanged}

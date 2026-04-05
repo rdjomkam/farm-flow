@@ -14,6 +14,26 @@
     "finDeGrace": "Grace period end",
     "prixPaye": "Price paid",
     "aucunEvenementAudit": "No events in the audit log.",
+    "audit": {
+      "empty": "No events in the audit log.",
+      "reason": "Reason: {reason}",
+      "actions": {
+        "SITE_SUSPENDED": "Site suspended",
+        "SITE_BLOCKED": "Site blocked",
+        "SITE_RESTORED": "Site restored",
+        "SITE_ARCHIVED": "Site archived",
+        "MODULES_UPDATED": "Modules updated",
+        "SITE_CREATED": "Site created",
+        "ABONNEMENT_FORCED": "Subscription forced"
+      }
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "SUSPENDED": "Suspended",
+      "BLOCKED": "Blocked",
+      "ARCHIVED": "Archived"
+    },
+    "changeStatus": "Change status",
     "tabs": {
       "all": "All ({count})",
       "active": "Active ({count})",

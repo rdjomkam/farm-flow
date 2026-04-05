@@ -1,4 +1,10 @@
 {
+  "global": {
+    "fallback": "Quelque chose s'est mal passé. Veuillez réessayer.",
+    "criticalTitle": "Une erreur critique est survenue",
+    "ref": "Réf:",
+    "retry": "Réessayer"
+  },
   "page": {
     "somethingWentWrong": "Quelque chose s'est mal passé. Veuillez réessayer.",
     "errorOccurred": "Une erreur est survenue",

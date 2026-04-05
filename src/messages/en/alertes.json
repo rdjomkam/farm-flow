@@ -4,11 +4,40 @@
     "AVERTISSEMENT": "Warning",
     "INFO": "Info"
   },
+  "types": {
+    "highMortality": "High mortality",
+    "waterQuality": "Water quality",
+    "lowStock": "Low stock",
+    "feedingReminder": "Feeding reminder",
+    "biometryReminder": "Biometry reminder",
+    "custom": "Custom",
+    "lateNeed": "Overdue need",
+    "highDensity": "High density",
+    "insufficientWaterRenewal": "Insufficient water renewal",
+    "noWaterQualityRecord": "Water quality unchecked",
+    "criticalDensityAndWaterQuality": "Density + water quality critical",
+    "subscriptionRenewalReminder": "Subscription renewal reminder",
+    "trialExpired": "Free trial expired"
+  },
+  "statuts": {
+    "ACTIVE": "Active",
+    "LUE": "Read",
+    "TRAITEE": "Processed"
+  },
   "notifications": {
     "aucuneNotification": "No notifications",
     "aucuneActive": "No active notifications",
     "aucuneLue": "No read notifications",
-    "aucuneTraitee": "No processed notifications"
+    "aucuneTraitee": "No processed notifications",
+    "countUnread": "{count} unread notification",
+    "countUnreadPlural": "{count} unread notifications",
+    "markAllRead": "Mark all as read",
+    "tabs": {
+      "all": "All",
+      "active": "Active",
+      "read": "Read",
+      "processed": "Processed"
+    }
   },
   "card": {
     "nonLu": "Unread",

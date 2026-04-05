@@ -54,5 +54,16 @@
     "relacher": "Release to refresh",
     "rafraichissement": "Refreshing..."
   },
-  "lockedFor": "Locked for {duration}"
+  "lockedFor": "Locked for {duration}",
+  "pin": {
+    "sessionLocked": "Session locked",
+    "enterPinToUnlock": "Enter your PIN to unlock",
+    "tooManyAttempts": "Too many attempts. Data wiped. Please log in online.",
+    "tooManyAttemptsLockout": "Too many attempts.",
+    "pinIncorrect": "Incorrect PIN",
+    "waitBeforeRetry": "Wait {duration} before retrying",
+    "verifying": "Verifying...",
+    "unlock": "Unlock",
+    "forgotPin": "Forgot PIN? (local data will be wiped)"
+  }
 }

@@ -1,4 +1,10 @@
 {
+  "global": {
+    "fallback": "Something went wrong. Please try again.",
+    "criticalTitle": "A critical error occurred",
+    "ref": "Ref:",
+    "retry": "Try again"
+  },
   "page": {
     "somethingWentWrong": "Something went wrong. Please try again.",
     "errorOccurred": "An error occurred",

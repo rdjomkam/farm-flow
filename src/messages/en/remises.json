@@ -1,4 +1,12 @@
 {
+  "types": {
+    "earlyAdopter": "Early Adopter",
+    "seasonal": "Seasonal",
+    "referral": "Referral",
+    "cooperative": "Cooperative",
+    "volume": "Volume",
+    "manual": "Manual"
+  },
   "list": {
     "tabs": {
       "actives": "Active",

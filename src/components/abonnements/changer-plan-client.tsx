@@ -159,11 +159,11 @@ export function ChangerPlanClient({
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? "Erreur lors du downgrade.");
+      if (!res.ok) throw new Error(data.message ?? t("errors.downgradeError"));
 
       setDowngradeSuccess(true);
     } catch (err) {
-      setDowngradeError(err instanceof Error ? err.message : "Erreur inconnue.");
+      setDowngradeError(err instanceof Error ? err.message : t("errors.unknownError"));
     } finally {
       setDowngradeLoading(false);
     }

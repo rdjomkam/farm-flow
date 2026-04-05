@@ -116,13 +116,13 @@ export function AbonnementsAdminList({
       const res = await fetch(`/api/abonnements/${id}/annuler`, { method: "POST" });
       if (!res.ok) {
         const data = await res.json();
-        setAnnulationError(data.message ?? "Impossible d'annuler.");
+        setAnnulationError(data.message ?? t("admin.cannotCancelSubscription"));
         return;
       }
       setAnnulationId(null);
       queryClient.invalidateQueries({ queryKey: queryKeys.abonnements.all });
     } catch {
-      setAnnulationError("Erreur réseau.");
+      setAnnulationError(t("admin.networkError"));
     } finally {
       setAnnulationLoading(false);
     }
@@ -249,8 +249,7 @@ export function AbonnementsAdminList({
                           <DialogHeader>
                             <DialogTitle>{t("admin.forceActivationTitle")}</DialogTitle>
                             <DialogDescription>
-                              Activer manuellement l&apos;abonnement pour le site{" "}
-                              <strong>{a.site.name}</strong> ?
+                              {t("admin.forceActivationDesc", { siteName: a.site.name })}
                             </DialogDescription>
                           </DialogHeader>
                           <DialogFooter>
@@ -294,8 +293,7 @@ export function AbonnementsAdminList({
                           <DialogHeader>
                             <DialogTitle>{t("dialogs.cancelTitle")}</DialogTitle>
                             <DialogDescription>
-                              Annuler l&apos;abonnement de <strong>{a.site.name}</strong> ? Cette
-                              action est irréversible.
+                              {t("admin.cancelSubscriptionDesc", { siteName: a.site.name })}
                             </DialogDescription>
                           </DialogHeader>
                           {annulationError && (

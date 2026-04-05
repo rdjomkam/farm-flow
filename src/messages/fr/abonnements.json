@@ -7,7 +7,58 @@
     "INGENIEUR_STARTER": "Ingénieur Starter",
     "INGENIEUR_PRO": "Ingénieur Pro",
     "INGENIEUR_EXPERT": "Ingénieur Expert",
-    "EXONERATION": "Exonération"
+    "EXONERATION": "Exonération",
+    "features": {
+      "decouverte_limits": "1 bac, 1 vague",
+      "eleveur_limits": "10 bacs, 3 vagues",
+      "professionnel_limits": "30 bacs, 10 vagues, 3 sites",
+      "unlimited_records": "Relevés illimités",
+      "basic_dashboard": "Tableau de bord basique",
+      "community_support": "Support communautaire",
+      "custom_alerts": "Alertes personnalisées",
+      "email_support": "Support email",
+      "advanced_analytics": "Analyses avancées",
+      "stock_management": "Gestion des stocks",
+      "sales_billing": "Ventes & facturation",
+      "priority_support": "Support prioritaire",
+      "unlimited_tanks_waves": "Bacs & vagues illimités",
+      "unlimited_sites": "Sites illimités",
+      "all_features": "Toutes les fonctionnalités",
+      "api_access": "API access",
+      "dedicated_support": "Support dédié",
+      "training_included": "Formation incluse",
+      "supervised_5_farms": "5 fermes supervisées",
+      "client_dashboard": "Dashboard clients",
+      "supervised_20_farms": "20 fermes supervisées",
+      "unlimited_farms": "Fermes illimitées",
+      "full_access": "Accès complet",
+      "manual_plan": "Plan accordé manuellement"
+    },
+    "badges": {
+      "popular": "Populaire",
+      "free": "Gratuit",
+      "yourPlan": "Votre plan"
+    },
+    "buttons": {
+      "startFree": "Commencer gratuitement",
+      "currentPlan": "Plan actuel",
+      "choosePlan": "Choisir ce plan",
+      "unavailable": "Non disponible"
+    },
+    "price": {
+      "perMonth": "par mois",
+      "perQuarter": "par trimestre",
+      "perYear": "par an",
+      "unavailableForPeriod": "Non disponible pour cette période",
+      "savings": "Économisez {amount}",
+      "unlimitedTanks": "Bacs illimités",
+      "unlimitedWaves": "Vagues illimitées",
+      "unlimitedSites": "Sites illimités",
+      "tanks": "{count} bacs",
+      "waves": "{count} vagues",
+      "sites": "{count} sites"
+    },
+    "emptyMessage": "Les plans ne sont pas disponibles pour le moment."
   },
   "periods": {
     "MENSUEL": "Mensuel",
@@ -113,6 +164,7 @@
     "activate": "Activer",
     "activation": "Activation...",
     "forceActivationTitle": "Forcer l'activation",
+    "forceActivationDesc": "Activer manuellement l'abonnement pour le site {siteName} ?",
     "noSubscriptionFound": "Aucun abonnement trouvé.",
     "noPlanFound": "Aucun plan trouvé.",
     "maxBatches": "Vagues max",
@@ -129,26 +181,43 @@
     "editPlanAriaLabel": "Modifier le plan {name}",
     "subscribers": "{count} abonné",
     "subscribersPlural": "{count} abonnés",
+    "engineerFarms": "{count} fermes",
+    "cancelSubscriptionDesc": "Annuler l'abonnement de {siteName} ? Cette action est irréversible.",
+    "cannotCancelSubscription": "Impossible d'annuler.",
+    "networkError": "Erreur réseau.",
+    "cannotDisableWithSubscribers": "Impossible de désactiver un plan avec {count} abonné{plural} actif{plural}.",
+    "networkErrorRetry": "Erreur réseau. Veuillez réessayer.",
+    "toggleStatusError": "Erreur lors du changement de statut.",
+    "serverError": "Erreur serveur.",
     "form": {
       "nameLabel": "Nom",
       "namePlaceholder": "Ex : Plan Éleveur Standard",
+      "nameRequired": "Le nom du plan est requis.",
       "typeLabel": "Type de plan",
+      "typeRequired": "Le type de plan est requis.",
       "typeImmutable": "Le type de plan ne peut pas être modifié après création.",
       "descriptionLabel": "Description (optionnel)",
       "descriptionPlaceholder": "Description visible sur la page de tarification",
       "tariffsLegend": "Tarifs (en XAF — laisser vide si non disponible)",
       "prixMensuelLabel": "Prix mensuel",
       "prixMensuelPlaceholder": "Ex: 3000",
+      "prixMensuelMin": "Le prix mensuel doit être >= 0.",
       "prixTrimestrielLabel": "Prix trimestriel",
       "prixTrimestrielPlaceholder": "Ex: 7500",
+      "prixTrimestrielMin": "Le prix trimestriel doit être >= 0.",
       "prixAnnuelLabel": "Prix annuel",
       "prixAnnuelPlaceholder": "Ex: 25000",
+      "prixAnnuelMin": "Le prix annuel doit être >= 0.",
       "limitesLegend": "Limites (999 = illimité)",
       "maxSitesLabel": "Sites max",
+      "limitesSitesMin": "La limite de sites doit être >= 1.",
       "maxTanksLabel": "Bacs max",
+      "limitesBacsMin": "La limite de bacs doit être >= 1.",
       "maxBatchesLabel": "Vagues max",
+      "limitesVaguesMin": "La limite de vagues doit être >= 1.",
       "maxIngFermesLabel": "Fermes ingénieur max (optionnel)",
-      "maxIngFermesPlaceholder": "Ex: 5"
+      "maxIngFermesPlaceholder": "Ex: 5",
+      "limitesIngFermesMin": "La limite de fermes ingénieur doit être >= 1."
     },
     "table": {
       "site": "Site",
@@ -189,7 +258,9 @@
     "networkError": "Erreur réseau. Veuillez réessayer.",
     "promoVerificationFailed": "Impossible de vérifier le code promo.",
     "paymentInitFailed": "Impossible d'initier le paiement. Veuillez réessayer.",
-    "networkErrorPayment": "Erreur réseau. Veuillez vérifier votre connexion et réessayer."
+    "networkErrorPayment": "Erreur réseau. Veuillez vérifier votre connexion et réessayer.",
+    "downgradeError": "Erreur lors du downgrade.",
+    "unknownError": "Erreur inconnue."
   },
   "planFormDialog": {
     "titleCreate": "Créer un plan d'abonnement",
@@ -274,7 +345,11 @@
     "retry": "Réessayer",
     "back": "Retour",
     "payNow": "Payer maintenant",
-    "initiating": "Initiation..."
+    "initiating": "Initiation...",
+    "stepsAriaLabel": "Étapes du paiement",
+    "stepAriaLabel": "Étape {num} : {label}",
+    "stepCurrentSuffix": "(étape en cours)",
+    "stepDoneSuffix": "(terminée)"
   },
   "upgradeForm": {
     "phoneRequired": "Veuillez entrer votre numéro de téléphone Mobile Money.",
@@ -308,6 +383,43 @@
     "blockedResources": "Ressources bloquées",
     "backToSubscription": "← Retour a mon abonnement",
     "noBlockedResources": "Aucune ressource bloquée",
-    "allResourcesActive": "Toutes vos ressources sont actives."
+    "allResourcesActive": "Toutes vos ressources sont actives.",
+    "blockedCount": "{count} ressource bloquée",
+    "blockedCountPlural": "{count} ressources bloquées",
+    "blockedExplanation": "Ces ressources ont été bloquées lors de votre downgrade de plan. Pour les débloquer, upgradez votre plan ou supprimez d'autres ressources.",
+    "upgradeToUnlock": "Upgrader mon plan pour débloquer",
+    "quotaReached": "Quota du plan actuel atteint. Upgradez votre plan pour débloquer cette ressource.",
+    "unlockError": "Erreur lors du déblocage.",
+    "blockedTanksTitle": "Bacs bloqués ({count})",
+    "blockedWavesTitle": "Vagues bloquées ({count})",
+    "blockedOn": "Bloqué le {date}",
+    "blockedOnFem": "Bloquée le {date}",
+    "unlock": "Débloquer",
+    "waveBlockedStatus": "{statut} — Bloquée le {date}"
+  },
+  "comparaison": {
+    "featureColumn": "Fonctionnalité",
+    "featureIncluded": "Inclus",
+    "featureNotIncluded": "Non inclus",
+    "featureNotApplicable": "Non applicable",
+    "features": {
+      "tanks": "Bacs",
+      "concurrentWaves": "Vagues simultanées",
+      "sites": "Sites",
+      "records": "Relevés (biométrie, mortalité...)",
+      "dashboard": "Tableau de bord",
+      "customAlerts": "Alertes personnalisées",
+      "stockManagement": "Gestion des stocks",
+      "salesBilling": "Ventes & Facturation",
+      "advancedAnalytics": "Analyses avancées",
+      "apiAccess": "API Access",
+      "support": "Support"
+    },
+    "support": {
+      "community": "Communauté",
+      "email": "Email",
+      "priority": "Prioritaire",
+      "dedicated": "Dédié"
+    }
   }
 }

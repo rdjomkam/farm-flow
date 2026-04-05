@@ -192,11 +192,11 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
     const clientErrors: { field: string; message: string }[] = [];
 
     if (!nom.trim()) {
-      clientErrors.push({ field: "nom", message: "Le nom du plan est requis." });
+      clientErrors.push({ field: "nom", message: t("admin.form.nameRequired") });
     }
 
     if (!isEditing && !typePlan) {
-      clientErrors.push({ field: "typePlan", message: "Le type de plan est requis." });
+      clientErrors.push({ field: "typePlan", message: t("admin.form.typeRequired") });
     }
 
     const prixMensuelNum = parsePrix(prixMensuel);
@@ -204,34 +204,34 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
     const prixAnnuelNum = parsePrix(prixAnnuel);
 
     if (prixMensuelNum !== null && prixMensuelNum < 0) {
-      clientErrors.push({ field: "prixMensuel", message: "Le prix mensuel doit être >= 0." });
+      clientErrors.push({ field: "prixMensuel", message: t("admin.form.prixMensuelMin") });
     }
     if (prixTrimestrielNum !== null && prixTrimestrielNum < 0) {
-      clientErrors.push({ field: "prixTrimestriel", message: "Le prix trimestriel doit être >= 0." });
+      clientErrors.push({ field: "prixTrimestriel", message: t("admin.form.prixTrimestrielMin") });
     }
     if (prixAnnuelNum !== null && prixAnnuelNum < 0) {
-      clientErrors.push({ field: "prixAnnuel", message: "Le prix annuel doit être >= 0." });
+      clientErrors.push({ field: "prixAnnuel", message: t("admin.form.prixAnnuelMin") });
     }
 
     const limitesBacsNum = parseInt(limitesBacs);
     if (isNaN(limitesBacsNum) || limitesBacsNum < 1) {
-      clientErrors.push({ field: "limitesBacs", message: "La limite de bacs doit être >= 1." });
+      clientErrors.push({ field: "limitesBacs", message: t("admin.form.limitesBacsMin") });
     }
 
     const limitesVaguesNum = parseInt(limitesVagues);
     if (isNaN(limitesVaguesNum) || limitesVaguesNum < 1) {
-      clientErrors.push({ field: "limitesVagues", message: "La limite de vagues doit être >= 1." });
+      clientErrors.push({ field: "limitesVagues", message: t("admin.form.limitesVaguesMin") });
     }
 
     const limitesSitesNum = parseInt(limitesSites);
     if (isNaN(limitesSitesNum) || limitesSitesNum < 1) {
-      clientErrors.push({ field: "limitesSites", message: "La limite de sites doit être >= 1." });
+      clientErrors.push({ field: "limitesSites", message: t("admin.form.limitesSitesMin") });
     }
 
     if (limitesIngFermes !== "") {
       const ingFermesNum = parseInt(limitesIngFermes);
       if (isNaN(ingFermesNum) || ingFermesNum < 1) {
-        clientErrors.push({ field: "limitesIngFermes", message: "La limite de fermes ingénieur doit être >= 1." });
+        clientErrors.push({ field: "limitesIngFermes", message: t("admin.form.limitesIngFermesMin") });
       }
     }
 
@@ -277,7 +277,7 @@ export function PlanFormDialog({ plan, onSuccess, children }: PlanFormDialogProp
         if (data.errors) {
           setErrors(data.errors);
         } else {
-          const msg = data.message ?? "Erreur serveur.";
+          const msg = data.message ?? t("admin.serverError");
           // Message spécifique pour conflit de type (409)
           setErrors([{ field: "global", message: msg }]);
         }

@@ -14,6 +14,26 @@
     "finDeGrace": "Fin de grace",
     "prixPaye": "Prix paye",
     "aucunEvenementAudit": "Aucun evenement dans le journal d'audit.",
+    "audit": {
+      "empty": "Aucun evenement dans le journal d'audit.",
+      "reason": "Raison : {reason}",
+      "actions": {
+        "SITE_SUSPENDED": "Site suspendu",
+        "SITE_BLOCKED": "Site bloque",
+        "SITE_RESTORED": "Site restaure",
+        "SITE_ARCHIVED": "Site archive",
+        "MODULES_UPDATED": "Modules mis a jour",
+        "SITE_CREATED": "Site cree",
+        "ABONNEMENT_FORCED": "Abonnement force"
+      }
+    },
+    "status": {
+      "ACTIVE": "Actif",
+      "SUSPENDED": "Suspendu",
+      "BLOCKED": "Bloque",
+      "ARCHIVED": "Archive"
+    },
+    "changeStatus": "Changer le statut",
     "tabs": {
       "all": "Tous ({count})",
       "active": "Actifs ({count})",

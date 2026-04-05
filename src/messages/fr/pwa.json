@@ -54,5 +54,16 @@
     "relacher": "Relacher pour rafraichir",
     "rafraichissement": "Rafraichissement..."
   },
-  "lockedFor": "Verrouillé pendant {duration}"
+  "lockedFor": "Verrouillé pendant {duration}",
+  "pin": {
+    "sessionLocked": "Session verrouillée",
+    "enterPinToUnlock": "Saisissez votre PIN pour déverrouiller",
+    "tooManyAttempts": "Trop de tentatives. Données effacées. Reconnectez-vous en ligne.",
+    "tooManyAttemptsLockout": "Trop de tentatives.",
+    "pinIncorrect": "PIN incorrect",
+    "waitBeforeRetry": "Patientez {duration} avant de réessayer",
+    "verifying": "Vérification...",
+    "unlock": "Déverrouiller",
+    "forgotPin": "PIN oublié ? (les données locales seront effacées)"
+  }
 }

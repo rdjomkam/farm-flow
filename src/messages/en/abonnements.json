@@ -7,7 +7,58 @@
     "INGENIEUR_STARTER": "Engineer Starter",
     "INGENIEUR_PRO": "Engineer Pro",
     "INGENIEUR_EXPERT": "Engineer Expert",
-    "EXONERATION": "Exemption"
+    "EXONERATION": "Exemption",
+    "features": {
+      "decouverte_limits": "1 tank, 1 batch",
+      "eleveur_limits": "10 tanks, 3 batches",
+      "professionnel_limits": "30 tanks, 10 batches, 3 sites",
+      "unlimited_records": "Unlimited records",
+      "basic_dashboard": "Basic dashboard",
+      "community_support": "Community support",
+      "custom_alerts": "Custom alerts",
+      "email_support": "Email support",
+      "advanced_analytics": "Advanced analytics",
+      "stock_management": "Stock management",
+      "sales_billing": "Sales & billing",
+      "priority_support": "Priority support",
+      "unlimited_tanks_waves": "Unlimited tanks & batches",
+      "unlimited_sites": "Unlimited sites",
+      "all_features": "All features",
+      "api_access": "API access",
+      "dedicated_support": "Dedicated support",
+      "training_included": "Training included",
+      "supervised_5_farms": "5 supervised farms",
+      "client_dashboard": "Client dashboard",
+      "supervised_20_farms": "20 supervised farms",
+      "unlimited_farms": "Unlimited farms",
+      "full_access": "Full access",
+      "manual_plan": "Manually granted plan"
+    },
+    "badges": {
+      "popular": "Popular",
+      "free": "Free",
+      "yourPlan": "Your plan"
+    },
+    "buttons": {
+      "startFree": "Get started for free",
+      "currentPlan": "Current plan",
+      "choosePlan": "Choose this plan",
+      "unavailable": "Unavailable"
+    },
+    "price": {
+      "perMonth": "per month",
+      "perQuarter": "per quarter",
+      "perYear": "per year",
+      "unavailableForPeriod": "Not available for this period",
+      "savings": "Save {amount}",
+      "unlimitedTanks": "Unlimited tanks",
+      "unlimitedWaves": "Unlimited batches",
+      "unlimitedSites": "Unlimited sites",
+      "tanks": "{count} tanks",
+      "waves": "{count} batches",
+      "sites": "{count} sites"
+    },
+    "emptyMessage": "Plans are not available at the moment."
   },
   "periods": {
     "MENSUEL": "Monthly",
@@ -113,6 +164,7 @@
     "activate": "Activate",
     "activation": "Activating...",
     "forceActivationTitle": "Force activation",
+    "forceActivationDesc": "Manually activate the subscription for site {siteName}?",
     "noSubscriptionFound": "No subscription found.",
     "noPlanFound": "No plan found.",
     "maxBatches": "Max batches",
@@ -129,26 +181,43 @@
     "editPlanAriaLabel": "Edit plan {name}",
     "subscribers": "{count} subscriber",
     "subscribersPlural": "{count} subscribers",
+    "engineerFarms": "{count} farms",
+    "cancelSubscriptionDesc": "Cancel the subscription for {siteName}? This action is irreversible.",
+    "cannotCancelSubscription": "Unable to cancel.",
+    "networkError": "Network error.",
+    "cannotDisableWithSubscribers": "Cannot deactivate a plan with {count} active{plural} subscriber{plural}.",
+    "networkErrorRetry": "Network error. Please try again.",
+    "toggleStatusError": "Error changing plan status.",
+    "serverError": "Server error.",
     "form": {
       "nameLabel": "Name",
       "namePlaceholder": "E.g.: Standard Farmer Plan",
+      "nameRequired": "Plan name is required.",
       "typeLabel": "Plan type",
+      "typeRequired": "Plan type is required.",
       "typeImmutable": "The plan type cannot be changed after creation.",
       "descriptionLabel": "Description (optional)",
       "descriptionPlaceholder": "Description visible on the pricing page",
       "tariffsLegend": "Pricing (in XAF — leave blank if not available)",
       "prixMensuelLabel": "Monthly price",
       "prixMensuelPlaceholder": "E.g.: 3000",
+      "prixMensuelMin": "Monthly price must be >= 0.",
       "prixTrimestrielLabel": "Quarterly price",
       "prixTrimestrielPlaceholder": "E.g.: 7500",
+      "prixTrimestrielMin": "Quarterly price must be >= 0.",
       "prixAnnuelLabel": "Annual price",
       "prixAnnuelPlaceholder": "E.g.: 25000",
+      "prixAnnuelMin": "Annual price must be >= 0.",
       "limitesLegend": "Limits (999 = unlimited)",
       "maxSitesLabel": "Max sites",
+      "limitesSitesMin": "Site limit must be >= 1.",
       "maxTanksLabel": "Max tanks",
+      "limitesBacsMin": "Tank limit must be >= 1.",
       "maxBatchesLabel": "Max batches",
+      "limitesVaguesMin": "Batch limit must be >= 1.",
       "maxIngFermesLabel": "Engineer farms max (optional)",
-      "maxIngFermesPlaceholder": "E.g.: 5"
+      "maxIngFermesPlaceholder": "E.g.: 5",
+      "limitesIngFermesMin": "Engineer farms limit must be >= 1."
     },
     "table": {
       "site": "Site",
@@ -189,7 +258,9 @@
     "networkError": "Network error. Please try again.",
     "promoVerificationFailed": "Unable to verify promo code.",
     "paymentInitFailed": "Unable to initiate payment. Please try again.",
-    "networkErrorPayment": "Network error. Please check your connection and try again."
+    "networkErrorPayment": "Network error. Please check your connection and try again.",
+    "downgradeError": "Error during downgrade.",
+    "unknownError": "Unknown error."
   },
   "planFormDialog": {
     "titleCreate": "Create a subscription plan",
@@ -274,7 +345,11 @@
     "retry": "Retry",
     "back": "Back",
     "payNow": "Pay now",
-    "initiating": "Initiating..."
+    "initiating": "Initiating...",
+    "stepsAriaLabel": "Payment steps",
+    "stepAriaLabel": "Step {num}: {label}",
+    "stepCurrentSuffix": "(current step)",
+    "stepDoneSuffix": "(completed)"
   },
   "upgradeForm": {
     "phoneRequired": "Please enter your Mobile Money phone number.",
@@ -308,6 +383,43 @@
     "blockedResources": "Blocked resources",
     "backToSubscription": "← Back to my subscription",
     "noBlockedResources": "No blocked resources",
-    "allResourcesActive": "All your resources are active."
+    "allResourcesActive": "All your resources are active.",
+    "blockedCount": "{count} resource blocked",
+    "blockedCountPlural": "{count} resources blocked",
+    "blockedExplanation": "These resources were blocked during your plan downgrade. To unblock them, upgrade your plan or delete other resources.",
+    "upgradeToUnlock": "Upgrade my plan to unblock",
+    "quotaReached": "Current plan quota reached. Upgrade your plan to unblock this resource.",
+    "unlockError": "Error while unblocking.",
+    "blockedTanksTitle": "Blocked tanks ({count})",
+    "blockedWavesTitle": "Blocked batches ({count})",
+    "blockedOn": "Blocked on {date}",
+    "blockedOnFem": "Blocked on {date}",
+    "unlock": "Unblock",
+    "waveBlockedStatus": "{statut} — Blocked on {date}"
+  },
+  "comparaison": {
+    "featureColumn": "Feature",
+    "featureIncluded": "Included",
+    "featureNotIncluded": "Not included",
+    "featureNotApplicable": "Not applicable",
+    "features": {
+      "tanks": "Tanks",
+      "concurrentWaves": "Concurrent batches",
+      "sites": "Sites",
+      "records": "Records (biometry, mortality...)",
+      "dashboard": "Dashboard",
+      "customAlerts": "Custom alerts",
+      "stockManagement": "Stock management",
+      "salesBilling": "Sales & Billing",
+      "advancedAnalytics": "Advanced analytics",
+      "apiAccess": "API Access",
+      "support": "Support"
+    },
+    "support": {
+      "community": "Community",
+      "email": "Email",
+      "priority": "Priority",
+      "dedicated": "Dedicated"
+    }
   }
 }

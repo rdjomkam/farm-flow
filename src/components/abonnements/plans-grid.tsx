@@ -45,41 +45,54 @@ const PERIODES: PeriodeFacturation[] = [
   PeriodeFacturation.ANNUEL,
 ];
 
-// Fonctionnalités clés par plan pour les cartes
-const PLAN_FEATURES: Record<TypePlan, string[]> = {
+// Feature keys per plan — references keys under "plans.features.*"
+type FeatureKey = `plans.features.${string}`;
+
+const PLAN_FEATURE_KEYS: Record<TypePlan, FeatureKey[]> = {
   [TypePlan.DECOUVERTE]: [
-    "1 bac, 1 vague",
-    "Relevés illimités",
-    "Tableau de bord basique",
-    "Support communautaire",
+    "plans.features.decouverte_limits",
+    "plans.features.unlimited_records",
+    "plans.features.basic_dashboard",
+    "plans.features.community_support",
   ],
   [TypePlan.ELEVEUR]: [
-    "10 bacs, 3 vagues",
-    "Relevés illimités",
-    "Analyses & graphiques",
-    "Alertes personnalisées",
-    "Support email",
+    "plans.features.eleveur_limits",
+    "plans.features.unlimited_records",
+    "plans.features.custom_alerts",
+    "plans.features.email_support",
   ],
   [TypePlan.PROFESSIONNEL]: [
-    "30 bacs, 10 vagues, 3 sites",
-    "Relevés illimités",
-    "Analyses avancées",
-    "Gestion des stocks",
-    "Ventes & facturation",
-    "Support prioritaire",
+    "plans.features.professionnel_limits",
+    "plans.features.unlimited_records",
+    "plans.features.advanced_analytics",
+    "plans.features.stock_management",
+    "plans.features.sales_billing",
+    "plans.features.priority_support",
   ],
   [TypePlan.ENTREPRISE]: [
-    "Bacs & vagues illimités",
-    "Sites illimités",
-    "Toutes les fonctionnalités",
-    "API access",
-    "Support dédié",
-    "Formation incluse",
+    "plans.features.unlimited_tanks_waves",
+    "plans.features.unlimited_sites",
+    "plans.features.all_features",
+    "plans.features.api_access",
+    "plans.features.dedicated_support",
+    "plans.features.training_included",
   ],
-  [TypePlan.INGENIEUR_STARTER]: ["5 fermes supervisées", "Dashboard clients"],
-  [TypePlan.INGENIEUR_PRO]: ["20 fermes supervisées", "Dashboard clients"],
-  [TypePlan.INGENIEUR_EXPERT]: ["Fermes illimitées", "Dashboard clients"],
-  [TypePlan.EXONERATION]: ["Accès complet", "Plan accordé manuellement"],
+  [TypePlan.INGENIEUR_STARTER]: [
+    "plans.features.supervised_5_farms",
+    "plans.features.client_dashboard",
+  ],
+  [TypePlan.INGENIEUR_PRO]: [
+    "plans.features.supervised_20_farms",
+    "plans.features.client_dashboard",
+  ],
+  [TypePlan.INGENIEUR_EXPERT]: [
+    "plans.features.unlimited_farms",
+    "plans.features.client_dashboard",
+  ],
+  [TypePlan.EXONERATION]: [
+    "plans.features.full_access",
+    "plans.features.manual_plan",
+  ],
 };
 
 function formatPrix(montant: number | null | undefined): string {
@@ -95,7 +108,7 @@ function getTarifForPeriode(plan: PlanAbonnement, periode: PeriodeFacturation): 
   }
 }
 
-function getEconomie(plan: PlanAbonnement, periode: PeriodeFacturation): string | null {
+function getEconomieMontant(plan: PlanAbonnement, periode: PeriodeFacturation): number | null {
   if (periode === PeriodeFacturation.MENSUEL) return null;
   const mensuel = getTarifForPeriode(plan, PeriodeFacturation.MENSUEL);
   const tarif = getTarifForPeriode(plan, periode);
@@ -103,7 +116,7 @@ function getEconomie(plan: PlanAbonnement, periode: PeriodeFacturation): string 
   const mois = periode === PeriodeFacturation.TRIMESTRIEL ? 3 : 12;
   const economie = mensuel * mois - tarif;
   if (economie <= 0) return null;
-  return `Économisez ${formatXAF(economie)}`;
+  return economie;
 }
 
 export function PlansGrid({ plans, abonnementActifPlanId }: PlansGridProps) {
@@ -148,9 +161,9 @@ export function PlansGrid({ plans, abonnementActifPlanId }: PlansGridProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {plansPromoteurs.map((plan) => {
           const tarif = getTarifForPeriode(plan, periode);
-          const economie = getEconomie(plan, periode);
+          const economieMontant = getEconomieMontant(plan, periode);
           const limites = { limitesBacs: plan.limitesBacs, limitesVagues: plan.limitesVagues, limitesSites: plan.limitesSites };
-          const features = PLAN_FEATURES[plan.typePlan] ?? [];
+          const featureKeys = PLAN_FEATURE_KEYS[plan.typePlan] ?? [];
           const isActif = plan.id === abonnementActifPlanId;
           const isPopulaire = plan.typePlan === TypePlan.PROFESSIONNEL;
           const isGratuit = plan.typePlan === TypePlan.DECOUVERTE;
@@ -171,14 +184,14 @@ export function PlansGrid({ plans, abonnementActifPlanId }: PlansGridProps) {
                 {isPopulaire && (
                   <Badge variant="en_cours" className="flex items-center gap-1">
                     <Star className="h-3 w-3" />
-                    Populaire
+                    {t("plans.badges.popular")}
                   </Badge>
                 )}
                 {isGratuit && (
-                  <Badge variant="terminee">Gratuit</Badge>
+                  <Badge variant="terminee">{t("plans.badges.free")}</Badge>
                 )}
                 {isActif && (
-                  <Badge variant="info">Votre plan</Badge>
+                  <Badge variant="info">{t("plans.badges.yourPlan")}</Badge>
                 )}
               </div>
 
@@ -190,7 +203,7 @@ export function PlansGrid({ plans, abonnementActifPlanId }: PlansGridProps) {
               {/* Prix */}
               <div className="mt-3 mb-1">
                 {tarif === null || tarif === undefined ? (
-                  <p className="text-sm text-muted-foreground">Non disponible pour cette période</p>
+                  <p className="text-sm text-muted-foreground">{t("plans.price.unavailableForPeriod")}</p>
                 ) : (
                   <>
                     <p className="text-2xl font-bold text-foreground">
@@ -199,10 +212,10 @@ export function PlansGrid({ plans, abonnementActifPlanId }: PlansGridProps) {
                     {tarif !== 0 && (
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {periode === PeriodeFacturation.MENSUEL
-                          ? "par mois"
+                          ? t("plans.price.perMonth")
                           : periode === PeriodeFacturation.TRIMESTRIEL
-                          ? "par trimestre"
-                          : "par an"}
+                          ? t("plans.price.perQuarter")
+                          : t("plans.price.perYear")}
                       </p>
                     )}
                   </>
@@ -210,25 +223,39 @@ export function PlansGrid({ plans, abonnementActifPlanId }: PlansGridProps) {
               </div>
 
               {/* Économie */}
-              {economie && (
-                <p className="text-xs text-success font-medium mb-3">{economie}</p>
+              {economieMontant !== null && (
+                <p className="text-xs text-success font-medium mb-3">
+                  {t("plans.price.savings", { amount: formatXAF(economieMontant) })}
+                </p>
               )}
 
               {/* Limites */}
               <div className="text-xs text-muted-foreground mb-4 space-y-0.5">
-                <p>{limites.limitesBacs === 999 ? "Bacs illimités" : `${limites.limitesBacs} bacs`}</p>
-                <p>{limites.limitesVagues === 999 ? "Vagues illimitées" : `${limites.limitesVagues} vagues`}</p>
+                <p>
+                  {limites.limitesBacs === 999
+                    ? t("plans.price.unlimitedTanks")
+                    : t("plans.price.tanks", { count: limites.limitesBacs })}
+                </p>
+                <p>
+                  {limites.limitesVagues === 999
+                    ? t("plans.price.unlimitedWaves")
+                    : t("plans.price.waves", { count: limites.limitesVagues })}
+                </p>
                 {limites.limitesSites > 1 && (
-                  <p>{limites.limitesSites === 999 ? "Sites illimités" : `${limites.limitesSites} sites`}</p>
+                  <p>
+                    {limites.limitesSites === 999
+                      ? t("plans.price.unlimitedSites")
+                      : t("plans.price.sites", { count: limites.limitesSites })}
+                  </p>
                 )}
               </div>
 
               {/* Fonctionnalités */}
               <ul className="space-y-1.5 mb-5 flex-1">
-                {features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-xs text-foreground">
+                {featureKeys.map((key) => (
+                  <li key={key} className="flex items-start gap-2 text-xs text-foreground">
                     <Check className="h-3.5 w-3.5 text-success mt-0.5 shrink-0" />
-                    {f}
+                    {t(key as Parameters<typeof t>[0])}
                   </li>
                 ))}
               </ul>
@@ -238,16 +265,16 @@ export function PlansGrid({ plans, abonnementActifPlanId }: PlansGridProps) {
                 {isGratuit ? (
                   <Link href="/inscription" className="block w-full">
                     <Button variant="outline" className="w-full min-h-[44px]">
-                      Commencer gratuitement
+                      {t("plans.buttons.startFree")}
                     </Button>
                   </Link>
                 ) : isActif ? (
                   <Button disabled className="w-full min-h-[44px] opacity-60">
-                    Plan actuel
+                    {t("plans.buttons.currentPlan")}
                   </Button>
                 ) : tarif === null || tarif === undefined ? (
                   <Button disabled variant="outline" className="w-full min-h-[44px] opacity-60">
-                    Non disponible
+                    {t("plans.buttons.unavailable")}
                   </Button>
                 ) : (
                   <Link href={`/checkout?planId=${plan.id}`} className="block w-full">
@@ -258,7 +285,7 @@ export function PlansGrid({ plans, abonnementActifPlanId }: PlansGridProps) {
                       ].join(" ")}
                     >
                       <Zap className="h-4 w-4 mr-1.5" />
-                      Choisir ce plan
+                      {t("plans.buttons.choosePlan")}
                     </Button>
                   </Link>
                 )}
@@ -271,7 +298,7 @@ export function PlansGrid({ plans, abonnementActifPlanId }: PlansGridProps) {
       {/* Message vide */}
       {plansPromoteurs.length === 0 && (
         <div className="text-center py-10 text-muted-foreground">
-          <p className="text-sm">Les plans ne sont pas disponibles pour le moment.</p>
+          <p className="text-sm">{t("plans.emptyMessage")}</p>
         </div>
       )}
     </div>
