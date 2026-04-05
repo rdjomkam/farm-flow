@@ -45,8 +45,7 @@ import {
   detecterPhase,
 } from "@/lib/calculs";
 import {
-  segmenterPeriodesAlimentaires,
-  interpolerPoidsVague,
+  segmenterPeriodesAlimentairesVague,
   type ReleveAlimPoint,
   type BiometriePoint,
   type VagueContext,
@@ -654,8 +653,8 @@ async function computeAlimentMetrics(
       Math.floor((now.getTime() - vague.dateDebut.getTime()) / (1000 * 60 * 60 * 24))
     );
 
-    // ADR-028: FCR per feed period (Couche 3)
-    // Build inputs for segmenterPeriodesAlimentaires
+    // ADR-033: FCR per feed period at vague level (Couche 3)
+    // Build inputs for segmenterPeriodesAlimentairesVague
     const vagueAlimReleves = alimentRelevesByVague.get(vague.id) ?? [];
     const relevsAlimPoints: ReleveAlimPoint[] = vagueAlimReleves.map((r) => ({
       releveId: r.id,
@@ -702,18 +701,10 @@ async function computeAlimentMetrics(
         }
       : undefined;
 
-    // ADR-033 DISC-09: build mortalitesParBac (flat Map) for per-tank nombreVivants
-    // (each tank tracks its own mortality separately via estimerNombreVivantsADate)
-    const mortalitesParBac = new Map<string, Array<{ nombreMorts: number; date: Date }>>();
-    for (const r of (relevesByVague.get(vague.id) ?? []).filter(
-      (r) => r.typeReleve === TypeReleve.MORTALITE
-    )) {
-      if (r.bacId) {
-        const list = mortalitesParBac.get(r.bacId) ?? [];
-        list.push({ nombreMorts: r.nombreMorts ?? 0, date: r.date });
-        mortalitesParBac.set(r.bacId, list);
-      }
-    }
+    // ADR-033 DISC-09: flat array of all mortality records for the vague (vague-level FCR)
+    const mortalitesTotales = (relevesByVague.get(vague.id) ?? [])
+      .filter((r) => r.typeReleve === TypeReleve.MORTALITE)
+      .map((r) => ({ nombreMorts: r.nombreMorts ?? 0, date: r.date }));
 
     // ADR-032: update vagueCtx with calibrages
     const vagueCtxWithCalibrages: VagueContext = {
@@ -725,17 +716,14 @@ async function computeAlimentMetrics(
       })),
     };
 
-    // Segmenter all periods, then filter for this product.
-    // Weight estimation now uses vague-level Gompertz via interpolerPoidsVague
-    // inside segmenterPeriodesAlimentaires (ADR-033 fix).
-    const allPeriodes = segmenterPeriodesAlimentaires(
+    // ADR-033 DISC-08: vague-level segmentation (all tanks combined, one period per product run).
+    // Uses interpolerPoidsVague (no bacId filter) and estimerNombreVivantsVague (total population).
+    const allPeriodes = segmenterPeriodesAlimentairesVague(
       relevsAlimPoints,
       biometriePoints,
       vagueCtxWithCalibrages,
-      {
-        gompertzContext,
-        mortalitesParBac,
-      }
+      mortalitesTotales,
+      { gompertzContext }
     );
     const periodesProduct = allPeriodes.filter((p) => p.produitId === produit.id);
 
@@ -2635,16 +2623,10 @@ export async function getFCRTrace(
         }
       : undefined;
 
-    // ADR-032: build mortalitesParBac for per-tank nombreVivants
-    // (per-tank mortality tracking is correct per ADR-033 — each tank has different fish count)
-    const mortalitesParBac = new Map<string, Array<{ nombreMorts: number; date: Date }>>();
-    for (const r of releves.filter((r) => r.typeReleve === TypeReleve.MORTALITE)) {
-      if (r.bacId) {
-        const list = mortalitesParBac.get(r.bacId) ?? [];
-        list.push({ nombreMorts: r.nombreMorts ?? 0, date: r.date });
-        mortalitesParBac.set(r.bacId, list);
-      }
-    }
+    // ADR-033 DISC-11: flat array of all mortality records for the vague (vague-level FCR)
+    const mortalitesTotales = releves
+      .filter((r) => r.typeReleve === TypeReleve.MORTALITE)
+      .map((r) => ({ nombreMorts: r.nombreMorts ?? 0, date: r.date }));
 
     // ADR-032: update vagueCtx with calibrages
     const vagueCtxWithCalibrages: VagueContext = {
@@ -2654,11 +2636,6 @@ export async function getFCRTrace(
         nombreMorts: c.nombreMorts,
         groupes: c.groupes,
       })),
-    };
-
-    const interpolOptions = {
-      gompertzContext,
-      mortalitesParBac,
     };
 
     // Build ReleveAlimPoints for segmentation
@@ -2672,47 +2649,27 @@ export async function getFCRTrace(
       })),
     }));
 
-    // Segment all periods using vague-level weight estimation (ADR-033)
-    const allPeriodes = segmenterPeriodesAlimentaires(
+    // ADR-033 DISC-12: vague-level segmentation (all tanks combined)
+    const allPeriodes = segmenterPeriodesAlimentairesVague(
       relevsAlimPoints,
       biometriePoints,
       vagueCtxWithCalibrages,
-      interpolOptions
+      mortalitesTotales,
+      { gompertzContext }
     );
     const periodesProduct = allPeriodes.filter((p) => p.produitId === produitId);
 
-    // Build map from bacId to nom for display (bacId/bacNom kept for transparency)
-    const bacNomMap = new Map<string, string>(vague.bacs.map((b) => [b.id, b.nom]));
-
-    // Build FCRTracePeriode for each period of this product.
-    // Weight estimation uses interpolerPoidsVague (ADR-033 DISC-13 fix) —
-    // ALL biometries are passed, not filtered by bacId.
+    // ADR-033 DISC-14: Build FCRTracePeriode from vague-level periods.
+    // bacId and bacNom removed — periods are at vague level, not per-tank.
+    // Weight estimation details are reused from PeriodeAlimentaireVague
+    // (already computed by segmenterPeriodesAlimentairesVague above).
     const tracePeriodes: FCRTracePeriode[] = [];
     for (const periode of periodesProduct) {
-      const debutEstim = interpolerPoidsVague(
-        periode.dateDebut,
-        biometriePoints,
-        vague.poidsMoyenInitial,
-        interpolOptions
-      );
-      const finEstim = interpolerPoidsVague(
-        periode.dateFin,
-        biometriePoints,
-        vague.poidsMoyenInitial,
-        interpolOptions
-      );
-
-      const poidsMoyenDebut = debutEstim?.poids ?? null;
-      const poidsMoyenFin = finEstim?.poids ?? null;
-      const methodeDebut = debutEstim?.methode ?? "VALEUR_INITIALE";
-      const methodeFin = finEstim?.methode ?? "VALEUR_INITIALE";
-
-      const dureeJours = Math.max(
-        0,
-        Math.round(
-          (periode.dateFin.getTime() - periode.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
-        )
-      );
+      const poidsMoyenDebut = periode.poidsMoyenDebut;
+      const poidsMoyenFin = periode.poidsMoyenFin;
+      // Extract actual estimation method for each boundary from detail objects
+      const methodeDebut = periode.detailEstimationDebut?.methode ?? periode.methodeEstimation;
+      const methodeFin = periode.detailEstimationFin?.methode ?? periode.methodeEstimation;
 
       const nombreVivants = periode.nombreVivants;
       // Raw (unrounded) biomasse values used for gain and FCR computation
@@ -2742,29 +2699,20 @@ export async function getFCRTrace(
           ? Math.round((periode.quantiteKg / gainBiomasseKgRaw) * 100) / 100
           : null;
 
-      // Methode retenue = moins precise des deux bornes
-      const methodeRank = (m: string): number => {
-        if (m === "BIOMETRIE_EXACTE") return 3;
-        if (m === "GOMPERTZ_VAGUE") return 2;
-        if (m === "INTERPOLATION_LINEAIRE") return 1;
-        return 0;
-      };
-      const methodeRetenue =
-        methodeRank(methodeDebut) <= methodeRank(methodeFin) ? methodeDebut : methodeFin;
+      // Methode retenue = methode de la periode (already the least-precise of both bounds)
+      const methodeRetenue = periode.methodeEstimation;
 
       tracePeriodes.push({
-        bacId: periode.bacId,
-        bacNom: bacNomMap.get(periode.bacId) ?? (periode.bacId === "unknown" ? "inconnu" : periode.bacId),
         dateDebut: periode.dateDebut,
         dateFin: periode.dateFin,
-        dureeJours,
+        dureeJours: periode.dureeJours,
         quantiteKg: periode.quantiteKg,
         poidsMoyenDebut,
         methodeDebut,
-        detailEstimationDebut: debutEstim?.detail ?? null,
+        detailEstimationDebut: periode.detailEstimationDebut,
         poidsMoyenFin,
         methodeFin,
-        detailEstimationFin: finEstim?.detail ?? null,
+        detailEstimationFin: periode.detailEstimationFin,
         methodeRetenue,
         nombreVivants,
         // Display values rounded to 2 decimals; gain uses raw values above for FCR accuracy

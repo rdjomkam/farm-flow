@@ -132,6 +132,74 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-055 — Gompertz CLARIAS_DEFAULTS produit des poids absurdes sur vague non calibrée
+**Sprint :** ADR-033 fix | **Date :** 2026-04-06
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/queries/analytics.ts`, `src/lib/feed-periods.ts`
+
+**Symptôme :**
+Sur une vague sans calibrage (`vague.gompertz === null`), le FCR calculé affiche des valeurs aberrantes : des périodes entières ont un gain négatif car le poids estimé au début de la période (43 g) est supérieur au poids estimé en fin de période (pourtant basé sur des biométries réelles de 100 g). Ces périodes à gain négatif sont exclues du calcul FCR, ce qui réduit artificiellement le nombre de périodes exploitables et biaise le résultat.
+
+**Cause racine :**
+Lors du passage à "Gompertz systématiquement" (ADR-034 initial), le contexte Gompertz était construit depuis `CLARIAS_DEFAULTS` (`W∞ = 1500 g`, `k = 0.018`, `ti = 95 jours`) quand `vague.gompertz` était absent. Ces paramètres génériques ne correspondent pas à l'élevage réel — ils produisent une courbe qui diverge massivement des mesures terrain (43 g prédit vs 100 g mesuré à J30). Le modèle était donc pire que l'interpolation linéaire pour les vagues non calibrées.
+
+**Fix :**
+Ne construire le contexte Gompertz que si un enregistrement calibré existe en base (`vague.gompertz !== null`). Quand `null`, laisser `gompertzCtx = undefined` afin que le système retombe en interpolation linéaire entre les points de biométrie réels :
+```typescript
+// Avant (incorrect — produit des poids absurdes) :
+const gompertzCtx = vague.gompertz
+  ? buildGompertzContext(vague.gompertz)
+  : buildGompertzContext(CLARIAS_DEFAULTS); // diverge si non calibré
+
+// Après (correct) :
+const gompertzCtx = vague.gompertz
+  ? buildGompertzContext(vague.gompertz)
+  : undefined; // fallback vers interpolation linéaire
+```
+
+**Leçon / Règle :**
+Les paramètres Gompertz génériques (`CLARIAS_DEFAULTS`) ne peuvent être utilisés comme fallback d'interpolation : ils représentent une population moyenne, pas la vague spécifique en cours d'élevage. Le Gompertz n'est valide que lorsqu'il est ajusté sur les données réelles de la vague (calibrage). Pour toute vague sans calibrage, l'interpolation linéaire entre biométries mesurées est toujours plus précise qu'un modèle générique. Utiliser `CLARIAS_DEFAULTS` dans un calcul de FCR est une source de biais systématique.
+
+---
+
+### ERR-054 — Type `PeriodeAlimentaireVague` créé avec `bacId` malgré la spec ADR
+**Sprint :** ADR-033 discrepancies | **Date :** 2026-04-06
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/types/calculs.ts`
+
+**Symptôme :**
+L'interface `PeriodeAlimentaireVague` — censée représenter une période d'alimentation au niveau vague (sans distinction par bac) — contient un champ `bacId: string`. Les fonctions qui consomment ce type peuvent alors filtrer ou grouper par bac, réintroduisant exactement le comportement per-bac que l'ADR cherchait à éliminer. La pré-analyse détecte cette incohérence avant que des bugs ne soient causés en production.
+
+**Cause racine :**
+L'interface a été créée lors d'un premier pass d'implémentation ADR-033 en copiant la structure de `PeriodeAlimentaire` (per-bac) sans supprimer le champ `bacId`. La spec ADR-033 §3.1 stipule explicitement que `PeriodeAlimentaireVague` n'a pas de `bacId` — mais le développeur n'a pas relu la spec au moment de créer l'interface. Le champ en trop est passé inaperçu car aucun consommateur immédiat ne testait son absence.
+
+**Fix :**
+Supprimer `bacId` de `PeriodeAlimentaireVague` dans `src/types/calculs.ts`. Vérifier à la compilation que les fonctions produisant ce type ne tentent plus de le remplir, et que les consommateurs ne l'utilisent pas.
+
+**Leçon / Règle :**
+Quand on crée un nouveau type en "clonant" un type existant, relire la spec ADR pour identifier les champs à ne PAS inclure — pas seulement ceux à ajouter. Appliquer un diff mental systématique : Nouveau type = Ancien type − {champs supprimés par la spec} + {champs ajoutés par la spec}. Un champ hérité par inadvertance dans un type "vague-level" qui ne devrait pas avoir de clé d'entité peut être détecté par la pré-analyse avant tout merge.
+
+---
+
+### ERR-053 — Commentaire ADR "fix appliqué" sur du code per-bac non corrigé
+**Sprint :** ADR-033 discrepancies | **Date :** 2026-04-06
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/feed-periods.ts`, `src/lib/queries/analytics.ts`
+
+**Symptôme :**
+Le commentaire dans `segmenterPeriodesAlimentaires` indique "Weight estimation uses the VAGUE-LEVEL Gompertz curve via `interpolerPoidsVague` (ALL biometries, NOT filtered by bacId)" — ce qui est vrai pour l'estimation du poids, mais la segmentation elle-même reste per-bac (groupement par `bacId` ligne 536). De même, `analytics.ts` porte le commentaire "ADR-033 DISC-09: build `mortalitesParBac` (flat Map)" alors que DISC-09 demandait de passer à un tableau plat `mortalitesTotales`. La pré-analyse détecte des commentaires contradictoires avec le code réel.
+
+**Cause racine :**
+L'implémentation a été réalisée en deux passes : une première passe a corrigé l'estimation du poids (interpolation vague-level), puis des commentaires "ADR-033 fixé" ont été ajoutés. Mais la deuxième correction (segmentation vague-level) n'a jamais été effectuée. Les commentaires optimistes ont masqué l'état réel du code lors des reviews suivantes.
+
+**Fix :**
+Les discrepancies DISC-03/05/06/08/09/11/12 ont finalement été reclassées "hors-scope" après validation utilisateur : l'algorithme confirmé maintient la segmentation per-bac et le `nombreVivants` per-bac — seule l'estimation du poids passe en vague-level. Les commentaires trompeurs ont été corrigés lors de la review ADR-033 (remarque I5 dans `review-ADR-033.md`).
+
+**Leçon / Règle :**
+Ne pas ajouter de commentaire "fix ADR-XXX DISC-YY" avant que la totalité de la correction correspondante soit effectuée. Un commentaire qui décrit un état futur désiré plutôt que l'état réel du code est plus dangereux qu'une absence de commentaire : il induit en erreur les reviewers et bloque la détection du travail restant. Utiliser plutôt un `// TODO(ADR-033 DISC-09): replace mortalitesParBac Map with flat mortalitesTotales array` tant que la correction n'est pas faite.
+
+---
+
 ### ERR-052 — FCR : numérateur et dénominateur agrégés sur des périodes différentes
 **Sprint :** ADR-033 | **Date :** 2026-04-05
 **Sévérité :** Haute

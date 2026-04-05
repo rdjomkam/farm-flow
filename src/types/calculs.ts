@@ -638,6 +638,9 @@ export interface ComparaisonVagues {
  *
  * Produced by segmenterPeriodesAlimentaires() in src/lib/feed-periods.ts.
  * Used for precise FCR calculation when feed switches occur within a vague.
+ *
+ * NOTE: bacId is kept here for legacy compatibility with segmenterPeriodesAlimentaires
+ * (per-bac segmentation). For vague-level FCR (ADR-033), use PeriodeAlimentaireVague.
  */
 export interface PeriodeAlimentaire {
   /** Tank identifier ("unknown" for old records without bacId) */
@@ -667,15 +670,12 @@ export interface PeriodeAlimentaire {
 
 /**
  * Coherent feeding period at the vague level — produced by vague-level FCR
- * calculation (ADR-033). Like PeriodeAlimentaire but enriched with full
- * estimation detail on both boundaries.
+ * calculation (ADR-033). Unlike PeriodeAlimentaire, this interface does NOT
+ * contain bacId — periods are at the vague level, not per-tank.
  *
- * Produced by segmenterPeriodesAlimentaires() after the vague-level Gompertz
- * weight estimation refactor.
+ * Produced by segmenterPeriodesAlimentairesVague() in src/lib/feed-periods.ts.
  */
 export interface PeriodeAlimentaireVague {
-  /** Tank identifier ("unknown" for old records without bacId) */
-  bacId: string;
   produitId: string;
   /** First ALIMENTATION releve of the period (inclusive) */
   dateDebut: Date;
@@ -689,7 +689,7 @@ export interface PeriodeAlimentaireVague {
   poidsMoyenDebut: number | null;
   /** Average weight (g) at period end — estimated from vague-level Gompertz */
   poidsMoyenFin: number | null;
-  /** Estimated number of living fish during this period (at start, per-tank) */
+  /** Estimated number of living fish during this period (total vague population at start) */
   nombreVivants: number | null;
   /** Biomass at start = poidsMoyenDebut × nombreVivants / 1000 in kg */
   biomasseDebutKg: number | null;
@@ -882,15 +882,10 @@ export type FCRTraceEstimationDetail =
 /**
  * Trace d'audit d'une periode alimentaire.
  *
- * Etend PeriodeAlimentaire avec tous les details de calcul intermediaires
- * necessaires a l'audit complet du FCR. Produite par getFCRTrace().
+ * Produite par getFCRTrace(). Les periodes sont au niveau vague (ADR-033) —
+ * bacId et bacNom ont ete supprimes (DISC-18).
  */
 export interface FCRTracePeriode {
-  /** Identifiant du bac ("unknown" pour les donnees legacy sans bacId) */
-  bacId: string;
-  /** Nom du bac pour l'affichage */
-  bacNom: string;
-
   dateDebut: Date;
   dateFin: Date;
   /** Nombre de jours de la periode (dateFin - dateDebut) */

@@ -1,6 +1,6 @@
 # ADR-033 — Discrepancies Between Confirmed FCR Algorithm and Current Implementation
 
-**Statut :** Référence pour implémentation
+**Statut :** FAIT — Tous les DISC implémentés, tests passent (122), build OK, review validée (2026-04-06)
 **Date :** 2026-04-05
 **Auteur :** @architect
 **Contexte :** ADR-033 a défini l'algorithme FCR au niveau vague (vague-level). Ce document

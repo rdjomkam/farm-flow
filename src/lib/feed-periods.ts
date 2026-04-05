@@ -5,11 +5,12 @@
  * ADR-032: Calibrage-aware nombreVivants + removal of GOMPERTZ_BAC.
  *
  * Core idea: instead of computing FCR globally for a vague, we segment feeding data
- * into coherent periods (one product, one tank, contiguous dates) and compute FCR
- * per period, then aggregate with weighted sum.
+ * into coherent periods and compute FCR per period, then aggregate.
+ * ADR-033: vague-level segmentation (all tanks combined) via segmenterPeriodesAlimentairesVague.
+ * Legacy per-tank segmentation via segmenterPeriodesAlimentaires (deprecated).
  */
 
-import type { PeriodeAlimentaire, FCRTraceEstimationDetail, MethodeEstimationPoids } from "@/types";
+import type { PeriodeAlimentaire, PeriodeAlimentaireVague, FCRTraceEstimationDetail, MethodeEstimationPoids } from "@/types";
 import { gompertzWeight } from "@/lib/gompertz";
 
 // ---------------------------------------------------------------------------
@@ -101,13 +102,10 @@ export interface GompertzVagueContext {
 // ---------------------------------------------------------------------------
 
 /**
- * Interpolates or retrieves the average weight of a tank at a given date.
+ * @deprecated Use interpolerPoidsVague instead (ADR-033 vague-level).
  *
- * Strategy (ADR-028 + ADR-034):
- *   1. Exact biometry — same calendar day  ->  BIOMETRIE_EXACTE
- *   2. Gompertz VAGUE — if gompertzContext provided, evaluate unconditionally
- *   3. Linear interpolation between two bracketing biometries  ->  INTERPOLATION_LINEAIRE
- *   4. Vague initial weight — fallback final  ->  VALEUR_INITIALE
+ * Interpolates or retrieves the average weight of a tank at a given date.
+ * Filters biometries by bacId — only use for per-tank scenarios.
  *
  * @param targetDate         - date for which to estimate weight
  * @param bacId              - tank identifier (null = whole-vague fallback)
@@ -404,6 +402,8 @@ export function interpolerPoidsVague(
 // ---------------------------------------------------------------------------
 
 /**
+ * @deprecated Use estimerNombreVivantsVague instead (ADR-033 vague-level).
+ *
  * Estime le nombre de poissons vivants dans un bac a une date donnee,
  * en tenant compte des operations de calibrage (ADR-032).
  *
@@ -478,6 +478,229 @@ export function estimerNombreVivantsADate(
 }
 
 // ---------------------------------------------------------------------------
+// estimerNombreVivantsVague (ADR-033)
+// ---------------------------------------------------------------------------
+
+/**
+ * Estime le nombre total de poissons vivants dans la VAGUE ENTIERE a une
+ * date donnee, en tenant compte des operations de calibrage (ADR-033).
+ *
+ * Algorithme vague-level :
+ *   nombreVivants = nombreInitial
+ *                 - Σ mortalitesTotales (avant ou egal a targetDate)
+ *                 - Σ calibrage.nombreMorts (calibrages avant ou egal a targetDate)
+ *
+ * Les redistributions de calibrage (groupes) ne changent pas le total vague :
+ * elles deplacent des poissons entre bacs, sans en ajouter ni supprimer.
+ *
+ * @param targetDate           - date de debut de la periode
+ * @param vagueContext         - contexte vague avec calibrages (ADR-032)
+ * @param mortalitesTotales    - tableau plat de toutes les mortalites de la vague
+ * @returns nombre de vivants estime pour la vague, ou null si impossible
+ */
+export function estimerNombreVivantsVague(
+  targetDate: Date,
+  vagueContext: VagueContext,
+  mortalitesTotales: Array<{ nombreMorts: number; date: Date }>
+): number | null {
+  const targetMs = targetDate.getTime();
+  const vagueDebutMs = vagueContext.dateDebut.getTime();
+
+  let population = vagueContext.nombreInitial;
+
+  // Subtract calibrage deaths (before or equal to targetDate)
+  const calibrages = vagueContext.calibrages ?? [];
+  for (const calibrage of calibrages) {
+    if (calibrage.date.getTime() <= targetMs) {
+      population = Math.max(0, population - calibrage.nombreMorts);
+    }
+  }
+
+  // Subtract all mortality records before or equal to targetDate
+  for (const mort of mortalitesTotales) {
+    const mortMs = mort.date.getTime();
+    if (mortMs > vagueDebutMs && mortMs <= targetMs) {
+      population = Math.max(0, population - mort.nombreMorts);
+    }
+  }
+
+  return population;
+}
+
+// ---------------------------------------------------------------------------
+// segmenterPeriodesAlimentairesVague (ADR-033)
+// ---------------------------------------------------------------------------
+
+/**
+ * Segments feeding records for the WHOLE VAGUE into coherent feeding periods.
+ *
+ * Unlike segmenterPeriodesAlimentaires (per-bac), this function:
+ *   - Does NOT group by bacId — all ALIMENTATION releves of the vague are
+ *     processed together, regardless of which tank they belong to.
+ *   - Uses interpolerPoidsVague (ALL biometries, NO bacId filter).
+ *   - Uses estimerNombreVivantsVague (total population, not per-tank).
+ *
+ * A period is a contiguous run of ALIMENTATION releves using the same
+ * principal product, sorted by date across all tanks.
+ *
+ * @param relevsAlim         - ALIMENTATION releves (all tanks), any order
+ * @param biometries         - ALL biometries of the vague (not filtered by bacId)
+ * @param vagueContext       - vague data (dateDebut, poidsMoyenInitial, bacs, calibrages)
+ * @param mortalitesTotales  - flat array of all mortality records for the vague
+ * @param options            - optional Gompertz context
+ * @returns array of PeriodeAlimentaireVague (one entry per product run at vague level)
+ */
+export function segmenterPeriodesAlimentairesVague(
+  relevsAlim: ReleveAlimPoint[],
+  biometries: BiometriePoint[],
+  vagueContext: VagueContext,
+  mortalitesTotales: Array<{ nombreMorts: number; date: Date }>,
+  options?: {
+    gompertzContext?: GompertzVagueContext;
+  }
+): PeriodeAlimentaireVague[] {
+  if (relevsAlim.length === 0) return [];
+
+  // Sort ALL releves by date ascending (across all tanks)
+  const sorted = [...relevsAlim].sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  const interpolOpts = {
+    gompertzContext: options?.gompertzContext,
+  };
+
+  // Segment into runs of same principal product (across all tanks, all dates)
+  const runs: { produitId: string; releves: ReleveAlimPoint[] }[] = [];
+  let currentProduitId: string | null = null;
+  let currentRun: ReleveAlimPoint[] = [];
+
+  for (const releve of sorted) {
+    const principal = getProduitPrincipal(releve.consommations);
+    if (principal === null) continue;
+
+    if (principal !== currentProduitId) {
+      if (currentRun.length > 0 && currentProduitId !== null) {
+        runs.push({ produitId: currentProduitId, releves: currentRun });
+      }
+      currentProduitId = principal;
+      currentRun = [releve];
+    } else {
+      currentRun.push(releve);
+    }
+  }
+  // Flush last run
+  if (currentRun.length > 0 && currentProduitId !== null) {
+    runs.push({ produitId: currentProduitId, releves: currentRun });
+  }
+
+  const allPeriodes: PeriodeAlimentaireVague[] = [];
+
+  for (const run of runs) {
+    const dateDebut = run.releves[0].date;
+    const dateFin = run.releves.at(-1)!.date;
+
+    const dureeJours = Math.max(
+      0,
+      Math.round((dateFin.getTime() - dateDebut.getTime()) / (1000 * 60 * 60 * 24))
+    );
+
+    // Total aliment consumed in kg for THIS produit in this run
+    let quantiteKg = 0;
+    for (const r of run.releves) {
+      for (const c of r.consommations) {
+        if (c.produitId === run.produitId) {
+          quantiteKg += c.quantiteKg;
+        }
+      }
+    }
+
+    // Estimate weights at period boundaries using vague-level Gompertz (ADR-033)
+    const debutEstim = interpolerPoidsVague(
+      dateDebut,
+      biometries,
+      vagueContext.poidsMoyenInitial,
+      interpolOpts
+    );
+    const finEstim = interpolerPoidsVague(
+      dateFin,
+      biometries,
+      vagueContext.poidsMoyenInitial,
+      interpolOpts
+    );
+
+    const poidsMoyenDebut = debutEstim.poids;
+    const poidsMoyenFin = finEstim.poids;
+
+    // Methode retenue = moins precise des deux bornes (conservative)
+    const methodeRank = (m: MethodeEstimationPoids): number => {
+      if (m === "BIOMETRIE_EXACTE") return 3;
+      if (m === "GOMPERTZ_VAGUE") return 2;
+      if (m === "INTERPOLATION_LINEAIRE") return 1;
+      return 0; // VALEUR_INITIALE
+    };
+    const methodeEstimation: MethodeEstimationPoids =
+      methodeRank(debutEstim.methode) <= methodeRank(finEstim.methode)
+        ? debutEstim.methode
+        : finEstim.methode;
+
+    // ADR-033: nombreVivants = total vague population (not per-tank)
+    const nombreVivants = estimerNombreVivantsVague(
+      dateDebut,
+      vagueContext,
+      mortalitesTotales
+    );
+
+    // Biomasse calculations
+    const biomasseDebutKg =
+      poidsMoyenDebut !== null && nombreVivants !== null
+        ? (poidsMoyenDebut * nombreVivants) / 1000
+        : null;
+    const biomasseFinKg =
+      poidsMoyenFin !== null && nombreVivants !== null
+        ? (poidsMoyenFin * nombreVivants) / 1000
+        : null;
+
+    // Gain biomasse: positive only — negative gain excluded from FCR (ADR degradation rule)
+    let gainBiomasseKg: number | null = null;
+    let gainNegatifExclu = false;
+    if (biomasseDebutKg !== null && biomasseFinKg !== null) {
+      const rawGain = biomasseFinKg - biomasseDebutKg;
+      if (rawGain > 0) {
+        gainBiomasseKg = rawGain;
+      } else {
+        gainNegatifExclu = true;
+      }
+    }
+
+    // Period-level FCR
+    const fcrPeriode =
+      gainBiomasseKg !== null && gainBiomasseKg > 0
+        ? quantiteKg / gainBiomasseKg
+        : null;
+
+    allPeriodes.push({
+      produitId: run.produitId,
+      dateDebut,
+      dateFin,
+      dureeJours,
+      quantiteKg,
+      poidsMoyenDebut,
+      poidsMoyenFin,
+      nombreVivants,
+      biomasseDebutKg,
+      biomasseFinKg,
+      gainBiomasseKg,
+      gainNegatifExclu,
+      methodeEstimation,
+      detailEstimationDebut: debutEstim.detail,
+      detailEstimationFin: finEstim.detail,
+      fcrPeriode,
+    });
+  }
+
+  return allPeriodes;
+}
+
+// ---------------------------------------------------------------------------
 // segmenterPeriodesAlimentaires
 // ---------------------------------------------------------------------------
 
@@ -496,6 +719,8 @@ function getProduitPrincipal(
 }
 
 /**
+ * @deprecated Use segmenterPeriodesAlimentairesVague instead (ADR-033 vague-level).
+ *
  * Segments the feeding records of a vague into coherent feeding periods.
  *
  * A period is a contiguous run of ALIMENTATION releves on the same tank

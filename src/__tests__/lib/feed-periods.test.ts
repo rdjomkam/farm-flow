@@ -26,6 +26,8 @@ import {
   interpolerPoidsBac,
   segmenterPeriodesAlimentaires,
   estimerNombreVivantsADate,
+  estimerNombreVivantsVague,
+  segmenterPeriodesAlimentairesVague,
   type ReleveAlimPoint,
   type BiometriePoint,
   type VagueContext,
@@ -2077,5 +2079,532 @@ describe("segmenterPeriodesAlimentaires — avec calibrages (ADR-032)", () => {
 
     // Les deux periodes doivent avoir des nombreVivants differents
     expect(periodeA!.nombreVivants).not.toBe(periodeB!.nombreVivants);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ADR-033 — estimerNombreVivantsVague : population totale vague
+// ---------------------------------------------------------------------------
+
+describe("estimerNombreVivantsVague — vague-level population (ADR-033)", () => {
+  /**
+   * VagueContext de base : 1000 poissons, debut J0.
+   */
+  const vagueCtx: VagueContext = {
+    dateDebut: makeDate(0),
+    nombreInitial: 1000,
+    poidsMoyenInitial: 10,
+    bacs: [
+      { id: "bac-A", nombreInitial: 500 },
+      { id: "bac-B", nombreInitial: 500 },
+    ],
+  };
+
+  it("retourne nombreInitial quand pas de mortalites ni calibrages", () => {
+    const result = estimerNombreVivantsVague(makeDate(10), vagueCtx, []);
+    expect(result).toBe(1000);
+  });
+
+  it("soustrait les mortalites avant ou egal a targetDate", () => {
+    // 10 morts au J5, target = J10 -> 1000 - 10 = 990
+    const mortalites = [{ nombreMorts: 10, date: makeDate(5) }];
+    const result = estimerNombreVivantsVague(makeDate(10), vagueCtx, mortalites);
+    expect(result).toBe(990);
+  });
+
+  it("ignore les mortalites apres targetDate", () => {
+    // 50 morts au J20, target = J10 -> pas de soustraction
+    const mortalites = [{ nombreMorts: 50, date: makeDate(20) }];
+    const result = estimerNombreVivantsVague(makeDate(10), vagueCtx, mortalites);
+    expect(result).toBe(1000);
+  });
+
+  it("soustrait calibrage.nombreMorts si calibrage.date <= targetDate", () => {
+    // Calibrage au J25 avec 20 morts, target = J30
+    const ctx: VagueContext = {
+      ...vagueCtx,
+      calibrages: [
+        {
+          date: makeDate(25),
+          nombreMorts: 20,
+          groupes: [
+            { destinationBacId: "bac-A", nombrePoissons: 490, poidsMoyen: 200 },
+            { destinationBacId: "bac-B", nombrePoissons: 490, poidsMoyen: 200 },
+          ],
+        },
+      ],
+    };
+    const result = estimerNombreVivantsVague(makeDate(30), ctx, []);
+    // 1000 - 20 (calibrage) = 980
+    expect(result).toBe(980);
+  });
+
+  it("ignore calibrage.nombreMorts si calibrage.date > targetDate", () => {
+    // Calibrage au J30, target = J20 -> calibrage dans le futur -> ignorer
+    const ctx: VagueContext = {
+      ...vagueCtx,
+      calibrages: [
+        {
+          date: makeDate(30),
+          nombreMorts: 20,
+          groupes: [],
+        },
+      ],
+    };
+    const result = estimerNombreVivantsVague(makeDate(20), ctx, []);
+    expect(result).toBe(1000);
+  });
+
+  it("ne descend pas en dessous de 0", () => {
+    // 2000 morts declarees alors que seulement 1000 poissons
+    const mortalites = [{ nombreMorts: 2000, date: makeDate(5) }];
+    const result = estimerNombreVivantsVague(makeDate(10), vagueCtx, mortalites);
+    expect(result).toBe(0);
+  });
+
+  it("combine mortalites et calibrage.nombreMorts correctement", () => {
+    // 1000 poissons initiaux
+    // Calibrage au J20 : 20 morts
+    // Mortalite au J25 : 30 morts
+    // Mortalite au J30 : 50 morts (apres target J28 -> ignore)
+    // target = J28 -> 1000 - 20 - 30 = 950
+    const ctx: VagueContext = {
+      ...vagueCtx,
+      calibrages: [
+        {
+          date: makeDate(20),
+          nombreMorts: 20,
+          groupes: [],
+        },
+      ],
+    };
+    const mortalites = [
+      { nombreMorts: 30, date: makeDate(25) },
+      { nombreMorts: 50, date: makeDate(30) }, // apres target
+    ];
+    const result = estimerNombreVivantsVague(makeDate(28), ctx, mortalites);
+    expect(result).toBe(950);
+  });
+
+  it("mortalite le meme jour que targetDate est comptee (<=)", () => {
+    // Mortalite exactement au J10, targetDate = J10 -> doit etre comptee
+    const mortalites = [{ nombreMorts: 15, date: makeDate(10) }];
+    const result = estimerNombreVivantsVague(makeDate(10), vagueCtx, mortalites);
+    expect(result).toBe(985);
+  });
+
+  it("mortalite le meme jour que vagueDebut est ignoree (> vagueDebutMs)", () => {
+    // Mortalite exactement au J0 (vagueDebut) -> date > vagueDebutMs est FALSE -> ignore
+    const mortalites = [{ nombreMorts: 100, date: makeDate(0) }];
+    const result = estimerNombreVivantsVague(makeDate(10), vagueCtx, mortalites);
+    // J0 == vagueDebutMs, condition est mortMs > vagueDebutMs -> false -> non soustraite
+    expect(result).toBe(1000);
+  });
+
+  it("multiple calibrages : tous ceux <= targetDate sont soustraits", () => {
+    // Deux calibrages : J10 (10 morts), J20 (15 morts), target = J25
+    // 1000 - 10 - 15 = 975
+    const ctx: VagueContext = {
+      ...vagueCtx,
+      calibrages: [
+        { date: makeDate(10), nombreMorts: 10, groupes: [] },
+        { date: makeDate(20), nombreMorts: 15, groupes: [] },
+        { date: makeDate(30), nombreMorts: 50, groupes: [] }, // futur
+      ],
+    };
+    const result = estimerNombreVivantsVague(makeDate(25), ctx, []);
+    expect(result).toBe(975);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ADR-033 — segmenterPeriodesAlimentairesVague : FCR vague-level sans bacId
+// ---------------------------------------------------------------------------
+
+describe("segmenterPeriodesAlimentairesVague — vague-level segmentation (ADR-033)", () => {
+  /**
+   * Contexte Gompertz pour les tests vague-level.
+   * W∞=1500, K=0.0488, ti=45.68, r2=0.99, HIGH
+   */
+  const GOMPERTZ_VAGUE_CTX: GompertzVagueContext = {
+    wInfinity: 1500,
+    k: 0.0488,
+    ti: 45.68,
+    r2: 0.9909,
+    biometrieCount: 12,
+    confidenceLevel: "HIGH",
+    vagueDebut: makeDate(0),
+  };
+
+  /**
+   * Contexte vague de base : 1000 poissons, 2 bacs.
+   */
+  const vagueCtxBase: VagueContext = {
+    dateDebut: makeDate(0),
+    nombreInitial: 1000,
+    poidsMoyenInitial: 10,
+    bacs: [
+      { id: "bac-A", nombreInitial: 500 },
+      { id: "bac-B", nombreInitial: 500 },
+    ],
+  };
+
+  it("entrees vides -> tableau vide", () => {
+    const result = segmenterPeriodesAlimentairesVague([], [], vagueCtxBase, []);
+    expect(result).toEqual([]);
+  });
+
+  it("releves sans consommations -> tableau vide", () => {
+    const releves = [
+      makeReleve("r1", "bac-A", 5, []),
+      makeReleve("r2", "bac-B", 10, []),
+    ];
+    const result = segmenterPeriodesAlimentairesVague(releves, [], vagueCtxBase, []);
+    expect(result).toHaveLength(0);
+  });
+
+  it("segmente tous bacs confondus : 1 produit -> 1 periode vague (pas de groupement par bacId)", () => {
+    // bac-A et bac-B ont tous les deux le meme produit -> 1 seule periode vague
+    const releves = [
+      makeReleve("r1", "bac-A", 1, [{ produitId: "prod-X", quantiteKg: 3 }]),
+      makeReleve("r2", "bac-B", 3, [{ produitId: "prod-X", quantiteKg: 4 }]),
+      makeReleve("r3", "bac-A", 7, [{ produitId: "prod-X", quantiteKg: 3 }]),
+    ];
+    const result = segmenterPeriodesAlimentairesVague(releves, [], vagueCtxBase, []);
+    // Pas de bacId dans PeriodeAlimentaireVague -> 1 seule periode (tous bacs confondus)
+    expect(result).toHaveLength(1);
+    expect(result[0].produitId).toBe("prod-X");
+    // quantiteKg = somme de tout l'aliment du produit
+    expect(result[0].quantiteKg).toBe(10);
+  });
+
+  it("les periodes ne contiennent PAS de bacId (structure PeriodeAlimentaireVague)", () => {
+    const releves = [
+      makeReleve("r1", "bac-A", 5, [{ produitId: "prod-X", quantiteKg: 2 }]),
+    ];
+    const result = segmenterPeriodesAlimentairesVague(releves, [], vagueCtxBase, []);
+    expect(result).toHaveLength(1);
+    // PeriodeAlimentaireVague ne doit pas avoir de bacId
+    const periode = result[0];
+    expect("bacId" in periode).toBe(false);
+  });
+
+  it("changement de produit -> 2 periodes vague distinctes", () => {
+    // Premier produit J1-J7, second produit J10-J14
+    const releves = [
+      makeReleve("r1", "bac-A", 1, [{ produitId: "prod-X", quantiteKg: 3 }]),
+      makeReleve("r2", "bac-B", 4, [{ produitId: "prod-X", quantiteKg: 4 }]),
+      makeReleve("r3", "bac-A", 7, [{ produitId: "prod-X", quantiteKg: 3 }]),
+      makeReleve("r4", "bac-A", 10, [{ produitId: "prod-Y", quantiteKg: 5 }]),
+      makeReleve("r5", "bac-B", 14, [{ produitId: "prod-Y", quantiteKg: 5 }]),
+    ];
+    const result = segmenterPeriodesAlimentairesVague(releves, [], vagueCtxBase, []);
+    expect(result).toHaveLength(2);
+    const periodeX = result.find((p) => p.produitId === "prod-X");
+    const periodeY = result.find((p) => p.produitId === "prod-Y");
+    expect(periodeX).toBeDefined();
+    expect(periodeY).toBeDefined();
+    expect(periodeX!.quantiteKg).toBe(10);
+    expect(periodeY!.quantiteKg).toBe(10);
+  });
+
+  it("nombreVivants est la population totale de la vague (pas per-bac)", () => {
+    // vagueCtxBase : 1000 poissons initiaux
+    // Pas de mortalites ni calibrages -> nombreVivants = 1000
+    const releves = [
+      makeReleve("r1", "bac-A", 5, [{ produitId: "prod-X", quantiteKg: 2 }]),
+      makeReleve("r2", "bac-B", 5, [{ produitId: "prod-X", quantiteKg: 2 }]),
+    ];
+    const result = segmenterPeriodesAlimentairesVague(releves, [], vagueCtxBase, []);
+    expect(result).toHaveLength(1);
+    // nombreVivants = total vague (1000), pas per-bac (500 par bac)
+    expect(result[0].nombreVivants).toBe(1000);
+  });
+
+  it("nombreVivants tient compte des mortalites avant dateDebut de la periode", () => {
+    // 50 morts au J3, periode debut = J5 -> 1000 - 50 = 950
+    const releves = [
+      makeReleve("r1", "bac-A", 5, [{ produitId: "prod-X", quantiteKg: 2 }]),
+    ];
+    const mortalites = [{ nombreMorts: 50, date: makeDate(3) }];
+    const result = segmenterPeriodesAlimentairesVague(releves, [], vagueCtxBase, mortalites);
+    expect(result[0].nombreVivants).toBe(950);
+  });
+
+  it("nombreVivants tient compte de calibrage.nombreMorts avant dateDebut de la periode", () => {
+    // Calibrage J5 avec 20 morts, periode debut = J10 -> 1000 - 20 = 980
+    const ctx: VagueContext = {
+      ...vagueCtxBase,
+      calibrages: [
+        {
+          date: makeDate(5),
+          nombreMorts: 20,
+          groupes: [],
+        },
+      ],
+    };
+    const releves = [
+      makeReleve("r1", "bac-A", 10, [{ produitId: "prod-X", quantiteKg: 2 }]),
+    ];
+    const result = segmenterPeriodesAlimentairesVague(releves, [], ctx, []);
+    expect(result[0].nombreVivants).toBe(980);
+  });
+
+  it("l'estimation de poids utilise interpolerPoidsVague (toutes biometries, pas de filtre bacId)", () => {
+    // Biometries uniquement sur bac-B (pas bac-A)
+    // La fonction vague-level ne filtre pas par bacId -> doit trouver la biometrie de bac-B
+    const biometries: BiometriePoint[] = [
+      makeBio("bac-B", 5, 100), // exact match pour la periode
+    ];
+    const releves = [
+      makeReleve("r1", "bac-A", 5, [{ produitId: "prod-X", quantiteKg: 2 }]),
+    ];
+    const result = segmenterPeriodesAlimentairesVague(releves, biometries, vagueCtxBase, []);
+    // Avec filtre per-bac, bac-A n'aurait pas de biometrie -> VALEUR_INITIALE
+    // Sans filtre (vague-level), biometrie de bac-B a J5 est utilisee -> BIOMETRIE_EXACTE
+    expect(result[0].methodeEstimation).toBe("BIOMETRIE_EXACTE");
+    expect(result[0].poidsMoyenDebut).toBe(100);
+  });
+
+  it("les gains negatifs sont exclus (gainBiomasseKg = null, gainNegatifExclu = true)", () => {
+    // Biometries : J5 = 200g, J15 = 100g -> gain negatif sur la periode
+    const biometries: BiometriePoint[] = [
+      makeBio("bac-A", 5, 200),
+      makeBio("bac-A", 15, 100),
+    ];
+    const releves = [
+      makeReleve("r1", "bac-A", 5, [{ produitId: "prod-X", quantiteKg: 5 }]),
+      makeReleve("r2", "bac-A", 15, [{ produitId: "prod-X", quantiteKg: 5 }]),
+    ];
+    const result = segmenterPeriodesAlimentairesVague(releves, biometries, vagueCtxBase, []);
+    expect(result).toHaveLength(1);
+    expect(result[0].gainBiomasseKg).toBeNull();
+    expect(result[0].gainNegatifExclu).toBe(true);
+  });
+
+  it("gainNegatifExclu = false quand gain positif", () => {
+    // Biometries : J5 = 100g, J15 = 200g -> gain positif
+    const biometries: BiometriePoint[] = [
+      makeBio("bac-A", 5, 100),
+      makeBio("bac-A", 15, 200),
+    ];
+    const releves = [
+      makeReleve("r1", "bac-A", 5, [{ produitId: "prod-X", quantiteKg: 5 }]),
+      makeReleve("r2", "bac-A", 15, [{ produitId: "prod-X", quantiteKg: 5 }]),
+    ];
+    const result = segmenterPeriodesAlimentairesVague(releves, biometries, vagueCtxBase, []);
+    expect(result).toHaveLength(1);
+    expect(result[0].gainBiomasseKg).not.toBeNull();
+    expect(result[0].gainNegatifExclu).toBe(false);
+  });
+
+  it("fcrPeriode = quantiteKg / gainBiomasseKg quand gain positif", () => {
+    // poids debut = 100g, poids fin = 200g, 1000 vivants
+    // biomasse debut = 100 * 1000 / 1000 = 100 kg
+    // biomasse fin = 200 * 1000 / 1000 = 200 kg
+    // gain = 200 - 100 = 100 kg
+    // aliment = 50 kg -> FCR = 50 / 100 = 0.5
+    const biometries: BiometriePoint[] = [
+      makeBio("bac-A", 5, 100),
+      makeBio("bac-A", 15, 200),
+    ];
+    const releves = [
+      makeReleve("r1", "bac-A", 5, [{ produitId: "prod-X", quantiteKg: 25 }]),
+      makeReleve("r2", "bac-A", 15, [{ produitId: "prod-X", quantiteKg: 25 }]),
+    ];
+    const result = segmenterPeriodesAlimentairesVague(releves, biometries, vagueCtxBase, []);
+    expect(result).toHaveLength(1);
+    expect(result[0].fcrPeriode).not.toBeNull();
+    expect(result[0].fcrPeriode).toBeCloseTo(0.5, 4);
+  });
+
+  it("fcrPeriode = null quand gainBiomasseKg = null", () => {
+    // Gain negatif -> fcrPeriode doit etre null
+    const biometries: BiometriePoint[] = [
+      makeBio("bac-A", 5, 300),
+      makeBio("bac-A", 15, 100),
+    ];
+    const releves = [
+      makeReleve("r1", "bac-A", 5, [{ produitId: "prod-X", quantiteKg: 10 }]),
+      makeReleve("r2", "bac-A", 15, [{ produitId: "prod-X", quantiteKg: 10 }]),
+    ];
+    const result = segmenterPeriodesAlimentairesVague(releves, biometries, vagueCtxBase, []);
+    expect(result[0].fcrPeriode).toBeNull();
+  });
+
+  it("retries en entree dans le desordre -> tries par date correctement", () => {
+    const releves = [
+      makeReleve("r3", "bac-A", 10, [{ produitId: "prod-X", quantiteKg: 3 }]),
+      makeReleve("r1", "bac-A", 1, [{ produitId: "prod-X", quantiteKg: 2 }]),
+      makeReleve("r2", "bac-B", 5, [{ produitId: "prod-X", quantiteKg: 4 }]),
+    ];
+    const result = segmenterPeriodesAlimentairesVague(releves, [], vagueCtxBase, []);
+    expect(result).toHaveLength(1);
+    expect(result[0].dateDebut.getTime()).toBe(makeDate(1).getTime());
+    expect(result[0].dateFin.getTime()).toBe(makeDate(10).getTime());
+    expect(result[0].quantiteKg).toBe(9);
+  });
+
+  it("dureeJours = difference en jours entre dateDebut et dateFin", () => {
+    const releves = [
+      makeReleve("r1", "bac-A", 0, [{ produitId: "prod-X", quantiteKg: 5 }]),
+      makeReleve("r2", "bac-B", 14, [{ produitId: "prod-X", quantiteKg: 5 }]),
+    ];
+    const result = segmenterPeriodesAlimentairesVague(releves, [], vagueCtxBase, []);
+    expect(result[0].dureeJours).toBe(14);
+  });
+
+  it("utilise Gompertz vague-level quand contexte fourni", () => {
+    // Pas de biometries -> Gompertz doit etre utilise
+    const releves = [
+      makeReleve("r1", "bac-A", 5, [{ produitId: "prod-X", quantiteKg: 3 }]),
+      makeReleve("r2", "bac-B", 20, [{ produitId: "prod-X", quantiteKg: 3 }]),
+    ];
+    const result = segmenterPeriodesAlimentairesVague(releves, [], vagueCtxBase, [], {
+      gompertzContext: GOMPERTZ_VAGUE_CTX,
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0].methodeEstimation).toBe("GOMPERTZ_VAGUE");
+    expect(result[0].poidsMoyenDebut).toBeGreaterThan(0);
+    expect(result[0].poidsMoyenFin).toBeGreaterThan(0);
+  });
+
+  // ---- Scenario de production simule : 3 bacs, calibrage, mortalites -------
+
+  it("scenario production 3 bacs : une seule periode vague (tous bacs confondus)", () => {
+    // Vague : 1300 poissons, 3 bacs
+    // Calibrage J25 : 20 morts
+    // Mortalites au J30 : 10 morts
+    // Alimentation : bac-01 J21-J25, bac-02 J21-J35, bac-03 J25-J35 (meme produit)
+    // -> 1 seule periode vague (meme produit, tous bacs)
+
+    const vagueProduction: VagueContext = {
+      dateDebut: makeDate(0),
+      nombreInitial: 1300,
+      poidsMoyenInitial: 0.5,
+      bacs: [
+        { id: "bac-01", nombreInitial: 650 },
+        { id: "bac-02", nombreInitial: 650 },
+        { id: "bac-03", nombreInitial: null },
+      ],
+      calibrages: [
+        {
+          date: makeDate(25),
+          nombreMorts: 20,
+          groupes: [
+            { destinationBacId: "bac-01", nombrePoissons: 130, poidsMoyen: 160 },
+            { destinationBacId: "bac-02", nombrePoissons: 520, poidsMoyen: 160 },
+            { destinationBacId: "bac-03", nombrePoissons: 650, poidsMoyen: 160 },
+          ],
+        },
+      ],
+    };
+
+    const mortalites = [
+      { nombreMorts: 10, date: makeDate(30) },
+    ];
+
+    const releves = [
+      // bac-01
+      makeReleve("r01-a", "bac-01", 21, [{ produitId: "skretting-3mm", quantiteKg: 5 }]),
+      makeReleve("r01-b", "bac-01", 25, [{ produitId: "skretting-3mm", quantiteKg: 5 }]),
+      // bac-02
+      makeReleve("r02-a", "bac-02", 21, [{ produitId: "skretting-3mm", quantiteKg: 10 }]),
+      makeReleve("r02-b", "bac-02", 28, [{ produitId: "skretting-3mm", quantiteKg: 20 }]),
+      makeReleve("r02-c", "bac-02", 35, [{ produitId: "skretting-3mm", quantiteKg: 20 }]),
+      // bac-03
+      makeReleve("r03-a", "bac-03", 25, [{ produitId: "skretting-3mm", quantiteKg: 15 }]),
+      makeReleve("r03-b", "bac-03", 30, [{ produitId: "skretting-3mm", quantiteKg: 15 }]),
+      makeReleve("r03-c", "bac-03", 35, [{ produitId: "skretting-3mm", quantiteKg: 10 }]),
+    ];
+
+    const result = segmenterPeriodesAlimentairesVague(releves, [], vagueProduction, mortalites, {
+      gompertzContext: GOMPERTZ_VAGUE_CTX,
+    });
+
+    // Tous bacs confondus, meme produit -> 1 seule periode vague
+    expect(result).toHaveLength(1);
+    expect(result[0].produitId).toBe("skretting-3mm");
+
+    // quantiteKg = 5+5 + 10+20+20 + 15+15+10 = 100kg
+    expect(result[0].quantiteKg).toBe(100);
+
+    // nombreVivants = population vague au J21 (dateDebut)
+    // = 1300 - 0 mortalites avant J21 (calibrage et mortalite sont apres J21)
+    expect(result[0].nombreVivants).toBe(1300);
+
+    // PeriodeAlimentaireVague n'a pas de bacId
+    expect("bacId" in result[0]).toBe(false);
+  });
+
+  it("scenario production 3 bacs : 2 produits -> 2 periodes vague distinctes", () => {
+    // Meme vague que ci-dessus mais bac-02 passe sur skretting-4mm apres J28
+    const vagueProduction: VagueContext = {
+      dateDebut: makeDate(0),
+      nombreInitial: 1300,
+      poidsMoyenInitial: 0.5,
+      bacs: [
+        { id: "bac-01", nombreInitial: 650 },
+        { id: "bac-02", nombreInitial: 650 },
+      ],
+    };
+
+    const releves = [
+      // Premier produit
+      makeReleve("r1", "bac-01", 5, [{ produitId: "prod-A", quantiteKg: 5 }]),
+      makeReleve("r2", "bac-02", 5, [{ produitId: "prod-A", quantiteKg: 5 }]),
+      makeReleve("r3", "bac-01", 10, [{ produitId: "prod-A", quantiteKg: 5 }]),
+      // Second produit (changement au J15 pour tous les bacs)
+      makeReleve("r4", "bac-01", 15, [{ produitId: "prod-B", quantiteKg: 8 }]),
+      makeReleve("r5", "bac-02", 15, [{ produitId: "prod-B", quantiteKg: 8 }]),
+    ];
+
+    const result = segmenterPeriodesAlimentairesVague(releves, [], vagueProduction, []);
+    // prod-A : J5-J10, prod-B : J15-J15 -> 2 periodes
+    expect(result).toHaveLength(2);
+
+    const periodeA = result.find((p) => p.produitId === "prod-A");
+    const periodeB = result.find((p) => p.produitId === "prod-B");
+    expect(periodeA).toBeDefined();
+    expect(periodeB).toBeDefined();
+    expect(periodeA!.quantiteKg).toBe(15);
+    expect(periodeB!.quantiteKg).toBe(16);
+  });
+
+  it("biomasseDebutKg et biomasseFinKg sont calcules correctement", () => {
+    // Biometries : J5 = 100g, J15 = 200g
+    // nombreVivants = 1000 (pas de mortalites)
+    // biomasseDebut = 100 * 1000 / 1000 = 100 kg
+    // biomasseFin = 200 * 1000 / 1000 = 200 kg
+    const biometries: BiometriePoint[] = [
+      makeBio("bac-A", 5, 100),
+      makeBio("bac-A", 15, 200),
+    ];
+    const releves = [
+      makeReleve("r1", "bac-A", 5, [{ produitId: "prod-X", quantiteKg: 5 }]),
+      makeReleve("r2", "bac-A", 15, [{ produitId: "prod-X", quantiteKg: 5 }]),
+    ];
+    const result = segmenterPeriodesAlimentairesVague(releves, biometries, vagueCtxBase, []);
+    expect(result).toHaveLength(1);
+    expect(result[0].biomasseDebutKg).toBeCloseTo(100, 4);
+    expect(result[0].biomasseFinKg).toBeCloseTo(200, 4);
+    expect(result[0].gainBiomasseKg).toBeCloseTo(100, 4);
+  });
+
+  it("methodeEstimation retourne la methode la moins precise des deux bornes (conservateur)", () => {
+    // Debut = biometrie exacte (rang 3), fin = VALEUR_INITIALE (rang 0)
+    // -> methodeEstimation = VALEUR_INITIALE (le moins precis)
+    const biometries: BiometriePoint[] = [
+      makeBio("bac-A", 5, 100), // exacte pour debut
+    ];
+    const releves = [
+      makeReleve("r1", "bac-A", 5, [{ produitId: "prod-X", quantiteKg: 5 }]),
+      // Fin a J40 : pas de biometrie, pas de Gompertz -> VALEUR_INITIALE
+      makeReleve("r2", "bac-A", 40, [{ produitId: "prod-X", quantiteKg: 5 }]),
+    ];
+    const result = segmenterPeriodesAlimentairesVague(releves, biometries, vagueCtxBase, []);
+    expect(result).toHaveLength(1);
+    // debut BIOMETRIE_EXACTE (3) > fin VALEUR_INITIALE (0) -> methode = VALEUR_INITIALE
+    expect(result[0].methodeEstimation).toBe("VALEUR_INITIALE");
   });
 });
