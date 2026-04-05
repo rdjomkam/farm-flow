@@ -26,7 +26,6 @@ import type {
 
 type MethodeEstimation =
   | "BIOMETRIE_EXACTE"
-  | "GOMPERTZ_BAC"
   | "GOMPERTZ_VAGUE"
   | "INTERPOLATION_LINEAIRE"
   | "VALEUR_INITIALE";
@@ -38,10 +37,6 @@ function MethodeBadge({ methode }: { methode: MethodeEstimation }) {
     BIOMETRIE_EXACTE: {
       label: t("biometrieExacte"),
       className: "bg-green-100 text-green-700",
-    },
-    GOMPERTZ_BAC: {
-      label: t("gompertzBac"),
-      className: "bg-blue-100 text-blue-700",
     },
     GOMPERTZ_VAGUE: {
       label: t("gompertzVague"),
@@ -125,7 +120,7 @@ function EstimationDetailBlock({ detail }: { detail: FCRTraceEstimationDetail | 
     );
   }
 
-  if (detail.methode === "GOMPERTZ_BAC" || detail.methode === "GOMPERTZ_VAGUE") {
+  if (detail.methode === "GOMPERTZ_VAGUE") {
     const p = detail.params;
     const formuleLine = `W(${detail.tJours.toFixed(1)}) = ${p.wInfinity} × exp(−exp(−${p.k.toFixed(4)} × (${detail.tJours.toFixed(1)} − ${p.ti.toFixed(1)}))) = ${detail.resultatG.toFixed(1)} g`;
     return (
@@ -437,9 +432,7 @@ function FCRTraceContent({ produitId, produitNom }: { produitId: string; produit
   }
 
   const strategieLabel =
-    traceData.strategieInterpolation === "GOMPERTZ_BAC"
-      ? t("stratGOMPERTZ_BAC")
-      : traceData.strategieInterpolation === "GOMPERTZ_VAGUE"
+    traceData.strategieInterpolation === "GOMPERTZ_VAGUE"
       ? t("stratGOMPERTZ_VAGUE")
       : t("stratLINEAIRE");
 

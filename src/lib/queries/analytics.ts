@@ -51,7 +51,6 @@ import {
   type BiometriePoint,
   type VagueContext,
   type GompertzVagueContext,
-  type GompertzBacContext,
 } from "@/lib/feed-periods";
 import {
   BENCHMARK_MORTALITE,
@@ -543,16 +542,19 @@ async function computeAlimentMetrics(
           confidenceLevel: true,
         },
       },
-      gompertzBacs: {
+      calibrages: {
         select: {
-          bacId: true,
-          wInfinity: true,
-          k: true,
-          ti: true,
-          r2: true,
-          biometrieCount: true,
-          confidenceLevel: true,
+          date: true,
+          nombreMorts: true,
+          groupes: {
+            select: {
+              destinationBacId: true,
+              nombrePoissons: true,
+              poidsMoyen: true,
+            },
+          },
         },
+        orderBy: { date: "asc" },
       },
     },
   });
@@ -678,17 +680,14 @@ async function computeAlimentMetrics(
       bacs: vague.bacs,
     };
 
-    // ADR-029 + ADR-030: build Gompertz context if available and strategy is configured
+    // ADR-029: build Gompertz context if available and strategy is configured
     const config = vague.configElevage;
     const gompertz = vague.gompertz;
     const interpolStrategy =
       config?.interpolationStrategy ?? StrategieInterpolation.LINEAIRE;
 
-    // INC-02 fix: gompertzContext (vague-level) is needed for GOMPERTZ_BAC as fallback too
     const gompertzContext: GompertzVagueContext | undefined =
-      gompertz &&
-      (interpolStrategy === StrategieInterpolation.GOMPERTZ_VAGUE ||
-        interpolStrategy === StrategieInterpolation.GOMPERTZ_BAC)
+      gompertz && interpolStrategy === StrategieInterpolation.GOMPERTZ_VAGUE
         ? {
             wInfinity: gompertz.wInfinity,
             k: gompertz.k,
@@ -700,40 +699,38 @@ async function computeAlimentMetrics(
           }
         : undefined;
 
-    // ADR-030: build per-tank Gompertz contexts if strategy = GOMPERTZ_BAC
-    let gompertzBacContexts: Map<string, GompertzBacContext> | undefined;
-    if (interpolStrategy === StrategieInterpolation.GOMPERTZ_BAC) {
-      const bacRows = vague.gompertzBacs ?? [];
-      if (bacRows.length > 0) {
-        gompertzBacContexts = new Map(
-          bacRows
-            .filter((b) => b.confidenceLevel !== "INSUFFICIENT_DATA")
-            .map((b) => [
-              b.bacId,
-              {
-                wInfinity: b.wInfinity,
-                k: b.k,
-                ti: b.ti,
-                r2: b.r2,
-                biometrieCount: b.biometrieCount,
-                confidenceLevel: b.confidenceLevel as GompertzBacContext["confidenceLevel"],
-                vagueDebut: vague.dateDebut,
-              },
-            ])
-        );
+    // ADR-032: build mortalitesParBac for calibrage-aware nombreVivants
+    const mortalitesParBac = new Map<string, Array<{ nombreMorts: number; date: Date }>>();
+    for (const r of (relevesByVague.get(vague.id) ?? []).filter(
+      (r) => r.typeReleve === TypeReleve.MORTALITE
+    )) {
+      if (r.bacId) {
+        const list = mortalitesParBac.get(r.bacId) ?? [];
+        list.push({ nombreMorts: r.nombreMorts ?? 0, date: r.date });
+        mortalitesParBac.set(r.bacId, list);
       }
     }
+
+    // ADR-032: update vagueCtx with calibrages
+    const vagueCtxWithCalibrages: VagueContext = {
+      ...vagueCtx,
+      calibrages: vague.calibrages.map((c) => ({
+        date: c.date,
+        nombreMorts: c.nombreMorts,
+        groupes: c.groupes,
+      })),
+    };
 
     // Segmenter all periods, then filter for this product
     const allPeriodes = segmenterPeriodesAlimentaires(
       relevsAlimPoints,
       biometriePoints,
-      vagueCtx,
+      vagueCtxWithCalibrages,
       {
         strategie: interpolStrategy as StrategieInterpolation,
         gompertzContext,
-        gompertzBacContexts,
         gompertzMinPoints: config?.gompertzMinPoints,
+        mortalitesParBac,
       }
     );
     const periodesProduct = allPeriodes.filter((p) => p.produitId === produit.id);
@@ -2508,16 +2505,19 @@ export async function getFCRTrace(
           confidenceLevel: true,
         },
       },
-      gompertzBacs: {
+      calibrages: {
         select: {
-          bacId: true,
-          wInfinity: true,
-          k: true,
-          ti: true,
-          r2: true,
-          biometrieCount: true,
-          confidenceLevel: true,
+          date: true,
+          nombreMorts: true,
+          groupes: {
+            select: {
+              destinationBacId: true,
+              nombrePoissons: true,
+              poidsMoyen: true,
+            },
+          },
         },
+        orderBy: { date: "asc" },
       },
     },
   });
@@ -2606,7 +2606,7 @@ export async function getFCRTrace(
       bacs: vague.bacs,
     };
 
-    // Build Gompertz contexts
+    // ADR-029: build Gompertz context if available and strategy is configured
     const config = vague.configElevage;
     const gompertz = vague.gompertz;
     const interpolStrategy =
@@ -2614,9 +2614,7 @@ export async function getFCRTrace(
       StrategieInterpolation.LINEAIRE;
 
     const gompertzContext: GompertzVagueContext | undefined =
-      gompertz &&
-      (interpolStrategy === StrategieInterpolation.GOMPERTZ_VAGUE ||
-        interpolStrategy === StrategieInterpolation.GOMPERTZ_BAC)
+      gompertz && interpolStrategy === StrategieInterpolation.GOMPERTZ_VAGUE
         ? {
             wInfinity: gompertz.wInfinity,
             k: gompertz.k,
@@ -2628,34 +2626,31 @@ export async function getFCRTrace(
           }
         : undefined;
 
-    let gompertzBacContexts: Map<string, GompertzBacContext> | undefined;
-    if (interpolStrategy === StrategieInterpolation.GOMPERTZ_BAC) {
-      const bacRows = vague.gompertzBacs ?? [];
-      if (bacRows.length > 0) {
-        gompertzBacContexts = new Map(
-          bacRows
-            .filter((b) => b.confidenceLevel !== "INSUFFICIENT_DATA")
-            .map((b) => [
-              b.bacId,
-              {
-                wInfinity: b.wInfinity,
-                k: b.k,
-                ti: b.ti,
-                r2: b.r2,
-                biometrieCount: b.biometrieCount,
-                confidenceLevel: b.confidenceLevel as GompertzBacContext["confidenceLevel"],
-                vagueDebut: vague.dateDebut,
-              },
-            ])
-        );
+    // ADR-032: build mortalitesParBac for calibrage-aware nombreVivants
+    const mortalitesParBac = new Map<string, Array<{ nombreMorts: number; date: Date }>>();
+    for (const r of releves.filter((r) => r.typeReleve === TypeReleve.MORTALITE)) {
+      if (r.bacId) {
+        const list = mortalitesParBac.get(r.bacId) ?? [];
+        list.push({ nombreMorts: r.nombreMorts ?? 0, date: r.date });
+        mortalitesParBac.set(r.bacId, list);
       }
     }
+
+    // ADR-032: update vagueCtx with calibrages
+    const vagueCtxWithCalibrages: VagueContext = {
+      ...vagueCtx,
+      calibrages: vague.calibrages.map((c) => ({
+        date: c.date,
+        nombreMorts: c.nombreMorts,
+        groupes: c.groupes,
+      })),
+    };
 
     const interpolOptions = {
       strategie: interpolStrategy,
       gompertzContext,
-      gompertzBacContexts,
       gompertzMinPoints: config?.gompertzMinPoints ?? undefined,
+      mortalitesParBac,
     };
 
     // Build ReleveAlimPoints for segmentation
@@ -2673,7 +2668,7 @@ export async function getFCRTrace(
     const allPeriodes = segmenterPeriodesAlimentaires(
       relevsAlimPoints,
       biometriePoints,
-      vagueCtx,
+      vagueCtxWithCalibrages,
       interpolOptions
     );
     const periodesProduct = allPeriodes.filter((p) => p.produitId === produitId);
@@ -2746,34 +2741,13 @@ export async function getFCRTrace(
 
       // Methode retenue = moins precise des deux bornes
       const methodeRank = (m: string): number => {
-        if (m === "BIOMETRIE_EXACTE") return 4;
-        if (m === "GOMPERTZ_BAC") return 3;
+        if (m === "BIOMETRIE_EXACTE") return 3;
         if (m === "GOMPERTZ_VAGUE") return 2;
         if (m === "INTERPOLATION_LINEAIRE") return 1;
         return 0;
       };
       const methodeRetenue =
         methodeRank(methodeDebut) <= methodeRank(methodeFin) ? methodeDebut : methodeFin;
-
-      // Gompertz bac params if applicable
-      let gompertzBacParams: FCRTraceGompertzParams | null = null;
-      if (
-        (methodeDebut === "GOMPERTZ_BAC" || methodeFin === "GOMPERTZ_BAC") &&
-        gompertzBacContexts &&
-        resolvedBacId !== null
-      ) {
-        const bacCtx = gompertzBacContexts.get(resolvedBacId);
-        if (bacCtx) {
-          gompertzBacParams = {
-            wInfinity: bacCtx.wInfinity,
-            k: bacCtx.k,
-            ti: bacCtx.ti,
-            r2: bacCtx.r2,
-            biometrieCount: bacCtx.biometrieCount,
-            confidenceLevel: bacCtx.confidenceLevel,
-          };
-        }
-      }
 
       tracePeriodes.push({
         bacId: periode.bacId,
@@ -2796,7 +2770,6 @@ export async function getFCRTrace(
         gainBiomasseKg: gainBiomasseKgRaw !== null ? Math.round(gainBiomasseKgRaw * 100) / 100 : null,
         gainNegatifExclu,
         fcrPeriode,
-        gompertzBac: gompertzBacParams,
       });
     }
 

@@ -84,7 +84,7 @@ export async function GET(
     // biometrieCount = unique dates (not raw releve count)
     const biometrieCount = groupedByDate.size;
 
-    // 3. Lazy calibration: recalibrate if biometrieCount changed, no record, or config threshold lowered
+    // Lazy calibration: recalibrate if biometrieCount changed, no record, or config threshold lowered
     const existingGompertz = vague.gompertz;
     const minPoints = vague.configElevage?.gompertzMinPoints ?? 5;
     const configWInf = vague.configElevage?.gompertzWInfDefault ?? null;
@@ -142,10 +142,9 @@ export async function GET(
         calibration: null,
         courbe: null,
         dateRecolteEstimee: null,
-        calibrationsBacs: [],
       });
     } else {
-      // 4a. Build weighted-average points per unique date
+      // Build weighted-average points per unique date
       const vagueStartMs = vague.dateDebut.getTime();
       const points = Array.from(groupedByDate.entries())
         .sort(([a], [b]) => a.localeCompare(b))
@@ -164,13 +163,13 @@ export async function GET(
           };
         });
 
-      // 4b. Build initial guess from ConfigElevage if available
+      // Build initial guess from ConfigElevage if available
       const initialGuess: Partial<GompertzParams> = {};
       if (vague.configElevage?.gompertzWInfDefault) initialGuess.wInfinity = vague.configElevage.gompertzWInfDefault;
       if (vague.configElevage?.gompertzKDefault) initialGuess.k = vague.configElevage.gompertzKDefault;
       if (vague.configElevage?.gompertzTiDefault) initialGuess.ti = vague.configElevage.gompertzTiDefault;
 
-      // 4c. Calibrate with aggregated weighted-average points
+      // Calibrate with aggregated weighted-average points
       const result = calibrerGompertz({ points, initialGuess }, minPoints);
 
       if (!result) {
@@ -180,11 +179,10 @@ export async function GET(
           calibration: null,
           courbe: null,
           dateRecolteEstimee: null,
-          calibrationsBacs: [],
         });
       }
 
-      // 4d. Upsert GompertzVague record
+      // Upsert GompertzVague record
       await prisma.gompertzVague.upsert({
         where: { vagueId },
         create: {
@@ -225,7 +223,6 @@ export async function GET(
         calibration: null,
         courbe: null,
         dateRecolteEstimee: null,
-        calibrationsBacs: [],
       });
     }
 
@@ -246,169 +243,6 @@ export async function GET(
       currentDay
     );
 
-    // 7. ADR-030 — Per-tank calibration loop
-    // Load existing GompertzBac records for this vague
-    const existingGompertzBacs = await prisma.gompertzBac.findMany({
-      where: { vagueId, siteId: auth.activeSiteId },
-    });
-    const existingBacMap = new Map(existingGompertzBacs.map((g) => [g.bacId, g]));
-    const vagueStartMs = vague.dateDebut.getTime();
-
-    const calibrationsBacs: {
-      bacId: string;
-      calibration: {
-        params: GompertzParams;
-        r2: number;
-        rmse: number;
-        confidenceLevel: string;
-        biometrieCount: number;
-      } | null;
-    }[] = [];
-
-    for (const bac of vague.bacs) {
-      // Filter biometries for this specific bac
-      const bacBiometries = biometriesRaw.filter((r) => r.bacId === bac.id);
-
-      // Group bac biometries by unique date
-      const bacByDate = new Map<string, typeof bacBiometries>();
-      for (const r of bacBiometries) {
-        const key = new Date(r.date).toISOString().slice(0, 10);
-        const group = bacByDate.get(key);
-        if (group) group.push(r);
-        else bacByDate.set(key, [r]);
-      }
-      const bacBiometrieCount = bacByDate.size;
-
-      // Check if cached record is still valid
-      const existingBacGompertz = existingBacMap.get(bac.id) ?? null;
-      const bacNeedsCalibration =
-        !isCachedGompertzValid(existingBacGompertz, bacBiometrieCount, minPoints, configWInf) ||
-        (existingBacGompertz?.confidenceLevel === "INSUFFICIENT_DATA" && bacBiometrieCount >= minPoints);
-
-      if (!bacNeedsCalibration && existingBacGompertz && existingBacGompertz.confidenceLevel !== "INSUFFICIENT_DATA") {
-        // Use cached bac calibration
-        calibrationsBacs.push({
-          bacId: bac.id,
-          calibration: {
-            params: {
-              wInfinity: existingBacGompertz.wInfinity,
-              k: existingBacGompertz.k,
-              ti: existingBacGompertz.ti,
-            },
-            r2: existingBacGompertz.r2,
-            rmse: existingBacGompertz.rmse,
-            confidenceLevel: existingBacGompertz.confidenceLevel,
-            biometrieCount: existingBacGompertz.biometrieCount,
-          },
-        });
-        continue;
-      }
-
-      if (bacBiometrieCount < minPoints) {
-        // Not enough data for this bac — upsert INSUFFICIENT_DATA
-        await prisma.gompertzBac.upsert({
-          where: { bacId: bac.id },
-          create: {
-            bacId: bac.id,
-            vagueId,
-            siteId: auth.activeSiteId,
-            wInfinity: 0,
-            k: 0,
-            ti: 0,
-            r2: 0,
-            rmse: 0,
-            biometrieCount: bacBiometrieCount,
-            confidenceLevel: "INSUFFICIENT_DATA",
-            configWInfUsed: configWInf,
-          },
-          update: {
-            biometrieCount: bacBiometrieCount,
-            confidenceLevel: "INSUFFICIENT_DATA",
-            configWInfUsed: configWInf,
-            calculatedAt: new Date(),
-          },
-        });
-        calibrationsBacs.push({ bacId: bac.id, calibration: null });
-        continue;
-      }
-
-      // Build weighted-average points per unique date for this bac.
-      // Note: all releves here share the same bacId (we are inside a per-bac loop),
-      // so vivantsByBac.get(r.bacId) resolves to the same value for every entry.
-      // The weighting therefore has no effect — this is effectively a simple
-      // arithmetic average. Weight is kept at 1 for clarity.
-      const bacPoints = Array.from(bacByDate.entries())
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([dateKey, releves]) => {
-          let sumWeighted = 0;
-          let sumWeights = 0;
-          for (const r of releves) {
-            const weight = 1;
-            sumWeighted += r.poidsMoyen! * weight;
-            sumWeights += weight;
-          }
-          const dateMs = new Date(dateKey + "T00:00:00").getTime();
-          return {
-            jour: Math.floor((dateMs - vagueStartMs) / (1000 * 60 * 60 * 24)),
-            poidsMoyen: Math.round((sumWeighted / sumWeights) * 100) / 100,
-          };
-        });
-
-      // Build initial guess from ConfigElevage if available
-      const bacInitialGuess: Partial<GompertzParams> = {};
-      if (vague.configElevage?.gompertzWInfDefault) bacInitialGuess.wInfinity = vague.configElevage.gompertzWInfDefault;
-      if (vague.configElevage?.gompertzKDefault) bacInitialGuess.k = vague.configElevage.gompertzKDefault;
-      if (vague.configElevage?.gompertzTiDefault) bacInitialGuess.ti = vague.configElevage.gompertzTiDefault;
-
-      // Calibrate with this bac's biometry points
-      const bacResult = calibrerGompertz({ points: bacPoints, initialGuess: bacInitialGuess }, minPoints);
-
-      if (!bacResult) {
-        calibrationsBacs.push({ bacId: bac.id, calibration: null });
-        continue;
-      }
-
-      // Upsert GompertzBac record
-      await prisma.gompertzBac.upsert({
-        where: { bacId: bac.id },
-        create: {
-          bacId: bac.id,
-          vagueId,
-          siteId: auth.activeSiteId,
-          wInfinity: bacResult.params.wInfinity,
-          k: bacResult.params.k,
-          ti: bacResult.params.ti,
-          r2: bacResult.r2,
-          rmse: bacResult.rmse,
-          biometrieCount: bacResult.biometrieCount,
-          confidenceLevel: bacResult.confidenceLevel,
-          configWInfUsed: configWInf,
-        },
-        update: {
-          wInfinity: bacResult.params.wInfinity,
-          k: bacResult.params.k,
-          ti: bacResult.params.ti,
-          r2: bacResult.r2,
-          rmse: bacResult.rmse,
-          biometrieCount: bacResult.biometrieCount,
-          confidenceLevel: bacResult.confidenceLevel,
-          configWInfUsed: configWInf,
-          calculatedAt: new Date(),
-        },
-      });
-
-      calibrationsBacs.push({
-        bacId: bac.id,
-        calibration: {
-          params: bacResult.params,
-          r2: bacResult.r2,
-          rmse: bacResult.rmse,
-          confidenceLevel: bacResult.confidenceLevel,
-          biometrieCount: bacResult.biometrieCount,
-        },
-      });
-    }
-
     return NextResponse.json({
       vagueId,
       calibration: {
@@ -420,7 +254,6 @@ export async function GET(
       },
       courbe,
       dateRecolteEstimee,
-      calibrationsBacs,
     });
   } catch (error) {
     if (error instanceof AuthError) {

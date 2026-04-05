@@ -2,6 +2,7 @@
  * Feed period segmentation — pure functions for per-tank, per-product FCR calculation.
  *
  * Implements ADR-028: FCR calculation refactor for feed switching accuracy.
+ * ADR-032: Calibrage-aware nombreVivants + removal of GOMPERTZ_BAC.
  *
  * Core idea: instead of computing FCR globally for a vague, we segment feeding data
  * into coherent periods (one product, one tank, contiguous dates) and compute FCR
@@ -31,11 +32,41 @@ export interface BiometriePoint {
   poidsMoyen: number; // grammes
 }
 
+/**
+ * Representation d'un calibrage pertinente pour le calcul FCR (ADR-032).
+ *
+ * Transmis par l'appelant (computeAlimentMetrics / getFCRTrace) depuis les
+ * enregistrements Calibrage de la DB.
+ *
+ * Un CalibragePoint par operation de calibrage de la vague, avec uniquement
+ * les champs necessaires au calcul de nombreVivants.
+ */
+export interface CalibragePoint {
+  /** Date de l'operation de calibrage */
+  date: Date;
+  /** Mortalites enregistrees pendant le calibrage */
+  nombreMorts: number;
+  /**
+   * Groupes de redistribution : chaque groupe decrit combien de poissons
+   * ont ete envoyes vers quel bac.
+   *
+   * Note : si un bac source recoit certains de ses propres poissons en retour
+   * (tri et remise), il apparaitra aussi comme destinationBacId.
+   */
+  groupes: Array<{
+    destinationBacId: string;
+    nombrePoissons: number;
+    poidsMoyen: number;
+  }>;
+}
+
 export interface VagueContext {
   dateDebut: Date;
   nombreInitial: number;
   poidsMoyenInitial: number; // grammes
   bacs: { id: string; nombreInitial: number | null }[];
+  /** Calibrages de la vague, tries par date ASC. Vide si aucun calibrage. */
+  calibrages?: CalibragePoint[];
 }
 
 // ---------------------------------------------------------------------------
@@ -66,55 +97,24 @@ export interface GompertzVagueContext {
 }
 
 // ---------------------------------------------------------------------------
-// GompertzBacContext (ADR-030)
-// ---------------------------------------------------------------------------
-
-/**
- * Contexte Gompertz per-tank pour la strategie GOMPERTZ_BAC (ADR-030).
- *
- * Un GompertzBacContext par bac, transmis par l'appelant (computeAlimentMetrics)
- * depuis les enregistrements GompertzBac de la DB.
- * Si null pour un bacId donne, le systeme retombe sur GompertzVagueContext.
- */
-export interface GompertzBacContext {
-  /** W∞ — poids asymptotique en grammes */
-  wInfinity: number;
-  /** k — constante de taux de croissance (1/jour) */
-  k: number;
-  /** ti — point d'inflexion en jours depuis le debut de la vague */
-  ti: number;
-  /** R² — coefficient de determination du calibrage */
-  r2: number;
-  /** Nombre de biometries du bac utilisees pour le calibrage */
-  biometrieCount: number;
-  /** Niveau de confiance — seuls HIGH et MEDIUM declenchent Gompertz */
-  confidenceLevel: "HIGH" | "MEDIUM" | "LOW" | "INSUFFICIENT_DATA";
-  /** Date de debut de la vague — necessaire pour convertir targetDate en t (jours) */
-  vagueDebut: Date;
-}
-
-// ---------------------------------------------------------------------------
 // interpolerPoidsBac
 // ---------------------------------------------------------------------------
 
 /**
  * Interpolates or retrieves the average weight of a tank at a given date.
  *
- * Strategy (ADR-028 + ADR-029 + ADR-030):
- *   1. Exact biometry — same calendar day  →  BIOMETRIE_EXACTE
- *   2a. If strategie = GOMPERTZ_BAC and GompertzBacContext valid for this bacId
- *       (HIGH | MEDIUM, r2 >= 0.85, biometrieCount >= gompertzMinPoints):
- *       evaluate gompertzWeight(t, bacParams)  →  GOMPERTZ_BAC
- *   2b. If strategie = GOMPERTZ_BAC or GOMPERTZ_VAGUE, and GompertzVagueContext valid:
- *       evaluate gompertzWeight(t, vagueParams)  →  GOMPERTZ_VAGUE
- *   2c. Linear interpolation between two bracketing biometries  →  INTERPOLATION_LINEAIRE
- *   3. Vague initial weight — fallback final  →  VALEUR_INITIALE
+ * Strategy (ADR-028 + ADR-029 + ADR-032):
+ *   1. Exact biometry — same calendar day  ->  BIOMETRIE_EXACTE
+ *   2. If strategie = GOMPERTZ_VAGUE and GompertzVagueContext valid:
+ *      evaluate gompertzWeight(t, vagueParams)  ->  GOMPERTZ_VAGUE
+ *   3. Linear interpolation between two bracketing biometries  ->  INTERPOLATION_LINEAIRE
+ *   4. Vague initial weight — fallback final  ->  VALEUR_INITIALE
  *
  * @param targetDate         - date for which to estimate weight
  * @param bacId              - tank identifier (null = whole-vague fallback)
  * @param biometries         - time series of biometries for the tank, sorted ascending by date
  * @param poidsInitial       - initial average weight of the vague (fallback)
- * @param options            - optional strategy options (ADR-029 + ADR-030)
+ * @param options            - optional strategy options (ADR-029)
  * @returns { poids, methode, detail } or null if no data at all
  */
 export function interpolerPoidsBac(
@@ -124,10 +124,8 @@ export function interpolerPoidsBac(
   poidsInitial: number,
   options?: {
     strategie?: StrategieInterpolation;
-    /** Contexte vague (ADR-029) — utilise par GOMPERTZ_VAGUE et comme fallback de GOMPERTZ_BAC */
+    /** Contexte vague (ADR-029) — utilise par GOMPERTZ_VAGUE */
     gompertzContext?: GompertzVagueContext;
-    /** Contextes per-tank (ADR-030) — utilises uniquement si strategie = GOMPERTZ_BAC */
-    gompertzBacContexts?: Map<string, GompertzBacContext>;
     gompertzMinPoints?: number;
   }
 ): { poids: number; methode: PeriodeAlimentaire["methodeEstimation"]; detail: FCRTraceEstimationDetail } | null {
@@ -165,53 +163,8 @@ export function interpolerPoidsBac(
   const strategie = options?.strategie ?? StrategieInterpolation.LINEAIRE;
   const minPoints = options?.gompertzMinPoints ?? 5;
 
-  // 2a. Gompertz per-tank strategy (ADR-030)
-  if (strategie === StrategieInterpolation.GOMPERTZ_BAC && bacId !== null && options?.gompertzBacContexts) {
-    const bacCtx = options.gompertzBacContexts.get(bacId);
-    if (bacCtx) {
-      const isValidLevel =
-        bacCtx.confidenceLevel === "HIGH" || bacCtx.confidenceLevel === "MEDIUM";
-      if (isValidLevel && bacCtx.r2 >= 0.85 && bacCtx.biometrieCount >= minPoints) {
-        const tDays =
-          (targetDate.getTime() - bacCtx.vagueDebut.getTime()) / (1000 * 60 * 60 * 24);
-        if (tDays >= 0) {
-          const poids = gompertzWeight(tDays, {
-            wInfinity: bacCtx.wInfinity,
-            k: bacCtx.k,
-            ti: bacCtx.ti,
-          });
-          if (poids > 0 && !isNaN(poids)) {
-            return {
-              poids,
-              methode: "GOMPERTZ_BAC",
-              detail: {
-                methode: "GOMPERTZ_BAC",
-                tJours: tDays,
-                params: {
-                  wInfinity: bacCtx.wInfinity,
-                  k: bacCtx.k,
-                  ti: bacCtx.ti,
-                  r2: bacCtx.r2,
-                  biometrieCount: bacCtx.biometrieCount,
-                  confidenceLevel: bacCtx.confidenceLevel,
-                },
-                resultatG: poids,
-              },
-            };
-          }
-        }
-      }
-    }
-    // Per-tank context absent or invalid — fall through to GOMPERTZ_VAGUE fallback (2b)
-  }
-
-  // 2b. Gompertz vague strategy (ADR-029) — used directly for GOMPERTZ_VAGUE,
-  //     or as fallback level when GOMPERTZ_BAC per-tank context is absent/invalid
-  if (
-    (strategie === StrategieInterpolation.GOMPERTZ_VAGUE ||
-      strategie === StrategieInterpolation.GOMPERTZ_BAC) &&
-    options?.gompertzContext
-  ) {
+  // 2. Gompertz vague strategy (ADR-029)
+  if (strategie === StrategieInterpolation.GOMPERTZ_VAGUE && options?.gompertzContext) {
     const ctx = options.gompertzContext;
     const isValidLevel =
       ctx.confidenceLevel === "HIGH" || ctx.confidenceLevel === "MEDIUM";
@@ -252,7 +205,7 @@ export function interpolerPoidsBac(
     // Conditions not met — fall through to linear interpolation
   }
 
-  // 2c. Linear interpolation between bracketing biometries
+  // 3. Linear interpolation between bracketing biometries
   const before = [...bacBios].reverse().find((b) => b.date.getTime() < targetMs);
   const after = bacBios.find((b) => b.date.getTime() > targetMs);
 
@@ -273,7 +226,7 @@ export function interpolerPoidsBac(
     };
   }
 
-  // 3. Target date is before all biometries — use initial weight
+  // 4. Target date is before all biometries — use initial weight
   if (!before && after) {
     return {
       poids: poidsInitial,
@@ -282,7 +235,7 @@ export function interpolerPoidsBac(
     };
   }
 
-  // 4. Target date is after all biometries — extrapolate using last known biometry
+  // 5. Target date is after all biometries — extrapolate using last known biometry
   if (before && !after) {
     return {
       poids: before.poidsMoyen,
@@ -305,11 +258,89 @@ export function interpolerPoidsBac(
 }
 
 // ---------------------------------------------------------------------------
+// estimerNombreVivantsADate (ADR-032)
+// ---------------------------------------------------------------------------
+
+/**
+ * Estime le nombre de poissons vivants dans un bac a une date donnee,
+ * en tenant compte des operations de calibrage (ADR-032).
+ *
+ * Algorithme :
+ * 1. Chercher le dernier CalibrageGroupe dont destinationBacId = bacId
+ *    et calibrage.date <= targetDate. Si trouve, partir de groupe.nombrePoissons.
+ * 2. Sinon, partir de bac.nombreInitial ?? round(vague.nombreInitial / nbBacs).
+ * 3. Soustraire les mortalites enregistrees pour ce bac entre la date de base
+ *    (calibrage ou debut de vague) et targetDate.
+ *
+ * @param bacId            - identifiant du bac (null = vague entiere, fallback legacy)
+ * @param targetDate       - date de debut de la periode
+ * @param vagueContext     - contexte vague avec calibrages (ADR-032)
+ * @param mortalitesParBac - Map<bacId, {nombreMorts, date}[]> pre-calculee
+ * @returns nombre de vivants estime, ou null si impossible
+ */
+export function estimerNombreVivantsADate(
+  bacId: string | null,
+  targetDate: Date,
+  vagueContext: VagueContext,
+  mortalitesParBac?: Map<string, Array<{ nombreMorts: number; date: Date }>>
+): number | null {
+  if (bacId === null) {
+    return vagueContext.nombreInitial;
+  }
+
+  const bac = vagueContext.bacs.find((b) => b.id === bacId);
+  if (!bac) return null;
+
+  const calibrages = vagueContext.calibrages ?? [];
+
+  // Find the last calibrage whose date <= targetDate that has a group for this bacId
+  let lastCalibrageDate: Date | null = null;
+  let basePopulation: number | null = null;
+
+  for (const calibrage of calibrages) {
+    if (calibrage.date.getTime() > targetDate.getTime()) break;
+    const groupe = calibrage.groupes.find((g) => g.destinationBacId === bacId);
+    if (groupe) {
+      lastCalibrageDate = calibrage.date;
+      basePopulation = groupe.nombrePoissons;
+    }
+  }
+
+  // If no calibrage found for this bac, use initial population
+  if (basePopulation === null) {
+    if (bac.nombreInitial !== null) {
+      basePopulation = bac.nombreInitial;
+    } else {
+      const nbBacs = vagueContext.bacs.length;
+      if (nbBacs === 0) return null;
+      basePopulation = Math.round(vagueContext.nombreInitial / nbBacs);
+    }
+  }
+
+  // Subtract mortalities between base date and targetDate for this bac
+  if (mortalitesParBac) {
+    const mortsBac = mortalitesParBac.get(bacId) ?? [];
+    const baseMs = lastCalibrageDate
+      ? lastCalibrageDate.getTime()
+      : vagueContext.dateDebut.getTime();
+    const targetMs = targetDate.getTime();
+    for (const mort of mortsBac) {
+      const mortMs = mort.date.getTime();
+      if (mortMs > baseMs && mortMs <= targetMs) {
+        basePopulation = Math.max(0, basePopulation - mort.nombreMorts);
+      }
+    }
+  }
+
+  return basePopulation;
+}
+
+// ---------------------------------------------------------------------------
 // segmenterPeriodesAlimentaires
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the principal product of a relevé alimentation:
+ * Returns the principal product of a releve alimentation:
  * the one with the highest quantiteKg. Returns null if no consommations.
  */
 function getProduitPrincipal(
@@ -323,55 +354,28 @@ function getProduitPrincipal(
 }
 
 /**
- * Estimates the number of living fish for a tank at the start of a period.
- *
- * When bacId is null (old records), falls back to the vague-level nombreInitial.
- * When bacs have their own nombreInitial, uses that for the specific tank.
- * Otherwise distributes vague nombreInitial evenly across bacs.
- */
-function estimerNombreVivants(
-  bacId: string | null,
-  vagueContext: VagueContext
-): number | null {
-  if (bacId === null) {
-    return vagueContext.nombreInitial;
-  }
-
-  const bac = vagueContext.bacs.find((b) => b.id === bacId);
-  if (!bac) return null;
-
-  if (bac.nombreInitial !== null) {
-    return bac.nombreInitial;
-  }
-
-  // Distribute evenly across bacs
-  const nbBacs = vagueContext.bacs.length;
-  if (nbBacs === 0) return null;
-  return Math.round(vagueContext.nombreInitial / nbBacs);
-}
-
-/**
  * Segments the feeding records of a vague into coherent feeding periods.
  *
- * A period is a contiguous run of ALIMENTATION relevés on the same tank
+ * A period is a contiguous run of ALIMENTATION releves on the same tank
  * using the same principal product. Each product change or new tank creates
  * a new period.
  *
  * ADR-028, Couche 1 algorithm:
- *   1. For each tank, sort ALIMENTATION relevés by date.
- *   2. Group consecutive relevés with the same principal produitId.
- *   3. Each product change → new period.
+ *   1. For each tank, sort ALIMENTATION releves by date.
+ *   2. Group consecutive releves with the same principal produitId.
+ *   3. Each product change -> new period.
  *   4. Estimate poidsMoyenDebut / poidsMoyenFin for each period.
- *   5. Compute gainBiomasseKg.
+ *   5. Compute gainBiomasseKg using calibrage-aware nombreVivants (ADR-032).
  *
  * Degrades gracefully:
- *   - Relevés without bacId are grouped under a synthetic "null" tank,
+ *   - Releves without bacId are grouped under a synthetic "null" tank,
  *     treated as a single whole-vague tank (ADR degradation rule 3).
  *   - If gainBiomasseKg is negative, it is set to null (ADR rule: exclude anti-gain).
  *
- * @param relevsAlim   - ALIMENTATION relevés with consommations, any order
- * @param biometries   - BIOMETRIE relevés with poidsMoyen, any order
- * @param vagueContext - vague data (dateDebut, poidsMoyenInitial, bacs)
+ * @param relevsAlim   - ALIMENTATION releves with consommations, any order
+ * @param biometries   - BIOMETRIE releves with poidsMoyen, any order
+ * @param vagueContext - vague data (dateDebut, poidsMoyenInitial, bacs, calibrages)
+ * @param options      - optional interpolation strategy and mortalitesParBac map
  * @returns array of PeriodeAlimentaire
  */
 export function segmenterPeriodesAlimentaires(
@@ -381,12 +385,12 @@ export function segmenterPeriodesAlimentaires(
   options?: {
     strategie?: StrategieInterpolation;
     gompertzContext?: GompertzVagueContext;
-    /** Contexts per-tank indexes par bacId. Ignores si strategie != GOMPERTZ_BAC. */
-    gompertzBacContexts?: Map<string, GompertzBacContext>;
     gompertzMinPoints?: number;
+    /** Pre-computed mortalities per bac for calibrage-aware nombreVivants (ADR-032) */
+    mortalitesParBac?: Map<string, Array<{ nombreMorts: number; date: Date }>>;
   }
 ): PeriodeAlimentaire[] {
-  // Group relevés by bacId (null counts as its own "tank")
+  // Group releves by bacId (null counts as its own "tank")
   const bacGroups = new Map<string | null, ReleveAlimPoint[]>();
   for (const r of relevsAlim) {
     const key = r.bacId;
@@ -413,7 +417,7 @@ export function segmenterPeriodesAlimentaires(
 
     for (const releve of sorted) {
       const principal = getProduitPrincipal(releve.consommations);
-      if (principal === null) continue; // skip relevés with no consommations
+      if (principal === null) continue; // skip releves with no consommations
 
       if (principal !== currentProduitId) {
         // Flush current run
@@ -437,7 +441,7 @@ export function segmenterPeriodesAlimentaires(
       const dateFin = run.releves.at(-1)!.date;
 
       // Total aliment consumed in kg for THIS produit in this run
-      // (each relevé may have multiple consommations — sum only this produit)
+      // (each releve may have multiple consommations — sum only this produit)
       let quantiteKg = 0;
       for (const r of run.releves) {
         for (const c of r.consommations) {
@@ -448,33 +452,37 @@ export function segmenterPeriodesAlimentaires(
       }
 
       // Estimate weights at period boundaries
+      const interpolOpts = {
+        strategie: options?.strategie,
+        gompertzContext: options?.gompertzContext,
+        gompertzMinPoints: options?.gompertzMinPoints,
+      };
       const debutEstim = interpolerPoidsBac(
         dateDebut,
         bacId,
         bacBios,
         vagueContext.poidsMoyenInitial,
-        options
+        interpolOpts
       );
       const finEstim = interpolerPoidsBac(
         dateFin,
         bacId,
         bacBios,
         vagueContext.poidsMoyenInitial,
-        options
+        interpolOpts
       );
 
       const poidsMoyenDebut = debutEstim?.poids ?? null;
       const poidsMoyenFin = finEstim?.poids ?? null;
 
       // Pick the method that is "least precise"
-      // (VALEUR_INITIALE < INTERPOLATION_LINEAIRE < GOMPERTZ_VAGUE < GOMPERTZ_BAC < BIOMETRIE_EXACTE)
+      // (VALEUR_INITIALE < INTERPOLATION_LINEAIRE < GOMPERTZ_VAGUE < BIOMETRIE_EXACTE)
       // to give a conservative/honest quality indication for the period (INC-03 fix)
       const methodeRank = (
         m: PeriodeAlimentaire["methodeEstimation"] | undefined
       ): number => {
         if (!m) return 0;
-        if (m === "BIOMETRIE_EXACTE") return 4;
-        if (m === "GOMPERTZ_BAC") return 3;
+        if (m === "BIOMETRIE_EXACTE") return 3;
         if (m === "GOMPERTZ_VAGUE") return 2;
         if (m === "INTERPOLATION_LINEAIRE") return 1;
         return 0; // VALEUR_INITIALE
@@ -484,7 +492,13 @@ export function segmenterPeriodesAlimentaires(
           ? (debutEstim?.methode ?? "VALEUR_INITIALE")
           : (finEstim?.methode ?? "VALEUR_INITIALE");
 
-      const nombreVivants = estimerNombreVivants(bacId, vagueContext);
+      // ADR-032: calibrage-aware nombreVivants using dateDebut of the period
+      const nombreVivants = estimerNombreVivantsADate(
+        bacId,
+        dateDebut,
+        vagueContext,
+        options?.mortalitesParBac
+      );
 
       // Gain biomasse: (poidsFin - poidsDebut) * nombreVivants / 1000
       let gainBiomasseKg: number | null = null;

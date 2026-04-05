@@ -421,16 +421,15 @@ enum TypeDeclencheur {
 // ──────────────────────────────────────────
 
 /**
- * Strategie d'interpolation des poids aux bornes de periode d'alimentation (ADR-029, ADR-030).
+ * Strategie d'interpolation des poids aux bornes de periode d'alimentation (ADR-029, ADR-032).
  * LINEAIRE       : interpolation lineaire entre deux biometries encadrantes (defaut, ADR-028).
  * GOMPERTZ_VAGUE : utilise la courbe Gompertz de la vague si calibree et fiable (R2 >= 0.85, HIGH/MEDIUM).
- * GOMPERTZ_BAC   : calibrage Gompertz par bac individuel avec fallback vers GOMPERTZ_VAGUE (ADR-030).
- * En l'absence d'un GompertzVague/GompertzBac fiable, le systeme retombe automatiquement sur LINEAIRE.
+ * GOMPERTZ_BAC supprimee (ADR-032) : fallback permanent apres calibrage, code mort.
+ * En l'absence d'un GompertzVague fiable, le systeme retombe automatiquement sur LINEAIRE.
  */
 enum StrategieInterpolation {
   LINEAIRE
   GOMPERTZ_VAGUE
-  GOMPERTZ_BAC
 }
 
 enum PhaseElevage {
@@ -558,8 +557,6 @@ model Site {
   historiqueNutritionnel HistoriqueNutritionnel[]
   // Sprint Gompertz
   gompertzVagues         GompertzVague[]
-  // ADR-030 — GompertzBac per-tank
-  gompertzBacs           GompertzBac[]
   // Sprint 30 — Abonnements
   abonnements            Abonnement[]             @relation("AbonnementsSite")
   paiementsAbo           PaiementAbonnement[]     @relation("PaiementsAboSite")
@@ -1002,8 +999,6 @@ model Bac {
   lotsAlevins         LotAlevins[]
   activites           Activite[]
   calibrageGroupesDst CalibrageGroupe[] @relation("GroupeDestBac")
-  // ADR-030 — GompertzBac per-tank
-  gompertz            GompertzBac?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
@@ -1052,8 +1047,6 @@ model Vague {
   historiqueNutritionnel HistoriqueNutritionnel[]
   // Sprint Gompertz
   gompertz               GompertzVague?
-  // ADR-030 — GompertzBac per-tank
-  gompertzBacs           GompertzBac[]
   createdAt              DateTime                 @default(now())
   updatedAt              DateTime                 @updatedAt
 
@@ -3083,77 +3076,6 @@ model GompertzVague {
 
   @@index([siteId])
   @@index([vagueId])
-}
-
-// ──────────────────────────────────────────
-// Modèle — GompertzBac (ADR-030)
-// ──────────────────────────────────────────
-
-/**
- * GompertzBac — Parametres du modele de croissance de Gompertz calibres sur les
- * releves biometriques d'un bac individuel.
- * W(t) = W∞ × exp(−exp(−k × (t − ti)))
- * Un seul enregistrement par bac (@@unique bacId).
- * Supprime en cascade avec le bac (onDelete: Cascade).
- * R8 : siteId obligatoire.
- */
-model GompertzBac {
-  id String @id @default(cuid())
-
-  bacId String @unique
-  bac   Bac    @relation(fields: [bacId], references: [id], onDelete: Cascade)
-
-  vagueId String
-  vague   Vague  @relation(fields: [vagueId], references: [id], onDelete: Cascade)
-
-  /**
-   * W∞ — Poids asymptotique (g)
-   */
-  wInfinity Float
-  /**
-   * k — Constante de taux de croissance (1/jour)
-   */
-  k         Float
-  /**
-   * ti — Point d'inflexion (jours depuis le debut de la vague)
-   */
-  ti        Float
-  /**
-   * R² — Coefficient de determination (0-1)
-   */
-  r2        Float
-  /**
-   * RMSE — Erreur quadratique moyenne (g)
-   */
-  rmse      Float
-  /**
-   * Nombre de releves biometriques du bac utilises pour le calibrage
-   */
-  biometrieCount Int
-
-  /**
-   * Niveau de confiance du calibrage.
-   * INSUFFICIENT_DATA = < minPoints
-   * LOW               = minPoints to minPoints+1
-   * MEDIUM            = minPoints+2 to minPoints+4
-   * HIGH              = >= minPoints+5 AND R² > 0.95
-   */
-  confidenceLevel String
-
-  /**
-   * Valeur de configElevage.gompertzWInfDefault utilisee lors de ce calibrage
-   */
-  configWInfUsed Float?
-
-  siteId String
-  site   Site   @relation(fields: [siteId], references: [id])
-
-  calculatedAt DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@index([vagueId])
-  @@index([siteId])
-  @@index([bacId])
 }
 
 // ──────────────────────────────────────────

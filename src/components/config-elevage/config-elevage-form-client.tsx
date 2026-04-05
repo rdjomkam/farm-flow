@@ -718,9 +718,6 @@ export function ConfigElevageFormClient({ templates }: Props) {
                     <option value={StrategieInterpolation.GOMPERTZ_VAGUE}>
                       {t("interpolationStrategy.GOMPERTZ_VAGUE")}
                     </option>
-                    <option value={StrategieInterpolation.GOMPERTZ_BAC}>
-                      {t("interpolationStrategy.GOMPERTZ_BAC")}
-                    </option>
                   </select>
                 </div>
                 <p className="text-xs text-muted-foreground">

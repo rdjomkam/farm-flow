@@ -273,7 +273,6 @@
     "biometrieExacte": "Biométrie exacte",
     "interpolationLineaire": "Interpolation linéaire",
     "gompertzVague": "Gompertz vague",
-    "gompertzBac": "Gompertz bac",
     "valeurInitiale": "Valeur initiale vague",
     "biomasse": "Biomasse",
     "nombreVivants": "Poissons vivants",
@@ -297,7 +296,6 @@
     "aliment": "Aliment",
     "gain": "Gain",
     "stratLINEAIRE": "Interpolation linéaire",
-    "stratGOMPERTZ_VAGUE": "Gompertz vague",
-    "stratGOMPERTZ_BAC": "Gompertz bac"
+    "stratGOMPERTZ_VAGUE": "Gompertz vague"
   }
 }

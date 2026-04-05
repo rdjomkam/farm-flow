@@ -151,8 +151,6 @@ export type {
   ConfigElevageWithRelations,
   AlimentTailleEntree,
   AlimentTauxEntree,
-  // ADR-030 — GompertzBac
-  GompertzBac,
   // Sprint 20 — Packs & Provisioning
   Pack,
   PackWithRelations,

@@ -661,7 +661,6 @@ export interface PeriodeAlimentaire {
   /** Method used to estimate boundary weights */
   methodeEstimation:
     | "BIOMETRIE_EXACTE"
-    | "GOMPERTZ_BAC"
     | "GOMPERTZ_VAGUE"
     | "INTERPOLATION_LINEAIRE"
     | "VALEUR_INITIALE";
@@ -743,7 +742,6 @@ export interface AlerteRation {
  */
 export type MethodeEstimationPoids =
   | "BIOMETRIE_EXACTE"
-  | "GOMPERTZ_BAC"
   | "GOMPERTZ_VAGUE"
   | "INTERPOLATION_LINEAIRE"
   | "VALEUR_INITIALE";
@@ -800,12 +798,12 @@ export interface FCRTraceEstimationInterpolationLineaire {
 }
 
 /**
- * Detail de l'estimation pour les methodes GOMPERTZ_VAGUE ou GOMPERTZ_BAC.
+ * Detail de l'estimation pour la methode GOMPERTZ_VAGUE.
  *
  * Formule : W(t) = W∞ × exp(−exp(−k × (t − ti)))
  */
 export interface FCRTraceEstimationGompertz {
-  methode: "GOMPERTZ_BAC" | "GOMPERTZ_VAGUE";
+  methode: "GOMPERTZ_VAGUE";
   /** t en jours depuis le debut de la vague jusqu'a la date cible */
   tJours: number;
   /** Parametres Gompertz utilises pour l'evaluation */
@@ -898,11 +896,6 @@ export interface FCRTracePeriode {
   /** FCR de la periode = quantiteKg / gainBiomasseKg (null si gain indisponible) */
   fcrPeriode: number | null;
 
-  /**
-   * Parametres Gompertz du bac si methodeDebut ou methodeFin = GOMPERTZ_BAC.
-   * Null pour toute autre methode.
-   */
-  gompertzBac: FCRTraceGompertzParams | null;
 }
 
 /**
@@ -932,8 +925,8 @@ export interface FCRTraceVague {
   fcrVague: number | null;
 
   /**
-   * Parametres Gompertz au niveau vague si la strategie GOMPERTZ_VAGUE ou
-   * GOMPERTZ_BAC est active et que le modele est calibre.
+   * Parametres Gompertz au niveau vague si la strategie GOMPERTZ_VAGUE
+   * est active et que le modele est calibre.
    * Null si strategie = LINEAIRE ou modele non calibre.
    */
   gompertzVague: FCRTraceGompertzParams | null;

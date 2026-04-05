@@ -25,11 +25,12 @@ import { describe, it, expect } from "vitest";
 import {
   interpolerPoidsBac,
   segmenterPeriodesAlimentaires,
+  estimerNombreVivantsADate,
   type ReleveAlimPoint,
   type BiometriePoint,
   type VagueContext,
   type GompertzVagueContext,
-  type GompertzBacContext,
+  type CalibragePoint,
 } from "@/lib/feed-periods";
 import { gompertzWeight } from "@/lib/gompertz";
 import { StrategieInterpolation } from "@/types";
@@ -1145,603 +1146,21 @@ describe("methodeRank — ordre de priorite 0-4 (ADR-029 legacy — see ADR-030 
 });
 
 // ---------------------------------------------------------------------------
-// ADR-030 — interpolerPoidsBac avec strategie GOMPERTZ_BAC
+// ADR-030 — GOMPERTZ_BAC supprime (ADR-032). Les tests ci-dessous ont ete
+// supprimes. La chaine d'interpolation est desormais a 3 niveaux :
+// BIOMETRIE_EXACTE -> GOMPERTZ_VAGUE -> INTERPOLATION_LINEAIRE -> VALEUR_INITIALE
 // ---------------------------------------------------------------------------
 
-/**
- * Contexte Gompertz bac valide par defaut pour les tests ADR-030.
- *
- * Parametres biologiquement plausibles pour Clarias gariepinus — bac individuel.
- * HIGH confidence : biometrieCount >= 8, r2 > 0.95.
- */
-const GOMPERTZ_BAC_CTX_HIGH: GompertzBacContext = {
-  wInfinity: 1200,
-  k: 0.018,
-  ti: 95,
-  r2: 0.97,
-  biometrieCount: 8,
-  confidenceLevel: "HIGH",
-  vagueDebut: makeDate(0),
-};
-
-const GOMPERTZ_BAC_CTX_MEDIUM: GompertzBacContext = {
-  wInfinity: 1100,
-  k: 0.020,
-  ti: 90,
-  r2: 0.87,
-  biometrieCount: 5,
-  confidenceLevel: "MEDIUM",
-  vagueDebut: makeDate(0),
-};
-
-describe("interpolerPoidsBac — strategie GOMPERTZ_BAC (ADR-030)", () => {
-  // ---- Cas nominal : GOMPERTZ_BAC HIGH, valeurs valides ------------------
-
-  it("GOMPERTZ_BAC + contexte HIGH valide -> retourne le poids Gompertz du bac", () => {
-    const targetDate = makeDate(50);
-    const expectedPoids = gompertzWeight(50, {
-      wInfinity: GOMPERTZ_BAC_CTX_HIGH.wInfinity,
-      k: GOMPERTZ_BAC_CTX_HIGH.k,
-      ti: GOMPERTZ_BAC_CTX_HIGH.ti,
-    });
-
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 10, 80), // non exacte a J50
-    ];
-    const bacContexts = new Map<string, GompertzBacContext>([
-      ["bac-A", GOMPERTZ_BAC_CTX_HIGH],
-    ]);
-
-    const result = interpolerPoidsBac(targetDate, "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
-      gompertzBacContexts: bacContexts,
-      gompertzMinPoints: 5,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.methode).toBe("GOMPERTZ_BAC");
-    expect(result!.poids).toBeCloseTo(expectedPoids, 6);
-  });
-
-  it("GOMPERTZ_BAC + contexte MEDIUM valide -> methode = GOMPERTZ_BAC", () => {
-    const targetDate = makeDate(40);
-    const expectedPoids = gompertzWeight(40, {
-      wInfinity: GOMPERTZ_BAC_CTX_MEDIUM.wInfinity,
-      k: GOMPERTZ_BAC_CTX_MEDIUM.k,
-      ti: GOMPERTZ_BAC_CTX_MEDIUM.ti,
-    });
-
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 5, 30), // non exacte a J40
-    ];
-    const bacContexts = new Map<string, GompertzBacContext>([
-      ["bac-A", GOMPERTZ_BAC_CTX_MEDIUM],
-    ]);
-
-    const result = interpolerPoidsBac(targetDate, "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
-      gompertzBacContexts: bacContexts,
-      gompertzMinPoints: 5,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.methode).toBe("GOMPERTZ_BAC");
-    expect(result!.poids).toBeCloseTo(expectedPoids, 6);
-  });
-
-  // ---- Biometrie exacte prime toujours sur GOMPERTZ_BAC (etape 1 inchangee) ----
-
-  it("biometrie exacte le meme jour prime sur GOMPERTZ_BAC", () => {
-    const targetDate = makeDate(50);
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 50, 777), // biometrie exacte a J50
-    ];
-    const bacContexts = new Map<string, GompertzBacContext>([
-      ["bac-A", GOMPERTZ_BAC_CTX_HIGH],
-    ]);
-
-    const result = interpolerPoidsBac(targetDate, "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
-      gompertzBacContexts: bacContexts,
-      gompertzMinPoints: 5,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.methode).toBe("BIOMETRIE_EXACTE");
-    expect(result!.poids).toBe(777);
-  });
-
-  // ---- GOMPERTZ_BAC avec gompertzMinPoints=3 (choix de l'eleveur) --------
-
-  it("GOMPERTZ_BAC avec n=3 minPoints et biometrieCount=3 -> GOMPERTZ_BAC utilise", () => {
-    const ctxN3: GompertzBacContext = {
-      ...GOMPERTZ_BAC_CTX_HIGH,
-      biometrieCount: 3,
-      r2: 0.999,
-      confidenceLevel: "HIGH",
-    };
-    const targetDate = makeDate(60);
-    const expectedPoids = gompertzWeight(60, {
-      wInfinity: ctxN3.wInfinity,
-      k: ctxN3.k,
-      ti: ctxN3.ti,
-    });
-
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 5, 40), // non exacte a J60
-    ];
-    const bacContexts = new Map<string, GompertzBacContext>([
-      ["bac-A", ctxN3],
-    ]);
-
-    const result = interpolerPoidsBac(targetDate, "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
-      gompertzBacContexts: bacContexts,
-      gompertzMinPoints: 3, // seuil abaisse a 3 par l'eleveur
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.methode).toBe("GOMPERTZ_BAC");
-    expect(result!.poids).toBeCloseTo(expectedPoids, 6);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// ADR-030 — fallbacks GOMPERTZ_BAC -> GOMPERTZ_VAGUE -> LINEAIRE -> INITIALE
-// ---------------------------------------------------------------------------
-
-describe("interpolerPoidsBac — fallbacks GOMPERTZ_BAC (ADR-030)", () => {
-  // ---- Fallback : bacId absent de la Map ---------------------------------
-
-  it("bacId absent de gompertzBacContexts -> fallback GOMPERTZ_VAGUE", () => {
-    // bac-A n'est pas dans la Map -> fallback sur GompertzVague
-    const targetDate = makeDate(50);
-    const expectedPoids = gompertzWeight(50, {
-      wInfinity: GOMPERTZ_CTX_HIGH.wInfinity,
-      k: GOMPERTZ_CTX_HIGH.k,
-      ti: GOMPERTZ_CTX_HIGH.ti,
-    });
-
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 10, 80),
-    ];
-    const bacContexts = new Map<string, GompertzBacContext>([
-      ["bac-B", GOMPERTZ_BAC_CTX_HIGH], // seul bac-B est dans la Map, pas bac-A
-    ]);
-
-    const result = interpolerPoidsBac(targetDate, "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
-      gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzBacContexts: bacContexts,
-      gompertzMinPoints: 5,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.methode).toBe("GOMPERTZ_VAGUE");
-    expect(result!.poids).toBeCloseTo(expectedPoids, 6);
-  });
-
-  // ---- Fallback : gompertzBacContexts non fourni -------------------------
-
-  it("gompertzBacContexts non fourni -> fallback GOMPERTZ_VAGUE", () => {
-    const targetDate = makeDate(50);
-    const expectedPoids = gompertzWeight(50, {
-      wInfinity: GOMPERTZ_CTX_HIGH.wInfinity,
-      k: GOMPERTZ_CTX_HIGH.k,
-      ti: GOMPERTZ_CTX_HIGH.ti,
-    });
-
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 10, 80),
-    ];
-
-    const result = interpolerPoidsBac(targetDate, "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
-      gompertzContext: GOMPERTZ_CTX_HIGH,
-      // gompertzBacContexts non fourni
-      gompertzMinPoints: 5,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.methode).toBe("GOMPERTZ_VAGUE");
-    expect(result!.poids).toBeCloseTo(expectedPoids, 6);
-  });
-
-  // ---- Fallback : confidenceLevel bac = LOW -> GOMPERTZ_VAGUE -----------
-
-  it("confidenceLevel bac = LOW -> fallback GOMPERTZ_VAGUE", () => {
-    const ctxLow: GompertzBacContext = {
-      ...GOMPERTZ_BAC_CTX_HIGH,
-      confidenceLevel: "LOW",
-      r2: 0.88, // r2 ok mais LOW -> refus
-    };
-    const targetDate = makeDate(50);
-    const expectedPoids = gompertzWeight(50, {
-      wInfinity: GOMPERTZ_CTX_HIGH.wInfinity,
-      k: GOMPERTZ_CTX_HIGH.k,
-      ti: GOMPERTZ_CTX_HIGH.ti,
-    });
-
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 10, 80),
-    ];
-    const bacContexts = new Map<string, GompertzBacContext>([
-      ["bac-A", ctxLow],
-    ]);
-
-    const result = interpolerPoidsBac(targetDate, "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
-      gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzBacContexts: bacContexts,
-      gompertzMinPoints: 5,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.methode).toBe("GOMPERTZ_VAGUE");
-    expect(result!.poids).toBeCloseTo(expectedPoids, 6);
-  });
-
-  // ---- Fallback : confidenceLevel bac = INSUFFICIENT_DATA -> GOMPERTZ_VAGUE ----
-
-  it("confidenceLevel bac = INSUFFICIENT_DATA -> fallback GOMPERTZ_VAGUE", () => {
-    const ctxInsufficient: GompertzBacContext = {
-      ...GOMPERTZ_BAC_CTX_HIGH,
-      confidenceLevel: "INSUFFICIENT_DATA",
-    };
-    const targetDate = makeDate(50);
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 10, 80),
-    ];
-    const bacContexts = new Map<string, GompertzBacContext>([
-      ["bac-A", ctxInsufficient],
-    ]);
-
-    const result = interpolerPoidsBac(targetDate, "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
-      gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzBacContexts: bacContexts,
-      gompertzMinPoints: 5,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.methode).toBe("GOMPERTZ_VAGUE");
-  });
-
-  // ---- Fallback : r2 bac < 0.85 -> GOMPERTZ_VAGUE -----------------------
-
-  it("r2 bac < 0.85 -> fallback GOMPERTZ_VAGUE", () => {
-    const ctxBadR2: GompertzBacContext = {
-      ...GOMPERTZ_BAC_CTX_HIGH,
-      r2: 0.80, // sous le seuil 0.85
-    };
-    const targetDate = makeDate(50);
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 10, 80),
-    ];
-    const bacContexts = new Map<string, GompertzBacContext>([
-      ["bac-A", ctxBadR2],
-    ]);
-
-    const result = interpolerPoidsBac(targetDate, "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
-      gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzBacContexts: bacContexts,
-      gompertzMinPoints: 5,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.methode).toBe("GOMPERTZ_VAGUE");
-  });
-
-  // ---- Fallback : biometrieCount bac < minPoints -> GOMPERTZ_VAGUE ------
-
-  it("biometrieCount bac < gompertzMinPoints -> fallback GOMPERTZ_VAGUE", () => {
-    const ctxFewPoints: GompertzBacContext = {
-      ...GOMPERTZ_BAC_CTX_HIGH,
-      biometrieCount: 3, // sous le seuil de 5
-    };
-    const targetDate = makeDate(50);
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 10, 80),
-    ];
-    const bacContexts = new Map<string, GompertzBacContext>([
-      ["bac-A", ctxFewPoints],
-    ]);
-
-    const result = interpolerPoidsBac(targetDate, "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
-      gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzBacContexts: bacContexts,
-      gompertzMinPoints: 5,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.methode).toBe("GOMPERTZ_VAGUE");
-  });
-
-  // ---- Double fallback : bac LOW + vague LOW -> INTERPOLATION_LINEAIRE --
-
-  it("bac LOW + vague LOW -> fallback INTERPOLATION_LINEAIRE", () => {
-    const ctxBacLow: GompertzBacContext = {
-      ...GOMPERTZ_BAC_CTX_HIGH,
-      confidenceLevel: "LOW",
-    };
-    const ctxVagueLow: GompertzVagueContext = {
-      ...GOMPERTZ_CTX_HIGH,
-      confidenceLevel: "LOW",
-    };
-    // Biometries encadrantes pour que INTERPOLATION_LINEAIRE soit disponible
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 0, 10),
-      makeBio("bac-A", 60, 200),
-    ];
-    const bacContexts = new Map<string, GompertzBacContext>([
-      ["bac-A", ctxBacLow],
-    ]);
-
-    const result = interpolerPoidsBac(makeDate(30), "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
-      gompertzContext: ctxVagueLow,
-      gompertzBacContexts: bacContexts,
-      gompertzMinPoints: 5,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.methode).toBe("INTERPOLATION_LINEAIRE");
-  });
-
-  // ---- Triple fallback : bac LOW + vague LOW + pas de biometries -> VALEUR_INITIALE ----
-
-  it("bac LOW + vague LOW + aucune biometrie encadrante -> VALEUR_INITIALE", () => {
-    const ctxBacLow: GompertzBacContext = {
-      ...GOMPERTZ_BAC_CTX_HIGH,
-      confidenceLevel: "LOW",
-    };
-    const ctxVagueLow: GompertzVagueContext = {
-      ...GOMPERTZ_CTX_HIGH,
-      confidenceLevel: "LOW",
-    };
-    // Biometrie apres la date cible -> pas d'encadrement -> VALEUR_INITIALE
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 60, 200), // apres la date cible J30
-    ];
-    const bacContexts = new Map<string, GompertzBacContext>([
-      ["bac-A", ctxBacLow],
-    ]);
-
-    const result = interpolerPoidsBac(makeDate(30), "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
-      gompertzContext: ctxVagueLow,
-      gompertzBacContexts: bacContexts,
-      gompertzMinPoints: 5,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.methode).toBe("VALEUR_INITIALE");
-  });
-
-  // ---- Strategies LINEAIRE et GOMPERTZ_VAGUE ignorent gompertzBacContexts ----
-
-  it("strategie LINEAIRE ignore gompertzBacContexts meme si fourni", () => {
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 0, 10),
-      makeBio("bac-A", 60, 200),
-    ];
-    const bacContexts = new Map<string, GompertzBacContext>([
-      ["bac-A", GOMPERTZ_BAC_CTX_HIGH],
-    ]);
-
-    const result = interpolerPoidsBac(makeDate(30), "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.LINEAIRE,
-      gompertzBacContexts: bacContexts,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.methode).toBe("INTERPOLATION_LINEAIRE");
-    // interpolation lineaire : 10 + (200-10) * (30/60) = 105g
-    expect(result!.poids).toBeCloseTo(105, 3);
-  });
-
-  it("strategie GOMPERTZ_VAGUE ignore gompertzBacContexts meme si fourni", () => {
-    const targetDate = makeDate(50);
-    const expectedPoids = gompertzWeight(50, {
-      wInfinity: GOMPERTZ_CTX_HIGH.wInfinity,
-      k: GOMPERTZ_CTX_HIGH.k,
-      ti: GOMPERTZ_CTX_HIGH.ti,
-    });
-
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 10, 80),
-    ];
-    const bacContexts = new Map<string, GompertzBacContext>([
-      ["bac-A", GOMPERTZ_BAC_CTX_HIGH], // fourni mais ignore car strategie = GOMPERTZ_VAGUE
-    ]);
-
-    const result = interpolerPoidsBac(targetDate, "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
-      gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzBacContexts: bacContexts,
-      gompertzMinPoints: 5,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.methode).toBe("GOMPERTZ_VAGUE");
-    expect(result!.poids).toBeCloseTo(expectedPoids, 6);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// ADR-030 — segmenterPeriodesAlimentaires avec GOMPERTZ_BAC
-// ---------------------------------------------------------------------------
-
-describe("segmenterPeriodesAlimentaires — strategie GOMPERTZ_BAC (ADR-030)", () => {
-  it("options transmises avec gompertzBacContexts -> periodes utilisent GOMPERTZ_BAC", () => {
-    // bac-A a un contexte HIGH valide -> GOMPERTZ_BAC
-    // Une biometrie non exacte est necessaire pour eviter la garde precoce
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 2, 25), // non exacte par rapport a J5 et J20
-    ];
-    const releves: ReleveAlimPoint[] = [
-      makeReleve("r1", "bac-A", 5, [{ produitId: "prod-X", quantiteKg: 3 }]),
-      makeReleve("r2", "bac-A", 20, [{ produitId: "prod-X", quantiteKg: 3 }]),
-    ];
-    const bacContexts = new Map<string, GompertzBacContext>([
-      ["bac-A", GOMPERTZ_BAC_CTX_HIGH],
-    ]);
-
-    const result = segmenterPeriodesAlimentaires(releves, biometries, BASE_VAGUE_CONTEXT, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
-      gompertzBacContexts: bacContexts,
-      gompertzMinPoints: 5,
-    });
-
-    expect(result).toHaveLength(1);
-    expect(result[0].methodeEstimation).toBe("GOMPERTZ_BAC");
-  });
-
-  it("scenario mixte : bac-A (GOMPERTZ_BAC) et bac-B (fallback GOMPERTZ_VAGUE)", () => {
-    // bac-A : dans la Map -> GOMPERTZ_BAC
-    // bac-B : pas dans la Map -> fallback GOMPERTZ_VAGUE
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 2, 25), // non exacte pour bac-A
-      makeBio("bac-B", 3, 30), // non exacte pour bac-B
-    ];
-    const releves: ReleveAlimPoint[] = [
-      makeReleve("r1", "bac-A", 5, [{ produitId: "prod-X", quantiteKg: 3 }]),
-      makeReleve("r2", "bac-A", 20, [{ produitId: "prod-X", quantiteKg: 3 }]),
-      makeReleve("r3", "bac-B", 5, [{ produitId: "prod-X", quantiteKg: 3 }]),
-      makeReleve("r4", "bac-B", 20, [{ produitId: "prod-X", quantiteKg: 3 }]),
-    ];
-    const bacContexts = new Map<string, GompertzBacContext>([
-      ["bac-A", GOMPERTZ_BAC_CTX_HIGH], // bac-A a assez de donnees
-      // bac-B absent -> fallback GOMPERTZ_VAGUE
-    ]);
-
-    const result = segmenterPeriodesAlimentaires(releves, biometries, BASE_VAGUE_CONTEXT, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
-      gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzBacContexts: bacContexts,
-      gompertzMinPoints: 5,
-    });
-
-    expect(result).toHaveLength(2);
-
-    const periodeA = result.find((p) => p.bacId === "bac-A");
-    const periodeB = result.find((p) => p.bacId === "bac-B");
-
-    expect(periodeA).toBeDefined();
-    expect(periodeB).toBeDefined();
-    expect(periodeA!.methodeEstimation).toBe("GOMPERTZ_BAC");
-    expect(periodeB!.methodeEstimation).toBe("GOMPERTZ_VAGUE");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// ADR-030 — methodeRank 5 niveaux (BIOMETRIE_EXACTE=4, GOMPERTZ_BAC=3,
-//           GOMPERTZ_VAGUE=2, INTERPOLATION_LINEAIRE=1, VALEUR_INITIALE=0)
-// ---------------------------------------------------------------------------
-
-describe("methodeRank — ordre de priorite 5 niveaux (ADR-030)", () => {
+// Tests GOMPERTZ_BAC supprimes (ADR-032 — GOMPERTZ_BAC eliminated).
+// La chaine est desormais : BIOMETRIE_EXACTE -> GOMPERTZ_VAGUE -> INTERPOLATION_LINEAIRE -> VALEUR_INITIALE
+// Tests conserves sous ADR-029 (methodeRank 3 niveaux) et ADR-032 (calibrage-aware).
+describe("methodeRank — ordre de priorite 4 niveaux (ADR-032)", () => {
   /**
-   * On verifie que GOMPERTZ_BAC a bien un rang superieur a GOMPERTZ_VAGUE (3 > 2),
-   * et que BIOMETRIE_EXACTE a bien un rang superieur a GOMPERTZ_BAC (4 > 3).
+   * Verifie que la chaine simplifiee sans GOMPERTZ_BAC fonctionne correctement :
+   * BIOMETRIE_EXACTE(3) > GOMPERTZ_VAGUE(2) > INTERPOLATION_LINEAIRE(1) > VALEUR_INITIALE(0)
    */
 
-  it("BIOMETRIE_EXACTE (rang 4) > GOMPERTZ_BAC (rang 3) -> GOMPERTZ_BAC conservateur", () => {
-    // debut = BIOMETRIE_EXACTE (J5 biometrie exacte)
-    // fin   = GOMPERTZ_BAC (J20, pas de biometrie exacte)
-    // min(4, 3) = 3 -> methode = GOMPERTZ_BAC
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 5, 50), // biometrie exacte au debut de la periode
-    ];
-    const releves: ReleveAlimPoint[] = [
-      makeReleve("r1", "bac-A", 5, [{ produitId: "prod-X", quantiteKg: 3 }]),
-      makeReleve("r2", "bac-A", 20, [{ produitId: "prod-X", quantiteKg: 3 }]),
-    ];
-    const bacContexts = new Map<string, GompertzBacContext>([
-      ["bac-A", GOMPERTZ_BAC_CTX_HIGH],
-    ]);
-
-    const result = segmenterPeriodesAlimentaires(releves, biometries, BASE_VAGUE_CONTEXT, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
-      gompertzBacContexts: bacContexts,
-      gompertzMinPoints: 5,
-    });
-
-    expect(result).toHaveLength(1);
-    // debut = BIOMETRIE_EXACTE (rang 4), fin = GOMPERTZ_BAC (rang 3)
-    // methodeRank(debut)=4 > methodeRank(fin)=3 -> retourne methode de fin = GOMPERTZ_BAC
-    expect(result[0].methodeEstimation).toBe("GOMPERTZ_BAC");
-  });
-
-  it("GOMPERTZ_BAC (rang 3) > GOMPERTZ_VAGUE (rang 2) dans la comparaison de rang", () => {
-    // debut = GOMPERTZ_BAC (bac-A dans la Map)
-    // fin   = GOMPERTZ_VAGUE (bac-A dans la Map mais on va forcer la fin a n'avoir que VAGUE)
-    //
-    // Strategie : utiliser un contexte bac dont vagueDebut est APRES le debut de la periode
-    // fin  = J5  : vagueDebut bac = makeDate(10) -> tDays = 5-10 = -5 < 0 -> fallback GOMPERTZ_VAGUE
-    // debut = J25 : vagueDebut bac = makeDate(10) -> tDays = 25-10 = 15 >= 0 -> GOMPERTZ_BAC
-    //
-    // Mais l'ordre debut/fin depend de l'ordre des releves. On va construire une periode
-    // dont la borne debut a tDays negatif (-> GOMPERTZ_VAGUE) et la borne fin a tDays positif (-> GOMPERTZ_BAC)
-    // -> min(2, 3) = 2 -> GOMPERTZ_VAGUE
-    const ctxBacDebutTard: GompertzBacContext = {
-      ...GOMPERTZ_BAC_CTX_HIGH,
-      vagueDebut: makeDate(15), // vague debut = J15, apres le 1er releve J5
-    };
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 3, 20), // non exacte pour J5 et J25
-    ];
-    const releves: ReleveAlimPoint[] = [
-      makeReleve("r1", "bac-A", 5, [{ produitId: "prod-X", quantiteKg: 3 }]),
-      makeReleve("r2", "bac-A", 25, [{ produitId: "prod-X", quantiteKg: 3 }]),
-    ];
-    const bacContexts = new Map<string, GompertzBacContext>([
-      ["bac-A", ctxBacDebutTard],
-    ]);
-
-    const result = segmenterPeriodesAlimentaires(releves, biometries, BASE_VAGUE_CONTEXT, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
-      gompertzContext: GOMPERTZ_CTX_HIGH, // vague valide comme fallback
-      gompertzBacContexts: bacContexts,
-      gompertzMinPoints: 5,
-    });
-
-    expect(result).toHaveLength(1);
-    // debut J5  : tDays = 5-15 = -10 < 0 -> GOMPERTZ_BAC refuse -> fallback GOMPERTZ_VAGUE (rang 2)
-    // fin   J25 : tDays = 25-15 = 10 >= 0 -> GOMPERTZ_BAC (rang 3)
-    // min(2, 3) = 2 -> methodeEstimation = GOMPERTZ_VAGUE
-    expect(result[0].methodeEstimation).toBe("GOMPERTZ_VAGUE");
-  });
-
-  it("BIOMETRIE_EXACTE (rang 4) sur les deux bornes -> BIOMETRIE_EXACTE meme avec GOMPERTZ_BAC configure", () => {
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 5, 50),
-      makeBio("bac-A", 20, 150),
-    ];
-    const releves: ReleveAlimPoint[] = [
-      makeReleve("r1", "bac-A", 5, [{ produitId: "prod-X", quantiteKg: 3 }]),
-      makeReleve("r2", "bac-A", 20, [{ produitId: "prod-X", quantiteKg: 3 }]),
-    ];
-    const bacContexts = new Map<string, GompertzBacContext>([
-      ["bac-A", GOMPERTZ_BAC_CTX_HIGH],
-    ]);
-
-    const result = segmenterPeriodesAlimentaires(releves, biometries, BASE_VAGUE_CONTEXT, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
-      gompertzBacContexts: bacContexts,
-      gompertzMinPoints: 5,
-    });
-
-    expect(result).toHaveLength(1);
-    // Les deux bornes ont une biometrie exacte -> rang 4 partout -> BIOMETRIE_EXACTE
-    expect(result[0].methodeEstimation).toBe("BIOMETRIE_EXACTE");
-  });
-
-  it("rang : VALEUR_INITIALE(0) < INTERPOLATION_LINEAIRE(1) < GOMPERTZ_VAGUE(2) < GOMPERTZ_BAC(3) < BIOMETRIE_EXACTE(4)", () => {
-    // Test indirect : on verifie que les 5 niveaux existent via les methodes observees
-    // dans les tests precedents. Ce test vaut comme documentation de l'ordre.
-
+  it("rang : VALEUR_INITIALE(0) < INTERPOLATION_LINEAIRE(1) < GOMPERTZ_VAGUE(2) < BIOMETRIE_EXACTE(3)", () => {
     // VALEUR_INITIALE = 0 : quand aucune biometrie avant la date cible
     const resVI = interpolerPoidsBac(makeDate(5), "bac-A", [makeBio("bac-A", 10, 50)], 10);
     expect(resVI!.methode).toBe("VALEUR_INITIALE");
@@ -1761,17 +1180,29 @@ describe("methodeRank — ordre de priorite 5 niveaux (ADR-030)", () => {
     });
     expect(resGV!.methode).toBe("GOMPERTZ_VAGUE");
 
-    // GOMPERTZ_BAC = 3
-    const resGB = interpolerPoidsBac(makeDate(50), "bac-A", [makeBio("bac-A", 5, 40)], 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
-      gompertzBacContexts: new Map([["bac-A", GOMPERTZ_BAC_CTX_HIGH]]),
-      gompertzMinPoints: 5,
-    });
-    expect(resGB!.methode).toBe("GOMPERTZ_BAC");
-
-    // BIOMETRIE_EXACTE = 4
+    // BIOMETRIE_EXACTE = 3
     const resExact = interpolerPoidsBac(makeDate(50), "bac-A", [makeBio("bac-A", 50, 500)], 10);
     expect(resExact!.methode).toBe("BIOMETRIE_EXACTE");
+  });
+
+  it("BIOMETRIE_EXACTE (rang 3) > GOMPERTZ_VAGUE (rang 2) -> GOMPERTZ_VAGUE conservateur", () => {
+    // debut = BIOMETRIE_EXACTE, fin = GOMPERTZ_VAGUE -> min(3, 2) = 2 -> GOMPERTZ_VAGUE
+    const biometries: BiometriePoint[] = [
+      makeBio("bac-A", 5, 50), // exacte au debut
+    ];
+    const releves: ReleveAlimPoint[] = [
+      makeReleve("r1", "bac-A", 5, [{ produitId: "prod-X", quantiteKg: 3 }]),
+      makeReleve("r2", "bac-A", 20, [{ produitId: "prod-X", quantiteKg: 3 }]),
+    ];
+
+    const result = segmenterPeriodesAlimentaires(releves, biometries, BASE_VAGUE_CONTEXT, {
+      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
+      gompertzContext: GOMPERTZ_CTX_HIGH,
+      gompertzMinPoints: 5,
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].methodeEstimation).toBe("GOMPERTZ_VAGUE");
   });
 });
 
@@ -1873,70 +1304,9 @@ describe("interpolerPoidsBac — detail FCRTraceEstimationDetail (ADR-031)", () 
     }
   });
 
-  // ---- GOMPERTZ_BAC -------------------------------------------------------
-
-  it("GOMPERTZ_BAC : detail contient methode, tJours, params et resultatG", () => {
-    const targetDate = makeDate(50); // t = 50 jours depuis vagueDebut = makeDate(0)
-    const biometries: BiometriePoint[] = [makeBio("bac-A", 10, 80)];
-    const bacContexts = new Map<string, GompertzBacContext>([
-      ["bac-A", GOMPERTZ_BAC_CTX_HIGH],
-    ]);
-
-    const result = interpolerPoidsBac(targetDate, "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
-      gompertzBacContexts: bacContexts,
-      gompertzMinPoints: 5,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.methode).toBe("GOMPERTZ_BAC");
-    expect(result!.detail.methode).toBe("GOMPERTZ_BAC");
-
-    if (result!.detail.methode === "GOMPERTZ_BAC") {
-      // tJours = (targetDate - vagueDebut) / ms_per_day = 50
-      expect(result!.detail.tJours).toBeCloseTo(50, 6);
-      // params : wInfinity, k, ti correspondent au contexte bac
-      expect(result!.detail.params.wInfinity).toBe(GOMPERTZ_BAC_CTX_HIGH.wInfinity);
-      expect(result!.detail.params.k).toBe(GOMPERTZ_BAC_CTX_HIGH.k);
-      expect(result!.detail.params.ti).toBe(GOMPERTZ_BAC_CTX_HIGH.ti);
-      expect(result!.detail.params.r2).toBe(GOMPERTZ_BAC_CTX_HIGH.r2);
-      expect(result!.detail.params.biometrieCount).toBe(GOMPERTZ_BAC_CTX_HIGH.biometrieCount);
-      expect(result!.detail.params.confidenceLevel).toBe(GOMPERTZ_BAC_CTX_HIGH.confidenceLevel);
-      // resultatG = poids calcule par Gompertz
-      const expected = gompertzWeight(50, {
-        wInfinity: GOMPERTZ_BAC_CTX_HIGH.wInfinity,
-        k: GOMPERTZ_BAC_CTX_HIGH.k,
-        ti: GOMPERTZ_BAC_CTX_HIGH.ti,
-      });
-      expect(result!.detail.resultatG).toBeCloseTo(expected, 6);
-      // resultatG doit etre coherent avec poids retourne
-      expect(result!.detail.resultatG).toBeCloseTo(result!.poids, 6);
-    }
-  });
-
-  it("GOMPERTZ_BAC : params.wInfinity correspond au contexte bac (pas au contexte vague)", () => {
-    // Deux contextes differents : bac wInfinity=1100, vague wInfinity=1200
-    const bacCtxDistinct: GompertzBacContext = {
-      ...GOMPERTZ_BAC_CTX_MEDIUM, // wInfinity=1100
-    };
-    const biometries: BiometriePoint[] = [makeBio("bac-A", 5, 30)];
-    const bacContexts = new Map<string, GompertzBacContext>([
-      ["bac-A", bacCtxDistinct],
-    ]);
-
-    const result = interpolerPoidsBac(makeDate(40), "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
-      gompertzContext: GOMPERTZ_CTX_HIGH, // vague : wInfinity=1200
-      gompertzBacContexts: bacContexts,
-      gompertzMinPoints: 5,
-    });
-
-    expect(result!.methode).toBe("GOMPERTZ_BAC");
-    if (result!.detail.methode === "GOMPERTZ_BAC") {
-      // Les params du detail doivent correspondre au contexte BAC (wInfinity=1100)
-      expect(result!.detail.params.wInfinity).toBe(1100);
-    }
-  });
+  // ---- GOMPERTZ_BAC supprime (ADR-032) ------------------------------------
+  // Les tests GOMPERTZ_BAC ont ete supprimes. GOMPERTZ_VAGUE est desormais le
+  // niveau le plus eleve avant BIOMETRIE_EXACTE.
 
   // ---- GOMPERTZ_VAGUE -----------------------------------------------------
 
@@ -1989,22 +1359,20 @@ describe("interpolerPoidsBac — detail FCRTraceEstimationDetail (ADR-031)", () 
     }
   });
 
-  it("GOMPERTZ_VAGUE (fallback depuis GOMPERTZ_BAC sans contexte bac) : detail.methode = GOMPERTZ_VAGUE", () => {
-    // Strategie GOMPERTZ_BAC mais pas de contexte bac pour bac-A -> fallback GOMPERTZ_VAGUE
+  it("GOMPERTZ_VAGUE avec contexte valide : detail.methode = GOMPERTZ_VAGUE", () => {
+    // Strategie GOMPERTZ_VAGUE avec contexte valide -> utilise Gompertz vague
     const biometries: BiometriePoint[] = [makeBio("bac-A", 5, 40)];
-    const emptyBacContexts = new Map<string, GompertzBacContext>(); // vide
 
     const result = interpolerPoidsBac(makeDate(50), "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_BAC,
+      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzBacContexts: emptyBacContexts,
       gompertzMinPoints: 5,
     });
 
     expect(result!.methode).toBe("GOMPERTZ_VAGUE");
     expect(result!.detail.methode).toBe("GOMPERTZ_VAGUE");
     if (result!.detail.methode === "GOMPERTZ_VAGUE") {
-      // Les params correspondent au contexte vague (pas bac)
+      // Les params correspondent au contexte vague
       expect(result!.detail.params.wInfinity).toBe(GOMPERTZ_CTX_HIGH.wInfinity);
     }
   });

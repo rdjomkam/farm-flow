@@ -83,8 +83,7 @@
   },
   "interpolationStrategy": {
     "LINEAIRE": "Lineaire (interpolation entre biometries)",
-    "GOMPERTZ_VAGUE": "Gompertz vague (courbe calibree sur toute la vague)",
-    "GOMPERTZ_BAC": "Gompertz bac (courbe individuelle par bac — ADR-030)"
+    "GOMPERTZ_VAGUE": "Gompertz vague (courbe calibree sur toute la vague)"
   },
   "benchmarks": {
     "fcrTitle": "FCR (plus bas = meilleur)",

@@ -273,7 +273,6 @@
     "biometrieExacte": "Exact biometry",
     "interpolationLineaire": "Linear interpolation",
     "gompertzVague": "Gompertz wave",
-    "gompertzBac": "Gompertz tank",
     "valeurInitiale": "Wave initial value",
     "biomasse": "Biomass",
     "nombreVivants": "Living fish",
@@ -297,7 +296,6 @@
     "aliment": "Feed",
     "gain": "Gain",
     "stratLINEAIRE": "Linear interpolation",
-    "stratGOMPERTZ_VAGUE": "Gompertz wave",
-    "stratGOMPERTZ_BAC": "Gompertz tank"
+    "stratGOMPERTZ_VAGUE": "Gompertz wave"
   }
 }
