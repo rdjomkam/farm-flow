@@ -899,8 +899,7 @@ describe("segmenterPeriodesAlimentaires — strategie GOMPERTZ_VAGUE (ADR-029)",
     // Vague debut = makeDate(0)
     // Releves a J5 et J20 (dates de borne)
     // Gompertz valid HIGH -> methodeEstimation doit refleter GOMPERTZ_VAGUE
-    // Une biometrie non exacte est necessaire pour que la garde "bacBios.length === 0"
-    // ne court-circuite pas la logique Gompertz
+    // Une biometrie non exacte est fournie pour tester la priorite Gompertz vs lineaire
     const biometries: BiometriePoint[] = [
       makeBio("bac-A", 2, 25), // non exacte par rapport a J5 et J20
     ];
@@ -1142,6 +1141,475 @@ describe("methodeRank — ordre de priorite 0-3 (ADR-029, ADR-032)", () => {
 
     // Biometrie exacte sur les deux bornes -> rang 3 partout -> BIOMETRIE_EXACTE
     expect(result[0].methodeEstimation).toBe("BIOMETRIE_EXACTE");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ADR-033 — interpolerPoidsVague : estimation de poids au niveau vague
+// ---------------------------------------------------------------------------
+
+import { interpolerPoidsVague } from "@/lib/feed-periods";
+
+/**
+ * Contexte Gompertz realiste calé sur Vague 26-01 (ADR-033).
+ * W∞=1500, K=0.0488, ti=45.68, r2=0.99, n=12, HIGH
+ * vagueDebut = makeDate(0) pour les tests
+ */
+const GOMPERTZ_CTX_ADR033: GompertzVagueContext = {
+  wInfinity: 1500,
+  k: 0.0488,
+  ti: 45.68,
+  r2: 0.9909,
+  biometrieCount: 12,
+  confidenceLevel: "HIGH",
+  vagueDebut: makeDate(0),
+};
+
+describe("interpolerPoidsVague — vague-level weight estimation (ADR-033)", () => {
+  // ---- BIOMETRIE_EXACTE quand correspondance exacte de date ----------------
+
+  it("returns BIOMETRIE_EXACTE when exact date match exists", () => {
+    // Biometries de bacs differents : J25 = 160g sur bac-01, J25 = 165g sur bac-03
+    // La fonction doit prendre la premiere correspondance calendaire
+    const biometries: BiometriePoint[] = [
+      makeBio("bac-01", 25, 160),
+      makeBio("bac-03", 25, 165),
+    ];
+    const result = interpolerPoidsVague(makeDate(25), biometries, 0.5);
+    expect(result.methode).toBe("BIOMETRIE_EXACTE");
+    // poids = premiere biometrie exacte trouvee (160 ou 165 selon tri)
+    expect([160, 165]).toContain(result.poids);
+  });
+
+  it("returns BIOMETRIE_EXACTE regardless of bacId (uses ALL biometries)", () => {
+    // Une seule biometrie mais dans bac-03 (pas bac-01)
+    // interpolerPoidsVague NE doit PAS filtrer par bacId
+    const biometries: BiometriePoint[] = [
+      makeBio("bac-03", 10, 77),
+    ];
+    const result = interpolerPoidsVague(makeDate(10), biometries, 0.5);
+    expect(result.methode).toBe("BIOMETRIE_EXACTE");
+    expect(result.poids).toBe(77);
+  });
+
+  // ---- GOMPERTZ_VAGUE meme en l'absence de biometries ---------------------
+
+  it("returns GOMPERTZ_VAGUE even when zero biometries exist", () => {
+    // Pas de biometries du tout — Gompertz doit s'evaluer car c'est une fonction de temps pur
+    const result = interpolerPoidsVague(makeDate(21), [], 0.5, {
+      gompertzContext: GOMPERTZ_CTX_ADR033,
+    });
+    expect(result.methode).toBe("GOMPERTZ_VAGUE");
+    const expectedPoids = gompertzWeight(21, {
+      wInfinity: GOMPERTZ_CTX_ADR033.wInfinity,
+      k: GOMPERTZ_CTX_ADR033.k,
+      ti: GOMPERTZ_CTX_ADR033.ti,
+    });
+    expect(result.poids).toBeCloseTo(expectedPoids, 4);
+  });
+
+  it("returns GOMPERTZ_VAGUE when biometries exist but no exact match", () => {
+    // Biometries avant et apres mais pas exactes -> Gompertz prime sur INTERPOLATION_LINEAIRE
+    const biometries: BiometriePoint[] = [
+      makeBio("bac-01", 5, 30),
+      makeBio("bac-03", 40, 500),
+    ];
+    const result = interpolerPoidsVague(makeDate(21), biometries, 0.5, {
+      gompertzContext: GOMPERTZ_CTX_ADR033,
+    });
+    expect(result.methode).toBe("GOMPERTZ_VAGUE");
+    const expectedPoids = gompertzWeight(21, {
+      wInfinity: GOMPERTZ_CTX_ADR033.wInfinity,
+      k: GOMPERTZ_CTX_ADR033.k,
+      ti: GOMPERTZ_CTX_ADR033.ti,
+    });
+    expect(result.poids).toBeCloseTo(expectedPoids, 4);
+  });
+
+  // ---- GOMPERTZ_VAGUE pour extrapolation (date apres toutes les biometries) ---
+
+  it("returns GOMPERTZ_VAGUE for extrapolation beyond last biometry", () => {
+    // Derniere biometrie a J25, date cible J35 (apres)
+    // Devrait utiliser Gompertz, pas la valeur plate de J25
+    const biometries: BiometriePoint[] = [
+      makeBio("bac-01", 10, 80),
+      makeBio("bac-03", 25, 160),
+    ];
+    const result = interpolerPoidsVague(makeDate(35), biometries, 0.5, {
+      gompertzContext: GOMPERTZ_CTX_ADR033,
+    });
+    expect(result.methode).toBe("GOMPERTZ_VAGUE");
+    const expectedPoids = gompertzWeight(35, {
+      wInfinity: GOMPERTZ_CTX_ADR033.wInfinity,
+      k: GOMPERTZ_CTX_ADR033.k,
+      ti: GOMPERTZ_CTX_ADR033.ti,
+    });
+    expect(result.poids).toBeCloseTo(expectedPoids, 4);
+    // Le poids extrapolé via Gompertz doit être supérieur à la dernière biométrie connue (160g)
+    // car Gompertz continue à croître au-delà de J25
+    expect(result.poids).toBeGreaterThan(160);
+  });
+
+  // ---- INTERPOLATION_LINEAIRE quand Gompertz absent -----------------------
+
+  it("returns INTERPOLATION_LINEAIRE between two biometries when no Gompertz", () => {
+    // Pas de contexte Gompertz -> fallback interpolation lineaire
+    // J0=50g, J40=400g, cible J20 -> 50 + (400-50)*(20/40) = 225g
+    const biometries: BiometriePoint[] = [
+      makeBio("bac-01", 0, 50),
+      makeBio("bac-03", 40, 400),
+    ];
+    const result = interpolerPoidsVague(makeDate(20), biometries, 0.5);
+    expect(result.methode).toBe("INTERPOLATION_LINEAIRE");
+    expect(result.poids).toBeCloseTo(50 + (400 - 50) * (20 / 40), 4);
+  });
+
+  // ---- VALEUR_INITIALE en dernier recours ----------------------------------
+
+  it("returns VALEUR_INITIALE when no biometries and no Gompertz", () => {
+    const result = interpolerPoidsVague(makeDate(25), [], 0.5);
+    expect(result.methode).toBe("VALEUR_INITIALE");
+    expect(result.poids).toBe(0.5);
+  });
+
+  it("returns VALEUR_INITIALE when only one biometry and date is before it (no Gompertz)", () => {
+    const biometries: BiometriePoint[] = [makeBio("bac-01", 20, 200)];
+    const result = interpolerPoidsVague(makeDate(5), biometries, 3);
+    expect(result.methode).toBe("VALEUR_INITIALE");
+    expect(result.poids).toBe(3);
+  });
+
+  // ---- Utilise TOUTES les biometries quels que soient les bacIds -----------
+
+  it("uses ALL biometries regardless of bacId (no per-bac filter)", () => {
+    // Biometries sur bac-03 et bac-04 uniquement (pas bac-01)
+    // Pour un "bac-01" cet appel vague-level doit quand meme trouver les biometries
+    // et faire l'interpolation lineaire entre elles
+    const biometries: BiometriePoint[] = [
+      makeBio("bac-03", 0, 50),
+      makeBio("bac-04", 40, 400),
+    ];
+    // Pas de filtre par bacId : la fonction doit utiliser ces deux biometries
+    const result = interpolerPoidsVague(makeDate(20), biometries, 10);
+    // Si la fonction filtrait par bacId (e.g. bac-01), elle retomberait sur VALEUR_INITIALE (10g)
+    // Ici, elle doit trouver les biometries J0=50g et J40=400g -> INTERPOLATION_LINEAIRE
+    expect(result.methode).toBe("INTERPOLATION_LINEAIRE");
+    expect(result.poids).toBeCloseTo(50 + (400 - 50) * (20 / 40), 4);
+    // La valeur ne doit PAS être le poidsInitial (10g) — ce qui prouverait un filtre per-bac
+    expect(result.poids).not.toBe(10);
+  });
+
+  // ---- BIOMETRIE_EXACTE prime toujours sur Gompertz -----------------------
+
+  it("BIOMETRIE_EXACTE primes over Gompertz when exact day match", () => {
+    // Biometrie exacte a J21 = 999g, Gompertz donnerait ~120g
+    const biometries: BiometriePoint[] = [makeBio("bac-01", 21, 999)];
+    const result = interpolerPoidsVague(makeDate(21), biometries, 0.5, {
+      gompertzContext: GOMPERTZ_CTX_ADR033,
+    });
+    expect(result.methode).toBe("BIOMETRIE_EXACTE");
+    expect(result.poids).toBe(999);
+  });
+
+  // ---- Gompertz : fallback si confidence insuffisante ---------------------
+
+  it("falls back to INTERPOLATION_LINEAIRE when Gompertz confidence is LOW", () => {
+    const ctxLow: GompertzVagueContext = {
+      ...GOMPERTZ_CTX_ADR033,
+      confidenceLevel: "LOW",
+    };
+    const biometries: BiometriePoint[] = [
+      makeBio("bac-01", 0, 10),
+      makeBio("bac-03", 60, 800),
+    ];
+    const result = interpolerPoidsVague(makeDate(30), biometries, 0.5, {
+      gompertzContext: ctxLow,
+    });
+    expect(result.methode).toBe("INTERPOLATION_LINEAIRE");
+  });
+
+  it("falls back to VALEUR_INITIALE when Gompertz confidence is LOW and no biometries", () => {
+    const ctxLow: GompertzVagueContext = {
+      ...GOMPERTZ_CTX_ADR033,
+      confidenceLevel: "LOW",
+    };
+    const result = interpolerPoidsVague(makeDate(25), [], 0.5, {
+      gompertzContext: ctxLow,
+    });
+    expect(result.methode).toBe("VALEUR_INITIALE");
+    expect(result.poids).toBe(0.5);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ADR-033 — segmenterPeriodesAlimentaires : FCR vague-level avec Gompertz
+// ---------------------------------------------------------------------------
+
+describe("segmenterPeriodesAlimentaires — vague-level Gompertz (ADR-033)", () => {
+  /**
+   * Scenario realiste Vague 26-01 (ADR-033) :
+   *
+   * - Vague : 1300 poissons, 2 bacs initiaux (bac-01 + bac-02, 650 chacun),
+   *   poidsInitial 0.5g, dateDebut = makeDate(0)
+   * - Gompertz : W∞=1500, K=0.0488, ti=45.68, r2=0.99, n=12, HIGH
+   * - Calibrage au J25 : bac-01→130, bac-03→520, bac-04→650 (+ 20 morts)
+   * - Poids Gompertz :
+   *   J21 ~ 120g, J25 ~ 160g, J35 ~ 400g
+   * - Alimentation Skretting 3mm :
+   *   bac-01 : J21-J25 (10kg), bac-02 : J21-J35 (50kg),
+   *   bac-03 : J25-J35 (40kg), bac-04 : J25-J35 (45kg)
+   * - Total aliment = 145kg
+   */
+
+  const GOMPERTZ_VAGUE_26_01: GompertzVagueContext = {
+    wInfinity: 1500,
+    k: 0.0488,
+    ti: 45.68,
+    r2: 0.9909,
+    biometrieCount: 12,
+    confidenceLevel: "HIGH",
+    vagueDebut: makeDate(0),
+  };
+
+  const vagueAvecCalibrage4Bacs: VagueContext = {
+    dateDebut: makeDate(0),
+    nombreInitial: 1300,
+    poidsMoyenInitial: 0.5,
+    bacs: [
+      { id: "bac-01", nombreInitial: 650 },
+      { id: "bac-02", nombreInitial: 650 },
+      { id: "bac-03", nombreInitial: null }, // cree au calibrage
+      { id: "bac-04", nombreInitial: null }, // cree au calibrage
+    ],
+    calibrages: [
+      {
+        date: makeDate(25),
+        nombreMorts: 20,
+        groupes: [
+          { destinationBacId: "bac-01", nombrePoissons: 130, poidsMoyen: 160 },
+          { destinationBacId: "bac-03", nombrePoissons: 520, poidsMoyen: 160 },
+          { destinationBacId: "bac-04", nombrePoissons: 650, poidsMoyen: 160 },
+        ],
+      },
+    ],
+  };
+
+  // bac-01 : J21-J25 = 10kg, bac-02 : J21-J35 = 50kg,
+  // bac-03 : J25-J35 = 40kg, bac-04 : J25-J35 = 45kg
+  const relevesScenario: ReleveAlimPoint[] = [
+    // bac-01
+    makeReleve("r01-a", "bac-01", 21, [{ produitId: "skretting-3mm", quantiteKg: 5 }]),
+    makeReleve("r01-b", "bac-01", 25, [{ produitId: "skretting-3mm", quantiteKg: 5 }]),
+    // bac-02
+    makeReleve("r02-a", "bac-02", 21, [{ produitId: "skretting-3mm", quantiteKg: 10 }]),
+    makeReleve("r02-b", "bac-02", 28, [{ produitId: "skretting-3mm", quantiteKg: 20 }]),
+    makeReleve("r02-c", "bac-02", 35, [{ produitId: "skretting-3mm", quantiteKg: 20 }]),
+    // bac-03
+    makeReleve("r03-a", "bac-03", 25, [{ produitId: "skretting-3mm", quantiteKg: 15 }]),
+    makeReleve("r03-b", "bac-03", 30, [{ produitId: "skretting-3mm", quantiteKg: 15 }]),
+    makeReleve("r03-c", "bac-03", 35, [{ produitId: "skretting-3mm", quantiteKg: 10 }]),
+    // bac-04
+    makeReleve("r04-a", "bac-04", 25, [{ produitId: "skretting-3mm", quantiteKg: 15 }]),
+    makeReleve("r04-b", "bac-04", 30, [{ produitId: "skretting-3mm", quantiteKg: 15 }]),
+    makeReleve("r04-c", "bac-04", 35, [{ produitId: "skretting-3mm", quantiteKg: 15 }]),
+  ];
+
+  it("uses Gompertz VAGUE for weight even for tanks with zero biometries", () => {
+    // bac-03 et bac-04 sont crees au calibrage J25 -> aucune biometrie sous leur bacId
+    // Avec l'ancien algorithme per-bac, ils retombaient sur VALEUR_INITIALE (0.5g)
+    // Avec ADR-033 (interpolerPoidsVague sans filtre bacId), Gompertz est utilise
+    //
+    // On verifie via methodeEstimation : si bac-03/04 tombent sur VALEUR_INITIALE,
+    // la methodeEstimation serait "VALEUR_INITIALE". Avec Gompertz, elle doit etre
+    // "GOMPERTZ_VAGUE".
+    //
+    // On n'a pas de biometries dans ce test (scenario pur Gompertz)
+    const periodes = segmenterPeriodesAlimentaires(
+      relevesScenario,
+      [], // aucune biometrie -> doit utiliser Gompertz via interpolerPoidsVague
+      vagueAvecCalibrage4Bacs,
+      {
+        gompertzContext: GOMPERTZ_VAGUE_26_01,
+        gompertzMinPoints: 5,
+      }
+    );
+
+    // Filtrer les periodes de bac-03 et bac-04
+    const periodes03 = periodes.filter((p) => p.bacId === "bac-03");
+    const periodes04 = periodes.filter((p) => p.bacId === "bac-04");
+
+    expect(periodes03.length).toBeGreaterThan(0);
+    expect(periodes04.length).toBeGreaterThan(0);
+
+    // Avec Gompertz vague (sans filtre bacId), la methode doit etre GOMPERTZ_VAGUE
+    for (const p of [...periodes03, ...periodes04]) {
+      expect(p.methodeEstimation).toBe("GOMPERTZ_VAGUE");
+    }
+  });
+
+  it("produces biologically plausible FCR (0.8-2.5) with calibrage scenario", () => {
+    // Scenario simplifie avec populations plus modestes pour FCR plausible.
+    //
+    // Gompertz: W∞=1000, K=0.03, ti=50
+    //   J25 ≈ 120g, J35 ≈ 208g
+    //
+    // Contexte : 200 poissons, calibrage J25 : bac-s1→40 fish, bac-s2→160 fish (nouveau bac)
+    // Alimentation Skretting :
+    //   bac-s1 (J25-J35) : 6kg
+    //   bac-s2 (J25-J35) : 26kg
+    // Total feed = 32kg
+    //
+    // Gain attendu :
+    //   bac-s1 : (208-120)*40/1000 = 3.52 kg
+    //   bac-s2 : (208-120)*160/1000 = 14.08 kg
+    //   Total gain = 17.60 kg
+    //   FCR = 32/17.60 ≈ 1.82 (plausible pour Clarias)
+
+    const GOMPERTZ_FCR_TEST: GompertzVagueContext = {
+      wInfinity: 1000,
+      k: 0.03,
+      ti: 50,
+      r2: 0.97,
+      biometrieCount: 10,
+      confidenceLevel: "HIGH",
+      vagueDebut: makeDate(0),
+    };
+
+    const vagueFCR: VagueContext = {
+      dateDebut: makeDate(0),
+      nombreInitial: 200,
+      poidsMoyenInitial: 5,
+      bacs: [
+        { id: "bac-s1", nombreInitial: 200 },
+        { id: "bac-s2", nombreInitial: null }, // cree au calibrage
+      ],
+      calibrages: [
+        {
+          date: makeDate(25),
+          nombreMorts: 0,
+          groupes: [
+            { destinationBacId: "bac-s1", nombrePoissons: 40, poidsMoyen: 120 },
+            { destinationBacId: "bac-s2", nombrePoissons: 160, poidsMoyen: 120 },
+          ],
+        },
+      ],
+    };
+
+    const relevesFCR: ReleveAlimPoint[] = [
+      makeReleve("fs1-a", "bac-s1", 25, [{ produitId: "sk3mm", quantiteKg: 3 }]),
+      makeReleve("fs1-b", "bac-s1", 35, [{ produitId: "sk3mm", quantiteKg: 3 }]),
+      makeReleve("fs2-a", "bac-s2", 25, [{ produitId: "sk3mm", quantiteKg: 13 }]),
+      makeReleve("fs2-b", "bac-s2", 35, [{ produitId: "sk3mm", quantiteKg: 13 }]),
+    ];
+
+    const periodes = segmenterPeriodesAlimentaires(
+      relevesFCR,
+      [], // aucune biometrie per-bac -> doit utiliser Gompertz
+      vagueFCR,
+      {
+        gompertzContext: GOMPERTZ_FCR_TEST,
+        gompertzMinPoints: 5,
+      }
+    );
+
+    const validPeriodes = periodes.filter(
+      (p) => p.gainBiomasseKg !== null && p.gainBiomasseKg > 0
+    );
+
+    // bac-s2 (nouveau bac sans biometrie per-bac) doit avoir un gain > 0 grace a Gompertz
+    expect(validPeriodes.length).toBe(2);
+
+    const totalAliment = validPeriodes.reduce((s, p) => s + p.quantiteKg, 0);
+    const totalGain = validPeriodes.reduce((s, p) => s + (p.gainBiomasseKg ?? 0), 0);
+
+    expect(totalGain).toBeGreaterThan(0);
+    expect(totalAliment).toBeGreaterThan(0);
+
+    const fcr = totalAliment / totalGain;
+    // FCR attendu ≈ 1.82 (biologiquement plausible pour Clarias)
+    expect(fcr).toBeGreaterThan(0.8);
+    expect(fcr).toBeLessThan(2.5);
+  });
+
+  it("excludes feed from periods with negative gain", () => {
+    // Scenario : poids decroit entre deux dates -> gain negatif -> periode exclue
+    // On ajoute artificiellement des biometries avec poids decroissant
+    // pour forcer un gain negatif sur bac-01
+    const biometriesDecroissantes: BiometriePoint[] = [
+      makeBio("bac-01", 21, 300), // J21 = 300g (haute)
+      makeBio("bac-01", 25, 200), // J25 = 200g (basse) -> gain negatif
+    ];
+
+    // Releves bac-01 uniquement
+    const releves01: ReleveAlimPoint[] = [
+      makeReleve("r01-a", "bac-01", 21, [{ produitId: "skretting-3mm", quantiteKg: 5 }]),
+      makeReleve("r01-b", "bac-01", 25, [{ produitId: "skretting-3mm", quantiteKg: 5 }]),
+    ];
+
+    const contexteSimple: VagueContext = {
+      dateDebut: makeDate(0),
+      nombreInitial: 650,
+      poidsMoyenInitial: 0.5,
+      bacs: [{ id: "bac-01", nombreInitial: 650 }],
+    };
+
+    const periodes = segmenterPeriodesAlimentaires(
+      releves01,
+      biometriesDecroissantes,
+      contexteSimple
+    );
+
+    expect(periodes).toHaveLength(1);
+    // Gain negatif -> gainBiomasseKg = null (exclu)
+    expect(periodes[0].gainBiomasseKg).toBeNull();
+    // La periode existe mais son gain est nul -> ne contribue pas au FCR
+    expect(periodes[0].quantiteKg).toBe(10); // l'aliment est quand meme compte
+  });
+
+  it("bac-03 and bac-04 gain biomasse is NOT null with Gompertz (key ADR-033 regression test)", () => {
+    // REGRESSION TEST pour DISC-01/DISC-02 :
+    // Avant ADR-033, bac-03 et bac-04 (crees au calibrage) n'avaient pas de biometries
+    // per-bac -> interpolerPoidsBac retournait VALEUR_INITIALE (0.5g) pour les deux bornes
+    // -> gain = (0.5 - 0.5) * N / 1000 = 0 -> gainBiomasseKg = null -> FCR artificiellement haut
+    //
+    // Avec ADR-033 (interpolerPoidsVague), Gompertz est utilise pour les deux bornes
+    // -> gain > 0 -> gainBiomasseKg != null
+    const periodes = segmenterPeriodesAlimentaires(
+      relevesScenario,
+      [], // aucune biometrie per-bac
+      vagueAvecCalibrage4Bacs,
+      {
+        gompertzContext: GOMPERTZ_VAGUE_26_01,
+        gompertzMinPoints: 5,
+      }
+    );
+
+    const periodes03 = periodes.filter((p) => p.bacId === "bac-03");
+    const periodes04 = periodes.filter((p) => p.bacId === "bac-04");
+
+    // Chaque bac doit avoir au moins une periode avec gain positif
+    for (const p of [...periodes03, ...periodes04]) {
+      // Le gain ne doit PAS etre null (ce qui arrivait avec l'ancien algo per-bac)
+      expect(p.gainBiomasseKg).not.toBeNull();
+      expect(p.gainBiomasseKg).toBeGreaterThan(0);
+    }
+  });
+
+  it("total feed across all tanks matches expected sum (145kg)", () => {
+    const periodes = segmenterPeriodesAlimentaires(
+      relevesScenario,
+      [],
+      vagueAvecCalibrage4Bacs,
+      {
+        gompertzContext: GOMPERTZ_VAGUE_26_01,
+        gompertzMinPoints: 5,
+      }
+    );
+
+    // Verifier que le total aliment de toutes les periodes = 145kg (somme des releves)
+    // bac-01: 5+5=10, bac-02: 10+20+20=50, bac-03: 15+15+10=40, bac-04: 15+15+15=45 -> 145
+    const totalAliment = periodes.reduce((s, p) => s + p.quantiteKg, 0);
+    expect(totalAliment).toBeCloseTo(145, 5);
   });
 });
 

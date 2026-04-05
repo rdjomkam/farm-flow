@@ -46,7 +46,7 @@ import {
 } from "@/lib/calculs";
 import {
   segmenterPeriodesAlimentaires,
-  interpolerPoidsBac,
+  interpolerPoidsVague,
   type ReleveAlimPoint,
   type BiometriePoint,
   type VagueContext,
@@ -620,6 +620,8 @@ async function computeAlimentMetrics(
   // Compute per-vague metrics
   const vagueMetrics: {
     quantite: number;
+    /** Feed from periods with positive gain only — used for FCR numerator (ADR-033 DISC-16) */
+    alimentValide: number;
     gainBiomasse: number | null;
     fcr: number | null;
     sgr: number | null;
@@ -680,26 +682,28 @@ async function computeAlimentMetrics(
       bacs: vague.bacs,
     };
 
-    // ADR-029: build Gompertz context if available and strategy is configured
+    // ADR-029 / ADR-033: build Gompertz context whenever the model is available —
+    // NOT conditional on interpolStrategy (ADR-033 DISC-10 fix).
+    // interpolationStrategy is a display preference; FCR always uses Gompertz when valid.
     const config = vague.configElevage;
     const gompertz = vague.gompertz;
     const interpolStrategy =
       config?.interpolationStrategy ?? StrategieInterpolation.LINEAIRE;
 
-    const gompertzContext: GompertzVagueContext | undefined =
-      gompertz && interpolStrategy === StrategieInterpolation.GOMPERTZ_VAGUE
-        ? {
-            wInfinity: gompertz.wInfinity,
-            k: gompertz.k,
-            ti: gompertz.ti,
-            r2: gompertz.r2,
-            biometrieCount: gompertz.biometrieCount,
-            confidenceLevel: gompertz.confidenceLevel as GompertzVagueContext["confidenceLevel"],
-            vagueDebut: vague.dateDebut,
-          }
-        : undefined;
+    const gompertzContext: GompertzVagueContext | undefined = gompertz
+      ? {
+          wInfinity: gompertz.wInfinity,
+          k: gompertz.k,
+          ti: gompertz.ti,
+          r2: gompertz.r2,
+          biometrieCount: gompertz.biometrieCount,
+          confidenceLevel: gompertz.confidenceLevel as GompertzVagueContext["confidenceLevel"],
+          vagueDebut: vague.dateDebut,
+        }
+      : undefined;
 
-    // ADR-032: build mortalitesParBac for calibrage-aware nombreVivants
+    // ADR-033 DISC-09: build mortalitesParBac (flat Map) for per-tank nombreVivants
+    // (each tank tracks its own mortality separately via estimerNombreVivantsADate)
     const mortalitesParBac = new Map<string, Array<{ nombreMorts: number; date: Date }>>();
     for (const r of (relevesByVague.get(vague.id) ?? []).filter(
       (r) => r.typeReleve === TypeReleve.MORTALITE
@@ -721,7 +725,9 @@ async function computeAlimentMetrics(
       })),
     };
 
-    // Segmenter all periods, then filter for this product
+    // Segmenter all periods, then filter for this product.
+    // Weight estimation now uses vague-level Gompertz via interpolerPoidsVague
+    // inside segmenterPeriodesAlimentaires (ADR-033 fix).
     const allPeriodes = segmenterPeriodesAlimentaires(
       relevsAlimPoints,
       biometriePoints,
@@ -735,18 +741,21 @@ async function computeAlimentMetrics(
     );
     const periodesProduct = allPeriodes.filter((p) => p.produitId === produit.id);
 
-    // Aggregate FCR from periods: total aliment / total positive gain
+    // Aggregate FCR from periods (ADR-033 DISC-16 fix):
+    // Both numerator and denominator are built ONLY from periods with positive gain.
+    // Periods with negative gain are excluded from BOTH feed and gain totals.
     let gainBiomasse: number | null = null;
     let fcr: number | null = null;
+    let totalAlimentValide = 0;
 
     if (periodesProduct.length > 0) {
-      const totalAlimentPeriodes = periodesProduct.reduce((s, p) => s + p.quantiteKg, 0);
-      const totalGainPeriodes = periodesProduct.reduce(
-        (s, p) => s + (p.gainBiomasseKg != null && p.gainBiomasseKg > 0 ? p.gainBiomasseKg : 0),
-        0
+      const validPeriodes = periodesProduct.filter(
+        (p) => p.gainBiomasseKg !== null && p.gainBiomasseKg > 0
       );
-      gainBiomasse = totalGainPeriodes > 0 ? totalGainPeriodes : null;
-      fcr = totalGainPeriodes > 0 ? totalAlimentPeriodes / totalGainPeriodes : null;
+      totalAlimentValide = validPeriodes.reduce((s, p) => s + p.quantiteKg, 0);
+      const totalGainValide = validPeriodes.reduce((s, p) => s + (p.gainBiomasseKg ?? 0), 0);
+      gainBiomasse = totalGainValide > 0 ? totalGainValide : null;
+      fcr = totalGainValide > 0 ? totalAlimentValide / totalGainValide : null;
     } else {
       // Fallback: no ALIMENTATION relevés segmented (old data without consommations)
       // Use the naive vague-level calculation
@@ -785,6 +794,8 @@ async function computeAlimentMetrics(
 
     vagueMetrics.push({
       quantite: conso.quantite,
+      // ADR-033 DISC-16: only feed from periods with positive gain
+      alimentValide: periodesProduct.length > 0 ? totalAlimentValide : conso.quantite,
       gainBiomasse,
       fcr,
       sgr,
@@ -827,8 +838,10 @@ async function computeAlimentMetrics(
   const prixBase = getPrixParUniteBase(produit);
   const coutTotal = Math.round(quantiteTotale * prixBase);
 
+  // ADR-033 DISC-16: use alimentValide (feed from periods with positive gain only)
+  // in the FCR numerator so that feed from negative-gain periods is excluded.
   const fcrMoyen = calculerFCRParAliment(
-    vagueMetrics.map((v) => ({ quantite: v.quantite, gainBiomasse: v.gainBiomasse }))
+    vagueMetrics.map((v) => ({ quantite: v.alimentValide, gainBiomasse: v.gainBiomasse }))
   );
 
   // Weighted SGR
@@ -2580,6 +2593,8 @@ export async function getFCRTrace(
 
   const parVague: FCRTraceVague[] = [];
   let quantiteTotaleGlobale = 0;
+  /** Feed from valid (positive-gain) periods only — used for global FCR numerator (ADR-033 DISC-16) */
+  let alimentValideTotalGlobale = 0;
   let gainBiomasseTotalGlobale: number | null = null;
 
   for (const vague of vagues) {
@@ -2606,27 +2621,28 @@ export async function getFCRTrace(
       bacs: vague.bacs,
     };
 
-    // ADR-029: build Gompertz context if available and strategy is configured
+    // ADR-029 / ADR-033: build Gompertz context whenever the model is available —
+    // NOT conditional on interpolStrategy (ADR-033 DISC-15 fix).
     const config = vague.configElevage;
     const gompertz = vague.gompertz;
     const interpolStrategy =
       (config?.interpolationStrategy as StrategieInterpolation | null) ??
       StrategieInterpolation.LINEAIRE;
 
-    const gompertzContext: GompertzVagueContext | undefined =
-      gompertz && interpolStrategy === StrategieInterpolation.GOMPERTZ_VAGUE
-        ? {
-            wInfinity: gompertz.wInfinity,
-            k: gompertz.k,
-            ti: gompertz.ti,
-            r2: gompertz.r2,
-            biometrieCount: gompertz.biometrieCount,
-            confidenceLevel: gompertz.confidenceLevel as GompertzVagueContext["confidenceLevel"],
-            vagueDebut: vague.dateDebut,
-          }
-        : undefined;
+    const gompertzContext: GompertzVagueContext | undefined = gompertz
+      ? {
+          wInfinity: gompertz.wInfinity,
+          k: gompertz.k,
+          ti: gompertz.ti,
+          r2: gompertz.r2,
+          biometrieCount: gompertz.biometrieCount,
+          confidenceLevel: gompertz.confidenceLevel as GompertzVagueContext["confidenceLevel"],
+          vagueDebut: vague.dateDebut,
+        }
+      : undefined;
 
-    // ADR-032: build mortalitesParBac for calibrage-aware nombreVivants
+    // ADR-032: build mortalitesParBac for per-tank nombreVivants
+    // (per-tank mortality tracking is correct per ADR-033 — each tank has different fish count)
     const mortalitesParBac = new Map<string, Array<{ nombreMorts: number; date: Date }>>();
     for (const r of releves.filter((r) => r.typeReleve === TypeReleve.MORTALITE)) {
       if (r.bacId) {
@@ -2664,7 +2680,7 @@ export async function getFCRTrace(
       })),
     }));
 
-    // Segment all periods (needed to know modeLegacy)
+    // Segment all periods using vague-level weight estimation (ADR-033)
     const allPeriodes = segmenterPeriodesAlimentaires(
       relevsAlimPoints,
       biometriePoints,
@@ -2673,27 +2689,22 @@ export async function getFCRTrace(
     );
     const periodesProduct = allPeriodes.filter((p) => p.produitId === produitId);
 
-    // Check legacy mode (bacId was null in original records)
-    const modeLegacy = vagueAlimReleves.some((r) => r.bacId === null);
-
-    // Build map from bacId to nom
+    // Build map from bacId to nom for display (bacId/bacNom kept for transparency)
     const bacNomMap = new Map<string, string>(vague.bacs.map((b) => [b.id, b.nom]));
 
-    // Build FCRTracePeriode for each period of this product
+    // Build FCRTracePeriode for each period of this product.
+    // Weight estimation uses interpolerPoidsVague (ADR-033 DISC-13 fix) —
+    // ALL biometries are passed, not filtered by bacId.
     const tracePeriodes: FCRTracePeriode[] = [];
     for (const periode of periodesProduct) {
-      const resolvedBacId = periode.bacId === "unknown" ? null : periode.bacId;
-
-      const debutEstim = interpolerPoidsBac(
+      const debutEstim = interpolerPoidsVague(
         periode.dateDebut,
-        resolvedBacId,
         biometriePoints,
         vague.poidsMoyenInitial,
         interpolOptions
       );
-      const finEstim = interpolerPoidsBac(
+      const finEstim = interpolerPoidsVague(
         periode.dateFin,
-        resolvedBacId,
         biometriePoints,
         vague.poidsMoyenInitial,
         interpolOptions
@@ -2773,10 +2784,14 @@ export async function getFCRTrace(
       });
     }
 
-    // Vague-level FCR aggregation
-    const totalAlimentVague = tracePeriodes.reduce((s, p) => s + p.quantiteKg, 0);
-    const totalGainVague = tracePeriodes.reduce(
-      (s, p) => s + (p.gainBiomasseKg != null ? p.gainBiomasseKg : 0),
+    // Vague-level FCR aggregation (ADR-033 DISC-16 fix):
+    // Both numerator and denominator only include periods with positive gain.
+    const validTracePeriodes = tracePeriodes.filter(
+      (p) => p.gainBiomasseKg !== null && p.gainBiomasseKg > 0
+    );
+    const totalAlimentVague = validTracePeriodes.reduce((s, p) => s + p.quantiteKg, 0);
+    const totalGainVague = validTracePeriodes.reduce(
+      (s, p) => s + (p.gainBiomasseKg ?? 0),
       0
     );
     const gainBiomasseVague = totalGainVague > 0 ? totalGainVague : null;
@@ -2802,6 +2817,7 @@ export async function getFCRTrace(
     }
 
     quantiteTotaleGlobale += quantiteVague;
+    alimentValideTotalGlobale += totalAlimentVague; // only valid-period feed (ADR-033 DISC-16)
     if (gainBiomasseVague !== null) {
       gainBiomasseTotalGlobale = (gainBiomasseTotalGlobale ?? 0) + gainBiomasseVague;
     }
@@ -2819,14 +2835,14 @@ export async function getFCRTrace(
       fcrVague,
       gompertzVague: gompertzVagueParams,
       periodes: tracePeriodes,
-      modeLegacy,
+      // modeLegacy removed — ADR-033 DISC-19/14: vague-level algorithm handles legacy data naturally
     });
   }
 
-  // Global FCR
+  // Global FCR (ADR-033 DISC-16): numerator uses only feed from valid (positive-gain) periods
   const fcrMoyenFinal =
     gainBiomasseTotalGlobale !== null && gainBiomasseTotalGlobale > 0
-      ? Math.round((quantiteTotaleGlobale / gainBiomasseTotalGlobale) * 100) / 100
+      ? Math.round((alimentValideTotalGlobale / gainBiomasseTotalGlobale) * 100) / 100
       : null;
 
   // Pick interpolation strategy from the first vague that has a config.

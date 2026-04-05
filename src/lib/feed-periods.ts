@@ -9,7 +9,7 @@
  * per period, then aggregate with weighted sum.
  */
 
-import type { PeriodeAlimentaire, FCRTraceEstimationDetail } from "@/types";
+import type { PeriodeAlimentaire, FCRTraceEstimationDetail, MethodeEstimationPoids } from "@/types";
 import { StrategieInterpolation } from "@/types";
 import { gompertzWeight } from "@/lib/gompertz";
 
@@ -258,6 +258,168 @@ export function interpolerPoidsBac(
 }
 
 // ---------------------------------------------------------------------------
+// interpolerPoidsVague (ADR-033)
+// ---------------------------------------------------------------------------
+
+/**
+ * Interpolates or retrieves the average weight of the whole vague at a given
+ * date. Unlike interpolerPoidsBac, this function does NOT filter biometries
+ * by bacId — it uses ALL biometries from the vague to represent the vague-level
+ * growth curve.
+ *
+ * Priority chain (ADR-033 §7):
+ *   1. BIOMETRIE_EXACTE — exact calendar-day match in ANY biometry
+ *   2. GOMPERTZ_VAGUE — if gompertzContext is valid (HIGH or MEDIUM, R² ≥ 0.85,
+ *      biometrieCount ≥ minPoints), ALWAYS evaluated even when biometries are
+ *      available or when the target date is beyond all biometries
+ *   3. INTERPOLATION_LINEAIRE — linear interpolation between two bracketing
+ *      biometries (only when Gompertz is not available)
+ *   4. VALEUR_INITIALE — fallback when nothing else is possible
+ *
+ * @param targetDate     - date for which to estimate weight
+ * @param biometries     - ALL biometries of the vague (NOT filtered by bacId)
+ * @param poidsInitial   - initial average weight of the vague (fallback)
+ * @param options        - optional options including gompertzContext (no strategie — Gompertz
+ *                         is evaluated unconditionally whenever a valid context is provided)
+ * @returns { poids, methode, detail }
+ */
+export function interpolerPoidsVague(
+  targetDate: Date,
+  biometries: BiometriePoint[],
+  poidsInitial: number,
+  options?: {
+    gompertzContext?: GompertzVagueContext;
+    gompertzMinPoints?: number;
+  }
+): { poids: number; methode: MethodeEstimationPoids; detail: FCRTraceEstimationDetail } {
+  // Sort all biometries (vague-level, not filtered by bacId)
+  const sortedBios = [...biometries].sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  const targetMs = targetDate.getTime();
+
+  // 1. Exact match (same calendar day) — primes over Gompertz
+  const exact = sortedBios.find(
+    (b) =>
+      b.date.getFullYear() === targetDate.getFullYear() &&
+      b.date.getMonth() === targetDate.getMonth() &&
+      b.date.getDate() === targetDate.getDate()
+  );
+  if (exact) {
+    return {
+      poids: exact.poidsMoyen,
+      methode: "BIOMETRIE_EXACTE",
+      detail: { methode: "BIOMETRIE_EXACTE", dateBiometrie: exact.date, poidsMesureG: exact.poidsMoyen },
+    };
+  }
+
+  // 2. Gompertz VAGUE — evaluated whenever valid context is provided, regardless of
+  //    interpolStrategy and regardless of whether biometries are available.
+  //    This is the core ADR-033 change: Gompertz is a time-only function and
+  //    does not require per-bac data.
+  const ctx = options?.gompertzContext;
+  if (ctx) {
+    const minPoints = options?.gompertzMinPoints ?? 5;
+    const isValidLevel = ctx.confidenceLevel === "HIGH" || ctx.confidenceLevel === "MEDIUM";
+    if (isValidLevel && ctx.r2 >= 0.85 && ctx.biometrieCount >= minPoints) {
+      const tDays = (targetDate.getTime() - ctx.vagueDebut.getTime()) / (1000 * 60 * 60 * 24);
+      if (tDays >= 0) {
+        const poids = gompertzWeight(tDays, {
+          wInfinity: ctx.wInfinity,
+          k: ctx.k,
+          ti: ctx.ti,
+        });
+        if (poids > 0 && !isNaN(poids)) {
+          return {
+            poids,
+            methode: "GOMPERTZ_VAGUE",
+            detail: {
+              methode: "GOMPERTZ_VAGUE",
+              tJours: tDays,
+              params: {
+                wInfinity: ctx.wInfinity,
+                k: ctx.k,
+                ti: ctx.ti,
+                r2: ctx.r2,
+                biometrieCount: ctx.biometrieCount,
+                confidenceLevel: ctx.confidenceLevel,
+              },
+              resultatG: poids,
+            },
+          };
+        }
+      }
+    }
+  }
+
+  // 3. Linear interpolation between two bracketing biometries
+  if (sortedBios.length >= 2) {
+    const before = [...sortedBios].reverse().find((b) => b.date.getTime() < targetMs);
+    const after = sortedBios.find((b) => b.date.getTime() > targetMs);
+
+    if (before && after) {
+      const span = after.date.getTime() - before.date.getTime();
+      const elapsed = targetMs - before.date.getTime();
+      const ratio = elapsed / span;
+      const poids = before.poidsMoyen + (after.poidsMoyen - before.poidsMoyen) * ratio;
+      return {
+        poids,
+        methode: "INTERPOLATION_LINEAIRE",
+        detail: {
+          methode: "INTERPOLATION_LINEAIRE",
+          pointAvant: { date: before.date, poidsMoyenG: before.poidsMoyen },
+          pointApres: { date: after.date, poidsMoyenG: after.poidsMoyen },
+          ratio,
+        },
+      };
+    }
+
+    // Target before all biometries
+    if (sortedBios.length > 0) {
+      const firstBio = sortedBios[0];
+      if (firstBio.date.getTime() > targetMs) {
+        return {
+          poids: poidsInitial,
+          methode: "VALEUR_INITIALE",
+          detail: { methode: "VALEUR_INITIALE", poidsMoyenInitialG: poidsInitial },
+        };
+      }
+
+      // Target after all biometries — flat extrapolation from last known
+      const lastBio = sortedBios[sortedBios.length - 1];
+      if (lastBio.date.getTime() < targetMs) {
+        return {
+          poids: lastBio.poidsMoyen,
+          methode: "INTERPOLATION_LINEAIRE",
+          detail: {
+            methode: "INTERPOLATION_LINEAIRE",
+            pointAvant: { date: lastBio.date, poidsMoyenG: lastBio.poidsMoyen },
+            pointApres: null,
+            ratio: null,
+          },
+        };
+      }
+    }
+  } else if (sortedBios.length === 1) {
+    const bio = sortedBios[0];
+    if (bio.date.getTime() === targetMs) {
+      // Already checked exact match above, but just in case
+      return {
+        poids: bio.poidsMoyen,
+        methode: "BIOMETRIE_EXACTE",
+        detail: { methode: "BIOMETRIE_EXACTE", dateBiometrie: bio.date, poidsMesureG: bio.poidsMoyen },
+      };
+    }
+  }
+
+  // 4. Fallback — vague initial weight
+  return {
+    poids: poidsInitial,
+    methode: "VALEUR_INITIALE",
+    detail: { methode: "VALEUR_INITIALE", poidsMoyenInitialG: poidsInitial },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // estimerNombreVivantsADate (ADR-032)
 // ---------------------------------------------------------------------------
 
@@ -360,12 +522,14 @@ function getProduitPrincipal(
  * using the same principal product. Each product change or new tank creates
  * a new period.
  *
- * ADR-028, Couche 1 algorithm:
- *   1. For each tank, sort ALIMENTATION releves by date.
- *   2. Group consecutive releves with the same principal produitId.
- *   3. Each product change -> new period.
- *   4. Estimate poidsMoyenDebut / poidsMoyenFin for each period.
- *   5. Compute gainBiomasseKg using calibrage-aware nombreVivants (ADR-032).
+ * ADR-028 + ADR-033 algorithm:
+ *   1. Segmentation is performed PER TANK (per bacId) — each bac has its own
+ *      independent set of periods (correct per ADR-033).
+ *   2. Weight estimation uses the VAGUE-LEVEL Gompertz curve via
+ *      interpolerPoidsVague (ALL biometries, NOT filtered by bacId), so that
+ *      the Gompertz model is always available regardless of per-tank biometry.
+ *   3. nombreVivants for gainBiomasseKg is PER TANK (calibrage-aware, ADR-032).
+ *   4. FCR aggregation is then computed from the per-tank periods by the caller.
  *
  * Degrades gracefully:
  *   - Releves without bacId are grouped under a synthetic "null" tank,
@@ -373,10 +537,10 @@ function getProduitPrincipal(
  *   - If gainBiomasseKg is negative, it is set to null (ADR rule: exclude anti-gain).
  *
  * @param relevsAlim   - ALIMENTATION releves with consommations, any order
- * @param biometries   - BIOMETRIE releves with poidsMoyen, any order
+ * @param biometries   - ALL BIOMETRIE releves of the vague (not filtered by bacId)
  * @param vagueContext - vague data (dateDebut, poidsMoyenInitial, bacs, calibrages)
- * @param options      - optional interpolation strategy and mortalitesParBac map
- * @returns array of PeriodeAlimentaire
+ * @param options      - optional Gompertz context, strategy, and mortalitesParBac map
+ * @returns array of PeriodeAlimentaire (one entry per tank-product run)
  */
 export function segmenterPeriodesAlimentaires(
   relevsAlim: ReleveAlimPoint[],
@@ -404,10 +568,8 @@ export function segmenterPeriodesAlimentaires(
     // Sort by date ascending
     const sorted = [...bacReleves].sort((a, b) => a.date.getTime() - b.date.getTime());
 
-    // Filter biometries for this tank
-    const bacBios = biometries
-      .filter((b) => b.bacId === bacId)
-      .sort((a, b) => a.date.getTime() - b.date.getTime());
+    // Note: biometries are NOT filtered by bacId here — weight estimation uses
+    // ALL vague biometries via interpolerPoidsVague (ADR-033 fix).
 
     // Segment into runs of same principal product
     // Each run: [start, end] inclusive indices in sorted array
@@ -451,23 +613,23 @@ export function segmenterPeriodesAlimentaires(
         }
       }
 
-      // Estimate weights at period boundaries
+      // Estimate weights at period boundaries using vague-level Gompertz (ADR-033).
+      // ALL biometries are passed (not filtered by bacId) so the vague-level
+      // Gompertz curve is always evaluated when available. No strategie option —
+      // interpolerPoidsVague evaluates Gompertz unconditionally when context is valid.
       const interpolOpts = {
-        strategie: options?.strategie,
         gompertzContext: options?.gompertzContext,
         gompertzMinPoints: options?.gompertzMinPoints,
       };
-      const debutEstim = interpolerPoidsBac(
+      const debutEstim = interpolerPoidsVague(
         dateDebut,
-        bacId,
-        bacBios,
+        biometries, // ALL biometries, not bacBios
         vagueContext.poidsMoyenInitial,
         interpolOpts
       );
-      const finEstim = interpolerPoidsBac(
+      const finEstim = interpolerPoidsVague(
         dateFin,
-        bacId,
-        bacBios,
+        biometries, // ALL biometries, not bacBios
         vagueContext.poidsMoyenInitial,
         interpolOpts
       );

@@ -666,6 +666,54 @@ export interface PeriodeAlimentaire {
     | "VALEUR_INITIALE";
 }
 
+/**
+ * Coherent feeding period at the vague level — produced by vague-level FCR
+ * calculation (ADR-033). Like PeriodeAlimentaire but enriched with full
+ * estimation detail on both boundaries.
+ *
+ * Produced by segmenterPeriodesAlimentaires() after the vague-level Gompertz
+ * weight estimation refactor.
+ */
+export interface PeriodeAlimentaireVague {
+  /** Tank identifier ("unknown" for old records without bacId) */
+  bacId: string;
+  produitId: string;
+  /** First ALIMENTATION releve of the period (inclusive) */
+  dateDebut: Date;
+  /** Last ALIMENTATION releve of the period (inclusive) */
+  dateFin: Date;
+  /** Duration in days */
+  dureeJours: number;
+  /** Total feed distributed in kg during this period */
+  quantiteKg: number;
+  /** Average weight (g) at period start — estimated from vague-level Gompertz */
+  poidsMoyenDebut: number | null;
+  /** Average weight (g) at period end — estimated from vague-level Gompertz */
+  poidsMoyenFin: number | null;
+  /** Estimated number of living fish during this period (at start, per-tank) */
+  nombreVivants: number | null;
+  /** Biomass at start = poidsMoyenDebut × nombreVivants / 1000 in kg */
+  biomasseDebutKg: number | null;
+  /** Biomass at end = poidsMoyenFin × nombreVivants / 1000 in kg */
+  biomasseFinKg: number | null;
+  /** Biomass gain (kg) — null if weights unavailable or gain is negative */
+  gainBiomasseKg: number | null;
+  /** true when the raw gain was negative (period excluded from FCR) */
+  gainNegatifExclu: boolean;
+  /** Method used to estimate boundary weights (always vague-level) */
+  methodeEstimation:
+    | "BIOMETRIE_EXACTE"
+    | "GOMPERTZ_VAGUE"
+    | "INTERPOLATION_LINEAIRE"
+    | "VALEUR_INITIALE";
+  /** Detailed estimation info for start boundary */
+  detailEstimationDebut: FCRTraceEstimationDetail | null;
+  /** Detailed estimation info for end boundary */
+  detailEstimationFin: FCRTraceEstimationDetail | null;
+  /** Period-level FCR = quantiteKg / gainBiomasseKg */
+  fcrPeriode: number | null;
+}
+
 // ---------------------------------------------------------------------------
 // Sprint FB — Feed Analytics v2
 // ---------------------------------------------------------------------------
@@ -925,20 +973,13 @@ export interface FCRTraceVague {
   fcrVague: number | null;
 
   /**
-   * Parametres Gompertz au niveau vague si la strategie GOMPERTZ_VAGUE
-   * est active et que le modele est calibre.
-   * Null si strategie = LINEAIRE ou modele non calibre.
+   * Parametres Gompertz au niveau vague si le modele est calibre.
+   * Null si aucun modele Gompertz disponible pour cette vague.
    */
   gompertzVague: FCRTraceGompertzParams | null;
 
   /** Periodes alimentaires pour cet aliment dans cette vague */
   periodes: FCRTracePeriode[];
-
-  /**
-   * true si des releves alimentation de cette vague n'ont pas de bacId
-   * (donnees legacy anterieures a l'identifiant de bac par releve).
-   */
-  modeLegacy: boolean;
 }
 
 /**

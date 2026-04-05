@@ -536,6 +536,7 @@ export type {
   ScoreAlimentConfig,
   // ADR-028 — FCR feed-switching accuracy
   PeriodeAlimentaire,
+  PeriodeAlimentaireVague,
   // ADR-031 — FCR Transparency Dialog
   MethodeEstimationPoids,
   FCRTraceGompertzParams,

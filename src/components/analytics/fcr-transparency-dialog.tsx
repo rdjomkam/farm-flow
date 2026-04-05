@@ -150,13 +150,22 @@ function EstimationDetailBlock({ detail }: { detail: FCRTraceEstimationDetail | 
 // Periode row (collapsible)
 // ---------------------------------------------------------------------------
 
-function PeriodeRow({ periode, defaultOpen }: { periode: FCRTracePeriode; defaultOpen?: boolean }) {
+function PeriodeRow({
+  periode,
+  index,
+  defaultOpen,
+}: {
+  periode: FCRTracePeriode;
+  index: number;
+  defaultOpen?: boolean;
+}) {
   const t = useTranslations("analytics.fcrTrace");
 
   const formatDate = (d: Date | string) =>
     new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
 
-  const title = `${t("bac")} ${periode.bacNom}  ${formatDate(periode.dateDebut)} → ${formatDate(periode.dateFin)}  (${periode.dureeJours}${t("joursUnit")})`;
+  // DISC-21: title no longer references bacNom — show period number and date range
+  const title = `${t("periodeN", { n: index + 1 })} : ${formatDate(periode.dateDebut)} → ${formatDate(periode.dateFin)}  (${periode.dureeJours}${t("joursUnit")})`;
 
   return (
     <details className="group border border-border rounded-lg overflow-hidden" open={defaultOpen}>
@@ -165,7 +174,7 @@ function PeriodeRow({ periode, defaultOpen }: { periode: FCRTracePeriode; defaul
         <div className="flex items-center gap-2 shrink-0">
           {periode.fcrPeriode !== null && (
             <span className="text-xs font-semibold text-primary tabular-nums">
-              ICA {periode.fcrPeriode}
+              ICA {periode.fcrPeriode.toFixed(2)}
             </span>
           )}
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-open:rotate-180" />
@@ -244,7 +253,7 @@ function PeriodeRow({ periode, defaultOpen }: { periode: FCRTracePeriode; defaul
           <div className="text-xs flex justify-between items-center border-t border-border pt-2">
             <span className="text-muted-foreground">{t("fcrPeriode")}</span>
             <code className="font-mono font-semibold text-primary">
-              {periode.quantiteKg.toFixed(2)} / {periode.gainBiomasseKg?.toFixed(2) ?? "?"} = {periode.fcrPeriode}
+              {periode.quantiteKg.toFixed(2)} / {periode.gainBiomasseKg?.toFixed(2) ?? "?"} = {periode.fcrPeriode.toFixed(2)}
             </code>
           </div>
         ) : (
@@ -254,6 +263,42 @@ function PeriodeRow({ periode, defaultOpen }: { periode: FCRTracePeriode; defaul
         )}
       </div>
     </details>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// GompertzParamsBlock (DISC-24)
+// ---------------------------------------------------------------------------
+
+function GompertzParamsBlock({ params }: { params: NonNullable<FCRTraceVague["gompertzVague"]> }) {
+  const t = useTranslations("analytics.fcrTrace");
+
+  const formula = `W(t) = ${params.wInfinity} × exp(−exp(−${params.k.toFixed(4)} × (t − ${params.ti.toFixed(2)})))`;
+
+  return (
+    <div className="rounded-lg bg-sky-50 border border-sky-200 px-3 py-2 space-y-1.5 mb-3">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-sky-700">
+        {t("gompertzParams")}
+      </p>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs">
+        <p className="text-muted-foreground">
+          W∞ = <span className="font-semibold text-foreground">{params.wInfinity} g</span>
+        </p>
+        <p className="text-muted-foreground">
+          K = <span className="font-semibold text-foreground">{params.k.toFixed(4)} j⁻¹</span>
+        </p>
+        <p className="text-muted-foreground">
+          ti = <span className="font-semibold text-foreground">{params.ti.toFixed(2)} j</span>
+        </p>
+        <p className="text-muted-foreground">
+          {t("r2Label")} = <span className="font-semibold text-foreground">{params.r2.toFixed(4)}</span>
+          {" "}({params.biometrieCount} bio.)
+        </p>
+      </div>
+      <code className="block text-[10px] font-mono bg-sky-100/60 rounded px-1.5 py-0.5 text-sky-900 break-all mt-1">
+        {formula}
+      </code>
+    </div>
   );
 }
 
@@ -277,7 +322,7 @@ function VagueSection({ vague, defaultOpen }: { vague: FCRTraceVague; defaultOpe
           <p className="text-xs text-muted-foreground">
             {formatDate(vague.dateDebut)} → {formatDate(vague.dateFin)}
             {" · "}
-            {vague.periodes.length} {t("periodesDuBac")}
+            {vague.periodes.length} {t("periodes")}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -305,8 +350,9 @@ function VagueSection({ vague, defaultOpen }: { vague: FCRTraceVague; defaultOpe
           </div>
         </div>
 
-        {vague.modeLegacy && (
-          <p className="text-[10px] text-amber-600 font-medium mb-2">{t("modeLegacy")}</p>
+        {/* Gompertz params block (DISC-24) */}
+        {vague.gompertzVague && (
+          <GompertzParamsBlock params={vague.gompertzVague} />
         )}
 
         {/* Periods */}
@@ -316,8 +362,9 @@ function VagueSection({ vague, defaultOpen }: { vague: FCRTraceVague; defaultOpe
           <div className="space-y-2">
             {vague.periodes.map((periode, idx) => (
               <PeriodeRow
-                key={`${periode.bacId}-${periode.dateDebut}-${idx}`}
+                key={`${periode.dateDebut}-${idx}`}
                 periode={periode}
+                index={idx}
                 defaultOpen={idx === 0 && vague.periodes.length === 1}
               />
             ))}
