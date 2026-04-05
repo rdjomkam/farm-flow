@@ -133,6 +133,11 @@
     "description": "This action is irreversible. The expense and all its data will be permanently deleted.",
     "confirmer": "Delete permanently"
   },
+  "paiements": {
+    "supprimerPaiement": "Delete payment",
+    "confirmeSuppression": "This action is irreversible. The payment and its additional fees will be permanently deleted.",
+    "paiementSupprime": "Payment deleted."
+  },
   "emptyState": {
     "noExpenses": "No expenses"
   },

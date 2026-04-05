@@ -26,8 +26,11 @@ const mockPrismaDepenseUpdate = vi.fn();
 const mockPrismaPaiementDepenseCreate = vi.fn();
 const mockPrismaPaiementDepenseAggregate = vi.fn();
 const mockPrismaPaiementDepenseFindUniqueOrThrow = vi.fn();
+const mockPrismaPaiementDepenseFindFirst = vi.fn();
+const mockPrismaPaiementDepenseDelete = vi.fn();
 const mockPrismaFraisPaiementDepenseCreateMany = vi.fn();
 const mockPrismaFraisPaiementDepenseAggregate = vi.fn();
+const mockPrismaAjustementDepenseCreate = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -45,10 +48,15 @@ vi.mock("@/lib/db", () => ({
       create: (...args: unknown[]) => mockPrismaPaiementDepenseCreate(...args),
       aggregate: (...args: unknown[]) => mockPrismaPaiementDepenseAggregate(...args),
       findUniqueOrThrow: (...args: unknown[]) => mockPrismaPaiementDepenseFindUniqueOrThrow(...args),
+      findFirst: (...args: unknown[]) => mockPrismaPaiementDepenseFindFirst(...args),
+      delete: (...args: unknown[]) => mockPrismaPaiementDepenseDelete(...args),
     },
     fraisPaiementDepense: {
       createMany: (...args: unknown[]) => mockPrismaFraisPaiementDepenseCreateMany(...args),
       aggregate: (...args: unknown[]) => mockPrismaFraisPaiementDepenseAggregate(...args),
+    },
+    ajustementDepense: {
+      create: (...args: unknown[]) => mockPrismaAjustementDepenseCreate(...args),
     },
     vague: { findFirst: vi.fn() },
     commande: { findFirst: vi.fn() },
@@ -64,10 +72,15 @@ vi.mock("@/lib/db", () => ({
         create: mockPrismaPaiementDepenseCreate,
         aggregate: mockPrismaPaiementDepenseAggregate,
         findUniqueOrThrow: mockPrismaPaiementDepenseFindUniqueOrThrow,
+        findFirst: mockPrismaPaiementDepenseFindFirst,
+        delete: mockPrismaPaiementDepenseDelete,
       },
       fraisPaiementDepense: {
         createMany: mockPrismaFraisPaiementDepenseCreateMany,
         aggregate: mockPrismaFraisPaiementDepenseAggregate,
+      },
+      ajustementDepense: {
+        create: mockPrismaAjustementDepenseCreate,
       },
       vague: { findFirst: vi.fn() },
       commande: { findFirst: vi.fn() },
@@ -456,5 +469,188 @@ describe("POST /api/depenses/[id]/paiements", () => {
       { params: Promise.resolve({ id: "dep-1" }) }
     );
     expect(response.status).toBe(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Unit tests — supprimerPaiementDepense
+// ---------------------------------------------------------------------------
+
+import { supprimerPaiementDepense } from "@/lib/queries/depenses";
+
+const FAKE_PAIEMENT = {
+  id: "pdep-1",
+  depenseId: "dep-1",
+  montant: 20000,
+  mode: ModePaiement.ESPECES,
+  reference: null,
+  date: new Date("2026-03-15"),
+  userId: "user-1",
+  siteId: "site-1",
+  createdAt: new Date(),
+};
+
+describe("supprimerPaiementDepense — logique metier", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("supprime un paiement et repasse a NON_PAYEE quand aucun paiement restant", async () => {
+    // Depense PAYEE_PARTIELLEMENT avec un seul paiement de 20000
+    const depensePartielle = { ...FAKE_DEPENSE, montantPaye: 20000, statut: StatutDepense.PAYEE_PARTIELLEMENT };
+    mockPrismaDepenseFindFirst.mockResolvedValue(depensePartielle);
+    mockPrismaPaiementDepenseFindFirst.mockResolvedValue(FAKE_PAIEMENT);
+    mockPrismaAjustementDepenseCreate.mockResolvedValue({ id: "ajust-1" });
+    mockPrismaPaiementDepenseDelete.mockResolvedValue(FAKE_PAIEMENT);
+    // Apres suppression : aucun paiement restant
+    mockPrismaPaiementDepenseAggregate.mockResolvedValue({ _sum: { montant: 0 } });
+    mockPrismaFraisPaiementDepenseAggregate.mockResolvedValue({ _sum: { montant: 0 } });
+    mockPrismaDepenseUpdate.mockResolvedValue({
+      ...depensePartielle,
+      montantPaye: 0,
+      statut: StatutDepense.NON_PAYEE,
+    });
+
+    const result = await supprimerPaiementDepense("site-1", "dep-1", "pdep-1", "user-1");
+
+    expect(result.statut).toBe(StatutDepense.NON_PAYEE);
+    expect(result.montantPaye).toBe(0);
+    expect(result.montantFraisSupp).toBe(0);
+  });
+
+  it("repasse a PAYEE_PARTIELLEMENT quand des paiements restants existent", async () => {
+    // Depense PAYEE avec deux paiements ; on en supprime un
+    const depensePayee = { ...FAKE_DEPENSE, montantPaye: 50000, statut: StatutDepense.PAYEE };
+    mockPrismaDepenseFindFirst.mockResolvedValue(depensePayee);
+    mockPrismaPaiementDepenseFindFirst.mockResolvedValue(FAKE_PAIEMENT);
+    mockPrismaAjustementDepenseCreate.mockResolvedValue({ id: "ajust-2" });
+    mockPrismaPaiementDepenseDelete.mockResolvedValue(FAKE_PAIEMENT);
+    // Apres suppression : 30000 restants (< montantTotal de 50000)
+    mockPrismaPaiementDepenseAggregate.mockResolvedValue({ _sum: { montant: 30000 } });
+    mockPrismaFraisPaiementDepenseAggregate.mockResolvedValue({ _sum: { montant: 0 } });
+    mockPrismaDepenseUpdate.mockResolvedValue({
+      ...depensePayee,
+      montantPaye: 30000,
+      statut: StatutDepense.PAYEE_PARTIELLEMENT,
+    });
+
+    const result = await supprimerPaiementDepense("site-1", "dep-1", "pdep-1", "user-1");
+
+    expect(result.statut).toBe(StatutDepense.PAYEE_PARTIELLEMENT);
+    expect(result.montantPaye).toBe(30000);
+  });
+
+  it("leve une erreur si la depense est introuvable", async () => {
+    mockPrismaDepenseFindFirst.mockResolvedValue(null);
+
+    await expect(
+      supprimerPaiementDepense("site-1", "dep-xxx", "pdep-1", "user-1")
+    ).rejects.toThrow("Depense introuvable");
+  });
+
+  it("leve une erreur si le paiement n'appartient pas a la depense", async () => {
+    mockPrismaDepenseFindFirst.mockResolvedValue(FAKE_DEPENSE);
+    mockPrismaPaiementDepenseFindFirst.mockResolvedValue(null);
+
+    await expect(
+      supprimerPaiementDepense("site-1", "dep-1", "pdep-xxx", "user-1")
+    ).rejects.toThrow("Paiement introuvable");
+  });
+
+  it("cree un audit trail AjustementDepense avant la suppression", async () => {
+    mockPrismaDepenseFindFirst.mockResolvedValue(FAKE_DEPENSE);
+    mockPrismaPaiementDepenseFindFirst.mockResolvedValue(FAKE_PAIEMENT);
+    mockPrismaAjustementDepenseCreate.mockResolvedValue({ id: "ajust-3" });
+    mockPrismaPaiementDepenseDelete.mockResolvedValue(FAKE_PAIEMENT);
+    mockPrismaPaiementDepenseAggregate.mockResolvedValue({ _sum: { montant: 0 } });
+    mockPrismaFraisPaiementDepenseAggregate.mockResolvedValue({ _sum: { montant: 0 } });
+    mockPrismaDepenseUpdate.mockResolvedValue({ ...FAKE_DEPENSE, montantPaye: 0, statut: StatutDepense.NON_PAYEE });
+
+    await supprimerPaiementDepense("site-1", "dep-1", "pdep-1", "user-1");
+
+    expect(mockPrismaAjustementDepenseCreate).toHaveBeenCalledOnce();
+    const createCall = mockPrismaAjustementDepenseCreate.mock.calls[0][0];
+    expect(createCall.data.depenseId).toBe("dep-1");
+    expect(createCall.data.paiementId).toBe("pdep-1");
+    expect(createCall.data.montantAvant).toBe(20000);
+    expect(createCall.data.montantApres).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// API route tests — DELETE /api/depenses/[id]/paiements/[paiementId]
+// ---------------------------------------------------------------------------
+
+import { DELETE as DELETE_PAIEMENT } from "@/app/api/depenses/[id]/paiements/[paiementId]/route";
+
+describe("DELETE /api/depenses/[id]/paiements/[paiementId]", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
+    // Depense PAYEE_PARTIELLEMENT avec un paiement
+    const depensePartielle = { ...FAKE_DEPENSE, montantPaye: 20000, statut: StatutDepense.PAYEE_PARTIELLEMENT };
+    mockPrismaDepenseFindFirst.mockResolvedValue(depensePartielle);
+    mockPrismaPaiementDepenseFindFirst.mockResolvedValue(FAKE_PAIEMENT);
+    mockPrismaAjustementDepenseCreate.mockResolvedValue({ id: "ajust-1" });
+    mockPrismaPaiementDepenseDelete.mockResolvedValue(FAKE_PAIEMENT);
+    mockPrismaPaiementDepenseAggregate.mockResolvedValue({ _sum: { montant: 0 } });
+    mockPrismaFraisPaiementDepenseAggregate.mockResolvedValue({ _sum: { montant: 0 } });
+    mockPrismaDepenseUpdate.mockResolvedValue({
+      ...depensePartielle,
+      montantPaye: 0,
+      montantFraisSupp: 0,
+      statut: StatutDepense.NON_PAYEE,
+    });
+  });
+
+  it("retourne 200 avec statut recalcule apres suppression du paiement", async () => {
+    const response = await DELETE_PAIEMENT(
+      makeRequest("/api/depenses/dep-1/paiements/pdep-1", { method: "DELETE" }),
+      { params: Promise.resolve({ id: "dep-1", paiementId: "pdep-1" }) }
+    );
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.statut).toBe(StatutDepense.NON_PAYEE);
+    expect(data.montantPaye).toBe(0);
+  });
+
+  it("retourne 404 si la depense est introuvable", async () => {
+    mockPrismaDepenseFindFirst.mockResolvedValue(null);
+    const response = await DELETE_PAIEMENT(
+      makeRequest("/api/depenses/dep-xxx/paiements/pdep-1", { method: "DELETE" }),
+      { params: Promise.resolve({ id: "dep-xxx", paiementId: "pdep-1" }) }
+    );
+    expect(response.status).toBe(404);
+  });
+
+  it("retourne 404 si le paiement n'appartient pas a la depense", async () => {
+    // La query retourne null quand le paiement n'existe pas ou n'appartient pas a la depense.
+    // L'erreur levee contient "introuvable" donc l'API retourne 404 (avant le check "n'appartient pas").
+    mockPrismaPaiementDepenseFindFirst.mockResolvedValue(null);
+    const response = await DELETE_PAIEMENT(
+      makeRequest("/api/depenses/dep-1/paiements/pdep-xxx", { method: "DELETE" }),
+      { params: Promise.resolve({ id: "dep-1", paiementId: "pdep-xxx" }) }
+    );
+    expect(response.status).toBe(404);
+  });
+
+  it("retourne 403 sans permission DEPENSES_PAYER", async () => {
+    const { ForbiddenError } = await import("@/lib/permissions");
+    mockRequirePermission.mockRejectedValue(new ForbiddenError("Permission insuffisante."));
+    const response = await DELETE_PAIEMENT(
+      makeRequest("/api/depenses/dep-1/paiements/pdep-1", { method: "DELETE" }),
+      { params: Promise.resolve({ id: "dep-1", paiementId: "pdep-1" }) }
+    );
+    expect(response.status).toBe(403);
+  });
+
+  it("retourne 401 sans session", async () => {
+    const { AuthError } = await import("@/lib/auth");
+    mockRequirePermission.mockRejectedValue(new AuthError("Non authentifie."));
+    const response = await DELETE_PAIEMENT(
+      makeRequest("/api/depenses/dep-1/paiements/pdep-1", { method: "DELETE" }),
+      { params: Promise.resolve({ id: "dep-1", paiementId: "pdep-1" }) }
+    );
+    expect(response.status).toBe(401);
   });
 });

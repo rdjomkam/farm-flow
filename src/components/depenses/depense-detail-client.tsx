@@ -208,6 +208,10 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
   const [fraisDeleteRaison, setFraisDeleteRaison] = useState("");
   const [fraisDeletePending, setFraisDeletePending] = useState(false);
 
+  // Delete paiement state
+  const [paiementDeleteTarget, setPaiementDeleteTarget] = useState<string | null>(null);
+  const [paiementDeletePending, setPaiementDeletePending] = useState(false);
+
   // Upload facture state
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -563,6 +567,30 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
       }
     } finally {
       setFraisDeletePending(false);
+    }
+  }
+
+  async function handlePaiementDelete() {
+    if (!paiementDeleteTarget) return;
+    setPaiementDeletePending(true);
+    try {
+      const result = await depenseService.deletePaiementDepense(
+        currentDepense.id,
+        paiementDeleteTarget
+      );
+      if (result.ok && result.data) {
+        setPaiements((prev) => prev.filter((p) => p.id !== paiementDeleteTarget));
+        setCurrentDepense((prev) => ({
+          ...prev,
+          montantPaye: result.data!.montantPaye,
+          statut: result.data!.statut,
+          montantFraisSupp: result.data!.montantFraisSupp,
+        }));
+        setPaiementDeleteTarget(null);
+        toast({ title: t("paiements.paiementSupprime"), variant: "success" });
+      }
+    } finally {
+      setPaiementDeletePending(false);
     }
   }
 
@@ -1356,9 +1384,21 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
                         </span>
                       )}
                     </div>
-                    <span className="text-xs text-muted-foreground shrink-0">
-                      {formatDate(p.date)}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs text-muted-foreground">
+                        {formatDate(p.date)}
+                      </span>
+                      {canPay && (
+                        <button
+                          type="button"
+                          onClick={() => setPaiementDeleteTarget(p.id)}
+                          className="text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded"
+                          aria-label={t("paiements.supprimerPaiement")}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Frais supplementaires du paiement */}
@@ -1579,6 +1619,41 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
               disabled={fraisDeletePending || !fraisDeleteRaison.trim()}
             >
               {fraisDeletePending ? t("ajustement.enCours") : t("ajustement.supprimerFrais")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Supprimer un paiement */}
+      <Dialog
+        open={!!paiementDeleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setPaiementDeleteTarget(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("paiements.supprimerPaiement")}</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <p className="text-sm text-muted-foreground">
+              {t("paiements.confirmeSuppression")}
+            </p>
+          </DialogBody>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" onClick={() => setPaiementDeleteTarget(null)}>
+                {t("detail.annuler")}
+              </Button>
+            </DialogClose>
+            <Button
+              variant="danger"
+              onClick={handlePaiementDelete}
+              disabled={paiementDeletePending}
+            >
+              {paiementDeletePending
+                ? t("ajustement.enCours")
+                : t("paiements.supprimerPaiement")}
             </Button>
           </DialogFooter>
         </DialogContent>

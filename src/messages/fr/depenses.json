@@ -133,6 +133,11 @@
     "description": "Cette action est irreversible. La depense et toutes ses donnees seront definitivement supprimees.",
     "confirmer": "Supprimer definitivement"
   },
+  "paiements": {
+    "supprimerPaiement": "Supprimer le paiement",
+    "confirmeSuppression": "Cette action est irreversible. Le paiement et ses frais supplementaires seront definitivement supprimes.",
+    "paiementSupprime": "Paiement supprime."
+  },
   "emptyState": {
     "noExpenses": "Aucune depense"
   },

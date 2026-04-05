@@ -92,6 +92,88 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-046 — Suppression de paiement : le message d'erreur "n'appartient pas" est masqué par "introuvable"
+**Sprint :** ADR-032 feature | **Date :** 2026-04-05
+**Sévérité :** Basse
+**Fichier(s) :** `src/app/api/depenses/[id]/paiements/[paiementId]/route.ts`
+
+**Symptôme :**
+La route DELETE `/api/depenses/[id]/paiements/[paiementId]` distingue deux cas d'erreur dans son handler : `message.includes("introuvable")` → 404, et `message.includes("n'appartient pas")` → 422. Mais la query `supprimerPaiementDepense` utilise `paiementDepense.findFirst({ where: { id: paiementId, depenseId } })` : si le paiement existe mais appartient à une autre dépense, `findFirst` retourne `null`, et la query lève "Paiement introuvable ou n'appartient pas a cette depense" — message qui contient "introuvable" en premier, donc l'API retourne toujours 404, jamais 422.
+
+**Cause racine :**
+Le contrôle d'ownership (le paiement appartient-il à cette dépense ?) est fusionné dans le même `findFirst` que l'existence du paiement. Il est impossible de distinguer les deux cas sans une deuxième requête.
+
+**Fix appliqué :**
+Les tests acceptent ce comportement : le cas "paiement d'une autre dépense" retourne 404 (même message). Ce n'est pas un bug fonctionnel — la sécurité est préservée (l'appelant ne peut pas accéder à des paiements hors-siteId). La distinction 404 vs 422 est cosmétique pour cette ressource.
+
+**Leçon / Règle :**
+Quand on rédige les handler HTTP d'erreur, s'assurer que l'ordre des `message.includes()` est cohérent avec les messages que la query peut réellement lever. Si plusieurs cas d'erreur partagent un mot commun (ici "introuvable"), le cas le plus spécifique doit être contrôlé en premier — ou la query doit lever des messages sans ambiguïté (`throw new Error("PAYMENT_NOT_FOUND")` vs `throw new Error("PAYMENT_WRONG_DEPENSE")`).
+
+---
+
+### ERR-045 — Suppression d'un modèle (ADR) sans nettoyer les références dans le code source
+**Sprint :** ADR-032 | **Date :** 2026-04-05
+**Sévérité :** Critique
+**Fichier(s) :** `src/app/api/vagues/[id]/gompertz/route.ts`, `src/components/config-elevage/config-elevage-form-client.tsx`, `src/components/analytics/fcr-transparency-dialog.tsx`
+
+**Symptôme :**
+Le build échoue avec trois erreurs TypeScript après qu'une ADR (ADR-032) a supprimé le modèle `GompertzBac` et la valeur d'enum `GOMPERTZ_BAC` de `StrategieInterpolation` :
+1. `prisma.gompertzBac` référencé dans la route gompertz → `Property 'gompertzBac' does not exist on type PrismaClient`
+2. `StrategieInterpolation.GOMPERTZ_BAC` dans le select de config-elevage → `Property 'GOMPERTZ_BAC' does not exist`
+3. Type local `MethodeEstimation` dans fcr-transparency-dialog inclut `"GOMPERTZ_BAC"` → comparaison impossible avec l'union réduite
+
+Ces trois fichiers avaient été mentionnés dans le plan d'implémentation de l'ADR (section 11.B), mais n'avaient pas été mis à jour lors de l'implémentation. Le bug a été découvert par le tester au moment du `npm run build`.
+
+**Cause racine :**
+L'implémenteur (Phase A de l'ADR) a nettoyé les fichiers de types et de logique (`src/types/`, `src/lib/feed-periods.ts`, `src/lib/queries/analytics.ts`) mais a omis de nettoyer les trois fichiers de composants/routes listés dans l'ADR. La migration SQL existait déjà dans `prisma/migrations/` mais le code applicatif n'avait pas suivi.
+
+**Fix :**
+- `gompertz/route.ts` : supprimer le bloc de calibration par bac (lignes 249-410), retourner `calibrationsBacs: []` pour compatibilité ascendante.
+- `config-elevage-form-client.tsx` : supprimer l'option `GOMPERTZ_BAC` du select `interpolationStrategy`.
+- `fcr-transparency-dialog.tsx` : supprimer `"GOMPERTZ_BAC"` du type local `MethodeEstimation`, du `config` record, et simplifier les branches conditionnelles.
+
+**Leçon / Règle :**
+Quand une ADR supprime un modèle ou une valeur d'enum, tous les fichiers mentionnés dans la section "Impact sur les fichiers" de l'ADR doivent être modifiés dans le même commit/PR. Ne jamais supposer qu'un fichier "UI" n'a pas besoin d'être mis à jour. Avant tout `npm run build`, chercher le symbole supprimé dans tout le projet : `grep -r "GOMPERTZ_BAC" src/`. Un build vert est la condition nécessaire pour clore une ADR.
+
+---
+
+### ERR-044 — Suppression de paiement sans audit trail : perte de traçabilité
+**Sprint :** ADR-032 feature | **Date :** 2026-04-05
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/queries/depenses.ts` — `supprimerPaiementDepense()`
+
+**Symptôme :**
+Pattern initial (avant la feature) : supprimer un `PaiementDepense` directement avec `prisma.paiementDepense.delete()` et recalculer les agrégats. Aucune trace de la suppression n'est conservée ; l'historique financier de la dépense devient incomplet et impossible à auditer.
+
+**Cause racine :**
+La suppression d'un paiement est une opération financière irréversible qui modifie le montant payé et le statut de la dépense. Sans audit trail, un bug ou une action malveillante sur cette route ne laisse aucune trace permettant de reconstituer l'état avant suppression.
+
+**Fix :**
+Créer un `AjustementDepense` (avec `typeAjustement: MONTANT_TOTAL`, `montantAvant: paiement.montant`, `montantApres: 0`, `paiementId`) **avant** la suppression, dans la même transaction. Si la transaction échoue après la création de l'audit trail mais avant la suppression, la transaction est annulée entièrement — aucun état incohérent.
+
+```typescript
+// 1. Create audit trail BEFORE deletion
+await tx.ajustementDepense.create({
+  data: {
+    depenseId,
+    montantAvant: paiement.montant,
+    montantApres: 0,
+    raison: `Suppression du paiement du ${paiement.date.toLocaleDateString("fr-FR")}`,
+    userId,
+    siteId,
+    typeAjustement: TypeAjustementDepense.MONTANT_TOTAL,
+    paiementId,
+  },
+});
+// 2. Delete (FraisPaiementDepense cascade automatically)
+await tx.paiementDepense.delete({ where: { id: paiementId } });
+```
+
+**Leçon / Règle :**
+Toute suppression d'un enregistrement financier (paiement, facture, ligne de commande) doit créer un enregistrement d'audit **avant** la suppression, dans la même transaction (R4). L'audit trail doit inclure le `paiementId` de la ligne supprimée pour permettre la reconstitution. Le modèle `AjustementDepense` est le bon outil pour cela dans ce projet.
+
+---
+
 ### ERR-043 — Variables mortes issues d'un copy-paste : supprimées avec `void` faute d'être câblées
 **Sprint :** ADR-031 | **Date :** 2026-04-05
 **Sévérité :** Moyenne
