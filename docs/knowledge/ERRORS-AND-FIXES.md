@@ -132,6 +132,85 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-052 — FCR : numérateur et dénominateur agrégés sur des périodes différentes
+**Sprint :** ADR-033 | **Date :** 2026-04-05
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/feed-periods.ts`
+
+**Symptôme :**
+Le FCR calculé est incohérent : des périodes avec gain négatif (perte de biomasse) sont exclues du dénominateur (gain total) mais leur consommation alimentaire reste incluse dans le numérateur (aliment total). Le ratio aliment/gain est donc artificiellement gonflé.
+
+**Cause racine :**
+La logique de filtrage des périodes ne s'appliquait pas symétriquement. Le dénominateur ne sommait que les périodes à gain positif (filtre correct pour éviter un FCR négatif), mais le numérateur sommait toute la consommation sans appliquer le même filtre. Les deux grandeurs n'étaient donc pas calculées sur le même ensemble de périodes.
+
+**Fix :**
+Filtrer les deux termes sur le même prédicat (`gain > 0`) avant l'agrégation :
+```typescript
+const periodesPositives = periodes.filter(p => p.gainBiomasse > 0);
+const alimentTotal = periodesPositives.reduce((s, p) => s + p.alimentConsome, 0);
+const gainTotal   = periodesPositives.reduce((s, p) => s + p.gainBiomasse,  0);
+const fcr = gainTotal > 0 ? alimentTotal / gainTotal : null;
+```
+
+**Leçon / Règle :**
+Quand un ratio est calculé avec un filtre sur le dénominateur, appliquer le même filtre au numérateur. Ne jamais filtrer un seul terme d'un ratio — cela produit une agrégation incohérente et un résultat trompeur. Vérifier systématiquement que numérateur et dénominateur utilisent exactement le même ensemble de périodes/lignes.
+
+---
+
+### ERR-051 — Contexte Gompertz non construit pour les stratégies LINEAIRE
+**Sprint :** ADR-033 | **Date :** 2026-04-05
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/feed-periods.ts`
+
+**Symptôme :**
+Une vague dont la `ConfigElevage.interpolationStrategy` vaut `LINEAIRE` n'utilise jamais le modèle Gompertz même si la vague a été calibrée (champ `vague.gompertz` renseigné avec des paramètres valides). L'interpolation reste linéaire même après calibrage, sous-estimant le poids des poissons dans les bacs créés après le calibrage.
+
+**Cause racine :**
+Le contexte Gompertz (`gompertzCtx`) était construit conditionnellement, uniquement quand `interpolStrategy === GOMPERTZ_VAGUE`. Or la stratégie configurée dans `ConfigElevage` contrôle le mode d'interpolation choisi par l'éleveur, mais la disponibilité du modèle Gompertz (existence de `vague.gompertz`) est une propriété indépendante. Conditionner la construction du contexte à la stratégie empêchait toute exploitation de Gompertz hors de ce chemin explicite.
+
+**Fix :**
+Séparer la construction du contexte Gompertz de la sélection de stratégie. Construire `gompertzCtx` dès que `vague.gompertz` est présent, indépendamment de `interpolStrategy` :
+```typescript
+const gompertzCtx = vague.gompertz
+  ? buildGompertzContext(vague.gompertz)
+  : null;
+
+// Ensuite, utiliser gompertzCtx là où c'est pertinent,
+// quelle que soit la valeur de interpolStrategy.
+```
+
+**Leçon / Règle :**
+Ne pas conditionner la construction d'un contexte de calcul à la stratégie configurée si ce contexte peut être utile indépendamment. La disponibilité d'un modèle (données présentes) et son activation par configuration sont deux choses distinctes. Construire le contexte quand les données existent ; décider de l'utiliser ensuite selon la stratégie.
+
+---
+
+### ERR-050 — `interpolerPoidsBac` filtrait par bacId, rendant les bacs post-calibrage invisibles
+**Sprint :** ADR-033 | **Date :** 2026-04-05
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/feed-periods.ts`
+
+**Symptôme :**
+Les bacs créés après un calibrage (redistribution des poissons) reçoivent un poids interpolé de `VALEUR_INITIALE` (50 g) au lieu du poids Gompertz correspondant à leur date de création. Le FCR et la biomasse sont fortement sous-estimés pour ces bacs.
+
+**Cause racine :**
+`interpolerPoidsBac` filtrait les biométries par `bacId` (`biometries.filter(b => b.bacId === bacId)`) pour obtenir l'historique du bac. Les bacs créés post-calibrage n'ont aucune biométrie propre dans leur fenêtre d'existence — les biométries appartiennent aux bacs sources. Le filtre retournait un tableau vide, ce qui déclenchait le fallback vers `VALEUR_INITIALE`.
+
+**Fix :**
+Créer `interpolerPoidsVague` qui utilise toutes les biométries de la vague sans filtre `bacId`, et qui évalue systématiquement Gompertz quand les paramètres sont disponibles :
+```typescript
+// Avant (incorrect) :
+const biometriesBac = biometries.filter(b => b.bacId === bacId);
+
+// Après (correct) :
+// interpolerPoidsVague reçoit toutes les biométries de la vague,
+// sans filtre bacId, et évalue Gompertz en priorité si gompertzCtx est non nul.
+```
+
+**Leçon / Règle :**
+Le poids d'un poisson dans un bac post-calibrage dépend de l'historique de la vague entière, pas de l'historique du bac seul. Ne jamais filtrer les biométries par `bacId` pour alimenter un modèle de croissance (Gompertz ou linéaire) — filtrer par `vagueId` et laisser le modèle interpoler à la date voulue. Réserver le filtre `bacId` uniquement aux affichages de mesures brutes par bac.
+
+---
+
 ### ERR-048 — GOMPERTZ_BAC : code mort car le fallback vers GOMPERTZ_VAGUE s'active systématiquement
 **Sprint :** ADR-032 | **Date :** 2026-04-05
 **Sévérité :** Moyenne
