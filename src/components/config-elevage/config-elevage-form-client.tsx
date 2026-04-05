@@ -7,7 +7,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useConfigService } from "@/services";
-import { PhaseElevage } from "@/types";
+import { PhaseElevage, StrategieInterpolation } from "@/types";
 import type { ConfigElevage } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -125,6 +125,7 @@ const FORM_DEFAULTS: Omit<ConfigElevage, "id" | "siteId" | "createdAt" | "update
   gompertzKDefault: null,
   gompertzTiDefault: null,
   gompertzMinPoints: 5,
+  interpolationStrategy: StrategieInterpolation.LINEAIRE,
 };
 
 // ---------------------------------------------------------------------------
@@ -375,6 +376,7 @@ export function ConfigElevageFormClient({ templates }: Props) {
       gompertzKDefault: tpl.gompertzKDefault ?? null,
       gompertzTiDefault: tpl.gompertzTiDefault ?? null,
       gompertzMinPoints: tpl.gompertzMinPoints ?? 5,
+      interpolationStrategy: tpl.interpolationStrategy ?? StrategieInterpolation.LINEAIRE,
     });
   };
 
@@ -696,6 +698,31 @@ export function ConfigElevageFormClient({ templates }: Props) {
                   max={20}
                   step={1}
                 />
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">
+                    {t("fields.interpolationStrategy")}
+                  </label>
+                  <select
+                    value={form.interpolationStrategy}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        interpolationStrategy: e.target.value as StrategieInterpolation,
+                      }))
+                    }
+                    className="flex h-10 w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value={StrategieInterpolation.LINEAIRE}>
+                      {t("interpolationStrategy.LINEAIRE")}
+                    </option>
+                    <option value={StrategieInterpolation.GOMPERTZ_VAGUE}>
+                      {t("interpolationStrategy.GOMPERTZ_VAGUE")}
+                    </option>
+                    <option value={StrategieInterpolation.GOMPERTZ_BAC}>
+                      {t("interpolationStrategy.GOMPERTZ_BAC")}
+                    </option>
+                  </select>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {t("gompertz.hint")}
                 </p>

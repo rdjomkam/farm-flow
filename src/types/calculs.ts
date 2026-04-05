@@ -469,6 +469,12 @@ export interface DetailAlimentVague {
   tauxMortaliteAssocie: number | null;
   /** Coefficient de croissance K de Gompertz pour cette vague — null si donnees insuffisantes */
   kGompertz?: number | null;
+  /** Number of distinct feeding periods detected for this product in this vague (ADR-028) */
+  nombrePeriodes?: number;
+  /** true if feed switches were detected in this vague (ADR-028) */
+  avecChangementAliment?: boolean;
+  /** true if at least one period used linear interpolation instead of exact biometry (ADR-028) */
+  avecInterpolation?: boolean;
 }
 
 /**
@@ -620,6 +626,44 @@ export interface IndicateursVagueComplet {
 export interface ComparaisonVagues {
   /** Liste des vagues avec leurs indicateurs complets */
   vagues: IndicateursVagueComplet[];
+}
+
+// ---------------------------------------------------------------------------
+// ADR-028 — FCR feed-switching accuracy
+// ---------------------------------------------------------------------------
+
+/**
+ * Coherent feeding period: a contiguous segment on a single tank where one
+ * principal product was distributed.
+ *
+ * Produced by segmenterPeriodesAlimentaires() in src/lib/feed-periods.ts.
+ * Used for precise FCR calculation when feed switches occur within a vague.
+ */
+export interface PeriodeAlimentaire {
+  /** Tank identifier ("unknown" for old records without bacId) */
+  bacId: string;
+  produitId: string;
+  /** First ALIMENTATION releve of the period (inclusive) */
+  dateDebut: Date;
+  /** Last ALIMENTATION releve of the period (inclusive) */
+  dateFin: Date;
+  /** Total feed distributed in kg during this period */
+  quantiteKg: number;
+  /** Average weight (g) at period start — biometry or interpolation */
+  poidsMoyenDebut: number | null;
+  /** Average weight (g) at period end — biometry or interpolation */
+  poidsMoyenFin: number | null;
+  /** Estimated number of living fish during this period (at start) */
+  nombreVivants: number | null;
+  /** Biomass gain (kg) during the period — null if weights unavailable */
+  gainBiomasseKg: number | null;
+  /** Method used to estimate boundary weights */
+  methodeEstimation:
+    | "BIOMETRIE_EXACTE"
+    | "GOMPERTZ_BAC"
+    | "GOMPERTZ_VAGUE"
+    | "INTERPOLATION_LINEAIRE"
+    | "VALEUR_INITIALE";
 }
 
 // ---------------------------------------------------------------------------

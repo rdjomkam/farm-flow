@@ -8,6 +8,31 @@
 
 ## Catégorie : Schema
 
+### ERR-038 — migrate diff regroupe la dérive de schéma non liée dans la nouvelle migration
+**Sprint :** ADR-029 | **Date :** 2026-04-05
+**Sévérité :** Haute
+**Fichier(s) :** `prisma/migrations/*/migration.sql`
+
+**Symptôme :**
+Un `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script` génère un fichier SQL contenant des colonnes ou tables inattendues — des changements qui n'ont rien à voir avec la feature en cours (par exemple, des `ALTER TABLE` sur des modèles existants déjà en production).
+
+**Cause racine :**
+`migrate diff` compare l'état réel de la base (ou shadow DB) au schéma Prisma courant. Si des colonnes ont été ajoutées directement en base (hors migrations : hotfix manuel, script de dev, seed), elles constituent une "dérive" (`drift`) que Prisma détecte et inclut dans le diff suivant. La migration générée mélange alors la feature cible et le rattrapage de dérive.
+
+**Fix :**
+1. Toujours inspecter le SQL généré avant de le valider :
+   ```bash
+   npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script > /tmp/check.sql
+   cat /tmp/check.sql
+   ```
+2. Si des changements non liés à la feature apparaissent, les séparer dans leurs propres fichiers de migration avant de déployer.
+3. En cas de dérive avérée, créer d'abord une migration de "rattrapage" (`fix-drift`) séparée avant la migration de feature.
+
+**Leçon / Règle :**
+Ne jamais modifier le schéma de base de données directement (hors migrations Prisma) en dev partagé ou en prod. Toute modification de schéma passe par une migration. Avant tout `migrate deploy`, relire le SQL généré ligne par ligne pour détecter les changements parasites.
+
+---
+
 ### ERR-001 — Enums PostgreSQL : ADD VALUE + UPDATE dans la même migration
 **Sprint :** 1-2 | **Date :** 2026-03-08
 **Sévérité :** Critique
@@ -67,6 +92,63 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-037 — TypeScript : Array.includes() rejette une union plus large que le tuple readonly
+**Sprint :** ADR-029 | **Date :** 2026-04-05
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/interpolation/strategy.ts` (et tout fichier utilisant `.includes()` sur un tuple `as const`)
+
+**Symptôme :**
+TypeScript émet une erreur de type lors d'un appel `.includes()` sur un tuple `readonly` quand la valeur testée est d'un type union plus large que le type des éléments du tuple :
+```
+Argument of type '"A" | "B" | "C" | "D"' is not assignable to parameter of type '"A" | "B"'.
+```
+
+**Cause racine :**
+`Array.prototype.includes(searchElement: T)` exige que `searchElement` soit assignable à `T`. Pour un tuple `readonly ["A", "B"]`, `T` est `"A" | "B"`, ce qui est plus étroit que la valeur de type `"A" | "B" | "C" | "D"` à tester. TypeScript considère l'appel comme type-unsafe car le tuple ne peut logiquement pas contenir `"C"` ou `"D"`.
+
+**Fix :**
+Remplacer `.includes()` par des égalités directes :
+```typescript
+// Incorrect :
+const SIMPLE_STRATEGIES = ["LAST_KNOWN", "ZERO"] as const;
+if (SIMPLE_STRATEGIES.includes(strategy)) { ... } // erreur TS
+
+// Correct :
+if (strategy === "LAST_KNOWN" || strategy === "ZERO") { ... }
+```
+
+**Leçon / Règle :**
+Ne pas utiliser `.includes()` pour tester l'appartenance d'une valeur à un sous-ensemble de son type union. Utiliser des comparaisons d'égalité directes (`===`) ou un cast explicite `(arr as readonly string[]).includes(val)` si le tuple est large. Les comparaisons directes sont plus lisibles et entièrement type-safe.
+
+---
+
+### ERR-036 — Prisma $Enums vs TypeScript enum : cast obligatoire à la frontière
+**Sprint :** ADR-029 | **Date :** 2026-04-05
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/interpolation/strategy.ts`, tout service lisant un champ Prisma typé `$Enums.XxxEnum`
+
+**Symptôme :**
+Une review signale un cast `as SomeEnum` comme "redondant" ou "cosmétique" sur un champ lu depuis Prisma. Supprimer le cast provoque une erreur TypeScript à la compilation :
+```
+Type '$Enums.InterpolationStrategy' is not assignable to type 'InterpolationStrategy'.
+```
+
+**Cause racine :**
+Prisma génère ses propres types nominaux dans l'espace `$Enums`. Ces types sont structurellement compatibles avec les enums TypeScript du projet (`src/types/`) mais nominalement distincts. TypeScript enforce la nominalité des enums : même si les valeurs sont identiques, les deux types ne sont pas interchangeables sans cast.
+
+**Fix :**
+Conserver le cast `as InterpolationStrategy` (ou l'enum applicatif équivalent) au point de lecture depuis Prisma :
+```typescript
+// Lecture depuis Prisma :
+const strategy = vague.interpolationStrategy as InterpolationStrategy;
+// Maintenant strategy est typé comme l'enum applicatif, pas $Enums.InterpolationStrategy
+```
+
+**Leçon / Règle :**
+Tout champ Prisma dont le type est un enum (`$Enums.X`) doit être casté vers le type enum applicatif (`import { X } from "@/types"`) au point de lecture. Ce cast est **obligatoire**, pas cosmétique. Ne jamais le supprimer lors d'une review sans vérifier que `npm run build` passe toujours. Voir aussi ERR-008 et ERR-012 pour des variantes de ce problème.
+
+---
+
 ### ERR-004 — updatedAt affiché au lieu de date de mesure
 **Sprint :** 29+ | **Date :** 2026-03-20
 **Sévérité :** Moyenne
@@ -119,6 +201,44 @@ Utiliser `head -3 migration.sql` et `tail -5 migration.sql` pour vérifier.
 ---
 
 ## Catégorie : Pattern
+
+### ERR-040 — ADR interne incohérent : hypothèse d'homogénéité contredite par l'ADR précédent
+**Sprint :** ADR-030 | **Date :** 2026-04-05
+**Sévérité :** Haute
+**Fichier(s) :** `docs/decisions/ADR-029.md`, `docs/decisions/ADR-030.md`
+
+**Symptôme :**
+ADR-029 rejette le calibrage Gompertz par bac avec l'argument que "les bacs d'une même vague ont des conditions quasi-identiques". ADR-030 doit annuler ce choix car les bacs ont en réalité des conditions différentes — en particulier des changements d'aliment qui surviennent à des dates distinctes par bac.
+
+**Cause racine :**
+ADR-028 avait introduit la segmentation des périodes d'alimentation par bac précisément parce que les bacs ne changent pas d'aliment en même temps. ADR-029, rédigé sans recroiser ADR-028, a posé une hypothèse d'homogénéité que le modèle avait déjà invalidée. Les deux ADR étaient en contradiction directe sur la nature des données.
+
+**Fix :**
+ADR-030 a été rédigé pour documenter l'invalidation d'ADR-029 et rétablir le calibrage par bac. Le travail d'implémentation a dû reprendre depuis la décision d'architecture.
+
+**Leçon / Règle :**
+Avant de rédiger un ADR qui suppose quelque chose sur la structure ou l'homogénéité des données, relire les ADR précédents pour détecter toute contradiction. En particulier : si un ADR antérieur a introduit une segmentation par entité (par bac, par période, par site), un nouvel ADR ne peut pas supposer que ces entités sont interchangeables. Documenter explicitement dans le nouvel ADR les hypothèses posées et les ADR croisés.
+
+---
+
+### ERR-039 — Pondération multi-entité copy-collée dans un contexte mono-entité devient un no-op
+**Sprint :** ADR-030 | **Date :** 2026-04-05
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/calculs-gompertz.ts` (route de calibrage par bac)
+
+**Symptôme :**
+Le calibrage Gompertz par bac produit des résultats identiques qu'avec ou sans pondération. Aucune erreur TypeScript ou runtime, mais la pondération n'a aucun effet.
+
+**Cause racine :**
+La route de calibrage par vague pondérait les points biométriques par `vivantsByBac` (nombre de poissons par bac) pour agréger plusieurs bacs à la même date. Quand cette logique a été copy-collée dans la boucle de calibrage par bac, tous les enregistrements avaient le même `bacId`. Le numérateur et le dénominateur de la moyenne pondérée étaient proportionnels à la même constante, ce qui ramène le calcul à une moyenne simple — la pondération ne change rien.
+
+**Fix :**
+Dans le contexte mono-entité (boucle par bac), remplacer la moyenne pondérée par une moyenne arithmétique simple. L'abstraction de pondération multi-entité n'est pertinente que lorsque plusieurs entités différentes sont agrégées sur la même dimension temporelle.
+
+**Leçon / Règle :**
+Quand on adapte du code d'agrégation multi-entité à un contexte mono-entité, simplifier plutôt que copier. Une moyenne pondérée sur des enregistrements qui partagent tous le même identifiant d'entité est algébriquement équivalente à une moyenne simple — conserver la pondération est trompeur car elle suggère une variance entre entités qui n'existe pas. Se poser la question : "quelle diversité ce code est-il censé compenser ?" Si la diversité n'est pas présente dans le jeu de données courant, l'abstraction ne doit pas être transférée.
+
+---
 
 ### ERR-018 — String en dur comme clé d'accès à un objet constant indexé par enum (variante R2)
 **Sprint :** 37 | **Date :** 2026-03-21
@@ -822,6 +942,102 @@ export async function checkSubscription(siteId: string, ressource: string) {
 
 **Leçon / Règle :**
 `unstable_cache` se place au niveau de la requête de données (queries), pas au niveau des fonctions de service ou des wrappers de logique métier. Si une fonction de service appelle une query déjà cachée, ne pas ajouter un deuxième `unstable_cache` sur le service. Un seul niveau de cache par chemin de données. Les tags d'invalidation (`revalidateTag`) ne traversent pas les caches imbriqués de façon fiable.
+
+---
+
+### ERR-035 — Filter-before-map : filtrer les nullables avant le mapping, pas après (FCR refactor)
+**Sprint :** ADR-028 | **Date :** 2026-04-05
+**Sévérité :** Basse
+**Fichier(s) :** `src/lib/calculs/fcr.ts` (ou équivalent calculs aliment)
+
+**Symptôme :**
+`biometriePoints` était construit avec `.map(b => b.poids ?? 0).filter(p => p > 0)`. Si le `.filter` est un jour retiré par erreur (refactoring, simplification), des valeurs `0` silencieuses entrent dans les calculs de biomasse ou d'interpolation, produisant des résultats faux sans erreur TypeScript ni runtime.
+
+**Cause racine :**
+Le mapping transforme `null` en `0` avant le filtre, créant un état intermédiaire sémantiquement incorrect (`0` n'est pas la même chose que "donnée absente"). La correction de l'absence est portée par le `.filter` qui suit, mais ce couplage est fragile : retirer le filtre ne produit aucun avertissement.
+
+**Fix :**
+Filtrer les nulls avant le mapping :
+```typescript
+// Incorrect (filter après map — fragile) :
+const biometriePoints = biometries
+  .map(b => b.poids ?? 0)
+  .filter(p => p > 0);
+
+// Correct (filter avant map — robuste) :
+const biometriePoints = biometries
+  .filter((b): b is typeof b & { poids: number } => b.poids !== null && b.poids > 0)
+  .map(b => b.poids);
+```
+
+**Leçon / Règle :**
+Ne jamais transformer une valeur nulle en valeur sentinelle (0, "", -1) pour la filtrer ensuite. Filtrer les nulls en premier avec un type guard, puis mapper uniquement des valeurs valides. Le pattern `map(null → 0).filter(> 0)` est sémantiquement incorrect et fragile : un refactoring anodin qui retire le filtre introduit silencieusement des données invalides dans les calculs.
+
+---
+
+### ERR-034 — Agrégation de qualité/confiance : utiliser le pire cas, pas le meilleur (FCR refactor)
+**Sprint :** ADR-028 | **Date :** 2026-04-05
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/calculs/fcr.ts` (ou équivalent calculs aliment)
+
+**Symptôme :**
+La `methodeEstimation` d'une période était dérivée en prenant le `max` du rang de précision des méthodes utilisées aux deux bornes de la période (biométrie exacte > interpolation > extrapolation). Utiliser le max revient à annoncer la méthode la plus précise, ce qui surestime la confiance réelle de l'estimation.
+
+**Cause racine :**
+L'intuition "prendre le max pour avoir la meilleure représentation" est incorrecte pour une métrique de qualité/confiance où la qualité de l'ensemble est limitée par le maillon le plus faible. Si une borne de la période est extrapolée, toute la période est de qualité "extrapolation", peu importe la précision de l'autre borne.
+
+**Fix :**
+Utiliser `min` (pire cas) pour l'agrégation de méthodes d'estimation :
+```typescript
+// Incorrect (max = surclasse la confiance réelle) :
+const methodeEstimation = [methodeDebut, methodeFin]
+  .map(m => PRECISION_RANK[m])
+  .reduce((a, b) => Math.max(a, b));
+
+// Correct (min = conservateur, borne inférieure de qualité) :
+const methodeEstimation = [methodeDebut, methodeFin]
+  .map(m => PRECISION_RANK[m])
+  .reduce((a, b) => Math.min(a, b));
+```
+
+**Leçon / Règle :**
+Quand on agrège des indicateurs de qualité, précision ou confiance provenant de plusieurs sources, toujours utiliser le **pire cas** (min, worst-case) comme valeur consolidée. La qualité globale est limitée par l'estimation la moins précise, pas par la plus précise. Ce principe s'applique à toute fonction d'estimation, interpolation, ou calcul basé sur plusieurs points de mesure de qualités hétérogènes.
+
+---
+
+### ERR-033 — Interpolation : extrapolation étiquetée "BIOMETRIE_EXACTE" (FCR refactor)
+**Sprint :** ADR-028 | **Date :** 2026-04-05
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/calculs/fcr.ts` (ou équivalent calculs aliment)
+
+**Symptôme :**
+La fonction `interpolerPoidsBac` retournait `methode: "BIOMETRIE_EXACTE"` lorsque la date cible était postérieure à toutes les biométries disponibles (cas d'extrapolation). L'appelant recevait une estimation extrapolée avec une étiquette de confiance maximale, ce qui pouvait conduire à des décisions basées sur des données présentées comme plus fiables qu'elles ne l'étaient.
+
+**Cause racine :**
+La branche de code gérant le cas "date cible après la dernière biométrie" copiait le retour de la branche "date cible exactement sur un point de mesure" (match exact = `BIOMETRIE_EXACTE`) sans adapter la valeur de `methode`. L'extrapolation et la lecture exacte étaient traitées de façon identique dans le label retourné.
+
+**Fix :**
+Retourner `"INTERPOLATION_LINEAIRE"` (ou un label dédié `"EXTRAPOLATION"`) pour les cas hors des bornes connues :
+```typescript
+// Incorrect (extrapolation labellisée comme lecture exacte) :
+if (dateTarget > dernierPoint.date) {
+  return { poids: dernierPoint.poids, methode: "BIOMETRIE_EXACTE" }; // FAUX
+}
+
+// Correct (label reflète la nature de l'estimation) :
+if (dateTarget > dernierPoint.date) {
+  return { poids: dernierPoint.poids, methode: "INTERPOLATION_LINEAIRE" };
+  // ou : methode: "EXTRAPOLATION" si le type le supporte
+}
+```
+
+**Leçon / Règle :**
+Dans toute fonction d'interpolation/extrapolation, chaque branche de retour doit porter un label `methode` qui correspond à ce que la branche fait réellement :
+- Date exacte sur un point mesuré → `"BIOMETRIE_EXACTE"`
+- Date entre deux points → `"INTERPOLATION_LINEAIRE"`
+- Date avant ou après toutes les mesures → `"INTERPOLATION_LINEAIRE"` ou `"EXTRAPOLATION"` (jamais `"BIOMETRIE_EXACTE"`)
+
+L'exactitude du label de méthode est aussi importante que l'exactitude de la valeur calculée : les appelants utilisent ce label pour communiquer la confiance aux utilisateurs finaux.
 
 ---
 

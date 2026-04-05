@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { formatNumber } from "@/lib/format";
-import { TypeReleve, CategorieProduit, StatutVague, StatutReproducteur, StatutLotAlevins } from "@/types";
+import { TypeReleve, CategorieProduit, StatutVague, StatutReproducteur, StatutLotAlevins, StrategieInterpolation } from "@/types";
 import type {
   IndicateursBac,
   ComparaisonBacs,
@@ -40,6 +40,14 @@ import {
   getTauxAlimentation,
   detecterPhase,
 } from "@/lib/calculs";
+import {
+  segmenterPeriodesAlimentaires,
+  type ReleveAlimPoint,
+  type BiometriePoint,
+  type VagueContext,
+  type GompertzVagueContext,
+  type GompertzBacContext,
+} from "@/lib/feed-periods";
 import {
   BENCHMARK_MORTALITE,
   BENCHMARK_DENSITE,
@@ -435,6 +443,7 @@ async function computeAlimentMetrics(
   const phasesCibles = (produit.phasesCibles ?? []) as AnalytiqueAliment["phasesCibles"];
 
   // Get all ReleveConsommation for this product on this site
+  // bacId is fetched here (ADR-028 incohérence 1 fix) for feed-period segmentation
   const allConsommations = await prisma.releveConsommation.findMany({
     where: { produitId: produit.id, siteId },
     select: {
@@ -444,6 +453,7 @@ async function computeAlimentMetrics(
           id: true,
           vagueId: true,
           date: true,
+          bacId: true,
         },
       },
     },
@@ -512,10 +522,37 @@ async function computeAlimentMetrics(
       dateDebut: true,
       dateFin: true,
       bacs: { select: { id: true, nombreInitial: true } },
+      configElevage: {
+        select: {
+          interpolationStrategy: true,
+          gompertzMinPoints: true,
+        },
+      },
+      gompertz: {
+        select: {
+          wInfinity: true,
+          k: true,
+          ti: true,
+          r2: true,
+          biometrieCount: true,
+          confidenceLevel: true,
+        },
+      },
+      gompertzBacs: {
+        select: {
+          bacId: true,
+          wInfinity: true,
+          k: true,
+          ti: true,
+          r2: true,
+          biometrieCount: true,
+          confidenceLevel: true,
+        },
+      },
     },
   });
 
-  // Fetch biometrie and mortalite releves for these vagues
+  // Fetch biometrie, mortalite and comptage releves for these vagues
   const vagueReleves = await prisma.releve.findMany({
     where: {
       vagueId: { in: vagueIds },
@@ -534,12 +571,43 @@ async function computeAlimentMetrics(
     },
   });
 
+  // ADR-028 incohérence 2 fix: fetch ALIMENTATION relevés with ALL their consommations
+  // for the feed-period segmentation (separate query to avoid changing vagueReleves type)
+  const alimentReleves = await prisma.releve.findMany({
+    where: {
+      vagueId: { in: vagueIds },
+      siteId,
+      typeReleve: TypeReleve.ALIMENTATION,
+    },
+    orderBy: { date: "asc" },
+    select: {
+      id: true,
+      vagueId: true,
+      bacId: true,
+      date: true,
+      consommations: {
+        select: {
+          produitId: true,
+          quantite: true,
+        },
+      },
+    },
+  });
+
   // Group releves by vague
   const relevesByVague = new Map<string, typeof vagueReleves>();
   for (const r of vagueReleves) {
     const existing = relevesByVague.get(r.vagueId) ?? [];
     existing.push(r);
     relevesByVague.set(r.vagueId, existing);
+  }
+
+  // Group ALIMENTATION relevés by vague for feed-period segmentation (ADR-028)
+  const alimentRelevesByVague = new Map<string, typeof alimentReleves>();
+  for (const r of alimentReleves) {
+    const existing = alimentRelevesByVague.get(r.vagueId) ?? [];
+    existing.push(r);
+    alimentRelevesByVague.set(r.vagueId, existing);
   }
 
   // Compute per-vague metrics
@@ -571,18 +639,129 @@ async function computeAlimentMetrics(
 
     const nombreVivants = computeNombreVivantsVague(vague.bacs, releves, vague.nombreInitial);
 
-    const biomasse = calculerBiomasse(poidsMoyen, nombreVivants);
-    const biomasseInitiale = calculerBiomasse(vague.poidsMoyenInitial, vague.nombreInitial);
-    const gainBiomasse =
-      biomasse !== null && biomasseInitiale !== null ? biomasse - biomasseInitiale : null;
-
     const now = vague.dateFin ?? new Date();
     const jours = Math.max(
       1,
       Math.floor((now.getTime() - vague.dateDebut.getTime()) / (1000 * 60 * 60 * 24))
     );
 
-    const fcr = calculerFCR(conso.quantite, gainBiomasse);
+    // ADR-028: FCR per feed period (Couche 3)
+    // Build inputs for segmenterPeriodesAlimentaires
+    const vagueAlimReleves = alimentRelevesByVague.get(vague.id) ?? [];
+    const relevsAlimPoints: ReleveAlimPoint[] = vagueAlimReleves.map((r) => ({
+      releveId: r.id,
+      date: r.date,
+      bacId: r.bacId,
+      consommations: r.consommations.map((c) => ({
+        produitId: c.produitId,
+        quantiteKg: c.quantite,
+      })),
+    }));
+
+    const biometriePoints: BiometriePoint[] = biometries
+      .filter((b) => b.poidsMoyen !== null && b.poidsMoyen > 0)
+      .map((b) => ({
+        date: b.date,
+        bacId: b.bacId,
+        poidsMoyen: b.poidsMoyen as number,
+      }));
+
+    const vagueCtx: VagueContext = {
+      dateDebut: vague.dateDebut,
+      nombreInitial: vague.nombreInitial,
+      poidsMoyenInitial: vague.poidsMoyenInitial,
+      bacs: vague.bacs,
+    };
+
+    // ADR-029 + ADR-030: build Gompertz context if available and strategy is configured
+    const config = vague.configElevage;
+    const gompertz = vague.gompertz;
+    const interpolStrategy =
+      config?.interpolationStrategy ?? StrategieInterpolation.LINEAIRE;
+
+    // INC-02 fix: gompertzContext (vague-level) is needed for GOMPERTZ_BAC as fallback too
+    const gompertzContext: GompertzVagueContext | undefined =
+      gompertz &&
+      (interpolStrategy === StrategieInterpolation.GOMPERTZ_VAGUE ||
+        interpolStrategy === StrategieInterpolation.GOMPERTZ_BAC)
+        ? {
+            wInfinity: gompertz.wInfinity,
+            k: gompertz.k,
+            ti: gompertz.ti,
+            r2: gompertz.r2,
+            biometrieCount: gompertz.biometrieCount,
+            confidenceLevel: gompertz.confidenceLevel as GompertzVagueContext["confidenceLevel"],
+            vagueDebut: vague.dateDebut,
+          }
+        : undefined;
+
+    // ADR-030: build per-tank Gompertz contexts if strategy = GOMPERTZ_BAC
+    let gompertzBacContexts: Map<string, GompertzBacContext> | undefined;
+    if (interpolStrategy === StrategieInterpolation.GOMPERTZ_BAC) {
+      const bacRows = vague.gompertzBacs ?? [];
+      if (bacRows.length > 0) {
+        gompertzBacContexts = new Map(
+          bacRows
+            .filter((b) => b.confidenceLevel !== "INSUFFICIENT_DATA")
+            .map((b) => [
+              b.bacId,
+              {
+                wInfinity: b.wInfinity,
+                k: b.k,
+                ti: b.ti,
+                r2: b.r2,
+                biometrieCount: b.biometrieCount,
+                confidenceLevel: b.confidenceLevel as GompertzBacContext["confidenceLevel"],
+                vagueDebut: vague.dateDebut,
+              },
+            ])
+        );
+      }
+    }
+
+    // Segmenter all periods, then filter for this product
+    const allPeriodes = segmenterPeriodesAlimentaires(
+      relevsAlimPoints,
+      biometriePoints,
+      vagueCtx,
+      {
+        strategie: interpolStrategy as StrategieInterpolation,
+        gompertzContext,
+        gompertzBacContexts,
+        gompertzMinPoints: config?.gompertzMinPoints,
+      }
+    );
+    const periodesProduct = allPeriodes.filter((p) => p.produitId === produit.id);
+
+    // Aggregate FCR from periods: total aliment / total positive gain
+    let gainBiomasse: number | null = null;
+    let fcr: number | null = null;
+
+    if (periodesProduct.length > 0) {
+      const totalAlimentPeriodes = periodesProduct.reduce((s, p) => s + p.quantiteKg, 0);
+      const totalGainPeriodes = periodesProduct.reduce(
+        (s, p) => s + (p.gainBiomasseKg != null && p.gainBiomasseKg > 0 ? p.gainBiomasseKg : 0),
+        0
+      );
+      gainBiomasse = totalGainPeriodes > 0 ? totalGainPeriodes : null;
+      fcr = totalGainPeriodes > 0 ? totalAlimentPeriodes / totalGainPeriodes : null;
+    } else {
+      // Fallback: no ALIMENTATION relevés segmented (old data without consommations)
+      // Use the naive vague-level calculation
+      const biomasse = calculerBiomasse(poidsMoyen, nombreVivants);
+      const biomasseInitiale = calculerBiomasse(vague.poidsMoyenInitial, vague.nombreInitial);
+      gainBiomasse =
+        biomasse !== null && biomasseInitiale !== null ? biomasse - biomasseInitiale : null;
+      fcr = calculerFCR(conso.quantite, gainBiomasse);
+    }
+
+    // ADR-028: metadata about period detection
+    const uniqueProduits = new Set(allPeriodes.map((p) => p.produitId));
+    const avecChangementAliment = periodesProduct.length > 1 || uniqueProduits.size > 1;
+    const avecInterpolation = periodesProduct.some(
+      (p) => p.methodeEstimation === "INTERPOLATION_LINEAIRE"
+    );
+
     const sgr = calculerSGR(vague.poidsMoyenInitial, poidsMoyen, jours);
     const tauxSurvie = calculerTauxSurvie(nombreVivants, vague.nombreInitial);
     const coutKg = calculerCoutParKgGain(conso.quantite, getPrixParUniteBase(produit), gainBiomasse);
@@ -623,6 +802,10 @@ async function computeAlimentMetrics(
         per: per !== null ? Math.round(per * 100) / 100 : null,
         tauxMortaliteAssocie:
           tauxMortaliteAssocie !== null ? Math.round(tauxMortaliteAssocie * 100) / 100 : null,
+        // ADR-028: feed-period metadata
+        nombrePeriodes: periodesProduct.length,
+        avecChangementAliment,
+        avecInterpolation,
       },
     });
 
@@ -1680,6 +1863,12 @@ function interpolerPoidsMoyen(
  * - Interpolation lineaire du poids moyen entre biometries (algorithme A5/A6)
  * - Benchmark FCR via getBenchmarkFCRPourPhase sur la premiere phase cible du produit
  *
+ * NOTE ADR-028 (residual inconsistency, out of scope):
+ * This function uses the old whole-vague FCR calculation (biometrieVague sans distinction de bac).
+ * If the vague has feed switches between tanks, the weekly FCR shown here may differ from
+ * the corrected per-period FCR shown in the feed comparison page (computeAlimentMetrics).
+ * A future evolution should apply segmenterPeriodesAlimentaires here as well.
+ *
  * @param siteId    - ID du site (multi-tenancy)
  * @param produitId - ID du produit aliment
  * @param vagueId   - Vague a analyser (optionnel - si absent, toutes les vagues)
@@ -1689,6 +1878,13 @@ export async function getFCRHebdomadaire(
   produitId: string,
   vagueId?: string
 ): Promise<FCRHebdomadairePoint[]> {
+  // NOTE ADR-028: Ce calcul FCR hebdomadaire utilise encore l'algorithme vague-entière
+  // (biomasseFinale - biomasseInitiale divisée par aliment total).
+  // Il n'a PAS été migré vers la segmentation per-bac de feed-periods.ts.
+  // Conséquence : si une vague contient des changements d'aliment, le FCR affiché dans
+  // ce graphique de tendance peut différer du FCR corrigé affiché dans la comparaison aliments.
+  // Voir ADR-028 et docs/analysis/pre-analysis-fcr-refactor.md (Risque 6).
+
   // 1. Verifier que le produit existe et appartient au site
   const produit = await prisma.produit.findFirst({
     where: { id: produitId, siteId, categorie: CategorieProduit.ALIMENT },

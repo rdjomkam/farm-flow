@@ -1981,6 +1981,27 @@ export enum PhaseElevage {
   PRE_RECOLTE = "PRE_RECOLTE",
 }
 
+/**
+ * Strategie d'interpolation du poids aux bornes de periode d'alimentation.
+ *
+ * LINEAIRE       — interpolation lineaire entre deux biometries encadrantes.
+ *                  Defaut. Precis a +/-5 % pour des biometries espacees de 7-21 jours.
+ * GOMPERTZ_VAGUE — utilise la courbe Gompertz calibree de la vague (GompertzVague)
+ *                  si confidenceLevel est HIGH ou MEDIUM.
+ *                  Fallback vers LINEAIRE si Gompertz non disponible ou insuffisant.
+ * GOMPERTZ_BAC   — calibrage Gompertz par bac individuel (ADR-030).
+ *                  Fallback automatique vers GOMPERTZ_VAGUE si le bac n'a pas assez de
+ *                  biometries, puis vers INTERPOLATION_LINEAIRE si la vague non plus.
+ *
+ * ADR-029, ADR-030.
+ */
+export enum StrategieInterpolation {
+  LINEAIRE = "LINEAIRE",
+  GOMPERTZ_VAGUE = "GOMPERTZ_VAGUE",
+  /** Calibrage Gompertz par bac individuel (ADR-030) */
+  GOMPERTZ_BAC = "GOMPERTZ_BAC",
+}
+
 // ---------------------------------------------------------------------------
 // Enums — Feed Analytics (Sprint FA)
 // ---------------------------------------------------------------------------
@@ -2216,6 +2237,8 @@ export interface ConfigElevage {
   gompertzTiDefault?: number | null;
   /** Nombre minimum de biometries (dates uniques) pour declencher le calcul Gompertz */
   gompertzMinPoints: number;
+  /** Strategie d'interpolation des poids aux bornes de periode (ADR-029) */
+  interpolationStrategy: StrategieInterpolation;
 
   // Metadonnees
   /** Profil par defaut du site (un seul isDefault=true par site) */
@@ -2231,6 +2254,43 @@ export interface ConfigElevage {
 /** ConfigElevage avec ses relations chargees */
 export interface ConfigElevageWithRelations extends ConfigElevage {
   site?: Pick<Site, "id" | "name">;
+}
+
+// ---------------------------------------------------------------------------
+// Modèles — Gompertz per-tank (ADR-030)
+// ---------------------------------------------------------------------------
+
+/**
+ * GompertzBac — Parametres du modele de croissance de Gompertz calibres sur les
+ * releves biometriques d'un bac individuel.
+ * W(t) = W∞ × exp(−exp(−k × (t − ti)))
+ * Un seul enregistrement par bac (bacId unique).
+ * Supprime en cascade avec le bac (onDelete: Cascade).
+ * R8 : siteId obligatoire.
+ */
+export interface GompertzBac {
+  id: string;
+  bacId: string;
+  vagueId: string;
+  /** W∞ — Poids asymptotique (g) */
+  wInfinity: number;
+  /** k — Constante de taux de croissance (1/jour) */
+  k: number;
+  /** ti — Point d'inflexion (jours depuis le debut de la vague) */
+  ti: number;
+  /** R² — Coefficient de determination (0-1) */
+  r2: number;
+  /** RMSE — Erreur quadratique moyenne (g) */
+  rmse: number;
+  /** Nombre de releves biometriques du bac utilises pour le calibrage */
+  biometrieCount: number;
+  /** Niveau de confiance : INSUFFICIENT_DATA | LOW | MEDIUM | HIGH */
+  confidenceLevel: string;
+  /** Valeur de configElevage.gompertzWInfDefault utilisee lors de ce calibrage */
+  configWInfUsed: number | null;
+  siteId: string;
+  calculatedAt: Date;
+  updatedAt: Date;
 }
 
 // ---------------------------------------------------------------------------

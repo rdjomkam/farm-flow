@@ -44,6 +44,7 @@ export {
   UniteBesoin,
   // Sprint 19 — ConfigElevage
   PhaseElevage,
+  StrategieInterpolation,
   // Sprint 20 — Packs & Provisioning
   StatutActivation,
   // Sprint 21 — Moteur de regles d'activites
@@ -150,6 +151,8 @@ export type {
   ConfigElevageWithRelations,
   AlimentTailleEntree,
   AlimentTauxEntree,
+  // ADR-030 — GompertzBac
+  GompertzBac,
   // Sprint 20 — Packs & Provisioning
   Pack,
   PackWithRelations,
@@ -533,6 +536,8 @@ export type {
   ChangementGranule,
   AlerteRation,
   ScoreAlimentConfig,
+  // ADR-028 — FCR feed-switching accuracy
+  PeriodeAlimentaire,
 } from "./calculs";
 
 // Gompertz growth model — public interfaces (Story G2.1)
