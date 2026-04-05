@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { formatNumber } from "@/lib/format";
-import { TypeReleve, CategorieProduit, StatutVague, StatutReproducteur, StatutLotAlevins, StrategieInterpolation } from "@/types";
+import { TypeReleve, CategorieProduit, StatutVague, StatutReproducteur, StatutLotAlevins } from "@/types";
+import { CLARIAS_DEFAULTS } from "@/lib/gompertz";
 import type {
   IndicateursBac,
   ComparaisonBacs,
@@ -528,8 +529,8 @@ async function computeAlimentMetrics(
       bacs: { select: { id: true, nombreInitial: true } },
       configElevage: {
         select: {
-          interpolationStrategy: true,
           gompertzMinPoints: true,
+          gompertzWInfDefault: true,
         },
       },
       gompertz: {
@@ -682,13 +683,10 @@ async function computeAlimentMetrics(
       bacs: vague.bacs,
     };
 
-    // ADR-029 / ADR-033: build Gompertz context whenever the model is available —
-    // NOT conditional on interpolStrategy (ADR-033 DISC-10 fix).
-    // interpolationStrategy is a display preference; FCR always uses Gompertz when valid.
+    // ADR-034: build Gompertz context ALWAYS — from DB record if available,
+    // otherwise from ConfigElevage defaults (wInfDefault) + CLARIAS_DEFAULTS.
     const config = vague.configElevage;
     const gompertz = vague.gompertz;
-    const interpolStrategy =
-      config?.interpolationStrategy ?? StrategieInterpolation.LINEAIRE;
 
     const gompertzContext: GompertzVagueContext | undefined = gompertz
       ? {
@@ -700,7 +698,15 @@ async function computeAlimentMetrics(
           confidenceLevel: gompertz.confidenceLevel as GompertzVagueContext["confidenceLevel"],
           vagueDebut: vague.dateDebut,
         }
-      : undefined;
+      : {
+          wInfinity: config?.gompertzWInfDefault ?? CLARIAS_DEFAULTS.wInfinity,
+          k: CLARIAS_DEFAULTS.k,
+          ti: CLARIAS_DEFAULTS.ti,
+          r2: 0,
+          biometrieCount: 0,
+          confidenceLevel: "LOW" as const,
+          vagueDebut: vague.dateDebut,
+        };
 
     // ADR-033 DISC-09: build mortalitesParBac (flat Map) for per-tank nombreVivants
     // (each tank tracks its own mortality separately via estimerNombreVivantsADate)
@@ -733,9 +739,7 @@ async function computeAlimentMetrics(
       biometriePoints,
       vagueCtxWithCalibrages,
       {
-        strategie: interpolStrategy as StrategieInterpolation,
         gompertzContext,
-        gompertzMinPoints: config?.gompertzMinPoints,
         mortalitesParBac,
       }
     );
@@ -2473,7 +2477,6 @@ export async function getFCRTrace(
       produitNom: produit.nom,
       fournisseurNom: produit.fournisseur?.nom ?? null,
       prixUnitaire: getPrixParUniteBase(produit),
-      strategieInterpolation: StrategieInterpolation.LINEAIRE,
       gompertzMinPoints: null,
       fcrMoyenFinal: null,
       quantiteTotaleFinal: 0,
@@ -2504,8 +2507,8 @@ export async function getFCRTrace(
       bacs: { select: { id: true, nom: true, nombreInitial: true } },
       configElevage: {
         select: {
-          interpolationStrategy: true,
           gompertzMinPoints: true,
+          gompertzWInfDefault: true,
         },
       },
       gompertz: {
@@ -2621,13 +2624,10 @@ export async function getFCRTrace(
       bacs: vague.bacs,
     };
 
-    // ADR-029 / ADR-033: build Gompertz context whenever the model is available —
-    // NOT conditional on interpolStrategy (ADR-033 DISC-15 fix).
+    // ADR-034: build Gompertz context ALWAYS — from DB record if available,
+    // otherwise from ConfigElevage defaults (wInfDefault) + CLARIAS_DEFAULTS.
     const config = vague.configElevage;
     const gompertz = vague.gompertz;
-    const interpolStrategy =
-      (config?.interpolationStrategy as StrategieInterpolation | null) ??
-      StrategieInterpolation.LINEAIRE;
 
     const gompertzContext: GompertzVagueContext | undefined = gompertz
       ? {
@@ -2639,7 +2639,15 @@ export async function getFCRTrace(
           confidenceLevel: gompertz.confidenceLevel as GompertzVagueContext["confidenceLevel"],
           vagueDebut: vague.dateDebut,
         }
-      : undefined;
+      : {
+          wInfinity: config?.gompertzWInfDefault ?? CLARIAS_DEFAULTS.wInfinity,
+          k: CLARIAS_DEFAULTS.k,
+          ti: CLARIAS_DEFAULTS.ti,
+          r2: 0,
+          biometrieCount: 0,
+          confidenceLevel: "LOW" as const,
+          vagueDebut: vague.dateDebut,
+        };
 
     // ADR-032: build mortalitesParBac for per-tank nombreVivants
     // (per-tank mortality tracking is correct per ADR-033 — each tank has different fish count)
@@ -2663,9 +2671,7 @@ export async function getFCRTrace(
     };
 
     const interpolOptions = {
-      strategie: interpolStrategy,
       gompertzContext,
-      gompertzMinPoints: config?.gompertzMinPoints ?? undefined,
       mortalitesParBac,
     };
 
@@ -2845,15 +2851,7 @@ export async function getFCRTrace(
       ? Math.round((alimentValideTotalGlobale / gainBiomasseTotalGlobale) * 100) / 100
       : null;
 
-  // Pick interpolation strategy from the first vague that has a config.
-  // This assumes all vagues for a given product share the same strategy.
-  // In theory a product could span vagues with different strategies, but this
-  // scenario is extremely unlikely and not yet supported — a single strategy
-  // is applied uniformly across the whole FCR trace.
   const firstConfig = vagues.find((v) => v.configElevage)?.configElevage;
-  const strategieInterpolation =
-    (firstConfig?.interpolationStrategy as StrategieInterpolation | null) ??
-    StrategieInterpolation.LINEAIRE;
   const gompertzMinPoints = firstConfig?.gompertzMinPoints ?? null;
 
   return {
@@ -2861,7 +2859,6 @@ export async function getFCRTrace(
     produitNom: produit.nom,
     fournisseurNom: produit.fournisseur?.nom ?? null,
     prixUnitaire: getPrixParUniteBase(produit),
-    strategieInterpolation,
     gompertzMinPoints,
     fcrMoyenFinal,
     quantiteTotaleFinal: Math.round(quantiteTotaleGlobale * 100) / 100,

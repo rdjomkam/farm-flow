@@ -11,7 +11,6 @@ import {
   FormeAliment,
   PhaseElevage,
   ScoreAlimentConfig,
-  StrategieInterpolation,
 } from "./models";
 import type { GompertzKLevel } from "@/lib/benchmarks";
 
@@ -997,12 +996,6 @@ export interface FCRTrace {
   fournisseurNom: string | null;
   /** Prix unitaire en CFA/kg (base d'achat) */
   prixUnitaire: number;
-
-  /**
-   * Strategie d'interpolation configuree (ConfigElevage).
-   * Contextualise les methodes d'estimation affichees dans les periodes.
-   */
-  strategieInterpolation: StrategieInterpolation;
 
   /**
    * Nombre minimal de biometries requis pour activer Gompertz.

@@ -32,8 +32,7 @@ import {
   type GompertzVagueContext,
   type CalibragePoint,
 } from "@/lib/feed-periods";
-import { gompertzWeight } from "@/lib/gompertz";
-import { StrategieInterpolation } from "@/types";
+import { gompertzWeight, CLARIAS_DEFAULTS } from "@/lib/gompertz";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -591,9 +590,7 @@ describe("interpolerPoidsBac — strategie GOMPERTZ_VAGUE (ADR-029)", () => {
     ];
 
     const result = interpolerPoidsBac(targetDate, "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzMinPoints: 5,
     });
 
     expect(result).not.toBeNull();
@@ -615,9 +612,7 @@ describe("interpolerPoidsBac — strategie GOMPERTZ_VAGUE (ADR-029)", () => {
     ];
 
     const result = interpolerPoidsBac(targetDate, "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: GOMPERTZ_CTX_MEDIUM,
-      gompertzMinPoints: 5,
     });
 
     expect(result).not.toBeNull();
@@ -635,9 +630,7 @@ describe("interpolerPoidsBac — strategie GOMPERTZ_VAGUE (ADR-029)", () => {
     ];
 
     const result = interpolerPoidsBac(targetDate, "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzMinPoints: 5,
     });
 
     expect(result).not.toBeNull();
@@ -645,29 +638,27 @@ describe("interpolerPoidsBac — strategie GOMPERTZ_VAGUE (ADR-029)", () => {
     expect(result!.poids).toBe(999);
   });
 
-  // ---- Fallback : confidence insuffisante --------------------------------
+  // ---- ADR-034: no guard conditions — Gompertz always used when context provided ---
 
-  it("gompertzContext.confidenceLevel = LOW -> fallback INTERPOLATION_LINEAIRE", () => {
+  it("gompertzContext.confidenceLevel = LOW -> still uses GOMPERTZ_VAGUE (ADR-034)", () => {
     const ctxLow: GompertzVagueContext = {
       ...GOMPERTZ_CTX_HIGH,
       confidenceLevel: "LOW",
-      r2: 0.88, // r2 ok mais niveau LOW -> refus
+      r2: 0.88,
     };
     const biometries: BiometriePoint[] = [
       makeBio("bac-A", 0, 10),
       makeBio("bac-A", 60, 200),
     ];
     const result = interpolerPoidsBac(makeDate(30), "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: ctxLow,
-      gompertzMinPoints: 5,
     });
 
     expect(result).not.toBeNull();
-    expect(result!.methode).toBe("INTERPOLATION_LINEAIRE");
+    expect(result!.methode).toBe("GOMPERTZ_VAGUE");
   });
 
-  it("gompertzContext.confidenceLevel = INSUFFICIENT_DATA -> fallback INTERPOLATION_LINEAIRE", () => {
+  it("gompertzContext.confidenceLevel = INSUFFICIENT_DATA -> still uses GOMPERTZ_VAGUE (ADR-034)", () => {
     const ctxInsufficient: GompertzVagueContext = {
       ...GOMPERTZ_CTX_HIGH,
       confidenceLevel: "INSUFFICIENT_DATA",
@@ -678,21 +669,17 @@ describe("interpolerPoidsBac — strategie GOMPERTZ_VAGUE (ADR-029)", () => {
       makeBio("bac-A", 60, 200),
     ];
     const result = interpolerPoidsBac(makeDate(30), "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: ctxInsufficient,
-      gompertzMinPoints: 5,
     });
 
     expect(result).not.toBeNull();
-    expect(result!.methode).toBe("INTERPOLATION_LINEAIRE");
+    expect(result!.methode).toBe("GOMPERTZ_VAGUE");
   });
 
-  // ---- Fallback : r2 insuffisant ----------------------------------------
-
-  it("r2 < 0.85 -> fallback INTERPOLATION_LINEAIRE", () => {
+  it("r2 < 0.85 -> still uses GOMPERTZ_VAGUE (ADR-034, no r2 guard)", () => {
     const ctxBadR2: GompertzVagueContext = {
       ...GOMPERTZ_CTX_HIGH,
-      r2: 0.80, // en-dessous du seuil 0.85
+      r2: 0.80,
       confidenceLevel: "HIGH",
     };
     const biometries: BiometriePoint[] = [
@@ -700,69 +687,23 @@ describe("interpolerPoidsBac — strategie GOMPERTZ_VAGUE (ADR-029)", () => {
       makeBio("bac-A", 60, 200),
     ];
     const result = interpolerPoidsBac(makeDate(30), "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: ctxBadR2,
-      gompertzMinPoints: 5,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.methode).toBe("INTERPOLATION_LINEAIRE");
-  });
-
-  it("r2 exactement = 0.85 -> Gompertz accepte (seuil inclusif)", () => {
-    const ctxR2Limite: GompertzVagueContext = {
-      ...GOMPERTZ_CTX_HIGH,
-      r2: 0.85,
-    };
-    // Une biometrie non exacte pour passer la garde "bacBios.length === 0"
-    // Si Gompertz n'est pas utilise on tomberait sur INTERPOLATION_LINEAIRE (une seule bio avant)
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 5, 40), // avant J50, pas exacte
-    ];
-    const result = interpolerPoidsBac(makeDate(50), "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
-      gompertzContext: ctxR2Limite,
-      gompertzMinPoints: 5,
     });
 
     expect(result).not.toBeNull();
     expect(result!.methode).toBe("GOMPERTZ_VAGUE");
   });
 
-  // ---- Fallback : biometrieCount insuffisant -----------------------------
-
-  it("biometrieCount < gompertzMinPoints -> fallback INTERPOLATION_LINEAIRE", () => {
+  it("biometrieCount = 3 -> still uses GOMPERTZ_VAGUE (ADR-034, no minPoints guard)", () => {
     const ctxFewPoints: GompertzVagueContext = {
       ...GOMPERTZ_CTX_HIGH,
-      biometrieCount: 3, // sous le seuil par defaut de 5
+      biometrieCount: 3,
     };
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 0, 10),
-      makeBio("bac-A", 60, 200),
-    ];
-    const result = interpolerPoidsBac(makeDate(30), "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
-      gompertzContext: ctxFewPoints,
-      gompertzMinPoints: 5, // seuil = 5, biometrieCount = 3 -> refus
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.methode).toBe("INTERPOLATION_LINEAIRE");
-  });
-
-  it("biometrieCount = gompertzMinPoints -> Gompertz accepte (valeur exacte suffit)", () => {
-    const ctxExactPoints: GompertzVagueContext = {
-      ...GOMPERTZ_CTX_HIGH,
-      biometrieCount: 5,
-    };
-    // Une biometrie non exacte pour passer la garde "bacBios.length === 0"
     const biometries: BiometriePoint[] = [
       makeBio("bac-A", 5, 40),
     ];
     const result = interpolerPoidsBac(makeDate(50), "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
-      gompertzContext: ctxExactPoints,
-      gompertzMinPoints: 5,
+      gompertzContext: ctxFewPoints,
     });
 
     expect(result).not.toBeNull();
@@ -777,9 +718,7 @@ describe("interpolerPoidsBac — strategie GOMPERTZ_VAGUE (ADR-029)", () => {
       makeBio("bac-A", 60, 200),
     ];
     const result = interpolerPoidsBac(makeDate(30), "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: undefined, // pas de contexte
-      gompertzMinPoints: 5,
     });
 
     expect(result).not.toBeNull();
@@ -799,31 +738,11 @@ describe("interpolerPoidsBac — strategie GOMPERTZ_VAGUE (ADR-029)", () => {
       makeBio("bac-A", 20, 50),
     ];
     const result = interpolerPoidsBac(makeDate(5), "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: ctx,
-      gompertzMinPoints: 5,
     });
 
     expect(result).not.toBeNull();
     expect(result!.methode).toBe("INTERPOLATION_LINEAIRE");
-  });
-
-  // ---- Strategie LINEAIRE ignore le contexte Gompertz -------------------
-
-  it("strategie LINEAIRE ignore gompertzContext, utilise l'interpolation lineaire", () => {
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 0, 10),
-      makeBio("bac-A", 60, 200),
-    ];
-    const result = interpolerPoidsBac(makeDate(30), "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.LINEAIRE,
-      gompertzContext: GOMPERTZ_CTX_HIGH, // fourni mais ignore
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.methode).toBe("INTERPOLATION_LINEAIRE");
-    // interpolation lineaire : 10 + (200-10) * (30/60) = 10 + 95 = 105g
-    expect(result!.poids).toBeCloseTo(105, 3);
   });
 
   it("sans options du tout -> comportement ADR-028 (LINEAIRE par defaut)", () => {
@@ -837,56 +756,71 @@ describe("interpolerPoidsBac — strategie GOMPERTZ_VAGUE (ADR-029)", () => {
     expect(result!.methode).toBe("INTERPOLATION_LINEAIRE");
   });
 
-  // ---- Gompertz avec n=3 (minimum) et r2 ~ 1.0 -------------------------
+  // ---- ADR-034: fallback context with ConfigElevage defaults produces valid Gompertz ---
 
-  it("Gompertz avec gompertzMinPoints=3 et r2=0.999 -> Gompertz utilise (trade-off accepte)", () => {
-    const ctxN3: GompertzVagueContext = {
-      ...GOMPERTZ_CTX_HIGH,
-      biometrieCount: 3,
-      r2: 0.999, // r2 ~ 1.0 avec n=3 (overfitting acceptable selon ADR-029)
-      confidenceLevel: "HIGH",
+  it("fallback context (r2=0, biometrieCount=0, LOW) with CLARIAS_DEFAULTS produces valid Gompertz", () => {
+    // Simulates what happens when vague.gompertz is NULL in DB —
+    // analytics.ts builds a fallback context from ConfigElevage/CLARIAS_DEFAULTS
+    const fallbackCtx: GompertzVagueContext = {
+      wInfinity: CLARIAS_DEFAULTS.wInfinity, // 1200
+      k: CLARIAS_DEFAULTS.k,                 // 0.018
+      ti: CLARIAS_DEFAULTS.ti,               // 95
+      r2: 0,
+      biometrieCount: 0,
+      confidenceLevel: "LOW",
+      vagueDebut: makeDate(0),
     };
-    // Une biometrie non exacte pour passer la garde "bacBios.length === 0"
     const biometries: BiometriePoint[] = [
       makeBio("bac-A", 5, 40),
     ];
     const result = interpolerPoidsBac(makeDate(50), "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
-      gompertzContext: ctxN3,
-      gompertzMinPoints: 3, // seuil abaisse a 3 par l'eleveur
+      gompertzContext: fallbackCtx,
     });
 
     expect(result).not.toBeNull();
     expect(result!.methode).toBe("GOMPERTZ_VAGUE");
     const expectedPoids = gompertzWeight(50, {
-      wInfinity: ctxN3.wInfinity,
-      k: ctxN3.k,
-      ti: ctxN3.ti,
+      wInfinity: CLARIAS_DEFAULTS.wInfinity,
+      k: CLARIAS_DEFAULTS.k,
+      ti: CLARIAS_DEFAULTS.ti,
     });
     expect(result!.poids).toBeCloseTo(expectedPoids, 6);
+    expect(result!.poids).toBeGreaterThan(0);
   });
 
-  // ---- gompertzMinPoints par defaut = 5 quand non fourni -----------------
-
-  it("gompertzMinPoints absent dans options -> defaut = 5 (biometrieCount=4 -> refus)", () => {
-    // biometrieCount = 4 < 5 (defaut) -> refus -> fallback LINEAIRE
-    const ctxCount4: GompertzVagueContext = {
-      ...GOMPERTZ_CTX_HIGH,
-      biometrieCount: 4,
+  it("fallback context with custom wInfDefault (1500g) produces different Gompertz weight", () => {
+    const fallbackCustom: GompertzVagueContext = {
+      wInfinity: 1500, // config.gompertzWInfDefault = 1500
+      k: CLARIAS_DEFAULTS.k,
+      ti: CLARIAS_DEFAULTS.ti,
+      r2: 0,
+      biometrieCount: 0,
+      confidenceLevel: "LOW",
+      vagueDebut: makeDate(0),
     };
-    // Biometries encadrantes pour que le fallback LINEAIRE soit actif (pas VALEUR_INITIALE)
-    const biometries: BiometriePoint[] = [
-      makeBio("bac-A", 0, 10),
-      makeBio("bac-A", 60, 200),
-    ];
-    const result = interpolerPoidsBac(makeDate(30), "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
-      gompertzContext: ctxCount4,
-      // gompertzMinPoints non fourni -> defaut = 5
+    const fallbackDefault: GompertzVagueContext = {
+      wInfinity: CLARIAS_DEFAULTS.wInfinity, // 1200
+      k: CLARIAS_DEFAULTS.k,
+      ti: CLARIAS_DEFAULTS.ti,
+      r2: 0,
+      biometrieCount: 0,
+      confidenceLevel: "LOW",
+      vagueDebut: makeDate(0),
+    };
+
+    const biometries: BiometriePoint[] = [makeBio("bac-A", 5, 40)];
+
+    const resultCustom = interpolerPoidsBac(makeDate(60), "bac-A", biometries, 10, {
+      gompertzContext: fallbackCustom,
+    });
+    const resultDefault = interpolerPoidsBac(makeDate(60), "bac-A", biometries, 10, {
+      gompertzContext: fallbackDefault,
     });
 
-    expect(result).not.toBeNull();
-    expect(result!.methode).toBe("INTERPOLATION_LINEAIRE");
+    expect(resultCustom!.methode).toBe("GOMPERTZ_VAGUE");
+    expect(resultDefault!.methode).toBe("GOMPERTZ_VAGUE");
+    // Higher wInfinity should produce a higher weight at same t
+    expect(resultCustom!.poids).toBeGreaterThan(resultDefault!.poids);
   });
 });
 
@@ -908,9 +842,7 @@ describe("segmenterPeriodesAlimentaires — strategie GOMPERTZ_VAGUE (ADR-029)",
       makeReleve("r2", "bac-A", 20, [{ produitId: "prod-X", quantiteKg: 3 }]),
     ];
     const result = segmenterPeriodesAlimentaires(releves, biometries, BASE_VAGUE_CONTEXT, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzMinPoints: 5,
     });
 
     expect(result).toHaveLength(1);
@@ -929,7 +861,7 @@ describe("segmenterPeriodesAlimentaires — strategie GOMPERTZ_VAGUE (ADR-029)",
     expect(result[0].methodeEstimation).toBe("VALEUR_INITIALE");
   });
 
-  it("options Gompertz LOW -> methodeEstimation = VALEUR_INITIALE (pas de biometries, fallback lineaire -> valeur initiale)", () => {
+  it("options Gompertz LOW -> methodeEstimation = GOMPERTZ_VAGUE (ADR-034: no guards)", () => {
     const releves: ReleveAlimPoint[] = [
       makeReleve("r1", "bac-A", 5, [{ produitId: "prod-X", quantiteKg: 3 }]),
     ];
@@ -938,14 +870,12 @@ describe("segmenterPeriodesAlimentaires — strategie GOMPERTZ_VAGUE (ADR-029)",
       confidenceLevel: "LOW",
     };
     const result = segmenterPeriodesAlimentaires(releves, [], BASE_VAGUE_CONTEXT, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: ctxLow,
-      gompertzMinPoints: 5,
     });
 
     expect(result).toHaveLength(1);
-    // LOW -> fallback lineaire -> pas de biometries -> VALEUR_INITIALE
-    expect(result[0].methodeEstimation).toBe("VALEUR_INITIALE");
+    // ADR-034: LOW confidence still uses Gompertz (no guards)
+    expect(result[0].methodeEstimation).toBe("GOMPERTZ_VAGUE");
   });
 
   it("Gompertz avec biometrie exacte sur une borne -> methode = GOMPERTZ_VAGUE (borne sans biometrie)", () => {
@@ -960,9 +890,7 @@ describe("segmenterPeriodesAlimentaires — strategie GOMPERTZ_VAGUE (ADR-029)",
       makeReleve("r2", "bac-A", 20, [{ produitId: "prod-X", quantiteKg: 3 }]),
     ];
     const result = segmenterPeriodesAlimentaires(releves, biometries, BASE_VAGUE_CONTEXT, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzMinPoints: 5,
     });
 
     expect(result).toHaveLength(1);
@@ -981,9 +909,7 @@ describe("segmenterPeriodesAlimentaires — strategie GOMPERTZ_VAGUE (ADR-029)",
       makeReleve("r2", "bac-A", 20, [{ produitId: "prod-X", quantiteKg: 3 }]),
     ];
     const result = segmenterPeriodesAlimentaires(releves, biometries, BASE_VAGUE_CONTEXT, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzMinPoints: 5,
     });
 
     expect(result).toHaveLength(1);
@@ -1023,9 +949,7 @@ describe("segmenterPeriodesAlimentaires — strategie GOMPERTZ_VAGUE (ADR-029)",
       makeReleve("r2", "bac-A", targetFin, [{ produitId: "prod-X", quantiteKg: 5 }]),
     ];
     const result = segmenterPeriodesAlimentaires(releves, biometries, BASE_VAGUE_CONTEXT, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzMinPoints: 5,
     });
 
     expect(result).toHaveLength(1);
@@ -1058,9 +982,7 @@ describe("methodeRank — ordre de priorite 0-3 (ADR-029, ADR-032)", () => {
       makeReleve("r2", "bac-A", 30, [{ produitId: "prod-X", quantiteKg: 1 }]),
     ];
     const result = segmenterPeriodesAlimentaires(releves, biometries, BASE_VAGUE_CONTEXT, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzMinPoints: 5,
     });
 
     expect(result[0].methodeEstimation).toBe("GOMPERTZ_VAGUE");
@@ -1090,9 +1012,7 @@ describe("methodeRank — ordre de priorite 0-3 (ADR-029, ADR-032)", () => {
       makeReleve("r2", "bac-A", 25, [{ produitId: "prod-X", quantiteKg: 1 }]),
     ];
     const result = segmenterPeriodesAlimentaires(releves, biometries, BASE_VAGUE_CONTEXT, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: ctxVagueDebutTard,
-      gompertzMinPoints: 5,
     });
 
     // debut J5 : t = 5 - 15 = -10 < 0 -> Gompertz refuse -> LINEAIRE (encadre par J0 et J10)
@@ -1134,9 +1054,7 @@ describe("methodeRank — ordre de priorite 0-3 (ADR-029, ADR-032)", () => {
       makeReleve("r2", "bac-A", 15, [{ produitId: "prod-X", quantiteKg: 1 }]),
     ];
     const result = segmenterPeriodesAlimentaires(releves, biometries, BASE_VAGUE_CONTEXT, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzMinPoints: 5,
     });
 
     // Biometrie exacte sur les deux bornes -> rang 3 partout -> BIOMETRIE_EXACTE
@@ -1311,9 +1229,9 @@ describe("interpolerPoidsVague — vague-level weight estimation (ADR-033)", () 
     expect(result.poids).toBe(999);
   });
 
-  // ---- Gompertz : fallback si confidence insuffisante ---------------------
+  // ---- ADR-034: Gompertz always used when context provided (no confidence guards) ---
 
-  it("falls back to INTERPOLATION_LINEAIRE when Gompertz confidence is LOW", () => {
+  it("uses GOMPERTZ_VAGUE even when confidence is LOW (ADR-034)", () => {
     const ctxLow: GompertzVagueContext = {
       ...GOMPERTZ_CTX_ADR033,
       confidenceLevel: "LOW",
@@ -1325,10 +1243,10 @@ describe("interpolerPoidsVague — vague-level weight estimation (ADR-033)", () 
     const result = interpolerPoidsVague(makeDate(30), biometries, 0.5, {
       gompertzContext: ctxLow,
     });
-    expect(result.methode).toBe("INTERPOLATION_LINEAIRE");
+    expect(result.methode).toBe("GOMPERTZ_VAGUE");
   });
 
-  it("falls back to VALEUR_INITIALE when Gompertz confidence is LOW and no biometries", () => {
+  it("uses GOMPERTZ_VAGUE even when confidence is LOW and no biometries (ADR-034)", () => {
     const ctxLow: GompertzVagueContext = {
       ...GOMPERTZ_CTX_ADR033,
       confidenceLevel: "LOW",
@@ -1336,8 +1254,8 @@ describe("interpolerPoidsVague — vague-level weight estimation (ADR-033)", () 
     const result = interpolerPoidsVague(makeDate(25), [], 0.5, {
       gompertzContext: ctxLow,
     });
-    expect(result.methode).toBe("VALEUR_INITIALE");
-    expect(result.poids).toBe(0.5);
+    expect(result.methode).toBe("GOMPERTZ_VAGUE");
+    expect(result.poids).toBeGreaterThan(0);
   });
 });
 
@@ -1430,7 +1348,6 @@ describe("segmenterPeriodesAlimentaires — vague-level Gompertz (ADR-033)", () 
       vagueAvecCalibrage4Bacs,
       {
         gompertzContext: GOMPERTZ_VAGUE_26_01,
-        gompertzMinPoints: 5,
       }
     );
 
@@ -1508,7 +1425,6 @@ describe("segmenterPeriodesAlimentaires — vague-level Gompertz (ADR-033)", () 
       vagueFCR,
       {
         gompertzContext: GOMPERTZ_FCR_TEST,
-        gompertzMinPoints: 5,
       }
     );
 
@@ -1580,7 +1496,6 @@ describe("segmenterPeriodesAlimentaires — vague-level Gompertz (ADR-033)", () 
       vagueAvecCalibrage4Bacs,
       {
         gompertzContext: GOMPERTZ_VAGUE_26_01,
-        gompertzMinPoints: 5,
       }
     );
 
@@ -1602,7 +1517,6 @@ describe("segmenterPeriodesAlimentaires — vague-level Gompertz (ADR-033)", () 
       vagueAvecCalibrage4Bacs,
       {
         gompertzContext: GOMPERTZ_VAGUE_26_01,
-        gompertzMinPoints: 5,
       }
     );
 
@@ -1642,9 +1556,7 @@ describe("methodeRank — ordre de priorite 4 niveaux (ADR-032)", () => {
 
     // GOMPERTZ_VAGUE = 2
     const resGV = interpolerPoidsBac(makeDate(50), "bac-A", [makeBio("bac-A", 5, 40)], 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzMinPoints: 5,
     });
     expect(resGV!.methode).toBe("GOMPERTZ_VAGUE");
 
@@ -1664,9 +1576,7 @@ describe("methodeRank — ordre de priorite 4 niveaux (ADR-032)", () => {
     ];
 
     const result = segmenterPeriodesAlimentaires(releves, biometries, BASE_VAGUE_CONTEXT, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzMinPoints: 5,
     });
 
     expect(result).toHaveLength(1);
@@ -1783,9 +1693,7 @@ describe("interpolerPoidsBac — detail FCRTraceEstimationDetail (ADR-031)", () 
     const biometries: BiometriePoint[] = [makeBio("bac-A", 10, 80)];
 
     const result = interpolerPoidsBac(targetDate, "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzMinPoints: 5,
     });
 
     expect(result).not.toBeNull();
@@ -1816,9 +1724,7 @@ describe("interpolerPoidsBac — detail FCRTraceEstimationDetail (ADR-031)", () 
   it("GOMPERTZ_VAGUE : tJours calcule correctement a partir de vagueDebut", () => {
     // vagueDebut = makeDate(0), targetDate = makeDate(35) -> tJours = 35
     const result = interpolerPoidsBac(makeDate(35), "bac-A", [makeBio("bac-A", 5, 40)], 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzMinPoints: 5,
     });
 
     expect(result!.methode).toBe("GOMPERTZ_VAGUE");
@@ -1832,9 +1738,7 @@ describe("interpolerPoidsBac — detail FCRTraceEstimationDetail (ADR-031)", () 
     const biometries: BiometriePoint[] = [makeBio("bac-A", 5, 40)];
 
     const result = interpolerPoidsBac(makeDate(50), "bac-A", biometries, 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzMinPoints: 5,
     });
 
     expect(result!.methode).toBe("GOMPERTZ_VAGUE");
@@ -1910,9 +1814,7 @@ describe("interpolerPoidsBac — detail FCRTraceEstimationDetail (ADR-031)", () 
 
     // GOMPERTZ_VAGUE
     const r4 = interpolerPoidsBac(makeDate(50), "bac-A", [makeBio("bac-A", 5, 40)], 10, {
-      strategie: StrategieInterpolation.GOMPERTZ_VAGUE,
       gompertzContext: GOMPERTZ_CTX_HIGH,
-      gompertzMinPoints: 5,
     });
     expect(r4!.methode).toBe("GOMPERTZ_VAGUE");
     expect(r4!.detail).toBeDefined();

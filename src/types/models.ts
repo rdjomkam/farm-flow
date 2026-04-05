@@ -1990,12 +1990,8 @@ export enum PhaseElevage {
  *                  si confidenceLevel est HIGH ou MEDIUM.
  *                  Fallback vers LINEAIRE si Gompertz non disponible ou insuffisant.
  *
- * ADR-029, ADR-032.
+ * ADR-029, ADR-032. Removed in ADR-034 (Gompertz always).
  */
-export enum StrategieInterpolation {
-  LINEAIRE = "LINEAIRE",
-  GOMPERTZ_VAGUE = "GOMPERTZ_VAGUE",
-}
 
 // ---------------------------------------------------------------------------
 // Enums — Feed Analytics (Sprint FA)
@@ -2232,8 +2228,6 @@ export interface ConfigElevage {
   gompertzTiDefault?: number | null;
   /** Nombre minimum de biometries (dates uniques) pour declencher le calcul Gompertz */
   gompertzMinPoints: number;
-  /** Strategie d'interpolation des poids aux bornes de periode (ADR-029) */
-  interpolationStrategy: StrategieInterpolation;
 
   // Metadonnees
   /** Profil par defaut du site (un seul isDefault=true par site) */

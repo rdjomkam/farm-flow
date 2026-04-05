@@ -44,7 +44,6 @@ export {
   UniteBesoin,
   // Sprint 19 — ConfigElevage
   PhaseElevage,
-  StrategieInterpolation,
   // Sprint 20 — Packs & Provisioning
   StatutActivation,
   // Sprint 21 — Moteur de regles d'activites

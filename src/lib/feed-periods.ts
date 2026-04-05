@@ -10,7 +10,6 @@
  */
 
 import type { PeriodeAlimentaire, FCRTraceEstimationDetail, MethodeEstimationPoids } from "@/types";
-import { StrategieInterpolation } from "@/types";
 import { gompertzWeight } from "@/lib/gompertz";
 
 // ---------------------------------------------------------------------------
@@ -74,10 +73,11 @@ export interface VagueContext {
 // ---------------------------------------------------------------------------
 
 /**
- * Contexte Gompertz optionnel pour la strategie GOMPERTZ_VAGUE (ADR-029).
+ * Contexte Gompertz pour l'estimation de poids (ADR-029, ADR-034).
  *
- * Transmis par l'appelant (computeAlimentMetrics) depuis un GompertzVague DB row.
- * Si null ou confidenceLevel insuffisant, le systeme retombe sur LINEAIRE.
+ * Transmis par l'appelant (computeAlimentMetrics) depuis un GompertzVague DB row
+ * ou construit a partir des ConfigElevage defaults quand le modele n'est pas calibre.
+ * Gompertz est toujours evalue quand un contexte est fourni (ADR-034).
  */
 export interface GompertzVagueContext {
   /** W∞ — poids asymptotique en grammes */
@@ -90,7 +90,7 @@ export interface GompertzVagueContext {
   r2: number;
   /** Nombre de biometries utilisees pour le calibrage */
   biometrieCount: number;
-  /** Niveau de confiance — seuls HIGH et MEDIUM declenchent Gompertz */
+  /** Niveau de confiance du calibrage */
   confidenceLevel: "HIGH" | "MEDIUM" | "LOW" | "INSUFFICIENT_DATA";
   /** Date de debut de la vague — necessaire pour convertir targetDate en t (jours) */
   vagueDebut: Date;
@@ -103,10 +103,9 @@ export interface GompertzVagueContext {
 /**
  * Interpolates or retrieves the average weight of a tank at a given date.
  *
- * Strategy (ADR-028 + ADR-029 + ADR-032):
+ * Strategy (ADR-028 + ADR-034):
  *   1. Exact biometry — same calendar day  ->  BIOMETRIE_EXACTE
- *   2. If strategie = GOMPERTZ_VAGUE and GompertzVagueContext valid:
- *      evaluate gompertzWeight(t, vagueParams)  ->  GOMPERTZ_VAGUE
+ *   2. Gompertz VAGUE — if gompertzContext provided, evaluate unconditionally
  *   3. Linear interpolation between two bracketing biometries  ->  INTERPOLATION_LINEAIRE
  *   4. Vague initial weight — fallback final  ->  VALEUR_INITIALE
  *
@@ -114,7 +113,7 @@ export interface GompertzVagueContext {
  * @param bacId              - tank identifier (null = whole-vague fallback)
  * @param biometries         - time series of biometries for the tank, sorted ascending by date
  * @param poidsInitial       - initial average weight of the vague (fallback)
- * @param options            - optional strategy options (ADR-029)
+ * @param options            - optional Gompertz context (ADR-034: evaluated unconditionally)
  * @returns { poids, methode, detail } or null if no data at all
  */
 export function interpolerPoidsBac(
@@ -123,10 +122,8 @@ export function interpolerPoidsBac(
   biometries: BiometriePoint[],
   poidsInitial: number,
   options?: {
-    strategie?: StrategieInterpolation;
-    /** Contexte vague (ADR-029) — utilise par GOMPERTZ_VAGUE */
+    /** Contexte Gompertz vague (ADR-034) — evaluated unconditionally when provided */
     gompertzContext?: GompertzVagueContext;
-    gompertzMinPoints?: number;
   }
 ): { poids: number; methode: PeriodeAlimentaire["methodeEstimation"]; detail: FCRTraceEstimationDetail } | null {
   // Filter biometries for this tank
@@ -160,49 +157,40 @@ export function interpolerPoidsBac(
     };
   }
 
-  const strategie = options?.strategie ?? StrategieInterpolation.LINEAIRE;
-  const minPoints = options?.gompertzMinPoints ?? 5;
+  // 2. Gompertz VAGUE — evaluated unconditionally when context provided (ADR-034)
+  const ctx = options?.gompertzContext;
+  if (ctx) {
+    const tDays =
+      (targetDate.getTime() - ctx.vagueDebut.getTime()) / (1000 * 60 * 60 * 24);
 
-  // 2. Gompertz vague strategy (ADR-029)
-  if (strategie === StrategieInterpolation.GOMPERTZ_VAGUE && options?.gompertzContext) {
-    const ctx = options.gompertzContext;
-    const isValidLevel =
-      ctx.confidenceLevel === "HIGH" || ctx.confidenceLevel === "MEDIUM";
+    if (tDays >= 0) {
+      const poids = gompertzWeight(tDays, {
+        wInfinity: ctx.wInfinity,
+        k: ctx.k,
+        ti: ctx.ti,
+      });
 
-    if (isValidLevel && ctx.r2 >= 0.85 && ctx.biometrieCount >= minPoints) {
-      const tDays =
-        (targetDate.getTime() - ctx.vagueDebut.getTime()) / (1000 * 60 * 60 * 24);
-
-      if (tDays >= 0) {
-        const poids = gompertzWeight(tDays, {
-          wInfinity: ctx.wInfinity,
-          k: ctx.k,
-          ti: ctx.ti,
-        });
-
-        if (poids > 0 && !isNaN(poids)) {
-          return {
-            poids,
+      if (poids > 0 && !isNaN(poids)) {
+        return {
+          poids,
+          methode: "GOMPERTZ_VAGUE",
+          detail: {
             methode: "GOMPERTZ_VAGUE",
-            detail: {
-              methode: "GOMPERTZ_VAGUE",
-              tJours: tDays,
-              params: {
-                wInfinity: ctx.wInfinity,
-                k: ctx.k,
-                ti: ctx.ti,
-                r2: ctx.r2,
-                biometrieCount: ctx.biometrieCount,
-                confidenceLevel: ctx.confidenceLevel,
-              },
-              resultatG: poids,
+            tJours: tDays,
+            params: {
+              wInfinity: ctx.wInfinity,
+              k: ctx.k,
+              ti: ctx.ti,
+              r2: ctx.r2,
+              biometrieCount: ctx.biometrieCount,
+              confidenceLevel: ctx.confidenceLevel,
             },
-          };
-        }
+            resultatG: poids,
+          },
+        };
       }
-      // If Gompertz result is invalid (t < 0, NaN, poids <= 0), fall through to linear
     }
-    // Conditions not met — fall through to linear interpolation
+    // If Gompertz result is invalid (t < 0, NaN, poids <= 0), fall through to linear
   }
 
   // 3. Linear interpolation between bracketing biometries
@@ -267,11 +255,10 @@ export function interpolerPoidsBac(
  * by bacId — it uses ALL biometries from the vague to represent the vague-level
  * growth curve.
  *
- * Priority chain (ADR-033 §7):
+ * Priority chain (ADR-033 + ADR-034):
  *   1. BIOMETRIE_EXACTE — exact calendar-day match in ANY biometry
- *   2. GOMPERTZ_VAGUE — if gompertzContext is valid (HIGH or MEDIUM, R² ≥ 0.85,
- *      biometrieCount ≥ minPoints), ALWAYS evaluated even when biometries are
- *      available or when the target date is beyond all biometries
+ *   2. GOMPERTZ_VAGUE — evaluated unconditionally when gompertzContext is provided
+ *      (no confidence/r2/minPoints guards — ADR-034)
  *   3. INTERPOLATION_LINEAIRE — linear interpolation between two bracketing
  *      biometries (only when Gompertz is not available)
  *   4. VALEUR_INITIALE — fallback when nothing else is possible
@@ -279,8 +266,8 @@ export function interpolerPoidsBac(
  * @param targetDate     - date for which to estimate weight
  * @param biometries     - ALL biometries of the vague (NOT filtered by bacId)
  * @param poidsInitial   - initial average weight of the vague (fallback)
- * @param options        - optional options including gompertzContext (no strategie — Gompertz
- *                         is evaluated unconditionally whenever a valid context is provided)
+ * @param options        - optional options including gompertzContext (ADR-034:
+ *                         evaluated unconditionally whenever provided)
  * @returns { poids, methode, detail }
  */
 export function interpolerPoidsVague(
@@ -289,7 +276,6 @@ export function interpolerPoidsVague(
   poidsInitial: number,
   options?: {
     gompertzContext?: GompertzVagueContext;
-    gompertzMinPoints?: number;
   }
 ): { poids: number; methode: MethodeEstimationPoids; detail: FCRTraceEstimationDetail } {
   // Sort all biometries (vague-level, not filtered by bacId)
@@ -312,41 +298,35 @@ export function interpolerPoidsVague(
     };
   }
 
-  // 2. Gompertz VAGUE — evaluated whenever valid context is provided, regardless of
-  //    interpolStrategy and regardless of whether biometries are available.
-  //    This is the core ADR-033 change: Gompertz is a time-only function and
-  //    does not require per-bac data.
+  // 2. Gompertz VAGUE — evaluated unconditionally when context provided (ADR-034).
+  //    No confidence/r2/minPoints guards. Gompertz is a time-only function.
   const ctx = options?.gompertzContext;
   if (ctx) {
-    const minPoints = options?.gompertzMinPoints ?? 5;
-    const isValidLevel = ctx.confidenceLevel === "HIGH" || ctx.confidenceLevel === "MEDIUM";
-    if (isValidLevel && ctx.r2 >= 0.85 && ctx.biometrieCount >= minPoints) {
-      const tDays = (targetDate.getTime() - ctx.vagueDebut.getTime()) / (1000 * 60 * 60 * 24);
-      if (tDays >= 0) {
-        const poids = gompertzWeight(tDays, {
-          wInfinity: ctx.wInfinity,
-          k: ctx.k,
-          ti: ctx.ti,
-        });
-        if (poids > 0 && !isNaN(poids)) {
-          return {
-            poids,
+    const tDays = (targetDate.getTime() - ctx.vagueDebut.getTime()) / (1000 * 60 * 60 * 24);
+    if (tDays >= 0) {
+      const poids = gompertzWeight(tDays, {
+        wInfinity: ctx.wInfinity,
+        k: ctx.k,
+        ti: ctx.ti,
+      });
+      if (poids > 0 && !isNaN(poids)) {
+        return {
+          poids,
+          methode: "GOMPERTZ_VAGUE",
+          detail: {
             methode: "GOMPERTZ_VAGUE",
-            detail: {
-              methode: "GOMPERTZ_VAGUE",
-              tJours: tDays,
-              params: {
-                wInfinity: ctx.wInfinity,
-                k: ctx.k,
-                ti: ctx.ti,
-                r2: ctx.r2,
-                biometrieCount: ctx.biometrieCount,
-                confidenceLevel: ctx.confidenceLevel,
-              },
-              resultatG: poids,
+            tJours: tDays,
+            params: {
+              wInfinity: ctx.wInfinity,
+              k: ctx.k,
+              ti: ctx.ti,
+              r2: ctx.r2,
+              biometrieCount: ctx.biometrieCount,
+              confidenceLevel: ctx.confidenceLevel,
             },
-          };
-        }
+            resultatG: poids,
+          },
+        };
       }
     }
   }
@@ -547,9 +527,7 @@ export function segmenterPeriodesAlimentaires(
   biometries: BiometriePoint[],
   vagueContext: VagueContext,
   options?: {
-    strategie?: StrategieInterpolation;
     gompertzContext?: GompertzVagueContext;
-    gompertzMinPoints?: number;
     /** Pre-computed mortalities per bac for calibrage-aware nombreVivants (ADR-032) */
     mortalitesParBac?: Map<string, Array<{ nombreMorts: number; date: Date }>>;
   }
@@ -619,7 +597,6 @@ export function segmenterPeriodesAlimentaires(
       // interpolerPoidsVague evaluates Gompertz unconditionally when context is valid.
       const interpolOpts = {
         gompertzContext: options?.gompertzContext,
-        gompertzMinPoints: options?.gompertzMinPoints,
       };
       const debutEstim = interpolerPoidsVague(
         dateDebut,

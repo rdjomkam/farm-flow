@@ -478,21 +478,12 @@ function FCRTraceContent({ produitId, produitNom }: { produitId: string; produit
     );
   }
 
-  const strategieLabel =
-    traceData.strategieInterpolation === "GOMPERTZ_VAGUE"
-      ? t("stratGOMPERTZ_VAGUE")
-      : t("stratLINEAIRE");
-
   return (
     <div className="space-y-4">
       {/* Summary bar */}
       <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 space-y-1">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs text-muted-foreground">{t("strategie")}</p>
-            <p className="text-sm font-semibold">{strategieLabel}</p>
-          </div>
-          <div className="text-right">
+          <div className="text-right ml-auto">
             <p className="text-xs text-muted-foreground">{t("fcrFinal")}</p>
             <p className="text-2xl font-bold text-primary tabular-nums">
               {traceData.fcrMoyenFinal ?? "—"}

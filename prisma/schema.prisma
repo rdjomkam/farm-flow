@@ -420,18 +420,6 @@ enum TypeDeclencheur {
 // Enums — Phase 3 : ConfigElevage (Sprint 19)
 // ──────────────────────────────────────────
 
-/**
- * Strategie d'interpolation des poids aux bornes de periode d'alimentation (ADR-029, ADR-032).
- * LINEAIRE       : interpolation lineaire entre deux biometries encadrantes (defaut, ADR-028).
- * GOMPERTZ_VAGUE : utilise la courbe Gompertz de la vague si calibree et fiable (R2 >= 0.85, HIGH/MEDIUM).
- * GOMPERTZ_BAC supprimee (ADR-032) : fallback permanent apres calibrage, code mort.
- * En l'absence d'un GompertzVague fiable, le systeme retombe automatiquement sur LINEAIRE.
- */
-enum StrategieInterpolation {
-  LINEAIRE
-  GOMPERTZ_VAGUE
-}
-
 enum PhaseElevage {
   ACCLIMATATION
   CROISSANCE_DEBUT
@@ -806,13 +794,6 @@ model ConfigElevage {
    */
   gompertzMinPoints   Int    @default(5)
 
-  /**
-   * Strategie d'interpolation des poids aux bornes de periode d'alimentation (ADR-029).
-   * LINEAIRE (defaut) : interpolation lineaire entre deux biometries encadrantes.
-   * GOMPERTZ_VAGUE : utilise la courbe Gompertz de la vague si calibree et fiable.
-   * Fallback automatique vers LINEAIRE si GompertzVague absent ou confidenceLevel insuffisant.
-   */
-  interpolationStrategy StrategieInterpolation @default(LINEAIRE)
 
   // ── Metadonnees ─────────────────────────────────
   /**

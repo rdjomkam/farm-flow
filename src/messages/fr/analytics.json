@@ -255,7 +255,6 @@
   "fcrTrace": {
     "title": "Détail du calcul ICA",
     "triggerLabel": "Comment est calculé cet ICA ?",
-    "strategie": "Stratégie d'interpolation",
     "fcrFinal": "ICA final agrégé",
     "totalAliment": "Total aliment",
     "totalGain": "Gain de biomasse total",
@@ -293,8 +292,6 @@
     "periodeN": "Période {n}",
     "fcrVague": "ICA vague",
     "aliment": "Aliment",
-    "gain": "Gain",
-    "stratLINEAIRE": "Interpolation linéaire",
-    "stratGOMPERTZ_VAGUE": "Gompertz vague"
+    "gain": "Gain"
   }
 }

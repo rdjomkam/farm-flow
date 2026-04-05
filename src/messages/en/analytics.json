@@ -255,7 +255,6 @@
   "fcrTrace": {
     "title": "FCR Calculation Detail",
     "triggerLabel": "How is this FCR calculated?",
-    "strategie": "Interpolation strategy",
     "fcrFinal": "Aggregated final FCR",
     "totalAliment": "Total feed",
     "totalGain": "Total biomass gain",
@@ -293,8 +292,6 @@
     "periodeN": "Period {n}",
     "fcrVague": "Wave FCR",
     "aliment": "Feed",
-    "gain": "Gain",
-    "stratLINEAIRE": "Linear interpolation",
-    "stratGOMPERTZ_VAGUE": "Gompertz wave"
+    "gain": "Gain"
   }
 }

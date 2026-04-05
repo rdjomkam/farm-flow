@@ -78,12 +78,7 @@
     "gompertzWInfDefault": "W∞ par defaut",
     "gompertzKDefault": "K par defaut",
     "gompertzTiDefault": "ti par defaut",
-    "gompertzMinPoints": "Points de biometrie minimum pour Gompertz",
-    "interpolationStrategy": "Strategie d'interpolation du poids"
-  },
-  "interpolationStrategy": {
-    "LINEAIRE": "Lineaire (interpolation entre biometries)",
-    "GOMPERTZ_VAGUE": "Gompertz vague (courbe calibree sur toute la vague)"
+    "gompertzMinPoints": "Points de biometrie minimum pour Gompertz"
   },
   "benchmarks": {
     "fcrTitle": "FCR (plus bas = meilleur)",
