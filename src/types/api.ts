@@ -445,6 +445,8 @@ export interface ReleveFilters {
   comportementAlim?: import("./models").ComportementAlimentaire;
   frequenceAlimentMin?: number;
   frequenceAlimentMax?: number;
+  /** Filtre par produit alimentaire via ReleveConsommation (remplace typeAliment/comportementAlim dans l'UI) */
+  produitId?: string;
 
   // --- Filtres specifiques QUALITE_EAU ---
   temperatureMin?: number;

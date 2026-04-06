@@ -114,6 +114,10 @@ export async function GET(request: NextRequest) {
     const descriptionSearch = searchParams.get("descriptionSearch");
     if (descriptionSearch) filters.descriptionSearch = descriptionSearch;
 
+    // Filtre ALIMENTATION par produit
+    const produitId = searchParams.get("produitId");
+    if (produitId) filters.produitId = produitId;
+
     // Filtres specifiques RENOUVELLEMENT
     const pourcentageMin = searchParams.get("pourcentageMin");
     const pourcentageMax = searchParams.get("pourcentageMax");

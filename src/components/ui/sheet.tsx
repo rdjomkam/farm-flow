@@ -27,10 +27,15 @@ const SheetOverlay = forwardRef<
 ));
 SheetOverlay.displayName = "SheetOverlay";
 
+interface SheetContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
+  /** Masquer le bouton Close generique (utile quand le contenu gere son propre bouton de fermeture) */
+  hideCloseButton?: boolean;
+}
+
 const SheetContent = forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => {
+  SheetContentProps
+>(({ className, children, hideCloseButton = false, ...props }, ref) => {
   const tCommon = useTranslations("common.buttons");
   return (
     <DialogPrimitive.Portal>
@@ -47,10 +52,12 @@ const SheetContent = forwardRef<
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="absolute right-3 rounded-md p-1 opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px] min-w-[44px] flex items-center justify-center z-10" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
-          <X className="h-5 w-5" />
-          <span className="sr-only">{tCommon("close")}</span>
-        </DialogPrimitive.Close>
+        {!hideCloseButton && (
+          <DialogPrimitive.Close className="absolute right-3 rounded-md p-1 opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px] min-w-[44px] flex items-center justify-center z-10" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
+            <X className="h-5 w-5" />
+            <span className="sr-only">{tCommon("close")}</span>
+          </DialogPrimitive.Close>
+        )}
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>
   );

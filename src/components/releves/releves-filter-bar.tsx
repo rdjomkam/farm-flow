@@ -205,7 +205,7 @@ export function ReleveFilterBar({ current, vagues }: Props) {
               )}
             </button>
           </SheetTrigger>
-          <SheetContent className="!left-auto !right-0 !inset-y-0 !w-full sm:!w-96 !p-0 flex flex-col">
+          <SheetContent className="!left-auto !right-0 !inset-y-0 !w-full sm:!w-96 !p-0 flex flex-col" hideCloseButton>
             <RelevesFilterSheet
               current={{
                 vagueId: localVagueId || undefined,

@@ -80,6 +80,12 @@ export async function getReleves(
       ...(filters.frequenceAlimentMax !== undefined && { lte: filters.frequenceAlimentMax }),
     };
   }
+  // Filtre ALIMENTATION par produit — jointure via ReleveConsommation
+  if (filters.produitId) {
+    where.consommations = {
+      some: { produitId: filters.produitId, siteId },
+    };
+  }
 
   // Filtres specifiques QUALITE_EAU
   if (filters.temperatureMin !== undefined || filters.temperatureMax !== undefined) {

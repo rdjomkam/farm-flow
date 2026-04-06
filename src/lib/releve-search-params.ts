@@ -32,6 +32,7 @@ export interface ReleveSearchParams {
   comportementAlim?: string;
   frequenceAlimentMin?: string;
   frequenceAlimentMax?: string;
+  produitId?: string; // filtre par produit alimentaire (remplace typeAliment + comportementAlim dans l'UI)
 
   // Filtres specifiques QUALITE_EAU
   temperatureMin?: string;
@@ -72,6 +73,7 @@ export const ALL_FILTER_PARAMS = [
   "comportementAlim",
   "frequenceAlimentMin",
   "frequenceAlimentMax",
+  "produitId",
   "temperatureMin",
   "temperatureMax",
   "phMin",
@@ -109,6 +111,7 @@ export interface ParsedReleveFilters {
   comportementAlim?: ComportementAlimentaire;
   frequenceAlimentMin?: number;
   frequenceAlimentMax?: number;
+  produitId?: string; // filtre par produit alimentaire
 
   // Filtres specifiques QUALITE_EAU (inclus seulement si typeReleve === QUALITE_EAU)
   temperatureMin?: number;
@@ -200,6 +203,7 @@ export function parseReleveSearchParams(
     const fMax = parsePositiveFloat(params.frequenceAlimentMax);
     if (fMin !== undefined) result.frequenceAlimentMin = fMin;
     if (fMax !== undefined) result.frequenceAlimentMax = fMax;
+    if (params.produitId) result.produitId = params.produitId;
   }
 
   if (typeReleve === TypeReleve.QUALITE_EAU) {
@@ -262,6 +266,7 @@ export function countActiveFilters(params: ReleveSearchParams): number {
   if (params.typeAliment) count++;
   if (params.comportementAlim) count++;
   if (params.frequenceAlimentMin || params.frequenceAlimentMax) count++;
+  if (params.produitId) count++;
 
   // Filtres specifiques QUALITE_EAU
   if (params.temperatureMin || params.temperatureMax) count++;

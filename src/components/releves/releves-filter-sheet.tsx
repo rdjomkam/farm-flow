@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { TypeReleve, StatutVague, CauseMortalite, TypeAliment, ComportementAlimentaire, MethodeComptage } from "@/types";
+import { X } from "lucide-react";
+import { TypeReleve, StatutVague, CauseMortalite, MethodeComptage } from "@/types";
 import {
   Select,
   SelectContent,
@@ -9,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SheetClose } from "@/components/ui/sheet";
 import { ALL_VALUE } from "@/lib/releve-search-params";
 import type { ReleveSearchParams } from "@/lib/releve-search-params";
 
@@ -21,6 +23,12 @@ interface VagueOption {
   id: string;
   code: string;
   statut: StatutVague;
+}
+
+interface ProduitAlimentOption {
+  id: string;
+  nom: string;
+  unite: string;
 }
 
 const typeLabels: Record<TypeReleve, string> = {
@@ -41,19 +49,6 @@ const causeMortaliteLabels: Record<CauseMortalite, string> = {
   [CauseMortalite.CANNIBALISME]: "Cannibalisme",
   [CauseMortalite.INCONNUE]: "Inconnue",
   [CauseMortalite.AUTRE]: "Autre",
-};
-
-const typeAlimentLabels: Record<TypeAliment, string> = {
-  [TypeAliment.ARTISANAL]: "Artisanal",
-  [TypeAliment.COMMERCIAL]: "Commercial",
-  [TypeAliment.MIXTE]: "Mixte",
-};
-
-const comportementAlimLabels: Record<ComportementAlimentaire, string> = {
-  [ComportementAlimentaire.VORACE]: "Vorace",
-  [ComportementAlimentaire.NORMAL]: "Normal",
-  [ComportementAlimentaire.FAIBLE]: "Faible",
-  [ComportementAlimentaire.REFUSE]: "Refus",
 };
 
 const methodeComptageLabels: Record<MethodeComptage, string> = {
@@ -146,10 +141,13 @@ export function RelevesFilterSheet({
   const [localNombreMortsMax, setLocalNombreMortsMax] = useState(current.nombreMortsMax ?? "");
 
   // Filtres specifiques ALIMENTATION
-  const [localTypeAliment, setLocalTypeAliment] = useState(current.typeAliment ?? ALL_VALUE);
-  const [localComportementAlim, setLocalComportementAlim] = useState(current.comportementAlim ?? ALL_VALUE);
+  const [localProduitId, setLocalProduitId] = useState(current.produitId ?? ALL_VALUE);
   const [localFrequenceAlimentMin, setLocalFrequenceAlimentMin] = useState(current.frequenceAlimentMin ?? "");
   const [localFrequenceAlimentMax, setLocalFrequenceAlimentMax] = useState(current.frequenceAlimentMax ?? "");
+
+  // Produits alimentaires charges dynamiquement pour le filtre ALIMENTATION
+  const [produits, setProduits] = useState<ProduitAlimentOption[]>([]);
+  const [produitsLoading, setProduitsLoading] = useState(false);
 
   // Filtres specifiques QUALITE_EAU
   const [localTemperatureMin, setLocalTemperatureMin] = useState(current.temperatureMin ?? "");
@@ -187,8 +185,7 @@ export function RelevesFilterSheet({
     setLocalCauseMortalite(current.causeMortalite ?? ALL_VALUE);
     setLocalNombreMortsMin(current.nombreMortsMin ?? "");
     setLocalNombreMortsMax(current.nombreMortsMax ?? "");
-    setLocalTypeAliment(current.typeAliment ?? ALL_VALUE);
-    setLocalComportementAlim(current.comportementAlim ?? ALL_VALUE);
+    setLocalProduitId(current.produitId ?? ALL_VALUE);
     setLocalFrequenceAlimentMin(current.frequenceAlimentMin ?? "");
     setLocalFrequenceAlimentMax(current.frequenceAlimentMax ?? "");
     setLocalTemperatureMin(current.temperatureMin ?? "");
@@ -218,6 +215,18 @@ export function RelevesFilterSheet({
       .finally(() => setBacsLoading(false));
   }, [localVagueId]);
 
+  // Charger les produits alimentaires au montage (une seule fois)
+  useEffect(() => {
+    setProduitsLoading(true);
+    fetch("/api/produits/aliment-releve")
+      .then((r) => r.json())
+      .then((d: { data?: ProduitAlimentOption[] }) => {
+        setProduits(d.data ?? []);
+      })
+      .catch(() => setProduits([]))
+      .finally(() => setProduitsLoading(false));
+  }, []);
+
   function handleVagueChange(value: string) {
     setLocalVagueId(value);
     setLocalBacId(ALL_VALUE); // reset bac quand vague change
@@ -236,8 +245,7 @@ export function RelevesFilterSheet({
     setLocalNombreMortsMin("");
     setLocalNombreMortsMax("");
     // Reset ALIMENTATION
-    setLocalTypeAliment(ALL_VALUE);
-    setLocalComportementAlim(ALL_VALUE);
+    setLocalProduitId(ALL_VALUE);
     setLocalFrequenceAlimentMin("");
     setLocalFrequenceAlimentMax("");
     // Reset QUALITE_EAU
@@ -277,8 +285,7 @@ export function RelevesFilterSheet({
       if (localNombreMortsMax) base.nombreMortsMax = localNombreMortsMax;
     }
     if (localType === TypeReleve.ALIMENTATION) {
-      if (localTypeAliment !== ALL_VALUE) base.typeAliment = localTypeAliment;
-      if (localComportementAlim !== ALL_VALUE) base.comportementAlim = localComportementAlim;
+      if (localProduitId !== ALL_VALUE) base.produitId = localProduitId;
       if (localFrequenceAlimentMin) base.frequenceAlimentMin = localFrequenceAlimentMin;
       if (localFrequenceAlimentMax) base.frequenceAlimentMax = localFrequenceAlimentMax;
     }
@@ -307,18 +314,32 @@ export function RelevesFilterSheet({
   return (
     <div className="flex flex-col h-full">
 
-      {/* Header fixe — safe area top */}
-      <div className="shrink-0 flex items-center justify-between px-4 pt-[env(safe-area-inset-top)] pb-3 border-b border-border">
+      {/* Header fixe — safe area top avec bouton fermeture integre */}
+      <div
+        className="shrink-0 flex items-center justify-between px-4 border-b border-border"
+        style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))", paddingBottom: "0.75rem" }}
+      >
         <h2 className="text-base font-semibold">Filtres</h2>
-        {activeCount > 0 && (
-          <button
-            type="button"
-            onClick={onClear}
-            className="text-sm text-muted-foreground hover:text-foreground underline"
-          >
-            Effacer tout
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {activeCount > 0 && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="text-sm text-muted-foreground hover:text-foreground underline"
+            >
+              Effacer tout
+            </button>
+          )}
+          <SheetClose asChild>
+            <button
+              type="button"
+              className="h-10 w-10 flex items-center justify-center rounded-md hover:bg-accent transition-colors"
+            >
+              <X className="h-5 w-5" />
+              <span className="sr-only">Fermer</span>
+            </button>
+          </SheetClose>
+        </div>
       </div>
 
       {/* Corps scrollable */}
@@ -455,32 +476,22 @@ export function RelevesFilterSheet({
             {localType === TypeReleve.ALIMENTATION && (
               <>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium">Type d'aliment</label>
-                  <Select value={localTypeAliment} onValueChange={setLocalTypeAliment}>
+                  <label className="text-sm font-medium">Produit alimentaire</label>
+                  <Select
+                    value={localProduitId}
+                    onValueChange={setLocalProduitId}
+                    disabled={produitsLoading}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Tous les types" />
+                      <SelectValue
+                        placeholder={produitsLoading ? "Chargement..." : "Tous les produits"}
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={ALL_VALUE}>Tous les types</SelectItem>
-                      {Object.values(TypeAliment).map((t) => (
-                        <SelectItem key={t} value={t}>
-                          {typeAlimentLabels[t]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium">Comportement alimentaire</label>
-                  <Select value={localComportementAlim} onValueChange={setLocalComportementAlim}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Tous les comportements" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={ALL_VALUE}>Tous les comportements</SelectItem>
-                      {Object.values(ComportementAlimentaire).map((c) => (
-                        <SelectItem key={c} value={c}>
-                          {comportementAlimLabels[c]}
+                      <SelectItem value={ALL_VALUE}>Tous les produits</SelectItem>
+                      {produits.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.nom}
                         </SelectItem>
                       ))}
                     </SelectContent>

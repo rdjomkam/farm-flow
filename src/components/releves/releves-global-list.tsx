@@ -148,10 +148,9 @@ export function RelevesGlobalList({
         ))}
       </div>
       <PaginationFooter
-        shown={offset + releves.length}
         total={total}
-        limit={limit}
         offset={offset}
+        limit={limit}
       />
     </div>
   );
