@@ -1,6 +1,7 @@
 "use client";
 
 import { Eye } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { KNOWN_PLACEHOLDERS } from "@/lib/regles-activites-constants";
 import { InstructionSteps } from "@/components/activites/instruction-steps";
 
@@ -55,6 +56,7 @@ export function TemplatePreview({
   instructionsTemplate,
   customPlaceholders = [],
 }: TemplatePreviewProps) {
+  const t = useTranslations("settings");
   // Build custom samples from custom placeholders
   const customSamples: Record<string, string> = {};
   for (const cp of customPlaceholders) {
@@ -81,7 +83,7 @@ export function TemplatePreview({
 
       {/* Titre resolu */}
       <div>
-        <p className="text-xs text-muted-foreground mb-1">Titre</p>
+        <p className="text-xs text-muted-foreground mb-1">{t("rules.detail.templateTitle")}</p>
         <p className="text-sm font-medium text-foreground bg-card rounded-md px-3 py-2 border border-border">
           {resolvedTitre}
         </p>
@@ -90,7 +92,7 @@ export function TemplatePreview({
       {/* Description resolue */}
       {resolvedDescription && (
         <div>
-          <p className="text-xs text-muted-foreground mb-1">Description</p>
+          <p className="text-xs text-muted-foreground mb-1">{t("rules.detail.templateDescription")}</p>
           <p className="text-sm text-foreground bg-card rounded-md px-3 py-2 border border-border">
             {resolvedDescription}
           </p>
@@ -100,7 +102,7 @@ export function TemplatePreview({
       {/* Instructions resolues */}
       {resolvedInstructions && (
         <div>
-          <p className="text-xs text-muted-foreground mb-2">Instructions</p>
+          <p className="text-xs text-muted-foreground mb-2">{t("rules.detail.templateInstructions")}</p>
           <div className="bg-card rounded-md px-3 py-3 border border-border">
             <InstructionSteps text={resolvedInstructions} />
           </div>

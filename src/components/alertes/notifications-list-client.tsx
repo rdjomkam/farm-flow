@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import {
   Bell,
@@ -25,24 +26,24 @@ import { useNotificationService } from "@/services";
 import { TypeAlerte, StatutAlerte } from "@/types";
 import type { Notification } from "@/types";
 
-// Labels par type d'alerte
-const typeAlerteLabels: Record<TypeAlerte, string> = {
-  [TypeAlerte.MORTALITE_ELEVEE]: "Mortalite elevee",
-  [TypeAlerte.QUALITE_EAU]: "Qualite de l'eau",
-  [TypeAlerte.STOCK_BAS]: "Stock bas",
-  [TypeAlerte.RAPPEL_ALIMENTATION]: "Rappel alimentation",
-  [TypeAlerte.RAPPEL_BIOMETRIE]: "Rappel biometrie",
-  [TypeAlerte.PERSONNALISEE]: "Personnalisee",
-  [TypeAlerte.BESOIN_EN_RETARD]: "Besoin en retard",
+// Map des clés de traduction par type d'alerte
+const typeAlerteTranslationKeys: Record<TypeAlerte, string> = {
+  [TypeAlerte.MORTALITE_ELEVEE]: "types.highMortality",
+  [TypeAlerte.QUALITE_EAU]: "types.waterQuality",
+  [TypeAlerte.STOCK_BAS]: "types.lowStock",
+  [TypeAlerte.RAPPEL_ALIMENTATION]: "types.feedingReminder",
+  [TypeAlerte.RAPPEL_BIOMETRIE]: "types.biometryReminder",
+  [TypeAlerte.PERSONNALISEE]: "types.custom",
+  [TypeAlerte.BESOIN_EN_RETARD]: "types.lateNeed",
   // Sprint 27-28 — Densite
-  [TypeAlerte.DENSITE_ELEVEE]: "Densite elevee",
-  [TypeAlerte.RENOUVELLEMENT_EAU_INSUFFISANT]: "Renouvellement insuffisant",
-  [TypeAlerte.AUCUN_RELEVE_QUALITE_EAU]: "Qualite eau non verifiee",
-  [TypeAlerte.DENSITE_CRITIQUE_QUALITE_EAU]: "Densite + qualite eau critiques",
+  [TypeAlerte.DENSITE_ELEVEE]: "types.highDensity",
+  [TypeAlerte.RENOUVELLEMENT_EAU_INSUFFISANT]: "types.insufficientWaterRenewal",
+  [TypeAlerte.AUCUN_RELEVE_QUALITE_EAU]: "types.noWaterQualityRecord",
+  [TypeAlerte.DENSITE_CRITIQUE_QUALITE_EAU]: "types.criticalDensityAndWaterQuality",
   // Sprint 36 — Rappels abonnement
-  [TypeAlerte.ABONNEMENT_RAPPEL_RENOUVELLEMENT]: "Rappel renouvellement abonnement",
+  [TypeAlerte.ABONNEMENT_RAPPEL_RENOUVELLEMENT]: "types.subscriptionRenewalReminder",
   // Sprint 49 — Fin d'essai
-  [TypeAlerte.ABONNEMENT_ESSAI_EXPIRE]: "Essai gratuit expire",
+  [TypeAlerte.ABONNEMENT_ESSAI_EXPIRE]: "types.trialExpired",
 };
 
 const typeAlerteIcons: Record<TypeAlerte, React.ComponentType<{ className?: string }>> = {
@@ -83,11 +84,7 @@ const typeAlerteColors: Record<TypeAlerte, string> = {
   [TypeAlerte.ABONNEMENT_ESSAI_EXPIRE]: "text-warning bg-warning/10",
 };
 
-const statutLabels: Record<StatutAlerte, string> = {
-  [StatutAlerte.ACTIVE]: "Active",
-  [StatutAlerte.LUE]: "Lue",
-  [StatutAlerte.TRAITEE]: "Traitee",
-};
+// Les labels de statut sont résolus via t() dans le composant
 
 const statutVariants: Record<StatutAlerte, "en_cours" | "terminee" | "default"> = {
   [StatutAlerte.ACTIVE]: "en_cours",
@@ -118,6 +115,7 @@ interface NotificationsListClientProps {
 export function NotificationsListClient({ notifications }: NotificationsListClientProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const t = useTranslations("alertes");
   const notificationService = useNotificationService();
   const [localNotifications, setLocalNotifications] = useState<Notification[]>(notifications);
 
@@ -180,7 +178,7 @@ export function NotificationsListClient({ notifications }: NotificationsListClie
                 {notification.titre}
               </p>
               <Badge variant={statutVariants[notification.statut as StatutAlerte] ?? "default"}>
-                {statutLabels[notification.statut as StatutAlerte] ?? notification.statut}
+                {t(`statuts.${notification.statut}`, { defaultMessage: notification.statut })}
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground line-clamp-2 mb-1">
@@ -191,7 +189,9 @@ export function NotificationsListClient({ notifications }: NotificationsListClie
                 {formatDateRelative(notification.createdAt)}
               </span>
               <span className="text-xs text-muted-foreground">
-                {typeAlerteLabels[notification.typeAlerte as TypeAlerte] ?? notification.typeAlerte}
+                {typeAlerteTranslationKeys[notification.typeAlerte as TypeAlerte]
+                  ? t(typeAlerteTranslationKeys[notification.typeAlerte as TypeAlerte] as Parameters<typeof t>[0])
+                  : notification.typeAlerte}
               </span>
             </div>
           </div>
@@ -215,7 +215,9 @@ export function NotificationsListClient({ notifications }: NotificationsListClie
       {actives.length > 0 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            {actives.length} notification{actives.length > 1 ? "s" : ""} non lue{actives.length > 1 ? "s" : ""}
+            {actives.length > 1
+              ? t("notifications.countUnreadPlural", { count: actives.length })
+              : t("notifications.countUnread", { count: actives.length })}
           </p>
           <Button
             variant="outline"
@@ -224,7 +226,7 @@ export function NotificationsListClient({ notifications }: NotificationsListClie
             className="min-h-[44px] gap-2"
           >
             <CheckCheck className="h-4 w-4" />
-            Tout marquer comme lu
+            {t("notifications.markAllRead")}
           </Button>
         </div>
       )}
@@ -232,22 +234,22 @@ export function NotificationsListClient({ notifications }: NotificationsListClie
       <Tabs defaultValue="toutes">
         <TabsList className="w-full">
           <TabsTrigger value="toutes">
-            Toutes ({localNotifications.length})
+            {t("notifications.tabs.all")} ({localNotifications.length})
           </TabsTrigger>
           <TabsTrigger value="actives">
-            Actives ({actives.length})
+            {t("notifications.tabs.active")} ({actives.length})
           </TabsTrigger>
           <TabsTrigger value="lues">
-            Lues ({lues.length})
+            {t("notifications.tabs.read")} ({lues.length})
           </TabsTrigger>
           <TabsTrigger value="traitees">
-            Traitees ({traitees.length})
+            {t("notifications.tabs.processed")} ({traitees.length})
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="toutes">
           {localNotifications.length === 0 ? (
-            <EmptyState message="Aucune notification" />
+            <EmptyState message={t("notifications.aucuneNotification")} />
           ) : (
             <div className="flex flex-col gap-2">
               {localNotifications.map((n) => (
@@ -259,7 +261,7 @@ export function NotificationsListClient({ notifications }: NotificationsListClie
 
         <TabsContent value="actives">
           {actives.length === 0 ? (
-            <EmptyState message="Aucune notification active" />
+            <EmptyState message={t("notifications.aucuneActive")} />
           ) : (
             <div className="flex flex-col gap-2">
               {actives.map((n) => (
@@ -271,7 +273,7 @@ export function NotificationsListClient({ notifications }: NotificationsListClie
 
         <TabsContent value="lues">
           {lues.length === 0 ? (
-            <EmptyState message="Aucune notification lue" />
+            <EmptyState message={t("notifications.aucuneLue")} />
           ) : (
             <div className="flex flex-col gap-2">
               {lues.map((n) => (
@@ -283,7 +285,7 @@ export function NotificationsListClient({ notifications }: NotificationsListClie
 
         <TabsContent value="traitees">
           {traitees.length === 0 ? (
-            <EmptyState message="Aucune notification traitee" />
+            <EmptyState message={t("notifications.aucuneTraitee")} />
           ) : (
             <div className="flex flex-col gap-2">
               {traitees.map((n) => (

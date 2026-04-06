@@ -16,6 +16,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Building2, Search, Users, Layers } from "lucide-react";
 import { SiteStatus } from "@/types";
 import type { AdminSiteSummary, AdminSitesListResponse } from "@/types";
@@ -53,6 +54,7 @@ interface SiteCardProps {
 }
 
 function SiteCard({ site, onStatusChanged }: SiteCardProps) {
+  const t = useTranslations("admin.sites");
   return (
     <div className="rounded-xl border border-border bg-card p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
@@ -75,7 +77,7 @@ function SiteCard({ site, onStatusChanged }: SiteCardProps) {
           {site.enabledModules.length} module{site.enabledModules.length !== 1 ? "s" : ""}
         </span>
         <span>
-          Créé le{" "}
+          {t("creeLe")}{" "}
           {new Date(site.createdAt).toLocaleDateString("fr-FR", {
             day: "2-digit",
             month: "short",
@@ -125,6 +127,7 @@ function SiteTableRow({
   site: AdminSiteSummary;
   onStatusChanged: () => void;
 }) {
+  const t = useTranslations("admin.sites");
   return (
     <tr className="border-b border-border hover:bg-muted/40 transition-colors">
       <td className="px-4 py-3">
@@ -139,7 +142,7 @@ function SiteTableRow({
         <AdminSiteStatusBadge status={site.status} />
       </td>
       <td className="px-4 py-3 text-sm text-muted-foreground">
-        {site.abonnement?.planNom ?? <span className="italic">Aucun plan</span>}
+        {site.abonnement?.planNom ?? <span className="italic">{t("aucunPlan")}</span>}
       </td>
       <td className="px-4 py-3 text-sm text-muted-foreground">{site.memberCount}</td>
       <td className="px-4 py-3 text-sm text-muted-foreground">{site.enabledModules.length}</td>
@@ -195,6 +198,7 @@ const TAB_STATUS: Record<TabValue, SiteStatus | null> = {
 };
 
 export function AdminSitesList({ initialData }: AdminSitesListProps) {
+  const t = useTranslations("admin.sites");
   const [data, setData] = useState(initialData);
   const [activeTab, setActiveTab] = useState<TabValue>("all");
   const [search, setSearch] = useState("");
@@ -234,7 +238,7 @@ export function AdminSitesList({ initialData }: AdminSitesListProps) {
         <KpiCard label="Total" value={stats.totalActive + stats.totalSuspended + stats.totalBlocked + stats.totalArchived} />
         <KpiCard label="Actifs" value={stats.totalActive} color="text-success" />
         <KpiCard label="Suspendus" value={stats.totalSuspended} color="text-accent-amber" />
-        <KpiCard label="Bloqués" value={stats.totalBlocked} color="text-danger" />
+        <KpiCard label={t("bloques")} value={stats.totalBlocked} color="text-danger" />
       </div>
 
       {/* Search */}
@@ -252,11 +256,11 @@ export function AdminSitesList({ initialData }: AdminSitesListProps) {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
         <TabsList className="w-full overflow-x-auto">
-          <TabsTrigger value="all">Tous ({data.sites.length})</TabsTrigger>
-          <TabsTrigger value="active">Actifs ({stats.totalActive})</TabsTrigger>
-          <TabsTrigger value="suspended">Suspendus ({stats.totalSuspended})</TabsTrigger>
-          <TabsTrigger value="blocked">Bloqués ({stats.totalBlocked})</TabsTrigger>
-          <TabsTrigger value="archived">Archivés ({stats.totalArchived})</TabsTrigger>
+          <TabsTrigger value="all">{t("tabs.all", { count: data.sites.length })}</TabsTrigger>
+          <TabsTrigger value="active">{t("tabs.active", { count: stats.totalActive })}</TabsTrigger>
+          <TabsTrigger value="suspended">{t("tabs.suspended", { count: stats.totalSuspended })}</TabsTrigger>
+          <TabsTrigger value="blocked">{t("tabs.blocked", { count: stats.totalBlocked })}</TabsTrigger>
+          <TabsTrigger value="archived">{t("tabs.archived", { count: stats.totalArchived })}</TabsTrigger>
         </TabsList>
 
         {(["all", "active", "suspended", "blocked", "archived"] as TabValue[]).map((tab) => (
@@ -264,7 +268,7 @@ export function AdminSitesList({ initialData }: AdminSitesListProps) {
             {filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Building2 className="h-10 w-10 text-muted-foreground/40" />
-                <p className="mt-3 text-sm text-muted-foreground">Aucun site trouvé</p>
+                <p className="mt-3 text-sm text-muted-foreground">{t("aucunSiteTrouve")}</p>
               </div>
             ) : (
               <>
@@ -296,7 +300,7 @@ export function AdminSitesList({ initialData }: AdminSitesListProps) {
                           Modules
                         </th>
                         <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Créé le
+                          {t("creeLe")}
                         </th>
                         <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                           Actions

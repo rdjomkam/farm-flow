@@ -1,6 +1,23 @@
 {
+  "global": {
+    "fallback": "Something went wrong. Please try again.",
+    "criticalTitle": "A critical error occurred",
+    "ref": "Ref:",
+    "retry": "Try again"
+  },
   "page": {
-    "somethingWentWrong": "Something went wrong. Please try again."
+    "somethingWentWrong": "Something went wrong. Please try again.",
+    "errorOccurred": "An error occurred",
+    "criticalError": "A critical error occurred",
+    "errorRef": "Ref:",
+    "notFoundTitle": "Page not found",
+    "notFoundDescription": "The page you are looking for does not exist or has been moved.",
+    "offlineTitle": "You are offline",
+    "offlineDescription": "Check your internet connection and try again. Data saved offline will be synchronized automatically.",
+    "criticalLayoutErrorTitle": "Critical error",
+    "criticalLayoutErrorDescription": "The application encountered an error. Please refresh the page.",
+    "cannotDisplay": "Unable to display {section}. Please try again.",
+    "thisSection": "this section"
   },
   "validation": {
     "required": "Required field",

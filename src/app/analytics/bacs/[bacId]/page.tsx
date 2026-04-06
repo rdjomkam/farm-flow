@@ -40,7 +40,7 @@ export default async function AnalyticsBacDetailPage({
         <Header title={t("bacDetail")} />
         <div className="p-4">
           <p className="py-8 text-center text-sm text-muted-foreground">
-            Parametre vagueId manquant.
+            {t("missingVagueId")}
           </p>
         </div>
       </>
@@ -71,9 +71,9 @@ export default async function AnalyticsBacDetailPage({
 
         {/* Cross-reference to vague-level analytics */}
         <p className="text-xs text-muted-foreground">
-          Pour FCR, SGR et survie,{" "}
+          {t("fcrSgrNote")}{" "}
           <Link href="/analytics/vagues" className="text-primary hover:underline font-medium">
-            voir les indicateurs de performance par vague
+            {t("viewVagueIndicators")}
           </Link>
           .
         </p>
@@ -83,7 +83,7 @@ export default async function AnalyticsBacDetailPage({
           <Button variant="ghost" size="sm" asChild>
             <Link href={`/analytics/bacs?vagueId=${vagueId}`}>
               <ArrowLeft className="h-4 w-4" />
-              Retour a la comparaison
+              {t("backToComparison")}
             </Link>
           </Button>
         </div>

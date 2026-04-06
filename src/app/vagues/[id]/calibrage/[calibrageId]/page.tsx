@@ -99,7 +99,7 @@ export default async function CalibrageDetailPage({
         <section className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 mb-3">
             <Scissors className="h-5 w-5 text-primary" />
-            <h2 className="text-base font-semibold">Calibrage</h2>
+            <h2 className="text-base font-semibold">{t("detail.title")}</h2>
           </div>
           <div className="flex flex-col gap-2 text-sm">
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -115,7 +115,7 @@ export default async function CalibrageDetailPage({
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <User className="h-4 w-4 shrink-0" />
-              <span>Par {calibrage.user.name}</span>
+              <span>{t("detail.byUser", { name: calibrage.user.name })}</span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Fish className="h-4 w-4 shrink-0" />
@@ -135,7 +135,7 @@ export default async function CalibrageDetailPage({
 
         {/* Groupes de redistribution */}
         <section>
-          <h3 className="text-sm font-semibold mb-3">Groupes de redistribution</h3>
+          <h3 className="text-sm font-semibold mb-3">{t("detail.redistributionGroups")}</h3>
           <div className="flex flex-col gap-2">
             {calibrage.groupes.map((groupe) => (
               <div
@@ -158,10 +158,10 @@ export default async function CalibrageDetailPage({
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                  <span>Destination : {groupe.destinationBac.nom}</span>
-                  <span>Poids moyen : {groupe.poidsMoyen} g</span>
+                  <span>{t("detail.destination", { name: groupe.destinationBac.nom })}</span>
+                  <span>{t("detail.avgWeight", { weight: groupe.poidsMoyen })}</span>
                   {groupe.tailleMoyenne !== null && (
-                    <span>Taille moyenne : {groupe.tailleMoyenne} cm</span>
+                    <span>{t("detail.avgSize", { size: groupe.tailleMoyenne })}</span>
                   )}
                 </div>
               </div>
@@ -172,7 +172,7 @@ export default async function CalibrageDetailPage({
         {/* Notes */}
         {calibrage.notes && (
           <section className="rounded-xl border border-border bg-card p-4">
-            <h3 className="text-sm font-semibold mb-2">Notes</h3>
+            <h3 className="text-sm font-semibold mb-2">{t("detail.notes")}</h3>
             <p className="text-sm text-muted-foreground">{calibrage.notes}</p>
           </section>
         )}
@@ -191,7 +191,7 @@ export default async function CalibrageDetailPage({
         {/* Badge "Modifie" */}
         {(calibrage as unknown as { modifie?: boolean }).modifie && (
           <div className="flex items-center gap-2 rounded-lg bg-warning/5 px-3 py-2 text-sm text-warning">
-            <span className="font-medium">Ce calibrage a ete modifie apres sa creation.</span>
+            <span className="font-medium">{t("detail.modifiedAfterCreation")}</span>
           </div>
         )}
 

@@ -163,7 +163,15 @@
   },
   "gompertz": {
     "modelParams": "Paramètres du modèle",
-    "noBiometricData": "Aucune mesure biométrique disponible."
+    "noBiometricData": "Aucune mesure biométrique disponible.",
+    "modelStatus": "Statut du modele",
+    "day": "Jour {day}",
+    "predictionsVsReality": "Predictions vs Realite",
+    "actual": "Reel",
+    "predicted": "Predit",
+    "deviation": "Ecart",
+    "projections": "Projections",
+    "dayHeader": "Jour"
   },
   "comparison": {
     "selectTitle": "Selectionnez 2 a 4 vagues",

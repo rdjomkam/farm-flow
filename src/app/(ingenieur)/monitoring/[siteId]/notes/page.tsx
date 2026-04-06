@@ -54,7 +54,7 @@ export default async function IngenieurClientNotesPage({
 
       <div className="flex flex-col gap-4 p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Toutes les notes</h2>
+          <h2 className="text-lg font-semibold">{t("allNotes")}</h2>
           <NouvelleNoteDialog
             siteId={session.activeSiteId}
             clientSiteId={clientSiteId}

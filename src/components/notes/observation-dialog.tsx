@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ interface ObservationDialogProps {
 
 export function ObservationDialog({ vagues }: ObservationDialogProps) {
   const queryClient = useQueryClient();
+  const t = useTranslations("notes.observationDialog");
   const [open, setOpen] = useState(false);
 
   function handleSuccess() {
@@ -31,11 +33,11 @@ export function ObservationDialog({ vagues }: ObservationDialogProps) {
       <DialogTrigger asChild>
         <Button className="w-full h-12 text-base flex items-center gap-2">
           <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-          Signaler un probleme
+          {t("trigger")}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-y-auto">
-        <DialogTitle>Signaler un probleme</DialogTitle>
+        <DialogTitle>{t("title")}</DialogTitle>
         <ObservationForm vagues={vagues} onSuccess={handleSuccess} />
       </DialogContent>
     </Dialog>

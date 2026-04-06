@@ -125,7 +125,15 @@
     "noOrder": "No order",
     "notes": "Notes",
     "notesPlaceholder": "Additional information...",
-    "createExpense": "Create expense"
+    "createExpense": "Create expense",
+    "labels": {
+      "description": "Description",
+      "categorie": "Category",
+      "montantTotal": "Total amount (FCFA)",
+      "date": "Date",
+      "vagueAssociee": "Associated batch",
+      "commandeLiee": "Linked order"
+    }
   },
   "deleteDepense": {
     "supprimer": "Delete",
@@ -140,6 +148,11 @@
   },
   "emptyState": {
     "noExpenses": "No expenses"
+  },
+  "list": {
+    "recurring": "Recurring",
+    "total": "Total: ",
+    "remaining": "Remaining: "
   },
   "recurrentes": {
     "frequences": {

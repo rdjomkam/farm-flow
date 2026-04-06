@@ -8,6 +8,7 @@
  * R2 : enums importes depuis @/types
  */
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { checkBackofficeAccess } from "@/lib/auth/backoffice";
 import { prisma } from "@/lib/db";
 import { AbonnementsAdminList } from "@/components/abonnements/abonnements-admin-list";
@@ -33,6 +34,8 @@ interface BackofficeAbonnementsPageProps {
 export default async function BackofficeAbonnementsPage({ searchParams }: BackofficeAbonnementsPageProps) {
   const session = await checkBackofficeAccess();
   if (!session) redirect("/login");
+
+  const t = await getTranslations("backoffice");
 
   const params = await searchParams;
   const page = Math.max(1, parseInt(params.page ?? "1", 10));
@@ -94,7 +97,7 @@ export default async function BackofficeAbonnementsPage({ searchParams }: Backof
     <div className="max-w-6xl mx-auto px-4 py-6">
       <div className="mb-4 flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-xl font-bold text-foreground">Tous les abonnements</h1>
+          <h1 className="text-xl font-bold text-foreground">{t("pages.abonnements.title")}</h1>
           <p className="text-sm text-muted-foreground">{total} abonnement{total > 1 ? "s" : ""} au total</p>
         </div>
       </div>

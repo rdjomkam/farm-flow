@@ -10,6 +10,7 @@
  */
 
 import { formatDateTime } from "@/lib/format";
+import { useTranslations } from "next-intl";
 import { Clock, User } from "lucide-react";
 
 interface AuditLogEntry {
@@ -24,33 +25,39 @@ interface AdminSiteAuditLogProps {
   logs: AuditLogEntry[];
 }
 
-const ACTION_LABELS: Record<string, string> = {
-  SITE_SUSPENDED: "Site suspendu",
-  SITE_BLOCKED: "Site bloqué",
-  SITE_RESTORED: "Site restauré",
-  SITE_ARCHIVED: "Site archivé",
-  MODULES_UPDATED: "Modules mis à jour",
-  SITE_CREATED: "Site créé",
-  ABONNEMENT_FORCED: "Abonnement forcé",
-};
-
-function formatAction(action: string): string {
-  return ACTION_LABELS[action] ?? action.replace(/_/g, " ").toLowerCase();
-}
-
-function formatDetails(details: Record<string, unknown> | null): string | null {
-  if (!details) return null;
-  const { reason } = details as { reason?: string };
-  if (reason) return `Raison : ${reason}`;
-  return null;
-}
+/** Clés d'action connues pour la traduction */
+const KNOWN_ACTION_KEYS = new Set([
+  "SITE_SUSPENDED",
+  "SITE_BLOCKED",
+  "SITE_RESTORED",
+  "SITE_ARCHIVED",
+  "MODULES_UPDATED",
+  "SITE_CREATED",
+  "ABONNEMENT_FORCED",
+]);
 
 export function AdminSiteAuditLog({ logs }: AdminSiteAuditLogProps) {
+  const t = useTranslations("admin.sites");
+
+  function formatAction(action: string): string {
+    if (KNOWN_ACTION_KEYS.has(action)) {
+      return t(`audit.actions.${action}` as Parameters<typeof t>[0]);
+    }
+    return action.replace(/_/g, " ").toLowerCase();
+  }
+
+  function formatDetails(details: Record<string, unknown> | null): string | null {
+    if (!details) return null;
+    const { reason } = details as { reason?: string };
+    if (reason) return t("audit.reason", { reason });
+    return null;
+  }
+
   if (logs.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-10 text-center">
         <Clock className="h-10 w-10 text-muted-foreground/40" />
-        <p className="mt-3 text-sm text-muted-foreground">Aucun événement dans le journal d&apos;audit.</p>
+        <p className="mt-3 text-sm text-muted-foreground">{t("audit.empty")}</p>
       </div>
     );
   }

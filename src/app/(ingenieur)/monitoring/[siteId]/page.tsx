@@ -216,7 +216,7 @@ export default async function IngenieurClientDetailPage({
             <CardContent className="p-3">
               <div className="flex items-center gap-2 mb-1">
                 <HeartPulse className="h-4 w-4 text-success" />
-                <span className="text-xs text-muted-foreground">Survie moy.</span>
+                <span className="text-xs text-muted-foreground">{t("monitoring.avgSurvival")}</span>
               </div>
               <p
                 className={`text-lg font-bold ${
@@ -240,11 +240,11 @@ export default async function IngenieurClientDetailPage({
             <CardContent className="p-3">
               <div className="flex items-center gap-2 mb-1">
                 <Fish className="h-4 w-4 text-primary" />
-                <span className="text-xs text-muted-foreground">Vagues</span>
+                <span className="text-xs text-muted-foreground">{t("monitoring.batches")}</span>
               </div>
               <p className="text-lg font-bold">
                 {clientSummary.vaguesEnCours}
-                <span className="text-xs font-normal text-muted-foreground ml-1">en cours</span>
+                <span className="text-xs font-normal text-muted-foreground ml-1">{t("monitoring.inProgress")}</span>
               </p>
             </CardContent>
           </Card>
@@ -253,7 +253,7 @@ export default async function IngenieurClientDetailPage({
             <CardContent className="p-3">
               <div className="flex items-center gap-2 mb-1">
                 <AlertTriangle className="h-4 w-4 text-danger" />
-                <span className="text-xs text-muted-foreground">Alertes</span>
+                <span className="text-xs text-muted-foreground">{t("monitoring.alerts")}</span>
               </div>
               <p
                 className={`text-lg font-bold ${
@@ -269,7 +269,7 @@ export default async function IngenieurClientDetailPage({
             <CardContent className="p-3">
               <div className="flex items-center gap-2 mb-1">
                 <MessageSquare className="h-4 w-4 text-primary" />
-                <span className="text-xs text-muted-foreground">Messages</span>
+                <span className="text-xs text-muted-foreground">{t("monitoring.messages")}</span>
               </div>
               <p
                 className={`text-lg font-bold ${
@@ -277,7 +277,7 @@ export default async function IngenieurClientDetailPage({
                 }`}
               >
                 {clientSummary.notesNonLues}
-                <span className="text-xs font-normal text-muted-foreground ml-1">non lu{clientSummary.notesNonLues > 1 ? "s" : ""}</span>
+                <span className="text-xs font-normal text-muted-foreground ml-1">{t("monitoring.unread", { count: clientSummary.notesNonLues })}</span>
               </p>
             </CardContent>
           </Card>
@@ -347,23 +347,23 @@ export default async function IngenieurClientDetailPage({
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 gap-2 sm:grid-cols-4 pt-0">
                       <div>
-                        <p className="text-xs text-muted-foreground">Debut</p>
+                        <p className="text-xs text-muted-foreground">{t("monitoring.start")}</p>
                         <p className="text-sm font-medium">
                           {new Date(vague.dateDebut).toLocaleDateString("fr-FR")}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Jour</p>
-                        <p className="text-sm font-medium">J{vague.joursEcoules}</p>
+                        <p className="text-xs text-muted-foreground">{t("monitoring.day")}</p>
+                        <p className="text-sm font-medium">{t("monitoring.dayLabel", { day: vague.joursEcoules })}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Vivants / Initial</p>
+                        <p className="text-xs text-muted-foreground">{t("monitoring.livingInitial")}</p>
                         <p className="text-sm font-medium">
                           {vague.nombreVivants} / {vague.nombreInitial}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Survie</p>
+                        <p className="text-xs text-muted-foreground">{t("monitoring.survival")}</p>
                         <p
                           className={`text-sm font-bold ${
                             vague.tauxSurvie === null
@@ -380,34 +380,34 @@ export default async function IngenieurClientDetailPage({
                       </div>
                       {vague.dernierePoidsMoyen !== null && (
                         <div>
-                          <p className="text-xs text-muted-foreground">Poids moy.</p>
+                          <p className="text-xs text-muted-foreground">{t("monitoring.avgWeight")}</p>
                           <p className="text-sm font-medium">{formatNum(vague.dernierePoidsMoyen, 1, "g")}</p>
                         </div>
                       )}
                       <div>
-                        <p className="text-xs text-muted-foreground">Biomasse</p>
+                        <p className="text-xs text-muted-foreground">{t("monitoring.biomass")}</p>
                         <p className="text-sm font-medium">
                           {formatNum(vague.biomasse, 2, "kg")}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">SGR</p>
+                        <p className="text-xs text-muted-foreground">{t("monitoring.sgr")}</p>
                         <p className="text-sm font-medium text-primary">
                           {formatNum(vague.sgr, 2, "%/j")}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">FCR</p>
+                        <p className="text-xs text-muted-foreground">{t("monitoring.fcr")}</p>
                         <p className="text-sm font-medium text-accent-amber">
                           {formatNum(vague.fcr, 2)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Releves</p>
+                        <p className="text-xs text-muted-foreground">{t("monitoring.records")}</p>
                         <p className="text-sm font-medium">{vague.nombreReleves}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Mortalites</p>
+                        <p className="text-xs text-muted-foreground">{t("monitoring.mortalities")}</p>
                         <p
                           className={`text-sm font-bold ${
                             vague.totalMortalites > 0 ? "text-danger" : "text-muted-foreground"
@@ -417,7 +417,7 @@ export default async function IngenieurClientDetailPage({
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Bacs</p>
+                        <p className="text-xs text-muted-foreground">{t("monitoring.tanks")}</p>
                         <p className="text-sm font-medium">{vague.nombreBacs}</p>
                       </div>
                     </CardContent>
@@ -466,10 +466,10 @@ export default async function IngenieurClientDetailPage({
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
                           {note.isUrgent && (
-                            <Badge variant="annulee">Urgent</Badge>
+                            <Badge variant="annulee">{t("monitoring.urgent")}</Badge>
                           )}
                           {note.isFromClient && (
-                            <Badge variant="info">Client</Badge>
+                            <Badge variant="info">{t("monitoring.client")}</Badge>
                           )}
                         </div>
                       </div>

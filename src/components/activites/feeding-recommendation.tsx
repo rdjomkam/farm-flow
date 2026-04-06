@@ -223,7 +223,8 @@ interface BacCardProps {
 }
 
 function BacCard({ bac }: BacCardProps) {
-  const t = useTranslations("stock");
+  const tStock = useTranslations("stock");
+  const tActivites = useTranslations("activites");
   const quantiteGrammesLabel =
     bac.recommendation.quantiteGrammes >= 1000
       ? `${(bac.recommendation.quantiteGrammes / 1000).toFixed(2)} kg`
@@ -243,19 +244,19 @@ function BacCard({ bac }: BacCardProps) {
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-1">
         <div>
-          <p className="text-xs text-muted-foreground">Quantite</p>
+          <p className="text-xs text-muted-foreground">{tActivites("feeding.quantity")}</p>
           <p className="text-sm font-bold text-primary">{quantiteGrammesLabel}</p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Granule</p>
-          <p className="text-sm font-medium">{t(`produits.taillesGranule.${bac.recommendation.tailleGranule}` as any) || bac.recommendation.tailleGranule}</p>
+          <p className="text-xs text-muted-foreground">{tActivites("feeding.granule")}</p>
+          <p className="text-sm font-medium">{tStock(`produits.taillesGranule.${bac.recommendation.tailleGranule}` as any) || bac.recommendation.tailleGranule}</p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Repas/jour</p>
+          <p className="text-xs text-muted-foreground">{tActivites("feeding.mealsPerDay")}</p>
           <p className="text-sm font-medium">{bac.recommendation.frequence}x</p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Poids moy.</p>
+          <p className="text-xs text-muted-foreground">{tActivites("feeding.avgWeight")}</p>
           <p className="text-sm font-medium">{bac.recommendation.poidsMoyenUtilise} g</p>
         </div>
         <div className="col-span-2">
@@ -283,7 +284,8 @@ export function FeedingRecommendation({
   produitStock,
   parBac,
 }: FeedingRecommendationProps) {
-  const t = useTranslations("stock");
+  const tStock = useTranslations("stock");
+  const tActivites = useTranslations("activites");
   const [showParBac, setShowParBac] = useState(false);
 
   // Donnees insuffisantes
@@ -377,7 +379,7 @@ export function FeedingRecommendation({
       {phaseElevage && (
         <div className="mb-3">
           <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-            {t(`produits.phases.${phaseElevage}` as any) || phaseElevage}
+            {tStock(`produits.phases.${phaseElevage}` as any) || phaseElevage}
           </span>
         </div>
       )}
@@ -385,7 +387,7 @@ export function FeedingRecommendation({
       {/* Quantite principale — mise en valeur */}
       {quantiteDisplay != null && (
         <div className="mb-3 rounded-md bg-card/80 px-3 py-2.5 text-center">
-          <p className="text-xs text-muted-foreground mb-0.5">Quantite quotidienne</p>
+          <p className="text-xs text-muted-foreground mb-0.5">{tActivites("feeding.dailyQuantity")}</p>
           <p className="text-xl font-bold text-primary leading-tight">
             {quantiteDisplay.label}
           </p>
@@ -403,7 +405,7 @@ export function FeedingRecommendation({
           <MetricRow
             icon={<Package className="h-3.5 w-3.5" />}
             label="Taille granule"
-            value={t(`produits.taillesGranule.${tailleGranuleEffective}` as any) || tailleGranuleEffective}
+            value={tStock(`produits.taillesGranule.${tailleGranuleEffective}` as any) || tailleGranuleEffective}
           />
         )}
 
@@ -463,24 +465,24 @@ export function FeedingRecommendation({
                 >
                   {joursStock} j
                 </p>
-                <p className="text-xs text-muted-foreground">avant rupture</p>
+                <p className="text-xs text-muted-foreground">{tActivites("feeding.beforeStockout")}</p>
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground shrink-0">Stock inconnu</p>
+              <p className="text-xs text-muted-foreground shrink-0">{tActivites("feeding.stockUnknown")}</p>
             )}
           </div>
 
           {joursStock != null && joursStock <= 3 && (
             <div className="mt-1.5 flex items-center gap-1 text-xs text-danger">
               <AlertTriangle className="h-3 w-3 shrink-0" />
-              <span>Stock critique — commander rapidement</span>
+              <span>{tActivites("feeding.criticalStock")}</span>
             </div>
           )}
 
           {joursStock != null && joursStock > 3 && joursStock <= 7 && (
             <div className="mt-1.5 flex items-center gap-1 text-xs text-warning">
               <AlertTriangle className="h-3 w-3 shrink-0" />
-              <span>Stock faible — prevoir une commande</span>
+              <span>{tActivites("feeding.lowStock")}</span>
             </div>
           )}
         </div>

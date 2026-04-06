@@ -178,7 +178,7 @@ export function ModifierActiviteDialog({
 
           {/* Type */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-foreground">Type</label>
+            <label className="text-sm font-medium text-foreground">{t("editDialog.type")}</label>
             <Select value={typeAct} onValueChange={(v) => setTypeAct(v as TypeActivite)} disabled={isLocked}>
               <SelectTrigger>
                 <SelectValue />
@@ -213,7 +213,7 @@ export function ModifierActiviteDialog({
 
           {/* Recurrence */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-foreground">Recurrence</label>
+            <label className="text-sm font-medium text-foreground">{t("editDialog.recurrence")}</label>
             <Select value={recurrence} onValueChange={setRecurrence} disabled={isLocked}>
               <SelectTrigger>
                 <SelectValue />
@@ -232,7 +232,7 @@ export function ModifierActiviteDialog({
 
           {/* Vague */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-foreground">Vague</label>
+            <label className="text-sm font-medium text-foreground">{t("editDialog.batch")}</label>
             <Select value={vagueId} onValueChange={setVagueId} disabled={isLocked}>
               <SelectTrigger>
                 <SelectValue />
@@ -248,7 +248,7 @@ export function ModifierActiviteDialog({
 
           {/* Bac */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-foreground">Bac</label>
+            <label className="text-sm font-medium text-foreground">{t("editDialog.tank")}</label>
             <Select value={bacId} onValueChange={setBacId} disabled={isLocked}>
               <SelectTrigger>
                 <SelectValue />
@@ -264,7 +264,7 @@ export function ModifierActiviteDialog({
 
           {/* Assignee */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-foreground">Assigner a</label>
+            <label className="text-sm font-medium text-foreground">{t("editDialog.assignTo")}</label>
             <Select value={assigneAId} onValueChange={setAssigneAId} disabled={isLocked}>
               <SelectTrigger>
                 <SelectValue />

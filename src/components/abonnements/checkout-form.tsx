@@ -71,11 +71,11 @@ function isValidPhone(phone: string): boolean {
 }
 
 // Barre de progression des étapes
-function StepProgress({ etape }: { etape: Etape }) {
+function StepProgress({ etape, t }: { etape: Etape; t: ReturnType<typeof useTranslations> }) {
   const steps = [
-    { num: 1, label: "Plan & Période" },
-    { num: 2, label: "Paiement" },
-    { num: 3, label: "Confirmation" },
+    { num: 1, label: t("checkoutForm.stepPlanPeriod") },
+    { num: 2, label: t("checkoutForm.stepPayment") },
+    { num: 3, label: t("checkoutForm.stepConfirmation") },
   ];
   return (
     <ol
@@ -186,7 +186,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
         setPromoError(null);
       } else {
         setRemise(null);
-        setPromoError(data.message ?? "Code promo invalide.");
+        setPromoError(data.message ?? t("checkoutForm.promoInvalid"));
       }
     } catch {
       setRemise(null);
@@ -216,11 +216,11 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
   // Validation étape 2
   function validerTelephone(): boolean {
     if (!telephone.trim()) {
-      setPhoneError("Le numéro de téléphone est obligatoire.");
+      setPhoneError(t("checkoutForm.phoneRequired"));
       return false;
     }
     if (!isValidPhone(telephone)) {
-      setPhoneError("Format invalide. Ex: +237 6XX XX XX XX ou 6XXXXXXXX");
+      setPhoneError(t("checkoutForm.phoneInvalid"));
       return false;
     }
     setPhoneError(null);
@@ -250,7 +250,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.message ?? "Une erreur est survenue lors de la souscription.");
+        setError(data.message ?? t("checkoutForm.subscriptionError"));
         setLoading(false);
         return;
       }
@@ -316,13 +316,13 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
   if (etape === 1) {
     return (
       <div>
-        <StepProgress etape={1} />
+        <StepProgress etape={1} t={t} />
 
         <div className="bg-card border border-border rounded-xl p-5 space-y-5">
           {/* Plan sélectionné */}
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-              Plan sélectionné
+              {t("checkoutForm.selectedPlan")}
             </p>
             <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
               <div className="flex-1">
@@ -337,7 +337,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
           {/* Sélection de la période */}
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-              Période de facturation
+              {t("changerPlan.billingPeriod")}
             </p>
             <div className="grid gap-2">
               {periodesDisponibles.map((p) => {
@@ -377,12 +377,12 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
           {/* Code promo */}
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-              Code promo (optionnel)
+              {t("checkoutForm.promoCode")}
             </p>
             <div className="relative">
               <Input
                 type="text"
-                placeholder="Entrez votre code promo"
+                placeholder={t("checkoutForm.promoPlaceholder")}
                 value={codePromo}
                 onChange={(e) => setCodePromo(e.target.value.toUpperCase())}
                 className="pr-10"
@@ -400,7 +400,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
             {remise && (
               <p className="text-xs text-success mt-1 flex items-center gap-1">
                 <Check className="h-3 w-3" />
-                {remise.nom} — {remise.estPourcentage ? `${remise.valeur}% de réduction` : `${formatXAF(remise.valeur)} de réduction`}
+                {remise.nom} — {remise.estPourcentage ? `${remise.valeur}% ${t("checkoutForm.discount")}` : `${formatXAF(remise.valeur)} ${t("checkoutForm.discount")}`}
               </p>
             )}
           </div>
@@ -409,15 +409,15 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
           {remise && tarifBase > 0 && (
             <div className="bg-success/10 border border-success/20 rounded-lg p-3">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Prix de base</span>
+                <span className="text-muted-foreground">{t("checkoutForm.basePrice")}</span>
                 <span className="line-through text-muted-foreground">{formatXAFOrFree(tarifBase)}</span>
               </div>
               <div className="flex justify-between text-sm mt-1">
-                <span className="text-muted-foreground">Réduction</span>
+                <span className="text-muted-foreground">{t("checkoutForm.reduction")}</span>
                 <span className="text-success">-{formatXAF(tarifBase - prixFinal)}</span>
               </div>
               <div className="flex justify-between font-bold text-sm mt-2 pt-2 border-t border-success/20">
-                <span className="text-foreground">Total</span>
+                <span className="text-foreground">{t("checkoutForm.total")}</span>
                 <span className="text-foreground">{formatXAFOrFree(prixFinal)}</span>
               </div>
             </div>
@@ -430,7 +430,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
               scrollTop();
             }}
           >
-            Continuer
+            {t("checkoutForm.continue")}
           </Button>
         </div>
       </div>
@@ -440,21 +440,21 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
   if (etape === 2) {
     return (
       <div>
-        <StepProgress etape={2} />
+        <StepProgress etape={2} t={t} />
 
         <div className="bg-card border border-border rounded-xl p-5 space-y-5">
           {/* Résumé */}
           <div className="bg-muted/40 rounded-lg p-3">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Plan</span>
+              <span className="text-muted-foreground">{t("checkoutForm.plan")}</span>
               <span className="font-medium text-foreground">{t(PLAN_LABELS[plan.typePlan])}</span>
             </div>
             <div className="flex justify-between text-sm mt-1">
-              <span className="text-muted-foreground">Période</span>
+              <span className="text-muted-foreground">{t("checkoutForm.period")}</span>
               <span className="font-medium text-foreground">{t(PERIODE_LABELS[periode])}</span>
             </div>
             <div className="flex justify-between text-sm mt-1 pt-1 border-t border-border">
-              <span className="font-medium text-foreground">Total</span>
+              <span className="font-medium text-foreground">{t("checkoutForm.total")}</span>
               <span className="font-bold text-foreground">{formatXAFOrFree(prixFinal)}</span>
             </div>
           </div>
@@ -462,7 +462,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
           {/* Fournisseur de paiement */}
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-              Mode de paiement
+              {t("checkoutForm.paymentMode")}
             </p>
             <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
               <CreditCard className="h-5 w-5 text-primary" />
@@ -471,7 +471,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
                   {t(FOURNISSEUR_LABELS[fournisseur])}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Paiement mobile money sécurisé
+                  {t("checkoutForm.securePayment")}
                 </p>
               </div>
             </div>
@@ -480,7 +480,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
           {/* Numéro de téléphone */}
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-              Numéro de téléphone Mobile Money
+              {t("checkoutForm.mobileMoneyPhone")}
             </p>
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -504,7 +504,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
               </p>
             )}
             <p className="text-xs text-muted-foreground mt-1">
-              Format accepté : +237 6XX XX XX XX ou 6XXXXXXXX
+              {t("checkoutForm.phoneFormatHint")}
             </p>
           </div>
 
@@ -517,7 +517,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
                 scrollTop();
               }}
             >
-              Retour
+              {t("checkoutForm.back")}
             </Button>
             <Button
               className="flex-1 min-h-[44px]"
@@ -531,10 +531,10 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Initiation...
+                  {t("checkoutForm.initiating")}
                 </>
               ) : (
-                "Payer maintenant"
+                t("checkoutForm.payNow")
               )}
             </Button>
           </div>
@@ -564,7 +564,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
 
   return (
     <div>
-      <StepProgress etape={3} />
+      <StepProgress etape={3} t={t} />
 
       <div className="bg-card border border-border rounded-xl p-6 text-center space-y-4">
         {isConfirme && (
@@ -572,9 +572,9 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
             <div className="flex items-center justify-center w-16 h-16 rounded-full bg-success/15 mx-auto">
               <Check className="h-8 w-8 text-success" />
             </div>
-            <h2 className="text-xl font-bold text-foreground">Paiement confirmé !</h2>
+            <h2 className="text-xl font-bold text-foreground">{t("checkoutForm.paymentConfirmedTitle")}</h2>
             <p className="text-sm text-muted-foreground">
-              Votre abonnement est maintenant actif. Redirection en cours...
+              {t("checkoutForm.subscriptionActive")}
             </p>
           </>
         )}
@@ -584,10 +584,9 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
             <div className="flex items-center justify-center w-16 h-16 rounded-full bg-danger/15 mx-auto">
               <AlertCircle className="h-8 w-8 text-danger" />
             </div>
-            <h2 className="text-xl font-bold text-foreground">Paiement échoué</h2>
+            <h2 className="text-xl font-bold text-foreground">{t("checkoutForm.paymentFailedTitle")}</h2>
             <p className="text-sm text-muted-foreground">
-              Le paiement n&apos;a pas pu être confirmé. Veuillez vérifier votre solde Mobile Money
-              et réessayer.
+              {t("checkoutForm.paymentFailed")}
             </p>
             <Button
               className="w-full min-h-[44px]"
@@ -599,7 +598,7 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
                 scrollTop();
               }}
             >
-              Réessayer
+              {t("checkoutForm.retry")}
             </Button>
           </>
         )}
@@ -609,18 +608,18 @@ export function CheckoutForm({ plan, isRenouvellement }: CheckoutFormProps) {
             <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/15 mx-auto">
               <Loader2 className="h-8 w-8 text-primary animate-spin" />
             </div>
-            <h2 className="text-xl font-bold text-foreground">En attente de confirmation</h2>
+            <h2 className="text-xl font-bold text-foreground">{t("checkoutForm.paymentPendingTitle")}</h2>
             <p className="text-sm text-muted-foreground">
-              Validez le paiement sur votre téléphone Mobile Money.
+              {t("checkoutForm.paymentPendingDesc")}
             </p>
             <div className="bg-muted/50 rounded-lg p-3 text-left">
-              <p className="text-xs text-muted-foreground">Numéro :</p>
+              <p className="text-xs text-muted-foreground">{t("checkoutForm.phoneNumberLabel")}</p>
               <p className="font-medium text-sm text-foreground">{telephone}</p>
-              <p className="text-xs text-muted-foreground mt-2">Montant :</p>
+              <p className="text-xs text-muted-foreground mt-2">{t("checkoutForm.amountLabel")}</p>
               <p className="font-bold text-sm text-foreground">{formatXAFOrFree(prixFinal)}</p>
             </div>
             <p className="text-xs text-muted-foreground">
-              Vérification automatique en cours... ({pollingCountRef.current}/10)
+              {t("checkoutForm.pollingStatus", { count: pollingCountRef.current })}
             </p>
           </>
         )}

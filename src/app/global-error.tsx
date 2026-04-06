@@ -1,5 +1,15 @@
 "use client";
 
+// NOTE: global-error.tsx renders outside the Next-intl provider context.
+// useTranslations() cannot be used here. Strings are kept as static constants
+// that mirror the keys in src/messages/*/errors.json (global.fallback, etc.).
+const STRINGS = {
+  criticalTitle: "Une erreur critique est survenue",
+  fallback: "Quelque chose s'est mal passé. Veuillez réessayer.",
+  ref: "Réf:",
+  retry: "Réessayer",
+};
+
 export default function GlobalError({
   error,
   reset,
@@ -40,14 +50,14 @@ export default function GlobalError({
           </div>
           <div>
             <h2 style={{ fontSize: "1.125rem", fontWeight: 600, margin: 0 }}>
-              Une erreur critique est survenue
+              {STRINGS.criticalTitle}
             </h2>
             <p style={{ marginTop: "0.5rem", fontSize: "0.875rem", color: "#6b7280" }}>
-              {error.message || "Quelque chose s'est mal passé. Veuillez réessayer."}
+              {error.message || STRINGS.fallback}
             </p>
             {error.digest && (
               <p style={{ marginTop: "0.25rem", fontSize: "0.75rem", color: "#9ca3af" }}>
-                Réf: {error.digest}
+                {STRINGS.ref} {error.digest}
               </p>
             )}
           </div>
@@ -63,7 +73,7 @@ export default function GlobalError({
               fontWeight: 500,
             }}
           >
-            Réessayer
+            {STRINGS.retry}
           </button>
         </div>
       </body>

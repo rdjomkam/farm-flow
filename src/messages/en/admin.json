@@ -1,4 +1,62 @@
 {
+  "sites": {
+    "aucunPlan": "No plan",
+    "bloques": "Blocked",
+    "aucunSiteTrouve": "No site found",
+    "releves": "Records",
+    "supervise": "Supervised",
+    "creeLe": "Created on",
+    "modifieLe": "Modified on",
+    "aucunMembre": "No members.",
+    "aucunAbonnementActif": "No active subscription.",
+    "periode": "Period",
+    "debut": "Start",
+    "finDeGrace": "Grace period end",
+    "prixPaye": "Price paid",
+    "aucunEvenementAudit": "No events in the audit log.",
+    "audit": {
+      "empty": "No events in the audit log.",
+      "reason": "Reason: {reason}",
+      "actions": {
+        "SITE_SUSPENDED": "Site suspended",
+        "SITE_BLOCKED": "Site blocked",
+        "SITE_RESTORED": "Site restored",
+        "SITE_ARCHIVED": "Site archived",
+        "MODULES_UPDATED": "Modules updated",
+        "SITE_CREATED": "Site created",
+        "ABONNEMENT_FORCED": "Subscription forced"
+      }
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "SUSPENDED": "Suspended",
+      "BLOCKED": "Blocked",
+      "ARCHIVED": "Archived"
+    },
+    "changeStatus": "Change status",
+    "tabs": {
+      "all": "All ({count})",
+      "active": "Active ({count})",
+      "suspended": "Suspended ({count})",
+      "blocked": "Blocked ({count})",
+      "archived": "Archived ({count})"
+    },
+    "detail": {
+      "tabs": {
+        "summary": "Summary",
+        "modules": "Modules",
+        "members": "Members",
+        "subscription": "Subscription",
+        "audit": "Audit"
+      },
+      "table": {
+        "name": "Name",
+        "email": "Email",
+        "phone": "Phone",
+        "role": "Role"
+      }
+    }
+  },
   "siteStatus": {
     "title": "Change site status",
     "siteLabel": "Site:",
@@ -44,6 +102,7 @@
     "saving": "Saving..."
   },
   "modules": {
+    "aucunModuleFiltre": "No module matches the filters.",
     "modifierTitle": "Edit module",
     "modifierDescription": "Update module metadata. The key and level are immutable.",
     "trigger": "Edit",
@@ -69,7 +128,21 @@
       "ordreTriInvalide": "Sort order must be an integer.",
       "libelleRequis": "Label is required.",
       "erreurReseau": "Network error. Please try again."
-    }
+    },
+    "active": "Active",
+    "inactive": "Inactive",
+    "sites": "site",
+    "sitesPlural": "sites",
+    "plans": "plan",
+    "plansPlural": "plans",
+    "visibility": "Visibility",
+    "all": "All",
+    "visible": "Visible",
+    "hidden": "Hidden",
+    "level": "Level",
+    "site": "Site",
+    "platform": "Platform",
+    "siteModules": "Site modules"
   },
   "analytics": {
     "kpis": {

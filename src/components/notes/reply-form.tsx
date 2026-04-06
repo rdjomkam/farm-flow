@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,6 +30,7 @@ export function ReplyForm({
   onSuccess,
 }: ReplyFormProps) {
   const queryClient = useQueryClient();
+  const t = useTranslations("notes.replyForm");
   const noteService = useNoteService();
   const { call } = useApi();
   const [contenu, setContenu] = useState("");
@@ -53,7 +55,7 @@ export function ReplyForm({
             type: "autre",
           }),
         },
-        { successMessage: "Reponse envoyee !" }
+        { successMessage: t("successMessage") }
       );
     } else {
       result = await noteService.createNote({
@@ -77,8 +79,8 @@ export function ReplyForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       <Textarea
-        label="Repondre"
-        placeholder="Votre reponse..."
+        label={t("repondreLabel")}
+        placeholder={t("reponsePlaceholder")}
         value={contenu}
         onChange={(e) => setContenu(e.target.value)}
         rows={3}
@@ -90,12 +92,12 @@ export function ReplyForm({
           value={visibility}
           onValueChange={(v) => setVisibility(v as VisibiliteNote)}
         >
-          <SelectTrigger label="Visibilite" className="h-10 min-h-[40px]">
-            <SelectValue placeholder="Visibilite" />
+          <SelectTrigger label={t("visibiliteLabel")} className="h-10 min-h-[40px]">
+            <SelectValue placeholder={t("visibiliteLabel")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={VisibiliteNote.PUBLIC}>Public (visible par le client)</SelectItem>
-            <SelectItem value={VisibiliteNote.INTERNE}>Interne (DKFarm uniquement)</SelectItem>
+            <SelectItem value={VisibiliteNote.PUBLIC}>{t("visibilitePublic")}</SelectItem>
+            <SelectItem value={VisibiliteNote.INTERNE}>{t("visibiliteInterne")}</SelectItem>
           </SelectContent>
         </Select>
       )}
@@ -106,7 +108,7 @@ export function ReplyForm({
         className="self-end"
         size="sm"
       >
-        Repondre
+        {t("repondreButton")}
       </Button>
     </form>
   );

@@ -115,5 +115,21 @@
     "creer": "Create profile",
     "enregistrer": "Save",
     "annuler": "Cancel"
+  },
+  "list": {
+    "deleteConfirm": "Delete profile \"{nom}\"?",
+    "duplicatePrompt": "Duplicate profile name:",
+    "noProfiles": "No configuration profiles.",
+    "default": "Default",
+    "inactive": "Inactive",
+    "objective": "Objective",
+    "duration": "Duration",
+    "survivalTarget": "Survival target",
+    "excellent": "excellent",
+    "edit": "Edit"
+  },
+  "page": {
+    "description": "Manage the farming configuration profiles for your site. Each profile defines benchmarks, alert thresholds and feeding parameters.",
+    "newProfile": "New profile"
   }
 }

@@ -4,6 +4,41 @@
     "AVERTISSEMENT": "Avertissement",
     "INFO": "Info"
   },
+  "types": {
+    "highMortality": "Mortalite elevee",
+    "waterQuality": "Qualite de l'eau",
+    "lowStock": "Stock bas",
+    "feedingReminder": "Rappel alimentation",
+    "biometryReminder": "Rappel biometrie",
+    "custom": "Personnalisee",
+    "lateNeed": "Besoin en retard",
+    "highDensity": "Densite elevee",
+    "insufficientWaterRenewal": "Renouvellement insuffisant",
+    "noWaterQualityRecord": "Qualite eau non verifiee",
+    "criticalDensityAndWaterQuality": "Densite + qualite eau critiques",
+    "subscriptionRenewalReminder": "Rappel renouvellement abonnement",
+    "trialExpired": "Essai gratuit expire"
+  },
+  "statuts": {
+    "ACTIVE": "Active",
+    "LUE": "Lue",
+    "TRAITEE": "Traitee"
+  },
+  "notifications": {
+    "aucuneNotification": "Aucune notification",
+    "aucuneActive": "Aucune notification active",
+    "aucuneLue": "Aucune notification lue",
+    "aucuneTraitee": "Aucune notification traitee",
+    "countUnread": "{count} notification non lue",
+    "countUnreadPlural": "{count} notifications non lues",
+    "markAllRead": "Tout marquer comme lu",
+    "tabs": {
+      "all": "Toutes",
+      "active": "Actives",
+      "read": "Lues",
+      "processed": "Traitees"
+    }
+  },
   "card": {
     "nonLu": "Non lu",
     "ctaLabels": {

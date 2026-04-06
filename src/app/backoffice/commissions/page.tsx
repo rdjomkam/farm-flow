@@ -8,6 +8,7 @@
  * R2 : enums importes depuis @/types
  */
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { checkBackofficeAccess } from "@/lib/auth/backoffice";
 import { prisma } from "@/lib/db";
 import { AdminRetraitsList } from "@/components/commissions/admin-retraits-list";
@@ -23,6 +24,8 @@ export const dynamic = "force-dynamic";
 export default async function BackofficeCommissionsPage() {
   const session = await checkBackofficeAccess();
   if (!session) redirect("/login");
+
+  const t = await getTranslations("backoffice");
 
   const [retraitsDemandes, retraitsTraites] = await Promise.all([
     prisma.retraitPortefeuille.findMany({
@@ -78,8 +81,8 @@ export default async function BackofficeCommissionsPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-foreground">Gestion des commissions</h1>
-        <p className="text-sm text-muted-foreground">Retraits et portefeuilles des ingenieurs</p>
+        <h1 className="text-xl font-bold text-foreground">{t("pages.commissions.title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("pages.commissions.subtitle")}</p>
       </div>
 
       {/* Statistiques rapides */}

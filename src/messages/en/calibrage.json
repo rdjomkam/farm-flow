@@ -1,7 +1,11 @@
 {
   "page": {
     "detail": "Calibration detail",
-    "new": "New calibration"
+    "new": "New calibration",
+    "nouveau": "New",
+    "retourVague": "Back to batch",
+    "aucunCalibrage": "No grading records",
+    "aucunCalibrageDescription": "The first grading of this batch will appear here."
   },
   "categories": {
     "PETIT": "Small",
@@ -85,6 +89,24 @@
       "GROS": "Large",
       "TRES_GROS": "Extra large"
     }
+  },
+  "card": {
+    "modified": "Modified"
+  },
+  "modifications": {
+    "title": "Modification history",
+    "before": "Before:",
+    "after": "After:"
+  },
+  "detail": {
+    "title": "Calibration",
+    "byUser": "By {name}",
+    "redistributionGroups": "Redistribution groups",
+    "destination": "Destination: {name}",
+    "avgWeight": "Average weight: {weight} g",
+    "avgSize": "Average size: {size} cm",
+    "notes": "Notes",
+    "modifiedAfterCreation": "This calibration was modified after its creation."
   },
   "modifierDialog": {
     "trigger": "Edit",

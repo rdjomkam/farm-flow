@@ -8,6 +8,10 @@
     "noSearchResults": "Aucun résultat pour cette recherche.",
     "noActivationsFiltered": "Aucune activation pour ce filtre."
   },
+  "activations": {
+    "activeLe": "Active le",
+    "expireLe": "Expire le"
+  },
   "statutsActivation": {
     "ACTIVE": "Active",
     "EXPIREE": "Expiree",

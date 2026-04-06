@@ -46,15 +46,15 @@ import { TypeActivite, StatutActivite, TypeReleve, Permission, Recurrence, Phase
 import type { ActiviteWithRelations } from "@/types";
 import { typeActiviteLabels } from "@/lib/labels/activite";
 
-/** Labels abreges pour les types de releve (utilises dans le badge du dialog) */
-const typeReleveLabels: Record<TypeReleve, string> = {
-  [TypeReleve.BIOMETRIE]: "Biométrie",
-  [TypeReleve.MORTALITE]: "Mortalité",
-  [TypeReleve.ALIMENTATION]: "Alimentation",
-  [TypeReleve.QUALITE_EAU]: "Qualité eau",
-  [TypeReleve.COMPTAGE]: "Comptage",
-  [TypeReleve.OBSERVATION]: "Observation",
-  [TypeReleve.RENOUVELLEMENT]: "Renouvellement",
+/** Clés de traduction pour les types de relevé */
+const typeReleveTranslationKeys: Record<TypeReleve, string> = {
+  [TypeReleve.BIOMETRIE]: "recordTypes.biometry",
+  [TypeReleve.MORTALITE]: "recordTypes.mortality",
+  [TypeReleve.ALIMENTATION]: "recordTypes.feeding",
+  [TypeReleve.QUALITE_EAU]: "recordTypes.waterQuality",
+  [TypeReleve.COMPTAGE]: "recordTypes.count",
+  [TypeReleve.OBSERVATION]: "recordTypes.observation",
+  [TypeReleve.RENOUVELLEMENT]: "recordTypes.renewal",
 };
 
 const typeActiviteColors: Record<TypeActivite, string> = {
@@ -96,12 +96,13 @@ const typeActiviteIcons: Record<TypeActivite, React.ReactNode> = {
   [TypeActivite.AUTRE]: <MoreHorizontal className="h-4 w-4" />,
 };
 
-const recurrenceLabels: Record<Recurrence, string> = {
-  [Recurrence.QUOTIDIEN]: "Quotidienne",
-  [Recurrence.HEBDOMADAIRE]: "Hebdomadaire",
-  [Recurrence.BIMENSUEL]: "Bimensuelle",
-  [Recurrence.MENSUEL]: "Mensuelle",
-  [Recurrence.PERSONNALISE]: "Personnalisee",
+/** Clés de traduction pour les récurrences */
+const recurrenceTranslationKeys: Record<Recurrence, string> = {
+  [Recurrence.QUOTIDIEN]: "recurrences.QUOTIDIENNE",
+  [Recurrence.HEBDOMADAIRE]: "recurrences.HEBDOMADAIRE",
+  [Recurrence.BIMENSUEL]: "recurrences.BIMENSUEL",
+  [Recurrence.MENSUEL]: "recurrences.MENSUELLE",
+  [Recurrence.PERSONNALISE]: "recurrences.PERSONNALISE",
 };
 
 interface PrioriteConfig {
@@ -110,10 +111,9 @@ interface PrioriteConfig {
   badgeBgClass: string;
   badgeTextClass: string;
   dotClass: string;
-  label: string;
 }
 
-function getPrioriteConfig(priorite: number): PrioriteConfig {
+function getPrioriteConfig(priorite: number): Omit<PrioriteConfig, "label"> {
   if (priorite >= 3) {
     return {
       iconBgClass: "bg-danger/10",
@@ -121,7 +121,6 @@ function getPrioriteConfig(priorite: number): PrioriteConfig {
       badgeBgClass: "bg-danger/10",
       badgeTextClass: "text-danger",
       dotClass: "bg-danger",
-      label: "Urgente",
     };
   }
   if (priorite === 2) {
@@ -131,7 +130,6 @@ function getPrioriteConfig(priorite: number): PrioriteConfig {
       badgeBgClass: "bg-warning/10",
       badgeTextClass: "text-warning",
       dotClass: "bg-warning",
-      label: "Moyenne",
     };
   }
   return {
@@ -140,15 +138,10 @@ function getPrioriteConfig(priorite: number): PrioriteConfig {
     badgeBgClass: "bg-accent-blue/10",
     badgeTextClass: "text-accent-blue",
     dotClass: "bg-accent-blue",
-    label: "Basse",
   };
 }
 
-const DAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
-const MONTHS = [
-  "Janvier", "Fevrier", "Mars", "Avril", "Mai", "Juin",
-  "Juillet", "Aout", "Septembre", "Octobre", "Novembre", "Decembre",
-];
+// DAYS and MONTHS are resolved via t("jours") and t("mois") inside the component
 
 function getMonthDays(year: number, month: number) {
   const firstDay = new Date(year, month, 1);
@@ -183,7 +176,8 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
     return t(`statuts.${statut}`);
   }
   function getRecurrenceLabel(rec: string): string {
-    return recurrenceLabels[rec as Recurrence] ?? rec;
+    const key = recurrenceTranslationKeys[rec as Recurrence];
+    return key ? t(key as Parameters<typeof t>[0]) : rec;
   }
   function getPhaseLabel(phase: PhaseElevage): string {
     return t(`phases.${phase}`);
@@ -384,7 +378,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                 {t("chargement")}
               </span>
             ) : (
-              `${MONTHS[viewMonth]} ${viewYear}`
+              `${(t.raw("mois") as string[])[viewMonth]} ${viewYear}`
             )}
           </span>
           <Button variant="outline" size="sm" onClick={nextMonth} disabled={isFetchingMonth} className="h-10 w-10 p-0">
@@ -415,7 +409,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
           <div className="hidden md:block">
             {/* Grille calendrier */}
             <div className="grid grid-cols-7 border-l border-t border-border rounded-lg overflow-hidden">
-              {DAYS.map((d) => (
+              {(t.raw("jours") as string[]).map((d) => (
                 <div key={d} className="border-r border-b border-border bg-muted/30 px-2 py-1 text-center text-xs font-semibold text-muted-foreground">
                   {d}
                 </div>
@@ -466,7 +460,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
             {selectedDay && (
               <div className="mt-4">
                 <h3 className="text-sm font-semibold mb-2">
-                  {selectedDay} {MONTHS[viewMonth]} {viewYear}
+                  {selectedDay} {(t.raw("mois") as string[])[viewMonth]} {viewYear}
                   {activitesDuJour.length > 0 && ` · ${activitesDuJour.length} activite${activitesDuJour.length > 1 ? "s" : ""}`}
                 </h3>
                 {activitesDuJour.length === 0 ? (
@@ -754,7 +748,9 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                         className="flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
                         onClick={() => setSelectedActivite(null)}
                       >
-                        {typeReleveLabels[a.releve.typeReleve as TypeReleve] ?? a.releve.typeReleve}
+                        {typeReleveTranslationKeys[a.releve.typeReleve as TypeReleve]
+                          ? t(typeReleveTranslationKeys[a.releve.typeReleve as TypeReleve] as Parameters<typeof t>[0])
+                          : a.releve.typeReleve}
                         {" · "}
                         {new Date(a.releve.date).toLocaleDateString("fr-FR", {
                           day: "numeric", month: "short", year: "numeric",

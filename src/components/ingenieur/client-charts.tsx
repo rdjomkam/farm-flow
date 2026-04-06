@@ -2,6 +2,7 @@
 
 import { memo } from "react";
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartTooltip, ChartCrosshair } from "@/components/ui/chart-tooltip";
 import { TypeReleve } from "@/types";
@@ -194,6 +195,7 @@ const tooltipMortalite = (
 // ---------------------------------------------------------------------------
 
 const VagueCharts = memo(function VagueCharts({ vague }: { vague: VagueAvecReleves }) {
+  const t = useTranslations("ingenieur.emptyStates");
   const croissanceData = buildCroissanceData(vague);
   const mortaliteData = buildMortaliteData(vague);
   const survieData = buildSurvieData(vague);
@@ -207,7 +209,7 @@ const VagueCharts = memo(function VagueCharts({ vague }: { vague: VagueAvecRelev
       <Card>
         <CardContent className="flex items-center justify-center py-8 text-center p-4">
           <p className="text-sm text-muted-foreground">
-            Aucune donnee de biometrie ou mortalite disponible pour{" "}
+            {t("noBiometrieData")}{" "}
             <span className="font-medium">{vague.code}</span>.
           </p>
         </CardContent>

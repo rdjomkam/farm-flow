@@ -57,6 +57,7 @@ function NoteCard({
   note: NoteIngenieurWithRelations;
   isClientView: boolean;
 }) {
+  const t = useTranslations("notes");
   const [localRead, setLocalRead] = useState(note.isRead);
   const isUnread = !localRead;
 
@@ -75,29 +76,29 @@ function NoteCard({
                 variant={note.isFromClient ? "default" : "en_cours"}
                 className="shrink-0"
               >
-                {note.isFromClient ? "Mon observation" : "DKFarm"}
+                {note.isFromClient ? t("list.myObservation") : t("list.dkfarm")}
               </Badge>
             )}
             {note.isUrgent && (
               <Badge variant="annulee" className="flex items-center gap-1 shrink-0">
                 <AlertTriangle className="h-3 w-3" aria-hidden="true" />
-                Urgent
+                {t("list.urgent")}
               </Badge>
             )}
             {!isClientView && note.visibility === VisibiliteNote.INTERNE && (
               <Badge variant="default" className="flex items-center gap-1 shrink-0">
                 <EyeOff className="h-3 w-3" aria-hidden="true" />
-                Interne
+                {t("list.internal")}
               </Badge>
             )}
             {!isClientView && note.visibility === VisibiliteNote.PUBLIC && (
               <Badge variant="en_cours" className="flex items-center gap-1 shrink-0">
                 <Eye className="h-3 w-3" aria-hidden="true" />
-                Public
+                {t("list.public")}
               </Badge>
             )}
             {isUnread && !isClientView && (
-              <span className="h-2 w-2 rounded-full bg-primary shrink-0" aria-label="Non lue" />
+              <span className="h-2 w-2 rounded-full bg-primary shrink-0" aria-label={t("list.unreadDot")} />
             )}
           </div>
           <span className="text-xs text-muted-foreground shrink-0">
@@ -107,12 +108,12 @@ function NoteCard({
         <CardTitle className="text-base leading-snug mt-1">{note.titre}</CardTitle>
         {note.vague && (
           <p className="text-xs text-muted-foreground">
-            Vague : <span className="font-medium text-foreground">{note.vague.code}</span>
+            {t("list.vagueLabel")} <span className="font-medium text-foreground">{note.vague.code}</span>
           </p>
         )}
         {(note._count?.replies ?? 0) > 0 && (
           <p className="text-xs text-muted-foreground">
-            {note._count!.replies} reponse{note._count!.replies > 1 ? "s" : ""}
+            {note._count!.replies > 1 ? t("list.replyCountPlural", { count: note._count!.replies }) : t("list.replyCount", { count: note._count!.replies })}
           </p>
         )}
       </CardHeader>
@@ -177,7 +178,7 @@ function NoteCard({
         </div>
         {!isClientView && note.clientSite && (
           <p className="text-xs text-muted-foreground">
-            Destine a :{" "}
+            {t("list.destinedTo")}{" "}
             <span className="font-medium text-foreground">{note.clientSite.name}</span>
           </p>
         )}
@@ -228,22 +229,22 @@ export function NotesList({ notes, isClientView = false, onRefresh }: NotesListP
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-muted-foreground">
-            {notes.length} note{notes.length > 1 ? "s" : ""}
+            {notes.length > 1 ? t("list.noteCountPlural", { count: notes.length }) : t("list.noteCount", { count: notes.length })}
           </span>
           {!isClientView && unreadNotes.length > 0 && (
             <Badge variant="en_cours">
-              {unreadNotes.length} non lue{unreadNotes.length > 1 ? "s" : ""}
+              {unreadNotes.length > 1 ? t("list.unreadCountPlural", { count: unreadNotes.length }) : t("list.unreadCount", { count: unreadNotes.length })}
             </Badge>
           )}
           {urgentNotes.length > 0 && (
             <Badge variant="annulee" className="flex items-center gap-1">
               <AlertTriangle className="h-3 w-3" aria-hidden="true" />
-              {urgentNotes.length} urgente{urgentNotes.length > 1 ? "s" : ""}
+              {urgentNotes.length > 1 ? t("list.urgentCountPlural", { count: urgentNotes.length }) : t("list.urgentCount", { count: urgentNotes.length })}
             </Badge>
           )}
         </div>
         {onRefresh && (
-          <Button size="sm" variant="ghost" onClick={onRefresh} aria-label="Rafraichir">
+          <Button size="sm" variant="ghost" onClick={onRefresh} aria-label={t("list.refreshButton")}>
             <RefreshCw className="h-4 w-4" />
           </Button>
         )}
@@ -253,18 +254,18 @@ export function NotesList({ notes, isClientView = false, onRefresh }: NotesListP
       <Tabs defaultValue="toutes">
         <TabsList>
           <TabsTrigger value="toutes">
-            Toutes ({notes.length})
+            {t("list.allTab", { count: notes.length })}
           </TabsTrigger>
           <TabsTrigger value="urgentes">
-            Urgentes ({urgentNotes.length})
+            {t("list.urgentTab", { count: urgentNotes.length })}
           </TabsTrigger>
           {isClientView ? (
             <TabsTrigger value="mes_obs">
-              Mes obs. ({myObservations.length})
+              {t("list.myObsTab", { count: myObservations.length })}
             </TabsTrigger>
           ) : (
             <TabsTrigger value="non_lues">
-              Non lues ({unreadNotes.length})
+              {t("list.unreadTab", { count: unreadNotes.length })}
             </TabsTrigger>
           )}
         </TabsList>

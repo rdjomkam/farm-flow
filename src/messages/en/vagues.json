@@ -163,7 +163,15 @@
   },
   "gompertz": {
     "modelParams": "Model parameters",
-    "noBiometricData": "No biometric measurements available."
+    "noBiometricData": "No biometric measurements available.",
+    "modelStatus": "Model status",
+    "day": "Day {day}",
+    "predictionsVsReality": "Predictions vs Reality",
+    "actual": "Actual",
+    "predicted": "Predicted",
+    "deviation": "Deviation",
+    "projections": "Projections",
+    "dayHeader": "Day"
   },
   "comparison": {
     "selectTitle": "Select 2 to 4 batches",

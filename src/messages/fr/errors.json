@@ -1,6 +1,23 @@
 {
+  "global": {
+    "fallback": "Quelque chose s'est mal passé. Veuillez réessayer.",
+    "criticalTitle": "Une erreur critique est survenue",
+    "ref": "Réf:",
+    "retry": "Réessayer"
+  },
   "page": {
-    "somethingWentWrong": "Quelque chose s'est mal passé. Veuillez réessayer."
+    "somethingWentWrong": "Quelque chose s'est mal passé. Veuillez réessayer.",
+    "errorOccurred": "Une erreur est survenue",
+    "criticalError": "Une erreur critique est survenue",
+    "errorRef": "Réf:",
+    "notFoundTitle": "Page introuvable",
+    "notFoundDescription": "La page que vous cherchez n'existe pas ou a été déplacée.",
+    "offlineTitle": "Vous êtes hors ligne",
+    "offlineDescription": "Vérifiez votre connexion internet et réessayez. Les données enregistrées hors ligne seront synchronisées automatiquement.",
+    "criticalLayoutErrorTitle": "Erreur critique",
+    "criticalLayoutErrorDescription": "L'application a rencontré une erreur. Veuillez rafraîchir la page.",
+    "cannotDisplay": "Impossible d'afficher {section}. Veuillez réessayer.",
+    "thisSection": "cette section"
   },
   "validation": {
     "required": "Champ obligatoire",

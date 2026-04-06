@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { Pencil } from "lucide-react";
 import type { CalibrageModificationWithUser } from "@/types";
 
@@ -64,6 +67,7 @@ interface CalibrageModificationsListProps {
 export function CalibrageModificationsList({
   modifications,
 }: CalibrageModificationsListProps) {
+  const t = useTranslations("calibrage");
   if (modifications.length === 0) return null;
 
   // Grouper les modifications par raison + utilisateur + proximite temporelle
@@ -101,7 +105,7 @@ export function CalibrageModificationsList({
     <section className="p-2">
       <div className="flex items-center gap-2 mb-3">
         <Pencil className="h-4 w-4 text-muted-foreground" />
-        <h3 className="text-sm font-semibold">Historique des modifications</h3>
+        <h3 className="text-sm font-semibold">{t("modifications.title")}</h3>
       </div>
       <div className="flex flex-col gap-3">
         {groupes.map((groupe, idx) => (
@@ -136,11 +140,11 @@ export function CalibrageModificationsList({
                     // Affichage special pour les groupes (JSON complexe)
                     <div className="flex flex-col gap-1">
                       <div className="rounded bg-danger/10 px-2 py-1 text-xs text-danger/80">
-                        <span className="font-medium">Avant :</span>{" "}
+                        <span className="font-medium">{t("modifications.before")}</span>{" "}
                         {renderValue(champ.champModifie, champ.ancienneValeur)}
                       </div>
                       <div className="rounded bg-success/10 px-2 py-1 text-xs text-success">
-                        <span className="font-medium">Apres :</span>{" "}
+                        <span className="font-medium">{t("modifications.after")}</span>{" "}
                         {renderValue(champ.champModifie, champ.nouvelleValeur)}
                       </div>
                     </div>

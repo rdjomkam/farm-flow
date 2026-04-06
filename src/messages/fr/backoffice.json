@@ -108,6 +108,83 @@
       "processing": "Activation..."
     }
   },
+  "sites": {
+    "aucunPlan": "Aucun plan",
+    "aucunSiteTrouve": "Aucun site trouve",
+    "creeLe": "Cree le",
+    "assignerA": "Assigner a",
+    "siteIntrouvable": "Site introuvable",
+    "retourAuxSites": "Retour aux sites",
+    "aucunMembre": "Aucun membre.",
+    "aucunAbonnementActif": "Aucun abonnement actif.",
+    "supervise": "Supervise",
+    "modifieLe": "Modifie le",
+    "periode": "Periode",
+    "debut": "Debut",
+    "finDeGrace": "Fin de grace",
+    "prixPaye": "Prix paye",
+    "tabs": {
+      "all": "Tous ({count})",
+      "active": "Actifs ({count})",
+      "suspended": "Suspendus ({count})",
+      "blocked": "Bloques ({count})",
+      "archived": "Archives ({count})"
+    },
+    "table": {
+      "name": "Nom",
+      "status": "Statut",
+      "members": "Membres",
+      "modules": "Modules",
+      "actions": "Actions"
+    },
+    "detail": {
+      "tabs": {
+        "summary": "Resume",
+        "modules": "Modules",
+        "members": "Membres",
+        "subscription": "Abonnement",
+        "audit": "Audit"
+      },
+      "table": {
+        "name": "Nom",
+        "email": "Email",
+        "phone": "Telephone",
+        "role": "Role"
+      },
+      "siteModules": "Modules du site"
+    }
+  },
+  "exonerationPage": {
+    "metaTitle": "Exonerations — DKFarm Backoffice",
+    "title": "Exonerations",
+    "description": "Acces gratuits accordes manuellement (partenaires, ONG, projets pilotes).",
+    "newButton": "+ Nouvelle exoneration"
+  },
+  "pages": {
+    "modules": {
+      "title": "Registre des modules"
+    },
+    "remises": {
+      "title": "Gestion des remises",
+      "subtitle": "Remises globales et par site"
+    },
+    "plans": {
+      "title": "Plans d'abonnement"
+    },
+    "commissions": {
+      "title": "Gestion des commissions",
+      "subtitle": "Retraits et portefeuilles des ingenieurs"
+    },
+    "sites": {
+      "title": "Gestion des sites clients"
+    },
+    "dashboard": {
+      "title": "Analytics Plateforme"
+    },
+    "abonnements": {
+      "title": "Tous les abonnements"
+    }
+  },
   "siteStatus": {
     "title": "Changer le statut du site",
     "siteLabel": "Site :",

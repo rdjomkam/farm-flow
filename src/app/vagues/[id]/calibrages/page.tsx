@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Scissors } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { AccessDenied } from "@/components/ui/access-denied";
@@ -25,9 +26,10 @@ export default async function VagueCalibragesPage({
   if (!permissions) return <AccessDenied />;
 
   const { id } = await params;
-  const [vague, calibrages] = await Promise.all([
+  const [vague, calibrages, t] = await Promise.all([
     getVagueById(id, session.activeSiteId),
     getCalibrages(session.activeSiteId, { vagueId: id }),
+    getTranslations("calibrage.page"),
   ]);
 
   if (!vague) notFound();
@@ -44,7 +46,7 @@ export default async function VagueCalibragesPage({
             <Button size="sm" asChild>
               <Link href={`/vagues/${id}/calibrage/nouveau`}>
                 <Scissors className="h-4 w-4" />
-                Nouveau
+                {t("nouveau")}
               </Link>
             </Button>
           </div>
@@ -56,7 +58,7 @@ export default async function VagueCalibragesPage({
           <Button variant="ghost" size="sm" asChild>
             <Link href={`/vagues/${id}`}>
               <ArrowLeft className="h-4 w-4" />
-              Retour à la vague
+              {t("retourVague")}
             </Link>
           </Button>
         </div>

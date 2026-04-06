@@ -10,6 +10,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { checkBackofficeAccess } from "@/lib/auth/backoffice";
 import { getAdminSiteById } from "@/lib/queries/admin-sites";
 import { BackofficeSiteDetailClient } from "@/components/backoffice/backoffice-site-detail-client";
@@ -21,8 +22,11 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const site = await getAdminSiteById(id);
-  return { title: site ? site.name : "Site introuvable" };
+  const [site, t] = await Promise.all([
+    getAdminSiteById(id),
+    getTranslations("backoffice.sites"),
+  ]);
+  return { title: site ? site.name : t("siteIntrouvable") };
 }
 
 export const dynamic = "force-dynamic";
@@ -33,7 +37,10 @@ export default async function BackofficeSiteDetailPage({ params }: Props) {
   const session = await checkBackofficeAccess();
   if (!session) redirect("/login");
 
-  const site = await getAdminSiteById(id);
+  const [site, t] = await Promise.all([
+    getAdminSiteById(id),
+    getTranslations("backoffice.sites"),
+  ]);
   if (!site) notFound();
 
   return (
@@ -43,7 +50,7 @@ export default async function BackofficeSiteDetailPage({ params }: Props) {
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
       >
         <ArrowLeft className="h-4 w-4" />
-        Retour aux sites
+        {t("retourAuxSites")}
       </Link>
 
       <BackofficeSiteDetailClient site={site} />

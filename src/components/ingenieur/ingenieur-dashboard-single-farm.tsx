@@ -98,7 +98,7 @@ export async function IngenieurDashboardSingleFarm({
           <p className="text-sm font-medium text-white/70 capitalize">{today}</p>
           <h1 className="text-xl font-bold mt-1">{t("greeting", { name: sessionName })}</h1>
           <p className="text-sm text-white/80 mt-1 truncate">
-            Vue : {siteName}
+            {t("dashboard.siteView", { name: siteName })}
           </p>
         </div>
         <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 hidden sm:block" />
@@ -111,7 +111,7 @@ export async function IngenieurDashboardSingleFarm({
           <CardContent className="p-3">
             <div className="flex items-center gap-2 mb-1">
               <HeartPulse className="h-4 w-4 text-success" />
-              <span className="text-xs text-muted-foreground">Survie moy.</span>
+              <span className="text-xs text-muted-foreground">{t("dashboard.avgSurvival")}</span>
             </div>
             <p
               className={`text-lg font-bold ${
@@ -135,12 +135,12 @@ export async function IngenieurDashboardSingleFarm({
           <CardContent className="p-3">
             <div className="flex items-center gap-2 mb-1">
               <Fish className="h-4 w-4 text-primary" />
-              <span className="text-xs text-muted-foreground">Vagues</span>
+              <span className="text-xs text-muted-foreground">{t("dashboard.batches")}</span>
             </div>
             <p className="text-lg font-bold">
               {dashboardData.vaguesActives}
               <span className="text-xs font-normal text-muted-foreground ml-1">
-                en cours
+                {t("dashboard.inProgress")}
               </span>
             </p>
           </CardContent>
@@ -150,7 +150,7 @@ export async function IngenieurDashboardSingleFarm({
           <CardContent className="p-3">
             <div className="flex items-center gap-2 mb-1">
               <AlertTriangle className="h-4 w-4 text-danger" />
-              <span className="text-xs text-muted-foreground">Alertes</span>
+              <span className="text-xs text-muted-foreground">{t("dashboard.alerts")}</span>
             </div>
             <p
               className={`text-lg font-bold ${
@@ -168,7 +168,7 @@ export async function IngenieurDashboardSingleFarm({
           <CardContent className="p-3">
             <div className="flex items-center gap-2 mb-1">
               <LayoutDashboard className="h-4 w-4 text-accent-blue" />
-              <span className="text-xs text-muted-foreground">Bacs</span>
+              <span className="text-xs text-muted-foreground">{t("dashboard.tanks")}</span>
             </div>
             <p className="text-lg font-bold">
               {dashboardData.bacsOccupes}
@@ -187,14 +187,14 @@ export async function IngenieurDashboardSingleFarm({
             <div className="flex items-center gap-2">
               <Bell className="h-4 w-4 text-danger" />
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Alertes ({alertesActives.length})
+                {t("dashboard.alertesCount", { count: alertesActives.length })}
               </h2>
             </div>
             <Link
               href={`/monitoring/${clientSiteId}`}
               className="text-xs text-primary hover:underline font-medium flex items-center gap-0.5"
             >
-              Details <ChevronRight className="h-3 w-3" />
+              {t("dashboard.details")} <ChevronRight className="h-3 w-3" />
             </Link>
           </div>
           <div className="flex flex-col gap-2">
@@ -226,7 +226,7 @@ export async function IngenieurDashboardSingleFarm({
         <div className="flex items-center gap-2 rounded-xl border border-success/30 bg-success/5 p-3">
           <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
           <p className="text-sm text-success font-medium">
-            Aucune alerte active pour ce site.
+            {t("emptyStates.noAlertesActiveSite")}
           </p>
         </div>
       )}
@@ -235,13 +235,13 @@ export async function IngenieurDashboardSingleFarm({
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Taches du jour ({tachesAujourdhui.length})
+            {t("dashboard.tachesAujourdhui", { count: tachesAujourdhui.length })}
           </h2>
           <Link
             href="/mes-taches"
             className="text-xs text-primary hover:underline font-medium flex items-center gap-0.5"
           >
-            Tout voir <ChevronRight className="h-3 w-3" />
+            {t("dashboard.toutVoir")} <ChevronRight className="h-3 w-3" />
           </Link>
         </div>
         {tachesAujourdhui.length === 0 ? (
@@ -259,7 +259,7 @@ export async function IngenieurDashboardSingleFarm({
                     </p>
                     {tache.vague && (
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Vague {tache.vague.code}
+                        {t("dashboard.vagueCode", { code: tache.vague.code })}
                       </p>
                     )}
                   </div>
@@ -273,7 +273,7 @@ export async function IngenieurDashboardSingleFarm({
                   >
                     {tache.statut === StatutActivite.EN_RETARD
                       ? t("statuses.late")
-                      : "Aujourd'hui"}
+                      : t("dashboard.aujourdhui")}
                   </Badge>
                 </CardContent>
               </Card>
@@ -288,7 +288,7 @@ export async function IngenieurDashboardSingleFarm({
           href={`/monitoring/${clientSiteId}`}
           className="flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
         >
-          Voir la fiche complete du site
+          {t("dashboard.voirFicheComplete")}
           <ChevronRight className="h-4 w-4" />
         </Link>
       </div>

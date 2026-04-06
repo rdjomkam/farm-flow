@@ -89,6 +89,17 @@
       "ou": "ou"
     }
   },
+  "feeding": {
+    "quantity": "Quantite",
+    "granule": "Granule",
+    "mealsPerDay": "Repas/jour",
+    "avgWeight": "Poids moy.",
+    "dailyQuantity": "Quantite quotidienne",
+    "beforeStockout": "avant rupture",
+    "stockUnknown": "Stock inconnu",
+    "criticalStock": "Stock critique — commander rapidement",
+    "lowStock": "Stock faible — prevoir une commande"
+  },
   "placeholders": {
     "retourRegles": "Retour aux regles",
     "nouveau": "Nouveau placeholder",

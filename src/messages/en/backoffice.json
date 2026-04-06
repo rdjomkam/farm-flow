@@ -108,6 +108,83 @@
       "processing": "Enabling..."
     }
   },
+  "sites": {
+    "aucunPlan": "No plan",
+    "aucunSiteTrouve": "No site found",
+    "creeLe": "Created on",
+    "assignerA": "Assign to",
+    "siteIntrouvable": "Site not found",
+    "retourAuxSites": "Back to sites",
+    "aucunMembre": "No members.",
+    "aucunAbonnementActif": "No active subscription.",
+    "supervise": "Supervised",
+    "modifieLe": "Modified on",
+    "periode": "Period",
+    "debut": "Start",
+    "finDeGrace": "Grace period end",
+    "prixPaye": "Price paid",
+    "tabs": {
+      "all": "All ({count})",
+      "active": "Active ({count})",
+      "suspended": "Suspended ({count})",
+      "blocked": "Blocked ({count})",
+      "archived": "Archived ({count})"
+    },
+    "table": {
+      "name": "Name",
+      "status": "Status",
+      "members": "Members",
+      "modules": "Modules",
+      "actions": "Actions"
+    },
+    "detail": {
+      "tabs": {
+        "summary": "Summary",
+        "modules": "Modules",
+        "members": "Members",
+        "subscription": "Subscription",
+        "audit": "Audit"
+      },
+      "table": {
+        "name": "Name",
+        "email": "Email",
+        "phone": "Phone",
+        "role": "Role"
+      },
+      "siteModules": "Site modules"
+    }
+  },
+  "exonerationPage": {
+    "metaTitle": "Exemptions — DKFarm Backoffice",
+    "title": "Exemptions",
+    "description": "Free access granted manually (partners, NGOs, pilot projects).",
+    "newButton": "+ New exemption"
+  },
+  "pages": {
+    "modules": {
+      "title": "Module registry"
+    },
+    "remises": {
+      "title": "Discount management",
+      "subtitle": "Global and per-site discounts"
+    },
+    "plans": {
+      "title": "Subscription plans"
+    },
+    "commissions": {
+      "title": "Commission management",
+      "subtitle": "Withdrawals and engineer wallets"
+    },
+    "sites": {
+      "title": "Client site management"
+    },
+    "dashboard": {
+      "title": "Platform analytics"
+    },
+    "abonnements": {
+      "title": "All subscriptions"
+    }
+  },
   "siteStatus": {
     "title": "Change site status",
     "siteLabel": "Site:",

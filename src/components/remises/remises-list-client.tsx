@@ -49,13 +49,14 @@ interface RemisesListClientProps {
   remises: RemiseItem[];
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  [TypeRemise.EARLY_ADOPTER]: "Early Adopter",
-  [TypeRemise.SAISONNIERE]: "Saisonnière",
-  [TypeRemise.PARRAINAGE]: "Parrainage",
-  [TypeRemise.COOPERATIVE]: "Coopérative",
-  [TypeRemise.VOLUME]: "Volume",
-  [TypeRemise.MANUELLE]: "Manuelle",
+/** Clés de traduction pour les types de remise */
+const TYPE_TRANSLATION_KEYS: Record<string, string> = {
+  [TypeRemise.EARLY_ADOPTER]: "types.earlyAdopter",
+  [TypeRemise.SAISONNIERE]: "types.seasonal",
+  [TypeRemise.PARRAINAGE]: "types.referral",
+  [TypeRemise.COOPERATIVE]: "types.cooperative",
+  [TypeRemise.VOLUME]: "types.volume",
+  [TypeRemise.MANUELLE]: "types.manual",
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -274,7 +275,9 @@ export function RemisesListClient({
                     TYPE_COLORS[remise.type] ?? "bg-slate-100 text-slate-800"
                   }`}
                 >
-                  {TYPE_LABELS[remise.type] ?? remise.type}
+                  {TYPE_TRANSLATION_KEYS[remise.type]
+                    ? t(TYPE_TRANSLATION_KEYS[remise.type] as Parameters<typeof t>[0])
+                    : remise.type}
                 </span>
 
                 {/* Badge global ou site */}

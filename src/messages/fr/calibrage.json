@@ -1,7 +1,11 @@
 {
   "page": {
     "detail": "Détail du calibrage",
-    "new": "Nouveau calibrage"
+    "new": "Nouveau calibrage",
+    "nouveau": "Nouveau",
+    "retourVague": "Retour à la vague",
+    "aucunCalibrage": "Aucun calibrage",
+    "aucunCalibrageDescription": "Le premier calibrage de cette vague apparaitra ici."
   },
   "categories": {
     "PETIT": "Petit",
@@ -85,6 +89,24 @@
       "GROS": "Gros",
       "TRES_GROS": "Tres gros"
     }
+  },
+  "card": {
+    "modified": "Modifie"
+  },
+  "modifications": {
+    "title": "Historique des modifications",
+    "before": "Avant :",
+    "after": "Apres :"
+  },
+  "detail": {
+    "title": "Calibrage",
+    "byUser": "Par {name}",
+    "redistributionGroups": "Groupes de redistribution",
+    "destination": "Destination : {name}",
+    "avgWeight": "Poids moyen : {weight} g",
+    "avgSize": "Taille moyenne : {size} cm",
+    "notes": "Notes",
+    "modifiedAfterCreation": "Ce calibrage a ete modifie apres sa creation."
   },
   "modifierDialog": {
     "trigger": "Modifier",

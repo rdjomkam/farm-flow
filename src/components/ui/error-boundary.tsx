@@ -2,6 +2,7 @@
 
 import React, { Component, type ReactNode } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -68,7 +69,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         return this.props.fallback;
       }
 
-      const sectionLabel = this.props.section ?? "cette section";
+      const sectionLabel = this.props.section ?? "";
 
       return (
         <div className={this.props.className}>
@@ -90,7 +91,10 @@ interface ErrorFallbackProps {
  * ErrorFallback — UI de repli en français, cohérente avec le design Tailwind + Radix.
  * Peut également être utilisée de manière autonome pour des états d'erreur non-boundary.
  */
-export function ErrorFallback({ section = "cette section", onRetry }: ErrorFallbackProps) {
+export function ErrorFallback({ section, onRetry }: ErrorFallbackProps) {
+  const tErrors = useTranslations("errors.page");
+  const tCommon = useTranslations("common.buttons");
+
   return (
     <Card className="border-danger/20 bg-danger/5">
       <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
@@ -99,10 +103,10 @@ export function ErrorFallback({ section = "cette section", onRetry }: ErrorFallb
         </div>
         <div className="flex flex-col gap-1">
           <p className="text-sm font-medium text-foreground">
-            Une erreur est survenue
+            {tErrors("errorOccurred")}
           </p>
           <p className="text-xs text-muted-foreground">
-            Impossible d&apos;afficher {section}. Veuillez réessayer.
+            {tErrors("cannotDisplay", { section: section ?? tErrors("thisSection") })}
           </p>
         </div>
         {onRetry && (
@@ -113,7 +117,7 @@ export function ErrorFallback({ section = "cette section", onRetry }: ErrorFallb
             className="gap-2"
           >
             <RefreshCw className="h-4 w-4" />
-            Réessayer
+            {tCommon("retry")}
           </Button>
         )}
       </CardContent>

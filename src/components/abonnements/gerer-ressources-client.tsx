@@ -15,6 +15,7 @@
  */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Lock, Unlock, Loader2, AlertCircle, ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -52,6 +53,7 @@ export function GererRessourcesClient({
   vagues,
 }: GererRessourcesClientProps) {
   const router = useRouter();
+  const t = useTranslations("abonnements");
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,16 +72,14 @@ export function GererRessourcesClient({
       if (!res.ok) {
         const data = await res.json();
         if (data.message?.includes("quota") || data.code === "QUOTA_DEPASSE") {
-          throw new Error(
-            "Quota du plan actuel atteint. Upgradez votre plan pour débloquer cette ressource."
-          );
+          throw new Error(t("gererRessources.quotaReached"));
         }
-        throw new Error(data.message ?? "Erreur lors du déblocage.");
+        throw new Error(data.message ?? t("gererRessources.unlockError"));
       }
 
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue.");
+      setError(err instanceof Error ? err.message : t("errors.unknownError"));
     } finally {
       setLoading(null);
     }
@@ -95,12 +95,12 @@ export function GererRessourcesClient({
           <Lock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
           <div className="space-y-1">
             <p className="text-sm font-medium text-foreground">
-              {nbBloques} ressource{nbBloques !== 1 ? "s" : ""} bloquée
-              {nbBloques !== 1 ? "s" : ""}
+              {nbBloques > 1
+                ? t("gererRessources.blockedCountPlural", { count: nbBloques })
+                : t("gererRessources.blockedCount", { count: nbBloques })}
             </p>
             <p className="text-xs text-muted-foreground">
-              Ces ressources ont été bloquées lors de votre downgrade de plan.
-              Pour les débloquer, upgradez votre plan ou supprimez d'autres ressources.
+              {t("gererRessources.blockedExplanation")}
             </p>
           </div>
         </div>
@@ -110,7 +110,7 @@ export function GererRessourcesClient({
       <Link href="/mon-abonnement/changer-plan">
         <Button variant="outline" className="w-full min-h-[44px]">
           <ArrowUp className="mr-2 h-4 w-4" />
-          Upgrader mon plan pour débloquer
+          {t("gererRessources.upgradeToUnlock")}
         </Button>
       </Link>
 
@@ -126,7 +126,7 @@ export function GererRessourcesClient({
       {bacs.length > 0 && (
         <div className="space-y-2">
           <h2 className="text-sm font-semibold text-foreground">
-            Bacs bloqués ({bacs.length})
+            {t("gererRessources.blockedTanksTitle", { count: bacs.length })}
           </h2>
           <div className="rounded-lg border border-border bg-card divide-y divide-border">
             {bacs.map((bac) => (
@@ -138,8 +138,9 @@ export function GererRessourcesClient({
                       {bac.nom}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Bloqué le{" "}
-                      {bac.blockedAt.toLocaleDateString("fr-FR")}
+                      {t("gererRessources.blockedOn", {
+                        date: bac.blockedAt.toLocaleDateString("fr-FR"),
+                      })}
                     </p>
                   </div>
                 </div>
@@ -155,7 +156,7 @@ export function GererRessourcesClient({
                   ) : (
                     <>
                       <Unlock className="mr-1 h-3.5 w-3.5" />
-                      Débloquer
+                      {t("gererRessources.unlock")}
                     </>
                   )}
                 </Button>
@@ -169,7 +170,7 @@ export function GererRessourcesClient({
       {vagues.length > 0 && (
         <div className="space-y-2">
           <h2 className="text-sm font-semibold text-foreground">
-            Vagues bloquées ({vagues.length})
+            {t("gererRessources.blockedWavesTitle", { count: vagues.length })}
           </h2>
           <div className="rounded-lg border border-border bg-card divide-y divide-border">
             {vagues.map((vague) => (
@@ -181,8 +182,10 @@ export function GererRessourcesClient({
                       {vague.nom}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {vague.statut} — Bloquée le{" "}
-                      {vague.blockedAt.toLocaleDateString("fr-FR")}
+                      {t("gererRessources.waveBlockedStatus", {
+                        statut: vague.statut,
+                        date: vague.blockedAt.toLocaleDateString("fr-FR"),
+                      })}
                     </p>
                   </div>
                 </div>
@@ -198,7 +201,7 @@ export function GererRessourcesClient({
                   ) : (
                     <>
                       <Unlock className="mr-1 h-3.5 w-3.5" />
-                      Débloquer
+                      {t("gererRessources.unlock")}
                     </>
                   )}
                 </Button>

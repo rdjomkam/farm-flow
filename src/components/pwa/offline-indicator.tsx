@@ -1,6 +1,7 @@
 "use client";
 
 import { WifiOff, Loader2, CloudOff } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 
 interface OfflineIndicatorProps {
@@ -15,6 +16,7 @@ interface OfflineIndicatorProps {
 }
 
 export function OfflineIndicator({ siteId, session }: OfflineIndicatorProps) {
+  const t = useTranslations("pwa");
   const { isOnline, pendingCount, isSyncing } = useNetworkStatus({ siteId, session });
 
   // Hide when online and nothing pending
@@ -25,13 +27,13 @@ export function OfflineIndicator({ siteId, session }: OfflineIndicatorProps) {
       {!isOnline && (
         <>
           <WifiOff className="h-3.5 w-3.5 text-red-400" />
-          <span>Hors ligne</span>
+          <span>{t("offlineIndicator.offline")}</span>
         </>
       )}
       {isSyncing && (
         <>
           <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-          <span>Synchronisation...</span>
+          <span>{t("offlineIndicator.syncing")}</span>
         </>
       )}
       {pendingCount > 0 && !isSyncing && (
@@ -40,7 +42,7 @@ export function OfflineIndicator({ siteId, session }: OfflineIndicatorProps) {
           <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none">
             {pendingCount}
           </span>
-          <span>en attente</span>
+          <span>{t("offlineIndicator.pending")}</span>
         </>
       )}
     </div>

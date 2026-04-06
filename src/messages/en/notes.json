@@ -2,7 +2,64 @@
   "emptyState": {
     "noNotes": "No notes",
     "noNotesFiltered": "No notes match this filter.",
-    "noNotesSent": "No notes sent"
+    "noNotesSent": "No notes sent",
+    "noEchanges": "No exchanges"
+  },
+  "observationDialog": {
+    "trigger": "Report an issue",
+    "title": "Report an issue"
+  },
+  "replyForm": {
+    "successMessage": "Reply sent!",
+    "repondreLabel": "Reply",
+    "reponsePlaceholder": "Your reply...",
+    "visibiliteLabel": "Visibility",
+    "visibilitePublic": "Public (visible to client)",
+    "visibiliteInterne": "Internal (DKFarm only)",
+    "repondreButton": "Reply"
+  },
+  "list": {
+    "internal": "Internal",
+    "public": "Public",
+    "urgent": "Urgent",
+    "unreadDot": "Unread",
+    "refreshButton": "Refresh",
+    "noteCount": "{count} note",
+    "noteCountPlural": "{count} notes",
+    "unreadCount": "{count} unread",
+    "unreadCountPlural": "{count} unread",
+    "urgentCount": "{count} urgent",
+    "urgentCountPlural": "{count} urgent",
+    "allTab": "All ({count})",
+    "urgentTab": "Urgent ({count})",
+    "myObsTab": "My obs. ({count})",
+    "unreadTab": "Unread ({count})",
+    "myObservation": "My observation",
+    "dkfarm": "DKFarm",
+    "vagueLabel": "Batch:",
+    "replyCount": "{count} reply",
+    "replyCountPlural": "{count} replies",
+    "destinedTo": "For:",
+    "todayAt": "Today at {time}",
+    "yesterdayAt": "Yesterday at {time}"
+  },
+  "page": {
+    "exchanges": "Exchanges",
+    "notesSent": "Notes sent",
+    "exchangesSummary": "Exchanges summary",
+    "notesSummary": "Notes summary",
+    "newNote": "{count} new note",
+    "newNotes": "{count} new notes",
+    "urgentBadge": "{count} urgent",
+    "urgentBadgePlural": "{count} urgent",
+    "observationBadge": "{count} observation",
+    "observationBadgePlural": "{count} observations",
+    "unreadByClients": "{count} unread by clients",
+    "unreadByClientsPlural": "{count} unread by clients",
+    "emptyClientDescription": "Report an issue to start the conversation with your DKFarm engineer.",
+    "emptyDkfarmDescription": "You haven't sent any notes to your clients yet. Go to a client's page to send a note.",
+    "unreadAriaLabel": "{count} unread note",
+    "unreadAriaLabelPlural": "{count} unread notes"
   },
   "form": {
     "sectionInfos": "Note information",

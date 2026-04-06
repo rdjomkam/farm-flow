@@ -49,9 +49,10 @@ export default async function NotesPage() {
 // ---------------------------------------------------------------------------
 
 async function ClientNotesView({ siteId }: { siteId: string }) {
-  const [notes, vaguesResult] = await Promise.all([
+  const [notes, vaguesResult, t] = await Promise.all([
     getClientFeed(siteId),
     getVagues(siteId, { statut: StatutVague.EN_COURS }),
+    getTranslations("notes"),
   ]);
 
   const vagues = vaguesResult.data.map((v) => ({ id: v.id, code: v.code }));
@@ -63,10 +64,10 @@ async function ClientNotesView({ siteId }: { siteId: string }) {
 
   return (
     <>
-      <Header title="Echanges">
+      <Header title={t("page.exchanges")}>
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (
-            <div className="relative" aria-label={`${unreadCount} note${unreadCount > 1 ? "s" : ""} non lue${unreadCount > 1 ? "s" : ""}`}>
+            <div className="relative" aria-label={unreadCount > 1 ? t("page.unreadAriaLabelPlural", { count: unreadCount }) : t("page.unreadAriaLabel", { count: unreadCount })}>
               <Bell className="h-5 w-5 text-muted-foreground" />
               <span
                 className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground"
@@ -83,22 +84,22 @@ async function ClientNotesView({ siteId }: { siteId: string }) {
         {(unreadCount > 0 || urgentCount > 0 || observationCount > 0) && (
           <section
             className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-4 py-3"
-            aria-label="Resume des echanges"
+            aria-label={t("page.exchangesSummary")}
           >
             {unreadCount > 0 && (
               <Badge variant="en_cours">
-                {unreadCount} nouvelle{unreadCount > 1 ? "s" : ""} note{unreadCount > 1 ? "s" : ""}
+                {unreadCount > 1 ? t("page.newNotes", { count: unreadCount }) : t("page.newNote", { count: unreadCount })}
               </Badge>
             )}
             {urgentCount > 0 && (
               <Badge variant="annulee" className="flex items-center gap-1">
                 <span aria-hidden="true">!</span>
-                {urgentCount} urgente{urgentCount > 1 ? "s" : ""}
+                {urgentCount > 1 ? t("page.urgentBadgePlural", { count: urgentCount }) : t("page.urgentBadge", { count: urgentCount })}
               </Badge>
             )}
             {observationCount > 0 && (
               <Badge variant="default">
-                {observationCount} observation{observationCount > 1 ? "s" : ""}
+                {observationCount > 1 ? t("page.observationBadgePlural", { count: observationCount }) : t("page.observationBadge", { count: observationCount })}
               </Badge>
             )}
           </section>
@@ -109,8 +110,8 @@ async function ClientNotesView({ siteId }: { siteId: string }) {
         {notes.length === 0 ? (
           <EmptyState
             icon={<MessageSquare className="h-7 w-7" />}
-            title="Aucun echange"
-            description="Signalez un probleme pour commencer la conversation avec votre ingenieur DKFarm."
+            title={t("emptyState.noEchanges")}
+            description={t("page.emptyClientDescription")}
           />
         ) : (
           <NotesList notes={notesJson} isClientView={true} />
@@ -134,23 +135,23 @@ async function DKFarmNotesView({ siteId }: { siteId: string }) {
 
   return (
     <>
-      <Header title="Notes envoyees" />
+      <Header title={t("page.notesSent")} />
 
       <div className="flex flex-col gap-4 p-4">
         {(unreadByClient > 0 || urgentCount > 0) && (
           <section
             className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-4 py-3"
-            aria-label="Resume des notes"
+            aria-label={t("page.notesSummary")}
           >
             {unreadByClient > 0 && (
               <Badge variant="en_cours">
-                {unreadByClient} non lue{unreadByClient > 1 ? "s" : ""} par les clients
+                {unreadByClient > 1 ? t("page.unreadByClientsPlural", { count: unreadByClient }) : t("page.unreadByClients", { count: unreadByClient })}
               </Badge>
             )}
             {urgentCount > 0 && (
               <Badge variant="annulee" className="flex items-center gap-1">
                 <span aria-hidden="true">!</span>
-                {urgentCount} urgente{urgentCount > 1 ? "s" : ""}
+                {urgentCount > 1 ? t("page.urgentBadgePlural", { count: urgentCount }) : t("page.urgentBadge", { count: urgentCount })}
               </Badge>
             )}
           </section>
@@ -160,7 +161,7 @@ async function DKFarmNotesView({ siteId }: { siteId: string }) {
           <EmptyState
             icon={<MessageSquare className="h-7 w-7" />}
             title={t("emptyState.noNotesSent")}
-            description="Vous n'avez pas encore envoye de notes a vos clients. Rendez-vous sur la fiche d'un client pour envoyer une note."
+            description={t("page.emptyDkfarmDescription")}
           />
         ) : (
           <NotesList notes={notesJson} isClientView={false} />

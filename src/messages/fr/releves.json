@@ -106,6 +106,7 @@
       "notesPlaceholder": "Remarques complémentaires...",
       "submit": "Enregistrer le relevé"
     },
+    "erreurFormulaire": "Le formulaire contient {count} erreur{plural}. Veuillez corriger les champs indiqués.",
     "errors": {
       "vagueId": "Sélectionnez une vague.",
       "bacId": "Sélectionnez un bac.",

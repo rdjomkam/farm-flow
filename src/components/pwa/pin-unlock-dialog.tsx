@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Lock, AlertTriangle } from "lucide-react";
 
@@ -22,6 +23,7 @@ export function PinUnlockDialog({
   onUnlock,
   onForgotPin,
 }: PinUnlockDialogProps) {
+  const t = useTranslations("pwa");
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -72,25 +74,23 @@ export function PinUnlockDialog({
     try {
       const result = await onUnlock(pin);
       if (result.wiped) {
-        setError(
-          "Trop de tentatives. Données effacées. Reconnectez-vous en ligne."
-        );
+        setError(t("pin.tooManyAttempts"));
         return;
       }
       if (result.lockoutUntil) {
         setLockoutUntil(result.lockoutUntil);
-        setError("Trop de tentatives.");
+        setError(t("pin.tooManyAttemptsLockout"));
         setPin("");
         return;
       }
       if (result.retryAfter) {
         setRetryAfter(result.retryAfter);
-        setError("PIN incorrect");
+        setError(t("pin.pinIncorrect"));
         setPin("");
         return;
       }
       if (!result.success) {
-        setError("PIN incorrect");
+        setError(t("pin.pinIncorrect"));
         setPin("");
         if (inputRef.current) inputRef.current.focus();
       }
@@ -110,17 +110,17 @@ export function PinUnlockDialog({
             </div>
 
             <Dialog.Title className="text-lg font-semibold">
-              Session verrouillée
+              {t("pin.sessionLocked")}
             </Dialog.Title>
 
             <Dialog.Description className="text-sm text-muted-foreground text-center">
-              Saisissez votre PIN pour déverrouiller
+              {t("pin.enterPinToUnlock")}
             </Dialog.Description>
 
             {lockoutUntil ? (
               <div className="flex items-center gap-2 rounded-lg bg-warning/10 p-3 text-sm text-warning">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
-                <span>Verrouillé pendant {lockoutRemaining}</span>
+                <span>{t("lockedFor", { duration: lockoutRemaining })}</span>
               </div>
             ) : (
               <>
@@ -151,7 +151,7 @@ export function PinUnlockDialog({
 
                 {retryAfter && retryRemaining && (
                   <p className="text-sm text-warning">
-                    Patientez {retryRemaining} avant de réessayer
+                    {t("pin.waitBeforeRetry", { duration: retryRemaining })}
                   </p>
                 )}
 
@@ -160,7 +160,7 @@ export function PinUnlockDialog({
                   disabled={loading || pin.length !== 6 || !!retryAfter}
                   className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
                 >
-                  {loading ? "Vérification..." : "Déverrouiller"}
+                  {loading ? t("pin.verifying") : t("pin.unlock")}
                 </button>
               </>
             )}
@@ -169,7 +169,7 @@ export function PinUnlockDialog({
               onClick={onForgotPin}
               className="text-xs text-muted-foreground hover:text-foreground"
             >
-              PIN oublié ? (les données locales seront effacées)
+              {t("pin.forgotPin")}
             </button>
           </div>
         </Dialog.Content>
