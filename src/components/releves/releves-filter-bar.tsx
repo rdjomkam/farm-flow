@@ -17,7 +17,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { RelevesFilterSheet } from "./releves-filter-sheet";
-import { countActiveFilters, ALL_VALUE } from "@/lib/releve-search-params";
+import { countActiveFilters, ALL_VALUE, ALL_FILTER_PARAMS } from "@/lib/releve-search-params";
 import type { ReleveSearchParams } from "@/lib/releve-search-params";
 
 interface BacOption {
@@ -108,10 +108,8 @@ export function ReleveFilterBar({ current, vagues }: Props) {
 
   function updateMultipleParams(updates: Partial<ReleveSearchParams>) {
     const params = new URLSearchParams(searchParams.toString());
-    // Reset tous les filtres d'abord
-    ["vagueId", "bacId", "typeReleve", "dateFrom", "dateTo", "modifie"].forEach(
-      (k) => params.delete(k)
-    );
+    // Reset TOUS les filtres (y compris les filtres specifiques) via ALL_FILTER_PARAMS
+    ALL_FILTER_PARAMS.forEach((k) => params.delete(k));
     params.delete("offset");
     // Appliquer les nouvelles valeurs
     Object.entries(updates).forEach(([k, v]) => {
@@ -206,19 +204,7 @@ export function ReleveFilterBar({ current, vagues }: Props) {
               )}
             </button>
           </SheetTrigger>
-          <SheetContent className="!left-auto !right-0 !inset-y-0 !w-full sm:!w-96 overflow-y-auto">
-            <div className="flex items-center justify-between px-4 pt-6 pb-2 border-b border-border">
-              <h2 className="text-base font-semibold">Filtres</h2>
-              {activeCount > 0 && (
-                <button
-                  type="button"
-                  onClick={resetAllFilters}
-                  className="text-sm text-muted-foreground hover:text-foreground underline"
-                >
-                  Effacer tout
-                </button>
-              )}
-            </div>
+          <SheetContent className="!left-auto !right-0 !inset-y-0 !w-full sm:!w-96 !p-0 flex flex-col">
             <RelevesFilterSheet
               current={{
                 vagueId: localVagueId || undefined,

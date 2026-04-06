@@ -456,6 +456,8 @@ describe("GET /api/export/vague/[id]", () => {
     mockGetVagueById.mockResolvedValue(FAKE_VAGUE);
     mockGetIndicateursVague.mockResolvedValue(FAKE_INDICATEURS);
     mockPrismaFindUnique.mockResolvedValue(FAKE_SITE);
+    // ADR-038 : la route charge les releves separement via prisma.releve.findMany
+    mockPrismaReleveFindMany.mockResolvedValue(FAKE_VAGUE.releves);
     const mod = await import("@/app/api/export/vague/[id]/route");
     GET = mod.GET;
   });

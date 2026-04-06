@@ -14,6 +14,7 @@ import { AccessDenied } from "@/components/ui/access-denied";
 import { CalibragesList } from "@/components/calibrage/calibrages-list";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getVagueById } from "@/lib/queries/vagues";
+import { getReleves } from "@/lib/queries/releves";
 import { getIndicateursVague } from "@/lib/queries/indicateurs";
 import { getCalibrages } from "@/lib/queries/calibrages";
 import { prisma } from "@/lib/db";
@@ -45,8 +46,16 @@ export default async function VagueDetailPage({
   const t = await getTranslations("vagues");
 
   const { id } = await params;
-  const [vague, indicateurs, produitsDb, calibragesDb, gompertzRecord, configElevages] = await Promise.all([
+  const [vague, biometriesData, relevesPreview, indicateurs, produitsDb, calibragesDb, gompertzRecord, configElevages] = await Promise.all([
     getVagueById(id, session.activeSiteId),
+    // Biometries pour le graphique — select restreint (ADR-038 A-D2)
+    prisma.releve.findMany({
+      where: { vagueId: id, siteId: session.activeSiteId, typeReleve: TypeReleve.BIOMETRIE },
+      orderBy: { date: "asc" },
+      select: { typeReleve: true, date: true, poidsMoyen: true, bacId: true },
+    }),
+    // 3 derniers relevés pour la preview (ADR-038 A-D2)
+    getReleves(session.activeSiteId, { vagueId: id }, { limit: 3, offset: 0 }),
     getIndicateursVague(session.activeSiteId, id),
     prisma.produit.findMany({
       where: {
@@ -96,9 +105,15 @@ export default async function VagueDetailPage({
   };
 
   // Build chart data from biometrie releves — aggregate by date (weighted avg across bacs)
-  const vivantsByBac = computeVivantsByBac(vague.bacs, vague.releves, vague.nombreInitial);
-  const biometries = vague.releves.filter(
-    (r) => r.typeReleve === TypeReleve.BIOMETRIE && r.poidsMoyen !== null
+  // Note: vivantsByBac needs mortalite + comptage releves — load them separately (ADR-038 A-D2)
+  const relevesForVivants = await prisma.releve.findMany({
+    where: { vagueId: id, siteId: session.activeSiteId },
+    orderBy: { date: "asc" },
+    select: { typeReleve: true, date: true, nombreMorts: true, nombreCompte: true, bacId: true },
+  });
+  const vivantsByBac = computeVivantsByBac(vague.bacs, relevesForVivants, vague.nombreInitial);
+  const biometries = biometriesData.filter(
+    (r) => r.poidsMoyen !== null
   );
   const groupedByDate = new Map<string, typeof biometries>();
   for (const r of biometries) {
@@ -312,7 +327,7 @@ export default async function VagueDetailPage({
 
         {/* Relevés */}
         <RelevesList
-          releves={vague.releves as unknown as Releve[]}
+          releves={relevesPreview.data as unknown as Releve[]}
           produits={produitsDb.map((p) => ({
             id: p.id,
             nom: p.nom,

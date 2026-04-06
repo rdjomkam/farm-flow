@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getVagueById, updateVague } from "@/lib/queries/vagues";
+import { getReleves } from "@/lib/queries/releves";
 import { getIndicateursVague } from "@/lib/queries/indicateurs";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
@@ -21,7 +22,11 @@ export async function GET(
       return apiError(404, "Vague introuvable.", { code: ErrorKeys.NOT_FOUND_VAGUE });
     }
 
-    const indicateurs = await getIndicateursVague(auth.activeSiteId, id);
+    const [indicateurs, relevesData] = await Promise.all([
+      getIndicateursVague(auth.activeSiteId, id),
+      // Charger les releves separement (ADR-038 — getVagueById ne retourne plus de releves)
+      getReleves(auth.activeSiteId, { vagueId: id }, { limit: 50, offset: 0 }),
+    ]);
 
     return NextResponse.json({
       vague: {
@@ -37,7 +42,7 @@ export async function GET(
         updatedAt: vague.updatedAt,
       },
       bacs: vague.bacs,
-      releves: vague.releves,
+      releves: relevesData.data,
       indicateurs: indicateurs ?? {
         tauxSurvie: null,
         fcr: null,

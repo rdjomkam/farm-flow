@@ -488,16 +488,32 @@ export interface Vague {
   statut: StatutVague;
   /** True si la vague est bloquée (accès restreint suite à abonnement expiré) — Sprint 45 */
   isBlocked: boolean;
+  /** Config d'elevage associee (nullable) — Sprint 19 */
+  configElevageId: string | null;
+  /** Pack activation source (nullable) — Sprint 20 */
+  packActivationId?: string | null;
   /** ID du site (ferme) — R8 */
   siteId: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
+/** Vague avec ses bacs uniquement (sans releves) */
+export interface VagueWithBacs extends Vague {
+  bacs: Bac[];
+}
+
 /** Vague avec ses relations bacs et releves chargees */
 export interface VagueWithRelations extends Vague {
   bacs: Bac[];
   releves: Releve[];
+}
+
+/** Vague avec relevés paginés et total — retournée par getVagueByIdWithReleves() */
+export interface VagueWithPaginatedReleves {
+  vague: VagueWithBacs;
+  releves: Releve[];
+  total: number;
 }
 
 /**

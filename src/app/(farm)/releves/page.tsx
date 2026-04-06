@@ -8,6 +8,7 @@ import { RelevesGlobalList } from "@/components/releves/releves-global-list";
 import { ReleveFilterBar } from "@/components/releves/releves-filter-bar";
 import { RelevesActiveFilters } from "@/components/releves/releves-active-filters";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
+import { getReleves } from "@/lib/queries/releves";
 import { prisma } from "@/lib/db";
 import { parseReleveSearchParams } from "@/lib/releve-search-params";
 import { StatutVague, Permission, CategorieProduit } from "@/types";
@@ -32,7 +33,7 @@ export default async function RelevesPage({
   // Resoudre les searchParams (Next.js 14+ App Router — Promise)
   const rawParams = await searchParams;
 
-  // Convertir en ReleveSearchParams (valeurs simples uniquement)
+  // Convertir en ReleveSearchParams (valeurs simples uniquement — inclut les nouveaux filtres specifiques)
   const current: ReleveSearchParams = {
     vagueId: typeof rawParams.vagueId === "string" ? rawParams.vagueId : undefined,
     bacId: typeof rawParams.bacId === "string" ? rawParams.bacId : undefined,
@@ -41,26 +42,37 @@ export default async function RelevesPage({
     dateTo: typeof rawParams.dateTo === "string" ? rawParams.dateTo : undefined,
     modifie: typeof rawParams.modifie === "string" ? rawParams.modifie : undefined,
     offset: typeof rawParams.offset === "string" ? rawParams.offset : undefined,
+    // Filtres specifiques BIOMETRIE
+    poidsMoyenMin: typeof rawParams.poidsMoyenMin === "string" ? rawParams.poidsMoyenMin : undefined,
+    poidsMoyenMax: typeof rawParams.poidsMoyenMax === "string" ? rawParams.poidsMoyenMax : undefined,
+    tailleMoyenneMin: typeof rawParams.tailleMoyenneMin === "string" ? rawParams.tailleMoyenneMin : undefined,
+    tailleMoyenneMax: typeof rawParams.tailleMoyenneMax === "string" ? rawParams.tailleMoyenneMax : undefined,
+    // Filtres specifiques MORTALITE
+    causeMortalite: typeof rawParams.causeMortalite === "string" ? rawParams.causeMortalite : undefined,
+    nombreMortsMin: typeof rawParams.nombreMortsMin === "string" ? rawParams.nombreMortsMin : undefined,
+    nombreMortsMax: typeof rawParams.nombreMortsMax === "string" ? rawParams.nombreMortsMax : undefined,
+    // Filtres specifiques ALIMENTATION
+    typeAliment: typeof rawParams.typeAliment === "string" ? rawParams.typeAliment : undefined,
+    comportementAlim: typeof rawParams.comportementAlim === "string" ? rawParams.comportementAlim : undefined,
+    frequenceAlimentMin: typeof rawParams.frequenceAlimentMin === "string" ? rawParams.frequenceAlimentMin : undefined,
+    frequenceAlimentMax: typeof rawParams.frequenceAlimentMax === "string" ? rawParams.frequenceAlimentMax : undefined,
+    // Filtres specifiques QUALITE_EAU
+    temperatureMin: typeof rawParams.temperatureMin === "string" ? rawParams.temperatureMin : undefined,
+    temperatureMax: typeof rawParams.temperatureMax === "string" ? rawParams.temperatureMax : undefined,
+    phMin: typeof rawParams.phMin === "string" ? rawParams.phMin : undefined,
+    phMax: typeof rawParams.phMax === "string" ? rawParams.phMax : undefined,
+    // Filtres specifiques COMPTAGE
+    methodeComptage: typeof rawParams.methodeComptage === "string" ? rawParams.methodeComptage : undefined,
+    // Filtres specifiques OBSERVATION
+    descriptionSearch: typeof rawParams.descriptionSearch === "string" ? rawParams.descriptionSearch : undefined,
+    // Filtres specifiques RENOUVELLEMENT
+    pourcentageMin: typeof rawParams.pourcentageMin === "string" ? rawParams.pourcentageMin : undefined,
+    pourcentageMax: typeof rawParams.pourcentageMax === "string" ? rawParams.pourcentageMax : undefined,
   };
 
   const parsed = parseReleveSearchParams(current);
 
-  // Construire les filtres Prisma
-  const where: Record<string, unknown> = { siteId };
-  if (parsed.vagueId) where.vagueId = parsed.vagueId;
-  if (parsed.bacId) where.bacId = parsed.bacId;
-  if (parsed.typeReleve) where.typeReleve = parsed.typeReleve;
-  if (parsed.dateFrom || parsed.dateTo) {
-    where.date = {
-      ...(parsed.dateFrom && { gte: new Date(parsed.dateFrom) }),
-      ...(parsed.dateTo && { lte: new Date(parsed.dateTo) }),
-    };
-  }
-  if (parsed.modifie) {
-    where.modifie = true;
-  }
-
-  // Charger en parallele : vagues (pour le selecteur) + releves (avec relations) + produits
+  // Charger en parallele : vagues (pour le selecteur) + releves + produits + chips labels
   const [vaguesRaw, releveData, produitsDb, vagueForChip, bacForChip] = await Promise.all([
     // Vagues EN_COURS pour le selecteur de filtre
     prisma.vague.findMany({
@@ -69,27 +81,8 @@ export default async function RelevesPage({
       orderBy: { dateDebut: "desc" },
       take: 50,
     }),
-    // Releves avec relations pour affichage
-    Promise.all([
-      prisma.releve.findMany({
-        where,
-        orderBy: { date: "desc" },
-        take: parsed.limit,
-        skip: parsed.offset,
-        include: {
-          bac: { select: { id: true, nom: true } },
-          consommations: {
-            include: { produit: true },
-          },
-          modifications: {
-            orderBy: { createdAt: "desc" },
-            take: 1,
-            include: { user: { select: { id: true, name: true } } },
-          },
-        },
-      }),
-      prisma.releve.count({ where }),
-    ]),
+    // Releves via getReleves() qui supporte tous les filtres (ADR-038 B)
+    getReleves(siteId, parsed, { limit: parsed.limit, offset: parsed.offset }),
     // Produits pour le formulaire de modification
     prisma.produit.findMany({
       where: {
@@ -116,7 +109,7 @@ export default async function RelevesPage({
       : Promise.resolve(null),
   ]);
 
-  const [releves, total] = releveData;
+  const { data: releves, total } = releveData;
 
   const vagues = vaguesRaw.map((v) => ({
     id: v.id,

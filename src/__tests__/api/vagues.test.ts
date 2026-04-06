@@ -23,6 +23,16 @@ vi.mock("@/lib/queries/indicateurs", () => ({
   getIndicateursVague: (...args: unknown[]) => mockGetIndicateursVague(...args),
 }));
 
+// Mock releves queries — necessaire depuis ADR-038 (getReleves appele dans GET /api/vagues/[id])
+vi.mock("@/lib/queries/releves", () => ({
+  getReleves: vi.fn().mockResolvedValue({ data: [], total: 0 }),
+  createReleve: vi.fn(),
+  getReleveById: vi.fn(),
+  updateReleve: vi.fn(),
+  deleteReleve: vi.fn(),
+  patchReleve: vi.fn(),
+}));
+
 // Mock check-quotas : fonctions pures utilisées dans la transaction
 vi.mock("@/lib/abonnements/check-quotas", () => ({
   isQuotaAtteint: (ressource: { actuel: number; limite: number | null }) => {

@@ -428,6 +428,39 @@ export interface ReleveFilters {
   nonLie?: boolean;
   /** Filtrer uniquement les releves modifies (ADR-014) */
   modifie?: boolean;
+
+  // --- Filtres specifiques BIOMETRIE ---
+  poidsMoyenMin?: number;
+  poidsMoyenMax?: number;
+  tailleMoyenneMin?: number;
+  tailleMoyenneMax?: number;
+
+  // --- Filtres specifiques MORTALITE ---
+  causeMortalite?: import("./models").CauseMortalite;
+  nombreMortsMin?: number;
+  nombreMortsMax?: number;
+
+  // --- Filtres specifiques ALIMENTATION ---
+  typeAliment?: import("./models").TypeAliment;
+  comportementAlim?: import("./models").ComportementAlimentaire;
+  frequenceAlimentMin?: number;
+  frequenceAlimentMax?: number;
+
+  // --- Filtres specifiques QUALITE_EAU ---
+  temperatureMin?: number;
+  temperatureMax?: number;
+  phMin?: number;
+  phMax?: number;
+
+  // --- Filtres specifiques COMPTAGE ---
+  methodeComptage?: import("./models").MethodeComptage;
+
+  // --- Filtres specifiques OBSERVATION ---
+  descriptionSearch?: string;
+
+  // --- Filtres specifiques RENOUVELLEMENT ---
+  pourcentageMin?: number;
+  pourcentageMax?: number;
 }
 
 /** Reponse liste des releves */

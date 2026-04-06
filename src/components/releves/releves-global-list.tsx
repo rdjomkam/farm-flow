@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ModifierReleveDialog } from "@/components/releves/modifier-releve-dialog";
 import { ReleveDetails } from "@/components/releves/releve-details";
-import { LoadMoreButton } from "@/components/releves/load-more-button";
+import { PaginationFooter } from "@/components/releves/pagination-footer";
 import { TypeReleve, Permission } from "@/types";
 import type { Releve } from "@/types";
 import type { ProduitOption } from "@/components/releves/consommation-fields";
@@ -147,11 +147,12 @@ export function RelevesGlobalList({
           />
         ))}
       </div>
-      {total > offset + limit && (
-        <div className="mt-4">
-          <LoadMoreButton offset={offset} total={total} />
-        </div>
-      )}
+      <PaginationFooter
+        shown={offset + releves.length}
+        total={total}
+        limit={limit}
+        offset={offset}
+      />
     </div>
   );
 }

@@ -30,28 +30,61 @@ export async function getVagues(
   return { data, total };
 }
 
-/** Recupere une vague par ID (verifie qu'elle appartient au site) */
-export async function getVagueById(id: string, siteId: string) {
+/** Recupere une vague par ID avec ses bacs uniquement — SANS les releves (ADR-038 A-D1) */
+export async function getVagueById(
+  id: string,
+  siteId: string
+): Promise<import("@/types").VagueWithBacs | null> {
   return prisma.vague.findFirst({
     where: { id, siteId },
     include: {
       bacs: { orderBy: { nom: "asc" } },
-      releves: {
-        orderBy: { date: "desc" },
-        include: {
-          bac: { select: { id: true, nom: true } },
-          consommations: {
-            include: { produit: true },
-          },
-          modifications: {
-            orderBy: { createdAt: "desc" },
-            take: 1,
-            include: { user: { select: { id: true, name: true } } },
-          },
+    },
+  }) as Promise<import("@/types").VagueWithBacs | null>;
+}
+
+/**
+ * Recupere la vague avec ses bacs + ses relevés paginés + le total.
+ * Usage : page /vagues/[id]/releves (ADR-038 A-D1)
+ */
+export async function getVagueByIdWithReleves(
+  id: string,
+  siteId: string,
+  pagination?: { limit: number; offset: number }
+): Promise<{ vague: import("@/types").VagueWithBacs; releves: import("@/types").Releve[]; total: number } | null> {
+  const limit = pagination?.limit ?? 20;
+  const offset = pagination?.offset ?? 0;
+
+  const [vague, releves, total] = await Promise.all([
+    prisma.vague.findFirst({
+      where: { id, siteId },
+      include: { bacs: { orderBy: { nom: "asc" } } },
+    }),
+    prisma.releve.findMany({
+      where: { vagueId: id, siteId },
+      orderBy: { date: "desc" },
+      take: limit,
+      skip: offset,
+      include: {
+        bac: { select: { id: true, nom: true } },
+        consommations: { include: { produit: true } },
+        modifications: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          include: { user: { select: { id: true, name: true } } },
         },
       },
-    },
-  });
+    }),
+    prisma.releve.count({ where: { vagueId: id, siteId } }),
+  ]);
+
+  if (!vague) return null;
+
+  return {
+    vague: vague as unknown as import("@/types").VagueWithBacs,
+    releves: releves as unknown as import("@/types").Releve[],
+    total,
+  };
 }
 
 /** Cree une vague et assigne les bacs en transaction */

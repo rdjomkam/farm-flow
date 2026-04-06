@@ -6,18 +6,20 @@ import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { AccessDenied } from "@/components/ui/access-denied";
-import { RelevesList } from "@/components/vagues/releves-list";
+import { RelevesGlobalList } from "@/components/releves/releves-global-list";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
-import { getVagueById } from "@/lib/queries/vagues";
+import { getVagueByIdWithReleves } from "@/lib/queries/vagues";
 import { prisma } from "@/lib/db";
 import { Permission, CategorieProduit, StatutVague } from "@/types";
-import type { Releve } from "@/types";
 import type { ProduitOption } from "@/components/releves/consommation-fields";
+import { RELEVES_PAGE_LIMIT } from "@/lib/releve-search-params";
 
 export default async function VagueRelevesPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await getServerSession();
   if (!session) redirect("/login");
@@ -31,8 +33,18 @@ export default async function VagueRelevesPage({
     const tVagues = await getTranslations("vagues");
 
     const { id } = await params;
-    const [vague, produitsDb] = await Promise.all([
-      getVagueById(id, session.activeSiteId),
+    const resolvedSearchParams = await searchParams;
+
+    // Lire l'offset depuis les searchParams (pagination URL)
+    const offsetRaw = resolvedSearchParams?.offset;
+    const offset = Math.max(
+      0,
+      parseInt(Array.isArray(offsetRaw) ? offsetRaw[0] : (offsetRaw ?? "0"), 10) || 0
+    );
+    const limit = RELEVES_PAGE_LIMIT;
+
+    const [result, produitsDb] = await Promise.all([
+      getVagueByIdWithReleves(id, session.activeSiteId, { limit, offset }),
       prisma.produit.findMany({
         where: {
           siteId: session.activeSiteId,
@@ -44,13 +56,14 @@ export default async function VagueRelevesPage({
       }),
     ]);
 
-    if (!vague) notFound();
+    if (!result) notFound();
 
+    const { vague, releves, total } = result;
     const isEnCours = vague.statut === StatutVague.EN_COURS;
 
     return (
       <>
-        <Header title={`${t("list.title", { count: vague.releves.length })} — ${vague.code}`} />
+        <Header title={`${t("list.title", { count: total })} — ${vague.code}`} />
 
         <div className="flex flex-col gap-4 p-4">
           {isEnCours && permissions.includes(Permission.RELEVES_CREER) && (
@@ -64,8 +77,12 @@ export default async function VagueRelevesPage({
             </div>
           )}
 
-          <RelevesList
-            releves={vague.releves as unknown as Releve[]}
+          <RelevesGlobalList
+            releves={releves}
+            total={total}
+            offset={offset}
+            limit={limit}
+            permissions={permissions}
             produits={produitsDb.map((p) => ({
               id: p.id,
               nom: p.nom,
@@ -73,7 +90,6 @@ export default async function VagueRelevesPage({
               unite: p.unite,
               stockActuel: p.stockActuel,
             } satisfies ProduitOption))}
-            permissions={permissions}
           />
 
           <div className="pb-4">

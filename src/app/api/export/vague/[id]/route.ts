@@ -28,9 +28,13 @@ export async function GET(
 
     const { id } = await params;
 
-    // Récupérer la vague avec toutes ses relations
-    const [vague, indicateurs, site] = await Promise.all([
+    // Récupérer la vague + relevés séparément (ADR-038 — getVagueById ne retourne plus de relevés)
+    const [vague, allReleves, indicateurs, site] = await Promise.all([
       getVagueById(id, auth.activeSiteId),
+      prisma.releve.findMany({
+        where: { vagueId: id, siteId: auth.activeSiteId },
+        orderBy: { date: "asc" },
+      }),
       getIndicateursVague(auth.activeSiteId, id),
       prisma.site.findUnique({
         where: { id: auth.activeSiteId },
@@ -53,7 +57,7 @@ export async function GET(
     }
 
     // Construire les relevés pour le rapport
-    const releves: ReleveRapportPDF[] = vague.releves.map((r) => ({
+    const releves: ReleveRapportPDF[] = allReleves.map((r) => ({
       date: r.date,
       typeReleve: r.typeReleve as TypeReleve,
       nomBac:
@@ -70,7 +74,7 @@ export async function GET(
     }));
 
     // Points d'évolution du poids (biométrie uniquement)
-    const evolutionPoids = vague.releves
+    const evolutionPoids = allReleves
       .filter((r) => r.typeReleve === TypeReleve.BIOMETRIE && r.poidsMoyen !== null)
       .map((r) => ({
         date: r.date,

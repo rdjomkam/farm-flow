@@ -132,6 +132,55 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-063 — Route export PDF utilise `vague.releves` non listée dans le scope ADR : régression silencieuse
+**Sprint :** ADR-038 | **Date :** 2026-04-06
+**Sévérité :** Haute
+**Fichier(s) :** `src/app/api/export/vague/[id]/route.ts`, `src/lib/queries/vagues.ts`
+
+**Symptôme :**
+Après que `getVagueById()` a été modifiée pour ne plus inclure les relevés (split ADR-038 Partie A), la route `GET /api/export/vague/[id]` continuait d'accéder à `vague.releves` — un champ désormais absent du type de retour. TypeScript n'avait pas détecté l'erreur car le type de retour de `getVagueById()` était inféré, non annoté explicitement. L'export PDF vague aurait produit une erreur runtime en production.
+
+**Cause racine :**
+L'ADR-038 listait la route export comme "surface exclue de la pagination" (tableau "Surfaces exclues") — donc non modifiée en apparence. Mais la modification de `getVagueById()` (retrait de l'include relevés) impactait implicitement tous les appelants qui accédaient à `vague.releves`. La route export n'était pas dans le tableau "Impact sur les fichiers" de l'ADR, ce qui a conduit à l'omettre. Le type de retour inféré de la fonction (non annoté `Promise<VagueWithBacs | null>`) n'a pas provoqué d'erreur de compilation car TypeScript ne peut pas signaler l'accès à un champ absent sur un type inféré silencieusement changé.
+
+**Fix :**
+1. Annoter explicitement le type de retour de `getVagueById()` en `Promise<VagueWithBacs | null>` — cela fait apparaître l'erreur TypeScript dans tous les appelants qui accèdent à `vague.releves`.
+2. Migrer `src/app/api/export/vague/[id]/route.ts` pour charger les relevés séparément : `prisma.releve.findMany({ where: { vagueId: id, siteId } })` — en même temps que l'étape 2 de l'ADR (queries), pas après.
+
+**Leçon / Règle :**
+Quand une query est modifiée pour supprimer un champ de son include, annoter immédiatement son type de retour explicitement. Tous les appelants qui accédaient au champ supprimé doivent être auditables via `grep -r "fonctionModifiee" src/`. Un tableau "surfaces exclues" dans un ADR ne suffit pas — chaque exclusion doit être vérifiée contre la liste des appelants pour confirmer qu'elle ne dépend pas du champ retiré.
+
+---
+
+### ERR-062 — Wrapper App Router re-export sans props bloquant la transmission de `searchParams`
+**Sprint :** ADR-038 | **Date :** 2026-04-06
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/app/(farm)/vagues/[id]/releves/page.tsx`, `src/components/pages/vague-releves-page.tsx`
+
+**Symptôme :**
+La page `/vagues/[id]/releves` était implémentée comme un re-export simple du composant `VagueRelevesPage` (`export { default } from "@/components/pages/vague-releves-page"`). Quand l'ADR-038 a ajouté la pagination URL (lecture de `searchParams.offset`), le composant ne recevait pas `searchParams` — il n'était pas un Page component App Router et le wrapper ne les transmettait pas. La pagination ne fonctionnait pas : l'offset était toujours 0 quel que soit l'URL.
+
+**Cause racine :**
+En Next.js App Router, `searchParams` est uniquement disponible dans les composants qui sont des fichiers Page (`app/.../page.tsx`). Un composant importé depuis `components/` n'y a pas accès directement via les props App Router — il doit les recevoir explicitement depuis le wrapper.
+
+**Fix :**
+Modifier le wrapper `src/app/(farm)/vagues/[id]/releves/page.tsx` pour accepter `searchParams` en props et les transmettre au composant :
+```typescript
+// Avant : re-export simple sans props
+export { default } from "@/components/pages/vague-releves-page";
+
+// Après : wrapper explicite avec transmission de searchParams
+export default async function Page({ searchParams }: { searchParams: Record<string, string | string[]> }) {
+  const { default: VagueRelevesPage } = await import("@/components/pages/vague-releves-page");
+  return <VagueRelevesPage searchParams={searchParams} />;
+}
+```
+
+**Leçon / Règle :**
+Un re-export simple (`export { default } from "..."`) est uniquement valide pour les wrappers qui n'ont pas besoin de transmettre des props App Router (`params`, `searchParams`). Dès qu'une page doit lire `searchParams` ou `params` depuis l'URL, le wrapper doit être un composant async explicite qui reçoit ces props et les transmet au composant enfant. La pré-analyse doit vérifier si les wrappers existants sont des re-exports simples avant d'ajouter un besoin de `searchParams`.
+
+---
+
 ### ERR-058 — Composant extrait non retiré de la source d'origine (copie fantôme)
 **Sprint :** ADR-034 | **Date :** 2026-04-06
 **Sévérité :** Moyenne
@@ -643,6 +692,93 @@ Utiliser `head -3 migration.sql` et `tail -5 migration.sql` pour vérifier.
 ---
 
 ## Catégorie : Pattern
+
+### ERR-061 — Constante de liste de paramètres URL hard-codée dans chaque composant : oubli lors d'un ajout
+**Sprint :** ADR-038 | **Date :** 2026-04-06
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/components/releves/releves-filter-bar.tsx`, `src/lib/releve-search-params.ts`
+
+**Symptôme :**
+La fonction `updateMultipleParams()` dans `releves-filter-bar.tsx` hard-codait la liste des 6 paramètres URL à effacer lors d'un reset ou d'un changement de type : `["vagueId", "bacId", "typeReleve", "dateFrom", "dateTo", "modifie"]`. Quand l'ADR-038 a ajouté 22 nouveaux paramètres de filtres spécifiques, ils n'étaient pas dans cette liste — un reset partiel laissait donc les filtres BIOMETRIE/MORTALITE/etc. actifs dans l'URL même si le type avait changé. Les filtres croisés produisaient des résultats incorrects (filtre BIOMETRIE actif sur une liste de MORTALITE).
+
+**Cause racine :**
+La liste des paramètres était dupliquée à plusieurs endroits (filter-bar, filter-sheet, active-filters) sans source de vérité partagée. Chaque ajout de paramètre nécessitait de mettre à jour N endroits séparément — une mise à jour partielle était difficile à détecter car aucun test ne vérifiait l'exhaustivité de cette liste.
+
+**Fix :**
+Créer une constante `ALL_FILTER_PARAMS` dans `src/lib/releve-search-params.ts` contenant l'ensemble de tous les paramètres de filtre, et l'utiliser partout :
+```typescript
+export const ALL_FILTER_PARAMS = [
+  "vagueId", "bacId", "typeReleve", "dateFrom", "dateTo", "modifie",
+  "poidsMoyenMin", "poidsMoyenMax", "tailleMoyenneMin", "tailleMoyenneMax",
+  "causeMortalite", "nombreMortsMin", "nombreMortsMax",
+  // ... 22 params au total
+] as const;
+```
+Remplacer le tableau inline dans `updateMultipleParams()` par `ALL_FILTER_PARAMS`. Écrire un test qui vérifie qu'`ALL_FILTER_PARAMS` contient tous les champs de `ReleveSearchParams` (exhaustivité).
+
+**Leçon / Règle :**
+Toute liste de paramètres URL (ou de champs de filtre) partagée entre plusieurs composants doit vivre dans une constante exportée unique, dans le fichier utilitaire dédié (ex: `releve-search-params.ts`). Ne jamais dupliquer un tableau de paramètres URL inline dans les composants. Un test d'exhaustivité (`expect(ALL_FILTER_PARAMS).toContain(key)` pour chaque clé de l'interface) garantit qu'un nouveau paramètre ne sera pas oublié.
+
+---
+
+### ERR-060 — Query lourde chargée pour un sous-ensemble de données : pattern split query
+**Sprint :** ADR-038 | **Date :** 2026-04-06
+**Sévérité :** Haute (performance)
+**Fichier(s) :** `src/lib/queries/vagues.ts`, `src/components/pages/vague-detail-page.tsx`
+
+**Symptôme :**
+`getVagueById()` chargeait tous les relevés d'une vague avec leurs relations complètes (bac, consommations, modifications) sans limite. Sur une vague de 6 bacs pendant 6 mois (~2 relevés/jour/bac), cela représente ~2 160 relevés soit ~500 KB de JSON Prisma en mémoire serveur — pour afficher uniquement 2 relevés en preview et quelques biométries sur le graphique. Les pages et le serveur étaient pénalisés sur toute vague mature.
+
+**Cause racine :**
+La query initiale avait été conçue quand les données étaient peu volumineuses. L'include `releves` était pratique pour l'accès direct à `vague.releves` dans les composants. Au fur et à mesure que des fonctionnalités dépendant de cette query ont été ajoutées (preview, graphique, page complète, export), le volume réel chargé a crû sans que la query soit adaptée.
+
+**Fix :**
+Séparer `getVagueById()` en deux fonctions distinctes avec des contrats explicites :
+- `getVagueById(id, siteId)` : retourne `VagueWithBacs | null` — vague + bacs uniquement, sans relevés. Type de retour annoté explicitement pour bloquer tout accès à `.releves`.
+- `getVagueByIdWithReleves(id, siteId, pagination?)` : retourne `{ vague, releves, total } | null` — charge relevés paginés en parallèle via `Promise.all`.
+Les appelants qui avaient besoin de sous-ensembles de relevés (biométries pour graphique, preview 3 relevés) utilisent maintenant des queries directes ciblées avec `select` restreint.
+
+**Leçon / Règle :**
+Une query qui charge un include sans limite (sans `take`) doit être remise en question dès que le volume peut croître. Pour les modèles en relation 1-N potentiellement volumineuse (vague → relevés, commande → lignes), ne jamais inclure l'entité enfant dans la query parent sans `take`. Créer des fonctions de query distinctes selon le besoin : une sans l'enfant (métadonnées) et une avec pagination. Annoter explicitement les types de retour pour que TypeScript détecte les accès aux champs manquants chez les appelants.
+
+---
+
+### ERR-064 — Sheet Radix avec override `!inset-y-0` annule les safe areas iOS/Android
+**Sprint :** ADR-038 | **Date :** 2026-04-06
+**Sévérité :** Basse (UX mobile)
+**Fichier(s) :** `src/components/releves/releves-filter-bar.tsx`, `src/components/releves/releves-filter-sheet.tsx`
+
+**Symptôme :**
+Le `SheetContent` du filtre relevés utilisait les classes Tailwind `!inset-y-0 !left-auto !right-0` pour positionner le Sheet en panneau latéral plein écran droit. Ces classes utilisent `!important` qui annule le `pt-[env(safe-area-inset-top)]` défini dans le composant `sheet.tsx` de base. Sur iPhone avec notch ou indicateur home (barre de gestes bas), le contenu du Sheet empiétait sur les zones système réservées : le titre se cachait sous la notch, les boutons d'action se trouvaient derrière la barre home.
+
+**Cause racine :**
+L'override `!inset-y-0` est nécessaire pour le positionnement du Sheet mais annule les paddings safe area. Le composant `SheetContent` de base avait prévu les safe areas via `pt-[env(safe-area-inset-top)]` mais le `!important` de l'override positionnement prenait le dessus. Modifier `SheetContent` globalement aurait cassé la sidebar et tous les autres usages partagés.
+
+**Fix :**
+Gérer les safe areas directement dans le contenu du Sheet (pas dans `SheetContent`), avec un layout flex-col h-full + header/footer sticky :
+```tsx
+<div className="flex flex-col h-full">
+  {/* Header fixe — safe area top */}
+  <div className="shrink-0 px-4 pt-[env(safe-area-inset-top)] pb-3 border-b">
+    ...
+  </div>
+  {/* Corps scrollable */}
+  <div className="flex-1 overflow-y-auto px-4 py-4">...</div>
+  {/* Footer fixe — safe area bottom + right landscape */}
+  <div className="shrink-0 px-4 pt-3
+                  pb-[max(0.75rem,env(safe-area-inset-bottom))]
+                  pr-[max(1rem,env(safe-area-inset-right))]
+                  border-t">
+    ...
+  </div>
+</div>
+```
+L'utilisation de `max(0.75rem, env(safe-area-inset-bottom))` garantit un minimum de 12px même sur les appareils sans geste système (où `safe-area-inset-bottom = 0`).
+
+**Leçon / Règle :**
+Quand un `SheetContent` ou `DialogContent` utilise des classes de positionnement avec `!important` qui annulent les safe areas, ne pas modifier le composant partagé — gérer les safe areas dans le contenu interne avec `pt-[env(safe-area-inset-top)]` et `pb-[max(0.75rem,env(safe-area-inset-bottom))]`. Cette approche isole le fix à l'usage spécifique sans impacter les autres Sheets/Dialogs. `max()` est le pattern correct pour garantir un minimum de padding sur les appareils sans safe area.
+
+---
 
 ### ERR-059 — Route group Next.js : déplacement partiel de dossier casse le loading state des sous-routes
 **Sprint :** ADR-034 | **Date :** 2026-04-06

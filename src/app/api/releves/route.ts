@@ -3,7 +3,7 @@ import { cachedJson } from "@/lib/api-cache";
 import { getReleves, createReleve } from "@/lib/queries/releves";
 import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { TypeReleve, Permission, StatutVague, TypeDeclencheur, parsePaginationQuery } from "@/types";
+import { TypeReleve, CauseMortalite, TypeAliment, ComportementAlimentaire, MethodeComptage, Permission, StatutVague, TypeDeclencheur, parsePaginationQuery } from "@/types";
 import type { CreateReleveDTO, ReleveFilters } from "@/types";
 import { prisma } from "@/lib/db";
 import {
@@ -59,6 +59,66 @@ export async function GET(request: NextRequest) {
     if (dateTo) filters.dateTo = dateTo;
     if (searchParams.get("nonLie") === "true") filters.nonLie = true;
     if (searchParams.get("modifie") === "true") filters.modifie = true;
+
+    // Filtres specifiques BIOMETRIE
+    const poidsMoyenMin = searchParams.get("poidsMoyenMin");
+    const poidsMoyenMax = searchParams.get("poidsMoyenMax");
+    const tailleMoyenneMin = searchParams.get("tailleMoyenneMin");
+    const tailleMoyenneMax = searchParams.get("tailleMoyenneMax");
+    if (poidsMoyenMin) { const n = parseFloat(poidsMoyenMin); if (!isNaN(n) && n >= 0) filters.poidsMoyenMin = n; }
+    if (poidsMoyenMax) { const n = parseFloat(poidsMoyenMax); if (!isNaN(n) && n >= 0) filters.poidsMoyenMax = n; }
+    if (tailleMoyenneMin) { const n = parseFloat(tailleMoyenneMin); if (!isNaN(n) && n >= 0) filters.tailleMoyenneMin = n; }
+    if (tailleMoyenneMax) { const n = parseFloat(tailleMoyenneMax); if (!isNaN(n) && n >= 0) filters.tailleMoyenneMax = n; }
+
+    // Filtres specifiques MORTALITE
+    const causeMortaliteParam = searchParams.get("causeMortalite");
+    if (causeMortaliteParam && Object.values(CauseMortalite).includes(causeMortaliteParam as CauseMortalite)) {
+      filters.causeMortalite = causeMortaliteParam as CauseMortalite;
+    }
+    const nombreMortsMin = searchParams.get("nombreMortsMin");
+    const nombreMortsMax = searchParams.get("nombreMortsMax");
+    if (nombreMortsMin) { const n = parseFloat(nombreMortsMin); if (!isNaN(n) && n >= 0) filters.nombreMortsMin = n; }
+    if (nombreMortsMax) { const n = parseFloat(nombreMortsMax); if (!isNaN(n) && n >= 0) filters.nombreMortsMax = n; }
+
+    // Filtres specifiques ALIMENTATION
+    const typeAlimentParam = searchParams.get("typeAliment");
+    if (typeAlimentParam && Object.values(TypeAliment).includes(typeAlimentParam as TypeAliment)) {
+      filters.typeAliment = typeAlimentParam as TypeAliment;
+    }
+    const comportementAlimParam = searchParams.get("comportementAlim");
+    if (comportementAlimParam && Object.values(ComportementAlimentaire).includes(comportementAlimParam as ComportementAlimentaire)) {
+      filters.comportementAlim = comportementAlimParam as ComportementAlimentaire;
+    }
+    const frequenceAlimentMin = searchParams.get("frequenceAlimentMin");
+    const frequenceAlimentMax = searchParams.get("frequenceAlimentMax");
+    if (frequenceAlimentMin) { const n = parseFloat(frequenceAlimentMin); if (!isNaN(n) && n >= 0) filters.frequenceAlimentMin = n; }
+    if (frequenceAlimentMax) { const n = parseFloat(frequenceAlimentMax); if (!isNaN(n) && n >= 0) filters.frequenceAlimentMax = n; }
+
+    // Filtres specifiques QUALITE_EAU
+    const temperatureMin = searchParams.get("temperatureMin");
+    const temperatureMax = searchParams.get("temperatureMax");
+    const phMin = searchParams.get("phMin");
+    const phMax = searchParams.get("phMax");
+    if (temperatureMin) { const n = parseFloat(temperatureMin); if (!isNaN(n) && n >= 0) filters.temperatureMin = n; }
+    if (temperatureMax) { const n = parseFloat(temperatureMax); if (!isNaN(n) && n >= 0) filters.temperatureMax = n; }
+    if (phMin) { const n = parseFloat(phMin); if (!isNaN(n) && n >= 0) filters.phMin = n; }
+    if (phMax) { const n = parseFloat(phMax); if (!isNaN(n) && n >= 0) filters.phMax = n; }
+
+    // Filtres specifiques COMPTAGE
+    const methodeComptageParam = searchParams.get("methodeComptage");
+    if (methodeComptageParam && Object.values(MethodeComptage).includes(methodeComptageParam as MethodeComptage)) {
+      filters.methodeComptage = methodeComptageParam as MethodeComptage;
+    }
+
+    // Filtres specifiques OBSERVATION
+    const descriptionSearch = searchParams.get("descriptionSearch");
+    if (descriptionSearch) filters.descriptionSearch = descriptionSearch;
+
+    // Filtres specifiques RENOUVELLEMENT
+    const pourcentageMin = searchParams.get("pourcentageMin");
+    const pourcentageMax = searchParams.get("pourcentageMax");
+    if (pourcentageMin) { const n = parseFloat(pourcentageMin); if (!isNaN(n) && n >= 0) filters.pourcentageMin = n; }
+    if (pourcentageMax) { const n = parseFloat(pourcentageMax); if (!isNaN(n) && n >= 0) filters.pourcentageMax = n; }
 
     const { data, total } = await getReleves(auth.activeSiteId, filters, { limit, offset });
     return cachedJson({ data, total, limit, offset }, "fast");

@@ -42,6 +42,77 @@ export async function getReleves(
     where.modifie = filters.modifie;
   }
 
+  // Filtres specifiques BIOMETRIE
+  if (filters.poidsMoyenMin !== undefined || filters.poidsMoyenMax !== undefined) {
+    where.poidsMoyen = {
+      ...(filters.poidsMoyenMin !== undefined && { gte: filters.poidsMoyenMin }),
+      ...(filters.poidsMoyenMax !== undefined && { lte: filters.poidsMoyenMax }),
+    };
+  }
+  if (filters.tailleMoyenneMin !== undefined || filters.tailleMoyenneMax !== undefined) {
+    where.tailleMoyenne = {
+      ...(filters.tailleMoyenneMin !== undefined && { gte: filters.tailleMoyenneMin }),
+      ...(filters.tailleMoyenneMax !== undefined && { lte: filters.tailleMoyenneMax }),
+    };
+  }
+
+  // Filtres specifiques MORTALITE
+  if (filters.causeMortalite) {
+    where.causeMortalite = filters.causeMortalite;
+  }
+  if (filters.nombreMortsMin !== undefined || filters.nombreMortsMax !== undefined) {
+    where.nombreMorts = {
+      ...(filters.nombreMortsMin !== undefined && { gte: filters.nombreMortsMin }),
+      ...(filters.nombreMortsMax !== undefined && { lte: filters.nombreMortsMax }),
+    };
+  }
+
+  // Filtres specifiques ALIMENTATION
+  if (filters.typeAliment) {
+    where.typeAliment = filters.typeAliment;
+  }
+  if (filters.comportementAlim) {
+    where.comportementAlim = filters.comportementAlim;
+  }
+  if (filters.frequenceAlimentMin !== undefined || filters.frequenceAlimentMax !== undefined) {
+    where.frequenceAliment = {
+      ...(filters.frequenceAlimentMin !== undefined && { gte: filters.frequenceAlimentMin }),
+      ...(filters.frequenceAlimentMax !== undefined && { lte: filters.frequenceAlimentMax }),
+    };
+  }
+
+  // Filtres specifiques QUALITE_EAU
+  if (filters.temperatureMin !== undefined || filters.temperatureMax !== undefined) {
+    where.temperature = {
+      ...(filters.temperatureMin !== undefined && { gte: filters.temperatureMin }),
+      ...(filters.temperatureMax !== undefined && { lte: filters.temperatureMax }),
+    };
+  }
+  if (filters.phMin !== undefined || filters.phMax !== undefined) {
+    where.ph = {
+      ...(filters.phMin !== undefined && { gte: filters.phMin }),
+      ...(filters.phMax !== undefined && { lte: filters.phMax }),
+    };
+  }
+
+  // Filtres specifiques COMPTAGE
+  if (filters.methodeComptage) {
+    where.methodeComptage = filters.methodeComptage;
+  }
+
+  // Filtres specifiques OBSERVATION
+  if (filters.descriptionSearch) {
+    where.description = { contains: filters.descriptionSearch, mode: "insensitive" };
+  }
+
+  // Filtres specifiques RENOUVELLEMENT
+  if (filters.pourcentageMin !== undefined || filters.pourcentageMax !== undefined) {
+    where.pourcentageRenouvellement = {
+      ...(filters.pourcentageMin !== undefined && { gte: filters.pourcentageMin }),
+      ...(filters.pourcentageMax !== undefined && { lte: filters.pourcentageMax }),
+    };
+  }
+
   const limit = pagination?.limit ?? 50;
   const offset = pagination?.offset ?? 0;
 
@@ -51,6 +122,15 @@ export async function getReleves(
       orderBy: { date: "desc" },
       take: limit,
       skip: offset,
+      include: {
+        bac: { select: { id: true, nom: true } },
+        consommations: { include: { produit: true } },
+        modifications: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          include: { user: { select: { id: true, name: true } } },
+        },
+      },
     }),
     prisma.releve.count({ where }),
   ]);
