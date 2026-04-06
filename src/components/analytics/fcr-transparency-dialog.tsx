@@ -130,12 +130,12 @@ function PeriodeBacRow({ periode }: { periode: FCRBacPeriode }) {
           </span>
         </div>
 
-        {/* Row 4: Gain per fish */}
+        {/* Row 4: Gain per fish + biomass formula */}
         <div className="grid grid-cols-2 gap-2">
-          <LabelValue label="Gain / poisson" value={`${fmt(periode.gainParPoissonG, 1)} g`} />
+          <LabelValue label="Gain / poisson" value={`${fmt(periode.gainParPoissonG, 2)} g`} />
           <LabelValue
             label="Biomasse gain"
-            value={`${fmt(periode.gainParPoissonG, 1)}g × ${fmtInt(periode.avgFishCount)} / 1000`}
+            value={`${fmt(periode.gainParPoissonG, 2)}g × ${fmtInt(periode.avgFishCount)} / 1000 = ${fmt(periode.gainBiomasseKg)}`}
             mono
           />
         </div>
