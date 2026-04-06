@@ -81,6 +81,20 @@ export interface FCRBacPeriode {
   fcr: number | null;
   /** FCR > 3.0 — possible erreur ou tres peu de poissons */
   flagHighFCR: boolean | null;
+  /** Poids Gompertz au debut de la periode (g) */
+  poidsDebutG: number;
+  /** Poids Gompertz a la fin de la periode (g) */
+  poidsFinG: number;
+  /** Methode d'estimation de la population */
+  populationMethode: "COMPTAGE_ANCRAGE" | "PROPORTIONNEL_INITIAL";
+  /** Population estimee au debut de la periode */
+  populationDebut: number;
+  /** Population estimee a la fin de la periode */
+  populationFin: number;
+  /** Nombre de jours exclusifs (aliment seul) */
+  joursExclusifs: number;
+  /** Nombre de jours mixtes rattaches */
+  joursMixtes: number;
 }
 
 /**

@@ -3,6 +3,7 @@ import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { getFCRByFeed } from "@/lib/queries/fcr-by-feed";
+import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-utils";
 import type { FCRByFeedParams } from "@/types";
 
@@ -19,7 +20,16 @@ export async function GET(
     const minPointsRaw = searchParams.get("minPoints");
     const saisonRaw = searchParams.get("saison");
 
-    const fcrParams: FCRByFeedParams = {};
+    // Load ConfigElevage for Gompertz params
+    const configElevage = await prisma.configElevage.findFirst({
+      where: { siteId: auth.activeSiteId, isActive: true },
+      select: { gompertzMinPoints: true, gompertzWInfDefault: true },
+    });
+
+    const fcrParams: FCRByFeedParams = {
+      minPoints: configElevage?.gompertzMinPoints ?? 5,
+      wInfinity: configElevage?.gompertzWInfDefault ?? null,
+    };
     if (minPointsRaw) {
       const n = parseInt(minPointsRaw, 10);
       if (!isNaN(n) && n > 0) fcrParams.minPoints = n;

@@ -553,6 +553,10 @@ export function calculerFCRPeriodeBac(
     (periode.dateFin.getTime() - vagueDebut.getTime()) / 86400000
   );
 
+  // Get weight at start and end of period from the daily gain table
+  const poidsDebutG = dailyGain.get(debutDayIdx)?.poids ?? 0;
+  const poidsFinG = dailyGain.get(finDayIdx)?.poids ?? 0;
+
   // Sum daily gains over the period
   let gainParPoissonG = 0;
   for (let t = debutDayIdx; t <= finDayIdx; t++) {
@@ -590,6 +594,13 @@ export function calculerFCRPeriodeBac(
     gainBiomasseKg,
     fcr,
     flagHighFCR,
+    poidsDebutG,
+    poidsFinG,
+    populationMethode: population.methode,
+    populationDebut: population.countDebut,
+    populationFin: population.countFin,
+    joursExclusifs: periode.joursExclusifs,
+    joursMixtes: periode.joursMixtes,
   };
 }
 
