@@ -8,6 +8,71 @@
 
 ## Catégorie : Schema
 
+### ERR-049 — Suppression de valeur d'enum : CAST échoue si des lignes portent encore l'ancienne valeur
+**Sprint :** ADR-032 | **Date :** 2026-04-05
+**Sévérité :** Critique
+**Fichier(s) :** `prisma/migrations/*/migration.sql`, `prisma/schema.prisma`
+
+**Symptôme :**
+La migration RECREATE pour supprimer `GOMPERTZ_BAC` de l'enum `StrategieInterpolation` échoue au moment du `ALTER COLUMN ... USING ... ::new_enum_type` avec une erreur PostgreSQL du type `invalid input value for enum` ou `cannot cast type text to enum`. Les lignes `ConfigElevage` qui contiennent encore la valeur `GOMPERTZ_BAC` font échouer le CAST.
+
+**Cause racine :**
+L'approche RECREATE (rename old → create new → cast columns → drop old) presuppose que toutes les lignes existantes portent des valeurs présentes dans le nouvel enum. Si une valeur est supprimée sans avoir d'abord migré les lignes qui la portent, le CAST échoue à l'exécution avec des données réelles (la shadow DB est vide, donc le problème ne se manifeste pas lors du `migrate diff`).
+
+**Fix :**
+Ajouter un `UPDATE` qui remplace l'ancienne valeur par sa valeur de remplacement AVANT le CAST, dans la même migration :
+```sql
+-- 1. Renommer l'ancien type
+ALTER TYPE "StrategieInterpolation" RENAME TO "StrategieInterpolation_old";
+
+-- 2. Créer le nouveau type sans la valeur supprimée
+CREATE TYPE "StrategieInterpolation" AS ENUM ('LINEAIRE', 'GOMPERTZ_VAGUE');
+
+-- 3. Migrer les données AVANT de caster la colonne
+UPDATE "ConfigElevage"
+SET "interpolationStrategy" = 'GOMPERTZ_VAGUE'
+WHERE "interpolationStrategy"::text = 'GOMPERTZ_BAC';
+
+-- 4. Caster la colonne vers le nouveau type
+ALTER TABLE "ConfigElevage"
+  ALTER COLUMN "interpolationStrategy"
+  TYPE "StrategieInterpolation"
+  USING "interpolationStrategy"::text::"StrategieInterpolation";
+
+-- 5. Supprimer l'ancien type
+DROP TYPE "StrategieInterpolation_old";
+```
+
+**Leçon / Règle :**
+Quand une valeur d'enum est supprimée, toujours inclure un `UPDATE` de migration des données existantes vers la valeur de remplacement AVANT l'étape CAST de la colonne. La shadow DB étant vide, les tests de migration ne détectent pas ce problème — il faut anticiper les données de production. Voir aussi ERR-001 pour le pattern RECREATE général.
+
+---
+
+### ERR-038 — migrate diff regroupe la dérive de schéma non liée dans la nouvelle migration
+**Sprint :** ADR-029 | **Date :** 2026-04-05
+**Sévérité :** Haute
+**Fichier(s) :** `prisma/migrations/*/migration.sql`
+
+**Symptôme :**
+Un `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script` génère un fichier SQL contenant des colonnes ou tables inattendues — des changements qui n'ont rien à voir avec la feature en cours (par exemple, des `ALTER TABLE` sur des modèles existants déjà en production).
+
+**Cause racine :**
+`migrate diff` compare l'état réel de la base (ou shadow DB) au schéma Prisma courant. Si des colonnes ont été ajoutées directement en base (hors migrations : hotfix manuel, script de dev, seed), elles constituent une "dérive" (`drift`) que Prisma détecte et inclut dans le diff suivant. La migration générée mélange alors la feature cible et le rattrapage de dérive.
+
+**Fix :**
+1. Toujours inspecter le SQL généré avant de le valider :
+   ```bash
+   npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script > /tmp/check.sql
+   cat /tmp/check.sql
+   ```
+2. Si des changements non liés à la feature apparaissent, les séparer dans leurs propres fichiers de migration avant de déployer.
+3. En cas de dérive avérée, créer d'abord une migration de "rattrapage" (`fix-drift`) séparée avant la migration de feature.
+
+**Leçon / Règle :**
+Ne jamais modifier le schéma de base de données directement (hors migrations Prisma) en dev partagé ou en prod. Toute modification de schéma passe par une migration. Avant tout `migrate deploy`, relire le SQL généré ligne par ligne pour détecter les changements parasites.
+
+---
+
 ### ERR-001 — Enums PostgreSQL : ADD VALUE + UPDATE dans la même migration
 **Sprint :** 1-2 | **Date :** 2026-03-08
 **Sévérité :** Critique
@@ -67,6 +132,408 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-055 — Gompertz CLARIAS_DEFAULTS produit des poids absurdes sur vague non calibrée
+**Sprint :** ADR-033 fix | **Date :** 2026-04-06
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/queries/analytics.ts`, `src/lib/feed-periods.ts`
+
+**Symptôme :**
+Sur une vague sans calibrage (`vague.gompertz === null`), le FCR calculé affiche des valeurs aberrantes : des périodes entières ont un gain négatif car le poids estimé au début de la période (43 g) est supérieur au poids estimé en fin de période (pourtant basé sur des biométries réelles de 100 g). Ces périodes à gain négatif sont exclues du calcul FCR, ce qui réduit artificiellement le nombre de périodes exploitables et biaise le résultat.
+
+**Cause racine :**
+Lors du passage à "Gompertz systématiquement" (ADR-034 initial), le contexte Gompertz était construit depuis `CLARIAS_DEFAULTS` (`W∞ = 1500 g`, `k = 0.018`, `ti = 95 jours`) quand `vague.gompertz` était absent. Ces paramètres génériques ne correspondent pas à l'élevage réel — ils produisent une courbe qui diverge massivement des mesures terrain (43 g prédit vs 100 g mesuré à J30). Le modèle était donc pire que l'interpolation linéaire pour les vagues non calibrées.
+
+**Fix :**
+Ne construire le contexte Gompertz que si un enregistrement calibré existe en base (`vague.gompertz !== null`). Quand `null`, laisser `gompertzCtx = undefined` afin que le système retombe en interpolation linéaire entre les points de biométrie réels :
+```typescript
+// Avant (incorrect — produit des poids absurdes) :
+const gompertzCtx = vague.gompertz
+  ? buildGompertzContext(vague.gompertz)
+  : buildGompertzContext(CLARIAS_DEFAULTS); // diverge si non calibré
+
+// Après (correct) :
+const gompertzCtx = vague.gompertz
+  ? buildGompertzContext(vague.gompertz)
+  : undefined; // fallback vers interpolation linéaire
+```
+
+**Leçon / Règle :**
+Les paramètres Gompertz génériques (`CLARIAS_DEFAULTS`) ne peuvent être utilisés comme fallback d'interpolation : ils représentent une population moyenne, pas la vague spécifique en cours d'élevage. Le Gompertz n'est valide que lorsqu'il est ajusté sur les données réelles de la vague (calibrage). Pour toute vague sans calibrage, l'interpolation linéaire entre biométries mesurées est toujours plus précise qu'un modèle générique. Utiliser `CLARIAS_DEFAULTS` dans un calcul de FCR est une source de biais systématique.
+
+---
+
+### ERR-054 — Type `PeriodeAlimentaireVague` créé avec `bacId` malgré la spec ADR
+**Sprint :** ADR-033 discrepancies | **Date :** 2026-04-06
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/types/calculs.ts`
+
+**Symptôme :**
+L'interface `PeriodeAlimentaireVague` — censée représenter une période d'alimentation au niveau vague (sans distinction par bac) — contient un champ `bacId: string`. Les fonctions qui consomment ce type peuvent alors filtrer ou grouper par bac, réintroduisant exactement le comportement per-bac que l'ADR cherchait à éliminer. La pré-analyse détecte cette incohérence avant que des bugs ne soient causés en production.
+
+**Cause racine :**
+L'interface a été créée lors d'un premier pass d'implémentation ADR-033 en copiant la structure de `PeriodeAlimentaire` (per-bac) sans supprimer le champ `bacId`. La spec ADR-033 §3.1 stipule explicitement que `PeriodeAlimentaireVague` n'a pas de `bacId` — mais le développeur n'a pas relu la spec au moment de créer l'interface. Le champ en trop est passé inaperçu car aucun consommateur immédiat ne testait son absence.
+
+**Fix :**
+Supprimer `bacId` de `PeriodeAlimentaireVague` dans `src/types/calculs.ts`. Vérifier à la compilation que les fonctions produisant ce type ne tentent plus de le remplir, et que les consommateurs ne l'utilisent pas.
+
+**Leçon / Règle :**
+Quand on crée un nouveau type en "clonant" un type existant, relire la spec ADR pour identifier les champs à ne PAS inclure — pas seulement ceux à ajouter. Appliquer un diff mental systématique : Nouveau type = Ancien type − {champs supprimés par la spec} + {champs ajoutés par la spec}. Un champ hérité par inadvertance dans un type "vague-level" qui ne devrait pas avoir de clé d'entité peut être détecté par la pré-analyse avant tout merge.
+
+---
+
+### ERR-053 — Commentaire ADR "fix appliqué" sur du code per-bac non corrigé
+**Sprint :** ADR-033 discrepancies | **Date :** 2026-04-06
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/feed-periods.ts`, `src/lib/queries/analytics.ts`
+
+**Symptôme :**
+Le commentaire dans `segmenterPeriodesAlimentaires` indique "Weight estimation uses the VAGUE-LEVEL Gompertz curve via `interpolerPoidsVague` (ALL biometries, NOT filtered by bacId)" — ce qui est vrai pour l'estimation du poids, mais la segmentation elle-même reste per-bac (groupement par `bacId` ligne 536). De même, `analytics.ts` porte le commentaire "ADR-033 DISC-09: build `mortalitesParBac` (flat Map)" alors que DISC-09 demandait de passer à un tableau plat `mortalitesTotales`. La pré-analyse détecte des commentaires contradictoires avec le code réel.
+
+**Cause racine :**
+L'implémentation a été réalisée en deux passes : une première passe a corrigé l'estimation du poids (interpolation vague-level), puis des commentaires "ADR-033 fixé" ont été ajoutés. Mais la deuxième correction (segmentation vague-level) n'a jamais été effectuée. Les commentaires optimistes ont masqué l'état réel du code lors des reviews suivantes.
+
+**Fix :**
+Les discrepancies DISC-03/05/06/08/09/11/12 ont finalement été reclassées "hors-scope" après validation utilisateur : l'algorithme confirmé maintient la segmentation per-bac et le `nombreVivants` per-bac — seule l'estimation du poids passe en vague-level. Les commentaires trompeurs ont été corrigés lors de la review ADR-033 (remarque I5 dans `review-ADR-033.md`).
+
+**Leçon / Règle :**
+Ne pas ajouter de commentaire "fix ADR-XXX DISC-YY" avant que la totalité de la correction correspondante soit effectuée. Un commentaire qui décrit un état futur désiré plutôt que l'état réel du code est plus dangereux qu'une absence de commentaire : il induit en erreur les reviewers et bloque la détection du travail restant. Utiliser plutôt un `// TODO(ADR-033 DISC-09): replace mortalitesParBac Map with flat mortalitesTotales array` tant que la correction n'est pas faite.
+
+---
+
+### ERR-052 — FCR : numérateur et dénominateur agrégés sur des périodes différentes
+**Sprint :** ADR-033 | **Date :** 2026-04-05
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/feed-periods.ts`
+
+**Symptôme :**
+Le FCR calculé est incohérent : des périodes avec gain négatif (perte de biomasse) sont exclues du dénominateur (gain total) mais leur consommation alimentaire reste incluse dans le numérateur (aliment total). Le ratio aliment/gain est donc artificiellement gonflé.
+
+**Cause racine :**
+La logique de filtrage des périodes ne s'appliquait pas symétriquement. Le dénominateur ne sommait que les périodes à gain positif (filtre correct pour éviter un FCR négatif), mais le numérateur sommait toute la consommation sans appliquer le même filtre. Les deux grandeurs n'étaient donc pas calculées sur le même ensemble de périodes.
+
+**Fix :**
+Filtrer les deux termes sur le même prédicat (`gain > 0`) avant l'agrégation :
+```typescript
+const periodesPositives = periodes.filter(p => p.gainBiomasse > 0);
+const alimentTotal = periodesPositives.reduce((s, p) => s + p.alimentConsome, 0);
+const gainTotal   = periodesPositives.reduce((s, p) => s + p.gainBiomasse,  0);
+const fcr = gainTotal > 0 ? alimentTotal / gainTotal : null;
+```
+
+**Leçon / Règle :**
+Quand un ratio est calculé avec un filtre sur le dénominateur, appliquer le même filtre au numérateur. Ne jamais filtrer un seul terme d'un ratio — cela produit une agrégation incohérente et un résultat trompeur. Vérifier systématiquement que numérateur et dénominateur utilisent exactement le même ensemble de périodes/lignes.
+
+---
+
+### ERR-051 — Contexte Gompertz non construit pour les stratégies LINEAIRE
+**Sprint :** ADR-033 | **Date :** 2026-04-05
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/feed-periods.ts`
+
+**Symptôme :**
+Une vague dont la `ConfigElevage.interpolationStrategy` vaut `LINEAIRE` n'utilise jamais le modèle Gompertz même si la vague a été calibrée (champ `vague.gompertz` renseigné avec des paramètres valides). L'interpolation reste linéaire même après calibrage, sous-estimant le poids des poissons dans les bacs créés après le calibrage.
+
+**Cause racine :**
+Le contexte Gompertz (`gompertzCtx`) était construit conditionnellement, uniquement quand `interpolStrategy === GOMPERTZ_VAGUE`. Or la stratégie configurée dans `ConfigElevage` contrôle le mode d'interpolation choisi par l'éleveur, mais la disponibilité du modèle Gompertz (existence de `vague.gompertz`) est une propriété indépendante. Conditionner la construction du contexte à la stratégie empêchait toute exploitation de Gompertz hors de ce chemin explicite.
+
+**Fix :**
+Séparer la construction du contexte Gompertz de la sélection de stratégie. Construire `gompertzCtx` dès que `vague.gompertz` est présent, indépendamment de `interpolStrategy` :
+```typescript
+const gompertzCtx = vague.gompertz
+  ? buildGompertzContext(vague.gompertz)
+  : null;
+
+// Ensuite, utiliser gompertzCtx là où c'est pertinent,
+// quelle que soit la valeur de interpolStrategy.
+```
+
+**Leçon / Règle :**
+Ne pas conditionner la construction d'un contexte de calcul à la stratégie configurée si ce contexte peut être utile indépendamment. La disponibilité d'un modèle (données présentes) et son activation par configuration sont deux choses distinctes. Construire le contexte quand les données existent ; décider de l'utiliser ensuite selon la stratégie.
+
+---
+
+### ERR-050 — `interpolerPoidsBac` filtrait par bacId, rendant les bacs post-calibrage invisibles
+**Sprint :** ADR-033 | **Date :** 2026-04-05
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/feed-periods.ts`
+
+**Symptôme :**
+Les bacs créés après un calibrage (redistribution des poissons) reçoivent un poids interpolé de `VALEUR_INITIALE` (50 g) au lieu du poids Gompertz correspondant à leur date de création. Le FCR et la biomasse sont fortement sous-estimés pour ces bacs.
+
+**Cause racine :**
+`interpolerPoidsBac` filtrait les biométries par `bacId` (`biometries.filter(b => b.bacId === bacId)`) pour obtenir l'historique du bac. Les bacs créés post-calibrage n'ont aucune biométrie propre dans leur fenêtre d'existence — les biométries appartiennent aux bacs sources. Le filtre retournait un tableau vide, ce qui déclenchait le fallback vers `VALEUR_INITIALE`.
+
+**Fix :**
+Créer `interpolerPoidsVague` qui utilise toutes les biométries de la vague sans filtre `bacId`, et qui évalue systématiquement Gompertz quand les paramètres sont disponibles :
+```typescript
+// Avant (incorrect) :
+const biometriesBac = biometries.filter(b => b.bacId === bacId);
+
+// Après (correct) :
+// interpolerPoidsVague reçoit toutes les biométries de la vague,
+// sans filtre bacId, et évalue Gompertz en priorité si gompertzCtx est non nul.
+```
+
+**Leçon / Règle :**
+Le poids d'un poisson dans un bac post-calibrage dépend de l'historique de la vague entière, pas de l'historique du bac seul. Ne jamais filtrer les biométries par `bacId` pour alimenter un modèle de croissance (Gompertz ou linéaire) — filtrer par `vagueId` et laisser le modèle interpoler à la date voulue. Réserver le filtre `bacId` uniquement aux affichages de mesures brutes par bac.
+
+---
+
+### ERR-048 — GOMPERTZ_BAC : code mort car le fallback vers GOMPERTZ_VAGUE s'active systématiquement
+**Sprint :** ADR-032 | **Date :** 2026-04-05
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/feed-periods.ts`, `src/lib/queries/analytics.ts`, `src/app/api/vagues/[id]/gompertz/route.ts`, `prisma/schema.prisma`
+
+**Symptôme :**
+L'option `GOMPERTZ_BAC` dans `StrategieInterpolation` (introduite par ADR-030) n'est jamais effectivement utilisée. Quand elle est sélectionnée dans `ConfigElevage`, le code de `interpolerPoidsBac` tombe systématiquement dans le fallback `GOMPERTZ_VAGUE`. Le FCR affiché est identique à `GOMPERTZ_VAGUE` quel que soit le choix de l'éleveur.
+
+**Cause racine :**
+Les calibrages (redistribution des poissons entre bacs) sont une opération courante dans l'élevage de Clarias gariepinus — toute vague au-delà de J20-J25 en subit au moins un. Les biométries per-bac incluent alors des discontinuités (le poids moyen "recule" après un calibrage) qui ne reflètent pas une vraie perte de poids. Le modèle Gompertz per-bac ne peut pas converger correctement sur ces données (R² faible), ce qui déclenche le fallback vers `GOMPERTZ_VAGUE`. En pratique, `GOMPERTZ_BAC` n'est jamais utilisé sur des données réelles.
+
+**Fix (ADR-032) :**
+Suppression complète de `GOMPERTZ_BAC` :
+- Enum `StrategieInterpolation` réduit à `LINEAIRE` + `GOMPERTZ_VAGUE` (migration RECREATE)
+- Modèle `GompertzBac` supprimé du schéma Prisma
+- Branche `GOMPERTZ_BAC` supprimée de `interpolerPoidsBac` dans `feed-periods.ts`
+- Chargement `gompertzBacs` supprimé de `analytics.ts`
+- Boucle de calibration per-bac supprimée de la route `/api/vagues/[id]/gompertz`
+- Option supprimée du formulaire `config-elevage-form-client.tsx` et du dialog `fcr-transparency-dialog.tsx`
+- ConfigElevage existants avec `interpolationStrategy = GOMPERTZ_BAC` migrés vers `GOMPERTZ_VAGUE` par la migration SQL
+
+**Leçon / Règle :**
+Avant d'implémenter une stratégie d'interpolation per-entité (per-bac, per-lot), vérifier si les données terrain contiennent des discontinuités qui empêcheraient le modèle de converger. Si le fallback vers la stratégie vague/globale s'activera systématiquement, la stratégie per-entité est du code mort. Il vaut mieux une chaîne d'interpolation simple et fiable qu'une chaîne complexe dont les niveaux supérieurs ne sont jamais atteints. Voir ADR-032 qui supersède ADR-030 sur ce point.
+
+---
+
+### ERR-047 — nombreVivants figé au démarrage de la vague : FCR 2.5× trop bas après calibrage
+**Sprint :** ADR-032 | **Date :** 2026-04-05
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/feed-periods.ts` (fonction `estimerNombreVivants`, remplacée par `estimerNombreVivantsADate`)
+
+**Symptôme :**
+Le FCR calculé par `computeAlimentMetrics` et `getFCRTrace` est biologiquement implausible (< 0.5) pour les bacs ayant subi un calibrage. Pour Clarias gariepinus, un FCR normal est entre 1.0 et 2.0. Un FCR de 0.4 signifie que les poissons ont pris plus de biomasse que d'aliment consommé — impossible.
+
+**Cause racine :**
+La fonction `estimerNombreVivants` dans `src/lib/feed-periods.ts` calculait le nombre de vivants d'un bac une seule fois pour toute sa durée de vie, à partir de `bac.nombreInitial ?? round(vague.nombreInitial / nbBacs)`. Cette valeur ne changeait jamais entre les périodes d'alimentation. Or, après un calibrage, `bac.nombreInitial` est périmé : il reflète la population au moment de la création du bac, pas la population post-calibrage.
+
+Exemple concret (Vague 26-01) : Bac 01 part de 325 poissons, en perd 195 lors d'un calibrage à J25 (redistribués vers Bac 03 et Bac 04). Post-calibrage, Bac 01 ne contient plus que 130 poissons. Mais l'algorithme continuait d'utiliser `nombreVivants = 325`. Le gain de biomasse calculé était donc `poidsMoyenGain × 325` au lieu de `poidsMoyenGain × 130`, soit 2.5× trop élevé. Un gain surestimé → FCR sous-estimé.
+
+**Fix (ADR-032) :**
+Remplacement de `estimerNombreVivants` par `estimerNombreVivantsADate(bacId, targetDate, vagueContext, mortalitesParBac)` :
+1. Chercher le dernier `CalibrageGroupe` dont `destinationBacId = bacId` et `calibrage.date <= targetDate`
+2. Si trouvé, partir de `groupe.nombrePoissons` (source de vérité post-calibrage depuis le modèle `Calibrage` existant depuis Sprint 24)
+3. Sinon, partir de `bac.nombreInitial ?? round(vague.nombreInitial / nbBacs)` (comportement précédent)
+4. Soustraire les mortalités enregistrées pour ce bac entre la date de base et `targetDate`
+
+Les requêtes Prisma dans `computeAlimentMetrics` et `getFCRTrace` incluent désormais `calibrages { groupes { destinationBacId, nombrePoissons, poidsMoyen } }`. Aucune migration de schéma requise — toutes les données nécessaires existaient déjà dans le modèle `Calibrage`.
+
+**Leçon / Règle :**
+Tout calcul de population par bac sur une vague doit être calibrage-aware. La source de vérité pour la population d'un bac après un calibrage est `CalibrageGroupe.nombrePoissons` (dernier calibrage avant la date cible), et non `Bac.nombreInitial` ni `Bac.nombrePoissons` (ce dernier est un champ legacy Phase 1 non fiable). Ne jamais utiliser une population "initiale" figée quand des opérations de redistribution peuvent avoir eu lieu. Voir `VagueContext.calibrages` et l'interface `CalibragePoint` dans `src/lib/feed-periods.ts`.
+
+---
+
+### ERR-046 — Suppression de paiement : le message d'erreur "n'appartient pas" est masqué par "introuvable"
+**Sprint :** ADR-032 feature | **Date :** 2026-04-05
+**Sévérité :** Basse
+**Fichier(s) :** `src/app/api/depenses/[id]/paiements/[paiementId]/route.ts`
+
+**Symptôme :**
+La route DELETE `/api/depenses/[id]/paiements/[paiementId]` distingue deux cas d'erreur dans son handler : `message.includes("introuvable")` → 404, et `message.includes("n'appartient pas")` → 422. Mais la query `supprimerPaiementDepense` utilise `paiementDepense.findFirst({ where: { id: paiementId, depenseId } })` : si le paiement existe mais appartient à une autre dépense, `findFirst` retourne `null`, et la query lève "Paiement introuvable ou n'appartient pas a cette depense" — message qui contient "introuvable" en premier, donc l'API retourne toujours 404, jamais 422.
+
+**Cause racine :**
+Le contrôle d'ownership (le paiement appartient-il à cette dépense ?) est fusionné dans le même `findFirst` que l'existence du paiement. Il est impossible de distinguer les deux cas sans une deuxième requête.
+
+**Fix appliqué :**
+Les tests acceptent ce comportement : le cas "paiement d'une autre dépense" retourne 404 (même message). Ce n'est pas un bug fonctionnel — la sécurité est préservée (l'appelant ne peut pas accéder à des paiements hors-siteId). La distinction 404 vs 422 est cosmétique pour cette ressource.
+
+**Leçon / Règle :**
+Quand on rédige les handler HTTP d'erreur, s'assurer que l'ordre des `message.includes()` est cohérent avec les messages que la query peut réellement lever. Si plusieurs cas d'erreur partagent un mot commun (ici "introuvable"), le cas le plus spécifique doit être contrôlé en premier — ou la query doit lever des messages sans ambiguïté (`throw new Error("PAYMENT_NOT_FOUND")` vs `throw new Error("PAYMENT_WRONG_DEPENSE")`).
+
+---
+
+### ERR-045 — Suppression d'un modèle (ADR) sans nettoyer les références dans le code source
+**Sprint :** ADR-032 | **Date :** 2026-04-05
+**Sévérité :** Critique
+**Fichier(s) :** `src/app/api/vagues/[id]/gompertz/route.ts`, `src/components/config-elevage/config-elevage-form-client.tsx`, `src/components/analytics/fcr-transparency-dialog.tsx`
+
+**Symptôme :**
+Le build échoue avec trois erreurs TypeScript après qu'une ADR (ADR-032) a supprimé le modèle `GompertzBac` et la valeur d'enum `GOMPERTZ_BAC` de `StrategieInterpolation` :
+1. `prisma.gompertzBac` référencé dans la route gompertz → `Property 'gompertzBac' does not exist on type PrismaClient`
+2. `StrategieInterpolation.GOMPERTZ_BAC` dans le select de config-elevage → `Property 'GOMPERTZ_BAC' does not exist`
+3. Type local `MethodeEstimation` dans fcr-transparency-dialog inclut `"GOMPERTZ_BAC"` → comparaison impossible avec l'union réduite
+
+Ces trois fichiers avaient été mentionnés dans le plan d'implémentation de l'ADR (section 11.B), mais n'avaient pas été mis à jour lors de l'implémentation. Le bug a été découvert par le tester au moment du `npm run build`.
+
+**Cause racine :**
+L'implémenteur (Phase A de l'ADR) a nettoyé les fichiers de types et de logique (`src/types/`, `src/lib/feed-periods.ts`, `src/lib/queries/analytics.ts`) mais a omis de nettoyer les trois fichiers de composants/routes listés dans l'ADR. La migration SQL existait déjà dans `prisma/migrations/` mais le code applicatif n'avait pas suivi.
+
+**Fix :**
+- `gompertz/route.ts` : supprimer le bloc de calibration par bac (lignes 249-410), retourner `calibrationsBacs: []` pour compatibilité ascendante.
+- `config-elevage-form-client.tsx` : supprimer l'option `GOMPERTZ_BAC` du select `interpolationStrategy`.
+- `fcr-transparency-dialog.tsx` : supprimer `"GOMPERTZ_BAC"` du type local `MethodeEstimation`, du `config` record, et simplifier les branches conditionnelles.
+
+**Leçon / Règle :**
+Quand une ADR supprime un modèle ou une valeur d'enum, tous les fichiers mentionnés dans la section "Impact sur les fichiers" de l'ADR doivent être modifiés dans le même commit/PR. Ne jamais supposer qu'un fichier "UI" n'a pas besoin d'être mis à jour. Avant tout `npm run build`, chercher le symbole supprimé dans tout le projet : `grep -r "GOMPERTZ_BAC" src/`. Un build vert est la condition nécessaire pour clore une ADR.
+
+---
+
+### ERR-044 — Suppression de paiement sans audit trail : perte de traçabilité
+**Sprint :** ADR-032 feature | **Date :** 2026-04-05
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/queries/depenses.ts` — `supprimerPaiementDepense()`
+
+**Symptôme :**
+Pattern initial (avant la feature) : supprimer un `PaiementDepense` directement avec `prisma.paiementDepense.delete()` et recalculer les agrégats. Aucune trace de la suppression n'est conservée ; l'historique financier de la dépense devient incomplet et impossible à auditer.
+
+**Cause racine :**
+La suppression d'un paiement est une opération financière irréversible qui modifie le montant payé et le statut de la dépense. Sans audit trail, un bug ou une action malveillante sur cette route ne laisse aucune trace permettant de reconstituer l'état avant suppression.
+
+**Fix :**
+Créer un `AjustementDepense` (avec `typeAjustement: MONTANT_TOTAL`, `montantAvant: paiement.montant`, `montantApres: 0`, `paiementId`) **avant** la suppression, dans la même transaction. Si la transaction échoue après la création de l'audit trail mais avant la suppression, la transaction est annulée entièrement — aucun état incohérent.
+
+```typescript
+// 1. Create audit trail BEFORE deletion
+await tx.ajustementDepense.create({
+  data: {
+    depenseId,
+    montantAvant: paiement.montant,
+    montantApres: 0,
+    raison: `Suppression du paiement du ${paiement.date.toLocaleDateString("fr-FR")}`,
+    userId,
+    siteId,
+    typeAjustement: TypeAjustementDepense.MONTANT_TOTAL,
+    paiementId,
+  },
+});
+// 2. Delete (FraisPaiementDepense cascade automatically)
+await tx.paiementDepense.delete({ where: { id: paiementId } });
+```
+
+**Leçon / Règle :**
+Toute suppression d'un enregistrement financier (paiement, facture, ligne de commande) doit créer un enregistrement d'audit **avant** la suppression, dans la même transaction (R4). L'audit trail doit inclure le `paiementId` de la ligne supprimée pour permettre la reconstitution. Le modèle `AjustementDepense` est le bon outil pour cela dans ce projet.
+
+---
+
+### ERR-043 — Variables mortes issues d'un copy-paste : supprimées avec `void` faute d'être câblées
+**Sprint :** ADR-031 | **Date :** 2026-04-05
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/calculs/fcr-trace.ts`
+
+**Symptôme :**
+Une variable `bacBios` est construite par filtrage des biométries sur un bac précis, puis immédiatement supprimée avec `void bacBios` pour éviter un avertissement TypeScript "variable déclarée mais non utilisée". Le résultat de ce filtrage n'alimente aucun calcul.
+
+**Cause racine :**
+Code adapté depuis un contexte où `bacBios` était consommé (traitement bac par bac). Dans le nouveau contexte (`getFCRTrace`), la logique avait été réécrite pour opérer sur l'ensemble des biométries ; `bacBios` n'avait donc plus de consommateur. L'auteur a masqué l'avertissement avec `void` au lieu de supprimer la variable.
+
+**Fix :**
+Supprimer la déclaration de `bacBios` et l'expression `void bacBios`. Tracer chaque variable jusqu'à son consommateur avant de valider l'adaptation.
+
+**Leçon / Règle :**
+Quand on adapte du code d'un contexte à un autre, tracer chaque variable locale jusqu'à son consommateur. Si une variable n'a aucun consommateur dans le nouveau contexte, la supprimer entièrement. Masquer un avertissement avec `void` est un signal d'alarme : soit la variable est nécessaire et doit être câblée, soit elle est morte et doit être retirée.
+
+---
+
+### ERR-042 — Fetch de données déclenché dans le corps de rendu React au lieu d'un `useEffect`
+**Sprint :** ADR-031 | **Date :** 2026-04-05
+**Sévérité :** Haute
+**Fichier(s) :** `src/components/releves/fcr-transparency-dialog.tsx`
+
+**Symptôme :**
+`loadTrace()` est appelée directement dans le corps du composant avec un garde `if (!loaded && !loading && !error)`. En React Strict Mode (développement), le composant est rendu deux fois, déclenchant deux appels réseau simultanés. En production, le comportement dépend du timing du premier rendu.
+
+**Cause racine :**
+Le développeur a tenté d'éviter un `useEffect` vide en plaçant la logique de fetch directement dans le render avec des gardes booléennes. Cette approche est incorrecte : les effets de bord (appels réseau, mutations d'état dérivées) ne doivent jamais être produits dans le corps de rendu.
+
+**Fix :**
+Déplacer l'appel dans un `useEffect` sans dépendances (ou avec `[open]` si le fetch doit se déclencher à l'ouverture du dialog) :
+```tsx
+useEffect(() => {
+  loadTrace();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+```
+
+**Leçon / Règle :**
+Ne jamais déclencher de side effects (fetch, setTimeout, mutation d'état externe) dans le corps de rendu d'un composant React, même avec des gardes booléennes. Toujours utiliser `useEffect`. En React Strict Mode, le corps de rendu est exécuté deux fois — toute logique conditionnelle y placée sera invoquée deux fois avant que l'état ne soit mis à jour.
+
+---
+
+### ERR-041 — Arrondi intermédiaire qui se propage dans les calculs suivants (rounding leak)
+**Sprint :** ADR-031 | **Date :** 2026-04-05
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/calculs/fcr-trace.ts`
+
+**Symptôme :**
+Le `fcrMoyenFinal` affiché dans le dialog de transparence FCR diffère légèrement du `fcrMoyen` affiché sur la carte de synthèse (ex : `2.34` vs `2.35`). Les deux valeurs sont calculées à partir des mêmes données source mais divergent d'un epsilon visible.
+
+**Cause racine :**
+Dans `getFCRTrace`, les valeurs de biomasse intermédiaires (`biomasseCourante`, `biomassePrecedente`) étaient arrondies à 2 décimales pour alimenter les lignes du tableau de détail. Ces valeurs arrondies étaient ensuite réutilisées pour calculer `gainBiomasseKg` et `fcrPeriode`. L'erreur d'arrondi s'accumulait à chaque période et produisait un `fcrMoyenFinal` légèrement différent du FCR calculé depuis les valeurs brutes dans la carte.
+
+**Fix :**
+Conserver les valeurs brutes non arrondies dans toutes les variables intermédiaires de calcul. N'appliquer `toFixed()` ou `Math.round()` qu'au moment de construire l'objet destiné à l'affichage, jamais avant.
+
+**Leçon / Règle :**
+L'arrondi est une opération d'affichage, pas de calcul. Dans toute chaîne de calcul multi-étapes, les valeurs intermédiaires doivent rester en virgule flottante native. Une valeur arrondie ne doit jamais servir d'entrée à un calcul ultérieur. Appliquer l'arrondi uniquement à la dernière étape, sur la valeur finale destinée à être affichée ou sérialisée.
+
+---
+
+### ERR-037 — TypeScript : Array.includes() rejette une union plus large que le tuple readonly
+**Sprint :** ADR-029 | **Date :** 2026-04-05
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/interpolation/strategy.ts` (et tout fichier utilisant `.includes()` sur un tuple `as const`)
+
+**Symptôme :**
+TypeScript émet une erreur de type lors d'un appel `.includes()` sur un tuple `readonly` quand la valeur testée est d'un type union plus large que le type des éléments du tuple :
+```
+Argument of type '"A" | "B" | "C" | "D"' is not assignable to parameter of type '"A" | "B"'.
+```
+
+**Cause racine :**
+`Array.prototype.includes(searchElement: T)` exige que `searchElement` soit assignable à `T`. Pour un tuple `readonly ["A", "B"]`, `T` est `"A" | "B"`, ce qui est plus étroit que la valeur de type `"A" | "B" | "C" | "D"` à tester. TypeScript considère l'appel comme type-unsafe car le tuple ne peut logiquement pas contenir `"C"` ou `"D"`.
+
+**Fix :**
+Remplacer `.includes()` par des égalités directes :
+```typescript
+// Incorrect :
+const SIMPLE_STRATEGIES = ["LAST_KNOWN", "ZERO"] as const;
+if (SIMPLE_STRATEGIES.includes(strategy)) { ... } // erreur TS
+
+// Correct :
+if (strategy === "LAST_KNOWN" || strategy === "ZERO") { ... }
+```
+
+**Leçon / Règle :**
+Ne pas utiliser `.includes()` pour tester l'appartenance d'une valeur à un sous-ensemble de son type union. Utiliser des comparaisons d'égalité directes (`===`) ou un cast explicite `(arr as readonly string[]).includes(val)` si le tuple est large. Les comparaisons directes sont plus lisibles et entièrement type-safe.
+
+---
+
+### ERR-036 — Prisma $Enums vs TypeScript enum : cast obligatoire à la frontière
+**Sprint :** ADR-029 | **Date :** 2026-04-05
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/interpolation/strategy.ts`, tout service lisant un champ Prisma typé `$Enums.XxxEnum`
+
+**Symptôme :**
+Une review signale un cast `as SomeEnum` comme "redondant" ou "cosmétique" sur un champ lu depuis Prisma. Supprimer le cast provoque une erreur TypeScript à la compilation :
+```
+Type '$Enums.InterpolationStrategy' is not assignable to type 'InterpolationStrategy'.
+```
+
+**Cause racine :**
+Prisma génère ses propres types nominaux dans l'espace `$Enums`. Ces types sont structurellement compatibles avec les enums TypeScript du projet (`src/types/`) mais nominalement distincts. TypeScript enforce la nominalité des enums : même si les valeurs sont identiques, les deux types ne sont pas interchangeables sans cast.
+
+**Fix :**
+Conserver le cast `as InterpolationStrategy` (ou l'enum applicatif équivalent) au point de lecture depuis Prisma :
+```typescript
+// Lecture depuis Prisma :
+const strategy = vague.interpolationStrategy as InterpolationStrategy;
+// Maintenant strategy est typé comme l'enum applicatif, pas $Enums.InterpolationStrategy
+```
+
+**Leçon / Règle :**
+Tout champ Prisma dont le type est un enum (`$Enums.X`) doit être casté vers le type enum applicatif (`import { X } from "@/types"`) au point de lecture. Ce cast est **obligatoire**, pas cosmétique. Ne jamais le supprimer lors d'une review sans vérifier que `npm run build` passe toujours. Voir aussi ERR-008 et ERR-012 pour des variantes de ce problème.
+
+---
+
 ### ERR-004 — updatedAt affiché au lieu de date de mesure
 **Sprint :** 29+ | **Date :** 2026-03-20
 **Sévérité :** Moyenne
@@ -119,6 +586,44 @@ Utiliser `head -3 migration.sql` et `tail -5 migration.sql` pour vérifier.
 ---
 
 ## Catégorie : Pattern
+
+### ERR-040 — ADR interne incohérent : hypothèse d'homogénéité contredite par l'ADR précédent
+**Sprint :** ADR-030 | **Date :** 2026-04-05
+**Sévérité :** Haute
+**Fichier(s) :** `docs/decisions/ADR-029.md`, `docs/decisions/ADR-030.md`
+
+**Symptôme :**
+ADR-029 rejette le calibrage Gompertz par bac avec l'argument que "les bacs d'une même vague ont des conditions quasi-identiques". ADR-030 doit annuler ce choix car les bacs ont en réalité des conditions différentes — en particulier des changements d'aliment qui surviennent à des dates distinctes par bac.
+
+**Cause racine :**
+ADR-028 avait introduit la segmentation des périodes d'alimentation par bac précisément parce que les bacs ne changent pas d'aliment en même temps. ADR-029, rédigé sans recroiser ADR-028, a posé une hypothèse d'homogénéité que le modèle avait déjà invalidée. Les deux ADR étaient en contradiction directe sur la nature des données.
+
+**Fix :**
+ADR-030 a été rédigé pour documenter l'invalidation d'ADR-029 et rétablir le calibrage par bac. Le travail d'implémentation a dû reprendre depuis la décision d'architecture.
+
+**Leçon / Règle :**
+Avant de rédiger un ADR qui suppose quelque chose sur la structure ou l'homogénéité des données, relire les ADR précédents pour détecter toute contradiction. En particulier : si un ADR antérieur a introduit une segmentation par entité (par bac, par période, par site), un nouvel ADR ne peut pas supposer que ces entités sont interchangeables. Documenter explicitement dans le nouvel ADR les hypothèses posées et les ADR croisés.
+
+---
+
+### ERR-039 — Pondération multi-entité copy-collée dans un contexte mono-entité devient un no-op
+**Sprint :** ADR-030 | **Date :** 2026-04-05
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/calculs-gompertz.ts` (route de calibrage par bac)
+
+**Symptôme :**
+Le calibrage Gompertz par bac produit des résultats identiques qu'avec ou sans pondération. Aucune erreur TypeScript ou runtime, mais la pondération n'a aucun effet.
+
+**Cause racine :**
+La route de calibrage par vague pondérait les points biométriques par `vivantsByBac` (nombre de poissons par bac) pour agréger plusieurs bacs à la même date. Quand cette logique a été copy-collée dans la boucle de calibrage par bac, tous les enregistrements avaient le même `bacId`. Le numérateur et le dénominateur de la moyenne pondérée étaient proportionnels à la même constante, ce qui ramène le calcul à une moyenne simple — la pondération ne change rien.
+
+**Fix :**
+Dans le contexte mono-entité (boucle par bac), remplacer la moyenne pondérée par une moyenne arithmétique simple. L'abstraction de pondération multi-entité n'est pertinente que lorsque plusieurs entités différentes sont agrégées sur la même dimension temporelle.
+
+**Leçon / Règle :**
+Quand on adapte du code d'agrégation multi-entité à un contexte mono-entité, simplifier plutôt que copier. Une moyenne pondérée sur des enregistrements qui partagent tous le même identifiant d'entité est algébriquement équivalente à une moyenne simple — conserver la pondération est trompeur car elle suggère une variance entre entités qui n'existe pas. Se poser la question : "quelle diversité ce code est-il censé compenser ?" Si la diversité n'est pas présente dans le jeu de données courant, l'abstraction ne doit pas être transférée.
+
+---
 
 ### ERR-018 — String en dur comme clé d'accès à un objet constant indexé par enum (variante R2)
 **Sprint :** 37 | **Date :** 2026-03-21
@@ -822,6 +1327,102 @@ export async function checkSubscription(siteId: string, ressource: string) {
 
 **Leçon / Règle :**
 `unstable_cache` se place au niveau de la requête de données (queries), pas au niveau des fonctions de service ou des wrappers de logique métier. Si une fonction de service appelle une query déjà cachée, ne pas ajouter un deuxième `unstable_cache` sur le service. Un seul niveau de cache par chemin de données. Les tags d'invalidation (`revalidateTag`) ne traversent pas les caches imbriqués de façon fiable.
+
+---
+
+### ERR-035 — Filter-before-map : filtrer les nullables avant le mapping, pas après (FCR refactor)
+**Sprint :** ADR-028 | **Date :** 2026-04-05
+**Sévérité :** Basse
+**Fichier(s) :** `src/lib/calculs/fcr.ts` (ou équivalent calculs aliment)
+
+**Symptôme :**
+`biometriePoints` était construit avec `.map(b => b.poids ?? 0).filter(p => p > 0)`. Si le `.filter` est un jour retiré par erreur (refactoring, simplification), des valeurs `0` silencieuses entrent dans les calculs de biomasse ou d'interpolation, produisant des résultats faux sans erreur TypeScript ni runtime.
+
+**Cause racine :**
+Le mapping transforme `null` en `0` avant le filtre, créant un état intermédiaire sémantiquement incorrect (`0` n'est pas la même chose que "donnée absente"). La correction de l'absence est portée par le `.filter` qui suit, mais ce couplage est fragile : retirer le filtre ne produit aucun avertissement.
+
+**Fix :**
+Filtrer les nulls avant le mapping :
+```typescript
+// Incorrect (filter après map — fragile) :
+const biometriePoints = biometries
+  .map(b => b.poids ?? 0)
+  .filter(p => p > 0);
+
+// Correct (filter avant map — robuste) :
+const biometriePoints = biometries
+  .filter((b): b is typeof b & { poids: number } => b.poids !== null && b.poids > 0)
+  .map(b => b.poids);
+```
+
+**Leçon / Règle :**
+Ne jamais transformer une valeur nulle en valeur sentinelle (0, "", -1) pour la filtrer ensuite. Filtrer les nulls en premier avec un type guard, puis mapper uniquement des valeurs valides. Le pattern `map(null → 0).filter(> 0)` est sémantiquement incorrect et fragile : un refactoring anodin qui retire le filtre introduit silencieusement des données invalides dans les calculs.
+
+---
+
+### ERR-034 — Agrégation de qualité/confiance : utiliser le pire cas, pas le meilleur (FCR refactor)
+**Sprint :** ADR-028 | **Date :** 2026-04-05
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/calculs/fcr.ts` (ou équivalent calculs aliment)
+
+**Symptôme :**
+La `methodeEstimation` d'une période était dérivée en prenant le `max` du rang de précision des méthodes utilisées aux deux bornes de la période (biométrie exacte > interpolation > extrapolation). Utiliser le max revient à annoncer la méthode la plus précise, ce qui surestime la confiance réelle de l'estimation.
+
+**Cause racine :**
+L'intuition "prendre le max pour avoir la meilleure représentation" est incorrecte pour une métrique de qualité/confiance où la qualité de l'ensemble est limitée par le maillon le plus faible. Si une borne de la période est extrapolée, toute la période est de qualité "extrapolation", peu importe la précision de l'autre borne.
+
+**Fix :**
+Utiliser `min` (pire cas) pour l'agrégation de méthodes d'estimation :
+```typescript
+// Incorrect (max = surclasse la confiance réelle) :
+const methodeEstimation = [methodeDebut, methodeFin]
+  .map(m => PRECISION_RANK[m])
+  .reduce((a, b) => Math.max(a, b));
+
+// Correct (min = conservateur, borne inférieure de qualité) :
+const methodeEstimation = [methodeDebut, methodeFin]
+  .map(m => PRECISION_RANK[m])
+  .reduce((a, b) => Math.min(a, b));
+```
+
+**Leçon / Règle :**
+Quand on agrège des indicateurs de qualité, précision ou confiance provenant de plusieurs sources, toujours utiliser le **pire cas** (min, worst-case) comme valeur consolidée. La qualité globale est limitée par l'estimation la moins précise, pas par la plus précise. Ce principe s'applique à toute fonction d'estimation, interpolation, ou calcul basé sur plusieurs points de mesure de qualités hétérogènes.
+
+---
+
+### ERR-033 — Interpolation : extrapolation étiquetée "BIOMETRIE_EXACTE" (FCR refactor)
+**Sprint :** ADR-028 | **Date :** 2026-04-05
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/calculs/fcr.ts` (ou équivalent calculs aliment)
+
+**Symptôme :**
+La fonction `interpolerPoidsBac` retournait `methode: "BIOMETRIE_EXACTE"` lorsque la date cible était postérieure à toutes les biométries disponibles (cas d'extrapolation). L'appelant recevait une estimation extrapolée avec une étiquette de confiance maximale, ce qui pouvait conduire à des décisions basées sur des données présentées comme plus fiables qu'elles ne l'étaient.
+
+**Cause racine :**
+La branche de code gérant le cas "date cible après la dernière biométrie" copiait le retour de la branche "date cible exactement sur un point de mesure" (match exact = `BIOMETRIE_EXACTE`) sans adapter la valeur de `methode`. L'extrapolation et la lecture exacte étaient traitées de façon identique dans le label retourné.
+
+**Fix :**
+Retourner `"INTERPOLATION_LINEAIRE"` (ou un label dédié `"EXTRAPOLATION"`) pour les cas hors des bornes connues :
+```typescript
+// Incorrect (extrapolation labellisée comme lecture exacte) :
+if (dateTarget > dernierPoint.date) {
+  return { poids: dernierPoint.poids, methode: "BIOMETRIE_EXACTE" }; // FAUX
+}
+
+// Correct (label reflète la nature de l'estimation) :
+if (dateTarget > dernierPoint.date) {
+  return { poids: dernierPoint.poids, methode: "INTERPOLATION_LINEAIRE" };
+  // ou : methode: "EXTRAPOLATION" si le type le supporte
+}
+```
+
+**Leçon / Règle :**
+Dans toute fonction d'interpolation/extrapolation, chaque branche de retour doit porter un label `methode` qui correspond à ce que la branche fait réellement :
+- Date exacte sur un point mesuré → `"BIOMETRIE_EXACTE"`
+- Date entre deux points → `"INTERPOLATION_LINEAIRE"`
+- Date avant ou après toutes les mesures → `"INTERPOLATION_LINEAIRE"` ou `"EXTRAPOLATION"` (jamais `"BIOMETRIE_EXACTE"`)
+
+L'exactitude du label de méthode est aussi importante que l'exactitude de la valeur calculée : les appelants utilisent ce label pour communiquer la confiance aux utilisateurs finaux.
 
 ---
 

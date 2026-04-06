@@ -22,7 +22,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
-import { getSubscriptionStatus, isBlocked } from "@/lib/abonnements/check-subscription";
+import { getSubscriptionStatusForSite, isBlocked } from "@/lib/abonnements/check-subscription";
 import { prisma } from "@/lib/db";
 import { StatutAbonnement, TypePlan } from "@/types";
 
@@ -30,9 +30,11 @@ export async function GET(request: NextRequest) {
   try {
     // Lire la session depuis le cookie (Node.js runtime — Prisma disponible)
     const session = await getSession(request);
+    console.log(`[statut-middleware] session exists=${!!session} activeSiteId=${session?.activeSiteId ?? "null"}`);
 
     if (!session || !session.activeSiteId) {
       // Pas de session → pas de restriction d'abonnement (le middleware auth gère le redirect /login)
+      // Pas d'activeSiteId → user n'a pas encore sélectionné de site, géré par le flux de sélection
       return NextResponse.json({
         statut: null,
         isDecouverte: false,
@@ -41,7 +43,8 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const status = await getSubscriptionStatus(session.activeSiteId);
+    const status = await getSubscriptionStatusForSite(session.activeSiteId);
+    console.log(`[statut-middleware] status for site ${session.activeSiteId}:`, JSON.stringify(status));
 
     // isDecouverte : plan DECOUVERTE ne bloque jamais
     // R2 : comparaison via enum TypePlan.DECOUVERTE
@@ -64,6 +67,8 @@ export async function GET(request: NextRequest) {
       ? false
       : isBlocked(status.statut as StatutAbonnement | null);
 
+    console.log(`[statut-middleware] result: isDecouverte=${isDecouverteFlag} blockedFlag=${blockedFlag} statut=${status.statut}`);
+
     return NextResponse.json({
       statut: status.statut,
       isDecouverte: isDecouverteFlag,
@@ -71,13 +76,13 @@ export async function GET(request: NextRequest) {
       isBlocked: blockedFlag,
     });
   } catch (error) {
-    console.error("[statut-middleware] Erreur :", error);
-    // En cas d'erreur, on ne bloque pas l'accès — fail open
+    console.error("[statut-middleware] Erreur (fail-closed — returning isBlocked:true):", error);
+    // Fail closed: si la vérification échoue, bloquer l'accès par précaution
     return NextResponse.json({
       statut: null,
       isDecouverte: false,
       planId: null,
-      isBlocked: false,
+      isBlocked: true,
     });
   }
 }

@@ -19,6 +19,8 @@ import {
   Eye,
   Trash2,
   Package,
+  ExternalLink,
+  ClipboardList,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,6 +72,7 @@ interface CommandeData {
   };
   user: { id: string; name: string };
   lignes: LigneData[];
+  listeBesoins?: { id: string; numero: string; titre: string } | null;
 }
 
 interface Props {
@@ -242,6 +245,18 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
                     date: new Date(commande.dateLivraison).toLocaleDateString("fr-FR"),
                   })}
                 </span>
+              </div>
+            )}
+            {commande.listeBesoins && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <ClipboardList className="h-4 w-4 shrink-0" />
+                <Link
+                  href={`/besoins/${commande.listeBesoins.id}`}
+                  className="text-primary hover:underline flex items-center gap-1"
+                >
+                  {t("commandes.detail.listeBesoins", { numero: commande.listeBesoins.numero })}
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </Link>
               </div>
             )}
           </div>

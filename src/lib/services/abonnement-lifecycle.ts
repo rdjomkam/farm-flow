@@ -69,16 +69,24 @@ export async function transitionnerStatuts(): Promise<TransitionStatutsResult> {
     if (result.count > 0) {
       essaisExpires++;
       // Envoyer notification de fin d'essai (idempotente via creerNotificationSiAbsente)
+      // Sprint 52 (Decision 1) : résoudre siteId via userId → site.ownerId
       try {
         const nomPlan = (essai.plan as { nom: string } | null)?.nom ?? "votre plan";
-        await creerNotificationSiAbsente(
-          essai.siteId,
-          essai.userId,
-          TypeAlerte.ABONNEMENT_ESSAI_EXPIRE,
-          "Votre essai gratuit est termine",
-          `Votre essai gratuit du plan ${nomPlan} est termine. Souscrivez maintenant pour continuer a beneficier de toutes les fonctionnalites.`,
-          "/abonnement"
-        );
+        const site = await prisma.site.findFirst({
+          where: { ownerId: essai.userId },
+          select: { id: true },
+          orderBy: { createdAt: "asc" },
+        });
+        if (site) {
+          await creerNotificationSiAbsente(
+            site.id,
+            essai.userId,
+            TypeAlerte.ABONNEMENT_ESSAI_EXPIRE,
+            "Votre essai gratuit est termine",
+            `Votre essai gratuit du plan ${nomPlan} est termine. Souscrivez maintenant pour continuer a beneficier de toutes les fonctionnalites.`,
+            "/abonnement"
+          );
+        }
       } catch (err) {
         console.error(
           `[abonnement-lifecycle] Echec notification fin essai pour abonnement ${essai.id}:`,
@@ -175,7 +183,7 @@ export async function getAbonnementsExpirantDans(joursAvant: number) {
     },
     include: {
       plan: { select: { nom: true, typePlan: true } },
-      site: { select: { id: true, name: true } },
+      // Sprint 52 : site supprimé (relation nullable depuis suppression de siteId)
       user: { select: { id: true, name: true, email: true, phone: true } },
     },
   });
@@ -196,7 +204,7 @@ export interface AppliquerDowngradeResult {
   /** Détail des downgrades appliqués */
   details: Array<{
     abonnementId: string;
-    siteId: string;
+    userId: string;
     ancienPlanId: string;
     nouveauPlanId: string;
     bacsBlockes: number;
@@ -229,7 +237,7 @@ export async function appliquerDowngradeProgramme(): Promise<AppliquerDowngradeR
     },
     select: {
       id: true,
-      siteId: true,
+      // Sprint 52 : siteId retiré — filtrage bacs/vagues via site.ownerId (Decision 2)
       planId: true,
       userId: true,
       periode: true,
@@ -267,11 +275,11 @@ export async function appliquerDowngradeProgramme(): Promise<AppliquerDowngradeR
 /**
  * Applique le downgrade pour un seul abonnement dans une $transaction.
  * Retourne null si le downgrade ne peut pas être appliqué (plan invalide, etc.).
+ * Sprint 52 : siteId supprimé — filtrage bacs/vagues via site.ownerId (Decision 2).
  */
 async function _appliquerUnDowngrade(
   abonnement: {
     id: string;
-    siteId: string;
     planId: string;
     userId: string;
     periode: string;
@@ -321,13 +329,14 @@ async function _appliquerUnDowngrade(
   const nouvelleperiode = (abonnement.downgradePeriode ?? abonnement.periode) as PeriodeFacturation;
 
   // Re-valider les IDs des ressources (des ressources peuvent avoir été supprimées entre-temps)
+  // Sprint 52 (Decision 2) : filtrer via site.ownerId au lieu de abonnement.siteId
   const [bacsExistants, vaguesExistantes] = await Promise.all([
     prisma.bac.findMany({
-      where: { siteId: abonnement.siteId },
+      where: { site: { ownerId: abonnement.userId } },
       select: { id: true },
     }),
     prisma.vague.findMany({
-      where: { siteId: abonnement.siteId },
+      where: { site: { ownerId: abonnement.userId } },
       select: { id: true },
     }),
   ]);
@@ -358,26 +367,27 @@ async function _appliquerUnDowngrade(
   // R4 : toutes les opérations dans une seule $transaction
   const result = await prisma.$transaction(async (tx) => {
     // 1. Bloquer les ressources en excès
+    // Sprint 52 (Decision 2) : filtrer via site.ownerId (pas de siteId sur abonnement)
     const [bacsBlockesResult, vaguesBloquéesResult] = await Promise.all([
       bacsABlocker.length > 0
         ? tx.bac.updateMany({
-            where: { id: { in: bacsABlocker }, siteId: abonnement.siteId },
+            where: { id: { in: bacsABlocker }, site: { ownerId: abonnement.userId } },
             data: { isBlocked: true },
           })
         : Promise.resolve({ count: 0 }),
       vaguesABloquer.length > 0
         ? tx.vague.updateMany({
-            where: { id: { in: vaguesABloquer }, siteId: abonnement.siteId },
+            where: { id: { in: vaguesABloquer }, site: { ownerId: abonnement.userId } },
             data: { isBlocked: true },
           })
         : Promise.resolve({ count: 0 }),
     ]);
 
     // 2. Créer le nouvel abonnement (statut ACTIF dès création)
+    // Sprint 52 : siteId supprimé de l'abonnement
     const dateFinNew = calculerProchaineDate(new Date(maintenant), nouvelleperiode);
     const nouvelAbonnement = await tx.abonnement.create({
       data: {
-        siteId: abonnement.siteId,
         planId: nouveauPlan.id,
         periode: nouvelleperiode,
         statut: StatutAbonnement.ACTIF,
@@ -413,7 +423,7 @@ async function _appliquerUnDowngrade(
 
   return {
     abonnementId: result.nouvelAbonnement.id,
-    siteId: abonnement.siteId,
+    userId: abonnement.userId,
     ancienPlanId: abonnement.planId,
     nouveauPlanId: nouveauPlan.id,
     bacsBlockes: result.bacsBlockes,

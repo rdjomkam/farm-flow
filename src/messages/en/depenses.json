@@ -85,9 +85,8 @@
     "raisonRequise": "Reason is required",
     "montantInferieur": "Amount cannot be less than the amount already paid",
     "enCours": "Processing...",
+    "montantActuel": "Current amount",
     "historique": "Adjustment history",
-    "tabMontant": "Amount",
-    "tabFrais": "Fees",
     "ajouterFrais": "Add fee",
     "modifierFrais": "Edit fee",
     "supprimerFrais": "Delete fee",
@@ -97,6 +96,9 @@
     "fraisAjoute": "Fee added",
     "selectPaiement": "Select a payment",
     "aucunFrais": "No additional fees"
+  },
+  "lignes": {
+    "titre": "Line items ({count})"
   },
   "motif": {
     "TRANSPORT": "Transport",
@@ -132,6 +134,17 @@
       "vagueAssociee": "Associated batch",
       "commandeLiee": "Linked order"
     }
+  },
+  "deleteDepense": {
+    "supprimer": "Delete",
+    "title": "Delete this expense?",
+    "description": "This action is irreversible. The expense and all its data will be permanently deleted.",
+    "confirmer": "Delete permanently"
+  },
+  "paiements": {
+    "supprimerPaiement": "Delete payment",
+    "confirmeSuppression": "This action is irreversible. The payment and its additional fees will be permanently deleted.",
+    "paiementSupprime": "Payment deleted."
   },
   "emptyState": {
     "noExpenses": "No expenses"

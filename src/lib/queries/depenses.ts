@@ -8,6 +8,7 @@ import type {
   AjusterDepenseDTO,
   AjusterFraisDepenseDTO,
 } from "@/types";
+import type { FraisPaiementDepense as PrismaFraisPaiementDepense } from "@/generated/prisma/client";
 import { categorieProduitToDepense, computeDominantCategorie } from "./besoins";
 
 // Re-export for use in API validation
@@ -88,6 +89,18 @@ export async function getDepenseById(id: string, siteId: string) {
       ajustements: {
         include: { user: { select: { id: true, name: true } } },
         orderBy: { createdAt: "desc" },
+      },
+      lignes: {
+        select: {
+          id: true,
+          designation: true,
+          categorieDepense: true,
+          quantite: true,
+          prixUnitaire: true,
+          montantTotal: true,
+          produit: { select: { id: true, nom: true } },
+        },
+        orderBy: { createdAt: "asc" },
       },
     },
   });
@@ -361,6 +374,97 @@ export async function ajouterPaiementDepense(
 }
 
 /**
+ * Supprime un paiement d'une depense (transaction atomique — R4).
+ *
+ * Regles metier :
+ * 1. La depense doit appartenir au site (R8)
+ * 2. Le paiement doit appartenir a la depense
+ * 3. Cree un AjustementDepense de type MONTANT_TOTAL AVANT suppression (audit trail immuable)
+ * 4. Supprime le PaiementDepense (FraisPaiementDepense cascade automatiquement)
+ * 5. Recalcule montantPaye et montantFraisSupp via agregation
+ * 6. Recalcule le statut :
+ *    - montantPaye >= montantTotal → PAYEE
+ *    - montantPaye > 0 → PAYEE_PARTIELLEMENT
+ *    - sinon → NON_PAYEE
+ */
+export async function supprimerPaiementDepense(
+  siteId: string,
+  depenseId: string,
+  paiementId: string,
+  userId: string
+) {
+  return prisma.$transaction(async (tx) => {
+    // 1. Verify depense belongs to site
+    const depense = await tx.depense.findFirst({
+      where: { id: depenseId, siteId },
+    });
+    if (!depense) throw new Error("Depense introuvable");
+
+    // 2. Verify paiement belongs to the depense
+    const paiement = await tx.paiementDepense.findFirst({
+      where: { id: paiementId, depenseId },
+    });
+    if (!paiement) throw new Error("Paiement introuvable ou n'appartient pas a cette depense");
+
+    // 3. Create audit trail BEFORE deletion (montantAvant = paiement.montant, montantApres = 0)
+    await tx.ajustementDepense.create({
+      data: {
+        depenseId,
+        montantAvant: paiement.montant,
+        montantApres: 0,
+        raison: `Suppression du paiement du ${paiement.date.toLocaleDateString("fr-FR")}`,
+        userId,
+        siteId,
+        typeAjustement: TypeAjustementDepense.MONTANT_TOTAL,
+        paiementId,
+      },
+    });
+
+    // 4. Delete the paiement (FraisPaiementDepense cascade automatically)
+    await tx.paiementDepense.delete({ where: { id: paiementId } });
+
+    // 5. Recalculate montantPaye from remaining paiements
+    const aggregation = await tx.paiementDepense.aggregate({
+      where: { depenseId },
+      _sum: { montant: true },
+    });
+    const newMontantPaye = aggregation._sum.montant ?? 0;
+
+    // Recalculate montantFraisSupp from remaining active frais
+    const totalFraisAgg = await tx.fraisPaiementDepense.aggregate({
+      where: { paiement: { depenseId }, deletedAt: null },
+      _sum: { montant: true },
+    });
+    const newMontantFraisSupp = totalFraisAgg._sum.montant ?? 0;
+
+    // 6. Determine new statut
+    const newStatut =
+      newMontantPaye >= depense.montantTotal
+        ? StatutDepense.PAYEE
+        : newMontantPaye > 0
+          ? StatutDepense.PAYEE_PARTIELLEMENT
+          : StatutDepense.NON_PAYEE;
+
+    // Update depense with new values
+    const updatedDepense = await tx.depense.update({
+      where: { id: depenseId },
+      data: {
+        montantPaye: newMontantPaye,
+        montantFraisSupp: newMontantFraisSupp,
+        statut: newStatut,
+      },
+    });
+
+    return {
+      depense: updatedDepense,
+      statut: newStatut,
+      montantPaye: newMontantPaye,
+      montantFraisSupp: newMontantFraisSupp,
+    };
+  });
+}
+
+/**
  * Ajuste le montant total d'une depense (transaction atomique — R4).
  *
  * Regles metier :
@@ -469,8 +573,7 @@ export async function ajusterFraisDepense(
 
     let montantAvant = 0;
     let montantApres = 0;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let resultFrais: any = null;
+    let resultFrais: PrismaFraisPaiementDepense | null = null;
 
     if (data.action === ActionAjustementFrais.SUPPRIME) {
       // 3. Verify frais belongs to paiement and is not already deleted

@@ -3,19 +3,21 @@
  *
  * R2 : importer les enums depuis @/types
  * R4 : opérations atomiques — confirmerPaiement via updateMany idempotent
- * R8 : siteId obligatoire
+ * Sprint 52 : siteId supprimé de createPaiementAbonnement
  */
 import { prisma } from "@/lib/db";
 import { StatutPaiementAbo } from "@/types";
 import type { FournisseurPaiement } from "@/types";
 
-/** Crée un enregistrement de paiement en statut EN_ATTENTE */
+/**
+ * Crée un enregistrement de paiement en statut EN_ATTENTE.
+ * Sprint 52 : siteId supprimé — le paiement est au niveau user.
+ */
 export async function createPaiementAbonnement(data: {
   abonnementId: string;
   montant: number;
   fournisseur: FournisseurPaiement;
   initiePar: string;
-  siteId: string;
   phoneNumber?: string;
   referenceExterne?: string;
 }) {
@@ -26,7 +28,6 @@ export async function createPaiementAbonnement(data: {
       fournisseur: data.fournisseur,
       statut: StatutPaiementAbo.EN_ATTENTE,
       initiePar: data.initiePar,
-      siteId: data.siteId,
       phoneNumber: data.phoneNumber ?? null,
       referenceExterne: data.referenceExterne ?? null,
       dateInitiation: new Date(),

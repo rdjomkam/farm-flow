@@ -22,11 +22,15 @@ export async function GET(
     const { id } = await params;
     const auth = await requirePermission(request, Permission.ABONNEMENTS_VOIR);
 
-    // R8 : siteId passé pour garantir l'appartenance au site actif
-    const abonnement = await getAbonnementById(id, auth.activeSiteId);
+    // Sprint 52 : ownership vérifié via userId (Decision 3 — siteId supprimé d'Abonnement)
+    const abonnement = await getAbonnementById(id);
 
     if (!abonnement) {
       return apiError(404, "Abonnement introuvable.");
+    }
+
+    if (abonnement.userId !== auth.userId) {
+      return apiError(403, "Accès refusé : cet abonnement n'appartient pas à votre compte.");
     }
 
     return NextResponse.json(abonnement);

@@ -7,7 +7,7 @@
  * R2 : enums importés depuis @/types
  * R4 : toutes les opérations DB dans une transaction Prisma atomique
  * R7 : prixMensuel nullable (DECOUVERTE = 0)
- * R8 : siteId obligatoire sur Abonnement
+ * Sprint 52 : siteId supprimé de l'Abonnement (user-level)
  */
 
 import { prisma } from "@/lib/db";
@@ -62,17 +62,19 @@ function calculatePrixPaye(
 }
 
 /**
- * Crée ou renouvelle un Abonnement pour un site à partir d'un Pack activé.
+ * Crée ou renouvelle un Abonnement pour un utilisateur à partir d'un Pack activé.
  *
  * Comportement :
- * - Si le site a déjà un abonnement ACTIF sur le même plan → renouvellement (dateFin étendue).
- * - Si le site a un abonnement ACTIF sur un plan différent → annulation de l'ancien, création du nouveau.
+ * - Si l'utilisateur a déjà un abonnement ACTIF sur le même plan → renouvellement (dateFin étendue).
+ * - Si l'utilisateur a un abonnement ACTIF sur un plan différent → annulation de l'ancien, création du nouveau.
  * - Sinon → création directe.
  *
  * L'activation d'un pack ne nécessite pas de paiement préalable :
  * le statut est positionné à ACTIF directement.
  *
- * @param siteId - ID du site client (R8)
+ * Sprint 52 : siteId supprimé de l'abonnement — recherche par userId (user-level).
+ *
+ * @param siteId - ID du site client (utilisé pour applyPlanModulesTx)
  * @param packId - ID du Pack activé
  * @param userId - ID de l'utilisateur souscripteur/activateur
  * @param periode - Période de facturation (défaut : MENSUEL)
@@ -103,10 +105,11 @@ export async function createAbonnementFromPack(
 
     const plan = pack.plan;
 
-    // 2. Vérifier si le site a déjà un abonnement actif
+    // 2. Vérifier si l'utilisateur a déjà un abonnement actif
+    // Sprint 52 : recherche par userId au lieu de siteId
     const abonnementExistant = await tx.abonnement.findFirst({
       where: {
-        siteId,
+        userId,
         statut: { in: [StatutAbonnement.ACTIF, StatutAbonnement.EN_GRACE] },
       },
       orderBy: { createdAt: "desc" },
@@ -141,9 +144,9 @@ export async function createAbonnementFromPack(
         const dateFin = calculateDateFin(now, periode);
         const prixPaye = calculatePrixPaye(plan, periode);
 
+        // Sprint 52 : siteId supprimé de l'abonnement
         abonnement = await tx.abonnement.create({
           data: {
-            siteId,
             planId: plan.id,
             periode,
             statut: StatutAbonnement.ACTIF,
@@ -162,9 +165,9 @@ export async function createAbonnementFromPack(
       const dateFin = calculateDateFin(now, periode);
       const prixPaye = calculatePrixPaye(plan, periode);
 
+      // Sprint 52 : siteId supprimé de l'abonnement
       abonnement = await tx.abonnement.create({
         data: {
-          siteId,
           planId: plan.id,
           periode,
           statut: StatutAbonnement.ACTIF,

@@ -153,6 +153,17 @@ export function useDepenseService() {
     [call]
   );
 
+  /** Supprimer un paiement d'une depense */
+  const deletePaiementDepense = useCallback(
+    (depenseId: string, paiementId: string) =>
+      call<{ depense: unknown; statut: string; montantPaye: number; montantFraisSupp: number }>(
+        `/api/depenses/${depenseId}/paiements/${paiementId}`,
+        { method: "DELETE" },
+        { successMessage: "Paiement supprime." }
+      ),
+    [call]
+  );
+
   /** Ajuster le montant total d'une depense (audit trail) */
   const ajusterDepense = useCallback(
     (depenseId: string, dto: AjusterDepenseDTO) =>
@@ -355,6 +366,7 @@ export function useDepenseService() {
     getFactureDepenseUrl,
     deleteFactureDepense,
     addPaiementDepense,
+    deletePaiementDepense,
     ajusterDepense,
     ajusterFraisDepense,
     listDepensesRecurrentes,

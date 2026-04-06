@@ -27,6 +27,10 @@ vi.mock("@/lib/db", () => ({
       updateMany: (...args: unknown[]) => mockPrismaAbonnementUpdateMany(...args),
       findMany: (...args: unknown[]) => mockPrismaAbonnementFindMany(...args),
     },
+    // Sprint 52 : résolution siteId via userId → site.ownerId (Decision 1)
+    site: {
+      findFirst: () => Promise.resolve({ id: "site-mock" }),
+    },
     $transaction: (operations: unknown[]) => {
       if (Array.isArray(operations)) {
         // Exécuter chaque opération (elles sont déjà des promesses)
@@ -100,7 +104,7 @@ function makeAbonnement(overrides: {
   const now = new Date();
   return {
     id: overrides.id,
-    siteId: "site-1",
+    // Sprint 52 : siteId supprimé d'Abonnement — résolu via userId (Decision 1)
     userId: "user-1",
     statut: overrides.statut,
     dateFin: overrides.dateFin ?? datePassee(1),

@@ -85,9 +85,8 @@
     "raisonRequise": "La raison est obligatoire",
     "montantInferieur": "Le montant ne peut pas etre inferieur au montant deja paye",
     "enCours": "En cours...",
+    "montantActuel": "Montant actuel",
     "historique": "Historique des ajustements",
-    "tabMontant": "Montant",
-    "tabFrais": "Frais",
     "ajouterFrais": "Ajouter un frais",
     "modifierFrais": "Modifier le frais",
     "supprimerFrais": "Supprimer le frais",
@@ -97,6 +96,9 @@
     "fraisAjoute": "Frais ajoute",
     "selectPaiement": "Selectionner un paiement",
     "aucunFrais": "Aucun frais supplementaire"
+  },
+  "lignes": {
+    "titre": "Detail des lignes ({count})"
   },
   "motif": {
     "TRANSPORT": "Transport",
@@ -132,6 +134,17 @@
       "vagueAssociee": "Vague associee",
       "commandeLiee": "Commande liee"
     }
+  },
+  "deleteDepense": {
+    "supprimer": "Supprimer",
+    "title": "Supprimer cette depense ?",
+    "description": "Cette action est irreversible. La depense et toutes ses donnees seront definitivement supprimees.",
+    "confirmer": "Supprimer definitivement"
+  },
+  "paiements": {
+    "supprimerPaiement": "Supprimer le paiement",
+    "confirmeSuppression": "Cette action est irreversible. Le paiement et ses frais supplementaires seront definitivement supprimes.",
+    "paiementSupprime": "Paiement supprime."
   },
   "emptyState": {
     "noExpenses": "Aucune depense"

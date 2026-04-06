@@ -42,28 +42,24 @@ ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy Next.js standalone output
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
+# Copy Next.js standalone output (with ownership set at copy time)
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # Copy Prisma schema, migrations, and config (needed for migrate deploy at startup)
-COPY --from=builder /app/prisma ./prisma/
-COPY --from=builder /app/prisma.config.ts ./
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma/
+COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./
 
 # Copy generated Prisma client
-COPY --from=builder /app/src/generated ./src/generated/
+COPY --from=builder --chown=nextjs:nodejs /app/src/generated ./src/generated/
 
 # Copy full node_modules for prisma CLI and pg driver
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 # Copy entrypoint script
-COPY docker-entrypoint.sh /docker-entrypoint.sh
+COPY --chown=nextjs:nodejs docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
-
-# Set ownership
-RUN chown -R nextjs:nodejs /app
-RUN chown nextjs:nodejs /docker-entrypoint.sh
 
 USER nextjs
 

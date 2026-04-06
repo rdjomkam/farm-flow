@@ -533,6 +533,20 @@ export type {
   ChangementGranule,
   AlerteRation,
   ScoreAlimentConfig,
+  // ADR-028 — FCR feed-switching accuracy
+  PeriodeAlimentaire,
+  PeriodeAlimentaireVague,
+  // ADR-031 — FCR Transparency Dialog
+  MethodeEstimationPoids,
+  FCRTraceGompertzParams,
+  FCRTraceEstimationBiometrieExacte,
+  FCRTraceEstimationInterpolationLineaire,
+  FCRTraceEstimationGompertz,
+  FCRTraceEstimationValeurInitiale,
+  FCRTraceEstimationDetail,
+  FCRTracePeriode,
+  FCRTraceVague,
+  FCRTrace,
 } from "./calculs";
 
 // Gompertz growth model — public interfaces (Story G2.1)

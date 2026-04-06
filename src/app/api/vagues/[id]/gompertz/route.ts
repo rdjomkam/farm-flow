@@ -84,7 +84,7 @@ export async function GET(
     // biometrieCount = unique dates (not raw releve count)
     const biometrieCount = groupedByDate.size;
 
-    // 3. Lazy calibration: recalibrate if biometrieCount changed, no record, or config threshold lowered
+    // Lazy calibration: recalibrate if biometrieCount changed, no record, or config threshold lowered
     const existingGompertz = vague.gompertz;
     const minPoints = vague.configElevage?.gompertzMinPoints ?? 5;
     const configWInf = vague.configElevage?.gompertzWInfDefault ?? null;
@@ -144,7 +144,7 @@ export async function GET(
         dateRecolteEstimee: null,
       });
     } else {
-      // 4a. Build weighted-average points per unique date
+      // Build weighted-average points per unique date
       const vagueStartMs = vague.dateDebut.getTime();
       const points = Array.from(groupedByDate.entries())
         .sort(([a], [b]) => a.localeCompare(b))
@@ -163,13 +163,13 @@ export async function GET(
           };
         });
 
-      // 4b. Build initial guess from ConfigElevage if available
+      // Build initial guess from ConfigElevage if available
       const initialGuess: Partial<GompertzParams> = {};
       if (vague.configElevage?.gompertzWInfDefault) initialGuess.wInfinity = vague.configElevage.gompertzWInfDefault;
       if (vague.configElevage?.gompertzKDefault) initialGuess.k = vague.configElevage.gompertzKDefault;
       if (vague.configElevage?.gompertzTiDefault) initialGuess.ti = vague.configElevage.gompertzTiDefault;
 
-      // 4c. Calibrate with aggregated weighted-average points
+      // Calibrate with aggregated weighted-average points
       const result = calibrerGompertz({ points, initialGuess }, minPoints);
 
       if (!result) {
@@ -182,7 +182,7 @@ export async function GET(
         });
       }
 
-      // 4d. Upsert GompertzVague record
+      // Upsert GompertzVague record
       await prisma.gompertzVague.upsert({
         where: { vagueId },
         create: {

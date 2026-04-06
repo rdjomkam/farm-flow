@@ -228,7 +228,6 @@ export {
   getAbonnements,
   getAbonnementActif,
   getAbonnementActifPourSite,
-  getAbonnementActifParSite,
   getAbonnementById,
   createAbonnement,
   activerAbonnement,

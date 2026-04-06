@@ -5,6 +5,7 @@ import { ArrowRight, Trophy } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { BenchmarkBadge } from "./benchmark-badge";
+import { FCRTransparencyDialog } from "./fcr-transparency-dialog";
 import { evaluerBenchmark, BENCHMARK_FCR } from "@/lib/benchmarks";
 import { cn } from "@/lib/utils";
 import type { AnalytiqueAliment } from "@/types";
@@ -223,10 +224,15 @@ export function FeedComparisonCards({
                 )}
               </div>
 
-              {/* FCR benchmark badge */}
+              {/* FCR benchmark badge + transparency trigger */}
               {aliment.fcrMoyen !== null && (
-                <div className="mt-1.5">
+                <div className="mt-1.5 flex items-center gap-2 flex-wrap">
                   <BenchmarkBadge level={evaluerBenchmark(aliment.fcrMoyen, BENCHMARK_FCR)} />
+                  <FCRTransparencyDialog
+                    produitId={aliment.produitId}
+                    produitNom={aliment.produitNom}
+                    fcrMoyen={aliment.fcrMoyen}
+                  />
                 </div>
               )}
             </CardContent>

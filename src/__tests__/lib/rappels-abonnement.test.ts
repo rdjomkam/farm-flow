@@ -11,6 +11,7 @@
  * - Aucun abonnement expirant → { envoyes: 0 }
  *
  * Story 36.2 — Sprint 36
+ * Sprint 52 : siteId résolu via userId → site.ownerId (Decision 1)
  * R2 : enums importés depuis @/types
  */
 
@@ -24,6 +25,7 @@ import { TypePlan, StatutAbonnement } from "@/types";
 
 const mockPrismaAbonnementFindMany = vi.fn();
 const mockPrismaNotificationCount = vi.fn();
+const mockPrismaSiteFindFirst = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -32,6 +34,10 @@ vi.mock("@/lib/db", () => ({
     },
     notification: {
       count: (...args: unknown[]) => mockPrismaNotificationCount(...args),
+    },
+    site: {
+      // Sprint 52 : résolution siteId via userId → site.ownerId (Decision 1)
+      findFirst: (...args: unknown[]) => mockPrismaSiteFindFirst(...args),
     },
   },
 }));
@@ -68,7 +74,7 @@ function makeAbonnement(overrides: {
 }) {
   return {
     id: overrides.id ?? "abo-1",
-    siteId: "site-1",
+    // Sprint 52 : siteId supprimé d'Abonnement — résolu via userId (Decision 1)
     userId: "user-1",
     statut: StatutAbonnement.ACTIF,
     dateFin: overrides.dateFin,
@@ -90,6 +96,8 @@ describe("envoyerRappelsRenouvellement()", () => {
     mockPrismaNotificationCount.mockResolvedValue(0);
     // Par défaut : creerNotificationSiAbsente réussit silencieusement
     mockCreerNotificationSiAbsente.mockResolvedValue(undefined);
+    // Sprint 52 : résolution siteId via userId → site.findFirst (Decision 1)
+    mockPrismaSiteFindFirst.mockResolvedValue({ id: "site-1" });
   });
 
   it("abonnement expirant dans 7 jours → rappel créé", async () => {

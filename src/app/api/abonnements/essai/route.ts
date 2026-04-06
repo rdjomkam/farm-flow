@@ -76,9 +76,9 @@ export async function POST(request: NextRequest) {
         }
 
         // Créer l'abonnement essai en statut ACTIF directement (pas de paiement)
+        // Sprint 52 : siteId supprimé de l'abonnement (user-level)
         const newAbonnement = await tx.abonnement.create({
           data: {
-            siteId: auth.activeSiteId,
             planId: plan.id,
             // Pour un essai, la période est MENSUEL par défaut (dureeEssaiJours prévaut sur dateFin)
             periode: (body.periode as PeriodeFacturation) ?? PeriodeFacturation.MENSUEL,

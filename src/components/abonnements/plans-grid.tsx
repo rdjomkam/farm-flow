@@ -13,7 +13,8 @@
  */
 import { useState } from "react";
 import Link from "next/link";
-import { Check, Star, Zap } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Check, Loader2, Star, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +29,57 @@ import { formatXAF, formatXAFOrFree } from "@/lib/format";
 interface PlansGridProps {
   plans: PlanAbonnement[];
   abonnementActifPlanId: string | null;
+  isLoggedIn?: boolean;
+}
+
+function StartEssaiButton({ planId }: { planId: string }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleClick() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/abonnements/essai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId, periode: "MENSUEL" }),
+      });
+      if (res.status === 409) {
+        router.push(`/checkout?planId=${planId}`);
+        return;
+      }
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.message ?? "Une erreur est survenue.");
+        return;
+      }
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      setError("Impossible de contacter le serveur.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <Button
+        variant="outline"
+        className="w-full min-h-[44px]"
+        onClick={handleClick}
+        disabled={loading}
+      >
+        {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+        Commencer gratuitement
+      </Button>
+      {error && (
+        <p className="text-xs text-destructive text-center">{error}</p>
+      )}
+    </div>
+  );
 }
 
 // Plans promoteurs affichés sur la page publique
@@ -119,7 +171,7 @@ function getEconomieMontant(plan: PlanAbonnement, periode: PeriodeFacturation): 
   return economie;
 }
 
-export function PlansGrid({ plans, abonnementActifPlanId }: PlansGridProps) {
+export function PlansGrid({ plans, abonnementActifPlanId, isLoggedIn }: PlansGridProps) {
   const t = useTranslations("abonnements");
   const [periode, setPeriode] = useState<PeriodeFacturation>(PeriodeFacturation.MENSUEL);
 
@@ -263,11 +315,19 @@ export function PlansGrid({ plans, abonnementActifPlanId }: PlansGridProps) {
               {/* CTA */}
               <div className="mt-auto">
                 {isGratuit ? (
-                  <Link href="/inscription" className="block w-full">
-                    <Button variant="outline" className="w-full min-h-[44px]">
-                      {t("plans.buttons.startFree")}
+                  isActif ? (
+                    <Button disabled className="w-full min-h-[44px] opacity-60">
+                      Plan actuel
                     </Button>
-                  </Link>
+                  ) : isLoggedIn ? (
+                    <StartEssaiButton planId={plan.id} />
+                  ) : (
+                    <Link href="/register" className="block w-full">
+                      <Button variant="outline" className="w-full min-h-[44px]">
+                        Commencer gratuitement
+                      </Button>
+                    </Link>
+                  )
                 ) : isActif ? (
                   <Button disabled className="w-full min-h-[44px] opacity-60">
                     {t("plans.buttons.currentPlan")}

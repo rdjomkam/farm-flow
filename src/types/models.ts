@@ -75,6 +75,7 @@ export enum Permission {
   DEPENSES_VOIR = "DEPENSES_VOIR",
   DEPENSES_CREER = "DEPENSES_CREER",
   DEPENSES_MODIFIER = "DEPENSES_MODIFIER",
+  DEPENSES_SUPPRIMER = "DEPENSES_SUPPRIMER",
   DEPENSES_PAYER = "DEPENSES_PAYER",
   // Besoins
   BESOINS_SOUMETTRE = "BESOINS_SOUMETTRE",
@@ -760,6 +761,8 @@ export interface Commande {
   userId: string;
   /** ID du site (ferme) — R8 */
   siteId: string;
+  /** ID de la liste de besoins d'origine (null si commande manuelle) */
+  listeBesoinsId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -769,6 +772,7 @@ export interface CommandeWithRelations extends Commande {
   fournisseur: Fournisseur;
   lignes: LigneCommande[];
   user: User;
+  listeBesoins?: ListeBesoins | null;
 }
 
 /**
@@ -1925,6 +1929,7 @@ export interface ListeBesoinsWithRelations extends ListeBesoins {
   vagues?: ListeBesoinsVagueWithRelations[];
   lignes?: LigneBesoin[];
   depenses?: Depense[];
+  commandes?: Commande[];
   _count?: { lignes: number };
 }
 
@@ -1975,6 +1980,18 @@ export enum PhaseElevage {
   FINITION = "FINITION",
   PRE_RECOLTE = "PRE_RECOLTE",
 }
+
+/**
+ * Strategie d'interpolation du poids aux bornes de periode d'alimentation.
+ *
+ * LINEAIRE       — interpolation lineaire entre deux biometries encadrantes.
+ *                  Defaut. Precis a +/-5 % pour des biometries espacees de 7-21 jours.
+ * GOMPERTZ_VAGUE — utilise la courbe Gompertz calibree de la vague (GompertzVague)
+ *                  si confidenceLevel est HIGH ou MEDIUM.
+ *                  Fallback vers LINEAIRE si Gompertz non disponible ou insuffisant.
+ *
+ * ADR-029, ADR-032. Removed in ADR-034 (Gompertz always).
+ */
 
 // ---------------------------------------------------------------------------
 // Enums — Feed Analytics (Sprint FA)
@@ -2706,13 +2723,14 @@ export type DowngradeRessourcesAGarder = {
 };
 
 /**
- * Abonnement — Instance d'un abonnement liant un site à un PlanAbonnement.
+ * Abonnement — Instance d'un abonnement lié à un utilisateur.
  * R3 : miroir exact du modèle Prisma Abonnement.
- * R8 : siteId obligatoire.
+ * Sprint 52 : siteId rendu optionnel — l'abonnement est au niveau user, pas site.
  */
 export interface Abonnement {
   id: string;
-  siteId: string;
+  /** ID du site associé (optionnel depuis Sprint 52 — abonnement au niveau user) */
+  siteId?: string | null;
   planId: string;
   periode: PeriodeFacturation;
   /** Statut courant — R2 : utiliser StatutAbonnement.ACTIF */
@@ -2782,7 +2800,7 @@ export interface AbonnementWithPlan extends Abonnement {
 /**
  * PaiementAbonnement — Transaction de paiement pour un abonnement.
  * R3 : miroir exact du modèle Prisma PaiementAbonnement.
- * R8 : siteId obligatoire.
+ * Sprint 52 : siteId rendu optionnel — le paiement est lié à l'abonnement user-level.
  */
 export interface PaiementAbonnement {
   id: string;
@@ -2801,7 +2819,8 @@ export interface PaiementAbonnement {
   initiePar: string;
   dateInitiation: Date;
   dateConfirmation: Date | null;
-  siteId: string;
+  /** ID du site associé (optionnel depuis Sprint 52 — paiement au niveau user) */
+  siteId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

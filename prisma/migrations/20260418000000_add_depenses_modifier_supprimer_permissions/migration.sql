@@ -1,0 +1,2 @@
+-- AlterEnum: add DEPENSES_SUPPRIMER to Permission enum
+ALTER TYPE "Permission" ADD VALUE IF NOT EXISTS 'DEPENSES_SUPPRIMER';

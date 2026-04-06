@@ -150,11 +150,11 @@ export async function PUT(request: NextRequest, { params }: Params) {
  * DELETE /api/depenses/[id]
  * Supprime une depense (seulement si statut NON_PAYEE).
  *
- * Permission : DEPENSES_CREER
+ * Permission : DEPENSES_SUPPRIMER
  */
 export async function DELETE(request: NextRequest, { params }: Params) {
   try {
-    const auth = await requirePermission(request, Permission.DEPENSES_CREER);
+    const auth = await requirePermission(request, Permission.DEPENSES_SUPPRIMER);
     const { id } = await params;
 
     const result = await deleteDepense(id, auth.activeSiteId);

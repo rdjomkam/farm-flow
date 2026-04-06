@@ -80,10 +80,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     await activerAbonnement(abonnementId);
 
     // Story 43.5 : appliquer les modules du plan au site
-    // Récupère l'abonnement pour obtenir siteId et planId
+    // Récupère l'abonnement pour obtenir planId et userId
+    // Sprint 52 (Decision 4) : siteId supprimé — résolution via userId → site.ownerId
     const abonnement = await prisma.abonnement.findUnique({
       where: { id: abonnementId },
-      select: { siteId: true, planId: true, userId: true },
+      select: { planId: true, userId: true },
     });
 
     if (abonnement) {
@@ -91,7 +92,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       await invalidateSubscriptionCaches(abonnement.userId);
 
       // Fire-and-forget : ne pas bloquer la réponse si erreur module
-      applyPlanModules(abonnement.siteId, abonnement.planId).catch((modulesError) => {
+      // Résoudre le siteId via le premier site actif de l'utilisateur
+      prisma.site.findFirst({
+        where: { ownerId: abonnement.userId },
+        select: { id: true },
+        orderBy: { createdAt: "asc" },
+      }).then((site) => {
+        if (site) {
+          return applyPlanModules(site.id, abonnement.planId);
+        }
+      }).catch((modulesError) => {
         console.error(
           "[webhook/manuel] Erreur applyPlanModules (non-bloquant) :",
           modulesError instanceof Error ? modulesError.message : "Erreur inconnue"

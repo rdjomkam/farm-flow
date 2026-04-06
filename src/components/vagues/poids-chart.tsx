@@ -107,6 +107,13 @@ export function PoidsChart({
     [data]
   );
 
+  /** Custom dot: only render on days with actual biometry data */
+  const biometryDot = (props: Record<string, unknown>) => {
+    const { cx, cy, payload } = props as { cx: number; cy: number; payload: EvolutionPoidsPoint };
+    if (payload?.poidsMoyen == null) return null;
+    return <circle cx={cx} cy={cy} r={3} fill="var(--primary)" stroke="var(--primary)" />;
+  };
+
   const dateFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat("fr-FR", {
@@ -259,15 +266,14 @@ export function PoidsChart({
       />
       <Tooltip content={tooltipContent} cursor={<ChartCrosshair />} />
       <Line
-        data={dataObservations}
         type="monotone"
         dataKey="poidsMoyen"
         name={t("poidsChart.seriesName")}
         stroke="var(--primary)"
         strokeWidth={2}
-        dot={{ r: 3 }}
+        dot={biometryDot}
         activeDot={{ r: 6 }}
-        connectNulls={false}
+        connectNulls={true}
       />
       <Line
         type="monotone"

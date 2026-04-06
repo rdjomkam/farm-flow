@@ -76,7 +76,7 @@ export default async function TarifsPage() {
       {/* Grille des plans */}
       <section className="py-8 px-4">
         <div className="max-w-6xl mx-auto">
-          <PlansGrid plans={plans} abonnementActifPlanId={abonnementActif?.planId ?? null} />
+          <PlansGrid plans={plans} abonnementActifPlanId={abonnementActif?.planId ?? null} isLoggedIn={session !== null} />
         </div>
       </section>
 

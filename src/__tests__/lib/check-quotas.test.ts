@@ -186,16 +186,13 @@ describe("getQuotasUsage", () => {
     expect(isQuotaAtteint(result.sites)).toBe(false);
   });
 
-  it("pas d'abonnement actif → limites par défaut DECOUVERTE", async () => {
+  it("pas d'abonnement actif → retourne null (pas de crash)", async () => {
     mockGetAbonnementActifPourSite.mockResolvedValue(null);
     mockPrismaBacCount.mockResolvedValue(0);
     mockPrismaVagueCount.mockResolvedValue(0);
 
     const result = await getQuotasUsage("site-sans-abo");
-
-    expect(result.bacs.limite).toBe(PLAN_LIMITES[TypePlan.DECOUVERTE].limitesBacs);
-    expect(result.vagues.limite).toBe(PLAN_LIMITES[TypePlan.DECOUVERTE].limitesVagues);
-    expect(result.sites.limite).toBe(PLAN_LIMITES[TypePlan.DECOUVERTE].limitesSites);
+    expect(result).toBeNull();
   });
 
   it("sites.actuel est toujours 1 (un site ne gère que lui-même)", async () => {
@@ -242,7 +239,7 @@ describe("getQuotasUsage", () => {
     expect(isQuotaAtteint(result.vagues)).toBe(true);
   });
 
-  it("plan inconnu (fallback) → limites DECOUVERTE", async () => {
+  it("plan inconnu → lève QUOTA_PLAN_INCONNU (Sprint 52 : fallback DECOUVERTE supprimé)", async () => {
     mockGetAbonnementActifPourSite.mockResolvedValue({
       id: "abo-inconnu",
       // typePlan invalide non présent dans PLAN_LIMITES
@@ -251,10 +248,7 @@ describe("getQuotasUsage", () => {
     mockPrismaBacCount.mockResolvedValue(2);
     mockPrismaVagueCount.mockResolvedValue(0);
 
-    const result = await getQuotasUsage("site-fallback");
-
-    expect(result.bacs.limite).toBe(PLAN_LIMITES[TypePlan.DECOUVERTE].limitesBacs);
-    expect(result.vagues.limite).toBe(PLAN_LIMITES[TypePlan.DECOUVERTE].limitesVagues);
+    await expect(getQuotasUsage("site-fallback")).rejects.toThrow("QUOTA_PLAN_INCONNU");
   });
 
   it("les comptes Prisma sont appelés avec le bon siteId", async () => {
