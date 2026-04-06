@@ -397,6 +397,19 @@
     "unlock": "Unblock",
     "waveBlockedStatus": "{statut} — Blocked on {date}"
   },
+  "quotas": {
+    "planUsage": "Your plan usage",
+    "upgrade": "Upgrade",
+    "bacsLabel": "Tanks",
+    "vaguesLabel": "Active batches",
+    "unlimited": "unlimited",
+    "used": "used",
+    "usedPlural": "used",
+    "limitReached": "You have reached the limit of your current plan.",
+    "upgradeLink": "Upgrade to a higher plan",
+    "createMoreResources": "to create more resources.",
+    "ariaLabel": "{label}: {current} of {limit}"
+  },
   "comparaison": {
     "featureColumn": "Feature",
     "featureIncluded": "Included",

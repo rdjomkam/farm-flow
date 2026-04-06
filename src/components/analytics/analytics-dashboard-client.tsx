@@ -292,34 +292,34 @@ export function AnalyticsDashboardClient({ dashboard }: AnalyticsDashboardClient
         <div className="flex flex-col gap-2">
           <QuickLink
             href="/analytics/bacs"
-            label="Par bac"
+            label={t("dashboard.parBac")}
             icon={Container}
             description={t("dashboard.comparerBacs")}
           />
           <QuickLink
             href="/analytics/aliments"
-            label="Par aliment"
+            label={t("dashboard.parAliment")}
             icon={Package}
             description={t("dashboard.analyserAliments")}
           />
           <QuickLink
             href="/analytics/vagues"
-            label="Par vague"
+            label={t("dashboard.parVague")}
             icon={Waves}
             description={t("dashboard.comparerVagues")}
           />
           <QuickLink
             href="/analytics/finances"
-            label="Finances"
+            label={t("dashboard.finances")}
             icon={Banknote}
-            description={`Dashboard financier — ${t("dashboard.bientotDisponible")}`}
+            description={`${t("dashboard.financesDescription")} — ${t("dashboard.bientotDisponible")}`}
             disabled
           />
           <QuickLink
             href="/analytics/tendances"
-            label="Tendances"
+            label={t("dashboard.tendances")}
             icon={TrendingUp}
-            description={`Analyse des tendances — ${t("dashboard.bientotDisponible")}`}
+            description={`${t("dashboard.tendancesDescription")} — ${t("dashboard.bientotDisponible")}`}
             disabled
           />
         </div>

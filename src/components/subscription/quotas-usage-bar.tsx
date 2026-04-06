@@ -12,6 +12,7 @@
  * Rouge si la limite est atteinte, avec un bouton "Mettre à niveau" vers /tarifs.
  */
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { getQuotasUsageWithCounts, isQuotaAtteint } from "@/lib/abonnements/check-quotas";
 import type { QuotaRessource } from "@/lib/abonnements/check-quotas";
 
@@ -36,7 +37,7 @@ interface RessourceBarProps {
   ressource: QuotaRessource;
 }
 
-function RessourceBar({ label, ressource }: RessourceBarProps) {
+function RessourceBar({ label, ressource, unlimitedLabel, usedLabel, usedPluralLabel, ariaLabelTemplate }: RessourceBarProps & { unlimitedLabel: string; usedLabel: string; usedPluralLabel: string; ariaLabelTemplate: (params: Record<string, string | number>) => string }) {
   const { actuel, limite } = ressource;
   const atteint = isQuotaAtteint(ressource);
 
@@ -45,7 +46,7 @@ function RessourceBar({ label, ressource }: RessourceBarProps) {
     return (
       <div className="flex items-center justify-between gap-2 text-sm">
         <span className="text-muted-foreground">{label}</span>
-        <span className="font-medium">{actuel} / illimité</span>
+        <span className="font-medium">{actuel} / {unlimitedLabel}</span>
       </div>
     );
   }
@@ -62,7 +63,7 @@ function RessourceBar({ label, ressource }: RessourceBarProps) {
             atteint ? "text-destructive" : "text-foreground",
           ].join(" ")}
         >
-          {actuel}/{limite} utilisé{actuel > 1 ? "s" : ""}
+          {actuel}/{limite} {actuel > 1 ? usedPluralLabel : usedLabel}
         </span>
       </div>
       {/* Barre de progression */}
@@ -72,7 +73,7 @@ function RessourceBar({ label, ressource }: RessourceBarProps) {
         aria-valuenow={actuel}
         aria-valuemin={0}
         aria-valuemax={limite}
-        aria-label={`${label} : ${actuel} sur ${limite}`}
+        aria-label={ariaLabelTemplate({ label, current: actuel, limit: limite })}
       >
         <div
           className={[
@@ -95,19 +96,29 @@ function RessourceBar({ label, ressource }: RessourceBarProps) {
 // ---------------------------------------------------------------------------
 
 export async function QuotasUsageBar({ siteId, precomputedBacsCount, precomputedVaguesCount }: QuotasUsageBarProps) {
-  const quotas = await getQuotasUsageWithCounts(siteId, {
-    bacsCount: precomputedBacsCount,
-    vaguesCount: precomputedVaguesCount,
-  });
+  const [quotas, t] = await Promise.all([
+    getQuotasUsageWithCounts(siteId, {
+      bacsCount: precomputedBacsCount,
+      vaguesCount: precomputedVaguesCount,
+    }),
+    getTranslations("abonnements"),
+  ]);
 
   const bacsAtteint = isQuotaAtteint(quotas.bacs);
   const vaguesAtteint = isQuotaAtteint(quotas.vagues);
   const limiteAtteinte = bacsAtteint || vaguesAtteint;
 
+  const sharedProps = {
+    unlimitedLabel: t("quotas.unlimited"),
+    usedLabel: t("quotas.used"),
+    usedPluralLabel: t("quotas.usedPlural"),
+    ariaLabelTemplate: (params: Record<string, string | number>) => t("quotas.ariaLabel", params),
+  };
+
   return (
     <div className="rounded-lg border bg-card p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">Utilisation de votre plan</h3>
+        <h3 className="text-sm font-semibold">{t("quotas.planUsage")}</h3>
         {limiteAtteinte && (
           <Link
             href="/tarifs"
@@ -118,23 +129,23 @@ export async function QuotasUsageBar({ siteId, precomputedBacsCount, precomputed
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-1",
             ].join(" ")}
           >
-            Mettre à niveau
+            {t("quotas.upgrade")}
           </Link>
         )}
       </div>
 
       <div className="flex flex-col gap-3">
-        <RessourceBar label="Bacs" ressource={quotas.bacs} />
-        <RessourceBar label="Vagues en cours" ressource={quotas.vagues} />
+        <RessourceBar label={t("quotas.bacsLabel")} ressource={quotas.bacs} {...sharedProps} />
+        <RessourceBar label={t("quotas.vaguesLabel")} ressource={quotas.vagues} {...sharedProps} />
       </div>
 
       {limiteAtteinte && (
         <p className="text-xs text-destructive">
-          Vous avez atteint la limite de votre plan actuel.{" "}
+          {t("quotas.limitReached")}{" "}
           <Link href="/tarifs" className="underline underline-offset-2 font-medium">
-            Passez à un plan supérieur
+            {t("quotas.upgradeLink")}
           </Link>{" "}
-          pour creer davantage de ressources.
+          {t("quotas.createMoreResources")}
         </p>
       )}
     </div>

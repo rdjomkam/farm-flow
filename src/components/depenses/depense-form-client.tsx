@@ -151,7 +151,7 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
             {/* Description */}
             <Input
               id="description"
-              label="Description"
+              label={t("form.labels.description")}
               required
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -166,7 +166,7 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
             >
               <SelectTrigger
                 id="categorie"
-                label="Categorie"
+                label={t("form.labels.categorie")}
                 required
                 error={getFieldError("categorieDepense")}
               >
@@ -184,7 +184,7 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
             {/* Montant */}
             <Input
               id="montant"
-              label="Montant total (FCFA)"
+              label={t("form.labels.montantTotal")}
               type="number"
               min={1}
               step="0.01"
@@ -198,7 +198,7 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
             {/* Date */}
             <Input
               id="date"
-              label="Date"
+              label={t("form.labels.date")}
               type="date"
               required
               value={date}
@@ -231,7 +231,7 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
             {/* Vague */}
             {vagues.length > 0 && (
               <Select value={vagueId || "__aucune"} onValueChange={(v) => setVagueId(v === "__aucune" ? "" : v)}>
-                <SelectTrigger id="vague" label="Vague associee">
+                <SelectTrigger id="vague" label={t("form.labels.vagueAssociee")}>
                   <SelectValue placeholder={t("form.noWave")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -251,7 +251,7 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
                 value={commandeId || "__aucune"}
                 onValueChange={handleCommandeChange}
               >
-                <SelectTrigger id="commande" label="Commande liee">
+                <SelectTrigger id="commande" label={t("form.labels.commandeLiee")}>
                   <SelectValue placeholder={t("form.noOrder")} />
                 </SelectTrigger>
                 <SelectContent>

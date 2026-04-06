@@ -123,7 +123,15 @@
     "noOrder": "Aucune commande",
     "notes": "Notes",
     "notesPlaceholder": "Informations complementaires...",
-    "createExpense": "Creer la depense"
+    "createExpense": "Creer la depense",
+    "labels": {
+      "description": "Description",
+      "categorie": "Categorie",
+      "montantTotal": "Montant total (FCFA)",
+      "date": "Date",
+      "vagueAssociee": "Vague associee",
+      "commandeLiee": "Commande liee"
+    }
   },
   "emptyState": {
     "noExpenses": "Aucune depense"

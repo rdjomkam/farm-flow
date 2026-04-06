@@ -397,6 +397,19 @@
     "unlock": "Débloquer",
     "waveBlockedStatus": "{statut} — Bloquée le {date}"
   },
+  "quotas": {
+    "planUsage": "Utilisation de votre plan",
+    "upgrade": "Mettre a niveau",
+    "bacsLabel": "Bacs",
+    "vaguesLabel": "Vagues en cours",
+    "unlimited": "illimite",
+    "used": "utilise",
+    "usedPlural": "utilises",
+    "limitReached": "Vous avez atteint la limite de votre plan actuel.",
+    "upgradeLink": "Passez a un plan superieur",
+    "createMoreResources": "pour creer davantage de ressources.",
+    "ariaLabel": "{label} : {current} sur {limit}"
+  },
   "comparaison": {
     "featureColumn": "Fonctionnalité",
     "featureIncluded": "Inclus",

@@ -36,7 +36,14 @@
     "comparerBacs": "Compare indicators by tank",
     "analyserAliments": "Analyse feed efficiency",
     "comparerVagues": "Compare inter-batch performance",
-    "bientotDisponible": "coming soon"
+    "bientotDisponible": "coming soon",
+    "parBac": "By tank",
+    "parAliment": "By feed",
+    "parVague": "By batch",
+    "finances": "Finances",
+    "tendances": "Trends",
+    "financesDescription": "Financial dashboard",
+    "tendancesDescription": "Trend analysis"
   },
   "emptyStates": {
     "noData": "No data",

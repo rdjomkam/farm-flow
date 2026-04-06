@@ -584,7 +584,7 @@ export function PlansAdminList({ plans: initialPlans }: PlansAdminListProps) {
                   <Button
                     variant="outline"
                     className="min-h-[44px] text-xs px-3"
-                    aria-label={`Modifier le plan ${p.nom}`}
+                    aria-label={t("admin.editPlanAriaLabel", { name: p.nom })}
                   >
                     {t("admin.edit")}
                   </Button>

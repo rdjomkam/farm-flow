@@ -123,7 +123,15 @@
     "noOrder": "No order",
     "notes": "Notes",
     "notesPlaceholder": "Additional information...",
-    "createExpense": "Create expense"
+    "createExpense": "Create expense",
+    "labels": {
+      "description": "Description",
+      "categorie": "Category",
+      "montantTotal": "Total amount (FCFA)",
+      "date": "Date",
+      "vagueAssociee": "Associated batch",
+      "commandeLiee": "Linked order"
+    }
   },
   "emptyState": {
     "noExpenses": "No expenses"

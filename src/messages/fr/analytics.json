@@ -36,7 +36,14 @@
     "comparerBacs": "Comparer les indicateurs par bac",
     "analyserAliments": "Analyser l'efficacité des aliments",
     "comparerVagues": "Comparer les performances inter-vagues",
-    "bientotDisponible": "bientôt disponible"
+    "bientotDisponible": "bientôt disponible",
+    "parBac": "Par bac",
+    "parAliment": "Par aliment",
+    "parVague": "Par vague",
+    "finances": "Finances",
+    "tendances": "Tendances",
+    "financesDescription": "Dashboard financier",
+    "tendancesDescription": "Analyse des tendances"
   },
   "emptyStates": {
     "noData": "Aucune donnée",
