@@ -94,7 +94,7 @@ function RangeInputs({
           value={minValue}
           onChange={(e) => onMinChange(e.target.value)}
           placeholder="Min"
-          className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="flex-1 min-w-0 h-10 rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
         <span className="text-sm text-muted-foreground shrink-0">–</span>
         <input
@@ -104,7 +104,7 @@ function RangeInputs({
           value={maxValue}
           onChange={(e) => onMaxChange(e.target.value)}
           placeholder="Max"
-          className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="flex-1 min-w-0 h-10 rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
       </div>
     </div>
@@ -322,7 +322,7 @@ export function RelevesFilterSheet({
       </div>
 
       {/* Corps scrollable */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-4">
 
         {/* Vague */}
         <div className="flex flex-col gap-1.5">
@@ -550,7 +550,7 @@ export function RelevesFilterSheet({
                   value={localDescriptionSearch}
                   onChange={(e) => setLocalDescriptionSearch(e.target.value)}
                   placeholder='Ex : "stress", "coloration"...'
-                  className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="h-10 rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
             )}
@@ -579,7 +579,7 @@ export function RelevesFilterSheet({
               type="date"
               value={localDateFrom}
               onChange={(e) => setLocalDateFrom(e.target.value)}
-              className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="flex-1 min-w-0 h-10 rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -588,7 +588,7 @@ export function RelevesFilterSheet({
               type="date"
               value={localDateTo}
               onChange={(e) => setLocalDateTo(e.target.value)}
-              className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="flex-1 min-w-0 h-10 rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
         </div>
@@ -599,7 +599,7 @@ export function RelevesFilterSheet({
             type="checkbox"
             checked={localModifie}
             onChange={(e) => setLocalModifie(e.target.checked)}
-            className="h-4 w-4 rounded border-input accent-primary cursor-pointer"
+            className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
           />
           <span className="text-sm">Relevés modifiés seulement</span>
         </label>

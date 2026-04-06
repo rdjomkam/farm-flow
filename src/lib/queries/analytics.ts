@@ -755,10 +755,6 @@ async function computeAlimentMetrics(
     // ADR-028: metadata about period detection
     const uniqueProduits = new Set(allPeriodes.map((p) => p.produitId));
     const avecChangementAliment = periodesProduct.length > 1 || uniqueProduits.size > 1;
-    const avecInterpolation = periodesProduct.some(
-      (p) => p.methodeEstimation === "INTERPOLATION_LINEAIRE"
-    );
-
     const sgr = calculerSGR(vague.poidsMoyenInitial, poidsMoyen, jours);
     const tauxSurvie = calculerTauxSurvie(nombreVivants, vague.nombreInitial);
     const coutKg = calculerCoutParKgGain(conso.quantite, getPrixParUniteBase(produit), gainBiomasse);
@@ -804,7 +800,6 @@ async function computeAlimentMetrics(
         // ADR-028: feed-period metadata
         nombrePeriodes: periodesProduct.length,
         avecChangementAliment,
-        avecInterpolation,
       },
     });
 

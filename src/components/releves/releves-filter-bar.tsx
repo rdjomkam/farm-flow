@@ -55,6 +55,7 @@ export function ReleveFilterBar({ current, vagues }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   // Etat local synchronise avec les searchParams
   const [localVagueId, setLocalVagueId] = useState(current.vagueId ?? "");
@@ -186,7 +187,7 @@ export function ReleveFilterBar({ current, vagues }: Props) {
     <div className={`transition-opacity ${isPending ? "opacity-60" : ""}`}>
       {/* Mobile : bouton "Filtres" + Sheet */}
       <div className="flex items-center justify-between gap-2 md:hidden">
-        <Sheet>
+        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger asChild>
             <button
               type="button"
@@ -215,8 +216,8 @@ export function ReleveFilterBar({ current, vagues }: Props) {
                 modifie: localModifie ? "true" : undefined,
               }}
               vagues={vagues}
-              onApply={(params) => updateMultipleParams(params)}
-              onClear={resetAllFilters}
+              onApply={(params) => { updateMultipleParams(params); setSheetOpen(false); }}
+              onClear={() => { resetAllFilters(); setSheetOpen(false); }}
               activeCount={activeCount}
             />
           </SheetContent>
@@ -287,7 +288,7 @@ export function ReleveFilterBar({ current, vagues }: Props) {
             type="date"
             value={localDateFrom}
             onChange={(e) => handleDateFromChange(e.target.value)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="h-10 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
 
@@ -298,7 +299,7 @@ export function ReleveFilterBar({ current, vagues }: Props) {
             type="date"
             value={localDateTo}
             onChange={(e) => handleDateToChange(e.target.value)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="h-10 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
 
@@ -308,7 +309,7 @@ export function ReleveFilterBar({ current, vagues }: Props) {
             type="checkbox"
             checked={localModifie}
             onChange={(e) => handleModifieChange(e.target.checked)}
-            className="h-4 w-4 rounded border-input accent-primary cursor-pointer"
+            className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
           />
           <span className="text-sm text-muted-foreground">Modifiés</span>
         </label>

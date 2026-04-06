@@ -551,6 +551,17 @@ export type {
   FCRTrace,
 } from "./calculs";
 
+// ADR-036 — FCR par aliment (algorithme FCR-by-feed)
+export type {
+  FCRByFeedParams,
+  JourConsommationType,
+  PeriodeBacFCR,
+  EstimationPopulationBac,
+  FCRBacPeriode,
+  FCRByFeedVague,
+  FCRByFeedResult,
+} from "./fcr-by-feed";
+
 // Gompertz growth model — public interfaces (Story G2.1)
 export type { GompertzParams, GompertzCalibrationResult } from "@/lib/gompertz";
 export type { GompertzConfidenceLevel } from "@/lib/gompertz";

@@ -13,6 +13,7 @@ import {
   ScoreAlimentConfig,
 } from "./models";
 import type { GompertzKLevel } from "@/lib/benchmarks";
+import type { FCRBacPeriode } from "./fcr-by-feed";
 
 // Re-export pour que les consommateurs n'aient pas a importer depuis models
 export type { ScoreAlimentConfig };
@@ -473,8 +474,11 @@ export interface DetailAlimentVague {
   nombrePeriodes?: number;
   /** true if feed switches were detected in this vague (ADR-028) */
   avecChangementAliment?: boolean;
-  /** true if at least one period used linear interpolation instead of exact biometry (ADR-028) */
-  avecInterpolation?: boolean;
+  // RETIRE : avecInterpolation (obsolete, remplace par flagLowConfidence - ADR-036)
+  /** Detail bac x periode (nouvel algorithme ADR-036) */
+  periodesBac?: FCRBacPeriode[];
+  /** true si R² Gompertz < 0.85 pour cette vague (ADR-036) */
+  flagLowConfidence?: boolean;
 }
 
 /**

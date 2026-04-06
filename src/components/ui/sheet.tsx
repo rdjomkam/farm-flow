@@ -47,7 +47,7 @@ const SheetContent = forwardRef<
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="absolute right-3 top-3 rounded-md p-1 opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px] min-w-[44px] flex items-center justify-center">
+        <DialogPrimitive.Close className="absolute right-3 rounded-md p-1 opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px] min-w-[44px] flex items-center justify-center z-10" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
           <X className="h-5 w-5" />
           <span className="sr-only">{tCommon("close")}</span>
         </DialogPrimitive.Close>
