@@ -193,6 +193,12 @@ export async function createCalibrage(
       data: { nombrePoissons: 0 },
     });
 
+    // ADR-043 Phase 2: mettre à jour les assignations actives des bacs sources à 0
+    await tx.assignationBac.updateMany({
+      where: { bacId: { in: data.sourceBacIds }, vagueId: data.vagueId, dateFin: null },
+      data: { nombrePoissons: 0 },
+    });
+
     // Pass 2: For each destination bac, sum fish going to it across all groups
     const destBacTotals = new Map<string, number>();
     for (const groupe of data.groupes) {
@@ -209,11 +215,30 @@ export async function createCalibrage(
           where: { id: bacId },
           data: { nombrePoissons: total },
         });
+        // ADR-043 Phase 2: dual-write sur AssignationBac
+        await tx.assignationBac.updateMany({
+          where: { bacId, vagueId: data.vagueId, dateFin: null },
+          data: { nombrePoissons: total },
+        });
       } else {
+        // Lire la valeur actuelle de l'assignation active pour l'incrément
+        const assignationDest = await tx.assignationBac.findFirst({
+          where: { bacId, vagueId: data.vagueId, dateFin: null },
+          select: { id: true, nombrePoissons: true },
+        });
+
         await tx.bac.update({
           where: { id: bacId },
           data: { nombrePoissons: { increment: total } },
         });
+
+        // ADR-043 Phase 2: dual-write sur AssignationBac
+        if (assignationDest) {
+          await tx.assignationBac.update({
+            where: { id: assignationDest.id },
+            data: { nombrePoissons: (assignationDest.nombrePoissons ?? 0) + total },
+          });
+        }
       }
     }
 
@@ -413,15 +438,38 @@ export async function patchCalibrage(
           where: { id: bacId },
           data: { nombrePoissons: { decrement: ancienTotal } },
         });
+        // ADR-043 dual-write: lire l'assignation active pour calculer la nouvelle valeur
+        const assignationDest6 = await tx.assignationBac.findFirst({
+          where: { bacId, vagueId: ancienCalibrage.vague.id, dateFin: null },
+          select: { id: true, nombrePoissons: true },
+        });
+        if (assignationDest6) {
+          await tx.assignationBac.update({
+            where: { id: assignationDest6.id },
+            data: { nombrePoissons: (assignationDest6.nombrePoissons ?? 0) - ancienTotal },
+          });
+        }
       }
 
       // 6c. Remettre les poissons sur le premier bac source
       // (approche v1 : totalSourcePoissons sur le premier source)
       if (ancienCalibrage.sourceBacIds.length > 0) {
+        const firstSourceId = ancienCalibrage.sourceBacIds[0];
         await tx.bac.update({
-          where: { id: ancienCalibrage.sourceBacIds[0] },
+          where: { id: firstSourceId },
           data: { nombrePoissons: { increment: totalSourcePoissons } },
         });
+        // ADR-043 dual-write sur le bac source
+        const assignationSource6 = await tx.assignationBac.findFirst({
+          where: { bacId: firstSourceId, vagueId: ancienCalibrage.vague.id, dateFin: null },
+          select: { id: true, nombrePoissons: true },
+        });
+        if (assignationSource6) {
+          await tx.assignationBac.update({
+            where: { id: assignationSource6.id },
+            data: { nombrePoissons: (assignationSource6.nombrePoissons ?? 0) + totalSourcePoissons },
+          });
+        }
       }
     }
 
@@ -432,6 +480,11 @@ export async function patchCalibrage(
       // Pass 1 : zeroed tous les bacs sources
       await tx.bac.updateMany({
         where: { id: { in: ancienCalibrage.sourceBacIds } },
+        data: { nombrePoissons: 0 },
+      });
+      // ADR-043 dual-write: mettre à zéro les assignations actives des bacs sources
+      await tx.assignationBac.updateMany({
+        where: { bacId: { in: ancienCalibrage.sourceBacIds }, vagueId: ancienCalibrage.vague.id, dateFin: null },
         data: { nombrePoissons: 0 },
       });
 
@@ -446,8 +499,25 @@ export async function patchCalibrage(
         const isSourceBac = ancienCalibrage.sourceBacIds.includes(bacId);
         if (isSourceBac) {
           await tx.bac.update({ where: { id: bacId }, data: { nombrePoissons: total } });
+          // ADR-043 dual-write: bac source reçoit un total fixe (déjà zeroed en Pass 1)
+          await tx.assignationBac.updateMany({
+            where: { bacId, vagueId: ancienCalibrage.vague.id, dateFin: null },
+            data: { nombrePoissons: total },
+          });
         } else {
+          // Lire l'assignation active pour calculer l'incrément correct
+          const assignationDest7 = await tx.assignationBac.findFirst({
+            where: { bacId, vagueId: ancienCalibrage.vague.id, dateFin: null },
+            select: { id: true, nombrePoissons: true },
+          });
           await tx.bac.update({ where: { id: bacId }, data: { nombrePoissons: { increment: total } } });
+          // ADR-043 dual-write: bac destination non-source
+          if (assignationDest7) {
+            await tx.assignationBac.update({
+              where: { id: assignationDest7.id },
+              data: { nombrePoissons: (assignationDest7.nombrePoissons ?? 0) + total },
+            });
+          }
         }
       }
     }

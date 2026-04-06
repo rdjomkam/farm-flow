@@ -36,7 +36,8 @@ export async function runEngineForSite(
       where: { siteId, statut: StatutVague.EN_COURS },
       include: {
         bacs: {
-          where: { vagueId: { not: null } },
+          // ADR-043 Phase 2: le filtre vagueId est redondant sur la relation vague.bacs
+          // mais conservé pour la rétrocompatibilité Phase 2 (fera l'objet d'une cleanup en Phase 3)
           select: {
             id: true,
             nom: true,

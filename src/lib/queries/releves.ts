@@ -163,7 +163,12 @@ export async function createReleve(siteId: string, userId: string, data: CreateR
       throw new Error("Bac introuvable");
     }
 
-    if (bac.vagueId !== data.vagueId) {
+    // ADR-043 Phase 2: vérifier via AssignationBac en priorité, fallback sur bac.vagueId
+    const assignationActive = await tx.assignationBac.findFirst({
+      where: { bacId: data.bacId, vagueId: data.vagueId, dateFin: null },
+    });
+
+    if (!assignationActive && bac.vagueId !== data.vagueId) {
       throw new Error("Ce bac n'appartient pas a la vague selectionnee");
     }
 

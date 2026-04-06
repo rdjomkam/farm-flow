@@ -410,6 +410,19 @@ VALUES
   ('bac_04', 'Etang A', 5000, NULL, 'vague_02', 'site_01', NOW(), NOW());
 
 -- ──────────────────────────────────────────
+-- AssignationBac — ADR-043 (Phase 2)
+-- bac_01, bac_02, bac_03 : actifs dans vague_01 (EN_COURS)
+-- bac_04 : terminé dans vague_02 (TERMINEE, clôturée le 2025-12-22)
+-- ──────────────────────────────────────────
+
+INSERT INTO "AssignationBac" (id, "bacId", "vagueId", "siteId", "dateAssignation", "dateFin", "nombrePoissonsInitial", "poidsMoyenInitial", "nombrePoissons", "createdAt", "updatedAt")
+VALUES
+  ('asn_01', 'bac_01', 'vague_01', 'site_01', '2026-01-15', NULL, 170, 8.5, 170, NOW(), NOW()),
+  ('asn_02', 'bac_02', 'vague_01', 'site_01', '2026-01-15', NULL, 165, 8.5, 165, NOW(), NOW()),
+  ('asn_03', 'bac_03', 'vague_01', 'site_01', '2026-01-15', NULL, 155, 8.5, 155, NOW(), NOW()),
+  ('asn_04', 'bac_04', 'vague_02', 'site_01', '2025-10-01', '2025-12-22', 300, 6.0, NULL, NOW(), NOW());
+
+-- ──────────────────────────────────────────
 -- Releves — 20 releves varies sur 2 mois
 -- ──────────────────────────────────────────
 

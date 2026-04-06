@@ -35,6 +35,25 @@ export function calculerTauxSurvie(
 }
 
 /**
+ * Calcule la durée d'une assignation bac-vague en jours.
+ *
+ * ADR-043 — Utilitaire pour l'historique des assignations.
+ *
+ * @param dateAssignation - Date de début de l'assignation
+ * @param dateFin - Date de fin (null = assignation encore active)
+ * @param now - Date de référence (par défaut : maintenant)
+ * @returns Durée en jours (>= 0)
+ */
+export function calculerDureeAssignation(
+  dateAssignation: Date,
+  dateFin: Date | null,
+  now: Date = new Date()
+): number {
+  const fin = dateFin ?? now;
+  return Math.max(0, Math.round((fin.getTime() - dateAssignation.getTime()) / 86400000));
+}
+
+/**
  * Calcule le gain de poids moyen en grammes.
  *
  * Formule : poidsMoyenActuel - poidsMoyenPrecedent

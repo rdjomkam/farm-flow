@@ -86,7 +86,8 @@ type VagueSummary = {
   code: string;
   statut: string;
   nombreInitial: number;
-  _count: { bacs: number; releves: number };
+  // ADR-043 Phase 2: assignations count added — keep bacs for compat
+  _count: { bacs: number; releves: number; assignations?: number };
 };
 
 function statutClass(statut: string): string {

@@ -28,6 +28,8 @@ const mockBacUpdate = vi.fn();
 const mockBacUpdateMany = vi.fn();
 const mockReleveCreate = vi.fn();
 const mockActiviteUpdateMany = vi.fn();
+// ADR-043 Phase 2: mocks AssignationBac
+const mockAssignationBacUpdateMany = vi.fn();
 
 /** Simule prisma.$transaction en executant directement le callback avec un tx mock */
 const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
@@ -47,6 +49,10 @@ const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
     },
     activite: {
       updateMany: (...args: unknown[]) => mockActiviteUpdateMany(...args),
+    },
+    // ADR-043 Phase 2: table de jonction AssignationBac
+    assignationBac: {
+      updateMany: (...args: unknown[]) => mockAssignationBacUpdateMany(...args),
     },
   };
   return fn(tx);
@@ -68,7 +74,8 @@ const vagueEnCours = {
   statut: StatutVague.EN_COURS,
   nombreInitial: 500,
   poidsMoyenInitial: 10,
-  _count: { bacs: 2 },
+  // ADR-043 Phase 2: _count inclut maintenant les assignations actives
+  _count: { bacs: 2, assignations: 2 },
 };
 
 /** Un bac vide (aucun poisson) */
@@ -166,7 +173,8 @@ describe("updateVague — retrait de bac (removeBacIds)", () => {
     mockBacFindMany.mockResolvedValue([bacVide]); // bac vide, aucun transfert necessaire
     mockBacUpdateMany.mockResolvedValue({ count: 1 });
     mockActiviteUpdateMany.mockResolvedValue({ count: 0 });
-    mockVagueUpdate.mockResolvedValue({ ...vagueEnCours, _count: { bacs: 1 } });
+    mockAssignationBacUpdateMany.mockResolvedValue({ count: 1 });
+    mockVagueUpdate.mockResolvedValue({ ...vagueEnCours, _count: { bacs: 1, assignations: 1 } });
 
     await updateVague("vague-1", "site-1", {
       removeBacIds: ["bac-a"],
@@ -198,7 +206,8 @@ describe("updateVague — retrait de bac (removeBacIds)", () => {
     mockBacFindMany.mockResolvedValue([bacVide]);
     mockBacUpdateMany.mockResolvedValue({ count: 1 });
     mockActiviteUpdateMany.mockResolvedValue({ count: 0 });
-    mockVagueUpdate.mockResolvedValue({ ...vagueEnCours, _count: { bacs: 1 } });
+    mockAssignationBacUpdateMany.mockResolvedValue({ count: 1 });
+    mockVagueUpdate.mockResolvedValue({ ...vagueEnCours, _count: { bacs: 1, assignations: 1 } });
 
     await updateVague("vague-1", "site-1", {
       removeBacIds: ["bac-a"],
@@ -215,8 +224,9 @@ describe("updateVague — retrait de bac (removeBacIds)", () => {
     mockBacFindFirst.mockResolvedValue(bacDestination); // dest a 200 poissons
     mockBacUpdate.mockResolvedValue({});
     mockBacUpdateMany.mockResolvedValue({ count: 1 });
+    mockAssignationBacUpdateMany.mockResolvedValue({ count: 1 });
     mockActiviteUpdateMany.mockResolvedValue({ count: 0 });
-    mockVagueUpdate.mockResolvedValue({ ...vagueEnCours, _count: { bacs: 1 } });
+    mockVagueUpdate.mockResolvedValue({ ...vagueEnCours, _count: { bacs: 1, assignations: 1 } });
 
     await updateVague("vague-1", "site-1", {
       removeBacIds: ["bac-b"],
@@ -237,7 +247,7 @@ describe("updateVague — retrait de bac (removeBacIds)", () => {
 
   // Test 7 — Retrait impossible si vague n'a qu'un seul bac
   it("leve une erreur si on tente de retirer le dernier bac", async () => {
-    const vagueUnBac = { ...vagueEnCours, _count: { bacs: 1 } };
+    const vagueUnBac = { ...vagueEnCours, _count: { bacs: 1, assignations: 1 } };
     mockVagueFindFirst.mockResolvedValue(vagueUnBac);
 
     await expect(

@@ -31,7 +31,48 @@ export async function GET(request: NextRequest) {
     let total: number;
 
     if (vagueId) {
-      // Retourner uniquement les bacs appartenant a cette vague (pour le selecteur dynamique)
+      // ADR-043 Phase 2: retourner les bacs avec assignation active pour cette vague
+      // Fallback: aussi sur Bac.vagueId pour la rétrocompatibilité
+      const assignations = await prisma.assignationBac.findMany({
+        where: { siteId: auth.activeSiteId, vagueId, dateFin: null },
+        include: {
+          bac: {
+            select: {
+              id: true,
+              nom: true,
+              volume: true,
+              nombrePoissons: true,
+              nombreInitial: true,
+              poidsMoyenInitial: true,
+              typeSysteme: true,
+              siteId: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
+        },
+        orderBy: { bac: { nom: "asc" } },
+      });
+
+      if (assignations.length > 0) {
+        const mapped = assignations.map((a) => ({
+          id: a.bac.id,
+          nom: a.bac.nom,
+          volume: a.bac.volume,
+          nombrePoissons: a.nombrePoissons ?? a.bac.nombrePoissons,
+          nombreInitial: a.nombrePoissonsInitial ?? a.bac.nombreInitial,
+          poidsMoyenInitial: a.poidsMoyenInitial ?? a.bac.poidsMoyenInitial,
+          typeSysteme: a.bac.typeSysteme ?? null,
+          vagueId,
+          siteId: a.bac.siteId,
+          vagueCode: null,
+          createdAt: a.bac.createdAt,
+          updatedAt: a.bac.updatedAt,
+        }));
+        return cachedJson({ data: mapped, total: mapped.length, limit: mapped.length, offset: 0 }, "fast");
+      }
+
+      // Fallback: utiliser Bac.vagueId (rétrocompat Phase 2)
       const bacs = await prisma.bac.findMany({
         where: { siteId: auth.activeSiteId, vagueId },
         orderBy: { nom: "asc" },

@@ -254,11 +254,27 @@ export async function transfererLotVersVague(
       },
     });
 
-    // 4. Assigner les bacs a la vague
+    // 4. Assigner les bacs a la vague (backward compat: écrire sur Bac)
     await tx.bac.updateMany({
       where: { id: { in: vagueData.bacIds }, siteId },
       data: { vagueId: nouvelleVague.id },
     });
+
+    // ADR-043 Phase 2: créer les AssignationBac correspondantes
+    for (const bacId of vagueData.bacIds) {
+      await tx.assignationBac.create({
+        data: {
+          bacId,
+          vagueId: nouvelleVague.id,
+          siteId,
+          dateAssignation: new Date(),
+          dateFin: null,
+          nombrePoissonsInitial: null, // pas de distribution par bac dans ce flux
+          poidsMoyenInitial: lot.poidsMoyen ?? null,
+          nombrePoissons: null,
+        },
+      });
+    }
 
     // 5. Mettre a jour le lot : statut TRANSFERE, vagueDestinationId, dateTransfert
     const lotMisAJour = await tx.lotAlevins.update({

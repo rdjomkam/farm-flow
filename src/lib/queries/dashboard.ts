@@ -64,7 +64,8 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
   const [vaguesActives, bacsTotal, bacsOccupes] = await Promise.all([
     getVaguesWithReleves(siteId),
     prisma.bac.count({ where: { siteId } }),
-    prisma.bac.count({ where: { siteId, vagueId: { not: null } } }),
+    // ADR-043 Phase 2: compter les assignations actives au lieu de Bac.vagueId
+    prisma.assignationBac.count({ where: { siteId, dateFin: null } }),
   ]);
 
   const vagues: VagueDashboardSummary[] = vaguesActives.map((v) => {

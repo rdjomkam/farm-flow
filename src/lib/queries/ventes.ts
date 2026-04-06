@@ -119,9 +119,15 @@ export async function createVente(
       if (available <= 0) continue;
 
       const toDeduct = Math.min(remaining, available);
+      const newCount = available - toDeduct;
       await tx.bac.update({
         where: { id: bac.id },
-        data: { nombrePoissons: available - toDeduct },
+        data: { nombrePoissons: newCount },
+      });
+      // ADR-043 Phase 2: dual-write sur AssignationBac
+      await tx.assignationBac.updateMany({
+        where: { bacId: bac.id, vagueId: data.vagueId, dateFin: null },
+        data: { nombrePoissons: newCount },
       });
       remaining -= toDeduct;
     }

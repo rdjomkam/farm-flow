@@ -555,6 +555,8 @@ model Site {
   retraits               RetraitPortefeuille[]    @relation("RetraitsSite")
   // Sprint 30.4 — Idempotency
   idempotencyRecords     IdempotencyRecord[]
+  // ADR-043 — Historique des assignations (Phase 2)
+  assignationsBac        AssignationBac[]
   // ADR-020 — Subscription refactoring
   /**
    * Propriétaire du site — administrateur principal responsable de l'abonnement.
@@ -980,6 +982,8 @@ model Bac {
   lotsAlevins         LotAlevins[]
   activites           Activite[]
   calibrageGroupesDst CalibrageGroupe[] @relation("GroupeDestBac")
+  // ADR-043 — Historique des assignations (Phase 2)
+  assignations        AssignationBac[]
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
@@ -1028,12 +1032,56 @@ model Vague {
   historiqueNutritionnel HistoriqueNutritionnel[]
   // Sprint Gompertz
   gompertz               GompertzVague?
+  // ADR-043 — Historique des assignations (Phase 2)
+  assignations           AssignationBac[]
   createdAt              DateTime                 @default(now())
   updatedAt              DateTime                 @updatedAt
 
   @@index([siteId])
   @@index([configElevageId])
   @@index([packActivationId])
+}
+
+/**
+ * AssignationBac — table d'association Bac <-> Vague avec historique.
+ *
+ * ADR-043 (Phase 2) : remplace la FK nullable Bac.vagueId comme source de vérité
+ * pour les assignations. Pendant la Phase 2, Bac.vagueId est conservé en double source
+ * de vérité pour la rétrocompatibilité. Phase 3 (future) supprimera Bac.vagueId.
+ *
+ * dateFin = null  : assignation active (bac actuellement dans la vague)
+ * dateFin non-null: assignation terminée (bac retiré ou vague clôturée)
+ *
+ * Contrainte d'unicité : un bac ne peut avoir qu'une seule assignation active
+ * (dateFin IS NULL) à la fois. Cette contrainte est un index unique partiel SQL
+ * ajouté manuellement dans la migration (non générée par Prisma).
+ */
+model AssignationBac {
+  id                    String    @id @default(cuid())
+  bacId                 String
+  bac                   Bac       @relation(fields: [bacId], references: [id], onDelete: Cascade)
+  vagueId               String
+  vague                 Vague     @relation(fields: [vagueId], references: [id], onDelete: Cascade)
+  siteId                String
+  site                  Site      @relation(fields: [siteId], references: [id])
+  /** Date de début de l'assignation (= date de création de la vague ou d'ajout du bac) */
+  dateAssignation       DateTime  @default(now())
+  /** Date de fin de l'assignation — null = assignation active */
+  dateFin               DateTime?
+  /** Nombre de poissons initial dans ce bac au démarrage de l'assignation */
+  nombrePoissonsInitial Int?
+  /** Poids moyen initial des poissons en grammes au démarrage de l'assignation */
+  poidsMoyenInitial     Float?
+  /** Nombre de poissons actuel dans ce bac (mis à jour via comptages/calibrages/ventes) */
+  nombrePoissons        Int?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([bacId])
+  @@index([vagueId])
+  @@index([siteId])
+  @@index([bacId, dateFin])
+  @@index([vagueId, dateFin])
 }
 
 model Releve {

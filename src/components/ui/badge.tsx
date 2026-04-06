@@ -7,6 +7,8 @@ const variants = {
   annulee: "bg-danger/15 text-danger",
   info: "bg-accent-blue-muted text-accent-blue",
   warning: "bg-accent-amber-muted text-accent-amber",
+  // ADR-043 — badge générique vert (assignation active, statut positif)
+  success: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
 };
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {

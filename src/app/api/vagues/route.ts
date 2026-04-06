@@ -46,7 +46,8 @@ export async function GET(request: NextRequest) {
         nombreInitial: v.nombreInitial,
         poidsMoyenInitial: v.poidsMoyenInitial,
         origineAlevins: v.origineAlevins,
-        nombreBacs: v._count.bacs,
+        // ADR-043 Phase 2: préférer le compte d'assignations actives
+        nombreBacs: (v._count as { assignations?: number }).assignations ?? v._count.bacs,
         joursEcoules,
         createdAt: v.createdAt,
       };

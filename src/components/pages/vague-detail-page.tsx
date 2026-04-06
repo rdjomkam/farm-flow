@@ -10,6 +10,8 @@ import { IndicateursCards } from "@/components/vagues/indicateurs-cards";
 import { PoidsChart } from "@/components/vagues/poids-chart";
 import { RelevesList } from "@/components/vagues/releves-list";
 import { VagueActionMenu } from "@/components/vagues/vague-action-menu";
+import { VagueBacsSection } from "@/components/vagues/vague-bacs-section";
+import { VagueBacsTimeline } from "@/components/vagues/vague-bacs-timeline";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { CalibragesList } from "@/components/calibrage/calibrages-list";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -21,7 +23,7 @@ import { prisma } from "@/lib/db";
 import { computeVivantsByBac } from "@/lib/calculs";
 import { genererCourbeGompertz, calibrerGompertz, isCachedGompertzValid } from "@/lib/gompertz";
 import { StatutVague, TypeReleve, CategorieProduit, Permission } from "@/types";
-import type { Bac, Releve, EvolutionPoidsPoint, IndicateursVague as IndicateursType, CalibrageWithRelations } from "@/types";
+import type { Bac, Releve, EvolutionPoidsPoint, IndicateursVague as IndicateursType, CalibrageWithRelations, AssignationBacForVague } from "@/types";
 import type { ProduitOption } from "@/components/releves/consommation-fields";
 
 const statutVariants: Record<StatutVague, "en_cours" | "terminee" | "annulee"> = {
@@ -46,7 +48,7 @@ export default async function VagueDetailPage({
   const t = await getTranslations("vagues");
 
   const { id } = await params;
-  const [vague, biometriesData, relevesPreview, indicateurs, produitsDb, calibragesDb, gompertzRecord, configElevages] = await Promise.all([
+  const [vague, biometriesData, relevesPreview, indicateurs, produitsDb, calibragesDb, gompertzRecord, configElevages, assignationsDb] = await Promise.all([
     getVagueById(id, session.activeSiteId),
     // Biometries pour le graphique — select restreint (ADR-038 A-D2)
     prisma.releve.findMany({
@@ -72,6 +74,12 @@ export default async function VagueDetailPage({
       where: { siteId: session.activeSiteId },
       select: { id: true, nom: true },
       orderBy: { nom: "asc" },
+    }),
+    // ADR-043 Phase 2: charger toutes les assignations de cette vague pour VagueBacsSection
+    prisma.assignationBac.findMany({
+      where: { vagueId: id, siteId: session.activeSiteId },
+      include: { bac: { select: { id: true, nom: true, volume: true } } },
+      orderBy: { dateAssignation: "asc" },
     }),
   ]);
 
@@ -322,6 +330,26 @@ export default async function VagueDetailPage({
               )}
             </div>
             <CalibragesList calibrages={calibragesDb as CalibrageWithRelations[]} limit={2} vagueId={vague.id} />
+          </section>
+        )}
+
+        {/* Bacs — Section ADR-043 (active + retirés + timeline) */}
+        {assignationsDb.length > 0 && (
+          <section>
+            <h2 className="text-base font-semibold mb-3">Bacs</h2>
+            <VagueBacsSection
+              bacsActifs={assignationsDb.filter((a) => a.dateFin === null) as AssignationBacForVague[]}
+              bacsRetires={assignationsDb.filter((a) => a.dateFin !== null) as AssignationBacForVague[]}
+            />
+            {assignationsDb.length > 1 && (
+              <div className="mt-4">
+                <VagueBacsTimeline
+                  assignations={assignationsDb as AssignationBacForVague[]}
+                  dateDebutVague={vague.dateDebut}
+                  dateFinVague={vague.dateFin}
+                />
+              </div>
+            )}
           </section>
         )}
 

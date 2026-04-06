@@ -454,6 +454,8 @@ export interface Bac {
   isBlocked: boolean;
   /** ID du site (ferme) — R8 */
   siteId: string;
+  /** Historique des assignations à des vagues — ADR-043 (optionnel, chargé à la demande) */
+  assignations?: AssignationBac[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -461,6 +463,45 @@ export interface Bac {
 /** Bac avec sa relation vague chargee */
 export interface BacWithVague extends Bac {
   vague: Vague | null;
+}
+
+// ---------------------------------------------------------------------------
+// ADR-043 — AssignationBac (table de jonction Bac <-> Vague avec historique)
+// ---------------------------------------------------------------------------
+
+/**
+ * AssignationBac — enregistrement d'une assignation d'un bac à une vague.
+ *
+ * dateFin = null  : assignation active (bac actuellement dans la vague)
+ * dateFin non-null: assignation terminée (bac retiré ou vague clôturée)
+ */
+export interface AssignationBac {
+  id: string;
+  bacId: string;
+  vagueId: string;
+  siteId: string;
+  /** Date de début de l'assignation */
+  dateAssignation: Date;
+  /** Date de fin — null = assignation active */
+  dateFin: Date | null;
+  /** Nombre de poissons initial dans ce bac au démarrage de l'assignation */
+  nombrePoissonsInitial: number | null;
+  /** Poids moyen initial des poissons en grammes */
+  poidsMoyenInitial: number | null;
+  /** Nombre de poissons actuel dans ce bac (mis à jour via comptages/calibrages/ventes) */
+  nombrePoissons: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** AssignationBac avec le code de la vague — pour l'affichage dans un historique bac */
+export interface AssignationBacWithVague extends AssignationBac {
+  vague: Pick<Vague, "id" | "code" | "statut">;
+}
+
+/** AssignationBac avec le nom du bac — pour l'affichage dans une vue vague */
+export interface AssignationBacForVague extends AssignationBac {
+  bac: Pick<Bac, "id" | "nom" | "volume">;
 }
 
 /**

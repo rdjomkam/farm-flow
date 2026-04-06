@@ -173,7 +173,7 @@ export async function getIndicateursBac(
   vagueId: string,
   bacId: string
 ): Promise<IndicateursBac | null> {
-  const [vague, bac] = await Promise.all([
+  const [vague, bac, assignation] = await Promise.all([
     prisma.vague.findFirst({
       where: { id: vagueId, siteId },
       select: {
@@ -182,12 +182,24 @@ export async function getIndicateursBac(
         poidsMoyenInitial: true,
         dateDebut: true,
         dateFin: true,
-        _count: { select: { bacs: true } },
+        _count: {
+          select: {
+            bacs: true,
+            // ADR-043 Phase 2: compter aussi les assignations
+            assignations: { where: { vagueId } },
+          },
+        },
       },
     }),
     prisma.bac.findFirst({
       where: { id: bacId, siteId },
       select: { id: true, nom: true, volume: true, nombreInitial: true },
+    }),
+    // ADR-043 Phase 2: lire nombrePoissonsInitial depuis AssignationBac
+    prisma.assignationBac.findFirst({
+      where: { bacId, vagueId, siteId },
+      orderBy: { dateAssignation: "asc" },
+      select: { nombrePoissonsInitial: true },
     }),
   ]);
 
@@ -207,15 +219,26 @@ export async function getIndicateursBac(
     },
   });
 
+  // ADR-043 Phase 2: préférer AssignationBac.nombrePoissonsInitial si disponible
+  const bacWithBestNombreInitial = {
+    ...bac,
+    nombreInitial: assignation?.nombrePoissonsInitial ?? bac.nombreInitial,
+  };
+
+  // ADR-043 Phase 2: utiliser le nombre d'assignations si _count.bacs est insuffisant
+  const totalBacs = vague._count.bacs > 0
+    ? vague._count.bacs
+    : (vague._count as { assignations?: number }).assignations ?? 1;
+
   return computeIndicateursBac(
-    bac,
+    bacWithBestNombreInitial,
     vagueId,
     vague.nombreInitial,
     vague.poidsMoyenInitial,
     vague.dateDebut,
     vague.dateFin,
     releves,
-    vague._count.bacs || 1
+    totalBacs || 1
   );
 }
 
@@ -1010,7 +1033,8 @@ export async function getAnalyticsDashboard(siteId: string): Promise<AnalyticsDa
   // ---- 1. Stats generales (COUNT en parallele) ----
   const [vaguesEnCours, bacsActifs, totalReproducteurs, totalLotsEnElevage] = await Promise.all([
     prisma.vague.count({ where: { siteId, statut: StatutVague.EN_COURS } }),
-    prisma.bac.count({ where: { siteId, vagueId: { not: null } } }),
+    // ADR-043 Phase 2: compter les assignations actives
+    prisma.assignationBac.count({ where: { siteId, dateFin: null } }),
     prisma.reproducteur.count({ where: { siteId, statut: StatutReproducteur.ACTIF } }),
     prisma.lotAlevins.count({ where: { siteId, statut: StatutLotAlevins.EN_ELEVAGE } }),
   ]);

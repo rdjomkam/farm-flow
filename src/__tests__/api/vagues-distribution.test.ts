@@ -142,6 +142,10 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
           findMany: (...args: unknown[]) => mockPrismaBacFindMany(...args),
           update: (...args: unknown[]) => mockPrismaBacUpdate(...args),
         },
+        // ADR-043 Phase 2: mock de la table de jonction AssignationBac
+        assignationBac: {
+          create: vi.fn().mockResolvedValue({}),
+        },
       };
       return fn(txMock);
     });

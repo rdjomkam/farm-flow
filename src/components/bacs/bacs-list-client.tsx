@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Plus, Pencil, Container } from "lucide-react";
+import { Plus, Pencil, Container, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -240,6 +241,12 @@ export function BacsListClient({ bacs: initialBacs, permissions }: BacsListClien
                     ) : (
                       <Badge variant="info">{t("list.libre")}</Badge>
                     )}
+                    {/* Lien vers la page de détail bac (ADR-043) */}
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" asChild>
+                      <Link href={`/bacs/${bac.id}`} title="Historique des assignations">
+                        <History className="h-3.5 w-3.5" />
+                      </Link>
+                    </Button>
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEdit(bac)}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
