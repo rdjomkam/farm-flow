@@ -73,7 +73,7 @@ export function PaginationFooter({
             onClick={gotoPrev}
             disabled={!hasPrev || isPending}
             className="
-              min-h-[44px] px-4 rounded-md border border-border bg-background
+              min-h-[44px] px-4 rounded-md border border-border bg-transparent
               flex items-center gap-1.5
               text-sm font-medium text-muted-foreground
               hover:bg-accent hover:text-foreground
@@ -97,7 +97,7 @@ export function PaginationFooter({
             onClick={gotoNext}
             disabled={!hasNext || isPending}
             className="
-              min-h-[44px] px-4 rounded-md border border-border bg-background
+              min-h-[44px] px-4 rounded-md border border-border bg-transparent
               flex items-center gap-1.5
               text-sm font-medium text-muted-foreground
               hover:bg-accent hover:text-foreground

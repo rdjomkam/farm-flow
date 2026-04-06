@@ -206,7 +206,7 @@ export function RelevesFilterSheet({
       return;
     }
     setBacsLoading(true);
-    fetch(`/api/bacs?vagueId=${localVagueId}`)
+    fetch(`/api/bacs/by-vague-releves?vagueId=${localVagueId}`)
       .then((r) => r.json())
       .then((d: { data?: BacOption[] }) => {
         setBacs(d.data ?? []);

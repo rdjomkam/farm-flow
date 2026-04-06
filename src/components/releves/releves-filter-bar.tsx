@@ -87,7 +87,7 @@ export function ReleveFilterBar({ current, vagues }: Props) {
       return;
     }
     setBacsLoading(true);
-    fetch(`/api/bacs?vagueId=${localVagueId}`)
+    fetch(`/api/bacs/by-vague-releves?vagueId=${localVagueId}`)
       .then((r) => r.json())
       .then((d: { data?: BacOption[] }) => setBacs(d.data ?? []))
       .catch(() => setBacs([]))
@@ -174,14 +174,37 @@ export function ReleveFilterBar({ current, vagues }: Props) {
     updateParam("modifie", checked ? "true" : "");
   }
 
-  const activeCount = countActiveFilters({
-    vagueId: localVagueId || undefined,
-    bacId: localBacId || undefined,
-    typeReleve: localType || undefined,
-    dateFrom: localDateFrom || undefined,
-    dateTo: localDateTo || undefined,
-    modifie: localModifie ? "true" : undefined,
-  });
+  // Lit TOUS les parametres de filtre depuis searchParams pour eviter la desynchronisation
+  function getCurrentParams(): ReleveSearchParams {
+    return {
+      vagueId: searchParams.get("vagueId") || undefined,
+      bacId: searchParams.get("bacId") || undefined,
+      typeReleve: searchParams.get("typeReleve") || undefined,
+      dateFrom: searchParams.get("dateFrom") || undefined,
+      dateTo: searchParams.get("dateTo") || undefined,
+      modifie: searchParams.get("modifie") || undefined,
+      produitId: searchParams.get("produitId") || undefined,
+      poidsMoyenMin: searchParams.get("poidsMoyenMin") || undefined,
+      poidsMoyenMax: searchParams.get("poidsMoyenMax") || undefined,
+      tailleMoyenneMin: searchParams.get("tailleMoyenneMin") || undefined,
+      tailleMoyenneMax: searchParams.get("tailleMoyenneMax") || undefined,
+      causeMortalite: searchParams.get("causeMortalite") || undefined,
+      nombreMortsMin: searchParams.get("nombreMortsMin") || undefined,
+      nombreMortsMax: searchParams.get("nombreMortsMax") || undefined,
+      frequenceAlimentMin: searchParams.get("frequenceAlimentMin") || undefined,
+      frequenceAlimentMax: searchParams.get("frequenceAlimentMax") || undefined,
+      temperatureMin: searchParams.get("temperatureMin") || undefined,
+      temperatureMax: searchParams.get("temperatureMax") || undefined,
+      phMin: searchParams.get("phMin") || undefined,
+      phMax: searchParams.get("phMax") || undefined,
+      methodeComptage: searchParams.get("methodeComptage") || undefined,
+      descriptionSearch: searchParams.get("descriptionSearch") || undefined,
+      pourcentageMin: searchParams.get("pourcentageMin") || undefined,
+      pourcentageMax: searchParams.get("pourcentageMax") || undefined,
+    };
+  }
+
+  const activeCount = countActiveFilters(getCurrentParams());
 
   return (
     <div className={`transition-opacity ${isPending ? "opacity-60" : ""}`}>
@@ -207,14 +230,7 @@ export function ReleveFilterBar({ current, vagues }: Props) {
           </SheetTrigger>
           <SheetContent className="!left-auto !right-0 !inset-y-0 !w-full sm:!w-96 !p-0 flex flex-col" hideCloseButton>
             <RelevesFilterSheet
-              current={{
-                vagueId: localVagueId || undefined,
-                bacId: localBacId || undefined,
-                typeReleve: localType || undefined,
-                dateFrom: localDateFrom || undefined,
-                dateTo: localDateTo || undefined,
-                modifie: localModifie ? "true" : undefined,
-              }}
+              current={getCurrentParams()}
               vagues={vagues}
               onApply={(params) => { updateMultipleParams(params); setSheetOpen(false); }}
               onClear={() => { resetAllFilters(); setSheetOpen(false); }}

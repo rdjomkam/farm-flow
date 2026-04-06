@@ -126,3 +126,27 @@ export async function libererBac(bacId: string, siteId: string) {
     data: { vagueId: null },
   });
 }
+
+/**
+ * Retourne tous les bacs distincts qui ont au moins un releve pour la vague demandee.
+ * Contrairement a getBacs(vagueId), cette fonction joint via la table Releve et inclut
+ * les bacs orphelins (Bac.vagueId = null) qui ont des releves historiques pour cette vague.
+ */
+export async function getBacsAvecRelevesPourVague(
+  siteId: string,
+  vagueId: string
+): Promise<{ id: string; nom: string }[]> {
+  const rows = await prisma.releve.findMany({
+    where: { vagueId, siteId },
+    select: { bacId: true },
+    distinct: ["bacId"],
+  });
+  const bacIds = rows.map((r) => r.bacId);
+  if (bacIds.length === 0) return [];
+
+  return prisma.bac.findMany({
+    where: { id: { in: bacIds }, siteId },
+    select: { id: true, nom: true },
+    orderBy: { nom: "asc" },
+  });
+}
