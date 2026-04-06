@@ -529,7 +529,11 @@ export function estimerPopulationBac(
 /**
  * Step 7 — FCR pour une periode dans un bac.
  *
- * gainParPoissonG = Σ dailyGain(t) pour t in [debut, fin] (jours relatifs vague)
+ * gainParPoissonG = Σ dailyGain(t) pour t in [debut+1, fin] (jours relatifs vague)
+ *   — gain(t) = weight(t) - weight(t-1), donc la somme de debut+1 a fin = weight(fin) - weight(debut),
+ *     ce qui est coherent avec les valeurs poidsDebutG / poidsFinG affichees dans l'UI.
+ *   — Inclure gain(debut) ajouterait weight(debut)-weight(debut-1), c'est-a-dire la
+ *     croissance d'AVANT la periode, ce qui cree une discordance visuelle.
  * gainBiomasseKg = gainParPoissonG × avgFishCount / 1000
  * fcr = qtyAlimentKg / gainBiomasseKg (null si gain <= 0)
  *
@@ -557,9 +561,13 @@ export function calculerFCRPeriodeBac(
   const poidsDebutG = dailyGain.get(debutDayIdx)?.poids ?? 0;
   const poidsFinG = dailyGain.get(finDayIdx)?.poids ?? 0;
 
-  // Sum daily gains over the period
+  // Sum daily gains over the period [debutDayIdx+1, finDayIdx].
+  // gain(t) = weight(t) - weight(t-1), so summing from debut+1 to fin gives
+  // weight(fin) - weight(debut), consistent with poidsDebutG / poidsFinG displayed in UI.
+  // Starting from debutDayIdx would add gain(debut) = weight(debut) - weight(debut-1),
+  // which is growth that happened BEFORE this period.
   let gainParPoissonG = 0;
-  for (let t = debutDayIdx; t <= finDayIdx; t++) {
+  for (let t = debutDayIdx + 1; t <= finDayIdx; t++) {
     const entry = dailyGain.get(t);
     if (entry) {
       gainParPoissonG += entry.gain;
