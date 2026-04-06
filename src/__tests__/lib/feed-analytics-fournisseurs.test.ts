@@ -8,6 +8,9 @@
  *   - Fournisseur avec un seul produit → score = score du produit
  *   - Tri par scoreMoyen DESC (null en fin)
  *   - Moyenne ponderee par quantite correcte
+ *
+ * Note : computeAlimentMetrics appelle desormais getFCRByFeed (ADR-036).
+ * Les mocks couvrent le pipeline complet de getFCRByFeed.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -18,23 +21,31 @@ import { getScoresFournisseurs } from "@/lib/queries/analytics";
 // ---------------------------------------------------------------------------
 
 const mockProduitFindMany = vi.fn();
+const mockProduitFindFirst = vi.fn();
 const mockReleveConsommationFindMany = vi.fn();
+const mockReleveConsommationAggregate = vi.fn();
 const mockVagueFindMany = vi.fn();
 const mockReleveFindMany = vi.fn();
+const mockCalibrageFindMany = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
     produit: {
       findMany: (...args: unknown[]) => mockProduitFindMany(...args),
+      findFirst: (...args: unknown[]) => mockProduitFindFirst(...args),
     },
     releveConsommation: {
       findMany: (...args: unknown[]) => mockReleveConsommationFindMany(...args),
+      aggregate: (...args: unknown[]) => mockReleveConsommationAggregate(...args),
     },
     vague: {
       findMany: (...args: unknown[]) => mockVagueFindMany(...args),
     },
     releve: {
       findMany: (...args: unknown[]) => mockReleveFindMany(...args),
+    },
+    calibrage: {
+      findMany: (...args: unknown[]) => mockCalibrageFindMany(...args),
     },
   },
 }));
@@ -70,13 +81,60 @@ function makeProduit(overrides: {
   };
 }
 
+/**
+ * Configure les mocks pour simuler une vague avec de la consommation
+ * mais sans biometrie (getFCRByFeed renvoie insufficientData=true, fcrGlobal=null).
+ *
+ * Ce scenario est realiste : getScoresFournisseurs peut avoir quantiteTotale > 0
+ * mais fcrMoyen = null si pas assez de biometries.
+ */
+function setupVagueWithConsoNoBio(vagueId: string, produitId: string, quantite: number) {
+  // getFCRByFeed step 1 — vague.findMany (find vagues with consommations for this product)
+  mockVagueFindMany.mockResolvedValueOnce([
+    {
+      id: vagueId,
+      code: `V-${vagueId}`,
+      nombreInitial: 1000,
+      poidsMoyenInitial: 5,
+      dateDebut: new Date("2026-01-01"),
+      dateFin: null,
+      bacs: [],
+      sourceBacIds: [],
+    },
+  ]);
+
+  // getFCRByFeed step 2 — releve.findMany for biometries (empty = insufficient data)
+  mockReleveFindMany.mockResolvedValueOnce([]);
+
+  // getFCRByFeed insufficient data branch — releveConsommation.aggregate
+  mockReleveConsommationAggregate.mockResolvedValueOnce({
+    _sum: { quantite },
+  });
+
+  // getVague metadata (in computeAlimentMetrics wrapper — vague.findMany for SGR)
+  mockVagueFindMany.mockResolvedValueOnce([
+    {
+      id: vagueId,
+      code: `V-${vagueId}`,
+      nombreInitial: 1000,
+      poidsMoyenInitial: 5,
+      dateDebut: new Date("2026-01-01"),
+      dateFin: null,
+      bacs: [],
+    },
+  ]);
+
+  // computeAlimentMetrics wrapper — releve.findMany for biometrie/mortalite/comptage
+  mockReleveFindMany.mockResolvedValueOnce([]);
+}
+
 // ---------------------------------------------------------------------------
 // Tests : liste vide
 // ---------------------------------------------------------------------------
 
 describe("getScoresFournisseurs — liste vide", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   it("retourne [] si aucun produit ALIMENT actif sur le site", async () => {
@@ -113,14 +171,25 @@ describe("getScoresFournisseurs — liste vide", () => {
 
 describe("getScoresFournisseurs — fournisseur sans consommation exclu", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   it("fournisseur dont le produit a quantiteTotale=0 est exclu (guard analytique.quantiteTotale <= 0)", async () => {
     const produit = makeProduit({ id: "prod-1", fournisseurId: "four-1", fournisseurNom: "Sans Conso" });
     mockProduitFindMany.mockResolvedValue([produit]);
-    // Aucune consommation → computeAlimentMetrics retourne quantiteTotale=0
-    mockReleveConsommationFindMany.mockResolvedValue([]);
+
+    // getFCRByFeed: produit.findFirst → returns produit (required for getFCRByFeed to proceed)
+    mockProduitFindFirst.mockResolvedValueOnce({
+      ...produit,
+      fournisseur: { nom: produit.fournisseur.nom },
+    });
+
+    // getFCRByFeed step 1: aucune vague avec consommations pour ce produit
+    mockVagueFindMany.mockResolvedValueOnce([]);
+
+    // computeAlimentMetrics wrapper: vague.findMany for SGR (no vagues)
+    // (when parVague is empty, we skip the vague metadata query, no mock needed)
+    mockReleveFindMany.mockResolvedValueOnce([]);
 
     const result = await getScoresFournisseurs("site-1");
 
@@ -135,34 +204,20 @@ describe("getScoresFournisseurs — fournisseur sans consommation exclu", () => 
 
 describe("getScoresFournisseurs — fournisseur avec un seul produit", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   it("fournisseur avec 1 produit : nombreProduits = 1", async () => {
     const produit = makeProduit({ id: "prod-1", fournisseurId: "four-1", fournisseurNom: "Mono Produit" });
     mockProduitFindMany.mockResolvedValue([produit]);
 
-    // Simulation : une consommation de 50kg en janvier 2026
-    mockReleveConsommationFindMany.mockResolvedValue([
-      {
-        quantite: 50,
-        releve: { id: "rel-1", vagueId: "vague-1", date: new Date("2026-01-15") },
-      },
-    ]);
-    // Une vague avec des donnees biometriques
-    mockVagueFindMany.mockResolvedValue([
-      {
-        id: "vague-1",
-        code: "V2026-001",
-        nombreInitial: 1000,
-        poidsMoyenInitial: 5,
-        dateDebut: new Date("2026-01-01"),
-        dateFin: null,
-        bacs: [],
-        configElevage: null,
-      },
-    ]);
-    mockReleveFindMany.mockResolvedValue([]);
+    // getFCRByFeed: produit.findFirst
+    mockProduitFindFirst.mockResolvedValueOnce({
+      ...produit,
+      fournisseur: { nom: produit.fournisseur.nom },
+    });
+
+    setupVagueWithConsoNoBio("vague-1", "prod-1", 50);
 
     const result = await getScoresFournisseurs("site-1");
 
@@ -175,26 +230,13 @@ describe("getScoresFournisseurs — fournisseur avec un seul produit", () => {
     const produit = makeProduit({ id: "prod-1", fournisseurId: "four-1", fournisseurNom: "Fournisseur X" });
     mockProduitFindMany.mockResolvedValue([produit]);
 
-    mockReleveConsommationFindMany.mockResolvedValue([
-      {
-        quantite: 100,
-        releve: { id: "rel-1", vagueId: "vague-1", date: new Date("2026-03-10") },
-      },
-    ]);
-    mockVagueFindMany.mockResolvedValue([
-      {
-        id: "vague-1",
-        code: "V2026-002",
-        nombreInitial: 500,
-        poidsMoyenInitial: 10,
-        dateDebut: new Date("2026-02-01"),
-        dateFin: null,
-        bacs: [],
-        configElevage: null,
-      },
-    ]);
-    // Pas de releves biometrie → FCR ne peut pas etre calcule
-    mockReleveFindMany.mockResolvedValue([]);
+    // getFCRByFeed: produit.findFirst
+    mockProduitFindFirst.mockResolvedValueOnce({
+      ...produit,
+      fournisseur: { nom: produit.fournisseur.nom },
+    });
+
+    setupVagueWithConsoNoBio("vague-1", "prod-1", 100);
 
     const result = await getScoresFournisseurs("site-1");
 
@@ -209,14 +251,10 @@ describe("getScoresFournisseurs — fournisseur avec un seul produit", () => {
 
 describe("getScoresFournisseurs — tri par scoreMoyen DESC", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   it("fournisseurs avec scoreMoyen null sont en fin de liste", async () => {
-    // On cree deux fournisseurs dont les produits n'ont pas de consommation (scoreMoyen null)
-    // et on verifie que les deux s'affichent correctement (null sort)
-    // Pour tester le tri, on mocke directement le comportement de la Map interne
-    // en s'assurant que les fournisseurs avec score null viennent apres
     mockProduitFindMany.mockResolvedValue([]);
 
     const result = await getScoresFournisseurs("site-1");
@@ -232,25 +270,14 @@ describe("getScoresFournisseurs — tri par scoreMoyen DESC", () => {
       fournisseurNom: "Top Fournisseur",
     });
     mockProduitFindMany.mockResolvedValue([produit]);
-    mockReleveConsommationFindMany.mockResolvedValue([
-      {
-        quantite: 200,
-        releve: { id: "rel-1", vagueId: "vague-1", date: new Date("2026-05-01") },
-      },
-    ]);
-    mockVagueFindMany.mockResolvedValue([
-      {
-        id: "vague-1",
-        code: "V2026-003",
-        nombreInitial: 2000,
-        poidsMoyenInitial: 8,
-        dateDebut: new Date("2026-04-01"),
-        dateFin: null,
-        bacs: [],
-        configElevage: null,
-      },
-    ]);
-    mockReleveFindMany.mockResolvedValue([]);
+
+    // getFCRByFeed: produit.findFirst
+    mockProduitFindFirst.mockResolvedValueOnce({
+      ...produit,
+      fournisseur: { nom: produit.fournisseur.nom },
+    });
+
+    setupVagueWithConsoNoBio("vague-1", "prod-1", 200);
 
     const result = await getScoresFournisseurs("site-1");
 
@@ -265,7 +292,7 @@ describe("getScoresFournisseurs — tri par scoreMoyen DESC", () => {
 
 describe("getScoresFournisseurs — agregation par fournisseur", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   it("deux produits du meme fournisseur → un seul entree avec nombreProduits=2", async () => {
@@ -273,34 +300,19 @@ describe("getScoresFournisseurs — agregation par fournisseur", () => {
     const produit2 = makeProduit({ id: "prod-2", fournisseurId: "four-1", fournisseurNom: "Fournisseur Commun" });
     mockProduitFindMany.mockResolvedValue([produit1, produit2]);
 
-    // Chaque produit a des consommations distinctes
-    mockReleveConsommationFindMany
-      .mockResolvedValueOnce([
-        {
-          quantite: 80,
-          releve: { id: "rel-1", vagueId: "vague-1", date: new Date("2026-06-10") },
-        },
-      ])
-      .mockResolvedValueOnce([
-        {
-          quantite: 60,
-          releve: { id: "rel-2", vagueId: "vague-1", date: new Date("2026-06-15") },
-        },
-      ]);
+    // Pour prod-1
+    mockProduitFindFirst.mockResolvedValueOnce({
+      ...produit1,
+      fournisseur: { nom: produit1.fournisseur.nom },
+    });
+    setupVagueWithConsoNoBio("vague-1", "prod-1", 80);
 
-    mockVagueFindMany.mockResolvedValue([
-      {
-        id: "vague-1",
-        code: "V2026-004",
-        nombreInitial: 1500,
-        poidsMoyenInitial: 12,
-        dateDebut: new Date("2026-05-01"),
-        dateFin: null,
-        bacs: [],
-        configElevage: null,
-      },
-    ]);
-    mockReleveFindMany.mockResolvedValue([]);
+    // Pour prod-2
+    mockProduitFindFirst.mockResolvedValueOnce({
+      ...produit2,
+      fournisseur: { nom: produit2.fournisseur.nom },
+    });
+    setupVagueWithConsoNoBio("vague-1", "prod-2", 60);
 
     const result = await getScoresFournisseurs("site-1");
 
@@ -315,47 +327,19 @@ describe("getScoresFournisseurs — agregation par fournisseur", () => {
     const produit2 = makeProduit({ id: "prod-B", fournisseurId: "four-B", fournisseurNom: "Fournisseur Beta" });
     mockProduitFindMany.mockResolvedValue([produit1, produit2]);
 
-    mockReleveConsommationFindMany
-      .mockResolvedValueOnce([
-        {
-          quantite: 100,
-          releve: { id: "rel-A1", vagueId: "vague-A", date: new Date("2026-07-01") },
-        },
-      ])
-      .mockResolvedValueOnce([
-        {
-          quantite: 70,
-          releve: { id: "rel-B1", vagueId: "vague-B", date: new Date("2026-07-05") },
-        },
-      ]);
+    // Pour prod-A
+    mockProduitFindFirst.mockResolvedValueOnce({
+      ...produit1,
+      fournisseur: { nom: produit1.fournisseur.nom },
+    });
+    setupVagueWithConsoNoBio("vague-A", "prod-A", 100);
 
-    mockVagueFindMany
-      .mockResolvedValueOnce([
-        {
-          id: "vague-A",
-          code: "V2026-A",
-          nombreInitial: 800,
-          poidsMoyenInitial: 6,
-          dateDebut: new Date("2026-06-01"),
-          dateFin: null,
-          bacs: [],
-          configElevage: null,
-        },
-      ])
-      .mockResolvedValueOnce([
-        {
-          id: "vague-B",
-          code: "V2026-B",
-          nombreInitial: 600,
-          poidsMoyenInitial: 9,
-          dateDebut: new Date("2026-06-10"),
-          dateFin: null,
-          bacs: [],
-          configElevage: null,
-        },
-      ]);
-
-    mockReleveFindMany.mockResolvedValue([]);
+    // Pour prod-B
+    mockProduitFindFirst.mockResolvedValueOnce({
+      ...produit2,
+      fournisseur: { nom: produit2.fournisseur.nom },
+    });
+    setupVagueWithConsoNoBio("vague-B", "prod-B", 70);
 
     const result = await getScoresFournisseurs("site-1");
 
@@ -372,31 +356,18 @@ describe("getScoresFournisseurs — agregation par fournisseur", () => {
 
 describe("getScoresFournisseurs — structure du resultat", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   it("chaque entree possede les champs attendus", async () => {
     const produit = makeProduit({ id: "prod-str", fournisseurId: "four-str", fournisseurNom: "Struct Test" });
     mockProduitFindMany.mockResolvedValue([produit]);
-    mockReleveConsommationFindMany.mockResolvedValue([
-      {
-        quantite: 50,
-        releve: { id: "rel-str", vagueId: "vague-str", date: new Date("2026-08-01") },
-      },
-    ]);
-    mockVagueFindMany.mockResolvedValue([
-      {
-        id: "vague-str",
-        code: "V2026-STR",
-        nombreInitial: 300,
-        poidsMoyenInitial: 4,
-        dateDebut: new Date("2026-07-01"),
-        dateFin: null,
-        bacs: [],
-        configElevage: null,
-      },
-    ]);
-    mockReleveFindMany.mockResolvedValue([]);
+
+    mockProduitFindFirst.mockResolvedValueOnce({
+      ...produit,
+      fournisseur: { nom: produit.fournisseur.nom },
+    });
+    setupVagueWithConsoNoBio("vague-str", "prod-str", 50);
 
     const result = await getScoresFournisseurs("site-1");
 

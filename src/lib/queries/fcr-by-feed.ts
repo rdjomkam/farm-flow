@@ -635,6 +635,24 @@ export function aggregerFCRVague(
  * @param params    - minPoints (defaut: 5), wInfinity optionnel
  * @returns FCRByFeedResult ou null si produit introuvable
  */
+// ---------------------------------------------------------------------------
+// Saison filter helpers
+// ---------------------------------------------------------------------------
+
+/** Mois (1-12) de la saison seche au Cameroun : novembre, decembre, janvier, fevrier, mars */
+const MOIS_SECHE = new Set([11, 12, 1, 2, 3]);
+
+/**
+ * Filtre une date selon le saisonFilter.
+ * @returns true si la date est dans la saison demandee (ou si aucun filtre)
+ */
+function dateMatchesSaison(date: Date, saisonFilter?: "SECHE" | "PLUIES"): boolean {
+  if (!saisonFilter) return true;
+  const mois = date.getUTCMonth() + 1; // 1-12
+  if (saisonFilter === "SECHE") return MOIS_SECHE.has(mois);
+  return !MOIS_SECHE.has(mois); // PLUIES
+}
+
 export async function getFCRByFeed(
   siteId: string,
   produitId: string,
@@ -642,6 +660,7 @@ export async function getFCRByFeed(
 ): Promise<FCRByFeedResult | null> {
   const minPoints = params?.minPoints ?? 5;
   const wInfinityOverride = params?.wInfinity ?? null;
+  const saisonFilter = params?.saisonFilter ?? undefined;
 
   // Lazy import to avoid DB connection at module load time (allows unit testing of pure functions)
   const { prisma } = await import("@/lib/db");
@@ -762,7 +781,7 @@ export async function getFCRByFeed(
 
     // Step 4: Daily gain table
     // First find the range of consumption days
-    const consommationsAll = await prisma.releveConsommation.findMany({
+    const consommationsAllRaw = await prisma.releveConsommation.findMany({
       where: {
         produitId,
         releve: { vagueId: vague.id },
@@ -774,6 +793,11 @@ export async function getFCRByFeed(
       },
       orderBy: { releve: { date: "asc" } },
     });
+
+    // Apply saisonFilter: keep only consommations whose releve date matches the season
+    const consommationsAll = saisonFilter
+      ? consommationsAllRaw.filter((c) => dateMatchesSaison(c.releve.date, saisonFilter))
+      : consommationsAllRaw;
 
     if (consommationsAll.length === 0) {
       parVague.push({
@@ -1023,6 +1047,8 @@ export async function getFCRByFeed(
       globalTotalAlimentKg += totalAlimentKg;
       globalTotalGainBiomasseKg += totalGainBiomasseKg;
       nombreVaguesIncluses++;
+    } else {
+      nombreVaguesIgnorees++;
     }
   }
 

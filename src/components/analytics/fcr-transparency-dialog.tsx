@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { Info, ChevronDown, RefreshCw, Loader2 } from "lucide-react";
+import { Info, ChevronDown, RefreshCw, Loader2, AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
   Dialog,
@@ -13,46 +13,33 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type {
-  FCRTrace,
-  FCRTraceVague,
-  FCRTracePeriode,
-  FCRTraceEstimationDetail,
-} from "@/types";
+import type { DetailAlimentVague, FCRBacPeriode, FCRByFeedResult } from "@/types";
 
 // ---------------------------------------------------------------------------
-// Method badge
+// Flag badges
 // ---------------------------------------------------------------------------
 
-type MethodeEstimation =
-  | "BIOMETRIE_EXACTE"
-  | "GOMPERTZ_VAGUE"
-  | "INTERPOLATION_LINEAIRE"
-  | "VALEUR_INITIALE";
-
-function MethodeBadge({ methode }: { methode: MethodeEstimation }) {
-  const t = useTranslations("analytics.fcrTrace");
-
-  const config: Record<MethodeEstimation, { label: string; className: string }> = {
-    BIOMETRIE_EXACTE: {
-      label: t("biometrieExacte"),
-      className: "bg-green-100 text-green-700",
-    },
-    GOMPERTZ_VAGUE: {
-      label: t("gompertzVague"),
-      className: "bg-sky-100 text-sky-700",
-    },
-    INTERPOLATION_LINEAIRE: {
-      label: t("interpolationLineaire"),
+function FlagBadge({
+  type,
+}: {
+  type: "LOW_CONFIDENCE" | "HIGH_FCR" | "INSUFFICIENT_DATA";
+}) {
+  const configs = {
+    LOW_CONFIDENCE: {
+      label: "Confiance faible (R² < 0.85)",
       className: "bg-amber-100 text-amber-700",
     },
-    VALEUR_INITIALE: {
-      label: t("valeurInitiale"),
+    HIGH_FCR: {
+      label: "FCR elevé (> 3.0)",
+      className: "bg-red-100 text-red-700",
+    },
+    INSUFFICIENT_DATA: {
+      label: "Donnees insuffisantes",
       className: "bg-gray-100 text-gray-600",
     },
   };
 
-  const { label, className } = config[methode] ?? config.VALEUR_INITIALE;
+  const { label, className } = configs[type];
 
   return (
     <span
@@ -67,268 +54,121 @@ function MethodeBadge({ methode }: { methode: MethodeEstimation }) {
 }
 
 // ---------------------------------------------------------------------------
-// Estimation detail block
+// Per-bac period row (ADR-036)
 // ---------------------------------------------------------------------------
 
-function EstimationDetailBlock({ detail }: { detail: FCRTraceEstimationDetail | null }) {
-  const t = useTranslations("analytics.fcrTrace");
-
-  if (!detail) return null;
-
-  if (detail.methode === "BIOMETRIE_EXACTE") {
-    return (
-      <p className="text-xs text-muted-foreground mt-0.5">
-        {new Date(detail.dateBiometrie).toLocaleDateString("fr-FR", {
-          day: "2-digit",
-          month: "2-digit",
-        })}
-        {" : "}
-        {detail.poidsMesureG.toFixed(1)} g
-      </p>
-    );
-  }
-
-  if (detail.methode === "INTERPOLATION_LINEAIRE") {
-    return (
-      <div className="text-xs text-muted-foreground mt-0.5 space-y-0.5">
-        {detail.pointAvant && (
-          <p>
-            ↑{" "}
-            {new Date(detail.pointAvant.date).toLocaleDateString("fr-FR", {
-              day: "2-digit",
-              month: "2-digit",
-            })}
-            {" : "}
-            {detail.pointAvant.poidsMoyenG.toFixed(1)} g
-          </p>
-        )}
-        {detail.pointApres && (
-          <p>
-            ↓{" "}
-            {new Date(detail.pointApres.date).toLocaleDateString("fr-FR", {
-              day: "2-digit",
-              month: "2-digit",
-            })}
-            {" : "}
-            {detail.pointApres.poidsMoyenG.toFixed(1)} g
-          </p>
-        )}
-        {detail.ratio !== null && (
-          <p>ratio : {detail.ratio.toFixed(2)}</p>
-        )}
-      </div>
-    );
-  }
-
-  if (detail.methode === "GOMPERTZ_VAGUE") {
-    const p = detail.params;
-    const formuleLine = `W(${detail.tJours.toFixed(1)}) = ${p.wInfinity} × exp(−exp(−${p.k.toFixed(4)} × (${detail.tJours.toFixed(1)} − ${p.ti.toFixed(1)}))) = ${detail.resultatG.toFixed(1)} g`;
-    return (
-      <div className="mt-0.5 space-y-0.5">
-        <code className="block text-[10px] font-mono bg-muted rounded px-1.5 py-0.5 text-foreground break-all">
-          {formuleLine}
-        </code>
-        <p className="text-[10px] text-muted-foreground">
-          {t("r2Label")} = {p.r2.toFixed(3)} · {p.biometrieCount} bio.
-        </p>
-      </div>
-    );
-  }
-
-  if (detail.methode === "VALEUR_INITIALE") {
-    return (
-      <p className="text-xs text-muted-foreground mt-0.5">
-        {detail.poidsMoyenInitialG.toFixed(1)} g
-      </p>
-    );
-  }
-
-  return null;
-}
-
-// ---------------------------------------------------------------------------
-// Periode row (collapsible)
-// ---------------------------------------------------------------------------
-
-function PeriodeRow({
+function PeriodeBacRow({
   periode,
   index,
-  defaultOpen,
 }: {
-  periode: FCRTracePeriode;
+  periode: FCRBacPeriode;
   index: number;
-  defaultOpen?: boolean;
 }) {
-  const t = useTranslations("analytics.fcrTrace");
-
   const formatDate = (d: Date | string) =>
     new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
 
-  // DISC-21: title no longer references bacNom — show period number and date range
-  const title = `${t("periodeN", { n: index + 1 })} : ${formatDate(periode.dateDebut)} → ${formatDate(periode.dateFin)}  (${periode.dureeJours}${t("joursUnit")})`;
+  const title = `${periode.bacNom} · ${formatDate(periode.dateDebut)} → ${formatDate(periode.dateFin)} (${periode.dureeJours}j)`;
 
   return (
-    <details className="group border border-border rounded-lg overflow-hidden" open={defaultOpen}>
+    <details className="group border border-border rounded-lg overflow-hidden">
       <summary className="flex items-center justify-between px-3 py-2 cursor-pointer select-none list-none bg-muted/40 hover:bg-muted/60 transition-colors">
         <span className="text-xs font-medium truncate pr-2">{title}</span>
         <div className="flex items-center gap-2 shrink-0">
-          {periode.fcrPeriode !== null && (
+          {periode.fcr !== null && (
             <span className="text-xs font-semibold text-primary tabular-nums">
-              ICA {periode.fcrPeriode.toFixed(2)}
+              ICA {periode.fcr.toFixed(2)}
             </span>
+          )}
+          {periode.flagHighFCR && (
+            <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
           )}
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-open:rotate-180" />
         </div>
       </summary>
 
-      <div className="px-3 py-2 space-y-3 text-sm">
-        {/* Feed quantity */}
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">{t("aliment")}</span>
-          <span className="font-semibold tabular-nums">{periode.quantiteKg.toFixed(2)} kg</span>
-        </div>
-
-        {/* Weight estimations */}
+      <div className="px-3 py-2 space-y-2 text-xs">
+        {/* Feed and gain row */}
         <div className="grid grid-cols-2 gap-2">
-          {/* Debut */}
-          <div className="space-y-1">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{t("debut")}</p>
-            <MethodeBadge methode={periode.methodeDebut as MethodeEstimation} />
-            {periode.poidsMoyenDebut !== null && (
-              <p className="text-xs font-semibold">{periode.poidsMoyenDebut.toFixed(1)} g</p>
-            )}
-            <EstimationDetailBlock detail={periode.detailEstimationDebut} />
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Aliment</p>
+            <p className="font-semibold tabular-nums">{periode.qtyAlimentKg.toFixed(2)} kg</p>
           </div>
-          {/* Fin */}
-          <div className="space-y-1">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{t("fin")}</p>
-            <MethodeBadge methode={periode.methodeFin as MethodeEstimation} />
-            {periode.poidsMoyenFin !== null && (
-              <p className="text-xs font-semibold">{periode.poidsMoyenFin.toFixed(1)} g</p>
-            )}
-            <EstimationDetailBlock detail={periode.detailEstimationFin} />
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Gain biomasse</p>
+            <p className="font-semibold tabular-nums text-primary">
+              {periode.gainBiomasseKg > 0 ? `+${periode.gainBiomasseKg.toFixed(2)} kg` : "—"}
+            </p>
           </div>
         </div>
 
-        {/* Biomass */}
-        {periode.nombreVivants !== null && (
-          <div className="rounded-lg bg-muted/50 px-3 py-2 space-y-1 text-xs">
-            <p className="font-medium text-muted-foreground uppercase tracking-wide text-[10px] mb-1">
-              {t("biomasse")}
-            </p>
-            {periode.biomasseDebutKg !== null && (
-              <p className="flex justify-between">
-                <span className="text-muted-foreground">{t("biomasseDebut")}</span>
-                <span className="tabular-nums font-semibold">{periode.biomasseDebutKg.toFixed(2)} kg</span>
-              </p>
-            )}
-            {periode.biomasseFinKg !== null && (
-              <p className="flex justify-between">
-                <span className="text-muted-foreground">{t("biomasseFin")}</span>
-                <span className="tabular-nums font-semibold">{periode.biomasseFinKg.toFixed(2)} kg</span>
-              </p>
-            )}
-            <p className="flex justify-between">
-              <span className="text-muted-foreground">{t("nombreVivants")}</span>
-              <span className="tabular-nums font-semibold">
-                {periode.nombreVivants.toLocaleString("fr-FR")}
-              </span>
-            </p>
-            {periode.gainNegatifExclu && (
-              <p className="text-amber-600 text-[10px] font-medium">{t("gainNegatifExclu")}</p>
-            )}
-            {!periode.gainNegatifExclu && periode.gainBiomasseKg !== null && (
-              <p className="flex justify-between border-t border-border pt-1 mt-1">
-                <span className="text-muted-foreground">{t("gainBiomasse")}</span>
-                <span className="tabular-nums font-semibold text-primary">
-                  +{periode.gainBiomasseKg.toFixed(2)} kg
-                </span>
-              </p>
-            )}
+        {/* Population and growth row */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Poissons moy.</p>
+            <p className="font-semibold tabular-nums">{Math.round(periode.avgFishCount).toLocaleString("fr-FR")}</p>
           </div>
-        )}
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Gain/poisson</p>
+            <p className="font-semibold tabular-nums">{periode.gainParPoissonG.toFixed(1)} g</p>
+          </div>
+        </div>
 
-        {/* FCR période */}
-        {periode.fcrPeriode !== null ? (
-          <div className="text-xs flex justify-between items-center border-t border-border pt-2">
-            <span className="text-muted-foreground">{t("fcrPeriode")}</span>
-            <code className="font-mono font-semibold text-primary">
-              {periode.quantiteKg.toFixed(2)} / {periode.gainBiomasseKg?.toFixed(2) ?? "?"} = {periode.fcrPeriode.toFixed(2)}
+        {/* FCR formula */}
+        {periode.fcr !== null && (
+          <div className="border-t border-border pt-2 flex items-center justify-between">
+            <span className="text-muted-foreground">ICA</span>
+            <code className="font-mono font-semibold text-primary text-xs">
+              {periode.qtyAlimentKg.toFixed(2)} / {periode.gainBiomasseKg.toFixed(2)} = {periode.fcr.toFixed(2)}
             </code>
           </div>
-        ) : (
-          <p className="text-xs text-muted-foreground border-t border-border pt-2">
-            {t("fcrPeriode")} : —
-          </p>
         )}
+
+        {/* Flags */}
+        <div className="flex flex-wrap gap-1">
+          {periode.flagHighFCR && <FlagBadge type="HIGH_FCR" />}
+        </div>
       </div>
     </details>
   );
 }
 
 // ---------------------------------------------------------------------------
-// GompertzParamsBlock (DISC-24)
+// Vague section — per-bac breakdown (ADR-036)
 // ---------------------------------------------------------------------------
 
-function GompertzParamsBlock({ params }: { params: NonNullable<FCRTraceVague["gompertzVague"]> }) {
-  const t = useTranslations("analytics.fcrTrace");
-
-  const formula = `W(t) = ${params.wInfinity} × exp(−exp(−${params.k.toFixed(4)} × (t − ${params.ti.toFixed(2)})))`;
-
-  return (
-    <div className="rounded-lg bg-sky-50 border border-sky-200 px-3 py-2 space-y-1.5 mb-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-sky-700">
-        {t("gompertzParams")}
-      </p>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs">
-        <p className="text-muted-foreground">
-          W∞ = <span className="font-semibold text-foreground">{params.wInfinity} g</span>
-        </p>
-        <p className="text-muted-foreground">
-          K = <span className="font-semibold text-foreground">{params.k.toFixed(4)} j⁻¹</span>
-        </p>
-        <p className="text-muted-foreground">
-          ti = <span className="font-semibold text-foreground">{params.ti.toFixed(2)} j</span>
-        </p>
-        <p className="text-muted-foreground">
-          {t("r2Label")} = <span className="font-semibold text-foreground">{params.r2.toFixed(4)}</span>
-          {" "}({params.biometrieCount} bio.)
-        </p>
-      </div>
-      <code className="block text-[10px] font-mono bg-sky-100/60 rounded px-1.5 py-0.5 text-sky-900 break-all mt-1">
-        {formula}
-      </code>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Vague section (collapsible)
-// ---------------------------------------------------------------------------
-
-function VagueSection({ vague, defaultOpen }: { vague: FCRTraceVague; defaultOpen?: boolean }) {
-  const t = useTranslations("analytics.fcrTrace");
-
+function VagueSection({
+  vague,
+  defaultOpen,
+}: {
+  vague: DetailAlimentVague;
+  defaultOpen?: boolean;
+}) {
   const formatDate = (d: Date | string | null) =>
     d
-      ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" })
+      ? new Date(d).toLocaleDateString("fr-FR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "2-digit",
+        })
       : "—";
+
+  const periodesBac = vague.periodesBac ?? [];
 
   return (
     <details className="group border border-border rounded-xl overflow-hidden" open={defaultOpen}>
       <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none list-none bg-muted/30 hover:bg-muted/50 transition-colors">
         <div className="min-w-0">
-          <p className="text-sm font-semibold truncate">{t("vague")} {vague.vagueCode}</p>
+          <p className="text-sm font-semibold truncate">Vague {vague.vagueCode}</p>
           <p className="text-xs text-muted-foreground">
-            {formatDate(vague.dateDebut)} → {formatDate(vague.dateFin)}
+            {formatDate(vague.periode.debut)} {"->"} {formatDate(vague.periode.fin)}
             {" · "}
-            {vague.periodes.length} {t("periodes")}
+            {periodesBac.length} periode{periodesBac.length !== 1 ? "s" : ""}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {vague.fcrVague !== null && (
+          {vague.fcr !== null && (
             <span className="text-sm font-bold text-primary tabular-nums">
-              ICA {vague.fcrVague}
+              ICA {vague.fcr}
             </span>
           )}
           <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
@@ -336,36 +176,35 @@ function VagueSection({ vague, defaultOpen }: { vague: FCRTraceVague; defaultOpe
       </summary>
 
       <div className="px-4 py-3 space-y-2">
-        {/* Vague summary metrics */}
-        <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+        {/* Vague summary */}
+        <div className="grid grid-cols-2 gap-2 text-xs mb-2">
           <div>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{t("aliment")}</p>
-            <p className="font-semibold tabular-nums">{vague.quantiteKg.toFixed(2)} kg</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Aliment total</p>
+            <p className="font-semibold tabular-nums">{vague.quantite.toFixed(2)} kg</p>
           </div>
           <div>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{t("gainBiomasse")}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Bacs / periodes</p>
             <p className="font-semibold tabular-nums">
-              {vague.gainBiomasseKg !== null ? `+${vague.gainBiomasseKg.toFixed(2)} kg` : "—"}
+              {periodesBac.length} periode{periodesBac.length !== 1 ? "s" : ""}
             </p>
           </div>
         </div>
 
-        {/* Gompertz params block (DISC-24) */}
-        {vague.gompertzVague && (
-          <GompertzParamsBlock params={vague.gompertzVague} />
-        )}
+        {/* Flags */}
+        <div className="flex flex-wrap gap-1 mb-2">
+          {vague.flagLowConfidence && <FlagBadge type="LOW_CONFIDENCE" />}
+        </div>
 
-        {/* Periods */}
-        {vague.periodes.length === 0 ? (
-          <p className="text-xs text-muted-foreground">{t("noData")}</p>
+        {/* Per-bac periods */}
+        {periodesBac.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Aucune periode de consommation trouvee.</p>
         ) : (
           <div className="space-y-2">
-            {vague.periodes.map((periode, idx) => (
-              <PeriodeRow
-                key={`${periode.dateDebut}-${idx}`}
+            {periodesBac.map((periode, idx) => (
+              <PeriodeBacRow
+                key={`${periode.bacId}-${periode.dateDebut}-${idx}`}
                 periode={periode}
                 index={idx}
-                defaultOpen={idx === 0 && vague.periodes.length === 1}
               />
             ))}
           </div>
@@ -379,37 +218,41 @@ function VagueSection({ vague, defaultOpen }: { vague: FCRTraceVague; defaultOpe
 // Aggregation section
 // ---------------------------------------------------------------------------
 
-function AggregationSection({ trace }: { trace: FCRTrace }) {
-  const t = useTranslations("analytics.fcrTrace");
-
+function AggregationSection({
+  fcrGlobal,
+  totalAlimentKg,
+  totalGainBiomasseKg,
+}: {
+  fcrGlobal: number | null;
+  totalAlimentKg: number;
+  totalGainBiomasseKg: number;
+}) {
   return (
     <div className="rounded-xl border border-border bg-muted/20 px-4 py-3 space-y-2">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {t("aggregationTitle")}
+        Agregation globale
       </p>
       <code className="block text-xs font-mono text-muted-foreground">
-        {t("aggregationFormule")}
+        ICA = Σ aliment (valide) / Σ gain biomasse
       </code>
       <div className="grid grid-cols-2 gap-2 text-xs pt-1">
         <div>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{t("totalAliment")}</p>
-          <p className="font-semibold tabular-nums">{trace.quantiteTotaleFinal.toFixed(2)} kg</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Total aliment</p>
+          <p className="font-semibold tabular-nums">{totalAlimentKg.toFixed(2)} kg</p>
         </div>
         <div>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{t("totalGain")}</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Total gain</p>
           <p className="font-semibold tabular-nums">
-            {trace.gainBiomasseTotalFinal !== null
-              ? `+${trace.gainBiomasseTotalFinal.toFixed(2)} kg`
-              : "—"}
+            {totalGainBiomasseKg > 0 ? `+${totalGainBiomasseKg.toFixed(2)} kg` : "—"}
           </p>
         </div>
       </div>
-      {trace.fcrMoyenFinal !== null && trace.gainBiomasseTotalFinal !== null && (
+      {fcrGlobal !== null && totalGainBiomasseKg > 0 && (
         <div className="border-t border-border pt-2 flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">{t("fcrFinal")}</span>
+          <span className="text-xs text-muted-foreground">ICA final</span>
           <code className="font-mono text-sm font-bold text-primary">
-            {trace.quantiteTotaleFinal.toFixed(2)} / {trace.gainBiomasseTotalFinal.toFixed(2)} ={" "}
-            <span>{trace.fcrMoyenFinal}</span>
+            {totalAlimentKg.toFixed(2)} / {totalGainBiomasseKg.toFixed(2)} ={" "}
+            <span>{fcrGlobal.toFixed(2)}</span>
           </code>
         </div>
       )}
@@ -418,44 +261,105 @@ function AggregationSection({ trace }: { trace: FCRTrace }) {
 }
 
 // ---------------------------------------------------------------------------
-// Main dialog content
+// Content when data is pre-loaded (from detail page)
 // ---------------------------------------------------------------------------
 
-function FCRTraceContent({ produitId, produitNom }: { produitId: string; produitNom: string }) {
-  const t = useTranslations("analytics.fcrTrace");
-  const [traceData, setTraceData] = useState<FCRTrace | null>(null);
+function FCRByFeedContentFromParVague({
+  parVague,
+  produitNom,
+}: {
+  parVague: DetailAlimentVague[];
+  produitNom: string;
+}) {
+  // Compute aggregated totals from parVague
+  const totalAlimentKg = parVague.reduce((s, v) => s + v.quantite, 0);
+  const totalGainBiomasseKg = parVague
+    .flatMap((v) => v.periodesBac ?? [])
+    .filter((p) => p.gainBiomasseKg > 0)
+    .reduce((s, p) => s + p.gainBiomasseKg, 0);
+
+  // fcrGlobal = weighted ratio from high-confidence vagues only
+  const fcrGlobal =
+    totalGainBiomasseKg > 0 ? totalAlimentKg / totalGainBiomasseKg : null;
+
+  return (
+    <div className="space-y-4">
+      {/* Summary bar */}
+      <div className="rounded-xl border border-border bg-muted/30 px-4 py-3">
+        <div className="text-right">
+          <p className="text-xs text-muted-foreground">ICA final</p>
+          <p className="text-2xl font-bold text-primary tabular-nums">
+            {fcrGlobal !== null ? fcrGlobal.toFixed(2) : "—"}
+          </p>
+        </div>
+      </div>
+
+      {/* Aggregation */}
+      <AggregationSection
+        fcrGlobal={fcrGlobal}
+        totalAlimentKg={totalAlimentKg}
+        totalGainBiomasseKg={totalGainBiomasseKg}
+      />
+
+      {/* Per-vague sections */}
+      {parVague.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-4 text-center">Aucune donnee disponible.</p>
+      ) : (
+        <div className="space-y-3">
+          {parVague.map((vague, idx) => (
+            <VagueSection
+              key={vague.vagueId}
+              vague={vague}
+              defaultOpen={idx === 0}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Content when fetching lazily from API (from list page)
+// ---------------------------------------------------------------------------
+
+function FCRByFeedContentLazy({
+  produitId,
+  produitNom,
+}: {
+  produitId: string;
+  produitNom: string;
+}) {
+  const [data, setData] = useState<FCRByFeedResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
 
-  const loadTrace = useCallback(async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/analytics/aliments/${produitId}/fcr-trace`);
+      const res = await fetch(`/api/analytics/aliments/${produitId}/fcr-by-feed`);
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }
-      const data: FCRTrace = await res.json();
-      setTraceData(data);
-      setLoaded(true);
+      const json: FCRByFeedResult = await res.json();
+      setData(json);
     } catch {
-      setError(t("error"));
+      setError("Erreur lors du chargement des donnees FCR. Veuillez reessayer.");
     } finally {
       setLoading(false);
     }
-  }, [produitId, t]);
+  }, [produitId]);
 
-  // Fetch on mount (when dialog opens and this component is rendered)
   useEffect(() => {
-    loadTrace();
+    loadData();
   }, [produitId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">{t("loading")}</p>
+        <p className="text-sm text-muted-foreground">Calcul en cours...</p>
       </div>
     );
   }
@@ -464,49 +368,70 @@ function FCRTraceContent({ produitId, produitNom }: { produitId: string; produit
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3">
         <p className="text-sm text-muted-foreground text-center">{error}</p>
-        <Button variant="outline" size="sm" onClick={loadTrace}>
+        <Button variant="outline" size="sm" onClick={loadData}>
           <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-          {t("retry")}
+          Reessayer
         </Button>
       </div>
     );
   }
 
-  if (!traceData) {
+  if (!data) {
     return (
-      <p className="text-sm text-muted-foreground py-8 text-center">{t("noData")}</p>
+      <p className="text-sm text-muted-foreground py-8 text-center">Aucune donnee disponible.</p>
     );
   }
 
   return (
     <div className="space-y-4">
       {/* Summary bar */}
-      <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 space-y-1">
-        <div className="flex items-center justify-between">
-          <div className="text-right ml-auto">
-            <p className="text-xs text-muted-foreground">{t("fcrFinal")}</p>
-            <p className="text-2xl font-bold text-primary tabular-nums">
-              {traceData.fcrMoyenFinal ?? "—"}
-            </p>
-          </div>
+      <div className="rounded-xl border border-border bg-muted/30 px-4 py-3">
+        <div className="text-right">
+          <p className="text-xs text-muted-foreground">ICA final</p>
+          <p className="text-2xl font-bold text-primary tabular-nums">
+            {data.fcrGlobal !== null ? data.fcrGlobal.toFixed(2) : "—"}
+          </p>
         </div>
       </div>
 
       {/* Aggregation */}
-      <AggregationSection trace={traceData} />
+      <AggregationSection
+        fcrGlobal={data.fcrGlobal}
+        totalAlimentKg={data.totalAlimentKg}
+        totalGainBiomasseKg={data.totalGainBiomasseKg}
+      />
 
-      {/* Per-vague sections */}
-      {traceData.parVague.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-4 text-center">{t("noData")}</p>
+      {/* Per-vague sections using FCRByFeedVague directly */}
+      {data.parVague.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-4 text-center">Aucune donnee disponible.</p>
       ) : (
         <div className="space-y-3">
-          {traceData.parVague.map((vague, idx) => (
-            <VagueSection
-              key={vague.vagueId}
-              vague={vague}
-              defaultOpen={idx === 0}
-            />
-          ))}
+          {data.parVague.map((fcrVague, idx) => {
+            // Build a DetailAlimentVague-like object for VagueSection
+            const vagueForDisplay: DetailAlimentVague = {
+              vagueId: fcrVague.vagueId,
+              vagueCode: fcrVague.vagueCode,
+              quantite: fcrVague.totalAlimentKg,
+              fcr: fcrVague.fcrVague !== null
+                ? Math.round(fcrVague.fcrVague * 100) / 100
+                : null,
+              sgr: null,
+              coutParKgGain: null,
+              periode: { debut: fcrVague.dateDebut, fin: fcrVague.dateFin },
+              adg: null,
+              per: null,
+              tauxMortaliteAssocie: null,
+              periodesBac: fcrVague.periodesBac,
+              flagLowConfidence: fcrVague.flagLowConfidence,
+            };
+            return (
+              <VagueSection
+                key={fcrVague.vagueId}
+                vague={vagueForDisplay}
+                defaultOpen={idx === 0}
+              />
+            );
+          })}
         </div>
       )}
     </div>
@@ -521,12 +446,15 @@ interface FCRTransparencyDialogProps {
   produitId: string;
   produitNom: string;
   fcrMoyen: number | null;
+  /** Pre-loaded per-vague data (from detail page). If absent, lazy-fetched from API. */
+  parVague?: DetailAlimentVague[];
 }
 
 export function FCRTransparencyDialog({
   produitId,
   produitNom,
   fcrMoyen,
+  parVague,
 }: FCRTransparencyDialogProps) {
   const t = useTranslations("analytics.fcrTrace");
 
@@ -551,7 +479,11 @@ export function FCRTransparencyDialog({
           </DialogTitle>
         </DialogHeader>
         <DialogBody>
-          <FCRTraceContent produitId={produitId} produitNom={produitNom} />
+          {parVague ? (
+            <FCRByFeedContentFromParVague parVague={parVague} produitNom={produitNom} />
+          ) : (
+            <FCRByFeedContentLazy produitId={produitId} produitNom={produitNom} />
+          )}
         </DialogBody>
       </DialogContent>
     </Dialog>

@@ -14,6 +14,13 @@ export interface FCRByFeedParams {
   minPoints?: number;
   /** Poids asymptotique W∞ (g). Null = utiliser ConfigElevage ou CLARIAS_DEFAULTS. */
   wInfinity?: number | null;
+  /**
+   * Filtre saisonnier (Cameroun) :
+   * - SECHE  = mois 11,12,1,2,3 (novembre a mars)
+   * - PLUIES = mois 4-10 (avril a octobre)
+   * Null ou absent = pas de filtre.
+   */
+  saisonFilter?: "SECHE" | "PLUIES";
 }
 
 // ─── Types intermediaires internes ────────────────────────────────────────

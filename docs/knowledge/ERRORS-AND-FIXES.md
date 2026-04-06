@@ -132,6 +132,114 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-073 — Dialog avec deux modes (lazy vs pre-loaded) : concevoir l'interface pour les deux contextes dès le départ
+**Sprint :** ADR-036 intégration | **Date :** 2026-04-06
+**Sévérité :** Basse
+**Fichier(s) :** `src/components/analytics/fcr-transparency-dialog.tsx`
+
+**Symptôme :**
+`FCRTransparencyDialog` avait besoin des données `parVague: DetailAlimentVague[]` pour afficher le détail bac × période (ADR-036), mais la page liste `/analytics/aliments` ne charge que `ComparaisonAliments` — sans `parVague`. La page détail, elle, charge `getDetailAliment` qui inclut `parVague`. Sans anticipation, le dialog doit choisir entre enrichir la page liste (N appels coûteux) ou ne rien afficher.
+
+**Cause racine :**
+Le dialog était conçu pour un seul contexte d'usage (page détail). Quand il a été réutilisé depuis la page liste, les données disponibles étaient insuffisantes. L'interface de props n'anticipait pas deux niveaux de disponibilité des données.
+
+**Fix :**
+Interface à prop optionnelle couvrant les deux modes :
+```typescript
+interface FCRTransparencyDialogProps {
+  produitId: string;
+  produitNom: string;
+  fcrMoyen: number | null;
+  /** Pre-loaded per-vague data (from detail page). If absent, lazy-fetched from API. */
+  parVague?: DetailAlimentVague[];
+}
+```
+- Si `parVague` est fourni : rendu direct depuis `FCRByFeedContentFromParVague` (zéro fetch réseau).
+- Si `parVague` est absent : `FCRByFeedContentLazy` fait un fetch vers `/api/analytics/aliments/[produitId]/fcr-by-feed` au montage du dialog.
+
+La route `fcr-by-feed` a été créée pour couvrir le mode lazy. Le mode lazy est le fallback universel.
+
+**Leçon / Règle :**
+Quand un dialog peut être invoqué depuis des contextes avec des disponibilités de données différentes (page détail avec pré-chargement vs page liste avec données partielles), concevoir dès le départ une interface à mode optionnel. Le mode lazy nécessite une route API dédiée — la créer en même temps que le composant, pas après. Éviter de créer deux composants distincts pour les deux contextes : un seul composant avec une prop optionnelle est plus maintenable.
+
+---
+
+### ERR-072 — Types code mort dans le barrel export après remplacement d'un algorithme
+**Sprint :** ADR-036 intégration | **Date :** 2026-04-06
+**Sévérité :** Basse
+**Fichier(s) :** `src/types/calculs.ts`, `src/types/index.ts`
+
+**Symptôme :**
+Après la migration vers ADR-036, les types `FCRTrace`, `FCRTraceVague`, `FCRTracePeriode`, `FCRTraceGompertzParams` et leurs sous-types (7 types au total) sont devenus code mort. `getFCRTrace` et la route `fcr-trace` ont été supprimés, `FCRTransparencyDialog` a été réécrit. Mais ces types restaient dans `src/types/index.ts` et exportés publiquement. Un agent consultant le barrel export croyait que ces types étaient en usage actif.
+
+**Cause racine :**
+Quand un algorithme est remplacé, on supprime le code (fonctions, routes, composants) mais on oublie de supprimer les types du barrel export. TypeScript ne signale pas d'erreur si un type exporté n'est pas utilisé — contrairement à une variable ou une fonction. Les types morts dans un barrel sont invisibles au compilateur.
+
+**Fix :**
+Après suppression de `getFCRTrace` et de la route, retirer les types `FCRTrace*` de `src/types/calculs.ts` et leurs re-exports de `src/types/index.ts`. Vérifier avec `grep -r "FCRTrace"` qu'aucun import résiduel ne subsiste avant de supprimer les définitions.
+
+**Leçon / Règle :**
+Quand un algorithme ou une feature est supprimé, procéder dans l'ordre inverse des dépendances : (1) supprimer les consommateurs, (2) supprimer les fonctions, (3) supprimer les types du fichier de définition, (4) retirer les re-exports du barrel `index.ts`. L'étape 4 est systématiquement oubliée. Utiliser `grep -r "TypeSupprime"` pour confirmer l'absence de tout import résiduel. Les types morts dans un barrel sont une forme de dette documentaire qui induit en erreur les futurs agents.
+
+---
+
+### ERR-071 — `saisonFilter` avec mapping mois → saison : dépendance géographique Cameroun non documentée
+**Sprint :** ADR-036 intégration | **Date :** 2026-04-06
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/queries/fcr-by-feed.ts` (`dateMatchesSaison`), `src/types/fcr-by-feed.ts`
+
+**Symptôme :**
+La feature FD.3 (filtrage des consommations par saison sèche/pluies) applique un mapping mois → saison codé en dur. La constante `MOIS_SECHE = new Set([11, 12, 1, 2, 3])` correspond aux mois secs au Cameroun. Pour un autre pays de la zone tropicale (ex. Sénégal : saison sèche = nov–mai), ce mapping est silencieusement faux.
+
+**Cause racine :**
+La pré-analyse avait identifié que `saisonFilter` n'existait pas dans `FCRByFeedParams`. L'ajout a été fait directement dans `fcr-by-feed.ts` sans créer une couche de configuration géographique. Le mapping de mois est une constante hardcodée non marquée comme site-specific.
+
+**Fix :**
+Commenter explicitement l'origine géographique :
+```typescript
+/** Mois (1-12) de la saison seche au Cameroun : novembre, decembre, janvier, fevrier, mars */
+const MOIS_SECHE = new Set([11, 12, 1, 2, 3]);
+```
+Si l'application s'étend à d'autres pays, externaliser cette constante dans `ConfigElevage` ou `Site`.
+
+**Leçon / Règle :**
+Tout mapping de dates vers des catégories climatiques, fiscales ou agricoles doit être : (1) documenté avec le pays/région d'origine dans le commentaire, (2) isolé dans une constante nommée (jamais inline dans la condition), (3) marqué "site-specific" si l'application est multi-pays. Pour ce projet : `MOIS_SECHE` est Cameroun-spécifique et devra être externalisé si DKFarm s'étend à d'autres pays.
+
+---
+
+### ERR-070 — Wrapper sur grande fonction : les champs secondaires peuvent être oubliés si aucun mapping exhaustif n'est établi
+**Sprint :** ADR-036 intégration | **Date :** 2026-04-06
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/queries/analytics.ts` (`computeAlimentMetrics`)
+
+**Symptôme :**
+Quand on remplace le corps de `computeAlimentMetrics` par un wrapper délégant à `getFCRByFeed`, l'attention se concentre sur le champ principal (FCR). Les champs secondaires — SGR, ADG, PER, taux de survie, score qualité — sont calculés par des fonctions distinctes (`calculerSGR`, `calculerADG`, `calculerPER`, `calculerTauxSurvie`) qui ont besoin des relevés biométriques et de mortalité. Ces données ne sont pas retournées par `getFCRByFeed`. Sans mapping exhaustif, ces champs peuvent être retournés `null` sans erreur de compilation.
+
+**Cause racine :**
+`getFCRByFeed` ne couvre que les métriques alimentaires (FCR, quantité consommée, gain biomasse). Les métriques de croissance et de survie doivent être recalculées dans le wrapper à partir de queries séparées sur les relevés. Si l'auteur ne consulte pas le type complet `AnalytiqueAliment`, il manque les champs qui ne viennent pas de `getFCRByFeed`.
+
+**Fix :**
+Avant d'écrire le wrapper, établir un mapping complet de TOUS les champs du type retourné :
+
+| Champ `AnalytiqueAliment` | Source | Transformation dans le wrapper |
+|---------------------------|--------|---------------------------------|
+| `fcrMoyen` | `FCRByFeedResult.fcrGlobal` | Direct |
+| `quantiteTotale` | `FCRByFeedResult.totalAlimentKg` | Direct |
+| `coutTotal` | `totalAlimentKg × prixUnitaire` | Calcul identique |
+| `nombreVagues` | `nombreVaguesIncluses + nombreVaguesIgnorees` | Somme |
+| `sgrMoyen` | Calculé via `calculerSGR()` sur biométries | Query séparée requise |
+| `tauxSurvieAssocie` | Calculé via mortalités vague | Query séparée requise |
+| `adgMoyen` | Calculé via `calculerADG()` | Query séparée requise |
+| `perMoyen` | Calculé via `calculerPER()` | Query séparée requise |
+| `scoreQualite` | `calculerScoreAliment(fcrMoyen, sgrMoyen, ...)` | Recalculé après SGR |
+
+Le wrapper fait une query séparée des relevés biométriques/mortalités pour les vagues identifiées par `getFCRByFeed`.
+
+**Leçon / Règle :**
+Avant de remplacer une grande fonction par un wrapper délégant, lister TOUS les champs du type retourné et tracer explicitement l'origine de chacun dans la nouvelle implémentation. La pré-analyse doit produire ce mapping : toute case "Query séparée requise" indique du code supplémentaire à écrire dans le wrapper. Ne jamais supposer que la sous-fonction déléguée couvre tous les champs du type de sortie.
+
+---
+
 ### ERR-067 — Tableau `sourceBacIds` : seul l'index 0 traité — les bacs 2, 3... invisibles
 **Sprint :** ADR-036 | **Date :** 2026-04-06
 **Sévérité :** Haute

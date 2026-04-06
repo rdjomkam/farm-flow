@@ -258,6 +258,30 @@ export function FeedVagueBreakdown({ parVague }: FeedVagueBreakdownProps) {
                   {tAnalytics("aliments.cout")} : {v.coutParKgGain !== null ? `${formatNumber(v.coutParKgGain)} CFA/kg` : "—"}
                 </span>
               </div>
+              {/* ADR-036: per-bac period breakdown */}
+              {v.periodesBac && v.periodesBac.length > 0 && (
+                <details className="mt-2">
+                  <summary className="text-xs text-muted-foreground cursor-pointer select-none hover:text-foreground">
+                    {v.periodesBac.length} periode{v.periodesBac.length !== 1 ? "s" : ""} par bac
+                  </summary>
+                  <div className="mt-1 flex flex-col gap-1 pl-2 border-l border-border">
+                    {v.periodesBac.map((p, idx) => (
+                      <div key={`${p.bacId}-${idx}`} className="text-xs">
+                        <span className="font-medium">{p.bacNom}</span>
+                        {" · "}
+                        {new Date(p.dateDebut).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}
+                        {" → "}
+                        {new Date(p.dateFin).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}
+                        {" · "}
+                        {p.qtyAlimentKg.toFixed(1)} kg
+                        {p.fcr !== null && (
+                          <span className="ml-1 text-primary font-semibold">ICA {p.fcr.toFixed(2)}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
             </CardContent>
           </Card>
         ))}

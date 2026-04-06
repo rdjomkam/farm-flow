@@ -538,7 +538,7 @@ export type {
   // ADR-028 — FCR feed-switching accuracy
   PeriodeAlimentaire,
   PeriodeAlimentaireVague,
-  // ADR-031 — FCR Transparency Dialog
+  // ADR-031 — Estimation detail types (still used by feed-periods.ts)
   MethodeEstimationPoids,
   FCRTraceGompertzParams,
   FCRTraceEstimationBiometrieExacte,
@@ -546,9 +546,7 @@ export type {
   FCRTraceEstimationGompertz,
   FCRTraceEstimationValeurInitiale,
   FCRTraceEstimationDetail,
-  FCRTracePeriode,
-  FCRTraceVague,
-  FCRTrace,
+  // FCRTracePeriode, FCRTraceVague, FCRTrace removed (ADR-036 replaces ADR-031 dialog)
 } from "./calculs";
 
 // ADR-036 — FCR par aliment (algorithme FCR-by-feed)
