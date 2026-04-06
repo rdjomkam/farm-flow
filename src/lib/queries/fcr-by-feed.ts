@@ -410,20 +410,28 @@ export function estimerPopulationBac(
 
       for (const cal of relevantCalibrages) {
         if (cal.sourceBacIds.includes(bacId)) {
-          const transferred = cal.nombreTransfere;
-          // Reconstruct: transferred + deaths during period (before and at calibrage)
-          const mortsAvantCal = mortalitesBac
-            .filter((m) => {
-              const mMs = m.date.getTime();
-              return mMs >= debutMs && mMs < cal.date.getTime();
-            })
-            .reduce((s, m) => s + m.nombreMorts, 0);
-
-          const mortsAuCal = mortalitesBac
-            .filter((m) => m.date.getTime() === cal.date.getTime())
-            .reduce((s, m) => s + m.nombreMorts, 0);
-
-          reconstructed = transferred + mortsAvantCal + mortsAuCal;
+          // Check if this bac is the sole source — then total transferred is exact.
+          // If multiple sources, we cannot determine per-source contributions.
+          // Fall back to proportional initial (nombreInitial / nbBacsVague)
+          // minus cumulative deaths for this bac before the calibrage.
+          if (cal.sourceBacIds.length === 1) {
+            const transferred = cal.nombreTransfere;
+            const mortsAvantCal = mortalitesBac
+              .filter((m) => {
+                const mMs = m.date.getTime();
+                return mMs >= debutMs && mMs < cal.date.getTime();
+              })
+              .reduce((s, m) => s + m.nombreMorts, 0);
+            const mortsAuCal = mortalitesBac
+              .filter((m) => m.date.getTime() === cal.date.getTime())
+              .reduce((s, m) => s + m.nombreMorts, 0);
+            reconstructed = transferred + mortsAvantCal + mortsAuCal;
+          } else {
+            // Multi-source calibrage: use proportional initial minus all deaths
+            const baseCount = Math.round(vagueNombreInit / Math.max(1, nbBacsVague));
+            const allMorts = mortalitesBac.reduce((s, m) => s + m.nombreMorts, 0);
+            reconstructed = Math.max(0, baseCount - allMorts);
+          }
           break;
         }
       }

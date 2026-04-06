@@ -435,8 +435,16 @@ async function computeAlimentMetrics(
   const phasesCibles = (produit.phasesCibles ?? []) as AnalytiqueAliment["phasesCibles"];
   const prixBase = getPrixParUniteBase(produit);
 
+  // Load ConfigElevage for Gompertz params (minPoints, wInfinity)
+  const configElevage = await prisma.configElevage.findFirst({
+    where: { siteId, isActive: true },
+    select: { gompertzMinPoints: true, gompertzWInfDefault: true },
+  });
+
   // Delegate FCR/feed calculation to ADR-036 algorithm
   const fcrResult = await getFCRByFeed(siteId, produit.id, {
+    minPoints: configElevage?.gompertzMinPoints ?? 5,
+    wInfinity: configElevage?.gompertzWInfDefault ?? null,
     saisonFilter: saisonFilter ?? undefined,
   });
 

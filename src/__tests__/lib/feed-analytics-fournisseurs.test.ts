@@ -47,6 +47,9 @@ vi.mock("@/lib/db", () => ({
     calibrage: {
       findMany: (...args: unknown[]) => mockCalibrageFindMany(...args),
     },
+    configElevage: {
+      findFirst: vi.fn().mockResolvedValue(null),
+    },
   },
 }));
 
