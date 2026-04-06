@@ -25,7 +25,21 @@ import type {
   FCRByFeedVague,
   FCRByFeedResult,
 } from "@/types/fcr-by-feed";
-import { CategorieProduit } from "@/types";
+import { CategorieProduit, TypeReleve } from "@/types";
+
+// ---------------------------------------------------------------------------
+// Internal types
+// ---------------------------------------------------------------------------
+
+/**
+ * Calibrage data enriched with source bac identifiers.
+ * Used by estimerPopulationBac to detect bacs emptied during a calibrage.
+ * All sourceBacIds are tracked (not just the first one — BUG-MULTI-SOURCE fix).
+ */
+type CalibrageForBac = CalibragePoint & {
+  sourceBacIds: string[];
+  nombreTransfere: number;
+};
 
 // ---------------------------------------------------------------------------
 // Step 4 — buildDailyGainTable
@@ -108,96 +122,8 @@ export function segmenterPeriodesParBac(
     };
   });
 
-  // Build exclusive-day runs (consecutive exclusive days with no gap)
-  // A "gap" = 2 consecutive dates with a difference > 1 day
-  type ExclusiveRun = {
-    startIdx: number;
-    endIdx: number;
-    startDate: Date;
-    endDate: Date;
-    qty: number;
-    count: number;
-  };
-
-  const exclusiveRuns: ExclusiveRun[] = [];
-  let runStart: number | null = null;
-
-  for (let i = 0; i < days.length; i++) {
-    const day = days[i];
-    if (day.isMixed) {
-      // Close exclusive run if open
-      if (runStart !== null) {
-        exclusiveRuns.push({
-          startIdx: runStart,
-          endIdx: i - 1,
-          startDate: days[runStart].date,
-          endDate: days[i - 1].date,
-          qty: days.slice(runStart, i).reduce((s, d) => s + d.qtyTargetKg, 0),
-          count: i - runStart,
-        });
-        runStart = null;
-      }
-      continue;
-    }
-
-    // Exclusive day
-    if (runStart === null) {
-      // Start new run
-      runStart = i;
-    } else {
-      // Check for gap (more than 1 calendar day between consecutive exclusive days)
-      const prevExclusiveIdx = findLastExclusiveIdx(days, i - 1);
-      if (prevExclusiveIdx !== null) {
-        const prevDate = days[prevExclusiveIdx].date;
-        const diffDays = Math.round(
-          (day.date.getTime() - prevDate.getTime()) / 86400000
-        );
-        if (diffDays > 1) {
-          // Gap: close current run and start new one
-          // Collect what was in the run from runStart to prevExclusiveIdx
-          exclusiveRuns.push({
-            startIdx: runStart,
-            endIdx: prevExclusiveIdx,
-            startDate: days[runStart].date,
-            endDate: days[prevExclusiveIdx].date,
-            qty: days.slice(runStart, prevExclusiveIdx + 1).filter(d => !d.isMixed).reduce((s, d) => s + d.qtyTargetKg, 0),
-            count: prevExclusiveIdx - runStart + 1,
-          });
-          runStart = i;
-        }
-      }
-    }
-  }
-
-  // Close last open run
-  if (runStart !== null) {
-    const lastExclusiveIdx = findLastExclusiveIdx(days, days.length - 1);
-    if (lastExclusiveIdx !== null && lastExclusiveIdx >= runStart) {
-      exclusiveRuns.push({
-        startIdx: runStart,
-        endIdx: lastExclusiveIdx,
-        startDate: days[runStart].date,
-        endDate: days[lastExclusiveIdx].date,
-        qty: days.slice(runStart, lastExclusiveIdx + 1).filter(d => !d.isMixed).reduce((s, d) => s + d.qtyTargetKg, 0),
-        count: lastExclusiveIdx - runStart + 1,
-      });
-    }
-  }
-
-  // Now build the final periods using a simpler and more correct approach
-  // Use a clean algorithm: group consecutive exclusive days, then attach adjacent mixed days
+  // Build the final periods: group consecutive exclusive days, then attach adjacent mixed days.
   return buildPeriods(days, bacId, bacNom);
-}
-
-/** Find the last exclusive day index at or before idx */
-function findLastExclusiveIdx(
-  days: Array<{ isMixed: boolean }>,
-  idx: number
-): number | null {
-  for (let i = idx; i >= 0; i--) {
-    if (!days[i].isMixed) return i;
-  }
-  return null;
 }
 
 /**
@@ -450,7 +376,7 @@ export function estimerPopulationBac(
   dateFin: Date,
   comptages: Array<{ date: Date; nombreCompte: number }>,
   mortalitesBac: Array<{ date: Date; nombreMorts: number }>,
-  calibrages: CalibragePoint[],
+  calibrages: CalibrageForBac[],
   vagueNombreInit: number,
   nbBacsVague: number
 ): EstimationPopulationBac {
@@ -475,25 +401,17 @@ export function estimerPopulationBac(
       // We need to reconstruct: nbTransferred + mortalitesDansPeriode
       let reconstructed: number | null = null;
 
-      // The calibrage interface here is CalibragePoint from feed-periods.ts
-      // CalibragePoint has: date, nombreMorts, groupes[{ destinationBacId, nombrePoissons, poidsMoyen }]
-      // The source bac is implicit (not in CalibragePoint directly)
-      // However, in the test we get: { date, bacId, bacDestinationId, nombreTransfere } as any
-      // We need to handle the actual CalibragePoint structure
-
-      // Try to find calibrage that happened after/at anchor date
+      // Try to find calibrage that happened after/at anchor date where this bac
+      // is listed as a source (i.e. fish were transferred OUT of it).
+      // sourceBacIds is an array — all elements are checked (BUG-MULTI-SOURCE fix).
       const relevantCalibrages = calibrages.filter(
         (c) => c.date.getTime() >= anchorMs
       );
 
       for (const cal of relevantCalibrages) {
-        // Look for groups that transferred TO another bac from this bac
-        // In the test structure, calibrages have { date, bacId, bacDestinationId, nombreTransfere }
-        // Cast to any to handle test fixtures
-        const calAny = cal as any;
-        if (calAny.bacId === bacId || calAny.sourceId === bacId) {
-          const transferred = calAny.nombreTransfere ?? calAny.nombrePoissons ?? 0;
-          // Reconstruct: transferred + deaths during period (before calibrage)
+        if (cal.sourceBacIds.includes(bacId)) {
+          const transferred = cal.nombreTransfere;
+          // Reconstruct: transferred + deaths during period (before and at calibrage)
           const mortsAvantCal = mortalitesBac
             .filter((m) => {
               const mMs = m.date.getTime();
@@ -501,35 +419,12 @@ export function estimerPopulationBac(
             })
             .reduce((s, m) => s + m.nombreMorts, 0);
 
-          // Also add deaths at calibrage itself
           const mortsAuCal = mortalitesBac
-            .filter((m) => {
-              const mMs = m.date.getTime();
-              return mMs === cal.date.getTime();
-            })
+            .filter((m) => m.date.getTime() === cal.date.getTime())
             .reduce((s, m) => s + m.nombreMorts, 0);
 
           reconstructed = transferred + mortsAvantCal + mortsAuCal;
           break;
-        }
-
-        // Also check groupes: if calibrage has a group where destinationBacId != bacId
-        // then this calibrage came FROM bacId (it was emptied)
-        // But we also need to handle if the test uses a flat calibrage structure
-        if (cal.groupes && cal.groupes.length > 0) {
-          const totalTransferred = cal.groupes.reduce((s, g) => s + g.nombrePoissons, 0);
-          if (totalTransferred > 0) {
-            // Assume this calibrage emptied this bac
-            const mortsAvantCal = mortalitesBac
-              .filter((m) => {
-                const mMs = m.date.getTime();
-                return mMs >= debutMs && mMs < cal.date.getTime();
-              })
-              .reduce((s, m) => s + m.nombreMorts, 0);
-
-            reconstructed = totalTransferred + mortsAvantCal;
-            break;
-          }
         }
       }
 
@@ -803,7 +698,7 @@ export async function getFCRByFeed(
     const biometries = await prisma.releve.findMany({
       where: {
         vagueId: vague.id,
-        typeReleve: "BIOMETRIE",
+        typeReleve: TypeReleve.BIOMETRIE,
         poidsMoyen: { not: null },
       },
       orderBy: { date: "asc" },
@@ -993,12 +888,12 @@ export async function getFCRByFeed(
 
     // Load population data for Step 6
     const comptagesVague = await prisma.releve.findMany({
-      where: { vagueId: vague.id, typeReleve: "COMPTAGE", nombreCompte: { not: null } },
+      where: { vagueId: vague.id, typeReleve: TypeReleve.COMPTAGE, nombreCompte: { not: null } },
       select: { bacId: true, date: true, nombreCompte: true },
     });
 
     const mortalitesVague = await prisma.releve.findMany({
-      where: { vagueId: vague.id, typeReleve: "MORTALITE", nombreMorts: { not: null } },
+      where: { vagueId: vague.id, typeReleve: TypeReleve.MORTALITE, nombreMorts: { not: null } },
       select: { bacId: true, date: true, nombreMorts: true },
     });
 
@@ -1030,28 +925,27 @@ export async function getFCRByFeed(
     }));
 
     // Also build per-calibrage bac info for empty-bac detection
-    // We need to know which calibrage transferred FROM a specific bac
-    type CalibrageWithSource = CalibragePoint & {
-      sourceBacId?: string;
-      totalTransfered?: number;
+    // We need to know which calibrage transferred FROM a specific bac.
+    // sourceBacIds is an array — all source bacs must be tracked (BUG-MULTI-SOURCE fix).
+    type CalibrageWithSources = CalibragePoint & {
+      sourceBacIds: string[];
+      totalTransfered: number;
     };
 
-    const calibrageWithSources: CalibrageWithSource[] = calibrageVague.map((cal) => {
-      return {
-        date: cal.date,
-        nombreMorts: cal.nombreMorts ?? 0,
-        groupes: cal.groupes.map((g) => ({
-          destinationBacId: g.destinationBacId,
-          nombrePoissons: g.nombrePoissons,
-          poidsMoyen: g.poidsMoyen,
-        })),
-        sourceBacId: cal.sourceBacIds[0],
-        totalTransfered: cal.groupes.reduce(
-          (s, g) => s + g.nombrePoissons,
-          0
-        ),
-      };
-    });
+    const calibrageWithSources: CalibrageWithSources[] = calibrageVague.map((cal) => ({
+      date: cal.date,
+      nombreMorts: cal.nombreMorts ?? 0,
+      groupes: cal.groupes.map((g) => ({
+        destinationBacId: g.destinationBacId,
+        nombrePoissons: g.nombrePoissons,
+        poidsMoyen: g.poidsMoyen,
+      })),
+      sourceBacIds: cal.sourceBacIds,
+      totalTransfered: cal.groupes.reduce(
+        (s, g) => s + g.nombrePoissons,
+        0
+      ),
+    }));
 
     const nbBacs = vague.bacs.length || 1;
 
@@ -1067,14 +961,16 @@ export async function getFCRByFeed(
         .filter((m) => m.bacId === bacId && m.nombreMorts !== null)
         .map((m) => ({ date: m.date, nombreMorts: m.nombreMorts! }));
 
-      // Build calibrage list for this specific bac
-      // augment calibragePoints with sourceBacId info
-      const calibragesForBac = calibrageWithSources.map((c) => ({
-        ...c,
-        bacId: c.sourceBacId,
-        bacDestinationId: c.groupes[0]?.destinationBacId,
+      // Build calibrage list for this specific bac.
+      // Each entry exposes all sourceBacIds so estimerPopulationBac can detect
+      // whether this bac was emptied by the calibrage (BUG-MULTI-SOURCE fix).
+      const calibragesForBac: CalibrageForBac[] = calibrageWithSources.map((c) => ({
+        date: c.date,
+        nombreMorts: c.nombreMorts,
+        groupes: c.groupes,
+        sourceBacIds: c.sourceBacIds,
         nombreTransfere: c.totalTransfered,
-      })) as any[];
+      }));
 
       for (const periode of periodes) {
         const population = estimerPopulationBac(
@@ -1126,8 +1022,8 @@ export async function getFCRByFeed(
     if (!flagLowConfidence) {
       globalTotalAlimentKg += totalAlimentKg;
       globalTotalGainBiomasseKg += totalGainBiomasseKg;
+      nombreVaguesIncluses++;
     }
-    nombreVaguesIncluses++;
   }
 
   const fcrGlobal =

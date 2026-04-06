@@ -350,14 +350,15 @@ describe("estimerPopulationBac", () => {
         { date: new Date("2026-03-24"), nombreMorts: 2 },
         { date: new Date("2026-03-25"), nombreMorts: 2 },
       ],
-      // Calibrage: 335 fish transferred to Bac 04
+      // Calibrage: 335 fish transferred to Bac 04 (from bac-03)
       [
         {
           date: new Date("2026-03-26"),
-          bacId: "bac-03",
-          bacDestinationId: "bac-04",
+          nombreMorts: 0,
+          groupes: [{ destinationBacId: "bac-04", nombrePoissons: 335, poidsMoyen: 0 }],
+          sourceBacIds: ["bac-03"],
           nombreTransfere: 335,
-        } as any,
+        },
       ],
       5500,
       3
