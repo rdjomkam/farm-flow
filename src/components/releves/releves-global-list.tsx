@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ModifierReleveDialog } from "@/components/releves/modifier-releve-dialog";
 import { ReleveDetails } from "@/components/releves/releve-details";
-import { PaginationFooter } from "@/components/releves/pagination-footer";
 import { TypeReleve, Permission } from "@/types";
 import type { Releve } from "@/types";
 import type { ProduitOption } from "@/components/releves/consommation-fields";
@@ -147,11 +146,6 @@ export function RelevesGlobalList({
           />
         ))}
       </div>
-      <PaginationFooter
-        total={total}
-        offset={offset}
-        limit={limit}
-      />
     </div>
   );
 }

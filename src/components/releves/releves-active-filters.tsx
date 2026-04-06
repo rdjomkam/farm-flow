@@ -64,9 +64,11 @@ interface Props {
   vagueCode?: string;
   /** Nom du bac pour affichage du chip (charge cote serveur) */
   bacNom?: string;
+  /** Nom du produit alimentaire pour affichage du chip (charge cote serveur) */
+  produitNom?: string;
 }
 
-export function RelevesActiveFilters({ current, vagueCode, bacNom }: Props) {
+export function RelevesActiveFilters({ current, vagueCode, bacNom, produitNom }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
@@ -167,6 +169,12 @@ export function RelevesActiveFilters({ current, vagueCode, bacNom }: Props) {
     chips.push({
       key: ["frequenceAlimentMin", "frequenceAlimentMax"],
       label: `Fréquence : ${formatRange(current.frequenceAlimentMin, current.frequenceAlimentMax, "fois/j")}`,
+    });
+  }
+  if (current.produitId) {
+    chips.push({
+      key: "produitId",
+      label: produitNom ? `Produit : ${produitNom}` : "Produit filtré",
     });
   }
 

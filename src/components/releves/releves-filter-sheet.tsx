@@ -285,10 +285,11 @@ export function RelevesFilterSheet({
       if (localNombreMortsMax) base.nombreMortsMax = localNombreMortsMax;
     }
     if (localType === TypeReleve.ALIMENTATION) {
-      if (localProduitId !== ALL_VALUE) base.produitId = localProduitId;
       if (localFrequenceAlimentMin) base.frequenceAlimentMin = localFrequenceAlimentMin;
       if (localFrequenceAlimentMax) base.frequenceAlimentMax = localFrequenceAlimentMax;
     }
+    // produitId est independant du type car il filtre via ReleveConsommation
+    if (localProduitId !== ALL_VALUE) base.produitId = localProduitId;
     if (localType === TypeReleve.QUALITE_EAU) {
       if (localTemperatureMin) base.temperatureMin = localTemperatureMin;
       if (localTemperatureMax) base.temperatureMax = localTemperatureMax;

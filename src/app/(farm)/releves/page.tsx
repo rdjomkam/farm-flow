@@ -7,6 +7,7 @@ import { AccessDenied } from "@/components/ui/access-denied";
 import { RelevesGlobalList } from "@/components/releves/releves-global-list";
 import { ReleveFilterBar } from "@/components/releves/releves-filter-bar";
 import { RelevesActiveFilters } from "@/components/releves/releves-active-filters";
+import { PaginationFooter } from "@/components/releves/pagination-footer";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getReleves } from "@/lib/queries/releves";
 import { prisma } from "@/lib/db";
@@ -52,6 +53,7 @@ export default async function RelevesPage({
     nombreMortsMin: typeof rawParams.nombreMortsMin === "string" ? rawParams.nombreMortsMin : undefined,
     nombreMortsMax: typeof rawParams.nombreMortsMax === "string" ? rawParams.nombreMortsMax : undefined,
     // Filtres specifiques ALIMENTATION
+    produitId: typeof rawParams.produitId === "string" ? rawParams.produitId : undefined,
     typeAliment: typeof rawParams.typeAliment === "string" ? rawParams.typeAliment : undefined,
     comportementAlim: typeof rawParams.comportementAlim === "string" ? rawParams.comportementAlim : undefined,
     frequenceAlimentMin: typeof rawParams.frequenceAlimentMin === "string" ? rawParams.frequenceAlimentMin : undefined,
@@ -73,7 +75,7 @@ export default async function RelevesPage({
   const parsed = parseReleveSearchParams(current);
 
   // Charger en parallele : vagues (pour le selecteur) + releves + produits + chips labels
-  const [vaguesRaw, releveData, produitsDb, vagueForChip, bacForChip] = await Promise.all([
+  const [vaguesRaw, releveData, produitsDb, vagueForChip, bacForChip, produitForChip] = await Promise.all([
     // Vagues EN_COURS pour le selecteur de filtre
     prisma.vague.findMany({
       where: { siteId, statut: StatutVague.EN_COURS },
@@ -104,6 +106,13 @@ export default async function RelevesPage({
     parsed.bacId
       ? prisma.bac.findFirst({
           where: { id: parsed.bacId, siteId },
+          select: { nom: true },
+        })
+      : Promise.resolve(null),
+    // Nom produit pour le chip de filtre actif
+    current.produitId
+      ? prisma.produit.findUnique({
+          where: { id: current.produitId },
           select: { nom: true },
         })
       : Promise.resolve(null),
@@ -150,6 +159,7 @@ export default async function RelevesPage({
           current={current}
           vagueCode={vagueForChip?.code}
           bacNom={bacForChip?.nom}
+          produitNom={produitForChip?.nom}
         />
 
         {/* Compteur de resultats */}
@@ -161,7 +171,7 @@ export default async function RelevesPage({
             : `${total} relevés trouvés`}
         </p>
 
-        {/* Liste des releves */}
+        {/* Liste des releves — carte blanche */}
         <div className="rounded-lg border border-border bg-card overflow-hidden">
           <RelevesGlobalList
             releves={releves as unknown as Releve[]}
@@ -170,6 +180,15 @@ export default async function RelevesPage({
             limit={parsed.limit}
             permissions={permissions}
             produits={produits}
+          />
+        </div>
+
+        {/* Pagination — HORS de la carte blanche, avec marge */}
+        <div className="mt-4 px-1">
+          <PaginationFooter
+            total={total}
+            offset={parsed.offset}
+            limit={parsed.limit}
           />
         </div>
       </div>

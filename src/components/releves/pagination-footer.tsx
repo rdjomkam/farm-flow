@@ -73,11 +73,12 @@ export function PaginationFooter({
             onClick={gotoPrev}
             disabled={!hasPrev || isPending}
             className="
-              min-h-[44px] px-4 rounded-md border border-border bg-transparent
+              min-h-[44px] px-4 rounded-md
               flex items-center gap-1.5
-              text-sm font-medium text-muted-foreground
-              hover:bg-accent hover:text-foreground
-              disabled:opacity-40 disabled:cursor-not-allowed
+              text-sm font-medium
+              bg-primary text-primary-foreground
+              hover:bg-primary/90
+              disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground
               transition-colors
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
             "
@@ -97,11 +98,12 @@ export function PaginationFooter({
             onClick={gotoNext}
             disabled={!hasNext || isPending}
             className="
-              min-h-[44px] px-4 rounded-md border border-border bg-transparent
+              min-h-[44px] px-4 rounded-md
               flex items-center gap-1.5
-              text-sm font-medium text-muted-foreground
-              hover:bg-accent hover:text-foreground
-              disabled:opacity-40 disabled:cursor-not-allowed
+              text-sm font-medium
+              bg-primary text-primary-foreground
+              hover:bg-primary/90
+              disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground
               transition-colors
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
             "
