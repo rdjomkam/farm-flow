@@ -132,6 +132,70 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-076 — tendanceFCR : query Prisma sans `consommations` dans le select — fallback dual-source impossible
+**Sprint :** ADR-043 | **Date :** 2026-04-06
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/queries/analytics.ts` lignes ~1162-1173
+
+**Symptôme :**
+La correction du calcul `totalAliment` (passage à un reducer hybrid `quantiteAliment ?? SUM(consommations)`) ne produit aucun effet : `consommations` est toujours vide même pour les relevés liés au stock. FCR reste 0 ou null pour les relevés stock-linked.
+
+**Cause racine :**
+Le select Prisma de la query `tendanceFCR` dans `getAnalyticsDashboard` ne listait pas `consommations` dans les champs à charger. Prisma n'inclut jamais les relations implicitement — sans `consommations: { select: { quantite: true } }`, le tableau est absent de l'objet retourné.
+
+**Fix :**
+Ajouter `consommations: { select: { quantite: true } }` dans le bloc `select` des relevés d'alimentation de la query `tendanceFCR`.
+
+**Leçon / Règle :**
+Quand on corrige un problème de source de données (legacy field → nouvelle relation), vérifier en premier que la query charge effectivement la nouvelle relation. Un reducer hybrid écrit correctement restera silencieusement no-op si Prisma ne sélectionne pas la relation. Toujours vérifier le `select` avant de déboguer la logique de calcul.
+
+---
+
+### ERR-075 — tendanceFCR : gain utilise la biomasse cumulée (toute la vague) au lieu de la biomasse sur le mois
+**Sprint :** ADR-043 | **Date :** 2026-04-06
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/queries/analytics.ts` lignes ~1204-1207 (`getAnalyticsDashboard`)
+
+**Symptôme :**
+Le FCR mensuel affiché dans la courbe de tendance est incohérent d'un mois à l'autre. En début de vague les valeurs sont anormalement élevées ; tous les mois affichent sensiblement le même dénominateur (gain) même si la croissance mensuelle varie.
+
+**Cause racine :**
+`biomasseFin` et `biomasseDebut` étaient tous deux calculés depuis `vagueRef.nombreInitial * vagueRef.poidsMoyenInitial`, c'est-à-dire la biomasse au démarrage de la vague. Le "gain" résultant était donc le gain depuis le début de la vague (gain cumulé), identique quel que soit le mois. Diviser la nourriture mensuelle par le gain cumulé donne un FCR sans signification périodique.
+
+**Fix :**
+Utiliser la première et la dernière biométrie détectées dans le mois comme `biomasseDebut` et `biomasseFin`. Ajouter une garde : si le mois contient moins de 2 biométries, sauter ce mois plutôt que d'afficher une valeur fausse.
+
+**Leçon / Règle :**
+Pour tout indicateur périodique (mensuel, hebdomadaire), s'assurer que le numérateur ET le dénominateur sont tous deux scopés à la même période. Un numérateur mensuel divisé par un dénominateur cumulatif produit une métrique sans sens. Appliquer la règle : "même fenêtre temporelle pour les deux termes du ratio".
+
+---
+
+### ERR-074 — totalAliment à 0 pour les relevés stock-linked : `quantiteAliment` ignoré le champ legacy, `consommations` pas consulté
+**Sprint :** ADR-043 | **Date :** 2026-04-06
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/queries/analytics.ts` ligne ~1332 (`getComparaisonVagues`)
+
+**Symptôme :**
+Dans `getComparaisonVagues`, le FCR d'une vague utilisant des relevés d'alimentation liés au stock (dual-write via `ReleveConsommation`) est 0 ou null. Le `totalAliment` calculé est 0 même si des enregistrements `ReleveConsommation` existent.
+
+**Cause racine :**
+Le reducer utilisait uniquement `r.quantiteAliment ?? 0`. Pour les relevés créés via le stock, `quantiteAliment` est null (le champ legacy n'est pas renseigné) ; la quantité réelle est stockée dans la relation `ReleveConsommation`. Le reducer ignorait complètement cette relation, rendant le numérateur FCR nul.
+
+**Fix :**
+Remplacer le reducer simple par un reducer hybrid :
+```typescript
+alimentations.reduce((s, r) => {
+  if (r.quantiteAliment != null) return s + r.quantiteAliment;
+  const fromConso = r.consommations?.reduce((sc, c) => sc + c.quantite, 0) ?? 0;
+  return s + fromConso;
+}, 0)
+```
+
+**Leçon / Règle :**
+Le système gère deux chemins d'écriture pour la quantité d'aliment : (1) `Releve.quantiteAliment` (champ legacy, relevé manuel) et (2) `ReleveConsommation.quantite` (dual-write via stock). Tout calcul impliquant la quantité d'aliment doit utiliser ce reducer hybrid. Ce pattern s'applique à au moins 5 autres fonctions : `computeIndicateursBac`, `getIndicateursVague`, `getDashboardProjections`, `getDashboardIndicateurs`, `detectFCRAlerte`. Voir aussi ERR-069 pour le pattern de conservation des quantités par période.
+
+---
+
 ### ERR-073 — Dialog avec deux modes (lazy vs pre-loaded) : concevoir l'interface pour les deux contextes dès le départ
 **Sprint :** ADR-036 intégration | **Date :** 2026-04-06
 **Sévérité :** Basse

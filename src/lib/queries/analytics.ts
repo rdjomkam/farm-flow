@@ -1167,6 +1167,10 @@ export async function getAnalyticsDashboard(siteId: string): Promise<AnalyticsDa
       poidsMoyen: true,
       nombreMorts: true,
       nombreCompte: true,
+      // BUG 2 fix: include consommations so we can fall back to stock-linked quantities
+      consommations: {
+        select: { quantite: true },
+      },
       vague: {
         select: { nombreInitial: true, poidsMoyenInitial: true },
       },
@@ -1187,22 +1191,34 @@ export async function getAnalyticsDashboard(siteId: string): Promise<AnalyticsDa
     const alimentations = releves.filter((r) => r.typeReleve === TypeReleve.ALIMENTATION);
     const biometries = releves.filter((r) => r.typeReleve === TypeReleve.BIOMETRIE);
 
-    const totalAliment = alimentations.reduce((s, r) => s + (r.quantiteAliment ?? 0), 0);
+    // BUG 2 fix: hybrid aliment sum — prioritise quantiteAliment (direct entry) if non-null,
+    // otherwise fall back to sum of ReleveConsommation (stock-linked). Never add both.
+    const totalAliment = alimentations.reduce((s, r) => {
+      if (r.quantiteAliment !== null && r.quantiteAliment !== undefined) {
+        return s + r.quantiteAliment;
+      }
+      return s + r.consommations.reduce((cs, c) => cs + c.quantite, 0);
+    }, 0);
 
-    // Gain biomasse approxime : somme des gains par vague sur ce mois
+    // BUG 3 fix: compute monthly gain using the first and last biometry WITHIN the month,
+    // not the cumulative gain since vague start (J0). Skip vagues with fewer than 2 biometries.
     let totalGainBiomasse = 0;
     const vaguesIds = [...new Set(releves.map((r) => r.vagueId))];
 
     for (const vagueId of vaguesIds) {
       const vagueBios = biometries.filter((r) => r.vagueId === vagueId);
-      if (vagueBios.length === 0) continue;
+      // Need at least 2 biometries in the month to compute a meaningful intra-month gain
+      if (vagueBios.length < 2) continue;
       const vagueRef = releves.find((r) => r.vagueId === vagueId)?.vague;
       if (!vagueRef) continue;
 
+      const premiereBio = vagueBios.at(0);
       const derniereBio = vagueBios.at(-1);
+      const poidsMoyenDebut = premiereBio?.poidsMoyen ?? null;
       const poidsMoyenFin = derniereBio?.poidsMoyen ?? null;
+      // Use nombreInitial as fish count estimate (conservative; mortalite data not available here)
       const biomasseFin = calculerBiomasse(poidsMoyenFin, vagueRef.nombreInitial);
-      const biomasseDebut = calculerBiomasse(vagueRef.poidsMoyenInitial, vagueRef.nombreInitial);
+      const biomasseDebut = calculerBiomasse(poidsMoyenDebut, vagueRef.nombreInitial);
       if (biomasseFin !== null && biomasseDebut !== null && biomasseFin > biomasseDebut) {
         totalGainBiomasse += biomasseFin - biomasseDebut;
       }
@@ -1329,7 +1345,14 @@ export async function getComparaisonVagues(
 
     const nombreVivants = computeNombreVivantsVague(vague.bacs, releves, vague.nombreInitial);
 
-    const totalAliment = alimentations.reduce((s, r) => s + (r.quantiteAliment ?? 0), 0);
+    // BUG 1 fix: hybrid aliment sum — prioritise quantiteAliment (direct entry) if non-null,
+    // otherwise fall back to sum of ReleveConsommation (stock-linked). Never add both.
+    const totalAliment = alimentations.reduce((s, r) => {
+      if (r.quantiteAliment !== null && r.quantiteAliment !== undefined) {
+        return s + r.quantiteAliment;
+      }
+      return s + r.consommations.reduce((cs, c) => cs + c.quantite, 0);
+    }, 0);
 
     const biomasseProduite = calculerBiomasse(poidsMoyenFinal, nombreVivants);
     const biomasseInitiale = calculerBiomasse(vague.poidsMoyenInitial, vague.nombreInitial);
