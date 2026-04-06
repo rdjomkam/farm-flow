@@ -855,7 +855,7 @@ export async function getFCRByFeed(
       (maxConsoDate.getTime() - vague.dateDebut.getTime()) / 86400000
     );
 
-    const dailyGainTable = buildDailyGainTable(gompertzParams, dayFrom, dayTo);
+    const dailyGainTable = buildDailyGainTable(gompertzParams, 0, dayTo);
 
     // Step 5: Segment by bac
     // Group consumptions by bac
