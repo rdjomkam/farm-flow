@@ -289,5 +289,35 @@
       "notes": "Notes",
       "consommations": "Consommations"
     }
+  },
+  "global": {
+    "title": "Tous les relevés",
+    "filtres": {
+      "bouton": "Filtres",
+      "titre": "Filtres",
+      "effacer": "Effacer tout",
+      "appliquer": "Appliquer ({count} actifs)",
+      "vague": "Vague",
+      "toutesVagues": "Toutes les vagues",
+      "bac": "Bac",
+      "tousBacs": "Tous les bacs",
+      "type": "Type de relevé",
+      "tousTyes": "Tous les types",
+      "du": "Du",
+      "au": "Au",
+      "modifie": "Relevés modifiés seulement"
+    },
+    "resultats": "{count} relevés trouvés",
+    "chargerPlus": "Charger {count} de plus",
+    "restants": "({count} restants)",
+    "filtresActifs": {
+      "vague": "Vague : {code}",
+      "bac": "Bac : {nom}",
+      "periode": {
+        "du": "Du {date}",
+        "au": "→ {date}"
+      },
+      "modifie": "Modifiés seulement"
+    }
   }
 }

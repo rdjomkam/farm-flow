@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
     const auth = await requirePermission(request, Permission.BACS_GERER);
     const { searchParams } = new URL(request.url);
     const libre = searchParams.get("libre") === "true";
+    const vagueId = searchParams.get("vagueId");
 
     // Pagination
     const paginationResult = parsePaginationQuery(searchParams);
@@ -29,7 +30,28 @@ export async function GET(request: NextRequest) {
     let data: ReturnType<typeof Array.prototype.map>;
     let total: number;
 
-    if (libre) {
+    if (vagueId) {
+      // Retourner uniquement les bacs appartenant a cette vague (pour le selecteur dynamique)
+      const bacs = await prisma.bac.findMany({
+        where: { siteId: auth.activeSiteId, vagueId },
+        orderBy: { nom: "asc" },
+      });
+      const mapped = bacs.map((b) => ({
+        id: b.id,
+        nom: b.nom,
+        volume: b.volume,
+        nombrePoissons: b.nombrePoissons,
+        nombreInitial: b.nombreInitial,
+        poidsMoyenInitial: b.poidsMoyenInitial,
+        typeSysteme: b.typeSysteme ?? null,
+        vagueId: b.vagueId,
+        siteId: b.siteId,
+        vagueCode: null,
+        createdAt: b.createdAt,
+        updatedAt: b.updatedAt,
+      }));
+      return cachedJson({ data: mapped, total: mapped.length, limit: mapped.length, offset: 0 }, "fast");
+    } else if (libre) {
       const list = await getBacsLibres(auth.activeSiteId);
       const mapped = list.map((b) => ({
         id: b.id,

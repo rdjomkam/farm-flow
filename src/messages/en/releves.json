@@ -289,5 +289,35 @@
       "notes": "Notes",
       "consommations": "Consumptions"
     }
+  },
+  "global": {
+    "title": "All records",
+    "filtres": {
+      "bouton": "Filters",
+      "titre": "Filters",
+      "effacer": "Clear all",
+      "appliquer": "Apply ({count} active)",
+      "vague": "Batch",
+      "toutesVagues": "All batches",
+      "bac": "Tank",
+      "tousBacs": "All tanks",
+      "type": "Record type",
+      "tousTyes": "All types",
+      "du": "From",
+      "au": "To",
+      "modifie": "Modified records only"
+    },
+    "resultats": "{count} records found",
+    "chargerPlus": "Load {count} more",
+    "restants": "({count} remaining)",
+    "filtresActifs": {
+      "vague": "Batch: {code}",
+      "bac": "Tank: {nom}",
+      "periode": {
+        "du": "From {date}",
+        "au": "→ {date}"
+      },
+      "modifie": "Modified only"
+    }
   }
 }

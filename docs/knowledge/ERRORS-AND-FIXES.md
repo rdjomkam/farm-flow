@@ -132,6 +132,63 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-058 — Composant extrait non retiré de la source d'origine (copie fantôme)
+**Sprint :** ADR-034 | **Date :** 2026-04-06
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/components/vagues/releves-list.tsx`, `src/components/releves/releve-details.tsx`
+
+**Symptôme :**
+Après extraction de `ReleveDetails` vers `src/components/releves/releve-details.tsx` pour le partage entre `releves-list.tsx` et la nouvelle `RelevesGlobalList`, la définition locale du composant restait dans `releves-list.tsx`. Deux définitions identiques coexistaient — l'une partagée, l'autre orpheline. L'import `memo` de React était également importé inutilement dans `releves-list.tsx` alors que le seul usage de `memo` était la définition locale devenue redondante.
+
+**Cause racine :**
+L'étape d'extraction d'un composant comprend deux actions : créer le nouveau fichier partagé ET supprimer la définition locale d'origine. La seconde action a été omise — l'implémenteur s'est concentré sur la création du fichier cible sans supprimer la source.
+
+**Fix :**
+Remplacer la définition locale de `ReleveDetails` dans `releves-list.tsx` par un import depuis `@/components/releves/releve-details.tsx`. Retirer `memo` des imports React si c'était son seul usage.
+
+**Leçon / Règle :**
+Toute extraction de composant est une opération en deux étapes atomiques : (1) créer le fichier partagé, (2) supprimer la définition locale et la remplacer par un import. La review et les tests doivent vérifier l'absence de copie fantôme avec `grep -r "ComponentName" src/` sur le nom du composant extrait. Si le nom apparaît dans plus d'un fichier de définition, l'extraction est incomplète.
+
+---
+
+### ERR-057 — API endpoint manquant un paramètre de filtre requis par une feature en cours
+**Sprint :** ADR-034 | **Date :** 2026-04-06
+**Sévérité :** Haute
+**Fichier(s) :** `src/app/api/bacs/route.ts`, `src/lib/queries/bacs.ts`
+
+**Symptôme :**
+La page `/releves` avec filtrage avancé devait proposer un sélecteur de bac dynamique : quand une vague est sélectionnée dans les filtres, seuls les bacs de cette vague sont listés. Cela nécessite `GET /api/bacs?vagueId=...`. La route existante ignorait ce paramètre — seul `?libre=true` était géré — ce qui rendait le sélecteur non fonctionnel (listait tous les bacs du site au lieu de ceux de la vague choisie).
+
+**Cause racine :**
+L'endpoint `/api/bacs` avait été créé pour un besoin différent (libérer un bac ou assigner une vague). Le besoin de filtrer les bacs par vague n'était apparu que plus tard, lors de la conception du filtrage global des relevés. La route n'avait jamais été étendue pour ce cas d'usage.
+
+**Fix :**
+Ajouter la lecture du paramètre `vagueId` dans `route.ts` et étendre `getBacs()` dans `queries/bacs.ts` avec un filtre optionnel `vagueId` : `prisma.bac.findMany({ where: { siteId, ...(vagueId ? { vagueId } : {}) } })`.
+
+**Leçon / Règle :**
+Lors de la pré-analyse d'une feature qui consomme des données d'endpoints existants, vérifier explicitement que chaque paramètre de filtre nécessaire est exposé dans la route. Ne pas supposer qu'un endpoint couvre tous les cas de filtrage futurs parce qu'il couvre le cas d'usage initial. Documenter dans l'ADR les extensions d'API requises comme des dépendances bloquantes (D-n) à traiter en priorité.
+
+---
+
+### ERR-056 — Composant UI supposé présent mais absent — bloquant détecté en pré-analyse
+**Sprint :** ADR-034 | **Date :** 2026-04-06
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/components/ui/switch.tsx`, `package.json`
+
+**Symptôme :**
+Le wireframe de `RelevesFilterSheet` utilisait un Radix Switch pour le toggle "Relevés modifiés seulement". Ni `src/components/ui/switch.tsx` ni le paquet `@radix-ui/react-switch` n'étaient présents dans le projet. L'implémentation aurait échoué à l'import si la pré-analyse n'avait pas détecté l'absence avant le développement.
+
+**Cause racine :**
+L'ADR a été rédigé en supposant la présence d'un composant Switch (présent dans d'autres projets Radix UI standard) sans vérifier son existence réelle dans `src/components/ui/`. La bibliothèque Radix UI est modulaire — chaque composant est une dépendance séparée et doit être installé explicitement.
+
+**Fix :**
+La pré-analyse a proposé deux options : installer `@radix-ui/react-switch` ou utiliser une checkbox native (`input type="checkbox"`) stylée Tailwind. La solution retenue a été la checkbox native — pas de nouvelle dépendance, cohérente avec les inputs natifs déjà utilisés pour les dates dans les filtres.
+
+**Leçon / Règle :**
+Avant de référencer un composant UI dans un ADR ou une story, vérifier son existence dans `src/components/ui/` ET sa dépendance dans `package.json`. Pour Radix UI en particulier : chaque primitive est un paquet npm distinct (`@radix-ui/react-switch`, `@radix-ui/react-checkbox`, etc.) — la présence d'un composant Radix ne garantit pas la présence d'un autre. La pré-analyse doit lister explicitement les composants requis et leur statut PRESENT/ABSENT.
+
+---
+
 ### ERR-055 — Gompertz CLARIAS_DEFAULTS produit des poids absurdes sur vague non calibrée
 **Sprint :** ADR-033 fix | **Date :** 2026-04-06
 **Sévérité :** Haute
@@ -586,6 +643,25 @@ Utiliser `head -3 migration.sql` et `tail -5 migration.sql` pour vérifier.
 ---
 
 ## Catégorie : Pattern
+
+### ERR-059 — Route group Next.js : déplacement partiel de dossier casse le loading state des sous-routes
+**Sprint :** ADR-034 | **Date :** 2026-04-06
+**Sévérité :** Haute
+**Fichier(s) :** `src/app/releves/`, `src/app/(farm)/releves/`
+
+**Symptôme :**
+`src/app/releves/` contenait deux fichiers : `loading.tsx` (pour `/releves`) et `nouveau/page.tsx` (pour `/releves/nouveau`). L'ADR demandait de déplacer uniquement `loading.tsx` vers `src/app/(farm)/releves/`. Ce déplacement partiel aurait cassé le loading state de `/releves/nouveau` : `loading.tsx` dans `(farm)/releves/` ne s'applique plus aux sous-routes restées dans l'ancien dossier `releves/nouveau/`.
+
+**Cause racine :**
+En Next.js App Router, un fichier `loading.tsx` couvre les routes du même segment et de ses sous-segments dans le même dossier. Si le dossier parent est divisé entre deux emplacements (`(farm)/releves/` et `releves/`), le `loading.tsx` du nouveau dossier n'a aucun effet sur les fichiers restés dans l'ancien dossier.
+
+**Fix :**
+Déplacer l'intégralité du dossier `src/app/releves/` vers `src/app/(farm)/releves/` en une seule opération : `loading.tsx` ET `nouveau/page.tsx` ensemble. Supprimer ensuite le dossier d'origine. Vérifier que les liens FAB (`/releves/nouveau`) fonctionnent toujours après déplacement.
+
+**Leçon / Règle :**
+Quand un dossier de route Next.js App Router est déplacé dans un route group (ex: `(farm)/`), déplacer toujours l'intégralité du sous-arbre du dossier en une seule opération. Un déplacement partiel (seulement certains fichiers du dossier) est presque toujours incorrect en App Router car les conventions de fichiers (`loading.tsx`, `error.tsx`, `layout.tsx`) s'appliquent au segment et à tous ses enfants dans le même arbre.
+
+---
 
 ### ERR-040 — ADR interne incohérent : hypothèse d'homogénéité contredite par l'ADR précédent
 **Sprint :** ADR-030 | **Date :** 2026-04-05

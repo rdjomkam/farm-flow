@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
     if (dateFrom) filters.dateFrom = dateFrom;
     if (dateTo) filters.dateTo = dateTo;
     if (searchParams.get("nonLie") === "true") filters.nonLie = true;
+    if (searchParams.get("modifie") === "true") filters.modifie = true;
 
     const { data, total } = await getReleves(auth.activeSiteId, filters, { limit, offset });
     return cachedJson({ data, total, limit, offset }, "fast");
