@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { generateNextNumero } from "./numero-utils";
 import { StatutBesoins, StatutCommande, CategorieDepense, CategorieProduit } from "@/types";
 import type {
   CreateListeBesoinsDTO,
@@ -579,17 +580,7 @@ export async function traiterBesoins(
     });
 
     if (lignesLibres.length > 0) {
-      const dernierDep = await tx.depense.findFirst({
-        where: { siteId, numero: { startsWith: `DEP-${annee}-` } },
-        orderBy: { numero: "desc" },
-        select: { numero: true },
-      });
-      let seqDep = 1;
-      if (dernierDep) {
-        const p = dernierDep.numero.split("-")[2];
-        seqDep = (parseInt(p, 10) || 0) + 1;
-      }
-      const numeroDep = `DEP-${annee}-${String(seqDep).padStart(3, "0")}`;
+      const numeroDep = await generateNextNumero(tx, "depense", "DEP", siteId);
 
       // Construire les lignes de dépense depuis les LigneBesoin LIBRE uniquement (ADR-027)
       const lignesDepenseData = lignesLibres.map((lb) => {

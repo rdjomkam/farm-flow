@@ -55,10 +55,6 @@ export async function POST(request: NextRequest) {
     const placeholder = await createCustomPlaceholder(body);
     return NextResponse.json({ placeholder }, { status: 201 });
   } catch (error) {
-    return handleApiError("POST /api/regles-activites/placeholders", error, "Erreur serveur.", {
-      statusMap: [
-        { match: "Unique constraint", status: 409 },
-      ],
-    });
+    return handleApiError("POST /api/regles-activites/placeholders", error, "Erreur serveur.");
   }
 }

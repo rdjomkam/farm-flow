@@ -45,11 +45,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const updated = await updateCustomPlaceholder(id, body);
     return NextResponse.json(updated);
   } catch (error) {
-    return handleApiError("PUT /api/regles-activites/placeholders/[id]", error, "Erreur serveur.", {
-      statusMap: [
-        { match: "Unique constraint", status: 409 },
-      ],
-    });
+    return handleApiError("PUT /api/regles-activites/placeholders/[id]", error, "Erreur serveur.");
   }
 }
 

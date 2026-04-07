@@ -24,6 +24,7 @@ const mockDepenseRecurrenteFindFirst = vi.fn();
 const mockDepenseRecurrenteUpdate = vi.fn();
 const mockDepenseCreate = vi.fn();
 const mockDepenseCount = vi.fn();
+const mockDepenseFindFirst = vi.fn();
 const mockDepenseFindMany = vi.fn();
 const mockVenteFindMany = vi.fn();
 const mockVenteAggregate = vi.fn();
@@ -45,6 +46,7 @@ vi.mock("@/lib/db", () => ({
     depense: {
       create: (...args: unknown[]) => mockDepenseCreate(...args),
       count: (...args: unknown[]) => mockDepenseCount(...args),
+      findFirst: (...args: unknown[]) => mockDepenseFindFirst(...args),
       findMany: (...args: unknown[]) => mockDepenseFindMany(...args),
     },
     vente: {
@@ -73,6 +75,7 @@ vi.mock("@/lib/db", () => ({
         depense: {
           create: mockDepenseCreate,
           count: mockDepenseCount,
+          findFirst: mockDepenseFindFirst,
         },
       })
     ),

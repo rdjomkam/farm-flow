@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { generateNextNumero } from "./numero-utils";
 import { StatutDepense, ModePaiement, MotifFraisSupp, TypeAjustementDepense, ActionAjustementFrais } from "@/types";
 import type {
   CreateDepenseDTO,
@@ -136,12 +137,8 @@ export async function createDepense(
       if (!vague) throw new Error("Vague introuvable");
     }
 
-    // Generate numero DEP-YYYY-NNN
-    const year = new Date().getFullYear();
-    const count = await tx.depense.count({
-      where: { siteId, numero: { startsWith: `DEP-${year}` } },
-    });
-    const numero = `DEP-${year}-${String(count + 1).padStart(3, "0")}`;
+    // Generate numero DEP-YYYY-NNN (findFirst+orderBy to avoid race condition)
+    const numero = await generateNextNumero(tx, "depense", "DEP", siteId);
 
     return tx.depense.create({
       data: {

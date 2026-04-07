@@ -68,11 +68,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(packProduit, { status: 201 });
   } catch (error) {
-    return handleApiError("POST /api/packs/[id]/produits", error, "Erreur serveur lors de l'ajout du produit.", {
-      statusMap: [
-        { match: ["Unique constraint", "unique"], status: 409 },
-      ],
-    });
+    return handleApiError("POST /api/packs/[id]/produits", error, "Erreur serveur lors de l'ajout du produit.");
   }
 }
 

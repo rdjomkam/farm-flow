@@ -145,9 +145,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(plan, { status: 201 });
   } catch (error) {
     return handleApiError("POST /api/plans", error, "Erreur serveur lors de la creation du plan.", {
-      statusMap: [
-        { match: ["Unique constraint", "unique"], status: 409 },
-      ],
       code: ErrorKeys.SERVER_CREATE_PLAN,
     });
   }

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { generateNextNumero } from "./numero-utils";
 import { StatutVague } from "@/types";
 import type { CreateVenteDTO, VenteFilters } from "@/types";
 
@@ -132,12 +133,8 @@ export async function createVente(
       remaining -= toDeduct;
     }
 
-    // Generate numero
-    const year = new Date().getFullYear();
-    const count = await tx.vente.count({
-      where: { siteId, numero: { startsWith: `VTE-${year}` } },
-    });
-    const numero = `VTE-${year}-${String(count + 1).padStart(3, "0")}`;
+    // Generate numero VTE-YYYY-NNN (findFirst+orderBy to avoid race condition)
+    const numero = await generateNextNumero(tx, "vente", "VTE", siteId);
 
     // Calculate montant
     const montantTotal = data.poidsTotalKg * data.prixUnitaireKg;

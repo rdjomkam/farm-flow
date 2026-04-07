@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { generateNextNumero } from "./numero-utils";
 import {
   CategorieDepense,
   CategorieProduit,
@@ -120,12 +121,8 @@ export async function createCommande(
       0
     );
 
-    // Generate numero
-    const year = new Date().getFullYear();
-    const count = await tx.commande.count({
-      where: { siteId, numero: { startsWith: `CMD-${year}` } },
-    });
-    const numero = `CMD-${year}-${String(count + 1).padStart(3, "0")}`;
+    // Generate numero CMD-YYYY-NNN (findFirst+orderBy to avoid race condition)
+    const numero = await generateNextNumero(tx, "commande", "CMD", siteId);
 
     // Create commande + lignes
     return tx.commande.create({
@@ -364,12 +361,8 @@ export async function recevoirCommande(
         Object.entries(categoriesDominantes).sort(([, a], [, b]) => b - a)[0]?.[0] ?? CategorieProduit.ALIMENT
       ) as CategorieProduit;
 
-      // Generate numero DEP-YYYY-NNN
-      const year = new Date().getFullYear();
-      const depCount = await tx.depense.count({
-        where: { siteId, numero: { startsWith: `DEP-${year}` } },
-      });
-      const depNumero = `DEP-${year}-${String(depCount + 1).padStart(3, "0")}`;
+      // Generate numero DEP-YYYY-NNN (findFirst+orderBy to avoid race condition)
+      const depNumero = await generateNextNumero(tx, "depense", "DEP", siteId);
 
       depense = await tx.depense.create({
         data: {

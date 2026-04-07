@@ -112,7 +112,10 @@ export function handleApiError(
     "code" in error &&
     (error as { code: unknown }).code === "P2002"
   ) {
-    return apiError(409, message || "Cette valeur existe déjà.");
+    console.error(`[${routeLabel}] P2002`, error);
+    const target = (error as { meta?: { target?: string[] } }).meta?.target;
+    const fields = target?.length ? ` (${target.join(", ")})` : "";
+    return apiError(409, `Cette valeur existe déjà${fields}.`);
   }
 
   // Route-specific mappings (highest priority)

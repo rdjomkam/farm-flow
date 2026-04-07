@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { generateNextNumero } from "./numero-utils";
 import { FrequenceRecurrence, CategorieDepense, StatutDepense } from "@/types";
 import type {
   CreateDepenseRecurrenteDTO,
@@ -55,17 +56,13 @@ function estDue(
 
 /**
  * Genere le numero auto-incremantal d'une Depense au format DEP-YYYY-NNN.
- * Utilise un compte sur le siteId + prefixe annuel — meme pattern que createDepense.
+ * Delegue a generateNextNumero (findFirst+orderBy pour eviter les race conditions).
  */
 async function generateNumeroDepense(
   tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
   siteId: string
 ): Promise<string> {
-  const year = new Date().getFullYear();
-  const count = await tx.depense.count({
-    where: { siteId, numero: { startsWith: `DEP-${year}` } },
-  });
-  return `DEP-${year}-${String(count + 1).padStart(3, "0")}`;
+  return generateNextNumero(tx, "depense", "DEP", siteId);
 }
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { generateNextNumero } from "./numero-utils";
 import { StatutFacture } from "@/types";
 import type {
   CreateFactureDTO,
@@ -100,12 +101,8 @@ export async function createFacture(
       throw new Error("Cette vente a deja une facture associee");
     }
 
-    // Generate numero
-    const year = new Date().getFullYear();
-    const count = await tx.facture.count({
-      where: { siteId, numero: { startsWith: `FAC-${year}` } },
-    });
-    const numero = `FAC-${year}-${String(count + 1).padStart(3, "0")}`;
+    // Generate numero FAC-YYYY-NNN (findFirst+orderBy to avoid race condition)
+    const numero = await generateNextNumero(tx, "facture", "FAC", siteId);
 
     return tx.facture.create({
       data: {

@@ -405,7 +405,8 @@ describe("POST /api/packs/[id]/produits", () => {
   });
 
   it("retourne 409 si produit deja dans le pack", async () => {
-    mockAddPackProduit.mockRejectedValue(new Error("Unique constraint failed"));
+    const prismaError = Object.assign(new Error("Unique constraint failed"), { code: "P2002", meta: { target: ["produitId"] } });
+    mockAddPackProduit.mockRejectedValue(prismaError);
     const req = makeRequest("http://localhost:3000/api/packs/pack-1/produits", {
       method: "POST",
       body: JSON.stringify({ produitId: "prod-1", quantite: 25 }),
