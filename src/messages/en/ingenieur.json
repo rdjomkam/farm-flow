@@ -56,6 +56,21 @@
     "client": "Client",
     "allNotes": "All notes"
   },
+  "stats": {
+    "clientsActives": "Active clients",
+    "clientsActivesSubtitle": "monitored sites",
+    "packsActifs": "Active packs",
+    "packsActifsSubtitle": "activations",
+    "survieMoyenne": "Average survival",
+    "survieMoyenneSubtitle": "all batches",
+    "fermesEnAlerte": "Farms in alert",
+    "toutVaBien": "all good",
+    "necessitentAttention": "need attention"
+  },
+  "siteClientFallback": "Client site",
+  "charts": {
+    "avgWeight": "Average weight"
+  },
   "greeting": "Hello, {name}",
   "emptyStates": {
     "noTasksToday": "No tasks for today.",

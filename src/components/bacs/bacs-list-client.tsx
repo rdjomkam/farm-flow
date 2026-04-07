@@ -243,7 +243,7 @@ export function BacsListClient({ bacs: initialBacs, permissions }: BacsListClien
                     )}
                     {/* Lien vers la page de détail bac (ADR-043) */}
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0" asChild>
-                      <Link href={`/bacs/${bac.id}`} title="Historique des assignations">
+                      <Link href={`/bacs/${bac.id}`} title={t("list.historiqueAssignations")}>
                         <History className="h-3.5 w-3.5" />
                       </Link>
                     </Button>

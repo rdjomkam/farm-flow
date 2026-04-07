@@ -1,6 +1,8 @@
 {
   "page": {
+    "title": "Analytics",
     "alimAnalytics": "Feed analytics",
+    "vaguesComparison": "Batch comparison",
     "alimSimulator": "Feed simulator",
     "alimDetail": "Feed detail",
     "bacDetail": "Tank detail",
@@ -294,6 +296,18 @@
   "fcrTrace": {
     "title": "FCR Calculation Detail",
     "triggerLabel": "How is this FCR calculated?",
+    "confidence": {
+      "HIGH": "High confidence",
+      "MEDIUM": "Medium confidence",
+      "LOW": "Low confidence",
+      "INSUFFICIENT_DATA": "Insufficient data"
+    },
+    "feedConsumed": "Feed consumed",
+    "biomassGain": "Biomass gain",
+    "biomassGainTotal": "Total biomass gain",
+    "totalFeed": "Total feed",
+    "noPeriods": "No consumption periods found.",
+    "noData": "No data available.",
     "fcrFinal": "Aggregated final FCR",
     "totalAliment": "Total feed",
     "totalGain": "Total biomass gain",

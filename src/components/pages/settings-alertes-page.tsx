@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { Settings } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { AlertesConfigClient } from "@/components/alertes/alertes-config-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -17,10 +18,11 @@ export default async function SettingsAlertesPage() {
     if (!permissions) return <AccessDenied />;
 
     const configs = await getConfigAlertes(session.activeSiteId, session.userId);
+    const t = await getTranslations("alertes.settings");
 
     return (
       <>
-        <Header title="Configuration des alertes">
+        <Header title={t("pageTitle")}>
           <Settings className="h-5 w-5 text-muted-foreground" />
         </Header>
         <div className="p-4">

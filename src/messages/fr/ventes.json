@@ -32,7 +32,8 @@
     "sansFature": "Sans facture",
     "filters": {
       "tousClients": "Tous les clients",
-      "toutesVagues": "Toutes les vagues"
+      "toutesVagues": "Toutes les vagues",
+      "vaguePlaceholder": "Vague"
     },
     "form": {
       "clientEtVague": "Client et vague",

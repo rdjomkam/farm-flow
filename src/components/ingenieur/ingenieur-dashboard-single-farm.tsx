@@ -85,7 +85,7 @@ export async function IngenieurDashboardSingleFarm({
     );
   });
 
-  const siteName = clientSummary?.siteName ?? "Site client";
+  const siteName = clientSummary?.siteName ?? t("siteClientFallback");
 
   return (
     <div className="flex flex-col gap-6 p-4">

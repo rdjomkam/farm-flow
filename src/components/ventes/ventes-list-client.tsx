@@ -87,7 +87,7 @@ export function VentesListClient({ initialVentes, clients, vagues, permissions }
           <div className="flex-1">
             <Select value={filterVague} onValueChange={setFilterVague}>
               <SelectTrigger>
-                <SelectValue placeholder="Vague" />
+                <SelectValue placeholder={t("ventes.filters.vaguePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t("ventes.filters.toutesVagues")}</SelectItem>

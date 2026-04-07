@@ -56,6 +56,21 @@
     "client": "Client",
     "allNotes": "Toutes les notes"
   },
+  "stats": {
+    "clientsActives": "Clients actifs",
+    "clientsActivesSubtitle": "sites suivis",
+    "packsActifs": "Packs actifs",
+    "packsActifsSubtitle": "activations",
+    "survieMoyenne": "Survie moyenne",
+    "survieMoyenneSubtitle": "toutes vagues",
+    "fermesEnAlerte": "Fermes en alerte",
+    "toutVaBien": "tout va bien",
+    "necessitentAttention": "necessitent attention"
+  },
+  "siteClientFallback": "Site client",
+  "charts": {
+    "avgWeight": "Poids moyen"
+  },
   "greeting": "Bonjour, {name}",
   "emptyStates": {
     "noTasksToday": "Aucune tâche pour aujourd'hui.",

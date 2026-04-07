@@ -23,16 +23,6 @@ const typeVariants: Record<TypeReleve, "info" | "warning" | "default"> = {
   [TypeReleve.RENOUVELLEMENT]: "default",
 };
 
-const typeLabels: Record<TypeReleve, string> = {
-  [TypeReleve.BIOMETRIE]: "Biométrie",
-  [TypeReleve.MORTALITE]: "Mortalité",
-  [TypeReleve.ALIMENTATION]: "Alimentation",
-  [TypeReleve.QUALITE_EAU]: "Qualité eau",
-  [TypeReleve.COMPTAGE]: "Comptage",
-  [TypeReleve.OBSERVATION]: "Observation",
-  [TypeReleve.RENOUVELLEMENT]: "Renouvellement eau",
-};
-
 interface Props {
   releves: Releve[];
   total: number;
@@ -60,7 +50,7 @@ const ReleveCard = memo(function ReleveCard({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 flex-wrap">
             <Badge variant={typeVariants[type]}>
-              {typeLabels[type]}
+              {t(`types.${type}`)}
             </Badge>
             {releve.bac && (
               <span className="text-xs text-muted-foreground">{releve.bac.nom}</span>
@@ -120,16 +110,14 @@ export function RelevesGlobalList({
   permissions,
   produits,
 }: Props) {
+  const t = useTranslations("releves");
+
   if (releves.length === 0) {
     return (
       <EmptyState
         icon={<FileText className="h-7 w-7" />}
-        title="Aucun relevé"
-        description={
-          offset > 0
-            ? "Aucun relevé supplémentaire trouvé."
-            : "Aucun relevé ne correspond aux filtres sélectionnés."
-        }
+        title={t("list.emptyTitle")}
+        description={t("list.emptyDescription")}
       />
     );
   }

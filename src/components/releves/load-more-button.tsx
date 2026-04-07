@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import { ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { RELEVES_PAGE_LIMIT } from "@/lib/releve-search-params";
 
 interface Props {
@@ -14,6 +15,8 @@ export function LoadMoreButton({ offset, total }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const t = useTranslations("releves");
+  const tCommon = useTranslations("common");
 
   const limit = RELEVES_PAGE_LIMIT;
   const shown = offset + limit;
@@ -38,8 +41,8 @@ export function LoadMoreButton({ offset, total }: Props) {
     >
       <ChevronDown className="h-4 w-4" />
       {isPending
-        ? "Chargement..."
-        : `Charger ${Math.min(limit, remaining)} de plus (${remaining} restants)`}
+        ? tCommon("loading.text")
+        : `${t("global.chargerPlus", { count: Math.min(limit, remaining) })} ${t("global.restants", { count: remaining })}`}
     </button>
   );
 }

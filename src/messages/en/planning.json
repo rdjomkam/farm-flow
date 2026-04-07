@@ -1,5 +1,6 @@
 {
   "page": {
+    "title": "Planning",
     "newActivity": "New activity",
     "taskDetail": "Activity detail",
     "myTasks": "My tasks"
@@ -128,7 +129,9 @@
     "recurrence": "Recurrence",
     "batch": "Batch",
     "tank": "Tank",
-    "assignTo": "Assign to"
+    "assignTo": "Assign to",
+    "dateDebut": "Start date",
+    "dateFin": "End date"
   },
   "rules": {
     "detail": {

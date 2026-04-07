@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { TypeReleve, StatutVague, CauseMortalite, MethodeComptage } from "@/types";
 import {
   Select,
@@ -31,31 +32,6 @@ interface ProduitAlimentOption {
   unite: string;
 }
 
-const typeLabels: Record<TypeReleve, string> = {
-  [TypeReleve.BIOMETRIE]: "Biométrie",
-  [TypeReleve.MORTALITE]: "Mortalité",
-  [TypeReleve.ALIMENTATION]: "Alimentation",
-  [TypeReleve.QUALITE_EAU]: "Qualité eau",
-  [TypeReleve.COMPTAGE]: "Comptage",
-  [TypeReleve.OBSERVATION]: "Observation",
-  [TypeReleve.RENOUVELLEMENT]: "Renouvellement eau",
-};
-
-const causeMortaliteLabels: Record<CauseMortalite, string> = {
-  [CauseMortalite.MALADIE]: "Maladie",
-  [CauseMortalite.QUALITE_EAU]: "Qualité de l'eau",
-  [CauseMortalite.STRESS]: "Stress",
-  [CauseMortalite.PREDATION]: "Prédation",
-  [CauseMortalite.CANNIBALISME]: "Cannibalisme",
-  [CauseMortalite.INCONNUE]: "Inconnue",
-  [CauseMortalite.AUTRE]: "Autre",
-};
-
-const methodeComptageLabels: Record<MethodeComptage, string> = {
-  [MethodeComptage.DIRECT]: "Direct",
-  [MethodeComptage.ESTIMATION]: "Estimation",
-  [MethodeComptage.ECHANTILLONNAGE]: "Échantillonnage",
-};
 
 /** Composant interne pour une paire de champs min/max */
 function RangeInputs({
@@ -121,6 +97,9 @@ export function RelevesFilterSheet({
   onClear,
   activeCount,
 }: Props) {
+  const t = useTranslations("releves");
+  const tCommon = useTranslations("common");
+
   // Etat local du sheet : les modifications ne s'appliquent qu'au clic "Appliquer"
   const [localVagueId, setLocalVagueId] = useState(current.vagueId ?? ALL_VALUE);
   const [localBacId, setLocalBacId] = useState(current.bacId ?? ALL_VALUE);
@@ -320,7 +299,7 @@ export function RelevesFilterSheet({
         className="shrink-0 flex items-center justify-between px-4 border-b border-border"
         style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))", paddingBottom: "0.75rem" }}
       >
-        <h2 className="text-base font-semibold">Filtres</h2>
+        <h2 className="text-base font-semibold">{t("global.filtres.titre")}</h2>
         <div className="flex items-center gap-2">
           {activeCount > 0 && (
             <button
@@ -328,7 +307,7 @@ export function RelevesFilterSheet({
               onClick={onClear}
               className="text-sm text-muted-foreground hover:text-foreground underline"
             >
-              Effacer tout
+              {t("global.filtres.effacer")}
             </button>
           )}
           <SheetClose asChild>
@@ -348,13 +327,13 @@ export function RelevesFilterSheet({
 
         {/* Vague */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Vague</label>
+          <label className="text-sm font-medium">{t("global.filtres.vague")}</label>
           <Select value={localVagueId} onValueChange={handleVagueChange}>
             <SelectTrigger>
-              <SelectValue placeholder="Toutes les vagues" />
+              <SelectValue placeholder={t("global.filtres.toutesVagues")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_VALUE}>Toutes les vagues</SelectItem>
+              <SelectItem value={ALL_VALUE}>{t("global.filtres.toutesVagues")}</SelectItem>
               {vagues.map((v) => (
                 <SelectItem key={v.id} value={v.id}>
                   {v.code}
@@ -366,7 +345,7 @@ export function RelevesFilterSheet({
 
         {/* Bac — desactive si pas de vague selectionnee */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Bac</label>
+          <label className="text-sm font-medium">{t("global.filtres.bac")}</label>
           <Select
             value={localBacId}
             onValueChange={setLocalBacId}
@@ -376,15 +355,15 @@ export function RelevesFilterSheet({
               <SelectValue
                 placeholder={
                   localVagueId === ALL_VALUE
-                    ? "Sélectionnez d'abord une vague"
+                    ? t("form.fields.bacSelectVagueFirst")
                     : bacsLoading
-                    ? "Chargement..."
-                    : "Tous les bacs"
+                    ? tCommon("loading.text")
+                    : t("global.filtres.tousBacs")
                 }
               />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_VALUE}>Tous les bacs</SelectItem>
+              <SelectItem value={ALL_VALUE}>{t("global.filtres.tousBacs")}</SelectItem>
               {bacs.map((b) => (
                 <SelectItem key={b.id} value={b.id}>
                   {b.nom}
@@ -396,16 +375,16 @@ export function RelevesFilterSheet({
 
         {/* Type de releve */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Type de relevé</label>
+          <label className="text-sm font-medium">{t("global.filtres.type")}</label>
           <Select value={localType} onValueChange={handleTypeChange}>
             <SelectTrigger>
-              <SelectValue placeholder="Tous les types" />
+              <SelectValue placeholder={t("global.filtres.tousTyes")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_VALUE}>Tous les types</SelectItem>
+              <SelectItem value={ALL_VALUE}>{t("global.filtres.tousTyes")}</SelectItem>
               {Object.values(TypeReleve).map((type) => (
                 <SelectItem key={type} value={type}>
-                  {typeLabels[type]}
+                  {t(`types.${type}`)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -416,14 +395,14 @@ export function RelevesFilterSheet({
         {showTypeSpecific && (
           <div className="border-t border-border pt-4 space-y-4">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Filtres {typeLabels[localType as TypeReleve]}
+              {t("global.filtres.filtresSpecifiques", { type: t(`types.${localType as TypeReleve}`) })}
             </p>
 
             {/* BIOMETRIE */}
             {localType === TypeReleve.BIOMETRIE && (
               <>
                 <RangeInputs
-                  label="Poids moyen"
+                  label={t("global.filtres.poidsMoyen")}
                   unit="g"
                   minValue={localPoidsMoyenMin}
                   maxValue={localPoidsMoyenMax}
@@ -432,7 +411,7 @@ export function RelevesFilterSheet({
                   step="0.1"
                 />
                 <RangeInputs
-                  label="Taille moyenne"
+                  label={t("global.filtres.tailleMoyenne")}
                   unit="cm"
                   minValue={localTailleMoyenneMin}
                   maxValue={localTailleMoyenneMax}
@@ -447,23 +426,23 @@ export function RelevesFilterSheet({
             {localType === TypeReleve.MORTALITE && (
               <>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium">Cause de mortalité</label>
+                  <label className="text-sm font-medium">{t("form.mortalite.causeMortalite")}</label>
                   <Select value={localCauseMortalite} onValueChange={setLocalCauseMortalite}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Toutes les causes" />
+                      <SelectValue placeholder={t("global.filtres.toutesCauses")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={ALL_VALUE}>Toutes les causes</SelectItem>
+                      <SelectItem value={ALL_VALUE}>{t("global.filtres.toutesCauses")}</SelectItem>
                       {Object.values(CauseMortalite).map((cause) => (
                         <SelectItem key={cause} value={cause}>
-                          {causeMortaliteLabels[cause]}
+                          {t(`form.mortalite.causes.${cause}`)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <RangeInputs
-                  label="Nombre de morts"
+                  label={t("global.filtres.nombreMorts")}
                   minValue={localNombreMortsMin}
                   maxValue={localNombreMortsMax}
                   onMinChange={setLocalNombreMortsMin}
@@ -477,7 +456,7 @@ export function RelevesFilterSheet({
             {localType === TypeReleve.ALIMENTATION && (
               <>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium">Produit alimentaire</label>
+                  <label className="text-sm font-medium">{t("global.filtres.produitAlimentaire")}</label>
                   <Select
                     value={localProduitId}
                     onValueChange={setLocalProduitId}
@@ -485,11 +464,11 @@ export function RelevesFilterSheet({
                   >
                     <SelectTrigger>
                       <SelectValue
-                        placeholder={produitsLoading ? "Chargement..." : "Tous les produits"}
+                        placeholder={produitsLoading ? tCommon("loading.text") : t("global.filtres.tousProduits")}
                       />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={ALL_VALUE}>Tous les produits</SelectItem>
+                      <SelectItem value={ALL_VALUE}>{t("global.filtres.tousProduits")}</SelectItem>
                       {produits.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
                           {p.nom}
@@ -499,7 +478,7 @@ export function RelevesFilterSheet({
                   </Select>
                 </div>
                 <RangeInputs
-                  label="Fréquence d'alimentation"
+                  label={t("global.filtres.frequenceAlimentation")}
                   unit="fois/j"
                   minValue={localFrequenceAlimentMin}
                   maxValue={localFrequenceAlimentMax}
@@ -514,7 +493,7 @@ export function RelevesFilterSheet({
             {localType === TypeReleve.QUALITE_EAU && (
               <>
                 <RangeInputs
-                  label="Température"
+                  label={t("global.filtres.temperature")}
                   unit="°C"
                   minValue={localTemperatureMin}
                   maxValue={localTemperatureMax}
@@ -523,7 +502,7 @@ export function RelevesFilterSheet({
                   step="0.1"
                 />
                 <RangeInputs
-                  label="pH"
+                  label={t("form.qualiteEau.ph")}
                   minValue={localPhMin}
                   maxValue={localPhMax}
                   onMinChange={setLocalPhMin}
@@ -536,16 +515,16 @@ export function RelevesFilterSheet({
             {/* COMPTAGE */}
             {localType === TypeReleve.COMPTAGE && (
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">Méthode de comptage</label>
+                <label className="text-sm font-medium">{t("form.comptage.methodeComptage")}</label>
                 <Select value={localMethodeComptage} onValueChange={setLocalMethodeComptage}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Toutes les méthodes" />
+                    <SelectValue placeholder={t("global.filtres.toutesMethodes")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={ALL_VALUE}>Toutes les méthodes</SelectItem>
+                    <SelectItem value={ALL_VALUE}>{t("global.filtres.toutesMethodes")}</SelectItem>
                     {Object.values(MethodeComptage).map((m) => (
                       <SelectItem key={m} value={m}>
-                        {methodeComptageLabels[m]}
+                        {t(`form.comptage.methodes.${m}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -556,7 +535,7 @@ export function RelevesFilterSheet({
             {/* OBSERVATION */}
             {localType === TypeReleve.OBSERVATION && (
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">Recherche dans la description</label>
+                <label className="text-sm font-medium">{t("global.filtres.rechercheDescription")}</label>
                 <input
                   type="text"
                   value={localDescriptionSearch}
@@ -570,7 +549,7 @@ export function RelevesFilterSheet({
             {/* RENOUVELLEMENT */}
             {localType === TypeReleve.RENOUVELLEMENT && (
               <RangeInputs
-                label="Pourcentage renouvelé"
+                label={t("global.filtres.pourcentageRenouvele")}
                 unit="%"
                 minValue={localPourcentageMin}
                 maxValue={localPourcentageMax}
@@ -584,9 +563,9 @@ export function RelevesFilterSheet({
 
         {/* Periode */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Période</label>
+          <label className="text-sm font-medium">{t("global.filtres.periode")}</label>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground w-5">Du</span>
+            <span className="text-sm text-muted-foreground w-5">{t("global.filtres.du")}</span>
             <input
               type="date"
               value={localDateFrom}
@@ -595,7 +574,7 @@ export function RelevesFilterSheet({
             />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground w-5">Au</span>
+            <span className="text-sm text-muted-foreground w-5">{t("global.filtres.au")}</span>
             <input
               type="date"
               value={localDateTo}
@@ -613,7 +592,7 @@ export function RelevesFilterSheet({
             onChange={(e) => setLocalModifie(e.target.checked)}
             className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
           />
-          <span className="text-sm">Relevés modifiés seulement</span>
+          <span className="text-sm">{t("global.filtres.modifie")}</span>
         </label>
 
       </div>
@@ -631,14 +610,16 @@ export function RelevesFilterSheet({
           onClick={onClear}
           className="flex-1 h-10 rounded-md border border-border bg-background text-sm font-medium text-muted-foreground hover:bg-accent transition-colors"
         >
-          Effacer tout
+          {t("global.filtres.effacer")}
         </button>
         <button
           type="button"
           onClick={handleApply}
           className="flex-1 h-10 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
         >
-          Appliquer{activeCount > 0 ? ` (${activeCount})` : ""}
+          {activeCount > 0
+            ? t("global.filtres.appliquer", { count: activeCount })
+            : t("global.filtres.appliquerSimple")}
         </button>
       </div>
 

@@ -171,8 +171,22 @@
     "predicted": "Predit",
     "deviation": "Ecart",
     "projections": "Projections",
-    "dayHeader": "Jour"
+    "dayHeader": "Jour",
+    "confidence": {
+      "HIGH": "Haute fiabilité",
+      "MEDIUM": "Fiabilité moyenne",
+      "LOW": "Faible fiabilité",
+      "INSUFFICIENT_DATA": "Données insuffisantes"
+    },
+    "ariaLabelDetails": "Détails du modèle Gompertz"
   },
+  "bacsSection": {
+    "bacsRetires": "{count} bac retiré",
+    "bacsRetiresPlural": "{count} bacs retirés",
+    "poissonsDepart": "{count} poissons au départ",
+    "retire": "Retiré"
+  },
+  "poidsChartSection": "le graphique d'évolution du poids",
   "comparison": {
     "selectTitle": "Selectionnez 2 a 4 vagues",
     "hide": "Masquer",

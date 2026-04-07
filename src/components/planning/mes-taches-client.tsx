@@ -8,20 +8,6 @@ import { CompleterActiviteDialog } from "@/components/planning/completer-activit
 import { TypeActivite, StatutActivite, Permission } from "@/types";
 import type { ActiviteWithRelations } from "@/types";
 
-const typeActiviteLabels: Record<TypeActivite, string> = {
-  [TypeActivite.ALIMENTATION]: "Alimentation",
-  [TypeActivite.BIOMETRIE]: "Biometrie",
-  [TypeActivite.QUALITE_EAU]: "Qualite eau",
-  [TypeActivite.COMPTAGE]: "Comptage",
-  [TypeActivite.NETTOYAGE]: "Nettoyage",
-  [TypeActivite.TRAITEMENT]: "Traitement",
-  [TypeActivite.RECOLTE]: "Recolte",
-  [TypeActivite.TRI]: "Tri",
-  [TypeActivite.MEDICATION]: "Medication",
-  [TypeActivite.RENOUVELLEMENT]: "Renouvellement eau",
-  [TypeActivite.AUTRE]: "Autre",
-};
-
 const typeActiviteColors: Record<TypeActivite, string> = {
   [TypeActivite.ALIMENTATION]: "bg-accent-green",
   [TypeActivite.BIOMETRIE]: "bg-accent-blue",
@@ -124,7 +110,7 @@ function TaskCard({
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground">
-            {typeActiviteLabels[activite.typeActivite as TypeActivite] ?? activite.typeActivite}
+            {tActivites(`filters.types.${activite.typeActivite}`) ?? activite.typeActivite}
             {activite.vague && ` · ${activite.vague.code}`}
             {activite.bac && ` · ${activite.bac.nom}`}
           </p>

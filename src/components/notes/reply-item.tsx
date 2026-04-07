@@ -2,6 +2,7 @@
 
 import ReactMarkdown from "react-markdown";
 import { Eye, EyeOff } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { VisibiliteNote } from "@/types";
 import type { NoteIngenieurWithRelations } from "@/types";
@@ -77,6 +78,7 @@ const compactMarkdownComponents = {
 };
 
 export function ReplyItem({ reply, isClientView = false }: ReplyItemProps) {
+  const t = useTranslations("notes");
   const isFromClient = reply.isFromClient;
 
   return (
@@ -85,7 +87,7 @@ export function ReplyItem({ reply, isClientView = false }: ReplyItemProps) {
       <div className="flex flex-wrap items-center gap-1.5 mb-1">
         {isClientView ? (
           <Badge variant={isFromClient ? "default" : "en_cours"} className="text-xs">
-            {isFromClient ? "Mon observation" : "DKFarm"}
+            {isFromClient ? t("detail.myObservation") : t("detail.dkfarm")}
           </Badge>
         ) : (
           <>

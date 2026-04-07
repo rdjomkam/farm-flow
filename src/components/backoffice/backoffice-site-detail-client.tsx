@@ -154,7 +154,7 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
               />
               {site.suspendedAt && (
                 <SiteInfoRow
-                  label="Suspendu le"
+                  label={t("sites.detail.suspendedAt")}
                   value={new Date(site.suspendedAt).toLocaleDateString("fr-FR", {
                     day: "2-digit",
                     month: "long",
@@ -163,7 +163,7 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
                 />
               )}
               {site.suspendedReason && (
-                <SiteInfoRow label="Raison suspension" value={site.suspendedReason} />
+                <SiteInfoRow label={t("sites.detail.suspendedReason")} value={site.suspendedReason} />
               )}
             </div>
           </div>

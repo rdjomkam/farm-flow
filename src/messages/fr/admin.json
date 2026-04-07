@@ -1,5 +1,6 @@
 {
   "sites": {
+    "searchPlaceholder": "Rechercher par nom...",
     "aucunPlan": "Aucun plan",
     "bloques": "Bloques",
     "aucunSiteTrouve": "Aucun site trouve",
@@ -102,6 +103,7 @@
     "saving": "Enregistrement..."
   },
   "modules": {
+    "searchPlaceholder": "Rechercher par label, cle, categorie...",
     "aucunModuleFiltre": "Aucun module ne correspond aux filtres.",
     "modifierTitle": "Modifier le module",
     "modifierDescription": "Mise a jour des metadonnees du module. La cle et le niveau sont immuables.",

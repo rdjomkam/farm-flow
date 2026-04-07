@@ -183,7 +183,7 @@ export function ChangerPlanClient({
             </p>
             <p className="text-sm text-muted-foreground">
               {PERIODE_LABELS[abonnement.periode]} —{" "}
-              {formatXAF(abonnement.prixPaye)} payé
+              {t("changerPlan.paidAmount", { amount: formatXAF(abonnement.prixPaye) })}
             </p>
           </div>
           <div className="flex items-center gap-1 text-xs text-muted-foreground">

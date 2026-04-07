@@ -290,7 +290,7 @@ export function PoidsChart({
   );
 
   return (
-    <ErrorBoundary section="le graphique d'évolution du poids">
+    <ErrorBoundary section={t("poidsChartSection")}>
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-2">

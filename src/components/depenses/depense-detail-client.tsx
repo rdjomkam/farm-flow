@@ -276,7 +276,7 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
   async function handlePaiement() {
     const montant = parseFloat(paiementMontant);
     if (isNaN(montant) || montant <= 0) {
-      toast({ title: "Montant invalide", variant: "error" });
+      toast({ title: t("errors.montantInvalide"), variant: "error" });
       return;
     }
 

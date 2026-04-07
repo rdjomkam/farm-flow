@@ -1,4 +1,10 @@
 {
+  "page": {
+    "title": "Notifications"
+  },
+  "settings": {
+    "pageTitle": "Configuration des alertes"
+  },
   "severites": {
     "CRITIQUE": "Critique",
     "AVERTISSEMENT": "Avertissement",

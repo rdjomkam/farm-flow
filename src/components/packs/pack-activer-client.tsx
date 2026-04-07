@@ -171,7 +171,7 @@ export function PackActiverClient({ pack }: Props) {
             <Input
               value={clientSiteName}
               onChange={(e) => setClientSiteName(e.target.value)}
-              placeholder="Ex: Ferme Ngozi — Bafia"
+              placeholder={t("activer.nomSitePlaceholder")}
               className="mt-1"
             />
           </div>
@@ -180,7 +180,7 @@ export function PackActiverClient({ pack }: Props) {
             <Input
               value={clientSiteAddress}
               onChange={(e) => setClientSiteAddress(e.target.value)}
-              placeholder="Ex: Quartier Lac, Bafia, Mbam"
+              placeholder={t("activer.adressePlaceholder")}
               className="mt-1"
             />
           </div>
@@ -198,7 +198,7 @@ export function PackActiverClient({ pack }: Props) {
             <Input
               value={clientUserName}
               onChange={(e) => setClientUserName(e.target.value)}
-              placeholder="Ex: Jean-Marie Ngozi"
+              placeholder={t("activer.nomCompletPlaceholder")}
               className="mt-1"
             />
           </div>
@@ -208,7 +208,7 @@ export function PackActiverClient({ pack }: Props) {
               type="tel"
               value={clientUserPhone}
               onChange={(e) => setClientUserPhone(e.target.value)}
-              placeholder="Ex: 699 000 000"
+              placeholder={t("activer.telephonePlaceholder")}
               className="mt-1"
               inputMode="tel"
             />
@@ -220,7 +220,7 @@ export function PackActiverClient({ pack }: Props) {
               type="email"
               value={clientUserEmail}
               onChange={(e) => setClientUserEmail(e.target.value)}
-              placeholder="Ex: ngozi@example.com"
+              placeholder={t("activer.emailPlaceholder")}
               className="mt-1"
             />
           </div>

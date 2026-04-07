@@ -18,25 +18,11 @@
 
 import Link from "next/link";
 import { ClipboardCheck } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { TypeActivite, StatutActivite, TypeReleve } from "@/types";
+import { TypeActivite, StatutActivite } from "@/types";
 import { ACTIVITE_RELEVE_TYPE_MAP, RELEVE_COMPATIBLE_TYPES } from "@/types/api";
 import type { ActiviteWithRelations } from "@/types";
-
-// ---------------------------------------------------------------------------
-// Labels des types de releve pour l'affichage
-// R2 : clés issues de l'enum TypeReleve — jamais de string literals
-// ---------------------------------------------------------------------------
-
-const typeReleveLabels: Record<TypeReleve, string> = {
-  [TypeReleve.BIOMETRIE]: "Biometrie",
-  [TypeReleve.MORTALITE]: "Mortalite",
-  [TypeReleve.ALIMENTATION]: "Alimentation",
-  [TypeReleve.QUALITE_EAU]: "Qualite eau",
-  [TypeReleve.COMPTAGE]: "Comptage",
-  [TypeReleve.OBSERVATION]: "Observation",
-  [TypeReleve.RENOUVELLEMENT]: "Renouvellement",
-};
 
 // ---------------------------------------------------------------------------
 // Props
@@ -60,6 +46,9 @@ interface ActiviteCompleteProps {
  * Le formulaire de releve lie ensuite automatiquement le releve a l'activite.
  */
 export function ActiviteComplete({ activite }: ActiviteCompleteProps) {
+  const tReleves = useTranslations("releves");
+  const tActivites = useTranslations("activites");
+
   const isActionable =
     activite.statut === StatutActivite.PLANIFIEE ||
     activite.statut === StatutActivite.EN_RETARD;
@@ -84,13 +73,13 @@ export function ActiviteComplete({ activite }: ActiviteCompleteProps) {
   params.set("typeReleve", mappedReleveType);
 
   const href = `/releves/nouveau?${params.toString()}`;
-  const releveLabel = typeReleveLabels[mappedReleveType] ?? mappedReleveType;
+  const releveLabel = tReleves(`types.${mappedReleveType}` as Parameters<typeof tReleves>[0]) ?? mappedReleveType;
 
   return (
     <Button asChild size="sm" className="gap-1.5 w-full sm:w-auto">
       <Link href={href}>
         <ClipboardCheck className="h-3.5 w-3.5" />
-        Terminer avec un releve ({releveLabel})
+        {tActivites("feeding.completerReleve", { label: releveLabel })}
       </Link>
     </Button>
   );

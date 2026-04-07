@@ -182,7 +182,10 @@
     "subscribers": "{count} subscriber",
     "subscribersPlural": "{count} subscribers",
     "engineerFarms": "{count} farms",
+    "noSite": "No site",
     "cancelSubscriptionDesc": "Cancel the subscription for {siteName}? This action is irreversible.",
+    "cancelSubscriptionIrreversible": "This action is irreversible.",
+    "toggleDeactivateSubscribersDesc": "The plan {nom} has {count} active subscriber{plural}. Existing subscriber{plural} will retain access until expiration, but no new subscriptions will be possible.",
     "cannotCancelSubscription": "Unable to cancel.",
     "networkError": "Network error.",
     "cannotDisableWithSubscribers": "Cannot deactivate a plan with {count} active{plural} subscriber{plural}.",
@@ -239,7 +242,8 @@
     "expired": "Expired",
     "daysRemaining": "{count} day remaining",
     "daysRemainingPlural": "{count} days remaining",
-    "gracePeriod": "Grace period"
+    "gracePeriod": "Grace period",
+    "limitedAccessUntil": "Limited access until"
   },
   "buttons": {
     "renew": "Renew",
@@ -284,6 +288,7 @@
   "changerPlan": {
     "currentPlan": "Current plan",
     "expiresOn": "Expires on",
+    "paidAmount": "{amount} paid",
     "prorataCredit": "Prorated credit available for an upgrade:",
     "upgradePlans": "Higher plans (Upgrade)",
     "upgradeGratuit": "Free upgrade (covered by your credit)",
@@ -309,6 +314,15 @@
     "billingPeriod": "Billing period",
     "backToSubscription": "← Back to my subscription",
     "pageTitle": "Change plan"
+  },
+  "downgradeSelector": {
+    "tooManyTanks": "Too many tanks selected: {selected}/{limit} allowed.",
+    "tooManyWaves": "Too many batches selected: {selected}/{limit} allowed.",
+    "tanksSection": "Tanks ({selected}/{limit} selected{plural})",
+    "wavesSection": "Batches ({selected}/{limit} selected{plural})",
+    "noResourcesToKeep": "No resources to keep for this site.",
+    "toKeep": "To keep",
+    "confirmSelection": "Confirm selection ({tanks} tank{tankPlural}, {waves} batch{wavePlural})"
   },
   "checkoutForm": {
     "stepPlanPeriod": "Plan & Period",
@@ -408,7 +422,10 @@
     "limitReached": "You have reached the limit of your current plan.",
     "upgradeLink": "Upgrade to a higher plan",
     "createMoreResources": "to create more resources.",
-    "ariaLabel": "{label}: {current} of {limit}"
+    "ariaLabel": "{label}: {current} of {limit}",
+    "noSubscription": "No active subscription.",
+    "subscribe": "Subscribe to a plan",
+    "toManageResources": "to manage your resources."
   },
   "comparaison": {
     "featureColumn": "Feature",

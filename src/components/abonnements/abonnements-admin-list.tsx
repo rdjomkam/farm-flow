@@ -209,7 +209,7 @@ export function AbonnementsAdminList({
           <tbody>
             {abonnements.map((a, i) => (
               <tr key={a.id} className={i % 2 === 0 ? "bg-card" : "bg-muted/10"}>
-                <td className="px-4 py-3 font-medium text-foreground">{a.site?.name ?? "Sans site"}</td>
+                <td className="px-4 py-3 font-medium text-foreground">{a.site?.name ?? t("admin.noSite")}</td>
                 <td className="px-4 py-3 text-foreground">{t(PLAN_LABELS[a.plan.typePlan])}</td>
                 <td className="px-4 py-3">
                   <Badge
@@ -249,8 +249,7 @@ export function AbonnementsAdminList({
                           <DialogHeader>
                             <DialogTitle>{t("admin.forceActivationTitle")}</DialogTitle>
                             <DialogDescription>
-                              Activer manuellement l&apos;abonnement pour le site{" "}
-                              <strong>{a.site?.name ?? "Abonnement"}</strong> ?
+                              {t("admin.forceActivationDesc", { siteName: a.site?.name ?? t("admin.noSite") })}
                             </DialogDescription>
                           </DialogHeader>
                           <DialogFooter>
@@ -294,8 +293,7 @@ export function AbonnementsAdminList({
                           <DialogHeader>
                             <DialogTitle>{t("dialogs.cancelTitle")}</DialogTitle>
                             <DialogDescription>
-                              Annuler l&apos;abonnement de <strong>{a.site?.name ?? "Abonnement"}</strong> ? Cette
-                              action est irréversible.
+                              {t("admin.cancelSubscriptionDesc", { siteName: a.site?.name ?? t("admin.noSite") })}
                             </DialogDescription>
                           </DialogHeader>
                           {annulationError && (
@@ -347,7 +345,7 @@ export function AbonnementsAdminList({
           <div key={a.id} className="bg-card border border-border rounded-xl p-4 space-y-3">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="font-semibold text-foreground">{a.site?.name ?? "Sans site"}</p>
+                <p className="font-semibold text-foreground">{a.site?.name ?? t("admin.noSite")}</p>
                 <p className="text-xs text-muted-foreground">{t(PLAN_LABELS[a.plan.typePlan])}</p>
               </div>
               <Badge

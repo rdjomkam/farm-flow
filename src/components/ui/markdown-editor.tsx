@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import {
   Bold,
   Italic,
@@ -26,7 +27,7 @@ interface MarkdownEditorProps {
 
 interface ToolbarAction {
   icon: React.ComponentType<{ className?: string }>;
-  title: string;
+  titleKey: string;
   action: (textarea: HTMLTextAreaElement) => {
     value: string;
     selectionStart: number;
@@ -37,37 +38,37 @@ interface ToolbarAction {
 const TOOLBAR_ACTIONS: ToolbarAction[] = [
   {
     icon: Bold,
-    title: "Gras",
+    titleKey: "bold",
     action: (ta) => wrapSelection(ta, "**", "**", "gras"),
   },
   {
     icon: Italic,
-    title: "Italique",
+    titleKey: "italic",
     action: (ta) => wrapSelection(ta, "*", "*", "italique"),
   },
   {
     icon: Heading2,
-    title: "Titre 2",
+    titleKey: "heading2",
     action: (ta) => toggleLinePrefix(ta, "## "),
   },
   {
     icon: Heading3,
-    title: "Titre 3",
+    titleKey: "heading3",
     action: (ta) => toggleLinePrefix(ta, "### "),
   },
   {
     icon: List,
-    title: "Liste",
+    titleKey: "list",
     action: (ta) => toggleLinePrefix(ta, "- "),
   },
   {
     icon: ListOrdered,
-    title: "Liste numerotee",
+    titleKey: "orderedList",
     action: (ta) => toggleLinePrefix(ta, "1. "),
   },
   {
     icon: Quote,
-    title: "Citation",
+    titleKey: "quote",
     action: (ta) => toggleLinePrefix(ta, "> "),
   },
 ];
@@ -82,6 +83,7 @@ function MarkdownEditor({
   rows = 6,
   className,
 }: MarkdownEditorProps) {
+  const t = useTranslations("common.markdownEditor");
   const generatedId = useId();
   const id = idProp ?? generatedId;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -121,10 +123,10 @@ function MarkdownEditor({
         <div className="flex flex-wrap gap-1 border-b border-border p-1">
           {TOOLBAR_ACTIONS.map((item) => (
             <button
-              key={item.title}
+              key={item.titleKey}
               type="button"
-              title={item.title}
-              aria-label={item.title}
+              title={t(item.titleKey as Parameters<typeof t>[0])}
+              aria-label={t(item.titleKey as Parameters<typeof t>[0])}
               className={cn(
                 "inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md",
                 "text-muted-foreground transition-colors",

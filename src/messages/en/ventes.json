@@ -32,7 +32,8 @@
     "sansFature": "No invoice",
     "filters": {
       "tousClients": "All clients",
-      "toutesVagues": "All batches"
+      "toutesVagues": "All batches",
+      "vaguePlaceholder": "Batch"
     },
     "form": {
       "clientEtVague": "Client and batch",

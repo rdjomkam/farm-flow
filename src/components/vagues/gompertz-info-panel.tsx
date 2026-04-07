@@ -49,14 +49,15 @@ function confidenceBadgeVariant(
   return "default";
 }
 
-function confidenceBadgeLabel(level: string): string {
-  const map: Record<string, string> = {
-    HIGH: "Haute fiabilite",
-    MEDIUM: "Fiabilite moyenne",
-    LOW: "Faible fiabilite",
-    INSUFFICIENT_DATA: "Donnees insuffisantes",
+function useConfidenceBadgeLabel() {
+  const t = useTranslations("vagues.gompertz.confidence");
+  return (level: string): string => {
+    const knownLevels = ["HIGH", "MEDIUM", "LOW", "INSUFFICIENT_DATA"] as const;
+    if ((knownLevels as readonly string[]).includes(level)) {
+      return t(level as (typeof knownLevels)[number]);
+    }
+    return level;
   };
-  return map[level] ?? level;
 }
 
 function ecartColor(ecartPct: number): string {
@@ -90,12 +91,13 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 function StatutSection({ data }: { data: GompertzPanelData }) {
   const t = useTranslations("vagues");
+  const getConfidenceLabel = useConfidenceBadgeLabel();
   return (
     <div>
       <SectionTitle>{t("gompertz.modelStatus")}</SectionTitle>
       <div className="flex flex-wrap items-center gap-2 mb-3">
         <Badge variant={confidenceBadgeVariant(data.confidenceLevel)}>
-          {confidenceBadgeLabel(data.confidenceLevel)}
+          {getConfidenceLabel(data.confidenceLevel)}
         </Badge>
       </div>
       <dl className="space-y-2 text-sm">
@@ -341,6 +343,7 @@ interface GompertzInfoPanelProps {
 }
 
 export function GompertzInfoPanel({ data }: GompertzInfoPanelProps) {
+  const t = useTranslations("vagues.gompertz");
   return (
     <Dialog>
       {/* R5: DialogTrigger asChild */}
@@ -349,7 +352,7 @@ export function GompertzInfoPanel({ data }: GompertzInfoPanelProps) {
           variant="ghost"
           size="sm"
           className="h-7 w-7 shrink-0"
-          aria-label="Détails du modèle Gompertz"
+          aria-label={t("ariaLabelDetails")}
         >
           <Info className="h-4 w-4" />
               </Button>

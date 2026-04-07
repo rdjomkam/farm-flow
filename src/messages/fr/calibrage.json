@@ -96,7 +96,12 @@
   "modifications": {
     "title": "Historique des modifications",
     "before": "Avant :",
-    "after": "Apres :"
+    "after": "Apres :",
+    "fields": {
+      "nombreMorts": "Nombre de morts",
+      "notes": "Notes",
+      "groupes": "Groupes de redistribution"
+    }
   },
   "detail": {
     "title": "Calibrage",

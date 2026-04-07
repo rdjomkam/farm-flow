@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -13,10 +14,10 @@ export default async function DepensesPage() {
   if (!session.activeSiteId) redirect("/settings/sites");
 
   try {
-    const permissions = await checkPagePermission(
-      session,
-      Permission.DEPENSES_VOIR
-    );
+    const [t, permissions] = await Promise.all([
+      getTranslations("depenses"),
+      checkPagePermission(session, Permission.DEPENSES_VOIR),
+    ]);
     if (!permissions) return <AccessDenied />;
 
     const [depenses, templatesActifs] = await Promise.all([
@@ -29,7 +30,7 @@ export default async function DepensesPage() {
 
     return (
       <>
-        <Header title="Depenses" />
+        <Header title={t("page.title")} />
         <DepensesListClient
           depenses={JSON.parse(JSON.stringify(depenses.data))}
           canManage={canManage}

@@ -154,7 +154,7 @@ export function RegleCard({ regle, onToggle, isToggling, canManage, canManageGlo
             type="button"
             role="switch"
             aria-checked={regle.isActive}
-            aria-label={regle.isActive ? "Desactiver la regle" : "Activer la regle"}
+            aria-label={regle.isActive ? t("rules.card.toggleDeactivate") : t("rules.card.toggleActivate")}
             disabled={isToggling}
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggle(regle.id); }}
             className={[

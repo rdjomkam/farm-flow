@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Bell } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { NotificationsListClient } from "@/components/alertes/notifications-list-client";
@@ -13,14 +14,17 @@ export default async function NotificationsPage() {
   if (!session.activeSiteId) redirect("/settings/sites");
 
   try {
-    const permissions = await checkPagePermission(session, Permission.ALERTES_VOIR);
+    const [t, permissions] = await Promise.all([
+      getTranslations("alertes"),
+      checkPagePermission(session, Permission.ALERTES_VOIR),
+    ]);
     if (!permissions) return <AccessDenied />;
 
     const notifications = await getNotifications(session.activeSiteId, session.userId);
 
     return (
       <>
-        <Header title="Notifications">
+        <Header title={t("page.title")}>
           <Bell className="h-5 w-5 text-muted-foreground" />
         </Header>
         <div className="p-4">

@@ -5,15 +5,7 @@ import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Scissors, Fish, AlertTriangle } from "lucide-react";
-import { CategorieCalibrage } from "@/types";
 import type { CalibrageWithRelations } from "@/types";
-
-const categorieLabels: Record<CategorieCalibrage, string> = {
-  [CategorieCalibrage.PETIT]: "Petit",
-  [CategorieCalibrage.MOYEN]: "Moyen",
-  [CategorieCalibrage.GROS]: "Gros",
-  [CategorieCalibrage.TRES_GROS]: "Tres gros",
-};
 
 interface CalibrageCardProps {
   calibrage: CalibrageWithRelations;
@@ -56,7 +48,7 @@ export function CalibrageCard({ calibrage }: CalibrageCardProps) {
           <div className="flex flex-wrap gap-1 mb-2">
             {calibrage.groupes.map((g, i) => (
               <Badge key={i} variant="default">
-                {categorieLabels[g.categorie as CategorieCalibrage] ??
+                {t(`categories.${g.categorie}` as Parameters<typeof t>[0]) ??
                   g.categorie}
                 : {g.nombrePoissons}
               </Badge>

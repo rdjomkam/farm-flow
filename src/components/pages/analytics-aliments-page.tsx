@@ -103,7 +103,7 @@ export default async function AnalyticsAlimentsPage({
 
   return (
     <>
-      <Header title="Analytiques aliments" />
+      <Header title={tAnalytics("page.alimAnalytics")} />
       <div className="flex flex-col gap-4 p-4">
         {/* FC.9 — Alertes DLC */}
         <AlerteDLC expires={dlcData.expires} expiringSoon={dlcData.expiringSoon} />

@@ -25,13 +25,17 @@ const fmtDate = (d: Date | string) =>
   new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
 
 function ConfidenceBadge({ level }: { level: string }) {
-  const config: Record<string, { label: string; className: string }> = {
-    HIGH: { label: "Confiance haute", className: "bg-emerald-100 text-emerald-700" },
-    MEDIUM: { label: "Confiance moyenne", className: "bg-amber-100 text-amber-700" },
-    LOW: { label: "Confiance faible", className: "bg-orange-100 text-orange-700" },
-    INSUFFICIENT_DATA: { label: "Donnees insuffisantes", className: "bg-gray-100 text-gray-600" },
+  const t = useTranslations("analytics.fcrTrace.confidence");
+  const classNames: Record<string, string> = {
+    HIGH: "bg-emerald-100 text-emerald-700",
+    MEDIUM: "bg-amber-100 text-amber-700",
+    LOW: "bg-orange-100 text-orange-700",
+    INSUFFICIENT_DATA: "bg-gray-100 text-gray-600",
   };
-  const { label, className } = config[level] ?? config.LOW;
+  const className = classNames[level] ?? classNames.LOW;
+  const label = (["HIGH", "MEDIUM", "LOW", "INSUFFICIENT_DATA"] as const).includes(level as "HIGH" | "MEDIUM" | "LOW" | "INSUFFICIENT_DATA")
+    ? t(level as "HIGH" | "MEDIUM" | "LOW" | "INSUFFICIENT_DATA")
+    : level;
   return (
     <span className={cn("inline-block rounded-full px-1.5 py-0.5 text-[10px] font-semibold", className)}>
       {label}
@@ -40,10 +44,11 @@ function ConfidenceBadge({ level }: { level: string }) {
 }
 
 function FlagBadge({ type }: { type: "LOW_CONFIDENCE" | "HIGH_FCR" | "INSUFFICIENT_DATA" }) {
+  const t = useTranslations("analytics.fcrTrace.confidence");
   const configs = {
     LOW_CONFIDENCE: { label: "R² < 0.85", className: "bg-amber-100 text-amber-700" },
     HIGH_FCR: { label: "ICA > 3.0", className: "bg-red-100 text-red-700" },
-    INSUFFICIENT_DATA: { label: "Donnees insuffisantes", className: "bg-gray-100 text-gray-600" },
+    INSUFFICIENT_DATA: { label: t("INSUFFICIENT_DATA"), className: "bg-gray-100 text-gray-600" },
   };
   const { label, className } = configs[type];
   return (
@@ -82,6 +87,7 @@ function PopMethodeBadge({ methode }: { methode: string }) {
 // ---------------------------------------------------------------------------
 
 function PeriodeBacRow({ periode }: { periode: FCRBacPeriode }) {
+  const t = useTranslations("analytics.fcrTrace");
   const title = `${periode.bacNom} · ${fmtDate(periode.dateDebut)} → ${fmtDate(periode.dateFin)} (${periode.dureeJours}j)`;
 
   return (
@@ -102,9 +108,9 @@ function PeriodeBacRow({ periode }: { periode: FCRBacPeriode }) {
       <div className="px-3 py-2 space-y-2.5 text-xs">
         {/* Row 1: Feed + Biomass gain */}
         <div className="grid grid-cols-2 gap-2">
-          <LabelValue label="Aliment consomme" value={`${fmt(periode.qtyAlimentKg)} kg`} />
+          <LabelValue label={t("feedConsumed")} value={`${fmt(periode.qtyAlimentKg)} kg`} />
           <LabelValue
-            label="Gain biomasse"
+            label={t("biomassGain")}
             value={periode.gainBiomasseKg > 0 ? `+${fmt(periode.gainBiomasseKg)} kg` : "—"}
           />
         </div>
@@ -134,7 +140,7 @@ function PeriodeBacRow({ periode }: { periode: FCRBacPeriode }) {
         <div className="grid grid-cols-2 gap-2">
           <LabelValue label="Gain / poisson" value={`${fmt(periode.gainParPoissonG, 2)} g`} />
           <LabelValue
-            label="Biomasse gain"
+            label={t("biomassGain")}
             value={`${fmt(periode.gainParPoissonG, 2)}g × ${fmtInt(periode.avgFishCount)} / 1000 = ${fmt(periode.gainBiomasseKg)}`}
             mono
           />
@@ -195,6 +201,7 @@ function GompertzSection({ gompertz }: { gompertz: FCRByFeedVague["gompertz"] })
 // ---------------------------------------------------------------------------
 
 function VagueSection({ vague, defaultOpen }: { vague: FCRByFeedVague; defaultOpen?: boolean }) {
+  const t = useTranslations("analytics.fcrTrace");
   const periodesBac = vague.periodesBac ?? [];
 
   return (
@@ -225,9 +232,9 @@ function VagueSection({ vague, defaultOpen }: { vague: FCRByFeedVague; defaultOp
 
         {/* Vague summary */}
         <div className="grid grid-cols-2 gap-2 text-xs">
-          <LabelValue label="Aliment total" value={`${fmt(vague.totalAlimentKg)} kg`} />
+          <LabelValue label={t("totalFeed")} value={`${fmt(vague.totalAlimentKg)} kg`} />
           <LabelValue
-            label="Gain biomasse total"
+            label={t("biomassGainTotal")}
             value={vague.totalGainBiomasseKg > 0 ? `+${fmt(vague.totalGainBiomasseKg)} kg` : "—"}
           />
         </div>
@@ -250,7 +257,7 @@ function VagueSection({ vague, defaultOpen }: { vague: FCRByFeedVague; defaultOp
 
         {/* Per-bac periods */}
         {periodesBac.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Aucune periode de consommation trouvee.</p>
+          <p className="text-xs text-muted-foreground">{t("noPeriods")}</p>
         ) : (
           <div className="space-y-2">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-semibold flex items-center gap-1">
@@ -328,6 +335,7 @@ function AggregationSection({
 // ---------------------------------------------------------------------------
 
 function FCRByFeedContent({ data }: { data: FCRByFeedResult }) {
+  const t = useTranslations("analytics.fcrTrace");
   return (
     <div className="space-y-4">
       {/* Summary bar */}
@@ -359,7 +367,7 @@ function FCRByFeedContent({ data }: { data: FCRByFeedResult }) {
 
       {/* Per-vague sections */}
       {data.parVague.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-4 text-center">Aucune donnee disponible.</p>
+        <p className="text-sm text-muted-foreground py-4 text-center">{t("noData")}</p>
       ) : (
         <div className="space-y-3">
           {data.parVague.map((vague, idx) => (
@@ -376,6 +384,7 @@ function FCRByFeedContent({ data }: { data: FCRByFeedResult }) {
 // ---------------------------------------------------------------------------
 
 function FCRByFeedContentLazy({ produitId }: { produitId: string }) {
+  const t = useTranslations("analytics.fcrTrace");
   const [data, setData] = useState<FCRByFeedResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -389,11 +398,11 @@ function FCRByFeedContentLazy({ produitId }: { produitId: string }) {
       const json: FCRByFeedResult = await res.json();
       setData(json);
     } catch {
-      setError("Erreur lors du chargement des donnees ICA. Veuillez reessayer.");
+      setError(t("error"));
     } finally {
       setLoading(false);
     }
-  }, [produitId]);
+  }, [produitId, t]);
 
   useEffect(() => {
     loadData();
@@ -403,7 +412,7 @@ function FCRByFeedContentLazy({ produitId }: { produitId: string }) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">Calcul en cours...</p>
+        <p className="text-sm text-muted-foreground">{t("loading")}</p>
       </div>
     );
   }
@@ -414,7 +423,7 @@ function FCRByFeedContentLazy({ produitId }: { produitId: string }) {
         <p className="text-sm text-muted-foreground text-center">{error}</p>
         <Button variant="outline" size="sm" onClick={loadData}>
           <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-          Reessayer
+          {t("retry")}
         </Button>
       </div>
     );
@@ -422,7 +431,7 @@ function FCRByFeedContentLazy({ produitId }: { produitId: string }) {
 
   if (!data) {
     return (
-      <p className="text-sm text-muted-foreground py-8 text-center">Aucune donnee disponible.</p>
+      <p className="text-sm text-muted-foreground py-8 text-center">{t("noData")}</p>
     );
   }
 

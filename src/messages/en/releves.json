@@ -297,6 +297,7 @@
       "titre": "Filters",
       "effacer": "Clear all",
       "appliquer": "Apply ({count} active)",
+      "appliquerSimple": "Apply",
       "vague": "Batch",
       "toutesVagues": "All batches",
       "bac": "Tank",
@@ -305,19 +306,48 @@
       "tousTyes": "All types",
       "du": "From",
       "au": "To",
-      "modifie": "Modified records only"
+      "modifie": "Modified records only",
+      "toutesCauses": "All causes",
+      "tousProduits": "All products",
+      "toutesMethodes": "All methods",
+      "periode": "Period",
+      "produitAlimentaire": "Feed product",
+      "rechercheDescription": "Search in description",
+      "filtresSpecifiques": "{type} filters",
+      "frequenceAlimentation": "Feeding frequency",
+      "poidsMoyen": "Average weight",
+      "tailleMoyenne": "Average length",
+      "nombreMorts": "Number of deaths",
+      "pourcentageRenouvele": "Percentage renewed",
+      "temperature": "Temperature"
     },
     "resultats": "{count} records found",
     "chargerPlus": "Load {count} more",
     "restants": "({count} remaining)",
     "filtresActifs": {
       "vague": "Batch: {code}",
+      "vagueFiltered": "Batch filtered",
       "bac": "Tank: {nom}",
+      "bacFiltered": "Tank filtered",
       "periode": {
         "du": "From {date}",
         "au": "→ {date}"
       },
-      "modifie": "Modified only"
+      "modifie": "Modified only",
+      "poids": "Weight",
+      "taille": "Length",
+      "cause": "Cause",
+      "morts": "Deaths",
+      "aliment": "Feed",
+      "comportement": "Behavior",
+      "frequence": "Frequency",
+      "frequenceUnit": "times/d",
+      "produit": "Product",
+      "produitFiltered": "Product filtered",
+      "temperature": "Temp",
+      "methode": "Method",
+      "recherche": "Search",
+      "renouvellement": "Renewal"
     }
   }
 }

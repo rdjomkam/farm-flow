@@ -1,6 +1,7 @@
 "use client";
 
 import { Users, Package, HeartPulse, AlertTriangle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { KPICard } from "@/components/ui/kpi-card";
 import type { IngenieurDashboardMetrics } from "@/lib/queries/ingenieur";
 
@@ -9,27 +10,29 @@ interface DashboardStatsProps {
 }
 
 export function DashboardStats({ metrics }: DashboardStatsProps) {
+  const t = useTranslations("ingenieur");
+
   const stats = [
     {
-      title: "Clients actives",
+      title: t("stats.clientsActives"),
       value: String(metrics.totalClientsActives),
-      subtitle: "sites suivis",
+      subtitle: t("stats.clientsActivesSubtitle"),
       icon: Users,
       iconColor: "text-primary",
       iconBgColor: "bg-primary/10",
     },
     {
-      title: "Packs actifs",
+      title: t("stats.packsActifs"),
       value: String(metrics.packsActifs),
-      subtitle: "activations",
+      subtitle: t("stats.packsActifsSubtitle"),
       icon: Package,
       iconColor: "text-accent-blue",
       iconBgColor: "bg-accent-blue-muted",
     },
     {
-      title: "Survie moyenne",
+      title: t("stats.survieMoyenne"),
       value: metrics.survieMoyenne !== null ? `${metrics.survieMoyenne}%` : "—",
-      subtitle: "toutes vagues",
+      subtitle: t("stats.survieMoyenneSubtitle"),
       icon: HeartPulse,
       iconColor:
         metrics.survieMoyenne === null
@@ -49,9 +52,11 @@ export function DashboardStats({ metrics }: DashboardStatsProps) {
           : "bg-danger/10",
     },
     {
-      title: "Fermes en alerte",
+      title: t("stats.fermesEnAlerte"),
       value: String(metrics.fermesNecessitantAttention),
-      subtitle: metrics.fermesNecessitantAttention > 0 ? "necessitent attention" : "tout va bien",
+      subtitle: metrics.fermesNecessitantAttention > 0
+        ? t("stats.necessitentAttention")
+        : t("stats.toutVaBien"),
       icon: AlertTriangle,
       iconColor: metrics.fermesNecessitantAttention > 0 ? "text-danger" : "text-success",
       iconBgColor:
