@@ -25,6 +25,8 @@ enum TypeReleve {
   COMPTAGE
   OBSERVATION
   RENOUVELLEMENT
+  /** Tri des poissons par taille dans un bac — Sprint Reproduction R1 */
+  TRI
 }
 
 enum TypeAliment {
@@ -244,6 +246,16 @@ enum TypeAlerte {
   ABONNEMENT_RAPPEL_RENOUVELLEMENT
   /** Notification envoyee quand un essai gratuit expire — Sprint 49 */
   ABONNEMENT_ESSAI_EXPIRE
+  /** Nombre de males reproducteurs actifs insuffisant — Sprint R1 */
+  MALES_STOCK_BAS
+  /** Femelle sollicitee trop frequemment (risque d'epuisement) — Sprint R1 */
+  FEMELLE_SUREXPLOITEE
+  /** Taux de consanguinite estime elevee entre geniteurs — Sprint R1 */
+  CONSANGUINITE_RISQUE
+  /** Alerte pendant la phase d'incubation/eclosion d'un lot — Sprint R1 */
+  INCUBATION_ECLOSION
+  /** Taux de survie d'un lot d'alevins sous le seuil critique — Sprint R1 */
+  TAUX_SURVIE_CRITIQUE_LOT
 }
 
 enum StatutAlerte {
@@ -440,7 +452,11 @@ enum SexeReproducteur {
 
 enum StatutReproducteur {
   ACTIF
+  /** Reproducteur en periode de repos physiologique — Sprint R1 */
+  EN_REPOS
   REFORME
+  /** Reproducteur sacrifie pour extraction de sperme ou autopsy — Sprint R1 */
+  SACRIFIE
   MORT
 }
 
@@ -485,6 +501,106 @@ enum ComportementAlimentaire {
   NORMAL
   FAIBLE
   REFUSE
+}
+
+// ──────────────────────────────────────────
+// Enums — Module Reproduction (R1-S1)
+// ──────────────────────────────────────────
+
+enum ModeGestionGeniteur {
+  GROUPE
+  INDIVIDUEL
+}
+
+enum GenerationGeniteur {
+  G0_SAUVAGE
+  G1
+  G2
+  G3_PLUS
+  INCONNUE
+}
+
+enum SourcingGeniteur {
+  PROPRE_PRODUCTION
+  ACHAT_FERMIER
+  SAUVAGE
+  STATION_RECHERCHE
+}
+
+enum TypeHormone {
+  OVAPRIM
+  OVATIDE
+  HCG
+  HYPOPHYSE_SILURE
+  HYPOPHYSE_CARPE
+  HYPOPHYSE_TILAPIA
+  LHRH_A
+  AUTRE
+}
+
+enum QualiteOeufs {
+  EXCELLENTE
+  BONNE
+  MOYENNE
+  MAUVAISE
+  NON_EVALUEE
+}
+
+enum MethodeExtractionMale {
+  SACRIFICE
+  CHIRURGICALE
+}
+
+enum MotiliteSperme {
+  OK
+  KO
+  NON_TESTE
+}
+
+enum CauseEchecPonte {
+  STRIPPING_TROP_PRECOCE
+  STRIPPING_TROP_TARDIF
+  SPERME_NON_VIABLE
+  CONTAMINATION_EAU
+  FEMELLE_NON_MATURE
+  HORMONE_INSUFFISANTE
+  TEMPERATURE_INADAPTEE
+  MANIPULATION_EXCESSIVE
+  AUTRE
+}
+
+enum SubstratIncubation {
+  RACINES_PISTIA
+  JACINTHES_EAU
+  PLATEAU_PERFORE
+  EPONGE_PONTE
+  BROSSES_FLOTTANTES
+  KAKABAN
+  FOND_BETON
+  AUTRE
+}
+
+enum StatutIncubation {
+  EN_COURS
+  ECLOSION_EN_COURS
+  TERMINEE
+  ECHOUEE
+}
+
+enum PhaseLot {
+  INCUBATION
+  LARVAIRE
+  NURSERIE
+  ALEVINAGE
+  SORTI
+  PERDU
+}
+
+enum DestinationLot {
+  VENTE_ALEVINS
+  TRANSFERT_GROSSISSEMENT
+  TRANSFERT_INTERNE
+  REFORMAGE
 }
 
 // ──────────────────────────────────────────
@@ -557,6 +673,10 @@ model Site {
   idempotencyRecords     IdempotencyRecord[]
   // ADR-043 — Historique des assignations (Phase 2)
   assignationsBac        AssignationBac[]
+  // R1-S3 — Module Reproduction : lots géniteurs, incubations, traitements
+  lotGeniteurs           LotGeniteurs[]
+  incubations            Incubation[]
+  traitementsIncubation  TraitementIncubation[]
   // ADR-020 — Subscription refactoring
   /**
    * Propriétaire du site — administrateur principal responsable de l'abonnement.
@@ -984,6 +1104,10 @@ model Bac {
   calibrageGroupesDst CalibrageGroupe[] @relation("GroupeDestBac")
   // ADR-043 — Historique des assignations (Phase 2)
   assignations        AssignationBac[]
+  // R1-S3 — Lots géniteurs hébergés dans ce bac
+  lotGeniteurs        LotGeniteurs[]
+  // R1-S4 — Reproducteurs individuels hébergés dans ce bac
+  reproducteurs       Reproducteur[]
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
@@ -1146,6 +1270,10 @@ model Releve {
   modifie       Boolean              @default(false)
   modifications ReleveModification[]
 
+  // R1-S4 — Lien optionnel vers un lot d'alevins (relevé de suivi alevinage)
+  lotAlevinsId String?
+  lotAlevins   LotAlevins? @relation(fields: [lotAlevinsId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1154,6 +1282,7 @@ model Releve {
   @@index([date])
   @@index([calibrageId])
   @@index([siteId])
+  @@index([lotAlevinsId])
 }
 
 // ──────────────────────────────────────────
@@ -1413,73 +1542,225 @@ model Paiement {
 // ──────────────────────────────────────────
 
 model Reproducteur {
-  id              String             @id @default(cuid())
-  code            String             @unique
-  sexe            SexeReproducteur
-  poids           Float
-  age             Int?
-  origine         String?
-  statut          StatutReproducteur @default(ACTIF)
-  dateAcquisition DateTime           @default(now())
-  notes           String?
-  siteId          String
-  site            Site               @relation(fields: [siteId], references: [id])
-  pontesAsFemelle Ponte[]            @relation("PonteFemelle")
-  pontesAsMale    Ponte[]            @relation("PonteMale")
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  id                String              @id @default(cuid())
+  code              String              @unique
+  sexe              SexeReproducteur
+  poids             Float
+  age               Int?
+  origine           String?
+  statut            StatutReproducteur  @default(ACTIF)
+  dateAcquisition   DateTime            @default(now())
+  notes             String?
+  // R1-S4 — Champs étendus
+  modeGestion       ModeGestionGeniteur @default(INDIVIDUEL)
+  photo             String?
+  pitTag            String?
+  nombrePontesTotal Int                 @default(0)
+  dernierePonte     DateTime?
+  tempsReposJours   Int?
+  generation        GenerationGeniteur  @default(INCONNUE)
+  sourcing          SourcingGeniteur    @default(ACHAT_FERMIER)
+  bacId             String?
+  bac               Bac?                @relation(fields: [bacId], references: [id])
+  siteId            String
+  site              Site                @relation(fields: [siteId], references: [id])
+  pontesAsFemelle   Ponte[]             @relation("PonteFemelle")
+  pontesAsMale      Ponte[]             @relation("PonteMale")
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 
   @@index([siteId])
   @@index([siteId, statut])
+  @@index([bacId])
 }
 
 model Ponte {
-  id              String        @id @default(cuid())
-  code            String        @unique
-  femelleId       String
-  femelle         Reproducteur  @relation("PonteFemelle", fields: [femelleId], references: [id])
-  maleId          String?
-  male            Reproducteur? @relation("PonteMale", fields: [maleId], references: [id])
-  datePonte       DateTime
-  nombreOeufs     Int?
-  tauxFecondation Float?
-  statut          StatutPonte   @default(EN_COURS)
-  notes           String?
-  siteId          String
-  site            Site          @relation(fields: [siteId], references: [id])
-  lots            LotAlevins[]
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                    String                 @id @default(cuid())
+  code                  String                 @unique
+  femelleId             String
+  femelle               Reproducteur           @relation("PonteFemelle", fields: [femelleId], references: [id])
+  maleId                String?
+  male                  Reproducteur?          @relation("PonteMale", fields: [maleId], references: [id])
+  datePonte             DateTime
+  nombreOeufs           Int?
+  tauxFecondation       Float?
+  statut                StatutPonte            @default(EN_COURS)
+  notes                 String?
+  // R1-S4 — Champs étendus
+  typeHormone           TypeHormone?
+  doseHormone           Float?
+  doseMgKg              Float?
+  coutHormone           Float?
+  heureInjection        DateTime?
+  temperatureEauC       Float?
+  latenceTheorique      Int?
+  heureStripping        DateTime?
+  poidsOeufsPontesG     Float?
+  nombreOeufsEstime     Int?
+  qualiteOeufs          QualiteOeufs?
+  methodeMale           MethodeExtractionMale?
+  motiliteSperme        MotiliteSperme?
+  tauxEclosion          Float?
+  nombreLarvesViables   Int?
+  coutTotal             Float?
+  causeEchec            CauseEchecPonte?
+  siteId                String
+  site                  Site                   @relation(fields: [siteId], references: [id])
+  lots                  LotAlevins[]
+  /** FK vers le groupe de femelles geniteurs (LotGeniteurs) — R1-S3 */
+  lotGeniteursFemellId  String?
+  lotGeniteursFemelle   LotGeniteurs?          @relation("PonteGroupeFemelle", fields: [lotGeniteursFemellId], references: [id])
+  /** FK vers le groupe de males geniteurs (LotGeniteurs) — R1-S3 */
+  lotGeniteursMaleId    String?
+  lotGeniteursMale      LotGeniteurs?          @relation("PonteGroupeMale", fields: [lotGeniteursMaleId], references: [id])
+  incubations           Incubation[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
 
   @@index([siteId])
   @@index([femelleId])
   @@index([siteId, statut])
+  @@index([lotGeniteursFemellId])
+  @@index([lotGeniteursMaleId])
 }
 
 model LotAlevins {
-  id                 String           @id @default(cuid())
-  code               String           @unique
-  ponteId            String
-  ponte              Ponte            @relation(fields: [ponteId], references: [id])
-  nombreInitial      Int
-  nombreActuel       Int
-  ageJours           Int              @default(0)
-  poidsMoyen         Float?
-  statut             StatutLotAlevins @default(EN_INCUBATION)
-  bacId              String?
-  bac                Bac?             @relation(fields: [bacId], references: [id])
-  vagueDestinationId String?
-  vagueDestination   Vague?           @relation(fields: [vagueDestinationId], references: [id])
-  dateTransfert      DateTime?
-  notes              String?
-  siteId             String
-  site               Site             @relation(fields: [siteId], references: [id])
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
+  id                    String           @id @default(cuid())
+  code                  String           @unique
+  ponteId               String
+  ponte                 Ponte            @relation(fields: [ponteId], references: [id])
+  nombreInitial         Int
+  nombreActuel          Int
+  ageJours              Int              @default(0)
+  poidsMoyen            Float?
+  statut                StatutLotAlevins @default(EN_INCUBATION)
+  bacId                 String?
+  bac                   Bac?             @relation(fields: [bacId], references: [id])
+  vagueDestinationId    String?
+  vagueDestination      Vague?           @relation(fields: [vagueDestinationId], references: [id])
+  dateTransfert         DateTime?
+  notes                 String?
+  /** FK vers l'incubation source — R1-S3 */
+  incubationId          String?
+  incubation            Incubation?      @relation(fields: [incubationId], references: [id])
+  // R1-S4 — Champs étendus
+  phase                 PhaseLot         @default(INCUBATION)
+  parentLotId           String?
+  parentLot             LotAlevins?      @relation("LotSplits", fields: [parentLotId], references: [id])
+  sousLots              LotAlevins[]     @relation("LotSplits")
+  dateDebutPhase        DateTime         @default(now())
+  nombreDeformesRetires Int              @default(0)
+  poidsObjectifG        Float?
+  destinationSortie     DestinationLot?
+  releves               Releve[]
+  siteId                String
+  site                  Site             @relation(fields: [siteId], references: [id])
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
 
   @@index([siteId])
   @@index([ponteId])
   @@index([siteId, statut])
+  @@index([incubationId])
+  @@index([parentLotId])
+  @@index([siteId, phase])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Module Reproduction R1-S3
+// ──────────────────────────────────────────
+
+/**
+ * LotGeniteurs — Groupe de geniteurs (males ou femelles) identifies comme unite de reproduction.
+ * Remplace la gestion individuelle du modele Reproducteur pour les sites qui gerent
+ * leurs geniteurs par lots. ADR-044 §3.2.
+ */
+model LotGeniteurs {
+  id                           String             @id @default(cuid())
+  code                         String             @unique
+  nom                          String
+  sexe                         SexeReproducteur
+  nombrePoissons               Int
+  poidsMoyenG                  Float?
+  poidsMinG                    Float?
+  poidsMaxG                    Float?
+  origine                      String?
+  sourcing                     SourcingGeniteur   @default(ACHAT_FERMIER)
+  generation                   GenerationGeniteur @default(INCONNUE)
+  dateAcquisition              DateTime           @default(now())
+  nombreMalesDisponibles       Int?
+  seuilAlerteMales             Int?
+  dateRenouvellementGenetique  DateTime?
+  bacId                        String?
+  bac                          Bac?               @relation(fields: [bacId], references: [id])
+  statut                       StatutReproducteur @default(ACTIF)
+  notes                        String?
+  siteId                       String
+  site                         Site               @relation(fields: [siteId], references: [id])
+  pontesAsFemelle              Ponte[]            @relation("PonteGroupeFemelle")
+  pontesAsMale                 Ponte[]            @relation("PonteGroupeMale")
+  createdAt                    DateTime           @default(now())
+  updatedAt                    DateTime           @updatedAt
+
+  @@index([siteId])
+  @@index([siteId, sexe])
+  @@index([siteId, statut])
+  @@index([bacId])
+}
+
+/**
+ * Incubation — Suivi d'une phase d'incubation des oeufs issus d'une ponte.
+ * Un enregistrement par cuvette/bac d'incubation. ADR-044 §3.4.
+ */
+model Incubation {
+  id                    String             @id @default(cuid())
+  code                  String             @unique
+  ponteId               String
+  ponte                 Ponte              @relation(fields: [ponteId], references: [id])
+  substrat              SubstratIncubation @default(RACINES_PISTIA)
+  temperatureEauC       Float?
+  dureeIncubationH      Int?
+  dateDebutIncubation   DateTime           @default(now())
+  dateEclosionPrevue    DateTime?
+  dateEclosionReelle    DateTime?
+  nombreOeufsPlaces     Int?
+  nombreLarvesEcloses   Int?
+  tauxEclosion          Float?
+  nombreDeformes        Int?
+  nombreLarvesViables   Int?
+  notesRetrait          String?
+  statut                StatutIncubation   @default(EN_COURS)
+  notes                 String?
+  siteId                String
+  site                  Site               @relation(fields: [siteId], references: [id])
+  traitements           TraitementIncubation[]
+  lotAlevins            LotAlevins[]
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  @@index([siteId])
+  @@index([ponteId])
+}
+
+/**
+ * TraitementIncubation — Traitement antifongique ou parasiticide applique pendant l'incubation.
+ * Cascade delete avec Incubation parent. ADR-044 §3.5.
+ */
+model TraitementIncubation {
+  id            String     @id @default(cuid())
+  incubationId  String
+  incubation    Incubation @relation(fields: [incubationId], references: [id], onDelete: Cascade)
+  produit       String
+  concentration String
+  dureeMinutes  Int
+  heure         DateTime   @default(now())
+  notes         String?
+  siteId        String
+  site          Site       @relation(fields: [siteId], references: [id])
+  createdAt     DateTime   @default(now())
+
+  @@index([incubationId])
+  @@index([siteId])
 }
 
 // ──────────────────────────────────────────

@@ -17,6 +17,7 @@
   "items": {
     "dashboard": "Dashboard",
     "reproducteurs": "Breeders",
+    "geniteurs": "Breeders",
     "pontes": "Spawnings",
     "lotsAlevins": "Fingerling batches",
     "lots": "Batches",

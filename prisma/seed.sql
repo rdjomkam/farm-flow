@@ -36,7 +36,10 @@ DELETE FROM "Pack";
 DELETE FROM "ConfigElevage";
 DELETE FROM "Produit";
 DELETE FROM "Fournisseur";
+DELETE FROM "TraitementIncubation";
 DELETE FROM "LotAlevins";
+DELETE FROM "Incubation";
+DELETE FROM "LotGeniteurs";
 DELETE FROM "Ponte";
 DELETE FROM "Reproducteur";
 DELETE FROM "Releve";
@@ -2658,6 +2661,293 @@ DELETE FROM "FeatureFlag";
 INSERT INTO "FeatureFlag" ("key", "enabled", "updatedAt")
 VALUES ('MAINTENANCE_MODE', false, NOW())
 ON CONFLICT ("key") DO NOTHING;
+
+-- ──────────────────────────────────────────────────────────────────────────────
+-- Module Reproduction R1-S5 — Données de test étendues
+-- ──────────────────────────────────────────────────────────────────────────────
+
+-- ──────────────────────────────────────────
+-- R1-S4 — Enrichissement Reproducteur (modeGestion, generation, sourcing)
+-- ──────────────────────────────────────────
+
+-- rep_01 : Femelle de l'écloserie nationale — G1, gestion individuelle
+UPDATE "Reproducteur" SET
+  "modeGestion"       = 'INDIVIDUEL'::"ModeGestionGeniteur",
+  "generation"        = 'G1'::"GenerationGeniteur",
+  "sourcing"          = 'STATION_RECHERCHE'::"SourcingGeniteur",
+  "nombrePontesTotal" = 3,
+  "dernierePonte"     = '2026-02-20 00:00:00'::timestamp,
+  "tempsReposJours"   = 30,
+  "pitTag"            = 'PT-F-001',
+  "updatedAt"         = NOW()
+WHERE id = 'rep_01';
+
+-- rep_02 : Femelle de Mbalmayo — G0 sauvage, gestion individuelle
+UPDATE "Reproducteur" SET
+  "modeGestion"       = 'INDIVIDUEL'::"ModeGestionGeniteur",
+  "generation"        = 'G0_SAUVAGE'::"GenerationGeniteur",
+  "sourcing"          = 'ACHAT_FERMIER'::"SourcingGeniteur",
+  "nombrePontesTotal" = 1,
+  "dernierePonte"     = '2026-02-20 00:00:00'::timestamp,
+  "tempsReposJours"   = 45,
+  "pitTag"            = 'PT-F-002',
+  "updatedAt"         = NOW()
+WHERE id = 'rep_02';
+
+-- rep_03 : Mâle dominant de l'écloserie nationale — G1, gestion individuelle
+UPDATE "Reproducteur" SET
+  "modeGestion"       = 'INDIVIDUEL'::"ModeGestionGeniteur",
+  "generation"        = 'G1'::"GenerationGeniteur",
+  "sourcing"          = 'STATION_RECHERCHE'::"SourcingGeniteur",
+  "nombrePontesTotal" = 4,
+  "dernierePonte"     = '2026-02-20 00:00:00'::timestamp,
+  "tempsReposJours"   = 14,
+  "pitTag"            = 'PT-M-001',
+  "updatedAt"         = NOW()
+WHERE id = 'rep_03';
+
+-- rep_04 : Mâle réformé — stock interne, génération inconnue
+UPDATE "Reproducteur" SET
+  "modeGestion"       = 'INDIVIDUEL'::"ModeGestionGeniteur",
+  "generation"        = 'INCONNUE'::"GenerationGeniteur",
+  "sourcing"          = 'PROPRE_PRODUCTION'::"SourcingGeniteur",
+  "nombrePontesTotal" = 0,
+  "tempsReposJours"   = NULL,
+  "updatedAt"         = NOW()
+WHERE id = 'rep_04';
+
+-- ──────────────────────────────────────────
+-- R1-S4 — Enrichissement Ponte (typeHormone, qualiteOeufs, méthode mâle, etc.)
+-- ──────────────────────────────────────────
+
+-- pon_01 : Ponte réussie — Ovaprim, sperme frais par sacrifice partiel
+UPDATE "Ponte" SET
+  "typeHormone"         = 'OVAPRIM'::"TypeHormone",
+  "doseHormone"         = 0.5,
+  "doseMgKg"            = 0.4,
+  "coutHormone"         = 12500.0,
+  "heureInjection"      = '2025-11-10 06:00:00'::timestamp,
+  "temperatureEauC"     = 28.0,
+  "latenceTheorique"    = 10,
+  "heureStripping"      = '2025-11-10 16:30:00'::timestamp,
+  "poidsOeufsPontesG"   = 180.0,
+  "nombreOeufsEstime"   = 4500,
+  "qualiteOeufs"        = 'EXCELLENTE'::"QualiteOeufs",
+  "methodeMale"         = 'CHIRURGICALE'::"MethodeExtractionMale",
+  "motiliteSperme"      = 'OK'::"MotiliteSperme",
+  "tauxEclosion"        = 78.5,
+  "nombreLarvesViables" = 3150,
+  "coutTotal"           = 18000.0,
+  "updatedAt"           = NOW()
+WHERE id = 'pon_01';
+
+-- pon_02 : Ponte en cours — Ovaprim, évaluation en cours
+UPDATE "Ponte" SET
+  "typeHormone"         = 'OVAPRIM'::"TypeHormone",
+  "doseHormone"         = 0.5,
+  "doseMgKg"            = 0.4,
+  "coutHormone"         = 12500.0,
+  "heureInjection"      = '2026-02-20 07:00:00'::timestamp,
+  "temperatureEauC"     = 27.5,
+  "latenceTheorique"    = 10,
+  "heureStripping"      = '2026-02-20 17:00:00'::timestamp,
+  "poidsOeufsPontesG"   = 145.0,
+  "nombreOeufsEstime"   = 3800,
+  "qualiteOeufs"        = 'BONNE'::"QualiteOeufs",
+  "methodeMale"         = 'CHIRURGICALE'::"MethodeExtractionMale",
+  "motiliteSperme"      = 'OK'::"MotiliteSperme",
+  "coutTotal"           = 18000.0,
+  "updatedAt"           = NOW()
+WHERE id = 'pon_02';
+
+-- pon_03 : Ponte échouée — sans hormone, sperme non testé
+UPDATE "Ponte" SET
+  "typeHormone"     = NULL,
+  "qualiteOeufs"    = 'MAUVAISE'::"QualiteOeufs",
+  "motiliteSperme"  = 'NON_TESTE'::"MotiliteSperme",
+  "causeEchec"      = 'HORMONE_INSUFFISANTE'::"CauseEchecPonte",
+  "coutTotal"       = 0.0,
+  "updatedAt"       = NOW()
+WHERE id = 'pon_03';
+
+-- ──────────────────────────────────────────
+-- R1-S4 — Enrichissement LotAlevins (phase, dateDebutPhase)
+-- ──────────────────────────────────────────
+
+-- lot_01 : Lot transféré — phase SORTI (transféré en vague grossissement)
+UPDATE "LotAlevins" SET
+  "phase"                  = 'SORTI'::"PhaseLot",
+  "dateDebutPhase"         = '2025-10-01 00:00:00'::timestamp,
+  "nombreDeformesRetires"  = 48,
+  "poidsObjectifG"         = 800.0,
+  "destinationSortie"      = 'TRANSFERT_GROSSISSEMENT'::"DestinationLot",
+  "updatedAt"              = NOW()
+WHERE id = 'lot_01';
+
+-- lot_02 : Lot en élevage — phase NURSERIE (post-larvaire, bac_03)
+UPDATE "LotAlevins" SET
+  "phase"          = 'NURSERIE'::"PhaseLot",
+  "dateDebutPhase" = '2026-02-26 00:00:00'::timestamp,
+  "updatedAt"      = NOW()
+WHERE id = 'lot_02';
+
+-- lot_03 : Lot encore en incubation — phase INCUBATION
+UPDATE "LotAlevins" SET
+  "phase"          = 'INCUBATION'::"PhaseLot",
+  "dateDebutPhase" = '2026-02-20 00:00:00'::timestamp,
+  "updatedAt"      = NOW()
+WHERE id = 'lot_03';
+
+-- ──────────────────────────────────────────
+-- R1-S3 — LotGeniteurs (2 : 1 groupe femelles + 1 groupe mâles)
+-- ──────────────────────────────────────────
+
+INSERT INTO "LotGeniteurs" (
+  id, code, nom, sexe,
+  "nombrePoissons", "poidsMoyenG", "poidsMinG", "poidsMaxG",
+  origine, sourcing, generation,
+  "dateAcquisition",
+  "nombreMalesDisponibles", "seuilAlerteMales",
+  "dateRenouvellementGenetique",
+  "bacId", statut, notes,
+  "siteId", "createdAt", "updatedAt"
+) VALUES
+  -- Groupe femelles génitrices — G1, écloserie nationale
+  (
+    'lotgen_01',
+    'LGF-2025-001',
+    'Groupe Femelles G1 — Lot Ecloserie Yaoundé',
+    'FEMELLE',
+    12, 1100.0, 950.0, 1350.0,
+    'Ecloserie Nationale Yaoundé — lot G1 acquis en 2024',
+    'STATION_RECHERCHE'::"SourcingGeniteur",
+    'G1'::"GenerationGeniteur",
+    '2024-09-01',
+    NULL, NULL,
+    '2027-09-01',
+    'bac_01',
+    'ACTIF'::"StatutReproducteur",
+    'Groupe de 12 femelles G1 — sélectionnées sur critères morphologiques. Taux de ponte estimé 80%. Renouvellement génétique prévu sept. 2027.',
+    'site_01', NOW(), NOW()
+  ),
+  -- Groupe mâles reproducteurs — G0 sauvages, achat fermier
+  (
+    'lotgen_02',
+    'LGM-2025-001',
+    'Groupe Mâles G0 — Lot Sauvage Mbalmayo',
+    'MALE',
+    8, 1350.0, 1100.0, 1600.0,
+    'Ferme Mbalmayo — pêche rivière Sanaga, élevage F0',
+    'SAUVAGE'::"SourcingGeniteur",
+    'G0_SAUVAGE'::"GenerationGeniteur",
+    '2025-01-15',
+    6, 3,
+    '2026-09-01',
+    'bac_02',
+    'ACTIF'::"StatutReproducteur",
+    'Lot de 8 mâles G0 sauvages — bonne diversité génétique. 2 individus en repos après ponte intensive. Seuil alerte fixé à 3 mâles disponibles.',
+    'site_01', NOW(), NOW()
+  );
+
+-- ──────────────────────────────────────────
+-- R1-S3 — Incubation (2 : 1 terminée, 1 en cours)
+-- liées aux pontes pon_01 et pon_02
+-- ──────────────────────────────────────────
+
+INSERT INTO "Incubation" (
+  id, code, "ponteId",
+  substrat, "temperatureEauC", "dureeIncubationH",
+  "dateDebutIncubation", "dateEclosionPrevue", "dateEclosionReelle",
+  "nombreOeufsPlaces", "nombreLarvesEcloses", "tauxEclosion",
+  "nombreDeformes", "nombreLarvesViables",
+  "notesRetrait", statut, notes,
+  "siteId", "createdAt", "updatedAt"
+) VALUES
+  -- incub_01 : Incubation de pon_01 — terminée avec succès
+  (
+    'incub_01',
+    'INC-2025-001',
+    'pon_01',
+    'RACINES_PISTIA'::"SubstratIncubation",
+    28.0, 22,
+    '2025-11-10 18:00:00'::timestamp,
+    '2025-11-11 16:00:00'::timestamp,
+    '2025-11-11 17:30:00'::timestamp,
+    3712,
+    2950,
+    79.5,
+    145,
+    2805,
+    'Retrait substrat 36h après éclosion — larves vigoureuses',
+    'TERMINEE'::"StatutIncubation",
+    'Incubation dans bac dédié 80L avec renouvellement eau 30%/h. Traitement antifongique préventif au bleu de méthylène J0. Résultat excellent.',
+    'site_01', NOW(), NOW()
+  ),
+  -- incub_02 : Incubation de pon_02 — en cours
+  (
+    'incub_02',
+    'INC-2026-001',
+    'pon_02',
+    'PLATEAU_PERFORE'::"SubstratIncubation",
+    27.5, 24,
+    '2026-02-20 18:00:00'::timestamp,
+    '2026-02-21 18:00:00'::timestamp,
+    NULL,
+    3750,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    'EN_COURS'::"StatutIncubation",
+    'Incubation sur plateau perforé avec aération douce. Contrôle température toutes les 4h. Traitement préventif Bleu de Méthylène appliqué J0.',
+    'site_01', NOW(), NOW()
+  );
+
+-- Lier les lots d'alevins aux incubations correspondantes
+UPDATE "LotAlevins" SET "incubationId" = 'incub_01', "updatedAt" = NOW() WHERE id = 'lot_01';
+UPDATE "LotAlevins" SET "incubationId" = 'incub_02', "updatedAt" = NOW() WHERE id = 'lot_02';
+UPDATE "LotAlevins" SET "incubationId" = 'incub_02', "updatedAt" = NOW() WHERE id = 'lot_03';
+
+-- Lier les pontes aux groupes géniteurs (gestion par groupe)
+UPDATE "Ponte" SET
+  "lotGeniteursFemellId" = 'lotgen_01',
+  "lotGeniteursMaleId"   = 'lotgen_02',
+  "updatedAt"            = NOW()
+WHERE id IN ('pon_01', 'pon_02');
+
+-- ──────────────────────────────────────────
+-- R1-S3 — TraitementIncubation (2 : 1 antifongique par incubation)
+-- ──────────────────────────────────────────
+
+INSERT INTO "TraitementIncubation" (
+  id, "incubationId",
+  produit, concentration, "dureeMinutes",
+  heure, notes,
+  "siteId", "createdAt"
+) VALUES
+  -- Traitement incub_01 — Bleu de méthylène préventif (J0 après ponte)
+  (
+    'trtinc_01',
+    'incub_01',
+    'Bleu de méthylène 1%',
+    '2 mg/L',
+    30,
+    '2025-11-10 19:00:00'::timestamp,
+    'Traitement antifongique préventif standard — appliqué 1h après mise en incubation. Aucune mortalité observée post-traitement.',
+    'site_01', NOW()
+  ),
+  -- Traitement incub_02 — Bleu de méthylène préventif (J0 après ponte)
+  (
+    'trtinc_02',
+    'incub_02',
+    'Bleu de méthylène 1%',
+    '2 mg/L',
+    30,
+    '2026-02-20 19:30:00'::timestamp,
+    'Traitement antifongique préventif standard — appliqué 1h30 après mise en incubation. Surveillance renforcée toutes les 2h les 12 premières heures.',
+    'site_01', NOW()
+  );
 
 COMMIT;
 

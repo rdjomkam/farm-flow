@@ -90,7 +90,9 @@ export function ReproducteurDetailClient({ reproducteur, permissions }: Props) {
 
   const statutLabels: Record<StatutReproducteur, string> = {
     [StatutReproducteur.ACTIF]: t("reproducteurs.statuts.ACTIF"),
+    [StatutReproducteur.EN_REPOS]: t("reproducteurs.statuts.EN_REPOS"),
     [StatutReproducteur.REFORME]: t("reproducteurs.statuts.REFORME"),
+    [StatutReproducteur.SACRIFIE]: t("reproducteurs.statuts.SACRIFIE"),
     [StatutReproducteur.MORT]: t("reproducteurs.statuts.MORT"),
   };
 

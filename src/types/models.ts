@@ -6,9 +6,11 @@
  *
  * 33 modeles : Site, SiteRole, SiteMember, User, Session, Bac, Vague, Releve, Fournisseur, Produit, MouvementStock, Commande, LigneCommande, ReleveConsommation, Client, Vente, Facture, Paiement, Reproducteur, Ponte, LotAlevins, ConfigAlerte, Notification, Activite, Depense, PaiementDepense, DepenseRecurrente, ListeBesoins, ListeBesoinsVague, LigneBesoin, RegleActivite, ConditionRegle, NoteIngenieur
  * + Sprint 30 : PlanAbonnement, Abonnement, PaiementAbonnement, Remise, RemiseApplication, CommissionIngenieur, PortefeuilleIngenieur, RetraitPortefeuille (8 modeles)
- * 36 enums : Role (+ INGENIEUR), Permission (+ 6 Phase 3), StatutVague, TypeReleve (+ RENOUVELLEMENT), TypeAliment, CauseMortalite, MethodeComptage, CategorieProduit, UniteStock, TypeMouvement, StatutCommande, StatutFacture, ModePaiement, SiteModule, SexeReproducteur, StatutReproducteur, StatutPonte, StatutLotAlevins, TypeAlerte (+ 4 density), StatutAlerte, TypeActivite (+ TRI/MEDICATION/RENOUVELLEMENT), StatutActivite, Recurrence, CategorieDepense, StatutDepense, FrequenceRecurrence, StatutBesoins, PhaseElevage, StatutActivation, TypeDeclencheur (+ 3 density), VisibiliteNote, CategorieCalibrage, TypeSystemeBac, OperateurCondition, LogiqueCondition, SeveriteAlerte
+ * + Module Reproduction R1-S3 : LotGeniteurs, Incubation, TraitementIncubation (3 modeles)
+ * 36 enums : Role (+ INGENIEUR), Permission (+ 6 Phase 3), StatutVague, TypeReleve (+ RENOUVELLEMENT + TRI), TypeAliment, CauseMortalite, MethodeComptage, CategorieProduit, UniteStock, TypeMouvement, StatutCommande, StatutFacture, ModePaiement, SiteModule, SexeReproducteur, StatutReproducteur, StatutPonte, StatutLotAlevins, TypeAlerte (+ 4 density + 5 reproduction), StatutAlerte, TypeActivite (+ TRI/MEDICATION/RENOUVELLEMENT), StatutActivite, Recurrence, CategorieDepense, StatutDepense, FrequenceRecurrence, StatutBesoins, PhaseElevage, StatutActivation, TypeDeclencheur (+ 3 density), VisibiliteNote, CategorieCalibrage, TypeSystemeBac, OperateurCondition, LogiqueCondition, SeveriteAlerte
  * + Sprint 30 : TypePlan, PeriodeFacturation, StatutAbonnement, StatutPaiementAbo, TypeRemise, StatutCommissionIng, FournisseurPaiement (7 enums) + 8 nouvelles permissions
  * + Sprint FA : TailleGranule, FormeAliment, ComportementAlimentaire (3 enums)
+ * + Module Reproduction R1-S1/S4 : ModeGestionGeniteur, GenerationGeniteur, SourcingGeniteur, TypeHormone, QualiteOeufs, MethodeExtractionMale, MotiliteSperme, CauseEchecPonte, SubstratIncubation, StatutIncubation, PhaseLot, DestinationLot (12 enums)
  */
 
 // ---------------------------------------------------------------------------
@@ -158,6 +160,8 @@ export enum TypeReleve {
   OBSERVATION = "OBSERVATION",
   /** Evenement de renouvellement d'eau d'un bac — Sprint 27-28 (ADR-density-alerts) */
   RENOUVELLEMENT = "RENOUVELLEMENT",
+  /** Tri des poissons par taille dans un bac — Sprint Reproduction R1 */
+  TRI = "TRI",
 }
 
 /** Type d'aliment distribue */
@@ -647,6 +651,9 @@ export interface Releve {
   /** ID du calibrage source (nullable — rempli si auto-cree lors d'un calibrage) */
   calibrageId?: string | null;
 
+  /** ID du lot d'alevins lie (nullable — rempli si releve de suivi alevinage, R1-S4) */
+  lotAlevinsId?: string | null;
+
   /** Bac associe (present si la query inclut le bac) */
   bac?: { id: string; nom: string } | null;
 }
@@ -1008,7 +1015,11 @@ export enum SexeReproducteur {
 /** Statut d'un reproducteur dans le cheptel */
 export enum StatutReproducteur {
   ACTIF = "ACTIF",
+  /** Reproducteur en periode de repos physiologique — Sprint R1 */
+  EN_REPOS = "EN_REPOS",
   REFORME = "REFORME",
+  /** Reproducteur sacrifie pour extraction de sperme ou autopsie — Sprint R1 */
+  SACRIFIE = "SACRIFIE",
   MORT = "MORT",
 }
 
@@ -1025,6 +1036,118 @@ export enum StatutLotAlevins {
   EN_ELEVAGE = "EN_ELEVAGE",
   TRANSFERE = "TRANSFERE",
   PERDU = "PERDU",
+}
+
+// ---------------------------------------------------------------------------
+// Enums — Module Reproduction (R1-S1)
+// ---------------------------------------------------------------------------
+
+/** Mode de gestion des geniteurs : par individu ou par lot de groupe */
+export enum ModeGestionGeniteur {
+  GROUPE = "GROUPE",
+  INDIVIDUEL = "INDIVIDUEL",
+}
+
+/** Generation genetique d'un reproducteur */
+export enum GenerationGeniteur {
+  G0_SAUVAGE = "G0_SAUVAGE",
+  G1 = "G1",
+  G2 = "G2",
+  G3_PLUS = "G3_PLUS",
+  INCONNUE = "INCONNUE",
+}
+
+/** Origine d'approvisionnement du reproducteur ou lot de geniteurs */
+export enum SourcingGeniteur {
+  PROPRE_PRODUCTION = "PROPRE_PRODUCTION",
+  ACHAT_FERMIER = "ACHAT_FERMIER",
+  SAUVAGE = "SAUVAGE",
+  STATION_RECHERCHE = "STATION_RECHERCHE",
+}
+
+/** Hormone utilisee pour l'induction de la ponte */
+export enum TypeHormone {
+  OVAPRIM = "OVAPRIM",
+  OVATIDE = "OVATIDE",
+  HCG = "HCG",
+  HYPOPHYSE_SILURE = "HYPOPHYSE_SILURE",
+  HYPOPHYSE_CARPE = "HYPOPHYSE_CARPE",
+  HYPOPHYSE_TILAPIA = "HYPOPHYSE_TILAPIA",
+  LHRH_A = "LHRH_A",
+  AUTRE = "AUTRE",
+}
+
+/** Qualite visuelle des oeufs au moment du stripping */
+export enum QualiteOeufs {
+  EXCELLENTE = "EXCELLENTE",
+  BONNE = "BONNE",
+  MOYENNE = "MOYENNE",
+  MAUVAISE = "MAUVAISE",
+  NON_EVALUEE = "NON_EVALUEE",
+}
+
+/** Methode utilisee pour extraire le sperme du male */
+export enum MethodeExtractionMale {
+  SACRIFICE = "SACRIFICE",
+  CHIRURGICALE = "CHIRURGICALE",
+}
+
+/** Qualite de la motilite du sperme teste */
+export enum MotiliteSperme {
+  OK = "OK",
+  KO = "KO",
+  NON_TESTE = "NON_TESTE",
+}
+
+/** Cause d'echec d'une ponte hormonalement induite */
+export enum CauseEchecPonte {
+  STRIPPING_TROP_PRECOCE = "STRIPPING_TROP_PRECOCE",
+  STRIPPING_TROP_TARDIF = "STRIPPING_TROP_TARDIF",
+  SPERME_NON_VIABLE = "SPERME_NON_VIABLE",
+  CONTAMINATION_EAU = "CONTAMINATION_EAU",
+  FEMELLE_NON_MATURE = "FEMELLE_NON_MATURE",
+  HORMONE_INSUFFISANTE = "HORMONE_INSUFFISANTE",
+  TEMPERATURE_INADAPTEE = "TEMPERATURE_INADAPTEE",
+  MANIPULATION_EXCESSIVE = "MANIPULATION_EXCESSIVE",
+  AUTRE = "AUTRE",
+}
+
+/** Substrat utilise dans le bac d'incubation pour fixer les oeufs */
+export enum SubstratIncubation {
+  RACINES_PISTIA = "RACINES_PISTIA",
+  JACINTHES_EAU = "JACINTHES_EAU",
+  PLATEAU_PERFORE = "PLATEAU_PERFORE",
+  EPONGE_PONTE = "EPONGE_PONTE",
+  BROSSES_FLOTTANTES = "BROSSES_FLOTTANTES",
+  KAKABAN = "KAKABAN",
+  FOND_BETON = "FOND_BETON",
+  AUTRE = "AUTRE",
+}
+
+/** Statut du cycle d'une incubation */
+export enum StatutIncubation {
+  EN_COURS = "EN_COURS",
+  ECLOSION_EN_COURS = "ECLOSION_EN_COURS",
+  TERMINEE = "TERMINEE",
+  ECHOUEE = "ECHOUEE",
+}
+
+/** Phase de developpement d'un lot d'alevins apres l'incubation */
+export enum PhaseLot {
+  INCUBATION = "INCUBATION",
+  LARVAIRE = "LARVAIRE",
+  NURSERIE = "NURSERIE",
+  ALEVINAGE = "ALEVINAGE",
+  SORTI = "SORTI",
+  PERDU = "PERDU",
+}
+
+/** Destination finale d'un lot d'alevins lors de la sortie */
+export enum DestinationLot {
+  VENTE_ALEVINS = "VENTE_ALEVINS",
+  TRANSFERT_GROSSISSEMENT = "TRANSFERT_GROSSISSEMENT",
+  TRANSFERT_INTERNE = "TRANSFERT_INTERNE",
+  REFORMAGE = "REFORMAGE",
 }
 
 // ---------------------------------------------------------------------------
@@ -1051,6 +1174,25 @@ export interface Reproducteur {
   statut: StatutReproducteur;
   dateAcquisition: Date;
   notes: string | null;
+  // R1-S4 — Champs etendus
+  /** Mode de gestion : INDIVIDUEL (defaut) ou GROUPE */
+  modeGestion: ModeGestionGeniteur;
+  /** URL de la photo du reproducteur (nullable) */
+  photo: string | null;
+  /** Identifiant electronique PIT tag (nullable) */
+  pitTag: string | null;
+  /** Nombre total de pontes dans lesquelles ce reproducteur a participe */
+  nombrePontesTotal: number;
+  /** Date de la derniere ponte (nullable si jamais participe) */
+  dernierePonte: Date | null;
+  /** Duree de repos minimum recommandee entre deux pontes (jours, nullable) */
+  tempsReposJours: number | null;
+  /** Generation genetique du reproducteur */
+  generation: GenerationGeniteur;
+  /** Origine d'approvisionnement */
+  sourcing: SourcingGeniteur;
+  /** Bac actuel d'hebergement (nullable si non assigne) */
+  bacId: string | null;
   /** ID du site (ferme) — R8 */
   siteId: string;
   createdAt: Date;
@@ -1078,9 +1220,9 @@ export interface Ponte {
   id: string;
   /** Code unique de la ponte sur le site (ex: "PONTE-2026-001") */
   code: string;
-  /** ID de la femelle reproductrice */
+  /** ID de la femelle reproductrice individuelle (nullable si gestion par lot) */
   femelleId: string;
-  /** ID du male reproducteur (nullable si insemination naturelle sans male identifie) */
+  /** ID du male reproducteur individuel (nullable si gestion par lot ou non identifie) */
   maleId: string | null;
   datePonte: Date;
   /** Nombre d'oeufs pondus (nullable si non compte) */
@@ -1089,6 +1231,45 @@ export interface Ponte {
   tauxFecondation: number | null;
   statut: StatutPonte;
   notes: string | null;
+  // R1-S4 — Champs etendus
+  /** FK vers le groupe de femelles geniteurs (LotGeniteurs) — R1-S3, nullable */
+  lotGeniteursFemellId: string | null;
+  /** FK vers le groupe de males geniteurs (LotGeniteurs) — R1-S3, nullable */
+  lotGeniteursMaleId: string | null;
+  /** Hormone utilisee pour l'induction de la ponte */
+  typeHormone: TypeHormone | null;
+  /** Dose totale d'hormone injectee (unite selon produit, ex: mL) */
+  doseHormone: number | null;
+  /** Dose normalisee rapportee au poids corporel (mg/kg) */
+  doseMgKg: number | null;
+  /** Cout de l'hormone utilisee (FCFA, nullable) */
+  coutHormone: number | null;
+  /** Heure d'injection de l'hormone */
+  heureInjection: Date | null;
+  /** Temperature de l'eau lors du stripping (°C, nullable) */
+  temperatureEauC: number | null;
+  /** Delai theorique entre injection et stripping (heures, nullable) */
+  latenceTheorique: number | null;
+  /** Heure du stripping (extraction des oeufs) */
+  heureStripping: Date | null;
+  /** Poids total des oeufs pondus lors du stripping (grammes, nullable) */
+  poidsOeufsPontesG: number | null;
+  /** Estimation du nombre d'oeufs (calcule ou compte, nullable) */
+  nombreOeufsEstime: number | null;
+  /** Qualite visuelle des oeufs au stripping */
+  qualiteOeufs: QualiteOeufs | null;
+  /** Methode utilisee pour extraire le sperme du male */
+  methodeMale: MethodeExtractionMale | null;
+  /** Qualite de la motilite du sperme */
+  motiliteSperme: MotiliteSperme | null;
+  /** Taux d'eclosion observe (%, nullable) */
+  tauxEclosion: number | null;
+  /** Nombre de larves viables comptees apres eclosion */
+  nombreLarvesViables: number | null;
+  /** Cout total de l'operation de ponte (hormones + main d'oeuvre, FCFA, nullable) */
+  coutTotal: number | null;
+  /** Cause de l'echec (rempli si statut = ECHOUEE) */
+  causeEchec: CauseEchecPonte | null;
   /** ID du site (ferme) — R8 */
   siteId: string;
   createdAt: Date;
@@ -1099,8 +1280,11 @@ export interface Ponte {
 export interface PonteWithRelations extends Ponte {
   femelle?: Reproducteur;
   male?: Reproducteur | null;
+  lotGeniteursFemelle?: LotGeniteurs | null;
+  lotGeniteursMale?: LotGeniteurs | null;
   lots?: LotAlevins[];
-  _count?: { lots: number };
+  incubations?: Incubation[];
+  _count?: { lots: number; incubations: number };
 }
 
 /**
@@ -1132,6 +1316,21 @@ export interface LotAlevins {
   /** Date du transfert vers la vague (null si pas encore transfere) */
   dateTransfert: Date | null;
   notes: string | null;
+  // R1-S4 — Champs etendus
+  /** Phase de developpement actuelle du lot */
+  phase: PhaseLot;
+  /** ID du lot parent (nullable — rempli si ce lot est issu d'un fractionnement) */
+  parentLotId: string | null;
+  /** Date de debut de la phase actuelle */
+  dateDebutPhase: Date;
+  /** Nombre de larves/alevins deformes retires de ce lot */
+  nombreDeformesRetires: number;
+  /** Poids cible par alevin a la sortie de la phase (grammes, nullable) */
+  poidsObjectifG: number | null;
+  /** Destination finale lors de la sortie du lot */
+  destinationSortie: DestinationLot | null;
+  /** FK vers l'incubation source (nullable — rempli si lot cree depuis une incubation) */
+  incubationId: string | null;
   /** ID du site (ferme) — R8 */
   siteId: string;
   createdAt: Date;
@@ -1143,6 +1342,235 @@ export interface LotAlevinsWithRelations extends LotAlevins {
   ponte?: Ponte;
   bac?: Bac | null;
   vagueDestination?: Vague | null;
+  incubation?: Incubation | null;
+  parentLot?: LotAlevins | null;
+  sousLots?: LotAlevins[];
+}
+
+// ---------------------------------------------------------------------------
+// Modeles — Module Reproduction R1-S3
+// ---------------------------------------------------------------------------
+
+/**
+ * LotGeniteurs — Groupe de geniteurs (males ou femelles) identifies comme unite de reproduction.
+ *
+ * Remplace la gestion individuelle du modele Reproducteur pour les sites qui gerent
+ * leurs geniteurs par lots. Un lot peut etre male ou femelle, pas les deux.
+ * ADR-044 §3.2.
+ *
+ * R3 : miroir exact du modele Prisma LotGeniteurs.
+ * R8 : siteId obligatoire.
+ */
+export interface LotGeniteurs {
+  id: string;
+  /** Code unique sur le site (ex: "LG-F-001") */
+  code: string;
+  /** Nom du lot (ex: "Femelles G2 acquisition mars 2026") */
+  nom: string;
+  /** Sexe de tous les individus du lot */
+  sexe: SexeReproducteur;
+  /** Nombre total de poissons dans ce lot */
+  nombrePoissons: number;
+  /** Poids moyen en grammes (nullable si non mesure) */
+  poidsMoyenG: number | null;
+  /** Poids minimum du lot en grammes (nullable) */
+  poidsMinG: number | null;
+  /** Poids maximum du lot en grammes (nullable) */
+  poidsMaxG: number | null;
+  /** Provenance descriptive (ex: "Ecloserie de Bafoussam") */
+  origine: string | null;
+  /** Origine d'approvisionnement */
+  sourcing: SourcingGeniteur;
+  /** Generation genetique estimee */
+  generation: GenerationGeniteur;
+  dateAcquisition: Date;
+  /** Nombre de males disponibles dans ce lot (pertinent si sexe = MALE, nullable) */
+  nombreMalesDisponibles: number | null;
+  /** Seuil d'alerte pour le nombre de males disponibles (nullable) */
+  seuilAlerteMales: number | null;
+  /** Date prevue pour le renouvellement genetique du lot (nullable) */
+  dateRenouvellementGenetique: Date | null;
+  /** Bac actuel d'hebergement (nullable si non assigne) */
+  bacId: string | null;
+  statut: StatutReproducteur;
+  notes: string | null;
+  /** ID du site (ferme) — R8 */
+  siteId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** LotGeniteurs avec ses relations chargees */
+export interface LotGeniteurWithRelations extends LotGeniteurs {
+  bac?: Pick<Bac, "id" | "nom" | "volume"> | null;
+  _count?: {
+    pontesAsFemelle: number;
+    pontesAsMale: number;
+  };
+}
+
+/**
+ * Incubation — Suivi d'une phase d'incubation des oeufs issus d'une ponte.
+ *
+ * Un enregistrement par cuvette ou bac d'incubation.
+ * Le statut evolue : EN_COURS → ECLOSION_EN_COURS → TERMINEE | ECHOUEE.
+ * ADR-044 §3.4.
+ *
+ * R3 : miroir exact du modele Prisma Incubation.
+ * R8 : siteId obligatoire.
+ */
+export interface Incubation {
+  id: string;
+  /** Code unique sur le site (ex: "INC-2026-001") */
+  code: string;
+  /** Ponte d'origine */
+  ponteId: string;
+  /** Substrat utilise pour fixer les oeufs dans le bac d'incubation */
+  substrat: SubstratIncubation;
+  /** Temperature de l'eau d'incubation (°C, nullable) */
+  temperatureEauC: number | null;
+  /** Duree theorique de l'incubation (heures, nullable) */
+  dureeIncubationH: number | null;
+  dateDebutIncubation: Date;
+  /** Date d'eclosion prevue (calculee depuis la temperature, nullable) */
+  dateEclosionPrevue: Date | null;
+  /** Date d'eclosion reelle (remplie a la fin, nullable) */
+  dateEclosionReelle: Date | null;
+  /** Nombre d'oeufs places dans ce bac d'incubation (nullable) */
+  nombreOeufsPlaces: number | null;
+  /** Nombre de larves ecloses comptes (nullable) */
+  nombreLarvesEcloses: number | null;
+  /** Taux d'eclosion calcule (%, nullable) */
+  tauxEclosion: number | null;
+  /** Nombre de larves deformees observees (nullable) */
+  nombreDeformes: number | null;
+  /** Nombre de larves viables apres tri des deformes (nullable) */
+  nombreLarvesViables: number | null;
+  /** Notes de retrait du substrat apres eclosion (nullable) */
+  notesRetrait: string | null;
+  statut: StatutIncubation;
+  notes: string | null;
+  /** ID du site (ferme) — R8 */
+  siteId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** Incubation avec ses relations chargees */
+export interface IncubationWithRelations extends Incubation {
+  ponte?: Pick<Ponte, "id" | "code" | "datePonte" | "statut">;
+  traitements?: TraitementIncubation[];
+  lotAlevins?: LotAlevins[];
+  _count?: { traitements: number; lotAlevins: number };
+}
+
+/**
+ * TraitementIncubation — Traitement antifongique ou parasiticide applique pendant l'incubation.
+ *
+ * Supprime en cascade avec l'Incubation parente (onDelete: Cascade).
+ * ADR-044 §3.5.
+ *
+ * R3 : miroir exact du modele Prisma TraitementIncubation.
+ * R8 : siteId obligatoire.
+ */
+export interface TraitementIncubation {
+  id: string;
+  /** ID de l'incubation parente */
+  incubationId: string;
+  /** Nom du produit applique (ex: "Bleu de methylene 0.1%") */
+  produit: string;
+  /** Concentration et unite (ex: "0.1 mg/L") */
+  concentration: string;
+  /** Duree du traitement en minutes */
+  dureeMinutes: number;
+  /** Heure d'application du traitement */
+  heure: Date;
+  notes: string | null;
+  /** ID du site (ferme) — R8 */
+  siteId: string;
+  createdAt: Date;
+}
+
+// ---------------------------------------------------------------------------
+// DTOs — Module Reproduction R1-S3 (LotGeniteurs, Incubation, TraitementIncubation)
+// ---------------------------------------------------------------------------
+
+/** DTO de creation d'un lot de geniteurs */
+export interface CreateLotGeniteurDTO {
+  code?: string;
+  nom: string;
+  sexe: SexeReproducteur;
+  nombrePoissons: number;
+  poidsMoyenG?: number | null;
+  poidsMinG?: number | null;
+  poidsMaxG?: number | null;
+  origine?: string | null;
+  sourcing?: SourcingGeniteur;
+  generation?: GenerationGeniteur;
+  dateAcquisition?: string;
+  nombreMalesDisponibles?: number | null;
+  seuilAlerteMales?: number | null;
+  dateRenouvellementGenetique?: string | null;
+  bacId?: string | null;
+  statut?: StatutReproducteur;
+  notes?: string | null;
+}
+
+/** DTO de mise a jour d'un lot de geniteurs */
+export interface UpdateLotGeniteurDTO {
+  nom?: string;
+  nombrePoissons?: number;
+  poidsMoyenG?: number | null;
+  poidsMinG?: number | null;
+  poidsMaxG?: number | null;
+  origine?: string | null;
+  sourcing?: SourcingGeniteur;
+  generation?: GenerationGeniteur;
+  nombreMalesDisponibles?: number | null;
+  seuilAlerteMales?: number | null;
+  dateRenouvellementGenetique?: string | null;
+  bacId?: string | null;
+  statut?: StatutReproducteur;
+  notes?: string | null;
+}
+
+/** DTO de creation d'une incubation */
+export interface CreateIncubationDTO {
+  code?: string;
+  ponteId: string;
+  substrat?: SubstratIncubation;
+  temperatureEauC?: number | null;
+  dureeIncubationH?: number | null;
+  dateDebutIncubation?: string;
+  dateEclosionPrevue?: string | null;
+  nombreOeufsPlaces?: number | null;
+  notes?: string | null;
+}
+
+/** DTO de mise a jour d'une incubation */
+export interface UpdateIncubationDTO {
+  substrat?: SubstratIncubation;
+  temperatureEauC?: number | null;
+  dureeIncubationH?: number | null;
+  dateEclosionPrevue?: string | null;
+  dateEclosionReelle?: string | null;
+  nombreOeufsPlaces?: number | null;
+  nombreLarvesEcloses?: number | null;
+  tauxEclosion?: number | null;
+  nombreDeformes?: number | null;
+  nombreLarvesViables?: number | null;
+  notesRetrait?: string | null;
+  statut?: StatutIncubation;
+  notes?: string | null;
+}
+
+/** DTO de creation d'un traitement d'incubation */
+export interface CreateTraitementIncubationDTO {
+  produit: string;
+  concentration: string;
+  dureeMinutes: number;
+  heure?: string;
+  notes?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -1171,6 +1599,16 @@ export enum TypeAlerte {
   ABONNEMENT_RAPPEL_RENOUVELLEMENT = "ABONNEMENT_RAPPEL_RENOUVELLEMENT",
   /** Notification envoyee quand un essai gratuit expire — Sprint 49 */
   ABONNEMENT_ESSAI_EXPIRE = "ABONNEMENT_ESSAI_EXPIRE",
+  /** Nombre de males reproducteurs actifs insuffisant — Sprint R1 */
+  MALES_STOCK_BAS = "MALES_STOCK_BAS",
+  /** Femelle sollicitee trop frequemment (risque d'epuisement) — Sprint R1 */
+  FEMELLE_SUREXPLOITEE = "FEMELLE_SUREXPLOITEE",
+  /** Taux de consanguinite estime elevee entre geniteurs — Sprint R1 */
+  CONSANGUINITE_RISQUE = "CONSANGUINITE_RISQUE",
+  /** Alerte pendant la phase d'incubation/eclosion d'un lot — Sprint R1 */
+  INCUBATION_ECLOSION = "INCUBATION_ECLOSION",
+  /** Taux de survie d'un lot d'alevins sous le seuil critique — Sprint R1 */
+  TAUX_SURVIE_CRITIQUE_LOT = "TAUX_SURVIE_CRITIQUE_LOT",
 }
 
 /** Statut du cycle de vie d'une notification */

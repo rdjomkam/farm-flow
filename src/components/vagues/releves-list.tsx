@@ -37,6 +37,7 @@ const typeVariants: Record<TypeReleve, "info" | "warning" | "default"> = {
   [TypeReleve.COMPTAGE]: "default",
   [TypeReleve.OBSERVATION]: "default",
   [TypeReleve.RENOUVELLEMENT]: "default",
+  [TypeReleve.TRI]: "default",
 };
 
 const DeleteReleveButton = memo(function DeleteReleveButton({ releveId }: { releveId: string }) {

@@ -55,6 +55,7 @@ const typeReleveTranslationKeys: Record<TypeReleve, string> = {
   [TypeReleve.COMPTAGE]: "recordTypes.count",
   [TypeReleve.OBSERVATION]: "recordTypes.observation",
   [TypeReleve.RENOUVELLEMENT]: "recordTypes.renewal",
+  [TypeReleve.TRI]: "recordTypes.sorting",
 };
 
 const typeActiviteColors: Record<TypeActivite, string> = {

@@ -50,6 +50,7 @@ const INGENIEUR_ONLY_PREFIXES = [
  */
 const FARM_ONLY_PREFIXES = [
   "/alevins",
+  "/reproduction",
   "/depenses",
   "/finances",
   "/factures",

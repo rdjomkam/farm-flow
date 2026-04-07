@@ -44,6 +44,12 @@ const typeAlerteTranslationKeys: Record<TypeAlerte, string> = {
   [TypeAlerte.ABONNEMENT_RAPPEL_RENOUVELLEMENT]: "types.subscriptionRenewalReminder",
   // Sprint 49 — Fin d'essai
   [TypeAlerte.ABONNEMENT_ESSAI_EXPIRE]: "types.trialExpired",
+  // Sprint R1 — Reproduction
+  [TypeAlerte.MALES_STOCK_BAS]: "types.malesLowStock",
+  [TypeAlerte.FEMELLE_SUREXPLOITEE]: "types.femaleOverexploited",
+  [TypeAlerte.CONSANGUINITE_RISQUE]: "types.inbreedingRisk",
+  [TypeAlerte.INCUBATION_ECLOSION]: "types.incubationHatching",
+  [TypeAlerte.TAUX_SURVIE_CRITIQUE_LOT]: "types.criticalSurvivalRateLot",
 };
 
 const typeAlerteIcons: Record<TypeAlerte, React.ComponentType<{ className?: string }>> = {
@@ -63,6 +69,12 @@ const typeAlerteIcons: Record<TypeAlerte, React.ComponentType<{ className?: stri
   [TypeAlerte.ABONNEMENT_RAPPEL_RENOUVELLEMENT]: Bell,
   // Sprint 49 — Fin d'essai
   [TypeAlerte.ABONNEMENT_ESSAI_EXPIRE]: Bell,
+  // Sprint R1 — Reproduction
+  [TypeAlerte.MALES_STOCK_BAS]: AlertTriangle,
+  [TypeAlerte.FEMELLE_SUREXPLOITEE]: AlertTriangle,
+  [TypeAlerte.CONSANGUINITE_RISQUE]: Activity,
+  [TypeAlerte.INCUBATION_ECLOSION]: Clock,
+  [TypeAlerte.TAUX_SURVIE_CRITIQUE_LOT]: AlertTriangle,
 };
 
 const typeAlerteColors: Record<TypeAlerte, string> = {
@@ -82,6 +94,12 @@ const typeAlerteColors: Record<TypeAlerte, string> = {
   [TypeAlerte.ABONNEMENT_RAPPEL_RENOUVELLEMENT]: "text-primary bg-primary/10",
   // Sprint 49 — Fin d'essai
   [TypeAlerte.ABONNEMENT_ESSAI_EXPIRE]: "text-warning bg-warning/10",
+  // Sprint R1 — Reproduction
+  [TypeAlerte.MALES_STOCK_BAS]: "text-warning bg-warning/10",
+  [TypeAlerte.FEMELLE_SUREXPLOITEE]: "text-danger bg-danger/10",
+  [TypeAlerte.CONSANGUINITE_RISQUE]: "text-accent-purple bg-accent-purple-muted",
+  [TypeAlerte.INCUBATION_ECLOSION]: "text-accent-blue bg-accent-blue-muted",
+  [TypeAlerte.TAUX_SURVIE_CRITIQUE_LOT]: "text-danger bg-danger/10",
 };
 
 // Les labels de statut sont résolus via t() dans le composant

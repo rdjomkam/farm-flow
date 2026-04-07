@@ -26,6 +26,19 @@ export {
   StatutReproducteur,
   StatutPonte,
   StatutLotAlevins,
+  // Module Reproduction R1-S1 — 12 nouveaux enums
+  ModeGestionGeniteur,
+  GenerationGeniteur,
+  SourcingGeniteur,
+  TypeHormone,
+  QualiteOeufs,
+  MethodeExtractionMale,
+  MotiliteSperme,
+  CauseEchecPonte,
+  SubstratIncubation,
+  StatutIncubation,
+  PhaseLot,
+  DestinationLot,
   // Sprint 11 — Alertes & Planning
   TypeAlerte,
   StatutAlerte,
@@ -124,6 +137,18 @@ export type {
   PonteWithRelations,
   LotAlevins,
   LotAlevinsWithRelations,
+  // Module Reproduction R1-S3 — nouveaux modeles
+  LotGeniteurs,
+  LotGeniteurWithRelations,
+  Incubation,
+  IncubationWithRelations,
+  TraitementIncubation,
+  // Module Reproduction R1-S3 — DTOs (definis dans models.ts)
+  CreateLotGeniteurDTO,
+  UpdateLotGeniteurDTO,
+  CreateIncubationDTO,
+  UpdateIncubationDTO,
+  CreateTraitementIncubationDTO,
   // Sprint 11 — Alertes & Planning
   ConfigAlerte,
   ConfigAlerteWithRelations,

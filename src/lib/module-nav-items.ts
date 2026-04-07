@@ -55,12 +55,13 @@ export interface ModuleNavConfig {
 export const MODULE_NAV: ModuleNavConfig[] = [
   {
     label: "Reproduction",
-    matchPaths: ["/alevins"],
+    matchPaths: ["/reproduction", "/alevins"],
     items: [
-      { href: "/alevins", label: "Dashboard", itemKey: "dashboard", icon: LayoutDashboard },
-      { href: "/alevins/reproducteurs", label: "Reproducteurs", itemKey: "reproducteurs", icon: Fish },
-      { href: "/alevins/pontes", label: "Pontes", itemKey: "pontes", icon: Egg },
-      { href: "/alevins/lots", label: "Lots", itemKey: "lots", icon: Layers },
+      { href: "/reproduction", label: "Dashboard", itemKey: "dashboard", icon: LayoutDashboard },
+      { href: "/reproduction/geniteurs", label: "Géniteurs", itemKey: "geniteurs", icon: Fish },
+      { href: "/reproduction/pontes", label: "Pontes", itemKey: "pontes", icon: Egg },
+      { href: "/reproduction/lots", label: "Lots", itemKey: "lots", icon: Layers },
+      { href: "/reproduction/planning", label: "Planning", itemKey: "planning", icon: Calendar },
     ],
   },
   {

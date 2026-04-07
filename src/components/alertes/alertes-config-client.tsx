@@ -152,6 +152,51 @@ const typeAlerteConfig: Record<
     hasSeuilValeur: false,
     hasSeuilPourcentage: false,
   },
+  // Sprint R1 — Reproduction
+  [TypeAlerte.MALES_STOCK_BAS]: {
+    label: "Males reproducteurs insuffisants",
+    description: "Alerte quand le nombre de males actifs est insuffisant pour les pontes planifiees",
+    icon: AlertTriangle,
+    color: "text-warning",
+    hasSeuilValeur: true,
+    hasSeuilPourcentage: false,
+    labelSeuilValeur: "Nombre minimum de males",
+  },
+  [TypeAlerte.FEMELLE_SUREXPLOITEE]: {
+    label: "Femelle surexploitee",
+    description: "Alerte quand une femelle est sollicitee trop frequemment (risque d'epuisement)",
+    icon: AlertTriangle,
+    color: "text-danger",
+    hasSeuilValeur: true,
+    hasSeuilPourcentage: false,
+    labelSeuilValeur: "Delai minimum entre pontes (jours)",
+  },
+  [TypeAlerte.CONSANGUINITE_RISQUE]: {
+    label: "Risque de consanguinite",
+    description: "Alerte quand le taux de consanguinite estime entre geniteurs depasse le seuil",
+    icon: Activity,
+    color: "text-accent-purple",
+    hasSeuilValeur: false,
+    hasSeuilPourcentage: true,
+    labelSeuilPourcentage: "Coefficient de consanguinite (%)",
+  },
+  [TypeAlerte.INCUBATION_ECLOSION]: {
+    label: "Suivi incubation/eclosion",
+    description: "Alerte durant la phase d'incubation ou d'eclosion d'un lot d'oeufs",
+    icon: Clock,
+    color: "text-accent-blue",
+    hasSeuilValeur: false,
+    hasSeuilPourcentage: false,
+  },
+  [TypeAlerte.TAUX_SURVIE_CRITIQUE_LOT]: {
+    label: "Taux de survie critique (lot)",
+    description: "Alerte quand le taux de survie d'un lot d'alevins passe sous le seuil critique",
+    icon: AlertTriangle,
+    color: "text-danger",
+    hasSeuilValeur: false,
+    hasSeuilPourcentage: true,
+    labelSeuilPourcentage: "Seuil de survie critique (%)",
+  },
 };
 
 interface AlerteConfigItem {

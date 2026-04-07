@@ -44,6 +44,7 @@ const typeReleveLabels: Record<TypeReleve, string> = {
   [TypeReleve.COMPTAGE]: "Comptage",
   [TypeReleve.OBSERVATION]: "Observation",
   [TypeReleve.RENOUVELLEMENT]: "Renouvellement",
+  [TypeReleve.TRI]: "Tri",
 };
 
 const statutLabels: Record<StatutVague, string> = {

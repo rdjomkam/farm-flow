@@ -26,6 +26,20 @@ const nextConfig: NextConfig = {
   experimental: {
     serverSourceMaps: true,
   },
+  async redirects() {
+    return [
+      {
+        source: "/alevins",
+        destination: "/reproduction",
+        permanent: true,
+      },
+      {
+        source: "/alevins/:path*",
+        destination: "/reproduction/:path*",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default withSerwist(withNextIntl(nextConfig));
