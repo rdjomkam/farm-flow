@@ -1146,11 +1146,11 @@ describe("Sprint 41 — coherence globale des 8 namespaces", () => {
     expect(val).toBe("SGR");
   });
 
-  it("les 7 types de releve sont couverts dans releves.types (fr et en)", () => {
+  it("les 8 types de releve sont couverts dans releves.types (fr et en)", () => {
     const frTypes = Object.keys((frReleves as Record<string, Record<string, string>>).types);
     const enTypes = Object.keys((enReleves as Record<string, Record<string, string>>).types);
-    expect(frTypes.length).toBe(7);
-    expect(enTypes.length).toBe(7);
+    expect(frTypes.length).toBe(8);
+    expect(enTypes.length).toBe(8);
   });
 
   it("errors.conflict.bacAlreadyAssigned couvre la regle metier bac unique en fr et en", () => {

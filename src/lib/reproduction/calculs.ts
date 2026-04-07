@@ -77,3 +77,45 @@ export function getLatenceTheoriqueH(temperatureEauC: number): number {
 export function estimerNombreOeufs(poidsOeufsPontesG: number): number {
   return Math.round(poidsOeufsPontesG * 750);
 }
+
+// ---------------------------------------------------------------------------
+// Durée d'incubation selon température (ADR-044 §6.3)
+// ---------------------------------------------------------------------------
+
+/**
+ * Table de correspondance température (°C) → durée d'incubation (heures).
+ * Points : 20°C→40h, 22°C→36h, 25°C→30h, 27°C→25h, 30°C→22h
+ */
+const INCUBATION_TABLE: LatencePoint[] = [
+  { tempC: 20, heures: 40 },
+  { tempC: 22, heures: 36 },
+  { tempC: 25, heures: 30 },
+  { tempC: 27, heures: 25 },
+  { tempC: 30, heures: 22 },
+];
+
+/**
+ * Retourne la durée théorique d'incubation en heures pour une température donnée.
+ *
+ * @param temperatureEauC - Température de l'eau en degrés Celsius
+ * @returns Durée d'incubation en heures (entier arrondi)
+ */
+export function getDureeIncubationH(temperatureEauC: number): number {
+  if (temperatureEauC <= INCUBATION_TABLE[0].tempC) {
+    return INCUBATION_TABLE[0].heures;
+  }
+  const last = INCUBATION_TABLE[INCUBATION_TABLE.length - 1];
+  if (temperatureEauC >= last.tempC) {
+    return last.heures;
+  }
+  for (let i = 0; i < INCUBATION_TABLE.length - 1; i++) {
+    const lower = INCUBATION_TABLE[i];
+    const upper = INCUBATION_TABLE[i + 1];
+    if (temperatureEauC >= lower.tempC && temperatureEauC <= upper.tempC) {
+      const ratio = (temperatureEauC - lower.tempC) / (upper.tempC - lower.tempC);
+      const heures = lower.heures + ratio * (upper.heures - lower.heures);
+      return Math.round(heures);
+    }
+  }
+  return INCUBATION_TABLE[0].heures;
+}

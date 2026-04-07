@@ -575,14 +575,15 @@ describe("createReleveSchema (discriminated union)", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects missing vagueId", () => {
+  it("accepts missing vagueId when lotAlevinsId also absent (general observation)", () => {
     const result = createReleveSchema.safeParse({
       bacId: "b",
       typeReleve: TypeReleve.BIOMETRIE,
       poidsMoyen: 100,
       echantillonCount: 20,
     });
-    expect(result.success).toBe(false);
+    // vagueId is now optional (R3-S5: XOR with lotAlevinsId, or neither for general obs)
+    expect(result.success).toBe(true);
   });
 });
 

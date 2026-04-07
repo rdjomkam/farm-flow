@@ -253,7 +253,8 @@ export async function getBacsAvecRelevesPourVague(
     select: { bacId: true },
     distinct: ["bacId"],
   });
-  const bacIds = rows.map((r) => r.bacId);
+  // Filter null bacIds — lot d'alevins releves can have null bacId (R3-S5)
+  const bacIds = rows.map((r) => r.bacId).filter((id): id is string => id !== null);
   if (bacIds.length === 0) return [];
 
   return prisma.bac.findMany({

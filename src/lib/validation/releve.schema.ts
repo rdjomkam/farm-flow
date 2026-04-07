@@ -154,16 +154,26 @@ export const renouvellementFieldsSchema = z
 // Champs communs pour la creation
 // ---------------------------------------------------------------------------
 
+/**
+ * Base schema pour les releves.
+ * vagueId et bacId sont optionnels pour supporter le mode lot d'alevins (ADR-044 §5.2).
+ * La validation XOR (vagueId XOR lotAlevinsId) est faite en couche API avant le schema.
+ */
 const createBaseSchema = z.object({
   typeReleve: z.nativeEnum(TypeReleve, {
     message: `Type de releve invalide. Valeurs acceptees : ${Object.values(TypeReleve).join(", ")}.`,
   }),
-  vagueId: z.string().min(1, "L'identifiant de la vague est obligatoire."),
-  bacId: z.string().min(1, "L'identifiant du bac est obligatoire."),
+  vagueId: z.string().min(1, "L'identifiant de la vague est obligatoire.").optional().nullable(),
+  bacId: z.string().min(1, "L'identifiant du bac est obligatoire.").optional().nullable(),
   notes: notesSchema,
   consommations: consommationsSchema,
   date: releveDateSchema,
   activiteId: z.string().trim().min(1, "L'identifiant d'activite doit etre une chaine non vide.").optional().nullable(),
+  /**
+   * ID du lot d'alevins (XOR avec vagueId — ADR-044 §5.2).
+   * Renseigner pour les releves de phases Nurserie et Alevinage.
+   */
+  lotAlevinsId: z.string().min(1, "L'identifiant du lot d'alevins doit etre une chaine non vide.").optional().nullable(),
 });
 
 // ---------------------------------------------------------------------------
@@ -194,6 +204,15 @@ export const createObservationSchema = createBaseSchema.extend({
   typeReleve: z.literal(TypeReleve.OBSERVATION),
 }).merge(observationFieldsSchema);
 
+/**
+ * Schema pour un releve de tri des poissons par taille (ADR-044, TypeReleve.TRI).
+ * Le tri s'applique aux lots d'alevins en phase Nurserie/Alevinage.
+ * Il utilise le champ description pour noter les observations du tri.
+ */
+export const createTriSchema = createBaseSchema.extend({
+  typeReleve: z.literal(TypeReleve.TRI),
+}).merge(observationFieldsSchema);
+
 export const createRenouvellementSchema = createBaseSchema
   .extend({ typeReleve: z.literal(TypeReleve.RENOUVELLEMENT) })
   .and(renouvellementFieldsSchema);
@@ -201,6 +220,8 @@ export const createRenouvellementSchema = createBaseSchema
 /**
  * Schema discrimine union pour la creation d'un releve.
  * Utiliser avec .safeParse() depuis la route POST.
+ * Note : RENOUVELLEMENT est traite separement (incompatibilite .and() + discriminatedUnion).
+ * Note : la validation XOR vagueId/lotAlevinsId est faite en couche API avant le schema.
  */
 export const createReleveSchema = z.discriminatedUnion("typeReleve", [
   createBiometrieSchema,
@@ -209,6 +230,7 @@ export const createReleveSchema = z.discriminatedUnion("typeReleve", [
   createQualiteEauSchema,
   createComptageSchema,
   createObservationSchema,
+  createTriSchema,
 ]);
 
 // ---------------------------------------------------------------------------

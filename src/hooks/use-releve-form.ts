@@ -64,6 +64,12 @@ export interface RenouvellementFields {
   nombreRenouvellements: string;
 }
 
+export interface TriFields {
+  description: string;
+  /** ID du lot d'alevins lie (pre-rempli depuis URL lotAlevinsId) */
+  lotAlevinsId: string;
+}
+
 export type TypedFormFields =
   | ({ typeReleve: TypeReleve.BIOMETRIE } & BiometrieFields)
   | ({ typeReleve: TypeReleve.MORTALITE } & MortaliteFields)
@@ -72,6 +78,7 @@ export type TypedFormFields =
   | ({ typeReleve: TypeReleve.COMPTAGE } & ComptageFields)
   | ({ typeReleve: TypeReleve.OBSERVATION } & ObservationFields)
   | ({ typeReleve: TypeReleve.RENOUVELLEMENT } & RenouvellementFields)
+  | ({ typeReleve: TypeReleve.TRI } & TriFields)
   | { typeReleve: "" };
 
 export interface ActivitePlanifiee {
@@ -100,7 +107,7 @@ function nowDatetimeLocal(): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
 
-function getEmptyFields(type: string): TypedFormFields {
+function getEmptyFields(type: string, initialLotAlevinsId?: string): TypedFormFields {
   switch (type) {
     case TypeReleve.BIOMETRIE:
       return { typeReleve: TypeReleve.BIOMETRIE, poidsMoyen: "", tailleMoyenne: "", echantillonCount: "" };
@@ -116,6 +123,8 @@ function getEmptyFields(type: string): TypedFormFields {
       return { typeReleve: TypeReleve.OBSERVATION, description: "" };
     case TypeReleve.RENOUVELLEMENT:
       return { typeReleve: TypeReleve.RENOUVELLEMENT, pourcentageRenouvellement: "", volumeRenouvele: "", nombreRenouvellements: "1" };
+    case TypeReleve.TRI:
+      return { typeReleve: TypeReleve.TRI, description: "", lotAlevinsId: initialLotAlevinsId ?? "" };
     default:
       return { typeReleve: "" };
   }
@@ -141,6 +150,7 @@ export function useReleveForm({ produits }: UseReleveFormProps) {
   const initialTypeReleve = searchParams.get("typeReleve") ?? "";
   const initialBacId = searchParams.get("bacId") ?? "";
   const initialVagueId = searchParams.get("vagueId") ?? "";
+  const initialLotAlevinsId = searchParams.get("lotAlevinsId") ?? "";
   const isFromActivite = Boolean(initialActiviteId);
 
   const [vagueId, setVagueId] = useState(initialVagueId);
@@ -153,7 +163,7 @@ export function useReleveForm({ produits }: UseReleveFormProps) {
   const [activiteId, setActiviteId] = useState(initialActiviteId);
   const [activitesPlanifiees, setActivitesPlanifiees] = useState<ActivitePlanifiee[]>([]);
   const [loadingActivites, setLoadingActivites] = useState(false);
-  const [fields, setFields] = useState<TypedFormFields>(() => getEmptyFields(initialTypeReleve));
+  const [fields, setFields] = useState<TypedFormFields>(() => getEmptyFields(initialTypeReleve, initialLotAlevinsId));
 
   const { data: bacsData, isLoading: loadingBacs } = useBacsList(
     vagueId ? { vagueId } : undefined,
@@ -178,10 +188,10 @@ export function useReleveForm({ produits }: UseReleveFormProps) {
   }, [vagueId, isFromActivite]);
 
   useEffect(() => {
-    setFields(getEmptyFields(typeReleve));
+    setFields(getEmptyFields(typeReleve, initialLotAlevinsId));
     setConsommations([]);
     if (!isFromActivite) setActiviteId("");
-  }, [typeReleve, isFromActivite]);
+  }, [typeReleve, isFromActivite, initialLotAlevinsId]);
 
   useEffect(() => {
     setActivitesPlanifiees([]);
@@ -255,6 +265,7 @@ export function useReleveForm({ produits }: UseReleveFormProps) {
     isFromActivite,
     initialTypeReleve,
     initialBacId,
+    initialLotAlevinsId,
     handleVagueChange,
     handleBacChange,
     handleTypeReleveChange,

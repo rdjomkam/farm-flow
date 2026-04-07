@@ -38,8 +38,22 @@ export async function GET(request: NextRequest) {
     const typeReleve = searchParams.get("typeReleve");
     const dateFrom = searchParams.get("dateFrom");
     const dateTo = searchParams.get("dateTo");
+    // ADR-044 §6.5 — filtre par lot d'alevins (XOR avec vagueId)
+    const lotAlevinsId = searchParams.get("lotAlevinsId");
+
+    if (vagueId && lotAlevinsId) {
+      return NextResponse.json(
+        {
+          status: 400,
+          message: "Les filtres vagueId et lotAlevinsId sont mutuellement exclusifs. Fournir l'un ou l'autre.",
+          field: "lotAlevinsId",
+        },
+        { status: 400 }
+      );
+    }
 
     if (vagueId) filters.vagueId = vagueId;
+    if (lotAlevinsId) filters.lotAlevinsId = lotAlevinsId;
     if (bacId) filters.bacId = bacId;
     if (typeReleve) {
       if (!Object.values(TypeReleve).includes(typeReleve as TypeReleve)) {
@@ -152,6 +166,35 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ADR-044 §R3 — Validation XOR : vagueId et lotAlevinsId sont mutuellement exclusifs
+    const hasVagueId = body.vagueId != null && body.vagueId !== "";
+    const hasLotAlevinsId = body.lotAlevinsId != null && body.lotAlevinsId !== "";
+
+    if (hasVagueId && hasLotAlevinsId) {
+      return apiError(400, "Erreurs de validation", {
+        errors: [
+          {
+            field: "lotAlevinsId",
+            message: "Un releve ne peut pas etre lie a une vague ET a un lot d'alevins simultanement. Fournir vagueId OU lotAlevinsId.",
+          },
+        ],
+      });
+    }
+
+    // Validation de presence : en mode vague, vagueId et bacId sont obligatoires
+    if (!hasLotAlevinsId) {
+      const missingFields: { field: string; message: string }[] = [];
+      if (!hasVagueId) {
+        missingFields.push({ field: "vagueId", message: "L'identifiant de la vague est obligatoire." });
+      }
+      if (body.bacId == null || body.bacId === "") {
+        missingFields.push({ field: "bacId", message: "L'identifiant du bac est obligatoire." });
+      }
+      if (missingFields.length > 0) {
+        return apiError(400, "Erreurs de validation", { errors: missingFields });
+      }
+    }
+
     // RENOUVELLEMENT is handled separately because .and() is incompatible with discriminatedUnion
     if (body.typeReleve === TypeReleve.RENOUVELLEMENT) {
       const result = createRenouvellementSchema.safeParse(body);
@@ -160,11 +203,13 @@ export async function POST(request: NextRequest) {
       }
       const v = result.data;
       const base = {
-        vagueId: v.vagueId,
-        bacId: v.bacId,
+        vagueId: v.vagueId ?? undefined,
+        bacId: v.bacId ?? undefined,
         ...(v.notes != null && { notes: v.notes }),
         ...(v.consommations && v.consommations.length > 0 && { consommations: v.consommations }),
         ...(v.date && { date: new Date(v.date).toISOString() }),
+        // ADR-044 §5.2 — lien lot d'alevins optionnel
+        ...(v.lotAlevinsId != null && { lotAlevinsId: v.lotAlevinsId }),
       };
       const dto: CreateReleveDTO = {
         ...base,
@@ -175,10 +220,13 @@ export async function POST(request: NextRequest) {
       };
       const activiteId = v.activiteId ?? undefined;
       const releve = await createReleve(auth.activeSiteId, auth.userId, dto, activiteId);
-      retryAsync(
-        () => triggerSeuilRulesAsync(auth.activeSiteId, dto.vagueId, auth.userId),
-        { context: "[POST /api/releves] hook SEUIL (RENOUVELLEMENT)" }
-      );
+      // Hook SEUIL uniquement en mode vague
+      if (dto.vagueId) {
+        retryAsync(
+          () => triggerSeuilRulesAsync(auth.activeSiteId, dto.vagueId!, auth.userId),
+          { context: "[POST /api/releves] hook SEUIL (RENOUVELLEMENT)" }
+        );
+      }
       if (idempotencyKey && auth.activeSiteId) {
         await storeIdempotency(idempotencyKey, auth.activeSiteId, releve, 201, hashBody(body));
       }
@@ -221,11 +269,13 @@ export async function POST(request: NextRequest) {
         : undefined;
 
     const base = {
-      vagueId: validated.vagueId,
-      bacId: validated.bacId,
+      vagueId: validated.vagueId ?? undefined,
+      bacId: validated.bacId ?? undefined,
       ...(validated.notes != null && { notes: validated.notes }),
       ...(consommations && { consommations }),
       ...(validated.date && { date: new Date(validated.date).toISOString() }),
+      // ADR-044 §5.2 — lien lot d'alevins optionnel (XOR avec vagueId)
+      ...(validated.lotAlevinsId != null && { lotAlevinsId: validated.lotAlevinsId }),
     };
 
     let dto!: CreateReleveDTO;
@@ -284,19 +334,30 @@ export async function POST(request: NextRequest) {
           description: validated.description,
         };
         break;
+      case TypeReleve.TRI:
+        // ADR-044 — TypeReleve.TRI : tri des poissons par taille, principalement pour lots d'alevins
+        dto = {
+          ...base,
+          typeReleve: TypeReleve.TRI,
+          description: validated.description,
+        };
+        break;
     }
 
     const releve = await createReleve(auth.activeSiteId, auth.userId, dto, activiteId);
 
     // Hook asynchrone : evaluer les regles SEUIL_* pour la vague concernee.
     // Ne bloque pas la reponse — echecs transitoires retenies, echec definitif logue.
+    // Uniquement en mode vague (pas pour les lots d'alevins).
     const vagueId = dto.vagueId;
     const siteId = auth.activeSiteId;
     const userId = auth.userId;
-    retryAsync(
-      () => triggerSeuilRulesAsync(siteId, vagueId, userId),
-      { context: "[POST /api/releves] hook SEUIL" }
-    );
+    if (vagueId) {
+      retryAsync(
+        () => triggerSeuilRulesAsync(siteId, vagueId, userId),
+        { context: "[POST /api/releves] hook SEUIL" }
+      );
+    }
 
     // Store idempotency record
     if (idempotencyKey && auth.activeSiteId) {

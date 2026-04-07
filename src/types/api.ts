@@ -112,6 +112,8 @@ import {
   StatutDepense,
   StatutFacture,
   StatutLotAlevins,
+  PhaseLot,
+  DestinationLot,
   StatutPonte,
   StatutReproducteur,
   StatutVague,
@@ -311,10 +313,10 @@ export interface CreateReleveConsommationDTO {
 
 /** Champs communs pour la creation d'un releve */
 interface CreateReleveBase {
-  /** ID de la vague */
-  vagueId: string;
-  /** ID du bac (doit appartenir a la vague) */
-  bacId: string;
+  /** ID de la vague (obligatoire sauf si lotAlevinsId est fourni — XOR avec lotAlevinsId, ADR-044 §5.2) */
+  vagueId?: string;
+  /** ID du bac (doit appartenir a la vague ou au lot d'alevins) */
+  bacId?: string;
   /** Notes libres */
   notes?: string;
   /** Produits consommes lors de ce releve (optionnel, genere des mouvements de stock) */
@@ -326,6 +328,12 @@ interface CreateReleveBase {
    * Ne peut pas etre anterieure a la dateDebut de la vague.
    */
   date?: string;
+  /**
+   * ID du lot d'alevins lie (optionnel — XOR avec vagueId, ADR-044 §5.2).
+   * Renseigner pour les releves de phases Nurserie et Alevinage.
+   * Si fourni, vagueId doit etre absent/null.
+   */
+  lotAlevinsId?: string;
 }
 
 /** DTO pour creer un releve de biometrie */
@@ -404,6 +412,17 @@ export interface CreateReleveRenouvellementDTO extends CreateReleveBase {
 }
 
 /**
+ * DTO pour creer un releve de tri des poissons par taille (ADR-044, TypeReleve.TRI).
+ * Le tri s'applique principalement aux lots d'alevins en phase Nurserie/Alevinage.
+ * Dans ce cas, lotAlevinsId est renseigne et vagueId est absent.
+ */
+export interface CreateReleveTriDTO extends CreateReleveBase {
+  typeReleve: TypeReleve.TRI;
+  /** Description du tri (criteres de tri, resultats observes) */
+  description: string;
+}
+
+/**
  * Union type pour la creation d'un releve.
  * Le typeReleve determine les champs requis.
  */
@@ -414,7 +433,8 @@ export type CreateReleveDTO =
   | CreateReleveQualiteEauDTO
   | CreateReleveComptageDTO
   | CreateReleveObservationDTO
-  | CreateReleveRenouvellementDTO;
+  | CreateReleveRenouvellementDTO
+  | CreateReleveTriDTO;
 
 /** Filtres pour lister les releves (query params) */
 export interface ReleveFilters {
@@ -467,6 +487,10 @@ export interface ReleveFilters {
   // --- Filtres specifiques RENOUVELLEMENT ---
   pourcentageMin?: number;
   pourcentageMax?: number;
+
+  // --- Filtre lot d'alevins (ADR-044 §6.5) ---
+  /** Filtrer par lot d'alevins — XOR avec vagueId dans les queries */
+  lotAlevinsId?: string;
 }
 
 /** Reponse liste des releves */
@@ -1126,8 +1150,16 @@ export interface CreateLotAlevinsDTO {
   poidsMoyen?: number;
   /** Statut initial (defaut : EN_INCUBATION) */
   statut?: StatutLotAlevins;
+  /** Phase de developpement initiale */
+  phase?: PhaseLot;
   /** ID du bac d'elevage */
   bacId?: string;
+  /** FK vers l'incubation source (optionnel) */
+  incubationId?: string;
+  /** Date de debut de la phase courante (ISO 8601, optionnel) */
+  dateDebutPhase?: string;
+  /** Poids cible par alevin a la sortie de la phase (grammes, optionnel) */
+  poidsObjectifG?: number;
   notes?: string;
 }
 
@@ -1146,6 +1178,10 @@ export interface UpdateLotAlevinsDTO {
   bacId?: string | null;
   /** Notes libres (null pour effacer) */
   notes?: string | null;
+  /** Nombre de larves/alevins deformes retires de ce lot */
+  nombreDeformesRetires?: number;
+  /** Poids cible par alevin a la sortie de la phase (grammes, null pour effacer) */
+  poidsObjectifG?: number | null;
 }
 
 /**
@@ -1167,6 +1203,8 @@ export interface TransfertLotDTO {
 export interface LotAlevinsFilters {
   ponteId?: string;
   statut?: StatutLotAlevins;
+  /** Filtre sur la phase de developpement */
+  phase?: PhaseLot;
   bacId?: string;
   /** Recherche libre sur code ou notes */
   search?: string;
@@ -1174,6 +1212,59 @@ export interface LotAlevinsFilters {
 
 /** Reponse liste des lots d'alevins */
 export type LotAlevinsListResponse = PaginatedResponse<LotAlevins>;
+
+/**
+ * DTO pour changer la phase de developpement d'un lot d'alevins.
+ * PATCH /api/reproduction/lots/[id]/phase
+ */
+export interface ChangePhaseLotDTO {
+  /** Nouvelle phase de developpement */
+  phase: PhaseLot;
+  /** Date de debut de la nouvelle phase (ISO 8601, optionnel — defaut : maintenant) */
+  dateDebutPhase?: string;
+  /** ID du bac ou le lot sera place dans la nouvelle phase (optionnel) */
+  bacId?: string;
+}
+
+/**
+ * Definition d'un sous-lot pour le fractionnement.
+ */
+export interface SousLotInput {
+  /** Nombre de poissons a allouer a ce sous-lot */
+  nombrePoissons: number;
+  /** Code du sous-lot (optionnel — genere automatiquement si absent) */
+  code?: string;
+  /** ID du bac de destination (optionnel) */
+  bacId?: string;
+  /** Notes libres */
+  notes?: string;
+}
+
+/**
+ * DTO pour fractionner un lot d'alevins en sous-lots.
+ * POST /api/reproduction/lots/[id]/split
+ */
+export interface SplitLotDTO {
+  /** Liste des sous-lots a creer (au moins un) */
+  sousLots: SousLotInput[];
+  /** ID du releve de tri associe (optionnel) */
+  releveTriId?: string;
+}
+
+/**
+ * DTO pour enregistrer la sortie definitive d'un lot d'alevins.
+ * PATCH /api/reproduction/lots/[id]/sortie
+ */
+export interface SortieLotDTO {
+  /** Destination finale du lot */
+  destinationSortie: DestinationLot;
+  /** Date du transfert/sortie (ISO 8601) */
+  dateTransfert: string;
+  /** ID de la vague de destination (requis si destinationSortie = TRANSFERT_GROSSISSEMENT) */
+  vagueDestinationId?: string;
+  /** Notes libres */
+  notes?: string;
+}
 
 // ---------------------------------------------------------------------------
 // Alertes — Configuration

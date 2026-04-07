@@ -287,12 +287,13 @@ export async function getComparaisonBacs(
     },
   });
 
-  // Group releves by bacId
+  // Group releves by bacId (bacId is always non-null here — filtered in the query)
   const relevesByBac = new Map<string, typeof allReleves>();
   for (const r of allReleves) {
-    const existing = relevesByBac.get(r.bacId) ?? [];
+    const bacKey = r.bacId!;
+    const existing = relevesByBac.get(bacKey) ?? [];
     existing.push(r);
-    relevesByBac.set(r.bacId, existing);
+    relevesByBac.set(bacKey, existing);
   }
 
   // Compute indicators for each bac
@@ -349,7 +350,8 @@ export async function getHistoriqueBac(
     distinct: ["vagueId"],
   });
 
-  const vagueIds = vaguesWithReleves.map((r) => r.vagueId);
+  // Filter out null vagueIds (lot d'alevins releves have null vagueId — R3-S5)
+  const vagueIds = vaguesWithReleves.map((r) => r.vagueId).filter((id): id is string => id !== null);
   if (vagueIds.length === 0) {
     return { bacId: bac.id, bacNom: bac.nom, volume: bac.volume, cycles: [] };
   }
@@ -384,12 +386,13 @@ export async function getHistoriqueBac(
     },
   });
 
-  // Group releves by vagueId
+  // Group releves by vagueId (vagueId is always non-null here — filtered in the query)
   const relevesByVague = new Map<string, typeof allReleves>();
   for (const r of allReleves) {
-    const existing = relevesByVague.get(r.vagueId) ?? [];
+    const vagueKey = r.vagueId!;
+    const existing = relevesByVague.get(vagueKey) ?? [];
     existing.push(r);
-    relevesByVague.set(r.vagueId, existing);
+    relevesByVague.set(vagueKey, existing);
   }
 
   const cycles: HistoriqueBacCycle[] = vagues.map((vague) => {
@@ -540,12 +543,13 @@ async function computeAlimentMetrics(
       })
     : [];
 
-  // Group releves by vague
+  // Group releves by vague (vagueId always non-null here — filtered in the queries above)
   const relevesByVague = new Map<string, typeof vagueReleves>();
   for (const r of vagueReleves) {
-    const existing = relevesByVague.get(r.vagueId) ?? [];
+    const vagueKey = r.vagueId!;
+    const existing = relevesByVague.get(vagueKey) ?? [];
     existing.push(r);
-    relevesByVague.set(r.vagueId, existing);
+    relevesByVague.set(vagueKey, existing);
   }
 
   // Build per-vague metrics by combining FCRByFeed result with biometric data
@@ -1309,12 +1313,13 @@ export async function getComparaisonVagues(
     }),
   ]);
 
-  // Grouper les releves et ventes par vagueId
+  // Grouper les releves et ventes par vagueId (vagueId always non-null — filtered in the query)
   const relevesByVague = new Map<string, typeof allReleves>();
   for (const r of allReleves) {
-    const existing = relevesByVague.get(r.vagueId) ?? [];
+    const vagueKey = r.vagueId!;
+    const existing = relevesByVague.get(vagueKey) ?? [];
     existing.push(r);
-    relevesByVague.set(r.vagueId, existing);
+    relevesByVague.set(vagueKey, existing);
   }
 
   const ventesByVague = new Map<string, number>();
@@ -1775,7 +1780,8 @@ export async function getFCRHebdomadaire(
   if (consommations.length === 0) return [];
 
   // 3. Guard E7 : isoler les vagueIds (pas de melange inter-vagues)
-  const vagueIds = [...new Set(consommations.map((c) => c.releve.vagueId))];
+  // Filter out null vagueIds — consommations from lot d'alevins releves don't have vagueId (R3-S5)
+  const vagueIds = [...new Set(consommations.map((c) => c.releve.vagueId).filter((id): id is string => id !== null))];
 
   // 4. Charger les vagues avec leurs bacs
   const vagues = await prisma.vague.findMany({
@@ -1804,7 +1810,7 @@ export async function getFCRHebdomadaire(
   });
   const biosByVague = new Map<string, { date: Date; poidsMoyen: number }[]>();
   for (const b of biometriesRaw) {
-    if (b.poidsMoyen === null) continue;
+    if (b.poidsMoyen === null || b.vagueId === null) continue;
     const existing = biosByVague.get(b.vagueId) ?? [];
     existing.push({ date: b.date, poidsMoyen: b.poidsMoyen });
     biosByVague.set(b.vagueId, existing);
@@ -1828,6 +1834,7 @@ export async function getFCRHebdomadaire(
   });
   const vivantsByVague = new Map<string, typeof relevesVivants>();
   for (const r of relevesVivants) {
+    if (r.vagueId === null) continue;
     const existing = vivantsByVague.get(r.vagueId) ?? [];
     existing.push(r);
     vivantsByVague.set(r.vagueId, existing);
@@ -1840,6 +1847,8 @@ export async function getFCRHebdomadaire(
     { quantiteAliment: number; vagueId: string; semaine: string }
   >();
   for (const c of consommations) {
+    // Skip consommations from lot d'alevins releves (no vagueId — R3-S5)
+    if (c.releve.vagueId === null) continue;
     const semaine = getISOWeekKey(c.releve.date);
     const key: SemaineKey = `${c.releve.vagueId}::${semaine}`;
     const existing = alimBySemaineVague.get(key) ?? {

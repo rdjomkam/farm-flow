@@ -1212,10 +1212,12 @@ model Releve {
   id         String     @id @default(cuid())
   date       DateTime
   typeReleve TypeReleve
-  vagueId    String
-  vague      Vague      @relation(fields: [vagueId], references: [id])
-  bacId      String
-  bac        Bac        @relation(fields: [bacId], references: [id])
+  // R3-S5 — vagueId nullable pour supporter les relevés de lots d'alevins (ADR-044 §5.2)
+  vagueId    String?
+  vague      Vague?     @relation(fields: [vagueId], references: [id])
+  // R3-S5 — bacId nullable (optionnel pour les relevés de lots d'alevins sans bac assigné)
+  bacId      String?
+  bac        Bac?       @relation(fields: [bacId], references: [id])
   siteId     String
   site       Site       @relation(fields: [siteId], references: [id])
   notes      String?

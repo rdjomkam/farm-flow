@@ -104,5 +104,22 @@ export function buildReleveDTO({
       ...(fields.nombreRenouvellements && { nombreRenouvellements: Number(fields.nombreRenouvellements) }),
     };
   }
+  if (fields.typeReleve === TypeReleve.TRI) {
+    // TRI : linked to lotAlevins (XOR with vagueId — handled by the API)
+    // If lotAlevinsId is set, pass it instead of vagueId
+    const triBase = fields.lotAlevinsId
+      ? {
+          ...(notes.trim() && { notes: notes.trim() }),
+          ...(activiteId && { activiteId }),
+          date: new Date(releveDate).toISOString(),
+          lotAlevinsId: fields.lotAlevinsId,
+        }
+      : base;
+    return {
+      ...triBase,
+      typeReleve: TypeReleve.TRI as const,
+      description: fields.description.trim(),
+    };
+  }
   throw new Error(`Type de relevé non reconnu : ${String(fields.typeReleve)}`);
 }

@@ -10,8 +10,13 @@ export function validateReleveForm(
   t: (key: string) => string
 ): Record<string, string> {
   const errs: Record<string, string> = {};
-  if (!vagueId) errs.vagueId = t("form.errors.vagueId");
-  if (!bacId) errs.bacId = t("form.errors.bacId");
+  // TRI peut etre lie a un lot d'alevins (sans vagueId/bacId) — XOR gere cote API
+  const isTriWithLot =
+    fields.typeReleve === TypeReleve.TRI &&
+    "lotAlevinsId" in fields &&
+    Boolean(fields.lotAlevinsId);
+  if (!vagueId && !isTriWithLot) errs.vagueId = t("form.errors.vagueId");
+  if (!bacId && !isTriWithLot) errs.bacId = t("form.errors.bacId");
   if (!typeReleve) errs.typeReleve = t("form.errors.typeReleve");
 
   if (fields.typeReleve === TypeReleve.BIOMETRIE) {
@@ -40,6 +45,9 @@ export function validateReleveForm(
     if (!fields.methodeComptage) errs.methodeComptage = t("form.errors.methodeComptage");
   }
   if (fields.typeReleve === TypeReleve.OBSERVATION) {
+    if (!fields.description?.trim()) errs.description = t("form.errors.description");
+  }
+  if (fields.typeReleve === TypeReleve.TRI) {
     if (!fields.description?.trim()) errs.description = t("form.errors.description");
   }
   if (fields.typeReleve === TypeReleve.RENOUVELLEMENT) {

@@ -133,6 +133,7 @@ export async function verifierAlertesMortalite(
   });
 
   for (const releve of relevesCritiques) {
+    if (!releve.vague || !releve.bac) continue;
     await creerNotificationSiAbsente(
       siteId,
       userId,
@@ -180,6 +181,7 @@ export async function verifierAlertesQualiteEau(
   });
 
   for (const releve of releves) {
+    if (!releve.vague || !releve.bac) continue;
     const problemes: string[] = [];
 
     if (releve.ph !== null) {

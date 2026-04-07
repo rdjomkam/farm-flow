@@ -10,6 +10,7 @@ import { FormQualiteEau } from "./form-qualite-eau";
 import { FormComptage } from "./form-comptage";
 import { FormObservation } from "./form-observation";
 import { FormRenouvellement } from "./form-renouvellement";
+import { FormTri } from "./form-tri";
 import { ConsommationFields } from "./consommation-fields";
 import type { ConsommationLine, ProduitOption } from "./consommation-fields";
 import { TypeReleve, CategorieProduit } from "@/types";
@@ -24,6 +25,7 @@ const MemoFormQualiteEau = React.memo(FormQualiteEau);
 const MemoFormComptage = React.memo(FormComptage);
 const MemoFormObservation = React.memo(FormObservation);
 const MemoFormRenouvellement = React.memo(FormRenouvellement);
+const MemoFormTri = React.memo(FormTri);
 const MemoConsommationFields = React.memo(ConsommationFields);
 
 interface ReleveTypeSectionsProps {
@@ -174,6 +176,18 @@ export function ReleveTypeSections({
         errors={errors}
         bacVolumeLitres={selectedBac?.volume ?? null}
       />
+    );
+  }
+
+  if (fields.typeReleve === TypeReleve.TRI) {
+    return (
+      <FormSection title={t("form.sections.tri.title")} description={t("form.sections.tri.description")}>
+        <MemoFormTri
+          values={{ description: fields.description, lotAlevinsId: fields.lotAlevinsId }}
+          onChange={updateField}
+          errors={errors}
+        />
+      </FormSection>
     );
   }
 

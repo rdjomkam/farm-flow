@@ -151,98 +151,121 @@ const categorieParType: Partial<Record<string, CategorieProduit>> = {
   [TypeReleveEnum.MORTALITE]: CategorieProduit.INTRANT,
 };
 
-/** Cree un releve dans un site (verifie que le bac appartient a la vague) */
+/** Cree un releve dans un site (verifie que le bac appartient a la vague ou au lot d'alevins) */
 export async function createReleve(siteId: string, userId: string, data: CreateReleveDTO, activiteId?: string) {
   return prisma.$transaction(async (tx) => {
-    // Verifier que le bac appartient a la vague et au site
-    const bac = await tx.bac.findFirst({
-      where: { id: data.bacId, siteId },
-    });
-
-    if (!bac) {
-      throw new Error("Bac introuvable");
-    }
-
-    // ADR-043 Phase 2: vérifier via AssignationBac en priorité, fallback sur bac.vagueId
-    const assignationActive = await tx.assignationBac.findFirst({
-      where: { bacId: data.bacId, vagueId: data.vagueId, dateFin: null },
-    });
-
-    if (!assignationActive && bac.vagueId !== data.vagueId) {
-      throw new Error("Ce bac n'appartient pas a la vague selectionnee");
-    }
-
-    // Verifier que la vague existe, est en cours, et appartient au site
-    const vague = await tx.vague.findFirst({
-      where: { id: data.vagueId, siteId },
-    });
-
-    if (!vague) {
-      throw new Error("Vague introuvable");
-    }
-
-    if (vague.statut !== StatutVague.EN_COURS) {
-      throw new Error("Impossible d'ajouter un releve a une vague cloturee");
-    }
+    // ADR-044 §5.2 — Mode lot d'alevins : lotAlevinsId renseigne, vagueId absent/null
+    const isLotAlevinsMode = !!data.lotAlevinsId && !data.vagueId;
 
     // Date : saisie si fournie et valide, sinon maintenant
     const releveDate = data.date ? new Date(data.date) : new Date();
 
-    // Validation : la date ne peut pas etre anterieure a la dateDebut de la vague
-    if (releveDate < vague.dateDebut) {
-      throw new Error(
-        `La date du releve ne peut pas etre anterieure au debut de la vague (${vague.dateDebut.toISOString().split("T")[0]}).`
-      );
+    if (isLotAlevinsMode) {
+      // Verifier que le lot d'alevins existe et appartient au site
+      const lotAlevins = await tx.lotAlevins.findFirst({
+        where: { id: data.lotAlevinsId!, siteId },
+      });
+      if (!lotAlevins) {
+        throw new Error("Lot d'alevins introuvable");
+      }
+
+      // bacId est optionnel pour les releves de lot d'alevins
+      if (data.bacId) {
+        const bac = await tx.bac.findFirst({ where: { id: data.bacId, siteId } });
+        if (!bac) {
+          throw new Error("Bac introuvable");
+        }
+      }
+    } else {
+      // Mode vague classique : validation bac + vague obligatoires
+      const bac = await tx.bac.findFirst({
+        where: { id: data.bacId!, siteId },
+      });
+
+      if (!bac) {
+        throw new Error("Bac introuvable");
+      }
+
+      // ADR-043 Phase 2: vérifier via AssignationBac en priorité, fallback sur bac.vagueId
+      const assignationActive = await tx.assignationBac.findFirst({
+        where: { bacId: data.bacId!, vagueId: data.vagueId!, dateFin: null },
+      });
+
+      if (!assignationActive && bac.vagueId !== data.vagueId) {
+        throw new Error("Ce bac n'appartient pas a la vague selectionnee");
+      }
+
+      // Verifier que la vague existe, est en cours, et appartient au site
+      const vague = await tx.vague.findFirst({
+        where: { id: data.vagueId!, siteId },
+      });
+
+      if (!vague) {
+        throw new Error("Vague introuvable");
+      }
+
+      if (vague.statut !== StatutVague.EN_COURS) {
+        throw new Error("Impossible d'ajouter un releve a une vague cloturee");
+      }
+
+      // Validation : la date ne peut pas etre anterieure a la dateDebut de la vague
+      if (releveDate < vague.dateDebut) {
+        throw new Error(
+          `La date du releve ne peut pas etre anterieure au debut de la vague (${vague.dateDebut.toISOString().split("T")[0]}).`
+        );
+      }
     }
 
     // Construire les donnees selon le type
-    const releve = await tx.releve.create({
-      data: {
-        date: releveDate,
-        typeReleve: data.typeReleve,
-        vagueId: data.vagueId,
-        bacId: data.bacId,
-        siteId,
-        notes: data.notes ?? null,
-        // Champs biometrie
-        ...("poidsMoyen" in data && { poidsMoyen: data.poidsMoyen }),
-        ...("tailleMoyenne" in data && { tailleMoyenne: data.tailleMoyenne }),
-        ...("echantillonCount" in data && {
-          echantillonCount: data.echantillonCount,
-        }),
-        // Champs mortalite
-        ...("nombreMorts" in data && { nombreMorts: data.nombreMorts }),
-        ...("causeMortalite" in data && {
-          causeMortalite: data.causeMortalite,
-        }),
-        // Champs alimentation
-        ...("quantiteAliment" in data && {
-          quantiteAliment: data.quantiteAliment,
-        }),
-        ...("typeAliment" in data && { typeAliment: data.typeAliment }),
-        ...("frequenceAliment" in data && {
-          frequenceAliment: data.frequenceAliment,
-        }),
-        ...("tauxRefus" in data && { tauxRefus: data.tauxRefus ?? null }),
-        ...("comportementAlim" in data && { comportementAlim: data.comportementAlim ?? null }),
-        // Champs qualite eau
-        ...("temperature" in data && { temperature: data.temperature }),
-        ...("ph" in data && { ph: data.ph }),
-        ...("oxygene" in data && { oxygene: data.oxygene }),
-        ...("ammoniac" in data && { ammoniac: data.ammoniac }),
-        // Champs comptage
-        ...("nombreCompte" in data && { nombreCompte: data.nombreCompte }),
-        ...("methodeComptage" in data && {
-          methodeComptage: data.methodeComptage,
-        }),
-        // Champs observation
-        ...("description" in data && { description: data.description }),
-        // Champs renouvellement eau (Sprint 27-28, ADR-density-alerts)
-        ...("pourcentageRenouvellement" in data && { pourcentageRenouvellement: data.pourcentageRenouvellement }),
-        ...("volumeRenouvele" in data && { volumeRenouvele: data.volumeRenouvele }),
-        ...("nombreRenouvellements" in data && { nombreRenouvellements: data.nombreRenouvellements }),
-      },
-    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const releveCreateData: any = {
+      date: releveDate,
+      typeReleve: data.typeReleve,
+      vagueId: data.vagueId ?? null,
+      bacId: data.bacId ?? null,
+      siteId,
+      notes: data.notes ?? null,
+      // R1-S4 — lien lot d'alevins optionnel (ADR-044 §5.2, XOR avec vagueId)
+      ...(data.lotAlevinsId && { lotAlevinsId: data.lotAlevinsId }),
+      // Champs biometrie
+      ...("poidsMoyen" in data && { poidsMoyen: data.poidsMoyen }),
+      ...("tailleMoyenne" in data && { tailleMoyenne: data.tailleMoyenne }),
+      ...("echantillonCount" in data && {
+        echantillonCount: data.echantillonCount,
+      }),
+      // Champs mortalite
+      ...("nombreMorts" in data && { nombreMorts: data.nombreMorts }),
+      ...("causeMortalite" in data && {
+        causeMortalite: data.causeMortalite,
+      }),
+      // Champs alimentation
+      ...("quantiteAliment" in data && {
+        quantiteAliment: data.quantiteAliment,
+      }),
+      ...("typeAliment" in data && { typeAliment: data.typeAliment }),
+      ...("frequenceAliment" in data && {
+        frequenceAliment: data.frequenceAliment,
+      }),
+      ...("tauxRefus" in data && { tauxRefus: data.tauxRefus ?? null }),
+      ...("comportementAlim" in data && { comportementAlim: data.comportementAlim ?? null }),
+      // Champs qualite eau
+      ...("temperature" in data && { temperature: data.temperature }),
+      ...("ph" in data && { ph: data.ph }),
+      ...("oxygene" in data && { oxygene: data.oxygene }),
+      ...("ammoniac" in data && { ammoniac: data.ammoniac }),
+      // Champs comptage
+      ...("nombreCompte" in data && { nombreCompte: data.nombreCompte }),
+      ...("methodeComptage" in data && {
+        methodeComptage: data.methodeComptage,
+      }),
+      // Champs observation
+      ...("description" in data && { description: data.description }),
+      // Champs renouvellement eau (Sprint 27-28, ADR-density-alerts)
+      ...("pourcentageRenouvellement" in data && { pourcentageRenouvellement: data.pourcentageRenouvellement }),
+      ...("volumeRenouvele" in data && { volumeRenouvele: data.volumeRenouvele }),
+      ...("nombreRenouvellements" in data && { nombreRenouvellements: data.nombreRenouvellements }),
+    };
+    const releve = await tx.releve.create({ data: releveCreateData });
 
     // Traiter les consommations de stock (optionnel)
     if (data.consommations && data.consommations.length > 0) {
@@ -320,8 +343,8 @@ export async function createReleve(siteId: string, userId: string, data: CreateR
             data: { statut: StatutActivite.TERMINEE, releveId: releve.id, dateTerminee: new Date() },
           });
         }
-      } else {
-        // Auto-match : chercher une activite compatible
+      } else if (data.vagueId) {
+        // Auto-match : chercher une activite compatible (seulement en mode vague)
         const activiteMatch = await findMatchingActivite(
           tx,
           siteId,
@@ -589,11 +612,13 @@ export async function patchReleve(
     const releve = await tx.releve.findFirst({ where: { id, siteId } });
     if (!releve) throw new Error("Releve introuvable");
 
-    // 2. Verifier que la vague est EN_COURS
-    const vague = await tx.vague.findFirst({ where: { id: releve.vagueId, siteId } });
-    if (!vague) throw new Error("Vague introuvable");
-    if (vague.statut !== StatutVague.EN_COURS) {
-      throw new Error("Impossible de modifier un releve sur une vague cloturee");
+    // 2. Verifier que la vague est EN_COURS (skip si releve de lot d'alevins sans vagueId)
+    if (releve.vagueId) {
+      const vague = await tx.vague.findFirst({ where: { id: releve.vagueId, siteId } });
+      if (!vague) throw new Error("Vague introuvable");
+      if (vague.statut !== StatutVague.EN_COURS) {
+        throw new Error("Impossible de modifier un releve sur une vague cloturee");
+      }
     }
 
     // 3. Filtrer les champs autorises pour ce typeReleve
@@ -792,11 +817,13 @@ async function _patchReleve_deprecated(
     const releve = await tx.releve.findFirst({ where: { id, siteId } });
     if (!releve) throw new Error("Releve introuvable");
 
-    // 2. Verify vague is EN_COURS
-    const vague = await tx.vague.findFirst({ where: { id: releve.vagueId, siteId } });
-    if (!vague) throw new Error("Vague introuvable");
-    if (vague.statut !== StatutVague.EN_COURS) {
-      throw new Error("Impossible de modifier un releve d'une vague cloturee");
+    // 2. Verify vague is EN_COURS (skip for lot d'alevins releves without vagueId)
+    if (releve.vagueId) {
+      const vague = await tx.vague.findFirst({ where: { id: releve.vagueId, siteId } });
+      if (!vague) throw new Error("Vague introuvable");
+      if (vague.statut !== StatutVague.EN_COURS) {
+        throw new Error("Impossible de modifier un releve d'une vague cloturee");
+      }
     }
 
     // 3. Determine allowed fields for this typeReleve

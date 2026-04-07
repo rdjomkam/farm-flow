@@ -362,6 +362,8 @@ export async function getRentabiliteParVague(
   const coutsByVague = new Map<string, number>();
   for (const c of toutesConsommations) {
     const vagueId = c.releve.vagueId;
+    // Skip consommations from lot d'alevins releves (no vagueId — R3-S5)
+    if (!vagueId) continue;
     const coutLigne = c.quantite * getPrixParUniteBase(c.produit);
     coutsByVague.set(vagueId, (coutsByVague.get(vagueId) ?? 0) + coutLigne);
   }

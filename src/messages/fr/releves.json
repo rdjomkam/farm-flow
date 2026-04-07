@@ -11,7 +11,8 @@
     "QUALITE_EAU": "Qualité eau",
     "COMPTAGE": "Comptage",
     "OBSERVATION": "Observation",
-    "RENOUVELLEMENT": "Renouvellement eau"
+    "RENOUVELLEMENT": "Renouvellement eau",
+    "TRI": "Tri par taille"
   },
   "list": {
     "title": "Relevés ({count})",
@@ -85,6 +86,10 @@
         "title": "Consommation de stock",
         "descriptionIntrant": "Produits utilisés (optionnel)",
         "descriptionAliment": "Produits consommés"
+      },
+      "tri": {
+        "title": "Tri par taille",
+        "description": "Observations du tri des alevins par taille"
       }
     },
     "fields": {
@@ -104,7 +109,10 @@
       "autoDetectionNone": "Auto-détection (aucune activité planifiée)",
       "notes": "Notes (optionnel)",
       "notesPlaceholder": "Remarques complémentaires...",
-      "submit": "Enregistrer le relevé"
+      "submit": "Enregistrer le relevé",
+      "lotAlevins": "Lot d'alevins",
+      "lotAlevinsPlaceholder": "Sélectionner un lot",
+      "lotAlevinsChargement": "Chargement..."
     },
     "erreurFormulaire": "Le formulaire contient {count} erreur{plural}. Veuillez corriger les champs indiqués.",
     "errors": {
@@ -190,6 +198,10 @@
     "observation": {
       "description": "Description",
       "placeholder": "Décrivez votre observation..."
+    },
+    "tri": {
+      "description": "Observations du tri",
+      "placeholder": "Ex : Séparation des alevins < 2cm et > 2cm, lot de 350 petits, 150 grands..."
     },
     "renouvellement": {
       "title": "Renouvellement d'eau",

@@ -11,7 +11,8 @@
     "QUALITE_EAU": "Water quality",
     "COMPTAGE": "Counting",
     "OBSERVATION": "Observation",
-    "RENOUVELLEMENT": "Water renewal"
+    "RENOUVELLEMENT": "Water renewal",
+    "TRI": "Size sorting"
   },
   "list": {
     "title": "Records ({count})",
@@ -85,6 +86,10 @@
         "title": "Stock consumption",
         "descriptionIntrant": "Products used (optional)",
         "descriptionAliment": "Products consumed"
+      },
+      "tri": {
+        "title": "Size sorting",
+        "description": "Fry size sorting observations"
       }
     },
     "fields": {
@@ -104,7 +109,10 @@
       "autoDetectionNone": "Auto-detect (no planned activity)",
       "notes": "Notes (optional)",
       "notesPlaceholder": "Additional remarks...",
-      "submit": "Save record"
+      "submit": "Save record",
+      "lotAlevins": "Fry batch",
+      "lotAlevinsPlaceholder": "Select a batch",
+      "lotAlevinsChargement": "Loading..."
     },
     "erreurFormulaire": "The form contains {count} error{plural}. Please fix the indicated fields.",
     "errors": {
@@ -190,6 +198,10 @@
     "observation": {
       "description": "Description",
       "placeholder": "Describe your observation..."
+    },
+    "tri": {
+      "description": "Sorting observations",
+      "placeholder": "E.g.: Separation of fry < 2cm and > 2cm, batch of 350 small, 150 large..."
     },
     "renouvellement": {
       "title": "Water renewal",

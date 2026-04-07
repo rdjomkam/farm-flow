@@ -16,6 +16,7 @@ import { FormSection } from "@/components/ui/form-section";
 import { ReleveTypeSections } from "./releve-type-sections";
 import type { ConsommationLine, ProduitOption } from "./consommation-fields";
 import { TypeReleve, StatutActivite, CategorieProduit } from "@/types";
+import type { TriFields } from "@/hooks/use-releve-form";
 import type { BacResponse } from "@/types";
 import type { TypedFormFields, ActivitePlanifiee } from "@/hooks/use-releve-form";
 
@@ -101,6 +102,11 @@ export function ReleveFormFields({
   const t = useTranslations("releves");
   const tStock = useTranslations("stock");
 
+  /** Releve TRI lie directement a un lot d'alevins (sans vague/bac) */
+  const isTriWithLot =
+    fields.typeReleve === TypeReleve.TRI &&
+    Boolean((fields as unknown as TriFields).lotAlevinsId);
+
   /** Unite de l'aliment derive de la premiere ligne de consommation */
   const uniteAliment = useMemo((): string | undefined => {
     if (typeReleve !== TypeReleve.ALIMENTATION) return undefined;
@@ -125,43 +131,45 @@ export function ReleveFormFields({
         </div>
       )}
 
-      {/* Section identification */}
-      <FormSection
-        title={t("form.sections.identification.title")}
-        description={t("form.sections.identification.description")}
-      >
-        <Select value={vagueId} onValueChange={onVagueChange} disabled={isFromActivite && Boolean(vagueId)}>
-          <SelectTrigger label={t("form.fields.vague")} required error={errors.vagueId}>
-            <SelectValue placeholder={t("form.fields.vaguePlaceholder")} />
-          </SelectTrigger>
-          <SelectContent>
-            {vagues.map((v) => (
-              <SelectItem key={v.id} value={v.id}>{v.code}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={bacId}
-          onValueChange={onBacChange}
-          disabled={!vagueId || loadingBacs || (isFromActivite && Boolean(initialBacId))}
+      {/* Section identification — masquee pour TRI lie a un lot d'alevins */}
+      {!isTriWithLot && (
+        <FormSection
+          title={t("form.sections.identification.title")}
+          description={t("form.sections.identification.description")}
         >
-          <SelectTrigger label={t("form.fields.bac")} required error={errors.bacId}>
-            <SelectValue
-              placeholder={
-                loadingBacs ? t("form.fields.bacChargement")
-                  : !vagueId ? t("form.fields.bacSelectVagueFirst")
-                  : t("form.fields.bacPlaceholder")
-              }
-            />
-          </SelectTrigger>
-          <SelectContent>
-            {bacs.map((b) => (
-              <SelectItem key={b.id} value={b.id}>{b.nom} ({b.volume}L)</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </FormSection>
+          <Select value={vagueId} onValueChange={onVagueChange} disabled={isFromActivite && Boolean(vagueId)}>
+            <SelectTrigger label={t("form.fields.vague")} required error={errors.vagueId}>
+              <SelectValue placeholder={t("form.fields.vaguePlaceholder")} />
+            </SelectTrigger>
+            <SelectContent>
+              {vagues.map((v) => (
+                <SelectItem key={v.id} value={v.id}>{v.code}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={bacId}
+            onValueChange={onBacChange}
+            disabled={!vagueId || loadingBacs || (isFromActivite && Boolean(initialBacId))}
+          >
+            <SelectTrigger label={t("form.fields.bac")} required error={errors.bacId}>
+              <SelectValue
+                placeholder={
+                  loadingBacs ? t("form.fields.bacChargement")
+                    : !vagueId ? t("form.fields.bacSelectVagueFirst")
+                    : t("form.fields.bacPlaceholder")
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {bacs.map((b) => (
+                <SelectItem key={b.id} value={b.id}>{b.nom} ({b.volume}L)</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormSection>
+      )}
 
       {/* Section date */}
       <FormSection
