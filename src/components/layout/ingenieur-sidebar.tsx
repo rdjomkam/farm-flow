@@ -18,7 +18,6 @@ import {
   Wallet,
   Calendar,
   BarChart3,
-  Fish,
   Shield,
   CheckSquare,
   Truck,
@@ -32,6 +31,7 @@ import { LanguageSwitcher } from "./language-switcher";
 import { cn } from "@/lib/utils";
 import { Permission, Role, SiteModule } from "@/types";
 import { ITEM_VIEW_PERMISSIONS } from "@/lib/permissions-constants";
+import { SilureLogo } from "@/components/ui/silure-logo";
 
 interface NavItem {
   href: string;
@@ -161,7 +161,7 @@ export function IngenieurSidebar({
     <aside className="hidden md:flex md:w-60 md:flex-col md:border-r md:border-border md:bg-card">
       {/* Logo header */}
       <div className="flex h-14 items-center gap-2 border-b border-border px-4 shrink-0">
-        <Fish className="h-6 w-6 text-primary" />
+        <SilureLogo size={24} className="text-primary" />
         <span className="text-lg font-bold">FarmFlow</span>
         <div className="ml-auto">
           <NotificationBell />

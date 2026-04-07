@@ -11,15 +11,22 @@ const variants = {
   success: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
 };
 
+const shapes = {
+  pill: "rounded-full",
+  square: "rounded-md",
+};
+
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: keyof typeof variants;
+  shape?: keyof typeof shapes;
 }
 
-function Badge({ className, variant = "default", ...props }: BadgeProps) {
+function Badge({ className, variant = "default", shape = "pill", ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+        "inline-flex items-center px-2.5 py-0.5 text-xs font-medium",
+        shapes[shape],
         variants[variant],
         className
       )}

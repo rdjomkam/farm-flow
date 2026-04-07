@@ -228,7 +228,7 @@ export function PoidsChart({
         stroke="var(--primary)"
         strokeWidth={2}
         dot={{ r: 3 }}
-        activeDot={{ r: 6 }}
+        activeDot={{ r: 6, stroke: "var(--primary)", strokeWidth: 2, fill: "white" }}
         connectNulls={false}
       />
       {hasGompertz && (
@@ -240,7 +240,7 @@ export function PoidsChart({
           strokeWidth={1.5}
           strokeDasharray="4 3"
           dot={false}
-          activeDot={{ r: 4 }}
+          activeDot={{ r: 4, stroke: "var(--accent-green)", strokeWidth: 2, fill: "white" }}
           connectNulls={true}
         />
       )}
@@ -272,7 +272,7 @@ export function PoidsChart({
         stroke="var(--primary)"
         strokeWidth={2}
         dot={biometryDot}
-        activeDot={{ r: 6 }}
+        activeDot={{ r: 6, stroke: "var(--primary)", strokeWidth: 2, fill: "white" }}
         connectNulls={true}
       />
       <Line
@@ -283,7 +283,7 @@ export function PoidsChart({
         strokeWidth={1.5}
         strokeDasharray="4 3"
         dot={false}
-        activeDot={{ r: 4 }}
+        activeDot={{ r: 4, stroke: "var(--accent-green)", strokeWidth: 2, fill: "white" }}
         connectNulls={true}
       />
     </LineChart>
@@ -333,17 +333,25 @@ export function PoidsChart({
           )}
 
           {/* Chart */}
-          <div className="w-full" style={{ height: 220 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              {activeChart === 0 || !hasGompertz ? observationsChart : predictionChart}
-            </ResponsiveContainer>
-          </div>
-
-          {hasGompertz && (
-            <p className="text-[10px] text-muted-foreground mt-1 text-center">
-              {t("poidsChart.gompertzLegend")}
-            </p>
-          )}
+          <figure>
+            <figcaption className="sr-only">
+              {t("poidsChart.title")}
+              {hasGompertz ? ` — ${t("poidsChart.gompertzLegend")}` : ""}
+            </figcaption>
+            <div className="w-full" style={{ height: 220 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                {activeChart === 0 || !hasGompertz ? observationsChart : predictionChart}
+              </ResponsiveContainer>
+            </div>
+            {hasGompertz && (
+              <p
+                className="text-[10px] text-muted-foreground mt-1 text-center"
+                aria-hidden="true"
+              >
+                {t("poidsChart.gompertzLegend")}
+              </p>
+            )}
+          </figure>
         </CardContent>
       </Card>
     </ErrorBoundary>

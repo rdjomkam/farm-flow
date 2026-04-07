@@ -2,6 +2,7 @@ import { Waves, Weight, HeartPulse, Container } from "lucide-react";
 import { KPICard } from "@/components/ui/kpi-card";
 import type { DashboardData } from "@/types";
 import { formatNum } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { getTranslations } from "next-intl/server";
 
 interface StatsCardsProps {
@@ -43,11 +44,11 @@ export async function StatsCards({ data }: StatsCardsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-3 lg:grid-cols-5">
       {stats.map((stat, index) => (
         <div
           key={stat.title}
-          className="animate-fade-in-up opacity-0"
+          className={cn("animate-fade-in-up opacity-0", index === 0 && "lg:col-span-2")}
           style={{ animationDelay: `${index * 80}ms` }}
         >
           <KPICard {...stat} />

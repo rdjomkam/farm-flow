@@ -45,7 +45,7 @@ export default async function ChangerPlanPage() {
 
   // Charger les plans disponibles
   const rawPlans = await getPlansAbonnements();
-  const plans: PlanAbonnement[] = rawPlans.map((p) => ({
+  const plans: PlanAbonnement[] = rawPlans.map((p: Record<string, unknown>) => ({
     ...p,
     prixMensuel: p.prixMensuel != null ? Number(p.prixMensuel) : null,
     prixTrimestriel: p.prixTrimestriel != null ? Number(p.prixTrimestriel) : null,

@@ -144,8 +144,8 @@ export function ReproducteurDetailClient({ reproducteur, permissions }: Props) {
           <span
             className={`inline-flex items-center rounded-full px-2.5 py-1 text-sm font-medium ${
               reproducteur.sexe === SexeReproducteur.FEMELLE
-                ? "bg-accent-pink-muted text-accent-pink"
-                : "bg-accent-indigo-muted text-accent-indigo"
+                ? "bg-accent-purple-muted text-accent-purple"
+                : "bg-accent-blue-muted text-accent-blue"
             }`}
           >
             {sexeLabels[reproducteur.sexe as SexeReproducteur] ??

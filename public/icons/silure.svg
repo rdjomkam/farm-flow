@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+  <!-- Corps principal -->
+  <ellipse cx="15" cy="17" rx="12" ry="7" fill="currentColor" opacity="0.9"/>
+  <!-- Tete arrondie -->
+  <circle cx="25" cy="17" r="5.5" fill="currentColor"/>
+  <!-- Queue bifurquee -->
+  <path d="M3 17 L0 10 L4 17 L0 24 Z" fill="currentColor" opacity="0.85"/>
+  <!-- Nageoire dorsale -->
+  <path d="M13 10 Q18 6 23 9 L23 11 Q18 8 13 12 Z" fill="currentColor" opacity="0.7"/>
+  <!-- Nageoire pectorale -->
+  <path d="M22 20 Q26 24 23 26 L22 23 Z" fill="currentColor" opacity="0.65"/>
+  <!-- Barbillon 1 (haut) -->
+  <path d="M27 14 Q31 10 30 8" stroke="currentColor" stroke-width="1" stroke-linecap="round" fill="none" opacity="0.85"/>
+  <!-- Barbillon 2 (haut court) -->
+  <path d="M28 15 Q32 12 31 10" stroke="currentColor" stroke-width="1" stroke-linecap="round" fill="none" opacity="0.85"/>
+  <!-- Barbillon 3 (bas) -->
+  <path d="M27 19 Q31 23 30 25" stroke="currentColor" stroke-width="1" stroke-linecap="round" fill="none" opacity="0.85"/>
+  <!-- Barbillon 4 (bas court) -->
+  <path d="M28 18 Q32 21 31 23" stroke="currentColor" stroke-width="1" stroke-linecap="round" fill="none" opacity="0.85"/>
+  <!-- Oeil -->
+  <circle cx="27" cy="15" r="1.4" fill="white"/>
+  <circle cx="27.4" cy="15" r="0.7" fill="currentColor" opacity="0.5"/>
+</svg>

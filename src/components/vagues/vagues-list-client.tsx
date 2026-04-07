@@ -172,17 +172,21 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
       );
     }
     return (
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+      <ul role="list" className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         {items.map((v) =>
           v.isBlocked ? (
-            <BlockedResourceOverlay key={v.id} resourceName={v.code}>
-              <VagueCard vague={v} />
-            </BlockedResourceOverlay>
+            <li key={v.id}>
+              <BlockedResourceOverlay resourceName={v.code}>
+                <VagueCard vague={v} />
+              </BlockedResourceOverlay>
+            </li>
           ) : (
-            <VagueCard key={v.id} vague={v} />
+            <li key={v.id}>
+              <VagueCard vague={v} />
+            </li>
           )
         )}
-      </div>
+      </ul>
     );
   }
 

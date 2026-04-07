@@ -132,6 +132,108 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-082 — console.log debug dans layout.tsx déclenché à chaque requête en production
+**Sprint :** 54 | **Date :** 2026-04-07
+**Sévérité :** Basse
+**Fichier(s) :** `src/app/layout.tsx` lignes 119, 124
+
+**Symptôme :**
+Les logs `[RootLayout] START` et `SESSION` s'affichent dans les logs serveur en production à chaque rendu de la route racine, polluant les traces et consommant des ressources inutilement.
+
+**Cause racine :**
+Les `console.log` de débogage ont été ajoutés pendant le développement et n'ont pas été retirés ni conditionnés avant la mise en production. En Next.js App Router, `layout.tsx` est un Server Component exécuté côté serveur à chaque requête non-cachée.
+
+**Fix :**
+Supprimer les `console.log` de débogage, ou les conditionner explicitement :
+```typescript
+if (process.env.NODE_ENV !== "production") {
+  console.log("[RootLayout] START");
+}
+```
+
+**Leçon / Règle :**
+Tout `console.log` dans un Server Component (layout, page, route handler) s'exécute côté serveur à chaque requête. Avant toute review ou merge, vérifier que les logs de débogage sont supprimés ou conditionnés par `process.env.NODE_ENV !== "production"`. La checklist de review doit inclure un grep sur `console.log` dans les fichiers layout.
+
+---
+
+### ERR-081 — Grain overlay avec z-index 9999 : risque de collision avec les modales
+**Sprint :** 54 | **Date :** 2026-04-07
+**Sévérité :** Basse
+**Fichier(s) :** `src/app/globals.css` ligne 132
+
+**Symptôme :**
+L'overlay de texture grain utilise `z-index: 9999` avec `pointer-events: none`. Fonctionnel en l'état, mais toute modale ou popover utilisant un z-index inférieur à 9999 (ex. Radix Dialog par défaut à 50) sera visuellement recouvert par l'overlay.
+
+**Cause racine :**
+La valeur 9999 est choisie "pour être sûr d'être au-dessus de tout" sans considérer que des composants Radix UI ou des toasts peuvent aussi vouloir être au premier plan. Les overlays purement décoratifs n'ont pas besoin d'un z-index élevé.
+
+**Fix :**
+Utiliser un z-index bas (1 ou 2) pour les overlays décoratifs avec `pointer-events: none`. Les composants interactifs (Dialog, Sheet, Toast) utilisent des z-index élevés via leurs propres stacking contexts :
+```css
+.grain-overlay {
+  z-index: 1;
+  pointer-events: none;
+}
+```
+
+**Leçon / Règle :**
+Les overlays décoratifs (`pointer-events: none`) doivent avoir le z-index le plus bas possible — idéalement 1. Réserver les z-index élevés (50+) aux composants interactifs qui doivent couvrir le contenu (Dialog, Sheet, Toast, Tooltip). Ne jamais utiliser 9999 sauf pour un système de notification global explicitement conçu pour dominer tout le reste.
+
+---
+
+### ERR-080 — R6 : classes Tailwind directes `bg-emerald-500/15 text-emerald-600` dans Badge contournent le système de tokens
+**Sprint :** 54 | **Date :** 2026-04-07
+**Sévérité :** Basse
+**Fichier(s) :** `src/components/ui/badge.tsx` ligne 11
+
+**Symptôme :**
+La variante `success` du composant Badge utilise des classes Tailwind directes (`bg-emerald-500/15 text-emerald-600`) au lieu des tokens CSS du thème (`--accent-emerald`, `--accent-emerald-muted`). En mode sombre ou lors d'un changement de palette, la couleur ne s'adapte pas.
+
+**Cause racine :**
+Violation de la règle R6 : les classes Tailwind de couleur brutes (`emerald-500`, `emerald-600`) sont des valeurs absolues non reliées au système de design tokens défini dans `globals.css`. Le composant Badge a été créé sans consulter les variables CSS disponibles.
+
+**Fix :**
+Remplacer les classes Tailwind directes par des références aux variables CSS du thème :
+```tsx
+// Au lieu de :
+"bg-emerald-500/15 text-emerald-600"
+
+// Utiliser :
+"bg-[var(--accent-emerald-muted)] text-[var(--accent-emerald)]"
+```
+
+**Leçon / Règle :**
+R6 s'applique aussi aux classes Tailwind de couleur — `bg-emerald-500` est aussi une couleur "en dur" que `#10b981`. Toujours vérifier `globals.css` pour les tokens disponibles (`--accent-*`, `--primary`, `--muted`, etc.) avant d'utiliser une classe Tailwind de couleur dans un composant UI partagé. Lors de la review, grep `bg-[a-z]+-[0-9]` et `text-[a-z]+-[0-9]` dans les composants UI pour détecter les violations R6.
+
+---
+
+### ERR-079 — R6 : `fill="white"` dans SVG/logo ne fonctionne pas en mode sombre
+**Sprint :** 54 | **Date :** 2026-04-07
+**Sévérité :** Basse
+**Fichier(s) :** `src/components/silure-logo.tsx` ligne 43, `public/icons/silure.svg` ligne 21
+
+**Symptôme :**
+L'attribut `fill="white"` sur un élément SVG (oeil du silure) rend l'élément invisible en mode sombre si le fond du SVG devient aussi sombre. La couleur `white` est absolue et ne s'adapte pas au thème.
+
+**Cause racine :**
+Violation de la règle R6 : la valeur `"white"` est une couleur littérale non reliée au système de tokens CSS. En mode sombre, `--background` est une couleur sombre, et `fill="white"` crée un contraste inversé ou invisible selon le contexte de rendu.
+
+**Fix :**
+Remplacer `fill="white"` par `fill="var(--background)"` pour que la couleur de remplissage suive automatiquement le thème :
+```tsx
+// silure-logo.tsx
+<circle cx="..." cy="..." r="..." fill="var(--background)" />
+```
+```xml
+<!-- silure.svg -->
+<circle cx="..." cy="..." r="..." fill="var(--background)" />
+```
+
+**Leçon / Règle :**
+R6 s'applique aux attributs SVG inline (`fill`, `stroke`) autant qu'aux propriétés CSS. Ne jamais utiliser `fill="white"`, `fill="black"`, `fill="#fff"` ou toute couleur absolue dans un SVG embarqué. Utiliser `fill="currentColor"` pour hériter de la couleur de texte du parent, ou `fill="var(--background)"` / `fill="var(--foreground)"` pour les remplissages de fond. Vérifier les SVG inline lors de toute review R6.
+
+---
+
 ### ERR-076 — tendanceFCR : query Prisma sans `consommations` dans le select — fallback dual-source impossible
 **Sprint :** ADR-043 | **Date :** 2026-04-06
 **Sévérité :** Haute
@@ -951,6 +1053,47 @@ Utiliser `head -3 migration.sql` et `tail -5 migration.sql` pour vérifier.
 ---
 
 ## Catégorie : Pattern
+
+### ERR-078 — Rapport de test produit avant le commit final : résultats "NON CONFORME" sur du code pourtant correct
+**Sprint :** 54 | **Date :** 2026-04-07
+**Sévérité :** Basse
+**Fichier(s) :** `docs/tests/rapport-story-54.4.md`
+
+**Symptôme :**
+Le rapport de test pour la story 54.4 marquait `stats-cards.tsx` comme "NON CONFORME" alors que la modification était bien présente dans le code source. Faux négatif générant une confusion lors de la review.
+
+**Cause racine :**
+Le tester a lancé ses vérifications avant que le développeur effectue son commit final. Le rapport documente l'état d'une version intermédiaire du code, pas l'état livré. Ce désynchronisation entre le moment du test et le moment du commit est un anti-pattern dans le pipeline story.
+
+**Fix :**
+Le rapport a été corrigé manuellement après vérification de la présence réelle des modifications dans le fichier final.
+
+**Leçon / Règle :**
+Le tester ne doit pas produire son rapport tant que le développeur n'a pas signalé que son implémentation est complète et committée. Le pipeline story est séquentiel : implementer → commit → tester → review. Vérifier le hash de commit ou la date du dernier fichier modifié avant de lancer les checks. Un rapport "NON CONFORME" sur du code correct est plus dommageable qu'un retard de quelques minutes.
+
+---
+
+### ERR-077 — Agents parallèles sur des fichiers partagés : modifications perdues par écrasement
+**Sprint :** 54 | **Date :** 2026-04-07
+**Sévérité :** Haute
+**Fichier(s) :** `src/app/globals.css`, `src/components/ui/card.tsx`, `src/components/ui/button.tsx`
+
+**Symptôme :**
+Plusieurs agents (stories 54.2, 54.3, 54.4, 54.5, 54.6) ont modifié les mêmes fichiers partagés (`globals.css`, `card.tsx`, `button.tsx`) en parallèle. Les modifications d'un agent ont écrasé celles d'un autre, forçant des ré-applications manuelles et des réconciliations en fin de sprint.
+
+**Cause racine :**
+Le modèle d'exécution parallèle d'agents indépendants ne gère pas les conflits d'écriture sur les fichiers partagés. Chaque agent lit la version du fichier au moment de son démarrage, travaille sur sa copie locale, puis écrit — écrasant silencieusement les changements des agents qui ont écrit entre-temps.
+
+**Fix :**
+Les fichiers partagés ont été réconciliés manuellement après la complétion de toutes les stories.
+
+**Leçon / Règle :**
+Les fichiers partagés entre plusieurs stories d'un même sprint (`globals.css`, composants UI de base comme `card.tsx`, `button.tsx`, `layout.tsx`) ne doivent pas être modifiés par plusieurs agents en parallèle. Deux stratégies acceptables :
+1. **Séquentialisation** : les stories touchant des fichiers partagés s'exécutent en séquence, pas en parallèle.
+2. **Agent dédié** : un seul agent "intégrateur" est responsable des fichiers partagés — les autres stories lui délèguent leurs besoins via une spec, sans écrire directement.
+Identifier les fichiers partagés en pré-analyse de sprint et planifier les dépendances en conséquence.
+
+---
 
 ### ERR-069 — Invariant de conservation non testé : sum(qtyPériodes) doit égaler total consommation bac
 **Sprint :** ADR-036 | **Date :** 2026-04-06

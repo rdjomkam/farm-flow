@@ -105,19 +105,22 @@ function SparklineFCR({ data }: SparklineFCRProps) {
   }
 
   return (
-    <div className="w-full h-[50px]">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data}>
-          <Line
-            type="monotone"
-            dataKey="fcr"
-            stroke="hsl(var(--primary))"
-            strokeWidth={2}
-            dot={false}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
+    <figure>
+      <figcaption className="sr-only">{t("labels.tendanceFCR")}</figcaption>
+      <div className="w-full h-[50px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data}>
+            <Line
+              type="monotone"
+              dataKey="fcr"
+              stroke="hsl(var(--primary))"
+              strokeWidth={2}
+              dot={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </figure>
   );
 }
 

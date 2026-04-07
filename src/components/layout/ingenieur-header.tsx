@@ -1,6 +1,6 @@
 "use client";
 
-import { Fish } from "lucide-react";
+import { SilureLogo } from "@/components/ui/silure-logo";
 import { NotificationBell } from "./notification-bell";
 import { cn } from "@/lib/utils";
 import { useNetworkStatus } from "@/hooks/use-network-status";
@@ -14,7 +14,7 @@ export function IngenieurHeader() {
       <div className="flex h-12 items-center justify-between px-3">
         {/* Logo + Ingénieur badge */}
         <div className="flex items-center gap-1.5">
-          <Fish className="h-5 w-5 text-primary" />
+          <SilureLogo size={20} className="text-primary" />
           <span className="text-sm font-semibold">FarmFlow</span>
           <span className="ml-0.5 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
             Ingénieur

@@ -52,7 +52,13 @@ export function AppShell({
   if (role === RoleEnum.INGENIEUR) {
     return (
       <>
-<div className="flex min-h-dvh overflow-x-clip">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:rounded-md focus:shadow-md focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          Aller au contenu principal
+        </a>
+        <div className="flex min-h-dvh overflow-x-clip">
           <IngenieurSidebar
             permissions={permissions}
             siteModules={siteModules}
@@ -63,8 +69,11 @@ export function AppShell({
           <div className="flex flex-1 flex-col overflow-x-clip max-w-full">
             <IngenieurHeader />
             <PullToRefresh />
-            <main className="flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
-              {children}
+            <main
+              id="main-content"
+              className="flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0"
+            >
+              <div className="max-w-7xl mx-auto w-full">{children}</div>
             </main>
           </div>
         </div>
@@ -86,7 +95,13 @@ export function AppShell({
   if (role !== null && FARM_ROLES.includes(role)) {
     return (
       <>
-<div className="flex min-h-dvh overflow-x-clip">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:rounded-md focus:shadow-md focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          Aller au contenu principal
+        </a>
+        <div className="flex min-h-dvh overflow-x-clip">
           <FarmSidebar
             permissions={permissions}
             siteModules={siteModules}
@@ -97,8 +112,11 @@ export function AppShell({
           <div className="flex flex-1 flex-col overflow-x-clip max-w-full">
             <FarmHeader />
             <PullToRefresh />
-            <main className="flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
-              {children}
+            <main
+              id="main-content"
+              className="flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0"
+            >
+              <div className="max-w-7xl mx-auto w-full">{children}</div>
             </main>
           </div>
         </div>

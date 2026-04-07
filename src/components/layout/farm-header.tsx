@@ -1,7 +1,7 @@
 "use client";
 
-import { Fish } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { SilureLogo } from "@/components/ui/silure-logo";
 import { NotificationBell } from "./notification-bell";
 import { cn } from "@/lib/utils";
 import { useNetworkStatus } from "@/hooks/use-network-status";
@@ -28,7 +28,7 @@ export function FarmHeader({
       <div className="flex h-12 items-center justify-between px-3">
         {/* Logo */}
         <div className="flex items-center gap-1.5">
-          <Fish className="h-5 w-5 text-primary" />
+          <SilureLogo size={20} className="text-primary" />
           <span className="text-sm font-semibold">FarmFlow</span>
           {/* Network indicator */}
           <div

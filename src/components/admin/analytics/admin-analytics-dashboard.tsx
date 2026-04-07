@@ -247,6 +247,7 @@ function SitesGrowthChart({ data, labelTotalCumulatif, labelNouveaux, labelAucun
             stroke="hsl(var(--primary))"
             strokeWidth={2}
             dot={false}
+            activeDot={{ r: 6, stroke: "var(--primary)", strokeWidth: 2, fill: "white" }}
           />
           <Line
             type="monotone"
@@ -255,6 +256,7 @@ function SitesGrowthChart({ data, labelTotalCumulatif, labelNouveaux, labelAucun
             stroke="hsl(var(--accent-green, 142 76% 36%))"
             strokeWidth={2}
             dot={false}
+            activeDot={{ r: 6, stroke: "var(--accent-green)", strokeWidth: 2, fill: "white" }}
             strokeDasharray="4 2"
           />
         </LineChart>
@@ -404,6 +406,7 @@ function RevenueChart({ data, mrr, labelRevenus, labelMrr, labelAucuneDonnee }: 
             stroke="hsl(var(--accent-amber, 38 92% 50%))"
             strokeWidth={2}
             dot={false}
+            activeDot={{ r: 6, stroke: "var(--accent-amber)", strokeWidth: 2, fill: "white" }}
           />
         </BarChart>
       </ResponsiveContainer>

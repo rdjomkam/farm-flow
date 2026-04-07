@@ -77,8 +77,8 @@ export default async function AlevinsPage() {
       value: pontesEnCours.length,
       total: pontes.length,
       icon: Egg,
-      color: "text-accent-yellow",
-      bgColor: "bg-accent-yellow-muted",
+      color: "text-accent-amber",
+      bgColor: "bg-accent-amber-muted",
     },
     {
       label: t("kpis.lotsEnElevage"),
@@ -117,8 +117,8 @@ export default async function AlevinsPage() {
         ? t("pontes.count", { count: pontes.length })
         : t("pontes.countPlural", { count: pontes.length }),
       icon: Egg,
-      color: "text-accent-yellow",
-      bgColor: "bg-accent-yellow-muted",
+      color: "text-accent-amber",
+      bgColor: "bg-accent-amber-muted",
     },
     {
       href: "/alevins/lots",

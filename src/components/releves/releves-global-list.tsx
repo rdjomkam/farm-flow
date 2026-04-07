@@ -124,16 +124,13 @@ export function RelevesGlobalList({
 
   return (
     <div className="flex flex-col gap-0">
-      <div className="flex flex-col">
+      <ul role="list" className="flex flex-col">
         {releves.map((r) => (
-          <ReleveCard
-            key={r.id}
-            releve={r}
-            produits={produits}
-            permissions={permissions}
-          />
+          <li key={r.id}>
+            <ReleveCard releve={r} produits={produits} permissions={permissions} />
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }

@@ -229,35 +229,37 @@ const VagueCharts = memo(function VagueCharts({ vague }: { vague: VagueAvecRelev
             </CardTitle>
           </CardHeader>
           <CardContent className="overflow-hidden">
-            <div className="h-[200px] w-full max-w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={croissanceData}
-                  margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fontSize: 11 }}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11 }}
-                    tickFormatter={(v) => `${v}g`}
-                    width={44}
-                  />
-                  <Tooltip content={tooltipCroissance} cursor={<ChartCrosshair />} />
-                  <Line
-                    type="monotone"
-                    dataKey="poidsMoyen"
-                    name={tIngenieur("charts.avgWeight")}
-                    stroke="var(--primary)"
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
-                    activeDot={{ r: 6 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            <figure>
+              <figcaption className="sr-only">
+                {vague.code} — Croissance (poids moyen)
+              </figcaption>
+              <div className="h-[200px] w-full max-w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={croissanceData}
+                    margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                    <YAxis
+                      tick={{ fontSize: 11 }}
+                      tickFormatter={(v) => `${v}g`}
+                      width={44}
+                    />
+                    <Tooltip content={tooltipCroissance} cursor={<ChartCrosshair />} />
+                    <Line
+                      type="monotone"
+                      dataKey="poidsMoyen"
+                      name={tIngenieur("charts.avgWeight")}
+                      stroke="var(--primary)"
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 6, stroke: "var(--primary)", strokeWidth: 2, fill: "white" }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </figure>
           </CardContent>
         </Card>
       )}
@@ -271,36 +273,38 @@ const VagueCharts = memo(function VagueCharts({ vague }: { vague: VagueAvecRelev
             </CardTitle>
           </CardHeader>
           <CardContent className="overflow-hidden">
-            <div className="h-[200px] w-full max-w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={survieData}
-                  margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fontSize: 11 }}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11 }}
-                    tickFormatter={(v) => `${v}%`}
-                    domain={[0, 100]}
-                    width={40}
-                  />
-                  <Tooltip content={tooltipSurvie} cursor={<ChartCrosshair />} />
-                  <Line
-                    type="monotone"
-                    dataKey="survie"
-                    name="Survie"
-                    stroke="var(--success)"
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
-                    activeDot={{ r: 6 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            <figure>
+              <figcaption className="sr-only">
+                {vague.code} — Taux de survie (%)
+              </figcaption>
+              <div className="h-[200px] w-full max-w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={survieData}
+                    margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                    <YAxis
+                      tick={{ fontSize: 11 }}
+                      tickFormatter={(v) => `${v}%`}
+                      domain={[0, 100]}
+                      width={40}
+                    />
+                    <Tooltip content={tooltipSurvie} cursor={<ChartCrosshair />} />
+                    <Line
+                      type="monotone"
+                      dataKey="survie"
+                      name="Survie"
+                      stroke="var(--success)"
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 6, stroke: "var(--primary)", strokeWidth: 2, fill: "white" }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </figure>
           </CardContent>
         </Card>
       )}
@@ -314,31 +318,30 @@ const VagueCharts = memo(function VagueCharts({ vague }: { vague: VagueAvecRelev
             </CardTitle>
           </CardHeader>
           <CardContent className="overflow-hidden">
-            <div className="h-[200px] w-full max-w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={mortaliteData}
-                  margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fontSize: 11 }}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11 }}
-                    width={36}
-                  />
-                  <Tooltip content={tooltipMortalite} cursor={<ChartCrosshair />} />
-                  <Bar
-                    dataKey="nombreMorts"
-                    name="Morts"
-                    fill="var(--danger)"
-                    radius={[3, 3, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <figure>
+              <figcaption className="sr-only">
+                {vague.code} — Mortalites par evenement
+              </figcaption>
+              <div className="h-[200px] w-full max-w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={mortaliteData}
+                    margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} width={36} />
+                    <Tooltip content={tooltipMortalite} cursor={<ChartCrosshair />} />
+                    <Bar
+                      dataKey="nombreMorts"
+                      name="Morts"
+                      fill="var(--danger)"
+                      radius={[3, 3, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </figure>
           </CardContent>
         </Card>
       )}

@@ -7350,3 +7350,21 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 | **51** | Backoffice Exonération | 51.1–51.3 | `FAIT` |
 | **52** | Cleanup migration + retrait fallback | 52.1–52.3 | `FAIT` |
 | **53** | Tests intégration + Review finale | 53.1–53.4 | `FAIT` |
+
+---
+
+## Sprint 54 — Design Audit Polish
+
+> **Plan détaillé :** `docs/sprints/SPRINT-54-DESIGN-AUDIT.md`
+> **Objectif :** Appliquer les 7 correctifs prioritaires identifiés par l'audit design (typographie, couleurs, animations, layout, accessibilité, composants, meta).
+
+| Story | Titre | Statut |
+|-------|-------|--------|
+| **54.1** | Typography Polish | `FAIT` |
+| **54.2** | Color & Shadow Refinement | `FAIT` |
+| **54.3** | Hover & Motion Upgrades | `FAIT` |
+| **54.4** | Layout & Spacing Fixes | `FAIT` |
+| **54.5** | Semantic HTML & Accessibility | `FAIT` |
+| **54.6** | Component Pattern Upgrades | `FAIT` |
+| **54.7** | Meta & 404 Page | `FAIT` |
+| **54.8** | Tests & Review Sprint 54 | `FAIT` |

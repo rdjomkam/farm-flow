@@ -179,87 +179,103 @@ function CourbeProjectionChart({ projection }: { projection: ProjectionVague }) 
   }
 
   return (
-    <div className="h-[200px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={courbeProjection} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-          <XAxis
-            dataKey="jour"
-            tick={{ fontSize: 11 }}
-            tickFormatter={(v) => `J${v}`}
-          />
-          <YAxis
-            tick={{ fontSize: 10 }}
-            tickFormatter={(v) => `${v}g`}
-            width={44}
-          />
-          <Tooltip
-            cursor={<ChartCrosshair />}
-            content={({ active, payload, label }) => {
-              if (!active || !payload || payload.length === 0) return null;
-              // Compute date from vague start: today - joursEcoules + jour
-              const jour = Number(label);
-              const dateDebut = new Date();
-              dateDebut.setDate(dateDebut.getDate() - joursEcoules);
-              const pointDate = new Date(dateDebut);
-              pointDate.setDate(pointDate.getDate() + jour);
-              const dateStr = pointDate.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
-              return (
-                <div className="rounded-xl border border-border bg-card p-3 shadow-[var(--shadow-elevated)] text-xs">
-                  <p className="font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                    Jour {label} — {dateStr}
-                  </p>
-                  {payload.map((p) => (
-                    <div key={p.name} className="flex items-center gap-2 text-sm">
-                      <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
-                      <span className="text-muted-foreground">{p.name} :</span>
-                      <span className="font-bold">{p.value}g</span>
-                    </div>
-                  ))}
-                </div>
-              );
-            }}
-          />
-          {/* Ligne verticale au jour courant */}
-          <ReferenceLine
-            x={joursEcoules}
-            stroke="var(--muted-foreground)"
-            strokeDasharray="4 4"
-            label={{ value: "Auj.", fontSize: 10, fill: "var(--muted-foreground)" }}
-          />
-          {/* Ligne horizontale objectif */}
-          <ReferenceLine
-            y={poidsObjectif}
-            stroke="var(--accent-amber)"
-            strokeDasharray="4 4"
-            label={{ value: `Obj. ${poidsObjectif}g`, fontSize: 10, fill: "var(--accent-amber)" }}
-          />
-          {/* Courbe reelle */}
-          <Line
-            type="monotone"
-            dataKey="poidsReel"
-            name="poidsReel"
-            stroke="var(--primary)"
-            strokeWidth={2}
-            dot={{ r: 3, fill: "var(--primary)" }}
-            activeDot={{ r: 5 }}
-            connectNulls={false}
-          />
-          {/* Courbe projetee (SGR) */}
-          <Line
-            type="monotone"
-            dataKey="poidsProjecte"
-            name="poidsProjecte"
-            stroke="var(--accent-blue)"
-            strokeWidth={2}
-            strokeDasharray="6 3"
-            dot={false}
-            activeDot={{ r: 4 }}
-            connectNulls={false}
-          />
-        </ComposedChart>
-      </ResponsiveContainer>
-    </div>
+    <figure>
+      <figcaption className="sr-only">
+        {tAnalytics("projections.growthCurve")}
+      </figcaption>
+      <div className="h-[200px] w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={courbeProjection} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+            <XAxis
+              dataKey="jour"
+              tick={{ fontSize: 11 }}
+              tickFormatter={(v) => `J${v}`}
+            />
+            <YAxis
+              tick={{ fontSize: 10 }}
+              tickFormatter={(v) => `${v}g`}
+              width={44}
+            />
+            <Tooltip
+              cursor={<ChartCrosshair />}
+              content={({ active, payload, label }) => {
+                if (!active || !payload || payload.length === 0) return null;
+                // Compute date from vague start: today - joursEcoules + jour
+                const jour = Number(label);
+                const dateDebut = new Date();
+                dateDebut.setDate(dateDebut.getDate() - joursEcoules);
+                const pointDate = new Date(dateDebut);
+                pointDate.setDate(pointDate.getDate() + jour);
+                const dateStr = pointDate.toLocaleDateString("fr-FR", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                });
+                return (
+                  <div className="rounded-xl border border-border bg-card p-3 shadow-[var(--shadow-elevated)] text-xs">
+                    <p className="font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                      Jour {label} — {dateStr}
+                    </p>
+                    {payload.map((p) => (
+                      <div key={p.name} className="flex items-center gap-2 text-sm">
+                        <div
+                          className="h-2.5 w-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: p.color }}
+                        />
+                        <span className="text-muted-foreground">{p.name} :</span>
+                        <span className="font-bold">{p.value}g</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              }}
+            />
+            {/* Ligne verticale au jour courant */}
+            <ReferenceLine
+              x={joursEcoules}
+              stroke="var(--muted-foreground)"
+              strokeDasharray="4 4"
+              label={{ value: "Auj.", fontSize: 10, fill: "var(--muted-foreground)" }}
+            />
+            {/* Ligne horizontale objectif */}
+            <ReferenceLine
+              y={poidsObjectif}
+              stroke="var(--accent-amber)"
+              strokeDasharray="4 4"
+              label={{
+                value: `Obj. ${poidsObjectif}g`,
+                fontSize: 10,
+                fill: "var(--accent-amber)",
+              }}
+            />
+            {/* Courbe reelle */}
+            <Line
+              type="monotone"
+              dataKey="poidsReel"
+              name="poidsReel"
+              stroke="var(--primary)"
+              strokeWidth={2}
+              dot={{ r: 3, fill: "var(--primary)" }}
+              activeDot={{ r: 6, stroke: "var(--primary)", strokeWidth: 2, fill: "white" }}
+              connectNulls={false}
+            />
+            {/* Courbe projetee (SGR) */}
+            <Line
+              type="monotone"
+              dataKey="poidsProjecte"
+              name="poidsProjecte"
+              stroke="var(--accent-blue)"
+              strokeWidth={2}
+              strokeDasharray="6 3"
+              dot={false}
+              activeDot={{ r: 6, stroke: "var(--primary)", strokeWidth: 2, fill: "white" }}
+              connectNulls={false}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    </figure>
   );
 }
 

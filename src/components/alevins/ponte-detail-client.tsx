@@ -39,7 +39,7 @@ function statutPonteBadgeClass(statut: string): string {
 
 function statutLotBadgeClass(statut: string): string {
   if (statut === StatutLotAlevins.EN_INCUBATION)
-    return "bg-accent-yellow-muted text-accent-yellow";
+    return "bg-accent-amber-muted text-accent-amber";
   if (statut === StatutLotAlevins.EN_ELEVAGE)
     return "bg-accent-green-muted text-accent-green";
   if (statut === StatutLotAlevins.TRANSFERE)

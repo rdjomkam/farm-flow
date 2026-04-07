@@ -30,8 +30,8 @@ import { useAlevinsService } from "@/services";
 import { useTranslations } from "next-intl";
 
 function sexeBadgeClass(sexe: string): string {
-  if (sexe === SexeReproducteur.FEMELLE) return "bg-accent-pink-muted text-accent-pink";
-  return "bg-accent-indigo-muted text-accent-indigo";
+  if (sexe === SexeReproducteur.FEMELLE) return "bg-accent-purple-muted text-accent-purple";
+  return "bg-accent-blue-muted text-accent-blue";
 }
 
 function statutBadgeClass(statut: string): string {

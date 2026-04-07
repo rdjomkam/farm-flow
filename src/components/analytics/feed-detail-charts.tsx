@@ -146,32 +146,31 @@ export function FeedFCRChart({ evolutionFCR }: FeedFCRChartProps) {
           <CardTitle className="text-base">{tAnalytics("aliments.evolutionFCR")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} width={40} domain={["auto", "auto"]} />
-                <Tooltip
-                  cursor={<ChartCrosshair />}
-                  content={
-                    <ChartTooltip
-                      valueFormatter={(v) => v.toFixed(2)}
-                    />
-                  }
-                />
-                <Line
-                  type="monotone"
-                  dataKey="fcr"
-                  name="FCR"
-                  stroke="var(--primary)"
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          <figure>
+            <figcaption className="sr-only">{tAnalytics("aliments.evolutionFCR")}</figcaption>
+            <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} width={40} domain={["auto", "auto"]} />
+                  <Tooltip
+                    cursor={<ChartCrosshair />}
+                    content={<ChartTooltip valueFormatter={(v) => v.toFixed(2)} />}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="fcr"
+                    name="FCR"
+                    stroke="var(--primary)"
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    activeDot={{ r: 6, stroke: "var(--primary)", strokeWidth: 2, fill: "white" }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </figure>
         </CardContent>
       </Card>
     </ErrorBoundary>
@@ -218,27 +217,40 @@ export function FeedVagueBreakdown({ parVague }: FeedVagueBreakdownProps) {
           <CardTitle className="text-base">{tAnalytics("aliments.performanceParVague")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} width={40} />
-              <Tooltip
-                cursor={<ChartCrosshair />}
-                content={
-                  <ChartTooltip
-                    valueFormatter={(v, name) =>
-                      name === "Quantite (kg)" ? `${v} kg` : v.toFixed(2)
+          <figure>
+            <figcaption className="sr-only">{tAnalytics("aliments.performanceParVague")}</figcaption>
+            <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} width={40} />
+                  <Tooltip
+                    cursor={<ChartCrosshair />}
+                    content={
+                      <ChartTooltip
+                        valueFormatter={(v, name) =>
+                          name === "Quantite (kg)" ? `${v} kg` : v.toFixed(2)
+                        }
+                      />
                     }
                   />
-                }
-              />
-              <Bar dataKey="quantite" name="Quantite (kg)" fill="var(--primary)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="fcr" name="FCR" fill="hsl(var(--chart-2, 217 91% 60%))" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+                  <Bar
+                    dataKey="quantite"
+                    name="Quantite (kg)"
+                    fill="var(--primary)"
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="fcr"
+                    name="FCR"
+                    fill="hsl(var(--chart-2, 217 91% 60%))"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </figure>
 
         {/* Vague detail cards for mobile */}
         <div className="mt-3 flex flex-col gap-2">
@@ -376,9 +388,11 @@ export function FeedFCRHebdoChart({ points, changements = [] }: FeedFCRHebdoChar
         </CardHeader>
         <CardContent>
           <ErrorBoundary section="le graphique FCR hebdomadaire">
-          <div className="h-[300px] w-full sm:h-[400px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
+            <figure>
+              <figcaption className="sr-only">{tAnalytics("aliments.fcrHebdoTitle")}</figcaption>
+              <div className="h-[300px] w-full sm:h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis
                 dataKey="semaine"
@@ -471,11 +485,12 @@ export function FeedFCRHebdoChart({ points, changements = [] }: FeedFCRHebdoChar
                   }}
                 />
               ))}
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            </figure>
           </ErrorBoundary>
-      </CardContent>
+        </CardContent>
     </Card>
   );
 }

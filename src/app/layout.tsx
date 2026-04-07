@@ -79,6 +79,18 @@ export async function generateMetadata(): Promise<Metadata> {
         { url: "/apple-touch-icon.png" },
       ],
     },
+    openGraph: {
+      type: "website",
+      locale: "fr_CM",
+      siteName: "FarmFlow",
+      title: "FarmFlow — Suivi d'elevage de silures",
+      description: "Application de suivi piscicole pour l'elevage de silures",
+    },
+    twitter: {
+      card: "summary",
+      title: "FarmFlow — Suivi d'elevage de silures",
+      description: "Application de suivi piscicole pour l'elevage de silures",
+    },
   };
 }
 

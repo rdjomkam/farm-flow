@@ -2,11 +2,13 @@ import { cn } from "@/lib/utils";
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   interactive?: boolean;
+  /** Polymorphic element type — defaults to "div". Use "article" for list items, "section" for page sections. */
+  as?: "div" | "article" | "section";
 }
 
-function Card({ className, interactive, ...props }: CardProps) {
+function Card({ className, interactive, as: Tag = "div", ...props }: CardProps) {
   return (
-    <div
+    <Tag
       className={cn(
         "rounded-xl border border-border bg-card text-card-foreground shadow-[var(--shadow-card)]",
         interactive && [
@@ -16,7 +18,7 @@ function Card({ className, interactive, ...props }: CardProps) {
         ],
         className
       )}
-      {...props}
+      {...(props as React.HTMLAttributes<HTMLElement>)}
     />
   );
 }
@@ -33,7 +35,7 @@ function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement
 function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h3
-      className={cn("text-lg font-semibold leading-tight", className)}
+      className={cn("text-lg font-semibold leading-tight [text-wrap:balance]", className)}
       {...props}
     />
   );
@@ -48,9 +50,14 @@ function CardDescription({ className, ...props }: React.HTMLAttributes<HTMLParag
   );
 }
 
-function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+interface CardContentProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** optical: true applies pb-5 (20px) for better visual balance on content-heavy cards */
+  optical?: boolean;
+}
+
+function CardContent({ className, optical, ...props }: CardContentProps) {
   return (
-    <div className={cn("p-4 pt-0", className)} {...props} />
+    <div className={cn("p-4 pt-0", optical && "pb-5", className)} {...props} />
   );
 }
 

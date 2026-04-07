@@ -107,42 +107,44 @@ export function VentesListClient({ initialVentes, clients, vagues, permissions }
           description={t("ventes.emptyDescription")}
         />
       ) : (
-        <div className="flex flex-col gap-2">
+        <ul role="list" className="flex flex-col gap-2">
           {filtered.map((v) => (
-            <Link key={v.id} href={`/ventes/${v.id}`}>
-              <Card className="hover:ring-1 hover:ring-primary/30 transition-all">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="min-w-0">
-                      <p className="font-semibold">{v.numero}</p>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {v.client.nom} — {v.vague.code}
-                      </p>
+            <li key={v.id}>
+              <Link href={`/ventes/${v.id}`}>
+                <Card as="article" className="hover:ring-1 hover:ring-primary/30 transition-all">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="min-w-0">
+                        <p className="font-semibold">{v.numero}</p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {v.client.nom} — {v.vague.code}
+                        </p>
+                      </div>
+                      {v.facture ? (
+                        <Badge variant={statutVariants[v.facture.statut] ?? "default"}>
+                          {statutLabel(v.facture.statut)}
+                        </Badge>
+                      ) : (
+                        <Badge variant="default">{t("ventes.sansFature")}</Badge>
+                      )}
                     </div>
-                    {v.facture ? (
-                      <Badge variant={statutVariants[v.facture.statut] ?? "default"}>
-                        {statutLabel(v.facture.statut)}
-                      </Badge>
-                    ) : (
-                      <Badge variant="default">{t("ventes.sansFature")}</Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      {v.quantitePoissons} {t("ventes.detail.poissons")} — {v.poidsTotalKg} kg
-                    </span>
-                    <span className="font-semibold">
-                      {formatNumber(v.montantTotal)} F
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {new Date(v.createdAt).toLocaleDateString("fr-FR")}
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {v.quantitePoissons} {t("ventes.detail.poissons")} — {v.poidsTotalKg} kg
+                      </span>
+                      <span className="font-semibold">
+                        {formatNumber(v.montantTotal)} F
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {new Date(v.createdAt).toLocaleDateString("fr-FR")}
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );

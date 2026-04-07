@@ -17,7 +17,6 @@ import {
   BellRing,
   User,
   LogOut,
-  Fish,
   Shield,
   Calendar,
   BarChart3,
@@ -29,6 +28,7 @@ import {
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { SilureLogo } from "@/components/ui/silure-logo";
 import { Permission, Role, SiteModule } from "@/types";
 import { ITEM_VIEW_PERMISSIONS } from "@/lib/permissions-constants";
 import { useAuthService } from "@/services";
@@ -327,7 +327,7 @@ export function IngenieurBottomNav({
           <div className="flex flex-col gap-0">
             {/* Header */}
             <div className="flex h-12 items-center gap-2 border-b border-border px-4 mb-2">
-              <Fish className="h-5 w-5 text-primary" />
+              <SilureLogo size={20} className="text-primary" />
               <span className="text-base font-bold">FarmFlow</span>
             </div>
 

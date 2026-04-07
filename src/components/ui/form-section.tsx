@@ -16,7 +16,7 @@ export function FormSection({ title, description, children, id }: FormSectionPro
           <span className="text-xs text-muted-foreground">{description}</span>
         )}
       </legend>
-      <div className="rounded-xl bg-surface-2 p-4 space-y-3">
+      <div className="rounded-lg bg-surface-2 p-4 space-y-3">
         {children}
       </div>
     </fieldset>
