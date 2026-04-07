@@ -207,11 +207,6 @@ export function IngenieurBottomNav({
 
   const openSheet = useCallback(() => setSheetOpen(true), []);
 
-  function isActive(href: string) {
-    if (href === "/") return pathname === "/";
-    return pathname === href || pathname.startsWith(href + "/");
-  }
-
   function isItemVisible(item: SheetNavItem): boolean {
     if (item.permissionRequired && !permissions.includes(item.permissionRequired))
       return false;
@@ -238,6 +233,20 @@ export function IngenieurBottomNav({
     if (visibleItems.length === 0) return null;
     return { ...group, items: visibleItems };
   }).filter(Boolean) as (SheetNavGroup & { items: SheetNavItem[] })[];
+
+  const allHrefs = visibleGroups.flatMap((g) => g.items.map((i) => i.href));
+
+  function isActive(href: string) {
+    if (href === "/") return pathname === "/";
+    if (pathname === href) return true;
+    if (!pathname.startsWith(href + "/")) return false;
+    return !allHrefs.some(
+      (other) =>
+        other !== href &&
+        other.startsWith(href + "/") &&
+        (pathname === other || pathname.startsWith(other + "/"))
+    );
+  }
 
   const canSeeClients = permissions.includes(Permission.MONITORING_CLIENTS);
   const canSeeTasks = permissions.includes(Permission.DASHBOARD_VOIR);

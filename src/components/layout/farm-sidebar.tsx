@@ -188,27 +188,22 @@ export function FarmSidebar({
     }).filter(Boolean) as (NavGroup & { items: NavItem[] })[];
   }, [NAV_GROUPS, permissions, siteModules]);
 
+  const allHrefs = useMemo(
+    () => visibleGroups.flatMap((g) => g.items.map((i) => i.href)),
+    [visibleGroups]
+  );
+
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
-    if (
-      href === "/stock" ||
-      href === "/reproduction" ||
-      href === "/analytics" ||
-      href === "/planning" ||
-      href === "/finances" ||
-      href === "/mes-taches" ||
-      href === "/ventes" ||
-      href === "/factures" ||
-      href === "/clients" ||
-      href === "/users" ||
-      href === "/packs" ||
-      href === "/activations" ||
-      href === "/mon-abonnement" ||
-      href === "/observations"
-    ) {
-      return pathname === href || pathname.startsWith(href + "/");
-    }
-    return pathname.startsWith(href);
+    if (pathname === href) return true;
+    if (!pathname.startsWith(href + "/")) return false;
+    // Only activate if no more-specific sibling href matches
+    return !allHrefs.some(
+      (other) =>
+        other !== href &&
+        other.startsWith(href + "/") &&
+        (pathname === other || pathname.startsWith(other + "/"))
+    );
   }
 
   return (

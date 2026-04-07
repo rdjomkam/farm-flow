@@ -137,24 +137,21 @@ export function IngenieurSidebar({
     }).filter(Boolean) as (NavGroup & { items: NavItem[] })[];
   }, [NAV_GROUPS, permissions, siteModules]);
 
+  const allHrefs = useMemo(
+    () => visibleGroups.flatMap((g) => g.items.map((i) => i.href)),
+    [visibleGroups]
+  );
+
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
-    if (
-      href === "/stock" ||
-      href === "/alevins" ||
-      href === "/analytics" ||
-      href === "/planning" ||
-      href === "/finances" ||
-      href === "/mes-taches" ||
-      href === "/ventes" ||
-      href === "/monitoring" ||
-      href === "/packs" ||
-      href === "/activations" ||
-      href === "/notes"
-    ) {
-      return pathname === href || pathname.startsWith(href + "/");
-    }
-    return pathname.startsWith(href);
+    if (pathname === href) return true;
+    if (!pathname.startsWith(href + "/")) return false;
+    return !allHrefs.some(
+      (other) =>
+        other !== href &&
+        other.startsWith(href + "/") &&
+        (pathname === other || pathname.startsWith(other + "/"))
+    );
   }
 
   return (

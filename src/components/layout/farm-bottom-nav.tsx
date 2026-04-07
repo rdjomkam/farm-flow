@@ -335,11 +335,6 @@ export function FarmBottomNav({
 
   const visibleVagues = permissions.includes(Permission.VAGUES_VOIR);
 
-  function isActive(href: string) {
-    if (href === "/") return pathname === "/";
-    return pathname === href || pathname.startsWith(href + "/");
-  }
-
   function isItemVisible(item: SheetNavItem): boolean {
     if (item.superAdminOnly) return isSuperAdmin;
     if (item.permissionRequired && !permissions.includes(item.permissionRequired))
@@ -355,6 +350,20 @@ export function FarmBottomNav({
     ...group,
     items: group.items.filter(isItemVisible),
   })).filter((group) => group.items.length > 0);
+
+  const allHrefs = visibleGroups.flatMap((g) => g.items.map((i) => i.href));
+
+  function isActive(href: string) {
+    if (href === "/") return pathname === "/";
+    if (pathname === href) return true;
+    if (!pathname.startsWith(href + "/")) return false;
+    return !allHrefs.some(
+      (other) =>
+        other !== href &&
+        other.startsWith(href + "/") &&
+        (pathname === other || pathname.startsWith(other + "/"))
+    );
+  }
 
   async function handleLogout() {
     await authService.logout();
