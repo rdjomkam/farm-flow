@@ -86,7 +86,9 @@ import {
   FournisseurPaiement,
   LogiqueCondition,
   MethodeComptage,
+  MethodeExtractionMale,
   ModePaiement,
+  MotiliteSperme,
   MotifFraisSupp,
   TypeAjustementDepense,
   ActionAjustementFrais,
@@ -94,6 +96,7 @@ import {
   PeriodeFacturation,
   PhaseElevage,
   PlaceholderFormat,
+  QualiteOeufs,
   PlaceholderMode,
   Recurrence,
   Role,
@@ -117,6 +120,7 @@ import {
   TypeActivite,
   TypeAlerte,
   TypeAliment,
+  TypeHormone,
   TypeDeclencheur,
   TypeMouvement,
   TypePlan,
@@ -998,6 +1002,109 @@ export interface PonteFilters {
 
 /** Reponse liste des pontes */
 export type PonteListResponse = PaginatedResponse<Ponte>;
+
+// ---------------------------------------------------------------------------
+// Pontes — Multi-etapes workflow (R2-S6)
+// ---------------------------------------------------------------------------
+
+/**
+ * DTO pour creer une ponte — Etape 1 : selection des geniteurs et injection.
+ *
+ * Contrainte : exactement UN des deux champs suivants doit etre fourni :
+ *   - femelleId (reproducteur individuel)
+ *   - lotGeniteursFemellId (gestion par lot)
+ *
+ * Le code est auto-genere si absent (format PONTE-YYYY-NNN).
+ */
+export interface CreatePonteV2DTO {
+  /** Code unique (auto-genere si absent) */
+  code?: string;
+  /** Date de la ponte (ISO date string, defaut : maintenant) */
+  datePonte?: string;
+  /** ID de la femelle reproductrice individuelle (XOR avec lotGeniteursFemellId) */
+  femelleId?: string;
+  /** ID du lot femelles geniteurs (XOR avec femelleId) */
+  lotGeniteursFemellId?: string;
+  /** ID du male reproducteur individuel (optionnel) */
+  maleId?: string;
+  /** ID du lot males geniteurs (optionnel) */
+  lotGeniteursMaleId?: string;
+  /** Hormone utilisee pour l'induction */
+  typeHormone?: TypeHormone;
+  /** Dose totale injectee (mL ou mg selon produit) */
+  doseHormone?: number;
+  /** Dose normalisee (mg/kg) */
+  doseMgKg?: number;
+  /** Cout de l'hormone (FCFA) */
+  coutHormone?: number;
+  /** Heure d'injection (ISO datetime string) */
+  heureInjection?: string;
+  /** Temperature de l'eau au moment de l'injection (Celsius) */
+  temperatureEauC?: number;
+  notes?: string;
+}
+
+/**
+ * DTO pour enregistrer les resultats du stripping — Etape 2.
+ *
+ * Met a jour heureStripping, poids des oeufs, qualite et infos male.
+ * Si poidsOeufsPontesG est fourni et nombreOeufsEstime absent,
+ * le systeme calcule automatiquement : Math.round(poids * 750).
+ */
+export interface StrippingStepDTO {
+  /** Heure du stripping (ISO datetime string) */
+  heureStripping: string;
+  /** Poids total des oeufs extraits (grammes) */
+  poidsOeufsPontesG?: number;
+  /** Estimation du nombre d'oeufs (calcule automatiquement si absent) */
+  nombreOeufsEstime?: number;
+  /** Qualite visuelle des oeufs */
+  qualiteOeufs?: QualiteOeufs;
+  /** Methode d'extraction du sperme */
+  methodeMale?: MethodeExtractionMale;
+  /** Qualite de la motilite du sperme */
+  motiliteSperme?: MotiliteSperme;
+  notes?: string;
+}
+
+/**
+ * DTO pour enregistrer les resultats finaux de la ponte — Etape 3.
+ *
+ * Met a jour tauxFecondation, tauxEclosion, nombreLarvesViables
+ * et fait passer le statut a TERMINEE.
+ */
+export interface ResultatPonteDTO {
+  /** Taux de fecondation observe (%, 0-100) */
+  tauxFecondation?: number;
+  /** Taux d'eclosion observe (%, 0-100) */
+  tauxEclosion?: number;
+  /** Nombre de larves viables comptees */
+  nombreLarvesViables?: number;
+  /** Cout total de l'operation (FCFA, hormones + main d'oeuvre) */
+  coutTotal?: number;
+  notes?: string;
+}
+
+/**
+ * Resume d'une ponte pour la liste — moins de champs que PonteWithRelations.
+ */
+export interface PonteSummary {
+  id: string;
+  code: string;
+  datePonte: Date;
+  statut: StatutPonte;
+  femelleId: string;
+  femelleCode: string | null;
+  lotGeniteursFemellId: string | null;
+  lotGeniteursFemellCode: string | null;
+  nombreOeufsEstime: number | null;
+  tauxFecondation: number | null;
+  tauxEclosion: number | null;
+  nombreLarvesViables: number | null;
+  coutTotal: number | null;
+  _count: { lots: number; incubations: number };
+  createdAt: Date;
+}
 
 // ---------------------------------------------------------------------------
 // Lots d'alevins
