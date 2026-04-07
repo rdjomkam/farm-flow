@@ -262,28 +262,12 @@ export async function proxy(request: NextRequest) {
         }
         // SUSPENDU → NE PAS rediriger (mode lecture seule géré côté composant)
       } else {
-        // API returned non-OK status — fail closed: block access
-        console.error(`[proxy] Subscription API returned non-OK status ${response.status} — blocking access (fail-closed)`);
-        if (pathname.startsWith("/api/")) {
-          return NextResponse.json(
-            { status: 403, message: "Impossible de vérifier l'abonnement.", code: "SUBSCRIPTION_CHECK_FAILED" },
-            { status: 403 }
-          );
-        }
-        const expireUrl = new URL("/abonnement-expire", request.url);
-        return NextResponse.redirect(expireUrl);
+        // API returned non-OK status — fail open: let pass (cannot determine subscription state)
+        console.warn(`[proxy] Subscription API returned non-OK status ${response.status} — fail-open, letting pass`);
       }
     } catch (error) {
-      // Fail closed: block access when subscription check fails
-      console.error("[proxy] Subscription check fetch failed — blocking access (fail-closed):", error);
-      if (pathname.startsWith("/api/")) {
-        return NextResponse.json(
-          { status: 403, message: "Impossible de vérifier l'abonnement.", code: "SUBSCRIPTION_CHECK_FAILED" },
-          { status: 403 }
-        );
-      }
-      const expireUrl = new URL("/abonnement-expire", request.url);
-      return NextResponse.redirect(expireUrl);
+      // Fail open: let pass when subscription check fails (network error, API unreachable)
+      console.warn("[proxy] Subscription check fetch failed — fail-open, letting pass:", error);
     }
   }
 

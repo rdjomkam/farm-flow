@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDepenses, createDepense } from "@/lib/queries/depenses";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import {
   CategorieDepense,
   Permission,
   StatutDepense,
   parsePaginationQuery,
 } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import type { CreateDepenseDTO, DepenseFilters } from "@/types";
 
 const VALID_CATEGORIES = Object.values(CategorieDepense);
@@ -63,19 +62,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data, total, limit, offset });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors de la recuperation des depenses.",
-      },
-      { status: 500 }
-    );
+    return handleApiError("GET /api/depenses", error, "Erreur serveur lors de la recuperation des depenses.");
   }
 }
 
@@ -179,23 +166,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(depense, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message =
-      error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors de la creation de la depense.",
-      },
-      { status: 500 }
-    );
+    return handleApiError("POST /api/depenses", error, "Erreur serveur lors de la creation de la depense.");
   }
 }

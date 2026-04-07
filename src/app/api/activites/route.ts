@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getActivites, createActivite } from "@/lib/queries";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, StatutActivite, TypeActivite, parsePaginationQuery } from "@/types";
 import type { ActiviteFilters } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 const TYPES_ACTIVITE_VALIDES = Object.values(TypeActivite) as string[];
 const STATUTS_ACTIVITE_VALIDES = Object.values(StatutActivite) as string[];
@@ -41,14 +40,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data, total, limit, offset });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    console.error("[GET /api/activites]", error);
-    return apiError(500, "Erreur serveur lors de la récupération des activités.");
+    return handleApiError("GET /api/activites", error, "Erreur serveur lors de la récupération des activités.");
   }
 }
 
@@ -98,17 +90,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(activite, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(409, message);
-    }
-    console.error("[POST /api/activites]", error);
-    return apiError(500, "Erreur serveur lors de la création de l'activité.");
+    return handleApiError("POST /api/activites", error, "Erreur serveur lors de la création de l'activité.", {
+      statusMap: [
+        { match: "introuvable", status: 409 },
+      ],
+    });
   }
 }

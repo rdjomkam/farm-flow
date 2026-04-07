@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cachedJson } from "@/lib/api-cache";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
-import {
-  getConfigsElevage,
-  createConfigElevage,
-} from "@/lib/queries/config-elevage";
-import { apiError } from "@/lib/api-utils";
+import { getConfigsElevage,
+  createConfigElevage } from "@/lib/queries/config-elevage";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import { createConfigElevageSchema } from "@/lib/validation/config-elevage";
 
 /**
@@ -21,13 +18,7 @@ export async function GET(request: NextRequest) {
     const configs = await getConfigsElevage(auth.activeSiteId);
     return cachedJson({ configs, total: configs.length }, "static");
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des configurations.");
+    return handleApiError("GET /api/config-elevage", error, "Erreur serveur lors de la recuperation des configurations.");
   }
 }
 
@@ -60,12 +51,6 @@ export async function POST(request: NextRequest) {
     const config = await createConfigElevage(auth.activeSiteId, parseResult.data);
     return NextResponse.json({ config }, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la creation du profil.");
+    return handleApiError("POST /api/config-elevage", error, "Erreur serveur lors de la creation du profil.");
   }
 }

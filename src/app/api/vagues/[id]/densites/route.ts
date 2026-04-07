@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, TypeSystemeBac } from "@/types";
 import { prisma } from "@/lib/db";
 import { calculerDensiteBac } from "@/lib/calculs";
 import { getConfigElevageDefaut, CONFIG_ELEVAGE_DEFAULTS } from "@/lib/queries/config-elevage";
 import { getStatutDensite, type StatutDensite } from "@/lib/density-thresholds";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 export interface BacDensiteResponse {
   bacId: string;
@@ -103,13 +102,6 @@ export async function GET(
 
     return NextResponse.json({ densites });
   } catch (error) {
-    console.error("[GET /api/vagues/[id]/densites] Error:", error);
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors du calcul des densites.");
+    return handleApiError("GET /api/vagues/[id]/densites", error, "Erreur serveur lors du calcul des densites.");
   }
 }

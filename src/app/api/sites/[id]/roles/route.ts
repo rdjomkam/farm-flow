@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requirePermission, ForbiddenError, canAssignRole } from "@/lib/permissions";
-import { AuthError } from "@/lib/auth";
 import { getSiteRoles, createSiteRole } from "@/lib/queries/roles";
 import { Permission } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -21,13 +20,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const roles = await getSiteRoles(siteId);
     return NextResponse.json({ roles, total: roles.length });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur.");
+    return handleApiError("GET /api/sites/[id]/roles", error, "Erreur serveur.");
   }
 }
 
@@ -70,16 +63,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     revalidatePath(`/settings/sites/${siteId}/roles`);
     return NextResponse.json(role, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    // Prisma unique constraint error (duplicate name)
-    if (error && typeof error === "object" && "code" in error && (error as { code: string }).code === "P2002") {
-      return apiError(409, "Un role avec ce nom existe deja.");
-    }
-    return apiError(500, "Erreur serveur lors de la creation du role.");
+    return handleApiError("POST /api/sites/[id]/roles", error, "Erreur serveur lors de la creation du role.");
   }
 }

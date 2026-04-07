@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cloturerBesoins } from "@/lib/queries/besoins";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import type { CloturerBesoinsDTO } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 /**
  * POST /api/besoins/[id]/cloturer
@@ -66,26 +65,6 @@ export async function POST(
     const listeBesoins = await cloturerBesoins(id, auth.activeSiteId, dto);
     return NextResponse.json(listeBesoins);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message =
-      error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    if (message.includes("Transition invalide")) {
-      return apiError(400, message);
-    }
-    return NextResponse.json(
-      {
-        status: 500,
-        message: `Erreur serveur lors de la cloture : ${message}`,
-      },
-      { status: 500 }
-    );
+    return handleApiError("POST /api/besoins/[id]/cloturer", error, "Erreur serveur lors de la cloture.");
   }
 }

@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireHasPermission, ForbiddenError } from "@/lib/permissions";
-import { AuthError } from "@/lib/auth";
+import { requireHasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/db";
 import { Permission } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -19,12 +18,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ deletedCount: result.count });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur.");
+    return handleApiError("POST /api/users/[id]/sessions", error, "Erreur serveur.");
   }
 }

@@ -17,9 +17,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAbonnementById, logAbonnementAudit } from "@/lib/queries/abonnements";
 import { getPlanAbonnementById } from "@/lib/queries/plans-abonnements";
 import { initierPaiement } from "@/lib/services/billing";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { invalidateSubscriptionCaches } from "@/lib/abonnements/invalidate-caches";
-import { AuthError } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
   Permission,
@@ -28,7 +27,7 @@ import {
   FournisseurPaiement,
   TypePlan,
 } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import {
   PLAN_TARIFS,
   calculerProchaineDate,
@@ -273,21 +272,10 @@ export async function POST(
 
     return NextResponse.json(responseBody, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    // Erreur métier levée depuis la transaction
+    // Erreur métier levée depuis la transaction — strip prefix before delegating
     if (error instanceof Error && error.message.startsWith("FOURNISSEUR_REQUIS:")) {
       return apiError(400, error.message.replace("FOURNISSEUR_REQUIS:", ""));
     }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    console.error("[upgrade] Erreur:", error);
-    return NextResponse.json(
-      { status: 500, message: `Erreur serveur lors de l'upgrade. ${message}` },
-      { status: 500 }
-    );
+    return handleApiError("POST /api/abonnements/[id]/upgrade", error, "Erreur serveur lors de l'upgrade.");
   }
 }

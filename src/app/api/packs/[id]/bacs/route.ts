@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { getPackBacs, replacePackBacs } from "@/lib/queries/packs";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -23,13 +22,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ bacs, total: bacs.length });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des bacs.");
+    return handleApiError("GET /api/packs/[id]/bacs", error, "Erreur serveur lors de la recuperation des bacs.");
   }
 }
 
@@ -82,15 +75,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ bacs, total: bacs.length });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    if (error instanceof Error) {
-      return apiError(400, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la mise a jour des bacs.");
+    return handleApiError("PUT /api/packs/[id]/bacs", error, "Erreur serveur lors de la mise a jour des bacs.");
   }
 }

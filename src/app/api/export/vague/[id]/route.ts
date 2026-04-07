@@ -6,8 +6,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
+import { handleApiError } from "@/lib/api-utils";
 import { getVagueById } from "@/lib/queries/vagues";
 import { getIndicateursVague } from "@/lib/queries/indicateurs";
 import { renderRapportVaguePDF } from "@/lib/export/pdf-rapport-vague";
@@ -126,14 +126,6 @@ export async function GET(
       },
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
-    }
-    if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
-    }
-    const message =
-      error instanceof Error ? error.message : "Erreur serveur inattendue";
-    return NextResponse.json({ status: 500, message: message }, { status: 500 });
+    return handleApiError("GET /api/export/vague/[id]", error, "Erreur serveur lors de la generation du rapport de vague.");
   }
 }

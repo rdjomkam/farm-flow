@@ -21,7 +21,7 @@ import {
   confirmerPaiement,
   getPaiementByReference,
 } from "@/lib/queries/paiements-abonnements";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import { activerAbonnement } from "@/lib/queries/abonnements";
 import { applyPlanModules } from "@/lib/abonnements/apply-plan-modules";
 
@@ -118,10 +118,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { status: 200 }
     );
   } catch (dbError) {
-    console.error(
-      "[webhook/manuel] Erreur :",
-      dbError instanceof Error ? dbError.message : "Erreur inconnue"
-    );
-    return apiError(500, "Erreur lors de la confirmation");
+    return handleApiError("POST /api/webhooks/manuel", dbError, "Erreur lors de la confirmation.");
   }
 }

@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireHasPermission, ForbiddenError } from "@/lib/permissions";
-import { AuthError } from "@/lib/auth";
+import { requireHasPermission } from "@/lib/permissions";
 import { getUserMemberships } from "@/lib/queries/users-admin";
 import { Permission } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -27,12 +26,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ memberships: result, total: result.length });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur.");
+    return handleApiError("GET /api/users/[id]/memberships", error, "Erreur serveur.");
   }
 }

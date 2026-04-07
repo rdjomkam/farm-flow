@@ -12,13 +12,10 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireSuperAdmin } from "@/lib/auth/backoffice";
-import { AuthError } from "@/lib/auth";
 import { ForbiddenError } from "@/lib/permissions";
-import {
-  getPlansAbonnements,
-  createPlanAbonnement,
-} from "@/lib/queries/plans-abonnements";
-import { apiError } from "@/lib/api-utils";
+import { getPlansAbonnements,
+  createPlanAbonnement } from "@/lib/queries/plans-abonnements";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import { TypePlan, SiteModule } from "@/types";
 import type { CreatePlanAbonnementDTO } from "@/types";
 import { ErrorKeys } from "@/lib/api-error-keys";
@@ -34,13 +31,9 @@ export async function GET(request: NextRequest) {
     const plans = await getPlansAbonnements(true);
     return NextResponse.json({ plans, total: plans.length });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des plans.", { code: ErrorKeys.SERVER_GET_PLANS, });
+    return handleApiError("GET /api/backoffice/plans", error, "Erreur serveur lors de la recuperation des plans.", {
+      code: ErrorKeys.SERVER_GET_PLANS,
+    });
   }
 }
 
@@ -143,16 +136,11 @@ export async function POST(request: NextRequest) {
     const plan = await createPlanAbonnement(data);
     return NextResponse.json(plan, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("Unique constraint") || message.includes("unique")) {
-      return apiError(409, "Un plan avec ce type existe deja.", { code: ErrorKeys.CONFLICT_PLAN_TYPE_EXISTS, });
-    }
-    return apiError(500, "Erreur serveur lors de la creation du plan.", { code: ErrorKeys.SERVER_CREATE_PLAN, });
+    return handleApiError("POST /api/backoffice/plans", error, "Erreur serveur lors de la creation du plan.", {
+      statusMap: [
+        { match: ["Unique constraint", "unique"], status: 409 },
+      ],
+      code: ErrorKeys.SERVER_CREATE_PLAN,
+    });
   }
 }

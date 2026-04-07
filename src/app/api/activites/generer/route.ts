@@ -19,7 +19,7 @@ import { runEngineerAlerts } from "@/lib/activity-engine/engineer-alerts";
 import { getOrCreateSystemUser } from "@/lib/queries/users";
 import { runLifecycle } from "@/lib/queries/lifecycle";
 import { genererDepensesRecurrentes } from "@/lib/queries/depenses-recurrentes";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 // ---------------------------------------------------------------------------
 // Utilitaires
@@ -140,9 +140,7 @@ export async function POST(request: NextRequest) {
           console.error(`[CRON] Erreur lifecycle site ${site.id}:`, lifecycleError);
         }
       } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        allErrors.push(`Site ${site.id} : ${msg}`);
-        console.error(`[CRON] Erreur site ${site.id}:`, error);
+        return handleApiError("POST /api/activites/generer", error, "Erreur serveur.");
       }
     }
 
@@ -166,8 +164,7 @@ export async function POST(request: NextRequest) {
       errors: allErrors.length > 0 ? allErrors : undefined,
     });
   } catch (error) {
-    console.error("[CRON /api/activites/generer] Erreur globale:", error);
-    return apiError(500, "Erreur serveur lors de la generation.");
+    return handleApiError("POST /api/activites/generer", error, "Erreur serveur lors de la generation.");
   }
 }
 

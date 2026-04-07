@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getBacById, updateBac } from "@/lib/queries/bacs";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, TypeSystemeBac } from "@/types";
 import type { UpdateBacDTO } from "@/types";
 import { ErrorKeys } from "@/lib/api-error-keys";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 export async function GET(
   request: NextRequest,
@@ -36,13 +35,9 @@ export async function GET(
       updatedAt: bac.updatedAt,
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation du bac.", { code: ErrorKeys.SERVER_GET_BAC });
+    return handleApiError("GET /api/bacs/[id]", error, "Erreur serveur lors de la recuperation du bac.", {
+      code: ErrorKeys.SERVER_GET_BAC,
+    });
   }
 }
 
@@ -115,18 +110,8 @@ export async function PUT(
     revalidatePath("/vagues");
     return NextResponse.json(bac);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur inattendue.";
-
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-
-    return apiError(500, "Erreur serveur lors de la mise a jour du bac.", { code: ErrorKeys.SERVER_UPDATE_BAC });
+    return handleApiError("PUT /api/bacs/[id]", error, "Erreur serveur lors de la mise a jour du bac.", {
+      code: ErrorKeys.SERVER_UPDATE_BAC,
+    });
   }
 }

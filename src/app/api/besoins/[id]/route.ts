@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getListeBesoinsById,
+import { getListeBesoinsById,
   updateListeBesoins,
-  deleteListeBesoins,
-} from "@/lib/queries/besoins";
-import { apiError } from "@/lib/api-utils";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+  deleteListeBesoins } from "@/lib/queries/besoins";
+import { apiError, handleApiError } from "@/lib/api-utils";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, UniteBesoin } from "@/types";
 
 const VALID_UNITES = Object.values(UniteBesoin);
@@ -33,13 +30,7 @@ export async function GET(
     }
     return NextResponse.json(listeBesoins);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur.");
+    return handleApiError("GET /api/besoins/[id]", error, "Erreur serveur.");
   }
 }
 
@@ -138,25 +129,11 @@ export async function PUT(
 
     return NextResponse.json(listeBesoins);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message =
-      error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    if (
-      message.includes("invalide") ||
-      message.includes("Impossible") ||
-      message.includes("SOUMISE")
-    ) {
-      return apiError(400, message);
-    }
-    return apiError(500, "Erreur serveur.");
+    return handleApiError("PUT /api/besoins/[id]", error, "Erreur serveur.", {
+      statusMap: [
+        { match: ["invalide", "Impossible", "SOUMISE"], status: 400 },
+      ],
+    });
   }
 }
 
@@ -180,20 +157,10 @@ export async function DELETE(
     await deleteListeBesoins(id, auth.activeSiteId);
     return NextResponse.json({ success: true });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message =
-      error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    if (message.includes("Impossible") || message.includes("SOUMISE")) {
-      return apiError(400, message);
-    }
-    return apiError(500, "Erreur serveur.");
+    return handleApiError("DELETE /api/besoins/[id]", error, "Erreur serveur.", {
+      statusMap: [
+        { match: ["Impossible", "SOUMISE"], status: 400 },
+      ],
+    });
   }
 }

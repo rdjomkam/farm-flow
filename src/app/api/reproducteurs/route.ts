@@ -3,9 +3,8 @@ import {
   getReproducteurs,
   createReproducteur,
 } from "@/lib/queries/reproducteurs";
-import { apiError } from "@/lib/api-utils";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { apiError, handleApiError } from "@/lib/api-utils";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, SexeReproducteur, StatutReproducteur } from "@/types";
 import type { CreateReproducteurDTO } from "@/lib/queries/reproducteurs";
 
@@ -47,14 +46,7 @@ export async function GET(request: NextRequest) {
       offset,
     });
   } catch (error) {
-    console.error("[GET /api/reproducteurs]", error);
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des reproducteurs.");
+    return handleApiError("GET /api/reproducteurs", error, "Erreur serveur lors de la recuperation des reproducteurs.");
   }
 }
 
@@ -122,25 +114,6 @@ export async function POST(request: NextRequest) {
     const reproducteur = await createReproducteur(auth.activeSiteId, data);
     return NextResponse.json(reproducteur, { status: 201 });
   } catch (error) {
-    console.error("[POST /api/reproducteurs]", error);
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    // Conflit : code deja utilise
-    if (message.includes("deja utilise") || message.includes("déjà utilisé")) {
-      return apiError(409, message);
-    }
-    // Ressource introuvable (ex: femelle/male referencies)
-    if (message.includes("n'existe pas") || message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    return NextResponse.json(
-      { status: 500, message: `Erreur serveur lors de la creation du reproducteur : ${message}` },
-      { status: 500 }
-    );
+    return handleApiError("POST /api/reproducteurs", error, "Erreur serveur lors de la creation du reproducteur.");
   }
 }

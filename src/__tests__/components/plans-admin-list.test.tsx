@@ -42,7 +42,7 @@ vi.mock("@tanstack/react-query", () => ({
 
 // Mock next-intl — retourne les traductions françaises réelles
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => {
+  useTranslations: () => (key: string, params?: Record<string, unknown>) => {
     const translations: Record<string, string> = {
       "plans.DECOUVERTE": "Découverte",
       "plans.ELEVEUR": "Éleveur",
@@ -51,6 +51,7 @@ vi.mock("next-intl", () => ({
       "plans.INGENIEUR_STARTER": "Ingénieur Starter",
       "plans.INGENIEUR_PRO": "Ingénieur Pro",
       "plans.INGENIEUR_EXPERT": "Ingénieur Expert",
+      "plans.EXONERATION": "Exonération",
       "periods.MENSUEL": "Mensuel",
       "periods.TRIMESTRIEL": "Trimestriel",
       "periods.ANNUEL": "Annuel",
@@ -66,6 +67,8 @@ vi.mock("next-intl", () => ({
       "providers.MANUEL": "Paiement manuel",
       "admin.allTypes": "Tous les types",
       "admin.allStatuses": "Tous les statuts",
+      "admin.filterByType": "Filtrer par type de plan",
+      "admin.filterByStatus": "Filtrer par statut",
       "admin.active": "Actif",
       "admin.inactive": "Inactif",
       "admin.reset": "Réinitialiser",
@@ -89,21 +92,56 @@ vi.mock("next-intl", () => ({
       "admin.columns.actions": "Actions",
       "admin.modulesInclus": "Modules inclus",
       "admin.modulesHelp": "Modules disponibles",
+      "admin.monthlyPrice": "Mensuel :",
+      "admin.quarterlyPrice": "Trimestriel :",
+      "admin.annualPrice": "Annuel :",
+      "admin.maxSites": "Sites max",
+      "admin.maxTanks": "Bacs max",
+      "admin.maxBatches": "Vagues max",
+      "admin.maxIngFermes": "Fermes ingénieur",
       "admin.toggleDeactivate": "Désactiver",
       "admin.toggleActivate": "Activer",
-      "admin.toggleDeactivateTitle": "Désactiver le plan",
+      "admin.toggleDeactivateTitle": "Désactiver le plan ?",
       "admin.toggleDeactivating": "Désactivation...",
       "admin.toggleDeactivateConfirm": "Confirmer la désactivation",
       "admin.dialogCancel": "Annuler",
       "admin.noPlanFound": "Aucun plan trouvé.",
       "admin.edit": "Modifier",
       "admin.createPlan": "Créer le plan",
+      "admin.createNewPlan": "Créer un nouveau plan",
       "admin.saving": "Enregistrement...",
+      "admin.toggleStatusError": "Erreur lors du changement de statut.",
+      "admin.networkErrorRetry": "Erreur réseau. Veuillez réessayer.",
       "planFormDialog.titleCreate": "Créer un plan d'abonnement",
       "planFormDialog.titleEdit": "Modifier le plan",
       "planFormDialog.descriptionCreate": "Remplissez les informations du nouveau plan.",
       "planFormDialog.descriptionEdit": "Modifiez les informations du plan.",
     };
+
+    // Handle keys with interpolation params
+    if (key === "admin.cannotDisableWithSubscribers" && params) {
+      const count = params.count as number;
+      const plural = count > 1 ? "s" : "";
+      return `Impossible de désactiver un plan avec ${count} abonné${plural} actif${plural}.`;
+    }
+    if (key === "admin.toggleDeactivateSubscribersDesc" && params) {
+      const count = params.count as number;
+      const plural = count > 1 ? "s" : "";
+      return `Le plan "${params.nom}" a ${count} abonné${plural} actif${plural}. Confirmez-vous la désactivation ?`;
+    }
+    if (key === "admin.engineerFarms" && params) {
+      return `${params.count} fermes`;
+    }
+    if (key === "admin.editPlanAriaLabel" && params) {
+      return `Modifier le plan ${params.name}`;
+    }
+    if (key === "admin.subscribersPlural" && params) {
+      return `${params.count} abonnés`;
+    }
+    if (key === "admin.subscribers" && params) {
+      return `${params.count} abonné`;
+    }
+
     return translations[key] ?? key;
   },
 }));

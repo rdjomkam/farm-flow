@@ -19,10 +19,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@/generated/prisma/client";
 import { requireSuperAdmin } from "@/lib/auth/backoffice";
-import { AuthError } from "@/lib/auth";
 import { ForbiddenError } from "@/lib/permissions";
 import { prisma } from "@/lib/db";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import { ErrorKeys } from "@/lib/api-error-keys";
 import type { FeatureFlagResponse } from "@/types";
 
@@ -61,13 +60,7 @@ export async function GET(
 
     return NextResponse.json(response);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message, { code: ErrorKeys.AUTH_UNAUTHORIZED });
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message, { code: ErrorKeys.AUTH_FORBIDDEN });
-    }
-    return apiError(500, "Erreur serveur lors de la lecture du flag.", {
+    return handleApiError("GET /api/backoffice/feature-flags/[key]", error, "Erreur serveur lors de la lecture du flag.", {
       code: ErrorKeys.SERVER_GENERIC,
     });
   }
@@ -180,16 +173,7 @@ export async function PATCH(
 
     return NextResponse.json(response);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message, { code: ErrorKeys.AUTH_UNAUTHORIZED });
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message, { code: ErrorKeys.AUTH_FORBIDDEN });
-    }
-    if (error instanceof Error) {
-      return apiError(400, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la mise a jour du flag.", {
+    return handleApiError("PATCH /api/backoffice/feature-flags/[key]", error, "Erreur serveur lors de la mise a jour du flag.", {
       code: ErrorKeys.SERVER_GENERIC,
     });
   }

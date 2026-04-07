@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, UniteStock } from "@/types";
 import { getPackProduits, addPackProduit, removePackProduit } from "@/lib/queries/packs";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -26,13 +25,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ produits, total: produits.length });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des produits.");
+    return handleApiError("GET /api/packs/[id]/produits", error, "Erreur serveur lors de la recuperation des produits.");
   }
 }
 
@@ -75,23 +68,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(packProduit, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    // Contrainte unique violee (packId + produitId)
-    if (error instanceof Error && (
-      error.message.includes("Unique constraint") ||
-      error.message.includes("unique")
-    )) {
-      return apiError(409, "Ce produit est deja dans le pack.");
-    }
-    if (error instanceof Error) {
-      return apiError(400, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de l'ajout du produit.");
+    return handleApiError("POST /api/packs/[id]/produits", error, "Erreur serveur lors de l'ajout du produit.", {
+      statusMap: [
+        { match: ["Unique constraint", "unique"], status: 409 },
+      ],
+    });
   }
 }
 
@@ -119,12 +100,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la suppression du produit.");
+    return handleApiError("DELETE /api/packs/[id]/produits", error, "Erreur serveur lors de la suppression du produit.");
   }
 }

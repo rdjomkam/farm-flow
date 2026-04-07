@@ -18,10 +18,9 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireSuperAdmin } from "@/lib/auth/backoffice";
-import { AuthError } from "@/lib/auth";
 import { ForbiddenError } from "@/lib/permissions";
 import { prisma } from "@/lib/db";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import { TypePlan, StatutAbonnement } from "@/types";
 import { logAbonnementAudit } from "@/lib/queries/abonnements";
 import { invalidateSubscriptionCaches } from "@/lib/abonnements/invalidate-caches";
@@ -53,13 +52,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     return NextResponse.json(abonnement);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation de l'exoneration.");
+    return handleApiError("GET /api/backoffice/exonerations/[id]", error, "Erreur serveur lors de la recuperation de l'exoneration.");
   }
 }
 
@@ -116,12 +109,6 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
     return NextResponse.json({ success: true, message: "Exoneration annulee avec succes." });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de l'annulation de l'exoneration.");
+    return handleApiError("DELETE /api/backoffice/exonerations/[id]", error, "Erreur serveur lors de l'annulation de l'exoneration.");
   }
 }

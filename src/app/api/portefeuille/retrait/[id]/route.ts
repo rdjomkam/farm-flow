@@ -13,10 +13,9 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { AuthError } from "@/lib/auth";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 export async function GET(
   request: NextRequest,
@@ -57,12 +56,6 @@ export async function GET(
 
     return NextResponse.json({ retrait });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation du retrait.");
+    return handleApiError("GET /api/portefeuille/retrait/[id]", error, "Erreur serveur lors de la recuperation du retrait.");
   }
 }

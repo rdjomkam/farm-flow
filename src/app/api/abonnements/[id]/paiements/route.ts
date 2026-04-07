@@ -12,10 +12,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAbonnementById } from "@/lib/queries/abonnements";
 import { getPaiementsByAbonnement } from "@/lib/queries/paiements-abonnements";
 import { initierPaiement } from "@/lib/services/billing";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { AuthError } from "@/lib/auth";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, FournisseurPaiement } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 const VALID_FOURNISSEURS = Object.values(FournisseurPaiement);
 
@@ -40,13 +39,7 @@ export async function GET(
     const paiements = await getPaiementsByAbonnement(id);
     return NextResponse.json({ paiements, total: paiements.length });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des paiements.");
+    return handleApiError("GET /api/abonnements/[id]/paiements", error, "Erreur serveur lors de la recuperation des paiements.");
   }
 }
 
@@ -98,16 +91,6 @@ export async function POST(
       { status: 201 }
     );
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    return NextResponse.json(
-      { status: 500, message: `Erreur serveur lors de l'initiation du paiement. ${message}` },
-      { status: 500 }
-    );
+    return handleApiError("POST /api/abonnements/[id]/paiements", error, "Erreur serveur lors de l'initiation du paiement.");
   }
 }

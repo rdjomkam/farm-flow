@@ -82,7 +82,8 @@ export async function POST(request: NextRequest) {
       setIsSuperAdminCookie(response, expires);
     }
     return response;
-  } catch {
+  } catch (error) {
+    console.error("[POST /api/auth/login]", error);
     return NextResponse.json(
       { success: false, error: "Erreur serveur lors de la connexion.", errorKey: ErrorKeys.SERVER_LOGIN } satisfies AuthResponse,
       { status: 500 }

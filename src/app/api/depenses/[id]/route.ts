@@ -4,9 +4,8 @@ import {
   updateDepense,
   deleteDepense,
 } from "@/lib/queries/depenses";
-import { apiError } from "@/lib/api-utils";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { apiError, handleApiError } from "@/lib/api-utils";
+import { requirePermission } from "@/lib/permissions";
 import { CategorieDepense, Permission } from "@/types";
 import type { UpdateDepenseDTO } from "@/types";
 
@@ -32,19 +31,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     return NextResponse.json(depense);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors de la recuperation de la depense.",
-      },
-      { status: 500 }
-    );
+    return handleApiError("GET /api/depenses/[id]", error, "Erreur serveur lors de la recuperation de la depense.");
   }
 }
 
@@ -125,24 +112,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const depense = await updateDepense(id, auth.activeSiteId, data);
     return NextResponse.json(depense);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message =
-      error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors de la mise a jour de la depense.",
-      },
-      { status: 500 }
-    );
+    return handleApiError("PUT /api/depenses/[id]", error, "Erreur serveur lors de la mise a jour de la depense.");
   }
 }
 
@@ -160,26 +130,6 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     const result = await deleteDepense(id, auth.activeSiteId);
     return NextResponse.json(result);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message =
-      error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    if (message.includes("Impossible")) {
-      return apiError(409, message);
-    }
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors de la suppression de la depense.",
-      },
-      { status: 500 }
-    );
+    return handleApiError("DELETE /api/depenses/[id]", error, "Erreur serveur lors de la suppression de la depense.");
   }
 }

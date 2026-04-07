@@ -12,12 +12,11 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireSuperAdmin } from "@/lib/auth/backoffice";
-import { AuthError } from "@/lib/auth";
 import { ForbiddenError } from "@/lib/permissions";
 import { updateSiteStatus } from "@/lib/queries/admin-sites";
 import type { SiteLifecycleAction } from "@/lib/queries/admin-sites";
 import { ErrorKeys } from "@/lib/api-error-keys";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 const VALID_ACTIONS: SiteLifecycleAction[] = ["SUSPEND", "BLOCK", "RESTORE", "ARCHIVE"];
 
@@ -82,15 +81,8 @@ export async function PATCH(
 
     return NextResponse.json(result);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message, { code: ErrorKeys.AUTH_UNAUTHORIZED });
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message, { code: ErrorKeys.AUTH_FORBIDDEN });
-    }
-    if (error instanceof Error) {
-      return apiError(400, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la mise a jour du statut du site.", { code: ErrorKeys.SERVER_GENERIC, });
+    return handleApiError("PATCH /api/backoffice/sites/[id]/status", error, "Erreur serveur lors de la mise a jour du statut du site.", {
+      code: ErrorKeys.SERVER_GENERIC,
+    });
   }
 }

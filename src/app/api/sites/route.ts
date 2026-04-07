@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, AuthError } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 import { getUserSites, createSite } from "@/lib/queries/sites";
 import { Role } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import { getQuotaSites } from "@/lib/abonnements/check-quotas";
-import { getSubscriptionStatus } from "@/lib/abonnements/check-subscription";
+import { getSubscriptionStatusByUser as getSubscriptionStatus } from "@/lib/abonnements/check-subscription";
 
 /** GET /api/sites — list sites the user is a member of */
 export async function GET(request: NextRequest) {
@@ -27,10 +27,7 @@ export async function GET(request: NextRequest) {
       total: sites.length,
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des sites.");
+    return handleApiError("GET /api/sites", error, "Erreur serveur lors de la recuperation des sites.");
   }
 }
 
@@ -87,9 +84,6 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la creation du site.");
+    return handleApiError("POST /api/sites", error, "Erreur serveur lors de la creation du site.");
   }
 }

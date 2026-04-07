@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { getIndicateursBac } from "@/lib/queries/analytics";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 export async function GET(
   request: NextRequest,
@@ -27,12 +26,6 @@ export async function GET(
 
     return NextResponse.json(indicateurs);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors du calcul des indicateurs du bac.");
+    return handleApiError("GET /api/analytics/bacs/[bacId]", error, "Erreur serveur lors du calcul des indicateurs du bac.");
   }
 }

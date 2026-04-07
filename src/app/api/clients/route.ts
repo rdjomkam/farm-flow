@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cachedJson } from "@/lib/api-cache";
 import { getClients, createClient } from "@/lib/queries/clients";
-import { AuthError } from "@/lib/auth";
 import { normalizePhone } from "@/lib/auth/phone";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import type { CreateClientDTO } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,13 +14,7 @@ export async function GET(request: NextRequest) {
 
     return cachedJson({ clients, total: clients.length }, "medium");
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des clients.");
+    return handleApiError("GET /api/clients", error, "Erreur serveur lors de la recuperation des clients.");
   }
 }
 
@@ -56,12 +49,6 @@ export async function POST(request: NextRequest) {
     const client = await createClient(auth.activeSiteId, data);
     return NextResponse.json(client, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la creation du client.");
+    return handleApiError("POST /api/clients", error, "Erreur serveur lors de la creation du client.");
   }
 }

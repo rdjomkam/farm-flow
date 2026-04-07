@@ -9,10 +9,9 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getAbonnementById } from "@/lib/queries/abonnements";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { AuthError } from "@/lib/auth";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 export async function GET(
   request: NextRequest,
@@ -35,12 +34,6 @@ export async function GET(
 
     return NextResponse.json(abonnement);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation de l'abonnement.");
+    return handleApiError("GET /api/abonnements/[id]", error, "Erreur serveur lors de la recuperation de l'abonnement.");
   }
 }

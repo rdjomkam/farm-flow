@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFactures, createFacture } from "@/lib/queries/factures";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, StatutFacture, parsePaginationQuery } from "@/types";
 import type { CreateFactureDTO, FactureFilters } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 const VALID_STATUTS = Object.values(StatutFacture);
 
@@ -34,13 +33,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data, total, limit, offset });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des factures.");
+    return handleApiError("GET /api/factures", error, "Erreur serveur lors de la recuperation des factures.");
   }
 }
 
@@ -71,19 +64,10 @@ export async function POST(request: NextRequest) {
     const facture = await createFacture(auth.activeSiteId, auth.userId, data);
     return NextResponse.json(facture, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    if (message.includes("deja une facture")) {
-      return apiError(409, message);
-    }
-    return apiError(500, "Erreur serveur lors de la creation de la facture.");
+    return handleApiError("POST /api/factures", error, "Erreur serveur lors de la creation de la facture.", {
+      statusMap: [
+        { match: "deja une facture", status: 409 },
+      ],
+    });
   }
 }

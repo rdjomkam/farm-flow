@@ -58,6 +58,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    console.error("[PUT /api/locale]", error);
     return NextResponse.json(
       { success: false, error: "Erreur serveur lors du changement de locale." },
       { status: 500 }

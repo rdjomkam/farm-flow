@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { getFCRByFeed } from "@/lib/queries/fcr-by-feed";
 import { prisma } from "@/lib/db";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import type { FCRByFeedParams } from "@/types";
 
 export async function GET(
@@ -46,12 +45,6 @@ export async function GET(
 
     return NextResponse.json(result);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors du calcul FCR par aliment.");
+    return handleApiError("GET /api/analytics/aliments/[produitId]/fcr-by-feed", error, "Erreur serveur lors du calcul FCR par aliment.");
   }
 }

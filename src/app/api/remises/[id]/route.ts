@@ -16,9 +16,8 @@ import {
   deleteRemise,
   desactiverRemise,
 } from "@/lib/queries/remises";
-import { apiError } from "@/lib/api-utils";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { AuthError } from "@/lib/auth";
+import { apiError, handleApiError } from "@/lib/api-utils";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import type { UpdateRemiseDTO } from "@/types";
 
@@ -37,13 +36,7 @@ export async function GET(
 
     return NextResponse.json({ remise });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation de la remise.");
+    return handleApiError("GET /api/remises/[id]", error, "Erreur serveur lors de la recuperation de la remise.");
   }
 }
 
@@ -84,17 +77,7 @@ export async function PUT(
     const remise = await updateRemise(id, data);
     return NextResponse.json({ remise });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    return NextResponse.json(
-      { status: 500, message: `Erreur serveur lors de la mise a jour de la remise. ${message}` },
-      { status: 500 }
-    );
+    return handleApiError("PUT /api/remises/[id]", error, "Erreur serveur lors de la mise a jour de la remise.");
   }
 }
 
@@ -124,16 +107,6 @@ export async function DELETE(
       });
     }
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    return NextResponse.json(
-      { status: 500, message: `Erreur serveur lors de la suppression de la remise. ${message}` },
-      { status: 500 }
-    );
+    return handleApiError("DELETE /api/remises/[id]", error, "Erreur serveur lors de la suppression de la remise.");
   }
 }

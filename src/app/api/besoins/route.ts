@@ -3,9 +3,8 @@ import {
   getListeBesoins,
   createListeBesoins,
 } from "@/lib/queries/besoins";
-import { apiError } from "@/lib/api-utils";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { apiError, handleApiError } from "@/lib/api-utils";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, StatutBesoins, UniteBesoin, parsePaginationQuery } from "@/types";
 import type { CreateListeBesoinsDTO, ListeBesoinsFilters, VagueRatioDTO } from "@/types";
 
@@ -60,19 +59,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data, total, limit, offset });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors de la recuperation des listes de besoins.",
-      },
-      { status: 500 }
-    );
+    return handleApiError("GET /api/besoins", error, "Erreur serveur lors de la recuperation des listes de besoins.");
   }
 }
 
@@ -213,20 +200,6 @@ export async function POST(request: NextRequest) {
     );
     return NextResponse.json(listeBesoins, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message =
-      error instanceof Error ? error.message : "Erreur serveur.";
-    return NextResponse.json(
-      {
-        status: 500,
-        message: `Erreur serveur lors de la creation de la liste de besoins : ${message}`,
-      },
-      { status: 500 }
-    );
+    return handleApiError("POST /api/besoins", error, "Erreur serveur lors de la creation de la liste de besoins.");
   }
 }

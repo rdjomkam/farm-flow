@@ -9,10 +9,9 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireSuperAdmin } from "@/lib/auth/backoffice";
-import { AuthError } from "@/lib/auth";
 import { ForbiddenError } from "@/lib/permissions";
 import { getPlatformKPIs } from "@/lib/queries/admin-analytics";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,13 +27,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    console.error("[GET /api/backoffice/analytics]", error);
-    return apiError(500, "Erreur serveur lors du calcul des KPIs plateforme.");
+    return handleApiError("GET /api/backoffice/analytics", error, "Erreur serveur lors du calcul des KPIs plateforme.");
   }
 }

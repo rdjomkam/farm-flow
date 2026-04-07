@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCalibrages, createCalibrage } from "@/lib/queries/calibrages";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, CategorieCalibrage } from "@/types";
 import type { CreateCalibrageDTO } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 const VALID_CATEGORIES = new Set(Object.values(CategorieCalibrage));
 const MAX_GROUPES = 4;
@@ -23,13 +22,7 @@ export async function GET(request: NextRequest) {
       total: calibrages.length,
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des calibrages.");
+    return handleApiError("GET /api/calibrages", error, "Erreur serveur lors de la recuperation des calibrages.");
   }
 }
 
@@ -129,24 +122,10 @@ export async function POST(request: NextRequest) {
     const calibrage = await createCalibrage(auth.activeSiteId, auth.userId, data);
     return NextResponse.json(calibrage, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    if (
-      message.includes("Conservation non respectee") ||
-      message.includes("n'est possible que") ||
-      message.includes("n'appartiennent pas") ||
-      message.includes("ne contient aucun")
-    ) {
-      return apiError(400, message);
-    }
-    return apiError(500, "Erreur serveur lors de la creation du calibrage.");
+    return handleApiError("POST /api/calibrages", error, "Erreur serveur lors de la creation du calibrage.", {
+      statusMap: [
+        { match: ["Conservation non respectee", "n'est possible que", "n'appartiennent pas", "ne contient aucun"], status: 400 },
+      ],
+    });
   }
 }

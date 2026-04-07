@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { getPacks, createPack } from "@/lib/queries/packs";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 /**
  * GET /api/packs
@@ -26,13 +25,7 @@ export async function GET(request: NextRequest) {
     const packs = await getPacks(auth.activeSiteId, filters);
     return NextResponse.json({ packs, total: packs.length });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des packs.");
+    return handleApiError("GET /api/packs", error, "Erreur serveur lors de la recuperation des packs.");
   }
 }
 
@@ -76,15 +69,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(pack, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    if (error instanceof Error) {
-      return apiError(400, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la creation du pack.");
+    return handleApiError("POST /api/packs", error, "Erreur serveur lors de la creation du pack.");
   }
 }

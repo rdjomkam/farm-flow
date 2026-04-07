@@ -11,11 +11,10 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getAllRemises, createRemise, getRemiseByCode } from "@/lib/queries/remises";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { AuthError } from "@/lib/auth";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, TypeRemise } from "@/types";
 import type { CreateRemiseDTO } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 const VALID_TYPES = Object.values(TypeRemise);
 
@@ -34,13 +33,7 @@ export async function GET(request: NextRequest) {
     const remises = await getAllRemises(targetSiteId);
     return NextResponse.json({ remises, total: remises.length });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des remises.");
+    return handleApiError("GET /api/remises", error, "Erreur serveur lors de la recuperation des remises.");
   }
 }
 
@@ -133,16 +126,6 @@ export async function POST(request: NextRequest) {
     const remise = await createRemise(auth.userId, data, siteId);
     return NextResponse.json({ remise }, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    return NextResponse.json(
-      { status: 500, message: `Erreur serveur lors de la creation de la remise. ${message}` },
-      { status: 500 }
-    );
+    return handleApiError("POST /api/remises", error, "Erreur serveur lors de la creation de la remise.");
   }
 }

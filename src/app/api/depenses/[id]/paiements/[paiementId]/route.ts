@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supprimerPaiementDepense } from "@/lib/queries/depenses";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 type Params = { params: Promise<{ id: string; paiementId: string }> };
 
@@ -33,26 +32,6 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message =
-      error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    if (message.includes("n'appartient pas")) {
-      return apiError(422, message);
-    }
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors de la suppression du paiement.",
-      },
-      { status: 500 }
-    );
+    return handleApiError("DELETE /api/depenses/[id]/paiements/[paiementId]", error, "Erreur serveur lors de la suppression du paiement.");
   }
 }

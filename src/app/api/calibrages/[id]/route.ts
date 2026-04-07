@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCalibrageById, patchCalibrage } from "@/lib/queries/calibrages";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, CategorieCalibrage } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -22,13 +21,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     return NextResponse.json(calibrage);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur.");
+    return handleApiError("GET /api/calibrages/[id]", error, "Erreur serveur.");
   }
 }
 
@@ -133,25 +126,11 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
-    console.error("[PATCH /api/calibrages/[id]] Error:", error);
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur inattendue.";
-
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    if (message.includes("cloturee")) {
-      return apiError(409, message);
-    }
-    if (message.includes("Conservation non respectee") || message.includes("bacs de destination") || message.includes("Aucun champ")) {
-      return apiError(400, message);
-    }
-
-    return apiError(500, "Erreur serveur lors de la modification du calibrage.");
+    return handleApiError("PATCH /api/calibrages/[id]", error, "Erreur serveur lors de la modification du calibrage.", {
+      statusMap: [
+        { match: "cloturee", status: 409 },
+        { match: ["Conservation non respectee", "bacs de destination", "Aucun champ"], status: 400 },
+      ],
+    });
   }
 }

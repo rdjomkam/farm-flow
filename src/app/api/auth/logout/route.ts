@@ -17,7 +17,8 @@ export async function POST(request: NextRequest) {
     clearUserRoleCookie(response);
     clearIsSuperAdminCookie(response);
     return response;
-  } catch {
+  } catch (error) {
+    console.error("[POST /api/auth/logout]", error);
     return NextResponse.json(
       { success: false, error: "Erreur serveur lors de la deconnexion." } satisfies AuthResponse,
       { status: 500 }

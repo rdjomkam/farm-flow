@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { getPackById, updatePack, deletePack } from "@/lib/queries/packs";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -26,13 +25,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(pack);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation du pack.");
+    return handleApiError("GET /api/packs/[id]", error, "Erreur serveur lors de la recuperation du pack.");
   }
 }
 
@@ -63,20 +56,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(updated);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    if (error instanceof Error && (
-      error.message.includes("desactiver") ||
-      error.message.includes("alevins") ||
-      error.message.includes("negatif")
-    )) {
-      return apiError(409, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la mise a jour du pack.");
+    return handleApiError("PUT /api/packs/[id]", error, "Erreur serveur lors de la mise a jour du pack.", {
+      statusMap: [
+        { match: ["desactiver", "alevins", "negatif"], status: 409 },
+      ],
+    });
   }
 }
 
@@ -97,15 +81,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    if (error instanceof Error && error.message.includes("supprimer")) {
-      return apiError(409, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la suppression du pack.");
+    return handleApiError("DELETE /api/packs/[id]", error, "Erreur serveur lors de la suppression du pack.", {
+      statusMap: [
+        { match: "supprimer", status: 409 },
+      ],
+    });
   }
 }

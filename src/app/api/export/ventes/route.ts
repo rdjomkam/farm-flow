@@ -7,8 +7,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
+import { handleApiError } from "@/lib/api-utils";
 import { getVentes } from "@/lib/queries/ventes";
 import { genererExcelVentes } from "@/lib/export/excel-ventes";
 import { Permission, StatutFacture } from "@/types";
@@ -80,14 +80,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
-    }
-    if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
-    }
-    const message =
-      error instanceof Error ? error.message : "Erreur serveur inattendue";
-    return NextResponse.json({ status: 500, message: message }, { status: 500 });
+    return handleApiError("GET /api/export/ventes", error, "Erreur serveur lors de la generation de l'export des ventes.");
   }
 }

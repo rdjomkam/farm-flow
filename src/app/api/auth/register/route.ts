@@ -106,7 +106,8 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json(responseBody, { status: 201 });
     setSessionCookie(response, sessionToken, expires);
     return response;
-  } catch {
+  } catch (error) {
+    console.error("[POST /api/auth/register]", error);
     return NextResponse.json(
       { success: false, error: "Erreur serveur lors de l'inscription.", errorKey: ErrorKeys.SERVER_REGISTER } satisfies AuthResponse,
       { status: 500 }

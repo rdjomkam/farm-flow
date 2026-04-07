@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMouvements, createMouvement } from "@/lib/queries/mouvements";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, TypeMouvement, parsePaginationQuery } from "@/types";
 import type { CreateMouvementDTO, MouvementFilters } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import { checkIdempotency, storeIdempotency, hashBody } from "@/lib/idempotency";
 
 const VALID_TYPES = Object.values(TypeMouvement);
@@ -41,13 +40,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data, total, limit, offset });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des mouvements.");
+    return handleApiError("GET /api/stock/mouvements", error, "Erreur serveur lors de la recuperation des mouvements.");
   }
 }
 
@@ -145,19 +138,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(mouvement, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    if (message.includes("Stock insuffisant")) {
-      return apiError(409, message);
-    }
-    return apiError(500, "Erreur serveur lors de la creation du mouvement.");
+    return handleApiError("POST /api/stock/mouvements", error, "Erreur serveur lors de la creation du mouvement.", {
+      statusMap: [
+        { match: "Stock insuffisant", status: 409 },
+      ],
+    });
   }
 }

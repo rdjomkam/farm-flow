@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getReproducteurById,
+import { getReproducteurById,
   updateReproducteur,
-  deleteReproducteur,
-} from "@/lib/queries/reproducteurs";
-import { apiError } from "@/lib/api-utils";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+  deleteReproducteur } from "@/lib/queries/reproducteurs";
+import { apiError, handleApiError } from "@/lib/api-utils";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, SexeReproducteur, StatutReproducteur } from "@/types";
 import type { UpdateReproducteurDTO } from "@/lib/queries/reproducteurs";
 
@@ -24,14 +21,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     return NextResponse.json(reproducteur);
   } catch (error) {
-    console.error("[GET /api/reproducteurs/[id]]", error);
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur.");
+    return handleApiError("GET /api/reproducteurs/[id]", error, "Erreur serveur.");
   }
 }
 
@@ -100,27 +90,11 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const reproducteur = await updateReproducteur(id, auth.activeSiteId, data);
     return NextResponse.json(reproducteur);
   } catch (error) {
-    console.error("[PUT /api/reproducteurs/[id]]", error);
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable") || message.includes("n'existe pas")) {
-      return apiError(404, message);
-    }
-    // Conflit : code deja utilise ou statut invalide
-    if (
-      message.includes("deja utilise") ||
-      message.includes("déjà utilisé") ||
-      message.includes("n'est pas ACTIF") ||
-      message.includes("statut doit etre")
-    ) {
-      return apiError(409, message);
-    }
-    return apiError(500, message);
+    return handleApiError("PUT /api/reproducteurs/[id]", error, "Erreur serveur.", {
+      statusMap: [
+        { match: ["n'est pas ACTIF", "statut doit etre"], status: 409 },
+      ],
+    });
   }
 }
 
@@ -132,21 +106,10 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     await deleteReproducteur(id, auth.activeSiteId);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[DELETE /api/reproducteurs/[id]]", error);
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    // pontes liées → 409
-    if (message.includes("ponte")) {
-      return apiError(409, message);
-    }
-    return apiError(500, message);
+    return handleApiError("DELETE /api/reproducteurs/[id]", error, "Erreur serveur.", {
+      statusMap: [
+        { match: "ponte", status: 409 },
+      ],
+    });
   }
 }

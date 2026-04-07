@@ -141,7 +141,7 @@ describe("getSubscriptionStatus", () => {
 
   it("abonnement ACTIF avec plan ELEVEUR → statut ACTIF, daysRemaining > 0", async () => {
     const dateFin = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000); // 10 jours
-    mockGetAbonnementActif.mockResolvedValue({
+    mockGetAbonnementActifPourSite.mockResolvedValue({
       id: "abo-1",
       statut: StatutAbonnement.ACTIF,
       dateFin,
@@ -159,7 +159,7 @@ describe("getSubscriptionStatus", () => {
 
   it("plan DECOUVERTE → isDecouverte = true", async () => {
     const dateFin = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    mockGetAbonnementActif.mockResolvedValue({
+    mockGetAbonnementActifPourSite.mockResolvedValue({
       id: "abo-decouverte",
       statut: StatutAbonnement.ACTIF,
       dateFin,
@@ -173,7 +173,7 @@ describe("getSubscriptionStatus", () => {
   });
 
   it("aucun abonnement → statut null, daysRemaining null", async () => {
-    mockGetAbonnementActif.mockResolvedValue(null);
+    mockGetAbonnementActifPourSite.mockResolvedValue(null);
 
     const result = await getSubscriptionStatus("user-vide");
 
@@ -185,7 +185,7 @@ describe("getSubscriptionStatus", () => {
 
   it("abonnement expiré hier → daysRemaining = 0", async () => {
     const dateFin = new Date(Date.now() - 24 * 60 * 60 * 1000); // hier
-    mockGetAbonnementActif.mockResolvedValue({
+    mockGetAbonnementActifPourSite.mockResolvedValue({
       id: "abo-1",
       statut: StatutAbonnement.EN_GRACE,
       dateFin,

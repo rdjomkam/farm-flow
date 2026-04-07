@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.error("[GET /api/auth/me]", error);
     return NextResponse.json(
       { success: false, error: "Erreur serveur." } satisfies AuthResponse,
       { status: 500 }

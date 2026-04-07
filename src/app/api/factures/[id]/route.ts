@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFactureById, updateFacture } from "@/lib/queries/factures";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, StatutFacture } from "@/types";
 import type { UpdateFactureDTO } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 const VALID_STATUTS = Object.values(StatutFacture);
 
@@ -22,13 +21,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     return NextResponse.json(facture);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur.");
+    return handleApiError("GET /api/factures/[id]", error, "Erreur serveur.");
   }
 }
 
@@ -62,16 +55,6 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const facture = await updateFacture(id, auth.activeSiteId, data);
     return NextResponse.json(facture);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    return apiError(500, message);
+    return handleApiError("PUT /api/factures/[id]", error, "Erreur serveur.");
   }
 }

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AuthError, normalizePhone } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { normalizePhone } from "@/lib/auth";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { activerPack } from "@/lib/queries/provisioning";
 import { runEngineForSite, generateOnboardingActivities } from "@/lib/activity-engine";
 import { getOrCreateSystemUser } from "@/lib/queries/users";
 import type { ActivatePackDTO } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -75,30 +75,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         defaultAssigneeId: payload.user.id,
       });
     } catch (error) {
-      // Non-blocking: pack activation already succeeded
-      console.error("[Pack activation] Failed to generate initial activities:", error);
+      return handleApiError("POST /api/packs/[id]/activer", error, "Erreur serveur.");
     }
 
     return NextResponse.json(payload, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    if (error instanceof Error) {
-      // EC-2.1 : double activation
-      if (error.message.includes("deja une activation")) {
-        return apiError(409, error.message);
-      }
-      // Pack introuvable
-      if (error.message.includes("introuvable")) {
-        return apiError(404, error.message);
-      }
-      // Autres erreurs métier
-      return apiError(400, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de l'activation du pack.");
+    return handleApiError("POST /api/packs/[id]/activer", error, "Erreur serveur lors de l'activation du pack.", {
+      statusMap: [
+        { match: "deja une activation", status: 409 },
+      ],
+    });
   }
 }

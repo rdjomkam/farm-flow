@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cachedJson } from "@/lib/api-cache";
 import { getReleves, createReleve } from "@/lib/queries/releves";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { TypeReleve, CauseMortalite, TypeAliment, ComportementAlimentaire, MethodeComptage, Permission, StatutVague, TypeDeclencheur, parsePaginationQuery } from "@/types";
 import type { CreateReleveDTO, ReleveFilters } from "@/types";
 import { prisma } from "@/lib/db";
@@ -13,7 +12,7 @@ import {
 } from "@/lib/activity-engine";
 import { retryAsync } from "@/lib/async-retry";
 import { ErrorKeys } from "@/lib/api-error-keys";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import { checkIdempotency, storeIdempotency, hashBody } from "@/lib/idempotency";
 import {
   createReleveSchema,
@@ -127,17 +126,7 @@ export async function GET(request: NextRequest) {
     const { data, total } = await getReleves(auth.activeSiteId, filters, { limit, offset });
     return cachedJson({ data, total, limit, offset }, "fast");
   } catch (error) {
-    console.error("[GET /api/releves] Error:", error);
-    if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
-    }
-    if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
-    }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation des releves.", errorKey: ErrorKeys.SERVER_GET_RELEVES },
-      { status: 500 }
-    );
+    return handleApiError("GET /api/releves", error, "Erreur serveur lors de la recuperation des releves.", { code: ErrorKeys.SERVER_GET_RELEVES });
   }
 }
 
@@ -316,28 +305,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(releve, { status: 201 });
   } catch (error) {
-    console.error("[POST /api/releves] Error:", error);
-    if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
-    }
-    if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
-    }
-    const message =
-      error instanceof Error ? error.message : "Erreur serveur inattendue.";
-
-    if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
-    }
-
-    if (message.includes("n'appartient pas") || message.includes("cloturee") || message.includes("Stock insuffisant") || message.includes("n'est pas de categorie")) {
-      return NextResponse.json({ status: 409, message }, { status: 409 });
-    }
-
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la creation du releve.", errorKey: ErrorKeys.SERVER_CREATE_RELEVE },
-      { status: 500 }
-    );
+    return handleApiError("POST /api/releves", error, "Erreur serveur lors de la creation du releve.", {
+      code: ErrorKeys.SERVER_CREATE_RELEVE,
+      statusMap: [{ match: ["n'appartient pas", "cloturee", "Stock insuffisant", "n'est pas de categorie"], status: 409 }],
+    });
   }
 }
 

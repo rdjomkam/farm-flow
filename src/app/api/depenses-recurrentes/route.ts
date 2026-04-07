@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getDepensesRecurrentes,
-  createDepenseRecurrente,
-} from "@/lib/queries/depenses-recurrentes";
-import { apiError } from "@/lib/api-utils";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { getDepensesRecurrentes,
+  createDepenseRecurrente } from "@/lib/queries/depenses-recurrentes";
+import { apiError, handleApiError } from "@/lib/api-utils";
+import { requirePermission } from "@/lib/permissions";
 import { CategorieDepense, FrequenceRecurrence, Permission } from "@/types";
 import type { CreateDepenseRecurrenteDTO } from "@/types";
 
@@ -30,13 +27,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ templates, total: templates.length });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors du chargement des templates.");
+    return handleApiError("GET /api/depenses-recurrentes", error, "Erreur serveur lors du chargement des templates.");
   }
 }
 
@@ -86,13 +77,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(template, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    return apiError(500, message);
+    return handleApiError("POST /api/depenses-recurrentes", error, "Erreur serveur.");
   }
 }

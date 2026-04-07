@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getFournisseurById,
+import { getFournisseurById,
   updateFournisseur,
-  deleteFournisseur,
-} from "@/lib/queries/fournisseurs";
-import { apiError } from "@/lib/api-utils";
-import { AuthError } from "@/lib/auth";
+  deleteFournisseur } from "@/lib/queries/fournisseurs";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import { normalizePhone } from "@/lib/auth/phone";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import type { UpdateFournisseurDTO } from "@/types";
 
@@ -25,13 +22,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     return NextResponse.json(fournisseur);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur.");
+    return handleApiError("GET /api/fournisseurs/[id]", error, "Erreur serveur.");
   }
 }
 
@@ -50,17 +41,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const fournisseur = await updateFournisseur(id, auth.activeSiteId, data);
     return NextResponse.json(fournisseur);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    return apiError(500, message);
+    return handleApiError("PUT /api/fournisseurs/[id]", error, "Erreur serveur.");
   }
 }
 
@@ -72,16 +53,6 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     await deleteFournisseur(id, auth.activeSiteId);
     return NextResponse.json({ success: true });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    return apiError(500, message);
+    return handleApiError("DELETE /api/fournisseurs/[id]", error, "Erreur serveur.");
   }
 }

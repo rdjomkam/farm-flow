@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, AuthError } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 import {
   getSiteMember,
   updateMemberSiteRole,
   removeMember,
 } from "@/lib/queries/sites";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import { getSiteRoleById } from "@/lib/queries/roles";
 import {
   canAssignRole,
@@ -79,13 +79,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       permissions: targetRole.permissions,
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la modification du role.");
+    return handleApiError("PUT /api/sites/[id]/members/[userId]", error, "Erreur serveur lors de la modification du role.");
   }
 }
 
@@ -130,12 +124,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la suppression du membre.");
+    return handleApiError("DELETE /api/sites/[id]/members/[userId]", error, "Erreur serveur lors de la suppression du membre.");
   }
 }

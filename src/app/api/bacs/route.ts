@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cachedJson } from "@/lib/api-cache";
 import { getBacs, getBacsLibres } from "@/lib/queries/bacs";
 import { prisma } from "@/lib/db";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, TypePlan, parsePaginationQuery } from "@/types";
 import type { CreateBacDTO } from "@/types";
 import { normaliseLimite, isQuotaAtteint } from "@/lib/abonnements/check-quotas";
@@ -11,7 +10,7 @@ import { getAbonnementActifPourSite } from "@/lib/queries/abonnements";
 import { PLAN_LIMITES } from "@/lib/abonnements-constants";
 import type { QuotaRessource } from "@/lib/abonnements/check-quotas";
 import { ErrorKeys } from "@/lib/api-error-keys";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -119,13 +118,9 @@ export async function GET(request: NextRequest) {
 
     return cachedJson({ data, total, limit, offset }, "medium");
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des bacs.", { code: ErrorKeys.SERVER_GET_BACS });
+    return handleApiError("GET /api/bacs", error, "Erreur serveur lors de la recuperation des bacs.", {
+      code: ErrorKeys.SERVER_GET_BACS,
+    });
   }
 }
 
@@ -170,14 +165,13 @@ export async function POST(request: NextRequest) {
     // Vérifier le quota et créer le bac dans une transaction atomique (R4)
     const bac = await prisma.$transaction(async (tx) => {
       // 1. Charger l'abonnement actif pour déterminer la limite
+      // Sans abonnement actif → appliquer les limites DECOUVERTE par défaut
       const abonnement = await getAbonnementActifPourSite(auth.activeSiteId);
-      if (!abonnement) {
-        throw new Error("NO_SUBSCRIPTION");
-      }
-      const planLimites = PLAN_LIMITES[abonnement.plan.typePlan as TypePlan];
-      const limitesBacs = planLimites
-        ? planLimites.limitesBacs
-        : PLAN_LIMITES[TypePlan.DECOUVERTE].limitesBacs;
+      const planType = abonnement?.plan.typePlan as TypePlan | undefined;
+      const planLimites = planType
+        ? PLAN_LIMITES[planType] ?? PLAN_LIMITES[TypePlan.DECOUVERTE]
+        : PLAN_LIMITES[TypePlan.DECOUVERTE];
+      const limitesBacs = planLimites.limitesBacs;
 
       // 2. Compter les bacs existants (dans la transaction pour éviter la race condition)
       const nombreBacs = await tx.bac.count({ where: { siteId: auth.activeSiteId } });
@@ -207,19 +201,8 @@ export async function POST(request: NextRequest) {
       if (err.message === "QUOTA_DEPASSE") {
         return { __quotaError: true, limite: err.quotaLimite } as const;
       }
-      if (err.message === "NO_SUBSCRIPTION") {
-        return { __noSubscription: true } as const;
-      }
       throw err;
     });
-
-    if ("__noSubscription" in bac) {
-      return apiError(
-        402,
-        "Aucun abonnement actif. Souscrivez un plan pour créer des ressources.",
-        { code: "NO_SUBSCRIPTION" }
-      );
-    }
 
     if ("__quotaError" in bac && bac.__quotaError) {
       return apiError(
@@ -231,12 +214,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(bac, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la creation du bac.", { code: ErrorKeys.SERVER_CREATE_BAC });
+    return handleApiError("POST /api/bacs", error, "Erreur serveur lors de la creation du bac.", {
+      code: ErrorKeys.SERVER_CREATE_BAC,
+    });
   }
 }

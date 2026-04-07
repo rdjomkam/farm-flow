@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { recevoirCommande } from "@/lib/queries/commandes";
 import { prisma } from "@/lib/db";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
-import {
-  uploadFile,
+import { uploadFile,
   validateFile,
-  generateStorageKey,
-} from "@/lib/storage";
-import { apiError } from "@/lib/api-utils";
+  generateStorageKey } from "@/lib/storage";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -139,22 +136,6 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     return NextResponse.json({ commande, depense, avertissements });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    if (message.includes("n'appartient pas") || message.includes("n'est pas couverte") || message.includes("negative")) {
-      return apiError(400, message);
-    }
-    if (message.includes("Impossible")) {
-      return apiError(409, message);
-    }
-    return apiError(500, "Erreur serveur lors de la reception de la commande.");
+    return handleApiError("POST /api/commandes/[id]/recevoir", error, "Erreur serveur lors de la reception de la commande.");
   }
 }

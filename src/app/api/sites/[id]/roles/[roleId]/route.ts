@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requirePermission, ForbiddenError, canAssignRole } from "@/lib/permissions";
-import { AuthError } from "@/lib/auth";
 import { getSiteRoleById, updateSiteRole, deleteSiteRole } from "@/lib/queries/roles";
 import { Permission } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 type RouteParams = { params: Promise<{ id: string; roleId: string }> };
 
@@ -25,13 +24,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(role);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur.");
+    return handleApiError("GET /api/sites/[id]/roles/[roleId]", error, "Erreur serveur.");
   }
 }
 
@@ -72,16 +65,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     revalidatePath(`/settings/sites/${siteId}/roles`);
     return NextResponse.json(updated);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    if (error && typeof error === "object" && "code" in error && (error as { code: string }).code === "P2002") {
-      return apiError(409, "Un role avec ce nom existe deja.");
-    }
-    return apiError(500, "Erreur serveur lors de la modification du role.");
+    return handleApiError("PUT /api/sites/[id]/roles/[roleId]", error, "Erreur serveur lors de la modification du role.");
   }
 }
 
@@ -111,12 +95,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     revalidatePath(`/settings/sites/${siteId}/roles`);
     return NextResponse.json({ success: true, reassignedMembers: role._count.members });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la suppression du role.");
+    return handleApiError("DELETE /api/sites/[id]/roles/[roleId]", error, "Erreur serveur lors de la suppression du role.");
   }
 }

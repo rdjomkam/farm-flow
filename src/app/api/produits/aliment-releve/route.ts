@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cachedJson } from "@/lib/api-cache";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
+import { handleApiError } from "@/lib/api-utils";
 import { Permission, CategorieProduit } from "@/types";
 import { prisma } from "@/lib/db";
 
@@ -37,16 +37,6 @@ export async function GET(request: NextRequest) {
 
     return cachedJson({ data: produits }, "fast");
   } catch (error) {
-    if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
-    }
-    if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
-    }
-    console.error("[GET /api/produits/aliment-releve] Error:", error);
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation des produits alimentaires." },
-      { status: 500 }
-    );
+    return handleApiError("GET /api/produits/aliment-releve", error, "Erreur serveur lors de la recuperation des produits alimentaires.");
   }
 }

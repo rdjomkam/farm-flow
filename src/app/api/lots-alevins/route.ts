@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getLotsAlevins, createLotAlevins } from "@/lib/queries/lots-alevins";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, StatutLotAlevins } from "@/types";
 import type { CreateLotAlevinsDTO } from "@/lib/queries/lots-alevins";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -39,14 +38,7 @@ export async function GET(request: NextRequest) {
       offset,
     });
   } catch (error) {
-    console.error("[GET /api/lots-alevins]", error);
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des lots d'alevins.");
+    return handleApiError("GET /api/lots-alevins", error, "Erreur serveur lors de la recuperation des lots d'alevins.");
   }
 }
 
@@ -128,35 +120,8 @@ export async function POST(request: NextRequest) {
     const lot = await createLotAlevins(auth.activeSiteId, data);
     return NextResponse.json(lot, { status: 201 });
   } catch (error) {
-    console.error("[POST /api/lots-alevins]", error);
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    // Conflit : code deja utilise
-    if (message.includes("deja utilise") || message.includes("déjà utilisé")) {
-      return apiError(409, message);
-    }
-    // Ressource introuvable (ex: ponte introuvable, bac introuvable)
-    if (message.includes("n'existe pas") || message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    // Conflit metier : bac deja assigne, statut invalide
-    if (
-      message.includes("occupe") ||
-      message.includes("deja assigne") ||
-      message.includes("déjà assigné") ||
-      message.includes("n'est pas ACTIF") ||
-      message.includes("statut doit etre")
-    ) {
-      return apiError(409, message);
-    }
-    return NextResponse.json(
-      { status: 500, message: `Erreur serveur lors de la creation du lot d'alevins : ${message}` },
-      { status: 500 }
-    );
+    return handleApiError("POST /api/lots-alevins", error, "Erreur serveur lors de la creation du lot d'alevins.", {
+      statusMap: [{ match: "occupe", status: 409 }],
+    });
   }
 }

@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cachedJson } from "@/lib/api-cache";
 import { getProduits, createProduit } from "@/lib/queries/produits";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, CategorieProduit, UniteStock, TailleGranule, FormeAliment, PhaseElevage } from "@/types";
 import type { CreateProduitDTO, ProduitFilters } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 const VALID_CATEGORIES = Object.values(CategorieProduit);
 const VALID_UNITES = Object.values(UniteStock);
@@ -35,13 +34,7 @@ export async function GET(request: NextRequest) {
 
     return cachedJson({ data: result.data, total: result.total, limit, offset }, "medium");
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des produits.");
+    return handleApiError("GET /api/produits", error, "Erreur serveur lors de la recuperation des produits.");
   }
 }
 
@@ -189,16 +182,6 @@ export async function POST(request: NextRequest) {
     const produit = await createProduit(auth.activeSiteId, data);
     return NextResponse.json(produit, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    return apiError(500, "Erreur serveur lors de la creation du produit.");
+    return handleApiError("POST /api/produits", error, "Erreur serveur lors de la creation du produit.");
   }
 }

@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getPonteById,
+import { getPonteById,
   updatePonte,
-  deletePonte,
-} from "@/lib/queries/pontes";
-import { apiError } from "@/lib/api-utils";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+  deletePonte } from "@/lib/queries/pontes";
+import { apiError, handleApiError } from "@/lib/api-utils";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, StatutPonte } from "@/types";
 import type { UpdatePonteDTO } from "@/lib/queries/pontes";
 
@@ -24,14 +21,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     return NextResponse.json(ponte);
   } catch (error) {
-    console.error("[GET /api/pontes/[id]]", error);
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur.");
+    return handleApiError("GET /api/pontes/[id]", error, "Erreur serveur.");
   }
 }
 
@@ -104,27 +94,11 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const ponte = await updatePonte(id, auth.activeSiteId, data);
     return NextResponse.json(ponte);
   } catch (error) {
-    console.error("[PUT /api/pontes/[id]]", error);
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable") || message.includes("n'existe pas")) {
-      return apiError(404, message);
-    }
-    // Conflit : code deja utilise ou statut invalide
-    if (
-      message.includes("deja utilise") ||
-      message.includes("déjà utilisé") ||
-      message.includes("n'est pas ACTIF") ||
-      message.includes("statut doit etre")
-    ) {
-      return apiError(409, message);
-    }
-    return apiError(500, message);
+    return handleApiError("PUT /api/pontes/[id]", error, "Erreur serveur.", {
+      statusMap: [
+        { match: ["n'est pas ACTIF", "statut doit etre"], status: 409 },
+      ],
+    });
   }
 }
 
@@ -136,21 +110,10 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     await deletePonte(id, auth.activeSiteId);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[DELETE /api/pontes/[id]]", error);
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    // lots liés → 409
-    if (message.includes("lot")) {
-      return apiError(409, message);
-    }
-    return apiError(500, message);
+    return handleApiError("DELETE /api/pontes/[id]", error, "Erreur serveur.", {
+      statusMap: [
+        { match: "lot", status: 409 },
+      ],
+    });
   }
 }

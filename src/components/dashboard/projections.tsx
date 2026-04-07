@@ -179,10 +179,7 @@ function CourbeProjectionChart({ projection }: { projection: ProjectionVague }) 
   }
 
   return (
-    <figure>
-      <figcaption className="sr-only">
-        {tAnalytics("projections.growthCurve")}
-      </figcaption>
+    <figure aria-label={tAnalytics("projections.growthCurve")}>
       <div className="h-[200px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={courbeProjection} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>

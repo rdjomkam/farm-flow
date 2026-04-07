@@ -93,6 +93,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    console.error("[GET /api/remises/verifier]", error);
     const message = error instanceof Error ? error.message : "Erreur serveur.";
     return NextResponse.json(
       { valide: false, messageErreur: `Erreur lors de la vérification. ${message}` },

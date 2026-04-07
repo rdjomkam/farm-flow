@@ -13,11 +13,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPaiementsByAbonnement } from "@/lib/queries/paiements-abonnements";
 import { verifierEtActiverPaiement } from "@/lib/services/billing";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { AuthError } from "@/lib/auth";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, StatutPaiementAbo } from "@/types";
 import { prisma } from "@/lib/db";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 export async function GET(
   request: NextRequest,
@@ -71,12 +70,6 @@ export async function GET(
       dateConfirmation: paiementMisAJour?.dateConfirmation ?? null,
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la verification du paiement.");
+    return handleApiError("GET /api/paiements/[id]/verifier", error, "Erreur serveur lors de la verification du paiement.");
   }
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getNotesPourClient } from "@/lib/queries/notes";
-import { AuthError, requireAuth } from "@/lib/auth";
-import { apiError } from "@/lib/api-utils";
+import { requireAuth } from "@/lib/auth";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 /**
  * GET /api/notes
@@ -43,9 +43,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ notes, total: notes.length });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des notes.");
+    return handleApiError("GET /api/notes", error, "Erreur serveur lors de la recuperation des notes.");
   }
 }

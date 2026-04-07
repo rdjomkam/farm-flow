@@ -15,12 +15,11 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireSuperAdmin } from "@/lib/auth/backoffice";
-import { AuthError } from "@/lib/auth";
 import { ForbiddenError } from "@/lib/permissions";
 import { prisma } from "@/lib/db";
 import { SiteModule } from "@/types";
 import type { AdminModulesListResponse, ModuleDefinitionResponse } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -109,14 +108,7 @@ export async function GET(request: NextRequest) {
     const response: AdminModulesListResponse = { modules };
     return NextResponse.json(response);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    console.error("[GET /api/backoffice/modules]", error);
-    return apiError(500, "Erreur serveur lors de la recuperation des modules.");
+    return handleApiError("GET /api/backoffice/modules", error, "Erreur serveur lors de la recuperation des modules.");
   }
 }
 
@@ -205,13 +197,6 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    console.error("[POST /api/backoffice/modules]", error);
-    return apiError(500, "Erreur serveur lors de la creation du module.");
+    return handleApiError("POST /api/backoffice/modules", error, "Erreur serveur lors de la creation du module.");
   }
 }

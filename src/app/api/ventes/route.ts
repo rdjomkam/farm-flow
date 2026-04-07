@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cachedJson } from "@/lib/api-cache";
 import { getVentes, createVente } from "@/lib/queries/ventes";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, parsePaginationQuery } from "@/types";
 import type { CreateVenteDTO, VenteFilters } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import { checkIdempotency, storeIdempotency, hashBody } from "@/lib/idempotency";
 
 export async function GET(request: NextRequest) {
@@ -34,13 +33,7 @@ export async function GET(request: NextRequest) {
 
     return cachedJson({ data, total, limit, offset }, "fast");
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des ventes.");
+    return handleApiError("GET /api/ventes", error, "Erreur serveur lors de la recuperation des ventes.");
   }
 }
 
@@ -107,19 +100,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(vente, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable") || message.includes("inactif")) {
-      return apiError(404, message);
-    }
-    if (message.includes("insuffisant") || message.includes("annulee")) {
-      return apiError(409, message);
-    }
-    return apiError(500, "Erreur serveur lors de la creation de la vente.");
+    return handleApiError("POST /api/ventes", error, "Erreur serveur lors de la creation de la vente.", {
+      statusMap: [
+        { match: "inactif", status: 404 },
+        { match: ["insuffisant", "annulee"], status: 409 },
+      ],
+    });
   }
 }

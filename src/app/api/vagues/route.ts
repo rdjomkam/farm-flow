@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cachedJson } from "@/lib/api-cache";
 import { getVagues } from "@/lib/queries/vagues";
 import { prisma } from "@/lib/db";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, StatutVague, TypePlan, parsePaginationQuery } from "@/types";
 import type { CreateVagueDTO } from "@/types";
 import { normaliseLimite, isQuotaAtteint } from "@/lib/abonnements/check-quotas";
@@ -11,7 +10,7 @@ import { getAbonnementActifPourSite } from "@/lib/queries/abonnements";
 import { PLAN_LIMITES } from "@/lib/abonnements-constants";
 import type { QuotaRessource } from "@/lib/abonnements/check-quotas";
 import { ErrorKeys } from "@/lib/api-error-keys";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -55,14 +54,9 @@ export async function GET(request: NextRequest) {
 
     return cachedJson({ data, total, limit, offset }, "medium");
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    console.error("[API GET /vagues]", error);
-    return apiError(500, "Erreur serveur lors de la recuperation des vagues.", { code: ErrorKeys.SERVER_GET_VAGUES });
+    return handleApiError("GET /api/vagues", error, "Erreur serveur lors de la recuperation des vagues.", {
+      code: ErrorKeys.SERVER_GET_VAGUES,
+    });
   }
 }
 
@@ -180,14 +174,13 @@ export async function POST(request: NextRequest) {
     // Check quota + création sont dans la même transaction pour éviter les race conditions.
     const vagueResult = await prisma.$transaction(async (tx) => {
       // 1. Charger l'abonnement actif pour déterminer la limite
+      // Sans abonnement actif → appliquer les limites DECOUVERTE par défaut
       const abonnement = await getAbonnementActifPourSite(auth.activeSiteId);
-      if (!abonnement) {
-        throw new Error("NO_SUBSCRIPTION");
-      }
-      const planLimites = PLAN_LIMITES[abonnement.plan.typePlan as TypePlan];
-      const limitesVagues = planLimites
-        ? planLimites.limitesVagues
-        : PLAN_LIMITES[TypePlan.DECOUVERTE].limitesVagues;
+      const planType = abonnement?.plan.typePlan as TypePlan | undefined;
+      const planLimites = planType
+        ? PLAN_LIMITES[planType] ?? PLAN_LIMITES[TypePlan.DECOUVERTE]
+        : PLAN_LIMITES[TypePlan.DECOUVERTE];
+      const limitesVagues = planLimites.limitesVagues;
 
       // 2. Compter les vagues EN_COURS (dans la transaction pour éviter la race condition)
       const nombreVagues = await tx.vague.count({
@@ -262,19 +255,8 @@ export async function POST(request: NextRequest) {
       if (err.message === "QUOTA_DEPASSE") {
         return { __quotaError: true, limite: err.quotaLimite } as const;
       }
-      if (err.message === "NO_SUBSCRIPTION") {
-        return { __noSubscription: true } as const;
-      }
       throw err;
     });
-
-    if (vagueResult && "__noSubscription" in vagueResult) {
-      return apiError(
-        402,
-        "Aucun abonnement actif. Souscrivez un plan pour créer des ressources.",
-        { code: "NO_SUBSCRIPTION" }
-      );
-    }
 
     if (vagueResult && "__quotaError" in vagueResult && vagueResult.__quotaError) {
       return apiError(
@@ -314,29 +296,8 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message =
-      error instanceof Error ? error.message : "Erreur serveur inattendue.";
-
-    if (
-      message.includes("deja assigne") ||
-      message.includes("déjà assigné") ||
-      message.includes("deja utilise") ||
-      message.includes("déjà utilisé")
-    ) {
-      return apiError(409, message);
-    }
-
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-
-    console.error("[API POST /vagues]", error);
-    return apiError(500, "Erreur serveur lors de la creation de la vague.", { code: ErrorKeys.SERVER_CREATE_VAGUE });
+    return handleApiError("POST /api/vagues", error, "Erreur serveur lors de la creation de la vague.", {
+      code: ErrorKeys.SERVER_CREATE_VAGUE,
+    });
   }
 }

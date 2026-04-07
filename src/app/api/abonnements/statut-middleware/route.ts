@@ -22,7 +22,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
-import { getSubscriptionStatusForSite, isBlocked } from "@/lib/abonnements/check-subscription";
+import { getSubscriptionStatus, isBlocked } from "@/lib/abonnements/check-subscription";
 import { prisma } from "@/lib/db";
 import { StatutAbonnement, TypePlan } from "@/types";
 
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const status = await getSubscriptionStatusForSite(session.activeSiteId);
+    const status = await getSubscriptionStatus(session.activeSiteId);
     console.log(`[statut-middleware] status for site ${session.activeSiteId}:`, JSON.stringify(status));
 
     // isDecouverte : plan DECOUVERTE ne bloque jamais
@@ -76,13 +76,13 @@ export async function GET(request: NextRequest) {
       isBlocked: blockedFlag,
     });
   } catch (error) {
-    console.error("[statut-middleware] Erreur (fail-closed — returning isBlocked:true):", error);
-    // Fail closed: si la vérification échoue, bloquer l'accès par précaution
+    console.error("[statut-middleware] Erreur (fail-open — returning isBlocked:false):", error);
+    // Fail open: si la vérification échoue, ne pas bloquer l'utilisateur par précaution
     return NextResponse.json({
       statut: null,
       isDecouverte: false,
       planId: null,
-      isBlocked: true,
+      isBlocked: false,
     });
   }
 }

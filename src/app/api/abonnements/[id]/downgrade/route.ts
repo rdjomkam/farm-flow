@@ -15,9 +15,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAbonnementById, logAbonnementAudit } from "@/lib/queries/abonnements";
 import { getPlanAbonnementById } from "@/lib/queries/plans-abonnements";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { invalidateSubscriptionCaches } from "@/lib/abonnements/invalidate-caches";
-import { AuthError } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
   Permission,
@@ -25,7 +24,7 @@ import {
   PeriodeFacturation,
   TypePlan,
 } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import { PLAN_LIMITES } from "@/lib/abonnements-constants";
 import type { Prisma } from "@/generated/prisma/client";
 import { Prisma as PrismaNamespace } from "@/generated/prisma/client";
@@ -180,18 +179,7 @@ export async function POST(
       { status: 200 }
     );
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    console.error("[downgrade] Erreur:", error);
-    return NextResponse.json(
-      { status: 500, message: `Erreur serveur lors du downgrade. ${message}` },
-      { status: 500 }
-    );
+    return handleApiError("POST /api/abonnements/[id]/downgrade", error, "Erreur serveur lors du downgrade.");
   }
 }
 
@@ -246,16 +234,6 @@ export async function DELETE(
       { status: 200 }
     );
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    return NextResponse.json(
-      { status: 500, message: `Erreur serveur lors de l'annulation du downgrade. ${message}` },
-      { status: 500 }
-    );
+    return handleApiError("DELETE /api/abonnements/[id]/downgrade", error, "Erreur serveur lors de l'annulation du downgrade.");
   }
 }

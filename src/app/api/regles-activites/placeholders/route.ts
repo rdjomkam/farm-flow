@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
-import {
-  getCustomPlaceholders,
-  createCustomPlaceholder,
-} from "@/lib/queries/custom-placeholders";
-import { apiError } from "@/lib/api-utils";
+import { getCustomPlaceholders,
+  createCustomPlaceholder } from "@/lib/queries/custom-placeholders";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 /**
  * GET /api/regles-activites/placeholders
@@ -26,14 +23,7 @@ export async function GET(request: NextRequest) {
     const placeholders = await getCustomPlaceholders(onlyActive);
     return NextResponse.json({ placeholders, total: placeholders.length });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    console.error("[GET /api/regles-activites/placeholders]", error);
-    return apiError(500, "Erreur serveur lors de la recuperation des placeholders.");
+    return handleApiError("GET /api/regles-activites/placeholders", error, "Erreur serveur lors de la recuperation des placeholders.");
   }
 }
 
@@ -65,18 +55,10 @@ export async function POST(request: NextRequest) {
     const placeholder = await createCustomPlaceholder(body);
     return NextResponse.json({ placeholder }, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, (error as Error).message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, (error as Error).message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    // Prisma unique constraint violation
-    if (message.includes("Unique constraint")) {
-      return apiError(409, "Cette cle existe deja.");
-    }
-    console.error("[POST /api/regles-activites/placeholders]", error);
-    return apiError(400, message);
+    return handleApiError("POST /api/regles-activites/placeholders", error, "Erreur serveur.", {
+      statusMap: [
+        { match: "Unique constraint", status: 409 },
+      ],
+    });
   }
 }

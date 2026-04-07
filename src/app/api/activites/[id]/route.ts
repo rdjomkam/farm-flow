@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getActiviteById, updateActivite, deleteActivite, completeActivite } from "@/lib/queries";
 import type { UpdateActiviteDTO, CompleteActiviteDTO } from "@/types";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, StatutActivite } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -23,14 +22,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     return NextResponse.json(activite);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    console.error("[GET /api/activites/[id]]", error);
-    return apiError(500, "Erreur serveur lors de la récupération de l'activité.");
+    return handleApiError("GET /api/activites/[id]", error, "Erreur serveur lors de la récupération de l'activité.");
   }
 }
 
@@ -102,27 +94,11 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
     return NextResponse.json(activite);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    if (
-      message.includes("requis") ||
-      message.includes("deja lie") ||
-      message.includes("PLANIFIEE") ||
-      message.includes("minimum") ||
-      message.includes("terminees ou annulees")
-    ) {
-      return apiError(400, message);
-    }
-    console.error("[PUT /api/activites/[id]]", error);
-    return apiError(500, message);
+    return handleApiError("PUT /api/activites/[id]", error, "Erreur serveur.", {
+      statusMap: [
+        { match: ["requis", "deja lie", "PLANIFIEE", "minimum", "terminees ou annulees"], status: 400 },
+      ],
+    });
   }
 }
 
@@ -134,17 +110,6 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     await deleteActivite(auth.activeSiteId, id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    console.error("[DELETE /api/activites/[id]]", error);
-    return apiError(500, message);
+    return handleApiError("DELETE /api/activites/[id]", error, "Erreur serveur.");
   }
 }

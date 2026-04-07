@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, TypeReleve, TypeSystemeBac } from "@/types";
 import { prisma } from "@/lib/db";
 import { calculerDensiteBac, computeTauxRenouvellement } from "@/lib/calculs";
 import { getConfigElevageDefaut, CONFIG_ELEVAGE_DEFAULTS } from "@/lib/queries/config-elevage";
 import { getStatutDensite } from "@/lib/density-thresholds";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 export async function GET(
   request: NextRequest,
@@ -132,13 +131,6 @@ export async function GET(
       joursDepuisDernierReleveQualiteEau,
     });
   } catch (error) {
-    console.error("[GET /api/bacs/[id]/densite] Error:", error);
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors du calcul de densite.");
+    return handleApiError("GET /api/bacs/[id]/densite", error, "Erreur serveur lors du calcul de densite.");
   }
 }

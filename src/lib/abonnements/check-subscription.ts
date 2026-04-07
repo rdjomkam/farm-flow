@@ -78,7 +78,7 @@ function _buildSubscriptionStatus(
 }
 
 // ---------------------------------------------------------------------------
-// getSubscriptionStatus — par userId (user-level)
+// getSubscriptionStatusByUser — par userId (user-level)
 // ---------------------------------------------------------------------------
 
 /**
@@ -89,7 +89,7 @@ function _buildSubscriptionStatus(
  * @param userId - ID de l'utilisateur propriétaire de l'abonnement
  * @returns SubscriptionStatus avec statut + jours restants
  */
-export const getSubscriptionStatus = (
+export const getSubscriptionStatusByUser = (
   userId: string
 ): Promise<SubscriptionStatus> =>
   unstable_cache(
@@ -105,11 +105,11 @@ export const getSubscriptionStatus = (
   )();
 
 // ---------------------------------------------------------------------------
-// getSubscriptionStatusForSite — wrapper siteId → ownerId → getSubscriptionStatus
+// getSubscriptionStatus — par siteId (site-level)
 // ---------------------------------------------------------------------------
 
 /**
- * Charge l'abonnement actif du propriétaire d'un site et retourne son statut.
+ * Charge l'abonnement actif d'un site et retourne son statut.
  * Délègue directement à getAbonnementActifPourSite (déjà mis en cache 1h côté query,
  * tag `subscription-site-${siteId}`). Pas de cache supplémentaire ici — double
  * unstable_cache avec le même tag est un anti-pattern.
@@ -118,12 +118,15 @@ export const getSubscriptionStatus = (
  * @param siteId - ID du site (R8)
  * @returns SubscriptionStatus avec statut + jours restants
  */
-export async function getSubscriptionStatusForSite(
+export async function getSubscriptionStatus(
   siteId: string
 ): Promise<SubscriptionStatus> {
   const abonnement = await getAbonnementActifPourSite(siteId);
   return _buildSubscriptionStatus(abonnement);
 }
+
+/** Alias for backward compatibility — prefer getSubscriptionStatus(siteId). */
+export const getSubscriptionStatusForSite = getSubscriptionStatus;
 
 // ---------------------------------------------------------------------------
 // Fonctions pures de vérification de statut
@@ -157,7 +160,7 @@ export function isReadOnlyMode(statut: StatutAbonnement | null): boolean {
  * R2 : compare avec StatutAbonnement.EXPIRE et StatutAbonnement.ANNULE.
  */
 export function isBlocked(statut: StatutAbonnement | null): boolean {
-  if (!statut) return true;
+  if (!statut) return false;
   return (
     (statut as string) === StatutAbonnement.EXPIRE ||
     (statut as string) === StatutAbonnement.ANNULE

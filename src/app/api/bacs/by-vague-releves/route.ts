@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBacsAvecRelevesPourVague } from "@/lib/queries/bacs";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 /**
  * GET /api/bacs/by-vague-releves?vagueId={vagueId}
@@ -25,12 +24,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data: bacs });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des bacs par releves.");
+    return handleApiError("GET /api/bacs/by-vague-releves", error, "Erreur serveur lors de la recuperation des bacs par releves.");
   }
 }

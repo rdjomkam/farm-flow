@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getRegleActiviteById,
+import { getRegleActiviteById,
   updateRegleActivite,
-  deleteRegleActivite,
-} from "@/lib/queries/regles-activites";
-import { apiError } from "@/lib/api-utils";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+  deleteRegleActivite } from "@/lib/queries/regles-activites";
+import { apiError, handleApiError } from "@/lib/api-utils";
+import { requirePermission } from "@/lib/permissions";
 import { ActionRegle, SeveriteAlerte, TypeActivite, TypeDeclencheur, OperateurCondition, LogiqueCondition, Permission } from "@/types";
 import { validateTemplatePlaceholders, VALID_ACTION_PAYLOAD_TYPES } from "@/lib/regles-activites-constants";
 import type { UpdateRegleActiviteDTO } from "@/types";
@@ -41,14 +38,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     return NextResponse.json({ regle });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    console.error("[GET /api/regles-activites/[id]]", error);
-    return apiError(500, "Erreur serveur lors de la recuperation de la regle d'activite.");
+    return handleApiError("GET /api/regles-activites/[id]", error, "Erreur serveur lors de la recuperation de la regle d'activite.");
   }
 }
 
@@ -278,24 +268,12 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
     return NextResponse.json({ regle });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, (error as Error).message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, (error as Error).message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    if (message.includes("globales DKFarm")) {
-      return apiError(403, message);
-    }
-    if (message.includes("phaseMin") || message.includes("inferieure ou egale")) {
-      return apiError(400, message);
-    }
-    console.error("[PUT /api/regles-activites/[id]]", error);
-    return apiError(500, "Erreur serveur lors de la mise a jour de la regle d'activite.");
+    return handleApiError("PUT /api/regles-activites/[id]", error, "Erreur serveur lors de la mise a jour de la regle d'activite.", {
+      statusMap: [
+        { match: "globales DKFarm", status: 403 },
+        { match: ["phaseMin", "inferieure ou egale"], status: 400 },
+      ],
+    });
   }
 }
 
@@ -325,17 +303,6 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
     return NextResponse.json({ success: true, id });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, (error as Error).message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, (error as Error).message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    console.error("[DELETE /api/regles-activites/[id]]", error);
-    return apiError(500, "Erreur serveur lors de la suppression de la regle d'activite.");
+    return handleApiError("DELETE /api/regles-activites/[id]", error, "Erreur serveur lors de la suppression de la regle d'activite.");
   }
 }

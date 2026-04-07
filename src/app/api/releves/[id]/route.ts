@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getReleveById, updateReleve, patchReleve, deleteReleve } from "@/lib/queries/releves";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import {
   TypeReleve,
   Permission,
@@ -12,7 +11,7 @@ import { prisma } from "@/lib/db";
 import { runEngineForSite } from "@/lib/activity-engine";
 import { retryAsync } from "@/lib/async-retry";
 import { ErrorKeys } from "@/lib/api-error-keys";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import {
   updateReleveSchema,
   patchReleveSchema,
@@ -42,16 +41,7 @@ export async function GET(
 
     return NextResponse.json(releve);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
-    }
-    if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
-    }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la recuperation du releve.", errorKey: ErrorKeys.SERVER_GET_RELEVE },
-      { status: 500 }
-    );
+    return handleApiError("GET /api/releves/[id]", error, "Erreur serveur lors de la recuperation du releve.", { code: ErrorKeys.SERVER_GET_RELEVE });
   }
 }
 
@@ -152,27 +142,10 @@ export async function PUT(
     const releve = await updateReleve(auth.activeSiteId, auth.userId, id, data);
     return NextResponse.json(releve);
   } catch (error) {
-    console.error("[PUT /api/releves/[id]] Error:", error);
-    if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
-    }
-    if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur inattendue.";
-
-    if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
-    }
-
-    if (message.includes("Stock insuffisant") || message.includes("n'appartient pas") || message.includes("n'est pas de categorie")) {
-      return NextResponse.json({ status: 409, message }, { status: 409 });
-    }
-
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la mise a jour du releve.", errorKey: ErrorKeys.SERVER_UPDATE_RELEVE },
-      { status: 500 }
-    );
+    return handleApiError("PUT /api/releves/[id]", error, "Erreur serveur lors de la mise a jour du releve.", {
+      code: ErrorKeys.SERVER_UPDATE_RELEVE,
+      statusMap: [{ match: ["Stock insuffisant", "n'appartient pas", "n'est pas de categorie"], status: 409 }],
+    });
   }
 }
 
@@ -284,29 +257,10 @@ export async function PATCH(
 
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
-    console.error("[PATCH /api/releves/[id]] Error:", error);
-    if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
-    }
-    if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur inattendue.";
-
-    if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
-    }
-    if (message.includes("cloturee")) {
-      return NextResponse.json({ status: 409, message }, { status: 409 });
-    }
-    if (message.includes("Stock insuffisant") || message.includes("n'appartient pas") || message.includes("n'est pas de categorie")) {
-      return NextResponse.json({ status: 409, message }, { status: 409 });
-    }
-
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la modification du releve.", errorKey: ErrorKeys.SERVER_UPDATE_RELEVE },
-      { status: 500 }
-    );
+    return handleApiError("PATCH /api/releves/[id]", error, "Erreur serveur lors de la modification du releve.", {
+      code: ErrorKeys.SERVER_UPDATE_RELEVE,
+      statusMap: [{ match: ["cloturee", "Stock insuffisant", "n'appartient pas", "n'est pas de categorie"], status: 409 }],
+    });
   }
 }
 
@@ -335,21 +289,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: result.message }, { status: 200 });
   } catch (error) {
-    console.error("[DELETE /api/releves/[id]] Error:", error);
-    if (error instanceof AuthError) {
-      return NextResponse.json({ status: 401, message: error.message }, { status: 401 });
-    }
-    if (error instanceof ForbiddenError) {
-      return NextResponse.json({ status: 403, message: error.message }, { status: 403 });
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur inattendue.";
-    if (message.includes("introuvable")) {
-      return NextResponse.json({ status: 404, message }, { status: 404 });
-    }
-    return NextResponse.json(
-      { status: 500, message: "Erreur serveur lors de la suppression du releve.", errorKey: ErrorKeys.SERVER_DELETE_RELEVE },
-      { status: 500 }
-    );
+    return handleApiError("DELETE /api/releves/[id]", error, "Erreur serveur lors de la suppression du releve.", { code: ErrorKeys.SERVER_DELETE_RELEVE });
   }
 }
 

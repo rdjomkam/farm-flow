@@ -14,11 +14,10 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireSuperAdmin } from "@/lib/auth/backoffice";
-import { AuthError } from "@/lib/auth";
 import { ForbiddenError } from "@/lib/permissions";
 import { prisma } from "@/lib/db";
 import type { ModuleDefinitionResponse } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 // ---------------------------------------------------------------------------
 // Helper — siteCount + planCount for a given module key
@@ -84,14 +83,7 @@ export async function GET(
 
     return NextResponse.json(response);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    console.error("[GET /api/backoffice/modules/[key]]", error);
-    return apiError(500, "Erreur serveur lors de la recuperation du module.");
+    return handleApiError("GET /api/backoffice/modules/[key]", error, "Erreur serveur lors de la recuperation du module.");
   }
 }
 
@@ -193,13 +185,6 @@ export async function PATCH(
 
     return NextResponse.json(response);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    console.error("[PATCH /api/backoffice/modules/[key]]", error);
-    return apiError(500, "Erreur serveur lors de la modification du module.");
+    return handleApiError("PATCH /api/backoffice/modules/[key]", error, "Erreur serveur lors de la modification du module.");
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, AuthError } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 import { normalizePhone } from "@/lib/auth/phone";
 import { getSiteById, getSiteMember, addMember } from "@/lib/queries/sites";
 import { getSiteRoleById } from "@/lib/queries/roles";
@@ -8,7 +8,7 @@ import {
   canAssignRole,
   ForbiddenError,
 } from "@/lib/permissions";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import { Permission } from "@/types";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -39,10 +39,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       total: site.members.length,
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des membres.");
+    return handleApiError("GET /api/sites/[id]/members", error, "Erreur serveur lors de la recuperation des membres.");
   }
 }
 
@@ -123,12 +120,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       { status: 201 }
     );
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de l'ajout du membre.");
+    return handleApiError("POST /api/sites/[id]/members", error, "Erreur serveur lors de l'ajout du membre.");
   }
 }

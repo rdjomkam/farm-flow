@@ -12,10 +12,9 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getPortefeuille } from "@/lib/queries/commissions";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { AuthError } from "@/lib/auth";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -39,12 +38,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation du portefeuille.");
+    return handleApiError("GET /api/portefeuille", error, "Erreur serveur lors de la recuperation du portefeuille.");
   }
 }

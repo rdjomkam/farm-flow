@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { transfererLotVersVague } from "@/lib/queries/lots-alevins";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -56,29 +55,8 @@ export async function POST(request: NextRequest, { params }: Params) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("[POST /api/lots-alevins/[id]/transferer]", error);
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    // Erreurs metier : statut invalide, bacs occupes → 409
-    if (
-      message.includes("non transferable") ||
-      message.includes("deja assigne") ||
-      message.includes("Bacs deja") ||
-      message.includes("statut")
-    ) {
-      return apiError(409, message);
-    }
-    return NextResponse.json(
-      { status: 500, message: `Erreur serveur lors du transfert : ${message}` },
-      { status: 500 }
-    );
+    return handleApiError("POST /api/lots-alevins/[id]/transferer", error, "Erreur serveur lors du transfert.", {
+      statusMap: [{ match: ["non transferable", "Bacs deja", "statut"], status: 409 }],
+    });
   }
 }

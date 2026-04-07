@@ -133,6 +133,7 @@ vi.mock("@/lib/abonnements/check-quotas", () => ({
 
 vi.mock("@/lib/abonnements/check-subscription", () => ({
   getSubscriptionStatus: (...args: unknown[]) => mockGetSubscriptionStatus(...args),
+  getSubscriptionStatusByUser: (...args: unknown[]) => mockGetSubscriptionStatus(...args),
 }));
 
 import { GET as getSites, POST as postSite } from "@/app/api/sites/route";

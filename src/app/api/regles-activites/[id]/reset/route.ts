@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRegleActiviteById, resetFiredOnce } from "@/lib/queries/regles-activites";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, TypeDeclencheur } from "@/types";
 import { SEUIL_TYPES_FIREDONCE } from "@/lib/regles-activites-constants";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -41,17 +40,6 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     return NextResponse.json({ id: result.id, firedOnce: result.firedOnce });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, (error as Error).message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, (error as Error).message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    console.error("[POST /api/regles-activites/[id]/reset]", error);
-    return apiError(500, "Erreur serveur lors de la reinitialisation de firedOnce.");
+    return handleApiError("POST /api/regles-activites/[id]/reset", error, "Erreur serveur lors de la reinitialisation de firedOnce.");
   }
 }

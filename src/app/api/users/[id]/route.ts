@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireHasPermission, ForbiddenError } from "@/lib/permissions";
-import { AuthError } from "@/lib/auth";
+import { requireHasPermission } from "@/lib/permissions";
 import { getUserAdminDetail, updateUserAdmin, countActiveAdmins } from "@/lib/queries/users-admin";
 import { Permission, Role } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -30,13 +29,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       updatedAt: user.updatedAt.toISOString(),
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur.");
+    return handleApiError("GET /api/users/[id]", error, "Erreur serveur.");
   }
 }
 
@@ -108,15 +101,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       updatedAt: updated.updatedAt.toISOString(),
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    if (error && typeof error === "object" && "code" in error && (error as { code: string }).code === "P2002") {
-      return apiError(409, "Email ou telephone deja utilise.");
-    }
-    return apiError(500, "Erreur serveur lors de la modification.");
+    return handleApiError("PATCH /api/users/[id]", error, "Erreur serveur lors de la modification.");
   }
 }

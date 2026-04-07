@@ -15,7 +15,7 @@ import {
   getAbonnements,
   logAbonnementAudit,
 } from "@/lib/queries/abonnements";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import { getPlanAbonnementById } from "@/lib/queries/plans-abonnements";
 import {
   verifierRemiseApplicable,
@@ -23,9 +23,8 @@ import {
 } from "@/lib/queries/remises";
 import { initierPaiement } from "@/lib/services/billing";
 import { verifierEtAppliquerRemiseAutomatique } from "@/lib/services/remises-automatiques";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { invalidateSubscriptionCaches } from "@/lib/abonnements/invalidate-caches";
-import { AuthError } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
   Permission,
@@ -66,13 +65,7 @@ export async function GET(request: NextRequest) {
     const abonnements = await getAbonnements(auth.userId, filters);
     return NextResponse.json({ abonnements, total: abonnements.length });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des abonnements.");
+    return handleApiError("GET /api/abonnements", error, "Erreur serveur lors de la recuperation des abonnements.");
   }
 }
 
@@ -254,16 +247,6 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    return NextResponse.json(
-      { status: 500, message: `Erreur serveur lors de la souscription. ${message}` },
-      { status: 500 }
-    );
+    return handleApiError("POST /api/abonnements", error, "Erreur serveur lors de la souscription.");
   }
 }

@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
-import {
-  getConfigElevageDefaut,
-  CONFIG_ELEVAGE_DEFAULTS,
-} from "@/lib/queries/config-elevage";
-import { apiError } from "@/lib/api-utils";
+import { getConfigElevageDefaut,
+  CONFIG_ELEVAGE_DEFAULTS } from "@/lib/queries/config-elevage";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 /**
  * GET /api/config-elevage/defaut
@@ -31,12 +28,6 @@ export async function GET(request: NextRequest) {
       message: "Aucun profil par defaut configure. Utilisation des valeurs FAO standard.",
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation du profil par defaut.");
+    return handleApiError("GET /api/config-elevage/defaut", error, "Erreur serveur lors de la recuperation du profil par defaut.");
   }
 }

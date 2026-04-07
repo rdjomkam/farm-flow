@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getLotAlevinsById,
-  updateLotAlevins,
-} from "@/lib/queries/lots-alevins";
-import { apiError } from "@/lib/api-utils";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { getLotAlevinsById,
+  updateLotAlevins } from "@/lib/queries/lots-alevins";
+import { apiError, handleApiError } from "@/lib/api-utils";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, StatutLotAlevins } from "@/types";
 import type { UpdateLotAlevinsDTO } from "@/lib/queries/lots-alevins";
 
@@ -23,14 +20,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     return NextResponse.json(lot);
   } catch (error) {
-    console.error("[GET /api/lots-alevins/[id]]", error);
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur.");
+    return handleApiError("GET /api/lots-alevins/[id]", error, "Erreur serveur.");
   }
 }
 
@@ -98,29 +88,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const lot = await updateLotAlevins(id, auth.activeSiteId, data);
     return NextResponse.json(lot);
   } catch (error) {
-    console.error("[PUT /api/lots-alevins/[id]]", error);
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable") || message.includes("n'existe pas")) {
-      return apiError(404, message);
-    }
-    // Conflit : code deja utilise, bac occupe ou statut invalide
-    if (
-      message.includes("deja utilise") ||
-      message.includes("déjà utilisé") ||
-      message.includes("occupe") ||
-      message.includes("deja assigne") ||
-      message.includes("déjà assigné") ||
-      message.includes("n'est pas ACTIF") ||
-      message.includes("statut doit etre")
-    ) {
-      return apiError(409, message);
-    }
-    return apiError(500, message);
+    return handleApiError("PUT /api/lots-alevins/[id]", error, "Erreur serveur.", {
+      statusMap: [
+        { match: ["occupe", "n'est pas ACTIF", "statut doit etre"], status: 409 },
+      ],
+    });
   }
 }

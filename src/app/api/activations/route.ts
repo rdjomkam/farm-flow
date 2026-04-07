@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, StatutActivation } from "@/types";
 import { getPackActivations } from "@/lib/queries/packs";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 /**
  * GET /api/activations
@@ -29,12 +28,6 @@ export async function GET(request: NextRequest) {
     const activations = await getPackActivations(auth.activeSiteId, filters);
     return NextResponse.json({ activations, total: activations.length });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des activations.");
+    return handleApiError("GET /api/activations", error, "Erreur serveur lors de la recuperation des activations.");
   }
 }

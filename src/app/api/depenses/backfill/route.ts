@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as crypto from "crypto";
 import { backfillLignesDepense } from "@/lib/queries/depenses";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 // ---------------------------------------------------------------------------
 // Utilitaires
@@ -68,7 +68,6 @@ export async function POST(request: NextRequest) {
       errors: result.errors.length > 0 ? result.errors : undefined,
     });
   } catch (error) {
-    console.error("[POST /api/depenses/backfill] Erreur globale:", error);
-    return apiError(500, "Erreur serveur lors du backfill.");
+    return handleApiError("POST /api/depenses/backfill", error, "Erreur serveur lors du backfill.");
   }
 }

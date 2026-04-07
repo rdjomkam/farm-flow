@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, AuthError } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 import { getSiteById, updateSite, getSiteMember } from "@/lib/queries/sites";
 import { ForbiddenError } from "@/lib/permissions";
 import { Permission, SiteModule } from "@/types";
 import { SITE_TOGGLEABLE_MODULES } from "@/lib/site-modules-config";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 const VALID_MODULES = SITE_TOGGLEABLE_MODULES.map((m) => m.value);
 
@@ -44,10 +44,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       createdAt: site.createdAt,
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation du site.");
+    return handleApiError("GET /api/sites/[id]", error, "Erreur serveur lors de la recuperation du site.");
   }
 }
 
@@ -105,12 +102,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       updatedAt: updated.updatedAt,
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la modification du site.");
+    return handleApiError("PUT /api/sites/[id]", error, "Erreur serveur lors de la modification du site.");
   }
 }

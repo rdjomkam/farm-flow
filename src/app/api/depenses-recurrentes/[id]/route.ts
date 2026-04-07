@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getDepenseRecurrenteById,
+import { getDepenseRecurrenteById,
   updateDepenseRecurrente,
-  deleteDepenseRecurrente,
-} from "@/lib/queries/depenses-recurrentes";
-import { apiError } from "@/lib/api-utils";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+  deleteDepenseRecurrente } from "@/lib/queries/depenses-recurrentes";
+import { apiError, handleApiError } from "@/lib/api-utils";
+import { requirePermission } from "@/lib/permissions";
 import { CategorieDepense, FrequenceRecurrence, Permission } from "@/types";
 import type { UpdateDepenseRecurrenteDTO } from "@/types";
 
@@ -33,13 +30,7 @@ export async function GET(
 
     return NextResponse.json(template);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur.");
+    return handleApiError("GET /api/depenses-recurrentes/[id]", error, "Erreur serveur.");
   }
 }
 
@@ -95,17 +86,7 @@ export async function PUT(
     const updated = await updateDepenseRecurrente(id, auth.activeSiteId, dto);
     return NextResponse.json(updated);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    return apiError(500, message);
+    return handleApiError("PUT /api/depenses-recurrentes/[id]", error, "Erreur serveur.");
   }
 }
 
@@ -125,16 +106,6 @@ export async function DELETE(
     await deleteDepenseRecurrente(id, auth.activeSiteId);
     return NextResponse.json({ success: true });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    return apiError(500, message);
+    return handleApiError("DELETE /api/depenses-recurrentes/[id]", error, "Erreur serveur.");
   }
 }

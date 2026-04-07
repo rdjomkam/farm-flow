@@ -16,11 +16,10 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireSuperAdmin } from "@/lib/auth/backoffice";
-import { AuthError } from "@/lib/auth";
 import { ForbiddenError } from "@/lib/permissions";
 import { getAdminSites } from "@/lib/queries/admin-sites";
 import { SiteStatus, SiteModule } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 const VALID_SITE_STATUSES = Object.values(SiteStatus);
 const VALID_SITE_MODULES = Object.values(SiteModule);
@@ -67,12 +66,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des sites.");
+    return handleApiError("GET /api/backoffice/sites", error, "Erreur serveur lors de la recuperation des sites.");
   }
 }

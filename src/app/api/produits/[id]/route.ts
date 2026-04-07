@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getProduitById,
+import { getProduitById,
   updateProduit,
-  deleteProduit,
-} from "@/lib/queries/produits";
-import { apiError } from "@/lib/api-utils";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+  deleteProduit } from "@/lib/queries/produits";
+import { apiError, handleApiError } from "@/lib/api-utils";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, CategorieProduit, UniteStock, TailleGranule, FormeAliment, PhaseElevage } from "@/types";
 import type { UpdateProduitDTO } from "@/types";
 
@@ -30,13 +27,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     return NextResponse.json(produit);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur.");
+    return handleApiError("GET /api/produits/[id]", error, "Erreur serveur.");
   }
 }
 
@@ -181,20 +172,11 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const produit = await updateProduit(id, auth.activeSiteId, data);
     return NextResponse.json(produit);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    if (message.includes("contenance non modifiable")) {
-      return apiError(409, message);
-    }
-    return apiError(500, message);
+    return handleApiError("PUT /api/produits/[id]", error, "Erreur serveur.", {
+      statusMap: [
+        { match: "contenance non modifiable", status: 409 },
+      ],
+    });
   }
 }
 
@@ -206,16 +188,6 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     await deleteProduit(id, auth.activeSiteId);
     return NextResponse.json({ success: true });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    return apiError(500, message);
+    return handleApiError("DELETE /api/produits/[id]", error, "Erreur serveur.");
   }
 }

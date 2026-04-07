@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
-import {
-  uploadFile,
+import { uploadFile,
   deleteFile,
   getSignedUrl,
   validateFile,
   generateStorageKey,
-  extractFileNameFromKey,
-} from "@/lib/storage";
-import { apiError } from "@/lib/api-utils";
+  extractFileNameFromKey } from "@/lib/storage";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -84,14 +81,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       { status: 201 }
     );
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    return apiError(500, message);
+    return handleApiError("POST /api/commandes/[id]/facture", error, "Erreur serveur.");
   }
 }
 
@@ -122,14 +112,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     return NextResponse.json({ url, fileName });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    return apiError(500, message);
+    return handleApiError("GET /api/commandes/[id]/facture", error, "Erreur serveur.");
   }
 }
 
@@ -166,13 +149,6 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    return apiError(500, message);
+    return handleApiError("DELETE /api/commandes/[id]/facture", error, "Erreur serveur.");
   }
 }

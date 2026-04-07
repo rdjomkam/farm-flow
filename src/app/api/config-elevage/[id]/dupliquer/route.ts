@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import { dupliquerConfigElevage } from "@/lib/queries/config-elevage";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 /**
  * POST /api/config-elevage/[id]/dupliquer
@@ -33,12 +32,6 @@ export async function POST(
 
     return NextResponse.json({ config }, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la duplication du profil.");
+    return handleApiError("POST /api/config-elevage/[id]/dupliquer", error, "Erreur serveur lors de la duplication du profil.");
   }
 }

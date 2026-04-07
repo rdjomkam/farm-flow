@@ -21,12 +21,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logAbonnementAudit } from "@/lib/queries/abonnements";
 import { getPlanAbonnementById } from "@/lib/queries/plans-abonnements";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { invalidateSubscriptionCaches } from "@/lib/abonnements/invalidate-caches";
-import { AuthError } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Permission, StatutAbonnement, TypePlan, PeriodeFacturation } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import type { TypePlan as TypePlanPrisma } from "@/generated/prisma/enums";
 
 export async function POST(request: NextRequest) {
@@ -137,16 +136,6 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    return NextResponse.json(
-      { status: 500, message: `Erreur serveur lors de la creation de l'essai. ${message}` },
-      { status: 500 }
-    );
+    return handleApiError("POST /api/abonnements/essai", error, "Erreur serveur lors de la creation de l'essai.");
   }
 }

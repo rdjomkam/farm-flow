@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
-import {
-  getConfigElevageById,
+import { getConfigElevageById,
   updateConfigElevage,
-  deleteConfigElevage,
-} from "@/lib/queries/config-elevage";
-import { apiError } from "@/lib/api-utils";
+  deleteConfigElevage } from "@/lib/queries/config-elevage";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import { updateConfigElevageSchema } from "@/lib/validation/config-elevage";
 
 /**
@@ -30,13 +27,7 @@ export async function GET(
 
     return NextResponse.json({ config });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation du profil.");
+    return handleApiError("GET /api/config-elevage/[id]", error, "Erreur serveur lors de la recuperation du profil.");
   }
 }
 
@@ -77,13 +68,7 @@ export async function PUT(
 
     return NextResponse.json({ config });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la mise a jour du profil.");
+    return handleApiError("PUT /api/config-elevage/[id]", error, "Erreur serveur lors de la mise a jour du profil.");
   }
 }
 
@@ -113,12 +98,6 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Profil supprime avec succes.", id: result.id });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la suppression du profil.");
+    return handleApiError("DELETE /api/config-elevage/[id]", error, "Erreur serveur lors de la suppression du profil.");
   }
 }

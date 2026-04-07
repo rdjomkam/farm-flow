@@ -9,10 +9,9 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { togglePlanAbonnement } from "@/lib/queries/plans-abonnements";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { AuthError } from "@/lib/auth";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 export async function PATCH(
   request: NextRequest,
@@ -47,12 +46,6 @@ export async function PATCH(
       isActif: "isActif" in result ? result.isActif : undefined,
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors du changement de statut du plan.");
+    return handleApiError("PATCH /api/plans/[id]/toggle", error, "Erreur serveur lors du changement de statut du plan.");
   }
 }

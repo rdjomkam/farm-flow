@@ -2,12 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getVagueById, updateVague } from "@/lib/queries/vagues";
 import { getReleves } from "@/lib/queries/releves";
 import { getIndicateursVague } from "@/lib/queries/indicateurs";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { StatutVague, Permission } from "@/types";
 import type { UpdateVagueDTO } from "@/types";
 import { ErrorKeys } from "@/lib/api-error-keys";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 export async function GET(
   request: NextRequest,
@@ -58,13 +57,9 @@ export async function GET(
       },
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation de la vague.", { code: ErrorKeys.SERVER_GET_VAGUE });
+    return handleApiError("GET /api/vagues/[id]", error, "Erreur serveur lors de la recuperation de la vague.", {
+      code: ErrorKeys.SERVER_GET_VAGUE,
+    });
   }
 }
 
@@ -208,27 +203,12 @@ export async function PUT(
       createdAt: vague.createdAt,
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message =
-      error instanceof Error ? error.message : "Erreur serveur inattendue.";
-
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-
-    if (message.includes("deja assigne") || message.includes("cloturee") || message.includes("vague cloturee")) {
-      return apiError(409, message);
-    }
-
-    if (message.includes("contient") && message.includes("poissons")) {
-      return apiError(422, message, { code: "TRANSFER_REQUIRED" });
-    }
-
-    return apiError(500, "Erreur serveur lors de la mise a jour de la vague.", { code: ErrorKeys.SERVER_UPDATE_VAGUE });
+    return handleApiError("PUT /api/vagues/[id]", error, "Erreur serveur lors de la mise a jour de la vague.", {
+      statusMap: [
+        { match: ["cloturee", "vague cloturee"], status: 409 },
+        { match: ["contient", "poissons"], status: 422 },
+      ],
+      code: ErrorKeys.SERVER_UPDATE_VAGUE,
+    });
   }
 }

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, AuthError } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 import {
   getObservationsClient,
   createObservationClient,
 } from "@/lib/queries/notes";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 // ---------------------------------------------------------------------------
 // Types d'observation disponibles pour un client PISCICULTEUR
@@ -45,16 +45,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ notes, total: notes.length });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors de la recuperation des observations.",
-      },
-      { status: 500 }
-    );
+    return handleApiError("GET /api/mes-observations", error, "Erreur serveur lors de la recuperation des observations.");
   }
 }
 
@@ -142,22 +133,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(note, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    const message =
-      error instanceof Error ? error.message : "Erreur serveur inattendue.";
-
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors de la creation de l'observation.",
-      },
-      { status: 500 }
-    );
+    return handleApiError("POST /api/mes-observations", error, "Erreur serveur lors de la creation de l'observation.");
   }
 }

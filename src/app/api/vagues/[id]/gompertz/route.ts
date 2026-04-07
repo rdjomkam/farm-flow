@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, TypeReleve } from "@/types";
 import {
   calibrerGompertz,
@@ -10,7 +9,7 @@ import {
   isCachedGompertzValid,
   type GompertzParams,
 } from "@/lib/gompertz";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import { computeVivantsByBac } from "@/lib/calculs";
 
 const DEFAULT_TARGET_WEIGHT_G = 800;
@@ -256,19 +255,6 @@ export async function GET(
       dateRecolteEstimee,
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    console.error("[GET /api/vagues/[id]/gompertz]", error);
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors du calcul Gompertz.",
-      },
-      { status: 500 }
-    );
+    return handleApiError("GET /api/vagues/[id]/gompertz", error, "Erreur serveur lors du calcul Gompertz.");
   }
 }

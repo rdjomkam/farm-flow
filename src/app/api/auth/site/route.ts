@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, AuthError, SESSION_COOKIE_NAME } from "@/lib/auth";
+import { requireAuth, SESSION_COOKIE_NAME } from "@/lib/auth";
 import { getSiteMember } from "@/lib/queries/sites";
 import { prisma } from "@/lib/db";
 import { ErrorKeys } from "@/lib/api-error-keys";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 /** PUT /api/auth/site — change the active site for the current session */
 export async function PUT(request: NextRequest) {
@@ -40,9 +40,8 @@ export async function PUT(request: NextRequest) {
       },
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    return apiError(500, "Erreur serveur lors du changement de site.", { code: ErrorKeys.SERVER_CHANGE_SITE });
+    return handleApiError("PUT /api/auth/site", error, "Erreur serveur lors du changement de site.", {
+      code: ErrorKeys.SERVER_CHANGE_SITE,
+    });
   }
 }

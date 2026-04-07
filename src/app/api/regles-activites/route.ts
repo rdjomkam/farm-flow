@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getReglesActivites,
-  createRegleActivite,
-} from "@/lib/queries/regles-activites";
-import { apiError } from "@/lib/api-utils";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { getReglesActivites,
+  createRegleActivite } from "@/lib/queries/regles-activites";
+import { apiError, handleApiError } from "@/lib/api-utils";
+import { requirePermission } from "@/lib/permissions";
 import { ActionRegle, SeveriteAlerte, TypeActivite, TypeDeclencheur, OperateurCondition, LogiqueCondition, Permission } from "@/types";
 import { validateTemplatePlaceholders, SEUIL_TYPES_FIREDONCE, VALID_ACTION_PAYLOAD_TYPES } from "@/lib/regles-activites-constants";
 import type { CreateRegleActiviteDTO, RegleActiviteFilters } from "@/types";
@@ -72,14 +69,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ regles, total: regles.length });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    console.error("[GET /api/regles-activites]", error);
-    return apiError(500, "Erreur serveur lors de la recuperation des regles d'activite.");
+    return handleApiError("GET /api/regles-activites", error, "Erreur serveur lors de la recuperation des regles d'activite.");
   }
 }
 
@@ -340,17 +330,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ regle }, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, (error as Error).message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, (error as Error).message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("phaseMin") || message.includes("inferieure ou egale")) {
-      return apiError(400, message);
-    }
-    console.error("[POST /api/regles-activites]", error);
-    return apiError(500, "Erreur serveur lors de la creation de la regle d'activite.");
+    return handleApiError("POST /api/regles-activites", error, "Erreur serveur lors de la creation de la regle d'activite.", {
+      statusMap: [
+        { match: ["phaseMin", "inferieure ou egale"], status: 400 },
+      ],
+    });
   }
 }

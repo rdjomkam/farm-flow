@@ -42,48 +42,95 @@ vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
 }));
 
-const translations: Record<string, string> = {
-  "admin.active": "Actif",
-  "admin.inactive": "Inactif",
-  "admin.unlimited": "Illimité",
-  "admin.onQuote": "Sur devis",
-  "admin.noModules": "Aucun",
-  "admin.public": "Public",
-  "admin.private": "Privé",
-  "admin.newPlan": "Nouveau plan",
-  "admin.allTypes": "Tous les types",
-  "admin.allStatuses": "Tous les statuts",
-  "admin.reset": "Réinitialiser",
-  "admin.toggleDeactivate": "Désactiver",
-  "admin.toggleActivate": "Activer",
-  "admin.toggleDeactivateTitle": "Désactiver le plan ?",
-  "admin.toggleDeactivating": "Désactivation...",
-  "admin.toggleDeactivateConfirm": "Confirmer la désactivation",
-  "admin.dialogCancel": "Annuler",
-  "admin.noPlanFound": "Aucun plan trouvé.",
-  "admin.edit": "Modifier",
-  "admin.createPlan": "Créer le plan",
-  "admin.saving": "Enregistrement...",
-  "admin.columns.plan": "Plan",
-  "admin.columns.type": "Type",
-  "admin.columns.price": "Prix",
-  "admin.columns.sites": "Sites",
-  "admin.columns.tanks": "Bacs",
-  "admin.columns.waves": "Vagues",
-  "admin.columns.engineer": "Ingénieur",
-  "admin.columns.subscribers": "Abonnés",
-  "admin.columns.status": "Statut",
-  "admin.columns.visibility": "Visibilité",
-  "admin.columns.modules": "Modules",
-  "admin.columns.actions": "Actions",
-  "planFormDialog.titleCreate": "Créer un plan d'abonnement",
-  "planFormDialog.titleEdit": "Modifier le plan",
-  "planFormDialog.descriptionCreate": "Remplissez les informations du nouveau plan.",
-  "planFormDialog.descriptionEdit": "Modifiez les informations du plan.",
-};
-
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => translations[key] ?? key,
+  useTranslations: () => (key: string, params?: Record<string, unknown>) => {
+    const translations: Record<string, string | ((...args: unknown[]) => string)> = {
+      "admin.active": "Actif",
+      "admin.inactive": "Inactif",
+      "admin.unlimited": "Illimité",
+      "admin.onQuote": "Sur devis",
+      "admin.noModules": "Aucun",
+      "admin.public": "Public",
+      "admin.private": "Privé",
+      "admin.newPlan": "Nouveau plan",
+      "admin.allTypes": "Tous les types",
+      "admin.allStatuses": "Tous les statuts",
+      "admin.filterByType": "Filtrer par type de plan",
+      "admin.filterByStatus": "Filtrer par statut",
+      "admin.reset": "Réinitialiser",
+      "admin.toggleDeactivate": "Désactiver",
+      "admin.toggleActivate": "Activer",
+      "admin.toggleDeactivateTitle": "Désactiver le plan ?",
+      "admin.toggleDeactivating": "Désactivation...",
+      "admin.toggleDeactivateConfirm": "Confirmer la désactivation",
+      "admin.dialogCancel": "Annuler",
+      "admin.noPlanFound": "Aucun plan trouvé.",
+      "admin.edit": "Modifier",
+      "admin.createPlan": "Créer le plan",
+      "admin.createNewPlan": "Créer un nouveau plan",
+      "admin.saving": "Enregistrement...",
+      "admin.toggleStatusError": "Erreur lors du changement de statut.",
+      "admin.networkErrorRetry": "Erreur réseau. Veuillez réessayer.",
+      "admin.columns.plan": "Plan",
+      "admin.columns.type": "Type",
+      "admin.columns.price": "Prix",
+      "admin.columns.sites": "Sites",
+      "admin.columns.tanks": "Bacs",
+      "admin.columns.waves": "Vagues",
+      "admin.columns.engineer": "Ingénieur",
+      "admin.columns.subscribers": "Abonnés",
+      "admin.columns.status": "Statut",
+      "admin.columns.visibility": "Visibilité",
+      "admin.columns.modules": "Modules",
+      "admin.columns.actions": "Actions",
+      "admin.monthlyPrice": "Mensuel :",
+      "admin.quarterlyPrice": "Trimestriel :",
+      "admin.annualPrice": "Annuel :",
+      "admin.maxSites": "Sites max",
+      "admin.maxTanks": "Bacs max",
+      "admin.maxBatches": "Vagues max",
+      "admin.maxIngFermes": "Fermes ingénieur",
+      "plans.DECOUVERTE": "Découverte",
+      "plans.ELEVEUR": "Éleveur",
+      "plans.PROFESSIONNEL": "Professionnel",
+      "plans.ENTREPRISE": "Entreprise",
+      "plans.INGENIEUR_STARTER": "Ingénieur Starter",
+      "plans.INGENIEUR_PRO": "Ingénieur Pro",
+      "plans.INGENIEUR_EXPERT": "Ingénieur Expert",
+      "plans.EXONERATION": "Exonération",
+      "planFormDialog.titleCreate": "Créer un plan d'abonnement",
+      "planFormDialog.titleEdit": "Modifier le plan",
+      "planFormDialog.descriptionCreate": "Remplissez les informations du nouveau plan.",
+      "planFormDialog.descriptionEdit": "Modifiez les informations du plan.",
+    };
+
+    // Handle keys with interpolation params
+    if (key === "admin.cannotDisableWithSubscribers" && params) {
+      const count = params.count as number;
+      const plural = count > 1 ? "s" : "";
+      return `Impossible de désactiver un plan avec ${count} abonné${plural} actif${plural}.`;
+    }
+    if (key === "admin.toggleDeactivateSubscribersDesc" && params) {
+      const count = params.count as number;
+      const plural = count > 1 ? "s" : "";
+      return `Le plan "${params.nom}" a ${count} abonné${plural} actif${plural}. Confirmez-vous la désactivation ?`;
+    }
+    if (key === "admin.engineerFarms" && params) {
+      return `${params.count} fermes`;
+    }
+    if (key === "admin.editPlanAriaLabel" && params) {
+      return `Modifier le plan ${params.name}`;
+    }
+    if (key === "admin.subscribersPlural" && params) {
+      return `${params.count} abonnés`;
+    }
+    if (key === "admin.subscribers" && params) {
+      return `${params.count} abonné`;
+    }
+
+    const val = translations[key];
+    return typeof val === "string" ? val : key;
+  },
 }));
 
 const mockFetch = vi.fn();

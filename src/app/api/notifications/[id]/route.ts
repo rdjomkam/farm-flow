@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateNotificationStatut } from "@/lib/queries";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, StatutAlerte } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -33,17 +32,6 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
     return NextResponse.json(notification);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    console.error("[PUT /api/notifications/[id]]", error);
-    return apiError(500, message);
+    return handleApiError("PUT /api/notifications/[id]", error, "Erreur serveur.");
   }
 }

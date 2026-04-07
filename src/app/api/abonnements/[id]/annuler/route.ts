@@ -14,12 +14,11 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getAbonnementById } from "@/lib/queries/abonnements";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { invalidateSubscriptionCaches } from "@/lib/abonnements/invalidate-caches";
-import { AuthError } from "@/lib/auth";
 import { Permission, StatutAbonnement } from "@/types";
 import { prisma } from "@/lib/db";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 export async function POST(
   request: NextRequest,
@@ -89,12 +88,6 @@ export async function POST(
       message: "Abonnement annul\u00e9. Il restera actif jusqu'\u00e0 la date d'expiration.",
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de l'annulation.");
+    return handleApiError("POST /api/abonnements/[id]/annuler", error, "Erreur serveur lors de l'annulation.");
   }
 }

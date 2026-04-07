@@ -4,7 +4,7 @@ import { AuthError } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/permissions";
 import { Permission, VisibiliteNote } from "@/types";
 import type { UpdateNoteIngenieurDTO } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 /**
  * GET /api/ingenieur/notes/[id]
@@ -36,13 +36,7 @@ export async function GET(
 
     return NextResponse.json(note);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation de la note.");
+    return handleApiError("GET /api/ingenieur/notes/[id]", error, "Erreur serveur lors de la recuperation de la note.");
   }
 }
 

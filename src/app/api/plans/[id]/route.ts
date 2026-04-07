@@ -10,13 +10,10 @@
  * R4 : opérations atomiques via les fonctions query
  */
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getPlanAbonnementById,
-  updatePlanAbonnement,
-} from "@/lib/queries/plans-abonnements";
-import { apiError } from "@/lib/api-utils";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { AuthError } from "@/lib/auth";
+import { getPlanAbonnementById,
+  updatePlanAbonnement } from "@/lib/queries/plans-abonnements";
+import { apiError, handleApiError } from "@/lib/api-utils";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, SiteModule } from "@/types";
 import type { UpdatePlanAbonnementDTO } from "@/types";
 import { ErrorKeys } from "@/lib/api-error-keys";
@@ -43,10 +40,9 @@ export async function GET(
 
     return NextResponse.json(plan);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation du plan.", { code: ErrorKeys.SERVER_GET_PLAN });
+    return handleApiError("GET /api/plans/[id]", error, "Erreur serveur lors de la recuperation du plan.", {
+      code: ErrorKeys.SERVER_GET_PLAN,
+    });
   }
 }
 
@@ -151,13 +147,9 @@ export async function PUT(
     const updated = await updatePlanAbonnement(id, data);
     return NextResponse.json(updated);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la modification du plan.", { code: ErrorKeys.SERVER_UPDATE_PLAN });
+    return handleApiError("PUT /api/plans/[id]", error, "Erreur serveur lors de la modification du plan.", {
+      code: ErrorKeys.SERVER_UPDATE_PLAN,
+    });
   }
 }
 
@@ -183,12 +175,8 @@ export async function DELETE(
     await updatePlanAbonnement(id, { isActif: false });
     return NextResponse.json({ message: "Plan desactive avec succes." });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la desactivation du plan.", { code: ErrorKeys.SERVER_DELETE_PLAN });
+    return handleApiError("DELETE /api/plans/[id]", error, "Erreur serveur lors de la desactivation du plan.", {
+      code: ErrorKeys.SERVER_DELETE_PLAN,
+    });
   }
 }

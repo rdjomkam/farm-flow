@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCommandes, createCommande } from "@/lib/queries/commandes";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, StatutCommande, parsePaginationQuery } from "@/types";
 import type { CreateCommandeDTO, CommandeFilters } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import { checkIdempotency, storeIdempotency, hashBody } from "@/lib/idempotency";
 
 const VALID_STATUTS = Object.values(StatutCommande);
@@ -37,13 +36,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data, total, limit, offset });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la recuperation des commandes.");
+    return handleApiError("GET /api/commandes", error, "Erreur serveur lors de la recuperation des commandes.");
   }
 }
 
@@ -116,16 +109,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(commande, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message.includes("introuvable")) {
-      return apiError(404, message);
-    }
-    return apiError(500, "Erreur serveur lors de la creation de la commande.");
+    return handleApiError("POST /api/commandes", error, "Erreur serveur lors de la creation de la commande.");
   }
 }

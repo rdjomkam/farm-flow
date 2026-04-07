@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireHasPermission } from "@/lib/permissions";
 import { ForbiddenError } from "@/lib/permissions";
-import { AuthError } from "@/lib/auth";
 import { hashPassword } from "@/lib/auth";
 import { normalizePhone } from "@/lib/auth";
 import { getUserByEmail, getUserByPhone, createUser } from "@/lib/queries/users";
 import { listUsers } from "@/lib/queries/users-admin";
 import { Permission, Role } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 /** GET /api/users — lister les utilisateurs (pagine, filtrable) */
 export async function GET(request: NextRequest) {
@@ -44,13 +43,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ users: result, total, page, limit });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur.");
+    return handleApiError("GET /api/users", error, "Erreur serveur.");
   }
 }
 
@@ -128,16 +121,6 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    // Prisma unique constraint
-    if (error && typeof error === "object" && "code" in error && (error as { code: string }).code === "P2002") {
-      return apiError(409, "Email ou telephone deja utilise.");
-    }
-    return apiError(500, "Erreur serveur lors de la creation.");
+    return handleApiError("POST /api/users", error, "Erreur serveur lors de la creation.");
   }
 }

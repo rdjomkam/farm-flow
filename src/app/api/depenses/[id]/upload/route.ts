@@ -8,9 +8,8 @@ import {
   getSignedUrl,
   extractFileNameFromKey,
 } from "@/lib/storage";
-import { apiError } from "@/lib/api-utils";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { apiError, handleApiError } from "@/lib/api-utils";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 
 type Params = { params: Promise<{ id: string }> };
@@ -94,19 +93,7 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     return NextResponse.json({ url, fileName }, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors de l'upload de la facture.",
-      },
-      { status: 500 }
-    );
+    return handleApiError("POST /api/depenses/[id]/upload", error, "Erreur serveur lors de l'upload de la facture.");
   }
 }
 
@@ -139,19 +126,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     return NextResponse.json({ url, fileName });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors de la recuperation de la facture.",
-      },
-      { status: 500 }
-    );
+    return handleApiError("GET /api/depenses/[id]/upload", error, "Erreur serveur lors de la recuperation de la facture.");
   }
 }
 
@@ -190,18 +165,6 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return NextResponse.json(
-      {
-        status: 500,
-        message: "Erreur serveur lors de la suppression de la facture.",
-      },
-      { status: 500 }
-    );
+    return handleApiError("DELETE /api/depenses/[id]/upload", error, "Erreur serveur lors de la suppression de la facture.");
   }
 }

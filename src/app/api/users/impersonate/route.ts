@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, getSessionToken, AuthError } from "@/lib/auth";
+import { requireAuth, getSessionToken } from "@/lib/auth";
 import { ForbiddenError } from "@/lib/permissions";
 import { prisma } from "@/lib/db";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 /** DELETE /api/users/impersonate — arreter l'impersonation en cours */
 export async function DELETE(request: NextRequest) {
@@ -30,12 +30,6 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur.");
+    return handleApiError("DELETE /api/users/impersonate", error, "Erreur serveur.");
   }
 }

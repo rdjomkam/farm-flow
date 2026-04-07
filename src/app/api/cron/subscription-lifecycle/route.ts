@@ -24,7 +24,7 @@ import * as crypto from "crypto";
 import { transitionnerStatuts, appliquerDowngradeProgramme } from "@/lib/services/abonnement-lifecycle";
 import { rendreCommissionsDisponiblesCron } from "@/lib/services/commissions";
 import { envoyerRappelsRenouvellement } from "@/lib/services/rappels-abonnement";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 // ---------------------------------------------------------------------------
 // Utilitaires
@@ -89,10 +89,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error(
-      "[CRON /api/cron/subscription-lifecycle] Erreur globale:",
-      error
-    );
-    return apiError(500, "Erreur serveur lors du traitement lifecycle.");
+    return handleApiError("GET /api/cron/subscription-lifecycle", error, "Erreur serveur lors du traitement lifecycle.");
   }
 }

@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AuthError } from "@/lib/auth";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
-import {
-  getCustomPlaceholderById,
+import { getCustomPlaceholderById,
   updateCustomPlaceholder,
-  deleteCustomPlaceholder,
-} from "@/lib/queries/custom-placeholders";
-import { apiError } from "@/lib/api-utils";
+  deleteCustomPlaceholder } from "@/lib/queries/custom-placeholders";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -29,14 +26,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     return NextResponse.json(placeholder);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    console.error("[GET /api/regles-activites/placeholders/[id]]", error);
-    return apiError(500, "Erreur serveur lors de la recuperation du placeholder.");
+    return handleApiError("GET /api/regles-activites/placeholders/[id]", error, "Erreur serveur lors de la recuperation du placeholder.");
   }
 }
 
@@ -55,22 +45,11 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const updated = await updateCustomPlaceholder(id, body);
     return NextResponse.json(updated);
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, (error as Error).message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, (error as Error).message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    // Prisma unique constraint violation
-    if (message.includes("Unique constraint")) {
-      return apiError(409, "Cette cle existe deja.");
-    }
-    if (message === "Placeholder introuvable.") {
-      return apiError(404, message);
-    }
-    console.error("[PUT /api/regles-activites/placeholders/[id]]", error);
-    return apiError(400, message);
+    return handleApiError("PUT /api/regles-activites/placeholders/[id]", error, "Erreur serveur.", {
+      statusMap: [
+        { match: "Unique constraint", status: 409 },
+      ],
+    });
   }
 }
 
@@ -88,17 +67,6 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     await deleteCustomPlaceholder(id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, (error as Error).message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, (error as Error).message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    if (message === "Placeholder introuvable.") {
-      return apiError(404, message);
-    }
-    console.error("[DELETE /api/regles-activites/placeholders/[id]]", error);
-    return apiError(400, message);
+    return handleApiError("DELETE /api/regles-activites/placeholders/[id]", error, "Erreur serveur.");
   }
 }

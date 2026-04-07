@@ -14,11 +14,10 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { demanderRetrait } from "@/lib/queries/commissions";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { AuthError } from "@/lib/auth";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, FournisseurPaiement } from "@/types";
 import type { DemandeRetraitDTO } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 const VALID_FOURNISSEURS = Object.values(FournisseurPaiement);
 
@@ -59,15 +58,10 @@ export async function POST(request: NextRequest) {
     const retrait = await demanderRetrait(auth.userId, dto, auth.activeSiteId);
     return NextResponse.json({ retrait }, { status: 201 });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    if (error instanceof Error && error.message.includes("Solde insuffisant")) {
-      return apiError(400, error.message);
-    }
-    return apiError(500, "Erreur serveur lors de la demande de retrait.");
+    return handleApiError("POST /api/portefeuille/retrait", error, "Erreur serveur lors de la demande de retrait.", {
+      statusMap: [
+        { match: "Solde insuffisant", status: 400 },
+      ],
+    });
   }
 }

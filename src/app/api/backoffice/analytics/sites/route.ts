@@ -9,10 +9,9 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireSuperAdmin } from "@/lib/auth/backoffice";
-import { AuthError } from "@/lib/auth";
 import { ForbiddenError } from "@/lib/permissions";
 import { getSitesGrowth } from "@/lib/queries/admin-analytics";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 const VALID_PERIODS = ["7d", "30d", "90d", "12m"] as const;
 type Period = (typeof VALID_PERIODS)[number];
@@ -38,13 +37,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    console.error("[GET /api/backoffice/analytics/sites]", error);
-    return apiError(500, "Erreur serveur lors du calcul de l'evolution des sites.");
+    return handleApiError("GET /api/backoffice/analytics/sites", error, "Erreur serveur lors du calcul de l'evolution des sites.");
   }
 }

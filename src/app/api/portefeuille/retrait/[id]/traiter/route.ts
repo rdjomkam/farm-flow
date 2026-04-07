@@ -13,10 +13,9 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { traiterRetrait } from "@/lib/queries/commissions";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
-import { AuthError } from "@/lib/auth";
+import { requirePermission } from "@/lib/permissions";
 import { Permission, StatutPaiementAbo } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 
 const VALID_STATUTS = [StatutPaiementAbo.CONFIRME, StatutPaiementAbo.ECHEC] as const;
 
@@ -66,12 +65,6 @@ export async function POST(
 
     return NextResponse.json({ success: true, count: result.count });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    return apiError(500, "Erreur serveur lors du traitement du retrait.");
+    return handleApiError("POST /api/portefeuille/retrait/[id]/traiter", error, "Erreur serveur lors du traitement du retrait.");
   }
 }

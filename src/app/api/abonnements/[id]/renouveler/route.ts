@@ -13,9 +13,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAbonnementById, logAbonnementAudit } from "@/lib/queries/abonnements";
 import { getPlanAbonnementById } from "@/lib/queries/plans-abonnements";
 import { initierPaiement } from "@/lib/services/billing";
-import { requirePermission, ForbiddenError } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { invalidateSubscriptionCaches } from "@/lib/abonnements/invalidate-caches";
-import { AuthError } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
   Permission,
@@ -24,7 +23,7 @@ import {
   FournisseurPaiement,
   TypePlan,
 } from "@/types";
-import { apiError } from "@/lib/api-utils";
+import { apiError, handleApiError } from "@/lib/api-utils";
 import {
   PLAN_TARIFS,
   calculerProchaineDate,
@@ -181,16 +180,6 @@ export async function POST(
       { status: 201 }
     );
   } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(401, error.message);
-    }
-    if (error instanceof ForbiddenError) {
-      return apiError(403, error.message);
-    }
-    const message = error instanceof Error ? error.message : "Erreur serveur.";
-    return NextResponse.json(
-      { status: 500, message: `Erreur serveur lors du renouvellement. ${message}` },
-      { status: 500 }
-    );
+    return handleApiError("POST /api/abonnements/[id]/renouveler", error, "Erreur serveur lors du renouvellement.");
   }
 }

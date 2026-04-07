@@ -9,6 +9,7 @@
 export {
   getSubscriptionStatus,
   getSubscriptionStatusForSite,
+  getSubscriptionStatusByUser,
   isSubscriptionValid,
   isReadOnlyMode,
   isBlocked,
