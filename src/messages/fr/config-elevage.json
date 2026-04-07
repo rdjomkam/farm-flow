@@ -130,6 +130,7 @@
   },
   "page": {
     "description": "Gerez les profils de configuration d'elevage de votre site. Chaque profil definit les benchmarks, les seuils d'alerte et les parametres d'alimentation.",
-    "newProfile": "Nouveau profil"
+    "newProfile": "Nouveau profil",
+    "editTitle": "Modifier : {nom}"
   }
 }

@@ -47,7 +47,7 @@ export default async function BacDetailPage({
         <Button variant="ghost" size="sm" className="self-start -ml-2" asChild>
           <Link href="/bacs">
             <ArrowLeft className="h-4 w-4" />
-            Retour aux bacs
+            {t("retourBacs")}
           </Link>
         </Button>
 
@@ -65,10 +65,10 @@ export default async function BacDetailPage({
                 )}
               </div>
               {bac.volume != null && (
-                <p className="text-sm text-muted-foreground mt-0.5">Volume : {bac.volume} L</p>
+                <p className="text-sm text-muted-foreground mt-0.5">{t("volume", { volume: bac.volume })}</p>
               )}
               {bac.typeSysteme && (
-                <p className="text-sm text-muted-foreground">Type : {bac.typeSysteme}</p>
+                <p className="text-sm text-muted-foreground">{t("type", { type: bac.typeSysteme })}</p>
               )}
             </div>
           </CardContent>
@@ -77,7 +77,7 @@ export default async function BacDetailPage({
         {/* Historique des assignations */}
         <section>
           <h2 className="text-base font-semibold mb-3">
-            Historique des assignations
+            {t("historiqueTitle")}
             {bac.assignations.length > 0 && (
               <span className="ml-2 text-sm font-normal text-muted-foreground">
                 ({bac.assignations.length})

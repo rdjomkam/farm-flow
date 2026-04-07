@@ -1,5 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { Settings } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { AccessDenied } from "@/components/ui/access-denied";
@@ -19,13 +20,15 @@ export default async function ConfigElevageEditPage({ params }: Props) {
   const permissions = await checkPagePermission(session, Permission.DASHBOARD_VOIR);
   if (!permissions) return <AccessDenied />;
 
+  const t = await getTranslations("config-elevage");
+
   const { id } = await params;
   const config = await getConfigElevageById(id, session.activeSiteId);
   if (!config) notFound();
 
   return (
     <>
-      <Header title={`Modifier : ${config.nom}`}>
+      <Header title={t("page.editTitle", { nom: config.nom })}>
         <Settings className="h-5 w-5 text-muted-foreground" />
       </Header>
       <div className="p-4">

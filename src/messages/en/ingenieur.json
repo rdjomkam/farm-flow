@@ -21,6 +21,10 @@
   "monitoring": {
     "noActiveAlerts": "No active alerts on client sites.",
     "alertesActives": "Active alerts ({count})",
+    "clientsTitle": "Clients ({count})",
+    "noClients": "No active clients at the moment.",
+    "noClientsHint": "Clients appear here when a pack is activated for their site.",
+    "vueGlobale": "Global overview",
     "noActiveAlertsClient": "No active alerts for this client.",
     "noWavesInProgress": "No waves in progress.",
     "noNotesForClient": "No notes for this client.",
@@ -80,7 +84,8 @@
   },
   "commissions": {
     "mesCommissions": "My commissions",
-    "aucuneCommission": "No commissions yet."
+    "aucuneCommission": "No commissions yet.",
+    "historiqueRetraits": "Withdrawal history"
   },
   "statuses": {
     "late": "Late"

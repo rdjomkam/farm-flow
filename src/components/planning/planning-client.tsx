@@ -461,7 +461,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
               <div className="mt-4">
                 <h3 className="text-sm font-semibold mb-2">
                   {selectedDay} {(t.raw("mois") as string[])[viewMonth]} {viewYear}
-                  {activitesDuJour.length > 0 && ` · ${activitesDuJour.length} activite${activitesDuJour.length > 1 ? "s" : ""}`}
+                  {activitesDuJour.length > 0 && ` · ${activitesDuJour.length > 1 ? t("activitesCountPlural", { count: activitesDuJour.length }) : t("activitesCount", { count: activitesDuJour.length })}`}
                 </h3>
                 {activitesDuJour.length === 0 ? (
                   <p className="text-sm text-muted-foreground">{t("empty.ceJour")}</p>

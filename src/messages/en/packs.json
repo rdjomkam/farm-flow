@@ -9,6 +9,11 @@
     "noActivationsFiltered": "No activations for this filter."
   },
   "activationsSearch": "Search by code, site or pack...",
+  "activationsTabs": {
+    "actives": "Active",
+    "expirees": "Expired",
+    "toutes": "All"
+  },
   "activations": {
     "activeLe": "Activated on",
     "expireLe": "Expires on"

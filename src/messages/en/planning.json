@@ -8,6 +8,8 @@
   "jours": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
   "mois": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
   "chargement": "Loading...",
+  "activitesCount": "{count} activity",
+  "activitesCountPlural": "{count} activities",
   "nouvelle": "New",
   "tabs": {
     "toutes": "All",

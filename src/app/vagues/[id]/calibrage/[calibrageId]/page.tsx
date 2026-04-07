@@ -119,14 +119,15 @@ export default async function CalibrageDetailPage({
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Fish className="h-4 w-4 shrink-0" />
-              <span>{totalPoissons} poissons redistribues</span>
+              <span>{t("detail.poissonsRedistribues", { count: totalPoissons })}</span>
             </div>
             {calibrage.nombreMorts > 0 && (
               <div className="flex items-center gap-2 text-danger">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
                 <span>
-                  {calibrage.nombreMorts} mort
-                  {calibrage.nombreMorts > 1 ? "s" : ""} constates
+                  {calibrage.nombreMorts > 1
+                    ? t("detail.mortsConstates", { count: calibrage.nombreMorts })
+                    : t("detail.mortConstates", { count: calibrage.nombreMorts })}
                 </span>
               </div>
             )}
@@ -154,7 +155,7 @@ export default async function CalibrageDetailPage({
                       groupe.categorie}
                   </Badge>
                   <span className="text-sm font-semibold">
-                    {groupe.nombrePoissons} poissons
+                    {t("detail.poissons", { count: groupe.nombrePoissons })}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -180,11 +181,14 @@ export default async function CalibrageDetailPage({
         {/* Bilan conservation */}
         <section className="rounded-xl bg-success/5 p-4">
           <h3 className="text-sm font-semibold text-success mb-2">
-            Bilan de conservation
+            {t("detail.bilanConservation")}
           </h3>
           <p className="text-sm text-success">
-            {totalPoissons} redistribues + {calibrage.nombreMorts} morts ={" "}
-            {totalPoissons + calibrage.nombreMorts} poissons
+            {t("detail.bilanDetail", {
+              redistribues: totalPoissons,
+              morts: calibrage.nombreMorts,
+              total: totalPoissons + calibrage.nombreMorts,
+            })}
           </p>
         </section>
 

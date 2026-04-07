@@ -31,18 +31,20 @@ interface NotesListProps {
 }
 
 /**
- * Formate une date en francais relatif (aujourd'hui, hier, ou JJ/MM/AAAA).
+ * Formate une date en relatif (aujourd'hui, hier, ou JJ/MM/AAAA).
+ * Accepts a translation function to produce locale-aware labels.
  */
-function formatDate(date: Date | string): string {
+function formatDate(date: Date | string, t: (key: string, values?: Record<string, string>) => string): string {
   const d = typeof date === "string" ? new Date(date) : date;
   const now = new Date();
   const diff = now.getTime() - d.getTime();
   const dayMs = 86_400_000;
+  const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   if (diff < dayMs && d.getDate() === now.getDate()) {
-    return `Aujourd'hui a ${d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`;
+    return t("list.todayAt", { time });
   }
   if (diff < 2 * dayMs && d.getDate() === now.getDate() - 1) {
-    return `Hier a ${d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`;
+    return t("list.yesterdayAt", { time });
   }
   return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
@@ -102,7 +104,7 @@ function NoteCard({
             )}
           </div>
           <span className="text-xs text-muted-foreground shrink-0">
-            {formatDate(note.createdAt)}
+            {formatDate(note.createdAt, t)}
           </span>
         </div>
         <CardTitle className="text-base leading-snug mt-1">{note.titre}</CardTitle>

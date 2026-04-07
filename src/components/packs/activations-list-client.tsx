@@ -76,9 +76,9 @@ export function ActivationsListClient({ activations }: Props) {
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="actives">Actives</TabsTrigger>
-          <TabsTrigger value="expirees">Expirees</TabsTrigger>
-          <TabsTrigger value="toutes">Toutes</TabsTrigger>
+          <TabsTrigger value="actives">{t("activationsTabs.actives")}</TabsTrigger>
+          <TabsTrigger value="expirees">{t("activationsTabs.expirees")}</TabsTrigger>
+          <TabsTrigger value="toutes">{t("activationsTabs.toutes")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value={tab} className="mt-4">
