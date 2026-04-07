@@ -441,7 +441,7 @@ export function FarmBottomNav({
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent
           className={cn(
-            "overflow-y-auto border-border",
+            "overflow-y-auto overscroll-contain border-border",
             isLandscape
               ? "inset-y-0 right-0 left-auto top-0 bottom-0 h-full w-80 rounded-l-2xl border-l border-t-0"
               : "inset-y-auto bottom-0 top-auto left-0 right-0 w-full h-auto max-h-[80vh] rounded-t-2xl border-r-0 border-t"

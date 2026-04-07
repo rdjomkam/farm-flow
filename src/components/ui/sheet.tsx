@@ -17,7 +17,7 @@ const SheetOverlay = forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-overlay",
+      "fixed inset-0 z-50 bg-overlay touch-none",
       "data-[state=open]:animate-in data-[state=open]:fade-in-0",
       "data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
       className
@@ -43,7 +43,7 @@ const SheetContent = forwardRef<
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-72 bg-card border-r border-border shadow-lg pt-[env(safe-area-inset-top)]",
+          "fixed inset-y-0 left-0 z-50 w-72 bg-card border-r border-border shadow-lg pt-[env(safe-area-inset-top)] overscroll-contain",
           "data-[state=open]:animate-in data-[state=open]:slide-in-from-left",
           "data-[state=closed]:animate-out data-[state=closed]:slide-out-to-left",
           "duration-200",
