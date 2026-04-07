@@ -78,7 +78,7 @@ interface Props {
 }
 
 export function PonteDetailClient({ ponte, femelles, males, permissions }: Props) {
-  const t = useTranslations("alevins");
+  const t = useTranslations("reproduction");
   const router = useRouter();
   const queryClient = useQueryClient();
   const alevinsService = useAlevinsService();
@@ -102,16 +102,16 @@ export function PonteDetailClient({ ponte, femelles, males, permissions }: Props
   const [notes, setNotes] = useState(ponte.notes ?? "");
 
   const statutPonteLabels: Record<StatutPonte, string> = {
-    [StatutPonte.EN_COURS]: t("pontes.statuts.EN_COURS"),
-    [StatutPonte.TERMINEE]: t("pontes.statuts.TERMINEE"),
-    [StatutPonte.ECHOUEE]: t("pontes.statuts.ECHOUEE"),
+    [StatutPonte.EN_COURS]: t("alevins.pontes.statuts.EN_COURS"),
+    [StatutPonte.TERMINEE]: t("alevins.pontes.statuts.TERMINEE"),
+    [StatutPonte.ECHOUEE]: t("alevins.pontes.statuts.ECHOUEE"),
   };
 
   const statutLotLabels: Record<StatutLotAlevins, string> = {
-    [StatutLotAlevins.EN_INCUBATION]: t("lots.statuts.EN_INCUBATION"),
-    [StatutLotAlevins.EN_ELEVAGE]: t("lots.statuts.EN_ELEVAGE"),
-    [StatutLotAlevins.TRANSFERE]: t("lots.statuts.TRANSFERE"),
-    [StatutLotAlevins.PERDU]: t("lots.statuts.PERDU"),
+    [StatutLotAlevins.EN_INCUBATION]: t("alevins.lots.statuts.EN_INCUBATION"),
+    [StatutLotAlevins.EN_ELEVAGE]: t("alevins.lots.statuts.EN_ELEVAGE"),
+    [StatutLotAlevins.TRANSFERE]: t("alevins.lots.statuts.TRANSFERE"),
+    [StatutLotAlevins.PERDU]: t("alevins.lots.statuts.PERDU"),
   };
 
   async function handleSave() {
@@ -137,7 +137,7 @@ export function PonteDetailClient({ ponte, femelles, males, permissions }: Props
     const result = await call<{ message: string }>(
       `/api/pontes/${ponte.id}`,
       { method: "DELETE" },
-      { successMessage: t("pontes.detail.deleteSuccess") }
+      { successMessage: t("alevins.pontes.detail.deleteSuccess") }
     );
     if (result.ok) {
       router.push("/alevins/pontes");
@@ -153,7 +153,7 @@ export function PonteDetailClient({ ponte, femelles, males, permissions }: Props
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
       >
         <ArrowLeft className="h-4 w-4" />
-        {t("pontes.title")}
+        {t("alevins.pontes.title")}
       </Link>
 
       {/* Header actions */}
@@ -169,23 +169,23 @@ export function PonteDetailClient({ ponte, femelles, males, permissions }: Props
             <DialogTrigger asChild>
               <Button size="sm" variant="outline">
                 <Pencil className="h-4 w-4 mr-1" />
-                {t("pontes.form.modifier")}
+                {t("alevins.pontes.form.modifier")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>{t("pontes.modifierPonte")}</DialogTitle>
+                <DialogTitle>{t("alevins.pontes.modifierPonte")}</DialogTitle>
               </DialogHeader>
               <div className="flex flex-col gap-4 py-2">
                 <Input
-                  label={t("pontes.form.code")}
+                  label={t("alevins.pontes.form.code")}
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   autoFocus
                 />
                 <Select value={maleId} onValueChange={setMaleId}>
-                  <SelectTrigger label={t("pontes.form.male")}>
-                    <SelectValue placeholder={t("pontes.form.malePlaceholder")} />
+                  <SelectTrigger label={t("alevins.pontes.form.male")}>
+                    <SelectValue placeholder={t("alevins.pontes.form.malePlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     {males.map((m) => (
@@ -196,19 +196,19 @@ export function PonteDetailClient({ ponte, femelles, males, permissions }: Props
                   </SelectContent>
                 </Select>
                 <Input
-                  label={t("pontes.form.datePonte")}
+                  label={t("alevins.pontes.form.datePonte")}
                   type="date"
                   value={datePonte}
                   onChange={(e) => setDatePonte(e.target.value)}
                 />
                 <Input
-                  label={t("pontes.form.nombreOeufs")}
+                  label={t("alevins.pontes.form.nombreOeufs")}
                   type="number"
                   value={nombreOeufs}
                   onChange={(e) => setNombreOeufs(e.target.value)}
                 />
                 <Input
-                  label={t("pontes.form.tauxFecondation")}
+                  label={t("alevins.pontes.form.tauxFecondation")}
                   type="number"
                   min="0"
                   max="100"
@@ -216,7 +216,7 @@ export function PonteDetailClient({ ponte, femelles, males, permissions }: Props
                   onChange={(e) => setTauxFecondation(e.target.value)}
                 />
                 <Select value={statut} onValueChange={setStatut}>
-                  <SelectTrigger label={t("pontes.form.statut")}>
+                  <SelectTrigger label={t("alevins.pontes.form.statut")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -228,20 +228,20 @@ export function PonteDetailClient({ ponte, femelles, males, permissions }: Props
                   </SelectContent>
                 </Select>
                 <Input
-                  label={t("pontes.form.notes")}
+                  label={t("alevins.pontes.form.notes")}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                 />
               </div>
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button variant="outline">{t("pontes.form.annuler")}</Button>
+                  <Button variant="outline">{t("alevins.pontes.form.annuler")}</Button>
                 </DialogClose>
                 <Button
                   onClick={handleSave}
                   disabled={!code.trim() || !datePonte}
                 >
-                  {t("pontes.form.enregistrer")}
+                  {t("alevins.pontes.form.enregistrer")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -257,20 +257,20 @@ export function PonteDetailClient({ ponte, femelles, males, permissions }: Props
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>{t("pontes.supprimerPonte")}</DialogTitle>
+                <DialogTitle>{t("alevins.pontes.supprimerPonte")}</DialogTitle>
               </DialogHeader>
               <p className="text-sm text-muted-foreground py-2">
-                {t("pontes.detail.confirmDelete", { code: ponte.code })}
+                {t("alevins.pontes.detail.confirmDelete", { code: ponte.code })}
               </p>
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button variant="outline">{t("pontes.form.annuler")}</Button>
+                  <Button variant="outline">{t("alevins.pontes.form.annuler")}</Button>
                 </DialogClose>
                 <Button
                   variant="danger"
                   onClick={handleDelete}
                 >
-                  {t("pontes.form.supprimer")}
+                  {t("alevins.pontes.form.supprimer")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -282,21 +282,21 @@ export function PonteDetailClient({ ponte, femelles, males, permissions }: Props
       {/* Infos principales */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">{t("pontes.detail.informations")}</CardTitle>
+          <CardTitle className="text-base">{t("alevins.pontes.detail.informations")}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">{t("pontes.detail.code")}</span>
+            <span className="text-muted-foreground">{t("alevins.pontes.detail.code")}</span>
             <span className="font-medium">{ponte.code}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">{t("pontes.detail.date")}</span>
+            <span className="text-muted-foreground">{t("alevins.pontes.detail.date")}</span>
             <span>
               {new Date(ponte.datePonte).toLocaleDateString("fr-FR")}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">{t("pontes.detail.femelle")}</span>
+            <span className="text-muted-foreground">{t("alevins.pontes.detail.femelle")}</span>
             <Link
               href={`/alevins/reproducteurs/${ponte.femelle.id}`}
               className="text-primary hover:underline"
@@ -305,7 +305,7 @@ export function PonteDetailClient({ ponte, femelles, males, permissions }: Props
             </Link>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">{t("pontes.detail.male")}</span>
+            <span className="text-muted-foreground">{t("alevins.pontes.detail.male")}</span>
             {ponte.male ? (
               <Link
                 href={`/alevins/reproducteurs/${ponte.male.id}`}
@@ -319,19 +319,19 @@ export function PonteDetailClient({ ponte, femelles, males, permissions }: Props
           </div>
           {ponte.nombreOeufs !== null && (
             <div className="flex justify-between">
-              <span className="text-muted-foreground">{t("pontes.detail.oeufs")}</span>
+              <span className="text-muted-foreground">{t("alevins.pontes.detail.oeufs")}</span>
               <span>{formatNumber(ponte.nombreOeufs)}</span>
             </div>
           )}
           {ponte.tauxFecondation !== null && (
             <div className="flex justify-between">
-              <span className="text-muted-foreground">{t("pontes.detail.tauxFecondation")}</span>
+              <span className="text-muted-foreground">{t("alevins.pontes.detail.tauxFecondation")}</span>
               <span>{ponte.tauxFecondation}%</span>
             </div>
           )}
           {ponte.notes && (
             <div className="flex flex-col gap-1 pt-1 border-t border-border">
-              <span className="text-muted-foreground">{t("pontes.detail.notes")}</span>
+              <span className="text-muted-foreground">{t("alevins.pontes.detail.notes")}</span>
               <p className="text-sm">{ponte.notes}</p>
             </div>
           )}
@@ -342,7 +342,7 @@ export function PonteDetailClient({ ponte, femelles, males, permissions }: Props
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">
-            {t("pontes.detail.lotsAlevins")} ({ponte.lots.length})
+            {t("alevins.pontes.detail.lotsAlevins")} ({ponte.lots.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -350,7 +350,7 @@ export function PonteDetailClient({ ponte, femelles, males, permissions }: Props
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <Baby className="h-8 w-8 text-muted-foreground mb-2" />
               <p className="text-sm text-muted-foreground">
-                {t("lots.aucun")}
+                {t("alevins.lots.aucun")}
               </p>
             </div>
           ) : (
@@ -361,8 +361,8 @@ export function PonteDetailClient({ ponte, femelles, males, permissions }: Props
                     <div>
                       <p className="font-medium text-sm">{l.code}</p>
                       <p className="text-xs text-muted-foreground">
-                        {l.nombreActuel}/{l.nombreInitial} {t("lots.card.alevins")}
-                        {l.bac && ` — ${t("lots.card.bac")} : ${l.bac.nom}`}
+                        {l.nombreActuel}/{l.nombreInitial} {t("alevins.lots.card.alevins")}
+                        {l.bac && ` — ${t("alevins.lots.card.bac")} : ${l.bac.nom}`}
                       </p>
                     </div>
                     <span

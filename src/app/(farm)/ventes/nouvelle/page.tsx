@@ -8,7 +8,16 @@ import { getClients } from "@/lib/queries/clients";
 import { prisma } from "@/lib/db";
 import { StatutVague, Permission } from "@/types";
 
-export default async function NouvelleVentePage() {
+interface NouvelleVentePageProps {
+  searchParams: Promise<{
+    lotAlevinsId?: string;
+    quantite?: string;
+    poidsTotalKg?: string;
+    clientId?: string;
+  }>;
+}
+
+export default async function NouvelleVentePage({ searchParams }: NouvelleVentePageProps) {
   const session = await getServerSession();
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
@@ -17,6 +26,8 @@ export default async function NouvelleVentePage() {
   if (!permissions) return <AccessDenied />;
 
   const t = await getTranslations("ventes");
+  const params = await searchParams;
+
   const [clients, vagues] = await Promise.all([
     getClients(session.activeSiteId),
     prisma.vague.findMany({
@@ -31,6 +42,16 @@ export default async function NouvelleVentePage() {
     }),
   ]);
 
+  // Fetch lot info for the banner when coming from a lot sortie
+  let lotCode: string | null = null;
+  if (params.lotAlevinsId) {
+    const lot = await prisma.lotAlevins.findFirst({
+      where: { id: params.lotAlevinsId, siteId: session.activeSiteId },
+      select: { code: true },
+    });
+    lotCode = lot?.code ?? null;
+  }
+
   const clientOptions = clients.map((c) => ({ id: c.id, nom: c.nom }));
   const vagueOptions = vagues.map((v) => ({
     id: v.id,
@@ -41,6 +62,16 @@ export default async function NouvelleVentePage() {
     ),
   }));
 
+  const prefill = params.lotAlevinsId
+    ? {
+        lotAlevinsId: params.lotAlevinsId,
+        lotCode: lotCode ?? undefined,
+        quantite: params.quantite ? parseInt(params.quantite, 10) : undefined,
+        poidsTotalKg: params.poidsTotalKg ? parseFloat(params.poidsTotalKg) : undefined,
+        clientId: params.clientId,
+      }
+    : undefined;
+
   return (
     <>
       <Header title={t("ventes.new")} />
@@ -48,6 +79,7 @@ export default async function NouvelleVentePage() {
         <VenteFormClient
           clients={clientOptions}
           vagues={vagueOptions}
+          prefill={prefill}
         />
       </div>
     </>

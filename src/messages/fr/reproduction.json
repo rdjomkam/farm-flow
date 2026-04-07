@@ -582,6 +582,31 @@
       "fractionner": "Fractionner",
       "loading": "Fractionnement...",
       "successMessage": "Lot fractionne avec succes."
+    },
+    "sortie": {
+      "title": "Sortie du lot",
+      "destination": "Destination",
+      "dateTransfert": "Date de sortie",
+      "venteAlevins": "Vente d'alevins",
+      "venteAlevinsDesc": "Vendre les alevins a un client",
+      "transfertGrossissement": "Transfert en grossissement",
+      "transfertGrossissementDesc": "Transferer vers une vague de grossissement",
+      "transfertAutreSite": "Transfert vers un autre site",
+      "perteTotal": "Perte totale",
+      "perteTotalDesc": "Enregistrer la perte ou la reforme du lot",
+      "client": "Client",
+      "clientPlaceholder": "Selectionner un client",
+      "prixUnitaire": "Prix unitaire (FCFA/kg)",
+      "poidsTotalKg": "Poids total (kg)",
+      "vagueDestination": "Vague de destination",
+      "vagueDestinationPlaceholder": "Selectionner une vague",
+      "creerNouvelleVague": "Creer une nouvelle vague",
+      "cause": "Cause de la perte",
+      "notes": "Notes",
+      "confirmer": "Confirmer la sortie",
+      "enCours": "Sortie en cours...",
+      "succes": "Lot sorti avec succes",
+      "erreur": "Erreur lors de la sortie"
     }
   }
 }

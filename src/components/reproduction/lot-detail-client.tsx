@@ -23,17 +23,11 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-} from "@/components/ui/select";
 import { useApi } from "@/hooks/use-api";
 import { PhaseLot, StatutLotAlevins, DestinationLot, Permission } from "@/types";
 import { LotPhaseStepper } from "./lot-phase-stepper";
 import { LotSplitDialog } from "./lot-split-dialog";
+import { LotSortieDialog } from "./lot-sortie-dialog";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -173,10 +167,6 @@ export function LotDetailClient({ lot, permissions }: Props) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [splitDialogOpen, setSplitDialogOpen] = useState(false);
 
-  // Sortie form state
-  const [destination, setDestination] = useState<string>("");
-  const [sortieNotes, setSortieNotes] = useState("");
-
   const canModify = permissions.includes(Permission.ALEVINS_MODIFIER);
   const canDelete = permissions.includes(Permission.ALEVINS_SUPPRIMER);
 
@@ -237,27 +227,6 @@ export function LotDetailClient({ lot, permissions }: Props) {
       router.push("/reproduction/lots");
     } else {
       setDeleteDialogOpen(false);
-    }
-  }
-
-  async function handleSortie() {
-    if (!destination) return;
-    const result = await call(
-      `/api/reproduction/lots/${lot.id}/sortie`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          destinationSortie: destination,
-          dateTransfert: new Date().toISOString(),
-          notes: sortieNotes.trim() || undefined,
-        }),
-      },
-      { successMessage: t("detail.sortieSuccess") }
-    );
-    if (result.ok) {
-      setSortieDialogOpen(false);
-      router.refresh();
     }
   }
 
@@ -325,64 +294,16 @@ export function LotDetailClient({ lot, permissions }: Props) {
                 {t("detail.fractionner")}
               </Button>
 
-              {/* Sortir */}
-              <Dialog open={sortieDialogOpen} onOpenChange={setSortieDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" variant="outline" className="min-h-[44px]">
-                    <LogOut className="h-4 w-4 mr-1" aria-hidden="true" />
-                    {t("detail.sortir")}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{t("detail.sortirTitle")}</DialogTitle>
-                  </DialogHeader>
-                  <div className="flex flex-col gap-4 py-2">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-sm font-medium">
-                        {t("detail.destinationLabel")}
-                      </label>
-                      <Select value={destination} onValueChange={setDestination}>
-                        <SelectTrigger className="min-h-[44px]">
-                          <SelectValue placeholder={t("detail.destinationPlaceholder")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.values(DestinationLot).map((d) => (
-                            <SelectItem key={d} value={d}>
-                              {destinationLabels[d] ?? d}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-sm font-medium">
-                        {t("detail.notesLabel")}
-                      </label>
-                      <textarea
-                        className="min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        placeholder={t("detail.notesPlaceholder")}
-                        value={sortieNotes}
-                        onChange={(e) => setSortieNotes(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button variant="outline" className="min-h-[44px]">
-                        {t("detail.annuler")}
-                      </Button>
-                    </DialogClose>
-                    <Button
-                      onClick={handleSortie}
-                      disabled={!destination}
-                      className="min-h-[44px]"
-                    >
-                      {t("detail.confirmerSortie")}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              {/* Sortir — opens LotSortieDialog */}
+              <Button
+                size="sm"
+                variant={lot.phase === PhaseLot.ALEVINAGE ? "primary" : "outline"}
+                className="min-h-[44px]"
+                onClick={() => setSortieDialogOpen(true)}
+              >
+                <LogOut className="h-4 w-4 mr-1" aria-hidden="true" />
+                {t("detail.sortir")}
+              </Button>
             </>
           )}
 
@@ -670,6 +591,19 @@ export function LotDetailClient({ lot, permissions }: Props) {
         open={splitDialogOpen}
         onOpenChange={setSplitDialogOpen}
         onSuccess={handleSplitSuccess}
+      />
+
+      {/* Sortie dialog — enriched with destination-specific fields */}
+      <LotSortieDialog
+        lot={{
+          id: lot.id,
+          code: lot.code,
+          nombreActuel: lot.nombreActuel,
+          poidsMoyen: lot.poidsMoyen,
+          phase: lot.phase,
+        }}
+        open={sortieDialogOpen}
+        onOpenChange={setSortieDialogOpen}
       />
     </div>
   );

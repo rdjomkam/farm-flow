@@ -14,7 +14,14 @@
  */
 
 import { prisma } from "@/lib/db";
-import { TypeAlerte, StatutAlerte, StatutIncubation, StatutLotAlevins } from "@/generated/prisma/enums";
+import {
+  TypeAlerte,
+  StatutAlerte,
+  StatutIncubation,
+  StatutLotAlevins,
+  SexeReproducteur,
+  StatutReproducteur,
+} from "@/generated/prisma/enums";
 
 // ---------------------------------------------------------------------------
 // Helpers internes
@@ -267,6 +274,251 @@ export async function checkLotSurvieAlerts(siteId: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// MALES_STOCK_BAS
+// ---------------------------------------------------------------------------
+
+/**
+ * Verifie les lots de geniteurs males dont le nombre disponible est inferieur
+ * ou egal au seuil d'alerte configure (seuilAlerteMales) ou au seuil par
+ * defaut de 2 si non configure.
+ *
+ * Conditions de declenchement :
+ * - statut = ACTIF
+ * - sexe = MALE (ou lot mixte avec nombreMalesDisponibles)
+ * - nombreMalesDisponibles <= seuil
+ *
+ * Deduplication : une seule alerte ACTIVE par lot par jour.
+ *
+ * @param siteId - ID du site a verifier (R8)
+ */
+export async function checkMalesStockBasAlerts(siteId: string): Promise<void> {
+  const seuilDefaut = 2;
+
+  const lotsGeniteurs = await prisma.lotGeniteurs.findMany({
+    where: {
+      siteId,
+      statut: StatutReproducteur.ACTIF,
+      nombreMalesDisponibles: { not: null },
+    },
+    select: {
+      id: true,
+      code: true,
+      nom: true,
+      nombreMalesDisponibles: true,
+      seuilAlerteMales: true,
+    },
+  });
+
+  if (lotsGeniteurs.length === 0) return;
+
+  const membres = await prisma.siteMember.findMany({
+    where: { siteId },
+    select: { userId: true },
+  });
+
+  for (const lot of lotsGeniteurs) {
+    const seuil = lot.seuilAlerteMales ?? seuilDefaut;
+    const nombreMales = lot.nombreMalesDisponibles!;
+
+    if (nombreMales > seuil) continue;
+
+    const lien = `/reproduction/geniteurs/${lot.id}`;
+    const titre = `Stock de males bas : ${lot.nom}`;
+    const message =
+      `Le lot de geniteurs ${lot.nom} (${lot.code}) n'a plus que ` +
+      `${nombreMales} male(s) disponible(s), en dessous du seuil d'alerte de ${seuil}.`;
+
+    for (const membre of membres) {
+      const existeDeja = await notificationActiveExistePourLien(
+        siteId,
+        membre.userId,
+        TypeAlerte.MALES_STOCK_BAS,
+        lien
+      );
+      if (!existeDeja) {
+        await prisma.notification.create({
+          data: {
+            typeAlerte: TypeAlerte.MALES_STOCK_BAS,
+            titre,
+            message,
+            statut: StatutAlerte.ACTIVE,
+            lien,
+            userId: membre.userId,
+            siteId,
+          },
+        });
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// FEMELLE_SUREXPLOITEE
+// ---------------------------------------------------------------------------
+
+/**
+ * Verifie les reproductrices femelles dont la derniere ponte remonte a moins
+ * de 42 jours (6 semaines — temps de repos recommande). Cree une alerte
+ * FEMELLE_SUREXPLOITEE pour chaque membre du site.
+ *
+ * Conditions de declenchement :
+ * - statut = ACTIF
+ * - sexe = FEMELLE
+ * - dernierePonte non nulle ET < maintenant - 42 jours
+ *   (c.-a-d. la femelle a ponte trop recemment et est a risque de surexploitation)
+ *
+ * Deduplication : une seule alerte ACTIVE par femelle par jour.
+ *
+ * @param siteId - ID du site a verifier (R8)
+ */
+export async function checkFemelleSurexploiteeAlerts(siteId: string): Promise<void> {
+  const maintenant = new Date();
+  const seuil42Jours = new Date(maintenant.getTime() - 42 * 24 * 60 * 60 * 1000);
+
+  const femellesSurexploitees = await prisma.reproducteur.findMany({
+    where: {
+      siteId,
+      statut: StatutReproducteur.ACTIF,
+      sexe: SexeReproducteur.FEMELLE,
+      dernierePonte: {
+        not: null,
+        gt: seuil42Jours,
+      },
+    },
+    select: {
+      id: true,
+      code: true,
+      dernierePonte: true,
+    },
+  });
+
+  if (femellesSurexploitees.length === 0) return;
+
+  const membres = await prisma.siteMember.findMany({
+    where: { siteId },
+    select: { userId: true },
+  });
+
+  for (const femelle of femellesSurexploitees) {
+    const lien = `/reproduction/geniteurs/${femelle.id}`;
+    const joursDepuisDernierePonte = Math.floor(
+      (maintenant.getTime() - femelle.dernierePonte!.getTime()) / (24 * 60 * 60 * 1000)
+    );
+    const titre = `Femelle surexploitee : ${femelle.code}`;
+    const message =
+      `La femelle ${femelle.code} a ponte il y a seulement ${joursDepuisDernierePonte} jour(s). ` +
+      `Un repos de 42 jours minimum est recommande pour eviter la surexploitation.`;
+
+    for (const membre of membres) {
+      const existeDeja = await notificationActiveExistePourLien(
+        siteId,
+        membre.userId,
+        TypeAlerte.FEMELLE_SUREXPLOITEE,
+        lien
+      );
+      if (!existeDeja) {
+        await prisma.notification.create({
+          data: {
+            typeAlerte: TypeAlerte.FEMELLE_SUREXPLOITEE,
+            titre,
+            message,
+            statut: StatutAlerte.ACTIVE,
+            lien,
+            userId: membre.userId,
+            siteId,
+          },
+        });
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// CONSANGUINITE_RISQUE
+// ---------------------------------------------------------------------------
+
+/**
+ * Verifie les couples (femelleId, maleId) utilises plus de 3 fois dans les
+ * pontes du site. Cree une alerte CONSANGUINITE_RISQUE pour chaque membre.
+ *
+ * Conditions de declenchement :
+ * - femelleId et maleId tous deux non nuls (pontes individuelles avec male identifie)
+ * - Le meme couple a ete utilise > 3 fois
+ *
+ * Deduplication : une seule alerte ACTIVE par cle de couple par jour.
+ * La cle de couple est encodee dans le champ lien :
+ *   /reproduction/alertes/consanguinite/[femelleId]-[maleId]
+ *
+ * @param siteId - ID du site a verifier (R8)
+ */
+export async function checkConsanguiniteRisqueAlerts(siteId: string): Promise<void> {
+  const pontes = await prisma.ponte.findMany({
+    where: {
+      siteId,
+      femelleId: { not: undefined },
+      maleId: { not: null },
+    },
+    select: {
+      femelleId: true,
+      maleId: true,
+    },
+  });
+
+  if (pontes.length === 0) return;
+
+  // Compter les occurrences de chaque couple
+  const comptesCouple = new Map<string, number>();
+  for (const ponte of pontes) {
+    if (!ponte.femelleId || !ponte.maleId) continue;
+    const cle = `${ponte.femelleId}-${ponte.maleId}`;
+    comptesCouple.set(cle, (comptesCouple.get(cle) ?? 0) + 1);
+  }
+
+  // Filtrer les couples utilises plus de 3 fois
+  const couplesRisque = Array.from(comptesCouple.entries()).filter(
+    ([, count]) => count > 3
+  );
+
+  if (couplesRisque.length === 0) return;
+
+  const membres = await prisma.siteMember.findMany({
+    where: { siteId },
+    select: { userId: true },
+  });
+
+  for (const [cle, count] of couplesRisque) {
+    const lien = `/reproduction/alertes/consanguinite/${cle}`;
+    const [femelleId, maleId] = cle.split("-");
+    const titre = "Risque de consanguinite detecte";
+    const message =
+      `Le couple femelle ${femelleId} / male ${maleId} a ete utilise ${count} fois. ` +
+      `Il est recommande de diversifier les reproducteurs pour eviter la consanguinite.`;
+
+    for (const membre of membres) {
+      const existeDeja = await notificationActiveExistePourLien(
+        siteId,
+        membre.userId,
+        TypeAlerte.CONSANGUINITE_RISQUE,
+        lien
+      );
+      if (!existeDeja) {
+        await prisma.notification.create({
+          data: {
+            typeAlerte: TypeAlerte.CONSANGUINITE_RISQUE,
+            titre,
+            message,
+            statut: StatutAlerte.ACTIVE,
+            lien,
+            userId: membre.userId,
+            siteId,
+          },
+        });
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Fonction principale — verifier toutes les alertes reproduction
 // ---------------------------------------------------------------------------
 
@@ -282,5 +534,8 @@ export async function verifierAlertesReproduction(siteId: string): Promise<void>
   await Promise.allSettled([
     checkIncubationEclosionAlerts(siteId),
     checkLotSurvieAlerts(siteId),
+    checkMalesStockBasAlerts(siteId),
+    checkFemelleSurexploiteeAlerts(siteId),
+    checkConsanguiniteRisqueAlerts(siteId),
   ]);
 }

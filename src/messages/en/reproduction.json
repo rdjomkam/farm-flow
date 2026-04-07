@@ -512,6 +512,31 @@
       "fractionner": "Split",
       "loading": "Splitting...",
       "successMessage": "Batch split successfully."
+    },
+    "sortie": {
+      "title": "Batch exit",
+      "destination": "Destination",
+      "dateTransfert": "Exit date",
+      "venteAlevins": "Fry sale",
+      "venteAlevinsDesc": "Sell the fry to a client",
+      "transfertGrossissement": "Transfer to grow-out",
+      "transfertGrossissementDesc": "Transfer to a grow-out cohort",
+      "transfertAutreSite": "Transfer to another site",
+      "perteTotal": "Total loss",
+      "perteTotalDesc": "Record batch loss or culling",
+      "client": "Client",
+      "clientPlaceholder": "Select a client",
+      "prixUnitaire": "Unit price (FCFA/kg)",
+      "poidsTotalKg": "Total weight (kg)",
+      "vagueDestination": "Destination cohort",
+      "vagueDestinationPlaceholder": "Select a cohort",
+      "creerNouvelleVague": "Create a new cohort",
+      "cause": "Cause of loss",
+      "notes": "Notes",
+      "confirmer": "Confirm exit",
+      "enCours": "Processing...",
+      "succes": "Batch exited successfully",
+      "erreur": "Error during exit"
     }
   }
 }

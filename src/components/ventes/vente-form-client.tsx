@@ -7,7 +7,7 @@ import Link from "next/link";
 import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
 import { formatNumber } from "@/lib/format";
-import { ArrowLeft, ShoppingCart } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Fish } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,21 +33,34 @@ interface VagueOption {
   poissonsDisponibles: number;
 }
 
+interface PrefillData {
+  lotAlevinsId: string;
+  lotCode?: string;
+  quantite?: number;
+  poidsTotalKg?: number;
+  clientId?: string;
+}
+
 interface Props {
   clients: ClientOption[];
   vagues: VagueOption[];
+  prefill?: PrefillData;
 }
 
-export function VenteFormClient({ clients, vagues }: Props) {
+export function VenteFormClient({ clients, vagues, prefill }: Props) {
   const t = useTranslations("ventes");
   const router = useRouter();
   const queryClient = useQueryClient();
   const venteService = useVenteService();
 
-  const [clientId, setClientId] = useState("");
+  const [clientId, setClientId] = useState(prefill?.clientId ?? "");
   const [vagueId, setVagueId] = useState("");
-  const [quantitePoissons, setQuantitePoissons] = useState("");
-  const [poidsTotalKg, setPoidsTotalKg] = useState("");
+  const [quantitePoissons, setQuantitePoissons] = useState(
+    prefill?.quantite !== undefined ? String(prefill.quantite) : ""
+  );
+  const [poidsTotalKg, setPoidsTotalKg] = useState(
+    prefill?.poidsTotalKg !== undefined ? String(prefill.poidsTotalKg) : ""
+  );
   const [prixUnitaireKg, setPrixUnitaireKg] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -93,6 +106,24 @@ export function VenteFormClient({ clients, vagues }: Props) {
         <ArrowLeft className="h-4 w-4" />
         {t("ventes.form.back")}
       </Link>
+
+      {/* Banner: pre-filled from lot alevins */}
+      {prefill?.lotAlevinsId && (
+        <div className="flex items-start gap-3 rounded-lg border border-accent-green-muted bg-accent-green-muted/30 p-3">
+          <Fish className="h-5 w-5 text-accent-green mt-0.5 shrink-0" aria-hidden="true" />
+          <div className="flex flex-col gap-0.5 text-sm">
+            <span className="font-medium text-accent-green">
+              Vente pre-remplie depuis le lot{prefill.lotCode ? ` ${prefill.lotCode}` : ""}
+            </span>
+            <Link
+              href={`/reproduction/lots/${prefill.lotAlevinsId}`}
+              className="text-xs text-muted-foreground underline hover:text-foreground transition-colors"
+            >
+              Voir le lot d&apos;alevins
+            </Link>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         {/* Step 1: Client + Vague */}
