@@ -11,7 +11,7 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, { params }: Params) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_VOIR);
+    const auth = await requirePermission(request, Permission.GENITEURS_VOIR);
     const { id } = await params;
 
     const reproducteur = await getReproducteurById(id, auth.activeSiteId);
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
 export async function PUT(request: NextRequest, { params }: Params) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_MODIFIER);
+    const auth = await requirePermission(request, Permission.GENITEURS_GERER);
     const { id } = await params;
     const body = await request.json();
     const errors: { field: string; message: string }[] = [];
@@ -100,7 +100,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
 export async function DELETE(request: NextRequest, { params }: Params) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_SUPPRIMER);
+    const auth = await requirePermission(request, Permission.GENITEURS_GERER);
     const { id } = await params;
 
     await deleteReproducteur(id, auth.activeSiteId);

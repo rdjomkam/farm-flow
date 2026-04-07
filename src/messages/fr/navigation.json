@@ -88,6 +88,9 @@
     "dashboardFinances": "Dashboard finances",
     "vueAlevins": "Vue alevins",
     "planning": "Planning",
+    "dashboardReproduction": "Tableau de bord",
+    "incubations": "Incubations",
+    "planningReproduction": "Planning",
     "aliments": "Aliments",
     "gestionSites": "Gestion sites",
     "configElevage": "Config élevage",
@@ -120,6 +123,7 @@
     "planningTasks": "Planning & Tâches",
     "analytics": "Analytics",
     "administration": "Administration",
-    "superAdmin": "Super Admin"
+    "superAdmin": "Super Admin",
+    "reproduction": "Reproduction"
   }
 }

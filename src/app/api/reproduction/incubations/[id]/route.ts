@@ -9,7 +9,7 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, { params }: Params) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_VOIR);
+    const auth = await requirePermission(request, Permission.INCUBATIONS_VOIR);
     const { id } = await params;
 
     const incubation = await getIncubationById(id, auth.activeSiteId);
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_MODIFIER);
+    const auth = await requirePermission(request, Permission.INCUBATIONS_GERER);
     const { id } = await params;
     const body = await request.json();
 

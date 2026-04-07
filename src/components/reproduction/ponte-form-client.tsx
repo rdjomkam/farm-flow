@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
   TypeHormone,
@@ -915,11 +915,8 @@ function Step4Confirmation({
 
   return (
     <div className="space-y-5">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">{t("summary.title")}</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
+      <div>
+        <h3 className="text-base font-semibold mb-3">{t("summary.title")}</h3>
           {/* Injection */}
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 mt-1">
             {t("summary.sectionInjection")}
@@ -1093,8 +1090,7 @@ function Step4Confirmation({
               </>
             )}
           </div>
-        </CardContent>
-      </Card>
+      </div>
 
       <div className="flex gap-3">
         <Button

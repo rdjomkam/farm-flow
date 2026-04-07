@@ -10,7 +10,7 @@ const VALID_STATUTS = Object.values(StatutLotAlevins);
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_VOIR);
+    const auth = await requirePermission(request, Permission.LOTS_ALEVINS_VOIR);
     const { searchParams } = new URL(request.url);
 
     // Pagination
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_MODIFIER);
+    const auth = await requirePermission(request, Permission.LOTS_ALEVINS_GERER);
     const body = await request.json();
 
     const errors: { field: string; message: string }[] = [];

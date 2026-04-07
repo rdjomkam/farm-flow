@@ -36,6 +36,12 @@ export const SYSTEM_ROLE_DEFINITIONS = [
       Permission.ALERTES_VOIR,
       Permission.CALIBRAGES_VOIR,
       Permission.REGLES_ACTIVITES_VOIR,
+      // Reproduction — lecture seule (ADR-045)
+      Permission.ALEVINS_VOIR,
+      Permission.GENITEURS_VOIR,
+      Permission.PONTES_VOIR,
+      Permission.LOTS_ALEVINS_VOIR,
+      Permission.INCUBATIONS_VOIR,
     ],
   },
 ] as const;
@@ -101,12 +107,28 @@ export const PERMISSION_GROUPS = {
     Permission.FACTURES_GERER,
     Permission.PAIEMENTS_CREER,
   ],
-  alevins: [
+  reproduction: [
+    // Gate de module
     Permission.ALEVINS_VOIR,
+    // Geniteurs
+    Permission.GENITEURS_VOIR,
+    Permission.GENITEURS_GERER,
+    // Pontes
+    Permission.PONTES_VOIR,
+    Permission.PONTES_GERER,
+    // Lots Alevins
+    Permission.LOTS_ALEVINS_VOIR,
+    Permission.LOTS_ALEVINS_GERER,
+    // Incubations
+    Permission.INCUBATIONS_VOIR,
+    Permission.INCUBATIONS_GERER,
+    // Planning Reproduction
+    Permission.PLANNING_REPRODUCTION_VOIR,
+    // Legacy (soft-deprecated, conservees pour compatibilite)
+    Permission.ALEVINS_GERER,
     Permission.ALEVINS_CREER,
     Permission.ALEVINS_MODIFIER,
     Permission.ALEVINS_SUPPRIMER,
-    Permission.ALEVINS_GERER,
   ],
   planning: [Permission.PLANNING_VOIR, Permission.PLANNING_GERER],
   finances: [Permission.FINANCES_VOIR, Permission.FINANCES_GERER],
@@ -192,6 +214,18 @@ export const ITEM_VIEW_PERMISSIONS: Record<string, Permission> = {
   "/depenses":               Permission.DEPENSES_VOIR,
   "/depenses/recurrentes":   Permission.DEPENSES_VOIR,
   "/besoins":                Permission.BESOINS_SOUMETTRE,
+  // Reproduction — items granulaires (ADR-045)
+  "/reproduction":                   Permission.ALEVINS_VOIR,
+  "/reproduction/geniteurs":         Permission.GENITEURS_VOIR,
+  "/reproduction/pontes":            Permission.PONTES_VOIR,
+  "/reproduction/lots":              Permission.LOTS_ALEVINS_VOIR,
+  "/reproduction/incubations":       Permission.INCUBATIONS_VOIR,
+  "/reproduction/planning":          Permission.PLANNING_REPRODUCTION_VOIR,
+  // Compatibilite aliases /alevins (periode de transition)
+  "/alevins":                        Permission.ALEVINS_VOIR,
+  "/alevins/reproducteurs":          Permission.GENITEURS_VOIR,
+  "/alevins/pontes":                 Permission.PONTES_VOIR,
+  "/alevins/lots":                   Permission.LOTS_ALEVINS_VOIR,
   // Analyse & Pilotage (gate: DASHBOARD_VOIR)
   "/mes-taches":         Permission.DASHBOARD_VOIR,
   "/planning":           Permission.PLANNING_VOIR,

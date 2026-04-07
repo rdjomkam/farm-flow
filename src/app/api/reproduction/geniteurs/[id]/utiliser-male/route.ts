@@ -23,7 +23,7 @@ type Params = { params: Promise<{ id: string }> };
  */
 export async function POST(request: NextRequest, { params }: Params) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_MODIFIER);
+    const auth = await requirePermission(request, Permission.GENITEURS_GERER);
     const { id } = await params;
 
     // Parse body

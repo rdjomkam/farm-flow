@@ -8,7 +8,7 @@ type Params = { params: Promise<{ id: string; traitementId: string }> };
 
 export async function DELETE(request: NextRequest, { params }: Params) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_SUPPRIMER);
+    const auth = await requirePermission(request, Permission.INCUBATIONS_GERER);
     const { traitementId } = await params;
 
     await deleteTraitement(traitementId, auth.activeSiteId);

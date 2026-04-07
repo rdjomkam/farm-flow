@@ -35,6 +35,9 @@ import {
   NotebookPen,
   Banknote,
   FileText,
+  LayoutDashboard,
+  Fish,
+  ThermometerSun,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -170,6 +173,47 @@ const SHEET_GROUPS: SheetNavGroup[] = [
     ],
   },
   {
+    groupKey: "reproduction",
+    gatePermission: Permission.ALEVINS_VOIR,
+    items: [
+      {
+        href: "/reproduction",
+        labelKey: "items.dashboardReproduction",
+        icon: LayoutDashboard,
+        permissionRequired: Permission.ALEVINS_VOIR,
+        moduleRequired: SiteModule.REPRODUCTION,
+      },
+      {
+        href: "/reproduction/geniteurs",
+        labelKey: "items.geniteurs",
+        icon: Fish,
+        permissionRequired: Permission.GENITEURS_VOIR,
+        moduleRequired: SiteModule.REPRODUCTION,
+      },
+      {
+        href: "/reproduction/pontes",
+        labelKey: "items.pontes",
+        icon: Egg,
+        permissionRequired: Permission.PONTES_VOIR,
+        moduleRequired: SiteModule.REPRODUCTION,
+      },
+      {
+        href: "/reproduction/lots",
+        labelKey: "items.lotsAlevins",
+        icon: Layers,
+        permissionRequired: Permission.LOTS_ALEVINS_VOIR,
+        moduleRequired: SiteModule.REPRODUCTION,
+      },
+      {
+        href: "/reproduction/planning",
+        labelKey: "items.planningReproduction",
+        icon: Calendar,
+        permissionRequired: Permission.PLANNING_REPRODUCTION_VOIR,
+        moduleRequired: SiteModule.REPRODUCTION,
+      },
+    ],
+  },
+  {
     groupKey: "analysePilotage",
     gatePermission: Permission.DASHBOARD_VOIR,
     items: [
@@ -190,19 +234,6 @@ const SHEET_GROUPS: SheetNavGroup[] = [
         labelKey: "items.mesTaches",
         icon: ClipboardCheck,
         permissionRequired: Permission.PLANNING_VOIR,
-      },
-    ],
-  },
-  {
-    groupKey: "reproduction",
-    gatePermission: Permission.ALEVINS_VOIR,
-    items: [
-      {
-        href: "/alevins",
-        labelKey: "items.alevins",
-        icon: Egg,
-        permissionRequired: Permission.ALEVINS_VOIR,
-        moduleRequired: SiteModule.REPRODUCTION,
       },
     ],
   },

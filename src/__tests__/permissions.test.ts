@@ -2,7 +2,7 @@
  * Tests unitaires — Permissions (CR-009 Dynamic Roles)
  *
  * Couvre :
- * - SYSTEM_ROLE_DEFINITIONS : 3 definitions, Administrateur=34, Gerant=32, Pisciculteur=6
+ * - SYSTEM_ROLE_DEFINITIONS : 3 definitions, Administrateur=34, Gerant=32, Pisciculteur=13
  * - canAssignRole() : anti-escalation par sur-ensemble
  * - PERMISSION_GROUPS : 9 groupes, 34 permissions, pas de doublons
  * - ForbiddenError : status 403, name, message, instanceof Error
@@ -184,11 +184,11 @@ describe("SYSTEM_ROLE_DEFINITIONS", () => {
   describe("Pisciculteur", () => {
     const piscDef = SYSTEM_ROLE_DEFINITIONS.find((r) => r.name === "Pisciculteur")!;
 
-    it("a exactement 8 permissions", () => {
-      expect(piscDef.permissions).toHaveLength(8);
+    it("a exactement 13 permissions (8 de base + 5 reproduction lecture ADR-045)", () => {
+      expect(piscDef.permissions).toHaveLength(13);
     });
 
-    it("a les 8 permissions attendues", () => {
+    it("a les 8 permissions de base attendues", () => {
       expect(piscDef.permissions).toContain(Permission.VAGUES_VOIR);
       expect(piscDef.permissions).toContain(Permission.RELEVES_VOIR);
       expect(piscDef.permissions).toContain(Permission.RELEVES_CREER);
@@ -197,6 +197,14 @@ describe("SYSTEM_ROLE_DEFINITIONS", () => {
       expect(piscDef.permissions).toContain(Permission.ALERTES_VOIR);
       expect(piscDef.permissions).toContain(Permission.CALIBRAGES_VOIR);
       expect(piscDef.permissions).toContain(Permission.REGLES_ACTIVITES_VOIR);
+    });
+
+    it("a les 5 permissions de reproduction en lecture seule (ADR-045)", () => {
+      expect(piscDef.permissions).toContain(Permission.ALEVINS_VOIR);
+      expect(piscDef.permissions).toContain(Permission.GENITEURS_VOIR);
+      expect(piscDef.permissions).toContain(Permission.PONTES_VOIR);
+      expect(piscDef.permissions).toContain(Permission.LOTS_ALEVINS_VOIR);
+      expect(piscDef.permissions).toContain(Permission.INCUBATIONS_VOIR);
     });
 
     it("n'a pas VAGUES_CREER ni SITE_GERER ni MEMBRES_GERER", () => {
@@ -276,7 +284,7 @@ describe("PERMISSION_GROUPS", () => {
     expect(groupNames).toContain("stock");
     expect(groupNames).toContain("clients");
     expect(groupNames).toContain("ventes");
-    expect(groupNames).toContain("alevins");
+    expect(groupNames).toContain("reproduction");
     expect(groupNames).toContain("planning");
     expect(groupNames).toContain("finances");
     expect(groupNames).toContain("alertes");

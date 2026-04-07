@@ -234,9 +234,9 @@ describe("farm-sidebar.tsx — Fish réservé à Reproducteurs, SilureLogo pour 
     expect(sidebarSrc).toContain("Fish,");
   });
 
-  it("Fish est utilisé pour le nav item reproducteurs", () => {
+  it("Fish est utilisé pour le nav item geniteurs (ADR-045 — renommé de reproducteurs à geniteurs)", () => {
     expect(sidebarSrc).toContain('icon: Fish');
-    expect(sidebarSrc).toContain("reproducteurs");
+    expect(sidebarSrc).toContain("geniteurs");
   });
 
   it("SilureLogo est importé depuis ui/silure-logo", () => {

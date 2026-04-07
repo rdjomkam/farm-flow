@@ -38,7 +38,7 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, { params }: Params) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_VOIR);
+    const auth = await requirePermission(request, Permission.GENITEURS_VOIR);
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const mode = searchParams.get("mode") ?? "GROUPE";
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_MODIFIER);
+    const auth = await requirePermission(request, Permission.GENITEURS_GERER);
     const { id } = await params;
     const body = await request.json();
     const errors: { field: string; message: string }[] = [];
@@ -248,7 +248,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
 export async function DELETE(request: NextRequest, { params }: Params) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_SUPPRIMER);
+    const auth = await requirePermission(request, Permission.GENITEURS_GERER);
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const mode = searchParams.get("mode") ?? "GROUPE";

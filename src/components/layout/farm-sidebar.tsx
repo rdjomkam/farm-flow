@@ -26,6 +26,7 @@ import {
   Fish,
   Layers,
   Calendar,
+  ThermometerSun,
   ClipboardCheck,
   CreditCard,
   Building2,
@@ -114,12 +115,14 @@ export function FarmSidebar({
       moduleRequired: SiteModule.VENTES,
     },
     {
-      labelKey: "items.alevins",
+      labelKey: "groups.reproduction",
       items: [
-        { href: "/alevins", labelKey: "items.vueAlevins", icon: Egg },
-        { href: "/alevins/reproducteurs", labelKey: "items.reproducteurs", icon: Fish },
-        { href: "/alevins/pontes", labelKey: "items.pontes", icon: Egg },
-        { href: "/alevins/lots", labelKey: "items.lots", icon: Layers },
+        { href: "/reproduction", labelKey: "items.dashboardReproduction", icon: LayoutDashboard },
+        { href: "/reproduction/geniteurs", labelKey: "items.geniteurs", icon: Fish },
+        { href: "/reproduction/pontes", labelKey: "items.pontes", icon: Egg },
+        { href: "/reproduction/lots", labelKey: "items.lots", icon: Layers },
+        { href: "/reproduction/incubations", labelKey: "items.incubations", icon: ThermometerSun },
+        { href: "/reproduction/planning", labelKey: "items.planningReproduction", icon: Calendar },
       ],
       permissionRequired: Permission.ALEVINS_VOIR,
       moduleRequired: SiteModule.REPRODUCTION,
@@ -189,7 +192,7 @@ export function FarmSidebar({
     if (href === "/") return pathname === "/";
     if (
       href === "/stock" ||
-      href === "/alevins" ||
+      href === "/reproduction" ||
       href === "/analytics" ||
       href === "/planning" ||
       href === "/finances" ||

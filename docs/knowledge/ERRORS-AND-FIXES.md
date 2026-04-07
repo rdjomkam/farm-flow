@@ -8,6 +8,29 @@
 
 ## Catégorie : Schema
 
+### ERR-083 — ADD VALUE seul (sans UPDATE) est valide hors transaction : ERR-001 ne couvre pas ce cas
+**Sprint :** ADR-045 | **Date :** 2026-04-07
+**Sévérité :** Moyenne
+**Fichier(s) :** `docs/knowledge/ERRORS-AND-FIXES.md` (ERR-001), `prisma/schema.prisma`
+
+**Symptôme :**
+ERR-001 dit "JAMAIS `ADD VALUE` + `UPDATE` dans la même migration. Toujours RECREATE." La MEMORY.md dit "Use RECREATE approach only". Un agent lisant ces règles pourrait choisir l'approche RECREATE même pour une migration qui n'ajoute que des valeurs nouvelles (sans retrait ni UPDATE), ce qui est inutilement complexe et risqué sur un enum avec 55+ valeurs existantes.
+
+**Cause racine :**
+ERR-001 a été formulé pour interdire le pattern `ADD VALUE` + `UPDATE` dans la même transaction (ce qui échoue sur la shadow DB). La règle a été généralisée en "RECREATE toujours" sans documenter l'exception : l'ajout pur de valeurs sans UPDATE associé est valide avec `ADD VALUE IF NOT EXISTS` hors transaction.
+
+**Fix :**
+Pour une migration qui n'ajoute que des valeurs (aucune valeur retirée, aucun `UPDATE` dans la même migration) : utiliser `ADD VALUE IF NOT EXISTS` dans un fichier SQL manuel avec le flag `-- DISABLE_DDL_TRANSACTION` ou via le workflow `migrate deploy` (voir ERR-002). L'approche RECREATE reste obligatoire dès qu'une valeur est retirée ou renommée.
+
+Règle précisée :
+- Ajout pur → `ADD VALUE IF NOT EXISTS` hors transaction (OK)
+- Retrait / renommage / ADD + UPDATE → RECREATE (obligatoire)
+
+**Leçon / Règle :**
+ERR-001 s'applique uniquement quand `ADD VALUE` et `UPDATE` coexistent dans la même transaction. Pour un ajout pur de valeurs enum, utiliser `ADD VALUE IF NOT EXISTS` hors transaction est la bonne approche — ne pas déclencher RECREATE par réflexe sur un enum large.
+
+---
+
 ### ERR-049 — Suppression de valeur d'enum : CAST échoue si des lignes portent encore l'ancienne valeur
 **Sprint :** ADR-032 | **Date :** 2026-04-05
 **Sévérité :** Critique
@@ -131,6 +154,107 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 ---
 
 ## Catégorie : Code
+
+### ERR-088 — Migration de permissions : fichiers de labels UI absents du scope ADR
+**Sprint :** ADR-045 | **Date :** 2026-04-07
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/role-form-labels.ts`
+
+**Symptôme :**
+L'ADR-045 liste les fichiers à modifier pour la migration des permissions. `src/lib/role-form-labels.ts` n'y figure pas. Après implémentation, les 9 nouvelles permissions (`GENITEURS_VOIR`, `GENITEURS_GERER`, `PONTES_VOIR`, etc.) n'ont pas de labels lisibles dans le formulaire de gestion des rôles — les clés brutes d'enum s'affichent à la place.
+
+**Cause racine :**
+Lors de la rédaction de l'ADR, le fichier `role-form-labels.ts` n'a pas été identifié dans la recherche de dépendances. Ce fichier contient des libellés UI pour chaque valeur de l'enum `Permission` et doit être mis à jour chaque fois que des permissions sont ajoutées.
+
+**Fix :**
+Ajouter les labels UI pour chaque nouvelle valeur de permission dans `src/lib/role-form-labels.ts` (section correspondante au groupe concerné). La pré-analyse ADR-045 a détecté ce fichier et l'a ajouté au scope d'implémentation.
+
+**Leçon / Règle :**
+Lors de toute migration ou extension de l'enum `Permission`, toujours inclure `src/lib/role-form-labels.ts` dans le scope. Plus généralement : quand on ajoute des valeurs à un enum métier, grep systématiquement `role-form-labels`, `permissions-constants`, et tout fichier `*-labels*` ou `*-constants*` pour détecter les fichiers de mapping qui nécessitent une mise à jour manuelle.
+
+---
+
+### ERR-087 — src/types/models.ts : enum TypeScript manuel, non auto-généré depuis Prisma
+**Sprint :** ADR-045 | **Date :** 2026-04-07
+**Sévérité :** Haute
+**Fichier(s) :** `src/types/models.ts`
+
+**Symptôme :**
+Un ADR indique "aucune modification manuelle de `src/types/models.ts` nécessaire si le type est re-exporté depuis le client Prisma généré". En réalité, les types dans ce fichier sont des enums TypeScript maintenus à la main — ils ne sont pas auto-générés. Résultat : après une migration Prisma, les nouvelles valeurs d'enum sont dans le client Prisma mais absentes de `src/types/models.ts`. Les composants qui importent depuis `@/types` voient des types incomplets, causant des erreurs TypeScript silencieuses ou des `as any` compensatoires.
+
+**Cause racine :**
+Ce projet maintient ses types dans `src/types/models.ts` manuellement, en parallèle du client Prisma généré. Cette décision d'architecture (Phase 1) n'était pas documentée dans les ADR ultérieures, causant des hypothèses fausses sur le comportement d'auto-synchronisation.
+
+**Fix :**
+Après chaque migration Prisma qui ajoute ou modifie un enum, mettre à jour manuellement les enums correspondants dans `src/types/models.ts`. Il n'y a pas d'auto-synchronisation dans ce projet.
+
+**Leçon / Règle :**
+`src/types/models.ts` dans ce projet est la source de vérité TypeScript, maintenu manuellement. Toute migration de schéma Prisma qui touche un enum DOIT aussi mettre à jour `src/types/models.ts`. Ne jamais présumer d'une auto-synchronisation — vérifier systématiquement les deux fichiers.
+
+---
+
+### ERR-086 — Route migration : code mort `isActive` laissé derrière après changement de chemin
+**Sprint :** ADR-045 | **Date :** 2026-04-07
+**Sévérité :** Basse
+**Fichier(s) :** `src/components/layout/farm-sidebar.tsx`, `src/components/layout/farm-bottom-nav.tsx`
+
+**Symptôme :**
+Après la migration des routes `/alevins/*` vers `/reproduction/*`, la logique `isActive` dans la sidebar contenait encore `href === "/alevins"` comme condition de détection de route active. Ce code mort n'a aucun effet fonctionnel (la route `/alevins` redirige vers `/reproduction`) mais pollue le code et peut induire en erreur lors d'une prochaine modification.
+
+**Cause racine :**
+La migration de routes a mis à jour les `href` dans les items de navigation, mais n'a pas nettoyé les vérifications d'état actif (`isActive`) qui référencent les anciens chemins. La logique `isActive` est souvent dans une zone séparée du fichier, facilement oubliée lors d'un remplacement ciblé.
+
+**Fix :**
+Lors d'un remplacement de route, rechercher toutes les occurrences de l'ancien chemin dans le fichier (pas seulement dans les propriétés `href`) : `isActive`, `includes()`, `startsWith()`, commentaires, tests.
+
+**Leçon / Règle :**
+Quand une route est renommée ou déplacée, grep l'ancien chemin dans TOUS les composants de navigation (sidebar, bottom-nav, breadcrumb) et corriger chaque occurrence : `href`, `isActive`, `includes`, `startsWith`, constantes de chemin, et commentaires. Un remplacement partiel laisse du code mort difficile à détecter.
+
+---
+
+### ERR-085 — Commentaires JSDoc non mis à jour lors d'une migration de permissions
+**Sprint :** ADR-045 | **Date :** 2026-04-07
+**Sévérité :** Basse
+**Fichier(s) :** `src/app/api/reproduction/pontes/[id]/resultat/route.ts`, `src/app/api/reproduction/pontes/[id]/stripping/route.ts`, `src/app/api/reproduction/pontes/[id]/echec/route.ts`
+
+**Symptôme :**
+Après la migration de `ALEVINS_MODIFIER` → `PONTES_GERER` dans le code runtime des routes, les commentaires JSDoc au-dessus des fonctions mentionnaient encore l'ancienne permission (`@requires ALEVINS_MODIFIER`). La permission effective est correcte à l'exécution, mais la documentation interne est trompeuse.
+
+**Cause racine :**
+Le remplacement de permissions a ciblé les appels `requirePermission()` dans le corps des fonctions, sans passer en revue les commentaires JSDoc environnants. Les outils de remplacement (find/replace, grep) ne cherchent généralement pas dans les blocs de commentaires lors d'une migration de code.
+
+**Fix :**
+Mettre à jour les commentaires JSDoc dans les 3 routes pontes pour référencer `PONTES_GERER` à la place de `ALEVINS_MODIFIER`.
+
+**Leçon / Règle :**
+Lors d'une migration de permissions, le grep de remplacement doit cibler AUSSI les commentaires — pas uniquement le code runtime. Après tout remplacement de `requirePermission()`, relire les blocs JSDoc ou commentaires environnants dans chaque fichier modifié. La checklist de review doit inclure : "les commentaires JSDoc reflètent-ils les permissions actuelles ?"
+
+---
+
+### ERR-084 — Sous-estimation du scope API dans un ADR : grep exhaustif obligatoire avant de chiffrer
+**Sprint :** ADR-045 | **Date :** 2026-04-07
+**Sévérité :** Haute
+**Fichier(s) :** `src/app/api/reproduction/**`, `src/app/api/reproducteurs/**`, `src/app/api/pontes/**`, `src/app/api/lots-alevins/**`
+
+**Symptôme :**
+ADR-045 liste 3 fichiers API à modifier pour la migration des permissions reproduction. La pré-analyse révèle 22 fichiers avec 53 call sites `ALEVINS_*`. Les routes sous `/api/reproduction/` (créées dans les sprints R1–R5 postérieurement à la rédaction de l'ADR) n'ont pas été prises en compte. Un agent qui implémente sans re-grepper ne corrige que 3 fichiers sur 22, laissant 19 fichiers avec les anciennes permissions.
+
+**Cause racine :**
+L'ADR a été rédigé en listant les fichiers de mémoire (ou depuis un état antérieur du code). Les sprints R1–R5 ont ajouté de nombreuses routes sous `/api/reproduction/` qui utilisent toutes `ALEVINS_*` par défaut. Le scope ADR n'a pas été mis à jour après ces ajouts.
+
+**Fix :**
+Avant toute implémentation impliquant des permissions : lancer un grep exhaustif sur toutes les valeurs à remplacer, noter le nombre exact de fichiers et de call sites, et comparer au scope de l'ADR. Si un écart existe, l'agent implémenteur doit étendre le scope et en informer le PM.
+
+```bash
+# Exemple de grep de vérification avant implémentation
+grep -r "ALEVINS_" src/app/api/ --include="*.ts" -l
+grep -r "ALEVINS_" src/app/api/ --include="*.ts" -c | grep -v ":0"
+```
+
+**Leçon / Règle :**
+Ne jamais implémenter une migration de permissions en se basant uniquement sur la liste de fichiers de l'ADR. Toujours lancer un grep exhaustif (code runtime + commentaires + tests + constantes + labels + seed) avant de commencer. L'ADR peut être obsolète si des fichiers ont été ajoutés après sa rédaction. Voir aussi ERR-088 pour les fichiers de labels oubliés.
+
+---
 
 ### ERR-082 — console.log debug dans layout.tsx déclenché à chaque requête en production
 **Sprint :** 54 | **Date :** 2026-04-07

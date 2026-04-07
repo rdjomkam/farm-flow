@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_VOIR);
+    const auth = await requirePermission(request, Permission.LOTS_ALEVINS_VOIR);
     const { id } = await params;
 
     const lot = await getLotById(id, auth.activeSiteId);
@@ -33,7 +33,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_MODIFIER);
+    const auth = await requirePermission(request, Permission.LOTS_ALEVINS_GERER);
     const { id } = await params;
     const body = await request.json();
 
@@ -118,7 +118,7 @@ export async function DELETE(
   try {
     const auth = await requirePermission(
       request,
-      Permission.ALEVINS_SUPPRIMER
+      Permission.LOTS_ALEVINS_GERER
     );
     const { id } = await params;
 

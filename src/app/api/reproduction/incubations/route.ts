@@ -9,7 +9,7 @@ const VALID_STATUTS = Object.values(StatutIncubation);
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_VOIR);
+    const auth = await requirePermission(request, Permission.INCUBATIONS_VOIR);
     const { searchParams } = new URL(request.url);
 
     // Pagination
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_MODIFIER);
+    const auth = await requirePermission(request, Permission.INCUBATIONS_GERER);
     const body = await request.json();
 
     const errors: { field: string; message: string }[] = [];

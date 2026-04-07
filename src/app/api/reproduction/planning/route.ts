@@ -8,7 +8,7 @@
  *   dateDebut : string (ISO date, REQUIS) — debut de la periode
  *   dateFin   : string (ISO date, REQUIS) — fin de la periode
  *
- * Requiert la permission ALEVINS_VOIR.
+ * Requiert la permission PLANNING_REPRODUCTION_VOIR.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -23,7 +23,7 @@ import { apiError, handleApiError } from "@/lib/api-utils";
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_VOIR);
+    const auth = await requirePermission(request, Permission.PLANNING_REPRODUCTION_VOIR);
     const { searchParams } = new URL(request.url);
 
     // dateDebut — requis

@@ -10,7 +10,7 @@ import type { CreateReproducteurDTO } from "@/lib/queries/reproducteurs";
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_VOIR);
+    const auth = await requirePermission(request, Permission.GENITEURS_VOIR);
     const { searchParams } = new URL(request.url);
 
     const sexeParam = searchParams.get("sexe");
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_CREER);
+    const auth = await requirePermission(request, Permission.GENITEURS_GERER);
     const body = await request.json();
     const errors: { field: string; message: string }[] = [];
 

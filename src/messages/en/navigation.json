@@ -88,6 +88,9 @@
     "dashboardFinances": "Finance dashboard",
     "vueAlevins": "Fingerlings overview",
     "planning": "Planning",
+    "dashboardReproduction": "Dashboard",
+    "incubations": "Incubations",
+    "planningReproduction": "Planning",
     "aliments": "Feed",
     "gestionSites": "Site management",
     "configElevage": "Farming config",
@@ -120,6 +123,7 @@
     "planningTasks": "Planning & Tasks",
     "analytics": "Analytics",
     "administration": "Administration",
-    "superAdmin": "Super Admin"
+    "superAdmin": "Super Admin",
+    "reproduction": "Reproduction"
   }
 }

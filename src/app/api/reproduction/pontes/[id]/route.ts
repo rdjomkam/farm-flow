@@ -8,7 +8,7 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, { params }: Params) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_VOIR);
+    const auth = await requirePermission(request, Permission.PONTES_VOIR);
     const { id } = await params;
 
     const ponte = await getPonteById(id, auth.activeSiteId);
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
 export async function DELETE(request: NextRequest, { params }: Params) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_SUPPRIMER);
+    const auth = await requirePermission(request, Permission.PONTES_GERER);
     const { id } = await params;
 
     await deletePonte(id, auth.activeSiteId);

@@ -293,7 +293,7 @@ describe("GET /api/reproduction/planning", () => {
     expect(response.status).toBe(403);
   });
 
-  it("appelle requirePermission avec la permission ALEVINS_VOIR", async () => {
+  it("appelle requirePermission avec la permission PLANNING_REPRODUCTION_VOIR (ADR-045)", async () => {
     const request = makeRequest({
       dateDebut: "2026-03-01",
       dateFin: "2026-03-31",
@@ -302,7 +302,7 @@ describe("GET /api/reproduction/planning", () => {
 
     expect(mockRequirePermission).toHaveBeenCalledWith(
       expect.anything(),
-      Permission.ALEVINS_VOIR
+      Permission.PLANNING_REPRODUCTION_VOIR
     );
   });
 

@@ -163,12 +163,26 @@ enum Permission {
   FACTURES_GERER
   // Paiements (1)
   PAIEMENTS_CREER
-  // Alevins (6)
+  // Alevins (6) — gate de module Reproduction + legacy soft-deprecated
   ALEVINS_VOIR
   ALEVINS_GERER
   ALEVINS_CREER
   ALEVINS_MODIFIER
   ALEVINS_SUPPRIMER
+  // Reproduction — Géniteurs (2)
+  GENITEURS_VOIR
+  GENITEURS_GERER
+  // Reproduction — Pontes (2)
+  PONTES_VOIR
+  PONTES_GERER
+  // Reproduction — Lots Alevins (2)
+  LOTS_ALEVINS_VOIR
+  LOTS_ALEVINS_GERER
+  // Reproduction — Incubations (2)
+  INCUBATIONS_VOIR
+  INCUBATIONS_GERER
+  // Reproduction — Planning dédié (1)
+  PLANNING_REPRODUCTION_VOIR
   // Planning (2)
   PLANNING_VOIR
   PLANNING_GERER

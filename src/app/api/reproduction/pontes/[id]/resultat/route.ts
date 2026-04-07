@@ -13,11 +13,11 @@ type Params = { params: Promise<{ id: string }> };
  * Fait passer le statut a TERMINEE.
  *
  * Body : ResultatPonteDTO
- * Permission : ALEVINS_MODIFIER
+ * Permission : PONTES_GERER
  */
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_MODIFIER);
+    const auth = await requirePermission(request, Permission.PONTES_GERER);
     const { id } = await params;
 
     let body: Record<string, unknown>;

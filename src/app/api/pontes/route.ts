@@ -7,7 +7,7 @@ import { apiError, handleApiError } from "@/lib/api-utils";
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_VOIR);
+    const auth = await requirePermission(request, Permission.PONTES_VOIR);
     const { searchParams } = new URL(request.url);
 
     const statutParam = searchParams.get("statut");
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requirePermission(request, Permission.ALEVINS_CREER);
+    const auth = await requirePermission(request, Permission.PONTES_GERER);
     const body = await request.json();
     const errors: { field: string; message: string }[] = [];
 
