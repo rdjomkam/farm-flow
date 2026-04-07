@@ -111,7 +111,7 @@ export function BackofficeSiteModulesEditor({
         className="w-full sm:w-auto"
       >
         <Save className="h-4 w-4" />
-        {loading ? t("buttons.saving") : "Appliquer les modules"}
+        {loading ? t("buttons.saving") : t("buttons.applyModules")}
       </Button>
     </div>
   );

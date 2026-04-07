@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { AnalyticsDashboardClient } from "@/components/analytics/analytics-dashboard-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -12,14 +13,17 @@ export default async function AnalyticsPage() {
   if (!session.activeSiteId) redirect("/settings/sites");
 
   try {
-    const permissions = await checkPagePermission(session, Permission.DASHBOARD_VOIR);
+    const [t, permissions] = await Promise.all([
+      getTranslations("analytics"),
+      checkPagePermission(session, Permission.DASHBOARD_VOIR),
+    ]);
     if (!permissions) return <AccessDenied />;
 
     const dashboard = await getAnalyticsDashboard(session.activeSiteId);
 
     return (
       <>
-        <Header title="Analytiques" />
+        <Header title={t("page.title")} />
         <AnalyticsDashboardClient dashboard={dashboard} />
       </>
     );

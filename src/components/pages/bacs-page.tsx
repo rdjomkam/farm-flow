@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { BacsListClient } from "@/components/bacs/bacs-list-client";
 import { AccessDenied } from "@/components/ui/access-denied";
@@ -13,7 +14,8 @@ export default async function BacsPage() {
   if (!session.activeSiteId) redirect("/settings/sites");
 
   try {
-    const [permissions, bacsResult] = await Promise.all([
+    const [t, permissions, bacsResult] = await Promise.all([
+      getTranslations("bacs"),
       checkPagePermission(session, Permission.BACS_GERER),
       getBacs(session.activeSiteId),
     ]);
@@ -21,7 +23,7 @@ export default async function BacsPage() {
 
     return (
       <>
-        <Header title="Bacs" />
+        <Header title={t("page.title")} />
         <div className="px-4 pt-4">
           <QuotasUsageBar siteId={session.activeSiteId} precomputedBacsCount={bacsResult.total} />
         </div>

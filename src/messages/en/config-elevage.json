@@ -130,6 +130,7 @@
   },
   "page": {
     "description": "Manage the farming configuration profiles for your site. Each profile defines benchmarks, alert thresholds and feeding parameters.",
-    "newProfile": "New profile"
+    "newProfile": "New profile",
+    "editTitle": "Edit: {nom}"
   }
 }

@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { TypeSystemeBac } from "@/types";
 import { getStatutDensite, type StatutDensite } from "@/lib/density-thresholds";
 
@@ -45,13 +46,14 @@ const STATUT_STYLES: Record<StatutDensite, { bg: string; text: string; label: st
  *
  * Mobile-first — badge compact adapte aux cartes de bac.
  */
-export function BacDensiteBadge({
+export async function BacDensiteBadge({
   densiteKgM3,
   typeSysteme,
   seuilAlerte,
   seuilCritique,
   size = "sm",
 }: BacDensiteBadgeProps) {
+  const t = await getTranslations("bacs.densite");
   // Construire une config partielle si des seuils explicites sont passes
   const configOverride =
     seuilAlerte != null || seuilCritique != null
@@ -76,7 +78,7 @@ export function BacDensiteBadge({
       title={
         densiteKgM3 != null
           ? `Densite : ${densiteKgM3.toFixed(1)} kg/m³`
-          : "Densite non calculable"
+          : t("nonCalculable")
       }
     >
       {densiteKgM3 != null ? (

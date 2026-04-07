@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition, useState, useEffect } from "react";
 import { SlidersHorizontal } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { TypeReleve, StatutVague } from "@/types";
 import {
   Select,
@@ -36,16 +37,6 @@ function isValidTypeReleve(value: string): value is TypeReleve {
   return Object.values(TypeReleve).includes(value as TypeReleve);
 }
 
-const typeLabels: Record<TypeReleve, string> = {
-  [TypeReleve.BIOMETRIE]: "Biométrie",
-  [TypeReleve.MORTALITE]: "Mortalité",
-  [TypeReleve.ALIMENTATION]: "Alimentation",
-  [TypeReleve.QUALITE_EAU]: "Qualité eau",
-  [TypeReleve.COMPTAGE]: "Comptage",
-  [TypeReleve.OBSERVATION]: "Observation",
-  [TypeReleve.RENOUVELLEMENT]: "Renouvellement eau",
-};
-
 interface Props {
   current: ReleveSearchParams;
   vagues: VagueOption[];
@@ -54,6 +45,7 @@ interface Props {
 export function ReleveFilterBar({ current, vagues }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations("releves");
   const [isPending, startTransition] = useTransition();
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -217,7 +209,7 @@ export function ReleveFilterBar({ current, vagues }: Props) {
               className="inline-flex items-center gap-2 h-10 px-4 rounded-md border border-border bg-background text-sm font-medium hover:bg-accent transition-colors"
             >
               <SlidersHorizontal className="h-4 w-4" />
-              Filtres
+              {t("global.filtres.bouton")}
               {activeCount > 0 && (
                 <span
                   className="inline-flex items-center justify-center rounded-full w-5 h-5 text-xs font-bold text-primary-foreground"
@@ -251,7 +243,7 @@ export function ReleveFilterBar({ current, vagues }: Props) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL_VALUE}>Toutes les vagues</SelectItem>
+            <SelectItem value={ALL_VALUE}>{t("global.filtres.toutesVagues")}</SelectItem>
             {vagues.map((v) => (
               <SelectItem key={v.id} value={v.id}>
                 {v.code}
@@ -267,10 +259,10 @@ export function ReleveFilterBar({ current, vagues }: Props) {
           disabled={!localVagueId || bacsLoading}
         >
           <SelectTrigger className="w-36" label="Bac">
-            <SelectValue placeholder={bacsLoading ? "..." : "Tous les bacs"} />
+            <SelectValue placeholder={bacsLoading ? "..." : t("global.filtres.tousBacs")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL_VALUE}>Tous les bacs</SelectItem>
+            <SelectItem value={ALL_VALUE}>{t("global.filtres.tousBacs")}</SelectItem>
             {bacs.map((b) => (
               <SelectItem key={b.id} value={b.id}>
                 {b.nom}
@@ -288,10 +280,10 @@ export function ReleveFilterBar({ current, vagues }: Props) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL_VALUE}>Tous les types</SelectItem>
+            <SelectItem value={ALL_VALUE}>{t("global.filtres.tousTyes")}</SelectItem>
             {Object.values(TypeReleve).map((type) => (
               <SelectItem key={type} value={type}>
-                {typeLabels[type]}
+                {t(`types.${type}`)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -299,7 +291,7 @@ export function ReleveFilterBar({ current, vagues }: Props) {
 
         {/* Du */}
         <div className="flex items-center gap-1">
-          <span className="text-sm text-muted-foreground">Du</span>
+          <span className="text-sm text-muted-foreground">{t("global.filtres.du")}</span>
           <input
             type="date"
             value={localDateFrom}
@@ -310,7 +302,7 @@ export function ReleveFilterBar({ current, vagues }: Props) {
 
         {/* Au */}
         <div className="flex items-center gap-1">
-          <span className="text-sm text-muted-foreground">Au</span>
+          <span className="text-sm text-muted-foreground">{t("global.filtres.au")}</span>
           <input
             type="date"
             value={localDateTo}
@@ -327,7 +319,7 @@ export function ReleveFilterBar({ current, vagues }: Props) {
             onChange={(e) => handleModifieChange(e.target.checked)}
             className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
           />
-          <span className="text-sm text-muted-foreground">Modifiés</span>
+          <span className="text-sm text-muted-foreground">{t("list.modified")}</span>
         </label>
 
         {/* Reset */}
@@ -337,7 +329,7 @@ export function ReleveFilterBar({ current, vagues }: Props) {
             onClick={resetAllFilters}
             className="text-sm text-muted-foreground hover:text-foreground underline ml-auto"
           >
-            Effacer
+            {t("global.filtres.effacer")}
           </button>
         )}
       </div>

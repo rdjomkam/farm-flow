@@ -98,7 +98,12 @@
     "beforeStockout": "before stockout",
     "stockUnknown": "Stock unknown",
     "criticalStock": "Critical stock — order quickly",
-    "lowStock": "Low stock — plan an order"
+    "lowStock": "Low stock — plan an order",
+    "granuleSize": "Pellet size",
+    "frequence": "Frequency",
+    "avgWeightFull": "Average weight",
+    "poissons": "Fish",
+    "completerReleve": "Complete with a record ({label})"
   },
   "placeholders": {
     "retourRegles": "Back to rules",
@@ -135,6 +140,10 @@
       "formatNombre": "Number",
       "formatTexte": "Text",
       "decimalesLabel": "Decimals",
+      "clePlaceholder": "e.g.: mortality_pct",
+      "libellePlaceholder": "e.g.: Cumulative mortality rate (%)",
+      "exemplePlaceholder": "e.g.: 12.5",
+      "formulePlaceholder": "e.g.: avg_weight * 1.2",
       "annuler": "Cancel",
       "creer": "Create",
       "enregistrer": "Save"

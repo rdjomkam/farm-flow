@@ -3,7 +3,8 @@
     "updateError": "Erreur lors de la mise à jour des modules."
   },
   "buttons": {
-    "saving": "Enregistrement..."
+    "saving": "Enregistrement...",
+    "applyModules": "Appliquer les modules"
   },
   "header": {
     "title": "DKFarm Backoffice",
@@ -109,6 +110,7 @@
     }
   },
   "sites": {
+    "searchPlaceholder": "Rechercher par nom...",
     "aucunPlan": "Aucun plan",
     "aucunSiteTrouve": "Aucun site trouve",
     "creeLe": "Cree le",
@@ -151,7 +153,9 @@
         "phone": "Telephone",
         "role": "Role"
       },
-      "siteModules": "Modules du site"
+      "siteModules": "Modules du site",
+      "suspendedAt": "Suspendu le",
+      "suspendedReason": "Raison suspension"
     }
   },
   "exonerationPage": {

@@ -30,16 +30,6 @@ import { useApi } from "@/hooks/use-api";
 import { RELEVE_COMPATIBLE_TYPES, ACTIVITE_RELEVE_TYPE_MAP } from "@/types/api";
 import type { ActiviteWithRelations } from "@/types";
 
-const typeReleveLabels: Record<TypeReleve, string> = {
-  [TypeReleve.BIOMETRIE]: "Biometrie",
-  [TypeReleve.MORTALITE]: "Mortalite",
-  [TypeReleve.ALIMENTATION]: "Alimentation",
-  [TypeReleve.QUALITE_EAU]: "Qualite eau",
-  [TypeReleve.COMPTAGE]: "Comptage",
-  [TypeReleve.OBSERVATION]: "Observation",
-  [TypeReleve.RENOUVELLEMENT]: "Renouvellement",
-};
-
 interface CompleterActiviteDialogProps {
   activite: ActiviteWithRelations;
   onCompleted?: () => void;
@@ -53,6 +43,7 @@ interface UnlinkedReleve {
 
 export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActiviteDialogProps) {
   const t = useTranslations("planning");
+  const tReleves = useTranslations("releves");
   const queryClient = useQueryClient();
   const activiteService = useActiviteService();
   const { call } = useApi();
@@ -148,7 +139,7 @@ export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActi
                     <p className="text-sm font-medium">{t("completerActivite.creerReleve")}</p>
                     <p className="text-xs text-muted-foreground">
                       {t("completerActivite.saisirReleve", {
-                        type: mappedReleveType ? typeReleveLabels[mappedReleveType] : "",
+                        type: mappedReleveType ? tReleves(`types.${mappedReleveType}`) : "",
                       })}
                     </p>
                   </div>
@@ -172,7 +163,7 @@ export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActi
                     {unlinkedReleves.map((r) => (
                       <SelectItem key={r.id} value={r.id}>
                         {t("completerActivite.releveOption", {
-                          type: typeReleveLabels[r.typeReleve] ?? r.typeReleve,
+                          type: tReleves(`types.${r.typeReleve}`) ?? r.typeReleve,
                           date: new Date(r.date).toLocaleDateString("fr-FR", {
                             day: "numeric",
                             month: "short",

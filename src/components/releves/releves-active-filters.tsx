@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import { X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { TypeReleve, CauseMortalite, TypeAliment, ComportementAlimentaire, MethodeComptage } from "@/types";
 import {
   countActiveFilters,
@@ -10,45 +11,6 @@ import {
   ALL_VALUE,
 } from "@/lib/releve-search-params";
 import type { ReleveSearchParams } from "@/lib/releve-search-params";
-
-const typeLabels: Record<TypeReleve, string> = {
-  [TypeReleve.BIOMETRIE]: "Biométrie",
-  [TypeReleve.MORTALITE]: "Mortalité",
-  [TypeReleve.ALIMENTATION]: "Alimentation",
-  [TypeReleve.QUALITE_EAU]: "Qualité eau",
-  [TypeReleve.COMPTAGE]: "Comptage",
-  [TypeReleve.OBSERVATION]: "Observation",
-  [TypeReleve.RENOUVELLEMENT]: "Renouvellement eau",
-};
-
-const causeMortaliteLabels: Record<CauseMortalite, string> = {
-  [CauseMortalite.MALADIE]: "Maladie",
-  [CauseMortalite.QUALITE_EAU]: "Qualité eau",
-  [CauseMortalite.STRESS]: "Stress",
-  [CauseMortalite.PREDATION]: "Prédation",
-  [CauseMortalite.CANNIBALISME]: "Cannibalisme",
-  [CauseMortalite.INCONNUE]: "Inconnue",
-  [CauseMortalite.AUTRE]: "Autre",
-};
-
-const typeAlimentLabels: Record<TypeAliment, string> = {
-  [TypeAliment.ARTISANAL]: "Artisanal",
-  [TypeAliment.COMMERCIAL]: "Commercial",
-  [TypeAliment.MIXTE]: "Mixte",
-};
-
-const comportementAlimLabels: Record<ComportementAlimentaire, string> = {
-  [ComportementAlimentaire.VORACE]: "Vorace",
-  [ComportementAlimentaire.NORMAL]: "Normal",
-  [ComportementAlimentaire.FAIBLE]: "Faible",
-  [ComportementAlimentaire.REFUSE]: "Refus",
-};
-
-const methodeComptageLabels: Record<MethodeComptage, string> = {
-  [MethodeComptage.DIRECT]: "Direct",
-  [MethodeComptage.ESTIMATION]: "Estimation",
-  [MethodeComptage.ECHANTILLONNAGE]: "Échantillonnage",
-};
 
 /** Formate un label de plage min/max */
 function formatRange(min: string | undefined, max: string | undefined, unit?: string): string {
@@ -72,6 +34,7 @@ export function RelevesActiveFilters({ current, vagueCode, bacNom, produitNom }:
   const router = useRouter();
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
+  const t = useTranslations("releves");
 
   const activeCount = countActiveFilters(current);
   if (activeCount === 0) return null;
@@ -103,17 +66,17 @@ export function RelevesActiveFilters({ current, vagueCode, bacNom, produitNom }:
   if (current.vagueId) {
     chips.push({
       key: "vagueId",
-      label: vagueCode ? `Vague : ${vagueCode}` : "Vague filtrée",
+      label: vagueCode ? t("global.filtresActifs.vague", { code: vagueCode }) : t("global.filtresActifs.vagueFiltered"),
     });
   }
   if (current.bacId) {
     chips.push({
       key: "bacId",
-      label: bacNom ? `Bac : ${bacNom}` : "Bac filtré",
+      label: bacNom ? t("global.filtresActifs.bac", { nom: bacNom }) : t("global.filtresActifs.bacFiltered"),
     });
   }
   if (current.typeReleve && current.typeReleve !== ALL_VALUE) {
-    const label = typeLabels[current.typeReleve as TypeReleve] ?? current.typeReleve;
+    const label = t(`types.${current.typeReleve}` as Parameters<typeof t>[0]) ?? current.typeReleve;
     chips.push({ key: "typeReleve", label });
   }
   if (current.dateFrom && current.dateTo) {
@@ -122,59 +85,59 @@ export function RelevesActiveFilters({ current, vagueCode, bacNom, produitNom }:
       label: `${formatDateChip(current.dateFrom)} → ${formatDateChip(current.dateTo)}`,
     });
   } else if (current.dateFrom) {
-    chips.push({ key: "dateFrom", label: `Du ${formatDateChip(current.dateFrom)}` });
+    chips.push({ key: "dateFrom", label: t("global.filtresActifs.periode.du", { date: formatDateChip(current.dateFrom) }) });
   } else if (current.dateTo) {
-    chips.push({ key: "dateTo", label: `→ ${formatDateChip(current.dateTo)}` });
+    chips.push({ key: "dateTo", label: t("global.filtresActifs.periode.au", { date: formatDateChip(current.dateTo) }) });
   }
   if (current.modifie === "true") {
-    chips.push({ key: "modifie", label: "Modifiés seulement" });
+    chips.push({ key: "modifie", label: t("global.filtresActifs.modifie") });
   }
 
   // Filtres specifiques BIOMETRIE
   if (current.poidsMoyenMin || current.poidsMoyenMax) {
     chips.push({
       key: ["poidsMoyenMin", "poidsMoyenMax"],
-      label: `Poids : ${formatRange(current.poidsMoyenMin, current.poidsMoyenMax, "g")}`,
+      label: `${t("global.filtresActifs.poids")} : ${formatRange(current.poidsMoyenMin, current.poidsMoyenMax, "g")}`,
     });
   }
   if (current.tailleMoyenneMin || current.tailleMoyenneMax) {
     chips.push({
       key: ["tailleMoyenneMin", "tailleMoyenneMax"],
-      label: `Taille : ${formatRange(current.tailleMoyenneMin, current.tailleMoyenneMax, "cm")}`,
+      label: `${t("global.filtresActifs.taille")} : ${formatRange(current.tailleMoyenneMin, current.tailleMoyenneMax, "cm")}`,
     });
   }
 
   // Filtres specifiques MORTALITE
   if (current.causeMortalite) {
-    const label = causeMortaliteLabels[current.causeMortalite as CauseMortalite] ?? current.causeMortalite;
-    chips.push({ key: "causeMortalite", label: `Cause : ${label}` });
+    const label = t(`form.mortalite.causes.${current.causeMortalite}` as Parameters<typeof t>[0]) ?? current.causeMortalite;
+    chips.push({ key: "causeMortalite", label: `${t("global.filtresActifs.cause")} : ${label}` });
   }
   if (current.nombreMortsMin || current.nombreMortsMax) {
     chips.push({
       key: ["nombreMortsMin", "nombreMortsMax"],
-      label: `Morts : ${formatRange(current.nombreMortsMin, current.nombreMortsMax)}`,
+      label: `${t("global.filtresActifs.morts")} : ${formatRange(current.nombreMortsMin, current.nombreMortsMax)}`,
     });
   }
 
   // Filtres specifiques ALIMENTATION
   if (current.typeAliment) {
-    const label = typeAlimentLabels[current.typeAliment as TypeAliment] ?? current.typeAliment;
-    chips.push({ key: "typeAliment", label: `Aliment : ${label}` });
+    const label = t(`form.alimentation.types.${current.typeAliment}` as Parameters<typeof t>[0]) ?? current.typeAliment;
+    chips.push({ key: "typeAliment", label: `${t("global.filtresActifs.aliment")} : ${label}` });
   }
   if (current.comportementAlim) {
-    const label = comportementAlimLabels[current.comportementAlim as ComportementAlimentaire] ?? current.comportementAlim;
-    chips.push({ key: "comportementAlim", label: `Comportement : ${label}` });
+    const label = t(`form.alimentation.comportementAlim.${current.comportementAlim}` as Parameters<typeof t>[0]) ?? current.comportementAlim;
+    chips.push({ key: "comportementAlim", label: `${t("global.filtresActifs.comportement")} : ${label}` });
   }
   if (current.frequenceAlimentMin || current.frequenceAlimentMax) {
     chips.push({
       key: ["frequenceAlimentMin", "frequenceAlimentMax"],
-      label: `Fréquence : ${formatRange(current.frequenceAlimentMin, current.frequenceAlimentMax, "fois/j")}`,
+      label: `${t("global.filtresActifs.frequence")} : ${formatRange(current.frequenceAlimentMin, current.frequenceAlimentMax, t("global.filtresActifs.frequenceUnit"))}`,
     });
   }
   if (current.produitId) {
     chips.push({
       key: "produitId",
-      label: produitNom ? `Produit : ${produitNom}` : "Produit filtré",
+      label: produitNom ? `${t("global.filtresActifs.produit")} : ${produitNom}` : t("global.filtresActifs.produitFiltered"),
     });
   }
 
@@ -182,7 +145,7 @@ export function RelevesActiveFilters({ current, vagueCode, bacNom, produitNom }:
   if (current.temperatureMin || current.temperatureMax) {
     chips.push({
       key: ["temperatureMin", "temperatureMax"],
-      label: `T° : ${formatRange(current.temperatureMin, current.temperatureMax, "°C")}`,
+      label: `${t("global.filtresActifs.temperature")} : ${formatRange(current.temperatureMin, current.temperatureMax, "°C")}`,
     });
   }
   if (current.phMin || current.phMax) {
@@ -194,20 +157,20 @@ export function RelevesActiveFilters({ current, vagueCode, bacNom, produitNom }:
 
   // Filtres specifiques COMPTAGE
   if (current.methodeComptage) {
-    const label = methodeComptageLabels[current.methodeComptage as MethodeComptage] ?? current.methodeComptage;
-    chips.push({ key: "methodeComptage", label: `Méthode : ${label}` });
+    const label = t(`form.comptage.methodes.${current.methodeComptage}` as Parameters<typeof t>[0]) ?? current.methodeComptage;
+    chips.push({ key: "methodeComptage", label: `${t("global.filtresActifs.methode")} : ${label}` });
   }
 
   // Filtres specifiques OBSERVATION
   if (current.descriptionSearch) {
-    chips.push({ key: "descriptionSearch", label: `Recherche : "${current.descriptionSearch}"` });
+    chips.push({ key: "descriptionSearch", label: `${t("global.filtresActifs.recherche")} : "${current.descriptionSearch}"` });
   }
 
   // Filtres specifiques RENOUVELLEMENT
   if (current.pourcentageMin || current.pourcentageMax) {
     chips.push({
       key: ["pourcentageMin", "pourcentageMax"],
-      label: `Renouvellement : ${formatRange(current.pourcentageMin, current.pourcentageMax, "%")}`,
+      label: `${t("global.filtresActifs.renouvellement")} : ${formatRange(current.pourcentageMin, current.pourcentageMax, "%")}`,
     });
   }
 
@@ -229,7 +192,7 @@ export function RelevesActiveFilters({ current, vagueCode, bacNom, produitNom }:
         onClick={clearAll}
         className="shrink-0 text-xs text-muted-foreground hover:text-foreground underline transition-colors ml-1"
       >
-        Tout effacer
+        {t("global.filtres.effacer")}
       </button>
     </div>
   );

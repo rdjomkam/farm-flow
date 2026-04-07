@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { PlusCircle } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { AccessDenied } from "@/components/ui/access-denied";
@@ -30,6 +31,7 @@ export default async function RelevesPage({
   if (!permissions) return <AccessDenied />;
 
   const siteId = session.activeSiteId;
+  const t = await getTranslations("releves");
 
   // Resoudre les searchParams (Next.js 14+ App Router — Promise)
   const rawParams = await searchParams;
@@ -138,7 +140,7 @@ export default async function RelevesPage({
 
   return (
     <>
-      <Header title="Tous les relevés" />
+      <Header title={t("global.title")} />
 
       <div className="flex flex-col gap-4 p-4 pb-20">
         {/* Barre d'actions : filtres + bouton nouveau */}
@@ -148,7 +150,7 @@ export default async function RelevesPage({
             <Button size="sm" asChild className="shrink-0">
               <Link href="/releves/nouveau">
                 <PlusCircle className="h-4 w-4" />
-                <span className="hidden sm:inline ml-1">Nouveau</span>
+                <span className="hidden sm:inline ml-1">{t("page.nouveau_btn")}</span>
               </Link>
             </Button>
           )}
@@ -164,11 +166,7 @@ export default async function RelevesPage({
 
         {/* Compteur de resultats */}
         <p className="text-sm text-muted-foreground">
-          {total === 0
-            ? "Aucun relevé trouvé"
-            : total === 1
-            ? "1 relevé trouvé"
-            : `${total} relevés trouvés`}
+          {t("global.resultats", { count: total })}
         </p>
 
         {/* Liste des releves — carte blanche */}

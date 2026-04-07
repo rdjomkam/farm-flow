@@ -429,7 +429,7 @@ export function RegleFormClient() {
       (c) => c.typeDeclencheur !== "" && c.operateur !== ""
     );
     if (validConditions.length === 0) {
-      errs.conditions = "Au moins une condition de declenchement est requise";
+      errs.conditions = t("rules.form.validation.conditionsRequises");
     }
 
     // intervalleJours required when a RECURRENT condition exists
@@ -457,7 +457,7 @@ export function RegleFormClient() {
       const idxMin = PHASE_ELEVAGE_ORDER.indexOf(form.phaseMin as PhaseElevage);
       const idxMax = PHASE_ELEVAGE_ORDER.indexOf(form.phaseMax as PhaseElevage);
       if (idxMin > idxMax) {
-        errs.phaseMin = "La phase minimale doit preceder la phase maximale";
+        errs.phaseMin = t("rules.form.validation.phaseOrdreInvalide");
       }
     }
 
@@ -465,7 +465,7 @@ export function RegleFormClient() {
     const needsNotif = form.actionType === ActionRegle.NOTIFICATION || form.actionType === ActionRegle.LES_DEUX;
     if (needsNotif) {
       if (!form.severite) {
-        errs.severite = "La severite est requise pour les alertes";
+        errs.severite = t("rules.form.validation.severiteRequise");
       }
       if (!form.titreNotificationTemplate || form.titreNotificationTemplate.trim().length < 5) {
         errs.titreNotificationTemplate = "Minimum 5 caracteres requis";
@@ -575,7 +575,7 @@ export function RegleFormClient() {
       {/* ------------------------------------------------------------------ */}
       <div className="flex flex-col gap-2">
         <SectionHeader
-          title="Type d'activite"
+          title={t("rules.form.typeActiviteSection")}
           open={sectionTypeOpen}
           onToggle={() => setSectionTypeOpen(!sectionTypeOpen)}
           badge="requis"
@@ -590,7 +590,7 @@ export function RegleFormClient() {
                 label="Type d'activite"
                 error={errors.typeActivite}
               >
-                <SelectValue placeholder="Choisir un type d'activite..." />
+                <SelectValue placeholder={t("rules.form.typeActivitePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {Object.values(TypeActivite).map((val) => (
@@ -609,7 +609,7 @@ export function RegleFormClient() {
       {/* ------------------------------------------------------------------ */}
       <div className="flex flex-col gap-2">
         <SectionHeader
-          title="Conditions de declenchement"
+          title={t("rules.form.conditionsSection")}
           open={sectionConditionsOpen}
           onToggle={() => setSectionConditionsOpen(!sectionConditionsOpen)}
           badge="requis"
@@ -620,7 +620,7 @@ export function RegleFormClient() {
             <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
               <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground">
-                Definissez les conditions qui declencheront cette regle. Ajoutez une ou plusieurs conditions.
+                {t("rules.form.conditionsBannerText")}
               </p>
             </div>
 
@@ -635,7 +635,7 @@ export function RegleFormClient() {
                 value={form.logique}
                 onValueChange={(v) => setField("logique", v as LogiqueCondition)}
               >
-                <SelectTrigger label="Logique de combinaison">
+                <SelectTrigger label={t("rules.detail.logiqueCombinaisonLabel")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -681,8 +681,8 @@ export function RegleFormClient() {
                         setField("conditions", updated);
                       }}
                     >
-                      <SelectTrigger label="Type de declencheur">
-                        <SelectValue placeholder="Choisir..." />
+                      <SelectTrigger label={t("rules.detail.typeDeclencheurLabel")}>
+                        <SelectValue placeholder={t("rules.form.choosePlaceholder")} />
                       </SelectTrigger>
                       <SelectContent>
                         {Object.values(TypeDeclencheur).map((val) => (
@@ -707,8 +707,8 @@ export function RegleFormClient() {
                         setField("conditions", updated);
                       }}
                     >
-                      <SelectTrigger label="Operateur">
-                        <SelectValue placeholder="Choisir..." />
+                      <SelectTrigger label={t("rules.detail.operateurLabel")}>
+                        <SelectValue placeholder={t("rules.form.choosePlaceholder")} />
                       </SelectTrigger>
                       <SelectContent>
                         {Object.values(OperateurCondition).map((val) => (
@@ -724,13 +724,13 @@ export function RegleFormClient() {
                       <Input
                         label={(() => {
                           switch (cond.typeDeclencheur as TypeDeclencheur) {
-                            case TypeDeclencheur.SEUIL_POIDS: return "Poids moyen declencheur (g)";
-                            case TypeDeclencheur.SEUIL_QUALITE: return "Valeur minimale (ex: pH min)";
-                            case TypeDeclencheur.SEUIL_MORTALITE: return "Taux de mortalite declencheur (%)";
-                            case TypeDeclencheur.FCR_ELEVE: return "ICA declencheur";
-                            case TypeDeclencheur.STOCK_BAS: return "Quantite de stock minimal";
-                            case TypeDeclencheur.JALON: return "Seuil du jalon (% du cycle)";
-                            default: return "Valeur";
+                            case TypeDeclencheur.SEUIL_POIDS: return t("rules.form.conditionLabels.poidsDeclencheur");
+                            case TypeDeclencheur.SEUIL_QUALITE: return t("rules.form.conditionLabels.valeurQualiteMin");
+                            case TypeDeclencheur.SEUIL_MORTALITE: return t("rules.form.conditionLabels.tauxMortalite");
+                            case TypeDeclencheur.FCR_ELEVE: return t("rules.form.conditionLabels.icaDeclencheur");
+                            case TypeDeclencheur.STOCK_BAS: return t("rules.form.conditionLabels.stockMinimal");
+                            case TypeDeclencheur.JALON: return t("rules.form.conditionLabels.seuilJalon");
+                            default: return t("rules.form.conditionLabels.valeur");
                           }
                         })()}
                         type="number"
@@ -741,14 +741,14 @@ export function RegleFormClient() {
                           updated[idx] = { ...updated[idx], conditionValeur: e.target.value };
                           setField("conditions", updated);
                         }}
-                        placeholder="Ex: 200"
+                        placeholder={t("rules.form.placeholderEx200")}
                       />
                     )}
 
                     {/* Valeur secondaire — ENTRE uniquement */}
                     {cond.operateur === OperateurCondition.ENTRE && (
                       <Input
-                        label="Valeur maximale (borne haute)"
+                        label={t("rules.detail.valeurMaxLabel")}
                         type="number"
                         step="any"
                         value={cond.conditionValeur2}
@@ -757,7 +757,7 @@ export function RegleFormClient() {
                           updated[idx] = { ...updated[idx], conditionValeur2: e.target.value };
                           setField("conditions", updated);
                         }}
-                        placeholder="Ex: 300"
+                        placeholder={t("rules.form.placeholderEx300")}
                       />
                     )}
                   </div>
@@ -783,7 +783,7 @@ export function RegleFormClient() {
               className="w-full min-h-[44px]"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Ajouter une condition
+              {t("rules.form.addCondition")}
             </Button>
           </div>
         )}
@@ -834,8 +834,7 @@ export function RegleFormClient() {
                 <div className="flex items-start gap-2 rounded-lg border border-accent-amber/20 bg-accent-amber/5 p-3">
                   <Info className="h-4 w-4 text-accent-amber shrink-0 mt-0.5" />
                   <p className="text-xs text-muted-foreground">
-                    Une alerte sera envoyee aux utilisateurs quand la regle se declenche.
-                    Configurez ici le contenu et la severite de l&apos;alerte.
+                    {t("rules.form.notifBannerText")}
                   </p>
                 </div>
 
@@ -848,10 +847,10 @@ export function RegleFormClient() {
                   }}
                 >
                   <SelectTrigger
-                    label="Severite de l'alerte"
+                    label={t("rules.detail.severiteLabel")}
                     error={errors.severite}
                   >
-                    <SelectValue placeholder="Choisir une severite..." />
+                    <SelectValue placeholder={t("rules.form.severiteChoosePlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     {Object.values(SeveriteAlerte).map((val) => (
@@ -865,7 +864,7 @@ export function RegleFormClient() {
                 {/* Titre notification template */}
                 <TemplateField
                   id="titreNotificationTemplate"
-                  label="Titre de l'alerte"
+                  label={t("rules.detail.titreAlerteLabel")}
                   value={form.titreNotificationTemplate}
                   onChange={(v) => setField("titreNotificationTemplate", v)}
                   placeholder="Ex: Densite elevee — Bac {bac}"
@@ -879,7 +878,7 @@ export function RegleFormClient() {
                 {/* Description notification template */}
                 <TemplateField
                   id="descriptionNotificationTemplate"
-                  label="Description de l'alerte (optionnel)"
+                  label={t("rules.detail.descriptionAlerteLabel")}
                   value={form.descriptionNotificationTemplate}
                   onChange={(v) => setField("descriptionNotificationTemplate", v)}
                   placeholder="Ex: Densite : {valeur} kg/m3 — Action requise"
@@ -893,7 +892,7 @@ export function RegleFormClient() {
                   value={form.actionPayloadType}
                   onValueChange={(v) => setField("actionPayloadType", v === "__none__" ? "" : v)}
                 >
-                  <SelectTrigger label="Bouton d'action dans l'alerte (optionnel)">
+                  <SelectTrigger label={t("rules.detail.actionPayloadLabel")}>
                     <SelectValue placeholder={t("rules.actions.none")} />
                   </SelectTrigger>
                   <SelectContent>
@@ -918,7 +917,7 @@ export function RegleFormClient() {
       {/* ------------------------------------------------------------------ */}
       <div className="flex flex-col gap-2">
         <SectionHeader
-          title={form.actionType === ActionRegle.NOTIFICATION ? "Identite de la regle" : "Identite et templates"}
+          title={form.actionType === ActionRegle.NOTIFICATION ? t("rules.form.identiteNotifSection") : t("rules.form.identiteSection")}
           open={sectionIdentiteOpen}
           onToggle={() => setSectionIdentiteOpen(!sectionIdentiteOpen)}
           badge="requis"
@@ -927,7 +926,7 @@ export function RegleFormClient() {
           <div className="flex flex-col gap-4 p-4 rounded-lg border border-border">
             {/* nom */}
             <Input
-              label="Nom de la regle"
+              label={t("rules.form.nomRegleLabel")}
               value={form.nom}
               onChange={(e) => setField("nom", e.target.value)}
               placeholder="Ex: Alimentation renforcee phase finition"
@@ -943,7 +942,7 @@ export function RegleFormClient() {
                 <div className="flex flex-col gap-1.5">
                   <TemplateField
                     id="titreTemplate"
-                    label="Titre de l'activite"
+                    label={t("rules.detail.titreActiviteLabel")}
                     value={form.titreTemplate}
                     onChange={(v) => setField("titreTemplate", v)}
                     placeholder="Ex: Distribuer {quantite_calculee}kg de granule en {bac}"
@@ -960,7 +959,7 @@ export function RegleFormClient() {
                 {/* descriptionTemplate */}
                 <TemplateField
                   id="descriptionTemplate"
-                  label="Description de l'activite (optionnel)"
+                  label={t("rules.detail.descriptionActiviteLabel")}
                   value={form.descriptionTemplate}
                   onChange={(v) => setField("descriptionTemplate", v)}
                   placeholder="Ex: Poids moyen {poids_moyen}g — semaine {semaine} du cycle"
@@ -972,7 +971,7 @@ export function RegleFormClient() {
                 {/* instructionsTemplate */}
                 <TemplateField
                   id="instructionsTemplate"
-                  label="Instructions detaillees (optionnel)"
+                  label={t("rules.detail.instructionsLabel")}
                   value={form.instructionsTemplate}
                   onChange={(v) => setField("instructionsTemplate", v)}
                   placeholder={"1. Premiere etape\n2. Deuxieme etape\n3. Verifier le resultat"}
@@ -987,7 +986,7 @@ export function RegleFormClient() {
             {/* titreTemplate minimal requis pour les notifications (utilise comme fallback) */}
             {form.actionType === ActionRegle.NOTIFICATION && (
               <Input
-                label="Nom interne de la regle (pour les logs)"
+                label={t("rules.detail.nomInterneLabel")}
                 value={form.titreTemplate}
                 onChange={(e) => setField("titreTemplate", e.target.value)}
                 placeholder="Ex: Alerte densite elevee"
@@ -1010,7 +1009,7 @@ export function RegleFormClient() {
                   ) : (
                     <ChevronDown className="h-4 w-4" />
                   )}
-                  Afficher les placeholders disponibles
+                  {t("rules.detail.afficherPlaceholders")}
                 </button>
                 {placeholderOpen && (
                   <PlaceholderPanel onInsert={insertPlaceholder} />
@@ -1026,7 +1025,7 @@ export function RegleFormClient() {
       {/* ------------------------------------------------------------------ */}
       <div className="flex flex-col gap-2">
         <SectionHeader
-          title="Parametres avances"
+          title={t("rules.form.avancesSection")}
           open={sectionAvancesOpen}
           onToggle={() => setSectionAvancesOpen(!sectionAvancesOpen)}
           badge="optionnel"
@@ -1036,23 +1035,23 @@ export function RegleFormClient() {
             {/* intervalleJours */}
             <div className="flex flex-col gap-1">
               <Input
-                label="Intervalle en jours"
+                label={t("rules.form.intervalleLabel")}
                 type="number"
                 min={1}
                 step={1}
                 value={form.intervalleJours}
                 onChange={(e) => setField("intervalleJours", e.target.value)}
-                placeholder="Ex: 7"
+                placeholder={t("rules.form.placeholderEx7")}
                 error={errors.intervalleJours}
               />
               <p className="text-xs text-muted-foreground">
-                Uniquement pour les declencheurs de type Recurrent
+                {t("rules.detail.recurrentHint")}
               </p>
             </div>
 
             {/* priorite */}
             <Input
-              label="Priorite (1=urgente, 10=basse)"
+              label={t("rules.form.prioriteLabel")}
               type="number"
               min={1}
               max={10}
@@ -1068,10 +1067,10 @@ export function RegleFormClient() {
               onValueChange={(v) => setField("phaseMin", v as PhaseElevage)}
             >
               <SelectTrigger
-                label="Phase minimale d'application (optionnel)"
+                label={t("rules.form.phaseMinLabel")}
                 error={errors.phaseMin}
               >
-                <SelectValue placeholder="Toutes les phases" />
+                <SelectValue placeholder={t("rules.form.allPhases")} />
               </SelectTrigger>
               <SelectContent>
                 {PHASE_ELEVAGE_ORDER.map((val) => (
@@ -1088,10 +1087,10 @@ export function RegleFormClient() {
               onValueChange={(v) => setField("phaseMax", v as PhaseElevage)}
             >
               <SelectTrigger
-                label="Phase maximale d'application (optionnel)"
+                label={t("rules.form.phaseMaxLabel")}
                 error={errors.phaseMax}
               >
-                <SelectValue placeholder="Toutes les phases" />
+                <SelectValue placeholder={t("rules.form.allPhases")} />
               </SelectTrigger>
               <SelectContent>
                 {PHASE_ELEVAGE_ORDER.map((val) => (
@@ -1115,7 +1114,7 @@ export function RegleFormClient() {
           size="lg"
           className="w-full"
         >
-          Creer la regle
+          {t("rules.form.createRule")}
         </Button>
       </div>
     </form>

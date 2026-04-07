@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -12,10 +13,10 @@ export default async function BesoinsPage() {
   if (!session.activeSiteId) redirect("/settings/sites");
 
   try {
-    const permissions = await checkPagePermission(
-      session,
-      Permission.BESOINS_SOUMETTRE
-    );
+    const [t, permissions] = await Promise.all([
+      getTranslations("besoins"),
+      checkPagePermission(session, Permission.BESOINS_SOUMETTRE),
+    ]);
     if (!permissions) return <AccessDenied />;
 
     const listesBesoins = await getListeBesoins(session.activeSiteId);
@@ -26,7 +27,7 @@ export default async function BesoinsPage() {
 
     return (
       <>
-        <Header title="Listes de Besoins" />
+        <Header title={t("page.title")} />
         <BesoinsListClient
           listesBesoins={JSON.parse(JSON.stringify(listesBesoins.data))}
           canCreate={canCreate}

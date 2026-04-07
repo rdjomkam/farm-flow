@@ -196,6 +196,7 @@ const tooltipMortalite = (
 
 const VagueCharts = memo(function VagueCharts({ vague }: { vague: VagueAvecReleves }) {
   const t = useTranslations("ingenieur.emptyStates");
+  const tIngenieur = useTranslations("ingenieur");
   const croissanceData = buildCroissanceData(vague);
   const mortaliteData = buildMortaliteData(vague);
   const survieData = buildSurvieData(vague);
@@ -248,7 +249,7 @@ const VagueCharts = memo(function VagueCharts({ vague }: { vague: VagueAvecRelev
                   <Line
                     type="monotone"
                     dataKey="poidsMoyen"
-                    name="Poids moyen"
+                    name={tIngenieur("charts.avgWeight")}
                     stroke="var(--primary)"
                     strokeWidth={2}
                     dot={{ r: 3 }}

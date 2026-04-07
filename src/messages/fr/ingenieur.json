@@ -21,6 +21,10 @@
   "monitoring": {
     "noActiveAlerts": "Aucune alerte active sur les sites clients.",
     "alertesActives": "Alertes actives ({count})",
+    "clientsTitle": "Clients ({count})",
+    "noClients": "Aucun client actif pour le moment.",
+    "noClientsHint": "Les clients apparaissent ici lorsqu'un pack est active pour leur site.",
+    "vueGlobale": "Vue globale",
     "noActiveAlertsClient": "Aucune alerte active pour ce client.",
     "noWavesInProgress": "Aucune vague en cours.",
     "noNotesForClient": "Aucune note pour ce client.",
@@ -56,6 +60,21 @@
     "client": "Client",
     "allNotes": "Toutes les notes"
   },
+  "stats": {
+    "clientsActives": "Clients actifs",
+    "clientsActivesSubtitle": "sites suivis",
+    "packsActifs": "Packs actifs",
+    "packsActifsSubtitle": "activations",
+    "survieMoyenne": "Survie moyenne",
+    "survieMoyenneSubtitle": "toutes vagues",
+    "fermesEnAlerte": "Fermes en alerte",
+    "toutVaBien": "tout va bien",
+    "necessitentAttention": "necessitent attention"
+  },
+  "siteClientFallback": "Site client",
+  "charts": {
+    "avgWeight": "Poids moyen"
+  },
   "greeting": "Bonjour, {name}",
   "emptyStates": {
     "noTasksToday": "Aucune tâche pour aujourd'hui.",
@@ -65,7 +84,8 @@
   },
   "commissions": {
     "mesCommissions": "Mes commissions",
-    "aucuneCommission": "Aucune commission pour le moment."
+    "aucuneCommission": "Aucune commission pour le moment.",
+    "historiqueRetraits": "Historique des retraits"
   },
   "statuses": {
     "late": "En retard"

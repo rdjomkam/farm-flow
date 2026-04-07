@@ -196,7 +196,7 @@ export function ModifierActiviteDialog({
           {/* Date debut */}
           <Input
             type="datetime-local"
-            label="Date de debut"
+            label={t("editDialog.dateDebut")}
             value={dateDebut}
             onChange={(e) => setDateDebut(e.target.value)}
             disabled={isLocked}
@@ -205,7 +205,7 @@ export function ModifierActiviteDialog({
           {/* Date fin */}
           <Input
             type="datetime-local"
-            label="Date de fin"
+            label={t("editDialog.dateFin")}
             value={dateFin}
             onChange={(e) => setDateFin(e.target.value)}
             disabled={isLocked}

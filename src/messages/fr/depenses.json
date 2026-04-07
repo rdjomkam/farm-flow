@@ -1,5 +1,6 @@
 {
   "page": {
+    "title": "Depenses",
     "newExpense": "Nouvelle dépense",
     "recurringExpenses": "Dépenses récurrentes",
     "finances": "Finances"
@@ -73,6 +74,9 @@
     "listeBesoins": "Liste de besoins",
     "fraisNotesPlaceholder": "Ex: transport depuis Douala",
     "supprimerFrais": "Supprimer ce frais"
+  },
+  "errors": {
+    "montantInvalide": "Montant invalide"
   },
   "ajustement": {
     "title": "Ajuster le montant",
@@ -168,6 +172,7 @@
     "categorieLabel": "Categorie",
     "categoriePlaceholder": "Choisir une categorie",
     "montantLabel": "Montant estime (FCFA)",
+    "montantPlaceholder": "Ex: 150000",
     "frequenceLabel": "Frequence",
     "jourLabel": "Jour du mois (1-28)",
     "annuler": "Annuler",

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { LotsAlevinsListClient } from "@/components/alevins/lots-list-client";
 import { AccessDenied } from "@/components/ui/access-denied";
@@ -13,7 +14,10 @@ export default async function AlevinsLotsPage() {
   if (!session.activeSiteId) redirect("/settings/sites");
 
   try {
-    const permissions = await checkPagePermission(session, Permission.ALEVINS_VOIR);
+    const [t, permissions] = await Promise.all([
+      getTranslations("alevins"),
+      checkPagePermission(session, Permission.ALEVINS_VOIR),
+    ]);
     if (!permissions) return <AccessDenied />;
 
     const [lotsResult, pontesResult] = await Promise.all([
@@ -25,7 +29,7 @@ export default async function AlevinsLotsPage() {
 
     return (
       <>
-        <Header title="Lots d'alevins" />
+        <Header title={t("page.lotsTitle")} />
         <div className="p-4">
           <LotsAlevinsListClient
             lots={JSON.parse(JSON.stringify(lotsResult.data))}

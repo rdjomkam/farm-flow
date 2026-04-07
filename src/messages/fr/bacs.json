@@ -1,4 +1,7 @@
 {
+  "page": {
+    "title": "Bacs"
+  },
   "typeSysteme": {
     "BAC_BETON": "Bac beton / plastique",
     "BAC_PLASTIQUE": "Bac plastique",
@@ -13,7 +16,8 @@
     "poissons": "{count} poissons",
     "initial": "Initial : {nombre} ind. / {poids} g",
     "libre": "Libre",
-    "occupe": "Occupe"
+    "occupe": "Occupe",
+    "historiqueAssignations": "Historique des assignations"
   },
   "createDialog": {
     "title": "Nouveau bac",
@@ -27,6 +31,24 @@
       "nomRequis": "Le nom est obligatoire.",
       "volumePositif": "Le volume doit etre superieur a 0."
     }
+  },
+  "assignationHistory": {
+    "arrow": "→",
+    "aLaFin": "à la fin",
+    "poissonsDepart": "{count} poissons au départ",
+    "poissons": "{count} poissons",
+    "terminee": "Terminée"
+  },
+  "densite": {
+    "nonCalculable": "Densité non calculable"
+  },
+  "detail": {
+    "occupe": "Occupé",
+    "libre": "Libre",
+    "retourBacs": "Retour aux bacs",
+    "volume": "Volume : {volume} L",
+    "type": "Type : {type}",
+    "historiqueTitle": "Historique des assignations"
   },
   "editDialog": {
     "title": "Modifier le bac",

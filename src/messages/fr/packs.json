@@ -8,6 +8,12 @@
     "noSearchResults": "Aucun résultat pour cette recherche.",
     "noActivationsFiltered": "Aucune activation pour ce filtre."
   },
+  "activationsSearch": "Rechercher par code, site ou pack...",
+  "activationsTabs": {
+    "actives": "Actives",
+    "expirees": "Expirees",
+    "toutes": "Toutes"
+  },
   "activations": {
     "activeLe": "Active le",
     "expireLe": "Expire le"
@@ -131,12 +137,17 @@
     "voirActivations": "Voir toutes les activations",
     "siteTitle": "1. Site du pisciculteur",
     "nomSiteLabel": "Nom du site",
+    "nomSitePlaceholder": "Ex: Ferme Ngozi — Bafia",
     "adresseLabel": "Adresse (optionnel)",
+    "adressePlaceholder": "Ex: Quartier Lac, Bafia, Mbam",
     "pisciculteurTitle": "2. Compte pisciculteur",
     "nomCompletLabel": "Nom complet",
+    "nomCompletPlaceholder": "Ex: Jean-Marie Ngozi",
     "telephoneLabel": "Telephone",
+    "telephonePlaceholder": "Ex: 699 000 000",
     "telephoneHint": "Le code pays (+237) sera ajoute automatiquement",
     "emailLabel": "Email (optionnel)",
+    "emailPlaceholder": "Ex: ngozi@example.com",
     "motDePasseLabel": "Mot de passe",
     "motDePasseHint": "Le pisciculteur utilisera ce mot de passe pour se connecter.",
     "motDePasseMin": "Min. 6 caracteres",

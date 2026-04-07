@@ -182,7 +182,10 @@
     "subscribers": "{count} abonné",
     "subscribersPlural": "{count} abonnés",
     "engineerFarms": "{count} fermes",
+    "noSite": "Sans site",
     "cancelSubscriptionDesc": "Annuler l'abonnement de {siteName} ? Cette action est irréversible.",
+    "cancelSubscriptionIrreversible": "Cette action est irréversible.",
+    "toggleDeactivateSubscribersDesc": "Le plan {nom} a {count} abonné{plural} actif{plural}. Les abonnés existants conserveront leur accès jusqu'à expiration, mais aucun nouvel abonnement ne sera possible.",
     "cannotCancelSubscription": "Impossible d'annuler.",
     "networkError": "Erreur réseau.",
     "cannotDisableWithSubscribers": "Impossible de désactiver un plan avec {count} abonné{plural} actif{plural}.",
@@ -239,7 +242,8 @@
     "expired": "Expiré",
     "daysRemaining": "{count} jour restant",
     "daysRemainingPlural": "{count} jours restants",
-    "gracePeriod": "Période de grâce"
+    "gracePeriod": "Période de grâce",
+    "limitedAccessUntil": "Accès limité jusqu'au"
   },
   "buttons": {
     "renew": "Renouveler",
@@ -284,6 +288,7 @@
   "changerPlan": {
     "currentPlan": "Plan actuel",
     "expiresOn": "Expire le",
+    "paidAmount": "{amount} payé",
     "prorataCredit": "Crédit prorata disponible pour un upgrade :",
     "upgradePlans": "Plans supérieurs (Upgrade)",
     "upgradeGratuit": "Upgrade gratuit (couvert par votre crédit)",
@@ -309,6 +314,15 @@
     "billingPeriod": "Période de facturation",
     "backToSubscription": "← Retour a mon abonnement",
     "pageTitle": "Changer de plan"
+  },
+  "downgradeSelector": {
+    "tooManyTanks": "Trop de bacs sélectionnés : {selected}/{limit} autorisé(s).",
+    "tooManyWaves": "Trop de vagues sélectionnées : {selected}/{limit} autorisée(s).",
+    "tanksSection": "Bacs ({selected}/{limit} sélectionné{plural})",
+    "wavesSection": "Vagues ({selected}/{limit} sélectionné{plural})",
+    "noResourcesToKeep": "Aucune ressource à conserver pour ce site.",
+    "toKeep": "À conserver",
+    "confirmSelection": "Confirmer la sélection ({tanks} bac{tankPlural}, {waves} vague{wavePlural})"
   },
   "checkoutForm": {
     "stepPlanPeriod": "Plan & Période",
@@ -408,7 +422,10 @@
     "limitReached": "Vous avez atteint la limite de votre plan actuel.",
     "upgradeLink": "Passez a un plan superieur",
     "createMoreResources": "pour creer davantage de ressources.",
-    "ariaLabel": "{label} : {current} sur {limit}"
+    "ariaLabel": "{label} : {current} sur {limit}",
+    "noSubscription": "Aucun abonnement actif.",
+    "subscribe": "Souscrire à un plan",
+    "toManageResources": "pour gérer vos ressources."
   },
   "comparaison": {
     "featureColumn": "Fonctionnalité",

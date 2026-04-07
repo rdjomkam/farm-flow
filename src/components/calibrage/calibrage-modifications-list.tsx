@@ -4,12 +4,6 @@ import { useTranslations } from "next-intl";
 import { Pencil } from "lucide-react";
 import type { CalibrageModificationWithUser } from "@/types";
 
-/** Labels lisibles pour les champs de calibrage */
-const champLabels: Record<string, string> = {
-  nombreMorts: "Nombre de morts",
-  notes:       "Notes",
-  groupes:     "Groupes de redistribution",
-};
 
 function formatDate(date: Date | string): string {
   const d = new Date(date);
@@ -134,7 +128,7 @@ export function CalibrageModificationsList({
               {groupe.champs.map((champ) => (
                 <div key={champ.id} className="flex flex-col gap-0.5">
                   <span className="text-xs font-medium text-foreground">
-                    {champLabels[champ.champModifie] ?? champ.champModifie}
+                    {t(`modifications.fields.${champ.champModifie}` as Parameters<typeof t>[0]) ?? champ.champModifie}
                   </span>
                   {champ.champModifie === "groupes" ? (
                     // Affichage special pour les groupes (JSON complexe)

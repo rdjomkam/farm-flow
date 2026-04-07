@@ -96,7 +96,12 @@
   "modifications": {
     "title": "Historique des modifications",
     "before": "Avant :",
-    "after": "Apres :"
+    "after": "Apres :",
+    "fields": {
+      "nombreMorts": "Nombre de morts",
+      "notes": "Notes",
+      "groupes": "Groupes de redistribution"
+    }
   },
   "detail": {
     "title": "Calibrage",
@@ -106,7 +111,13 @@
     "avgWeight": "Poids moyen : {weight} g",
     "avgSize": "Taille moyenne : {size} cm",
     "notes": "Notes",
-    "modifiedAfterCreation": "Ce calibrage a ete modifie apres sa creation."
+    "modifiedAfterCreation": "Ce calibrage a ete modifie apres sa creation.",
+    "poissonsRedistribues": "{count} poissons redistribues",
+    "mortConstates": "{count} mort constate",
+    "mortsConstates": "{count} morts constates",
+    "bilanConservation": "Bilan de conservation",
+    "bilanDetail": "{redistribues} redistribues + {morts} morts = {total} poissons",
+    "poissons": "{count} poissons"
   },
   "modifierDialog": {
     "trigger": "Modifier",

@@ -199,7 +199,7 @@ export function AbonnementActuelCard({ abonnement }: AbonnementActuelCardProps) 
         <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 text-xs">
           <p className="font-medium text-warning">{t("card.gracePeriod")}</p>
           <p className="text-muted-foreground mt-0.5">
-            Accès limité jusqu&apos;au{" "}
+            {t("card.limitedAccessUntil")}{" "}
             {new Date(abonnement.dateFinGrace).toLocaleDateString("fr-FR")}
           </p>
         </div>

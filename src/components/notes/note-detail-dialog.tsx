@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import ReactMarkdown from "react-markdown";
 import {
@@ -113,6 +114,7 @@ export function NoteDetailDialog({
   onRead,
   children,
 }: NoteDetailDialogProps) {
+  const t = useTranslations("notes");
   const queryClient = useQueryClient();
   const noteService = useNoteService();
   const [markedRead, setMarkedRead] = useState(false);
@@ -176,7 +178,7 @@ export function NoteDetailDialog({
                 <Badge
                   variant={note.isFromClient ? "default" : "en_cours"}
                 >
-                  {note.isFromClient ? "Mon observation" : "DKFarm"}
+                  {note.isFromClient ? t("detail.myObservation") : t("detail.dkfarm")}
                 </Badge>
               )}
             </div>

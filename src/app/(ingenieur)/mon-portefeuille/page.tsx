@@ -100,7 +100,7 @@ export default async function MonPortefeuillePage() {
         {retraitsFormatted.length > 0 && (
           <section>
             <h2 className="text-base font-semibold text-foreground mb-3">
-              Historique des retraits
+              {tCommissions("historiqueRetraits")}
             </h2>
             <RetraitsList retraits={retraitsFormatted} />
           </section>

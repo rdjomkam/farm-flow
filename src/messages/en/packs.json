@@ -8,6 +8,12 @@
     "noSearchResults": "No results for this search.",
     "noActivationsFiltered": "No activations for this filter."
   },
+  "activationsSearch": "Search by code, site or pack...",
+  "activationsTabs": {
+    "actives": "Active",
+    "expirees": "Expired",
+    "toutes": "All"
+  },
   "activations": {
     "activeLe": "Activated on",
     "expireLe": "Expires on"
@@ -131,12 +137,17 @@
     "voirActivations": "View all activations",
     "siteTitle": "1. Fish farmer site",
     "nomSiteLabel": "Site name",
+    "nomSitePlaceholder": "E.g.: Ngozi Farm — Bafia",
     "adresseLabel": "Address (optional)",
+    "adressePlaceholder": "E.g.: Lake District, Bafia, Mbam",
     "pisciculteurTitle": "2. Fish farmer account",
     "nomCompletLabel": "Full name",
+    "nomCompletPlaceholder": "E.g.: Jean-Marie Ngozi",
     "telephoneLabel": "Phone",
+    "telephonePlaceholder": "E.g.: 699 000 000",
     "telephoneHint": "Country code (+237) will be added automatically",
     "emailLabel": "Email (optional)",
+    "emailPlaceholder": "E.g.: ngozi@example.com",
     "motDePasseLabel": "Password",
     "motDePasseHint": "The fish farmer will use this password to log in.",
     "motDePasseMin": "Min. 6 characters",

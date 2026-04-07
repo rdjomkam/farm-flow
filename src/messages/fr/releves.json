@@ -297,6 +297,7 @@
       "titre": "Filtres",
       "effacer": "Effacer tout",
       "appliquer": "Appliquer ({count} actifs)",
+      "appliquerSimple": "Appliquer",
       "vague": "Vague",
       "toutesVagues": "Toutes les vagues",
       "bac": "Bac",
@@ -305,19 +306,48 @@
       "tousTyes": "Tous les types",
       "du": "Du",
       "au": "Au",
-      "modifie": "Relevés modifiés seulement"
+      "modifie": "Relevés modifiés seulement",
+      "toutesCauses": "Toutes les causes",
+      "tousProduits": "Tous les produits",
+      "toutesMethodes": "Toutes les méthodes",
+      "periode": "Période",
+      "produitAlimentaire": "Produit alimentaire",
+      "rechercheDescription": "Recherche dans la description",
+      "filtresSpecifiques": "Filtres {type}",
+      "frequenceAlimentation": "Fréquence d'alimentation",
+      "poidsMoyen": "Poids moyen",
+      "tailleMoyenne": "Taille moyenne",
+      "nombreMorts": "Nombre de morts",
+      "pourcentageRenouvele": "Pourcentage renouvelé",
+      "temperature": "Température"
     },
     "resultats": "{count} relevés trouvés",
     "chargerPlus": "Charger {count} de plus",
     "restants": "({count} restants)",
     "filtresActifs": {
       "vague": "Vague : {code}",
+      "vagueFiltered": "Vague filtrée",
       "bac": "Bac : {nom}",
+      "bacFiltered": "Bac filtré",
       "periode": {
         "du": "Du {date}",
         "au": "→ {date}"
       },
-      "modifie": "Modifiés seulement"
+      "modifie": "Modifiés seulement",
+      "poids": "Poids",
+      "taille": "Taille",
+      "cause": "Cause",
+      "morts": "Morts",
+      "aliment": "Aliment",
+      "comportement": "Comportement",
+      "frequence": "Fréquence",
+      "frequenceUnit": "fois/j",
+      "produit": "Produit",
+      "produitFiltered": "Produit filtré",
+      "temperature": "T°",
+      "methode": "Méthode",
+      "recherche": "Recherche",
+      "renouvellement": "Renouvellement"
     }
   }
 }

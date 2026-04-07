@@ -171,8 +171,22 @@
     "predicted": "Predicted",
     "deviation": "Deviation",
     "projections": "Projections",
-    "dayHeader": "Day"
+    "dayHeader": "Day",
+    "confidence": {
+      "HIGH": "High reliability",
+      "MEDIUM": "Medium reliability",
+      "LOW": "Low reliability",
+      "INSUFFICIENT_DATA": "Insufficient data"
+    },
+    "ariaLabelDetails": "Gompertz model details"
   },
+  "bacsSection": {
+    "bacsRetires": "{count} removed tank",
+    "bacsRetiresPlural": "{count} removed tanks",
+    "poissonsDepart": "{count} fish at start",
+    "retire": "Removed"
+  },
+  "poidsChartSection": "the weight evolution chart",
   "comparison": {
     "selectTitle": "Select 2 to 4 batches",
     "hide": "Hide",

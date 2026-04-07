@@ -108,13 +108,13 @@ export async function QuotasUsageBar({ siteId, precomputedBacsCount, precomputed
   if (!quotas) {
     return (
       <div className="rounded-lg border bg-card p-4 flex flex-col gap-3">
-        <h3 className="text-sm font-semibold">Utilisation de votre plan</h3>
+        <h3 className="text-sm font-semibold">{t("quotas.planUsage")}</h3>
         <p className="text-sm text-muted-foreground">
-          Aucun abonnement actif.{" "}
+          {t("quotas.noSubscription")}{" "}
           <Link href="/tarifs" className="underline underline-offset-2 font-medium text-primary">
-            Souscrire à un plan
+            {t("quotas.subscribe")}
           </Link>{" "}
-          pour gérer vos ressources.
+          {t("quotas.toManageResources")}
         </p>
       </div>
     );

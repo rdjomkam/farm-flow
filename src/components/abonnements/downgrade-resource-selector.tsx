@@ -14,6 +14,7 @@
  * Valide que le nombre sélectionné <= limite du nouveau plan.
  */
 import { useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { AlertCircle, CheckSquare, Square, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TypePlan } from "@/types";
@@ -64,6 +65,7 @@ export function DowngradeResourceSelector({
   onSelectionChange,
   initialSelection,
 }: DowngradeResourceSelectorProps) {
+  const t = useTranslations("abonnements");
   // R2/ERR-031 : accès PLAN_LIMITES via TypePlan cast
   const limites = PLAN_LIMITES[nouveauPlanTypePlan];
 
@@ -140,12 +142,12 @@ export function DowngradeResourceSelector({
           <div className="space-y-1">
             {!bacsValide && (
               <p>
-                Trop de bacs sélectionnés : {nbBacsSelectionnes}/{limitesBacs} autorisé(s).
+                {t("downgradeSelector.tooManyTanks", { selected: nbBacsSelectionnes, limit: limitesBacs })}
               </p>
             )}
             {!vaguesValide && (
               <p>
-                Trop de vagues sélectionnées : {nbVaguesSelectionnees}/{limitesVagues} autorisée(s).
+                {t("downgradeSelector.tooManyWaves", { selected: nbVaguesSelectionnees, limit: limitesVagues })}
               </p>
             )}
           </div>
@@ -161,8 +163,11 @@ export function DowngradeResourceSelector({
             className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-foreground"
           >
             <span>
-              Bacs ({nbBacsSelectionnes}/{limitesBacs} sélectionné
-              {nbBacsSelectionnes !== 1 ? "s" : ""})
+              {t("downgradeSelector.tanksSection", {
+                selected: nbBacsSelectionnes,
+                limit: limitesBacs,
+                plural: nbBacsSelectionnes !== 1 ? "s" : "",
+              })}
             </span>
             {bacsSection ? (
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -200,7 +205,7 @@ export function DowngradeResourceSelector({
                     <span className="flex-1 truncate">{bac.nom}</span>
                     {selectionne && (
                       <span className="ml-auto text-xs font-medium text-primary">
-                        A conserver
+                        {t("downgradeSelector.toKeep")}
                       </span>
                     )}
                   </button>
@@ -220,8 +225,11 @@ export function DowngradeResourceSelector({
             className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-foreground"
           >
             <span>
-              Vagues ({nbVaguesSelectionnees}/{limitesVagues} sélectionné
-              {nbVaguesSelectionnees !== 1 ? "es" : "e"})
+              {t("downgradeSelector.wavesSection", {
+                selected: nbVaguesSelectionnees,
+                limit: limitesVagues,
+                plural: nbVaguesSelectionnees !== 1 ? "es" : "e",
+              })}
             </span>
             {vaguesSection ? (
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -262,7 +270,7 @@ export function DowngradeResourceSelector({
                     </span>
                     {selectionnee && (
                       <span className="text-xs font-medium text-primary">
-                        A conserver
+                        {t("downgradeSelector.toKeep")}
                       </span>
                     )}
                   </button>
@@ -276,7 +284,7 @@ export function DowngradeResourceSelector({
       {/* Résumé si aucune ressource */}
       {bacs.length === 0 && vagues.length === 0 && (
         <p className="text-sm text-muted-foreground text-center py-4">
-          Aucune ressource a conserver pour ce site.
+          {t("downgradeSelector.noResourcesToKeep")}
         </p>
       )}
 
@@ -287,9 +295,12 @@ export function DowngradeResourceSelector({
         disabled={!selectionValide}
         className="w-full min-h-[44px]"
       >
-        Confirmer la selection ({nbBacsSelectionnes} bac
-        {nbBacsSelectionnes !== 1 ? "s" : ""}, {nbVaguesSelectionnees} vague
-        {nbVaguesSelectionnees !== 1 ? "s" : ""})
+        {t("downgradeSelector.confirmSelection", {
+          tanks: nbBacsSelectionnes,
+          tankPlural: nbBacsSelectionnes !== 1 ? "s" : "",
+          waves: nbVaguesSelectionnees,
+          wavePlural: nbVaguesSelectionnees !== 1 ? "s" : "",
+        })}
       </Button>
     </div>
   );

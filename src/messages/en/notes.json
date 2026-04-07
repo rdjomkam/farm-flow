@@ -61,6 +61,10 @@
     "unreadAriaLabel": "{count} unread note",
     "unreadAriaLabelPlural": "{count} unread notes"
   },
+  "detail": {
+    "myObservation": "My observation",
+    "dkfarm": "DKFarm"
+  },
   "form": {
     "sectionInfos": "Note information",
     "sectionInfosDescription": "Write the note for the client",

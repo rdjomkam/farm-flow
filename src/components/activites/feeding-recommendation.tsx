@@ -404,7 +404,7 @@ export function FeedingRecommendation({
         {tailleGranuleEffective && (
           <MetricRow
             icon={<Package className="h-3.5 w-3.5" />}
-            label="Taille granule"
+            label={tActivites("feeding.granuleSize")}
             value={tStock(`produits.taillesGranule.${tailleGranuleEffective}` as any) || tailleGranuleEffective}
           />
         )}
@@ -412,7 +412,7 @@ export function FeedingRecommendation({
         {frequenceEffective != null && (
           <MetricRow
             icon={<Clock className="h-3.5 w-3.5" />}
-            label="Frequence"
+            label={tActivites("feeding.frequence")}
             value={`${frequenceEffective} repas / jour`}
           />
         )}
@@ -420,7 +420,7 @@ export function FeedingRecommendation({
         {poidsMoyenUtilise != null && (
           <MetricRow
             icon={<span className="text-xs font-bold">~</span>}
-            label="Poids moyen"
+            label={tActivites("feeding.avgWeightFull")}
             value={`${poidsMoyenUtilise} g`}
             hint={estProjete ? "projete" : undefined}
           />
@@ -429,7 +429,7 @@ export function FeedingRecommendation({
         {nombreVivantsUtilise != null && (
           <MetricRow
             icon={<span className="text-xs">🐟</span>}
-            label="Poissons"
+            label={tActivites("feeding.poissons")}
             value={formatNumber(nombreVivantsUtilise)}
           />
         )}

@@ -143,7 +143,7 @@ export default async function IngenieurPage() {
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Clients ({clientsResult.total})
+              {t("monitoring.clientsTitle", { count: clientsResult.total })}
             </h2>
           </div>
 
@@ -152,10 +152,10 @@ export default async function IngenieurPage() {
               <CardContent className="flex flex-col items-center justify-center py-12 text-center p-4">
                 <Bell className="h-10 w-10 text-muted-foreground/30 mb-3" />
                 <p className="text-sm text-muted-foreground">
-                  Aucun client actif pour le moment.
+                  {t("monitoring.noClients")}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Les clients apparaissent ici lorsqu&#39;un pack est active pour leur site.
+                  {t("monitoring.noClientsHint")}
                 </p>
               </CardContent>
             </Card>
@@ -171,7 +171,7 @@ export default async function IngenieurPage() {
         {/* Stats globales — bas de page */}
         <section>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-            Vue globale
+            {t("monitoring.vueGlobale")}
           </h2>
           <DashboardStats metrics={metricsSerialized} />
         </section>

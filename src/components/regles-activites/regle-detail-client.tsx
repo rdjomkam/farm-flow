@@ -333,9 +333,9 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
 
         {/* Header section */}
         <SectionCard title={t("rules.sections.identity")}>
-          <InfoRow label="Nom">{regle.nom}</InfoRow>
+          <InfoRow label={t("rules.detail.nom")}>{regle.nom}</InfoRow>
           {regle.description && (
-            <InfoRow label="Description">{regle.description}</InfoRow>
+            <InfoRow label={t("rules.detail.description")}>{regle.description}</InfoRow>
           )}
           <InfoRow label="Type d'activite">
             <Badge variant="en_cours">
@@ -401,28 +401,28 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
               <Badge variant="warning">{t("rules.firedOnceBadge")}</Badge>
             </InfoRow>
           )}
-          <InfoRow label="Activites generees">
+          <InfoRow label={t("rules.detail.activitesGenerees")}>
             <span className="font-mono text-sm">{activitesCount}</span>
           </InfoRow>
         </SectionCard>
 
         {/* Declencheur params */}
         <SectionCard title={t("rules.sections.triggerParams")}>
-          <InfoRow label="Priorite">{regle.priorite} / 10</InfoRow>
+          <InfoRow label={t("rules.detail.priorite")}>{regle.priorite} / 10</InfoRow>
           {regle.intervalleJours != null && (
-            <InfoRow label="Intervalle">
+            <InfoRow label={t("rules.detail.intervalleJours")}>
               {regle.intervalleJours} jour{regle.intervalleJours > 1 ? "s" : ""}
             </InfoRow>
           )}
           {regle.phaseMin && (
-            <InfoRow label="Phase min">
+            <InfoRow label={t("rules.detail.phaseMin")}>
               {PHASE_ELEVAGE_LABELS[regle.phaseMin as PhaseElevage]
                 ? t(PHASE_ELEVAGE_LABELS[regle.phaseMin as PhaseElevage])
                 : regle.phaseMin}
             </InfoRow>
           )}
           {regle.phaseMax && (
-            <InfoRow label="Phase max">
+            <InfoRow label={t("rules.detail.phaseMax")}>
               {PHASE_ELEVAGE_LABELS[regle.phaseMax as PhaseElevage]
                 ? t(PHASE_ELEVAGE_LABELS[regle.phaseMax as PhaseElevage])
                 : regle.phaseMax}
@@ -702,7 +702,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
 
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">
-            Nom <span className="text-danger">*</span>
+            {t("rules.detail.nom")} <span className="text-danger">*</span>
           </label>
           <Input
             value={form.nom}
@@ -715,7 +715,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
 
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">
-            Description
+            {t("rules.detail.description")}
           </label>
           <Textarea
             value={form.description}
@@ -725,7 +725,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
             rows={2}
             maxLength={500}
             className="min-h-[44px]"
-            placeholder="Description metier..."
+            placeholder={t("rules.detail.descriptionMetierPlaceholder")}
           />
           <p className="text-xs text-muted-foreground text-right mt-0.5">
             {form.description.length}/500
@@ -761,7 +761,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
         {/* Priorite */}
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">
-            Priorite (1 = haute, 10 = basse)
+            {t("rules.detail.priorite")}
           </label>
           <Input
             type="number"
@@ -781,7 +781,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
         {/* intervalleJours — toujours visible avec note RECURRENT */}
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">
-            Intervalle (jours)
+            {t("rules.detail.intervalleJours")}
           </label>
           <Input
             type="number"
@@ -796,7 +796,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
             step={1}
           />
           <p className="text-xs text-muted-foreground mt-1">
-            Uniquement pour les declencheurs de type Recurrent
+            {t("rules.detail.intervalleJoursHint")}
           </p>
         </div>
 
@@ -804,7 +804,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              Phase min
+              {t("rules.detail.phaseMin")}
             </label>
             <Select
               value={form.phaseMin ?? "__none__"}
@@ -830,7 +830,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              Phase max
+              {t("rules.detail.phaseMax")}
             </label>
             <Select
               value={form.phaseMax ?? "__none__"}
@@ -864,14 +864,14 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
         <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
           <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
           <p className="text-xs text-muted-foreground">
-            Definissez les conditions qui declencheront cette regle. Ajoutez une ou plusieurs conditions.
+            {t("rules.form.conditionsBannerText")}
           </p>
         </div>
 
         {/* Logique */}
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">
-            Logique de combinaison
+            {t("rules.detail.logiqueCombinaisonLabel")}
           </label>
           <Select
             value={form.logique}
@@ -915,7 +915,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                 {/* TypeDeclencheur */}
                 <div>
                   <label className="block text-xs font-medium text-foreground mb-1">
-                    Type de declencheur
+                    {t("rules.detail.typeDeclencheurLabel")}
                   </label>
                   <Select
                     value={cond.typeDeclencheur}
@@ -928,7 +928,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Choisir..." />
+                      <SelectValue placeholder={t("rules.form.choosePlaceholder")} />
                     </SelectTrigger>
                     <SelectContent>
                       {Object.values(TypeDeclencheur).map((val) => (
@@ -943,7 +943,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                 {/* Operateur */}
                 <div>
                   <label className="block text-xs font-medium text-foreground mb-1">
-                    Operateur
+                    {t("rules.detail.operateurLabel")}
                   </label>
                   <Select
                     value={cond.operateur}
@@ -960,7 +960,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Choisir..." />
+                      <SelectValue placeholder={t("rules.form.choosePlaceholder")} />
                     </SelectTrigger>
                     <SelectContent>
                       {Object.values(OperateurCondition).map((val) => (
@@ -974,7 +974,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
 
                 {/* Valeur */}
                 <Input
-                  label="Valeur"
+                  label={t("rules.detail.valeurLabel")}
                   type="number"
                   step="any"
                   value={cond.conditionValeur}
@@ -985,13 +985,13 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                       return { ...f, conditions: updated };
                     })
                   }
-                  placeholder="Ex: 200"
+                  placeholder={t("rules.form.placeholderEx200")}
                 />
 
                 {/* Valeur2 — ENTRE uniquement */}
                 {cond.operateur === OperateurCondition.ENTRE && (
                   <Input
-                    label="Valeur maximale (borne haute)"
+                    label={t("rules.detail.valeurMaxLabel")}
                     type="number"
                     step="any"
                     value={cond.conditionValeur2}
@@ -1002,7 +1002,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                         return { ...f, conditions: updated };
                       })
                     }
-                    placeholder="Ex: 300"
+                    placeholder={t("rules.form.placeholderEx300")}
                   />
                 )}
               </div>
@@ -1026,7 +1026,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           className="w-full min-h-[44px]"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Ajouter une condition
+          {t("rules.form.addCondition")}
         </Button>
       </div>
 
@@ -1058,21 +1058,21 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           <div className="space-y-4">
             <div className="rounded-lg border border-accent-amber/20 bg-accent-amber/5 p-3">
               <p className="text-xs text-muted-foreground">
-                Configurez le contenu de l&apos;alerte qui sera envoyee aux utilisateurs.
+                {t("rules.form.notifConfigBannerText")}
               </p>
             </div>
 
             {/* Severite */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">
-                Severite <span className="text-danger">*</span>
+                {t("rules.detail.severiteLabel")} <span className="text-danger">*</span>
               </label>
               <Select
                 value={form.severite ?? "__none__"}
                 onValueChange={(v) => setForm((f) => ({ ...f, severite: v === "__none__" ? null : v as SeveriteAlerte }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Choisir..." />
+                  <SelectValue placeholder={t("rules.form.choosePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.values(SeveriteAlerte).map((val) => (
@@ -1086,7 +1086,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
 
             {/* titreNotificationTemplate */}
             <TemplateEditor
-              label="Titre de l'alerte"
+              label={t("rules.detail.titreAlerteLabel")}
               name="titreNotificationTemplate"
               value={form.titreNotificationTemplate}
               onChange={(v) => setForm((f) => ({ ...f, titreNotificationTemplate: v }))}
@@ -1099,7 +1099,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
 
             {/* descriptionNotificationTemplate */}
             <TemplateEditor
-              label="Description de l'alerte (optionnel)"
+              label={t("rules.detail.descriptionAlerteLabel")}
               name="descriptionNotificationTemplate"
               value={form.descriptionNotificationTemplate}
               onChange={(v) => setForm((f) => ({ ...f, descriptionNotificationTemplate: v }))}
@@ -1112,7 +1112,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
             {/* actionPayloadType */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">
-                Bouton d&apos;action dans l&apos;alerte (optionnel)
+                {t("rules.detail.actionPayloadLabel")}
               </label>
               <Select
                 value={form.actionPayloadType || "__none__"}
@@ -1141,7 +1141,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
         <h3 className="text-sm font-semibold text-foreground">{t("rules.sections.activityTemplates")}</h3>
 
         <TemplateEditor
-          label="Titre de l'activite"
+          label={t("rules.detail.titreActiviteLabel")}
           name="titreTemplate"
           value={form.titreTemplate}
           onChange={(v) => setForm((f) => ({ ...f, titreTemplate: v }))}
@@ -1153,7 +1153,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
         />
 
         <TemplateEditor
-          label="Description"
+          label={t("rules.detail.description")}
           name="descriptionTemplate"
           value={form.descriptionTemplate}
           onChange={(v) => setForm((f) => ({ ...f, descriptionTemplate: v }))}
@@ -1164,7 +1164,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
         />
 
         <TemplateEditor
-          label="Instructions detaillees"
+          label={t("rules.detail.instructionsLabel")}
           name="instructionsTemplate"
           value={form.instructionsTemplate}
           onChange={(v) => setForm((f) => ({ ...f, instructionsTemplate: v }))}
@@ -1181,7 +1181,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
       <div className="rounded-xl border border-border bg-card p-4 space-y-3">
         <h3 className="text-sm font-semibold text-foreground">{t("rules.sections.internalIdentity")}</h3>
         <Input
-          label="Titre interne (pour les logs)"
+          label={t("rules.detail.titreInterneLabel")}
           value={form.titreTemplate}
           onChange={(e) => setForm((f) => ({ ...f, titreTemplate: e.target.value }))}
           placeholder="Ex: Alerte densite elevee"
@@ -1221,7 +1221,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                 className="flex-1 sm:flex-none"
               >
                 <Trash2 className="h-4 w-4" />
-                Supprimer
+                {t("rules.supprimer")}
               </Button>
             </DialogTrigger>
             <DialogContent>

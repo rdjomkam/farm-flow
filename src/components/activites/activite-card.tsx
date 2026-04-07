@@ -20,7 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { CompleterActiviteDialog } from "@/components/planning/completer-activite-dialog";
 import { FeedingRecommendation } from "@/components/activites/feeding-recommendation";
-import { TypeActivite, StatutActivite, Permission, PhaseElevage, UniteStock } from "@/types";
+import { TypeActivite, StatutActivite, Permission, UniteStock } from "@/types";
 import type { ActiviteWithRelations } from "@/types";
 import { typeActiviteLabels } from "@/lib/labels/activite";
 
@@ -42,15 +42,6 @@ const typeActiviteIcons: Record<TypeActivite, React.ReactNode> = {
   [TypeActivite.AUTRE]: <MoreHorizontal className="h-4 w-4" />,
 };
 
-// Labels pour la phase d'elevage (R2 : jamais de string literal)
-const phaseElevageLabels: Record<PhaseElevage, string> = {
-  [PhaseElevage.ACCLIMATATION]: "Acclimatation",
-  [PhaseElevage.CROISSANCE_DEBUT]: "Croissance debut",
-  [PhaseElevage.JUVENILE]: "Juvenile",
-  [PhaseElevage.GROSSISSEMENT]: "Grossissement",
-  [PhaseElevage.FINITION]: "Finition",
-  [PhaseElevage.PRE_RECOLTE]: "Pre-recolte",
-};
 
 // ---------------------------------------------------------------------------
 // Helpers priorite (1=basse, 2=moyenne, 3=critique)
@@ -224,7 +215,7 @@ export function ActiviteCard({ activite, permissions }: ActiviteCardProps) {
       {activite.phaseElevage && (
         <div className="mb-2">
           <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-            {phaseElevageLabels[activite.phaseElevage as PhaseElevage] ??
+            {t(`phases.${activite.phaseElevage}` as Parameters<typeof t>[0]) ??
               activite.phaseElevage}
           </span>
         </div>

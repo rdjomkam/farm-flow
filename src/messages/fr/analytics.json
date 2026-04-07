@@ -1,6 +1,8 @@
 {
   "page": {
+    "title": "Analytiques",
     "alimAnalytics": "Analytiques aliments",
+    "vaguesComparison": "Comparaison vagues",
     "alimSimulator": "Simulateur aliments",
     "alimDetail": "Détail aliment",
     "bacDetail": "Détail bac",
@@ -294,6 +296,18 @@
   "fcrTrace": {
     "title": "Détail du calcul ICA",
     "triggerLabel": "Comment est calculé cet ICA ?",
+    "confidence": {
+      "HIGH": "Confiance haute",
+      "MEDIUM": "Confiance moyenne",
+      "LOW": "Confiance faible",
+      "INSUFFICIENT_DATA": "Données insuffisantes"
+    },
+    "feedConsumed": "Aliment consommé",
+    "biomassGain": "Gain biomasse",
+    "biomassGainTotal": "Gain biomasse total",
+    "totalFeed": "Aliment total",
+    "noPeriods": "Aucune période de consommation trouvée.",
+    "noData": "Aucune donnée disponible.",
     "fcrFinal": "ICA final agrégé",
     "totalAliment": "Total aliment",
     "totalGain": "Gain de biomasse total",

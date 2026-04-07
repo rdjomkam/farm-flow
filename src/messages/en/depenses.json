@@ -1,5 +1,6 @@
 {
   "page": {
+    "title": "Expenses",
     "newExpense": "New expense",
     "recurringExpenses": "Recurring expenses",
     "finances": "Finances"
@@ -73,6 +74,9 @@
     "listeBesoins": "Needs list",
     "fraisNotesPlaceholder": "E.g.: transport from Douala",
     "supprimerFrais": "Remove this fee"
+  },
+  "errors": {
+    "montantInvalide": "Invalid amount"
   },
   "ajustement": {
     "title": "Adjust amount",
@@ -168,6 +172,7 @@
     "categorieLabel": "Category",
     "categoriePlaceholder": "Choose a category",
     "montantLabel": "Estimated amount (FCFA)",
+    "montantPlaceholder": "E.g.: 150000",
     "frequenceLabel": "Frequency",
     "jourLabel": "Day of month (1-28)",
     "annuler": "Cancel",

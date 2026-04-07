@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { VaguesComparisonClient } from "@/components/analytics/vagues-comparison-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -15,12 +16,14 @@ export default async function AnalyticsVaguesPage() {
     const permissions = await checkPagePermission(session, Permission.VAGUES_VOIR);
     if (!permissions) return <AccessDenied />;
 
+    const t = await getTranslations("analytics.page");
+
     // Charger toutes les vagues du site (EN_COURS et TERMINEE) pour le selecteur
     const { data: vagues } = await getVagues(session.activeSiteId);
 
     return (
       <>
-        <Header title="Comparaison vagues" />
+        <Header title={t("vaguesComparison")} />
         <VaguesComparisonClient vagues={vagues} />
       </>
     );

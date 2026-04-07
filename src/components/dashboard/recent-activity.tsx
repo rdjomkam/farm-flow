@@ -1,15 +1,7 @@
+import { getTranslations } from "next-intl/server";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { TypeReleve } from "@/types";
-
-const typeLabels: Record<string, string> = {
-  [TypeReleve.BIOMETRIE]: "Biometrie",
-  [TypeReleve.MORTALITE]: "Mortalite",
-  [TypeReleve.ALIMENTATION]: "Alimentation",
-  [TypeReleve.QUALITE_EAU]: "Qualite eau",
-  [TypeReleve.COMPTAGE]: "Comptage",
-  [TypeReleve.OBSERVATION]: "Observation",
-};
 
 const typeColors: Record<string, string> = {
   [TypeReleve.BIOMETRIE]: "bg-accent-blue",
@@ -31,8 +23,10 @@ interface RecentActivityProps {
   }[];
 }
 
-export function RecentActivity({ releves }: RecentActivityProps) {
+export async function RecentActivity({ releves }: RecentActivityProps) {
   if (releves.length === 0) return null;
+
+  const t = await getTranslations("releves");
 
   return (
     <section>
@@ -44,7 +38,7 @@ export function RecentActivity({ releves }: RecentActivityProps) {
               <div className={cn("h-2 w-2 rounded-full shrink-0", typeColors[r.typeReleve] || "bg-muted-foreground")} />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium truncate">
-                  {typeLabels[r.typeReleve] || r.typeReleve}
+                  {t(`types.${r.typeReleve}` as Parameters<typeof t>[0]) || r.typeReleve}
                   {r.vague && <span className="text-muted-foreground font-normal"> &mdash; {r.vague.code}</span>}
                 </p>
                 {r.bac && <p className="text-xs text-muted-foreground">Bac: {r.bac.nom}</p>}

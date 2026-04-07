@@ -1,5 +1,6 @@
 {
   "sites": {
+    "searchPlaceholder": "Search by name...",
     "aucunPlan": "No plan",
     "bloques": "Blocked",
     "aucunSiteTrouve": "No site found",
@@ -102,6 +103,7 @@
     "saving": "Saving..."
   },
   "modules": {
+    "searchPlaceholder": "Search by label, key, category...",
     "aucunModuleFiltre": "No module matches the filters.",
     "modifierTitle": "Edit module",
     "modifierDescription": "Update module metadata. The key and level are immutable.",

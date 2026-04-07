@@ -128,6 +128,15 @@
     "description": "You do not have the required permissions to access this page. Contact an administrator if you believe this is an error.",
     "backButton": "Back to dashboard"
   },
+  "markdownEditor": {
+    "bold": "Bold",
+    "italic": "Italic",
+    "heading2": "Heading 2",
+    "heading3": "Heading 3",
+    "list": "List",
+    "orderedList": "Numbered list",
+    "quote": "Quote"
+  },
   "loading": {
     "ariaLabel": "Loading",
     "text": "Loading..."

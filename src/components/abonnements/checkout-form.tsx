@@ -81,7 +81,7 @@ function StepProgress({ etape, t }: { etape: Etape; t: ReturnType<typeof useTran
     <ol
       className="flex items-center gap-2 mb-6"
       role="list"
-      aria-label="Étapes du paiement"
+      aria-label={t("checkoutForm.stepsAriaLabel")}
     >
       {steps.map((step, i) => (
         <li
@@ -100,7 +100,7 @@ function StepProgress({ etape, t }: { etape: Etape; t: ReturnType<typeof useTran
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground",
               ].join(" ")}
-              aria-label={`Étape ${step.num}: ${step.label}${step.num === etape ? " (étape en cours)" : step.num < etape ? " (terminée)" : ""}`}
+              aria-label={`${t("checkoutForm.stepAriaLabel", { num: step.num, label: step.label })}${step.num === etape ? ` ${t("checkoutForm.stepCurrentSuffix")}` : step.num < etape ? ` ${t("checkoutForm.stepDoneSuffix")}` : ""}`}
             >
               {step.num < etape ? <Check className="h-4 w-4" /> : step.num}
             </div>

@@ -4,6 +4,7 @@ import * as Collapsible from "@radix-ui/react-collapsible";
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { AssignationBacForVague } from "@/types";
@@ -24,6 +25,7 @@ interface VagueBacsSectionProps {
  */
 export function VagueBacsSection({ bacsActifs, bacsRetires }: VagueBacsSectionProps) {
   const [open, setOpen] = useState(false);
+  const t = useTranslations("vagues.bacsSection");
 
   return (
     <div className="flex flex-col gap-3">
@@ -69,7 +71,9 @@ export function VagueBacsSection({ bacsActifs, bacsRetires }: VagueBacsSectionPr
                 <ChevronRight className="h-4 w-4 shrink-0" />
               )}
               <span>
-                {bacsRetires.length} bac{bacsRetires.length > 1 ? "s" : ""} retiré{bacsRetires.length > 1 ? "s" : ""}
+                {bacsRetires.length > 1
+                  ? t("bacsRetiresPlural", { count: bacsRetires.length })
+                  : t("bacsRetires", { count: bacsRetires.length })}
               </span>
             </button>
           </Collapsible.Trigger>
@@ -86,11 +90,11 @@ export function VagueBacsSection({ bacsActifs, bacsRetires }: VagueBacsSectionPr
                       )}
                       {a.nombrePoissonsInitial != null && (
                         <p className="text-xs text-muted-foreground">
-                          {a.nombrePoissonsInitial} poissons au départ
+                          {t("poissonsDepart", { count: a.nombrePoissonsInitial })}
                         </p>
                       )}
                     </div>
-                    <Badge variant="default">Retiré</Badge>
+                    <Badge variant="default">{t("retire")}</Badge>
                   </CardContent>
                 </Card>
               </Link>

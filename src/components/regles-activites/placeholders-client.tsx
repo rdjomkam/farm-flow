@@ -293,7 +293,7 @@ function PlaceholderForm({ initial, onSave, onCancel }: FormProps) {
         <Input
           value={key}
           onChange={(e) => setKey(e.target.value)}
-          placeholder="ex: mortalite_pct"
+          placeholder={t("form.clePlaceholder")}
           pattern="^[a-z][a-z0-9_]*$"
           title="Minuscules, chiffres et underscores uniquement"
           required
@@ -312,7 +312,7 @@ function PlaceholderForm({ initial, onSave, onCancel }: FormProps) {
         <Input
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          placeholder="ex: Taux mortalite cumulee (%)"
+          placeholder={t("form.libellePlaceholder")}
           required
         />
       </div>
@@ -338,7 +338,7 @@ function PlaceholderForm({ initial, onSave, onCancel }: FormProps) {
         <Input
           value={example}
           onChange={(e) => setExample(e.target.value)}
-          placeholder="ex: 12,5"
+          placeholder={t("form.exemplePlaceholder")}
           required
         />
       </div>
@@ -417,7 +417,7 @@ function PlaceholderForm({ initial, onSave, onCancel }: FormProps) {
           <Input
             value={formula}
             onChange={(e) => setFormula(e.target.value)}
-            placeholder="ex: poids_moyen * 1.2"
+            placeholder={t("form.formulePlaceholder")}
             required
             className="font-mono"
           />

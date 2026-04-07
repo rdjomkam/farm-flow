@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { calculerDureeAssignation } from "@/lib/calculs";
@@ -14,7 +15,9 @@ interface BacAssignationHistoryProps {
  * Affiche l'historique des assignations d'un bac à des vagues.
  * ADR-043 — Phase 2 Feature 1.
  */
-export function BacAssignationHistory({ assignations }: BacAssignationHistoryProps) {
+export async function BacAssignationHistory({ assignations }: BacAssignationHistoryProps) {
+  const t = await getTranslations("bacs.assignationHistory");
+
   if (assignations.length === 0) {
     return (
       <p className="text-sm text-muted-foreground py-4 text-center">
@@ -72,15 +75,15 @@ export function BacAssignationHistory({ assignations }: BacAssignationHistoryPro
                     <p className="text-xs text-muted-foreground mt-1">
                       {a.nombrePoissonsInitial != null ? (
                         <>
-                          <span className="font-medium">{a.nombrePoissonsInitial}</span> poissons au départ
+                          {t("poissonsDepart", { count: a.nombrePoissonsInitial })}
                           {a.nombrePoissons != null && a.nombrePoissons !== a.nombrePoissonsInitial && (
-                            <> → <span className="font-medium">{a.nombrePoissons}</span> à la fin</>
+                            <> {t("arrow")} <span className="font-medium">{a.nombrePoissons}</span> {t("aLaFin")}</>
                           )}
                         </>
                       ) : (
                         <>
                           {a.nombrePoissons != null && (
-                            <><span className="font-medium">{a.nombrePoissons}</span> poissons</>
+                            <>{t("poissons", { count: a.nombrePoissons })}</>
                           )}
                         </>
                       )}
@@ -93,7 +96,7 @@ export function BacAssignationHistory({ assignations }: BacAssignationHistoryPro
                   {active ? (
                     <Badge variant="success">Active</Badge>
                   ) : (
-                    <Badge variant="default">Terminée</Badge>
+                    <Badge variant="default">{t("terminee")}</Badge>
                   )}
                 </div>
               </div>

@@ -66,7 +66,7 @@ export function ActivationsListClient({ activations }: Props) {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Rechercher par code, site ou pack..."
+            placeholder={t("activationsSearch")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -76,9 +76,9 @@ export function ActivationsListClient({ activations }: Props) {
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="actives">Actives</TabsTrigger>
-          <TabsTrigger value="expirees">Expirees</TabsTrigger>
-          <TabsTrigger value="toutes">Toutes</TabsTrigger>
+          <TabsTrigger value="actives">{t("activationsTabs.actives")}</TabsTrigger>
+          <TabsTrigger value="expirees">{t("activationsTabs.expirees")}</TabsTrigger>
+          <TabsTrigger value="toutes">{t("activationsTabs.toutes")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value={tab} className="mt-4">

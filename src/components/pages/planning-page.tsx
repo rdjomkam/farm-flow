@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { PlanningClient } from "@/components/planning/planning-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -14,7 +15,10 @@ export default async function PlanningPage() {
   if (!session.activeSiteId) redirect("/settings/sites");
 
   try {
-    const permissions = await checkPagePermission(session, Permission.PLANNING_VOIR);
+    const [t, permissions] = await Promise.all([
+      getTranslations("planning"),
+      checkPagePermission(session, Permission.PLANNING_VOIR),
+    ]);
     if (!permissions) return <AccessDenied />;
 
     // Charger les activites du mois courant et les 2 mois precedents
@@ -35,7 +39,7 @@ export default async function PlanningPage() {
 
     return (
       <>
-        <Header title="Planning" />
+        <Header title={t("page.title")} />
         <div className="p-4">
           <PlanningClient
             activites={JSON.parse(JSON.stringify(activitesResult.data))}

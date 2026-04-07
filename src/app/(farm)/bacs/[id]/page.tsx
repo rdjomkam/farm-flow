@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Container } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,8 @@ export default async function BacDetailPage({
   const permissions = await checkPagePermission(session, Permission.BACS_GERER);
   if (!permissions) return <AccessDenied />;
 
+  const t = await getTranslations("bacs.detail");
+
   const { id } = await params;
   const bac = await getBacWithAssignations(id, session.activeSiteId);
 
@@ -44,7 +47,7 @@ export default async function BacDetailPage({
         <Button variant="ghost" size="sm" className="self-start -ml-2" asChild>
           <Link href="/bacs">
             <ArrowLeft className="h-4 w-4" />
-            Retour aux bacs
+            {t("retourBacs")}
           </Link>
         </Button>
 
@@ -56,16 +59,16 @@ export default async function BacDetailPage({
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-lg font-semibold">{bac.nom}</h1>
                 {isOccupe ? (
-                  <Badge variant="warning">Occupé</Badge>
+                  <Badge variant="warning">{t("occupe")}</Badge>
                 ) : (
-                  <Badge variant="info">Libre</Badge>
+                  <Badge variant="info">{t("libre")}</Badge>
                 )}
               </div>
               {bac.volume != null && (
-                <p className="text-sm text-muted-foreground mt-0.5">Volume : {bac.volume} L</p>
+                <p className="text-sm text-muted-foreground mt-0.5">{t("volume", { volume: bac.volume })}</p>
               )}
               {bac.typeSysteme && (
-                <p className="text-sm text-muted-foreground">Type : {bac.typeSysteme}</p>
+                <p className="text-sm text-muted-foreground">{t("type", { type: bac.typeSysteme })}</p>
               )}
             </div>
           </CardContent>
@@ -74,7 +77,7 @@ export default async function BacDetailPage({
         {/* Historique des assignations */}
         <section>
           <h2 className="text-base font-semibold mb-3">
-            Historique des assignations
+            {t("historiqueTitle")}
             {bac.assignations.length > 0 && (
               <span className="ml-2 text-sm font-normal text-muted-foreground">
                 ({bac.assignations.length})

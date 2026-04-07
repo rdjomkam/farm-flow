@@ -282,7 +282,7 @@ export function RecurrentesListClient({
                         montantEstime: parseFloat(e.target.value) || 0,
                       }))
                     }
-                    placeholder="Ex: 150000"
+                    placeholder={t("recurrentes.montantPlaceholder")}
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">

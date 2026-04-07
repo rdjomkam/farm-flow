@@ -18,9 +18,12 @@ import { prisma } from "@/lib/db";
 import { GererRessourcesClient } from "@/components/abonnements/gerer-ressources-client";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Gérer les ressources",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("abonnements");
+  return {
+    title: t("gererRessources.pageTitle"),
+  };
+}
 
 export const dynamic = "force-dynamic";
 

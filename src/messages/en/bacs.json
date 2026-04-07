@@ -1,4 +1,7 @@
 {
+  "page": {
+    "title": "Tanks"
+  },
   "typeSysteme": {
     "BAC_BETON": "Concrete / plastic tank",
     "BAC_PLASTIQUE": "Plastic tank",
@@ -13,7 +16,8 @@
     "poissons": "{count} fish",
     "initial": "Initial: {nombre} ind. / {poids} g",
     "libre": "Available",
-    "occupe": "Occupied"
+    "occupe": "Occupied",
+    "historiqueAssignations": "Assignment history"
   },
   "createDialog": {
     "title": "New tank",
@@ -27,6 +31,24 @@
       "nomRequis": "Name is required.",
       "volumePositif": "Volume must be greater than 0."
     }
+  },
+  "assignationHistory": {
+    "arrow": "→",
+    "aLaFin": "at the end",
+    "poissonsDepart": "{count} fish at start",
+    "poissons": "{count} fish",
+    "terminee": "Completed"
+  },
+  "densite": {
+    "nonCalculable": "Density not calculable"
+  },
+  "detail": {
+    "occupe": "Occupied",
+    "libre": "Available",
+    "retourBacs": "Back to tanks",
+    "volume": "Volume: {volume} L",
+    "type": "Type: {type}",
+    "historiqueTitle": "Assignment history"
   },
   "editDialog": {
     "title": "Edit tank",

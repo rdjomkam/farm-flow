@@ -149,12 +149,11 @@ function TogglePlanButton({
           <DialogHeader>
             <DialogTitle>{t("admin.toggleDeactivateTitle")}</DialogTitle>
             <DialogDescription>
-              Le plan <strong>{plan.nom}</strong> a{" "}
-              <strong>{plan._count.abonnements}</strong> abonné
-              {plan._count.abonnements > 1 ? "s" : ""} actif
-              {plan._count.abonnements > 1 ? "s" : ""}. Les abonnés existants
-              conserveront leur accès jusqu&apos;à expiration, mais aucun
-              nouvel abonnement ne sera possible.
+              {t("admin.toggleDeactivateSubscribersDesc", {
+                nom: plan.nom,
+                count: plan._count.abonnements,
+                plural: plan._count.abonnements > 1 ? "s" : "",
+              })}
             </DialogDescription>
           </DialogHeader>
 

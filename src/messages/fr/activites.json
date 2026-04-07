@@ -98,7 +98,12 @@
     "beforeStockout": "avant rupture",
     "stockUnknown": "Stock inconnu",
     "criticalStock": "Stock critique — commander rapidement",
-    "lowStock": "Stock faible — prevoir une commande"
+    "lowStock": "Stock faible — prevoir une commande",
+    "granuleSize": "Taille granule",
+    "frequence": "Frequence",
+    "avgWeightFull": "Poids moyen",
+    "poissons": "Poissons",
+    "completerReleve": "Terminer avec un releve ({label})"
   },
   "placeholders": {
     "retourRegles": "Retour aux regles",
@@ -135,6 +140,10 @@
       "formatNombre": "Nombre",
       "formatTexte": "Texte",
       "decimalesLabel": "Decimales",
+      "clePlaceholder": "ex: mortalite_pct",
+      "libellePlaceholder": "ex: Taux mortalite cumulee (%)",
+      "exemplePlaceholder": "ex: 12,5",
+      "formulePlaceholder": "ex: poids_moyen * 1.2",
       "annuler": "Annuler",
       "creer": "Creer",
       "enregistrer": "Enregistrer"
