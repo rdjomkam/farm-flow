@@ -102,17 +102,13 @@
 html {
   overflow-x: clip;
   scroll-behavior: smooth;
+  overscroll-behavior-y: none;
+  background-color: var(--card);
 }
 
 body {
   overflow-x: clip;
-}
-
-/* Prevent native overscroll/pull-to-refresh in PWA standalone mode */
-@media all and (display-mode: standalone) {
-  html, body {
-    overscroll-behavior-y: none;
-  }
+  overscroll-behavior-y: none;
 }
 
 body {

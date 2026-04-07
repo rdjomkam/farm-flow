@@ -31,7 +31,7 @@ export function usePullToRefresh() {
       if (isRefreshing) return;
       if (window.scrollY > 0) return;
       // Don't activate when a Radix dialog is open
-      if (document.querySelector("[data-radix-dialog-overlay]")) return;
+      if (document.querySelector("[role='dialog'][data-state='open']")) return;
 
       startY.current = e.touches[0].clientY;
       startX.current = e.touches[0].clientX;

@@ -11,7 +11,7 @@ export default async function ReproductionPlanningPage() {
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const permissions = await checkPagePermission(session, Permission.ALEVINS_VOIR);
+  const permissions = await checkPagePermission(session, Permission.PLANNING_REPRODUCTION_VOIR);
   if (!permissions) return <AccessDenied />;
 
   const t = await getTranslations("reproduction.planning");

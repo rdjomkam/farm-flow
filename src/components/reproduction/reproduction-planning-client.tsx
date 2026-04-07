@@ -14,16 +14,16 @@ import { ProductionCalculator } from "./production-calculator";
 interface PontePlanifiee {
   id: string;
   code: string;
-  dateInjection: string | null;
-  datePonte: string;
+  dateDebut: string;
+  dateFin: string | null;
   statut: string;
-  femelle: { code: string } | null;
+  femelle: { id: string; code: string } | null;
 }
 
 interface IncubationEnCours {
   id: string;
   code: string;
-  dateDebutIncubation: string;
+  dateDebut: string;
   dateEclosionPrevue: string | null;
   statut: string;
 }
@@ -308,12 +308,13 @@ function UpcomingEventsList({
 export function ReproductionPlanningClient() {
   const t = useTranslations("reproduction.planning");
 
-  const now = new Date();
-  const [dateDebut, setDateDebut] = useState<string>(
-    toDateInputValue(startOfMonth(now))
+  // Stable reference — computed once on mount to avoid useMemo thrashing
+  const now = useMemo(() => new Date(), []);
+  const [dateDebut, setDateDebut] = useState<string>(() =>
+    toDateInputValue(startOfMonth(new Date()))
   );
-  const [dateFin, setDateFin] = useState<string>(
-    toDateInputValue(endOfMonth(now))
+  const [dateFin, setDateFin] = useState<string>(() =>
+    toDateInputValue(endOfMonth(new Date()))
   );
   const [data, setData] = useState<PlanningData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -359,7 +360,7 @@ export function ReproductionPlanningClient() {
     const events: CalendarEvent[] = [];
     for (const p of data.pontesPlanifiees) {
       events.push({
-        date: p.datePonte.split("T")[0],
+        date: p.dateDebut.split("T")[0],
         type: "ponte",
         label: `${p.code}${p.femelle ? ` (${p.femelle.code})` : ""}`,
       });

@@ -526,6 +526,30 @@
       "TRANSFERT_INTERNE": "Transfert interne",
       "REFORMAGE": "Reformage"
     },
+    "form": {
+      "title": "Nouveau lot d'alevins",
+      "code": "Code du lot",
+      "codePlaceholder": "Ex: LOT-2026-001",
+      "ponte": "Ponte d'origine",
+      "pontePlaceholder": "Selectionner une ponte",
+      "nombreInitial": "Nombre initial d'alevins",
+      "phase": "Phase initiale",
+      "phasePlaceholder": "Selectionner une phase",
+      "bac": "Bac d'elevage (optionnel)",
+      "bacPlaceholder": "Selectionner un bac",
+      "poidsMoyen": "Poids moyen (g)",
+      "notes": "Notes",
+      "notesPlaceholder": "Observations...",
+      "submit": "Creer le lot",
+      "success": "Lot cree avec succes.",
+      "errors": {
+        "codeRequired": "Le code est obligatoire.",
+        "ponteRequired": "La ponte est obligatoire.",
+        "nombreRequired": "Le nombre initial est obligatoire.",
+        "nombrePositif": "Le nombre doit etre un entier positif.",
+        "serverError": "Erreur lors de la creation du lot."
+      }
+    },
     "card": {
       "poissons": "poissons",
       "survie": "survie",
