@@ -455,6 +455,43 @@
       "eclosionPrevueDans": "Eclosion prevue dans"
     }
   },
+  "dashboard": {
+    "title": "Tableau de bord Reproduction",
+    "periode": "Periode",
+    "derniers30j": "30 derniers jours",
+    "derniers3m": "3 derniers mois",
+    "derniers6m": "6 derniers mois",
+    "derniers12m": "12 derniers mois",
+    "tout": "Tout",
+    "kpis": {
+      "pontes": "Pontes",
+      "oeufs": "Oeufs",
+      "larvesViables": "Larves viables",
+      "alevinsActifs": "Alevins actifs",
+      "geniteurs": "Geniteurs",
+      "lotsEnCours": "Lots en cours",
+      "tauxFecondation": "Taux de fecondation",
+      "tauxEclosion": "Taux d'eclosion",
+      "tauxSurvie": "Taux de survie global"
+    },
+    "funnel": {
+      "title": "Entonnoir de survie"
+    },
+    "timeline": {
+      "title": "Production mensuelle",
+      "pontes": "Pontes",
+      "alevins": "Alevins"
+    },
+    "phases": {
+      "title": "Repartition par phase"
+    },
+    "actions": {
+      "nouvellePonte": "Nouvelle ponte",
+      "voirGeniteurs": "Geniteurs",
+      "planning": "Planning"
+    },
+    "aucuneDonnee": "Aucune donnee pour cette periode"
+  },
   "lots": {
     "title": "Lots d'alevins",
     "nouveau": "Nouveau lot",
@@ -607,6 +644,31 @@
       "enCours": "Sortie en cours...",
       "succes": "Lot sorti avec succes",
       "erreur": "Erreur lors de la sortie"
+    }
+  },
+  "planning": {
+    "title": "Planning de reproduction",
+    "periodeDebut": "Date de début",
+    "periodeFin": "Date de fin",
+    "pontesPlanifiees": "Pontes planifiées",
+    "eclosionsPrevues": "Éclosions prévues",
+    "lotsActifs": "Lots actifs",
+    "calendrier": "Calendrier",
+    "gantt": "Chronologie des lots",
+    "evenements": "Événements à venir",
+    "aucunEvenement": "Aucun événement pour cette période",
+    "calculateur": {
+      "title": "Calculateur de production",
+      "cible": "Nombre d'alevins cible",
+      "tauxSurvie": "Taux de survie estimé (%)",
+      "oeufsParFemelle": "Oeufs par femelle (g)",
+      "malesParPonte": "Mâles par ponte",
+      "resultats": "Résultats",
+      "pontesNecessaires": "Pontes nécessaires",
+      "femellesNecessaires": "Femelles nécessaires",
+      "malesNecessaires": "Mâles nécessaires",
+      "surfaceEstimee": "Surface estimée",
+      "dureeEstimee": "Durée estimée"
     }
   }
 }

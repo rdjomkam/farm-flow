@@ -385,6 +385,43 @@
       "eclosionPrevueDans": "Expected hatching in"
     }
   },
+  "dashboard": {
+    "title": "Reproduction Dashboard",
+    "periode": "Period",
+    "derniers30j": "Last 30 days",
+    "derniers3m": "Last 3 months",
+    "derniers6m": "Last 6 months",
+    "derniers12m": "Last 12 months",
+    "tout": "All",
+    "kpis": {
+      "pontes": "Spawnings",
+      "oeufs": "Eggs",
+      "larvesViables": "Viable larvae",
+      "alevinsActifs": "Active fry",
+      "geniteurs": "Breeders",
+      "lotsEnCours": "Batches in progress",
+      "tauxFecondation": "Fertilization rate",
+      "tauxEclosion": "Hatching rate",
+      "tauxSurvie": "Overall survival rate"
+    },
+    "funnel": {
+      "title": "Survival funnel"
+    },
+    "timeline": {
+      "title": "Monthly production",
+      "pontes": "Spawnings",
+      "alevins": "Fry"
+    },
+    "phases": {
+      "title": "Breakdown by phase"
+    },
+    "actions": {
+      "nouvellePonte": "New spawning",
+      "voirGeniteurs": "Breeders",
+      "planning": "Planning"
+    },
+    "aucuneDonnee": "No data for this period"
+  },
   "lots": {
     "title": "Fry batches",
     "nouveau": "New batch",
@@ -537,6 +574,31 @@
       "enCours": "Processing...",
       "succes": "Batch exited successfully",
       "erreur": "Error during exit"
+    }
+  },
+  "planning": {
+    "title": "Reproduction planning",
+    "periodeDebut": "Start date",
+    "periodeFin": "End date",
+    "pontesPlanifiees": "Planned spawnings",
+    "eclosionsPrevues": "Expected hatchings",
+    "lotsActifs": "Active batches",
+    "calendrier": "Calendar",
+    "gantt": "Batch timeline",
+    "evenements": "Upcoming events",
+    "aucunEvenement": "No events for this period",
+    "calculateur": {
+      "title": "Production calculator",
+      "cible": "Target fingerling count",
+      "tauxSurvie": "Estimated survival rate (%)",
+      "oeufsParFemelle": "Eggs per female (g)",
+      "malesParPonte": "Males per spawning",
+      "resultats": "Results",
+      "pontesNecessaires": "Spawnings needed",
+      "femellesNecessaires": "Females needed",
+      "malesNecessaires": "Males needed",
+      "surfaceEstimee": "Estimated surface",
+      "dureeEstimee": "Estimated duration"
     }
   }
 }
