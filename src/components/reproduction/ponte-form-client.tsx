@@ -107,9 +107,9 @@ function Stepper({
   return (
     <div className="mb-6">
       {/* Mobile: compact dots + label */}
-      <div className="flex items-center justify-between gap-1 md:hidden">
+      <div className="flex items-center justify-center gap-1 md:hidden">
         {steps.map((step, i) => (
-          <div key={step.num} className="flex items-center flex-1">
+          <div key={step.num} className={cn("flex items-center", i < steps.length - 1 && "flex-1")}>
             <div
               className={cn(
                 "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold border-2 transition-all",
@@ -220,15 +220,22 @@ function SourceToggle({
   return (
     <div className="flex items-center justify-between">
       <span className="text-sm font-medium">{label}</span>
-      <div className="flex rounded-lg border border-border overflow-hidden">
+      <div className="relative flex rounded-full bg-muted p-1 min-w-[200px]">
+        {/* Sliding indicator */}
+        <div
+          className={cn(
+            "absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-primary shadow-sm transition-transform duration-200",
+            value === "individuel" && "translate-x-[calc(100%+4px)]"
+          )}
+        />
         <button
           type="button"
           onClick={() => onChange("lot")}
           className={cn(
-            "px-3 py-1.5 text-sm font-medium transition-colors min-h-[36px]",
+            "relative z-10 flex-1 px-4 py-1.5 text-sm font-medium rounded-full transition-colors min-h-[36px]",
             value === "lot"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-muted"
+              ? "text-primary-foreground"
+              : "text-muted-foreground"
           )}
         >
           {t("sourceToggle.lot")}
@@ -237,10 +244,10 @@ function SourceToggle({
           type="button"
           onClick={() => onChange("individuel")}
           className={cn(
-            "px-3 py-1.5 text-sm font-medium transition-colors min-h-[36px]",
+            "relative z-10 flex-1 px-4 py-1.5 text-sm font-medium rounded-full transition-colors min-h-[36px]",
             value === "individuel"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-muted"
+              ? "text-primary-foreground"
+              : "text-muted-foreground"
           )}
         >
           {t("sourceToggle.individuel")}
@@ -285,6 +292,7 @@ function Step1Injection({
   loading,
   onChange,
   onSubmit,
+  onCancel,
 }: {
   data: Step1Data;
   lotsFemelles: GenericOption[];
@@ -295,6 +303,7 @@ function Step1Injection({
   loading: boolean;
   onChange: (patch: Partial<Step1Data>) => void;
   onSubmit: () => void;
+  onCancel: () => void;
 }) {
   const t = useTranslations("reproduction.pontes.form");
   const tHormone = useTranslations("reproduction.pontes.hormone");
@@ -488,17 +497,28 @@ function Step1Injection({
 
       <ErrorBanner message={error} />
 
-      <Button
-        type="button"
-        variant="primary"
-        size="lg"
-        className="w-full"
-        disabled={loading}
-        onClick={onSubmit}
-      >
-        {loading ? t("actions.loading") : t("actions.suivant")}
-        {!loading && <ChevronRight className="h-4 w-4" aria-hidden />}
-      </Button>
+      <div className="flex gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          className="flex-1"
+          onClick={onCancel}
+        >
+          {t("actions.annuler")}
+        </Button>
+        <Button
+          type="button"
+          variant="primary"
+          size="lg"
+          className="flex-1"
+          disabled={loading}
+          onClick={onSubmit}
+        >
+          {loading ? t("actions.loading") : t("actions.suivant")}
+          {!loading && <ChevronRight className="h-4 w-4" aria-hidden />}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -1168,6 +1188,7 @@ export function PonteFormClient({
   males,
 }: Props) {
   const t = useTranslations("reproduction.pontes.form");
+  const router = useRouter();
 
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [maxReachedStep, setMaxReachedStep] = useState<Step>(1);
@@ -1413,6 +1434,7 @@ export function PonteFormClient({
               loading={loading}
               onChange={(patch) => setStep1((prev) => ({ ...prev, ...patch }))}
               onSubmit={handleStep1Submit}
+              onCancel={() => router.push("/reproduction/pontes")}
             />
           )}
 
