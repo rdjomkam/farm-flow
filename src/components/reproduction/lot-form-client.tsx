@@ -81,6 +81,7 @@ export function LotFormClient({ pontes, bacs }: Props) {
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
+  const [nombreInitialPrefilled, setNombreInitialPrefilled] = useState(false);
 
   // ---- helpers ----
 
@@ -89,6 +90,32 @@ export function LotFormClient({ pontes, bacs }: Props) {
     // Clear field error on change
     if (errors[field as keyof FormErrors]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+    // When ponte changes, fetch incubations to pre-fill nombreInitial
+    if (field === "ponteId" && value) {
+      fetchIncubationForPonte(value);
+    }
+    if (field === "nombreInitial") {
+      setNombreInitialPrefilled(false);
+    }
+  }
+
+  async function fetchIncubationForPonte(ponteId: string) {
+    try {
+      const res = await fetch(`/api/reproduction/incubations?ponteId=${ponteId}&limit=1`);
+      if (!res.ok) return;
+      const data = await res.json() as { data?: Array<{ nombreLarvesViables?: number | null; nombreLarvesEcloses?: number | null }> };
+      const incubations = data.data ?? [];
+      if (incubations.length > 0) {
+        const inc = incubations[0];
+        const suggested = inc.nombreLarvesViables ?? inc.nombreLarvesEcloses ?? null;
+        if (suggested !== null && suggested > 0) {
+          setForm((prev) => ({ ...prev, nombreInitial: String(suggested) }));
+          setNombreInitialPrefilled(true);
+        }
+      }
+    } catch {
+      // Silently ignore — pre-fill is best effort
     }
   }
 
@@ -220,6 +247,9 @@ export function LotFormClient({ pontes, bacs }: Props) {
               placeholder="Ex: 5000"
               className="min-h-[44px]"
             />
+            {nombreInitialPrefilled && !errors.nombreInitial && (
+              <p className="text-xs text-muted-foreground">{t("nombreInitialPrefilled")}</p>
+            )}
             {errors.nombreInitial && (
               <p className="text-sm text-destructive">{errors.nombreInitial}</p>
             )}

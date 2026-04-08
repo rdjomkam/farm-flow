@@ -42,7 +42,9 @@ import {
   QualiteOeufs,
   MethodeExtractionMale,
   MotiliteSperme,
+  SubstratIncubation,
 } from "@/types";
+import { Input } from "@/components/ui/input";
 import { useTranslations } from "next-intl";
 import { formatNumber, formatDate, formatDateTime, formatXAF } from "@/lib/format";
 
@@ -198,7 +200,19 @@ export function ReproductionPonteDetailClient({ ponte, permissions }: Props) {
   const [echecOpen, setEchecOpen] = useState(false);
   const [selectedCauseEchec, setSelectedCauseEchec] = useState<string>("");
 
-  const canModify = permissions.includes(Permission.ALEVINS_MODIFIER);
+  // Lancer incubation dialog state
+  const [incubationOpen, setIncubationOpen] = useState(false);
+  const [incubationSubstrat, setIncubationSubstrat] = useState<string>("");
+  const [incubationTemp, setIncubationTemp] = useState<string>("");
+  const [incubationNbOeufs, setIncubationNbOeufs] = useState<string>("");
+  const [incubationDateDebut, setIncubationDateDebut] = useState<string>(
+    new Date().toISOString().slice(0, 16)
+  );
+  const [incubationDateEclosionPrevue, setIncubationDateEclosionPrevue] = useState<string>("");
+  const [incubationNotes, setIncubationNotes] = useState<string>("");
+  const [incubationLoading, setIncubationLoading] = useState(false);
+
+  const canModify = permissions.includes(Permission.INCUBATIONS_GERER);
   const canDelete = permissions.includes(Permission.ALEVINS_SUPPRIMER);
 
   const hasLinkedData =
@@ -218,10 +232,10 @@ export function ReproductionPonteDetailClient({ ponte, permissions }: Props) {
   };
 
   const statutLotLabels: Record<StatutLotAlevins, string> = {
-    [StatutLotAlevins.EN_INCUBATION]: "En incubation",
-    [StatutLotAlevins.EN_ELEVAGE]: "En elevage",
-    [StatutLotAlevins.TRANSFERE]: "Transfere",
-    [StatutLotAlevins.PERDU]: "Perdu",
+    [StatutLotAlevins.EN_INCUBATION]: t("lots.statuts.EN_INCUBATION"),
+    [StatutLotAlevins.EN_ELEVAGE]: t("lots.statuts.EN_ELEVAGE"),
+    [StatutLotAlevins.TRANSFERE]: t("lots.statuts.TRANSFERE"),
+    [StatutLotAlevins.PERDU]: t("lots.statuts.PERDU"),
   };
 
   const causeEchecLabels: Record<CauseEchecPonte, string> = {
@@ -258,11 +272,42 @@ export function ReproductionPonteDetailClient({ ponte, permissions }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ causeEchec: selectedCauseEchec }),
       },
-      { successMessage: "Ponte marquee comme echouee." }
+      { successMessage: t("pontes.detail.echecSuccess") }
     );
     if (result.ok) {
       setEchecOpen(false);
       router.refresh();
+    }
+  }
+
+  async function handleLancerIncubation() {
+    if (!incubationSubstrat || !incubationDateDebut) return;
+    setIncubationLoading(true);
+    const body: Record<string, unknown> = {
+      ponteId: ponte.id,
+      substrat: incubationSubstrat,
+      dateDebutIncubation: new Date(incubationDateDebut).toISOString(),
+    };
+    if (incubationTemp.trim()) body.temperatureEauC = parseFloat(incubationTemp);
+    if (incubationNbOeufs.trim()) body.nombreOeufsPlaces = parseInt(incubationNbOeufs, 10);
+    if (incubationDateEclosionPrevue)
+      body.dateEclosionPrevue = new Date(incubationDateEclosionPrevue).toISOString();
+    if (incubationNotes.trim()) body.notes = incubationNotes.trim();
+
+    const result = await call<{ id: string }>(
+      "/api/reproduction/incubations",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+      { successMessage: t("incubations.lancerSuccess") }
+    );
+    setIncubationLoading(false);
+
+    if (result.ok && result.data?.id) {
+      setIncubationOpen(false);
+      router.push(`/reproduction/incubations/${result.data.id}`);
     }
   }
 
@@ -584,15 +629,131 @@ export function ReproductionPonteDetailClient({ ponte, permissions }: Props) {
       {/* Incubations liees */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <FlaskConical className="h-4 w-4" />
-            {t("pontes.detail.incubations")}
-            {ponte.incubations && ponte.incubations.length > 0 && (
-              <span className="text-muted-foreground font-normal text-sm">
-                ({ponte.incubations.length})
-              </span>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FlaskConical className="h-4 w-4" />
+              {t("pontes.detail.incubations")}
+              {ponte.incubations && ponte.incubations.length > 0 && (
+                <span className="text-muted-foreground font-normal text-sm">
+                  ({ponte.incubations.length})
+                </span>
+              )}
+            </CardTitle>
+            {canModify && !isEchouee && (
+              <Dialog open={incubationOpen} onOpenChange={setIncubationOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="min-h-[44px] gap-1">
+                    <FlaskConical className="h-4 w-4" />
+                    {t("incubations.lancerIncubation")}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{t("incubations.lancerIncubationTitle")}</DialogTitle>
+                  </DialogHeader>
+                  <div className="flex flex-col gap-3 py-2">
+                    {/* Substrat */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm font-medium">
+                        {t("incubations.form.substrat")} <span className="text-destructive">*</span>
+                      </label>
+                      <Select value={incubationSubstrat} onValueChange={setIncubationSubstrat}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("incubations.form.substratPlaceholder")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.values(SubstratIncubation).map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {t(`incubations.substrat.${s}`)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {/* Temperature eau */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm font-medium">
+                        {t("incubations.form.temperatureEauC")}
+                      </label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.1}
+                        placeholder="Ex: 28"
+                        value={incubationTemp}
+                        onChange={(e) => setIncubationTemp(e.target.value)}
+                        className="min-h-[44px]"
+                      />
+                    </div>
+                    {/* Nombre oeufs places */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm font-medium">
+                        {t("incubations.form.nombreOeufsPlaces")}
+                      </label>
+                      <Input
+                        type="number"
+                        min={0}
+                        placeholder="Ex: 10000"
+                        value={incubationNbOeufs}
+                        onChange={(e) => setIncubationNbOeufs(e.target.value)}
+                        className="min-h-[44px]"
+                      />
+                    </div>
+                    {/* Date debut incubation */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm font-medium">
+                        {t("incubations.form.dateDebutIncubation")} <span className="text-destructive">*</span>
+                      </label>
+                      <input
+                        type="datetime-local"
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        value={incubationDateDebut}
+                        onChange={(e) => setIncubationDateDebut(e.target.value)}
+                      />
+                    </div>
+                    {/* Date eclosion prevue */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm font-medium">
+                        {t("incubations.form.dateEclosionPrevue")}
+                      </label>
+                      <input
+                        type="datetime-local"
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        value={incubationDateEclosionPrevue}
+                        onChange={(e) => setIncubationDateEclosionPrevue(e.target.value)}
+                      />
+                    </div>
+                    {/* Notes */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm font-medium">
+                        {t("incubations.form.notes")}
+                      </label>
+                      <textarea
+                        rows={2}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                        placeholder={t("incubations.form.notesPlaceholder")}
+                        value={incubationNotes}
+                        onChange={(e) => setIncubationNotes(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button variant="outline" disabled={incubationLoading}>
+                        {t("geniteurs.form.annuler")}
+                      </Button>
+                    </DialogClose>
+                    <Button
+                      onClick={handleLancerIncubation}
+                      disabled={incubationLoading || !incubationSubstrat || !incubationDateDebut}
+                    >
+                      {incubationLoading ? t("pontes.form.actions.loading") : t("incubations.lancerConfirmer")}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             )}
-          </CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
           {!ponte.incubations || ponte.incubations.length === 0 ? (
@@ -701,7 +862,7 @@ export function ReproductionPonteDetailClient({ ponte, permissions }: Props) {
                 </div>
                 <DialogFooter>
                   <DialogClose asChild>
-                    <Button variant="outline">Annuler</Button>
+                    <Button variant="outline">{t("geniteurs.form.annuler")}</Button>
                   </DialogClose>
                   <Button
                     variant="danger"
@@ -733,10 +894,10 @@ export function ReproductionPonteDetailClient({ ponte, permissions }: Props) {
                 </p>
                 <DialogFooter>
                   <DialogClose asChild>
-                    <Button variant="outline">Annuler</Button>
+                    <Button variant="outline">{t("geniteurs.form.annuler")}</Button>
                   </DialogClose>
                   <Button variant="danger" onClick={handleDelete}>
-                    Supprimer
+                    {t("geniteurs.form.supprimer")}
                   </Button>
                 </DialogFooter>
               </DialogContent>

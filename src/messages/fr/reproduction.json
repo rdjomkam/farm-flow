@@ -202,6 +202,7 @@
       "confirmDelete": "Etes-vous sur de vouloir supprimer {code} ? Cette action est irreversible.",
       "deleteSuccess": "Ponte supprimee.",
       "echecTitle": "Cause de l'echec",
+      "echecSuccess": "Ponte marquee comme echouee.",
       "marquerEchouee": "Marquer comme echouee",
       "marquerEchoueeTitle": "Marquer la ponte comme echouee",
       "marquerEchoueeConfirm": "Confirmer",
@@ -396,6 +397,20 @@
   "incubations": {
     "title": "Incubations",
     "backToReproduction": "Reproduction",
+    "lancerIncubation": "Lancer",
+    "lancerIncubationTitle": "Lancer une incubation",
+    "lancerSuccess": "Incubation lancee avec succes.",
+    "lancerConfirmer": "Lancer l'incubation",
+    "form": {
+      "substrat": "Substrat",
+      "substratPlaceholder": "Selectionner un substrat",
+      "temperatureEauC": "Temperature eau (°C) (optionnel)",
+      "nombreOeufsPlaces": "Nombre d'oeufs places (optionnel)",
+      "dateDebutIncubation": "Date de debut",
+      "dateEclosionPrevue": "Date d'eclosion prevue (optionnel)",
+      "notes": "Notes (optionnel)",
+      "notesPlaceholder": "Observations..."
+    },
     "detail": {
       "informations": "Informations d'incubation",
       "substrat": "Substrat",
@@ -433,6 +448,10 @@
       "dateEclosionReelle": "Date et heure d'eclosion reelle",
       "confirmerEclosion": "Confirmer l'eclosion",
       "supprimerTraitement": "Supprimer le traitement",
+      "traitementSuccess": "Traitement ajoute avec succes.",
+      "traitementSupprime": "Traitement supprime.",
+      "eclosionSuccess": "Eclosion enregistree avec succes.",
+      "enregistrement": "Enregistrement...",
       "ponte": "Ponte",
       "degresUnit": "°C",
       "heuresUnit": "h",
@@ -453,6 +472,26 @@
       "eclosionImminente": "Eclosion imminente !",
       "eclosionTerminee": "Eclosion terminee",
       "eclosionPrevueDans": "Eclosion prevue dans"
+    },
+    "count": "{count} incubation",
+    "countPlural": "{count} incubations",
+    "aucune": "Aucune incubation",
+    "search": "Rechercher par code ou ponte...",
+    "tabs": {
+      "tous": "Toutes",
+      "en_cours": "En cours",
+      "eclosion": "Eclosion",
+      "terminees": "Terminees",
+      "echouees": "Echouees"
+    },
+    "card": {
+      "ponte": "Ponte",
+      "debut": "Debut",
+      "eclosionPrevue": "Eclosion prevue",
+      "oeufs": "oeufs",
+      "larves": "larves ecloses",
+      "traitements": "traitement(s)",
+      "lots": "lot(s)"
     }
   },
   "dashboard": {
@@ -542,6 +581,7 @@
       "notesPlaceholder": "Observations...",
       "submit": "Creer le lot",
       "success": "Lot cree avec succes.",
+      "nombreInitialPrefilled": "Pre-rempli depuis l'eclosion (modifiable)",
       "errors": {
         "codeRequired": "Le code est obligatoire.",
         "ponteRequired": "La ponte est obligatoire.",
