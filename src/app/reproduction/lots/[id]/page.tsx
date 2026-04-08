@@ -2,7 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { AccessDenied } from "@/components/ui/access-denied";
-import { LotDetailClient } from "@/components/reproduction/lot-detail-client";
+import {LotDetailClient, LotDetailData} from "@/components/reproduction/lot-detail-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getLotById } from "@/lib/queries/lots-alevins";
 import { Permission } from "@/types";
@@ -24,11 +24,9 @@ export default async function ReproductionLotDetailPage({ params }: PageProps) {
 
   if (!lot) notFound();
 
-  const t = await getTranslations("reproduction.lots");
-
   return (
     <>
-      <Header title={`${t("detail.titre")} ${lot.code}`} />
+      <Header title={`${lot.code}`} />
       <div className="p-4">
         <LotDetailClient
           lot={JSON.parse(JSON.stringify(lot))}

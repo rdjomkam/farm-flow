@@ -374,10 +374,11 @@
         "suivant": "Suivant",
         "precedent": "Precedent",
         "enregistrer": "Enregistrer",
-        "terminer": "Terminer la ponte",
+        "terminer": "Terminer",
         "marquerEchec": "Marquer echouee",
-        "voirPonte": "Voir la ponte",
-        "loading": "Enregistrement..."
+        "voirPonte": "Voir",
+        "loading": "Enregistrement...",
+        "annuler": "Annuler"
       },
       "errors": {
         "femelleRequired": "Veuillez selectionner une femelle ou un lot.",

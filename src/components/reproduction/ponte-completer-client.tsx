@@ -106,9 +106,9 @@ function Stepper({
   return (
     <div className="mb-6">
       {/* Mobile: compact dots + label */}
-      <div className="flex items-center justify-between gap-1 md:hidden">
+      <div className="flex items-center justify-center gap-1 md:hidden">
         {steps.map((step, i) => (
-          <div key={step.num} className="flex items-center flex-1">
+          <div key={step.num} className={cn("flex items-center", i < steps.length - 1 && "flex-1")}>
             <div
               className={cn(
                 "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold border-2 transition-all",
@@ -339,18 +339,6 @@ function Step1InjectionEdit({
       />
 
       <ErrorBanner message={error} />
-
-      <Button
-        type="button"
-        variant="primary"
-        size="lg"
-        className="w-full"
-        disabled={loading}
-        onClick={onSubmit}
-      >
-        {loading ? t("actions.loading") : t("actions.suivant")}
-        {!loading && <ChevronRight className="h-4 w-4" aria-hidden />}
-      </Button>
     </div>
   );
 }
@@ -477,29 +465,6 @@ function Step2StrippingEdit({
       />
 
       <ErrorBanner message={error} />
-
-      <div className="flex gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="flex-1"
-          onClick={onBack}
-        >
-          {t("actions.precedent")}
-        </Button>
-        <Button
-          type="button"
-          variant="primary"
-          size="lg"
-          className="flex-1"
-          disabled={loading}
-          onClick={onSubmit}
-        >
-          {loading ? t("actions.loading") : t("actions.suivant")}
-          {!loading && <ChevronRight className="h-4 w-4" aria-hidden />}
-        </Button>
-      </div>
     </div>
   );
 }
@@ -570,28 +535,6 @@ function Step3ResultatEdit({
         />
 
         <ErrorBanner message={error} />
-
-        <div className="flex gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            className="flex-1"
-            onClick={() => onChange({ isEchec: false, causeEchec: "", echecNotes: "" })}
-          >
-            {t("actions.precedent")}
-          </Button>
-          <Button
-            type="button"
-            variant="danger"
-            size="lg"
-            className="flex-1"
-            disabled={loading}
-            onClick={onEchec}
-          >
-            {loading ? t("actions.loading") : t("actions.marquerEchec")}
-          </Button>
-        </div>
       </div>
     );
   }
@@ -654,33 +597,10 @@ function Step3ResultatEdit({
       <button
         type="button"
         onClick={() => onChange({ isEchec: true })}
-        className="w-full text-sm text-destructive hover:underline underline-offset-2 min-h-[44px] flex items-center justify-center"
+        className="w-full text-sm text-danger hover:underline underline-offset-2 min-h-[44px] flex items-center justify-center"
       >
         {t("marquerEchec")}
       </button>
-
-      <div className="flex gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="flex-1"
-          onClick={onBack}
-        >
-          {t("actions.precedent")}
-        </Button>
-        <Button
-          type="button"
-          variant="primary"
-          size="lg"
-          className="flex-1"
-          disabled={loading}
-          onClick={onSubmit}
-        >
-          {loading ? t("actions.loading") : t("actions.terminer")}
-          {!loading && <ChevronRight className="h-4 w-4" aria-hidden />}
-        </Button>
-      </div>
     </div>
   );
 }
@@ -937,9 +857,9 @@ export function PonteCompleterClient({ ponte, initialStep }: Props) {
 
   return (
     <div className="flex flex-col gap-4 max-w-lg mx-auto pb-8">
+      <Stepper currentStep={currentStep} maxReachedStep={maxReachedStep} />
       <Card>
         <CardContent className="pt-6">
-          <Stepper currentStep={currentStep} maxReachedStep={maxReachedStep} />
 
           {currentStep === 1 && (
             <Step1InjectionEdit
@@ -981,6 +901,106 @@ export function PonteCompleterClient({ ponte, initialStep }: Props) {
           )}
         </CardContent>
       </Card>
+
+      {/* Boutons hors card */}
+      {currentStep === 1 && (
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="flex-1"
+            onClick={() => router.push(`/reproduction/pontes/${ponte.id}`)}
+          >
+            {t("actions.annuler")}
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            className="flex-1"
+            disabled={loading}
+            onClick={handleStep1Submit}
+          >
+            {loading ? t("actions.loading") : t("actions.suivant")}
+            {!loading && <ChevronRight className="h-4 w-4" aria-hidden />}
+          </Button>
+        </div>
+      )}
+
+      {currentStep === 2 && (
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="flex-1"
+            onClick={() => goToStep(1)}
+          >
+            {t("actions.precedent")}
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            className="flex-1"
+            disabled={loading}
+            onClick={handleStep2Submit}
+          >
+            {loading ? t("actions.loading") : t("actions.suivant")}
+            {!loading && <ChevronRight className="h-4 w-4" aria-hidden />}
+          </Button>
+        </div>
+      )}
+
+      {currentStep === 3 && !step3.isEchec && (
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="flex-1"
+            onClick={() => goToStep(2)}
+          >
+            {t("actions.precedent")}
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            className="flex-1"
+            disabled={loading}
+            onClick={handleStep3Submit}
+          >
+            {loading ? t("actions.loading") : t("actions.terminer")}
+            {!loading && <ChevronRight className="h-4 w-4" aria-hidden />}
+          </Button>
+        </div>
+      )}
+
+      {currentStep === 3 && step3.isEchec && (
+        <div className="flex gap-3 mt-4">
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="flex-1"
+            onClick={() => setStep3((prev) => ({ ...prev, isEchec: false, causeEchec: "", echecNotes: "" }))}
+          >
+            {t("actions.precedent")}
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            size="lg"
+            className="flex-1"
+            disabled={loading}
+            onClick={handleEchec}
+          >
+            {loading ? t("actions.loading") : t("actions.marquerEchec")}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

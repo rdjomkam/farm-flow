@@ -141,19 +141,23 @@ export function PontesListClient({ pontes }: PontesListClientProps) {
       />
 
       {/* Date range */}
-      <div className="grid grid-cols-2 gap-2">
-        <Input
-          label={t("pontes.dateFrom")}
-          type="date"
-          value={dateFrom}
-          onChange={(e) => setDateFrom(e.target.value)}
-        />
-        <Input
-          label={t("pontes.dateTo")}
-          type="date"
-          value={dateTo}
-          onChange={(e) => setDateTo(e.target.value)}
-        />
+      <div className="grid grid-cols-2 gap-3">
+        <div className="min-w-0">
+          <Input
+            label={t("pontes.dateFrom")}
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+          />
+        </div>
+        <div className="min-w-0">
+          <Input
+            label={t("pontes.dateTo")}
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
+        </div>
       </div>
 
       {/* Tabs */}
@@ -249,7 +253,7 @@ export function PontesListClient({ pontes }: PontesListClientProps) {
       {/* FAB — link to nouvelle ponte */}
       <Link
         href="/reproduction/pontes/nouvelle"
-        className="fixed bottom-20 right-4 z-40 md:bottom-6 md:right-6"
+        className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-4 z-40 md:bottom-6 md:right-6"
       >
         <Button
           className="h-14 w-14 rounded-full shadow-lg p-0"

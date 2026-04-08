@@ -273,10 +273,11 @@
         "suivant": "Next",
         "precedent": "Previous",
         "enregistrer": "Save",
-        "terminer": "Complete spawning",
+        "terminer": "Complete",
         "marquerEchec": "Mark failed",
-        "voirPonte": "View spawning",
-        "loading": "Saving..."
+        "voirPonte": "View",
+        "loading": "Saving...",
+        "annuler": "Cancel"
       },
       "errors": {
         "femelleRequired": "Please select a female or a group.",

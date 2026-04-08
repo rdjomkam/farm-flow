@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -64,6 +64,17 @@ export function LotPhaseStepper({
 
   const currentIndex = PHASE_ORDER.indexOf(currentPhase);
 
+  // Auto-select next phase when dialog opens externally (e.g. "Changer phase" button)
+  useEffect(() => {
+    if (open && !selectedPhase) {
+      const nextIndex = currentIndex + 1;
+      const nextPhase = PHASE_ORDER[nextIndex];
+      if (nextPhase && nextPhase !== PhaseLot.SORTI) {
+        setSelectedPhase(nextPhase);
+      }
+    }
+  }, [open]);
+
   const phaseLabels: Record<PhaseLot, string> = {
     [PhaseLot.INCUBATION]: t("phases.INCUBATION"),
     [PhaseLot.LARVAIRE]: t("phases.LARVAIRE"),
@@ -111,7 +122,7 @@ export function LotPhaseStepper({
   return (
     <>
       {/* Visual stepper */}
-      <div className="w-full overflow-x-auto -mx-4 px-4">
+      <div className="w-full overflow-x-auto -mx-4 px-4 py-2 scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
         <div className="flex items-center min-w-max gap-0">
           {PHASE_ORDER.map((phase, index) => {
             const isCompleted = index < currentIndex;

@@ -4,7 +4,8 @@ import { IncubationDetailClient } from "@/components/reproduction/incubation-det
 import { AccessDenied } from "@/components/ui/access-denied";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getIncubationById } from "@/lib/queries/incubations";
-import { Permission } from "@/types";
+import { getProduits } from "@/lib/queries/produits";
+import { Permission, CategorieProduit } from "@/types";
 
 export default async function IncubationDetailPage({
   params,
@@ -19,7 +20,10 @@ export default async function IncubationDetailPage({
   if (!permissions) return <AccessDenied />;
 
   const { id } = await params;
-  const incubation = await getIncubationById(id, session.activeSiteId);
+  const [incubation, { data: produits }] = await Promise.all([
+    getIncubationById(id, session.activeSiteId),
+    getProduits(session.activeSiteId, { categorie: CategorieProduit.INTRANT }),
+  ]);
 
   if (!incubation) notFound();
 
@@ -30,6 +34,7 @@ export default async function IncubationDetailPage({
         <IncubationDetailClient
           incubation={JSON.parse(JSON.stringify(incubation))}
           permissions={permissions}
+          produits={produits.map((p) => ({ id: p.id, nom: p.nom }))}
         />
       </div>
     </>

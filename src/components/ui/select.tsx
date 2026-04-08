@@ -36,6 +36,7 @@ const SelectTrigger = forwardRef<
       {label && (
         <label id={labelId} className="text-sm font-medium text-foreground">
           {label}
+          {required && <span className="text-destructive ml-0.5">*</span>}
         </label>
       )}
       <SelectPrimitive.Trigger

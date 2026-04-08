@@ -233,3 +233,44 @@ export function clearIsSuperAdminCookie(response: NextResponse): void {
     maxAge: 0,
   });
 }
+
+/**
+ * Cookie name for subscription status.
+ * Non-httpOnly so the Edge middleware (proxy.ts) can read it.
+ * The value is JSON: { statut, isDecouverte, isBlocked }.
+ * This is a UX convenience — the authoritative check always happens server-side with Prisma.
+ */
+export const SUBSCRIPTION_COOKIE_NAME = "sub_status";
+
+export interface SubCookiePayload {
+  statut: string | null;
+  isDecouverte: boolean;
+  isBlocked: boolean;
+}
+
+/** Set the subscription status companion cookie on a response */
+export function setSubscriptionCookie(
+  response: NextResponse,
+  payload: SubCookiePayload,
+  expires: Date
+): void {
+  response.cookies.set(SUBSCRIPTION_COOKIE_NAME, JSON.stringify(payload), {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_MAX_AGE_S,
+    expires,
+  });
+}
+
+/** Clear the subscription status companion cookie on a response */
+export function clearSubscriptionCookie(response: NextResponse): void {
+  response.cookies.set(SUBSCRIPTION_COOKIE_NAME, "", {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
+}

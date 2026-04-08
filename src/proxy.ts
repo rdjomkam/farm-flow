@@ -7,7 +7,7 @@
  *   1. Vérifier si l'utilisateur est authentifié (cookie session_token).
  *      Si non authentifié et route protégée → redirect /login.
  *   2. Pour les utilisateurs authentifiés, vérifier le statut d'abonnement
- *      via l'API interne /api/abonnements/statut-middleware (Node.js runtime).
+ *      via le cookie companion `sub_status` (set par /api/auth/site et layout.tsx).
  *      Si statut EXPIRE → redirect /abonnement-expire.
  *      Si statut SUSPENDU → NE PAS rediriger (mode lecture seule géré côté composant).
  *      Si plan DECOUVERTE → pas de restriction.
@@ -15,14 +15,11 @@
  * NOTE : Le mode maintenance est vérifié dans src/app/layout.tsx (Server Component,
  * Node.js runtime, accès Prisma direct). Le middleware reste léger (Edge Runtime).
  *
- * IMPORTANT : Prisma ne tourne PAS sur Edge Runtime.
- * Les vérifications se font via fetch vers les API internes Node.js.
- *
  * Story 36.3 — Sprint 36
  * Story IA.1 — Redirection par rôle (INGENIEUR vs farm)
  */
 import { NextRequest, NextResponse } from "next/server";
-import { Role, StatutAbonnement } from "@/types";
+import { Role } from "@/types";
 
 const SESSION_COOKIE = "session_token";
 const ROLE_COOKIE = "user_role";
@@ -212,40 +209,17 @@ export async function proxy(request: NextRequest) {
 
   // Vérification d'abonnement — uniquement pour les routes non whitelistées
   const shouldCheckSubscription = !isSubscriptionWhitelisted(pathname) && !isNoSiteRoute(pathname);
-  console.log(`[proxy] pathname=${pathname} whitelisted=${isSubscriptionWhitelisted(pathname)} noSiteRoute=${isNoSiteRoute(pathname)} shouldCheck=${shouldCheckSubscription}`);
 
   if (shouldCheckSubscription) {
-    try {
-      const internalBase = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
-      const apiUrl = new URL("/api/abonnements/statut-middleware", internalBase);
-      console.log(`[proxy] Fetching subscription status from ${apiUrl.toString()}`);
-      const response = await fetch(apiUrl.toString(), {
-        method: "GET",
-        headers: {
-          // Transmettre le cookie de session à l'API interne
-          cookie: request.headers.get("cookie") ?? "",
-        },
-      });
-
-      console.log(`[proxy] Subscription API response: status=${response.status} ok=${response.ok}`);
-
-      if (response.ok) {
-        const data = (await response.json()) as {
+    const subCookie = request.cookies.get("sub_status")?.value;
+    if (subCookie) {
+      try {
+        const data = JSON.parse(subCookie) as {
           statut: string | null;
           isDecouverte: boolean;
-          planId: string | null;
           isBlocked: boolean;
         };
-
-        console.log(`[proxy] Subscription data: statut=${data.statut} isDecouverte=${data.isDecouverte} isBlocked=${data.isBlocked}`);
-
-        // Plan DECOUVERTE → jamais bloqué
-        // Statut null → pas d'abonnement → bloqué (redirect)
-        // Statut EXPIRE ou ANNULE → bloqué (redirect)
-        if (
-          !data.isDecouverte &&
-          data.isBlocked
-        ) {
+        if (!data.isDecouverte && data.isBlocked) {
           // API routes → 403 JSON response
           if (pathname.startsWith("/api/")) {
             return NextResponse.json(
@@ -258,18 +232,13 @@ export async function proxy(request: NextRequest) {
             );
           }
           // Pages → redirect to /abonnement-expire
-          const expireUrl = new URL("/abonnement-expire", request.url);
-          return NextResponse.redirect(expireUrl);
+          return NextResponse.redirect(new URL("/abonnement-expire", request.url));
         }
-        // SUSPENDU → NE PAS rediriger (mode lecture seule géré côté composant)
-      } else {
-        // API returned non-OK status — fail open: let pass (cannot determine subscription state)
-        console.warn(`[proxy] Subscription API returned non-OK status ${response.status} — fail-open, letting pass`);
+      } catch {
+        // Malformed cookie — fail open
       }
-    } catch (error) {
-      // Fail open: let pass when subscription check fails (network error, API unreachable)
-      console.warn("[proxy] Subscription check fetch failed — fail-open, letting pass:", error);
     }
+    // No cookie = fail open (same as before)
   }
 
   // Transmettre le pathname aux Server Components via un header de requête.

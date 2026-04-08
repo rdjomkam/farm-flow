@@ -496,29 +496,6 @@ function Step1Injection({
       />
 
       <ErrorBanner message={error} />
-
-      <div className="flex gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="flex-1"
-          onClick={onCancel}
-        >
-          {t("actions.annuler")}
-        </Button>
-        <Button
-          type="button"
-          variant="primary"
-          size="lg"
-          className="flex-1"
-          disabled={loading}
-          onClick={onSubmit}
-        >
-          {loading ? t("actions.loading") : t("actions.suivant")}
-          {!loading && <ChevronRight className="h-4 w-4" aria-hidden />}
-        </Button>
-      </div>
     </div>
   );
 }
@@ -645,29 +622,6 @@ function Step2Stripping({
       />
 
       <ErrorBanner message={error} />
-
-      <div className="flex gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="flex-1"
-          onClick={onBack}
-        >
-          {t("actions.precedent")}
-        </Button>
-        <Button
-          type="button"
-          variant="primary"
-          size="lg"
-          className="flex-1"
-          disabled={loading}
-          onClick={onSubmit}
-        >
-          {loading ? t("actions.loading") : t("actions.suivant")}
-          {!loading && <ChevronRight className="h-4 w-4" aria-hidden />}
-        </Button>
-      </div>
     </div>
   );
 }
@@ -731,30 +685,6 @@ function Step3Resultat({
         />
 
         <ErrorBanner message={error} />
-
-        <div className="flex gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            className="flex-1"
-            onClick={() =>
-              onChange({ isEchec: false, causeEchec: "", echecNotes: "" })
-            }
-          >
-            {t("actions.precedent")}
-          </Button>
-          <Button
-            type="button"
-            variant="danger"
-            size="lg"
-            className="flex-1"
-            disabled={loading}
-            onClick={onEchec}
-          >
-            {loading ? t("actions.loading") : t("actions.marquerEchec")}
-          </Button>
-        </div>
       </div>
     );
   }
@@ -821,29 +751,6 @@ function Step3Resultat({
       >
         {t("marquerEchec")}
       </button>
-
-      <div className="flex gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="flex-1"
-          onClick={onBack}
-        >
-          {t("actions.precedent")}
-        </Button>
-        <Button
-          type="button"
-          variant="primary"
-          size="lg"
-          className="flex-1"
-          disabled={loading}
-          onClick={onSubmit}
-        >
-          {loading ? t("actions.loading") : t("actions.suivant")}
-          {!loading && <ChevronRight className="h-4 w-4" aria-hidden />}
-        </Button>
-      </div>
     </div>
   );
 }
@@ -1112,27 +1019,6 @@ function Step4Confirmation({
           </div>
       </div>
 
-      <div className="flex gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="flex-1"
-          onClick={onBack}
-        >
-          {t("actions.precedent")}
-        </Button>
-        <Button
-          type="button"
-          variant="primary"
-          size="lg"
-          className="flex-1"
-          onClick={() => router.push(`/reproduction/pontes/${ponteId}`)}
-        >
-          {t("actions.voirPonte")}
-          <ChevronRight className="h-4 w-4" aria-hidden />
-        </Button>
-      </div>
     </div>
   );
 }
@@ -1476,6 +1362,130 @@ export function PonteFormClient({
           )}
         </CardContent>
       </Card>
+
+      {/* Boutons hors card */}
+      {currentStep === 1 && (
+        <div className="flex gap-3 mt-4">
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="flex-1"
+            onClick={() => router.push("/reproduction/pontes")}
+          >
+            {t("actions.annuler")}
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            className="flex-1"
+            disabled={loading}
+            onClick={handleStep1Submit}
+          >
+            {loading ? t("actions.loading") : t("actions.suivant")}
+            {!loading && <ChevronRight className="h-4 w-4" aria-hidden />}
+          </Button>
+        </div>
+      )}
+
+      {currentStep === 2 && (
+        <div className="flex gap-3 mt-4">
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="flex-1"
+            onClick={() => goToStep(1)}
+          >
+            {t("actions.precedent")}
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            className="flex-1"
+            disabled={loading}
+            onClick={handleStep2Submit}
+          >
+            {loading ? t("actions.loading") : t("actions.suivant")}
+            {!loading && <ChevronRight className="h-4 w-4" aria-hidden />}
+          </Button>
+        </div>
+      )}
+
+      {currentStep === 3 && !step3.isEchec && (
+        <div className="flex gap-3 mt-4">
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="flex-1"
+            onClick={() => goToStep(2)}
+          >
+            {t("actions.precedent")}
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            className="flex-1"
+            disabled={loading}
+            onClick={handleStep3Submit}
+          >
+            {loading ? t("actions.loading") : t("actions.suivant")}
+            {!loading && <ChevronRight className="h-4 w-4" aria-hidden />}
+          </Button>
+        </div>
+      )}
+
+      {currentStep === 3 && step3.isEchec && (
+        <div className="flex gap-3 mt-4">
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="flex-1"
+            onClick={() => setStep3((prev) => ({ ...prev, isEchec: false, causeEchec: "", echecNotes: "" }))}
+          >
+            {t("actions.precedent")}
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            size="lg"
+            className="flex-1"
+            disabled={loading}
+            onClick={handleEchecSubmit}
+          >
+            {loading ? t("actions.loading") : t("actions.marquerEchec")}
+          </Button>
+        </div>
+      )}
+
+      {currentStep === 4 && ponteId && (
+        <div className="flex gap-3 mt-4">
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="flex-1"
+            onClick={() => goToStep(3)}
+          >
+            {t("actions.precedent")}
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            className="flex-1"
+            onClick={() => router.push(`/reproduction/pontes/${ponteId}`)}
+          >
+            {t("actions.voirPonte")}
+            <ChevronRight className="h-4 w-4" aria-hidden />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

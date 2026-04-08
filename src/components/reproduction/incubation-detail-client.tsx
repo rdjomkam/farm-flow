@@ -12,6 +12,7 @@ import {
   Trash2,
   CheckCircle2,
   Clock,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,8 +25,15 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
 import { useApi } from "@/hooks/use-api";
-import { StatutIncubation, SubstratIncubation, Permission } from "@/types";
+import { StatutIncubation, SubstratIncubation, StatutLotAlevins, Permission } from "@/types";
 import { formatDate, formatDateTime, formatNumber } from "@/lib/format";
 import { EclosionCountdownTimer } from "./eclosion-countdown-timer";
 
@@ -86,6 +94,7 @@ interface IncubationDetailData {
 interface Props {
   incubation: IncubationDetailData;
   permissions: Permission[];
+  produits: { id: string; nom: string }[];
 }
 
 // ---------------------------------------------------------------------------
@@ -97,6 +106,13 @@ function statutBadgeClass(statut: string): string {
   if (statut === StatutIncubation.ECLOSION_EN_COURS) return "bg-accent-amber-muted text-accent-amber";
   if (statut === StatutIncubation.TERMINEE) return "bg-accent-blue-muted text-accent-blue";
   return "bg-destructive/10 text-destructive";
+}
+
+function statutLotBadgeClass(statut: string): string {
+  if (statut === StatutLotAlevins.EN_INCUBATION) return "bg-accent-blue-muted text-accent-blue";
+  if (statut === StatutLotAlevins.EN_ELEVAGE) return "bg-accent-green-muted text-accent-green";
+  if (statut === StatutLotAlevins.TRANSFERE) return "bg-muted text-muted-foreground";
+  return "bg-accent-red-muted text-accent-red";
 }
 
 // ---------------------------------------------------------------------------
@@ -116,7 +132,7 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 // Main component
 // ---------------------------------------------------------------------------
 
-export function IncubationDetailClient({ incubation, permissions }: Props) {
+export function IncubationDetailClient({ incubation, permissions, produits }: Props) {
   const t = useTranslations("reproduction");
   const router = useRouter();
   const { call } = useApi();
@@ -358,10 +374,10 @@ export function IncubationDetailClient({ incubation, permissions }: Props) {
       )}
 
       {/* Traitements */}
-      <Card>
-        <CardHeader className="pb-2">
+      <div>
+        <div className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
+            <h3 className="text-base font-semibold flex items-center gap-2">
               <Clock className="h-4 w-4" />
               {t("incubations.detail.traitements")}
               {incubation.traitements && incubation.traitements.length > 0 && (
@@ -369,7 +385,7 @@ export function IncubationDetailClient({ incubation, permissions }: Props) {
                   ({incubation.traitements.length})
                 </span>
               )}
-            </CardTitle>
+            </h3>
             {canModify && isEnCours && (
               <Dialog open={traitementOpen} onOpenChange={setTraitementOpen}>
                 <DialogTrigger asChild>
@@ -387,13 +403,16 @@ export function IncubationDetailClient({ incubation, permissions }: Props) {
                       <label className="text-sm font-medium">
                         {t("incubations.detail.produit")} <span className="text-destructive">*</span>
                       </label>
-                      <input
-                        type="text"
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        placeholder={t("incubations.detail.produitPlaceholder")}
-                        value={traitementProduit}
-                        onChange={(e) => setTraitementProduit(e.target.value)}
-                      />
+                      <Select value={traitementProduit} onValueChange={setTraitementProduit}>
+                        <SelectTrigger className="min-h-[44px]">
+                          <SelectValue placeholder={t("incubations.detail.produitPlaceholder")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {produits.map((p) => (
+                            <SelectItem key={p.id} value={p.nom}>{p.nom}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-sm font-medium">
@@ -464,8 +483,8 @@ export function IncubationDetailClient({ incubation, permissions }: Props) {
               </Dialog>
             )}
           </div>
-        </CardHeader>
-        <CardContent>
+        </div>
+        <div>
           {!incubation.traitements || incubation.traitements.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center">
               {t("incubations.detail.aucunTraitement")}
@@ -475,7 +494,7 @@ export function IncubationDetailClient({ incubation, permissions }: Props) {
               {incubation.traitements.map((traitement) => (
                 <div
                   key={traitement.id}
-                  className="flex items-start justify-between gap-2 rounded-lg border border-border px-3 py-2"
+                  className="flex items-start justify-between gap-2 rounded-lg px-3 py-2"
                 >
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm">{traitement.produit}</p>
@@ -502,26 +521,26 @@ export function IncubationDetailClient({ incubation, permissions }: Props) {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Lots d'alevins issus */}
       {incubation.lotAlevins && incubation.lotAlevins.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
+        <div>
+          <div className="pb-2">
+            <h3 className="text-base font-semibold flex items-center gap-2">
               <Baby className="h-4 w-4" />
               {t("incubations.detail.lotsAlevins")}
               <span className="text-muted-foreground font-normal text-sm">
                 ({incubation.lotAlevins.length})
               </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+            </h3>
+          </div>
+          <div>
             <div className="flex flex-col gap-2">
               {incubation.lotAlevins.map((lot) => (
                 <Link key={lot.id} href={`/alevins/lots/${lot.id}`}>
-                  <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-muted/50 transition-colors">
                     <div>
                       <p className="font-medium text-sm">{lot.code}</p>
                       <p className="text-xs text-muted-foreground">
@@ -529,13 +548,18 @@ export function IncubationDetailClient({ incubation, permissions }: Props) {
                         — {lot.phase}
                       </p>
                     </div>
-                    <span className="text-xs text-muted-foreground">{lot.statut}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statutLotBadgeClass(lot.statut)}`}>
+                        {t(`lots.statuts.${lot.statut}`) ?? lot.statut}
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
                   </div>
                 </Link>
               ))}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Notes */}

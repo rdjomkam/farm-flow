@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Info } from "lucide-react";
 import { useApi } from "@/hooks/use-api";
 import { DestinationLot } from "@/types";
 
@@ -265,7 +267,7 @@ export function LotSortieDialog({ lot, open, onOpenChange }: LotSortieDialogProp
           </p>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
+        <DialogBody className="flex flex-col gap-4 py-2">
           {/* Date de sortie */}
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium" htmlFor="sortie-date">
@@ -390,10 +392,13 @@ export function LotSortieDialog({ lot, open, onOpenChange }: LotSortieDialogProp
                 </>
               ) : (
                 <>
-                  <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-3 text-xs text-amber-800 dark:text-amber-300">
-                    Pour créer une nouvelle vague, vous serez redirigé vers la page de
-                    création après la sortie du lot. Sélectionnez plutôt une vague existante
-                    pour un transfert immédiat.
+                  <div className="flex items-start gap-2 rounded-lg bg-white p-3 text-xs text-blue-700 dark:text-blue border border-blue-100 dark:border-blue-900/50">
+                    <Info className="h-4 w-4 shrink-0 mt-0.5 text-blue-500 dark:text-blue-400" />
+                    <span>
+                      Pour créer une nouvelle vague, vous serez redirigé vers la page de
+                      création après la sortie du lot. Sélectionnez plutôt une vague existante
+                      pour un transfert immédiat.
+                    </span>
                   </div>
                   <button
                     type="button"
@@ -416,7 +421,7 @@ export function LotSortieDialog({ lot, open, onOpenChange }: LotSortieDialogProp
               <label className="text-sm font-medium">{t("sortie.cause")}</label>
               <input
                 type="text"
-                className="min-h-[44px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="min-h-[44px] w-full rounded-lg border border-muted bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 placeholder="Ex: Mortalité massive, maladie..."
                 value={cause}
                 onChange={(e) => setCause(e.target.value)}
@@ -428,7 +433,7 @@ export function LotSortieDialog({ lot, open, onOpenChange }: LotSortieDialogProp
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium">{t("sortie.notes")}</label>
             <textarea
-              className="min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+              className="min-h-[72px] w-full rounded-lg border border-muted bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
               placeholder="Observations..."
               value={
                 destination === DestinationLot.REFORMAGE && cause
@@ -446,7 +451,8 @@ export function LotSortieDialog({ lot, open, onOpenChange }: LotSortieDialogProp
               }}
             />
           </div>
-        </div>
+
+        </DialogBody>
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
           <DialogClose asChild>

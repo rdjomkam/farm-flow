@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DK Farm — L'excellence piscicole au Cameroun</title>
+  <meta name="description" content="DK Farm : alevins Clarias gariepinus, poisson marchand frais et application Farm Flow. Cameroun.">
+  <meta name="theme-color" content="#1a5c3a">
+  <link rel="icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+    body{
+      font-family:'Outfit',-apple-system,BlinkMacSystemFont,sans-serif;
+      font-size:1.0625rem;font-weight:400;line-height:1.75;
+      color:#0c1a0e;background:#fdfcf9;
+      overflow-x:hidden;-webkit-font-smoothing:antialiased;
+    }
+    img{max-width:100%;display:block}
+    a{color:inherit;text-decoration:none}
+    button{font-family:inherit;cursor:pointer;border:none;background:none}
+    ul{list-style:none}
+
+    /* ── grain ── */
+    body::after{
+      content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:.022;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    :root{
+      --green:#1a5c3a;--green-acc:#2d8a56;--green-light:#e8f5ec;
+      --earth:#c8a96e;--earth-light:#f0e6d2;
+      --dark:#0c1a0e;--light:#f6f4ef;--surface:#fdfcf9;
+      --muted:#5a6352;--muted-light:#8a917f;
+      --radius:1.75rem;--radius-inner:calc(1.75rem - 6px);
+      --spring:cubic-bezier(0.32,0.72,0,1);
+      --ease:cubic-bezier(0.16,1,0.3,1);
+    }
+
+    .container{width:100%;max-width:1140px;margin:0 auto;padding:0 1.25rem}
+    @media(min-width:768px){.container{padding:0 2.5rem}}
+    @media(min-width:1024px){.container{padding:0 3rem}}
+
+    /* ── reveals ── */
+    .rv{opacity:0;transform:translateY(60px);filter:blur(12px);
+      transition:opacity .7s var(--spring),transform .7s var(--spring),filter .7s var(--spring);will-change:opacity,transform}
+    .rv.vis{opacity:1;transform:translateY(0);filter:blur(0)}
+    .rv[data-d="1"]{transition-delay:.1s}.rv[data-d="2"]{transition-delay:.2s}
+    .rv[data-d="3"]{transition-delay:.3s}.rv[data-d="4"]{transition-delay:.4s}
+    @media(prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;filter:none;transition:none}}
+
+    /* ══ NAV ══ */
+    .nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:1.25rem 0;
+      transition:background .5s var(--spring),box-shadow .5s var(--spring)}
+    .nav.scrolled{background:rgba(253,252,249,.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+      box-shadow:0 1px 0 rgba(26,92,58,.06)}
+    .nav-inner{display:flex;align-items:center;justify-content:space-between}
+    .nav-logo{font-weight:800;font-size:1.375rem;letter-spacing:-.03em;color:#fff;transition:color .4s var(--spring)}
+    .nav.scrolled .nav-logo{color:var(--green)}
+    .nav-logo span{color:var(--earth)}
+    .nav-links{display:none;gap:2.25rem;align-items:center}
+    @media(min-width:768px){.nav-links{display:flex}}
+    .nav-links a{font-size:.875rem;font-weight:400;color:rgba(255,255,255,.7);transition:color .3s var(--spring)}
+    .nav.scrolled .nav-links a{color:var(--muted)}
+    .nav-links a:hover{color:#fff}
+    .nav.scrolled .nav-links a:hover{color:var(--dark)}
+    .nav-cta{display:inline-flex;align-items:center;gap:.5rem;padding:.625rem 1rem .625rem 1.25rem;
+      background:var(--green);color:#fff;border-radius:9999px;font-size:.8125rem;font-weight:600;
+      transition:transform .3s var(--spring),background .3s,box-shadow .3s}
+    .nav-cta:hover{background:var(--green-acc);box-shadow:0 4px 16px rgba(26,92,58,.25)}
+    .nav-cta:active{transform:scale(.97)}
+    .nav-cta .icon-pill{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.15);
+      display:flex;align-items:center;justify-content:center;transition:transform .3s var(--spring)}
+    .nav-cta:hover .icon-pill{transform:translate(2px,-2px)}
+    .nav-cta .icon-pill svg{width:13px;height:13px}
+
+    /* hamburger */
+    .ham{display:flex;flex-direction:column;gap:6px;width:26px;padding:2px 0;z-index:110}
+    @media(min-width:768px){.ham{display:none}}
+    .ham span{display:block;height:2px;background:#fff;border-radius:99px;
+      transition:transform .45s var(--spring),opacity .3s var(--spring);transform-origin:center}
+    .nav.scrolled .ham span{background:var(--dark)}
+    .ham.open span:nth-child(1){transform:translateY(8px) rotate(45deg)}
+    .ham.open span:nth-child(2){opacity:0;transform:scaleX(0)}
+    .ham.open span:nth-child(3){transform:translateY(-8px) rotate(-45deg)}
+
+    /* mobile menu */
+    .mob-menu{position:fixed;inset:0;z-index:105;
+      background:rgba(12,26,14,.96);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+      display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:0 2rem;gap:1.75rem;
+      opacity:0;pointer-events:none;transition:opacity .45s var(--spring)}
+    .mob-menu.open{opacity:1;pointer-events:auto}
+    .mob-menu a{font-size:2rem;font-weight:700;letter-spacing:-.02em;color:#fff;
+      opacity:0;transform:translateY(20px);transition:opacity .5s var(--spring),transform .5s var(--spring),color .3s}
+    .mob-menu.open a{opacity:1;transform:translateY(0)}
+    .mob-menu.open a:nth-child(1){transition-delay:.08s}
+    .mob-menu.open a:nth-child(2){transition-delay:.14s}
+    .mob-menu.open a:nth-child(3){transition-delay:.2s}
+    .mob-menu.open a:nth-child(4){transition-delay:.26s}
+    .mob-menu.open a:nth-child(5){transition-delay:.32s}
+    .mob-menu a:hover{color:var(--earth)}
+
+    /* ══ HERO ══ */
+    .hero{position:relative;min-height:100dvh;display:flex;align-items:flex-end;
+      padding:0 0 6rem;overflow:hidden}
+    .hero-bg{position:absolute;inset:0;z-index:0}
+    .hero-bg img{width:100%;height:100%;object-fit:cover;object-position:center 40%;
+      transition:transform 8s var(--ease);transform:scale(1.02)}
+    .hero-bg::after{content:'';position:absolute;inset:0;
+      background:linear-gradient(180deg,rgba(12,26,14,.35) 0%,rgba(12,26,14,.7) 60%,rgba(12,26,14,.92) 100%)}
+    .hero-content{position:relative;z-index:2;max-width:640px}
+    @media(min-width:768px){.hero{align-items:center;padding:8rem 0 6rem}.hero-content{max-width:580px}}
+    .hero-tag{display:inline-flex;align-items:center;gap:.5rem;
+      padding:.375rem 1rem;border:1px solid rgba(255,255,255,.12);border-radius:9999px;
+      font-size:.75rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+      color:rgba(255,255,255,.65);margin-bottom:2rem;backdrop-filter:blur(8px)}
+    .hero-tag .pulse{width:6px;height:6px;border-radius:50%;background:var(--green-acc);
+      animation:blink 2.4s infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+    .hero h1{font-size:clamp(2.5rem,7vw,5rem);font-weight:800;
+      letter-spacing:-.04em;line-height:.95;color:#fff;margin-bottom:1.5rem}
+    .hero h1 em{font-style:normal;color:var(--earth)}
+    .hero-sub{font-size:1.125rem;font-weight:300;color:rgba(255,255,255,.6);
+      max-width:44ch;margin-bottom:2.5rem;line-height:1.7}
+    .hero-actions{display:flex;flex-wrap:wrap;gap:.875rem}
+    .btn-hero{display:inline-flex;align-items:center;gap:.625rem;
+      padding:1rem 1.25rem 1rem 1.75rem;border-radius:9999px;font-size:1rem;font-weight:600;
+      transition:transform .35s var(--spring),box-shadow .35s var(--spring),background .3s}
+    .btn-hero:active{transform:scale(.97)}
+    .btn-hero.primary{background:var(--green);color:#fff;
+      box-shadow:0 6px 24px rgba(26,92,58,.3)}
+    .btn-hero.primary:hover{background:var(--green-acc);transform:translateY(-2px);
+      box-shadow:0 10px 32px rgba(26,92,58,.35)}
+    .btn-hero.ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.2)}
+    .btn-hero.ghost:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.06)}
+    .btn-icon{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.12);
+      display:flex;align-items:center;justify-content:center;transition:transform .35s var(--spring)}
+    .btn-hero:hover .btn-icon{transform:translate(2px,-2px)}
+    .btn-icon svg{width:14px;height:14px;color:#fff}
+
+    /* hero scroll hint */
+    .hero-scroll{position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);z-index:2;
+      display:flex;flex-direction:column;align-items:center;gap:.5rem;color:rgba(255,255,255,.35);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase}
+    .hero-scroll .line{width:1px;height:40px;background:linear-gradient(180deg,rgba(255,255,255,.3),transparent);animation:scrollhint 2s infinite}
+    @keyframes scrollhint{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+
+    /* ══ SECTION LABELS ══ */
+    .sec-label{display:inline-flex;align-items:center;gap:.625rem;
+      font-size:.6875rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--green);margin-bottom:1.25rem}
+    .sec-label::before{content:'';width:24px;height:1.5px;background:var(--earth);border-radius:1px}
+    .sec-title{font-size:clamp(1.75rem,4.5vw,3rem);font-weight:800;
+      letter-spacing:-.04em;line-height:.95;color:var(--dark);margin-bottom:.75rem}
+    .sec-sub{font-size:1.25rem;font-weight:300;color:var(--muted);max-width:50ch;margin-bottom:3.5rem}
+
+    /* ══ PRODUCTS — zig-zag ══ */
+    .products{padding:7rem 0 8rem;background:var(--surface)}
+    .prod-grid{display:flex;flex-direction:column;gap:1.5rem}
+    @media(min-width:768px){
+      .prod-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:1.5rem}
+      .prod-card:nth-child(1){grid-row:1/3}
+      .prod-card:nth-child(3){grid-column:1/-1}
+      .prod-card:nth-child(3) .prod-inner{flex-direction:row;align-items:center;gap:2.5rem}
+      .prod-card:nth-child(3) .prod-img{max-width:320px;aspect-ratio:16/10;flex-shrink:0}
+      .prod-card:nth-child(2){margin-top:-1.5rem}
+    }
+    /* double-bezel card */
+    .prod-card{background:rgba(26,92,58,.04);border-radius:var(--radius);padding:6px;
+      border:1px solid rgba(26,92,58,.05);
+      transition:transform .5s var(--spring),box-shadow .5s var(--spring)}
+    .prod-card:hover{transform:translateY(-6px);box-shadow:0 20px 48px rgba(26,92,58,.1)}
+    .prod-inner{background:var(--surface);border-radius:var(--radius-inner);padding:0;
+      display:flex;flex-direction:column;height:100%;overflow:hidden;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.6)}
+    .prod-img{width:100%;aspect-ratio:4/3;overflow:hidden;position:relative}
+    .prod-img img{width:100%;height:100%;object-fit:cover;transition:transform .6s var(--spring)}
+    .prod-card:hover .prod-img img{transform:scale(1.04)}
+    .prod-img .prod-badge{position:absolute;top:1rem;left:1rem;
+      padding:.3rem .875rem;border-radius:9999px;font-size:.6875rem;font-weight:600;
+      letter-spacing:.05em;text-transform:uppercase;backdrop-filter:blur(12px)}
+    .prod-badge.alev{background:rgba(26,92,58,.85);color:#fff}
+    .prod-badge.marc{background:rgba(200,169,110,.9);color:#fff}
+    .prod-badge.app{background:rgba(59,89,152,.85);color:#fff}
+    .prod-body{padding:1.75rem;flex:1;display:flex;flex-direction:column}
+    .prod-body h3{font-size:1.25rem;font-weight:700;letter-spacing:-.02em;color:var(--dark);margin-bottom:.375rem}
+    .prod-price{font-size:1.0625rem;font-weight:700;color:var(--green);margin-bottom:.75rem}
+    .prod-price span{font-weight:400;color:var(--muted);font-size:.875rem}
+    .prod-body p{font-size:.9375rem;color:var(--muted);margin-bottom:1.25rem;flex:1}
+    .prod-chips{display:flex;flex-wrap:wrap;gap:.375rem;margin-bottom:1.25rem}
+    .chip{padding:.25rem .75rem;background:var(--light);border-radius:9999px;font-size:.75rem;font-weight:500;color:var(--dark)}
+    .btn-card{display:inline-flex;align-items:center;gap:.5rem;
+      padding:.6875rem 1rem .6875rem 1.375rem;border-radius:9999px;font-size:.875rem;font-weight:600;
+      color:#fff;width:fit-content;transition:transform .3s var(--spring),box-shadow .3s var(--spring),background .3s}
+    .btn-card:active{transform:scale(.97)}
+    .btn-card .ic{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.15);
+      display:flex;align-items:center;justify-content:center;transition:transform .3s var(--spring)}
+    .btn-card:hover .ic{transform:translate(2px,-2px)}
+    .btn-card .ic svg{width:12px;height:12px}
+    .btn-card.cg{background:var(--green)}.btn-card.cg:hover{background:var(--green-acc);box-shadow:0 4px 14px rgba(26,92,58,.2)}
+    .btn-card.ce{background:#9e7c3a}.btn-card.ce:hover{background:#b89050;box-shadow:0 4px 14px rgba(200,169,110,.25)}
+    .btn-card.cb{background:#3b5998}.btn-card.cb:hover{background:#4a6aab;box-shadow:0 4px 14px rgba(59,89,152,.2)}
+
+    /* ══ TRUST ══ */
+    .trust{padding:7rem 0 8rem;background:var(--light);position:relative;overflow:hidden}
+    .trust-img{position:absolute;right:-5%;top:0;bottom:0;width:45%;z-index:0;display:none}
+    @media(min-width:1024px){.trust-img{display:block}}
+    .trust-img img{width:100%;height:100%;object-fit:cover;opacity:.12}
+    .trust-content{position:relative;z-index:1}
+    .trust-row{display:grid;grid-template-columns:1fr;gap:1rem;margin-top:2.5rem}
+    @media(min-width:768px){.trust-row{grid-template-columns:1.3fr .7fr;gap:1.25rem}}
+    .trust-row-2{display:grid;grid-template-columns:1fr;gap:1rem;margin-top:1rem}
+    @media(min-width:768px){.trust-row-2{grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-left:4rem}}
+    .trust-card{background:var(--surface);border-radius:var(--radius);padding:2rem;
+      border:1px solid rgba(26,92,58,.05);
+      transition:transform .45s var(--spring),box-shadow .45s var(--spring)}
+    .trust-card:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(26,92,58,.06)}
+    .trust-card .tc-icon{width:44px;height:44px;border-radius:.875rem;display:flex;
+      align-items:center;justify-content:center;margin-bottom:1.125rem;background:var(--green-light)}
+    .trust-card .tc-icon svg{width:20px;height:20px;color:var(--green)}
+    .trust-card h3{font-size:1.0625rem;font-weight:700;color:var(--dark);margin-bottom:.25rem;letter-spacing:-.01em}
+    .trust-card p{font-size:.9rem;color:var(--muted);line-height:1.65}
+    .trust-stat{font-size:2.5rem;font-weight:800;color:var(--green);letter-spacing:-.04em;line-height:1;margin-bottom:.375rem}
+
+    /* ══ STEPS ══ */
+    .steps{padding:7rem 0 8rem;background:var(--surface)}
+    .steps-wrap{margin-top:3rem;display:flex;flex-direction:column;gap:0;position:relative}
+    .steps-wrap::before{content:'';position:absolute;left:27px;top:0;bottom:0;width:2px;
+      background:linear-gradient(180deg,var(--green-light),rgba(26,92,58,.06));border-radius:1px}
+    @media(min-width:768px){
+      .steps-wrap::before{left:50%;transform:translateX(-50%)}
+    }
+    .step{display:flex;gap:1.5rem;align-items:flex-start;padding:2rem 0;position:relative}
+    @media(min-width:768px){
+      .step{width:48%;gap:2rem}
+      .step:nth-child(odd){margin-right:auto;text-align:right;flex-direction:row-reverse}
+      .step:nth-child(even){margin-left:auto}
+      .step:nth-child(odd) .step-num{position:absolute;right:-27px;transform:translateX(50%)}
+      .step:nth-child(even) .step-num{position:absolute;left:-27px;transform:translateX(-50%)}
+    }
+    .step-num{width:54px;height:54px;border-radius:50%;background:var(--surface);
+      border:2px solid var(--green-light);display:flex;align-items:center;justify-content:center;
+      font-size:1.125rem;font-weight:800;color:var(--green);flex-shrink:0;position:relative;z-index:1}
+    .step-body h3{font-size:1.0625rem;font-weight:700;color:var(--dark);margin-bottom:.25rem}
+    .step-body p{font-size:.9rem;color:var(--muted);max-width:30ch}
+
+    /* ══ TESTIMONIALS ══ */
+    .testi{padding:7rem 0 8rem;background:var(--light)}
+    .testi-grid{margin-top:3rem;display:grid;grid-template-columns:1fr;gap:1.25rem}
+    @media(min-width:768px){
+      .testi-grid{grid-template-columns:1.4fr .6fr;grid-template-rows:auto auto;gap:1.25rem}
+      .testi-card:first-child{grid-row:1/3}
+      .testi-card:last-child{margin-left:2rem}
+    }
+    .testi-card{background:var(--surface);border-radius:var(--radius);padding:2.25rem;
+      border:1px solid rgba(26,92,58,.05);display:flex;flex-direction:column}
+    .testi-card:first-child{padding:3rem}
+    .testi-card blockquote{font-size:1.0625rem;color:var(--dark);line-height:1.75;flex:1;
+      margin-bottom:1.5rem;border-left:3px solid var(--green-light);padding-left:1.25rem}
+    .testi-card:first-child blockquote{font-size:1.25rem;font-weight:300;letter-spacing:-.01em}
+    .testi-author{display:flex;align-items:center;gap:.75rem}
+    .testi-avatar{width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0;
+      background:linear-gradient(135deg,var(--green-light),var(--earth-light))}
+    .testi-avatar img{width:100%;height:100%;object-fit:cover}
+    .testi-name{font-size:.9rem;font-weight:600;color:var(--dark)}
+    .testi-role{font-size:.8rem;color:var(--muted-light)}
+
+    /* ══ FOOTER ══ */
+    .footer{padding:5rem 0 2rem;background:var(--dark);color:rgba(255,255,255,.55)}
+    .footer-top{display:grid;grid-template-columns:1fr;gap:3rem;margin-bottom:3.5rem}
+    @media(min-width:768px){.footer-top{grid-template-columns:1.6fr .7fr .7fr;gap:3rem}}
+    .footer-brand .f-logo{font-size:1.75rem;font-weight:800;color:#fff;letter-spacing:-.03em;margin-bottom:.625rem}
+    .footer-brand .f-logo span{color:var(--earth)}
+    .footer-brand p{max-width:34ch;margin-bottom:1.5rem;font-size:.9375rem}
+    .footer-social{display:flex;gap:.625rem}
+    .footer-social a{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.07);
+      display:flex;align-items:center;justify-content:center;transition:background .3s var(--spring),transform .3s var(--spring)}
+    .footer-social a:hover{background:rgba(255,255,255,.14);transform:translateY(-2px)}
+    .footer-social a svg{width:16px;height:16px;color:rgba(255,255,255,.6)}
+    .footer h4{font-size:.6875rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.85);margin-bottom:1rem}
+    .footer ul li{margin-bottom:.5rem}
+    .footer ul a{font-size:.9rem;transition:color .3s}.footer ul a:hover{color:#fff}
+    .footer-bottom{padding-top:2rem;border-top:1px solid rgba(255,255,255,.07);
+      display:flex;flex-wrap:wrap;justify-content:space-between;gap:.5rem;font-size:.8rem}
+
+    /* ══ WHATSAPP FLOAT ══ */
+    .wa-float{position:fixed;bottom:1.5rem;right:1.5rem;z-index:90;
+      width:54px;height:54px;border-radius:50%;background:#25d366;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 4px 20px rgba(37,211,102,.35);
+      transform:translateX(80px);opacity:0;
+      animation:wa-in .6s var(--spring) 2.5s forwards;
+      transition:transform .3s var(--spring),box-shadow .3s}
+    .wa-float:hover{transform:scale(1.06);box-shadow:0 6px 28px rgba(37,211,102,.45)}
+    .wa-float:active{transform:scale(.95)}
+    .wa-float svg{width:26px;height:26px;color:#fff}
+    .wa-float::before{content:'';position:absolute;inset:-4px;border-radius:50%;
+      border:2px solid rgba(37,211,102,.4);animation:wa-ring 3s ease-out infinite 3s}
+    @keyframes wa-in{to{transform:translateX(0);opacity:1}}
+    @keyframes wa-ring{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.5);opacity:0}}
+    @media(prefers-reduced-motion:reduce){
+      .wa-float{transform:none;opacity:1;animation:none}
+      .wa-float::before{animation:none}
+      .hero-bg img{transition:none}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav" id="nav">
+    <div class="container nav-inner">
+      <a href="#" class="nav-logo">DK<span>Farm</span></a>
+      <div class="nav-links">
+        <a href="#produits">Produits</a>
+        <a href="#pourquoi">Pourquoi nous</a>
+        <a href="#commander">Commander</a>
+        <a href="#contact">Contact</a>
+        <a href="https://wa.me/237679575133" target="_blank" rel="noopener" class="nav-cta">
+          Nous contacter
+          <span class="icon-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
+        </a>
+      </div>
+      <button class="ham" id="ham" aria-label="Menu"><span></span><span></span><span></span></button>
+    </div>
+  </nav>
+
+  <div class="mob-menu" id="mob">
+    <a href="#produits" data-close>Produits</a>
+    <a href="#pourquoi" data-close>Pourquoi nous</a>
+    <a href="#commander" data-close>Commander</a>
+    <a href="#contact" data-close>Contact</a>
+    <a href="https://wa.me/237679575133" target="_blank" rel="noopener">WhatsApp</a>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg">
+      <img src="https://images.unsplash.com/photo-1541441056316-443fff347c40?w=1400&q=80&auto=format&fit=crop" alt="Poissons dans un bassin d'eau sombre" loading="eager">
+    </div>
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-tag rv"><span class="pulse"></span>Pisciculture Cameroun</div>
+        <h1 class="rv" data-d="1">Vos poissons.<br><em>Notre expertise.</em></h1>
+        <p class="hero-sub rv" data-d="2">Alevins Clarias gariepinus, poisson marchand frais et application de gestion piscicole. Du bassin au march&eacute;, au Cameroun.</p>
+        <div class="hero-actions rv" data-d="3">
+          <a href="https://wa.me/237679575133" target="_blank" rel="noopener" class="btn-hero primary">
+            Commander maintenant
+            <span class="btn-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></span>
+          </a>
+          <a href="#produits" class="btn-hero ghost">
+            Voir nos produits
+            <span class="btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="hero-scroll" aria-hidden="true"><span class="line"></span></div>
+  </section>
+
+  <!-- PRODUCTS -->
+  <section class="products" id="produits">
+    <div class="container">
+      <div class="sec-label rv">Nos produits</div>
+      <h2 class="sec-title rv" data-d="1">Du bassin &agrave; votre march&eacute;</h2>
+      <p class="sec-sub rv" data-d="2">Trois offres. Un seul objectif : la r&eacute;ussite de votre activit&eacute; piscicole.</p>
+
+      <div class="prod-grid">
+        <!-- Alevins -->
+        <div class="prod-card rv" data-d="0">
+          <div class="prod-inner">
+            <div class="prod-img">
+              <img src="https://images.unsplash.com/photo-1544551763-77ef2d0cfc6c?w=700&q=80&auto=format&fit=crop" alt="Alevins de silure dans l'eau" loading="lazy">
+              <span class="prod-badge alev">Alevins</span>
+            </div>
+            <div class="prod-body">
+              <h3>Alevins Clarias gariepinus</h3>
+              <div class="prod-price">&Agrave; partir de 50 FCFA <span>/ unit&eacute;</span></div>
+              <p>S&eacute;lection g&eacute;n&eacute;tique rigoureuse, croissance rapide, transport conditionn&eacute;. Pour d&eacute;marrer ou renouveler vos bacs.</p>
+              <div class="prod-chips">
+                <span class="chip">3–5 cm</span><span class="chip">5–8 cm</span><span class="chip">8–12 cm</span>
+              </div>
+              <a href="https://wa.me/237679575133?text=Bonjour%2C%20je%20souhaite%20commander%20des%20alevins" target="_blank" rel="noopener" class="btn-card cg">
+                Commander <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Poisson marchand -->
+        <div class="prod-card rv" data-d="1">
+          <div class="prod-inner">
+            <div class="prod-img">
+              <img src="https://images.unsplash.com/photo-1685853996091-f9b4fe630374?w=700&q=80&auto=format&fit=crop" alt="Poissons frais pr&ecirc;ts pour le march&eacute;" loading="lazy">
+              <span class="prod-badge marc">Marchand</span>
+            </div>
+            <div class="prod-body">
+              <h3>Poisson marchand 400g+</h3>
+              <div class="prod-price">Prix au kg <span>/ selon volume</span></div>
+              <p>Silures &eacute;lev&eacute;s 6 mois minimum. Chair ferme, go&ucirc;t net. Livraison fra&icirc;che au Cameroun.</p>
+              <a href="https://wa.me/237679575133?text=Bonjour%2C%20je%20souhaite%20commander%20du%20poisson%20marchand" target="_blank" rel="noopener" class="btn-card ce">
+                Commander <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Farm Flow -->
+        <div class="prod-card rv" data-d="2">
+          <div class="prod-inner">
+            <div class="prod-img">
+              <img src="https://images.unsplash.com/photo-1607629266843-b53648489635?w=700&q=80&auto=format&fit=crop" alt="Vue a&eacute;rienne d'un bassin piscicole" loading="lazy">
+              <span class="prod-badge app">Application</span>
+            </div>
+            <div class="prod-body">
+              <h3>Farm Flow</h3>
+              <div class="prod-price">Gratuit <span>pour commencer</span></div>
+              <p>Suivez vos vagues, bacs, alimentation et mortalit&eacute; depuis votre t&eacute;l&eacute;phone. Tableau de bord, indicateurs, historique complet. Con&ccedil;u pour le terrain.</p>
+              <a href="/register" class="btn-card cb">
+                Essai gratuit <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUST -->
+  <section class="trust" id="pourquoi">
+    <div class="trust-img"><img src="https://images.unsplash.com/photo-1605000797499-95a51c5269ae?w=800&q=70&auto=format&fit=crop" alt="" loading="lazy"></div>
+    <div class="container trust-content">
+      <div class="sec-label rv">Pourquoi DK Farm</div>
+      <h2 class="sec-title rv" data-d="1"><span data-count="32" class="trust-stat">0</span> cycles. Z&eacute;ro compromis.</h2>
+
+      <div class="trust-row">
+        <div class="trust-card rv" data-d="0">
+          <div class="tc-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+          </div>
+          <h3>Tra&ccedil;abilit&eacute; compl&egrave;te</h3>
+          <p>Chaque lot document&eacute; du jour 1 &agrave; la r&eacute;colte. Qualit&eacute; de l'eau, alimentation, croissance — tout est enregistr&eacute;.</p>
+        </div>
+        <div class="trust-card rv" data-d="1">
+          <div class="tc-icon" style="background:var(--earth-light)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#9e7c3a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          </div>
+          <h3>Livraison conditionn&eacute;e</h3>
+          <p>Transport en oxyg&egrave;ne pour les alevins, cha&icirc;ne du froid pour le marchand. Toutes r&eacute;gions du Cameroun.</p>
+        </div>
+      </div>
+      <div class="trust-row-2">
+        <div class="trust-card rv" data-d="2">
+          <div class="tc-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <h3>94,7% de survie</h3>
+          <p>Taux moyen mesur&eacute; sur les 12 derniers mois via Farm Flow. Pas un chiffre marketing.</p>
+        </div>
+        <div class="trust-card rv" data-d="3">
+          <div class="tc-icon" style="background:#eef2ff">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#3b5998" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+          </div>
+          <h3>Pilot&eacute; par les donn&eacute;es</h3>
+          <p>Farm Flow transforme chaque relev&eacute; terrain en indicateur actionnable. FCR, SGR, biomasse — en temps r&eacute;el.</p>
+        </div>
+        <div class="trust-card rv" data-d="4">
+          <div class="tc-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <h3>Accompagnement terrain</h3>
+          <p>Conseils d'alimentation, protocoles de traitement, dimensionnement des bacs. On ne vend pas juste des poissons.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEPS -->
+  <section class="steps" id="commander">
+    <div class="container">
+      <div class="sec-label rv">Commander</div>
+      <h2 class="sec-title rv" data-d="1">WhatsApp &rarr; Devis &rarr; Livraison</h2>
+      <p class="sec-sub rv" data-d="2">Pas de formulaire. Pas de compte. Juste un message.</p>
+
+      <div class="steps-wrap">
+        <div class="step rv" data-d="0">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h3>Envoyez-nous un message</h3>
+            <p>WhatsApp ou appel. Pr&eacute;cisez le produit, la quantit&eacute;, la taille si alevins.</p>
+          </div>
+        </div>
+        <div class="step rv" data-d="1">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h3>Recevez votre devis</h3>
+            <p>Tarif d&eacute;taill&eacute; sous 2h. Validez et on fixe la date ensemble.</p>
+          </div>
+        </div>
+        <div class="step rv" data-d="2">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h3>R&eacute;ception ou enl&egrave;vement</h3>
+            <p>Livraison en conditions optimales ou enl&egrave;vement &agrave; la ferme. Paiement &agrave; r&eacute;ception.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="testi">
+    <div class="container">
+      <div class="sec-label rv">T&eacute;moignages</div>
+      <h2 class="sec-title rv" data-d="1">Sur le terrain</h2>
+
+      <div class="testi-grid">
+        <div class="testi-card rv" data-d="0">
+          <blockquote>J'ai lanc&eacute; avec 2 000 alevins DK Farm il y a 8 mois. Taux de survie au-dessus de tout ce que j'avais eu avant. Leur &eacute;quipe m'a recadr&eacute; sur les dosages, les fr&eacute;quences d'alimentation. C'est ce suivi qui fait la diff&eacute;rence — pas juste le poisson.</blockquote>
+          <div class="testi-author">
+            <div class="testi-avatar"><img src="https://images.unsplash.com/photo-1596788068873-9ffd5cacd4c4?w=80&q=80&auto=format&fit=crop&crop=face" alt="Paul N."></div>
+            <div><div class="testi-name">Paul Nkouatchet</div><div class="testi-role">Pisciculteur, Bafoussam</div></div>
+          </div>
+        </div>
+        <div class="testi-card rv" data-d="1">
+          <blockquote>Farm Flow a remplac&eacute; mes trois cahiers. Je vois mon FCR en temps r&eacute;el, j'anticipe les pics de mortalit&eacute;.</blockquote>
+          <div class="testi-author">
+            <div class="testi-avatar"><img src="https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=80&q=80&auto=format&fit=crop&crop=face" alt="Awa M."></div>
+            <div><div class="testi-name">Awa Mbouda</div><div class="testi-role">G&eacute;rante de ferme, Douala</div></div>
+          </div>
+        </div>
+        <div class="testi-card rv" data-d="2">
+          <blockquote>Qualit&eacute; constante du marchand. Mes clients &agrave; Yaound&eacute; commandent deux fois par mois maintenant. Livraison toujours ponctuelle.</blockquote>
+          <div class="testi-author">
+            <div class="testi-avatar"><img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=80&q=80&auto=format&fit=crop&crop=face" alt="Jean-Pierre E."></div>
+            <div><div class="testi-name">Jean-Pierre Essomba</div><div class="testi-role">Restaurateur, Yaound&eacute;</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer" id="contact">
+    <div class="container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <div class="f-logo">DK<span>Farm</span></div>
+          <p>Alevins, poisson marchand et technologie piscicole. Depuis le Cameroun.</p>
+          <div class="footer-social">
+            <a href="https://wa.me/237679575133" target="_blank" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></a>
+            <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
+          </div>
+        </div>
+        <div>
+          <h4>Navigation</h4>
+          <ul>
+            <li><a href="#produits">Produits</a></li>
+            <li><a href="#pourquoi">Pourquoi nous</a></li>
+            <li><a href="#commander">Commander</a></li>
+            <li><a href="/login">Farm Flow</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Contact</h4>
+          <ul>
+            <li><a href="https://wa.me/237679575133" target="_blank" rel="noopener">+237 679 575 133</a></li>
+            <li>Cameroun</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>&copy; 2026 DK Farm</span>
+        <span>Propuls&eacute; par Farm Flow</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- WHATSAPP -->
+  <a href="https://wa.me/237679575133" target="_blank" rel="noopener" class="wa-float" aria-label="WhatsApp">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+  </a>
+
+  <script>
+    const nav=document.getElementById('nav'),ham=document.getElementById('ham'),mob=document.getElementById('mob');
+
+    /* nav scroll */
+    let ticking=false;
+    function onScroll(){
+      if(!ticking){requestAnimationFrame(()=>{
+        nav.classList.toggle('scrolled',window.scrollY>60);
+        /* hero parallax */
+        const bg=document.querySelector('.hero-bg img');
+        if(bg&&window.scrollY<window.innerHeight){
+          bg.style.transform='scale(1.02) translateY('+window.scrollY*.18+'px)';
+        }
+        ticking=false;
+      });ticking=true}
+    }
+    window.addEventListener('scroll',onScroll,{passive:true});onScroll();
+
+    /* hamburger */
+    ham.addEventListener('click',()=>{
+      ham.classList.toggle('open');mob.classList.toggle('open');
+      document.body.style.overflow=mob.classList.contains('open')?'hidden':'';
+    });
+    mob.querySelectorAll('[data-close]').forEach(a=>a.addEventListener('click',()=>{
+      ham.classList.remove('open');mob.classList.remove('open');document.body.style.overflow='';
+    }));
+
+    /* reveals */
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      const obs=new IntersectionObserver(entries=>{
+        entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('vis');obs.unobserve(e.target)}});
+      },{threshold:.08,rootMargin:'0px 0px -30px 0px'});
+      document.querySelectorAll('.rv').forEach(el=>obs.observe(el));
+    }));
+
+    /* counter */
+    const cObs=new IntersectionObserver(entries=>{
+      entries.forEach(e=>{
+        if(!e.isIntersecting)return;
+        const el=e.target,target=+el.dataset.count;let start=0;const dur=1400,t0=performance.now();
+        (function tick(now){
+          const p=Math.min((now-t0)/dur,1);
+          const ease=1-Math.pow(1-p,3);
+          el.textContent=Math.round(ease*target)+'+';
+          if(p<1)requestAnimationFrame(tick);
+        })(t0);
+        cObs.unobserve(el);
+      });
+    },{threshold:.5});
+    document.querySelectorAll('[data-count]').forEach(el=>cObs.observe(el));
+
+    /* smooth scroll */
+    document.querySelectorAll('a[href^="#"]').forEach(a=>{
+      a.addEventListener('click',function(e){
+        const h=this.getAttribute('href');if(h==='#')return;e.preventDefault();
+        const t=document.querySelector(h);if(t)t.scrollIntoView({behavior:'smooth',block:'start'});
+      });
+    });
+  </script>
+</body>
+</html>

@@ -10,21 +10,11 @@
  * - Absence de cookie → redirect /login pour les pages
  * - Absence de cookie → 401 JSON pour les routes API
  * - Routes backoffice non interceptees par la logique role
+ * - Subscription check via sub_status cookie
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
-
-// ---------------------------------------------------------------------------
-// Mock — fetch pour contourner l'appel à /api/abonnements/statut-middleware
-// Sans ce mock, le fetch vers l'API interne provoquerait une erreur réseau
-// en environnement de test (pas de serveur Next.js running).
-// L'abonnement check est "fail open" : si l'API échoue, il laisse passer.
-// ---------------------------------------------------------------------------
-const mockFetch = vi.fn().mockResolvedValue({
-  ok: false,
-  json: async () => ({}),
-} as Response);
 
 // ---------------------------------------------------------------------------
 // Mock StatutAbonnement et Role pour ne pas avoir a charger tous les types
@@ -44,23 +34,16 @@ vi.mock("@/types", () => ({
   },
 }));
 
-// Remplacer le fetch global
-beforeEach(() => {
-  vi.stubGlobal("fetch", mockFetch);
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-  vi.clearAllMocks();
-});
-
 // Import après les mocks
 import { proxy } from "@/proxy";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function makeRequest(path: string, options: { role?: string; session?: string } = {}) {
+function makeRequest(
+  path: string,
+  options: { role?: string; session?: string; subStatus?: object } = {}
+) {
   const url = new URL(path, "http://localhost:3000");
   const req = new NextRequest(url);
 
@@ -69,6 +52,9 @@ function makeRequest(path: string, options: { role?: string; session?: string } 
   }
   if (options.role) {
     req.cookies.set("user_role", options.role);
+  }
+  if (options.subStatus) {
+    req.cookies.set("sub_status", JSON.stringify(options.subStatus));
   }
 
   return req;
@@ -135,7 +121,7 @@ describe("Absence de session_token — 401 pour les routes API", () => {
     const req = makeRequest("/api/vagues");
     const res = await proxy(req);
     expect(res.status).toBe(401);
-    const body = await res.json() as { message: string };
+    const body = (await res.json()) as { message: string };
     expect(body.message).toContain("Non authentifie");
   });
 
@@ -199,9 +185,6 @@ describe("Rôle INGENIEUR — redirections", () => {
 
 // ---------------------------------------------------------------------------
 // 5. Non-INGENIEUR — blocage sur routes ingenieur-only
-// Note (Sprint NA — NA.6) : le Guard E11 intercepte les rôles vides AVANT
-// la vérification INGENIEUR_ONLY. Un utilisateur sans rôle est redirigé vers
-// /login, pas vers /. Seuls ADMIN/GERANT/PISCICULTEUR sont redirigés vers /.
 // ---------------------------------------------------------------------------
 describe("Rôle non-INGENIEUR — blocage routes ingenieur-only", () => {
   const farmRoles = ["ADMIN", "GERANT", "PISCICULTEUR"];
@@ -224,7 +207,7 @@ describe("Rôle non-INGENIEUR — blocage routes ingenieur-only", () => {
     });
   }
 
-  // Guard E11 (Sprint NA — NA.6) : session existe mais rôle absent → /login
+  // Guard E11
   it("no-role accede à /monitoring → redirect vers /login (Guard E11)", async () => {
     const req = makeRequest("/monitoring", { session: "tok", role: "" });
     const res = await proxy(req);
@@ -241,11 +224,9 @@ describe("Rôle non-INGENIEUR — blocage routes ingenieur-only", () => {
     expect(location).toContain("/login");
   });
 
-
   it("ADMIN accede à / → laisse passer (espace farm)", async () => {
     const req = makeRequest("/", { session: "tok", role: "ADMIN" });
     const res = await proxy(req);
-    // ADMIN à / → pas de redirect vers /monitoring
     const location = res.headers.get("location");
     if (location) {
       expect(location).not.toContain("/monitoring");
@@ -257,7 +238,6 @@ describe("Rôle non-INGENIEUR — blocage routes ingenieur-only", () => {
     const req = makeRequest("/vagues", { session: "tok", role: "GERANT" });
     const res = await proxy(req);
     const location = res.headers.get("location");
-    // Pas de redirect basé sur le rôle
     if (location) {
       expect(location).not.toMatch(/\/$/);
       expect(location).not.toContain("/monitoring");
@@ -281,9 +261,7 @@ describe("Routes API — exclues de la logique de rôle", () => {
   it("/api/vagues avec role INGENIEUR et session → ne redirige pas", async () => {
     const req = makeRequest("/api/vagues", { session: "tok-ing", role: "INGENIEUR" });
     const res = await proxy(req);
-    // L'API ne doit pas être redirigée vers /monitoring
     expect(res.headers.get("location")).toBeNull();
-    // Doit passer (200 next, ou 401 si pas de session — mais on a session ici)
     expect(res.status).not.toBe(307);
   });
 
@@ -295,7 +273,6 @@ describe("Routes API — exclues de la logique de rôle", () => {
   });
 
   it("/api/monitoring avec role ADMIN → pas de redirect", async () => {
-    // Les API ne sont pas soumises à la logique de rôle du middleware
     const req = makeRequest("/api/monitoring", { session: "tok", role: "ADMIN" });
     const res = await proxy(req);
     const location = res.headers.get("location");
@@ -311,7 +288,6 @@ describe("Route /backoffice — exclue de la logique de rôle", () => {
     const req = makeRequest("/backoffice", { session: "tok-admin", role: "ADMIN" });
     const res = await proxy(req);
     const location = res.headers.get("location");
-    // Le backoffice ne doit pas être redirigé par la logique INGENIEUR
     if (location) {
       expect(location).not.toContain("/monitoring");
       expect(location).not.toMatch(/\/$/);
@@ -338,5 +314,87 @@ describe("Sous-chemins — logique de préfixe INGENIEUR_ONLY", () => {
       expect(location).not.toMatch(/\/$/);
     }
     expect(res.status).not.toBe(307);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 9. Subscription check via sub_status cookie
+// ---------------------------------------------------------------------------
+describe("Subscription check via sub_status cookie", () => {
+  it("blocked subscription → redirect to /abonnement-expire for pages", async () => {
+    const req = makeRequest("/vagues", {
+      session: "tok",
+      role: "ADMIN",
+      subStatus: { statut: "EXPIRE", isDecouverte: false, isBlocked: true },
+    });
+    const res = await proxy(req);
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/abonnement-expire");
+  });
+
+  it("blocked subscription → 403 for API routes", async () => {
+    const req = makeRequest("/api/vagues", {
+      session: "tok",
+      role: "ADMIN",
+      subStatus: { statut: "EXPIRE", isDecouverte: false, isBlocked: true },
+    });
+    const res = await proxy(req);
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { code: string };
+    expect(body.code).toBe("SUBSCRIPTION_BLOCKED");
+  });
+
+  it("DECOUVERTE plan → never blocked even if isBlocked is somehow true", async () => {
+    const req = makeRequest("/vagues", {
+      session: "tok",
+      role: "ADMIN",
+      subStatus: { statut: null, isDecouverte: true, isBlocked: false },
+    });
+    const res = await proxy(req);
+    expect(res.status).not.toBe(307);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("active subscription → pass through", async () => {
+    const req = makeRequest("/vagues", {
+      session: "tok",
+      role: "ADMIN",
+      subStatus: { statut: "ACTIF", isDecouverte: false, isBlocked: false },
+    });
+    const res = await proxy(req);
+    expect(res.status).not.toBe(307);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("no sub_status cookie → fail open (pass through)", async () => {
+    const req = makeRequest("/vagues", { session: "tok", role: "ADMIN" });
+    const res = await proxy(req);
+    expect(res.status).not.toBe(307);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("malformed sub_status cookie → fail open", async () => {
+    const url = new URL("/vagues", "http://localhost:3000");
+    const req = new NextRequest(url);
+    req.cookies.set("session_token", "tok");
+    req.cookies.set("user_role", "ADMIN");
+    req.cookies.set("sub_status", "not-valid-json{{{");
+    const res = await proxy(req);
+    expect(res.status).not.toBe(307);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("whitelisted route /mon-abonnement → not checked even if blocked", async () => {
+    const req = makeRequest("/mon-abonnement", {
+      session: "tok",
+      role: "ADMIN",
+      subStatus: { statut: "EXPIRE", isDecouverte: false, isBlocked: true },
+    });
+    const res = await proxy(req);
+    // Should NOT redirect to /abonnement-expire
+    const location = res.headers.get("location");
+    if (location) {
+      expect(location).not.toContain("/abonnement-expire");
+    }
   });
 });

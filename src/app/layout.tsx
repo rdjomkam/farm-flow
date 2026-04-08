@@ -3,7 +3,7 @@ import { cache } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { ToastProvider } from "@/components/ui/toast";
@@ -12,11 +12,12 @@ import { GlobalLoadingProvider } from "@/contexts/global-loading.context";
 import { GlobalLoadingBar } from "@/components/ui/global-loading-bar";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
 import { QueryProvider } from "@/providers/query-provider";
-import { getServerSession } from "@/lib/auth";
+import { getServerSession, SUBSCRIPTION_COOKIE_NAME } from "@/lib/auth";
 import { getServerPermissions, getServerSiteModules } from "@/lib/auth/permissions-server";
+import { getSubscriptionStatus, isBlocked } from "@/lib/abonnements/check-subscription";
 import { prisma } from "@/lib/db";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
-import { Permission, Role, SiteModule } from "@/types";
+import { Permission, Role, SiteModule, StatutAbonnement, TypePlan } from "@/types";
 import { SwRegister } from "@/components/pwa/sw-register";
 import { AppleSplashLinks } from "@/components/pwa/apple-splash-links";
 import "./globals.css";
@@ -171,6 +172,38 @@ export default async function RootLayout({
     // Fail-open for any other error (DB unavailable, etc.)
   }
   // ── Fin maintenance check ─────────────────────────────────────────────────
+
+  // ── Refresh subscription cookie on every page load ──────────────────────
+  // Keeps the sub_status cookie fresh so the Edge middleware can check it
+  // without an internal fetch. The authoritative check is server-side (Prisma).
+  try {
+    if (session?.activeSiteId) {
+      const cookieStore = await cookies();
+      const subStatus = await getSubscriptionStatus(session.activeSiteId);
+      const isDecouverteFlag =
+        subStatus.isDecouverte ||
+        (subStatus.planType as string) === TypePlan.DECOUVERTE;
+      const blockedFlag = isDecouverteFlag
+        ? false
+        : isBlocked(subStatus.statut as StatutAbonnement | null);
+      cookieStore.set(SUBSCRIPTION_COOKIE_NAME, JSON.stringify({
+        statut: subStatus.statut,
+        isDecouverte: isDecouverteFlag,
+        isBlocked: blockedFlag,
+      }), {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 30 * 24 * 60 * 60,
+      });
+    }
+  } catch (error: unknown) {
+    const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
+    if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
+    // Fail-open — don't block render if subscription check fails
+  }
+  // ── Fin subscription cookie refresh ─────────────────────────────────────
 
   try {
     return (

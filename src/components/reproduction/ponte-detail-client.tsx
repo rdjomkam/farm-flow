@@ -12,6 +12,7 @@ import {
   XCircle,
   Baby,
   FlaskConical,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -628,10 +629,10 @@ export function ReproductionPonteDetailClient({ ponte, permissions }: Props) {
       )}
 
       {/* Incubations liees */}
-      <Card>
-        <CardHeader className="pb-2">
+      <div>
+        <div className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
+            <h3 className="text-base font-semibold flex items-center gap-2">
               <FlaskConical className="h-4 w-4" />
               {t("pontes.detail.incubations")}
               {ponte.incubations && ponte.incubations.length > 0 && (
@@ -639,7 +640,7 @@ export function ReproductionPonteDetailClient({ ponte, permissions }: Props) {
                   ({ponte.incubations.length})
                 </span>
               )}
-            </CardTitle>
+            </h3>
             {canLancerIncubation && !isEchouee && step2Done && (
               <Dialog open={incubationOpen} onOpenChange={setIncubationOpen}>
                 <DialogTrigger asChild>
@@ -755,8 +756,8 @@ export function ReproductionPonteDetailClient({ ponte, permissions }: Props) {
               </Dialog>
             )}
           </div>
-        </CardHeader>
-        <CardContent>
+        </div>
+        <div>
           {!ponte.incubations || ponte.incubations.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center">
               {t("pontes.detail.aucuneIncubation")}
@@ -764,34 +765,36 @@ export function ReproductionPonteDetailClient({ ponte, permissions }: Props) {
           ) : (
             <div className="flex flex-col gap-2">
               {ponte.incubations.map((inc) => (
-                <div
-                  key={inc.id}
-                  className="flex items-center justify-between rounded-lg border border-border px-3 py-2"
-                >
-                  <div>
-                    <p className="font-medium text-sm">{inc.code}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDate(inc.dateDebutIncubation)}
-                      {inc.nombreOeufsPlaces !== null &&
-                        ` — ${formatNumber(inc.nombreOeufsPlaces)} oeufs`}
-                    </p>
+                <Link key={inc.id} href={`/reproduction/incubations/${inc.id}`}>
+                  <div className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-muted/50 transition-colors">
+                    <div>
+                      <p className="font-medium text-sm">{inc.code}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDate(inc.dateDebutIncubation)}
+                        {inc.nombreOeufsPlaces !== null &&
+                          ` — ${formatNumber(inc.nombreOeufsPlaces)} oeufs`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statutIncubationBadgeClass(inc.statut)}`}
+                      >
+                        {statutIncubationLabels[inc.statut as StatutIncubation] ?? inc.statut}
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
                   </div>
-                  <span
-                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statutIncubationBadgeClass(inc.statut)}`}
-                  >
-                    {statutIncubationLabels[inc.statut as StatutIncubation] ?? inc.statut}
-                  </span>
-                </div>
+                </Link>
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Lots d'alevins */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
+      <div>
+        <div className="pb-2">
+          <h3 className="text-base font-semibold flex items-center gap-2">
             <Baby className="h-4 w-4" />
             {t("pontes.detail.lotsAlevins")}
             {ponte.lots && ponte.lots.length > 0 && (
@@ -799,9 +802,9 @@ export function ReproductionPonteDetailClient({ ponte, permissions }: Props) {
                 ({ponte.lots.length})
               </span>
             )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+          </h3>
+        </div>
+        <div>
           {!ponte.lots || ponte.lots.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center">
               {t("pontes.detail.aucunLot")}
@@ -810,7 +813,7 @@ export function ReproductionPonteDetailClient({ ponte, permissions }: Props) {
             <div className="flex flex-col gap-2">
               {ponte.lots.map((lot) => (
                 <Link key={lot.id} href={`/alevins/lots/${lot.id}`}>
-                  <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-muted/50 transition-colors">
                     <div>
                       <p className="font-medium text-sm">{lot.code}</p>
                       <p className="text-xs text-muted-foreground">
@@ -818,18 +821,21 @@ export function ReproductionPonteDetailClient({ ponte, permissions }: Props) {
                         {lot.bac && ` — Bac : ${lot.bac.nom}`}
                       </p>
                     </div>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statutLotBadgeClass(lot.statut)}`}
-                    >
-                      {statutLotLabels[lot.statut as StatutLotAlevins] ?? lot.statut}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statutLotBadgeClass(lot.statut)}`}
+                      >
+                        {statutLotLabels[lot.statut as StatutLotAlevins] ?? lot.statut}
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
                   </div>
                 </Link>
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Action buttons */}
       {(canModifyPonte || canDelete) && (

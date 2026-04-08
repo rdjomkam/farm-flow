@@ -205,6 +205,13 @@ const SHEET_GROUPS: SheetNavGroup[] = [
         moduleRequired: SiteModule.REPRODUCTION,
       },
       {
+        href: "/reproduction/incubations",
+        labelKey: "items.incubations",
+        icon: ThermometerSun,
+        permissionRequired: Permission.INCUBATIONS_VOIR,
+        moduleRequired: SiteModule.REPRODUCTION,
+      },
+      {
         href: "/reproduction/planning",
         labelKey: "items.planningReproduction",
         icon: Calendar,
