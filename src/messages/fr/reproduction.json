@@ -314,6 +314,7 @@
       "typeHormoneLabel": "Hormone (optionnel)",
       "typeHormonePlaceholder": "Selectionner une hormone",
       "doseHormone": "Dose hormone ml/mg (optionnel)",
+      "doseMgKg": "Dose mg/kg (optionnel)",
       "coutHormone": "Cout hormone FCFA (optionnel)",
       "heureInjection": "Heure injection (optionnel)",
       "temperatureEauC": "Temperature eau °C (optionnel)",

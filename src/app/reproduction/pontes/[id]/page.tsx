@@ -15,7 +15,7 @@ export default async function ReproductionPonteDetailPage({
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
 
-  const permissions = await checkPagePermission(session, Permission.ALEVINS_VOIR);
+  const permissions = await checkPagePermission(session, Permission.PONTES_VOIR);
   if (!permissions) return <AccessDenied />;
 
   const { id } = await params;

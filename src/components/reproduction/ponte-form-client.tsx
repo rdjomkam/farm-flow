@@ -1107,7 +1107,7 @@ function Step4Confirmation({
           variant="primary"
           size="lg"
           className="flex-1"
-          onClick={() => router.push(`/alevins/pontes/${ponteId}`)}
+          onClick={() => router.push(`/reproduction/pontes/${ponteId}`)}
         >
           {t("actions.voirPonte")}
           <ChevronRight className="h-4 w-4" aria-hidden />

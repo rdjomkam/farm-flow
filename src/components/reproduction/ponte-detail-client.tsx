@@ -212,7 +212,8 @@ export function ReproductionPonteDetailClient({ ponte, permissions }: Props) {
   const [incubationNotes, setIncubationNotes] = useState<string>("");
   const [incubationLoading, setIncubationLoading] = useState(false);
 
-  const canModify = permissions.includes(Permission.INCUBATIONS_GERER);
+  const canModifyPonte = permissions.includes(Permission.PONTES_GERER);
+  const canLancerIncubation = permissions.includes(Permission.INCUBATIONS_GERER);
   const canDelete = permissions.includes(Permission.ALEVINS_SUPPRIMER);
 
   const hasLinkedData =
@@ -639,7 +640,7 @@ export function ReproductionPonteDetailClient({ ponte, permissions }: Props) {
                 </span>
               )}
             </CardTitle>
-            {canModify && !isEchouee && (
+            {canLancerIncubation && !isEchouee && step2Done && (
               <Dialog open={incubationOpen} onOpenChange={setIncubationOpen}>
                 <DialogTrigger asChild>
                   <Button variant="ghost" size="sm" className="min-h-[44px] gap-1">
@@ -831,10 +832,10 @@ export function ReproductionPonteDetailClient({ ponte, permissions }: Props) {
       </Card>
 
       {/* Action buttons */}
-      {(canModify || canDelete) && (
+      {(canModifyPonte || canDelete) && (
         <div className="flex flex-col gap-3 pt-2">
           {/* Marquer comme echouee */}
-          {canModify && isEnCours && (
+          {canModifyPonte && isEnCours && (
             <Dialog open={echecOpen} onOpenChange={setEchecOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="w-full min-h-[44px]">

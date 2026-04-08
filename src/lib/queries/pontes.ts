@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { StatutPonte, StatutReproducteur, CauseEchecPonte } from "@/types";
+import { StatutPonte, StatutReproducteur, CauseEchecPonte, TypeHormone } from "@/types";
 import type {
   CreatePonteDTO,
   UpdatePonteDTO,
@@ -536,6 +536,73 @@ export async function markEchec(
     where: { id, siteId },
     include: {
       femelle: { select: { id: true, code: true } },
+      _count: { select: { lots: true, incubations: true } },
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Queries — Etape 1 injection (edition)
+// ---------------------------------------------------------------------------
+
+export interface InjectionStepDTO {
+  typeHormone?: TypeHormone;
+  doseHormone?: number;
+  doseMgKg?: number;
+  coutHormone?: number;
+  heureInjection?: string;
+  temperatureEauC?: number;
+  latenceTheorique?: number;
+  notes?: string;
+}
+
+/**
+ * Etape 1 (edition) : met a jour les champs d'injection hormonale.
+ *
+ * Appele via PATCH /api/reproduction/pontes/[id] depuis PonteCompleterClient
+ * lorsque le step 1 (injection) n'a pas ete complete lors de la creation.
+ *
+ * R4 : updateMany avec conditions.
+ */
+export async function updateInjection(
+  id: string,
+  siteId: string,
+  dto: InjectionStepDTO
+) {
+  const latenceTheorique =
+    dto.latenceTheorique !== undefined
+      ? dto.latenceTheorique
+      : dto.temperatureEauC !== undefined
+      ? getLatenceTheoriqueH(dto.temperatureEauC)
+      : undefined;
+
+  const result = await prisma.ponte.updateMany({
+    where: { id, siteId },
+    data: {
+      ...(dto.typeHormone !== undefined && { typeHormone: dto.typeHormone }),
+      ...(dto.doseHormone !== undefined && { doseHormone: dto.doseHormone }),
+      ...(dto.doseMgKg !== undefined && { doseMgKg: dto.doseMgKg }),
+      ...(dto.coutHormone !== undefined && { coutHormone: dto.coutHormone }),
+      ...(dto.heureInjection !== undefined && {
+        heureInjection: new Date(dto.heureInjection),
+      }),
+      ...(dto.temperatureEauC !== undefined && {
+        temperatureEauC: dto.temperatureEauC,
+      }),
+      ...(latenceTheorique !== undefined && { latenceTheorique }),
+      ...(dto.notes !== undefined && { notes: dto.notes }),
+    },
+  });
+
+  if (result.count === 0) {
+    throw new Error("Ponte introuvable ou n'appartient pas a ce site");
+  }
+
+  return prisma.ponte.findFirst({
+    where: { id, siteId },
+    include: {
+      femelle: { select: { id: true, code: true } },
+      male: { select: { id: true, code: true } },
       _count: { select: { lots: true, incubations: true } },
     },
   });
