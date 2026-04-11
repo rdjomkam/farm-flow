@@ -130,7 +130,7 @@ export function ProductionCalculator() {
                 {(poidsOeufsParFemelle * OEUFS_PAR_GRAMME).toLocaleString(
                   "fr-FR"
                 )}{" "}
-                oeufs estimés ({OEUFS_PAR_GRAMME}/g)
+                {t("oeufsEstimesHint", { rate: OEUFS_PAR_GRAMME })}
               </p>
             </div>
 
@@ -185,16 +185,16 @@ export function ProductionCalculator() {
                   value={`~${results.dureeEstimee} sem.`}
                 />
                 <div className="mt-2 rounded-lg bg-muted/40 border border-border p-3 text-xs text-muted-foreground">
-                  Base :{" "}
+                  {t("baseLabel")}{" "}
                   <strong>
                     {results.alevinsParPonte.toLocaleString("fr-FR")}
                   </strong>{" "}
-                  alevins/ponte estimés
+                  {t("alevinsParPonteLabel")}
                 </div>
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                Paramètres invalides.
+                {t("parametresInvalides")}
               </p>
             )}
           </div>

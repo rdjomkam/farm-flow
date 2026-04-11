@@ -21,7 +21,7 @@ export async function BacAssignationHistory({ assignations }: BacAssignationHist
   if (assignations.length === 0) {
     return (
       <p className="text-sm text-muted-foreground py-4 text-center">
-        Aucune assignation enregistrée pour ce bac.
+        {t("empty")}
       </p>
     );
   }

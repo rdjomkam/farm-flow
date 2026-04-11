@@ -63,10 +63,13 @@
   "recurrences": {
     "AUCUNE": "Aucune",
     "QUOTIDIENNE": "Quotidienne",
+    "QUOTIDIEN": "Quotidien",
     "HEBDOMADAIRE": "Hebdomadaire",
     "MENSUELLE": "Mensuelle",
-    "BIMENSUEL": "Bimensuelle",
-    "PERSONNALISE": "Personnalisee"
+    "MENSUEL": "Mensuel",
+    "BIMENSUEL": "Bimensuel",
+    "BIMENSUEL_DETAIL": "Bimensuel (2x/semaine)",
+    "PERSONNALISE": "Personnalise"
   },
   "recordTypes": {
     "biometry": "Biometrie",

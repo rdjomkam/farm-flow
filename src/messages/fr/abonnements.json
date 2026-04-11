@@ -58,7 +58,11 @@
       "waves": "{count} vagues",
       "sites": "{count} sites"
     },
-    "emptyMessage": "Les plans ne sont pas disponibles pour le moment."
+    "emptyMessage": "Les plans ne sont pas disponibles pour le moment.",
+    "errors": {
+      "generic": "Une erreur est survenue.",
+      "serverUnreachable": "Impossible de contacter le serveur."
+    }
   },
   "periods": {
     "MENSUEL": "Mensuel",

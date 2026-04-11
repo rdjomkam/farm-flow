@@ -131,6 +131,7 @@ function MonthCalendar({
   month: number;
   events: CalendarEvent[];
 }) {
+  const tPlanning = useTranslations("reproduction.planning");
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
   const days = getDaysInMonth(year, month);
@@ -183,7 +184,7 @@ function MonthCalendar({
               onClick={() =>
                 setExpandedDay(isExpanded ? null : dayEvents.length > 0 ? key : null)
               }
-              aria-label={`${day.getDate()} ${dayEvents.length > 0 ? `— ${dayEvents.length} événement(s)` : ""}`}
+              aria-label={`${day.getDate()} ${dayEvents.length > 0 ? `— ${tPlanning("eventCount", { count: dayEvents.length })}` : ""}`}
             >
               <span
                 className={`text-xs font-medium leading-none block mb-0.5 ${
@@ -247,6 +248,7 @@ function UpcomingEventsList({
   events: CalendarEvent[];
   emptyLabel: string;
 }) {
+  const tPlanning = useTranslations("reproduction.planning");
   const sorted = useMemo(
     () => [...events].sort((a, b) => a.date.localeCompare(b.date)),
     [events]
@@ -292,7 +294,7 @@ function UpcomingEventsList({
                   : "bg-[#7c3aed]/10 text-[#7c3aed]"
               }`}
             >
-              {ev.type === "ponte" ? "Ponte" : "Éclosion"}
+              {ev.type === "ponte" ? tPlanning("ponte") : tPlanning("eclosion")}
             </span>
           </div>
         );
@@ -329,12 +331,12 @@ export function ReproductionPlanningClient() {
         const res = await fetch(`/api/reproduction/planning?${params}`);
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          throw new Error(body.error ?? `Erreur ${res.status}`);
+          throw new Error(body.error ?? t("errorStatus", { status: res.status }));
         }
         const json: PlanningData = await res.json();
         setData(json);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Erreur inconnue");
+        setError(err instanceof Error ? err.message : t("errorUnknown"));
       } finally {
         setLoading(false);
       }
@@ -436,7 +438,7 @@ export function ReproductionPlanningClient() {
               disabled={loading || !dateDebut || !dateFin || dateDebut >= dateFin}
               className="w-full sm:w-auto h-11 px-5 rounded-lg bg-primary text-primary-foreground font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
             >
-              {loading ? "Chargement..." : "Appliquer"}
+              {loading ? t("loading") : t("apply")}
             </button>
           </div>
           {error && (
@@ -486,11 +488,11 @@ export function ReproductionPlanningClient() {
             <div className="flex gap-4 mt-3">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span className="w-2.5 h-2.5 rounded-full bg-primary inline-block" />
-                Ponte
+                {t("ponte")}
               </div>
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#7c3aed] inline-block" />
-                Éclosion
+                {t("eclosion")}
               </div>
             </div>
           </CardContent>

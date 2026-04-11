@@ -58,7 +58,11 @@
       "waves": "{count} batches",
       "sites": "{count} sites"
     },
-    "emptyMessage": "Plans are not available at the moment."
+    "emptyMessage": "Plans are not available at the moment.",
+    "errors": {
+      "generic": "An error occurred.",
+      "serverUnreachable": "Unable to reach the server."
+    }
   },
   "periods": {
     "MENSUEL": "Monthly",

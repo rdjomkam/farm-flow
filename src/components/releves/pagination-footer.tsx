@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { RELEVES_PAGE_LIMIT } from "@/lib/releve-search-params";
 
@@ -20,11 +21,18 @@ export function PaginationFooter({
   total,
   offset,
   limit = RELEVES_PAGE_LIMIT,
-  itemLabel = { singular: "relevé", plural: "relevés" },
+  itemLabel,
 }: PaginationFooterProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const tCommon = useTranslations("common.pagination");
+  const tReleves = useTranslations("releves.page");
+
+  const resolvedLabel = itemLabel ?? {
+    singular: tReleves("labelSingular"),
+    plural: tReleves("labelPlural"),
+  };
 
   // Cas bord : rien a afficher si total est 0
   if (total === 0) return null;
@@ -34,7 +42,7 @@ export function PaginationFooter({
   const hasPrev = offset > 0;
   const hasNext = offset + limit < total;
 
-  const totalLabel = total === 1 ? itemLabel.singular : itemLabel.plural;
+  const totalLabel = total === 1 ? resolvedLabel.singular : resolvedLabel.plural;
 
   function gotoPrev() {
     const params = new URLSearchParams(searchParams.toString());
@@ -61,7 +69,7 @@ export function PaginationFooter({
     <div className={`mt-4 flex flex-col gap-2 transition-opacity ${isPending ? "opacity-60" : ""}`}>
       {/* Indicateur total */}
       <p className="text-xs text-center text-muted-foreground">
-        {total} {totalLabel} au total
+        {tCommon("totalItems", { count: total, label: totalLabel })}
       </p>
 
       {/* Controles de navigation — uniquement si plusieurs pages */}
@@ -84,12 +92,12 @@ export function PaginationFooter({
             "
           >
             <ChevronLeft className="h-4 w-4 shrink-0" />
-            Précédent
+            {tCommon("previous")}
           </button>
 
           {/* Indicateur de page */}
           <span className="text-sm font-medium text-foreground whitespace-nowrap">
-            Page {currentPage} / {totalPages}
+            {tCommon("page", { current: currentPage, total: totalPages })}
           </span>
 
           {/* Bouton Suivant */}
@@ -108,7 +116,7 @@ export function PaginationFooter({
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
             "
           >
-            Suivant
+            {tCommon("next")}
             <ChevronRight className="h-4 w-4 shrink-0" />
           </button>
         </div>

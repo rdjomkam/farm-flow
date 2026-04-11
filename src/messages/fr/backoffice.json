@@ -69,6 +69,7 @@
       "title": "Annuler l'exoneration ?",
       "description": "L'acces gratuit sera revoque. L'utilisateur devra souscrire a un plan payant pour continuer.",
       "confirm": "Confirmer l'annulation",
+      "cancelling": "Annulation...",
       "cancel": "Retour",
       "successTitle": "Exoneration annulee",
       "successDesc": "L'acces gratuit a ete revoque.",
@@ -114,6 +115,14 @@
     "aucunPlan": "Aucun plan",
     "aucunSiteTrouve": "Aucun site trouve",
     "creeLe": "Cree le",
+    "gerer": "Gérer",
+    "actionsButton": "Actions",
+    "kpi": {
+      "total": "Total",
+      "actifs": "Actifs",
+      "suspendus": "Suspendus",
+      "bloques": "Bloqués"
+    },
     "assignerA": "Assigner a",
     "siteIntrouvable": "Site introuvable",
     "retourAuxSites": "Retour aux sites",
@@ -140,6 +149,7 @@
       "actions": "Actions"
     },
     "detail": {
+      "changeStatus": "Changer le statut",
       "tabs": {
         "summary": "Resume",
         "modules": "Modules",

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { BenchmarkLevel } from "@/lib/benchmarks";
 
@@ -8,23 +9,11 @@ interface BenchmarkBadgeProps {
   className?: string;
 }
 
-const levelConfig: Record<BenchmarkLevel, { label: string; classes: string }> = {
-  EXCELLENT: {
-    label: "Excellent",
-    classes: "bg-accent-green-muted text-accent-green",
-  },
-  BON: {
-    label: "Bon",
-    classes: "bg-accent-blue-muted text-accent-blue",
-  },
-  ACCEPTABLE: {
-    label: "Acceptable",
-    classes: "bg-accent-amber-muted text-accent-amber",
-  },
-  MAUVAIS: {
-    label: "Mauvais",
-    classes: "bg-accent-red-muted text-accent-red",
-  },
+const levelClasses: Record<BenchmarkLevel, string> = {
+  EXCELLENT: "bg-accent-green-muted text-accent-green",
+  BON: "bg-accent-blue-muted text-accent-blue",
+  ACCEPTABLE: "bg-accent-amber-muted text-accent-amber",
+  MAUVAIS: "bg-accent-red-muted text-accent-red",
 };
 
 /**
@@ -34,19 +23,19 @@ const levelConfig: Record<BenchmarkLevel, { label: string; classes: string }> = 
  * Utilise les CSS variables du theme (R6).
  */
 export function BenchmarkBadge({ level, className }: BenchmarkBadgeProps) {
-  if (level === null) return null;
+  const t = useTranslations("dashboard.benchmarks");
 
-  const config = levelConfig[level];
+  if (level === null) return null;
 
   return (
     <span
       className={cn(
         "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-        config.classes,
+        levelClasses[level],
         className
       )}
     >
-      {config.label}
+      {t(level)}
     </span>
   );
 }

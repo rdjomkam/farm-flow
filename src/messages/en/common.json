@@ -42,7 +42,10 @@
     "amount": "Amount",
     "notes": "Notes",
     "type": "Type",
-    "reference": "Reference"
+    "reference": "Reference",
+    "yes": "Yes",
+    "no": "No",
+    "administrator": "Administrator"
   },
   "confirm": {
     "areYouSure": "Are you sure?",
@@ -140,6 +143,12 @@
   "loading": {
     "ariaLabel": "Loading",
     "text": "Loading..."
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {current} / {total}",
+    "totalItems": "{count} {label} total"
   },
   "blockedResource": {
     "badgeLabel": "Blocked",

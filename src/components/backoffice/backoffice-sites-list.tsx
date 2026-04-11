@@ -81,7 +81,7 @@ function SiteCard({ site, onStatusChanged }: { site: AdminSiteSummary; onStatusC
       <div className="flex gap-2 pt-1">
         <Link href={`/backoffice/sites/${site.id}`} className="flex-1">
           <Button variant="outline" size="sm" className="w-full">
-            Gerer
+            {t("gerer")}
           </Button>
         </Link>
         {site.status !== SiteStatus.ARCHIVED && (
@@ -91,7 +91,7 @@ function SiteCard({ site, onStatusChanged }: { site: AdminSiteSummary; onStatusC
             currentStatus={site.status}
             trigger={
               <Button variant="ghost" size="sm">
-                Actions
+                {t("actionsButton")}
               </Button>
             }
             onSuccess={onStatusChanged}
@@ -143,7 +143,7 @@ function SiteTableRow({
         <div className="flex items-center gap-2">
           <Link href={`/backoffice/sites/${site.id}`}>
             <Button variant="outline" size="sm">
-              Gerer
+              {t("gerer")}
             </Button>
           </Link>
           {site.status !== SiteStatus.ARCHIVED && (
@@ -153,7 +153,7 @@ function SiteTableRow({
               currentStatus={site.status}
               trigger={
                 <Button variant="ghost" size="sm">
-                  Actions
+                  {t("actionsButton")}
                 </Button>
               }
               onSuccess={onStatusChanged}
@@ -219,10 +219,10 @@ export function BackofficeSitesList({ initialData }: BackofficeSitesListProps) {
     <div className="space-y-6" key={refreshKey}>
       {/* KPI Cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Total" value={stats.totalActive + stats.totalSuspended + stats.totalBlocked + stats.totalArchived} />
-        <KpiCard label="Actifs" value={stats.totalActive} color="text-success" />
-        <KpiCard label="Suspendus" value={stats.totalSuspended} color="text-accent-amber" />
-        <KpiCard label="Bloques" value={stats.totalBlocked} color="text-danger" />
+        <KpiCard label={t("kpi.total")} value={stats.totalActive + stats.totalSuspended + stats.totalBlocked + stats.totalArchived} />
+        <KpiCard label={t("kpi.actifs")} value={stats.totalActive} color="text-success" />
+        <KpiCard label={t("kpi.suspendus")} value={stats.totalSuspended} color="text-accent-amber" />
+        <KpiCard label={t("kpi.bloques")} value={stats.totalBlocked} color="text-danger" />
       </div>
 
       {/* Search */}

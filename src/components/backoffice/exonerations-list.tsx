@@ -167,7 +167,7 @@ function CancelExonerationDialog({ exonerationId, userName, trigger, onSuccess }
             onClick={handleConfirm}
             disabled={loading}
           >
-            {loading ? "Annulation..." : t("confirm")}
+            {loading ? t("cancelling") : t("confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

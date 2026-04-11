@@ -747,7 +747,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
             <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-4" />
           </div>
           <span className="text-sm font-medium text-foreground">
-            {form.isActive ? "Active" : t("rules.detail.inactive")}
+            {form.isActive ? t("rules.detail.active") : t("rules.detail.inactive")}
           </span>
         </label>
       </div>
@@ -1093,7 +1093,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
               required
               maxLength={200}
               rows={2}
-              placeholder="Ex: Densite elevee — Bac {bac}"
+              placeholder={t("rules.form.placeholderTitreNotif")}
               customPlaceholders={customPlaceholders}
             />
 
@@ -1105,7 +1105,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
               onChange={(v) => setForm((f) => ({ ...f, descriptionNotificationTemplate: v }))}
               maxLength={500}
               rows={3}
-              placeholder="Ex: Densite : {valeur} kg/m3 — Action requise"
+              placeholder={t("rules.form.placeholderDescNotif")}
               customPlaceholders={customPlaceholders}
             />
 
@@ -1148,7 +1148,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           required
           maxLength={200}
           rows={2}
-          placeholder="Ex: Biometrie semaine {semaine} — poids moyen {poids_moyen}g"
+          placeholder={t("rules.form.placeholderTitreActivite")}
           customPlaceholders={customPlaceholders}
         />
 
@@ -1159,7 +1159,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           onChange={(v) => setForm((f) => ({ ...f, descriptionTemplate: v }))}
           maxLength={500}
           rows={3}
-          placeholder="Description courte de l'activite..."
+          placeholder={t("rules.form.placeholderDescActivite")}
           customPlaceholders={customPlaceholders}
         />
 
@@ -1170,7 +1170,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           onChange={(v) => setForm((f) => ({ ...f, instructionsTemplate: v }))}
           maxLength={5000}
           rows={6}
-          placeholder={"1. Etape 1\n2. Etape 2\n3. Etape 3"}
+          placeholder={t("rules.form.placeholderInstructions")}
           customPlaceholders={customPlaceholders}
         />
       </div>
@@ -1184,7 +1184,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           label={t("rules.detail.titreInterneLabel")}
           value={form.titreTemplate}
           onChange={(e) => setForm((f) => ({ ...f, titreTemplate: e.target.value }))}
-          placeholder="Ex: Alerte densite elevee"
+          placeholder={t("rules.form.placeholderNomInterne")}
           required
           maxLength={200}
         />

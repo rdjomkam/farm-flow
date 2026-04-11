@@ -26,7 +26,7 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
   const form = useReleveForm({ produits });
 
   return (
-    <ErrorBoundary section="le formulaire de relevé">
+    <ErrorBoundary section={t("errorSection.recordForm")}>
       <section>
         <h2 className="text-base font-semibold mb-4">{t("form.title")}</h2>
 

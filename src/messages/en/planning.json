@@ -63,9 +63,12 @@
   "recurrences": {
     "AUCUNE": "None",
     "QUOTIDIENNE": "Daily",
+    "QUOTIDIEN": "Daily",
     "HEBDOMADAIRE": "Weekly",
     "MENSUELLE": "Monthly",
-    "BIMENSUEL": "Biweekly",
+    "MENSUEL": "Monthly",
+    "BIMENSUEL": "Twice weekly",
+    "BIMENSUEL_DETAIL": "Twice weekly (2x/week)",
     "PERSONNALISE": "Custom"
   },
   "recordTypes": {

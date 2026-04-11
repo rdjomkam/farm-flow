@@ -68,6 +68,7 @@ function LabelValue({ label, value, mono }: { label: string; value: string; mono
 }
 
 function PopMethodeBadge({ methode }: { methode: string }) {
+  const t = useTranslations("analytics.fcrTrace");
   const isComptage = methode === "COMPTAGE_ANCRAGE";
   return (
     <span
@@ -77,7 +78,7 @@ function PopMethodeBadge({ methode }: { methode: string }) {
       )}
     >
       <Users className="h-2.5 w-2.5" />
-      {isComptage ? "Comptage" : "Proportionnel"}
+      {isComptage ? t("comptage") : t("proportionnel")}
     </span>
   );
 }

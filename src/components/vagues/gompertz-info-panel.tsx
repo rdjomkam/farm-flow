@@ -287,9 +287,9 @@ function ProjectionsSection({ data }: { data: GompertzPanelData }) {
       {/* Short-term projections */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 mb-4">
         {[
-          { label: "Dans 7 jours", poids: projections.j7, gain: gainJ7 },
-          { label: "Dans 14 jours", poids: projections.j14, gain: gainJ14 },
-          { label: "Dans 30 jours", poids: projections.j30, gain: gainJ30 },
+          { label: t("gompertz.in7days"), poids: projections.j7, gain: gainJ7 },
+          { label: t("gompertz.in14days"), poids: projections.j14, gain: gainJ14 },
+          { label: t("gompertz.in30days"), poids: projections.j30, gain: gainJ30 },
         ].map(({ label, poids, gain }) => (
           <Card key={label}>
             <CardContent className="p-3 text-center">

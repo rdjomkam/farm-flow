@@ -69,6 +69,7 @@
       "title": "Cancel exemption?",
       "description": "Free access will be revoked. The user will need to subscribe to a paid plan to continue.",
       "confirm": "Confirm cancellation",
+      "cancelling": "Cancelling...",
       "cancel": "Go back",
       "successTitle": "Exemption cancelled",
       "successDesc": "Free access has been revoked.",
@@ -114,6 +115,14 @@
     "aucunPlan": "No plan",
     "aucunSiteTrouve": "No site found",
     "creeLe": "Created on",
+    "gerer": "Manage",
+    "actionsButton": "Actions",
+    "kpi": {
+      "total": "Total",
+      "actifs": "Active",
+      "suspendus": "Suspended",
+      "bloques": "Blocked"
+    },
     "assignerA": "Assign to",
     "siteIntrouvable": "Site not found",
     "retourAuxSites": "Back to sites",
@@ -140,6 +149,7 @@
       "actions": "Actions"
     },
     "detail": {
+      "changeStatus": "Change status",
       "tabs": {
         "summary": "Summary",
         "modules": "Modules",

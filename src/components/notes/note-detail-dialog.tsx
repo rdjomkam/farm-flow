@@ -37,16 +37,19 @@ interface NoteDetailDialogProps {
   children: React.ReactNode;
 }
 
-function formatDate(date: Date | string): string {
+function formatDate(
+  date: Date | string,
+  t: (key: string, params?: Record<string, string>) => string
+): string {
   const d = typeof date === "string" ? new Date(date) : date;
   const now = new Date();
   const diff = now.getTime() - d.getTime();
   const dayMs = 86_400_000;
   if (diff < dayMs && d.getDate() === now.getDate()) {
-    return `Aujourd'hui à ${d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`;
+    return t("list.todayAt", { time: d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) });
   }
   if (diff < 2 * dayMs && d.getDate() === now.getDate() - 1) {
-    return `Hier à ${d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`;
+    return t("list.yesterdayAt", { time: d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) });
   }
   return d.toLocaleDateString("fr-FR", {
     day: "2-digit",
@@ -198,7 +201,7 @@ export function NoteDetailDialog({
               )}
               <span className="inline-flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5 shrink-0" />
-                {formatDate(note.createdAt)}
+                {formatDate(note.createdAt, t)}
               </span>
               {note.vague && (
                 <span className="inline-flex items-center gap-1.5">

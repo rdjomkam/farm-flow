@@ -96,6 +96,7 @@ function Stepper({
   maxReachedStep: CompleterStep;
 }) {
   const t = useTranslations("reproduction.pontes.form");
+  const tRepro = useTranslations("reproduction");
 
   const steps: { label: string; num: CompleterStep }[] = [
     { label: t("steps.injection"), num: 1 },
@@ -147,7 +148,7 @@ function Stepper({
       </p>
 
       {/* Desktop: full horizontal stepper */}
-      <nav className="hidden md:flex items-center" aria-label="Etapes">
+      <nav className="hidden md:flex items-center" aria-label={tRepro("stepsAriaLabel")}>
         {steps.map((step, i) => (
           <div key={step.num} className="flex items-center flex-1">
             <div className="flex items-center gap-2 shrink-0">

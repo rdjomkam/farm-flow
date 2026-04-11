@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { BenchmarkLevel } from "@/lib/benchmarks";
 
@@ -10,19 +11,14 @@ const levelStyles: Record<BenchmarkLevel, string> = {
   MAUVAIS: "bg-accent-red-muted text-accent-red",
 };
 
-const levelLabels: Record<BenchmarkLevel, string> = {
-  EXCELLENT: "Excellent",
-  BON: "Bon",
-  ACCEPTABLE: "Acceptable",
-  MAUVAIS: "Mauvais",
-};
-
 interface BenchmarkBadgeProps {
   level: BenchmarkLevel | null;
   className?: string;
 }
 
 export function BenchmarkBadge({ level, className }: BenchmarkBadgeProps) {
+  const t = useTranslations("analytics.benchmarks");
+
   if (!level) {
     return (
       <span
@@ -44,7 +40,7 @@ export function BenchmarkBadge({ level, className }: BenchmarkBadgeProps) {
         className
       )}
     >
-      {levelLabels[level]}
+      {t(level)}
     </span>
   );
 }

@@ -124,6 +124,11 @@
       "referencePlaceholder": "E.g. MTN-20260310-001"
     }
   },
+  "errorSection": {
+    "saleForm": "the sale form",
+    "financialEvolutionChart": "the financial evolution chart",
+    "profitabilityChart": "the profitability chart"
+  },
   "finances": {
     "title": "Finances",
     "kpis": {

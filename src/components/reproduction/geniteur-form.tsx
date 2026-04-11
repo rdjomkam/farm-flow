@@ -188,7 +188,7 @@ export function GeniteurForm({
       if (!res.ok) {
         const data = await res.json().catch(() => null);
         const msg =
-          data?.error || "Une erreur est survenue lors de la création.";
+          data?.error || tForm("errorCreation");
         setError(msg);
         return;
       }
@@ -197,7 +197,7 @@ export function GeniteurForm({
       onOpenChange(false);
       onSuccess?.();
     } catch {
-      setError("Une erreur réseau est survenue.");
+      setError(tForm("errorNetwork"));
     } finally {
       setIsSubmitting(false);
     }

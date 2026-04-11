@@ -20,15 +20,6 @@ import { TypeActivite, Recurrence } from "@/types";
 import { useActiviteService } from "@/services";
 import { typeActiviteLabels } from "@/lib/labels/activite";
 
-// Recurrence labels (inline, planning.json recurrences keys don't fully match the enum)
-const recurrenceStaticLabels: Record<string, string> = {
-  [Recurrence.QUOTIDIEN]: "Quotidien",
-  [Recurrence.HEBDOMADAIRE]: "Hebdomadaire",
-  [Recurrence.BIMENSUEL]: "Bimensuel (2x/semaine)",
-  [Recurrence.MENSUEL]: "Mensuel",
-  [Recurrence.PERSONNALISE]: "Personnalise",
-};
-
 const recurrenceValues = [
   { value: "none" },
   { value: Recurrence.QUOTIDIEN },
@@ -52,6 +43,13 @@ interface FormErrors {
 
 export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleActiviteFormProps) {
   const t = useTranslations("planning");
+  const recurrenceLabels: Record<string, string> = {
+    [Recurrence.QUOTIDIEN]: t("recurrences.QUOTIDIEN"),
+    [Recurrence.HEBDOMADAIRE]: t("recurrences.HEBDOMADAIRE"),
+    [Recurrence.BIMENSUEL]: t("recurrences.BIMENSUEL_DETAIL"),
+    [Recurrence.MENSUEL]: t("recurrences.MENSUEL"),
+    [Recurrence.PERSONNALISE]: t("recurrences.PERSONNALISE"),
+  };
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
@@ -181,7 +179,7 @@ export function NouvelleActiviteForm({ vagues, bacs, members = [] }: NouvelleAct
               <SelectItem key={opt.value} value={opt.value}>
                 {opt.value === "none"
                   ? t("options.noneOneTime")
-                  : recurrenceStaticLabels[opt.value]}
+                  : recurrenceLabels[opt.value]}
               </SelectItem>
             ))}
           </SelectContent>

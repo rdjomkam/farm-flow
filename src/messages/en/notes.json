@@ -65,6 +65,10 @@
     "myObservation": "My observation",
     "dkfarm": "DKFarm"
   },
+  "fallbackNames": {
+    "client": "Client",
+    "ingenieur": "Engineer"
+  },
   "form": {
     "sectionInfos": "Note information",
     "sectionInfosDescription": "Write the note for the client",

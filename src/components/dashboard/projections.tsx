@@ -370,7 +370,7 @@ function ProjectionCard({ projection }: ProjectionCardProps) {
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               {tAnalytics("projections.growthCurve")}
             </p>
-            <ErrorBoundary section="le graphique de croissance">
+            <ErrorBoundary section={tAnalytics("errorSection.growthChart")}>
               <CourbeProjectionChart projection={projection} />
             </ErrorBoundary>
             <p className="text-[10px] text-muted-foreground mt-1 text-center">

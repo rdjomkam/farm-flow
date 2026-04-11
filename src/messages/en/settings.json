@@ -128,6 +128,7 @@
     "supprimer": "Delete",
     "resetFiredOnceDescription": "This rule will trigger again on the next evaluation cycle. Do you confirm this action?",
     "detail": {
+      "active": "Active",
       "inactive": "Inactive",
       "logic": "Logic:",
       "templateTitle": "Title",
@@ -167,7 +168,11 @@
       "priority": "Priority {priority}/10",
       "threshold": "Threshold: {value}",
       "toggleActivate": "Activate rule",
-      "toggleDeactivate": "Deactivate rule"
+      "toggleDeactivate": "Deactivate rule",
+      "scopeGlobal": "Global DKFarm",
+      "scopeSite": "This site",
+      "firedOnceTitle": "This rule has already been triggered once (one-shot). It will not trigger again until firedOnce is reset.",
+      "firedOnceLabel": "Triggered"
     },
     "form": {
       "activitySection": "Activity section",
@@ -206,7 +211,18 @@
       "placeholderEx300": "E.g.: 300",
       "placeholderEx7": "E.g.: 7",
       "notifBannerText": "An alert will be sent to users when the rule triggers. Configure the content and severity of the alert here.",
-      "notifConfigBannerText": "Configure the alert content that will be sent to users."
+      "notifConfigBannerText": "Configure the alert content that will be sent to users.",
+      "placeholderTitreNotif": "E.g.: High density — Tank {bac}",
+      "placeholderDescNotif": "E.g.: Density: {valeur} kg/m3 — Action required",
+      "placeholderTitreActivite": "E.g.: Biometry week {semaine} — avg weight {poids_moyen}g",
+      "placeholderDescActivite": "Short description of the activity...",
+      "placeholderInstructions": "1. Step 1\n2. Step 2\n3. Step 3",
+      "placeholderNomInterne": "E.g.: High density alert",
+      "placeholderTitreTemplate": "E.g.: Distribute {quantite_calculee}kg of pellets in {bac}",
+      "placeholderDescTemplate": "E.g.: Avg weight {poids_moyen}g — week {semaine} of cycle",
+      "placeholderNomRegle": "E.g.: Enhanced feeding - finishing phase",
+      "instructionsHint": "Recommended format: 1. First step\\n2. Second step",
+      "activitySectionDesc": "Activity templates (title, description, instructions) are configured in the next section."
     }
   },
   "placeholders": {

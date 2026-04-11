@@ -140,7 +140,7 @@ export function FeedFCRChart({ evolutionFCR }: FeedFCRChartProps) {
   }));
 
   return (
-    <ErrorBoundary section="le graphique FCR">
+    <ErrorBoundary section={tAnalytics("errorSection.fcrChart")}>
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{tAnalytics("aliments.evolutionFCR")}</CardTitle>
@@ -211,7 +211,7 @@ export function FeedVagueBreakdown({ parVague }: FeedVagueBreakdownProps) {
   }));
 
   return (
-    <ErrorBoundary section="le graphique par vague">
+    <ErrorBoundary section={tAnalytics("errorSection.perWaveChart")}>
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{tAnalytics("aliments.performanceParVague")}</CardTitle>
@@ -387,7 +387,7 @@ export function FeedFCRHebdoChart({ points, changements = [] }: FeedFCRHebdoChar
           <CardTitle className="text-base">{tAnalytics("aliments.fcrHebdoTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <ErrorBoundary section="le graphique FCR hebdomadaire">
+          <ErrorBoundary section={tAnalytics("errorSection.weeklyFcrChart")}>
             <figure>
               <figcaption className="sr-only">{tAnalytics("aliments.fcrHebdoTitle")}</figcaption>
               <div className="h-[300px] w-full sm:h-[400px]">

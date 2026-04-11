@@ -171,6 +171,9 @@
     "predicted": "Predicted",
     "deviation": "Deviation",
     "projections": "Projections",
+    "in7days": "In 7 days",
+    "in14days": "In 14 days",
+    "in30days": "In 30 days",
     "dayHeader": "Day",
     "confidence": {
       "HIGH": "High reliability",

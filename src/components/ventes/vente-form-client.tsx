@@ -97,7 +97,7 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
     parseFloat(prixUnitaireKg) > 0;
 
   return (
-    <ErrorBoundary section="le formulaire de vente">
+    <ErrorBoundary section={t("errorSection.saleForm")}>
     <div className="flex flex-col gap-4">
       <Link
         href="/ventes"

@@ -19,5 +19,11 @@
     "emptyTitle": "No waves in progress",
     "emptyDescription": "Create a wave to start tracking your catfish.",
     "createWave": "Create a wave"
+  },
+  "benchmarks": {
+    "EXCELLENT": "Excellent",
+    "BON": "Good",
+    "ACCEPTABLE": "Acceptable",
+    "MAUVAIS": "Poor"
   }
 }

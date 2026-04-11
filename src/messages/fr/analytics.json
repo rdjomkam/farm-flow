@@ -53,6 +53,10 @@
     "noDataAvailable": "Aucune donnée disponible"
   },
   "benchmarks": {
+    "EXCELLENT": "Excellent",
+    "BON": "Bon",
+    "ACCEPTABLE": "Acceptable",
+    "MAUVAIS": "Mauvais",
     "fcr": {
       "label": "ICA",
       "full": "ICA (Indice de Conversion Alimentaire)"
@@ -153,6 +157,13 @@
       "r2": "R\u00b2",
       "rmse": "RMSE"
     }
+  },
+  "errorSection": {
+    "fcrChart": "le graphique FCR",
+    "perWaveChart": "le graphique par vague",
+    "weeklyFcrChart": "le graphique FCR hebdomadaire",
+    "historyChart": "le graphique historique",
+    "growthChart": "le graphique de croissance"
   },
   "bacs": {
     "noBacs": "Aucun bac assigné à cette vague.",
@@ -335,6 +346,8 @@
     "gompertzParams": "Paramètres Gompertz",
     "gompertzFormule": "W(t) = W∞ × exp(−exp(−k × (t − ti)))",
     "interpolPoints": "Points d'interpolation",
+    "comptage": "Comptage",
+    "proportionnel": "Proportionnel",
     "loading": "Chargement de la trace...",
     "error": "Impossible de charger la trace. Réessayer.",
     "retry": "Réessayer",

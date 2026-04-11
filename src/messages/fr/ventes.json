@@ -124,6 +124,11 @@
       "referencePlaceholder": "Ex: MTN-20260310-001"
     }
   },
+  "errorSection": {
+    "saleForm": "le formulaire de vente",
+    "financialEvolutionChart": "le graphique d'évolution financière",
+    "profitabilityChart": "le graphique de rentabilité"
+  },
   "finances": {
     "title": "Finances",
     "kpis": {

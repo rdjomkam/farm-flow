@@ -62,6 +62,8 @@
       "titre": "Nouveau géniteur",
       "titreGroupe": "Nouveau lot de géniteurs",
       "titreIndividuel": "Nouveau géniteur individuel",
+      "errorCreation": "Une erreur est survenue lors de la creation.",
+      "errorNetwork": "Une erreur reseau est survenue.",
       "mode": "Mode de gestion",
       "nom": "Nom du lot",
       "nomPlaceholder": "Ex: Femelles G2 mars 2026",
@@ -500,6 +502,8 @@
     "title": "Tableau de bord Reproduction",
     "periode": "Periode",
     "derniers30j": "30 derniers jours",
+    "errorLoading": "Erreur lors du chargement des donnees.",
+    "errorUnknown": "Erreur inconnue.",
     "derniers3m": "3 derniers mois",
     "derniers6m": "6 derniers mois",
     "derniers12m": "12 derniers mois",
@@ -709,7 +713,9 @@
       "confirmer": "Confirmer la sortie",
       "enCours": "Sortie en cours...",
       "succes": "Lot sorti avec succes",
-      "erreur": "Erreur lors de la sortie"
+      "erreur": "Erreur lors de la sortie",
+      "placeholderRaison": "Ex: Mortalite massive, maladie...",
+      "placeholderObservations": "Observations..."
     }
   },
   "planning": {
@@ -723,6 +729,13 @@
     "gantt": "Chronologie des lots",
     "evenements": "Événements à venir",
     "aucunEvenement": "Aucun événement pour cette période",
+    "eventCount": "{count} evenement(s)",
+    "ponte": "Ponte",
+    "eclosion": "Eclosion",
+    "errorStatus": "Erreur {status}",
+    "errorUnknown": "Erreur inconnue",
+    "loading": "Chargement...",
+    "apply": "Appliquer",
     "calculateur": {
       "title": "Calculateur de production",
       "cible": "Nombre d'alevins cible",
@@ -734,7 +747,12 @@
       "femellesNecessaires": "Femelles nécessaires",
       "malesNecessaires": "Mâles nécessaires",
       "surfaceEstimee": "Surface estimée",
-      "dureeEstimee": "Durée estimée"
+      "dureeEstimee": "Durée estimée",
+      "oeufsEstimesHint": "oeufs estimés ({rate}/g)",
+      "alevinsParPonteLabel": "alevins/ponte estimés",
+      "parametresInvalides": "Paramètres invalides.",
+      "baseLabel": "Base :"
     }
-  }
+  },
+  "stepsAriaLabel": "Etapes"
 }

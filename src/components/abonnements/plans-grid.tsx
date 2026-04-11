@@ -34,6 +34,7 @@ interface PlansGridProps {
 
 function StartEssaiButton({ planId }: { planId: string }) {
   const router = useRouter();
+  const t = useTranslations("abonnements");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,13 +53,13 @@ function StartEssaiButton({ planId }: { planId: string }) {
       }
       if (!res.ok) {
         const data = await res.json();
-        setError(data.message ?? "Une erreur est survenue.");
+        setError(data.message ?? t("plans.errors.generic"));
         return;
       }
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError("Impossible de contacter le serveur.");
+      setError(t("plans.errors.serverUnreachable"));
     } finally {
       setLoading(false);
     }
@@ -73,7 +74,7 @@ function StartEssaiButton({ planId }: { planId: string }) {
         disabled={loading}
       >
         {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-        Commencer gratuitement
+        {t("plans.buttons.startFree")}
       </Button>
       {error && (
         <p className="text-xs text-destructive text-center">{error}</p>
@@ -317,14 +318,14 @@ export function PlansGrid({ plans, abonnementActifPlanId, isLoggedIn }: PlansGri
                 {isGratuit ? (
                   isActif ? (
                     <Button disabled className="w-full min-h-[44px] opacity-60">
-                      Plan actuel
+                      {t("plans.buttons.currentPlan")}
                     </Button>
                   ) : isLoggedIn ? (
                     <StartEssaiButton planId={plan.id} />
                   ) : (
                     <Link href="/register" className="block w-full">
                       <Button variant="outline" className="w-full min-h-[44px]">
-                        Commencer gratuitement
+                        {t("plans.buttons.startFree")}
                       </Button>
                     </Link>
                   )

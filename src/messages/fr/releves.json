@@ -1,8 +1,13 @@
 {
+  "errorSection": {
+    "recordForm": "le formulaire de relevé"
+  },
   "page": {
     "nouveau": "Nouveau releve",
     "retourVague": "Retour à la vague",
-    "nouveau_btn": "Nouveau"
+    "nouveau_btn": "Nouveau",
+    "labelSingular": "relevé",
+    "labelPlural": "relevés"
   },
   "types": {
     "BIOMETRIE": "Biométrie",

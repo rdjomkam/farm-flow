@@ -171,6 +171,9 @@
     "predicted": "Predit",
     "deviation": "Ecart",
     "projections": "Projections",
+    "in7days": "Dans 7 jours",
+    "in14days": "Dans 14 jours",
+    "in30days": "Dans 30 jours",
     "dayHeader": "Jour",
     "confidence": {
       "HIGH": "Haute fiabilité",

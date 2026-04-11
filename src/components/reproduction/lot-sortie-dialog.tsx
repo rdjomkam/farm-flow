@@ -422,7 +422,7 @@ export function LotSortieDialog({ lot, open, onOpenChange }: LotSortieDialogProp
               <input
                 type="text"
                 className="min-h-[44px] w-full rounded-lg border border-muted bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder="Ex: Mortalité massive, maladie..."
+                placeholder={t("sortie.placeholderRaison")}
                 value={cause}
                 onChange={(e) => setCause(e.target.value)}
               />
@@ -434,7 +434,7 @@ export function LotSortieDialog({ lot, open, onOpenChange }: LotSortieDialogProp
             <label className="text-sm font-medium">{t("sortie.notes")}</label>
             <textarea
               className="min-h-[72px] w-full rounded-lg border border-muted bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-              placeholder="Observations..."
+              placeholder={t("sortie.placeholderObservations")}
               value={
                 destination === DestinationLot.REFORMAGE && cause
                   ? `${cause}${notes ? `\n${notes}` : ""}`

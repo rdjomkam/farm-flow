@@ -34,6 +34,21 @@
       "BLOCKED": "Blocked",
       "ARCHIVED": "Archived"
     },
+    "gerer": "Manage",
+    "actionsButton": "Actions",
+    "kpi": {
+      "total": "Total",
+      "actifs": "Active",
+      "suspendus": "Suspended"
+    },
+    "table": {
+      "name": "Name",
+      "status": "Status",
+      "plan": "Plan",
+      "members": "Members",
+      "modules": "Modules",
+      "actions": "Actions"
+    },
     "changeStatus": "Change status",
     "tabs": {
       "all": "All ({count})",
@@ -55,6 +70,24 @@
         "email": "Email",
         "phone": "Phone",
         "role": "Role"
+      },
+      "stats": {
+        "bacs": "Tanks",
+        "vagues": "Batches",
+        "membres": "Members"
+      },
+      "info": {
+        "id": "ID",
+        "nom": "Name",
+        "adresse": "Address",
+        "oui": "Yes",
+        "non": "No",
+        "plan": "Plan",
+        "type": "Type",
+        "statut": "Status",
+        "fin": "End",
+        "suspendedAt": "Suspended on",
+        "suspendedReason": "Suspension reason"
       }
     }
   },
@@ -97,7 +130,8 @@
   },
   "modulesEditor": {
     "updateError": "Error updating modules.",
-    "updateSuccess": "Modules updated"
+    "updateSuccess": "Modules updated",
+    "applyModules": "Apply modules"
   },
   "buttons": {
     "saving": "Saving..."

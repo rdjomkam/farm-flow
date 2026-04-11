@@ -62,6 +62,8 @@
       "titre": "New breeder",
       "titreGroupe": "New breeder group",
       "titreIndividuel": "New individual breeder",
+      "errorCreation": "An error occurred during creation.",
+      "errorNetwork": "A network error occurred.",
       "mode": "Management mode",
       "nom": "Group name",
       "nomPlaceholder": "E.g.: G2 Females march 2026",
@@ -386,10 +388,20 @@
       "eclosionPrevueDans": "Expected hatching in"
     }
   },
+  "statuts": {
+    "incubation": {
+      "EN_COURS": "In progress",
+      "ECLOSION_EN_COURS": "Hatching in progress",
+      "TERMINEE": "Completed",
+      "ECHOUEE": "Failed"
+    }
+  },
   "dashboard": {
     "title": "Reproduction Dashboard",
     "periode": "Period",
     "derniers30j": "Last 30 days",
+    "errorLoading": "Error loading data.",
+    "errorUnknown": "Unknown error.",
     "derniers3m": "Last 3 months",
     "derniers6m": "Last 6 months",
     "derniers12m": "Last 12 months",
@@ -574,7 +586,9 @@
       "confirmer": "Confirm exit",
       "enCours": "Processing...",
       "succes": "Batch exited successfully",
-      "erreur": "Error during exit"
+      "erreur": "Error during exit",
+      "placeholderRaison": "E.g.: Mass mortality, disease...",
+      "placeholderObservations": "Observations..."
     }
   },
   "planning": {
@@ -588,6 +602,13 @@
     "gantt": "Batch timeline",
     "evenements": "Upcoming events",
     "aucunEvenement": "No events for this period",
+    "eventCount": "{count} event(s)",
+    "ponte": "Spawning",
+    "eclosion": "Hatching",
+    "errorStatus": "Error {status}",
+    "errorUnknown": "Unknown error",
+    "loading": "Loading...",
+    "apply": "Apply",
     "calculateur": {
       "title": "Production calculator",
       "cible": "Target fingerling count",
@@ -599,7 +620,12 @@
       "femellesNecessaires": "Females needed",
       "malesNecessaires": "Males needed",
       "surfaceEstimee": "Estimated surface",
-      "dureeEstimee": "Estimated duration"
+      "dureeEstimee": "Estimated duration",
+      "oeufsEstimesHint": "estimated eggs ({rate}/g)",
+      "alevinsParPonteLabel": "estimated fingerlings/spawning",
+      "parametresInvalides": "Invalid parameters.",
+      "baseLabel": "Base:"
     }
-  }
+  },
+  "stepsAriaLabel": "Steps"
 }

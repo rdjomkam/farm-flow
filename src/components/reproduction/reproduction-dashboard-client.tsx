@@ -169,7 +169,7 @@ export function ReproductionDashboardClient() {
       ]);
 
       if (!kpisRes.ok || !funnelRes.ok || !lotsRes.ok) {
-        throw new Error("Erreur lors du chargement des donnees.");
+        throw new Error(t("errorLoading"));
       }
 
       const [kpisJson, funnelJson, lotsJson] = await Promise.all([
@@ -182,7 +182,7 @@ export function ReproductionDashboardClient() {
       setFunnel(funnelJson.funnel as FunnelItem[]);
       setLotsData(lotsJson.data as LotsKpiData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue.");
+      setError(err instanceof Error ? err.message : t("errorUnknown"));
     } finally {
       setLoading(false);
     }

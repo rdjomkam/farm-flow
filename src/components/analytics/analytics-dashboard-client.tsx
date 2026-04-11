@@ -262,7 +262,7 @@ export function AnalyticsDashboardClient({ dashboard }: AnalyticsDashboardClient
 
           {/* Tendance FCR */}
           <KpiCard title={t("dashboard.tendanceFCR")}>
-            <ErrorBoundary section="le graphique FCR">
+            <ErrorBoundary section={t("errorSection.fcrChart")}>
               <SparklineFCR data={tendanceFCR} />
             </ErrorBoundary>
             {tendanceFCR.length > 0 && (

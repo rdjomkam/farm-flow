@@ -19,5 +19,11 @@
     "emptyTitle": "Aucune vague en cours",
     "emptyDescription": "Créez une vague pour commencer le suivi de vos silures.",
     "createWave": "Créer une vague"
+  },
+  "benchmarks": {
+    "EXCELLENT": "Excellent",
+    "BON": "Bon",
+    "ACCEPTABLE": "Acceptable",
+    "MAUVAIS": "Mauvais"
   }
 }

@@ -12,26 +12,26 @@ interface BacDensiteBadgeProps {
   size?: "sm" | "xs";
 }
 
-const STATUT_STYLES: Record<StatutDensite, { bg: string; text: string; label: string }> = {
+const STATUT_STYLES: Record<StatutDensite, { bg: string; text: string; labelKey: string }> = {
   OK: {
     bg: "bg-accent-green-muted",
     text: "text-accent-green",
-    label: "OK",
+    labelKey: "OK",
   },
   ALERTE: {
     bg: "bg-accent-amber-muted",
     text: "text-accent-amber",
-    label: "Alerte",
+    labelKey: "statuts.alerte",
   },
   CRITIQUE: {
     bg: "bg-accent-red-muted",
     text: "text-accent-red",
-    label: "Critique",
+    labelKey: "statuts.critique",
   },
   INCONNU: {
     bg: "bg-muted",
     text: "text-muted-foreground",
-    label: "Inconnue",
+    labelKey: "statuts.inconnu",
   },
 };
 
@@ -72,12 +72,14 @@ export async function BacDensiteBadge({
 
   const textSize = size === "xs" ? "text-xs" : "text-sm";
 
+  const label = styles.labelKey === "OK" ? "OK" : t(styles.labelKey as Parameters<typeof t>[0]);
+
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${textSize} ${styles.bg} ${styles.text}`}
       title={
         densiteKgM3 != null
-          ? `Densite : ${densiteKgM3.toFixed(1)} kg/m³`
+          ? t("title", { value: densiteKgM3.toFixed(1) })
           : t("nonCalculable")
       }
     >
@@ -87,7 +89,7 @@ export async function BacDensiteBadge({
           <span className="opacity-70">kg/m³</span>
         </>
       ) : (
-        <span>{styles.label}</span>
+        <span>{label}</span>
       )}
     </span>
   );
