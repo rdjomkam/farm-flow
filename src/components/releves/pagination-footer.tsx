@@ -2,8 +2,8 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
-import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { RELEVES_PAGE_LIMIT } from "@/lib/releve-search-params";
 
 interface PaginationFooterProps {
@@ -23,16 +23,11 @@ export function PaginationFooter({
   limit = RELEVES_PAGE_LIMIT,
   itemLabel,
 }: PaginationFooterProps) {
+  const t = useTranslations("common.pagination");
   const router = useRouter();
   const searchParams = useSearchParams();
+  const resolvedItemLabel = itemLabel ?? { singular: t("defaultSingular"), plural: t("defaultPlural") };
   const [isPending, startTransition] = useTransition();
-  const tCommon = useTranslations("common.pagination");
-  const tReleves = useTranslations("releves.page");
-
-  const resolvedLabel = itemLabel ?? {
-    singular: tReleves("labelSingular"),
-    plural: tReleves("labelPlural"),
-  };
 
   // Cas bord : rien a afficher si total est 0
   if (total === 0) return null;
@@ -42,7 +37,7 @@ export function PaginationFooter({
   const hasPrev = offset > 0;
   const hasNext = offset + limit < total;
 
-  const totalLabel = total === 1 ? resolvedLabel.singular : resolvedLabel.plural;
+  const totalLabel = total === 1 ? resolvedItemLabel.singular : resolvedItemLabel.plural;
 
   function gotoPrev() {
     const params = new URLSearchParams(searchParams.toString());
@@ -69,7 +64,7 @@ export function PaginationFooter({
     <div className={`mt-4 flex flex-col gap-2 transition-opacity ${isPending ? "opacity-60" : ""}`}>
       {/* Indicateur total */}
       <p className="text-xs text-center text-muted-foreground">
-        {tCommon("totalItems", { count: total, label: totalLabel })}
+        {t("total", { count: total, label: totalLabel })}
       </p>
 
       {/* Controles de navigation — uniquement si plusieurs pages */}
@@ -92,12 +87,12 @@ export function PaginationFooter({
             "
           >
             <ChevronLeft className="h-4 w-4 shrink-0" />
-            {tCommon("previous")}
+            {t("previous")}
           </button>
 
           {/* Indicateur de page */}
           <span className="text-sm font-medium text-foreground whitespace-nowrap">
-            {tCommon("page", { current: currentPage, total: totalPages })}
+            {t("pageIndicator", { current: currentPage, total: totalPages })}
           </span>
 
           {/* Bouton Suivant */}
@@ -116,7 +111,7 @@ export function PaginationFooter({
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
             "
           >
-            {tCommon("next")}
+            {t("next")}
             <ChevronRight className="h-4 w-4 shrink-0" />
           </button>
         </div>

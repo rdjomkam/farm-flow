@@ -58,7 +58,9 @@
     "tanks": "Tanks",
     "urgent": "Urgent",
     "client": "Client",
-    "allNotes": "All notes"
+    "allNotes": "All notes",
+    "unreadAriaLabel": "Unread",
+    "seeMore": "See more ({count})"
   },
   "stats": {
     "clientsActives": "Active clients",

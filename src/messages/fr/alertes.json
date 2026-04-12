@@ -45,6 +45,103 @@
       "processed": "Traitees"
     }
   },
+  "config": {
+    "verifierMaintenant": "Vérifier maintenant",
+    "sauvegarder": "Sauvegarder",
+    "desactiver": "Désactiver",
+    "activer": "Activer",
+    "seuilValeurDefaut": "Seuil de valeur",
+    "seuilPourcentageDefaut": "Seuil en pourcentage (%)",
+    "placeholderSeuilValeur": "Ex : 3",
+    "placeholderSeuilPourcentage": "Ex : 5",
+    "ariaToggle": "{action} l'alerte {label}",
+    "types": {
+      "MORTALITE_ELEVEE": {
+        "label": "Mortalité élevée",
+        "description": "Alerte quand le taux de mortalité dépasse le seuil défini",
+        "seuilPourcentage": "Seuil de mortalité (%)"
+      },
+      "QUALITE_EAU": {
+        "label": "Qualité de l'eau",
+        "description": "Alerte quand les paramètres qualité eau sont hors normes"
+      },
+      "STOCK_BAS": {
+        "label": "Stock bas",
+        "description": "Alerte quand le stock d'un produit passe sous le seuil d'alerte"
+      },
+      "RAPPEL_ALIMENTATION": {
+        "label": "Rappel alimentation",
+        "description": "Rappel quand aucun relevé alimentation n'a été fait depuis N jours",
+        "seuilValeur": "Délai sans relevé (jours)"
+      },
+      "RAPPEL_BIOMETRIE": {
+        "label": "Rappel biométrie",
+        "description": "Rappel quand aucune biométrie n'a été faite depuis N jours",
+        "seuilValeur": "Délai sans biométrie (jours)"
+      },
+      "PERSONNALISEE": {
+        "label": "Personnalisée",
+        "description": "Alerte personnalisée avec un seuil défini manuellement",
+        "seuilValeur": "Seuil de valeur",
+        "seuilPourcentage": "Seuil en pourcentage (%)"
+      },
+      "BESOIN_EN_RETARD": {
+        "label": "Besoin en retard",
+        "description": "Alerte quand une liste de besoins dépasse sa date limite sans être traitée"
+      },
+      "DENSITE_ELEVEE": {
+        "label": "Densité élevée",
+        "description": "Alerte quand la biomasse par m³ dépasse le seuil pour le type de système",
+        "seuilValeur": "Seuil de densité (kg/m³)"
+      },
+      "RENOUVELLEMENT_EAU_INSUFFISANT": {
+        "label": "Renouvellement eau insuffisant",
+        "description": "Alerte quand le taux de renouvellement effectif est insuffisant pour la densité actuelle",
+        "seuilValeur": "Taux minimum (%/jour)"
+      },
+      "AUCUN_RELEVE_QUALITE_EAU": {
+        "label": "Absence relevé qualité eau",
+        "description": "Alerte quand aucun relevé qualité eau n'a été enregistré depuis N jours à densité élevée",
+        "seuilValeur": "Délai sans relevé (jours)"
+      },
+      "DENSITE_CRITIQUE_QUALITE_EAU": {
+        "label": "Densité critique + qualité eau dégradée",
+        "description": "Alerte combinée : densité élevée ET qualité eau critique simultanément"
+      },
+      "ABONNEMENT_RAPPEL_RENOUVELLEMENT": {
+        "label": "Rappel renouvellement abonnement",
+        "description": "Rappel automatique quand l'abonnement expire dans 14, 7, 3 ou 1 jour(s)"
+      },
+      "ABONNEMENT_ESSAI_EXPIRE": {
+        "label": "Essai gratuit expiré",
+        "description": "Notification envoyée quand un essai gratuit arrive à expiration"
+      },
+      "MALES_STOCK_BAS": {
+        "label": "Mâles reproducteurs insuffisants",
+        "description": "Alerte quand le nombre de mâles actifs est insuffisant pour les pontes planifiées",
+        "seuilValeur": "Nombre minimum de mâles"
+      },
+      "FEMELLE_SUREXPLOITEE": {
+        "label": "Femelle surexploitée",
+        "description": "Alerte quand une femelle est sollicitée trop fréquemment (risque d'épuisement)",
+        "seuilValeur": "Délai minimum entre pontes (jours)"
+      },
+      "CONSANGUINITE_RISQUE": {
+        "label": "Risque de consanguinité",
+        "description": "Alerte quand le taux de consanguinité estimé entre géniteurs dépasse le seuil",
+        "seuilPourcentage": "Coefficient de consanguinité (%)"
+      },
+      "INCUBATION_ECLOSION": {
+        "label": "Suivi incubation/éclosion",
+        "description": "Alerte durant la phase d'incubation ou d'éclosion d'un lot d'œufs"
+      },
+      "TAUX_SURVIE_CRITIQUE_LOT": {
+        "label": "Taux de survie critique (lot)",
+        "description": "Alerte quand le taux de survie d'un lot d'alevins passe sous le seuil critique",
+        "seuilPourcentage": "Seuil de survie critique (%)"
+      }
+    }
+  },
   "card": {
     "nonLu": "Non lu",
     "ctaLabels": {

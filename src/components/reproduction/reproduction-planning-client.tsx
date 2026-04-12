@@ -131,7 +131,6 @@ function MonthCalendar({
   month: number;
   events: CalendarEvent[];
 }) {
-  const tPlanning = useTranslations("reproduction.planning");
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
   const days = getDaysInMonth(year, month);
@@ -184,7 +183,7 @@ function MonthCalendar({
               onClick={() =>
                 setExpandedDay(isExpanded ? null : dayEvents.length > 0 ? key : null)
               }
-              aria-label={`${day.getDate()} ${dayEvents.length > 0 ? `— ${tPlanning("eventCount", { count: dayEvents.length })}` : ""}`}
+              aria-label={`${day.getDate()} ${dayEvents.length > 0 ? `— ${dayEvents.length} événement(s)` : ""}`}
             >
               <span
                 className={`text-xs font-medium leading-none block mb-0.5 ${
@@ -248,7 +247,7 @@ function UpcomingEventsList({
   events: CalendarEvent[];
   emptyLabel: string;
 }) {
-  const tPlanning = useTranslations("reproduction.planning");
+  const t = useTranslations("reproduction.planning");
   const sorted = useMemo(
     () => [...events].sort((a, b) => a.date.localeCompare(b.date)),
     [events]
@@ -294,7 +293,7 @@ function UpcomingEventsList({
                   : "bg-[#7c3aed]/10 text-[#7c3aed]"
               }`}
             >
-              {ev.type === "ponte" ? tPlanning("ponte") : tPlanning("eclosion")}
+              {ev.type === "ponte" ? t("ponte") : t("eclosion")}
             </span>
           </div>
         );
@@ -331,12 +330,12 @@ export function ReproductionPlanningClient() {
         const res = await fetch(`/api/reproduction/planning?${params}`);
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          throw new Error(body.error ?? t("errorStatus", { status: res.status }));
+          throw new Error(body.error ?? t("erreurStatus", { status: res.status }));
         }
         const json: PlanningData = await res.json();
         setData(json);
       } catch (err) {
-        setError(err instanceof Error ? err.message : t("errorUnknown"));
+        setError(err instanceof Error ? err.message : t("erreurInconnue"));
       } finally {
         setLoading(false);
       }
@@ -438,7 +437,7 @@ export function ReproductionPlanningClient() {
               disabled={loading || !dateDebut || !dateFin || dateDebut >= dateFin}
               className="w-full sm:w-auto h-11 px-5 rounded-lg bg-primary text-primary-foreground font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
             >
-              {loading ? t("loading") : t("apply")}
+              {loading ? t("chargement") : t("appliquer")}
             </button>
           </div>
           {error && (

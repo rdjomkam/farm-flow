@@ -28,9 +28,7 @@ export default async function PlaceholdersPage() {
       </Header>
       <div className="p-4">
         <p className="text-sm text-muted-foreground mb-4">
-          Definissez des placeholders personnalises utilisables dans les
-          templates de regles. Les placeholders sont globaux et disponibles pour
-          tous les sites.
+          {t("placeholdersDescription")}
         </p>
         <PlaceholdersClient canManage={canManage} />
       </div>

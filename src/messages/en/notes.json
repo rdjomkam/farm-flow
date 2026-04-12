@@ -1,4 +1,9 @@
 {
+  "nouvelleNote": {
+    "button": "New note",
+    "title": "New note",
+    "description": "Write a note for this client. Public notes will be visible to the fish farmer."
+  },
   "emptyState": {
     "noNotes": "No notes",
     "noNotesFiltered": "No notes match this filter.",

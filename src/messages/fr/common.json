@@ -58,7 +58,8 @@
     "networkError": "Erreur de connexion",
     "unauthorized": "Non autorisé",
     "forbidden": "Accès refusé",
-    "notFound": "Introuvable"
+    "notFound": "Introuvable",
+    "serverContact": "Impossible de contacter le serveur."
   },
   "metadata": {
     "appDescription": "Application de suivi d'élevage de silures",
@@ -148,7 +149,11 @@
     "previous": "Précédent",
     "next": "Suivant",
     "page": "Page {current} / {total}",
-    "totalItems": "{count} {label} au total"
+    "totalItems": "{count} {label} au total",
+    "total": "{count} {label} au total",
+    "pageIndicator": "Page {current} / {total}",
+    "defaultSingular": "relevé",
+    "defaultPlural": "relevés"
   },
   "blockedResource": {
     "badgeLabel": "Bloqué",
@@ -158,5 +163,9 @@
     "upgradeMessage": "Mettez à niveau votre plan pour accéder à cette ressource et à d'autres fonctionnalités avancées.",
     "upgradeButton": "Mettre à niveau",
     "closeButton": "Fermer"
+  },
+  "placeholders": {
+    "min": "Min",
+    "max": "Max"
   }
 }

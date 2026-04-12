@@ -25,5 +25,15 @@
     "BON": "Good",
     "ACCEPTABLE": "Acceptable",
     "MAUVAIS": "Poor"
+  },
+  "benchmark": {
+    "EXCELLENT": "Excellent",
+    "BON": "Good",
+    "ACCEPTABLE": "Acceptable",
+    "MAUVAIS": "Poor"
+  },
+  "recentActivity": {
+    "title": "Recent activity",
+    "bacLabel": "Tank: {nom}"
   }
 }

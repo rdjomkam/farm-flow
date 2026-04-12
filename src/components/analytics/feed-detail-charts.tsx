@@ -118,6 +118,7 @@ interface FeedFCRChartProps {
 
 export function FeedFCRChart({ evolutionFCR }: FeedFCRChartProps) {
   const tAnalytics = useTranslations("analytics");
+  const tSections = useTranslations("errors.sections");
 
   if (evolutionFCR.length === 0) {
     return (
@@ -140,7 +141,7 @@ export function FeedFCRChart({ evolutionFCR }: FeedFCRChartProps) {
   }));
 
   return (
-    <ErrorBoundary section={tAnalytics("errorSection.fcrChart")}>
+    <ErrorBoundary section={tSections("fcrChart")}>
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{tAnalytics("aliments.evolutionFCR")}</CardTitle>
@@ -187,6 +188,7 @@ interface FeedVagueBreakdownProps {
 
 export function FeedVagueBreakdown({ parVague }: FeedVagueBreakdownProps) {
   const tAnalytics = useTranslations("analytics");
+  const tSections = useTranslations("errors.sections");
 
   if (parVague.length === 0) {
     return (
@@ -211,7 +213,7 @@ export function FeedVagueBreakdown({ parVague }: FeedVagueBreakdownProps) {
   }));
 
   return (
-    <ErrorBoundary section={tAnalytics("errorSection.perWaveChart")}>
+    <ErrorBoundary section={tSections("perWaveChart")}>
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{tAnalytics("aliments.performanceParVague")}</CardTitle>
@@ -336,6 +338,7 @@ interface FeedFCRHebdoChartProps {
 
 export function FeedFCRHebdoChart({ points, changements = [] }: FeedFCRHebdoChartProps) {
   const tAnalytics = useTranslations("analytics");
+  const tSections = useTranslations("errors.sections");
 
   if (points.length === 0) {
     return (
@@ -387,7 +390,7 @@ export function FeedFCRHebdoChart({ points, changements = [] }: FeedFCRHebdoChar
           <CardTitle className="text-base">{tAnalytics("aliments.fcrHebdoTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <ErrorBoundary section={tAnalytics("errorSection.weeklyFcrChart")}>
+          <ErrorBoundary section={tSections("weeklyFcrChart")}>
             <figure>
               <figcaption className="sr-only">{tAnalytics("aliments.fcrHebdoTitle")}</figcaption>
               <div className="h-[300px] w-full sm:h-[400px]">

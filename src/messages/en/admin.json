@@ -134,7 +134,8 @@
     "applyModules": "Apply modules"
   },
   "buttons": {
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "applyModules": "Apply modules"
   },
   "modules": {
     "searchPlaceholder": "Search by label, key, category...",

@@ -17,7 +17,8 @@
     "permissions": "permissions",
     "reglesDescription": "Gerez les regles qui declenchent automatiquement des activites sur vos vagues. Les regles globales DKFarm s'appliquent a tous les sites, les regles de ce site vous sont propres.",
     "placeholders": "Placeholders",
-    "alertesActives": "Alertes actives ({count})"
+    "alertesActives": "Alertes actives ({count})",
+    "placeholdersDescription": "Definissez des placeholders personnalises utilisables dans les templates de regles. Les placeholders sont globaux et disponibles pour tous les sites."
   },
   "triggers": {
     "CALENDRIER": "Calendrier",
@@ -130,6 +131,18 @@
     "detail": {
       "active": "Active",
       "inactive": "Inactive",
+      "typeActiviteLabel": "Type d'activité",
+      "actionLabel": "Action",
+      "declencheurLabel": "Déclencheur",
+      "perimetreLabel": "Périmètre",
+      "statutLabel": "Statut",
+      "firedOnceLabel": "firedOnce",
+      "scopeGlobal": "Globale DKFarm",
+      "scopeSite": "Ce site",
+      "deleteConfirmation": "Cette action est irréversible. La règle \"{nom}\" sera définitivement supprimée.",
+      "deleteNoActivities": "Cette règle n'a généré aucune activité. Elle peut être supprimée en toute sécurité.",
+      "deleteBlocked": "Suppression impossible : {count} activité(s) liée(s)",
+      "activitesRecentes": "Activités récentes ({count} au total)",
       "logic": "Logique :",
       "templateTitle": "Titre",
       "templateDescription": "Description",
@@ -172,7 +185,12 @@
       "scopeGlobal": "Globale DKFarm",
       "scopeSite": "Ce site",
       "firedOnceTitle": "Cette regle s'est deja declenchee une fois (one-shot). Elle ne se declenchera pas a nouveau tant que firedOnce n'est pas reinitialise.",
-      "firedOnceLabel": "Declenchee"
+      "firedOnceLabel": "Declenchee",
+      "firedOnceTooltip": "Cette regle s'est deja declenchee une fois (one-shot). Elle ne se declenchera pas a nouveau tant que firedOnce n'est pas reinitialise.",
+      "firedOnceBadge": "Declenchee",
+      "activeStatus": "Active",
+      "activitiesGenerated": "{count} activite{count, plural, one {} other {s}} generee{count, plural, one {} other {s}}",
+      "intervalDays": "Tous les {interval} jour{interval, plural, one {} other {s}}"
     },
     "form": {
       "activitySection": "Section activite",

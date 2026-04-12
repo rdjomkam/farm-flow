@@ -582,7 +582,9 @@
       "vagueDestinationPlaceholder": "Select a cohort",
       "creerNouvelleVague": "Create a new cohort",
       "cause": "Cause of loss",
+      "causePlaceholder": "e.g.: Massive mortality, disease...",
       "notes": "Notes",
+      "notesPlaceholder": "Observations...",
       "confirmer": "Confirm exit",
       "enCours": "Processing...",
       "succes": "Batch exited successfully",
@@ -625,7 +627,22 @@
       "alevinsParPonteLabel": "estimated fingerlings/spawning",
       "parametresInvalides": "Invalid parameters.",
       "baseLabel": "Base:"
-    }
+    },
+    "appliquer": "Apply",
+    "chargement": "Loading...",
+    "erreurStatus": "Error {status}",
+    "erreurInconnue": "Unknown error"
   },
-  "stepsAriaLabel": "Steps"
+  "stepsAriaLabel": "Steps",
+  "errors": {
+    "loadingData": "Error loading data.",
+    "unknown": "Unknown error.",
+    "creationFailed": "An error occurred during creation.",
+    "networkError": "A network error occurred."
+  },
+  "ponteStatuts": {
+    "EN_COURS": "In progress",
+    "TERMINEE": "Completed",
+    "ECHOUEE": "Failed"
+  }
 }

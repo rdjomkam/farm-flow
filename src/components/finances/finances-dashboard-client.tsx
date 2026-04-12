@@ -92,6 +92,7 @@ export function FinancesDashboardClient({
   topClients,
 }: FinancesDashboardClientProps) {
   const t = useTranslations("ventes");
+  const tSections = useTranslations("errors.sections");
 
   // Format evolution data for Recharts
   const evolutionData = evolution.evolution.map((m) => ({
@@ -250,7 +251,7 @@ export function FinancesDashboardClient({
       )}
 
       {/* Evolution chart */}
-      <ErrorBoundary section={t("errorSection.financialEvolutionChart")}>
+      <ErrorBoundary section={tSections("financialEvolutionChart")}>
       <Card>
         <CardHeader className="pb-0">
           <CardTitle className="text-base">{t("finances.evolution.title")}</CardTitle>
@@ -336,7 +337,7 @@ export function FinancesDashboardClient({
 
       {/* Profitability by vague */}
       {vagueData.length > 0 && (
-        <ErrorBoundary section={t("errorSection.profitabilityChart")}>
+        <ErrorBoundary section={tSections("profitabilityChart")}>
         <Card>
           <CardHeader className="pb-0">
             <CardTitle className="text-base">{t("finances.rentabilite.title")}</CardTitle>

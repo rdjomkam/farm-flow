@@ -17,7 +17,8 @@
     "permissions": "permissions",
     "reglesDescription": "Manage rules that automatically trigger activities on your batches. Global DKFarm rules apply to all sites, while this site's rules are your own.",
     "placeholders": "Placeholders",
-    "alertesActives": "Active alerts ({count})"
+    "alertesActives": "Active alerts ({count})",
+    "placeholdersDescription": "Define custom placeholders usable in rule templates. Placeholders are global and available for all sites."
   },
   "triggers": {
     "CALENDRIER": "Calendar",
@@ -130,6 +131,18 @@
     "detail": {
       "active": "Active",
       "inactive": "Inactive",
+      "typeActiviteLabel": "Activity type",
+      "actionLabel": "Action",
+      "declencheurLabel": "Trigger",
+      "perimetreLabel": "Scope",
+      "statutLabel": "Status",
+      "firedOnceLabel": "firedOnce",
+      "scopeGlobal": "Global DKFarm",
+      "scopeSite": "This site",
+      "deleteConfirmation": "This action is irreversible. The rule \"{nom}\" will be permanently deleted.",
+      "deleteNoActivities": "This rule has not generated any activity. It can be safely deleted.",
+      "deleteBlocked": "Cannot delete: {count} linked activity(ies)",
+      "activitesRecentes": "Recent activities ({count} total)",
       "logic": "Logic:",
       "templateTitle": "Title",
       "templateDescription": "Description",
@@ -172,7 +185,12 @@
       "scopeGlobal": "Global DKFarm",
       "scopeSite": "This site",
       "firedOnceTitle": "This rule has already been triggered once (one-shot). It will not trigger again until firedOnce is reset.",
-      "firedOnceLabel": "Triggered"
+      "firedOnceLabel": "Triggered",
+      "firedOnceTooltip": "This rule has already fired once (one-shot). It will not fire again until firedOnce is reset.",
+      "firedOnceBadge": "Fired",
+      "activeStatus": "Active",
+      "activitiesGenerated": "{count} {count, plural, one {activity} other {activities}} generated",
+      "intervalDays": "Every {interval} {interval, plural, one {day} other {days}}"
     },
     "form": {
       "activitySection": "Activity section",

@@ -58,7 +58,9 @@
     "tanks": "Bacs",
     "urgent": "Urgent",
     "client": "Client",
-    "allNotes": "Toutes les notes"
+    "allNotes": "Toutes les notes",
+    "unreadAriaLabel": "Non lue",
+    "seeMore": "Voir plus ({count})"
   },
   "stats": {
     "clientsActives": "Clients actifs",

@@ -709,7 +709,9 @@
       "vagueDestinationPlaceholder": "Selectionner une vague",
       "creerNouvelleVague": "Creer une nouvelle vague",
       "cause": "Cause de la perte",
+      "causePlaceholder": "Ex : Mortalité massive, maladie...",
       "notes": "Notes",
+      "notesPlaceholder": "Observations...",
       "confirmer": "Confirmer la sortie",
       "enCours": "Sortie en cours...",
       "succes": "Lot sorti avec succes",
@@ -731,7 +733,7 @@
     "aucunEvenement": "Aucun événement pour cette période",
     "eventCount": "{count} evenement(s)",
     "ponte": "Ponte",
-    "eclosion": "Eclosion",
+    "eclosion": "Éclosion",
     "errorStatus": "Erreur {status}",
     "errorUnknown": "Erreur inconnue",
     "loading": "Chargement...",
@@ -752,7 +754,22 @@
       "alevinsParPonteLabel": "alevins/ponte estimés",
       "parametresInvalides": "Paramètres invalides.",
       "baseLabel": "Base :"
-    }
+    },
+    "appliquer": "Appliquer",
+    "chargement": "Chargement...",
+    "erreurStatus": "Erreur {status}",
+    "erreurInconnue": "Erreur inconnue"
   },
-  "stepsAriaLabel": "Etapes"
+  "stepsAriaLabel": "Etapes",
+  "errors": {
+    "loadingData": "Erreur lors du chargement des données.",
+    "unknown": "Erreur inconnue.",
+    "creationFailed": "Une erreur est survenue lors de la création.",
+    "networkError": "Une erreur réseau est survenue."
+  },
+  "ponteStatuts": {
+    "EN_COURS": "En cours",
+    "TERMINEE": "Terminée",
+    "ECHOUEE": "Échouée"
+  }
 }

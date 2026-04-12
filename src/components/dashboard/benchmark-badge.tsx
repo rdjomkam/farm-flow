@@ -9,11 +9,19 @@ interface BenchmarkBadgeProps {
   className?: string;
 }
 
-const levelClasses: Record<BenchmarkLevel, string> = {
-  EXCELLENT: "bg-accent-green-muted text-accent-green",
-  BON: "bg-accent-blue-muted text-accent-blue",
-  ACCEPTABLE: "bg-accent-amber-muted text-accent-amber",
-  MAUVAIS: "bg-accent-red-muted text-accent-red",
+const levelConfig: Record<BenchmarkLevel, { classes: string }> = {
+  EXCELLENT: {
+    classes: "bg-accent-green-muted text-accent-green",
+  },
+  BON: {
+    classes: "bg-accent-blue-muted text-accent-blue",
+  },
+  ACCEPTABLE: {
+    classes: "bg-accent-amber-muted text-accent-amber",
+  },
+  MAUVAIS: {
+    classes: "bg-accent-red-muted text-accent-red",
+  },
 };
 
 /**
@@ -23,15 +31,17 @@ const levelClasses: Record<BenchmarkLevel, string> = {
  * Utilise les CSS variables du theme (R6).
  */
 export function BenchmarkBadge({ level, className }: BenchmarkBadgeProps) {
-  const t = useTranslations("dashboard.benchmarks");
+  const t = useTranslations("dashboard.benchmark");
 
   if (level === null) return null;
+
+  const config = levelConfig[level];
 
   return (
     <span
       className={cn(
         "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-        levelClasses[level],
+        config.classes,
         className
       )}
     >

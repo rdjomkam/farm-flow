@@ -34,7 +34,7 @@ interface PlansGridProps {
 
 function StartEssaiButton({ planId }: { planId: string }) {
   const router = useRouter();
-  const t = useTranslations("abonnements");
+  const tCommon = useTranslations("common");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,13 +53,13 @@ function StartEssaiButton({ planId }: { planId: string }) {
       }
       if (!res.ok) {
         const data = await res.json();
-        setError(data.message ?? t("plans.errors.generic"));
+        setError(data.message ?? tCommon("errors.generic"));
         return;
       }
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError(t("plans.errors.serverUnreachable"));
+      setError(tCommon("errors.serverContact"));
     } finally {
       setLoading(false);
     }
@@ -74,7 +74,7 @@ function StartEssaiButton({ planId }: { planId: string }) {
         disabled={loading}
       >
         {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-        {t("plans.buttons.startFree")}
+        Commencer gratuitement
       </Button>
       {error && (
         <p className="text-xs text-destructive text-center">{error}</p>
@@ -318,14 +318,14 @@ export function PlansGrid({ plans, abonnementActifPlanId, isLoggedIn }: PlansGri
                 {isGratuit ? (
                   isActif ? (
                     <Button disabled className="w-full min-h-[44px] opacity-60">
-                      {t("plans.buttons.currentPlan")}
+                      Plan actuel
                     </Button>
                   ) : isLoggedIn ? (
                     <StartEssaiButton planId={plan.id} />
                   ) : (
                     <Link href="/register" className="block w-full">
                       <Button variant="outline" className="w-full min-h-[44px]">
-                        {t("plans.buttons.startFree")}
+                        Commencer gratuitement
                       </Button>
                     </Link>
                   )

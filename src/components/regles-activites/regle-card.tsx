@@ -138,11 +138,11 @@ export function RegleCard({ regle, onToggle, isToggling, canManage, canManageGlo
             {/* firedOnce indicator */}
             {regle.firedOnce && (
               <span
-                title={t("rules.card.firedOnceTitle")}
+                title={t("rules.card.firedOnceTooltip")}
                 className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-accent-amber-muted text-accent-amber cursor-help"
               >
                 <Lock className="h-3 w-3" />
-                {t("rules.card.firedOnceLabel")}
+                {t("rules.card.firedOnceBadge")}
               </span>
             )}
           </div>
@@ -182,7 +182,7 @@ export function RegleCard({ regle, onToggle, isToggling, canManage, canManageGlo
                 : "bg-muted text-muted-foreground",
             ].join(" ")}
           >
-            {regle.isActive ? t("rules.detail.active") : t("rules.detail.inactive")}
+            {regle.isActive ? t("rules.card.activeStatus") : t("rules.detail.inactive")}
           </span>
         )}
       </div>
@@ -192,9 +192,7 @@ export function RegleCard({ regle, onToggle, isToggling, canManage, canManageGlo
         {/* Activites count */}
         <span className="inline-flex items-center gap-1">
           <Activity className="h-3 w-3" />
-          {regle._count.activites} activite
-          {regle._count.activites !== 1 ? "s" : ""} generee
-          {regle._count.activites !== 1 ? "s" : ""}
+          {t("rules.card.activitiesGenerated", { count: regle._count.activites })}
         </span>
 
         {/* Priorite */}
@@ -203,8 +201,7 @@ export function RegleCard({ regle, onToggle, isToggling, canManage, canManageGlo
         {/* intervalleJours */}
         {showIntervalle && (
           <span>
-            Tous les {regle.intervalleJours} jour
-            {regle.intervalleJours !== 1 ? "s" : ""}
+            {t("rules.card.intervalDays", { interval: regle.intervalleJours ?? 0 })}
           </span>
         )}
 

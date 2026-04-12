@@ -71,6 +71,8 @@
       "confirm": "Confirm cancellation",
       "cancelling": "Cancelling...",
       "cancel": "Go back",
+      "userLabel": "User: ",
+      "cancelling": "Cancelling...",
       "successTitle": "Exemption cancelled",
       "successDesc": "Free access has been revoked.",
       "errorTitle": "Error",
@@ -193,7 +195,8 @@
       "title": "Client site management"
     },
     "dashboard": {
-      "title": "Platform analytics"
+      "title": "Platform analytics",
+      "description": "Consolidated KPIs for the entire DKFarm platform"
     },
     "abonnements": {
       "title": "All subscriptions"

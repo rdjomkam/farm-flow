@@ -22,11 +22,12 @@ interface ReleveFormClientProps {
 
 export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
   const t = useTranslations("releves");
+  const tSections = useTranslations("errors.sections");
 
   const form = useReleveForm({ produits });
 
   return (
-    <ErrorBoundary section={t("errorSection.recordForm")}>
+    <ErrorBoundary section={tSections("releveForm")}>
       <section>
         <h2 className="text-base font-semibold mb-4">{t("form.title")}</h2>
 

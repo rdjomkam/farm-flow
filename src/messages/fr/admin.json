@@ -134,7 +134,8 @@
     "applyModules": "Appliquer les modules"
   },
   "buttons": {
-    "saving": "Enregistrement..."
+    "saving": "Enregistrement...",
+    "applyModules": "Appliquer les modules"
   },
   "modules": {
     "searchPlaceholder": "Rechercher par label, cle, categorie...",

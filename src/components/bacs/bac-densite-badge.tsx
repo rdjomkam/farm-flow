@@ -12,26 +12,22 @@ interface BacDensiteBadgeProps {
   size?: "sm" | "xs";
 }
 
-const STATUT_STYLES: Record<StatutDensite, { bg: string; text: string; labelKey: string }> = {
+const STATUT_STYLES: Record<StatutDensite, { bg: string; text: string }> = {
   OK: {
     bg: "bg-accent-green-muted",
     text: "text-accent-green",
-    labelKey: "OK",
   },
   ALERTE: {
     bg: "bg-accent-amber-muted",
     text: "text-accent-amber",
-    labelKey: "statuts.alerte",
   },
   CRITIQUE: {
     bg: "bg-accent-red-muted",
     text: "text-accent-red",
-    labelKey: "statuts.critique",
   },
   INCONNU: {
     bg: "bg-muted",
     text: "text-muted-foreground",
-    labelKey: "statuts.inconnu",
   },
 };
 
@@ -72,14 +68,12 @@ export async function BacDensiteBadge({
 
   const textSize = size === "xs" ? "text-xs" : "text-sm";
 
-  const label = styles.labelKey === "OK" ? "OK" : t(styles.labelKey as Parameters<typeof t>[0]);
-
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${textSize} ${styles.bg} ${styles.text}`}
       title={
         densiteKgM3 != null
-          ? t("title", { value: densiteKgM3.toFixed(1) })
+          ? t("titleTooltip", { value: densiteKgM3.toFixed(1) })
           : t("nonCalculable")
       }
     >
@@ -89,7 +83,7 @@ export async function BacDensiteBadge({
           <span className="opacity-70">kg/m³</span>
         </>
       ) : (
-        <span>{label}</span>
+        <span>{t(statut)}</span>
       )}
     </span>
   );

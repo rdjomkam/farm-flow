@@ -1,4 +1,9 @@
 {
+  "nouvelleNote": {
+    "button": "Nouvelle note",
+    "title": "Nouvelle note",
+    "description": "Rédigez une note pour ce client. Les notes publiques seront visibles par le pisciculteur."
+  },
   "emptyState": {
     "noNotes": "Aucune note",
     "noNotesFiltered": "Aucune note ne correspond à ce filtre.",

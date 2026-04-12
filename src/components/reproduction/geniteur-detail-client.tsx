@@ -127,7 +127,7 @@ function ponteBadgeClass(statut: string): string {
 
 export function GeniteurDetailClient({ geniteur, mode, permissions }: Props) {
   const t = useTranslations("reproduction.geniteurs");
-  const tPontes = useTranslations("reproduction.pontes");
+  const tPonteStatuts = useTranslations("reproduction.ponteStatuts");
   const router = useRouter();
   const { call } = useApi();
 
@@ -905,10 +905,10 @@ export function GeniteurDetailClient({ geniteur, mode, permissions }: Props) {
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${ponteBadgeClass(p.statut)}`}
                       >
                         {p.statut === StatutPonte.EN_COURS
-                          ? tPontes("statuts.EN_COURS")
+                          ? tPonteStatuts("EN_COURS")
                           : p.statut === StatutPonte.TERMINEE
-                            ? tPontes("statuts.TERMINEE")
-                            : tPontes("statuts.ECHOUEE")}
+                            ? tPonteStatuts("TERMINEE")
+                            : tPonteStatuts("ECHOUEE")}
                       </span>
                     </div>
                   </Link>

@@ -58,7 +58,8 @@
     "networkError": "Connection error",
     "unauthorized": "Unauthorized",
     "forbidden": "Access denied",
-    "notFound": "Not found"
+    "notFound": "Not found",
+    "serverContact": "Unable to contact the server."
   },
   "metadata": {
     "appDescription": "Catfish farming tracking application",
@@ -144,11 +145,19 @@
     "ariaLabel": "Loading",
     "text": "Loading..."
   },
+  "placeholders": {
+    "min": "Min",
+    "max": "Max"
+  },
   "pagination": {
     "previous": "Previous",
     "next": "Next",
     "page": "Page {current} / {total}",
-    "totalItems": "{count} {label} total"
+    "totalItems": "{count} {label} total",
+    "total": "{count} {label} total",
+    "pageIndicator": "Page {current} / {total}",
+    "defaultSingular": "record",
+    "defaultPlural": "records"
   },
   "blockedResource": {
     "badgeLabel": "Blocked",

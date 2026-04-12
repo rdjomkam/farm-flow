@@ -117,7 +117,7 @@ export function AdminSiteModulesEditor({
         className="w-full sm:w-auto"
       >
         <Save className="h-4 w-4" />
-        {loading ? t("buttons.saving") : t("modulesEditor.applyModules")}
+        {loading ? t("buttons.saving") : t("buttons.applyModules")}
       </Button>
     </div>
   );

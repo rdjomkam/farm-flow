@@ -134,7 +134,7 @@ interface BacHistoriqueChartProps {
 
 export function BacHistoriqueChart({ cycles }: BacHistoriqueChartProps) {
   const t = useTranslations("analytics.bacs");
-  const tAnalytics = useTranslations("analytics");
+  const tSections = useTranslations("errors.sections");
 
   if (cycles.length === 0) {
     return (
@@ -161,7 +161,7 @@ export function BacHistoriqueChart({ cycles }: BacHistoriqueChartProps) {
   }));
 
   return (
-    <ErrorBoundary section={tAnalytics("errorSection.historyChart")}>
+    <ErrorBoundary section={tSections("historyChart")}>
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t("historique")}</CardTitle>

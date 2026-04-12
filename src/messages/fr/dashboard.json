@@ -25,5 +25,15 @@
     "BON": "Bon",
     "ACCEPTABLE": "Acceptable",
     "MAUVAIS": "Mauvais"
+  },
+  "benchmark": {
+    "EXCELLENT": "Excellent",
+    "BON": "Bon",
+    "ACCEPTABLE": "Acceptable",
+    "MAUVAIS": "Mauvais"
+  },
+  "recentActivity": {
+    "title": "Activité récente",
+    "bacLabel": "Bac : {nom}"
   }
 }

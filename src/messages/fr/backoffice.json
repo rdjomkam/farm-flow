@@ -71,6 +71,8 @@
       "confirm": "Confirmer l'annulation",
       "cancelling": "Annulation...",
       "cancel": "Retour",
+      "userLabel": "Utilisateur : ",
+      "cancelling": "Annulation...",
       "successTitle": "Exoneration annulee",
       "successDesc": "L'acces gratuit a ete revoque.",
       "errorTitle": "Erreur",
@@ -193,7 +195,8 @@
       "title": "Gestion des sites clients"
     },
     "dashboard": {
-      "title": "Analytics Plateforme"
+      "title": "Analytics Plateforme",
+      "description": "KPIs consolides de toute la plateforme DKFarm"
     },
     "abonnements": {
       "title": "Tous les abonnements"

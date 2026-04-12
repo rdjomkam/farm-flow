@@ -49,6 +49,7 @@ interface Props {
 
 export function VenteFormClient({ clients, vagues, prefill }: Props) {
   const t = useTranslations("ventes");
+  const tSections = useTranslations("errors.sections");
   const router = useRouter();
   const queryClient = useQueryClient();
   const venteService = useVenteService();
@@ -97,7 +98,7 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
     parseFloat(prixUnitaireKg) > 0;
 
   return (
-    <ErrorBoundary section={t("errorSection.saleForm")}>
+    <ErrorBoundary section={tSections("saleForm")}>
     <div className="flex flex-col gap-4">
       <Link
         href="/ventes"

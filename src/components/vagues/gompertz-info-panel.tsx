@@ -28,17 +28,14 @@ function formatDateFr(isoDate: string): string {
   });
 }
 
-function r2Explanation(r2: number): string {
-  if (r2 > 0.95) {
-    return "Excellent — le modele reproduit tres fidelement la croissance observee.";
-  }
-  if (r2 > 0.85) {
-    return "Bon — le modele suit bien la tendance generale.";
-  }
-  if (r2 > 0.70) {
-    return "Acceptable — le modele donne une approximation utile.";
-  }
-  return "Faible — le modele a du mal a reproduire vos donnees, les projections sont a prendre avec precaution.";
+function useR2Explanation() {
+  const t = useTranslations("vagues.gompertz");
+  return (r2: number): string => {
+    if (r2 > 0.95) return t("r2Excellent");
+    if (r2 > 0.85) return t("r2Good");
+    if (r2 > 0.70) return t("r2Acceptable");
+    return t("r2Weak");
+  };
 }
 
 function confidenceBadgeVariant(
@@ -67,14 +64,13 @@ function ecartColor(ecartPct: number): string {
   return "text-[var(--danger)]";
 }
 
-function kComment(k: number): { label: string; color: string } {
-  if (k < 0.02) {
-    return { label: "(croissance lente)", color: "text-[var(--warning)]" };
-  }
-  if (k > 0.06) {
-    return { label: "(croissance rapide)", color: "text-[var(--success)]" };
-  }
-  return { label: "(croissance normale)", color: "text-muted-foreground" };
+function useKComment() {
+  const t = useTranslations("vagues.gompertz");
+  return (k: number): { label: string; color: string } => {
+    if (k < 0.02) return { label: t("kSlow"), color: "text-[var(--warning)]" };
+    if (k > 0.06) return { label: t("kFast"), color: "text-[var(--success)]" };
+    return { label: t("kNormal"), color: "text-muted-foreground" };
+  };
 }
 
 // ─── Sub-sections ─────────────────────────────────────────────────────────────
@@ -91,7 +87,9 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 function StatutSection({ data }: { data: GompertzPanelData }) {
   const t = useTranslations("vagues");
+  const tG = useTranslations("vagues.gompertz");
   const getConfidenceLabel = useConfidenceBadgeLabel();
+  const getR2Explanation = useR2Explanation();
   return (
     <div>
       <SectionTitle>{t("gompertz.modelStatus")}</SectionTitle>
@@ -105,18 +103,18 @@ function StatutSection({ data }: { data: GompertzPanelData }) {
           <dt className="font-medium">
             R<sup>2</sup> = {data.r2.toFixed(3)}
           </dt>
-          <dd className="text-muted-foreground mt-0.5">{r2Explanation(data.r2)}</dd>
+          <dd className="text-muted-foreground mt-0.5">{getR2Explanation(data.r2)}</dd>
         </div>
         <div>
           <dt className="font-medium">RMSE = {data.rmse.toFixed(1)} g</dt>
           <dd className="text-muted-foreground mt-0.5">
-            Erreur moyenne de &plusmn;{Math.round(data.rmse)} g sur les predictions.
+            {tG("rmseDescription", { rmse: String(Math.round(data.rmse)) })}
           </dd>
         </div>
         <div>
-          <dt className="font-medium">{data.biometrieCount} seances de biometrie</dt>
+          <dt className="font-medium">{tG("biometrieCount", { count: data.biometrieCount })}</dt>
           <dd className="text-muted-foreground mt-0.5">
-            Dates uniques de pesee utilisees pour calibrer le modele.
+            {tG("biometrieCountDescription")}
           </dd>
         </div>
       </dl>
@@ -128,8 +126,10 @@ function StatutSection({ data }: { data: GompertzPanelData }) {
 
 function ParamsSection({ data }: { data: GompertzPanelData }) {
   const t = useTranslations("vagues");
+  const tG = useTranslations("vagues.gompertz");
   const { wInfinity, k, ti } = data.params;
-  const kInfo = kComment(k);
+  const getKComment = useKComment();
+  const kInfo = getKComment(k);
 
   return (
     <div>
@@ -139,13 +139,11 @@ function ParamsSection({ data }: { data: GompertzPanelData }) {
         <Card>
           <CardContent className="p-3">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-              Poids maximum (W&infin;)
+              {tG("wInfinityLabel")}
             </p>
             <p className="text-xl font-bold mb-2">{Math.round(wInfinity)} g</p>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Le poids theorique maximal que vos poissons peuvent atteindre dans les
-              conditions actuelles d&apos;elevage. Ce n&apos;est pas un objectif mais une
-              limite biologique estimee par le modele.
+              {tG("wInfinityDescription")}
             </p>
           </CardContent>
         </Card>
@@ -154,15 +152,14 @@ function ParamsSection({ data }: { data: GompertzPanelData }) {
         <Card>
           <CardContent className="p-3">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-              Vitesse de croissance (k)
+              {tG("kLabel")}
             </p>
             <p className="text-xl font-bold mb-1">{k.toFixed(4)}</p>
             <p className={cn("text-xs font-medium mb-2", kInfo.color)}>
               {kInfo.label}
             </p>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Plus cette valeur est elevee, plus vos poissons grossissent rapidement. Une
-              valeur typique pour le silure se situe entre 0,02 et 0,06.
+              {tG("kDescription")}
             </p>
           </CardContent>
         </Card>
@@ -171,12 +168,11 @@ function ParamsSection({ data }: { data: GompertzPanelData }) {
         <Card>
           <CardContent className="p-3">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-              Point d&apos;inflexion (ti)
+              {tG("tiLabel")}
             </p>
             <p className="text-xl font-bold mb-2">{t("gompertz.day", { day: Math.round(ti) })}</p>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Le jour ou la croissance est la plus rapide. Avant ce jour, la croissance
-              accelere. Apres, elle ralentit progressivement jusqu&apos;au poids maximum.
+              {tG("tiDescription")}
             </p>
           </CardContent>
         </Card>
@@ -275,6 +271,7 @@ function ComparaisonSection({ data }: { data: GompertzPanelData }) {
 
 function ProjectionsSection({ data }: { data: GompertzPanelData }) {
   const t = useTranslations("vagues");
+  const tG = useTranslations("vagues.gompertz");
   const { projections, poidsObjectif, joursAvantObjectif, dateObjectif, params } = data;
   const gainJ7 = projections.j7 - projections.poidsActuel;
   const gainJ14 = projections.j14 - projections.poidsActuel;
@@ -287,16 +284,16 @@ function ProjectionsSection({ data }: { data: GompertzPanelData }) {
       {/* Short-term projections */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 mb-4">
         {[
-          { label: t("gompertz.in7days"), poids: projections.j7, gain: gainJ7 },
-          { label: t("gompertz.in14days"), poids: projections.j14, gain: gainJ14 },
-          { label: t("gompertz.in30days"), poids: projections.j30, gain: gainJ30 },
-        ].map(({ label, poids, gain }) => (
-          <Card key={label}>
+          { days: 7, poids: projections.j7, gain: gainJ7 },
+          { days: 14, poids: projections.j14, gain: gainJ14 },
+          { days: 30, poids: projections.j30, gain: gainJ30 },
+        ].map(({ days, poids, gain }) => (
+          <Card key={days}>
             <CardContent className="p-3 text-center">
-              <p className="text-xs text-muted-foreground mb-1">{label}</p>
+              <p className="text-xs text-muted-foreground mb-1">{tG("inDays", { count: days })}</p>
               <p className="text-xl font-bold">{poids} g</p>
               <p className="text-xs text-[var(--success)] mt-1">
-                +{Math.round(gain)} g vs aujourd&apos;hui
+                {tG("vsToday", { gain: String(Math.round(gain)) })}
               </p>
             </CardContent>
           </Card>
@@ -309,24 +306,19 @@ function ProjectionsSection({ data }: { data: GompertzPanelData }) {
           {dateObjectif !== null && joursAvantObjectif !== null ? (
             <div>
               <p className="text-sm font-semibold mb-1">
-                Objectif de {poidsObjectif} g estim&eacute; le{" "}
-                <span className="text-primary">{formatDateFr(dateObjectif)}</span>
+                {tG("objectifReached", { poids: poidsObjectif, date: formatDateFr(dateObjectif) })}
               </p>
               <p className="text-sm text-muted-foreground">
-                Dans environ{" "}
-                <strong>{joursAvantObjectif}</strong> jour
-                {joursAvantObjectif !== 1 ? "s" : ""}
+                {tG("objectifDays", { count: joursAvantObjectif })}
               </p>
             </div>
           ) : (
             <div>
               <p className="text-sm font-semibold text-[var(--warning)] mb-1">
-                Objectif hors de portee
+                {tG("objectifUnreachable")}
               </p>
               <p className="text-sm text-muted-foreground">
-                Le poids objectif de {poidsObjectif} g d&eacute;passe le poids maximum
-                th&eacute;orique (W&infin; = {Math.round(params.wInfinity)} g). V&eacute;rifiez
-                les conditions d&apos;&eacute;levage ou ajustez l&apos;objectif.
+                {tG("objectifUnreachableDescription", { poids: poidsObjectif, wInfinity: Math.round(params.wInfinity) })}
               </p>
             </div>
           )}
@@ -360,9 +352,9 @@ export function GompertzInfoPanel({ data }: GompertzInfoPanelProps) {
 
       <DialogContent className="md:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Analyse du modele Gompertz</DialogTitle>
+          <DialogTitle>{t("dialogTitle")}</DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            Parametres, predictions et projections du modele de croissance
+            {t("dialogDescription")}
           </DialogDescription>
         </DialogHeader>
 

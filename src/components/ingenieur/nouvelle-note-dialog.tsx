@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { Plus } from "lucide-react";
@@ -26,6 +27,7 @@ export function NouvelleNoteDialog({
   clientSiteId,
   vagues,
 }: NouvelleNoteDialogProps) {
+  const t = useTranslations("notes.nouvelleNote");
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
 
@@ -34,14 +36,14 @@ export function NouvelleNoteDialog({
       <DialogTrigger asChild>
         <Button size="sm">
           <Plus className="h-4 w-4" />
-          Nouvelle note
+          {t("button")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nouvelle note</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
           <DialogDescription>
-            Redigez une note pour ce client. Les notes publiques seront visibles par le pisciculteur.
+            {t("description")}
           </DialogDescription>
         </DialogHeader>
         <NoteForm

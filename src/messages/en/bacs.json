@@ -47,7 +47,12 @@
       "critique": "Critical",
       "inconnu": "Unknown"
     },
-    "title": "Density: {value} kg/m³"
+    "title": "Density: {value} kg/m³",
+    "OK": "OK",
+    "ALERTE": "Alert",
+    "CRITIQUE": "Critical",
+    "INCONNU": "Unknown",
+    "titleTooltip": "Density: {value} kg/m³"
   },
   "detail": {
     "occupe": "Occupied",
