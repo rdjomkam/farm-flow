@@ -22,6 +22,15 @@
       "traitees": "Processed",
       "cloturees": "Closed",
       "rejetees": "Rejected"
+    },
+    "card": {
+      "lignesSingular": "{count} line",
+      "lignesPlural": "{count} lines",
+      "enRetard": "Overdue — deadline {date}",
+      "echeanceProche": "Deadline approaching — {date}",
+      "limite": "Deadline: {date}",
+      "montantEstime": "Estimated amount",
+      "montantReel": "Actual amount"
     }
   },
   "form": {

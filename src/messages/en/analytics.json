@@ -358,6 +358,13 @@
     "periodeN": "Period {n}",
     "fcrVague": "Wave FCR",
     "aliment": "Feed",
-    "gain": "Gain"
+    "gain": "Gain",
+    "detailParBacEtPeriode": "Detail by tank and period",
+    "agregationGlobale": "Global aggregation",
+    "totalGainLabel": "Total gain",
+    "vaguesIncluses": "Included batches",
+    "vaguesIgnorees": "Excluded batches",
+    "paramsMinPoints": "Params: minPoints={count}",
+    "fcrFinalShort": "Final FCR"
   }
 }

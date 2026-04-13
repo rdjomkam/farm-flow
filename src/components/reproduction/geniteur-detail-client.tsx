@@ -940,15 +940,16 @@ export function GeniteurDetailClient({ geniteur, mode, permissions }: Props) {
                 <div className="flex items-center gap-2 text-sm">
                   <Egg className="h-4 w-4 text-muted-foreground" />
                   <span>
-                    {totalPontes} ponte{totalPontes > 1 ? "s" : ""} enregistrée
-                    {totalPontes > 1 ? "s" : ""}
+                    {totalPontes > 1
+                      ? t("detail.pontesEnregistreesPlural", { count: totalPontes })
+                      : t("detail.pontesEnregistreesSingular", { count: totalPontes })}
                   </span>
                 </div>
                 <Link
                   href="/reproduction/pontes"
                   className="text-sm text-primary hover:underline w-fit"
                 >
-                  Voir toutes les pontes
+                  {t("detail.voirToutesPontes")}
                 </Link>
               </div>
             )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { CheckCircle2, AlertTriangle, Clock } from "lucide-react";
 import { StatutIncubation } from "@/types";
 
@@ -59,6 +60,7 @@ function computeCountdown(target: Date): CountdownState {
  * Mobile-first : grands chiffres lisibles, padding genereux.
  */
 export function EclosionCountdownTimer({ dateEclosionPrevue, statut }: Props) {
+  const t = useTranslations("reproduction.incubation.countdown");
   const targetDate = new Date(dateEclosionPrevue);
 
   const [countdown, setCountdown] = useState<CountdownState>(() =>
@@ -87,7 +89,7 @@ export function EclosionCountdownTimer({ dateEclosionPrevue, statut }: Props) {
       <div className="flex items-center gap-2 rounded-lg bg-[var(--accent-green-muted,#d1fae5)] px-4 py-3">
         <CheckCircle2 className="h-5 w-5 text-[var(--accent-green,#10b981)] shrink-0" />
         <span className="text-sm font-medium text-[var(--accent-green,#10b981)]">
-          Eclosion terminee
+          {t("eclosionTerminee")}
         </span>
       </div>
     );
@@ -104,7 +106,7 @@ export function EclosionCountdownTimer({ dateEclosionPrevue, statut }: Props) {
       <div className="flex items-center gap-2 rounded-lg border border-[var(--accent-amber,#f59e0b)]/40 bg-[var(--accent-amber-muted,#fef3c7)] px-4 py-3">
         <AlertTriangle className="h-5 w-5 text-[var(--accent-amber,#f59e0b)] shrink-0 animate-pulse" />
         <span className="text-sm font-semibold text-[var(--accent-amber,#f59e0b)]">
-          Eclosion imminente !
+          {t("eclosionImminente")}
         </span>
       </div>
     );
@@ -116,7 +118,7 @@ export function EclosionCountdownTimer({ dateEclosionPrevue, statut }: Props) {
       <div className="flex items-center gap-2 mb-2">
         <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
         <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
-          Eclosion prevue dans
+          {t("eclosionPrevueDans")}
         </span>
       </div>
       <div className="flex items-end gap-3 justify-center">

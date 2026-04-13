@@ -135,7 +135,10 @@
       "confirmDelete": "Etes-vous sûr de vouloir supprimer {code} ? Cette action est irréversible.",
       "confirmReformer": "Etes-vous sûr de vouloir réformer {code} ? Le statut passera à RÉFORMÉ.",
       "deleteSuccess": "Géniteur supprimé avec succès.",
-      "reformerSuccess": "Géniteur réformé avec succès."
+      "reformerSuccess": "Géniteur réformé avec succès.",
+      "pontesEnregistreesSingular": "{count} ponte enregistrée",
+      "pontesEnregistreesPlural": "{count} pontes enregistrées",
+      "voirToutesPontes": "Voir toutes les pontes"
     },
     "stats": {
       "totalPontes": "Total pontes",
@@ -717,7 +720,9 @@
       "succes": "Lot sorti avec succes",
       "erreur": "Erreur lors de la sortie",
       "placeholderRaison": "Ex: Mortalite massive, maladie...",
-      "placeholderObservations": "Observations..."
+      "placeholderObservations": "Observations...",
+      "creerNouvelleVagueInfo": "Pour créer une nouvelle vague, vous serez redirigé vers la page de création après la sortie du lot. Sélectionnez plutôt une vague existante pour un transfert immédiat.",
+      "selectionnerVagueExistante": "Sélectionner une vague existante"
     }
   },
   "planning": {

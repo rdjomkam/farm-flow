@@ -107,6 +107,12 @@
       "deleteCondition": "Supprimer cette condition",
       "createRule": "Créer une règle"
     },
+    "placeholders": {
+      "available": "Placeholders disponibles",
+      "clickToInsert": "Cliquez pour inserer",
+      "showLess": "Afficher moins",
+      "showMore": "Voir tous ({count} de plus)"
+    },
     "phases": {
       "allPhases": "Toutes les phases"
     },

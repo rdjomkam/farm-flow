@@ -135,7 +135,10 @@
       "confirmDelete": "Are you sure you want to delete {code}? This action is irreversible.",
       "confirmReformer": "Are you sure you want to retire {code}? The status will change to RETIRED.",
       "deleteSuccess": "Breeder deleted successfully.",
-      "reformerSuccess": "Breeder retired successfully."
+      "reformerSuccess": "Breeder retired successfully.",
+      "pontesEnregistreesSingular": "{count} spawning recorded",
+      "pontesEnregistreesPlural": "{count} spawnings recorded",
+      "voirToutesPontes": "View all spawnings"
     },
     "stats": {
       "totalPontes": "Total spawnings",
@@ -590,7 +593,9 @@
       "succes": "Batch exited successfully",
       "erreur": "Error during exit",
       "placeholderRaison": "E.g.: Mass mortality, disease...",
-      "placeholderObservations": "Observations..."
+      "placeholderObservations": "Observations...",
+      "creerNouvelleVagueInfo": "To create a new batch, you will be redirected to the creation page after the lot exit. Select an existing batch for immediate transfer.",
+      "selectionnerVagueExistante": "Select an existing batch"
     }
   },
   "planning": {

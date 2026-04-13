@@ -35,6 +35,7 @@ interface PlansGridProps {
 function StartEssaiButton({ planId }: { planId: string }) {
   const router = useRouter();
   const tCommon = useTranslations("common");
+  const tButtons = useTranslations("abonnements.plans.buttons");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,7 +75,7 @@ function StartEssaiButton({ planId }: { planId: string }) {
         disabled={loading}
       >
         {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-        Commencer gratuitement
+        {tButtons("startFree")}
       </Button>
       {error && (
         <p className="text-xs text-destructive text-center">{error}</p>
@@ -318,14 +319,14 @@ export function PlansGrid({ plans, abonnementActifPlanId, isLoggedIn }: PlansGri
                 {isGratuit ? (
                   isActif ? (
                     <Button disabled className="w-full min-h-[44px] opacity-60">
-                      Plan actuel
+                      {t("plans.buttons.currentPlan")}
                     </Button>
                   ) : isLoggedIn ? (
                     <StartEssaiButton planId={plan.id} />
                   ) : (
                     <Link href="/register" className="block w-full">
                       <Button variant="outline" className="w-full min-h-[44px]">
-                        Commencer gratuitement
+                        {t("plans.buttons.startFree")}
                       </Button>
                     </Link>
                   )

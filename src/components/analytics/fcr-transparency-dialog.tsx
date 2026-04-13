@@ -263,7 +263,7 @@ function VagueSection({ vague, defaultOpen }: { vague: FCRByFeedVague; defaultOp
           <div className="space-y-2">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-semibold flex items-center gap-1">
               <TrendingUp className="h-3 w-3" />
-              Detail par bac et periode
+              {t("detailParBacEtPeriode")}
             </p>
             {periodesBac.map((periode, idx) => (
               <PeriodeBacRow
@@ -297,30 +297,31 @@ function AggregationSection({
   nombreVaguesIgnorees: number;
   params: { minPoints: number; wInfinity: number | null };
 }) {
+  const t = useTranslations("analytics.fcrTrace");
   return (
     <div className="rounded-xl border border-border bg-muted/20 px-4 py-3 space-y-2">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Agregation globale
+        {t("agregationGlobale")}
       </p>
       <code className="block text-xs font-mono text-muted-foreground">
         ICA = Σ aliment (vagues valides) / Σ gain biomasse
       </code>
       <div className="grid grid-cols-2 gap-2 text-xs pt-1">
-        <LabelValue label="Total aliment" value={`${fmt(totalAlimentKg)} kg`} />
+        <LabelValue label={t("totalAliment")} value={`${fmt(totalAlimentKg)} kg`} />
         <LabelValue
-          label="Total gain"
+          label={t("totalGainLabel")}
           value={totalGainBiomasseKg > 0 ? `+${fmt(totalGainBiomasseKg)} kg` : "—"}
         />
-        <LabelValue label="Vagues incluses" value={String(nombreVaguesIncluses)} />
-        <LabelValue label="Vagues ignorees" value={String(nombreVaguesIgnorees)} />
+        <LabelValue label={t("vaguesIncluses")} value={String(nombreVaguesIncluses)} />
+        <LabelValue label={t("vaguesIgnorees")} value={String(nombreVaguesIgnorees)} />
       </div>
       <div className="flex items-center gap-2 text-[10px] text-muted-foreground pt-1">
-        <span>Params: minPoints={params.minPoints}</span>
+        <span>{t("paramsMinPoints", { count: params.minPoints })}</span>
         {params.wInfinity !== null && <span>W∞={params.wInfinity}g</span>}
       </div>
       {fcrGlobal !== null && totalGainBiomasseKg > 0 && (
         <div className="border-t border-border pt-2 flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">ICA final</span>
+          <span className="text-xs text-muted-foreground">{t("fcrFinalShort")}</span>
           <code className="font-mono text-sm font-bold text-primary">
             {fmt(totalAlimentKg)} / {fmt(totalGainBiomasseKg)} ={" "}
             <span>{fmt(fcrGlobal)}</span>

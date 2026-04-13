@@ -182,14 +182,20 @@
     },
     "remises": {
       "title": "Gestion des remises",
-      "subtitle": "Remises globales et par site"
+      "subtitle": "Remises globales et par site",
+      "remisesActives": "Remises actives",
+      "totalUtilisations": "Total utilisations",
+      "remisesGlobales": "Remises globales"
     },
     "plans": {
       "title": "Plans d'abonnement"
     },
     "commissions": {
       "title": "Gestion des commissions",
-      "subtitle": "Retraits et portefeuilles des ingenieurs"
+      "subtitle": "Retraits et portefeuilles des ingenieurs",
+      "retraitsEnAttente": "Retraits en attente",
+      "totalAVerser": "Total a verser",
+      "retraitsTraites": "Retraits traites (recents)"
     },
     "sites": {
       "title": "Gestion des sites clients"

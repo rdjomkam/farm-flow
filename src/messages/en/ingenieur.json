@@ -16,7 +16,11 @@
     "vagueCode": "Batch {code}",
     "aujourdhui": "Today",
     "voirFicheComplete": "View full site profile",
-    "details": "Details"
+    "details": "Details",
+    "monPortefeuille": "My wallet",
+    "voirDetails": "View details",
+    "disponible": "Available",
+    "enAttente": "Pending"
   },
   "monitoring": {
     "noActiveAlerts": "No active alerts on client sites.",

@@ -228,8 +228,9 @@ export function BesoinsListClient({
                             {formatDate(lb.createdAt)}
                           </span>
                           <span>
-                            {lb._count.lignes} ligne
-                            {lb._count.lignes !== 1 ? "s" : ""}
+                            {lb._count.lignes !== 1
+                              ? t("list.card.lignesPlural", { count: lb._count.lignes })
+                              : t("list.card.lignesSingular", { count: lb._count.lignes })}
                           </span>
                         </div>
 
@@ -242,17 +243,17 @@ export function BesoinsListClient({
                               {dlStatus === "retard" ? (
                                 <span className="flex items-center gap-1 text-xs font-medium text-destructive">
                                   <AlertCircle className="h-3.5 w-3.5" />
-                                  En retard — echance le {formatDate(lb.dateLimite)}
+                                  {t("list.card.enRetard", { date: formatDate(lb.dateLimite) })}
                                 </span>
                               ) : dlStatus === "proche" ? (
                                 <span className="flex items-center gap-1 text-xs font-medium text-warning">
                                   <Clock className="h-3.5 w-3.5" />
-                                  Echeance proche — {formatDate(lb.dateLimite)}
+                                  {t("list.card.echeanceProche", { date: formatDate(lb.dateLimite) })}
                                 </span>
                               ) : (
                                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
                                   <Clock className="h-3.5 w-3.5" />
-                                  Limite : {formatDate(lb.dateLimite)}
+                                  {t("list.card.limite", { date: formatDate(lb.dateLimite) })}
                                 </span>
                               )}
                             </div>
@@ -263,7 +264,7 @@ export function BesoinsListClient({
                         <div className="mt-3 flex items-center justify-between">
                           <div>
                             <p className="text-xs text-muted-foreground">
-                              Montant estime
+                              {t("list.card.montantEstime")}
                             </p>
                             <p className="text-base font-semibold">
                               {formatMontant(lb.montantEstime)} FCFA
@@ -272,7 +273,7 @@ export function BesoinsListClient({
                           {lb.montantReel !== null && (
                             <div className="text-right">
                               <p className="text-xs text-muted-foreground">
-                                Montant reel
+                                {t("list.card.montantReel")}
                               </p>
                               <p className="text-base font-semibold text-primary">
                                 {formatMontant(lb.montantReel)} FCFA

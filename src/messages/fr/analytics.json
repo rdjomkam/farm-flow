@@ -358,6 +358,13 @@
     "periodeN": "Période {n}",
     "fcrVague": "ICA vague",
     "aliment": "Aliment",
-    "gain": "Gain"
+    "gain": "Gain",
+    "detailParBacEtPeriode": "Detail par bac et periode",
+    "agregationGlobale": "Agregation globale",
+    "totalGainLabel": "Total gain",
+    "vaguesIncluses": "Vagues incluses",
+    "vaguesIgnorees": "Vagues ignorees",
+    "paramsMinPoints": "Params: minPoints={count}",
+    "fcrFinalShort": "ICA final"
   }
 }

@@ -182,14 +182,20 @@
     },
     "remises": {
       "title": "Discount management",
-      "subtitle": "Global and per-site discounts"
+      "subtitle": "Global and per-site discounts",
+      "remisesActives": "Active discounts",
+      "totalUtilisations": "Total uses",
+      "remisesGlobales": "Global discounts"
     },
     "plans": {
       "title": "Subscription plans"
     },
     "commissions": {
       "title": "Commission management",
-      "subtitle": "Withdrawals and engineer wallets"
+      "subtitle": "Withdrawals and engineer wallets",
+      "retraitsEnAttente": "Pending withdrawals",
+      "totalAVerser": "Total to pay",
+      "retraitsTraites": "Processed withdrawals (recent)"
     },
     "sites": {
       "title": "Client site management"

@@ -16,7 +16,11 @@
     "vagueCode": "Vague {code}",
     "aujourdhui": "Aujourd'hui",
     "voirFicheComplete": "Voir la fiche complete du site",
-    "details": "Details"
+    "details": "Details",
+    "monPortefeuille": "Mon portefeuille",
+    "voirDetails": "Voir details",
+    "disponible": "Disponible",
+    "enAttente": "En attente"
   },
   "monitoring": {
     "noActiveAlerts": "Aucune alerte active sur les sites clients.",

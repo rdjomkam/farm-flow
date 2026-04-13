@@ -394,11 +394,7 @@ export function LotSortieDialog({ lot, open, onOpenChange }: LotSortieDialogProp
                 <>
                   <div className="flex items-start gap-2 rounded-lg bg-white p-3 text-xs text-blue-700 dark:text-blue border border-blue-100 dark:border-blue-900/50">
                     <Info className="h-4 w-4 shrink-0 mt-0.5 text-blue-500 dark:text-blue-400" />
-                    <span>
-                      Pour créer une nouvelle vague, vous serez redirigé vers la page de
-                      création après la sortie du lot. Sélectionnez plutôt une vague existante
-                      pour un transfert immédiat.
-                    </span>
+                    <span>{t("sortie.creerNouvelleVagueInfo")}</span>
                   </div>
                   <button
                     type="button"
@@ -408,7 +404,7 @@ export function LotSortieDialog({ lot, open, onOpenChange }: LotSortieDialogProp
                       setNouvelleVagueCode("");
                     }}
                   >
-                    Sélectionner une vague existante
+                    {t("sortie.selectionnerVagueExistante")}
                   </button>
                 </>
               )}

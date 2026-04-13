@@ -218,6 +218,7 @@ interface PlaceholderPanelProps {
 }
 
 function PlaceholderPanel({ onInsert }: PlaceholderPanelProps) {
+  const t = useTranslations("settings.rules.placeholders");
   const [expanded, setExpanded] = useState(false);
 
   const visible = expanded
@@ -229,10 +230,10 @@ function PlaceholderPanel({ onInsert }: PlaceholderPanelProps) {
       <div className="flex items-center gap-2">
         <Info className="h-4 w-4 text-muted-foreground shrink-0" />
         <span className="text-sm font-medium text-foreground">
-          Placeholders disponibles
+          {t("available")}
         </span>
         <span className="text-xs text-muted-foreground ml-auto">
-          Cliquez pour inserer
+          {t("clickToInsert")}
         </span>
       </div>
       <div className="flex flex-wrap gap-1.5">
@@ -262,13 +263,12 @@ function PlaceholderPanel({ onInsert }: PlaceholderPanelProps) {
           {expanded ? (
             <>
               <ChevronUp className="h-3 w-3" />
-              Afficher moins
+              {t("showLess")}
             </>
           ) : (
             <>
               <ChevronDown className="h-3 w-3" />
-              Voir tous ({KNOWN_PLACEHOLDERS.length - DEFAULT_PLACEHOLDER_COUNT}{" "}
-              de plus)
+              {t("showMore", { count: KNOWN_PLACEHOLDERS.length - DEFAULT_PLACEHOLDER_COUNT })}
             </>
           )}
         </button>
