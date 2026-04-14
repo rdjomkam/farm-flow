@@ -98,7 +98,9 @@
       "enregistrer": "Enregistrer",
       "supprimer": "Supprimer",
       "modifier": "Modifier",
-      "reformer": "Réformer"
+      "reformer": "Réformer",
+      "errorCreate": "Une erreur est survenue lors de la création.",
+      "errorNetwork": "Une erreur réseau est survenue."
     },
     "detail": {
       "informations": "Informations",
@@ -743,6 +745,10 @@
     "errorUnknown": "Erreur inconnue",
     "loading": "Chargement...",
     "apply": "Appliquer",
+    "lotPoissons": "{count} poissons",
+    "lotJours": "{count} jours",
+    "lotTooltip": "{code} — {phase} — {age}j — {count} poissons",
+    "lotMobileSubline": "{phase} · {age}j · {count} poissons",
     "calculateur": {
       "title": "Calculateur de production",
       "cible": "Nombre d'alevins cible",
@@ -758,7 +764,10 @@
       "oeufsEstimesHint": "oeufs estimés ({rate}/g)",
       "alevinsParPonteLabel": "alevins/ponte estimés",
       "parametresInvalides": "Paramètres invalides.",
-      "baseLabel": "Base :"
+      "baseLabel": "Base :",
+      "surfaceBac": "{count} bac",
+      "surfaceBacs": "{count} bacs",
+      "dureeSemaines": "~{count} sem."
     },
     "appliquer": "Appliquer",
     "chargement": "Chargement...",

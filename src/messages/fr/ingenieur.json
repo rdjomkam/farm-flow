@@ -79,7 +79,13 @@
   },
   "siteClientFallback": "Site client",
   "charts": {
-    "avgWeight": "Poids moyen"
+    "avgWeight": "Poids moyen",
+    "croissanceTitle": "{code} — Croissance (poids moyen)",
+    "survieTitle": "{code} — Taux de survie (%)",
+    "mortalitesTitle": "{code} — Mortalités par événement",
+    "survieSeries": "Survie",
+    "mortsSeries": "Morts",
+    "mortsTooltip": "{count} morts"
   },
   "greeting": "Bonjour, {name}",
   "emptyStates": {

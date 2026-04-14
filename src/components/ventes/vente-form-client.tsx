@@ -114,13 +114,15 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
           <Fish className="h-5 w-5 text-accent-green mt-0.5 shrink-0" aria-hidden="true" />
           <div className="flex flex-col gap-0.5 text-sm">
             <span className="font-medium text-accent-green">
-              Vente pre-remplie depuis le lot{prefill.lotCode ? ` ${prefill.lotCode}` : ""}
+              {prefill.lotCode
+                ? t("ventes.form.prefillFromLotWithCode", { code: prefill.lotCode })
+                : t("ventes.form.prefillFromLot")}
             </span>
             <Link
               href={`/reproduction/lots/${prefill.lotAlevinsId}`}
               className="text-xs text-muted-foreground underline hover:text-foreground transition-colors"
             >
-              Voir le lot d&apos;alevins
+              {t("ventes.form.viewLotAlevins")}
             </Link>
           </div>
         </div>

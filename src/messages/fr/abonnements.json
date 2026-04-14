@@ -45,6 +45,10 @@
       "choosePlan": "Choisir ce plan",
       "unavailable": "Non disponible"
     },
+    "errors": {
+      "generic": "Une erreur est survenue.",
+      "serverUnreachable": "Impossible de contacter le serveur."
+    },
     "price": {
       "perMonth": "par mois",
       "perQuarter": "par trimestre",
@@ -58,11 +62,7 @@
       "waves": "{count} vagues",
       "sites": "{count} sites"
     },
-    "emptyMessage": "Les plans ne sont pas disponibles pour le moment.",
-    "errors": {
-      "generic": "Une erreur est survenue.",
-      "serverUnreachable": "Impossible de contacter le serveur."
-    }
+    "emptyMessage": "Les plans ne sont pas disponibles pour le moment."
   },
   "periods": {
     "MENSUEL": "Mensuel",

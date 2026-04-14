@@ -54,7 +54,10 @@
       "notes": "Notes (optional)",
       "notesPlaceholder": "Additional information...",
       "submit": "Record sale",
-      "back": "Sales"
+      "back": "Sales",
+      "prefillFromLot": "Sale pre-filled from lot",
+      "prefillFromLotWithCode": "Sale pre-filled from lot {code}",
+      "viewLotAlevins": "View fingerling lot"
     },
     "detail": {
       "poissons": "Fish",

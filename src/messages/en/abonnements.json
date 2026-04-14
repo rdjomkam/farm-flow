@@ -45,6 +45,10 @@
       "choosePlan": "Choose this plan",
       "unavailable": "Unavailable"
     },
+    "errors": {
+      "generic": "An error occurred.",
+      "serverUnreachable": "Unable to reach the server."
+    },
     "price": {
       "perMonth": "per month",
       "perQuarter": "per quarter",
@@ -58,11 +62,7 @@
       "waves": "{count} batches",
       "sites": "{count} sites"
     },
-    "emptyMessage": "Plans are not available at the moment.",
-    "errors": {
-      "generic": "An error occurred.",
-      "serverUnreachable": "Unable to reach the server."
-    }
+    "emptyMessage": "Plans are not available at the moment."
   },
   "periods": {
     "MENSUEL": "Monthly",

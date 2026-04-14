@@ -211,7 +211,10 @@
     "bacsRetires": "{count} removed tank",
     "bacsRetiresPlural": "{count} removed tanks",
     "poissonsDepart": "{count} fish at start",
-    "retire": "Removed"
+    "retire": "Removed",
+    "actif": "Active",
+    "aucunBacActif": "No active tanks for this batch.",
+    "poissons": "{count} fish"
   },
   "poidsChartSection": "the weight evolution chart",
   "comparison": {

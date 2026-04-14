@@ -54,7 +54,10 @@
       "notes": "Notes (optionnel)",
       "notesPlaceholder": "Informations complementaires...",
       "submit": "Enregistrer la vente",
-      "back": "Ventes"
+      "back": "Ventes",
+      "prefillFromLot": "Vente pre-remplie depuis le lot",
+      "prefillFromLotWithCode": "Vente pre-remplie depuis le lot {code}",
+      "viewLotAlevins": "Voir le lot d'alevins"
     },
     "detail": {
       "poissons": "Poissons",

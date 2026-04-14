@@ -91,7 +91,10 @@
     }
   },
   "card": {
-    "modified": "Modified"
+    "modified": "Modified",
+    "title": "Calibration",
+    "groupe": "{count} group",
+    "groupes": "{count} groups"
   },
   "modifications": {
     "title": "Modification history",

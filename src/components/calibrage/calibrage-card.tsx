@@ -26,7 +26,7 @@ export function CalibrageCard({ calibrage }: CalibrageCardProps) {
             <div className="flex items-center gap-2 min-w-0">
               <Scissors className="h-4 w-4 text-muted-foreground shrink-0" />
               <p className="font-semibold text-sm">
-                Calibrage{" "}
+                {t("card.title")}{" "}
                 {new Date(calibrage.date).toLocaleDateString("fr-FR", {
                   day: "numeric",
                   month: "short",
@@ -39,8 +39,9 @@ export function CalibrageCard({ calibrage }: CalibrageCardProps) {
                 <Badge variant="warning">{t("card.modified")}</Badge>
               )}
               <Badge variant="info">
-                {calibrage.groupes.length} groupe
-                {calibrage.groupes.length > 1 ? "s" : ""}
+                {calibrage.groupes.length > 1
+                  ? t("card.groupes", { count: calibrage.groupes.length })
+                  : t("card.groupe", { count: calibrage.groupes.length })}
               </Badge>
             </div>
           </div>
@@ -58,19 +59,20 @@ export function CalibrageCard({ calibrage }: CalibrageCardProps) {
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Fish className="h-3 w-3" />
-              {totalPoissons} poissons redistribues
+              {t("detail.poissonsRedistribues", { count: totalPoissons })}
             </span>
             {calibrage.nombreMorts > 0 && (
               <span className="flex items-center gap-1 text-danger">
                 <AlertTriangle className="h-3 w-3" />
-                {calibrage.nombreMorts} mort
-                {calibrage.nombreMorts > 1 ? "s" : ""}
+                {calibrage.nombreMorts > 1
+                  ? t("detail.mortsConstates", { count: calibrage.nombreMorts })
+                  : t("detail.mortConstates", { count: calibrage.nombreMorts })}
               </span>
             )}
           </div>
 
           <p className="text-xs text-muted-foreground mt-1">
-            Par {calibrage.user.name}
+            {t("detail.byUser", { name: calibrage.user.name })}
           </p>
         </CardContent>
       </Card>

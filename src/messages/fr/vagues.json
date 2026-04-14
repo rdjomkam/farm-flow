@@ -211,7 +211,10 @@
     "bacsRetires": "{count} bac retiré",
     "bacsRetiresPlural": "{count} bacs retirés",
     "poissonsDepart": "{count} poissons au départ",
-    "retire": "Retiré"
+    "retire": "Retiré",
+    "actif": "Actif",
+    "aucunBacActif": "Aucun bac actif pour cette vague.",
+    "poissons": "{count} poissons"
   },
   "poidsChartSection": "le graphique d'évolution du poids",
   "comparison": {

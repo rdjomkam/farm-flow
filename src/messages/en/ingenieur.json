@@ -79,7 +79,13 @@
   },
   "siteClientFallback": "Client site",
   "charts": {
-    "avgWeight": "Average weight"
+    "avgWeight": "Average weight",
+    "croissanceTitle": "{code} — Growth (average weight)",
+    "survieTitle": "{code} — Survival rate (%)",
+    "mortalitesTitle": "{code} — Mortalities per event",
+    "survieSeries": "Survival",
+    "mortsSeries": "Deaths",
+    "mortsTooltip": "{count} deaths"
   },
   "greeting": "Hello, {name}",
   "emptyStates": {

@@ -98,7 +98,9 @@
       "enregistrer": "Save",
       "supprimer": "Delete",
       "modifier": "Edit",
-      "reformer": "Retire"
+      "reformer": "Retire",
+      "errorCreate": "An error occurred during creation.",
+      "errorNetwork": "A network error occurred."
     },
     "detail": {
       "informations": "Information",
@@ -616,6 +618,10 @@
     "errorUnknown": "Unknown error",
     "loading": "Loading...",
     "apply": "Apply",
+    "lotPoissons": "{count} fish",
+    "lotJours": "{count} days",
+    "lotTooltip": "{code} — {phase} — {age}d — {count} fish",
+    "lotMobileSubline": "{phase} · {age}d · {count} fish",
     "calculateur": {
       "title": "Production calculator",
       "cible": "Target fingerling count",
@@ -631,7 +637,10 @@
       "oeufsEstimesHint": "estimated eggs ({rate}/g)",
       "alevinsParPonteLabel": "estimated fingerlings/spawning",
       "parametresInvalides": "Invalid parameters.",
-      "baseLabel": "Base:"
+      "baseLabel": "Base:",
+      "surfaceBac": "{count} tank",
+      "surfaceBacs": "{count} tanks",
+      "dureeSemaines": "~{count} wk"
     },
     "appliquer": "Apply",
     "chargement": "Loading...",

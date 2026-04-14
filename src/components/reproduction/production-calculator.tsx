@@ -178,11 +178,15 @@ export function ProductionCalculator() {
                 />
                 <ResultRow
                   label={t("surfaceEstimee")}
-                  value={`${results.surfaceEstimee} bac${results.surfaceEstimee > 1 ? "s" : ""}`}
+                  value={
+                    results.surfaceEstimee > 1
+                      ? t("surfaceBacs", { count: results.surfaceEstimee })
+                      : t("surfaceBac", { count: results.surfaceEstimee })
+                  }
                 />
                 <ResultRow
                   label={t("dureeEstimee")}
-                  value={`~${results.dureeEstimee} sem.`}
+                  value={t("dureeSemaines", { count: results.dureeEstimee })}
                 />
                 <div className="mt-2 rounded-lg bg-muted/40 border border-border p-3 text-xs text-muted-foreground">
                   {t("baseLabel")}{" "}

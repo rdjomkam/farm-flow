@@ -183,12 +183,14 @@ const tooltipSurvie = (
   />
 );
 
-const tooltipMortalite = (
-  <ChartTooltip
-    labelFormatter={formatTooltipLabel}
-    valueFormatter={(v) => `${v} morts`}
-  />
-);
+function makeTooltipMortalite(format: (count: number) => string) {
+  return (
+    <ChartTooltip
+      labelFormatter={formatTooltipLabel}
+      valueFormatter={(v) => format(Number(v))}
+    />
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Composant charts par vague
@@ -197,6 +199,10 @@ const tooltipMortalite = (
 const VagueCharts = memo(function VagueCharts({ vague }: { vague: VagueAvecReleves }) {
   const t = useTranslations("ingenieur.emptyStates");
   const tIngenieur = useTranslations("ingenieur");
+  const tCharts = useTranslations("ingenieur.charts");
+  const tooltipMortalite = makeTooltipMortalite((count) =>
+    tCharts("mortsTooltip", { count })
+  );
   const croissanceData = buildCroissanceData(vague);
   const mortaliteData = buildMortaliteData(vague);
   const survieData = buildSurvieData(vague);
@@ -225,13 +231,13 @@ const VagueCharts = memo(function VagueCharts({ vague }: { vague: VagueAvecRelev
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">
-              {vague.code} — Croissance (poids moyen)
+              {tCharts("croissanceTitle", { code: vague.code })}
             </CardTitle>
           </CardHeader>
           <CardContent className="overflow-hidden">
             <figure>
               <figcaption className="sr-only">
-                {vague.code} — Croissance (poids moyen)
+                {tCharts("croissanceTitle", { code: vague.code })}
               </figcaption>
               <div className="h-[200px] w-full max-w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -269,13 +275,13 @@ const VagueCharts = memo(function VagueCharts({ vague }: { vague: VagueAvecRelev
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">
-              {vague.code} — Taux de survie (%)
+              {tCharts("survieTitle", { code: vague.code })}
             </CardTitle>
           </CardHeader>
           <CardContent className="overflow-hidden">
             <figure>
               <figcaption className="sr-only">
-                {vague.code} — Taux de survie (%)
+                {tCharts("survieTitle", { code: vague.code })}
               </figcaption>
               <div className="h-[200px] w-full max-w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -295,7 +301,7 @@ const VagueCharts = memo(function VagueCharts({ vague }: { vague: VagueAvecRelev
                     <Line
                       type="monotone"
                       dataKey="survie"
-                      name="Survie"
+                      name={tCharts("survieSeries")}
                       stroke="var(--success)"
                       strokeWidth={2}
                       dot={{ r: 3 }}
@@ -314,13 +320,13 @@ const VagueCharts = memo(function VagueCharts({ vague }: { vague: VagueAvecRelev
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">
-              {vague.code} — Mortalites par evenement
+              {tCharts("mortalitesTitle", { code: vague.code })}
             </CardTitle>
           </CardHeader>
           <CardContent className="overflow-hidden">
             <figure>
               <figcaption className="sr-only">
-                {vague.code} — Mortalites par evenement
+                {tCharts("mortalitesTitle", { code: vague.code })}
               </figcaption>
               <div className="h-[200px] w-full max-w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -334,7 +340,7 @@ const VagueCharts = memo(function VagueCharts({ vague }: { vague: VagueAvecRelev
                     <Tooltip content={tooltipMortalite} cursor={<ChartCrosshair />} />
                     <Bar
                       dataKey="nombreMorts"
-                      name="Morts"
+                      name={tCharts("mortsSeries")}
                       fill="var(--danger)"
                       radius={[3, 3, 0, 0]}
                     />

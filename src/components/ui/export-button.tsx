@@ -11,6 +11,7 @@
  */
 
 import { Download } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { useApi } from "@/hooks/use-api";
 
@@ -32,11 +33,13 @@ interface ExportButtonProps {
 export function ExportButton({
   href,
   filename,
-  label = "Exporter",
+  label,
   variant = "outline",
   className = "",
   icon,
 }: ExportButtonProps) {
+  const t = useTranslations("common");
+  const resolvedLabel = label ?? t("buttons.export");
   const { download } = useApi();
 
   async function handleExport() {
@@ -48,10 +51,10 @@ export function ExportButton({
       variant={variant}
       onClick={handleExport}
       className={`min-h-[44px] ${className}`}
-      aria-label={label}
+      aria-label={resolvedLabel}
     >
       {icon ?? <Download className="h-4 w-4" />}
-      <span className="ml-1.5">{label}</span>
+      <span className="ml-1.5">{resolvedLabel}</span>
     </Button>
   );
 }
