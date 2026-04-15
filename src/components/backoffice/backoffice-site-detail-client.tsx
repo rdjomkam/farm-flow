@@ -69,6 +69,7 @@ interface BackofficeSiteDetailClientProps {
 
 export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSiteDetailClientProps) {
   const t = useTranslations("backoffice");
+  const tCommon = useTranslations("common");
   const [site, setSite] = useState(initialSite);
 
   function handleModulesSaved(modules: SiteModule[]) {
@@ -103,7 +104,7 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
             currentStatus={site.status}
             trigger={
               <Button variant="outline" size="sm">
-                Changer le statut
+                {t("sites.detail.changeStatus")}
               </Button>
             }
             onSuccess={handleStatusChanged}
@@ -135,7 +136,7 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
               <SiteInfoRow label="ID" value={site.id} mono />
               <SiteInfoRow label="Nom" value={site.name} />
               <SiteInfoRow label="Adresse" value={site.address ?? "—"} />
-              <SiteInfoRow label={t("sites.supervise")} value={site.supervised ? "Oui" : "Non"} />
+              <SiteInfoRow label={t("sites.supervise")} value={site.supervised ? tCommon("labels.yes") : tCommon("labels.no")} />
               <SiteInfoRow
                 label={t("sites.creeLe")}
                 value={new Date(site.createdAt).toLocaleDateString("fr-FR", {

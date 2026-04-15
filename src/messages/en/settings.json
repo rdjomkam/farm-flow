@@ -17,7 +17,8 @@
     "permissions": "permissions",
     "reglesDescription": "Manage rules that automatically trigger activities on your batches. Global DKFarm rules apply to all sites, while this site's rules are your own.",
     "placeholders": "Placeholders",
-    "alertesActives": "Active alerts ({count})"
+    "alertesActives": "Active alerts ({count})",
+    "placeholdersDescription": "Define custom placeholders usable in rule templates. Placeholders are global and available for all sites."
   },
   "triggers": {
     "CALENDRIER": "Calendar",
@@ -106,6 +107,12 @@
       "deleteCondition": "Delete this condition",
       "createRule": "Create a rule"
     },
+    "placeholders": {
+      "available": "Available placeholders",
+      "clickToInsert": "Click to insert",
+      "showLess": "Show less",
+      "showMore": "Show all ({count} more)"
+    },
     "phases": {
       "allPhases": "All phases"
     },
@@ -128,7 +135,20 @@
     "supprimer": "Delete",
     "resetFiredOnceDescription": "This rule will trigger again on the next evaluation cycle. Do you confirm this action?",
     "detail": {
+      "active": "Active",
       "inactive": "Inactive",
+      "typeActiviteLabel": "Activity type",
+      "actionLabel": "Action",
+      "declencheurLabel": "Trigger",
+      "perimetreLabel": "Scope",
+      "statutLabel": "Status",
+      "firedOnceLabel": "firedOnce",
+      "scopeGlobal": "Global DKFarm",
+      "scopeSite": "This site",
+      "deleteConfirmation": "This action is irreversible. The rule \"{nom}\" will be permanently deleted.",
+      "deleteNoActivities": "This rule has not generated any activity. It can be safely deleted.",
+      "deleteBlocked": "Cannot delete: {count} linked activity(ies)",
+      "activitesRecentes": "Recent activities ({count} total)",
       "logic": "Logic:",
       "templateTitle": "Title",
       "templateDescription": "Description",
@@ -167,7 +187,16 @@
       "priority": "Priority {priority}/10",
       "threshold": "Threshold: {value}",
       "toggleActivate": "Activate rule",
-      "toggleDeactivate": "Deactivate rule"
+      "toggleDeactivate": "Deactivate rule",
+      "scopeGlobal": "Global DKFarm",
+      "scopeSite": "This site",
+      "firedOnceTitle": "This rule has already been triggered once (one-shot). It will not trigger again until firedOnce is reset.",
+      "firedOnceLabel": "Triggered",
+      "firedOnceTooltip": "This rule has already fired once (one-shot). It will not fire again until firedOnce is reset.",
+      "firedOnceBadge": "Fired",
+      "activeStatus": "Active",
+      "activitiesGenerated": "{count} {count, plural, one {activity} other {activities}} generated",
+      "intervalDays": "Every {interval} {interval, plural, one {day} other {days}}"
     },
     "form": {
       "activitySection": "Activity section",
@@ -206,7 +235,18 @@
       "placeholderEx300": "E.g.: 300",
       "placeholderEx7": "E.g.: 7",
       "notifBannerText": "An alert will be sent to users when the rule triggers. Configure the content and severity of the alert here.",
-      "notifConfigBannerText": "Configure the alert content that will be sent to users."
+      "notifConfigBannerText": "Configure the alert content that will be sent to users.",
+      "placeholderTitreNotif": "E.g.: High density — Tank {bac}",
+      "placeholderDescNotif": "E.g.: Density: {valeur} kg/m3 — Action required",
+      "placeholderTitreActivite": "E.g.: Biometry week {semaine} — avg weight {poids_moyen}g",
+      "placeholderDescActivite": "Short description of the activity...",
+      "placeholderInstructions": "1. Step 1\n2. Step 2\n3. Step 3",
+      "placeholderNomInterne": "E.g.: High density alert",
+      "placeholderTitreTemplate": "E.g.: Distribute {quantite_calculee}kg of pellets in {bac}",
+      "placeholderDescTemplate": "E.g.: Avg weight {poids_moyen}g — week {semaine} of cycle",
+      "placeholderNomRegle": "E.g.: Enhanced feeding - finishing phase",
+      "instructionsHint": "Recommended format: 1. First step\\n2. Second step",
+      "activitySectionDesc": "Activity templates (title, description, instructions) are configured in the next section."
     }
   },
   "placeholders": {

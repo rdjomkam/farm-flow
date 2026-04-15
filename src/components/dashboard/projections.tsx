@@ -282,6 +282,7 @@ function CourbeProjectionChart({ projection }: { projection: ProjectionVague }) 
 function ProjectionCard({ projection }: ProjectionCardProps) {
   const [chartExpanded, setChartExpanded] = useState(false);
   const tAnalytics = useTranslations("analytics");
+  const tSections = useTranslations("errors.sections");
 
   return (
     <Card>
@@ -370,7 +371,7 @@ function ProjectionCard({ projection }: ProjectionCardProps) {
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               {tAnalytics("projections.growthCurve")}
             </p>
-            <ErrorBoundary section="le graphique de croissance">
+            <ErrorBoundary section={tSections("growthChart")}>
               <CourbeProjectionChart projection={projection} />
             </ErrorBoundary>
             <p className="text-[10px] text-muted-foreground mt-1 text-center">

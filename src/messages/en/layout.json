@@ -1,4 +1,9 @@
 {
+  "skipToMain": "Skip to main content",
+  "networkStatus": {
+    "online": "Online",
+    "offline": "Offline"
+  },
   "fab": {
     "ariaLabel": "New record",
     "toasts": {

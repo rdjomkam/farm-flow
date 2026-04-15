@@ -69,7 +69,10 @@
       "title": "Cancel exemption?",
       "description": "Free access will be revoked. The user will need to subscribe to a paid plan to continue.",
       "confirm": "Confirm cancellation",
+      "cancelling": "Cancelling...",
       "cancel": "Go back",
+      "userLabel": "User: ",
+      "cancelling": "Cancelling...",
       "successTitle": "Exemption cancelled",
       "successDesc": "Free access has been revoked.",
       "errorTitle": "Error",
@@ -114,6 +117,14 @@
     "aucunPlan": "No plan",
     "aucunSiteTrouve": "No site found",
     "creeLe": "Created on",
+    "gerer": "Manage",
+    "actionsButton": "Actions",
+    "kpi": {
+      "total": "Total",
+      "actifs": "Active",
+      "suspendus": "Suspended",
+      "bloques": "Blocked"
+    },
     "assignerA": "Assign to",
     "siteIntrouvable": "Site not found",
     "retourAuxSites": "Back to sites",
@@ -140,6 +151,7 @@
       "actions": "Actions"
     },
     "detail": {
+      "changeStatus": "Change status",
       "tabs": {
         "summary": "Summary",
         "modules": "Modules",
@@ -170,20 +182,27 @@
     },
     "remises": {
       "title": "Discount management",
-      "subtitle": "Global and per-site discounts"
+      "subtitle": "Global and per-site discounts",
+      "remisesActives": "Active discounts",
+      "totalUtilisations": "Total uses",
+      "remisesGlobales": "Global discounts"
     },
     "plans": {
       "title": "Subscription plans"
     },
     "commissions": {
       "title": "Commission management",
-      "subtitle": "Withdrawals and engineer wallets"
+      "subtitle": "Withdrawals and engineer wallets",
+      "retraitsEnAttente": "Pending withdrawals",
+      "totalAVerser": "Total to pay",
+      "retraitsTraites": "Processed withdrawals (recent)"
     },
     "sites": {
       "title": "Client site management"
     },
     "dashboard": {
-      "title": "Platform analytics"
+      "title": "Platform analytics",
+      "description": "Consolidated KPIs for the entire DKFarm platform"
     },
     "abonnements": {
       "title": "All subscriptions"

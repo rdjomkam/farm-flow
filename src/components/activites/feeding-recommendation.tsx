@@ -237,7 +237,7 @@ function BacCard({ bac }: BacCardProps) {
         {bac.recommendation.estProjete && (
           <span className="text-xs text-warning flex items-center gap-1">
             <Info className="h-3 w-3" />
-            Poids projete
+            {tActivites("feeding.poidsProjete")}
           </span>
         )}
       </div>
@@ -365,12 +365,12 @@ export function FeedingRecommendation({
       <div className="flex items-center gap-1.5 mb-3">
         <Utensils className="h-3.5 w-3.5 text-primary" />
         <p className="text-xs font-semibold text-primary">
-          Recommandation d&apos;alimentation
+          {tActivites("feeding.recommandationAlimentation")}
         </p>
         {estProjete && (
           <span className="ml-auto flex items-center gap-1 text-xs text-warning">
             <Info className="h-3 w-3" />
-            Poids projete (SGR)
+            {tActivites("feeding.poidsProjeteSGR")}
           </span>
         )}
       </div>

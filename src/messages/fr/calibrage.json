@@ -91,7 +91,10 @@
     }
   },
   "card": {
-    "modified": "Modifie"
+    "modified": "Modifie",
+    "title": "Calibrage",
+    "groupe": "{count} groupe",
+    "groupes": "{count} groupes"
   },
   "modifications": {
     "title": "Historique des modifications",
@@ -119,6 +122,10 @@
     "bilanDetail": "{redistribues} redistribues + {morts} morts = {total} poissons",
     "poissons": "{count} poissons"
   },
+  "form": {
+    "selectAtLeastOneSource": "Selectionnez au moins un bac source.",
+    "selectPlaceholder": "Selectionnez..."
+  },
   "modifierDialog": {
     "trigger": "Modifier",
     "title": "Modifier le calibrage",
@@ -143,6 +150,7 @@
     "tailleMoyenne": "Taille moyenne (cm, optionnel)",
     "ajouterGroupe": "Ajouter un groupe",
     "notes": "Notes (optionnel)",
+    "selectPlaceholder": "Selectionnez...",
     "annuler": "Annuler",
     "enregistrer": "Enregistrer les modifications",
     "erreurs": {

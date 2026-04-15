@@ -150,7 +150,7 @@ function CancelExonerationDialog({ exonerationId, userName, trigger, onSuccess }
         <div className="rounded-lg border border-danger/30 bg-danger/5 p-3 flex items-start gap-2">
           <AlertCircle className="h-4 w-4 text-danger mt-0.5 shrink-0" />
           <p className="text-sm text-foreground">
-            Utilisateur : <strong>{userName}</strong>
+            {t("userLabel")}<strong>{userName}</strong>
           </p>
         </div>
 
@@ -167,7 +167,7 @@ function CancelExonerationDialog({ exonerationId, userName, trigger, onSuccess }
             onClick={handleConfirm}
             disabled={loading}
           >
-            {loading ? "Annulation..." : t("confirm")}
+            {loading ? t("cancelling") : t("confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

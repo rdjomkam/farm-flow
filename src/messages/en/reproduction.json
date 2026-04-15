@@ -62,6 +62,8 @@
       "titre": "New breeder",
       "titreGroupe": "New breeder group",
       "titreIndividuel": "New individual breeder",
+      "errorCreation": "An error occurred during creation.",
+      "errorNetwork": "A network error occurred.",
       "mode": "Management mode",
       "nom": "Group name",
       "nomPlaceholder": "E.g.: G2 Females march 2026",
@@ -96,7 +98,9 @@
       "enregistrer": "Save",
       "supprimer": "Delete",
       "modifier": "Edit",
-      "reformer": "Retire"
+      "reformer": "Retire",
+      "errorCreate": "An error occurred during creation.",
+      "errorNetwork": "A network error occurred."
     },
     "detail": {
       "informations": "Information",
@@ -133,7 +137,10 @@
       "confirmDelete": "Are you sure you want to delete {code}? This action is irreversible.",
       "confirmReformer": "Are you sure you want to retire {code}? The status will change to RETIRED.",
       "deleteSuccess": "Breeder deleted successfully.",
-      "reformerSuccess": "Breeder retired successfully."
+      "reformerSuccess": "Breeder retired successfully.",
+      "pontesEnregistreesSingular": "{count} spawning recorded",
+      "pontesEnregistreesPlural": "{count} spawnings recorded",
+      "voirToutesPontes": "View all spawnings"
     },
     "stats": {
       "totalPontes": "Total spawnings",
@@ -386,10 +393,20 @@
       "eclosionPrevueDans": "Expected hatching in"
     }
   },
+  "statuts": {
+    "incubation": {
+      "EN_COURS": "In progress",
+      "ECLOSION_EN_COURS": "Hatching in progress",
+      "TERMINEE": "Completed",
+      "ECHOUEE": "Failed"
+    }
+  },
   "dashboard": {
     "title": "Reproduction Dashboard",
     "periode": "Period",
     "derniers30j": "Last 30 days",
+    "errorLoading": "Error loading data.",
+    "errorUnknown": "Unknown error.",
     "derniers3m": "Last 3 months",
     "derniers6m": "Last 6 months",
     "derniers12m": "Last 12 months",
@@ -570,11 +587,17 @@
       "vagueDestinationPlaceholder": "Select a cohort",
       "creerNouvelleVague": "Create a new cohort",
       "cause": "Cause of loss",
+      "causePlaceholder": "e.g.: Massive mortality, disease...",
       "notes": "Notes",
+      "notesPlaceholder": "Observations...",
       "confirmer": "Confirm exit",
       "enCours": "Processing...",
       "succes": "Batch exited successfully",
-      "erreur": "Error during exit"
+      "erreur": "Error during exit",
+      "placeholderRaison": "E.g.: Mass mortality, disease...",
+      "placeholderObservations": "Observations...",
+      "creerNouvelleVagueInfo": "To create a new batch, you will be redirected to the creation page after the lot exit. Select an existing batch for immediate transfer.",
+      "selectionnerVagueExistante": "Select an existing batch"
     }
   },
   "planning": {
@@ -588,6 +611,17 @@
     "gantt": "Batch timeline",
     "evenements": "Upcoming events",
     "aucunEvenement": "No events for this period",
+    "eventCount": "{count} event(s)",
+    "ponte": "Spawning",
+    "eclosion": "Hatching",
+    "errorStatus": "Error {status}",
+    "errorUnknown": "Unknown error",
+    "loading": "Loading...",
+    "apply": "Apply",
+    "lotPoissons": "{count} fish",
+    "lotJours": "{count} days",
+    "lotTooltip": "{code} — {phase} — {age}d — {count} fish",
+    "lotMobileSubline": "{phase} · {age}d · {count} fish",
     "calculateur": {
       "title": "Production calculator",
       "cible": "Target fingerling count",
@@ -599,7 +633,30 @@
       "femellesNecessaires": "Females needed",
       "malesNecessaires": "Males needed",
       "surfaceEstimee": "Estimated surface",
-      "dureeEstimee": "Estimated duration"
-    }
+      "dureeEstimee": "Estimated duration",
+      "oeufsEstimesHint": "estimated eggs ({rate}/g)",
+      "alevinsParPonteLabel": "estimated fingerlings/spawning",
+      "parametresInvalides": "Invalid parameters.",
+      "baseLabel": "Base:",
+      "surfaceBac": "{count} tank",
+      "surfaceBacs": "{count} tanks",
+      "dureeSemaines": "~{count} wk"
+    },
+    "appliquer": "Apply",
+    "chargement": "Loading...",
+    "erreurStatus": "Error {status}",
+    "erreurInconnue": "Unknown error"
+  },
+  "stepsAriaLabel": "Steps",
+  "errors": {
+    "loadingData": "Error loading data.",
+    "unknown": "Unknown error.",
+    "creationFailed": "An error occurred during creation.",
+    "networkError": "A network error occurred."
+  },
+  "ponteStatuts": {
+    "EN_COURS": "In progress",
+    "TERMINEE": "Completed",
+    "ECHOUEE": "Failed"
   }
 }

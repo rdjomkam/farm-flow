@@ -69,7 +69,10 @@
       "title": "Annuler l'exoneration ?",
       "description": "L'acces gratuit sera revoque. L'utilisateur devra souscrire a un plan payant pour continuer.",
       "confirm": "Confirmer l'annulation",
+      "cancelling": "Annulation...",
       "cancel": "Retour",
+      "userLabel": "Utilisateur : ",
+      "cancelling": "Annulation...",
       "successTitle": "Exoneration annulee",
       "successDesc": "L'acces gratuit a ete revoque.",
       "errorTitle": "Erreur",
@@ -114,6 +117,14 @@
     "aucunPlan": "Aucun plan",
     "aucunSiteTrouve": "Aucun site trouve",
     "creeLe": "Cree le",
+    "gerer": "Gérer",
+    "actionsButton": "Actions",
+    "kpi": {
+      "total": "Total",
+      "actifs": "Actifs",
+      "suspendus": "Suspendus",
+      "bloques": "Bloqués"
+    },
     "assignerA": "Assigner a",
     "siteIntrouvable": "Site introuvable",
     "retourAuxSites": "Retour aux sites",
@@ -140,6 +151,7 @@
       "actions": "Actions"
     },
     "detail": {
+      "changeStatus": "Changer le statut",
       "tabs": {
         "summary": "Resume",
         "modules": "Modules",
@@ -170,20 +182,27 @@
     },
     "remises": {
       "title": "Gestion des remises",
-      "subtitle": "Remises globales et par site"
+      "subtitle": "Remises globales et par site",
+      "remisesActives": "Remises actives",
+      "totalUtilisations": "Total utilisations",
+      "remisesGlobales": "Remises globales"
     },
     "plans": {
       "title": "Plans d'abonnement"
     },
     "commissions": {
       "title": "Gestion des commissions",
-      "subtitle": "Retraits et portefeuilles des ingenieurs"
+      "subtitle": "Retraits et portefeuilles des ingenieurs",
+      "retraitsEnAttente": "Retraits en attente",
+      "totalAVerser": "Total a verser",
+      "retraitsTraites": "Retraits traites (recents)"
     },
     "sites": {
       "title": "Gestion des sites clients"
     },
     "dashboard": {
-      "title": "Analytics Plateforme"
+      "title": "Analytics Plateforme",
+      "description": "KPIs consolides de toute la plateforme DKFarm"
     },
     "abonnements": {
       "title": "Tous les abonnements"

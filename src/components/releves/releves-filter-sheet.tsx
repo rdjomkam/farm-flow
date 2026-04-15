@@ -51,6 +51,7 @@ function RangeInputs({
   onMaxChange: (v: string) => void;
   step?: string;
 }) {
+  const tRange = useTranslations("common.placeholders");
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-sm font-medium">
@@ -64,7 +65,7 @@ function RangeInputs({
           step={step}
           value={minValue}
           onChange={(e) => onMinChange(e.target.value)}
-          placeholder="Min"
+          placeholder={tRange("min")}
           className="flex-1 min-w-0 h-10 rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
         <span className="text-sm text-muted-foreground shrink-0">–</span>
@@ -74,7 +75,7 @@ function RangeInputs({
           step={step}
           value={maxValue}
           onChange={(e) => onMaxChange(e.target.value)}
-          placeholder="Max"
+          placeholder={tRange("max")}
           className="flex-1 min-w-0 h-10 rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
       </div>
@@ -316,7 +317,7 @@ export function RelevesFilterSheet({
               className="h-10 w-10 flex items-center justify-center rounded-md hover:bg-accent transition-colors"
             >
               <X className="h-5 w-5" />
-              <span className="sr-only">Fermer</span>
+              <span className="sr-only">{tCommon("buttons.close")}</span>
             </button>
           </SheetClose>
         </div>

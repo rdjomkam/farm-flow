@@ -37,10 +37,22 @@
     "aLaFin": "à la fin",
     "poissonsDepart": "{count} poissons au départ",
     "poissons": "{count} poissons",
-    "terminee": "Terminée"
+    "terminee": "Terminée",
+    "empty": "Aucune assignation enregistrée pour ce bac."
   },
   "densite": {
-    "nonCalculable": "Densité non calculable"
+    "nonCalculable": "Densité non calculable",
+    "statuts": {
+      "alerte": "Alerte",
+      "critique": "Critique",
+      "inconnu": "Inconnue"
+    },
+    "title": "Densité : {value} kg/m³",
+    "OK": "OK",
+    "ALERTE": "Alerte",
+    "CRITIQUE": "Critique",
+    "INCONNU": "Inconnue",
+    "titleTooltip": "Densité : {value} kg/m³"
   },
   "detail": {
     "occupe": "Occupé",

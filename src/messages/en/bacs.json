@@ -37,10 +37,22 @@
     "aLaFin": "at the end",
     "poissonsDepart": "{count} fish at start",
     "poissons": "{count} fish",
-    "terminee": "Completed"
+    "terminee": "Completed",
+    "empty": "No assignment history recorded for this tank."
   },
   "densite": {
-    "nonCalculable": "Density not calculable"
+    "nonCalculable": "Density not calculable",
+    "statuts": {
+      "alerte": "Alert",
+      "critique": "Critical",
+      "inconnu": "Unknown"
+    },
+    "title": "Density: {value} kg/m³",
+    "OK": "OK",
+    "ALERTE": "Alert",
+    "CRITIQUE": "Critical",
+    "INCONNU": "Unknown",
+    "titleTooltip": "Density: {value} kg/m³"
   },
   "detail": {
     "occupe": "Occupied",

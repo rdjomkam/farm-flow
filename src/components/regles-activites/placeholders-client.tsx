@@ -295,7 +295,7 @@ function PlaceholderForm({ initial, onSave, onCancel }: FormProps) {
           onChange={(e) => setKey(e.target.value)}
           placeholder={t("form.clePlaceholder")}
           pattern="^[a-z][a-z0-9_]*$"
-          title="Minuscules, chiffres et underscores uniquement"
+          title={t("form.clePatternTitle")}
           required
           disabled={!!initial} // cannot change key after creation
         />

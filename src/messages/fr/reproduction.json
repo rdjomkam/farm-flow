@@ -62,6 +62,8 @@
       "titre": "Nouveau géniteur",
       "titreGroupe": "Nouveau lot de géniteurs",
       "titreIndividuel": "Nouveau géniteur individuel",
+      "errorCreation": "Une erreur est survenue lors de la creation.",
+      "errorNetwork": "Une erreur reseau est survenue.",
       "mode": "Mode de gestion",
       "nom": "Nom du lot",
       "nomPlaceholder": "Ex: Femelles G2 mars 2026",
@@ -96,7 +98,9 @@
       "enregistrer": "Enregistrer",
       "supprimer": "Supprimer",
       "modifier": "Modifier",
-      "reformer": "Réformer"
+      "reformer": "Réformer",
+      "errorCreate": "Une erreur est survenue lors de la création.",
+      "errorNetwork": "Une erreur réseau est survenue."
     },
     "detail": {
       "informations": "Informations",
@@ -133,7 +137,10 @@
       "confirmDelete": "Etes-vous sûr de vouloir supprimer {code} ? Cette action est irréversible.",
       "confirmReformer": "Etes-vous sûr de vouloir réformer {code} ? Le statut passera à RÉFORMÉ.",
       "deleteSuccess": "Géniteur supprimé avec succès.",
-      "reformerSuccess": "Géniteur réformé avec succès."
+      "reformerSuccess": "Géniteur réformé avec succès.",
+      "pontesEnregistreesSingular": "{count} ponte enregistrée",
+      "pontesEnregistreesPlural": "{count} pontes enregistrées",
+      "voirToutesPontes": "Voir toutes les pontes"
     },
     "stats": {
       "totalPontes": "Total pontes",
@@ -500,6 +507,8 @@
     "title": "Tableau de bord Reproduction",
     "periode": "Periode",
     "derniers30j": "30 derniers jours",
+    "errorLoading": "Erreur lors du chargement des donnees.",
+    "errorUnknown": "Erreur inconnue.",
     "derniers3m": "3 derniers mois",
     "derniers6m": "6 derniers mois",
     "derniers12m": "12 derniers mois",
@@ -705,11 +714,17 @@
       "vagueDestinationPlaceholder": "Selectionner une vague",
       "creerNouvelleVague": "Creer une nouvelle vague",
       "cause": "Cause de la perte",
+      "causePlaceholder": "Ex : Mortalité massive, maladie...",
       "notes": "Notes",
+      "notesPlaceholder": "Observations...",
       "confirmer": "Confirmer la sortie",
       "enCours": "Sortie en cours...",
       "succes": "Lot sorti avec succes",
-      "erreur": "Erreur lors de la sortie"
+      "erreur": "Erreur lors de la sortie",
+      "placeholderRaison": "Ex: Mortalite massive, maladie...",
+      "placeholderObservations": "Observations...",
+      "creerNouvelleVagueInfo": "Pour créer une nouvelle vague, vous serez redirigé vers la page de création après la sortie du lot. Sélectionnez plutôt une vague existante pour un transfert immédiat.",
+      "selectionnerVagueExistante": "Sélectionner une vague existante"
     }
   },
   "planning": {
@@ -723,6 +738,17 @@
     "gantt": "Chronologie des lots",
     "evenements": "Événements à venir",
     "aucunEvenement": "Aucun événement pour cette période",
+    "eventCount": "{count} evenement(s)",
+    "ponte": "Ponte",
+    "eclosion": "Éclosion",
+    "errorStatus": "Erreur {status}",
+    "errorUnknown": "Erreur inconnue",
+    "loading": "Chargement...",
+    "apply": "Appliquer",
+    "lotPoissons": "{count} poissons",
+    "lotJours": "{count} jours",
+    "lotTooltip": "{code} — {phase} — {age}j — {count} poissons",
+    "lotMobileSubline": "{phase} · {age}j · {count} poissons",
     "calculateur": {
       "title": "Calculateur de production",
       "cible": "Nombre d'alevins cible",
@@ -734,7 +760,30 @@
       "femellesNecessaires": "Femelles nécessaires",
       "malesNecessaires": "Mâles nécessaires",
       "surfaceEstimee": "Surface estimée",
-      "dureeEstimee": "Durée estimée"
-    }
+      "dureeEstimee": "Durée estimée",
+      "oeufsEstimesHint": "oeufs estimés ({rate}/g)",
+      "alevinsParPonteLabel": "alevins/ponte estimés",
+      "parametresInvalides": "Paramètres invalides.",
+      "baseLabel": "Base :",
+      "surfaceBac": "{count} bac",
+      "surfaceBacs": "{count} bacs",
+      "dureeSemaines": "~{count} sem."
+    },
+    "appliquer": "Appliquer",
+    "chargement": "Chargement...",
+    "erreurStatus": "Erreur {status}",
+    "erreurInconnue": "Erreur inconnue"
+  },
+  "stepsAriaLabel": "Etapes",
+  "errors": {
+    "loadingData": "Erreur lors du chargement des données.",
+    "unknown": "Erreur inconnue.",
+    "creationFailed": "Une erreur est survenue lors de la création.",
+    "networkError": "Une erreur réseau est survenue."
+  },
+  "ponteStatuts": {
+    "EN_COURS": "En cours",
+    "TERMINEE": "Terminée",
+    "ECHOUEE": "Échouée"
   }
 }

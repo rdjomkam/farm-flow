@@ -460,7 +460,7 @@ export default async function IngenieurClientDetailPage({
                       <div className="flex items-start justify-between gap-2 mb-1">
                         <div className="flex items-center gap-1.5 min-w-0">
                           {!note.isRead && (
-                            <span className="h-2 w-2 rounded-full bg-primary shrink-0" aria-label="Non lue" />
+                            <span className="h-2 w-2 rounded-full bg-primary shrink-0" aria-label={t("monitoring.unreadAriaLabel")} />
                           )}
                           <p className="text-sm font-medium">{note.titre}</p>
                         </div>
@@ -505,7 +505,7 @@ export default async function IngenieurClientDetailPage({
                   href={`/monitoring/${clientSiteId}/notes`}
                   className="text-sm font-medium text-primary hover:underline text-center py-2"
                 >
-                  Voir plus ({notesSerialized.length})
+                  {t("monitoring.seeMore", { count: notesSerialized.length })}
                 </Link>
               )}
             </div>

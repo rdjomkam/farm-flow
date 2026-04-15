@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import { CategorieCalibrage } from "@/types";
 import type { BacResponse, CreateCalibrageDTO } from "@/types";
@@ -60,6 +61,7 @@ export function CalibrageFormClient({
   bacs,
   onSuccess,
 }: CalibrageFormClientProps) {
+  const t = useTranslations("calibrage");
   const router = useRouter();
   const queryClient = useQueryClient();
   const calibrageService = useCalibrageService();
@@ -93,7 +95,7 @@ export function CalibrageFormClient({
 
   function validateSources(): boolean {
     if (selectedBacIds.length === 0) {
-      setSourceError("Selectionnez au moins un bac source.");
+      setSourceError(t("form.selectAtLeastOneSource"));
       return false;
     }
     if (totalSourcePoissons === 0) {

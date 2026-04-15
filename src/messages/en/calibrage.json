@@ -91,7 +91,10 @@
     }
   },
   "card": {
-    "modified": "Modified"
+    "modified": "Modified",
+    "title": "Calibration",
+    "groupe": "{count} group",
+    "groupes": "{count} groups"
   },
   "modifications": {
     "title": "Modification history",
@@ -119,6 +122,10 @@
     "bilanDetail": "{redistribues} redistributed + {morts} dead = {total} fish",
     "poissons": "{count} fish"
   },
+  "form": {
+    "selectAtLeastOneSource": "Select at least one source tank.",
+    "selectPlaceholder": "Select..."
+  },
   "modifierDialog": {
     "trigger": "Edit",
     "title": "Edit grading",
@@ -143,6 +150,7 @@
     "tailleMoyenne": "Average length (cm, optional)",
     "ajouterGroupe": "Add a group",
     "notes": "Notes (optional)",
+    "selectPlaceholder": "Select...",
     "annuler": "Cancel",
     "enregistrer": "Save changes",
     "erreurs": {

@@ -45,6 +45,10 @@
       "choosePlan": "Choose this plan",
       "unavailable": "Unavailable"
     },
+    "errors": {
+      "generic": "An error occurred.",
+      "serverUnreachable": "Unable to reach the server."
+    },
     "price": {
       "perMonth": "per month",
       "perQuarter": "per quarter",

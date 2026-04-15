@@ -127,6 +127,7 @@ function ponteBadgeClass(statut: string): string {
 
 export function GeniteurDetailClient({ geniteur, mode, permissions }: Props) {
   const t = useTranslations("reproduction.geniteurs");
+  const tPonteStatuts = useTranslations("reproduction.ponteStatuts");
   const router = useRouter();
   const { call } = useApi();
 
@@ -904,10 +905,10 @@ export function GeniteurDetailClient({ geniteur, mode, permissions }: Props) {
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${ponteBadgeClass(p.statut)}`}
                       >
                         {p.statut === StatutPonte.EN_COURS
-                          ? "En cours"
+                          ? tPonteStatuts("EN_COURS")
                           : p.statut === StatutPonte.TERMINEE
-                            ? "Terminée"
-                            : "Échouée"}
+                            ? tPonteStatuts("TERMINEE")
+                            : tPonteStatuts("ECHOUEE")}
                       </span>
                     </div>
                   </Link>
@@ -939,15 +940,16 @@ export function GeniteurDetailClient({ geniteur, mode, permissions }: Props) {
                 <div className="flex items-center gap-2 text-sm">
                   <Egg className="h-4 w-4 text-muted-foreground" />
                   <span>
-                    {totalPontes} ponte{totalPontes > 1 ? "s" : ""} enregistrée
-                    {totalPontes > 1 ? "s" : ""}
+                    {totalPontes > 1
+                      ? t("detail.pontesEnregistreesPlural", { count: totalPontes })
+                      : t("detail.pontesEnregistreesSingular", { count: totalPontes })}
                   </span>
                 </div>
                 <Link
                   href="/reproduction/pontes"
                   className="text-sm text-primary hover:underline w-fit"
                 >
-                  Voir toutes les pontes
+                  {t("detail.voirToutesPontes")}
                 </Link>
               </div>
             )}

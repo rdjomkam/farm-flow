@@ -12,16 +12,19 @@ interface ReplyItemProps {
   isClientView?: boolean;
 }
 
-function formatDate(date: Date | string): string {
+function formatDate(
+  date: Date | string,
+  t: (key: string, params?: Record<string, string>) => string
+): string {
   const d = typeof date === "string" ? new Date(date) : date;
   const now = new Date();
   const diff = now.getTime() - d.getTime();
   const dayMs = 86_400_000;
   if (diff < dayMs && d.getDate() === now.getDate()) {
-    return `Aujourd'hui a ${d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`;
+    return t("list.todayAt", { time: d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) });
   }
   if (diff < 2 * dayMs && d.getDate() === now.getDate() - 1) {
-    return `Hier a ${d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`;
+    return t("list.yesterdayAt", { time: d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) });
   }
   return d.toLocaleDateString("fr-FR", {
     day: "2-digit",
@@ -92,7 +95,7 @@ export function ReplyItem({ reply, isClientView = false }: ReplyItemProps) {
         ) : (
           <>
             <span className="text-xs font-medium text-foreground">
-              {reply.ingenieur?.name ?? (isFromClient ? "Client" : "Ingenieur")}
+              {reply.ingenieur?.name ?? (isFromClient ? t("fallbackNames.client") : t("fallbackNames.ingenieur"))}
             </span>
             {reply.visibility === VisibiliteNote.INTERNE ? (
               <Badge variant="default" className="flex items-center gap-0.5 text-xs">
@@ -108,7 +111,7 @@ export function ReplyItem({ reply, isClientView = false }: ReplyItemProps) {
           </>
         )}
         <span className="text-xs text-muted-foreground ml-auto">
-          {formatDate(reply.createdAt)}
+          {formatDate(reply.createdAt, t)}
         </span>
       </div>
 

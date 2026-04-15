@@ -35,7 +35,7 @@ export default async function BackofficeDashboardPage() {
       <div className="mb-6">
         <h1 className="text-xl font-bold text-foreground">{t("pages.dashboard.title")}</h1>
         <p className="text-sm text-muted-foreground">
-          KPIs consolides de toute la plateforme DKFarm
+          {t("pages.dashboard.description")}
         </p>
       </div>
       <AdminAnalyticsDashboard initialKPIs={initialKPIs} apiBase="/api/backoffice/analytics" />

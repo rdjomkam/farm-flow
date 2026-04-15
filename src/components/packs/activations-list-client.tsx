@@ -12,10 +12,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatutActivation } from "@/types";
 
-const statutLabels: Record<StatutActivation, string> = {
-  [StatutActivation.ACTIVE]: "Active",
-  [StatutActivation.EXPIREE]: "Expiree",
-  [StatutActivation.SUSPENDUE]: "Suspendue",
+const STATUT_LABEL_KEYS: Record<StatutActivation, `statutsActivation.${string}`> = {
+  [StatutActivation.ACTIVE]: "statutsActivation.ACTIVE",
+  [StatutActivation.EXPIREE]: "statutsActivation.EXPIREE",
+  [StatutActivation.SUSPENDUE]: "statutsActivation.SUSPENDUE",
 };
 
 const statutVariants: Record<StatutActivation, "en_cours" | "default" | "warning"> = {
@@ -98,7 +98,7 @@ export function ActivationsListClient({ activations }: Props) {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-mono font-semibold text-sm">{act.code}</span>
                           <Badge variant={statutVariants[act.statut as StatutActivation]}>
-                            {statutLabels[act.statut as StatutActivation]}
+                            {t(STATUT_LABEL_KEYS[act.statut as StatutActivation])}
                           </Badge>
                         </div>
                         <p className="font-medium text-sm mt-1">{act.clientSite.name}</p>

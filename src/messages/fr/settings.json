@@ -17,7 +17,8 @@
     "permissions": "permissions",
     "reglesDescription": "Gerez les regles qui declenchent automatiquement des activites sur vos vagues. Les regles globales DKFarm s'appliquent a tous les sites, les regles de ce site vous sont propres.",
     "placeholders": "Placeholders",
-    "alertesActives": "Alertes actives ({count})"
+    "alertesActives": "Alertes actives ({count})",
+    "placeholdersDescription": "Definissez des placeholders personnalises utilisables dans les templates de regles. Les placeholders sont globaux et disponibles pour tous les sites."
   },
   "triggers": {
     "CALENDRIER": "Calendrier",
@@ -106,6 +107,12 @@
       "deleteCondition": "Supprimer cette condition",
       "createRule": "Créer une règle"
     },
+    "placeholders": {
+      "available": "Placeholders disponibles",
+      "clickToInsert": "Cliquez pour inserer",
+      "showLess": "Afficher moins",
+      "showMore": "Voir tous ({count} de plus)"
+    },
     "phases": {
       "allPhases": "Toutes les phases"
     },
@@ -128,7 +135,20 @@
     "supprimer": "Supprimer",
     "resetFiredOnceDescription": "Cette regle se declenchera a nouveau au prochain cycle d'evaluation du moteur. Confirmez-vous cette action ?",
     "detail": {
+      "active": "Active",
       "inactive": "Inactive",
+      "typeActiviteLabel": "Type d'activité",
+      "actionLabel": "Action",
+      "declencheurLabel": "Déclencheur",
+      "perimetreLabel": "Périmètre",
+      "statutLabel": "Statut",
+      "firedOnceLabel": "firedOnce",
+      "scopeGlobal": "Globale DKFarm",
+      "scopeSite": "Ce site",
+      "deleteConfirmation": "Cette action est irréversible. La règle \"{nom}\" sera définitivement supprimée.",
+      "deleteNoActivities": "Cette règle n'a généré aucune activité. Elle peut être supprimée en toute sécurité.",
+      "deleteBlocked": "Suppression impossible : {count} activité(s) liée(s)",
+      "activitesRecentes": "Activités récentes ({count} au total)",
       "logic": "Logique :",
       "templateTitle": "Titre",
       "templateDescription": "Description",
@@ -167,7 +187,16 @@
       "priority": "Priorite {priority}/10",
       "threshold": "Seuil : {value}",
       "toggleActivate": "Activer la regle",
-      "toggleDeactivate": "Desactiver la regle"
+      "toggleDeactivate": "Desactiver la regle",
+      "scopeGlobal": "Globale DKFarm",
+      "scopeSite": "Ce site",
+      "firedOnceTitle": "Cette regle s'est deja declenchee une fois (one-shot). Elle ne se declenchera pas a nouveau tant que firedOnce n'est pas reinitialise.",
+      "firedOnceLabel": "Declenchee",
+      "firedOnceTooltip": "Cette regle s'est deja declenchee une fois (one-shot). Elle ne se declenchera pas a nouveau tant que firedOnce n'est pas reinitialise.",
+      "firedOnceBadge": "Declenchee",
+      "activeStatus": "Active",
+      "activitiesGenerated": "{count} activite{count, plural, one {} other {s}} generee{count, plural, one {} other {s}}",
+      "intervalDays": "Tous les {interval} jour{interval, plural, one {} other {s}}"
     },
     "form": {
       "activitySection": "Section activite",
@@ -206,7 +235,18 @@
       "placeholderEx300": "Ex: 300",
       "placeholderEx7": "Ex: 7",
       "notifBannerText": "Une alerte sera envoyee aux utilisateurs quand la regle se declenche. Configurez ici le contenu et la severite de l'alerte.",
-      "notifConfigBannerText": "Configurez le contenu de l'alerte qui sera envoyee aux utilisateurs."
+      "notifConfigBannerText": "Configurez le contenu de l'alerte qui sera envoyee aux utilisateurs.",
+      "placeholderTitreNotif": "Ex: Densite elevee — Bac {bac}",
+      "placeholderDescNotif": "Ex: Densite : {valeur} kg/m3 — Action requise",
+      "placeholderTitreActivite": "Ex: Biometrie semaine {semaine} — poids moyen {poids_moyen}g",
+      "placeholderDescActivite": "Description courte de l'activite...",
+      "placeholderInstructions": "1. Etape 1\n2. Etape 2\n3. Etape 3",
+      "placeholderNomInterne": "Ex: Alerte densite elevee",
+      "placeholderTitreTemplate": "Ex: Distribuer {quantite_calculee}kg de granule en {bac}",
+      "placeholderDescTemplate": "Ex: Poids moyen {poids_moyen}g — semaine {semaine} du cycle",
+      "placeholderNomRegle": "Ex: Alimentation renforcee phase finition",
+      "instructionsHint": "Format recommande : 1. Premiere etape\\n2. Deuxieme etape",
+      "activitySectionDesc": "Les templates d'activite (titre, description, instructions) sont configures dans la section suivante."
     }
   },
   "placeholders": {

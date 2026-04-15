@@ -22,6 +22,15 @@
       "traitees": "Traitees",
       "cloturees": "Cloturees",
       "rejetees": "Rejetees"
+    },
+    "card": {
+      "lignesSingular": "{count} ligne",
+      "lignesPlural": "{count} lignes",
+      "enRetard": "En retard — échéance le {date}",
+      "echeanceProche": "Échéance proche — {date}",
+      "limite": "Limite : {date}",
+      "montantEstime": "Montant estimé",
+      "montantReel": "Montant réel"
     }
   },
   "form": {

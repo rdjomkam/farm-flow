@@ -163,8 +163,11 @@ export function LotsGanttView({ lots, dateDebut, dateFin }: LotsGanttViewProps) 
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{lot.code}</p>
                   <p className="text-xs text-muted-foreground">
-                    {lot.phase} &middot; {lot.ageJours}j &middot;{" "}
-                    {lot.nombreActuel.toLocaleString("fr-FR")} poissons
+                    {t("lotMobileSubline", {
+                      phase: lot.phase,
+                      age: lot.ageJours,
+                      count: lot.nombreActuel.toLocaleString("fr-FR"),
+                    })}
                   </p>
                 </div>
               </div>
@@ -232,7 +235,12 @@ export function LotsGanttView({ lots, dateDebut, dateFin }: LotsGanttViewProps) 
                         left: `${leftPercent}%`,
                         width: `${widthPercent}%`,
                       }}
-                      title={`${lot.code} — ${lot.phase} — ${lot.ageJours}j — ${lot.nombreActuel.toLocaleString("fr-FR")} poissons`}
+                      title={t("lotTooltip", {
+                        code: lot.code,
+                        phase: lot.phase,
+                        age: lot.ageJours,
+                        count: lot.nombreActuel.toLocaleString("fr-FR"),
+                      })}
                     >
                       {/* Tooltip on hover */}
                       <div
@@ -245,8 +253,8 @@ export function LotsGanttView({ lots, dateDebut, dateFin }: LotsGanttViewProps) 
                       >
                         <span className="font-semibold">{lot.code}</span>
                         <span>{lot.phase}</span>
-                        <span>{lot.ageJours} jours</span>
-                        <span>{lot.nombreActuel.toLocaleString("fr-FR")} poissons</span>
+                        <span>{t("lotJours", { count: lot.ageJours })}</span>
+                        <span>{t("lotPoissons", { count: lot.nombreActuel.toLocaleString("fr-FR") })}</span>
                       </div>
                     </div>
                   </div>

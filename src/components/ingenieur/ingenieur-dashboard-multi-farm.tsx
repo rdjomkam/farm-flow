@@ -258,21 +258,21 @@ export async function IngenieurDashboardMultiFarm({
           <div className="flex items-center gap-2">
             <Wallet className="h-4 w-4 text-muted-foreground" />
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Mon portefeuille
+              {t("dashboard.monPortefeuille")}
             </h2>
           </div>
           <Link
             href="/mon-portefeuille"
             className="text-xs text-primary hover:underline font-medium flex items-center gap-0.5"
           >
-            Voir details <ChevronRight className="h-3 w-3" />
+            {t("dashboard.voirDetails")} <ChevronRight className="h-3 w-3" />
           </Link>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Card>
             <CardContent className="p-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-1">
-                Disponible
+                {t("dashboard.disponible")}
               </p>
               <p className="text-lg font-bold text-foreground">
                 {formatXAF(solde)}
@@ -282,7 +282,7 @@ export async function IngenieurDashboardMultiFarm({
           <Card>
             <CardContent className="p-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-1">
-                En attente
+                {t("dashboard.enAttente")}
               </p>
               <p className="text-lg font-bold text-warning">
                 {formatXAF(soldePending)}

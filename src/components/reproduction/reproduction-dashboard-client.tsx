@@ -138,6 +138,7 @@ function PhaseBreakdown({ data }: { data: LotsKpiData }) {
 
 export function ReproductionDashboardClient() {
   const t = useTranslations("reproduction.dashboard");
+  const tErrors = useTranslations("reproduction.errors");
 
   const [period, setPeriod] = useState<PeriodKey>("30j");
   const [kpis, setKpis] = useState<ReproductionKpis | null>(null);
@@ -169,7 +170,7 @@ export function ReproductionDashboardClient() {
       ]);
 
       if (!kpisRes.ok || !funnelRes.ok || !lotsRes.ok) {
-        throw new Error("Erreur lors du chargement des donnees.");
+        throw new Error(tErrors("loadingData"));
       }
 
       const [kpisJson, funnelJson, lotsJson] = await Promise.all([
@@ -182,7 +183,7 @@ export function ReproductionDashboardClient() {
       setFunnel(funnelJson.funnel as FunnelItem[]);
       setLotsData(lotsJson.data as LotsKpiData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue.");
+      setError(err instanceof Error ? err.message : tErrors("unknown"));
     } finally {
       setLoading(false);
     }

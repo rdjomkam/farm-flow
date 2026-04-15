@@ -53,6 +53,10 @@
     "noDataAvailable": "No data available"
   },
   "benchmarks": {
+    "EXCELLENT": "Excellent",
+    "BON": "Good",
+    "ACCEPTABLE": "Acceptable",
+    "MAUVAIS": "Poor",
     "fcr": {
       "label": "FCR",
       "full": "FCR (Feed Conversion Ratio)"
@@ -153,6 +157,13 @@
       "r2": "R\u00b2",
       "rmse": "RMSE"
     }
+  },
+  "errorSection": {
+    "fcrChart": "the FCR chart",
+    "perWaveChart": "the per-batch chart",
+    "weeklyFcrChart": "the weekly FCR chart",
+    "historyChart": "the history chart",
+    "growthChart": "the growth chart"
   },
   "bacs": {
     "noBacs": "No tanks assigned to this batch.",
@@ -335,6 +346,8 @@
     "gompertzParams": "Gompertz parameters",
     "gompertzFormule": "W(t) = W∞ × exp(−exp(−k × (t − ti)))",
     "interpolPoints": "Interpolation points",
+    "comptage": "Count",
+    "proportionnel": "Proportional",
     "loading": "Loading trace...",
     "error": "Failed to load trace. Retry.",
     "retry": "Retry",
@@ -345,6 +358,13 @@
     "periodeN": "Period {n}",
     "fcrVague": "Wave FCR",
     "aliment": "Feed",
-    "gain": "Gain"
+    "gain": "Gain",
+    "detailParBacEtPeriode": "Detail by tank and period",
+    "agregationGlobale": "Global aggregation",
+    "totalGainLabel": "Total gain",
+    "vaguesIncluses": "Included batches",
+    "vaguesIgnorees": "Excluded batches",
+    "paramsMinPoints": "Params: minPoints={count}",
+    "fcrFinalShort": "Final FCR"
   }
 }

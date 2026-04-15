@@ -16,7 +16,11 @@
     "vagueCode": "Batch {code}",
     "aujourdhui": "Today",
     "voirFicheComplete": "View full site profile",
-    "details": "Details"
+    "details": "Details",
+    "monPortefeuille": "My wallet",
+    "voirDetails": "View details",
+    "disponible": "Available",
+    "enAttente": "Pending"
   },
   "monitoring": {
     "noActiveAlerts": "No active alerts on client sites.",
@@ -58,7 +62,9 @@
     "tanks": "Tanks",
     "urgent": "Urgent",
     "client": "Client",
-    "allNotes": "All notes"
+    "allNotes": "All notes",
+    "unreadAriaLabel": "Unread",
+    "seeMore": "See more ({count})"
   },
   "stats": {
     "clientsActives": "Active clients",
@@ -73,7 +79,13 @@
   },
   "siteClientFallback": "Client site",
   "charts": {
-    "avgWeight": "Average weight"
+    "avgWeight": "Average weight",
+    "croissanceTitle": "{code} — Growth (average weight)",
+    "survieTitle": "{code} — Survival rate (%)",
+    "mortalitesTitle": "{code} — Mortalities per event",
+    "survieSeries": "Survival",
+    "mortsSeries": "Deaths",
+    "mortsTooltip": "{count} deaths"
   },
   "greeting": "Hello, {name}",
   "emptyStates": {

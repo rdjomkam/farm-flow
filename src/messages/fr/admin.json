@@ -34,6 +34,21 @@
       "BLOCKED": "Bloque",
       "ARCHIVED": "Archive"
     },
+    "gerer": "Gérer",
+    "actionsButton": "Actions",
+    "kpi": {
+      "total": "Total",
+      "actifs": "Actifs",
+      "suspendus": "Suspendus"
+    },
+    "table": {
+      "name": "Nom",
+      "status": "Statut",
+      "plan": "Plan",
+      "members": "Membres",
+      "modules": "Modules",
+      "actions": "Actions"
+    },
     "changeStatus": "Changer le statut",
     "tabs": {
       "all": "Tous ({count})",
@@ -55,6 +70,24 @@
         "email": "Email",
         "phone": "Telephone",
         "role": "Role"
+      },
+      "stats": {
+        "bacs": "Bacs",
+        "vagues": "Vagues",
+        "membres": "Membres"
+      },
+      "info": {
+        "id": "ID",
+        "nom": "Nom",
+        "adresse": "Adresse",
+        "oui": "Oui",
+        "non": "Non",
+        "plan": "Plan",
+        "type": "Type",
+        "statut": "Statut",
+        "fin": "Fin",
+        "suspendedAt": "Suspendu le",
+        "suspendedReason": "Raison suspension"
       }
     }
   },
@@ -97,10 +130,12 @@
   },
   "modulesEditor": {
     "updateError": "Erreur lors de la mise à jour des modules.",
-    "updateSuccess": "Modules mis à jour"
+    "updateSuccess": "Modules mis à jour",
+    "applyModules": "Appliquer les modules"
   },
   "buttons": {
-    "saving": "Enregistrement..."
+    "saving": "Enregistrement...",
+    "applyModules": "Appliquer les modules"
   },
   "modules": {
     "searchPlaceholder": "Rechercher par label, cle, categorie...",

@@ -202,6 +202,7 @@ interface AnalyticsDashboardClientProps {
 
 export function AnalyticsDashboardClient({ dashboard }: AnalyticsDashboardClientProps) {
   const t = useTranslations("analytics");
+  const tSections = useTranslations("errors.sections");
   const { meilleurBac, meilleurAliment, alertesPerformance, tendanceFCR, stats } = dashboard;
 
   return (
@@ -262,7 +263,7 @@ export function AnalyticsDashboardClient({ dashboard }: AnalyticsDashboardClient
 
           {/* Tendance FCR */}
           <KpiCard title={t("dashboard.tendanceFCR")}>
-            <ErrorBoundary section="le graphique FCR">
+            <ErrorBoundary section={tSections("fcrChart")}>
               <SparklineFCR data={tendanceFCR} />
             </ErrorBoundary>
             {tendanceFCR.length > 0 && (

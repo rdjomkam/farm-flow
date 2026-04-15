@@ -45,6 +45,103 @@
       "processed": "Processed"
     }
   },
+  "config": {
+    "verifierMaintenant": "Check now",
+    "sauvegarder": "Save",
+    "desactiver": "Disable",
+    "activer": "Enable",
+    "seuilValeurDefaut": "Threshold value",
+    "seuilPourcentageDefaut": "Threshold percentage (%)",
+    "placeholderSeuilValeur": "e.g.: 3",
+    "placeholderSeuilPourcentage": "e.g.: 5",
+    "ariaToggle": "{action} alert {label}",
+    "types": {
+      "MORTALITE_ELEVEE": {
+        "label": "High mortality",
+        "description": "Alert when mortality rate exceeds the defined threshold",
+        "seuilPourcentage": "Mortality threshold (%)"
+      },
+      "QUALITE_EAU": {
+        "label": "Water quality",
+        "description": "Alert when water quality parameters are out of range"
+      },
+      "STOCK_BAS": {
+        "label": "Low stock",
+        "description": "Alert when a product's stock falls below the alert threshold"
+      },
+      "RAPPEL_ALIMENTATION": {
+        "label": "Feeding reminder",
+        "description": "Reminder when no feeding record has been made for N days",
+        "seuilValeur": "Days without record"
+      },
+      "RAPPEL_BIOMETRIE": {
+        "label": "Biometry reminder",
+        "description": "Reminder when no biometry has been performed for N days",
+        "seuilValeur": "Days without biometry"
+      },
+      "PERSONNALISEE": {
+        "label": "Custom",
+        "description": "Custom alert with a manually defined threshold",
+        "seuilValeur": "Threshold value",
+        "seuilPourcentage": "Threshold percentage (%)"
+      },
+      "BESOIN_EN_RETARD": {
+        "label": "Overdue need",
+        "description": "Alert when a need list exceeds its deadline without being processed"
+      },
+      "DENSITE_ELEVEE": {
+        "label": "High density",
+        "description": "Alert when biomass per m³ exceeds the threshold for the system type",
+        "seuilValeur": "Density threshold (kg/m³)"
+      },
+      "RENOUVELLEMENT_EAU_INSUFFISANT": {
+        "label": "Insufficient water renewal",
+        "description": "Alert when the effective renewal rate is insufficient for current density",
+        "seuilValeur": "Minimum rate (%/day)"
+      },
+      "AUCUN_RELEVE_QUALITE_EAU": {
+        "label": "No water quality record",
+        "description": "Alert when no water quality record has been registered for N days at high density",
+        "seuilValeur": "Days without record"
+      },
+      "DENSITE_CRITIQUE_QUALITE_EAU": {
+        "label": "Critical density + degraded water quality",
+        "description": "Combined alert: high density AND critical water quality simultaneously"
+      },
+      "ABONNEMENT_RAPPEL_RENOUVELLEMENT": {
+        "label": "Subscription renewal reminder",
+        "description": "Automatic reminder when subscription expires in 14, 7, 3 or 1 day(s)"
+      },
+      "ABONNEMENT_ESSAI_EXPIRE": {
+        "label": "Free trial expired",
+        "description": "Notification sent when a free trial is about to expire"
+      },
+      "MALES_STOCK_BAS": {
+        "label": "Insufficient breeding males",
+        "description": "Alert when the number of active males is insufficient for planned spawnings",
+        "seuilValeur": "Minimum number of males"
+      },
+      "FEMELLE_SUREXPLOITEE": {
+        "label": "Overworked female",
+        "description": "Alert when a female is solicited too frequently (risk of exhaustion)",
+        "seuilValeur": "Minimum delay between spawnings (days)"
+      },
+      "CONSANGUINITE_RISQUE": {
+        "label": "Inbreeding risk",
+        "description": "Alert when estimated inbreeding coefficient between breeders exceeds threshold",
+        "seuilPourcentage": "Inbreeding coefficient (%)"
+      },
+      "INCUBATION_ECLOSION": {
+        "label": "Incubation/hatching monitoring",
+        "description": "Alert during the incubation or hatching phase of an egg batch"
+      },
+      "TAUX_SURVIE_CRITIQUE_LOT": {
+        "label": "Critical survival rate (batch)",
+        "description": "Alert when a fingerling batch survival rate falls below critical threshold",
+        "seuilPourcentage": "Critical survival threshold (%)"
+      }
+    }
+  },
   "card": {
     "nonLu": "Unread",
     "ctaLabels": {
@@ -62,6 +159,100 @@
       "VOIR_VAGUE": "View batch",
       "VOIR_STOCK": "View stock",
       "default": "View details"
+    }
+  },
+  "config": {
+    "checkNow": "Check now",
+    "save": "Save",
+    "toggleEnable": "Enable alert {name}",
+    "toggleDisable": "Disable alert {name}",
+    "defaultThresholdValue": "Threshold value",
+    "defaultThresholdPercentage": "Threshold percentage (%)",
+    "types": {
+      "MORTALITE_ELEVEE": {
+        "label": "High mortality",
+        "description": "Alert when mortality rate exceeds defined threshold",
+        "thresholdPercentage": "Mortality threshold (%)"
+      },
+      "QUALITE_EAU": {
+        "label": "Water quality",
+        "description": "Alert when water quality parameters are out of range"
+      },
+      "STOCK_BAS": {
+        "label": "Low stock",
+        "description": "Alert when product stock drops below warning level"
+      },
+      "RAPPEL_ALIMENTATION": {
+        "label": "Feeding reminder",
+        "description": "Reminder when no feeding record has been made for N days",
+        "thresholdValue": "Days without record"
+      },
+      "RAPPEL_BIOMETRIE": {
+        "label": "Biometry reminder",
+        "description": "Reminder when no biometry has been done for N days",
+        "thresholdValue": "Days without biometry"
+      },
+      "PERSONNALISEE": {
+        "label": "Custom",
+        "description": "Custom alert with manually defined threshold",
+        "thresholdValue": "Threshold value",
+        "thresholdPercentage": "Threshold percentage (%)"
+      },
+      "BESOIN_EN_RETARD": {
+        "label": "Overdue need",
+        "description": "Alert when a needs list exceeds its deadline without being processed"
+      },
+      "DENSITE_ELEVEE": {
+        "label": "High density",
+        "description": "Alert when biomass per m3 exceeds the threshold for the system type",
+        "thresholdValue": "Density threshold (kg/m3)"
+      },
+      "RENOUVELLEMENT_EAU_INSUFFISANT": {
+        "label": "Insufficient water renewal",
+        "description": "Alert when the effective renewal rate is too low for the current density",
+        "thresholdValue": "Minimum rate (%/day)"
+      },
+      "AUCUN_RELEVE_QUALITE_EAU": {
+        "label": "No water quality record",
+        "description": "Alert when no water quality record has been entered for N days at high density",
+        "thresholdValue": "Days without record"
+      },
+      "DENSITE_CRITIQUE_QUALITE_EAU": {
+        "label": "Critical density + poor water quality",
+        "description": "Combined alert: high density AND critical water quality simultaneously"
+      },
+      "ABONNEMENT_RAPPEL_RENOUVELLEMENT": {
+        "label": "Subscription renewal reminder",
+        "description": "Automatic reminder when subscription expires in 14, 7, 3, or 1 day(s)"
+      },
+      "ABONNEMENT_ESSAI_EXPIRE": {
+        "label": "Free trial expired",
+        "description": "Notification sent when a free trial is about to expire"
+      },
+      "MALES_STOCK_BAS": {
+        "label": "Insufficient male broodstock",
+        "description": "Alert when the number of active males is insufficient for planned spawnings",
+        "thresholdValue": "Minimum number of males"
+      },
+      "FEMELLE_SUREXPLOITEE": {
+        "label": "Overworked female",
+        "description": "Alert when a female is used too frequently (risk of exhaustion)",
+        "thresholdValue": "Minimum delay between spawnings (days)"
+      },
+      "CONSANGUINITE_RISQUE": {
+        "label": "Inbreeding risk",
+        "description": "Alert when the estimated inbreeding rate between broodstock exceeds the threshold",
+        "thresholdPercentage": "Inbreeding coefficient (%)"
+      },
+      "INCUBATION_ECLOSION": {
+        "label": "Incubation/hatching monitoring",
+        "description": "Alert during the incubation or hatching phase of an egg batch"
+      },
+      "TAUX_SURVIE_CRITIQUE_LOT": {
+        "label": "Critical survival rate (batch)",
+        "description": "Alert when the survival rate of a fingerling batch drops below the critical threshold",
+        "thresholdPercentage": "Critical survival threshold (%)"
+      }
     }
   }
 }

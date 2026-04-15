@@ -126,23 +126,23 @@ export function RegleCard({ regle, onToggle, isToggling, canManage, canManageGlo
             {isGlobal ? (
               <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary">
                 <Globe className="h-3 w-3" />
-                Globale DKFarm
+                {t("rules.card.scopeGlobal")}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground">
                 <Building2 className="h-3 w-3" />
-                Ce site
+                {t("rules.card.scopeSite")}
               </span>
             )}
 
             {/* firedOnce indicator */}
             {regle.firedOnce && (
               <span
-                title="Cette regle s'est deja declenchee une fois (one-shot). Elle ne se declenchera pas a nouveau tant que firedOnce n'est pas reinitialise."
+                title={t("rules.card.firedOnceTooltip")}
                 className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-accent-amber-muted text-accent-amber cursor-help"
               >
                 <Lock className="h-3 w-3" />
-                Declenchee
+                {t("rules.card.firedOnceBadge")}
               </span>
             )}
           </div>
@@ -182,7 +182,7 @@ export function RegleCard({ regle, onToggle, isToggling, canManage, canManageGlo
                 : "bg-muted text-muted-foreground",
             ].join(" ")}
           >
-            {regle.isActive ? "Active" : t("rules.detail.inactive")}
+            {regle.isActive ? t("rules.card.activeStatus") : t("rules.detail.inactive")}
           </span>
         )}
       </div>
@@ -192,9 +192,7 @@ export function RegleCard({ regle, onToggle, isToggling, canManage, canManageGlo
         {/* Activites count */}
         <span className="inline-flex items-center gap-1">
           <Activity className="h-3 w-3" />
-          {regle._count.activites} activite
-          {regle._count.activites !== 1 ? "s" : ""} generee
-          {regle._count.activites !== 1 ? "s" : ""}
+          {t("rules.card.activitiesGenerated", { count: regle._count.activites })}
         </span>
 
         {/* Priorite */}
@@ -203,8 +201,7 @@ export function RegleCard({ regle, onToggle, isToggling, canManage, canManageGlo
         {/* intervalleJours */}
         {showIntervalle && (
           <span>
-            Tous les {regle.intervalleJours} jour
-            {regle.intervalleJours !== 1 ? "s" : ""}
+            {t("rules.card.intervalDays", { interval: regle.intervalleJours ?? 0 })}
           </span>
         )}
 

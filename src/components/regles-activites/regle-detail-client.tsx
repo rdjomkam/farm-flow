@@ -337,14 +337,14 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           {regle.description && (
             <InfoRow label={t("rules.detail.description")}>{regle.description}</InfoRow>
           )}
-          <InfoRow label="Type d'activite">
+          <InfoRow label={t("rules.detail.typeActiviteLabel")}>
             <Badge variant="en_cours">
               {TYPE_ACTIVITE_LABELS[regle.typeActivite as keyof typeof TYPE_ACTIVITE_LABELS]
                 ? t(TYPE_ACTIVITE_LABELS[regle.typeActivite as keyof typeof TYPE_ACTIVITE_LABELS])
                 : regle.typeActivite}
             </Badge>
           </InfoRow>
-          <InfoRow label="Action">
+          <InfoRow label={t("rules.detail.actionLabel")}>
             <span className="inline-flex items-center gap-1.5">
               <Badge variant={
                 (regle.actionType as ActionRegle) === ActionRegle.NOTIFICATION ? "warning" :
@@ -366,38 +366,38 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
               )}
             </span>
           </InfoRow>
-          <InfoRow label="Declencheur">
+          <InfoRow label={t("rules.detail.declencheurLabel")}>
             <Badge variant="default">
               {TYPE_DECLENCHEUR_LABELS[regle.typeDeclencheur as keyof typeof TYPE_DECLENCHEUR_LABELS]
                 ? t(TYPE_DECLENCHEUR_LABELS[regle.typeDeclencheur as keyof typeof TYPE_DECLENCHEUR_LABELS])
                 : regle.typeDeclencheur}
             </Badge>
           </InfoRow>
-          <InfoRow label="Perimetre">
+          <InfoRow label={t("rules.detail.perimetreLabel")}>
             {isGlobal ? (
               <span className="inline-flex items-center gap-1 text-accent-blue">
                 <Globe className="h-3.5 w-3.5" />
-                Globale DKFarm
+                {t("rules.detail.scopeGlobal")}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 text-muted-foreground">
                 <Building2 className="h-3.5 w-3.5" />
-                Ce site
+                {t("rules.detail.scopeSite")}
               </span>
             )}
           </InfoRow>
-          <InfoRow label="Statut">
+          <InfoRow label={t("rules.detail.statutLabel")}>
             {regle.isActive ? (
               <span className="inline-flex items-center gap-1 text-success">
                 <Check className="h-3.5 w-3.5" />
-                Active
+                {t("rules.detail.active")}
               </span>
             ) : (
               <span className="text-muted-foreground">{t("rules.detail.inactive")}</span>
             )}
           </InfoRow>
           {showFiredOnce && (
-            <InfoRow label="firedOnce">
+            <InfoRow label={t("rules.detail.firedOnceLabel")}>
               <Badge variant="warning">{t("rules.firedOnceBadge")}</Badge>
             </InfoRow>
           )}
@@ -550,7 +550,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
 
         {/* Recent activities */}
         {regle.activites && regle.activites.length > 0 && (
-          <SectionCard title={`Activites recentes (${activitesCount} au total)`}>
+          <SectionCard title={t("rules.detail.activitesRecentes", { count: activitesCount })}>
             <div className="space-y-2">
               {regle.activites.map((a) => (
                 <div
@@ -628,13 +628,13 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                   <DialogHeader>
                     <DialogTitle>{t("rules.dialogs.deleteRule")}</DialogTitle>
                     <DialogDescription>
-                      Cette action est irreversible. La regle &quot;{regle.nom}&quot; sera definitivement supprimee.
+                      {t("rules.detail.deleteConfirmation", { nom: regle.nom })}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="flex items-start gap-2 rounded-lg bg-danger/10 border border-danger/20 p-3">
                     <AlertTriangle className="h-4 w-4 text-danger shrink-0 mt-0.5" />
                     <p className="text-sm text-danger">
-                      Cette regle n&apos;a genere aucune activite. Elle peut etre supprimee en toute securite.
+                      {t("rules.detail.deleteNoActivities")}
                     </p>
                   </div>
                   <DialogFooter>
@@ -656,7 +656,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
             {!isGlobal && activitesCount > 0 && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Info className="h-3.5 w-3.5 shrink-0" />
-                Suppression impossible : {activitesCount} activite{activitesCount > 1 ? "s" : ""} liee{activitesCount > 1 ? "s" : ""}
+                {t("rules.detail.deleteBlocked", { count: activitesCount })}
               </div>
             )}
           </div>
@@ -747,7 +747,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
             <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-4" />
           </div>
           <span className="text-sm font-medium text-foreground">
-            {form.isActive ? "Active" : t("rules.detail.inactive")}
+            {form.isActive ? t("rules.detail.active") : t("rules.detail.inactive")}
           </span>
         </label>
       </div>
@@ -1093,7 +1093,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
               required
               maxLength={200}
               rows={2}
-              placeholder="Ex: Densite elevee — Bac {bac}"
+              placeholder={t("rules.form.placeholderTitreNotif")}
               customPlaceholders={customPlaceholders}
             />
 
@@ -1105,7 +1105,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
               onChange={(v) => setForm((f) => ({ ...f, descriptionNotificationTemplate: v }))}
               maxLength={500}
               rows={3}
-              placeholder="Ex: Densite : {valeur} kg/m3 — Action requise"
+              placeholder={t("rules.form.placeholderDescNotif")}
               customPlaceholders={customPlaceholders}
             />
 
@@ -1148,7 +1148,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           required
           maxLength={200}
           rows={2}
-          placeholder="Ex: Biometrie semaine {semaine} — poids moyen {poids_moyen}g"
+          placeholder={t("rules.form.placeholderTitreActivite")}
           customPlaceholders={customPlaceholders}
         />
 
@@ -1159,7 +1159,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           onChange={(v) => setForm((f) => ({ ...f, descriptionTemplate: v }))}
           maxLength={500}
           rows={3}
-          placeholder="Description courte de l'activite..."
+          placeholder={t("rules.form.placeholderDescActivite")}
           customPlaceholders={customPlaceholders}
         />
 
@@ -1170,7 +1170,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           onChange={(v) => setForm((f) => ({ ...f, instructionsTemplate: v }))}
           maxLength={5000}
           rows={6}
-          placeholder={"1. Etape 1\n2. Etape 2\n3. Etape 3"}
+          placeholder={t("rules.form.placeholderInstructions")}
           customPlaceholders={customPlaceholders}
         />
       </div>
@@ -1184,7 +1184,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
           label={t("rules.detail.titreInterneLabel")}
           value={form.titreTemplate}
           onChange={(e) => setForm((f) => ({ ...f, titreTemplate: e.target.value }))}
-          placeholder="Ex: Alerte densite elevee"
+          placeholder={t("rules.form.placeholderNomInterne")}
           required
           maxLength={200}
         />
@@ -1228,7 +1228,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
               <DialogHeader>
                 <DialogTitle>{t("rules.dialogs.deleteRule")}</DialogTitle>
                 <DialogDescription>
-                  Cette action est irreversible. La regle &quot;{regle.nom}&quot; sera definitivement supprimee.
+                  {t("rules.detail.deleteConfirmation", { nom: regle.nom })}
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
@@ -1239,7 +1239,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                   variant="danger"
                   onClick={handleDelete}
                 >
-                  Supprimer
+                  {t("rules.supprimer")}
                 </Button>
               </DialogFooter>
             </DialogContent>
