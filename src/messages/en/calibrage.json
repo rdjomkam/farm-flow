@@ -90,6 +90,9 @@
       "TRES_GROS": "Extra large"
     }
   },
+  "list": {
+    "voirTout": "View all ({count})"
+  },
   "card": {
     "modified": "Modified",
     "title": "Calibration",
@@ -124,7 +127,16 @@
   },
   "form": {
     "selectAtLeastOneSource": "Select at least one source tank.",
-    "selectPlaceholder": "Select..."
+    "selectPlaceholder": "Select...",
+    "bacsVidesError": "The selected tanks contain no fish.",
+    "requis": "Required.",
+    "requisPositif": "Required (> 0).",
+    "stepLabels": {
+      "sources": "Sources",
+      "groupes": "Groups",
+      "mortalite": "Mortality",
+      "recapitulatif": "Summary"
+    }
   },
   "modifierDialog": {
     "trigger": "Edit",

@@ -212,7 +212,7 @@ function CourbeProjectionChart({ projection }: { projection: ProjectionVague }) 
                 return (
                   <div className="rounded-xl border border-border bg-card p-3 shadow-[var(--shadow-elevated)] text-xs">
                     <p className="font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                      Jour {label} — {dateStr}
+                      {tAnalytics("projections.tooltipDayLabel", { day: String(label), date: dateStr })}
                     </p>
                     {payload.map((p) => (
                       <div key={p.name} className="flex items-center gap-2 text-sm">
@@ -233,7 +233,7 @@ function CourbeProjectionChart({ projection }: { projection: ProjectionVague }) 
               x={joursEcoules}
               stroke="var(--muted-foreground)"
               strokeDasharray="4 4"
-              label={{ value: "Auj.", fontSize: 10, fill: "var(--muted-foreground)" }}
+              label={{ value: tAnalytics("projections.todayLabel"), fontSize: 10, fill: "var(--muted-foreground)" }}
             />
             {/* Ligne horizontale objectif */}
             <ReferenceLine

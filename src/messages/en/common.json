@@ -45,7 +45,8 @@
     "reference": "Reference",
     "yes": "Yes",
     "no": "No",
-    "administrator": "Administrator"
+    "administrator": "Administrator",
+    "statusAriaLabel": "Status: {value}"
   },
   "confirm": {
     "areYouSure": "Are you sure?",
@@ -147,7 +148,8 @@
   },
   "placeholders": {
     "min": "Min",
-    "max": "Max"
+    "max": "Max",
+    "example": "E.g.: {value}"
   },
   "pagination": {
     "previous": "Previous",

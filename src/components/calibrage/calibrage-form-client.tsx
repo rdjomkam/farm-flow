@@ -49,12 +49,12 @@ const INITIAL_GROUPES: GroupeForm[] = [
   },
 ];
 
-const STEP_LABELS = [
-  "Sources",
-  "Groupes",
-  "Mortalite",
-  "Recapitulatif",
-];
+const STEP_LABEL_KEYS = [
+  "form.stepLabels.sources",
+  "form.stepLabels.groupes",
+  "form.stepLabels.mortalite",
+  "form.stepLabels.recapitulatif",
+] as const;
 
 export function CalibrageFormClient({
   vagueId,
@@ -99,9 +99,7 @@ export function CalibrageFormClient({
       return false;
     }
     if (totalSourcePoissons === 0) {
-      setSourceError(
-        "Les bacs selectionnes ne contiennent aucun poisson."
-      );
+      setSourceError(t("form.bacsVidesError"));
       return false;
     }
     return true;
@@ -112,16 +110,16 @@ export function CalibrageFormClient({
     for (let i = 0; i < groupes.length; i++) {
       const g = groupes[i];
       if (!g.categorie) {
-        errors[`groupe_${i}_categorie`] = "Requis.";
+        errors[`groupe_${i}_categorie`] = t("form.requis");
       }
       if (!g.destinationBacId) {
-        errors[`groupe_${i}_destinationBacId`] = "Requis.";
+        errors[`groupe_${i}_destinationBacId`] = t("form.requis");
       }
       if (!g.nombrePoissons || Number(g.nombrePoissons) <= 0) {
-        errors[`groupe_${i}_nombrePoissons`] = "Requis (> 0).";
+        errors[`groupe_${i}_nombrePoissons`] = t("form.requisPositif");
       }
       if (!g.poidsMoyen || Number(g.poidsMoyen) <= 0) {
-        errors[`groupe_${i}_poidsMoyen`] = "Requis (> 0).";
+        errors[`groupe_${i}_poidsMoyen`] = t("form.requisPositif");
       }
     }
     setGroupeErrors(errors);
@@ -186,7 +184,7 @@ export function CalibrageFormClient({
     <div className="flex flex-col gap-4">
       {/* Indicateur d'etapes */}
       <div className="flex items-center gap-1">
-        {STEP_LABELS.map((label, i) => {
+        {STEP_LABEL_KEYS.map((labelKey, i) => {
           const stepNum = i + 1;
           const isActive = stepNum === step;
           const isDone = stepNum < step;
@@ -208,9 +206,9 @@ export function CalibrageFormClient({
                   isActive ? "font-semibold text-foreground" : "text-muted-foreground"
                 }`}
               >
-                {label}
+                {t(labelKey)}
               </span>
-              {i < STEP_LABELS.length - 1 && (
+              {i < STEP_LABEL_KEYS.length - 1 && (
                 <div
                   className={`flex-1 h-px mx-1 ${
                     isDone ? "bg-success" : "bg-border"

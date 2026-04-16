@@ -148,10 +148,24 @@
       "status": "Statut",
       "members": "Membres",
       "modules": "Modules",
+      "plan": "Plan",
       "actions": "Actions"
     },
     "detail": {
       "changeStatus": "Changer le statut",
+      "labels": {
+        "bacs": "Bacs",
+        "vagues": "Vagues",
+        "releves": "Releves",
+        "membres": "Membres",
+        "id": "ID",
+        "nom": "Nom",
+        "adresse": "Adresse",
+        "plan": "Plan",
+        "type": "Type",
+        "statut": "Statut",
+        "fin": "Fin"
+      },
       "tabs": {
         "summary": "Resume",
         "modules": "Modules",
@@ -174,7 +188,12 @@
     "metaTitle": "Exonerations — DKFarm Backoffice",
     "title": "Exonerations",
     "description": "Acces gratuits accordes manuellement (partenaires, ONG, projets pilotes).",
-    "newButton": "+ Nouvelle exoneration"
+    "newButton": "+ Nouvelle exoneration",
+    "kpi": {
+      "total": "Total",
+      "actives": "Actives",
+      "annuleesExpirees": "Annulees / Expirees"
+    }
   },
   "pages": {
     "modules": {

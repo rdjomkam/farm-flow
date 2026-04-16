@@ -614,7 +614,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
                       step={0.001}
                       value={quantite}
                       onChange={(e) => setQuantite(e.target.value)}
-                      placeholder="Ex: 10"
+                      placeholder={t("placeholderExample", { value: "10" })}
                       className="mt-1"
                     />
                   </div>

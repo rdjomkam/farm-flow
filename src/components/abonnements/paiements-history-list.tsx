@@ -82,7 +82,7 @@ export async function PaiementsHistoryList({ paiements }: PaiementsHistoryListPr
                 </span>
                 <Badge
                   variant={statutPaiementVariant(paiement.statut)}
-                  aria-label={`Statut : ${t(getStatutPaiementI18nKey(paiement.statut) as Parameters<typeof t>[0])}`}
+                  aria-label={t("admin.statusAriaLabel" as Parameters<typeof t>[0], { value: t(getStatutPaiementI18nKey(paiement.statut) as Parameters<typeof t>[0]) })}
                 >
                   {t(getStatutPaiementI18nKey(paiement.statut) as Parameters<typeof t>[0])}
                 </Badge>

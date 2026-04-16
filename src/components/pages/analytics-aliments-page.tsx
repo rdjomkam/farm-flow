@@ -143,7 +143,7 @@ export default async function AnalyticsAlimentsPage({
             <Button variant="outline" size="sm" asChild className="w-full">
               <Link href="/analytics/aliments/simulation">
                 <Calculator className="h-4 w-4" />
-                Simuler un changement d&apos;aliment
+                {tAnalytics("simulerChangementButton")}
               </Link>
             </Button>
           </div>

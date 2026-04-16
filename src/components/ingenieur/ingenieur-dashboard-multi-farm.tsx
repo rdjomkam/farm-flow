@@ -150,14 +150,14 @@ export async function IngenieurDashboardMultiFarm({
             <div className="flex items-center gap-2">
               <Bell className="h-4 w-4 text-danger" />
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Alertes actives ({alertesTriees.length})
+                {t("monitoring.alertesActives", { count: alertesTriees.length })}
               </h2>
             </div>
             <Link
               href="/monitoring"
               className="text-xs text-primary hover:underline font-medium flex items-center gap-0.5"
             >
-              Tout voir <ChevronRight className="h-3 w-3" />
+              {t("dashboard.toutVoir")} <ChevronRight className="h-3 w-3" />
             </Link>
           </div>
           <div className="flex flex-col gap-2">
@@ -230,7 +230,7 @@ export async function IngenieurDashboardMultiFarm({
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" />
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Fermes supervisees ({clientsResult.total})
+                {t("dashboard.fermesSuperviseesTitle", { count: clientsResult.total })}
               </h2>
             </div>
             {clientsResult.total > 6 && (
@@ -238,7 +238,7 @@ export async function IngenieurDashboardMultiFarm({
                 href="/monitoring"
                 className="text-xs text-primary hover:underline font-medium flex items-center gap-0.5"
               >
-                Tout voir <ChevronRight className="h-3 w-3" />
+                {t("dashboard.toutVoir")} <ChevronRight className="h-3 w-3" />
               </Link>
             )}
           </div>

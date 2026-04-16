@@ -118,28 +118,28 @@ function PeriodeBacRow({ periode }: { periode: FCRBacPeriode }) {
 
         {/* Row 2: Weight start → end */}
         <div className="grid grid-cols-2 gap-2">
-          <LabelValue label="Poids debut (Gompertz)" value={`${fmt(periode.poidsDebutG, 1)} g`} />
-          <LabelValue label="Poids fin (Gompertz)" value={`${fmt(periode.poidsFinG, 1)} g`} />
+          <LabelValue label={t("poidsDebutGompertz")} value={`${fmt(periode.poidsDebutG, 1)} g`} />
+          <LabelValue label={t("poidsFinGompertz")} value={`${fmt(periode.poidsFinG, 1)} g`} />
         </div>
 
         {/* Row 3: Population */}
         <div className="flex items-start gap-3">
           <div className="flex-1 grid grid-cols-3 gap-2">
-            <LabelValue label="Pop. debut" value={fmtInt(periode.populationDebut)} />
-            <LabelValue label="Pop. fin" value={fmtInt(periode.populationFin)} />
-            <LabelValue label="Pop. moyenne" value={fmtInt(periode.avgFishCount)} />
+            <LabelValue label={t("popDebut")} value={fmtInt(periode.populationDebut)} />
+            <LabelValue label={t("popFin")} value={fmtInt(periode.populationFin)} />
+            <LabelValue label={t("popMoyenne")} value={fmtInt(periode.avgFishCount)} />
           </div>
         </div>
         <div className="flex items-center gap-2">
           <PopMethodeBadge methode={periode.populationMethode} />
           <span className="text-[10px] text-muted-foreground">
-            {periode.joursExclusifs}j exclusifs{periode.joursMixtes > 0 ? ` + ${periode.joursMixtes}j mixtes` : ""}
+            {t("joursExclusifs", { count: periode.joursExclusifs })}{periode.joursMixtes > 0 ? ` + ${t("joursMixtes", { count: periode.joursMixtes })}` : ""}
           </span>
         </div>
 
         {/* Row 4: Gain per fish + biomass formula */}
         <div className="grid grid-cols-2 gap-2">
-          <LabelValue label="Gain / poisson" value={`${fmt(periode.gainParPoissonG, 2)} g`} />
+          <LabelValue label={t("gainParPoisson")} value={`${fmt(periode.gainParPoissonG, 2)} g`} />
           <LabelValue
             label={t("biomassGain")}
             value={`${fmt(periode.gainParPoissonG, 2)}g × ${fmtInt(periode.avgFishCount)} / 1000 = ${fmt(periode.gainBiomasseKg)}`}
@@ -173,24 +173,25 @@ function PeriodeBacRow({ periode }: { periode: FCRBacPeriode }) {
 // ---------------------------------------------------------------------------
 
 function GompertzSection({ gompertz }: { gompertz: FCRByFeedVague["gompertz"] }) {
+  const t = useTranslations("analytics.fcrTrace");
   if (!gompertz) return null;
 
   return (
     <div className="rounded-lg border border-border bg-muted/20 px-3 py-2 space-y-1.5">
       <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-wide font-semibold">
         <FlaskConical className="h-3 w-3" />
-        Modele Gompertz
+        {t("modeleGompertz")}
       </div>
       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-        <LabelValue label="W∞ (poids asymptotique)" value={`${fmt(gompertz.wInfinity, 0)} g`} />
-        <LabelValue label="K (taux croissance)" value={fmt(gompertz.k, 6)} mono />
-        <LabelValue label="ti (point inflexion)" value={`jour ${fmt(gompertz.ti, 1)}`} />
-        <LabelValue label="R² (qualite ajustement)" value={fmt(gompertz.r2, 4)} mono />
+        <LabelValue label={t("wInfinityLabel")} value={`${fmt(gompertz.wInfinity, 0)} g`} />
+        <LabelValue label={t("kLabel")} value={fmt(gompertz.k, 6)} mono />
+        <LabelValue label={t("tiLabel")} value={`jour ${fmt(gompertz.ti, 1)}`} />
+        <LabelValue label={t("r2QualiteLabel")} value={fmt(gompertz.r2, 4)} mono />
       </div>
       <div className="flex items-center gap-2 pt-0.5">
         <ConfidenceBadge level={gompertz.confidenceLevel} />
         <span className="text-[10px] text-muted-foreground">
-          {gompertz.biometrieCount} point{gompertz.biometrieCount !== 1 ? "s" : ""} biometrie
+          {gompertz.biometrieCount !== 1 ? t("biometriePointsPlural", { count: gompertz.biometrieCount }) : t("biometriePoints", { count: gompertz.biometrieCount })}
         </span>
       </div>
     </div>
@@ -209,11 +210,11 @@ function VagueSection({ vague, defaultOpen }: { vague: FCRByFeedVague; defaultOp
     <details className="group border border-border rounded-xl overflow-hidden" open={defaultOpen}>
       <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none list-none bg-muted/30 hover:bg-muted/50 transition-colors">
         <div className="min-w-0">
-          <p className="text-sm font-semibold truncate">Vague {vague.vagueCode}</p>
+          <p className="text-sm font-semibold truncate">{t("vagueCode", { code: vague.vagueCode })}</p>
           <p className="text-xs text-muted-foreground">
-            {fmtDate(vague.dateDebut)} → {vague.dateFin ? fmtDate(vague.dateFin) : "en cours"}
+            {fmtDate(vague.dateDebut)} → {vague.dateFin ? fmtDate(vague.dateFin) : t("enCours")}
             {" · "}
-            {periodesBac.length} periode{periodesBac.length !== 1 ? "s" : ""}
+            {periodesBac.length !== 1 ? t("periodeCountPlural", { count: periodesBac.length }) : t("periodeCount", { count: periodesBac.length })}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -243,7 +244,7 @@ function VagueSection({ vague, defaultOpen }: { vague: FCRByFeedVague; defaultOp
         {/* FCR formula for vague */}
         {vague.fcrVague !== null && (
           <div className="rounded-lg border border-border bg-muted/20 px-3 py-2 flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">ICA vague</span>
+            <span className="text-muted-foreground">{t("icaVague")}</span>
             <code className="font-mono font-semibold text-primary">
               {fmt(vague.totalAlimentKg)} / {fmt(vague.totalGainBiomasseKg)} = {fmt(vague.fcrVague)}
             </code>
@@ -343,14 +344,14 @@ function FCRByFeedContent({ data }: { data: FCRByFeedResult }) {
       {/* Summary bar */}
       <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 flex items-center justify-between">
         <div>
-          <p className="text-xs text-muted-foreground">Produit</p>
+          <p className="text-xs text-muted-foreground">{t("produitLabel")}</p>
           <p className="text-sm font-semibold">{data.produitNom}</p>
           {data.fournisseurNom && (
             <p className="text-xs text-muted-foreground">{data.fournisseurNom}</p>
           )}
         </div>
         <div className="text-right">
-          <p className="text-xs text-muted-foreground">ICA final</p>
+          <p className="text-xs text-muted-foreground">{t("icaFinal")}</p>
           <p className="text-2xl font-bold text-primary tabular-nums">
             {data.fcrGlobal !== null ? fmt(data.fcrGlobal) : "—"}
           </p>

@@ -20,7 +20,8 @@
     "monPortefeuille": "My wallet",
     "voirDetails": "View details",
     "disponible": "Available",
-    "enAttente": "Pending"
+    "enAttente": "Pending",
+    "fermesSuperviseesTitle": "Supervised farms ({count})"
   },
   "monitoring": {
     "noActiveAlerts": "No active alerts on client sites.",
@@ -64,7 +65,13 @@
     "client": "Client",
     "allNotes": "All notes",
     "unreadAriaLabel": "Unread",
-    "seeMore": "See more ({count})"
+    "seeMore": "See more ({count})",
+    "attentionRequise": "Attention required",
+    "actifDepuisLe": "Active since {date}",
+    "expireLe": "Expires on {date}",
+    "vaguesEnCoursTitle": "Batches in progress ({count})",
+    "graphiquesSuivi": "Tracking charts",
+    "notesRecentes": "Recent notes"
   },
   "stats": {
     "clientsActives": "Active clients",

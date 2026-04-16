@@ -27,8 +27,7 @@ export default async function SettingsAlertesPage() {
         </Header>
         <div className="p-4">
           <p className="text-sm text-muted-foreground mb-4">
-            Configurez les alertes automatiques pour votre site. Les alertes activees
-            genereront des notifications dans la cloche de notification.
+            {t("description")}
           </p>
           <AlertesConfigClient configs={JSON.parse(JSON.stringify(configs))} />
         </div>

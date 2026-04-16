@@ -244,7 +244,7 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
                             achatUnit: uniteAchat ? uniteLabel(uniteAchat) : t("produits.fields.contenanceUnit"),
                           })}
                           type="number"
-                          placeholder="Ex: 25"
+                          placeholder={t("placeholderExample", { value: "25" })}
                           value={contenance}
                           onChange={(e) => setContenance(e.target.value)}
                           disabled={contenanceDisabled}
@@ -286,7 +286,7 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
                         min="0"
                         max="100"
                         step="0.1"
-                        placeholder="Ex: 35"
+                        placeholder={t("placeholderExample", { value: "35" })}
                         value={tauxProteines}
                         onChange={(e) => setTauxProteines(e.target.value)}
                       />
@@ -296,7 +296,7 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
                         min="0"
                         max="100"
                         step="0.1"
-                        placeholder="Ex: 8"
+                        placeholder={t("placeholderExample", { value: "8" })}
                         value={tauxLipides}
                         onChange={(e) => setTauxLipides(e.target.value)}
                       />
@@ -306,7 +306,7 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
                         min="0"
                         max="100"
                         step="0.1"
-                        placeholder="Ex: 3"
+                        placeholder={t("placeholderExample", { value: "3" })}
                         value={tauxFibres}
                         onChange={(e) => setTauxFibres(e.target.value)}
                       />

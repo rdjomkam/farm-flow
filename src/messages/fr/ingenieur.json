@@ -20,7 +20,8 @@
     "monPortefeuille": "Mon portefeuille",
     "voirDetails": "Voir details",
     "disponible": "Disponible",
-    "enAttente": "En attente"
+    "enAttente": "En attente",
+    "fermesSuperviseesTitle": "Fermes supervisees ({count})"
   },
   "monitoring": {
     "noActiveAlerts": "Aucune alerte active sur les sites clients.",
@@ -64,7 +65,13 @@
     "client": "Client",
     "allNotes": "Toutes les notes",
     "unreadAriaLabel": "Non lue",
-    "seeMore": "Voir plus ({count})"
+    "seeMore": "Voir plus ({count})",
+    "attentionRequise": "Attention requise",
+    "actifDepuisLe": "Actif depuis le {date}",
+    "expireLe": "Expire le {date}",
+    "vaguesEnCoursTitle": "Vagues en cours ({count})",
+    "graphiquesSuivi": "Graphiques de suivi",
+    "notesRecentes": "Notes recentes"
   },
   "stats": {
     "clientsActives": "Clients actifs",

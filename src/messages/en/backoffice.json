@@ -148,10 +148,24 @@
       "status": "Status",
       "members": "Members",
       "modules": "Modules",
+      "plan": "Plan",
       "actions": "Actions"
     },
     "detail": {
       "changeStatus": "Change status",
+      "labels": {
+        "bacs": "Tanks",
+        "vagues": "Batches",
+        "releves": "Records",
+        "membres": "Members",
+        "id": "ID",
+        "nom": "Name",
+        "adresse": "Address",
+        "plan": "Plan",
+        "type": "Type",
+        "statut": "Status",
+        "fin": "End"
+      },
       "tabs": {
         "summary": "Summary",
         "modules": "Modules",
@@ -174,7 +188,12 @@
     "metaTitle": "Exemptions — DKFarm Backoffice",
     "title": "Exemptions",
     "description": "Free access granted manually (partners, NGOs, pilot projects).",
-    "newButton": "+ New exemption"
+    "newButton": "+ New exemption",
+    "kpi": {
+      "total": "Total",
+      "actives": "Active",
+      "annuleesExpirees": "Cancelled / Expired"
+    }
   },
   "pages": {
     "modules": {

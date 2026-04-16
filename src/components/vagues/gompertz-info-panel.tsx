@@ -237,7 +237,7 @@ function ComparaisonSection({ data }: { data: GompertzPanelData }) {
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b border-border text-muted-foreground text-left">
-              <th className="py-2 pr-4 font-medium">Date</th>
+              <th className="py-2 pr-4 font-medium">{t("gompertz.dateHeader")}</th>
               <th className="py-2 pr-4 font-medium">{t("gompertz.dayHeader")}</th>
               <th className="py-2 pr-4 font-medium text-right">{t("gompertz.actual")}</th>
               <th className="py-2 pr-4 font-medium text-right">{t("gompertz.predicted")}</th>

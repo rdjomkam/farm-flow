@@ -322,13 +322,14 @@ function SectionHeader({ title, open, onToggle, badge }: SectionHeaderProps) {
 // ---------------------------------------------------------------------------
 
 function TitrePreview({ titreTemplate }: { titreTemplate: string }) {
+  const t = useTranslations("settings");
   const resolved = resolvePreview(titreTemplate);
   if (!titreTemplate.trim()) return null;
 
   return (
     <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
       <p className="text-xs text-muted-foreground mb-1">
-        Apercu avec donnees exemple :
+        {t("rules.placeholders.apercuExemple")}
       </p>
       <p className="text-sm font-medium text-foreground">{resolved}</p>
     </div>
@@ -422,7 +423,7 @@ export function RegleFormClient() {
   const validate = useCallback((): boolean => {
     const errs: FormErrors = {};
 
-    if (!form.typeActivite) errs.typeActivite = "Requis";
+    if (!form.typeActivite) errs.typeActivite = t("rules.placeholders.requis");
 
     // At least one valid condition required
     const validConditions = form.conditions.filter(
@@ -587,7 +588,7 @@ export function RegleFormClient() {
               onValueChange={(v) => setField("typeActivite", v as TypeActivite)}
             >
               <SelectTrigger
-                label="Type d'activite"
+                label={t("rules.detail.typeActiviteLabel")}
                 error={errors.typeActivite}
               >
                 <SelectValue placeholder={t("rules.form.typeActivitePlaceholder")} />

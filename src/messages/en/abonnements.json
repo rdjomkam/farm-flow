@@ -187,6 +187,7 @@
     "subscribersPlural": "{count} subscribers",
     "engineerFarms": "{count} farms",
     "noSite": "No site",
+    "statusAriaLabel": "Status: {value}",
     "cancelSubscriptionDesc": "Cancel the subscription for {siteName}? This action is irreversible.",
     "cancelSubscriptionIrreversible": "This action is irreversible.",
     "toggleDeactivateSubscribersDesc": "The plan {nom} has {count} active subscriber{plural}. Existing subscriber{plural} will retain access until expiration, but no new subscriptions will be possible.",

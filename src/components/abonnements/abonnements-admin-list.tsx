@@ -214,7 +214,7 @@ export function AbonnementsAdminList({
                 <td className="px-4 py-3">
                   <Badge
                     variant={statutVariant(a.statut)}
-                    aria-label={`Statut : ${t(STATUT_ABONNEMENT_LABELS[a.statut])}`}
+                    aria-label={t("admin.statusAriaLabel", { value: t(STATUT_ABONNEMENT_LABELS[a.statut]) })}
                   >
                     {t(STATUT_ABONNEMENT_LABELS[a.statut])}
                   </Badge>
@@ -350,7 +350,7 @@ export function AbonnementsAdminList({
               </div>
               <Badge
                 variant={statutVariant(a.statut)}
-                aria-label={`Statut : ${t(STATUT_ABONNEMENT_LABELS[a.statut])}`}
+                aria-label={t("admin.statusAriaLabel", { value: t(STATUT_ABONNEMENT_LABELS[a.statut]) })}
               >
                 {t(STATUT_ABONNEMENT_LABELS[a.statut])}
               </Badge>

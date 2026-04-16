@@ -292,7 +292,7 @@ function Step1InjectionEdit({
           step="0.1"
           value={data.doseMgKg}
           onChange={(e) => onChange({ doseMgKg: e.target.value })}
-          placeholder="Ex: 4.0"
+          placeholder={t("placeholderExample", { value: "4.0" })}
         />
       </div>
 

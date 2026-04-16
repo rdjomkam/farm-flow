@@ -263,7 +263,7 @@ export function RemiseFormDialog({
               value={code}
               onChange={(e) => handleCodeChange(e.target.value)}
               disabled={isEditing}
-              placeholder="Ex: EARLY2026"
+              placeholder={t("placeholderExample", { value: "EARLY2026" })}
               className="w-full h-10 px-3 rounded-lg border border-border bg-background text-foreground font-mono text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <p className="text-xs text-muted-foreground mt-1">

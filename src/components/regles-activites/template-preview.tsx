@@ -111,7 +111,7 @@ export function TemplatePreview({
 
       {/* Avertissement donnees fictives */}
       <p className="text-xs text-muted-foreground italic">
-        Les valeurs affichees sont fictives. Les valeurs reelles sont calculees lors de la generation.
+        {t("rules.placeholders.fictifsWarning")}
       </p>
     </div>
   );

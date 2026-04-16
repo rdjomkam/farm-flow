@@ -3,7 +3,8 @@
     "title": "Notifications"
   },
   "settings": {
-    "pageTitle": "Alert configuration"
+    "pageTitle": "Alert configuration",
+    "description": "Configure automatic alerts for your site. Enabled alerts will generate notifications in the notification bell."
   },
   "severites": {
     "CRITIQUE": "Critical",

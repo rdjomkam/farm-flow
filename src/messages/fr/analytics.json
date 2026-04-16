@@ -122,12 +122,14 @@
     "currentWeight": "Poids actuel",
     "target": "Objectif",
     "inDays": "dans {count} j",
+    "todayLabel": "Auj.",
     "insufficientData": "Donnees insuffisantes",
     "estimatedHarvest": "Recolte estimee",
     "remainingFeed": "Aliment restant",
     "expectedRevenue": "Revenu attendu",
     "growthCurve": "Courbe de croissance",
     "chartLegend": "Ligne continue = mesures reelles · Pointilles = projection SGR actuel",
+    "tooltipDayLabel": "Jour {day} — {date}",
     "sgrHarvest": "Recolte SGR",
     "gompertzHarvest": "Recolte Gompertz",
     "harvestInDays": "~{count} j",
@@ -279,6 +281,7 @@
   "avertissement": {
     "taillesDifferentes": "Attention : les aliments comparés ont des tailles de granulé différentes. La comparaison du FCR peut être biaisée."
   },
+  "simulerChangementButton": "Simuler un changement d'aliment",
   "simulation": {
     "title": "Simulateur de changement d'aliment",
     "oldFeed": "Aliment actuel",
@@ -365,6 +368,28 @@
     "vaguesIncluses": "Vagues incluses",
     "vaguesIgnorees": "Vagues ignorees",
     "paramsMinPoints": "Params: minPoints={count}",
-    "fcrFinalShort": "ICA final"
+    "fcrFinalShort": "ICA final",
+    "poidsDebutGompertz": "Poids debut (Gompertz)",
+    "poidsFinGompertz": "Poids fin (Gompertz)",
+    "popDebut": "Pop. debut",
+    "popFin": "Pop. fin",
+    "popMoyenne": "Pop. moyenne",
+    "joursExclusifs": "{count}j exclusifs",
+    "joursMixtes": "{count}j mixtes",
+    "gainParPoisson": "Gain / poisson",
+    "modeleGompertz": "Modele Gompertz",
+    "wInfinityLabel": "W∞ (poids asymptotique)",
+    "kLabel": "K (taux croissance)",
+    "tiLabel": "ti (point inflexion)",
+    "r2QualiteLabel": "R² (qualite ajustement)",
+    "biometriePoints": "{count} point biometrie",
+    "biometriePointsPlural": "{count} points biometrie",
+    "vagueCode": "Vague {code}",
+    "enCours": "en cours",
+    "periodeCount": "{count} periode",
+    "periodeCountPlural": "{count} periodes",
+    "produitLabel": "Produit",
+    "icaFinal": "ICA final",
+    "icaVague": "ICA vague"
   }
 }

@@ -1,4 +1,5 @@
 {
+  "placeholderExample": "E.g.: {value}",
   "page": {
     "title": "Expenses",
     "newExpense": "New expense",

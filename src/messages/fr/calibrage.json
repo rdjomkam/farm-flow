@@ -90,6 +90,9 @@
       "TRES_GROS": "Tres gros"
     }
   },
+  "list": {
+    "voirTout": "Voir tout ({count})"
+  },
   "card": {
     "modified": "Modifie",
     "title": "Calibrage",
@@ -124,7 +127,16 @@
   },
   "form": {
     "selectAtLeastOneSource": "Selectionnez au moins un bac source.",
-    "selectPlaceholder": "Selectionnez..."
+    "selectPlaceholder": "Selectionnez...",
+    "bacsVidesError": "Les bacs selectionnes ne contiennent aucun poisson.",
+    "requis": "Requis.",
+    "requisPositif": "Requis (> 0).",
+    "stepLabels": {
+      "sources": "Sources",
+      "groupes": "Groupes",
+      "mortalite": "Mortalite",
+      "recapitulatif": "Recapitulatif"
+    }
   },
   "modifierDialog": {
     "trigger": "Modifier",
