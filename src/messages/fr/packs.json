@@ -123,6 +123,7 @@
     "uniteQuantiteLabel": "Quantite ({unite})",
     "quantiteLabelSansUnite": "Quantite"
   },
+  "placeholderExample": "Ex : {value}",
   "activer": {
     "successTitle": "Pack active avec succes !",
     "codeActivation": "Code d'activation :",

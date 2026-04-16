@@ -121,7 +121,9 @@
     "description": "Modifiez les parametres de l'activite.",
     "noteCompletion": "Note de completion",
     "annuler": "Annuler",
-    "enregistrer": "Enregistrer"
+    "enregistrer": "Enregistrer",
+    "labelTitre": "Titre",
+    "labelDescription": "Description"
   },
   "emptyState": {
     "noTasks": "Aucune tache en attente"

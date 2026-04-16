@@ -293,7 +293,7 @@ export function FeedingRecommendation({
     return (
       <div className="mt-3 rounded-lg border border-border/40 bg-muted/20 px-3 py-3">
         <p className="text-xs text-muted-foreground text-center">
-          Donnees insuffisantes pour calculer la recommandation d&apos;alimentation.
+          {tActivites("feeding.donneesInsuffisantes")}
         </p>
       </div>
     );
@@ -497,7 +497,7 @@ export function FeedingRecommendation({
             className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
           >
             <span>
-              Detail par bac ({parBac!.length} bacs)
+              {tActivites("feeding.detailParBac", { count: parBac!.length })}
             </span>
             {showParBac ? (
               <ChevronUp className="h-3.5 w-3.5" />

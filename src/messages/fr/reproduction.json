@@ -296,6 +296,7 @@
       "AUTRE": "Autre"
     },
     "form": {
+      "placeholderExample": "Ex : {value}",
       "title": "Nouvelle ponte",
       "steps": {
         "injection": "Injection",
@@ -577,6 +578,7 @@
       "REFORMAGE": "Reformage"
     },
     "form": {
+      "placeholderExample": "Ex : {value}",
       "title": "Nouveau lot d'alevins",
       "code": "Code du lot",
       "codePlaceholder": "Ex: LOT-2026-001",
@@ -739,6 +741,8 @@
     "evenements": "Événements à venir",
     "aucunEvenement": "Aucun événement pour cette période",
     "eventCount": "{count} evenement(s)",
+    "dayAriaLabel": "{day} — {count} evenement(s)",
+    "dayHeaders": "Lu,Ma,Me,Je,Ve,Sa,Di",
     "ponte": "Ponte",
     "eclosion": "Éclosion",
     "errorStatus": "Erreur {status}",
@@ -774,6 +778,7 @@
     "erreurStatus": "Erreur {status}",
     "erreurInconnue": "Erreur inconnue"
   },
+  "placeholderExample": "Ex : {value}",
   "stepsAriaLabel": "Etapes",
   "errors": {
     "loadingData": "Erreur lors du chargement des données.",

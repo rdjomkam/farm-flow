@@ -179,7 +179,7 @@ export default async function IngenieurClientDetailPage({
               {clientSummary.necessiteAttention && (
                 <Badge variant="annulee">
                   <AlertTriangle className="h-3 w-3 mr-1" />
-                  Attention requise
+                  {t("monitoring.attentionRequise")}
                 </Badge>
               )}
             </div>
@@ -194,16 +194,14 @@ export default async function IngenieurClientDetailPage({
             <div className="flex items-center gap-1">
               <Calendar className="h-3.5 w-3.5" />
               <span>
-                Actif depuis le{" "}
-                {new Date(clientSummary.dateActivation).toLocaleDateString("fr-FR")}
+                {t("monitoring.actifDepuisLe", { date: new Date(clientSummary.dateActivation).toLocaleDateString("fr-FR") })}
               </span>
             </div>
             {clientSummary.dateExpiration && (
               <div className="flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" />
                 <span>
-                  Expire le{" "}
-                  {new Date(clientSummary.dateExpiration).toLocaleDateString("fr-FR")}
+                  {t("monitoring.expireLe", { date: new Date(clientSummary.dateExpiration).toLocaleDateString("fr-FR") })}
                 </span>
               </div>
             )}
@@ -287,7 +285,7 @@ export default async function IngenieurClientDetailPage({
         {alertesSerialized.length > 0 && (
           <section>
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Alertes actives ({alertesSerialized.length})
+              {t("monitoring.alertesActives", { count: alertesSerialized.length })}
             </h2>
             <div className="flex flex-col gap-2">
               {alertesSerialized.map((alerte: (typeof alertesSerialized)[number]) => (
@@ -324,7 +322,7 @@ export default async function IngenieurClientDetailPage({
         {/* Vagues en cours — fiches */}
         <section>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-            Vagues en cours ({vaguesAvecStats.length})
+            {t("monitoring.vaguesEnCoursTitle", { count: vaguesAvecStats.length })}
           </h2>
 
           {vaguesAvecStats.length === 0 ? (
@@ -432,7 +430,7 @@ export default async function IngenieurClientDetailPage({
         {vaguesDetailSerialized.length > 0 && (
           <section>
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Graphiques de suivi
+              {t("monitoring.graphiquesSuivi")}
             </h2>
             <IngenieurClientCharts vagues={vaguesDetailSerialized} />
           </section>
@@ -442,7 +440,7 @@ export default async function IngenieurClientDetailPage({
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Notes recentes
+              {t("monitoring.notesRecentes")}
             </h2>
             <NouvelleNoteDialog
               siteId={session.activeSiteId}

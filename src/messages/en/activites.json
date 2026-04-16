@@ -106,7 +106,9 @@
     "completerReleve": "Complete with a record ({label})",
     "poidsProjete": "Projected weight",
     "poidsProjeteSGR": "Projected weight (SGR)",
-    "recommandationAlimentation": "Feeding recommendation"
+    "recommandationAlimentation": "Feeding recommendation",
+    "donneesInsuffisantes": "Insufficient data to calculate feeding recommendation.",
+    "detailParBac": "Detail per tank ({count} tanks)"
   },
   "placeholders": {
     "retourRegles": "Back to rules",

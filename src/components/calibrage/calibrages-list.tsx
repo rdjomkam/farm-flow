@@ -39,7 +39,7 @@ export function CalibragesList({ calibrages, limit, vagueId }: CalibragesListPro
           href={`/vagues/${vagueId}/calibrages`}
           className="flex items-center justify-center gap-1 rounded-md border border-border py-2 text-sm font-medium text-primary hover:bg-accent transition-colors"
         >
-          Voir tout ({calibrages.length})
+          {t("list.voirTout", { count: calibrages.length })}
           <ChevronRight className="h-4 w-4" />
         </Link>
       )}

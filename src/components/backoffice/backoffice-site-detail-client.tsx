@@ -126,16 +126,16 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
         <TabsContent value="resume">
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <StatCard label="Bacs" value={site.bacCount} icon={<Database className="h-5 w-5" />} />
-              <StatCard label="Vagues" value={site.vagueCount} icon={<Layers className="h-5 w-5" />} />
-              <StatCard label="Releves" value={site.releveCount} icon={<CheckCircle className="h-5 w-5" />} />
-              <StatCard label="Membres" value={site.memberCount} icon={<Users className="h-5 w-5" />} />
+              <StatCard label={t("sites.detail.labels.bacs")} value={site.bacCount} icon={<Database className="h-5 w-5" />} />
+              <StatCard label={t("sites.detail.labels.vagues")} value={site.vagueCount} icon={<Layers className="h-5 w-5" />} />
+              <StatCard label={t("sites.detail.labels.releves")} value={site.releveCount} icon={<CheckCircle className="h-5 w-5" />} />
+              <StatCard label={t("sites.detail.labels.membres")} value={site.memberCount} icon={<Users className="h-5 w-5" />} />
             </div>
 
             <div className="rounded-xl border border-border bg-card divide-y divide-border overflow-hidden">
-              <SiteInfoRow label="ID" value={site.id} mono />
-              <SiteInfoRow label="Nom" value={site.name} />
-              <SiteInfoRow label="Adresse" value={site.address ?? "—"} />
+              <SiteInfoRow label={t("sites.detail.labels.id")} value={site.id} mono />
+              <SiteInfoRow label={t("sites.detail.labels.nom")} value={site.name} />
+              <SiteInfoRow label={t("sites.detail.labels.adresse")} value={site.address ?? "—"} />
               <SiteInfoRow label={t("sites.supervise")} value={site.supervised ? tCommon("labels.yes") : tCommon("labels.no")} />
               <SiteInfoRow
                 label={t("sites.creeLe")}
@@ -246,9 +246,9 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
             </div>
           ) : (
             <div className="rounded-xl border border-border bg-card divide-y divide-border overflow-hidden">
-              <SiteInfoRow label="Plan" value={site.abonnementActif.planNom} />
-              <SiteInfoRow label="Type" value={site.abonnementActif.typePlan} />
-              <SiteInfoRow label="Statut" value={site.abonnementActif.statut} />
+              <SiteInfoRow label={t("sites.detail.labels.plan")} value={site.abonnementActif.planNom} />
+              <SiteInfoRow label={t("sites.detail.labels.type")} value={site.abonnementActif.typePlan} />
+              <SiteInfoRow label={t("sites.detail.labels.statut")} value={site.abonnementActif.statut} />
               <SiteInfoRow label={t("sites.periode")} value={site.abonnementActif.periode} />
               <SiteInfoRow
                 label={t("sites.debut")}
@@ -257,7 +257,7 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
                 })}
               />
               <SiteInfoRow
-                label="Fin"
+                label={t("sites.detail.labels.fin")}
                 value={new Date(site.abonnementActif.dateFin).toLocaleDateString("fr-FR", {
                   day: "2-digit", month: "long", year: "numeric",
                 })}

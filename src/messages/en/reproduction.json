@@ -196,6 +196,7 @@
       "ECHOUEE": "Failed"
     },
     "form": {
+      "placeholderExample": "E.g.: {value}",
       "title": "New spawning",
       "steps": {
         "injection": "Injection",
@@ -474,6 +475,9 @@
       "TRANSFERT_INTERNE": "Internal transfer",
       "REFORMAGE": "Culling"
     },
+    "form": {
+      "placeholderExample": "E.g.: {value}"
+    },
     "card": {
       "poissons": "fish",
       "survie": "survival",
@@ -612,6 +616,8 @@
     "evenements": "Upcoming events",
     "aucunEvenement": "No events for this period",
     "eventCount": "{count} event(s)",
+    "dayAriaLabel": "{day} — {count} event(s)",
+    "dayHeaders": "Mo,Tu,We,Th,Fr,Sa,Su",
     "ponte": "Spawning",
     "eclosion": "Hatching",
     "errorStatus": "Error {status}",
@@ -647,6 +653,7 @@
     "erreurStatus": "Error {status}",
     "erreurInconnue": "Unknown error"
   },
+  "placeholderExample": "E.g.: {value}",
   "stepsAriaLabel": "Steps",
   "errors": {
     "loadingData": "Error loading data.",

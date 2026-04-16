@@ -121,7 +121,9 @@
     "description": "Modify the activity parameters.",
     "noteCompletion": "Completion note",
     "annuler": "Cancel",
-    "enregistrer": "Save"
+    "enregistrer": "Save",
+    "labelTitre": "Title",
+    "labelDescription": "Description"
   },
   "emptyState": {
     "noTasks": "No pending tasks"

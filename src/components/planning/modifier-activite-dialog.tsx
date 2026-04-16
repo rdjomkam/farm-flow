@@ -169,7 +169,7 @@ export function ModifierActiviteDialog({
           <DialogBody className="flex flex-col gap-4">
           {/* Titre */}
           <Input
-            label="Titre"
+            label={t("modifierActivite.labelTitre")}
             value={titre}
             onChange={(e) => setTitre(e.target.value)}
             disabled={isLocked}
@@ -279,7 +279,7 @@ export function ModifierActiviteDialog({
 
           {/* Description */}
           <Textarea
-            label="Description"
+            label={t("modifierActivite.labelDescription")}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}

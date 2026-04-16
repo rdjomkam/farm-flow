@@ -82,19 +82,19 @@ export default async function BackofficeExonerationsPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Total
+            {t("kpi.total")}
           </p>
           <p className="mt-1 text-2xl font-bold text-foreground">{total}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Actives
+            {t("kpi.actives")}
           </p>
           <p className="mt-1 text-2xl font-bold text-success">{totalActives}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4 col-span-2 sm:col-span-1">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Annulees / Expirees
+            {t("kpi.annuleesExpirees")}
           </p>
           <p className="mt-1 text-2xl font-bold text-muted-foreground">
             {total - totalActives}

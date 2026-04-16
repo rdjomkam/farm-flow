@@ -1,4 +1,5 @@
 {
+  "placeholderExample": "Ex : {value}",
   "errorSection": {
     "recordForm": "le formulaire de relevé"
   },

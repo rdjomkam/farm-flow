@@ -270,7 +270,7 @@ export function BackofficeSitesList({ initialData }: BackofficeSitesListProps) {
                       <tr>
                         <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("table.name")}</th>
                         <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("table.status")}</th>
-                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Plan</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("table.plan")}</th>
                         <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("table.members")}</th>
                         <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("table.modules")}</th>
                         <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("creeLe")}</th>

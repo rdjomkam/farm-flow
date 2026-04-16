@@ -131,6 +131,7 @@ function MonthCalendar({
   month: number;
   events: CalendarEvent[];
 }) {
+  const t = useTranslations("reproduction.planning");
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
   const days = getDaysInMonth(year, month);
@@ -145,7 +146,7 @@ function MonthCalendar({
     return map;
   }, [events]);
 
-  const dayHeaders = ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"];
+  const dayHeaders = t("dayHeaders").split(",");
 
   return (
     <div className="w-full">
@@ -183,7 +184,7 @@ function MonthCalendar({
               onClick={() =>
                 setExpandedDay(isExpanded ? null : dayEvents.length > 0 ? key : null)
               }
-              aria-label={`${day.getDate()} ${dayEvents.length > 0 ? `— ${dayEvents.length} événement(s)` : ""}`}
+              aria-label={dayEvents.length > 0 ? t("dayAriaLabel", { day: day.getDate(), count: dayEvents.length }) : String(day.getDate())}
             >
               <span
                 className={`text-xs font-medium leading-none block mb-0.5 ${

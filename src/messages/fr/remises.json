@@ -1,4 +1,5 @@
 {
+  "placeholderExample": "Ex : {value}",
   "types": {
     "earlyAdopter": "Early Adopter",
     "seasonal": "Saisonniere",

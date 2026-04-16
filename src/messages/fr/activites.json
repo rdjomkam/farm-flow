@@ -106,7 +106,9 @@
     "completerReleve": "Terminer avec un releve ({label})",
     "poidsProjete": "Poids projeté",
     "poidsProjeteSGR": "Poids projeté (SGR)",
-    "recommandationAlimentation": "Recommandation d'alimentation"
+    "recommandationAlimentation": "Recommandation d'alimentation",
+    "donneesInsuffisantes": "Donnees insuffisantes pour calculer la recommandation d'alimentation.",
+    "detailParBac": "Detail par bac ({count} bacs)"
   },
   "placeholders": {
     "retourRegles": "Retour aux regles",

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -27,6 +28,7 @@ interface LanguageSwitcherProps {
 }
 
 export function LanguageSwitcher({ currentLocale = "fr", className }: LanguageSwitcherProps) {
+  const tLayout = useTranslations("layout.languageSwitcher");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [activeLocale, setActiveLocale] = useState<Locale>(currentLocale);
@@ -62,7 +64,7 @@ export function LanguageSwitcher({ currentLocale = "fr", className }: LanguageSw
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          aria-label={`Langue actuelle : ${current.label}. Cliquer pour changer`}
+          aria-label={tLayout("ariaLabel", { label: current.label })}
           disabled={isPending}
           className={cn(
             "flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium",

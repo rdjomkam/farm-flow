@@ -20,5 +20,8 @@
         "description": "Impossible de trouver la vague active. Reessayez."
       }
     }
+  },
+  "languageSwitcher": {
+    "ariaLabel": "Langue actuelle : {label}. Cliquer pour changer"
   }
 }

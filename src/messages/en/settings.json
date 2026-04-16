@@ -111,7 +111,14 @@
       "available": "Available placeholders",
       "clickToInsert": "Click to insert",
       "showLess": "Show less",
-      "showMore": "Show all ({count} more)"
+      "showMore": "Show all ({count} more)",
+      "systeme": "System placeholders:",
+      "personnalises": "Custom placeholders:",
+      "masquer": "Hide",
+      "nonReconnus": "Unrecognized placeholders: {keys} — they will be replaced by \"[data not available]\".",
+      "apercuExemple": "Preview with sample data:",
+      "fictifsWarning": "The displayed values are fictitious. Actual values are calculated during generation.",
+      "requis": "Required"
     },
     "phases": {
       "allPhases": "All phases"
