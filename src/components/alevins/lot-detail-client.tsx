@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { useAlevinsService } from "@/services";
 import { StatutLotAlevins, Permission } from "@/types";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 function statutBadgeClass(statut: string): string {
   if (statut === StatutLotAlevins.EN_INCUBATION)
@@ -79,6 +79,7 @@ interface Props {
 
 export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) {
   const t = useTranslations("reproduction");
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const alevinsService = useAlevinsService();
   const [editOpen, setEditOpen] = useState(false);
@@ -345,7 +346,7 @@ export function LotAlevinsDetailClient({ lot, bacsLibres, permissions }: Props) 
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t("alevins.lots.detail.dateTransfert")}</span>
               <span>
-                {new Date(lot.dateTransfert).toLocaleDateString("fr-FR")}
+                {new Date(lot.dateTransfert).toLocaleDateString(locale)}
               </span>
             </div>
           )}

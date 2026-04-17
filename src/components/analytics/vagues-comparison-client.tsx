@@ -349,6 +349,7 @@ function VaguesRadarChart({ vagues }: { vagues: IndicateursVagueComplet[] }) {
 
 function VaguesFinancialChart({ vagues }: { vagues: IndicateursVagueComplet[] }) {
   const tVagues = useTranslations("vagues");
+  const locale = useLocale();
   const data = [
     {
       name: tVagues("comparison.financialChart.coutAliment"),
@@ -379,7 +380,7 @@ function VaguesFinancialChart({ vagues }: { vagues: IndicateursVagueComplet[] })
             cursor={<ChartCrosshair />}
             formatter={(value) =>
               typeof value === "number"
-                ? `${new Intl.NumberFormat("fr-FR").format(value)} CFA`
+                ? `${new Intl.NumberFormat(locale).format(value)} CFA`
                 : `${value} CFA`
             }
           />

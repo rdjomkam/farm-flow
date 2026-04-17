@@ -17,7 +17,10 @@
     "feedNotFound": "Feed product not found.",
     "minTwoFeeds": "At least 2 feeds must have been used to run a simulation.",
     "comparer": "Compare →",
-    "changerVague": "Change batch"
+    "changerVague": "Change batch",
+    "waveSummaryBacs": "{count} tank",
+    "waveSummaryBacsPlural": "{count} tanks",
+    "waveSummaryAlevins": "{count} fingerlings"
   },
   "dashboard": {
     "indicateursCles": "Key indicators",

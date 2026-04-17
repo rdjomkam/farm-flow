@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import {
   ArrowLeft,
   ArrowRight,
@@ -138,12 +138,12 @@ interface Props {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatMontant(montant: number): string {
-  return new Intl.NumberFormat("fr-FR").format(Math.round(montant)) + " FCFA";
+function formatMontant(montant: number, locale: string): string {
+  return new Intl.NumberFormat(locale).format(Math.round(montant)) + " FCFA";
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("fr-FR", {
+function formatDate(dateStr: string, locale: string): string {
+  return new Date(dateStr).toLocaleDateString(locale, {
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -156,6 +156,7 @@ function formatDate(dateStr: string): string {
 
 export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Props) {
   const t = useTranslations("depenses");
+  const locale = useLocale();
   const router = useRouter();
   const depenseService = useDepenseService();
   const { toast } = useToast();
@@ -685,7 +686,7 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
               <Calendar className="h-3.5 w-3.5" />
               {t("detail.date")}
             </span>
-            <span>{formatDate(currentDepense.date)}</span>
+            <span>{formatDate(currentDepense.date, locale)}</span>
           </div>
 
           {/* Echeance */}
@@ -695,7 +696,7 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
                 <Calendar className="h-3.5 w-3.5" />
                 {t("detail.echeance")}
               </span>
-              <span>{formatDate(currentDepense.dateEcheance)}</span>
+              <span>{formatDate(currentDepense.dateEcheance, locale)}</span>
             </div>
           )}
 
@@ -767,7 +768,7 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
                 {t("detail.montantTotal")}
               </span>
               <span className="font-semibold">
-                {formatMontant(currentDepense.montantTotal)}
+                {formatMontant(currentDepense.montantTotal, locale)}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
@@ -775,7 +776,7 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
                 {t("detail.dejaPaye")}
               </span>
               <span className="font-semibold text-primary">
-                {formatMontant(currentDepense.montantPaye)}
+                {formatMontant(currentDepense.montantPaye, locale)}
               </span>
             </div>
             {statut !== StatutDepense.PAYEE && (
@@ -784,7 +785,7 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
                   {t("detail.resteAPayer")}
                 </span>
                 <span className="font-semibold text-warning">
-                  {formatMontant(resteAPayer)}
+                  {formatMontant(resteAPayer, locale)}
                 </span>
               </div>
             )}
@@ -795,7 +796,7 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
                     {t("detail.fraisSupp")}
                   </span>
                   <span className="font-semibold text-muted-foreground">
-                    {formatMontant(currentDepense.montantFraisSupp)}
+                    {formatMontant(currentDepense.montantFraisSupp, locale)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm border-t border-border pt-2">
@@ -803,7 +804,7 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
                     {t("detail.coutReelTotal")}
                   </span>
                   <span className="font-bold">
-                    {formatMontant(coutRealTotal)}
+                    {formatMontant(coutRealTotal, locale)}
                   </span>
                 </div>
               </>
@@ -850,7 +851,7 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
                   {/* Current amount display */}
                   <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2.5">
                     <span className="text-sm text-muted-foreground">{t("ajustement.montantActuel")}</span>
-                    <span className="text-sm font-semibold">{formatMontant(currentDepense.montantTotal)}</span>
+                    <span className="text-sm font-semibold">{formatMontant(currentDepense.montantTotal, locale)}</span>
                   </div>
 
                   {/* New amount */}
@@ -872,7 +873,7 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
                     {currentDepense.montantPaye > 0 && (
                       <p className="text-xs text-muted-foreground">
                         {t("ajustement.montantMinInfo", {
-                          min: formatMontant(currentDepense.montantPaye),
+                          min: formatMontant(currentDepense.montantPaye, locale),
                         })}
                       </p>
                     )}
@@ -943,7 +944,7 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
                                   {t(`motif.${f.motif}`)}
                                 </Badge>
                                 <span className="text-sm font-semibold">
-                                  {formatMontant(f.montant)}
+                                  {formatMontant(f.montant, locale)}
                                 </span>
                               </div>
                               {f.notes && (
@@ -952,7 +953,7 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
                                 </span>
                               )}
                               <span className="text-xs text-muted-foreground">
-                                {t("ajustement.paiementDu")} {formatDate(f.paiementDate)}
+                                {t("ajustement.paiementDu")} {formatDate(f.paiementDate, locale)}
                               </span>
                             </div>
                             <div className="flex gap-1 shrink-0">
@@ -1039,7 +1040,7 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
                       value={paiementMontant}
                       onChange={(e) => setPaiementMontant(e.target.value)}
                       placeholder={t("detail.montantMax", {
-                        max: formatMontant(resteAPayer),
+                        max: formatMontant(resteAPayer, locale),
                       })}
                     />
                   </div>
@@ -1182,13 +1183,13 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
                           {totalFrais > 0 && (
                             <div className="flex justify-between text-muted-foreground">
                               <span>{t("detail.totalFrais")}</span>
-                              <span>{formatMontant(totalFrais)}</span>
+                              <span>{formatMontant(totalFrais, locale)}</span>
                             </div>
                           )}
                           {totalPaiement > 0 && (
                             <div className="flex justify-between font-semibold">
                               <span>{t("detail.totalPaiement")}</span>
-                              <span>{formatMontant(totalPaiement)}</span>
+                              <span>{formatMontant(totalPaiement, locale)}</span>
                             </div>
                           )}
                         </div>
@@ -1337,10 +1338,10 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
                         {t(`categories.${l.categorieDepense}`)}
                       </span>
                     </div>
-                    <span className="font-medium shrink-0">{formatMontant(l.montantTotal)}</span>
+                    <span className="font-medium shrink-0">{formatMontant(l.montantTotal, locale)}</span>
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    {l.quantite} × {formatMontant(l.prixUnitaire)}
+                    {l.quantite} × {formatMontant(l.prixUnitaire, locale)}
                   </span>
                 </div>
               ))}
@@ -1372,7 +1373,7 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
                   <div className="flex items-start justify-between gap-2 text-sm">
                     <div className="flex flex-col gap-0.5">
                       <span className="font-semibold">
-                        {formatMontant(p.montant)}
+                        {formatMontant(p.montant, locale)}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {t(`modes.${p.mode as ModePaiement}`)} •{" "}
@@ -1386,7 +1387,7 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-xs text-muted-foreground">
-                        {formatDate(p.date)}
+                        {formatDate(p.date, locale)}
                       </span>
                       {canPay && (
                         <button
@@ -1411,7 +1412,7 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
                         >
                           <span>{t(`motif.${f.motif}`)}</span>
                           <span className="font-medium">
-                            + {formatMontant(f.montant)}
+                            + {formatMontant(f.montant, locale)}
                           </span>
                         </div>
                       ))}
@@ -1440,7 +1441,7 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
                 <SelectContent>
                   {paiements.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
-                      {formatMontant(p.montant)} — {formatDate(p.date)}
+                      {formatMontant(p.montant, locale)} — {formatDate(p.date, locale)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1677,13 +1678,13 @@ export function DepenseDetailClient({ depense, canEdit, canPay, canDelete }: Pro
                 >
                   <div className="flex items-start justify-between gap-2 text-xs text-muted-foreground">
                     <span>{a.user.name}</span>
-                    <span className="shrink-0">{formatDate(a.createdAt)}</span>
+                    <span className="shrink-0">{formatDate(a.createdAt, locale)}</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-sm font-medium flex-wrap">
-                    <span>{formatMontant(a.montantAvant)}</span>
+                    <span>{formatMontant(a.montantAvant, locale)}</span>
                     <ArrowRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     <span className="text-primary">
-                      {formatMontant(a.montantApres)}
+                      {formatMontant(a.montantApres, locale)}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">{a.raison}</p>

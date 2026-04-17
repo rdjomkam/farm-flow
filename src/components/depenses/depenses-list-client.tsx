@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import Link from "next/link";
 import { Plus, Receipt, Calendar, ArrowUpRight, RefreshCw, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -73,12 +73,12 @@ interface DepenseCardProps {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatMontant(montant: number): string {
-  return new Intl.NumberFormat("fr-FR").format(Math.round(montant)) + " FCFA";
+function formatMontant(montant: number, locale: string): string {
+  return new Intl.NumberFormat(locale).format(Math.round(montant)) + " FCFA";
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("fr-FR", {
+function formatDate(dateStr: string, locale: string): string {
+  return new Date(dateStr).toLocaleDateString(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -257,6 +257,7 @@ function DepensesList({ depenses, noExpensesLabel, statutLabels, categorieLabels
 
 function DepenseCard({ depense, statutLabels, categorieLabels }: DepenseCardProps) {
   const t = useTranslations("depenses");
+  const locale = useLocale();
   const statut = depense.statut as StatutDepense;
   const categorie = depense.categorieDepense as CategorieDepense;
   const resteAPayer = depense.montantTotal - depense.montantPaye;
@@ -297,14 +298,14 @@ function DepenseCard({ depense, statutLabels, categorieLabels }: DepenseCardProp
             <div>
               <span className="text-muted-foreground text-xs">{t("list.total")}</span>
               <span className="font-semibold">
-                {formatMontant(depense.montantTotal)}
+                {formatMontant(depense.montantTotal, locale)}
               </span>
             </div>
             {statut !== StatutDepense.PAYEE && (
               <div className="text-right">
                 <span className="text-muted-foreground text-xs">{t("list.remaining")}</span>
                 <span className="font-semibold text-warning">
-                  {formatMontant(resteAPayer)}
+                  {formatMontant(resteAPayer, locale)}
                 </span>
               </div>
             )}
@@ -329,7 +330,7 @@ function DepenseCard({ depense, statutLabels, categorieLabels }: DepenseCardProp
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
               <Calendar className="h-3.5 w-3.5" />
-              <span>{formatDate(depense.date)}</span>
+              <span>{formatDate(depense.date, locale)}</span>
             </div>
             <div className="flex items-center gap-2">
               {depense.commande && (

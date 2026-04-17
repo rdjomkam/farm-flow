@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import {
   ArrowLeft,
@@ -64,8 +64,8 @@ interface Props {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("fr-FR", {
+function formatDate(dateStr: string, locale: string) {
+  return new Date(dateStr).toLocaleDateString(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -574,6 +574,7 @@ function TemplateCard({
   onDelete: (id: string) => void;
 }) {
   const t = useTranslations("depenses");
+  const locale = useLocale();
   const frequence = template.frequence as FrequenceRecurrence;
   const categorie = template.categorieDepense as CategorieDepense;
 
@@ -607,7 +608,7 @@ function TemplateCard({
               {t("recurrentes.montantEstime")}{" "}
             </span>
             <span className="font-semibold">
-              {new Intl.NumberFormat("fr-FR").format(
+              {new Intl.NumberFormat(locale).format(
                 Math.round(template.montantEstime)
               )}{" "}
               FCFA
@@ -621,7 +622,7 @@ function TemplateCard({
         {template.derniereGeneration && (
           <p className="text-xs text-muted-foreground">
             {t("recurrentes.derniereGeneration")}{" "}
-            {formatDate(template.derniereGeneration)}
+            {formatDate(template.derniereGeneration, locale)}
           </p>
         )}
 

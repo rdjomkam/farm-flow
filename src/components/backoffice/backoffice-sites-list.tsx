@@ -13,7 +13,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Building2, Search, Users, Layers } from "lucide-react";
 import { SiteStatus } from "@/types";
 import type { AdminSiteSummary, AdminSitesListResponse } from "@/types";
@@ -41,6 +41,7 @@ function KpiCard({ label, value, color }: { label: string; value: number; color?
 
 function SiteCard({ site, onStatusChanged }: { site: AdminSiteSummary; onStatusChanged: () => void }) {
   const t = useTranslations("backoffice.sites");
+  const locale = useLocale();
   return (
     <div className="rounded-xl border border-border bg-card p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
@@ -64,7 +65,7 @@ function SiteCard({ site, onStatusChanged }: { site: AdminSiteSummary; onStatusC
         </span>
         <span>
           {t("creeLe")}{" "}
-          {new Date(site.createdAt).toLocaleDateString("fr-FR", {
+          {new Date(site.createdAt).toLocaleDateString(locale, {
             day: "2-digit",
             month: "short",
             year: "numeric",
@@ -114,6 +115,7 @@ function SiteTableRow({
   onStatusChanged: () => void;
 }) {
   const t = useTranslations("backoffice.sites");
+  const locale = useLocale();
   return (
     <tr className="border-b border-border hover:bg-muted/40 transition-colors">
       <td className="px-4 py-3">
@@ -133,7 +135,7 @@ function SiteTableRow({
       <td className="px-4 py-3 text-sm text-muted-foreground">{site.memberCount}</td>
       <td className="px-4 py-3 text-sm text-muted-foreground">{site.enabledModules.length}</td>
       <td className="px-4 py-3 text-sm text-muted-foreground">
-        {new Date(site.createdAt).toLocaleDateString("fr-FR", {
+        {new Date(site.createdAt).toLocaleDateString(locale, {
           day: "2-digit",
           month: "short",
           year: "numeric",

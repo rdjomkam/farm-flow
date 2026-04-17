@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { calculerDureeAssignation } from "@/lib/calculs";
@@ -17,6 +17,7 @@ interface BacAssignationHistoryProps {
  */
 export async function BacAssignationHistory({ assignations }: BacAssignationHistoryProps) {
   const t = await getTranslations("bacs.assignationHistory");
+  const locale = await getLocale();
 
   if (assignations.length === 0) {
     return (
@@ -34,13 +35,13 @@ export async function BacAssignationHistory({ assignations }: BacAssignationHist
         const active = a.dateFin === null;
         const duree = calculerDureeAssignation(a.dateAssignation, a.dateFin, now);
 
-        const dateDebut = a.dateAssignation.toLocaleDateString("fr-FR", {
+        const dateDebut = a.dateAssignation.toLocaleDateString(locale, {
           day: "2-digit",
           month: "short",
           year: "numeric",
         });
         const dateFin = a.dateFin
-          ? a.dateFin.toLocaleDateString("fr-FR", {
+          ? a.dateFin.toLocaleDateString(locale, {
               day: "2-digit",
               month: "short",
               year: "numeric",
@@ -66,8 +67,8 @@ export async function BacAssignationHistory({ assignations }: BacAssignationHist
                   {/* Plage de dates + durée */}
                   <p className="text-sm text-muted-foreground mt-0.5">
                     {dateDebut}
-                    {dateFin ? ` → ${dateFin}` : " → en cours"}
-                    <span className="ml-2 text-xs">({duree} j)</span>
+                    {dateFin ? ` → ${dateFin}` : ` → ${t("enCours")}`}
+                    <span className="ml-2 text-xs">({t("dureeJours", { count: duree })})</span>
                   </p>
 
                   {/* Effectifs initial → actuel */}
@@ -94,7 +95,7 @@ export async function BacAssignationHistory({ assignations }: BacAssignationHist
                 {/* Badge statut assignation */}
                 <div className="shrink-0">
                   {active ? (
-                    <Badge variant="success">Active</Badge>
+                    <Badge variant="success">{t("active")}</Badge>
                   ) : (
                     <Badge variant="default">{t("terminee")}</Badge>
                   )}

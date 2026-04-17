@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calculator } from "lucide-react";
 
@@ -20,6 +20,7 @@ const WEEKS_PER_PHASE = 3; // approximate weeks from ponte to fingerlings
 
 export function ProductionCalculator() {
   const t = useTranslations("reproduction.planning.calculateur");
+  const locale = useLocale();
 
   // Inputs
   const [cible, setCible] = useState<number>(1000);
@@ -128,7 +129,7 @@ export function ProductionCalculator() {
               />
               <p className="text-xs text-muted-foreground">
                 {(poidsOeufsParFemelle * OEUFS_PAR_GRAMME).toLocaleString(
-                  "fr-FR"
+                  locale
                 )}{" "}
                 {t("oeufsEstimesHint", { rate: OEUFS_PAR_GRAMME })}
               </p>
@@ -191,7 +192,7 @@ export function ProductionCalculator() {
                 <div className="mt-2 rounded-lg bg-muted/40 border border-border p-3 text-xs text-muted-foreground">
                   {t("baseLabel")}{" "}
                   <strong>
-                    {results.alevinsParPonte.toLocaleString("fr-FR")}
+                    {results.alevinsParPonte.toLocaleString(locale)}
                   </strong>{" "}
                   {t("alevinsParPonteLabel")}
                 </div>

@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { StatutPonte, Permission } from "@/types";
 import { useAlevinsService } from "@/services";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { formatNumber } from "@/lib/format";
 
 function statutBadgeClass(statut: string): string {
@@ -57,6 +57,7 @@ interface Props {
 
 export function PontesListClient({ pontes, femelles, males, permissions }: Props) {
   const t = useTranslations("reproduction");
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const alevinsService = useAlevinsService();
   const [tab, setTab] = useState("tous");
@@ -287,7 +288,7 @@ export function PontesListClient({ pontes, femelles, males, permissions }: Props
                         </div>
                         <div className="text-right text-xs text-muted-foreground shrink-0">
                           <p>
-                            {new Date(p.datePonte).toLocaleDateString("fr-FR")}
+                            {new Date(p.datePonte).toLocaleDateString(locale)}
                           </p>
                           <p className="mt-0.5">{p._count.lots} {t("alevins.pontes.card.lots")}</p>
                         </div>

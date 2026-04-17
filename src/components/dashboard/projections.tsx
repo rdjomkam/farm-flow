@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 import type { ProjectionVague } from "@/types";
 import { Role } from "@/types";
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { formatCFA, formatDate } from "@/lib/format";
 
 // Recharts chargés dynamiquement (SSR disabled)
@@ -168,6 +168,7 @@ function HarvestDateBlock({ projection }: { projection: ProjectionVague }) {
  */
 function CourbeProjectionChart({ projection }: { projection: ProjectionVague }) {
   const tAnalytics = useTranslations("analytics");
+  const locale = useLocale();
   const { courbeProjection, joursEcoules, poidsObjectif } = projection;
 
   if (courbeProjection.length === 0) {
@@ -204,7 +205,7 @@ function CourbeProjectionChart({ projection }: { projection: ProjectionVague }) 
                 dateDebut.setDate(dateDebut.getDate() - joursEcoules);
                 const pointDate = new Date(dateDebut);
                 pointDate.setDate(pointDate.getDate() + jour);
-                const dateStr = pointDate.toLocaleDateString("fr-FR", {
+                const dateStr = pointDate.toLocaleDateString(locale, {
                   day: "numeric",
                   month: "short",
                   year: "numeric",

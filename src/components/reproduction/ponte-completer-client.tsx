@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Check, ChevronRight, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -376,6 +376,7 @@ function Step2StrippingEdit({
   const tQualite = useTranslations("reproduction.pontes.qualiteOeufs");
   const tMethode = useTranslations("reproduction.pontes.methodeMale");
   const tMotilite = useTranslations("reproduction.pontes.motilite");
+  const locale = useLocale();
 
   const poidsVal = parseFloat(data.poidsOeufsPontesG);
   const nombreOeufsEstime =
@@ -404,7 +405,7 @@ function Step2StrippingEdit({
         hint={
           nombreOeufsEstime !== null
             ? t("nombreOeufsHint", {
-                count: nombreOeufsEstime.toLocaleString("fr-FR"),
+                count: nombreOeufsEstime.toLocaleString(locale),
               })
             : undefined
         }

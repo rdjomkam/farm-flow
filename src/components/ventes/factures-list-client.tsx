@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { formatNumber } from "@/lib/format";
 import { FileText, Filter } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -52,6 +52,7 @@ interface Props {
 
 export function FacturesListClient({ initialFactures, permissions: _permissions }: Props) {
   const t = useTranslations("ventes");
+  const locale = useLocale();
   const [filterStatut, setFilterStatut] = useState<string>("all");
 
   const { data: rawFactures = initialFactures } = useFacturesList(undefined, initialFactures);
@@ -119,7 +120,7 @@ export function FacturesListClient({ initialFactures, permissions: _permissions 
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">
-                        {new Date(f.dateEmission).toLocaleDateString("fr-FR")}
+                        {new Date(f.dateEmission).toLocaleDateString(locale)}
                       </span>
                       <span className="font-semibold">
                         {formatNumber(f.montantTotal)} F

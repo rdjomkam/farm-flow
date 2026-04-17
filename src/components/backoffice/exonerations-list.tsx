@@ -15,7 +15,7 @@
  */
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { ShieldOff, User, Building2, Calendar, AlertCircle } from "lucide-react";
 import { StatutAbonnement } from "@/types";
 import {
@@ -185,8 +185,8 @@ function isPermanent(dateFin: string | Date): boolean {
   return new Date(dateFin).getFullYear() >= DATE_PERMANENTE_YEAR;
 }
 
-function formatDate(d: string | Date): string {
-  return new Date(d).toLocaleDateString("fr-FR", {
+function formatDate(d: string | Date, locale: string): string {
+  return new Date(d).toLocaleDateString(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -201,6 +201,7 @@ function ExonerationCard({
   onRefresh: () => void;
 }) {
   const t = useTranslations("backoffice.exonerations.card");
+  const locale = useLocale();
   const isActif = (item.statut as string) === StatutAbonnement.ACTIF;
   const permanent = isPermanent(item.dateFin);
 
@@ -246,11 +247,11 @@ function ExonerationCard({
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
           <Calendar className="h-3.5 w-3.5" />
-          {t("dateDebut")} {formatDate(item.dateDebut)}
+          {t("dateDebut")} {formatDate(item.dateDebut, locale)}
         </span>
         <span className="flex items-center gap-1">
           <Calendar className="h-3.5 w-3.5" />
-          {permanent ? t("permanent") : `${t("dateFin")} ${formatDate(item.dateFin)}`}
+          {permanent ? t("permanent") : `${t("dateFin")} ${formatDate(item.dateFin, locale)}`}
         </span>
       </div>
 
@@ -285,6 +286,7 @@ function ExonerationTableRow({
   onRefresh: () => void;
 }) {
   const t = useTranslations("backoffice.exonerations.card");
+  const locale = useLocale();
   const isActif = (item.statut as string) === StatutAbonnement.ACTIF;
   const permanent = isPermanent(item.dateFin);
 
@@ -305,13 +307,13 @@ function ExonerationTableRow({
         </p>
       </td>
       <td className="px-4 py-3 text-sm text-muted-foreground">
-        {formatDate(item.dateDebut)}
+        {formatDate(item.dateDebut, locale)}
       </td>
       <td className="px-4 py-3 text-sm text-muted-foreground">
         {permanent ? (
           <span className="text-muted-foreground italic">{t("permanent")}</span>
         ) : (
-          formatDate(item.dateFin)
+          formatDate(item.dateFin, locale)
         )}
       </td>
       <td className="px-4 py-3">

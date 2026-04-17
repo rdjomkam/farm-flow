@@ -38,6 +38,9 @@
     "poissonsDepart": "{count} poissons au départ",
     "poissons": "{count} poissons",
     "terminee": "Terminée",
+    "active": "Active",
+    "enCours": "en cours",
+    "dureeJours": "{count} j",
     "empty": "Aucune assignation enregistrée pour ce bac."
   },
   "densite": {

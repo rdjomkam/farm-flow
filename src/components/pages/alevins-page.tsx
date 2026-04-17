@@ -15,7 +15,7 @@ import {
   StatutLotAlevins,
   Permission,
 } from "@/types";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 
 export default async function AlevinsPage() {
   const session = await getServerSession();
@@ -27,6 +27,7 @@ export default async function AlevinsPage() {
   if (!permissions) return <AccessDenied />;
 
   const t = await getTranslations("alevins");
+  const locale = await getLocale();
 
   const [reproducteursResult, pontesResult, lotsResult] = await Promise.all([
     getReproducteurs(session.activeSiteId),
@@ -91,7 +92,7 @@ export default async function AlevinsPage() {
     {
       label: t("kpis.dernierTransfert"),
       value: dernierTransfert
-        ? new Date(dernierTransfert.updatedAt).toLocaleDateString("fr-FR")
+        ? new Date(dernierTransfert.updatedAt).toLocaleDateString(locale)
         : "—",
       icon: ArrowRightLeft,
       color: "text-accent-purple",

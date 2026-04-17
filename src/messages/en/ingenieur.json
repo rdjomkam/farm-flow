@@ -71,7 +71,10 @@
     "expireLe": "Expires on {date}",
     "vaguesEnCoursTitle": "Batches in progress ({count})",
     "graphiquesSuivi": "Tracking charts",
-    "notesRecentes": "Recent notes"
+    "notesRecentes": "Recent notes",
+    "alevinsCount": "{count} fingerlings",
+    "bacCount": "{count} tank",
+    "bacsCount": "{count} tanks"
   },
   "stats": {
     "clientsActives": "Active clients",

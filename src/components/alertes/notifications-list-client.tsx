@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import {
   Bell,
@@ -110,21 +110,6 @@ const statutVariants: Record<StatutAlerte, "en_cours" | "terminee" | "default"> 
   [StatutAlerte.TRAITEE]: "terminee",
 };
 
-function formatDateRelative(date: Date | string): string {
-  const d = typeof date === "string" ? new Date(date) : date;
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffMinutes = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMinutes / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffMinutes < 1) return "A l'instant";
-  if (diffMinutes < 60) return `il y a ${diffMinutes} min`;
-  if (diffHours < 24) return `il y a ${diffHours}h`;
-  if (diffDays === 1) return "hier";
-  if (diffDays < 7) return `il y a ${diffDays} jours`;
-  return d.toLocaleDateString("fr-FR");
-}
 
 interface NotificationsListClientProps {
   notifications: Notification[];
@@ -134,8 +119,26 @@ export function NotificationsListClient({ notifications }: NotificationsListClie
   const router = useRouter();
   const queryClient = useQueryClient();
   const t = useTranslations("alertes");
+  const tDates = useTranslations("format.dates");
+  const locale = useLocale();
   const notificationService = useNotificationService();
   const [localNotifications, setLocalNotifications] = useState<Notification[]>(notifications);
+
+  function formatDateRelative(date: Date | string): string {
+    const d = typeof date === "string" ? new Date(date) : date;
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMinutes = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMinutes < 1) return tDates("justNow");
+    if (diffMinutes < 60) return tDates("minutesAgo", { count: diffMinutes });
+    if (diffHours < 24) return tDates("hoursAgo", { count: diffHours });
+    if (diffDays === 1) return tDates("yesterday");
+    if (diffDays < 7) return tDates("daysAgo", { count: diffDays });
+    return d.toLocaleDateString(locale);
+  }
 
   async function markAsRead(notification: Notification) {
     if (notification.statut !== StatutAlerte.ACTIVE) {

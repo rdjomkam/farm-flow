@@ -12,7 +12,7 @@ import {
   Clock,
   Plus,
 } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { Badge } from "@/components/ui/badge";
@@ -95,6 +95,7 @@ export default async function IngenieurClientDetailPage({
   });
 
   const t = await getTranslations("ingenieur");
+  const locale = await getLocale();
 
   // Serialiser pour les composants client
   const vaguesDetailSerialized = JSON.parse(JSON.stringify(vaguesDetail));
@@ -194,14 +195,14 @@ export default async function IngenieurClientDetailPage({
             <div className="flex items-center gap-1">
               <Calendar className="h-3.5 w-3.5" />
               <span>
-                {t("monitoring.actifDepuisLe", { date: new Date(clientSummary.dateActivation).toLocaleDateString("fr-FR") })}
+                {t("monitoring.actifDepuisLe", { date: new Date(clientSummary.dateActivation).toLocaleDateString(locale) })}
               </span>
             </div>
             {clientSummary.dateExpiration && (
               <div className="flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" />
                 <span>
-                  {t("monitoring.expireLe", { date: new Date(clientSummary.dateExpiration).toLocaleDateString("fr-FR") })}
+                  {t("monitoring.expireLe", { date: new Date(clientSummary.dateExpiration).toLocaleDateString(locale) })}
                 </span>
               </div>
             )}
@@ -301,7 +302,7 @@ export default async function IngenieurClientDetailPage({
                           {alerte.message}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {new Date(alerte.createdAt).toLocaleDateString("fr-FR")}
+                          {new Date(alerte.createdAt).toLocaleDateString(locale)}
                         </p>
                       </div>
                     </div>
@@ -347,7 +348,7 @@ export default async function IngenieurClientDetailPage({
                       <div>
                         <p className="text-xs text-muted-foreground">{t("monitoring.start")}</p>
                         <p className="text-sm font-medium">
-                          {new Date(vague.dateDebut).toLocaleDateString("fr-FR")}
+                          {new Date(vague.dateDebut).toLocaleDateString(locale)}
                         </p>
                       </div>
                       <div>
@@ -492,7 +493,7 @@ export default async function IngenieurClientDetailPage({
                         </ReactMarkdown>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(note.createdAt).toLocaleDateString("fr-FR")}
+                        {new Date(note.createdAt).toLocaleDateString(locale)}
                       </p>
                     </CardContent>
                   </Card>

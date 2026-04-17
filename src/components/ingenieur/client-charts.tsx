@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import dynamic from "next/dynamic";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartTooltip, ChartCrosshair } from "@/components/ui/chart-tooltip";
 import { TypeReleve } from "@/types";
@@ -160,30 +160,17 @@ function buildSurvieData(vague: VagueAvecReleves) {
 // Tooltip helpers — use date from payload for label
 // ---------------------------------------------------------------------------
 
-const dateFormat = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" });
-
-function formatTooltipLabel(label: string, payload?: Array<{ payload?: Record<string, unknown> }>) {
-  const dateStr = payload?.[0]?.payload?.date
-    ? dateFormat.format(new Date(payload[0].payload.date as string))
-    : "";
-  return dateStr ? `${label} — ${dateStr}` : String(label);
+function makeFormatTooltipLabel(locale: string) {
+  const dateFormat = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric" });
+  return function formatTooltipLabel(label: string, payload?: Array<{ payload?: Record<string, unknown> }>) {
+    const dateStr = payload?.[0]?.payload?.date
+      ? dateFormat.format(new Date(payload[0].payload.date as string))
+      : "";
+    return dateStr ? `${label} — ${dateStr}` : String(label);
+  };
 }
 
-const tooltipCroissance = (
-  <ChartTooltip
-    labelFormatter={formatTooltipLabel}
-    valueFormatter={(v) => `${v} g`}
-  />
-);
-
-const tooltipSurvie = (
-  <ChartTooltip
-    labelFormatter={formatTooltipLabel}
-    valueFormatter={(v) => `${v}%`}
-  />
-);
-
-function makeTooltipMortalite(format: (count: number) => string) {
+function makeTooltipMortalite(format: (count: number) => string, formatTooltipLabel: (label: string, payload?: Array<{ payload?: Record<string, unknown> }>) => string) {
   return (
     <ChartTooltip
       labelFormatter={formatTooltipLabel}
@@ -200,8 +187,23 @@ const VagueCharts = memo(function VagueCharts({ vague }: { vague: VagueAvecRelev
   const t = useTranslations("ingenieur.emptyStates");
   const tIngenieur = useTranslations("ingenieur");
   const tCharts = useTranslations("ingenieur.charts");
+  const locale = useLocale();
+  const formatTooltipLabel = makeFormatTooltipLabel(locale);
+  const tooltipCroissance = (
+    <ChartTooltip
+      labelFormatter={formatTooltipLabel}
+      valueFormatter={(v) => `${v} g`}
+    />
+  );
+  const tooltipSurvie = (
+    <ChartTooltip
+      labelFormatter={formatTooltipLabel}
+      valueFormatter={(v) => `${v}%`}
+    />
+  );
   const tooltipMortalite = makeTooltipMortalite((count) =>
-    tCharts("mortsTooltip", { count })
+    tCharts("mortsTooltip", { count }),
+    formatTooltipLabel
   );
   const croissanceData = buildCroissanceData(vague);
   const mortaliteData = buildMortaliteData(vague);

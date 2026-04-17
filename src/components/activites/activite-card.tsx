@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import {
   Utensils,
   Scale,
@@ -117,6 +117,7 @@ export interface ActiviteCardProps {
 export function ActiviteCard({ activite, permissions }: ActiviteCardProps) {
   const t = useTranslations("activites");
   const tPlanning = useTranslations("planning");
+  const locale = useLocale();
 
   const priorite = activite.priorite ?? 1;
   const config = getPrioriteConfig(priorite);
@@ -227,7 +228,7 @@ export function ActiviteCard({ activite, permissions }: ActiviteCardProps) {
           {/* Date */}
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <Clock className="h-3 w-3" />
-            {new Date(activite.dateDebut).toLocaleDateString("fr-FR", {
+            {new Date(activite.dateDebut).toLocaleDateString(locale, {
               weekday: "short",
               day: "numeric",
               month: "short",

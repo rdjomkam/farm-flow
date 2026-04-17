@@ -15,7 +15,7 @@
  */
 
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { WrenchIcon } from "lucide-react";
 import Link from "next/link";
 import { checkBackofficeAccess } from "@/lib/auth/backoffice";
@@ -52,9 +52,9 @@ async function getMaintenanceStatus(): Promise<MaintenanceStatusResponse> {
   }
 }
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, locale: string): string {
   try {
-    return new Intl.DateTimeFormat("fr-FR", {
+    return new Intl.DateTimeFormat(locale, {
       dateStyle: "long",
       timeStyle: "short",
     }).format(new Date(iso));
@@ -65,6 +65,7 @@ function formatDate(iso: string): string {
 
 export default async function MaintenancePage() {
   const t = await getTranslations("maintenance");
+  const locale = await getLocale();
   const [status, session] = await Promise.all([
     getMaintenanceStatus(),
     checkBackofficeAccess(),
@@ -91,7 +92,7 @@ export default async function MaintenancePage() {
       {status.estimatedEnd && (
         <div className="mb-6 rounded-lg border border-border bg-card px-5 py-3 text-sm text-muted-foreground">
           <span className="font-medium text-foreground">{t("estimatedEnd")} : </span>
-          {formatDate(status.estimatedEnd)}
+          {formatDate(status.estimatedEnd, locale)}
         </div>
       )}
 

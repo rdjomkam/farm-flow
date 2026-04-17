@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { MouvementExpirable, MouvementExpirableSoon } from "@/lib/queries/analytics";
 
@@ -19,6 +19,7 @@ interface AlerteDLCProps {
  */
 export function AlerteDLC({ expires, expiringSoon }: AlerteDLCProps) {
   const tAnalytics = useTranslations("analytics");
+  const locale = useLocale();
 
   const aucunAlerte = expires.length === 0 && expiringSoon.length === 0;
 
@@ -51,7 +52,7 @@ export function AlerteDLC({ expires, expiringSoon }: AlerteDLCProps) {
                   </span>
                 </div>
                 <span className="inline-flex items-center rounded-full bg-destructive px-2 py-0.5 text-xs font-semibold text-destructive-foreground">
-                  {tAnalytics("dlc.expire")} — {new Date(m.datePeremption).toLocaleDateString("fr-FR")}
+                  {tAnalytics("dlc.expire")} — {new Date(m.datePeremption).toLocaleDateString(locale)}
                 </span>
               </div>
             ))}

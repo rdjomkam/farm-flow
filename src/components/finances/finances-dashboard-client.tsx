@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { TrendingUp, TrendingDown, DollarSign, AlertCircle, Receipt } from "lucide-react";
 
 // Lazy loading Recharts — ssr: false obligatoire (no SSR, window/document deps)
@@ -62,18 +62,18 @@ import type {
 } from "@/lib/queries/finances";
 
 // FCFA number formatter
-function formatFCFA(amount: number): string {
-  return new Intl.NumberFormat("fr-FR").format(Math.round(amount)) + " FCFA";
+function formatFCFA(amount: number, locale: string): string {
+  return new Intl.NumberFormat(locale).format(Math.round(amount)) + " FCFA";
 }
 
-function formatCompact(amount: number): string {
+function formatCompact(amount: number, locale: string): string {
   if (Math.abs(amount) >= 1_000_000) {
     return (amount / 1_000_000).toFixed(1) + " M FCFA";
   }
   if (Math.abs(amount) >= 1_000) {
     return (amount / 1_000).toFixed(0) + " k FCFA";
   }
-  return new Intl.NumberFormat("fr-FR").format(Math.round(amount)) + " FCFA";
+  return new Intl.NumberFormat(locale).format(Math.round(amount)) + " FCFA";
 }
 
 import { KPICard } from "@/components/ui/kpi-card";
@@ -93,6 +93,7 @@ export function FinancesDashboardClient({
 }: FinancesDashboardClientProps) {
   const t = useTranslations("ventes");
   const tSections = useTranslations("errors.sections");
+  const locale = useLocale();
 
   // Format evolution data for Recharts
   const evolutionData = evolution.evolution.map((m) => ({
@@ -138,7 +139,7 @@ export function FinancesDashboardClient({
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KPICard
           title={t("finances.kpis.revenusTotal")}
-          value={formatCompact(resume.revenus)}
+          value={formatCompact(resume.revenus, locale)}
           subtitle={t("finances.kpis.revenusSub", { count: resume.nombreVentes })}
           icon={TrendingUp}
           iconColor="text-success"
@@ -146,15 +147,15 @@ export function FinancesDashboardClient({
         />
         <KPICard
           title={t("finances.kpis.coutsTotal")}
-          value={formatCompact(resume.coutsTotaux)}
-          subtitle={t("finances.kpis.coutsSub", { montant: formatCompact(resume.coutsAliments) })}
+          value={formatCompact(resume.coutsTotaux, locale)}
+          subtitle={t("finances.kpis.coutsSub", { montant: formatCompact(resume.coutsAliments, locale) })}
           icon={TrendingDown}
           iconColor="text-danger"
           iconBgColor="bg-danger/10"
         />
         <KPICard
           title={t("finances.kpis.margeBrute")}
-          value={formatCompact(resume.margeBrute)}
+          value={formatCompact(resume.margeBrute, locale)}
           subtitle={resume.tauxMarge !== null
             ? t("finances.kpis.margeSub", { taux: resume.tauxMarge.toFixed(1) })
             : undefined}
@@ -164,8 +165,8 @@ export function FinancesDashboardClient({
         />
         <KPICard
           title={t("finances.kpis.creances")}
-          value={formatCompact(resume.creances)}
-          subtitle={t("finances.kpis.creancesSub", { montant: formatCompact(resume.encaissements) })}
+          value={formatCompact(resume.creances, locale)}
+          subtitle={t("finances.kpis.creancesSub", { montant: formatCompact(resume.encaissements, locale) })}
           icon={AlertCircle}
           iconColor="text-warning"
           iconBgColor="bg-warning/10"
@@ -195,19 +196,19 @@ export function FinancesDashboardClient({
                 <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
                   {t("finances.depenses.total")}
                 </p>
-                <p className="text-lg font-bold">{formatCompact(resume.depensesTotales)}</p>
+                <p className="text-lg font-bold">{formatCompact(resume.depensesTotales, locale)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
                   {t("finances.depenses.payees")}
                 </p>
-                <p className="text-lg font-bold text-success">{formatCompact(resume.depensesPayees)}</p>
+                <p className="text-lg font-bold text-success">{formatCompact(resume.depensesPayees, locale)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
                   {t("finances.depenses.impayees")}
                 </p>
-                <p className="text-lg font-bold text-warning">{formatCompact(resume.depensesImpayees)}</p>
+                <p className="text-lg font-bold text-warning">{formatCompact(resume.depensesImpayees, locale)}</p>
               </div>
             </div>
 
@@ -289,7 +290,7 @@ export function FinancesDashboardClient({
                   axisLine={false}
                 />
                 <YAxis
-                  tickFormatter={(v) => formatCompact(v).replace(" FCFA", "")}
+                  tickFormatter={(v) => formatCompact(v, locale).replace(" FCFA", "")}
                   tick={{ fontSize: 11 }}
                   tickLine={false}
                   axisLine={false}
@@ -300,7 +301,7 @@ export function FinancesDashboardClient({
                   content={
                     <ChartTooltip
                       labelFormatter={(label) => t("finances.evolution.moisLabel", { label })}
-                      valueFormatter={(v) => formatFCFA(v)}
+                      valueFormatter={(v) => formatFCFA(v, locale)}
                     />
                   }
                 />
@@ -406,12 +407,12 @@ export function FinancesDashboardClient({
                       <p className="font-medium text-sm truncate">{client.nom}</p>
                       <p className="text-xs text-muted-foreground">
                         {t("finances.topClients.ventes", { count: client.nombreVentes })} &middot;{" "}
-                        {formatFCFA(client.totalVentes)}
+                        {formatFCFA(client.totalVentes, locale)}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-xs font-medium text-success">
-                        {t("finances.topClients.paye", { montant: formatCompact(client.totalPaye) })}
+                        {t("finances.topClients.paye", { montant: formatCompact(client.totalPaye, locale) })}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {ratioPaye.toFixed(0)}%
@@ -449,7 +450,7 @@ export function FinancesDashboardClient({
                 {t("finances.stats.prixMoyenKg")}
               </p>
               <p className="text-xl font-bold">
-                {new Intl.NumberFormat("fr-FR").format(Math.round(resume.prixMoyenVenteKg))} F
+                {new Intl.NumberFormat(locale).format(Math.round(resume.prixMoyenVenteKg))} F
               </p>
             </CardContent>
           </Card>
@@ -459,7 +460,7 @@ export function FinancesDashboardClient({
             <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
               {t("finances.stats.aliments")}
             </p>
-            <p className="text-xl font-bold">{formatCompact(resume.coutsAliments)}</p>
+            <p className="text-xl font-bold">{formatCompact(resume.coutsAliments, locale)}</p>
           </CardContent>
         </Card>
       </div>

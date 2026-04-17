@@ -2,7 +2,7 @@
 
 import { memo, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChartTooltip, ChartCrosshair } from "@/components/ui/chart-tooltip";
@@ -94,6 +94,7 @@ export function PoidsChart({
   dateDebut,
 }: PoidsChartProps) {
   const t = useTranslations("vagues");
+  const locale = useLocale();
 
   const [activeChart, setActiveChart] = useState<0 | 1>(0);
 
@@ -116,12 +117,12 @@ export function PoidsChart({
 
   const dateFormatter = useMemo(
     () =>
-      new Intl.DateTimeFormat("fr-FR", {
+      new Intl.DateTimeFormat(locale, {
         day: "numeric",
         month: "short",
         year: "numeric",
       }),
-    []
+    [locale]
   );
 
   const tooltipContent = useMemo(

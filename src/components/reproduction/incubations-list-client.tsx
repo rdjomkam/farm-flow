@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { FlaskConical } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -72,6 +72,7 @@ export function IncubationsListClient({
   permissions,
 }: IncubationsListClientProps) {
   const t = useTranslations("reproduction");
+  const locale = useLocale();
   const router = useRouter();
 
   const [tab, setTab] = useState("tous");
@@ -221,13 +222,13 @@ export function IncubationsListClient({
                           )}
                           {inc.nombreOeufsPlaces !== null && (
                             <span>
-                              {inc.nombreOeufsPlaces.toLocaleString("fr-FR")}{" "}
+                              {inc.nombreOeufsPlaces.toLocaleString(locale)}{" "}
                               {t("incubations.card.oeufs")}
                             </span>
                           )}
                           {inc.nombreLarvesEcloses !== null && (
                             <span className="text-accent-green font-medium">
-                              {inc.nombreLarvesEcloses.toLocaleString("fr-FR")}{" "}
+                              {inc.nombreLarvesEcloses.toLocaleString(locale)}{" "}
                               {t("incubations.card.larves")}
                             </span>
                           )}

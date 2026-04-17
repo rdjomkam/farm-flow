@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Bell, AlertTriangle, AlertCircle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SeveriteAlerte, TypeReleve } from "@/types";
@@ -83,12 +83,13 @@ export function NotificationCard({
   onMarkRead,
 }: NotificationCardProps) {
   const t = useTranslations("alertes");
+  const locale = useLocale();
   const router = useRouter();
   const styles = SEVERITE_STYLES[severite] ?? SEVERITE_STYLES[SeveriteAlerte.INFO];
   const { Icon } = styles;
 
   const date = new Date(createdAt);
-  const dateFormatted = date.toLocaleDateString("fr-FR", {
+  const dateFormatted = date.toLocaleDateString(locale, {
     day: "numeric",
     month: "short",
     hour: "2-digit",

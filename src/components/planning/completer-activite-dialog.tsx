@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
 import { Check, ClipboardCheck, ExternalLink } from "lucide-react";
@@ -44,6 +44,7 @@ interface UnlinkedReleve {
 export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActiviteDialogProps) {
   const t = useTranslations("planning");
   const tReleves = useTranslations("releves");
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const activiteService = useActiviteService();
   const { call } = useApi();
@@ -164,7 +165,7 @@ export function CompleterActiviteDialog({ activite, onCompleted }: CompleterActi
                       <SelectItem key={r.id} value={r.id}>
                         {t("completerActivite.releveOption", {
                           type: tReleves(`types.${r.typeReleve}`) ?? r.typeReleve,
-                          date: new Date(r.date).toLocaleDateString("fr-FR", {
+                          date: new Date(r.date).toLocaleDateString(locale, {
                             day: "numeric",
                             month: "short",
                             year: "numeric",

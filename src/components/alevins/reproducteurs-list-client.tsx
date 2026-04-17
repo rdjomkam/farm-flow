@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { SexeReproducteur, StatutReproducteur, Permission } from "@/types";
 import { useAlevinsService } from "@/services";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 function sexeBadgeClass(sexe: string): string {
   if (sexe === SexeReproducteur.FEMELLE) return "bg-accent-purple-muted text-accent-purple";
@@ -62,6 +62,7 @@ interface Props {
 
 export function ReproducteursListClient({ reproducteurs, permissions }: Props) {
   const t = useTranslations("reproduction");
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const alevinsService = useAlevinsService();
   const [tab, setTab] = useState("tous");
@@ -297,7 +298,7 @@ export function ReproducteursListClient({ reproducteurs, permissions }: Props) {
                         <div className="text-right text-xs text-muted-foreground shrink-0">
                           <p>
                             {new Date(r.dateAcquisition).toLocaleDateString(
-                              "fr-FR"
+                              locale
                             )}
                           </p>
                           <p className="mt-0.5">

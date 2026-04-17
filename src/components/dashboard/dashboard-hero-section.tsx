@@ -1,6 +1,6 @@
 import { Waves } from "lucide-react";
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { StatsCards } from "@/components/dashboard/stats-cards";
@@ -14,6 +14,7 @@ interface DashboardHeroSectionProps {
 
 export async function DashboardHeroSection({ data, sessionName }: DashboardHeroSectionProps) {
   const t = await getTranslations("dashboard");
+  const locale = await getLocale();
 
   return (
     <>
@@ -24,7 +25,7 @@ export async function DashboardHeroSection({ data, sessionName }: DashboardHeroS
       >
         <div className="relative z-10 text-white">
           <p className="text-sm font-medium text-white/70">
-            {new Date().toLocaleDateString("fr-FR", {
+            {new Date().toLocaleDateString(locale, {
               weekday: "long",
               day: "numeric",
               month: "long",
@@ -35,7 +36,7 @@ export async function DashboardHeroSection({ data, sessionName }: DashboardHeroS
             {data.vaguesActives > 1
               ? t("hero.wavesCountPlural", { count: data.vaguesActives })
               : t("hero.wavesCount", { count: data.vaguesActives })}
-            {data.biomasseTotale ? ` \u00b7 ${data.biomasseTotale} kg de biomasse` : ""}
+            {data.biomasseTotale ? ` \u00b7 ${t("hero.biomasse", { value: data.biomasseTotale })}` : ""}
           </p>
         </div>
         <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 hidden sm:block" />

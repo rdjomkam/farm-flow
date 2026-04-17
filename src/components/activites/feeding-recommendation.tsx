@@ -451,7 +451,7 @@ export function FeedingRecommendation({
                 {produitStock.nom}
               </p>
               <p className="text-xs text-muted-foreground">
-                Stock: {stockLabel ?? "—"}
+                {tActivites("feeding.stockLabel")} {stockLabel ?? "—"}
               </p>
             </div>
 
@@ -463,7 +463,7 @@ export function FeedingRecommendation({
                     getJoursStockColor(joursStock),
                   ].join(" ")}
                 >
-                  {joursStock} j
+                  {tActivites("feeding.daysShort", { count: joursStock })}
                 </p>
                 <p className="text-xs text-muted-foreground">{tActivites("feeding.beforeStockout")}</p>
               </div>

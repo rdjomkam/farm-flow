@@ -103,6 +103,8 @@
     "title": "Historique des modifications",
     "before": "Avant :",
     "after": "Apres :",
+    "reason": "Raison",
+    "groupeSummary": "{categorie} : {poissons} poissons @ {poids}g",
     "fields": {
       "nombreMorts": "Nombre de morts",
       "notes": "Notes",

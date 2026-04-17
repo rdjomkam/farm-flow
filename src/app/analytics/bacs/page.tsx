@@ -54,8 +54,8 @@ export default async function AnalyticsBacsPage({
                   <div>
                     <p className="text-sm font-semibold">{v.code}</p>
                     <p className="text-xs text-muted-foreground">
-                      {v._count.bacs} bac{v._count.bacs > 1 ? "s" : ""} —{" "}
-                      {v.nombreInitial} alevins
+                      {v._count.bacs > 1 ? t("waveSummaryBacsPlural", { count: v._count.bacs }) : t("waveSummaryBacs", { count: v._count.bacs })} —{" "}
+                      {t("waveSummaryAlevins", { count: v.nombreInitial })}
                     </p>
                   </div>
                   <span className="text-xs text-primary">{t("comparer")}</span>

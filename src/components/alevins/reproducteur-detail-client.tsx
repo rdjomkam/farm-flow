@@ -28,7 +28,7 @@ import {
 import { useAlevinsService } from "@/services";
 import { useApi } from "@/hooks/use-api";
 import { SexeReproducteur, StatutReproducteur, Permission } from "@/types";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 function statutBadgeClass(statut: string): string {
   if (statut === StatutReproducteur.ACTIF) return "bg-accent-green-muted text-accent-green";
@@ -68,6 +68,7 @@ interface Props {
 
 export function ReproducteurDetailClient({ reproducteur, permissions }: Props) {
   const t = useTranslations("reproduction");
+  const locale = useLocale();
   const router = useRouter();
   const queryClient = useQueryClient();
   const alevinsService = useAlevinsService();
@@ -298,7 +299,7 @@ export function ReproducteurDetailClient({ reproducteur, permissions }: Props) {
             <span className="text-muted-foreground">{t("alevins.reproducteurs.detail.acquisition")}</span>
             <span>
               {new Date(reproducteur.dateAcquisition).toLocaleDateString(
-                "fr-FR"
+                locale
               )}
             </span>
           </div>
@@ -332,7 +333,7 @@ export function ReproducteurDetailClient({ reproducteur, permissions }: Props) {
                     <div>
                       <p className="font-medium text-sm">{p.code}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(p.datePonte).toLocaleDateString("fr-FR")} —{" "}
+                        {new Date(p.datePonte).toLocaleDateString(locale)} —{" "}
                         {p._count.lots} {t("alevins.pontes.card.lots")}
                       </p>
                     </div>

@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { TypeReleve } from "@/types";
@@ -28,6 +28,7 @@ export async function RecentActivity({ releves }: RecentActivityProps) {
 
   const t = await getTranslations("releves");
   const tDash = await getTranslations("dashboard.recentActivity");
+  const locale = await getLocale();
 
   return (
     <section>
@@ -45,7 +46,7 @@ export async function RecentActivity({ releves }: RecentActivityProps) {
                 {r.bac && <p className="text-xs text-muted-foreground">{tDash("bacLabel", { nom: r.bac.nom })}</p>}
               </div>
               <span className="text-xs text-muted-foreground shrink-0">
-                {new Date(r.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                {new Date(r.createdAt).toLocaleDateString(locale, { day: "numeric", month: "short" })}
               </span>
             </div>
           ))}

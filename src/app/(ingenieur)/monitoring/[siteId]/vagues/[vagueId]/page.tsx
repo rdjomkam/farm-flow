@@ -1,7 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Calendar, Fish, Container } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,7 @@ export default async function IngenieurVagueDetailPage({
   const indicateurs = await getIndicateursVague(clientSiteId, vagueId);
   const tVagues = await getTranslations("vagues");
   const tIngenieur = await getTranslations("ingenieur");
+  const locale = await getLocale();
 
   const statut = vague.statut as StatutVague;
 
@@ -140,17 +141,17 @@ export default async function IngenieurVagueDetailPage({
           <Badge variant={statutVariants[statut]}>{tVagues(`statuts.${statut}`)}</Badge>
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Calendar className="h-3.5 w-3.5" />
-            {new Date(vague.dateDebut).toLocaleDateString("fr-FR")}
-            {vague.dateFin && ` — ${new Date(vague.dateFin).toLocaleDateString("fr-FR")}`}
+            {new Date(vague.dateDebut).toLocaleDateString(locale)}
+            {vague.dateFin && ` — ${new Date(vague.dateFin).toLocaleDateString(locale)}`}
           </div>
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Fish className="h-3.5 w-3.5" />
-            {vague.nombreInitial} alevins ({vague.poidsMoyenInitial}g)
+            {tIngenieur("monitoring.alevinsCount", { count: vague.nombreInitial })} ({vague.poidsMoyenInitial}g)
           </div>
           <div className="flex items-center gap-1 text-sm text-muted-foreground min-w-0">
             <Container className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">
-              {vague.bacs.length} bac{vague.bacs.length > 1 ? "s" : ""}
+              {vague.bacs.length > 1 ? tIngenieur("monitoring.bacsCount", { count: vague.bacs.length }) : tIngenieur("monitoring.bacCount", { count: vague.bacs.length })}
               {vague.bacs.length > 0 && ` (${vague.bacs.map((b) => b.nom).join(", ")})`}
             </span>
           </div>

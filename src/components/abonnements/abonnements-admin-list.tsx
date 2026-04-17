@@ -17,7 +17,7 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Filter, ChevronLeft, ChevronRight, AlertCircle, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -94,6 +94,7 @@ export function AbonnementsAdminList({
   const router = useRouter();
   const queryClient = useQueryClient();
   const t = useTranslations("abonnements");
+  const locale = useLocale();
   const [annulationId, setAnnulationId] = useState<string | null>(null);
   const [annulationLoading, setAnnulationLoading] = useState(false);
   const [annulationError, setAnnulationError] = useState<string | null>(null);
@@ -221,10 +222,10 @@ export function AbonnementsAdminList({
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{t(PERIODE_LABELS[a.periode])}</td>
                 <td className="px-4 py-3 text-muted-foreground">
-                  {new Date(a.dateDebut).toLocaleDateString("fr-FR")}
+                  {new Date(a.dateDebut).toLocaleDateString(locale)}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
-                  {new Date(a.dateFin).toLocaleDateString("fr-FR")}
+                  {new Date(a.dateFin).toLocaleDateString(locale)}
                 </td>
                 <td className="px-4 py-3 text-right font-medium text-foreground">
                   {formatXAF(a.prixPaye)}
@@ -366,11 +367,11 @@ export function AbonnementsAdminList({
               </div>
               <div>
                 <p className="text-muted-foreground">{t("admin.table.start")}</p>
-                <p className="font-medium text-foreground">{new Date(a.dateDebut).toLocaleDateString("fr-FR")}</p>
+                <p className="font-medium text-foreground">{new Date(a.dateDebut).toLocaleDateString(locale)}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">{t("admin.table.end")}</p>
-                <p className="font-medium text-foreground">{new Date(a.dateFin).toLocaleDateString("fr-FR")}</p>
+                <p className="font-medium text-foreground">{new Date(a.dateFin).toLocaleDateString(locale)}</p>
               </div>
             </div>
           </div>

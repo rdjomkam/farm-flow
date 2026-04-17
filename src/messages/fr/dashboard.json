@@ -18,7 +18,8 @@
     "sectionTitle": "Vagues en cours",
     "emptyTitle": "Aucune vague en cours",
     "emptyDescription": "Créez une vague pour commencer le suivi de vos silures.",
-    "createWave": "Créer une vague"
+    "createWave": "Créer une vague",
+    "biomasse": "{value} kg de biomasse"
   },
   "benchmarks": {
     "EXCELLENT": "Excellent",

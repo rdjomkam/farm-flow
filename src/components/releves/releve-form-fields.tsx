@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,6 +101,7 @@ export function ReleveFormFields({
 }: ReleveFormFieldsProps) {
   const t = useTranslations("releves");
   const tStock = useTranslations("stock");
+  const locale = useLocale();
 
   /** Releve TRI lie directement a un lot d'alevins (sans vague/bac) */
   const isTriWithLot =
@@ -232,7 +233,7 @@ export function ReleveFormFields({
                 )}
                 {activitesPlanifiees.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
-                    {a.titre}{" · "}{new Date(a.dateDebut).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                    {a.titre}{" · "}{new Date(a.dateDebut).toLocaleDateString(locale, { day: "numeric", month: "short" })}
                     {a.statut === StatutActivite.EN_RETARD && " ⚠"}
                   </SelectItem>
                 ))}

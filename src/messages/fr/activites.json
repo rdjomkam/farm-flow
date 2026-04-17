@@ -108,7 +108,9 @@
     "poidsProjeteSGR": "Poids projeté (SGR)",
     "recommandationAlimentation": "Recommandation d'alimentation",
     "donneesInsuffisantes": "Donnees insuffisantes pour calculer la recommandation d'alimentation.",
-    "detailParBac": "Detail par bac ({count} bacs)"
+    "detailParBac": "Detail par bac ({count} bacs)",
+    "stockLabel": "Stock :",
+    "daysShort": "{count} j"
   },
   "placeholders": {
     "retourRegles": "Retour aux regles",
