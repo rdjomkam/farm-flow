@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -151,6 +151,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
   const queryClient = useQueryClient();
   const configService = useConfigService();
   const t = useTranslations("settings");
+  const locale = useLocale();
   const tCommon = useTranslations("common");
 
   const [editMode, setEditMode] = useState(false);
@@ -561,7 +562,7 @@ export function RegleDetailClient({ regle, canManage, canManageGlobal, customPla
                     {a.titre}
                   </span>
                   <span className="text-xs text-muted-foreground shrink-0">
-                    {new Date(a.dateDebut).toLocaleDateString("fr-FR")}
+                    {new Date(a.dateDebut).toLocaleDateString(locale)}
                   </span>
                 </div>
               ))}

@@ -82,7 +82,8 @@
     "adminPlans": "Gestion des plans",
     "adminAbonnements": "Gestion des abonnements",
     "adminCommissions": "Gestion des commissions",
-    "adminRemises": "Gestion des remises"
+    "adminRemises": "Gestion des remises",
+    "ogTitle": "FarmFlow — Suivi d'élevage de silures"
   },
   "login": {
     "title": "Connexion",

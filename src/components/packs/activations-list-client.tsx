@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Users, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { formatNumber } from "@/lib/format";
@@ -42,6 +42,7 @@ interface Props {
 
 export function ActivationsListClient({ activations }: Props) {
   const t = useTranslations("packs");
+  const locale = useLocale();
   const [tab, setTab] = useState("actives");
   const [search, setSearch] = useState("");
 
@@ -105,9 +106,9 @@ export function ActivationsListClient({ activations }: Props) {
                         <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-muted-foreground">
                           <span>Pack : <Link href={`/packs/${act.pack.id}`} className="hover:underline">{act.pack.nom}</Link></span>
                           <span>{formatNumber(act.pack.nombreAlevins)} alevins</span>
-                          <span>{t("activations.activeLe")} {new Date(act.dateActivation).toLocaleDateString("fr-FR")}</span>
+                          <span>{t("activations.activeLe")} {new Date(act.dateActivation).toLocaleDateString(locale)}</span>
                           {act.dateExpiration && (
-                            <span>{t("activations.expireLe")} {new Date(act.dateExpiration).toLocaleDateString("fr-FR")}</span>
+                            <span>{t("activations.expireLe")} {new Date(act.dateExpiration).toLocaleDateString(locale)}</span>
                           )}
                         </div>
                         {act.notes && (

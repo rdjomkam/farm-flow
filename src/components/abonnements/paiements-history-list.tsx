@@ -9,7 +9,7 @@
  * R2 : enums importés depuis @/types
  * R6 : CSS variables du thème
  */
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { StatutPaiementAbo, FournisseurPaiement } from "@/types";
 import type { PaiementAbonnement } from "@/types";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +59,7 @@ function truncateRef(ref: string | null): string {
 
 export async function PaiementsHistoryList({ paiements }: PaiementsHistoryListProps) {
   const t = await getTranslations("abonnements");
+  const locale = await getLocale();
   if (paiements.length === 0) {
     return (
       <p className="text-sm text-muted-foreground text-center py-4">
@@ -100,11 +101,11 @@ export async function PaiementsHistoryList({ paiements }: PaiementsHistoryListPr
             </div>
             <div className="text-right shrink-0">
               <p className="text-xs text-muted-foreground">
-                {new Date(paiement.dateInitiation).toLocaleDateString("fr-FR")}
+                {new Date(paiement.dateInitiation).toLocaleDateString(locale)}
               </p>
               {paiement.dateConfirmation && (
                 <p className="text-xs text-success mt-0.5">
-                  {t("paiements.confirmedOn")} {new Date(paiement.dateConfirmation).toLocaleDateString("fr-FR")}
+                  {t("paiements.confirmedOn")} {new Date(paiement.dateConfirmation).toLocaleDateString(locale)}
                 </p>
               )}
             </div>

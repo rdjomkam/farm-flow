@@ -15,7 +15,7 @@
 
 import { formatNumber } from "@/lib/format";
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Building2, Users, Layers, Database, CheckCircle, XCircle } from "lucide-react";
 import { SiteStatus, SiteModule } from "@/types";
 import type { AdminSiteDetailResponse } from "@/types";
@@ -52,6 +52,7 @@ interface AdminSiteDetailClientProps {
 
 export function AdminSiteDetailClient({ site: initialSite }: AdminSiteDetailClientProps) {
   const t = useTranslations("admin.sites");
+  const locale = useLocale();
   const [site, setSite] = useState(initialSite);
 
   function handleModulesSaved(modules: SiteModule[]) {
@@ -127,7 +128,7 @@ export function AdminSiteDetailClient({ site: initialSite }: AdminSiteDetailClie
               />
               <SiteInfoRow
                 label={t("creeLe")}
-                value={new Date(site.createdAt).toLocaleDateString("fr-FR", {
+                value={new Date(site.createdAt).toLocaleDateString(locale, {
                   day: "2-digit",
                   month: "long",
                   year: "numeric",
@@ -135,7 +136,7 @@ export function AdminSiteDetailClient({ site: initialSite }: AdminSiteDetailClie
               />
               <SiteInfoRow
                 label={t("modifieLe")}
-                value={new Date(site.updatedAt).toLocaleDateString("fr-FR", {
+                value={new Date(site.updatedAt).toLocaleDateString(locale, {
                   day: "2-digit",
                   month: "long",
                   year: "numeric",
@@ -144,7 +145,7 @@ export function AdminSiteDetailClient({ site: initialSite }: AdminSiteDetailClie
               {site.suspendedAt && (
                 <SiteInfoRow
                   label={t("detail.info.suspendedAt")}
-                  value={new Date(site.suspendedAt).toLocaleDateString("fr-FR", {
+                  value={new Date(site.suspendedAt).toLocaleDateString(locale, {
                     day: "2-digit",
                     month: "long",
                     year: "numeric",
@@ -240,20 +241,20 @@ export function AdminSiteDetailClient({ site: initialSite }: AdminSiteDetailClie
               <SiteInfoRow label={t("periode")} value={site.abonnementActif.periode} />
               <SiteInfoRow
                 label={t("debut")}
-                value={new Date(site.abonnementActif.dateDebut).toLocaleDateString("fr-FR", {
+                value={new Date(site.abonnementActif.dateDebut).toLocaleDateString(locale, {
                   day: "2-digit", month: "long", year: "numeric",
                 })}
               />
               <SiteInfoRow
                 label={t("detail.info.fin")}
-                value={new Date(site.abonnementActif.dateFin).toLocaleDateString("fr-FR", {
+                value={new Date(site.abonnementActif.dateFin).toLocaleDateString(locale, {
                   day: "2-digit", month: "long", year: "numeric",
                 })}
               />
               {site.abonnementActif.dateFinGrace && (
                 <SiteInfoRow
                   label={t("finDeGrace")}
-                  value={new Date(site.abonnementActif.dateFinGrace).toLocaleDateString("fr-FR", {
+                  value={new Date(site.abonnementActif.dateFinGrace).toLocaleDateString(locale, {
                     day: "2-digit", month: "long", year: "numeric",
                   })}
                 />

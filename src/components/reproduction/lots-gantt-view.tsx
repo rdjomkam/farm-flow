@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 // ---------------------------------------------------------------------------
 // Phase color palette (ADR-044 §9)
@@ -84,8 +84,8 @@ function daysBetween(a: Date, b: Date): number {
   return Math.round((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function formatDateShort(date: Date): string {
-  return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+function formatDateShort(date: Date, locale: string): string {
+  return date.toLocaleDateString(locale, { day: "numeric", month: "short" });
 }
 
 // ---------------------------------------------------------------------------
@@ -94,6 +94,7 @@ function formatDateShort(date: Date): string {
 
 export function LotsGanttView({ lots, dateDebut, dateFin }: LotsGanttViewProps) {
   const t = useTranslations("reproduction.planning");
+  const locale = useLocale();
 
   const totalDays = useMemo(
     () => Math.max(daysBetween(dateDebut, dateFin), 1),
@@ -109,7 +110,7 @@ export function LotsGanttView({ lots, dateDebut, dateFin }: LotsGanttViewProps) 
       const offsetDays = daysBetween(dateDebut, current);
       const offsetPercent = (offsetDays / totalDays) * 100;
       if (offsetPercent >= 0 && offsetPercent <= 100) {
-        markers.push({ label: formatDateShort(current), offsetPercent });
+        markers.push({ label: formatDateShort(current, locale), offsetPercent });
       }
       current = addDays(current, 7);
     }
@@ -166,7 +167,7 @@ export function LotsGanttView({ lots, dateDebut, dateFin }: LotsGanttViewProps) 
                     {t("lotMobileSubline", {
                       phase: lot.phase,
                       age: lot.ageJours,
-                      count: lot.nombreActuel.toLocaleString("fr-FR"),
+                      count: lot.nombreActuel.toLocaleString(locale),
                     })}
                   </p>
                 </div>
@@ -224,7 +225,7 @@ export function LotsGanttView({ lots, dateDebut, dateFin }: LotsGanttViewProps) 
                   <div className="w-40 shrink-0 text-right pr-3">
                     <p className="text-xs font-medium truncate">{lot.code}</p>
                     <p className="text-xs text-muted-foreground">
-                      {lot.nombreActuel.toLocaleString("fr-FR")}
+                      {lot.nombreActuel.toLocaleString(locale)}
                     </p>
                   </div>
                   {/* Bar track */}
@@ -239,7 +240,7 @@ export function LotsGanttView({ lots, dateDebut, dateFin }: LotsGanttViewProps) 
                         code: lot.code,
                         phase: lot.phase,
                         age: lot.ageJours,
-                        count: lot.nombreActuel.toLocaleString("fr-FR"),
+                        count: lot.nombreActuel.toLocaleString(locale),
                       })}
                     >
                       {/* Tooltip on hover */}
@@ -254,7 +255,7 @@ export function LotsGanttView({ lots, dateDebut, dateFin }: LotsGanttViewProps) 
                         <span className="font-semibold">{lot.code}</span>
                         <span>{lot.phase}</span>
                         <span>{t("lotJours", { count: lot.ageJours })}</span>
-                        <span>{t("lotPoissons", { count: lot.nombreActuel.toLocaleString("fr-FR") })}</span>
+                        <span>{t("lotPoissons", { count: lot.nombreActuel.toLocaleString(locale) })}</span>
                       </div>
                     </div>
                   </div>

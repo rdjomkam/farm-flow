@@ -13,7 +13,7 @@
  */
 
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import {
   AlertTriangle,
   Bell,
@@ -70,6 +70,7 @@ export async function IngenieurDashboardMultiFarm({
   sessionName,
 }: IngenieurDashboardMultiFarmProps) {
   const t = await getTranslations("ingenieur");
+  const locale = await getLocale();
 
   // Charger les données en parallèle
   const [metrics, clientsResult, portefeuilleData] = await Promise.all([
@@ -107,7 +108,7 @@ export async function IngenieurDashboardMultiFarm({
     ? Number(portefeuilleData.portefeuille.soldePending)
     : 0;
 
-  const today = new Date().toLocaleDateString("fr-FR", {
+  const today = new Date().toLocaleDateString(locale, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -202,7 +203,7 @@ export async function IngenieurDashboardMultiFarm({
                           </Link>
                           <span className="text-xs text-muted-foreground">
                             {new Date(alerte.createdAt).toLocaleDateString(
-                              "fr-FR"
+                              locale
                             )}
                           </span>
                         </div>

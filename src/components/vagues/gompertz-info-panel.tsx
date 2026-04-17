@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Info } from "lucide-react";
 import {
   Dialog,
@@ -19,9 +19,9 @@ import type { GompertzPanelData } from "@/lib/gompertz-panel";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatDateFr(isoDate: string): string {
+function formatDateFr(isoDate: string, locale: string): string {
   const d = new Date(isoDate);
-  return d.toLocaleDateString("fr-FR", {
+  return d.toLocaleDateString(locale, {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -185,6 +185,7 @@ function ParamsSection({ data }: { data: GompertzPanelData }) {
 
 function ComparaisonSection({ data }: { data: GompertzPanelData }) {
   const t = useTranslations("vagues");
+  const locale = useLocale();
   const rows = data.comparaison;
 
   if (rows.length === 0) {
@@ -209,7 +210,7 @@ function ComparaisonSection({ data }: { data: GompertzPanelData }) {
             <Card key={row.jour}>
               <CardContent className="p-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                 <div className="col-span-2 flex items-center justify-between mb-1">
-                  <span className="font-medium">{formatDateFr(row.date)}</span>
+                  <span className="font-medium">{formatDateFr(row.date, locale)}</span>
                   <span className="text-muted-foreground text-xs">J{row.jour}</span>
                 </div>
                 <div>
@@ -250,7 +251,7 @@ function ComparaisonSection({ data }: { data: GompertzPanelData }) {
               const sign = row.ecartG >= 0 ? "+" : "";
               return (
                 <tr key={row.jour} className="border-b border-border/50 last:border-0">
-                  <td className="py-2 pr-4">{formatDateFr(row.date)}</td>
+                  <td className="py-2 pr-4">{formatDateFr(row.date, locale)}</td>
                   <td className="py-2 pr-4 text-muted-foreground">J{row.jour}</td>
                   <td className="py-2 pr-4 text-right font-medium">{row.poidsReel} g</td>
                   <td className="py-2 pr-4 text-right text-muted-foreground">{row.poidsPredits} g</td>
@@ -272,6 +273,7 @@ function ComparaisonSection({ data }: { data: GompertzPanelData }) {
 function ProjectionsSection({ data }: { data: GompertzPanelData }) {
   const t = useTranslations("vagues");
   const tG = useTranslations("vagues.gompertz");
+  const locale = useLocale();
   const { projections, poidsObjectif, joursAvantObjectif, dateObjectif, params } = data;
   const gainJ7 = projections.j7 - projections.poidsActuel;
   const gainJ14 = projections.j14 - projections.poidsActuel;
@@ -306,7 +308,7 @@ function ProjectionsSection({ data }: { data: GompertzPanelData }) {
           {dateObjectif !== null && joursAvantObjectif !== null ? (
             <div>
               <p className="text-sm font-semibold mb-1">
-                {tG("objectifReached", { poids: poidsObjectif, date: formatDateFr(dateObjectif) })}
+                {tG("objectifReached", { poids: poidsObjectif, date: formatDateFr(dateObjectif, locale) })}
               </p>
               <p className="text-sm text-muted-foreground">
                 {tG("objectifDays", { count: joursAvantObjectif })}

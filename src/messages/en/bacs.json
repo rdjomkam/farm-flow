@@ -38,6 +38,9 @@
     "poissonsDepart": "{count} fish at start",
     "poissons": "{count} fish",
     "terminee": "Completed",
+    "active": "Active",
+    "enCours": "ongoing",
+    "dureeJours": "{count} d",
     "empty": "No assignment history recorded for this tank."
   },
   "densite": {

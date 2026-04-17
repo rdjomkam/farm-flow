@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import type { AssignationBacForVague } from "@/types";
 
 interface VagueBacsTimelineProps {
@@ -11,8 +12,8 @@ interface VagueBacsTimelineProps {
   dateFinVague: Date | null;
 }
 
-function formatDate(d: Date): string {
-  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+function formatDate(d: Date, locale: string): string {
+  return d.toLocaleDateString(locale, { day: "2-digit", month: "short" });
 }
 
 /**
@@ -27,6 +28,7 @@ export function VagueBacsTimeline({
   dateDebutVague,
   dateFinVague,
 }: VagueBacsTimelineProps) {
+  const locale = useLocale();
   if (assignations.length === 0) return null;
 
   const now = new Date();
@@ -40,8 +42,8 @@ export function VagueBacsTimeline({
     <div className="hidden sm:block overflow-x-auto">
       {/* En-tête des dates */}
       <div className="flex items-center justify-between text-xs text-muted-foreground mb-2 px-32">
-        <span>{formatDate(vagueStart)}</span>
-        <span>{formatDate(vagueEnd)}</span>
+        <span>{formatDate(vagueStart, locale)}</span>
+        <span>{formatDate(vagueEnd, locale)}</span>
       </div>
 
       {/* Lignes de bac */}
@@ -74,14 +76,14 @@ export function VagueBacsTimeline({
                   }}
                   title={
                     active
-                      ? `${a.bac.nom} — actif depuis ${formatDate(a.dateAssignation)}`
-                      : `${a.bac.nom} — ${formatDate(a.dateAssignation)} → ${formatDate(a.dateFin!)}`
+                      ? `${a.bac.nom} — actif depuis ${formatDate(a.dateAssignation, locale)}`
+                      : `${a.bac.nom} — ${formatDate(a.dateAssignation, locale)} → ${formatDate(a.dateFin!, locale)}`
                   }
                 >
                   <span className="sr-only">
                     {active
-                      ? `${a.bac.nom} — actif depuis ${formatDate(a.dateAssignation)}`
-                      : `${a.bac.nom} — ${formatDate(a.dateAssignation)} → ${formatDate(a.dateFin!)}`}
+                      ? `${a.bac.nom} — actif depuis ${formatDate(a.dateAssignation, locale)}`
+                      : `${a.bac.nom} — ${formatDate(a.dateAssignation, locale)} → ${formatDate(a.dateFin!, locale)}`}
                   </span>
                 </div>
               </div>

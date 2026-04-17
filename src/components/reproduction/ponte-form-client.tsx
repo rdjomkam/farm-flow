@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Check, ChevronRight, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -523,6 +523,7 @@ function Step2Stripping({
   const tQualite = useTranslations("reproduction.pontes.qualiteOeufs");
   const tMethode = useTranslations("reproduction.pontes.methodeMale");
   const tMotilite = useTranslations("reproduction.pontes.motilite");
+  const locale = useLocale();
 
   const poidsVal = parseFloat(data.poidsOeufsPontesG);
   const nombreOeufsEstime =
@@ -551,7 +552,7 @@ function Step2Stripping({
         hint={
           nombreOeufsEstime !== null
             ? t("nombreOeufsHint", {
-                count: nombreOeufsEstime.toLocaleString("fr-FR"),
+                count: nombreOeufsEstime.toLocaleString(locale),
               })
             : undefined
         }
@@ -802,6 +803,7 @@ function Step4Confirmation({
   const tMethode = useTranslations("reproduction.pontes.methodeMale");
   const tMotilite = useTranslations("reproduction.pontes.motilite");
   const tCause = useTranslations("reproduction.pontes.causeEchec");
+  const locale = useLocale();
   const router = useRouter();
 
   // Resolve display names from options
@@ -860,7 +862,7 @@ function Step4Confirmation({
               label={t("summary.datePonte")}
               value={
                 step1.datePonte
-                  ? new Date(step1.datePonte).toLocaleDateString("fr-FR")
+                  ? new Date(step1.datePonte).toLocaleDateString(locale)
                   : null
               }
             />
@@ -880,7 +882,7 @@ function Step4Confirmation({
               label={t("summary.coutHormone")}
               value={
                 step1.coutHormone
-                  ? `${Number(step1.coutHormone).toLocaleString("fr-FR")} FCFA`
+                  ? `${Number(step1.coutHormone).toLocaleString(locale)} FCFA`
                   : null
               }
             />
@@ -888,7 +890,7 @@ function Step4Confirmation({
               label={t("summary.heureInjection")}
               value={
                 step1.heureInjection
-                  ? new Date(step1.heureInjection).toLocaleString("fr-FR")
+                  ? new Date(step1.heureInjection).toLocaleString(locale)
                   : null
               }
             />
@@ -915,13 +917,13 @@ function Step4Confirmation({
               <div className="mb-4">
                 <SummaryRow
                   label={t("summary.heureStripping")}
-                  value={new Date(step2.heureStripping).toLocaleString("fr-FR")}
+                  value={new Date(step2.heureStripping).toLocaleString(locale)}
                 />
                 <SummaryRow
                   label={t("summary.poids")}
                   value={
                     step2.poidsOeufsPontesG
-                      ? `${step2.poidsOeufsPontesG} g${nombreOeufsEstime ? ` (~${nombreOeufsEstime.toLocaleString("fr-FR")} oeufs)` : ""}`
+                      ? `${step2.poidsOeufsPontesG} g${nombreOeufsEstime ? ` (~${nombreOeufsEstime.toLocaleString(locale)} oeufs)` : ""}`
                       : null
                   }
                 />
@@ -1002,7 +1004,7 @@ function Step4Confirmation({
                     step3.nombreLarvesViables
                       ? Number(
                           step3.nombreLarvesViables
-                        ).toLocaleString("fr-FR")
+                        ).toLocaleString(locale)
                       : null
                   }
                 />
@@ -1010,7 +1012,7 @@ function Step4Confirmation({
                   label={t("summary.coutTotal")}
                   value={
                     step3.coutTotal
-                      ? `${Number(step3.coutTotal).toLocaleString("fr-FR")} FCFA`
+                      ? `${Number(step3.coutTotal).toLocaleString(locale)} FCFA`
                       : null
                   }
                 />

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -60,8 +60,8 @@ function genId() {
   return Math.random().toString(36).slice(2);
 }
 
-function formatMontant(n: number) {
-  return new Intl.NumberFormat("fr-FR", {
+function formatMontant(n: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(n);
@@ -88,6 +88,7 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
   const depenseService = useDepenseService();
   const t = useTranslations("besoins");
   const tStock = useTranslations("stock");
+  const locale = useLocale();
 
   const [titre, setTitre] = useState("");
   const [vaguesRatios, setVaguesRatios] = useState<VagueRatioItem[]>([]);
@@ -386,7 +387,8 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
                   <span className="font-medium text-foreground">
                     {formatMontant(
                       (parseFloat(l.quantite) || 0) *
-                        (parseFloat(l.prixEstime) || 0)
+                        (parseFloat(l.prixEstime) || 0),
+                      locale
                     )}{" "}
                     FCFA
                   </span>
@@ -412,7 +414,7 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
         <CardContent className="p-4 flex items-center justify-between">
           <span className="text-sm font-medium">{t("form.montantTotal")}</span>
           <span className="text-lg font-bold">
-            {formatMontant(montantEstime)} FCFA
+            {formatMontant(montantEstime, locale)} FCFA
           </span>
         </CardContent>
       </Card>

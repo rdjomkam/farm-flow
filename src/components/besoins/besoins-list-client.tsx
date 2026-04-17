@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Plus, ClipboardList, Calendar, User, AlertCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -54,15 +54,15 @@ interface Props {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatMontant(n: number) {
-  return new Intl.NumberFormat("fr-FR", {
+function formatMontant(n: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(n);
 }
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("fr-FR", {
+function formatDate(dateStr: string, locale: string) {
+  return new Date(dateStr).toLocaleDateString(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -91,6 +91,7 @@ export function BesoinsListClient({
   canCreate,
 }: Props) {
   const t = useTranslations("besoins");
+  const locale = useLocale();
   const { data: listesBesoinsRaw = initialListesBesoins } = useBesoinsList(undefined, {
     initialData: initialListesBesoins as unknown as ListeBesoinsWithRelations[],
   });
@@ -225,7 +226,7 @@ export function BesoinsListClient({
                           )}
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {formatDate(lb.createdAt)}
+                            {formatDate(lb.createdAt, locale)}
                           </span>
                           <span>
                             {lb._count.lignes !== 1
@@ -243,17 +244,17 @@ export function BesoinsListClient({
                               {dlStatus === "retard" ? (
                                 <span className="flex items-center gap-1 text-xs font-medium text-destructive">
                                   <AlertCircle className="h-3.5 w-3.5" />
-                                  {t("list.card.enRetard", { date: formatDate(lb.dateLimite) })}
+                                  {t("list.card.enRetard", { date: formatDate(lb.dateLimite, locale) })}
                                 </span>
                               ) : dlStatus === "proche" ? (
                                 <span className="flex items-center gap-1 text-xs font-medium text-warning">
                                   <Clock className="h-3.5 w-3.5" />
-                                  {t("list.card.echeanceProche", { date: formatDate(lb.dateLimite) })}
+                                  {t("list.card.echeanceProche", { date: formatDate(lb.dateLimite, locale) })}
                                 </span>
                               ) : (
                                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
                                   <Clock className="h-3.5 w-3.5" />
-                                  {t("list.card.limite", { date: formatDate(lb.dateLimite) })}
+                                  {t("list.card.limite", { date: formatDate(lb.dateLimite, locale) })}
                                 </span>
                               )}
                             </div>
@@ -267,7 +268,7 @@ export function BesoinsListClient({
                               {t("list.card.montantEstime")}
                             </p>
                             <p className="text-base font-semibold">
-                              {formatMontant(lb.montantEstime)} FCFA
+                              {formatMontant(lb.montantEstime, locale)} FCFA
                             </p>
                           </div>
                           {lb.montantReel !== null && (
@@ -276,7 +277,7 @@ export function BesoinsListClient({
                                 {t("list.card.montantReel")}
                               </p>
                               <p className="text-base font-semibold text-primary">
-                                {formatMontant(lb.montantReel)} FCFA
+                                {formatMontant(lb.montantReel, locale)} FCFA
                               </p>
                             </div>
                           )}

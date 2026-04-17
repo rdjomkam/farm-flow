@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Container, Calendar, Fish, Scissors } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,7 @@ export default async function VagueDetailPage({
   if (!permissions) return <AccessDenied />;
 
   const t = await getTranslations("vagues");
+  const locale = await getLocale();
 
   const { id } = await params;
   const [vague, biometriesData, relevesPreview, indicateurs, produitsDb, calibragesDb, gompertzRecord, configElevages, assignationsDb] = await Promise.all([
@@ -267,8 +268,8 @@ export default async function VagueDetailPage({
           <Badge variant={statutVariants[statut]}>{t(`statuts.${statut}`)}</Badge>
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Calendar className="h-3.5 w-3.5" />
-            {new Date(vague.dateDebut).toLocaleDateString("fr-FR")}
-            {vague.dateFin && ` — ${new Date(vague.dateFin).toLocaleDateString("fr-FR")}`}
+            {new Date(vague.dateDebut).toLocaleDateString(locale)}
+            {vague.dateFin && ` — ${new Date(vague.dateFin).toLocaleDateString(locale)}`}
           </div>
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Fish className="h-3.5 w-3.5" />

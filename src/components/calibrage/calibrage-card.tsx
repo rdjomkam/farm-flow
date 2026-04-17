@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Scissors, Fish, AlertTriangle } from "lucide-react";
@@ -13,6 +13,7 @@ interface CalibrageCardProps {
 
 export function CalibrageCard({ calibrage }: CalibrageCardProps) {
   const t = useTranslations("calibrage");
+  const locale = useLocale();
   const totalPoissons = calibrage.groupes.reduce(
     (sum, g) => sum + g.nombrePoissons,
     0
@@ -27,7 +28,7 @@ export function CalibrageCard({ calibrage }: CalibrageCardProps) {
               <Scissors className="h-4 w-4 text-muted-foreground shrink-0" />
               <p className="font-semibold text-sm">
                 {t("card.title")}{" "}
-                {new Date(calibrage.date).toLocaleDateString("fr-FR", {
+                {new Date(calibrage.date).toLocaleDateString(locale, {
                   day: "numeric",
                   month: "short",
                   year: "numeric",

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { formatNumber } from "@/lib/format";
 import { Plus, ShoppingCart, ArrowLeft, Calendar, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -65,6 +65,7 @@ interface Props {
 
 export function CommandesListClient({ commandes: initialCommandes, fournisseurs, produits, permissions }: Props) {
   const t = useTranslations("stock");
+  const locale = useLocale();
   const createCommandeMutation = useCreateCommande();
   const { data: commandesRaw = initialCommandes } = useCommandesList({
     initialData: initialCommandes as unknown as Commande[],
@@ -332,7 +333,7 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
                       <div className="flex items-center justify-between mt-1 text-xs text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          {new Date(c.dateCommande).toLocaleDateString("fr-FR")}
+                          {new Date(c.dateCommande).toLocaleDateString(locale)}
                         </div>
                         <span>
                           {c._count.lignes} ligne{c._count.lignes > 1 ? "s" : ""}

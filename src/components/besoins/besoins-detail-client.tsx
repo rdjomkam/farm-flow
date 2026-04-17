@@ -38,7 +38,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { StatutBesoins, UniteBesoin } from "@/types";
 import { useDepenseService } from "@/services";
 import { ModifierBesoinDialog } from "./modifier-besoin-dialog";
@@ -110,15 +110,15 @@ interface Props {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatMontant(n: number) {
-  return new Intl.NumberFormat("fr-FR", {
+function formatMontant(n: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(n);
 }
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("fr-FR", {
+function formatDate(dateStr: string, locale: string) {
+  return new Date(dateStr).toLocaleDateString(locale, {
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -140,6 +140,7 @@ export function BesoinsDetailClient({
   const depenseService = useDepenseService();
   const t = useTranslations("besoins");
   const tStock = useTranslations("stock");
+  const locale = useLocale();
   const uniteLabel = (u: UniteBesoin | string | null): string => {
     if (!u) return "";
     return tStock(`unites.${u}` as Parameters<typeof tStock>[0]);
@@ -316,7 +317,7 @@ export function BesoinsDetailClient({
               <p className="text-xs text-muted-foreground">{t("detail.creeeLe")}</p>
               <p className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
-                {formatDate(liste.createdAt)}
+                {formatDate(liste.createdAt, locale)}
               </p>
             </div>
             {liste.dateLimite && (() => {
@@ -328,7 +329,7 @@ export function BesoinsDetailClient({
                   <p className="text-xs text-muted-foreground">{t("detail.dateLimite")}</p>
                   <p className={`flex items-center gap-1 text-sm font-medium ${enRetard ? "text-destructive" : ""}`}>
                     <Calendar className="h-3 w-3" />
-                    {formatDate(liste.dateLimite)}
+                    {formatDate(liste.dateLimite, locale)}
                     {enRetard && (
                       <span className="ml-1 text-xs bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-full">
                         {t("detail.enRetard")}
@@ -345,14 +346,14 @@ export function BesoinsDetailClient({
             <div>
               <p className="text-xs text-muted-foreground">{t("detail.montantEstime")}</p>
               <p className="text-base font-semibold">
-                {formatMontant(liste.montantEstime)} FCFA
+                {formatMontant(liste.montantEstime, locale)} FCFA
               </p>
             </div>
             {liste.montantReel !== null && (
               <div>
                 <p className="text-xs text-muted-foreground">{t("detail.montantReel")}</p>
                 <p className="text-base font-semibold text-primary">
-                  {formatMontant(liste.montantReel)} FCFA
+                  {formatMontant(liste.montantReel, locale)} FCFA
                 </p>
               </div>
             )}
@@ -490,7 +491,7 @@ export function BesoinsDetailClient({
                   <p className="text-sm font-medium">{l.designation}</p>
                   <p className="text-xs text-muted-foreground">
                     {l.quantite} {uniteLabel(l.unite ?? l.produit?.unite ?? "")} &times;{" "}
-                    {formatMontant(l.prixEstime)} FCFA
+                    {formatMontant(l.prixEstime, locale)} FCFA
                   </p>
                   <Select
                     value={ligneActions[l.id] ?? (l.produitId ? "COMMANDE" : "LIBRE")}
@@ -616,16 +617,16 @@ export function BesoinsDetailClient({
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {l.quantite} {uniteLabel(l.unite ?? l.produit?.unite ?? "")}
                         {" "}×{" "}
-                        {formatMontant(l.prixEstime)} FCFA
+                        {formatMontant(l.prixEstime, locale)} FCFA
                         {" = "}
                         <span className="font-medium">
-                          {formatMontant(l.quantite * l.prixEstime)} FCFA
+                          {formatMontant(l.quantite * l.prixEstime, locale)} FCFA
                         </span>
                       </p>
                       {l.prixReel !== null && (
                         <p className="text-xs text-primary mt-0.5">
-                          {t("detail.reelLabel")} {l.quantite} × {formatMontant(l.prixReel)} ={" "}
-                          {formatMontant(l.quantite * l.prixReel)} FCFA
+                          {t("detail.reelLabel")} {l.quantite} × {formatMontant(l.prixReel, locale)} ={" "}
+                          {formatMontant(l.quantite * l.prixReel, locale)} FCFA
                         </p>
                       )}
                     </div>
@@ -671,7 +672,7 @@ export function BesoinsDetailClient({
                       {d.numero}
                     </p>
                     <p className="text-sm font-medium">
-                      {formatMontant(d.montantTotal)} FCFA
+                      {formatMontant(d.montantTotal, locale)} FCFA
                     </p>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />

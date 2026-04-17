@@ -7,7 +7,7 @@ import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { BenchmarkBadge } from "./benchmark-badge";
 import { evaluerBenchmark, BENCHMARK_FCR } from "@/lib/benchmarks";
 import type { DetailAliment, DetailAlimentVague, FCRHebdomadairePoint, ChangementGranule } from "@/types";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { formatNumber } from "@/lib/format";
 
 const ResponsiveContainer = dynamic(
@@ -119,6 +119,7 @@ interface FeedFCRChartProps {
 export function FeedFCRChart({ evolutionFCR }: FeedFCRChartProps) {
   const tAnalytics = useTranslations("analytics");
   const tSections = useTranslations("errors.sections");
+  const locale = useLocale();
 
   if (evolutionFCR.length === 0) {
     return (
@@ -136,7 +137,7 @@ export function FeedFCRChart({ evolutionFCR }: FeedFCRChartProps) {
   }
 
   const data = evolutionFCR.map((p) => ({
-    date: new Date(p.date).toLocaleDateString("fr-FR", { month: "short", year: "2-digit" }),
+    date: new Date(p.date).toLocaleDateString(locale, { month: "short", year: "2-digit" }),
     fcr: p.fcr,
   }));
 
@@ -189,6 +190,7 @@ interface FeedVagueBreakdownProps {
 export function FeedVagueBreakdown({ parVague }: FeedVagueBreakdownProps) {
   const tAnalytics = useTranslations("analytics");
   const tSections = useTranslations("errors.sections");
+  const locale = useLocale();
 
   if (parVague.length === 0) {
     return (
@@ -283,9 +285,9 @@ export function FeedVagueBreakdown({ parVague }: FeedVagueBreakdownProps) {
                       <div key={`${p.bacId}-${idx}`} className="text-xs">
                         <span className="font-medium">{p.bacNom}</span>
                         {" · "}
-                        {new Date(p.dateDebut).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}
+                        {new Date(p.dateDebut).toLocaleDateString(locale, { day: "2-digit", month: "2-digit" })}
                         {" → "}
-                        {new Date(p.dateFin).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}
+                        {new Date(p.dateFin).toLocaleDateString(locale, { day: "2-digit", month: "2-digit" })}
                         {" · "}
                         {p.qtyAlimentKg.toFixed(1)} kg
                         {p.fcr !== null && (

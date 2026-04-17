@@ -71,7 +71,10 @@
     "expireLe": "Expire le {date}",
     "vaguesEnCoursTitle": "Vagues en cours ({count})",
     "graphiquesSuivi": "Graphiques de suivi",
-    "notesRecentes": "Notes recentes"
+    "notesRecentes": "Notes recentes",
+    "alevinsCount": "{count} alevins",
+    "bacCount": "{count} bac",
+    "bacsCount": "{count} bacs"
   },
   "stats": {
     "clientsActives": "Clients actifs",

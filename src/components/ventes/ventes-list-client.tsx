@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { formatNumber } from "@/lib/format";
 import { Plus, ShoppingCart, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ interface Props {
 
 export function VentesListClient({ initialVentes, clients, vagues, permissions }: Props) {
   const t = useTranslations("ventes");
+  const locale = useLocale();
   const [filterClient, setFilterClient] = useState<string>("all");
   const [filterVague, setFilterVague] = useState<string>("all");
 
@@ -137,7 +138,7 @@ export function VentesListClient({ initialVentes, clients, vagues, permissions }
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(v.createdAt).toLocaleDateString("fr-FR")}
+                      {new Date(v.createdAt).toLocaleDateString(locale)}
                     </p>
                   </CardContent>
                 </Card>

@@ -108,7 +108,9 @@
     "poidsProjeteSGR": "Projected weight (SGR)",
     "recommandationAlimentation": "Feeding recommendation",
     "donneesInsuffisantes": "Insufficient data to calculate feeding recommendation.",
-    "detailParBac": "Detail per tank ({count} tanks)"
+    "detailParBac": "Detail per tank ({count} tanks)",
+    "stockLabel": "Stock:",
+    "daysShort": "{count} d"
   },
   "placeholders": {
     "retourRegles": "Back to rules",

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { Info, ChevronDown, RefreshCw, Loader2, AlertTriangle, FlaskConical, Users, TrendingUp } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import {
   Dialog,
   DialogTrigger,
@@ -20,9 +20,9 @@ import type { FCRBacPeriode, FCRByFeedResult, FCRByFeedVague } from "@/types";
 // ---------------------------------------------------------------------------
 
 const fmt = (n: number, d = 2) => n.toFixed(d);
-const fmtInt = (n: number) => Math.round(n).toLocaleString("fr-FR");
-const fmtDate = (d: Date | string) =>
-  new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+const fmtInt = (n: number, locale: string) => Math.round(n).toLocaleString(locale);
+const fmtDate = (d: Date | string, locale: string) =>
+  new Date(d).toLocaleDateString(locale, { day: "2-digit", month: "2-digit" });
 
 function ConfidenceBadge({ level }: { level: string }) {
   const t = useTranslations("analytics.fcrTrace.confidence");
@@ -89,7 +89,8 @@ function PopMethodeBadge({ methode }: { methode: string }) {
 
 function PeriodeBacRow({ periode }: { periode: FCRBacPeriode }) {
   const t = useTranslations("analytics.fcrTrace");
-  const title = `${periode.bacNom} · ${fmtDate(periode.dateDebut)} → ${fmtDate(periode.dateFin)} (${periode.dureeJours}j)`;
+  const locale = useLocale();
+  const title = `${periode.bacNom} · ${fmtDate(periode.dateDebut, locale)} → ${fmtDate(periode.dateFin, locale)} (${periode.dureeJours}j)`;
 
   return (
     <details className="group border border-border rounded-lg overflow-hidden">
@@ -125,9 +126,9 @@ function PeriodeBacRow({ periode }: { periode: FCRBacPeriode }) {
         {/* Row 3: Population */}
         <div className="flex items-start gap-3">
           <div className="flex-1 grid grid-cols-3 gap-2">
-            <LabelValue label={t("popDebut")} value={fmtInt(periode.populationDebut)} />
-            <LabelValue label={t("popFin")} value={fmtInt(periode.populationFin)} />
-            <LabelValue label={t("popMoyenne")} value={fmtInt(periode.avgFishCount)} />
+            <LabelValue label={t("popDebut")} value={fmtInt(periode.populationDebut, locale)} />
+            <LabelValue label={t("popFin")} value={fmtInt(periode.populationFin, locale)} />
+            <LabelValue label={t("popMoyenne")} value={fmtInt(periode.avgFishCount, locale)} />
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -142,7 +143,7 @@ function PeriodeBacRow({ periode }: { periode: FCRBacPeriode }) {
           <LabelValue label={t("gainParPoisson")} value={`${fmt(periode.gainParPoissonG, 2)} g`} />
           <LabelValue
             label={t("biomassGain")}
-            value={`${fmt(periode.gainParPoissonG, 2)}g × ${fmtInt(periode.avgFishCount)} / 1000 = ${fmt(periode.gainBiomasseKg)}`}
+            value={`${fmt(periode.gainParPoissonG, 2)}g × ${fmtInt(periode.avgFishCount, locale)} / 1000 = ${fmt(periode.gainBiomasseKg)}`}
             mono
           />
         </div>
@@ -204,6 +205,7 @@ function GompertzSection({ gompertz }: { gompertz: FCRByFeedVague["gompertz"] })
 
 function VagueSection({ vague, defaultOpen }: { vague: FCRByFeedVague; defaultOpen?: boolean }) {
   const t = useTranslations("analytics.fcrTrace");
+  const locale = useLocale();
   const periodesBac = vague.periodesBac ?? [];
 
   return (
@@ -212,7 +214,7 @@ function VagueSection({ vague, defaultOpen }: { vague: FCRByFeedVague; defaultOp
         <div className="min-w-0">
           <p className="text-sm font-semibold truncate">{t("vagueCode", { code: vague.vagueCode })}</p>
           <p className="text-xs text-muted-foreground">
-            {fmtDate(vague.dateDebut)} → {vague.dateFin ? fmtDate(vague.dateFin) : t("enCours")}
+            {fmtDate(vague.dateDebut, locale)} → {vague.dateFin ? fmtDate(vague.dateFin, locale) : t("enCours")}
             {" · "}
             {periodesBac.length !== 1 ? t("periodeCountPlural", { count: periodesBac.length }) : t("periodeCount", { count: periodesBac.length })}
           </p>

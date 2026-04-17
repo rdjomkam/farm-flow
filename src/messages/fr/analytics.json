@@ -17,7 +17,10 @@
     "feedNotFound": "Produit aliment introuvable.",
     "minTwoFeeds": "Il faut au moins 2 aliments utilisés pour lancer une simulation.",
     "comparer": "Comparer →",
-    "changerVague": "Changer de vague"
+    "changerVague": "Changer de vague",
+    "waveSummaryBacs": "{count} bac",
+    "waveSummaryBacsPlural": "{count} bacs",
+    "waveSummaryAlevins": "{count} alevins"
   },
   "dashboard": {
     "indicateursCles": "Indicateurs clés",

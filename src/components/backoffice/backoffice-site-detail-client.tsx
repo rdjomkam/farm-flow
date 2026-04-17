@@ -11,7 +11,7 @@
 
 import { formatNumber } from "@/lib/format";
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Building2, Users, Layers, Database, CheckCircle, XCircle } from "lucide-react";
 import { SiteStatus, SiteModule } from "@/types";
 import type { AdminSiteDetailResponse } from "@/types";
@@ -70,6 +70,7 @@ interface BackofficeSiteDetailClientProps {
 export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSiteDetailClientProps) {
   const t = useTranslations("backoffice");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
   const [site, setSite] = useState(initialSite);
 
   function handleModulesSaved(modules: SiteModule[]) {
@@ -139,7 +140,7 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
               <SiteInfoRow label={t("sites.supervise")} value={site.supervised ? tCommon("labels.yes") : tCommon("labels.no")} />
               <SiteInfoRow
                 label={t("sites.creeLe")}
-                value={new Date(site.createdAt).toLocaleDateString("fr-FR", {
+                value={new Date(site.createdAt).toLocaleDateString(locale, {
                   day: "2-digit",
                   month: "long",
                   year: "numeric",
@@ -147,7 +148,7 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
               />
               <SiteInfoRow
                 label={t("sites.modifieLe")}
-                value={new Date(site.updatedAt).toLocaleDateString("fr-FR", {
+                value={new Date(site.updatedAt).toLocaleDateString(locale, {
                   day: "2-digit",
                   month: "long",
                   year: "numeric",
@@ -156,7 +157,7 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
               {site.suspendedAt && (
                 <SiteInfoRow
                   label={t("sites.detail.suspendedAt")}
-                  value={new Date(site.suspendedAt).toLocaleDateString("fr-FR", {
+                  value={new Date(site.suspendedAt).toLocaleDateString(locale, {
                     day: "2-digit",
                     month: "long",
                     year: "numeric",
@@ -252,20 +253,20 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
               <SiteInfoRow label={t("sites.periode")} value={site.abonnementActif.periode} />
               <SiteInfoRow
                 label={t("sites.debut")}
-                value={new Date(site.abonnementActif.dateDebut).toLocaleDateString("fr-FR", {
+                value={new Date(site.abonnementActif.dateDebut).toLocaleDateString(locale, {
                   day: "2-digit", month: "long", year: "numeric",
                 })}
               />
               <SiteInfoRow
                 label={t("sites.detail.labels.fin")}
-                value={new Date(site.abonnementActif.dateFin).toLocaleDateString("fr-FR", {
+                value={new Date(site.abonnementActif.dateFin).toLocaleDateString(locale, {
                   day: "2-digit", month: "long", year: "numeric",
                 })}
               />
               {site.abonnementActif.dateFinGrace && (
                 <SiteInfoRow
                   label={t("sites.finDeGrace")}
-                  value={new Date(site.abonnementActif.dateFinGrace).toLocaleDateString("fr-FR", {
+                  value={new Date(site.abonnementActif.dateFinGrace).toLocaleDateString(locale, {
                     day: "2-digit", month: "long", year: "numeric",
                   })}
                 />

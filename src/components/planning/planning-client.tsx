@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
 import {
@@ -168,6 +168,7 @@ interface PlanningClientProps {
 
 export function PlanningClient({ activites, permissions, vagues = [], bacs = [], members = [] }: PlanningClientProps) {
   const t = useTranslations("planning");
+  const locale = useLocale();
   const activiteService = useActiviteService();
   const queryClient = useQueryClient();
   const [isPending, setIsPending] = useState(false);
@@ -294,7 +295,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
 
   for (const [key, items] of datesSorted) {
     const dt = new Date(key);
-    const label = dt.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+    const label = dt.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
     groupesParDate.push({ dateLabel: label, items });
   }
 
@@ -341,7 +342,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
               {activite.vague && ` · ${activite.vague.code}`}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {new Date(activite.dateDebut).toLocaleDateString("fr-FR", {
+              {new Date(activite.dateDebut).toLocaleDateString(locale, {
                 day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
               })}
             </p>
@@ -622,7 +623,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">{t("detail.dateDebut")}</span>
                       <span className="font-medium">
-                        {new Date(a.dateDebut).toLocaleDateString("fr-FR", {
+                        {new Date(a.dateDebut).toLocaleDateString(locale, {
                           weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
                         })}
                       </span>
@@ -631,7 +632,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">{t("detail.dateFin")}</span>
                         <span className="font-medium">
-                          {new Date(a.dateFin).toLocaleDateString("fr-FR", {
+                          {new Date(a.dateFin).toLocaleDateString(locale, {
                             weekday: "short", day: "numeric", month: "short",
                           })}
                         </span>
@@ -753,7 +754,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                           ? t(typeReleveTranslationKeys[a.releve.typeReleve as TypeReleve] as Parameters<typeof t>[0])
                           : a.releve.typeReleve}
                         {" · "}
-                        {new Date(a.releve.date).toLocaleDateString("fr-FR", {
+                        {new Date(a.releve.date).toLocaleDateString(locale, {
                           day: "numeric", month: "short", year: "numeric",
                         })}
                       </Link>
@@ -793,7 +794,7 @@ export function PlanningClient({ activites, permissions, vagues = [], bacs = [],
                     {a.dateTerminee && (
                       <p className="text-xs text-success/70 mt-1.5">
                         {t("detail.termineeLe")}{" "}
-                        {new Date(a.dateTerminee).toLocaleDateString("fr-FR", {
+                        {new Date(a.dateTerminee).toLocaleDateString(locale, {
                           day: "numeric", month: "long", year: "numeric",
                         })}
                       </p>

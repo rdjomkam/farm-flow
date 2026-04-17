@@ -18,7 +18,8 @@
     "sectionTitle": "Waves in progress",
     "emptyTitle": "No waves in progress",
     "emptyDescription": "Create a wave to start tracking your catfish.",
-    "createWave": "Create a wave"
+    "createWave": "Create a wave",
+    "biomasse": "{value} kg biomass"
   },
   "benchmarks": {
     "EXCELLENT": "Excellent",

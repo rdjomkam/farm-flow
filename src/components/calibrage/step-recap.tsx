@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2 } from "lucide-react";
@@ -43,6 +43,7 @@ export function StepRecap({
   submitting,
 }: StepRecapProps) {
   const t = useTranslations("calibrage.stepRecap");
+  const locale = useLocale();
   const sourceBacs = bacs.filter((b) => selectedBacIds.includes(b.id));
   const totalSourcePoissons = sourceBacs.reduce(
     (sum, b) => sum + (b.nombrePoissons ?? 0),
@@ -125,7 +126,7 @@ export function StepRecap({
       <section className="rounded-xl border border-border bg-card p-4">
         <h3 className="text-sm font-semibold mb-2">{t("dateCalibrage")}</h3>
         <p className="text-sm font-semibold">
-          {new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeStyle: "short" }).format(new Date(date))}
+          {new Intl.DateTimeFormat(locale, { dateStyle: "long", timeStyle: "short" }).format(new Date(date))}
         </p>
       </section>
 

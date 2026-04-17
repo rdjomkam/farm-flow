@@ -3,7 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { queryKeys } from "@/lib/query-keys";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { formatNumber } from "@/lib/format";
 import {
   ArrowLeft,
@@ -62,6 +62,7 @@ interface Props {
 
 export function VenteDetailClient({ vente, permissions }: Props) {
   const t = useTranslations("ventes");
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const venteService = useVenteService();
 
@@ -112,7 +113,7 @@ export function VenteDetailClient({ vente, permissions }: Props) {
             <div className="flex items-center gap-2 text-muted-foreground">
               <Calendar className="h-4 w-4 shrink-0" />
               <span>
-                {new Date(vente.createdAt).toLocaleDateString("fr-FR")}
+                {new Date(vente.createdAt).toLocaleDateString(locale)}
               </span>
             </div>
           </div>

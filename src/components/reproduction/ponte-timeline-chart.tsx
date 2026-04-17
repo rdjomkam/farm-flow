@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // ---------------------------------------------------------------------------
@@ -45,13 +45,14 @@ function CustomTooltip({
   payload?: TooltipPayloadItem[];
   label?: string;
 }) {
+  const locale = useLocale();
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow-md min-w-[120px]">
       <p className="font-semibold text-foreground mb-1">{label}</p>
       {payload.map((item) => (
         <p key={item.name} style={{ color: item.color }}>
-          {item.name} : {item.value.toLocaleString("fr-FR")}
+          {item.name} : {item.value.toLocaleString(locale)}
         </p>
       ))}
     </div>

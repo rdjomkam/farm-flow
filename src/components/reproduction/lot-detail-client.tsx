@@ -11,7 +11,7 @@ import {
   LogOut,
   ChevronRight,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -159,6 +159,7 @@ function statutBadgeClass(statut: string): string {
 
 export function LotDetailClient({ lot, permissions }: Props) {
   const t = useTranslations("reproduction.lots");
+  const locale = useLocale();
   const router = useRouter();
   const { call } = useApi();
 
@@ -567,7 +568,7 @@ export function LotDetailClient({ lot, permissions }: Props) {
                   )}
                 </div>
                 <span className="text-xs text-muted-foreground shrink-0">
-                  {new Date(r.date).toLocaleDateString("fr-FR")}
+                  {new Date(r.date).toLocaleDateString(locale)}
                 </span>
               </div>
             ))}

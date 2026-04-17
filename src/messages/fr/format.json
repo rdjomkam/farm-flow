@@ -16,7 +16,10 @@
   "dates": {
     "today": "Aujourd'hui",
     "yesterday": "Hier",
-    "daysAgo": "Il y a {count} jours"
+    "daysAgo": "Il y a {count} jours",
+    "justNow": "À l'instant",
+    "minutesAgo": "Il y a {count} min",
+    "hoursAgo": "Il y a {count}h"
   },
   "price": {
     "free": "Gratuit",

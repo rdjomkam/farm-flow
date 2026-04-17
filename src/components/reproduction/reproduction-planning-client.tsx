@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { CalendarDays, Fish, Egg, Layers } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LotsGanttView, GanttLot } from "./lots-gantt-view";
@@ -132,6 +132,7 @@ function MonthCalendar({
   events: CalendarEvent[];
 }) {
   const t = useTranslations("reproduction.planning");
+  const locale = useLocale();
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
   const days = getDaysInMonth(year, month);
@@ -249,6 +250,7 @@ function UpcomingEventsList({
   emptyLabel: string;
 }) {
   const t = useTranslations("reproduction.planning");
+  const locale = useLocale();
   const sorted = useMemo(
     () => [...events].sort((a, b) => a.date.localeCompare(b.date)),
     [events]
@@ -280,7 +282,7 @@ function UpcomingEventsList({
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{ev.label}</p>
               <p className="text-xs text-muted-foreground">
-                {d.toLocaleDateString("fr-FR", {
+                {d.toLocaleDateString(locale, {
                   weekday: "short",
                   day: "numeric",
                   month: "short",

@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import ReactMarkdown from "react-markdown";
 import {
@@ -39,19 +39,20 @@ interface NoteDetailDialogProps {
 
 function formatDate(
   date: Date | string,
-  t: (key: string, params?: Record<string, string>) => string
+  t: (key: string, params?: Record<string, string>) => string,
+  locale: string
 ): string {
   const d = typeof date === "string" ? new Date(date) : date;
   const now = new Date();
   const diff = now.getTime() - d.getTime();
   const dayMs = 86_400_000;
   if (diff < dayMs && d.getDate() === now.getDate()) {
-    return t("list.todayAt", { time: d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) });
+    return t("list.todayAt", { time: d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }) });
   }
   if (diff < 2 * dayMs && d.getDate() === now.getDate() - 1) {
-    return t("list.yesterdayAt", { time: d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) });
+    return t("list.yesterdayAt", { time: d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }) });
   }
-  return d.toLocaleDateString("fr-FR", {
+  return d.toLocaleDateString(locale, {
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -118,6 +119,7 @@ export function NoteDetailDialog({
   children,
 }: NoteDetailDialogProps) {
   const t = useTranslations("notes");
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const noteService = useNoteService();
   const [markedRead, setMarkedRead] = useState(false);
@@ -201,7 +203,7 @@ export function NoteDetailDialog({
               )}
               <span className="inline-flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5 shrink-0" />
-                {formatDate(note.createdAt, t)}
+                {formatDate(note.createdAt, t, locale)}
               </span>
               {note.vague && (
                 <span className="inline-flex items-center gap-1.5">
