@@ -83,7 +83,8 @@
     "adminAbonnements": "Subscription management",
     "adminCommissions": "Commission management",
     "adminRemises": "Discount management",
-    "ogTitle": "FarmFlow — Catfish farming management"
+    "ogTitle": "FarmFlow — Catfish farming management",
+    "changerPlan": "Change Plan"
   },
   "login": {
     "title": "Login",

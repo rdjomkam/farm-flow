@@ -21,9 +21,10 @@ import Link from "next/link";
 import { checkBackofficeAccess } from "@/lib/auth/backoffice";
 import type { MaintenanceStatusResponse } from "@/types";
 
-export const metadata: Metadata = {
-  title: "Maintenance | DKFarm",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("maintenance");
+  return { title: t("metadataTitle") };
+}
 
 // Desactiver le cache statique — la page doit refleter l'etat courant
 export const dynamic = "force-dynamic";

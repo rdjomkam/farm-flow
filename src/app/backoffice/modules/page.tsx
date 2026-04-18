@@ -14,9 +14,10 @@ import { AdminModulesList } from "@/components/admin/modules/admin-modules-list"
 import type { AdminModulesListResponse, ModuleDefinitionResponse } from "@/types";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Modules",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("backoffice.nav");
+  return { title: t("modules") };
+}
 
 export const dynamic = "force-dynamic";
 

@@ -15,9 +15,10 @@ import { getPlatformKPIs } from "@/lib/queries/admin-analytics";
 import { AdminAnalyticsDashboard } from "@/components/admin/analytics/admin-analytics-dashboard";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Dashboard",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("backoffice.nav");
+  return { title: t("dashboard") };
+}
 
 // ISR 5 minutes
 export const revalidate = 300;

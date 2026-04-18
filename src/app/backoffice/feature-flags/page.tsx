@@ -13,9 +13,10 @@ import { checkBackofficeAccess } from "@/lib/auth/backoffice";
 import { FeatureFlagsList } from "@/components/backoffice/feature-flags-list";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Feature Flags",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("backoffice.nav");
+  return { title: t("featureFlags") };
+}
 
 export const dynamic = "force-dynamic";
 

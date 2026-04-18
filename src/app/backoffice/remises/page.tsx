@@ -14,9 +14,10 @@ import { prisma } from "@/lib/db";
 import { RemisesListClient } from "@/components/remises/remises-list-client";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Remises",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("backoffice.nav");
+  return { title: t("remises") };
+}
 
 export const dynamic = "force-dynamic";
 

@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { PackActiverClient } from "@/components/packs/pack-activer-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
@@ -19,7 +20,10 @@ export default async function PackActiverPage({ params }: PageProps) {
   const permissions = await checkPagePermission(session, Permission.ACTIVER_PACKS);
   if (!permissions) return <AccessDenied />;
 
-  const pack = await getPackById(id, session.activeSiteId);
+  const [pack, t] = await Promise.all([
+    getPackById(id, session.activeSiteId),
+    getTranslations("packs.activer"),
+  ]);
   if (!pack) notFound();
   if (!pack.isActive) {
     redirect(`/packs/${id}`);
@@ -27,7 +31,7 @@ export default async function PackActiverPage({ params }: PageProps) {
 
   return (
     <>
-      <Header title={`Activer — ${pack.nom}`} />
+      <Header title={t("headerTitle", { nom: pack.nom })} />
       <div className="p-4">
         <PackActiverClient
           pack={JSON.parse(JSON.stringify(pack))}

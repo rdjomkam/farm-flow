@@ -125,6 +125,7 @@
   },
   "placeholderExample": "Ex : {value}",
   "activer": {
+    "headerTitle": "Activer — {nom}",
     "successTitle": "Pack active avec succes !",
     "codeActivation": "Code d'activation :",
     "recapTitle": "Recapitulatif du provisioning",

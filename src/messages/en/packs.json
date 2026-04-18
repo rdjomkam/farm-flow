@@ -125,6 +125,7 @@
   },
   "placeholderExample": "E.g.: {value}",
   "activer": {
+    "headerTitle": "Activate — {nom}",
     "successTitle": "Pack activated successfully!",
     "codeActivation": "Activation code:",
     "recapTitle": "Provisioning summary",
