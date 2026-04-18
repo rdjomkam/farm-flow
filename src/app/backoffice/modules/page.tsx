@@ -75,9 +75,7 @@ export default async function BackofficeModulesPage() {
       <div className="mb-6">
         <h1 className="text-xl font-bold text-foreground">{t("pages.modules.title")}</h1>
         <p className="text-sm text-muted-foreground">
-          {initialData.modules.length} module
-          {initialData.modules.length !== 1 ? "s" : ""} enregistre
-          {initialData.modules.length !== 1 ? "s" : ""}
+          {t("pages.modules.subtitle", { count: initialData.modules.length })}
         </p>
       </div>
       <AdminModulesList initialData={initialData} />

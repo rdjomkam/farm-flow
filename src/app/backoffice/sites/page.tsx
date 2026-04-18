@@ -34,8 +34,7 @@ export default async function BackofficeSitesPage() {
       <div className="mb-6">
         <h1 className="text-xl font-bold text-foreground">{t("pages.sites.title")}</h1>
         <p className="text-sm text-muted-foreground">
-          {initialData.stats.totalActive} site{initialData.stats.totalActive !== 1 ? "s" : ""} actif
-          {initialData.stats.totalActive !== 1 ? "s" : ""} sur {initialData.total} au total
+          {t("pages.sites.subtitle", { active: initialData.stats.totalActive, total: initialData.total })}
         </p>
       </div>
       <BackofficeSitesList initialData={initialData} />

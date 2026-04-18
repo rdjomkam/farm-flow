@@ -99,7 +99,7 @@ export default async function BackofficeAbonnementsPage({ searchParams }: Backof
       <div className="mb-4 flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-xl font-bold text-foreground">{t("pages.abonnements.title")}</h1>
-          <p className="text-sm text-muted-foreground">{total} abonnement{total > 1 ? "s" : ""} au total</p>
+          <p className="text-sm text-muted-foreground">{t("pages.abonnements.subtitle", { count: total })}</p>
         </div>
       </div>
       <AbonnementsAdminList

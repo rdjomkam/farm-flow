@@ -197,7 +197,8 @@
   },
   "pages": {
     "modules": {
-      "title": "Registre des modules"
+      "title": "Registre des modules",
+      "subtitle": "{count, plural, one {# module enregistre} other {# modules enregistres}}"
     },
     "remises": {
       "title": "Gestion des remises",
@@ -207,7 +208,8 @@
       "remisesGlobales": "Remises globales"
     },
     "plans": {
-      "title": "Plans d'abonnement"
+      "title": "Plans d'abonnement",
+      "subtitle": "{count, plural, one {# plan au total} other {# plans au total}}"
     },
     "commissions": {
       "title": "Gestion des commissions",
@@ -217,14 +219,16 @@
       "retraitsTraites": "Retraits traites (recents)"
     },
     "sites": {
-      "title": "Gestion des sites clients"
+      "title": "Gestion des sites clients",
+      "subtitle": "{active, plural, one {# site actif} other {# sites actifs}} sur {total} au total"
     },
     "dashboard": {
       "title": "Analytics Plateforme",
       "description": "KPIs consolides de toute la plateforme DKFarm"
     },
     "abonnements": {
-      "title": "Tous les abonnements"
+      "title": "Tous les abonnements",
+      "subtitle": "{count, plural, one {# abonnement au total} other {# abonnements au total}}"
     }
   },
   "siteStatus": {

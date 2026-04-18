@@ -43,7 +43,7 @@ export default async function BackofficePlansPage() {
         <div>
           <h1 className="text-xl font-bold text-foreground">{t("pages.plans.title")}</h1>
           <p className="text-sm text-muted-foreground">
-            {plans.length} plan{plans.length > 1 ? "s" : ""} au total
+            {t("pages.plans.subtitle", { count: plans.length })}
           </p>
         </div>
       </div>
