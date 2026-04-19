@@ -5,7 +5,8 @@
     "nouveau": "New",
     "retourVague": "Back to batch",
     "aucunCalibrage": "No grading records",
-    "aucunCalibrageDescription": "The first grading of this batch will appear here."
+    "aucunCalibrageDescription": "The first grading of this batch will appear here.",
+    "headerTitle": "Gradings — {code}"
   },
   "categories": {
     "PETIT": "Small",
@@ -139,6 +140,11 @@
       "mortalite": "Mortality",
       "recapitulatif": "Summary"
     }
+  },
+  "toasts": {
+    "created": "Calibration saved!",
+    "updated": "Calibration updated.",
+    "groupeUpdated": "Group updated."
   },
   "modifierDialog": {
     "trigger": "Edit",

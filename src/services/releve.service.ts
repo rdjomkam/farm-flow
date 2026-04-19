@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useApi } from "@/hooks/use-api";
 import { TypeReleve } from "@/types";
 import type { CreateReleveDTO, ReleveListResponse, PatchReleveResponse } from "@/types";
@@ -23,6 +24,7 @@ interface UpdateReleveDTO {
  */
 export function useReleveService() {
   const { call } = useApi();
+  const t = useTranslations("releves");
 
   const list = useCallback(
     (params?: { vagueId?: string; bacId?: string; typeReleve?: string }) => {
@@ -51,14 +53,14 @@ export function useReleveService() {
           body: JSON.stringify(dto),
         },
         {
-          successMessage: "Relevé enregistré !",
+          successMessage: t("toasts.created"),
           offlineCapable: true,
           entityType: "releve",
           entityLabel: `Relevé ${dto.typeReleve?.toLowerCase() ?? ""}`,
           priority: dto.typeReleve === TypeReleve.MORTALITE ? 1 : 2,
         }
       ),
-    [call]
+    [call, t]
   );
 
   const update = useCallback(
@@ -70,9 +72,9 @@ export function useReleveService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Relevé modifié." }
+        { successMessage: t("toasts.updated") }
       ),
-    [call]
+    [call, t]
   );
 
   const remove = useCallback(

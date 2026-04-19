@@ -165,6 +165,13 @@
       "activitySection": "Section activite"
     }
   },
+  "toasts": {
+    "created": "Activité planifiée.",
+    "completed": "Activité complétée.",
+    "updated": "Activité modifiée.",
+    "deleted": "Activité supprimée.",
+    "generated": "Activités générées."
+  },
   "completerActivite": {
     "trigger": "Completer",
     "title": "Completer l'activite",

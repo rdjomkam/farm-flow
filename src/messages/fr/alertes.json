@@ -162,6 +162,9 @@
       "default": "Voir les details"
     }
   },
+  "toasts": {
+    "allRead": "Toutes les notifications marquées comme lues."
+  },
   "config": {
     "checkNow": "Verifier maintenant",
     "save": "Sauvegarder",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useApi } from "@/hooks/use-api";
 import type {
   CalibrageWithRelations,
@@ -30,6 +31,7 @@ interface CalibrageListResult {
  */
 export function useCalibrageService() {
   const { call } = useApi();
+  const t = useTranslations("calibrage");
 
   const list = useCallback(
     (params?: { vagueId?: string }) => {
@@ -55,9 +57,9 @@ export function useCalibrageService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Calibrage enregistre !" }
+        { successMessage: t("toasts.created") }
       ),
-    [call]
+    [call, t]
   );
 
   const update = useCallback(
@@ -69,9 +71,9 @@ export function useCalibrageService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         },
-        { successMessage: "Calibrage modifie." }
+        { successMessage: t("toasts.updated") }
       ),
-    [call]
+    [call, t]
   );
 
   const updateGroupe = useCallback(
@@ -83,9 +85,9 @@ export function useCalibrageService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Groupe modifie." }
+        { successMessage: t("toasts.groupeUpdated") }
       ),
-    [call]
+    [call, t]
   );
 
   return { list, get, create, update, updateGroupe };

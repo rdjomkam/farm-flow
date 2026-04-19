@@ -16,7 +16,9 @@
   },
   "activations": {
     "activeLe": "Active le",
-    "expireLe": "Expire le"
+    "expireLe": "Expire le",
+    "packLabel": "Pack :",
+    "alevinsCount": "{count} alevins"
   },
   "statutsActivation": {
     "ACTIVE": "Active",
@@ -124,7 +126,17 @@
     "quantiteLabelSansUnite": "Quantite"
   },
   "placeholderExample": "Ex : {value}",
+  "toasts": {
+    "packCreated": "Pack créé.",
+    "packUpdated": "Pack modifié.",
+    "produitAdded": "Produit ajouté au pack.",
+    "bacAdded": "Bac ajouté au pack.",
+    "bacsSaved": "Configuration des bacs sauvegardée.",
+    "produitRemoved": "Produit retiré du pack.",
+    "packActivated": "Pack activé."
+  },
   "activer": {
+    "headerTitle": "Activer — {nom}",
     "successTitle": "Pack active avec succes !",
     "codeActivation": "Code d'activation :",
     "recapTitle": "Recapitulatif du provisioning",

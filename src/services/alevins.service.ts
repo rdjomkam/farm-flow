@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useApi } from "@/hooks/use-api";
 import type {
   LotAlevinsWithRelations,
@@ -30,6 +31,7 @@ import type {
  */
 export function useAlevinsService() {
   const { call } = useApi();
+  const t = useTranslations("reproduction");
 
   // -- Lots d'alevins --
 
@@ -58,9 +60,9 @@ export function useAlevinsService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Lot d'alevins cree !" }
+        { successMessage: t("toasts.lotCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   const updateLot = useCallback(
@@ -72,9 +74,9 @@ export function useAlevinsService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Lot modifie." }
+        { successMessage: t("toasts.lotUpdated") }
       ),
-    [call]
+    [call, t]
   );
 
   const transfererLot = useCallback(
@@ -86,9 +88,9 @@ export function useAlevinsService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Lot transfere." }
+        { successMessage: t("toasts.lotTransferred") }
       ),
-    [call]
+    [call, t]
   );
 
   // -- Pontes --
@@ -118,9 +120,9 @@ export function useAlevinsService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Ponte enregistree !" }
+        { successMessage: t("toasts.ponteCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   const updatePonte = useCallback(
@@ -132,9 +134,9 @@ export function useAlevinsService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Ponte modifiee." }
+        { successMessage: t("toasts.ponteUpdated") }
       ),
-    [call]
+    [call, t]
   );
 
   const deletePonte = useCallback(
@@ -142,9 +144,9 @@ export function useAlevinsService() {
       call<{ message: string }>(
         `/api/pontes/${id}`,
         { method: "DELETE" },
-        { successMessage: "Ponte supprimee." }
+        { successMessage: t("toasts.ponteDeleted") }
       ),
-    [call]
+    [call, t]
   );
 
   // -- Reproducteurs --
@@ -174,9 +176,9 @@ export function useAlevinsService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Reproducteur cree." }
+        { successMessage: t("toasts.reproducteurCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   const updateReproducteur = useCallback(
@@ -188,9 +190,9 @@ export function useAlevinsService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Reproducteur modifie." }
+        { successMessage: t("toasts.reproducteurUpdated") }
       ),
-    [call]
+    [call, t]
   );
 
   const deleteReproducteur = useCallback(
@@ -198,9 +200,9 @@ export function useAlevinsService() {
       call<{ message: string }>(
         `/api/reproducteurs/${id}`,
         { method: "DELETE" },
-        { successMessage: "Reproducteur supprime." }
+        { successMessage: t("toasts.reproducteurDeleted") }
       ),
-    [call]
+    [call, t]
   );
 
   return {

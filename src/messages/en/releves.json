@@ -308,6 +308,10 @@
       "consommations": "Consumptions"
     }
   },
+  "toasts": {
+    "created": "Record saved!",
+    "updated": "Record updated."
+  },
   "global": {
     "title": "All records",
     "filtres": {

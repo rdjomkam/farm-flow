@@ -84,10 +84,25 @@
     "forcerDeconnexionConfirmDescription": "Toutes les sessions actives de {name} seront supprimees. Cette action ne peut pas etre annulee.",
     "annuler": "Annuler",
     "compteSysteme": "Cet utilisateur est un compte systeme. Les actions de securite ne sont pas disponibles.",
+    "sessionsDeletedCount": "{count} session(s) supprimée(s).",
     "errors": {
       "motDePasseTropCourt": "Le mot de passe doit contenir au moins 6 caracteres.",
       "motDePasseNonCorrespondant": "Les mots de passe ne correspondent pas."
     }
+  },
+  "toasts": {
+    "userCreated": "Utilisateur créé.",
+    "userUpdated": "Utilisateur modifié.",
+    "passwordReset": "Mot de passe réinitialisé.",
+    "sessionsDeleted": "Sessions supprimées.",
+    "siteCreated": "Site créé.",
+    "siteUpdated": "Site modifié.",
+    "memberAdded": "Membre ajouté.",
+    "memberUpdated": "Membre modifié.",
+    "memberRemoved": "Membre retiré.",
+    "roleCreated": "Rôle créé.",
+    "roleUpdated": "Rôle modifié.",
+    "roleDeleted": "Rôle supprimé."
   },
   "impersonation": {
     "sectionTitle": "Impersonation",

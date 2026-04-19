@@ -661,6 +661,17 @@
     "creationFailed": "An error occurred during creation.",
     "networkError": "A network error occurred."
   },
+  "toasts": {
+    "lotCreated": "Fingerling batch created!",
+    "lotUpdated": "Batch updated.",
+    "lotTransferred": "Batch transferred.",
+    "ponteCreated": "Spawning recorded!",
+    "ponteUpdated": "Spawning updated.",
+    "ponteDeleted": "Spawning deleted.",
+    "reproducteurCreated": "Breeder created.",
+    "reproducteurUpdated": "Breeder updated.",
+    "reproducteurDeleted": "Breeder deleted."
+  },
   "ponteStatuts": {
     "EN_COURS": "In progress",
     "TERMINEE": "Completed",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useToast } from "@/components/ui/toast";
 import { useGlobalLoading } from "@/contexts/global-loading.context";
 
@@ -75,6 +76,7 @@ export interface ApiResult<T> {
 export function useApi() {
   const { toast } = useToast();
   const { increment, decrement, incrementMutation, decrementMutation } = useGlobalLoading();
+  const tErrors = useTranslations("errors.api");
 
   /**
    * call — Effectue un appel fetch avec gestion automatique du loading et des erreurs.
@@ -128,7 +130,7 @@ export function useApi() {
           const message =
             errorData?.message ??
             errorData?.error ??
-            `Erreur serveur (${res.status})`;
+            tErrors("serverError", { status: res.status });
 
           if (!silentError) {
             toast({ title: message, variant: "error" });
@@ -175,7 +177,7 @@ export function useApi() {
                 siteId,
               });
 
-              toast({ title: "Enregistré hors ligne", variant: "info" });
+              toast({ title: tErrors("savedOffline"), variant: "info" });
               return {
                 data: { _offline: true, tempId } as T,
                 error: null,
@@ -189,7 +191,7 @@ export function useApi() {
           }
         }
 
-        const message = "Erreur réseau. Vérifiez votre connexion.";
+        const message = tErrors("networkError");
         if (!silentError) {
           toast({ title: message, variant: "error" });
         }
@@ -201,7 +203,7 @@ export function useApi() {
         }
       }
     },
-    [toast, increment, decrement, incrementMutation, decrementMutation]
+    [toast, increment, decrement, incrementMutation, decrementMutation, tErrors]
   );
 
   /**
@@ -227,7 +229,7 @@ export function useApi() {
         const res = await fetch(url);
 
         if (!res.ok) {
-          let errorMsg = "Erreur lors du téléchargement";
+          let errorMsg = tErrors("downloadError");
           try {
             const data = await res.json();
             errorMsg = (data as Record<string, string>).error ??
@@ -248,16 +250,16 @@ export function useApi() {
         document.body.removeChild(a);
         URL.revokeObjectURL(blobUrl);
 
-        toast({ title: `${filename} téléchargé`, variant: "success" });
+        toast({ title: tErrors("downloadSuccess", { filename }), variant: "success" });
         return true;
       } catch {
-        toast({ title: "Erreur réseau lors du téléchargement", variant: "error" });
+        toast({ title: tErrors("networkDownloadError"), variant: "error" });
         return false;
       } finally {
         if (!silentLoading) decrement();
       }
     },
-    [toast, increment, decrement, incrementMutation, decrementMutation]
+    [toast, increment, decrement, incrementMutation, decrementMutation, tErrors]
   );
 
   return { call, download };

@@ -219,6 +219,11 @@
     "poissons": "{count} fish"
   },
   "poidsChartSection": "the weight evolution chart",
+  "toasts": {
+    "created": "Batch created successfully!",
+    "updated": "Batch updated.",
+    "closed": "Batch closed."
+  },
   "comparison": {
     "selectTitle": "Select 2 to 4 batches",
     "hide": "Hide",

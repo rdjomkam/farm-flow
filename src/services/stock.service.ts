@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useApi } from "@/hooks/use-api";
 import type {
   CommandeListResponse,
@@ -30,6 +31,7 @@ import type {
  */
 export function useStockService() {
   const { call } = useApi();
+  const t = useTranslations("stock");
 
   // -- Produits --
 
@@ -57,9 +59,9 @@ export function useStockService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Produit créé." }
+        { successMessage: t("toasts.produitCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   const updateProduit = useCallback(
@@ -71,9 +73,9 @@ export function useStockService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Produit modifié." }
+        { successMessage: t("toasts.produitUpdated") }
       ),
-    [call]
+    [call, t]
   );
 
   // -- Mouvements --
@@ -87,9 +89,9 @@ export function useStockService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Mouvement enregistré." }
+        { successMessage: t("toasts.mouvementCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   const getStockAlertes = useCallback(
@@ -118,9 +120,9 @@ export function useStockService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Commande créée." }
+        { successMessage: t("toasts.commandeCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   const envoyerCommande = useCallback(
@@ -128,9 +130,9 @@ export function useStockService() {
       call<CommandeWithRelations>(
         `/api/commandes/${id}/envoyer`,
         { method: "POST" },
-        { successMessage: "Commande envoyée." }
+        { successMessage: t("toasts.commandeEnvoyee") }
       ),
-    [call]
+    [call, t]
   );
 
   const annulerCommande = useCallback(
@@ -138,9 +140,9 @@ export function useStockService() {
       call<CommandeWithRelations>(
         `/api/commandes/${id}/annuler`,
         { method: "POST" },
-        { successMessage: "Commande annulée." }
+        { successMessage: t("toasts.commandeAnnulee") }
       ),
-    [call]
+    [call, t]
   );
 
   // -- Fournisseurs --
@@ -159,9 +161,9 @@ export function useStockService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Fournisseur créé." }
+        { successMessage: t("toasts.fournisseurCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   const updateFournisseur = useCallback(
@@ -173,9 +175,9 @@ export function useStockService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Fournisseur mis à jour." }
+        { successMessage: t("toasts.fournisseurUpdated") }
       ),
-    [call]
+    [call, t]
   );
 
   // -- Commandes avancees --
@@ -195,7 +197,7 @@ export function useStockService() {
         return call<RecevoirCommandeResponse>(
           `/api/commandes/${id}/recevoir`,
           { method: "POST", body: formData },
-          { successMessage: "Commande réceptionnée." }
+          { successMessage: t("toasts.commandeReceptionnee") }
         );
       }
       return call<RecevoirCommandeResponse>(
@@ -205,10 +207,10 @@ export function useStockService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ dateLivraison, lignes }),
         },
-        { successMessage: "Commande réceptionnée." }
+        { successMessage: t("toasts.commandeReceptionnee") }
       );
     },
-    [call]
+    [call, t]
   );
 
   const uploadFactureCommande = useCallback(
@@ -218,10 +220,10 @@ export function useStockService() {
       return call<{ factureUrl: string }>(
         `/api/commandes/${id}/facture`,
         { method: "POST", body: formData },
-        { successMessage: "Facture uploadée." }
+        { successMessage: t("toasts.factureUploadee") }
       );
     },
-    [call]
+    [call, t]
   );
 
   const getFactureCommandeUrl = useCallback(
@@ -235,9 +237,9 @@ export function useStockService() {
       call<{ message: string }>(
         `/api/commandes/${id}/facture`,
         { method: "DELETE" },
-        { successMessage: "Facture supprimée." }
+        { successMessage: t("toasts.factureSupprimee") }
       ),
-    [call]
+    [call, t]
   );
 
   return {

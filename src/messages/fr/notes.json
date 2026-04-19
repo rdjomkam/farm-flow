@@ -74,6 +74,11 @@
     "client": "Client",
     "ingenieur": "Ingenieur"
   },
+  "toasts": {
+    "noteCreated": "Note envoyée !",
+    "noteUpdated": "Note modifiée.",
+    "observationCreated": "Observation envoyée !"
+  },
   "form": {
     "sectionInfos": "Informations de la note",
     "sectionInfosDescription": "Redigez la note destinee au client",

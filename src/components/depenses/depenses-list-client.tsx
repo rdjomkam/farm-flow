@@ -145,7 +145,7 @@ export function DepensesListClient({ depenses, canManage, templatesActifsCount =
               <div className="flex items-center gap-2 text-sm">
                 <RefreshCw className="h-4 w-4 text-muted-foreground" />
                 <span>
-                  {templatesActifsCount} depense{templatesActifsCount !== 1 ? "s" : ""} recurrente{templatesActifsCount !== 1 ? "s" : ""} configuree{templatesActifsCount !== 1 ? "s" : ""}
+                  {t("list.recurrentesCount", { count: templatesActifsCount })}
                 </span>
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -187,7 +187,7 @@ export function DepensesListClient({ depenses, canManage, templatesActifsCount =
             <Link href="/depenses/nouvelle">
               <Button size="sm" className="gap-1.5">
                 <Plus className="h-4 w-4" />
-                Nouvelle
+                {t("list.nouvelle")}
               </Button>
             </Link>
           )}

@@ -14,9 +14,10 @@ import { AdminModulesList } from "@/components/admin/modules/admin-modules-list"
 import type { AdminModulesListResponse, ModuleDefinitionResponse } from "@/types";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Modules",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("backoffice.nav");
+  return { title: t("modules") };
+}
 
 export const dynamic = "force-dynamic";
 
@@ -74,9 +75,7 @@ export default async function BackofficeModulesPage() {
       <div className="mb-6">
         <h1 className="text-xl font-bold text-foreground">{t("pages.modules.title")}</h1>
         <p className="text-sm text-muted-foreground">
-          {initialData.modules.length} module
-          {initialData.modules.length !== 1 ? "s" : ""} enregistre
-          {initialData.modules.length !== 1 ? "s" : ""}
+          {t("pages.modules.subtitle", { count: initialData.modules.length })}
         </p>
       </div>
       <AdminModulesList initialData={initialData} />

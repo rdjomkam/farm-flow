@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useApi } from "@/hooks/use-api";
 import type { BacResponse, BacListResponse, CreateBacDTO, UpdateBacDTO } from "@/types";
 
@@ -13,6 +14,7 @@ import type { BacResponse, BacListResponse, CreateBacDTO, UpdateBacDTO } from "@
  */
 export function useBacService() {
   const { call } = useApi();
+  const t = useTranslations("bacs");
 
   const list = useCallback(
     (params?: { vagueId?: string; libre?: boolean }) => {
@@ -46,9 +48,9 @@ export function useBacService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Bac créé avec succès !" }
+        { successMessage: t("toasts.created") }
       ),
-    [call]
+    [call, t]
   );
 
   const update = useCallback(
@@ -60,9 +62,9 @@ export function useBacService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Bac modifié." }
+        { successMessage: t("toasts.updated") }
       ),
-    [call]
+    [call, t]
   );
 
   return { list, listLibres, listByVague, create, update };

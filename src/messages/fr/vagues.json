@@ -219,6 +219,16 @@
     "poissons": "{count} poissons"
   },
   "poidsChartSection": "le graphique d'évolution du poids",
+  "toasts": {
+    "created": "Vague créée avec succès !",
+    "updated": "Vague modifiée.",
+    "closed": "Vague clôturée."
+  },
+  "toasts": {
+    "created": "Vague créée avec succès !",
+    "updated": "Vague modifiée.",
+    "closed": "Vague clôturée."
+  },
   "comparison": {
     "selectTitle": "Selectionnez 2 a 4 vagues",
     "hide": "Masquer",

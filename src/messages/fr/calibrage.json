@@ -5,7 +5,8 @@
     "nouveau": "Nouveau",
     "retourVague": "Retour à la vague",
     "aucunCalibrage": "Aucun calibrage",
-    "aucunCalibrageDescription": "Le premier calibrage de cette vague apparaitra ici."
+    "aucunCalibrageDescription": "Le premier calibrage de cette vague apparaitra ici.",
+    "headerTitle": "Calibrages — {code}"
   },
   "categories": {
     "PETIT": "Petit",
@@ -139,6 +140,11 @@
       "mortalite": "Mortalite",
       "recapitulatif": "Recapitulatif"
     }
+  },
+  "toasts": {
+    "created": "Calibrage enregistré !",
+    "updated": "Calibrage modifié.",
+    "groupeUpdated": "Groupe modifié."
   },
   "modifierDialog": {
     "trigger": "Modifier",

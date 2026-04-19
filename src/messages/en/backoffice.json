@@ -197,7 +197,8 @@
   },
   "pages": {
     "modules": {
-      "title": "Module registry"
+      "title": "Module registry",
+      "subtitle": "{count, plural, one {# module registered} other {# modules registered}}"
     },
     "remises": {
       "title": "Discount management",
@@ -207,7 +208,8 @@
       "remisesGlobales": "Global discounts"
     },
     "plans": {
-      "title": "Subscription plans"
+      "title": "Subscription plans",
+      "subtitle": "{count, plural, one {# plan total} other {# plans total}}"
     },
     "commissions": {
       "title": "Commission management",
@@ -217,14 +219,16 @@
       "retraitsTraites": "Processed withdrawals (recent)"
     },
     "sites": {
-      "title": "Client site management"
+      "title": "Client site management",
+      "subtitle": "{active, plural, one {# active site} other {# active sites}} out of {total} total"
     },
     "dashboard": {
       "title": "Platform analytics",
       "description": "Consolidated KPIs for the entire DKFarm platform"
     },
     "abonnements": {
-      "title": "All subscriptions"
+      "title": "All subscriptions",
+      "subtitle": "{count, plural, one {# subscription total} other {# subscriptions total}}"
     }
   },
   "siteStatus": {

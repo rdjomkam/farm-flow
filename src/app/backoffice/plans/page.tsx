@@ -14,9 +14,10 @@ import { getPlansAbonnements } from "@/lib/queries/plans-abonnements";
 import { PlansAdminList } from "@/components/abonnements/plans-admin-list";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Plans",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("backoffice.nav");
+  return { title: t("plans") };
+}
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,7 @@ export default async function BackofficePlansPage() {
         <div>
           <h1 className="text-xl font-bold text-foreground">{t("pages.plans.title")}</h1>
           <p className="text-sm text-muted-foreground">
-            {plans.length} plan{plans.length > 1 ? "s" : ""} au total
+            {t("pages.plans.subtitle", { count: plans.length })}
           </p>
         </div>
       </div>

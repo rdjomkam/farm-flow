@@ -101,5 +101,13 @@
     "contactOwner": "The limit for {resource} has been reached. Contact the site owner.",
     "subscriptionRequired": "An active subscription is required to create this resource.",
     "viewPlans": "View plans"
+  },
+  "api": {
+    "serverError": "Server error ({status})",
+    "savedOffline": "Saved offline",
+    "networkError": "Network error. Check your connection.",
+    "downloadError": "Download error",
+    "downloadSuccess": "{filename} downloaded",
+    "networkDownloadError": "Network error during download"
   }
 }

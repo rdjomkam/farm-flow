@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useApi } from "@/hooks/use-api";
 import type {
   ConfigElevage,
@@ -60,6 +61,8 @@ interface PlaceholderListResult {
  */
 export function useConfigService() {
   const { call } = useApi();
+  const t = useTranslations("config-elevage");
+  const tPacks = useTranslations("packs");
 
   // -- Config elevage --
 
@@ -87,9 +90,9 @@ export function useConfigService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Configuration creee." }
+        { successMessage: t("toasts.configCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   const updateConfig = useCallback(
@@ -101,9 +104,9 @@ export function useConfigService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Configuration modifiee." }
+        { successMessage: t("toasts.configUpdated") }
       ),
-    [call]
+    [call, t]
   );
 
   const deleteConfig = useCallback(
@@ -111,9 +114,9 @@ export function useConfigService() {
       call<{ message: string }>(
         `/api/config-elevage/${id}`,
         { method: "DELETE" },
-        { successMessage: "Configuration supprimee." }
+        { successMessage: t("toasts.configDeleted") }
       ),
-    [call]
+    [call, t]
   );
 
   const dupliquerConfig = useCallback(
@@ -125,9 +128,9 @@ export function useConfigService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body ?? {}),
         },
-        { successMessage: "Configuration dupliquee." }
+        { successMessage: t("toasts.configDuplicated") }
       ),
-    [call]
+    [call, t]
   );
 
   // -- Regles d'activites --
@@ -151,9 +154,9 @@ export function useConfigService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Regle creee." }
+        { successMessage: t("toasts.regleCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   const updateRegle = useCallback(
@@ -165,9 +168,9 @@ export function useConfigService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Regle modifiee." }
+        { successMessage: t("toasts.regleUpdated") }
       ),
-    [call]
+    [call, t]
   );
 
   const deleteRegle = useCallback(
@@ -175,9 +178,9 @@ export function useConfigService() {
       call<{ message: string }>(
         `/api/regles-activites/${id}`,
         { method: "DELETE" },
-        { successMessage: "Regle supprimee." }
+        { successMessage: t("toasts.regleDeleted") }
       ),
-    [call]
+    [call, t]
   );
 
   const toggleRegle = useCallback(
@@ -185,9 +188,9 @@ export function useConfigService() {
       call<RegleActiviteWithRelations>(
         `/api/regles-activites/${id}/toggle`,
         { method: "PATCH" },
-        { successMessage: "Regle modifiee." }
+        { successMessage: t("toasts.regleUpdated") }
       ),
-    [call]
+    [call, t]
   );
 
   const resetRegle = useCallback(
@@ -195,9 +198,9 @@ export function useConfigService() {
       call<RegleActiviteWithRelations>(
         `/api/regles-activites/${id}/reset`,
         { method: "POST" },
-        { successMessage: "Regle reinitalisee." }
+        { successMessage: t("toasts.regleReset") }
       ),
-    [call]
+    [call, t]
   );
 
   // -- Placeholders personnalises --
@@ -222,9 +225,9 @@ export function useConfigService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Placeholder cree." }
+        { successMessage: t("toasts.placeholderCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   const updatePlaceholder = useCallback(
@@ -236,9 +239,9 @@ export function useConfigService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Placeholder modifie." }
+        { successMessage: t("toasts.placeholderUpdated") }
       ),
-    [call]
+    [call, t]
   );
 
   const deletePlaceholder = useCallback(
@@ -246,9 +249,9 @@ export function useConfigService() {
       call<{ message: string }>(
         `/api/regles-activites/placeholders/${id}`,
         { method: "DELETE" },
-        { successMessage: "Placeholder supprime." }
+        { successMessage: t("toasts.placeholderDeleted") }
       ),
-    [call]
+    [call, t]
   );
 
   // -- Config alertes --
@@ -267,9 +270,9 @@ export function useConfigService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Alerte creee." }
+        { successMessage: t("toasts.alerteCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   const updateConfigAlerte = useCallback(
@@ -281,9 +284,9 @@ export function useConfigService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Alerte modifiee." }
+        { successMessage: t("toasts.alerteUpdated") }
       ),
-    [call]
+    [call, t]
   );
 
   const deleteConfigAlerte = useCallback(
@@ -291,9 +294,9 @@ export function useConfigService() {
       call<{ message: string }>(
         `/api/alertes/config/${id}`,
         { method: "DELETE" },
-        { successMessage: "Alerte supprimee." }
+        { successMessage: t("toasts.alerteDeleted") }
       ),
-    [call]
+    [call, t]
   );
 
   const checkAlertes = useCallback(
@@ -325,9 +328,9 @@ export function useConfigService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Pack cree." }
+        { successMessage: tPacks("toasts.packCreated") }
       ),
-    [call]
+    [call, tPacks]
   );
 
   const updatePack = useCallback(
@@ -339,9 +342,9 @@ export function useConfigService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Pack modifie." }
+        { successMessage: tPacks("toasts.packUpdated") }
       ),
-    [call]
+    [call, tPacks]
   );
 
   const addPackProduit = useCallback(
@@ -353,9 +356,9 @@ export function useConfigService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Produit ajoute au pack." }
+        { successMessage: tPacks("toasts.produitAdded") }
       ),
-    [call]
+    [call, tPacks]
   );
 
   const addPackBac = useCallback(
@@ -367,9 +370,9 @@ export function useConfigService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Bac ajoute au pack." }
+        { successMessage: tPacks("toasts.bacAdded") }
       ),
-    [call]
+    [call, tPacks]
   );
 
   const updatePackBacs = useCallback(
@@ -381,9 +384,9 @@ export function useConfigService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         },
-        { successMessage: "Configuration des bacs sauvegardee." }
+        { successMessage: tPacks("toasts.bacsSaved") }
       ),
-    [call]
+    [call, tPacks]
   );
 
   const deletePackProduit = useCallback(
@@ -391,9 +394,9 @@ export function useConfigService() {
       call<PackWithRelations>(
         `/api/packs/${packId}/produits?produitId=${encodeURIComponent(produitId)}`,
         { method: "DELETE" },
-        { successMessage: "Produit retire du pack." }
+        { successMessage: tPacks("toasts.produitRemoved") }
       ),
-    [call]
+    [call, tPacks]
   );
 
   const activerPack = useCallback(
@@ -405,9 +408,9 @@ export function useConfigService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Pack active." }
+        { successMessage: tPacks("toasts.packActivated") }
       ),
-    [call]
+    [call, tPacks]
   );
 
   const listActivations = useCallback(

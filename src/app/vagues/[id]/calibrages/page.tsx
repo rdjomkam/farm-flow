@@ -38,7 +38,7 @@ export default async function VagueCalibragesPage({
 
   return (
     <>
-      <Header title={`Calibrages — ${vague.code}`} />
+      <Header title={t("headerTitle", { code: vague.code })} />
 
       <div className="flex flex-col gap-4 p-4">
         {isEnCours && permissions.includes(Permission.CALIBRAGES_CREER) && (

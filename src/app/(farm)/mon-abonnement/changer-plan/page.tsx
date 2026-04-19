@@ -23,9 +23,10 @@ import { prisma } from "@/lib/db";
 import type { PlanAbonnement } from "@/types";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Changer de plan",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common.metadata");
+  return { title: t("changerPlan") };
+}
 
 export const dynamic = "force-dynamic";
 

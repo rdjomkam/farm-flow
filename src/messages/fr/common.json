@@ -83,7 +83,8 @@
     "adminAbonnements": "Gestion des abonnements",
     "adminCommissions": "Gestion des commissions",
     "adminRemises": "Gestion des remises",
-    "ogTitle": "FarmFlow — Suivi d'élevage de silures"
+    "ogTitle": "FarmFlow — Suivi d'élevage de silures",
+    "changerPlan": "Changer de plan"
   },
   "login": {
     "title": "Connexion",
@@ -170,5 +171,13 @@
     "min": "Min",
     "max": "Max",
     "example": "Ex : {value}"
+  },
+  "toasts": {
+    "loginSuccess": "Connexion réussie !",
+    "logoutSuccess": "Déconnexion réussie.",
+    "registerSuccess": "Compte créé avec succès !",
+    "siteChanged": "Site actif changé.",
+    "impersonationStarted": "Impersonation démarrée.",
+    "impersonationStopped": "Retour à votre compte."
   }
 }

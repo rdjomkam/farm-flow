@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useApi } from "@/hooks/use-api";
 import type {
   CreateVagueDTO,
@@ -37,6 +38,7 @@ interface CloturerDTO {
  */
 export function useVagueService() {
   const { call } = useApi();
+  const t = useTranslations("vagues");
 
   const list = useCallback(
     () => call<VagueListResult>("/api/vagues"),
@@ -57,9 +59,9 @@ export function useVagueService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Vague créée avec succès !" }
+        { successMessage: t("toasts.created") }
       ),
-    [call]
+    [call, t]
   );
 
   const update = useCallback(
@@ -71,9 +73,9 @@ export function useVagueService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Vague modifiée." }
+        { successMessage: t("toasts.updated") }
       ),
-    [call]
+    [call, t]
   );
 
   const cloture = useCallback(
@@ -85,9 +87,9 @@ export function useVagueService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ statut: "TERMINEE", ...dto }),
         },
-        { successMessage: "Vague clôturée." }
+        { successMessage: t("toasts.closed") }
       ),
-    [call]
+    [call, t]
   );
 
   const listBacs = useCallback(
