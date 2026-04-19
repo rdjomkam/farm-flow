@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useApi } from "@/hooks/use-api";
 import type {
   CreateVenteDTO,
@@ -25,6 +26,7 @@ import type {
  */
 export function useVenteService() {
   const { call } = useApi();
+  const t = useTranslations("ventes");
 
   // -- Ventes --
 
@@ -48,14 +50,14 @@ export function useVenteService() {
           body: JSON.stringify(dto),
         },
         {
-          successMessage: "Vente enregistrée !",
+          successMessage: t("toasts.venteCreated"),
           offlineCapable: true,
           entityType: "vente",
           entityLabel: "Vente",
           priority: 2,
         }
       ),
-    [call]
+    [call, t]
   );
 
   const deleteVente = useCallback(
@@ -63,9 +65,9 @@ export function useVenteService() {
       call<{ message: string }>(
         `/api/ventes/${id}`,
         { method: "DELETE" },
-        { successMessage: "Vente supprimée." }
+        { successMessage: t("toasts.venteDeleted") }
       ),
-    [call]
+    [call, t]
   );
 
   // -- Factures --
@@ -89,9 +91,9 @@ export function useVenteService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         },
-        { successMessage: "Facture mise à jour." }
+        { successMessage: t("toasts.factureUpdated") }
       ),
-    [call]
+    [call, t]
   );
 
   const addPaiement = useCallback(
@@ -103,9 +105,9 @@ export function useVenteService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Paiement enregistré." }
+        { successMessage: t("toasts.paiementCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   // -- Clients --
@@ -124,9 +126,9 @@ export function useVenteService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Client créé." }
+        { successMessage: t("toasts.clientCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   const updateClient = useCallback(
@@ -138,9 +140,9 @@ export function useVenteService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Client mis à jour." }
+        { successMessage: t("toasts.clientUpdated") }
       ),
-    [call]
+    [call, t]
   );
 
   const createFacture = useCallback(
@@ -152,9 +154,9 @@ export function useVenteService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ venteId }),
         },
-        { successMessage: "Facture créée." }
+        { successMessage: t("toasts.factureCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   return {

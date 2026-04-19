@@ -132,6 +132,15 @@
     "financialEvolutionChart": "le graphique d'évolution financière",
     "profitabilityChart": "le graphique de rentabilité"
   },
+  "toasts": {
+    "venteCreated": "Vente enregistrée !",
+    "venteDeleted": "Vente supprimée.",
+    "factureUpdated": "Facture mise à jour.",
+    "paiementCreated": "Paiement enregistré.",
+    "clientCreated": "Client créé.",
+    "clientUpdated": "Client mis à jour.",
+    "factureCreated": "Facture créée."
+  },
   "finances": {
     "title": "Finances",
     "kpis": {

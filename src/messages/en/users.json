@@ -84,6 +84,7 @@
     "forcerDeconnexionConfirmDescription": "All active sessions of {name} will be deleted. This action cannot be undone.",
     "annuler": "Cancel",
     "compteSysteme": "This user is a system account. Security actions are not available.",
+    "sessionsDeletedCount": "{count} session(s) deleted.",
     "errors": {
       "motDePasseTropCourt": "Password must be at least 6 characters.",
       "motDePasseNonCorrespondant": "Passwords do not match."
@@ -107,6 +108,20 @@
       "reprendreSession": "Return to my session",
       "sessionAdmin": "Admin session"
     }
+  },
+  "toasts": {
+    "userCreated": "User created.",
+    "userUpdated": "User updated.",
+    "passwordReset": "Password reset.",
+    "sessionsDeleted": "Sessions deleted.",
+    "siteCreated": "Site created.",
+    "siteUpdated": "Site updated.",
+    "memberAdded": "Member added.",
+    "memberUpdated": "Member updated.",
+    "memberRemoved": "Member removed.",
+    "roleCreated": "Role created.",
+    "roleUpdated": "Role updated.",
+    "roleDeleted": "Role deleted."
   },
   "memberships": {
     "aucunSite": "No site",

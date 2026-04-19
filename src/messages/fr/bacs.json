@@ -65,6 +65,10 @@
     "type": "Type : {type}",
     "historiqueTitle": "Historique des assignations"
   },
+  "toasts": {
+    "created": "Bac créé avec succès !",
+    "updated": "Bac modifié."
+  },
   "editDialog": {
     "title": "Modifier le bac",
     "description": "Modifiez le nom ou le volume du bac.",

@@ -65,6 +65,10 @@
     "type": "Type: {type}",
     "historiqueTitle": "Assignment history"
   },
+  "toasts": {
+    "created": "Tank created successfully!",
+    "updated": "Tank updated."
+  },
   "editDialog": {
     "title": "Edit tank",
     "description": "Modify the tank name or volume.",

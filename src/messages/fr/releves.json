@@ -308,6 +308,14 @@
       "consommations": "Consommations"
     }
   },
+  "toasts": {
+    "created": "Relevé enregistré !",
+    "updated": "Relevé modifié."
+  },
+  "toasts": {
+    "created": "Relevé enregistré !",
+    "updated": "Relevé modifié."
+  },
   "global": {
     "title": "Tous les relevés",
     "filtres": {

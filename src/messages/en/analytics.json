@@ -310,6 +310,9 @@
     "tooltipBelow": "below",
     "tooltipTemplate": "This feed produced a growth speed {pct}% {direction} average"
   },
+  "recommendation": {
+    "title": "Recommendation"
+  },
   "fcrTrace": {
     "title": "FCR Calculation Detail",
     "triggerLabel": "How is this FCR calculated?",

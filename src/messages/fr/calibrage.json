@@ -141,6 +141,11 @@
       "recapitulatif": "Recapitulatif"
     }
   },
+  "toasts": {
+    "created": "Calibrage enregistré !",
+    "updated": "Calibrage modifié.",
+    "groupeUpdated": "Groupe modifié."
+  },
   "modifierDialog": {
     "trigger": "Modifier",
     "title": "Modifier le calibrage",

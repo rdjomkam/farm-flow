@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useApi } from "@/hooks/use-api";
 import type {
   User,
@@ -41,6 +42,7 @@ interface SiteListResult {
  */
 export function useUserService() {
   const { call } = useApi();
+  const t = useTranslations("users");
 
   // -- Utilisateurs --
 
@@ -63,9 +65,9 @@ export function useUserService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Utilisateur cree." }
+        { successMessage: t("toasts.userCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   const updateUser = useCallback(
@@ -77,9 +79,9 @@ export function useUserService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Utilisateur modifie." }
+        { successMessage: t("toasts.userUpdated") }
       ),
-    [call]
+    [call, t]
   );
 
   const resetPassword = useCallback(
@@ -91,9 +93,9 @@ export function useUserService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Mot de passe reinitialise." }
+        { successMessage: t("toasts.passwordReset") }
       ),
-    [call]
+    [call, t]
   );
 
   const getUserMemberships = useCallback(
@@ -107,9 +109,9 @@ export function useUserService() {
       call<{ message: string }>(
         `/api/users/${id}/sessions`,
         { method: "DELETE" },
-        { successMessage: "Sessions supprimees." }
+        { successMessage: t("toasts.sessionsDeleted") }
       ),
-    [call]
+    [call, t]
   );
 
   // -- Sites --
@@ -133,9 +135,9 @@ export function useUserService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Site cree.", ...callOptions }
+        { successMessage: t("toasts.siteCreated"), ...callOptions }
       ),
-    [call]
+    [call, t]
   );
 
   const updateSite = useCallback(
@@ -147,9 +149,9 @@ export function useUserService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Site modifie." }
+        { successMessage: t("toasts.siteUpdated") }
       ),
-    [call]
+    [call, t]
   );
 
   // -- Membres --
@@ -169,9 +171,9 @@ export function useUserService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Membre ajoute." }
+        { successMessage: t("toasts.memberAdded") }
       ),
-    [call]
+    [call, t]
   );
 
   const updateMember = useCallback(
@@ -183,9 +185,9 @@ export function useUserService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Membre modifie." }
+        { successMessage: t("toasts.memberUpdated") }
       ),
-    [call]
+    [call, t]
   );
 
   const removeMember = useCallback(
@@ -193,9 +195,9 @@ export function useUserService() {
       call<{ message: string }>(
         `/api/sites/${siteId}/members/${userId}`,
         { method: "DELETE" },
-        { successMessage: "Membre retire." }
+        { successMessage: t("toasts.memberRemoved") }
       ),
-    [call]
+    [call, t]
   );
 
   // -- Roles de site --
@@ -215,9 +217,9 @@ export function useUserService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Role cree." }
+        { successMessage: t("toasts.roleCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   const updateRole = useCallback(
@@ -229,9 +231,9 @@ export function useUserService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Role modifie." }
+        { successMessage: t("toasts.roleUpdated") }
       ),
-    [call]
+    [call, t]
   );
 
   const deleteRole = useCallback(
@@ -239,9 +241,9 @@ export function useUserService() {
       call<{ message: string }>(
         `/api/sites/${siteId}/roles/${roleId}`,
         { method: "DELETE" },
-        { successMessage: "Role supprime." }
+        { successMessage: t("toasts.roleDeleted") }
       ),
-    [call]
+    [call, t]
   );
 
   return {

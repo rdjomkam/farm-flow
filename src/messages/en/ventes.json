@@ -132,6 +132,15 @@
     "financialEvolutionChart": "the financial evolution chart",
     "profitabilityChart": "the profitability chart"
   },
+  "toasts": {
+    "venteCreated": "Sale recorded!",
+    "venteDeleted": "Sale deleted.",
+    "factureUpdated": "Invoice updated.",
+    "paiementCreated": "Payment recorded.",
+    "clientCreated": "Client created.",
+    "clientUpdated": "Client updated.",
+    "factureCreated": "Invoice created."
+  },
   "finances": {
     "title": "Finances",
     "kpis": {

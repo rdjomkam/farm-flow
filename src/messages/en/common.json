@@ -163,6 +163,14 @@
     "defaultSingular": "record",
     "defaultPlural": "records"
   },
+  "toasts": {
+    "loginSuccess": "Login successful!",
+    "logoutSuccess": "Logged out successfully.",
+    "registerSuccess": "Account created successfully!",
+    "siteChanged": "Active site changed.",
+    "impersonationStarted": "Impersonation started.",
+    "impersonationStopped": "Returned to your account."
+  },
   "blockedResource": {
     "badgeLabel": "Blocked",
     "title": "Blocked resource",

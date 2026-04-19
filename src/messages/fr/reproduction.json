@@ -779,6 +779,17 @@
     "erreurInconnue": "Erreur inconnue"
   },
   "placeholderExample": "Ex : {value}",
+  "toasts": {
+    "lotCreated": "Lot d'alevins créé !",
+    "lotUpdated": "Lot modifié.",
+    "lotTransferred": "Lot transféré.",
+    "ponteCreated": "Ponte enregistrée !",
+    "ponteUpdated": "Ponte modifiée.",
+    "ponteDeleted": "Ponte supprimée.",
+    "reproducteurCreated": "Reproducteur créé.",
+    "reproducteurUpdated": "Reproducteur modifié.",
+    "reproducteurDeleted": "Reproducteur supprimé."
+  },
   "stepsAriaLabel": "Etapes",
   "errors": {
     "loadingData": "Erreur lors du chargement des données.",

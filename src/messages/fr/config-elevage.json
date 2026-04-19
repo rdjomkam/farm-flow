@@ -128,6 +128,23 @@
     "excellent": "excellent",
     "edit": "Modifier"
   },
+  "toasts": {
+    "configCreated": "Configuration créée.",
+    "configUpdated": "Configuration modifiée.",
+    "configDeleted": "Configuration supprimée.",
+    "configDuplicated": "Configuration dupliquée.",
+    "regleCreated": "Règle créée.",
+    "regleUpdated": "Règle modifiée.",
+    "regleDeleted": "Règle supprimée.",
+    "regleToggled": "Règle modifiée.",
+    "regleReset": "Règle réinitialisée.",
+    "placeholderCreated": "Placeholder créé.",
+    "placeholderUpdated": "Placeholder modifié.",
+    "placeholderDeleted": "Placeholder supprimé.",
+    "alerteCreated": "Alerte créée.",
+    "alerteUpdated": "Alerte modifiée.",
+    "alerteDeleted": "Alerte supprimée."
+  },
   "page": {
     "description": "Gerez les profils de configuration d'elevage de votre site. Chaque profil definit les benchmarks, les seuils d'alerte et les parametres d'alimentation.",
     "newProfile": "Nouveau profil",

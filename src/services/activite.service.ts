@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useApi } from "@/hooks/use-api";
 import type { ActiviteWithRelations, CreateActiviteDTO } from "@/types";
 
@@ -33,6 +34,7 @@ interface CompleterActiviteDTO {
  */
 export function useActiviteService() {
   const { call } = useApi();
+  const t = useTranslations("planning");
 
   const list = useCallback(
     (params?: {
@@ -86,9 +88,9 @@ export function useActiviteService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Activité planifiée." }
+        { successMessage: t("toasts.created") }
       ),
-    [call]
+    [call, t]
   );
 
   const complete = useCallback(
@@ -100,9 +102,9 @@ export function useActiviteService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Activité complétée." }
+        { successMessage: t("toasts.completed") }
       ),
-    [call]
+    [call, t]
   );
 
   const update = useCallback(
@@ -114,9 +116,9 @@ export function useActiviteService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         },
-        { successMessage: "Activité modifiée." }
+        { successMessage: t("toasts.updated") }
       ),
-    [call]
+    [call, t]
   );
 
   const remove = useCallback(
@@ -124,9 +126,9 @@ export function useActiviteService() {
       call<{ message: string }>(
         `/api/activites/${id}`,
         { method: "DELETE" },
-        { successMessage: "Activité supprimée." }
+        { successMessage: t("toasts.deleted") }
       ),
-    [call]
+    [call, t]
   );
 
   const generer = useCallback(
@@ -134,9 +136,9 @@ export function useActiviteService() {
       call<{ generated: number }>(
         "/api/activites/generer",
         { method: "POST" },
-        { successMessage: "Activités générées." }
+        { successMessage: t("toasts.generated") }
       ),
-    [call]
+    [call, t]
   );
 
   return { list, getAujourdhui, getMesTaches, getMesTachesCount, create, update, remove, complete, generer };

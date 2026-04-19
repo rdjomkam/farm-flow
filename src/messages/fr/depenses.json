@@ -157,7 +157,30 @@
   "list": {
     "recurring": "Recurrentes",
     "total": "Total : ",
-    "remaining": "Reste : "
+    "remaining": "Reste : ",
+    "nouvelle": "Nouvelle",
+    "recurrentesCount": "{count} dépense(s) récurrente(s) configurée(s)"
+  },
+  "toasts": {
+    "created": "Dépense enregistrée !",
+    "updated": "Dépense modifiée.",
+    "deleted": "Dépense supprimée.",
+    "factureDeleted": "Facture supprimée.",
+    "paiementCreated": "Paiement enregistré.",
+    "paiementDeleted": "Paiement supprimé.",
+    "montantAdjusted": "Montant ajusté.",
+    "fraisAdjusted": "Frais ajusté.",
+    "recurrenteCreated": "Dépense récurrente créée.",
+    "recurrenteUpdated": "Dépense récurrente modifiée.",
+    "recurrenteDeleted": "Dépense récurrente supprimée.",
+    "recurrentesGenerated": "Dépenses générées.",
+    "besoinCreated": "Liste de besoins créée !",
+    "besoinUpdated": "Liste modifiée.",
+    "besoinApproved": "Liste approuvée.",
+    "besoinRejected": "Liste rejetée.",
+    "besoinProcessed": "Besoins traités.",
+    "besoinClosed": "Liste clôturée.",
+    "besoinDeleted": "Liste de besoins supprimée."
   },
   "recurrentes": {
     "frequences": {

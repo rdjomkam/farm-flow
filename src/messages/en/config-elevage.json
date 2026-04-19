@@ -132,5 +132,22 @@
     "description": "Manage the farming configuration profiles for your site. Each profile defines benchmarks, alert thresholds and feeding parameters.",
     "newProfile": "New profile",
     "editTitle": "Edit: {nom}"
+  },
+  "toasts": {
+    "configCreated": "Configuration created.",
+    "configUpdated": "Configuration updated.",
+    "configDeleted": "Configuration deleted.",
+    "configDuplicated": "Configuration duplicated.",
+    "regleCreated": "Rule created.",
+    "regleUpdated": "Rule updated.",
+    "regleDeleted": "Rule deleted.",
+    "regleToggled": "Rule updated.",
+    "regleReset": "Rule reset.",
+    "placeholderCreated": "Placeholder created.",
+    "placeholderUpdated": "Placeholder updated.",
+    "placeholderDeleted": "Placeholder deleted.",
+    "alerteCreated": "Alert created.",
+    "alerteUpdated": "Alert updated.",
+    "alerteDeleted": "Alert deleted."
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useApi } from "@/hooks/use-api";
 import type {
   LoginDTO,
@@ -24,6 +25,7 @@ import type {
  */
 export function useAuthService() {
   const { call } = useApi();
+  const t = useTranslations("common");
 
   const login = useCallback(
     (dto: LoginDTO) =>
@@ -34,9 +36,9 @@ export function useAuthService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Connexion reussie !" }
+        { successMessage: t("toasts.loginSuccess") }
       ),
-    [call]
+    [call, t]
   );
 
   const logout = useCallback(
@@ -44,9 +46,9 @@ export function useAuthService() {
       call<{ success: boolean }>(
         "/api/auth/logout",
         { method: "POST" },
-        { successMessage: "Deconnexion reussie." }
+        { successMessage: t("toasts.logoutSuccess") }
       ),
-    [call]
+    [call, t]
   );
 
   const register = useCallback(
@@ -58,9 +60,9 @@ export function useAuthService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Compte cree avec succes !" }
+        { successMessage: t("toasts.registerSuccess") }
       ),
-    [call]
+    [call, t]
   );
 
   const getMe = useCallback(
@@ -77,9 +79,9 @@ export function useAuthService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Site actif change." }
+        { successMessage: t("toasts.siteChanged") }
       ),
-    [call]
+    [call, t]
   );
 
   const impersonate = useCallback(
@@ -87,9 +89,9 @@ export function useAuthService() {
       call<StartImpersonationResponse>(
         `/api/users/${userId}/impersonate`,
         { method: "POST" },
-        { successMessage: "Impersonation demarree." }
+        { successMessage: t("toasts.impersonationStarted") }
       ),
-    [call]
+    [call, t]
   );
 
   const stopImpersonate = useCallback(
@@ -97,9 +99,9 @@ export function useAuthService() {
       call<StopImpersonationResponse>(
         "/api/users/impersonate",
         { method: "DELETE" },
-        { successMessage: "Retour a votre compte." }
+        { successMessage: t("toasts.impersonationStopped") }
       ),
-    [call]
+    [call, t]
   );
 
   return { login, logout, register, getMe, switchSite, impersonate, stopImpersonate };

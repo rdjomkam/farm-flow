@@ -232,6 +232,19 @@
     "commandesDesc": "{count} in progress"
   },
   "placeholderExample": "E.g.: {value}",
+  "toasts": {
+    "produitCreated": "Product created.",
+    "produitUpdated": "Product updated.",
+    "mouvementCreated": "Movement recorded.",
+    "commandeCreated": "Order created.",
+    "commandeEnvoyee": "Order sent.",
+    "commandeAnnulee": "Order cancelled.",
+    "fournisseurCreated": "Supplier created.",
+    "fournisseurUpdated": "Supplier updated.",
+    "commandeReceptionnee": "Order received.",
+    "factureUploadee": "Invoice uploaded.",
+    "factureSupprimee": "Invoice deleted."
+  },
   "actions": {
     "create": "Create",
     "save": "Save",

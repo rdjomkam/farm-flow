@@ -16,7 +16,9 @@
   },
   "activations": {
     "activeLe": "Activated on",
-    "expireLe": "Expires on"
+    "expireLe": "Expires on",
+    "packLabel": "Pack:",
+    "alevinsCount": "{count} fingerlings"
   },
   "statutsActivation": {
     "ACTIVE": "Active",
@@ -124,6 +126,15 @@
     "quantiteLabelSansUnite": "Quantity"
   },
   "placeholderExample": "E.g.: {value}",
+  "toasts": {
+    "packCreated": "Pack created.",
+    "packUpdated": "Pack updated.",
+    "produitAdded": "Product added to pack.",
+    "bacAdded": "Tank added to pack.",
+    "bacsSaved": "Tank configuration saved.",
+    "produitRemoved": "Product removed from pack.",
+    "packActivated": "Pack activated."
+  },
   "activer": {
     "headerTitle": "Activate — {nom}",
     "successTitle": "Pack activated successfully!",

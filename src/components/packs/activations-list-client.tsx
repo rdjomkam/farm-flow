@@ -104,8 +104,8 @@ export function ActivationsListClient({ activations }: Props) {
                         </div>
                         <p className="font-medium text-sm mt-1">{act.clientSite.name}</p>
                         <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-muted-foreground">
-                          <span>Pack : <Link href={`/packs/${act.pack.id}`} className="hover:underline">{act.pack.nom}</Link></span>
-                          <span>{formatNumber(act.pack.nombreAlevins)} alevins</span>
+                          <span>{t("activations.packLabel")} <Link href={`/packs/${act.pack.id}`} className="hover:underline">{act.pack.nom}</Link></span>
+                          <span>{t("activations.alevinsCount", { count: formatNumber(act.pack.nombreAlevins) })}</span>
                           <span>{t("activations.activeLe")} {new Date(act.dateActivation).toLocaleDateString(locale)}</span>
                           {act.dateExpiration && (
                             <span>{t("activations.expireLe")} {new Date(act.dateExpiration).toLocaleDateString(locale)}</span>

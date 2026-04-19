@@ -101,5 +101,13 @@
     "contactOwner": "La limite de {resource} a ete atteinte. Contactez le proprietaire du site.",
     "subscriptionRequired": "Un abonnement actif est requis pour creer cette ressource.",
     "viewPlans": "Voir les plans"
+  },
+  "api": {
+    "serverError": "Erreur serveur ({status})",
+    "savedOffline": "Enregistré hors ligne",
+    "networkError": "Erreur réseau. Vérifiez votre connexion.",
+    "downloadError": "Erreur lors du téléchargement",
+    "downloadSuccess": "{filename} téléchargé",
+    "networkDownloadError": "Erreur réseau lors du téléchargement"
   }
 }

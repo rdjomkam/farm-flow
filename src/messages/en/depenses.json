@@ -157,7 +157,30 @@
   "list": {
     "recurring": "Recurring",
     "total": "Total: ",
-    "remaining": "Remaining: "
+    "remaining": "Remaining: ",
+    "nouvelle": "New",
+    "recurrentesCount": "{count} recurring expense(s) configured"
+  },
+  "toasts": {
+    "created": "Expense recorded!",
+    "updated": "Expense updated.",
+    "deleted": "Expense deleted.",
+    "factureDeleted": "Invoice deleted.",
+    "paiementCreated": "Payment recorded.",
+    "paiementDeleted": "Payment deleted.",
+    "montantAdjusted": "Amount adjusted.",
+    "fraisAdjusted": "Fee adjusted.",
+    "recurrenteCreated": "Recurring expense created.",
+    "recurrenteUpdated": "Recurring expense updated.",
+    "recurrenteDeleted": "Recurring expense deleted.",
+    "recurrentesGenerated": "Expenses generated.",
+    "besoinCreated": "Needs list created!",
+    "besoinUpdated": "List updated.",
+    "besoinApproved": "List approved.",
+    "besoinRejected": "List rejected.",
+    "besoinProcessed": "Needs processed.",
+    "besoinClosed": "List closed.",
+    "besoinDeleted": "Needs list deleted."
   },
   "recurrentes": {
     "frequences": {

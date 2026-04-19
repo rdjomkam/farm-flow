@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useApi } from "@/hooks/use-api";
 import type {
   NoteIngenieurWithRelations,
@@ -46,6 +47,7 @@ interface CreateObservationDTO {
  */
 export function useNoteService() {
   const { call } = useApi();
+  const t = useTranslations("notes");
 
   // -- Notes ingenieur (endpoint INGENIEUR) --
 
@@ -85,9 +87,9 @@ export function useNoteService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Note envoyee !" }
+        { successMessage: t("toasts.noteCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   const updateNote = useCallback(
@@ -99,9 +101,9 @@ export function useNoteService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Note modifiee." }
+        { successMessage: t("toasts.noteUpdated") }
       ),
-    [call]
+    [call, t]
   );
 
   const markNoteRead = useCallback(
@@ -163,9 +165,9 @@ export function useNoteService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Observation envoyee !" }
+        { successMessage: t("toasts.observationCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   return {

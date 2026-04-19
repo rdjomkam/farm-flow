@@ -310,6 +310,9 @@
     "tooltipBelow": "en-dessous",
     "tooltipTemplate": "Cet aliment a produit une vitesse de croissance {pct}% {direction} la moyenne"
   },
+  "recommendation": {
+    "title": "Recommandation"
+  },
   "fcrTrace": {
     "title": "Détail du calcul ICA",
     "triggerLabel": "Comment est calculé cet ICA ?",

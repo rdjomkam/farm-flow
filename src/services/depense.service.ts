@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useApi } from "@/hooks/use-api";
 import type {
   DepenseWithRelations,
@@ -41,6 +42,7 @@ import type {
  */
 export function useDepenseService() {
   const { call } = useApi();
+  const t = useTranslations("depenses");
 
   // -- Depenses --
 
@@ -73,14 +75,14 @@ export function useDepenseService() {
           body: JSON.stringify(dto),
         },
         {
-          successMessage: "Depense enregistree !",
+          successMessage: t("toasts.created"),
           offlineCapable: true,
           entityType: "depense",
           entityLabel: "Dépense",
           priority: 2,
         }
       ),
-    [call]
+    [call, t]
   );
 
   const updateDepense = useCallback(
@@ -92,9 +94,9 @@ export function useDepenseService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Depense modifiee." }
+        { successMessage: t("toasts.updated") }
       ),
-    [call]
+    [call, t]
   );
 
   const deleteDepense = useCallback(
@@ -102,9 +104,9 @@ export function useDepenseService() {
       call<{ message: string }>(
         `/api/depenses/${id}`,
         { method: "DELETE" },
-        { successMessage: "Depense supprimee." }
+        { successMessage: t("toasts.deleted") }
       ),
-    [call]
+    [call, t]
   );
 
   /** Upload de la facture d'une depense (FormData — PDF/JPG/PNG) */
@@ -134,9 +136,9 @@ export function useDepenseService() {
       call<{ message: string }>(
         `/api/depenses/${id}/upload`,
         { method: "DELETE" },
-        { successMessage: "Facture supprimee." }
+        { successMessage: t("toasts.factureDeleted") }
       ),
-    [call]
+    [call, t]
   );
 
   const addPaiementDepense = useCallback(
@@ -148,9 +150,9 @@ export function useDepenseService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Paiement enregistre." }
+        { successMessage: t("toasts.paiementCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   /** Supprimer un paiement d'une depense */
@@ -159,9 +161,9 @@ export function useDepenseService() {
       call<{ depense: unknown; statut: string; montantPaye: number; montantFraisSupp: number }>(
         `/api/depenses/${depenseId}/paiements/${paiementId}`,
         { method: "DELETE" },
-        { successMessage: "Paiement supprime." }
+        { successMessage: t("toasts.paiementDeleted") }
       ),
-    [call]
+    [call, t]
   );
 
   /** Ajuster le montant total d'une depense (audit trail) */
@@ -174,9 +176,9 @@ export function useDepenseService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Montant ajuste." }
+        { successMessage: t("toasts.montantAdjusted") }
       ),
-    [call]
+    [call, t]
   );
 
   /** Ajuster un frais supplementaire d'un paiement de depense (audit trail) */
@@ -189,9 +191,9 @@ export function useDepenseService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Frais ajuste." }
+        { successMessage: t("toasts.fraisAdjusted") }
       ),
-    [call]
+    [call, t]
   );
 
   // -- Depenses recurrentes --
@@ -210,9 +212,9 @@ export function useDepenseService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Depense recurrente creee." }
+        { successMessage: t("toasts.recurrenteCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   const updateDepenseRecurrente = useCallback(
@@ -224,9 +226,9 @@ export function useDepenseService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Depense recurrente modifiee." }
+        { successMessage: t("toasts.recurrenteUpdated") }
       ),
-    [call]
+    [call, t]
   );
 
   const deleteDepenseRecurrente = useCallback(
@@ -234,9 +236,9 @@ export function useDepenseService() {
       call<{ message: string }>(
         `/api/depenses-recurrentes/${id}`,
         { method: "DELETE" },
-        { successMessage: "Depense recurrente supprimee." }
+        { successMessage: t("toasts.recurrenteDeleted") }
       ),
-    [call]
+    [call, t]
   );
 
   const genererDepensesRecurrentes = useCallback(
@@ -244,9 +246,9 @@ export function useDepenseService() {
       call<GenererDepensesRecurrentesResponse>(
         "/api/depenses-recurrentes/generer",
         { method: "POST" },
-        { successMessage: "Depenses generees." }
+        { successMessage: t("toasts.recurrentesGenerated") }
       ),
-    [call]
+    [call, t]
   );
 
   // -- Besoins --
@@ -275,9 +277,9 @@ export function useDepenseService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Liste de besoins creee !" }
+        { successMessage: t("toasts.besoinCreated") }
       ),
-    [call]
+    [call, t]
   );
 
   const updateBesoin = useCallback(
@@ -289,9 +291,9 @@ export function useDepenseService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Liste modifiee." }
+        { successMessage: t("toasts.besoinUpdated") }
       ),
-    [call]
+    [call, t]
   );
 
   const approuverBesoin = useCallback(
@@ -299,9 +301,9 @@ export function useDepenseService() {
       call<ListeBesoinsWithRelations>(
         `/api/besoins/${id}/approuver`,
         { method: "POST" },
-        { successMessage: "Liste approuvee." }
+        { successMessage: t("toasts.besoinApproved") }
       ),
-    [call]
+    [call, t]
   );
 
   const rejeterBesoin = useCallback(
@@ -313,9 +315,9 @@ export function useDepenseService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Liste rejetee." }
+        { successMessage: t("toasts.besoinRejected") }
       ),
-    [call]
+    [call, t]
   );
 
   const traiterBesoin = useCallback(
@@ -327,9 +329,9 @@ export function useDepenseService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Besoins traites." }
+        { successMessage: t("toasts.besoinProcessed") }
       ),
-    [call]
+    [call, t]
   );
 
   const cloturerBesoin = useCallback(
@@ -341,9 +343,9 @@ export function useDepenseService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Liste cloturee." }
+        { successMessage: t("toasts.besoinClosed") }
       ),
-    [call]
+    [call, t]
   );
 
   const deleteBesoin = useCallback(
@@ -351,9 +353,9 @@ export function useDepenseService() {
       call<{ success: boolean }>(
         `/api/besoins/${id}`,
         { method: "DELETE" },
-        { successMessage: "Liste de besoins supprimee." }
+        { successMessage: t("toasts.besoinDeleted") }
       ),
-    [call]
+    [call, t]
   );
 
   return {
