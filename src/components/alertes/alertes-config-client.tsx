@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import {
@@ -25,178 +26,34 @@ import { useConfigService } from "@/services";
 import { TypeAlerte } from "@/types";
 import type { ConfigAlerte } from "@/types";
 
-// Labels et icones par type d'alerte
+// Icon and style config per alert type (labels come from translations)
 const typeAlerteConfig: Record<
   TypeAlerte,
   {
-    label: string;
-    description: string;
     icon: React.ComponentType<{ className?: string }>;
     color: string;
     hasSeuilValeur: boolean;
     hasSeuilPourcentage: boolean;
-    labelSeuilValeur?: string;
-    labelSeuilPourcentage?: string;
   }
 > = {
-  [TypeAlerte.MORTALITE_ELEVEE]: {
-    label: "Mortalite elevee",
-    description: "Alerte quand le taux de mortalite depasse le seuil defini",
-    icon: AlertTriangle,
-    color: "text-danger",
-    hasSeuilValeur: false,
-    hasSeuilPourcentage: true,
-    labelSeuilPourcentage: "Seuil de mortalite (%)",
-  },
-  [TypeAlerte.QUALITE_EAU]: {
-    label: "Qualite de l'eau",
-    description: "Alerte quand les parametres qualite eau sont hors normes",
-    icon: Droplets,
-    color: "text-accent-blue",
-    hasSeuilValeur: false,
-    hasSeuilPourcentage: false,
-  },
-  [TypeAlerte.STOCK_BAS]: {
-    label: "Stock bas",
-    description: "Alerte quand le stock d'un produit passe sous le seuil d'alerte",
-    icon: Package,
-    color: "text-warning",
-    hasSeuilValeur: false,
-    hasSeuilPourcentage: false,
-  },
-  [TypeAlerte.RAPPEL_ALIMENTATION]: {
-    label: "Rappel alimentation",
-    description: "Rappel quand aucun releve alimentation n'a ete fait depuis N jours",
-    icon: Clock,
-    color: "text-primary",
-    hasSeuilValeur: true,
-    hasSeuilPourcentage: false,
-    labelSeuilValeur: "Delai sans releve (jours)",
-  },
-  [TypeAlerte.RAPPEL_BIOMETRIE]: {
-    label: "Rappel biometrie",
-    description: "Rappel quand aucune biometrie n'a ete faite depuis N jours",
-    icon: Activity,
-    color: "text-accent-purple",
-    hasSeuilValeur: true,
-    hasSeuilPourcentage: false,
-    labelSeuilValeur: "Delai sans biometrie (jours)",
-  },
-  [TypeAlerte.PERSONNALISEE]: {
-    label: "Personnalisee",
-    description: "Alerte personnalisee avec un seuil defini manuellement",
-    icon: Star,
-    color: "text-muted-foreground",
-    hasSeuilValeur: true,
-    hasSeuilPourcentage: true,
-    labelSeuilValeur: "Seuil de valeur",
-    labelSeuilPourcentage: "Seuil en pourcentage (%)",
-  },
-  [TypeAlerte.BESOIN_EN_RETARD]: {
-    label: "Besoin en retard",
-    description: "Alerte quand une liste de besoins depasse sa date limite sans etre traitee",
-    icon: CalendarClock,
-    color: "text-danger",
-    hasSeuilValeur: false,
-    hasSeuilPourcentage: false,
-  },
-  [TypeAlerte.DENSITE_ELEVEE]: {
-    label: "Densite elevee",
-    description: "Alerte quand la biomasse par m3 depasse le seuil pour le type de systeme",
-    icon: Waves,
-    color: "text-warning",
-    hasSeuilValeur: true,
-    hasSeuilPourcentage: false,
-    labelSeuilValeur: "Seuil de densite (kg/m3)",
-  },
-  [TypeAlerte.RENOUVELLEMENT_EAU_INSUFFISANT]: {
-    label: "Renouvellement eau insuffisant",
-    description: "Alerte quand le taux de renouvellement effectif est insuffisant pour la densite actuelle",
-    icon: RefreshCw,
-    color: "text-accent-blue",
-    hasSeuilValeur: true,
-    hasSeuilPourcentage: false,
-    labelSeuilValeur: "Taux minimum (%/jour)",
-  },
-  [TypeAlerte.AUCUN_RELEVE_QUALITE_EAU]: {
-    label: "Absence releve qualite eau",
-    description: "Alerte quand aucun releve qualite eau n'a ete enregistre depuis N jours a densite elevee",
-    icon: Eye,
-    color: "text-warning",
-    hasSeuilValeur: true,
-    hasSeuilPourcentage: false,
-    labelSeuilValeur: "Delai sans releve (jours)",
-  },
-  [TypeAlerte.DENSITE_CRITIQUE_QUALITE_EAU]: {
-    label: "Densite critique + qualite eau degradee",
-    description: "Alerte combinee : densite elevee ET qualite eau critique simultanement",
-    icon: Zap,
-    color: "text-danger",
-    hasSeuilValeur: false,
-    hasSeuilPourcentage: false,
-  },
-  [TypeAlerte.ABONNEMENT_RAPPEL_RENOUVELLEMENT]: {
-    label: "Rappel renouvellement abonnement",
-    description: "Rappel automatique quand l'abonnement expire dans 14, 7, 3 ou 1 jour(s)",
-    icon: Bell,
-    color: "text-primary",
-    hasSeuilValeur: false,
-    hasSeuilPourcentage: false,
-  },
-  // Sprint 49 — Fin d'essai
-  [TypeAlerte.ABONNEMENT_ESSAI_EXPIRE]: {
-    label: "Essai gratuit expire",
-    description: "Notification envoyee quand un essai gratuit arrive a expiration",
-    icon: Bell,
-    color: "text-warning",
-    hasSeuilValeur: false,
-    hasSeuilPourcentage: false,
-  },
-  // Sprint R1 — Reproduction
-  [TypeAlerte.MALES_STOCK_BAS]: {
-    label: "Males reproducteurs insuffisants",
-    description: "Alerte quand le nombre de males actifs est insuffisant pour les pontes planifiees",
-    icon: AlertTriangle,
-    color: "text-warning",
-    hasSeuilValeur: true,
-    hasSeuilPourcentage: false,
-    labelSeuilValeur: "Nombre minimum de males",
-  },
-  [TypeAlerte.FEMELLE_SUREXPLOITEE]: {
-    label: "Femelle surexploitee",
-    description: "Alerte quand une femelle est sollicitee trop frequemment (risque d'epuisement)",
-    icon: AlertTriangle,
-    color: "text-danger",
-    hasSeuilValeur: true,
-    hasSeuilPourcentage: false,
-    labelSeuilValeur: "Delai minimum entre pontes (jours)",
-  },
-  [TypeAlerte.CONSANGUINITE_RISQUE]: {
-    label: "Risque de consanguinite",
-    description: "Alerte quand le taux de consanguinite estime entre geniteurs depasse le seuil",
-    icon: Activity,
-    color: "text-accent-purple",
-    hasSeuilValeur: false,
-    hasSeuilPourcentage: true,
-    labelSeuilPourcentage: "Coefficient de consanguinite (%)",
-  },
-  [TypeAlerte.INCUBATION_ECLOSION]: {
-    label: "Suivi incubation/eclosion",
-    description: "Alerte durant la phase d'incubation ou d'eclosion d'un lot d'oeufs",
-    icon: Clock,
-    color: "text-accent-blue",
-    hasSeuilValeur: false,
-    hasSeuilPourcentage: false,
-  },
-  [TypeAlerte.TAUX_SURVIE_CRITIQUE_LOT]: {
-    label: "Taux de survie critique (lot)",
-    description: "Alerte quand le taux de survie d'un lot d'alevins passe sous le seuil critique",
-    icon: AlertTriangle,
-    color: "text-danger",
-    hasSeuilValeur: false,
-    hasSeuilPourcentage: true,
-    labelSeuilPourcentage: "Seuil de survie critique (%)",
-  },
+  [TypeAlerte.MORTALITE_ELEVEE]: { icon: AlertTriangle, color: "text-danger", hasSeuilValeur: false, hasSeuilPourcentage: true },
+  [TypeAlerte.QUALITE_EAU]: { icon: Droplets, color: "text-accent-blue", hasSeuilValeur: false, hasSeuilPourcentage: false },
+  [TypeAlerte.STOCK_BAS]: { icon: Package, color: "text-warning", hasSeuilValeur: false, hasSeuilPourcentage: false },
+  [TypeAlerte.RAPPEL_ALIMENTATION]: { icon: Clock, color: "text-primary", hasSeuilValeur: true, hasSeuilPourcentage: false },
+  [TypeAlerte.RAPPEL_BIOMETRIE]: { icon: Activity, color: "text-accent-purple", hasSeuilValeur: true, hasSeuilPourcentage: false },
+  [TypeAlerte.PERSONNALISEE]: { icon: Star, color: "text-muted-foreground", hasSeuilValeur: true, hasSeuilPourcentage: true },
+  [TypeAlerte.BESOIN_EN_RETARD]: { icon: CalendarClock, color: "text-danger", hasSeuilValeur: false, hasSeuilPourcentage: false },
+  [TypeAlerte.DENSITE_ELEVEE]: { icon: Waves, color: "text-warning", hasSeuilValeur: true, hasSeuilPourcentage: false },
+  [TypeAlerte.RENOUVELLEMENT_EAU_INSUFFISANT]: { icon: RefreshCw, color: "text-accent-blue", hasSeuilValeur: true, hasSeuilPourcentage: false },
+  [TypeAlerte.AUCUN_RELEVE_QUALITE_EAU]: { icon: Eye, color: "text-warning", hasSeuilValeur: true, hasSeuilPourcentage: false },
+  [TypeAlerte.DENSITE_CRITIQUE_QUALITE_EAU]: { icon: Zap, color: "text-danger", hasSeuilValeur: false, hasSeuilPourcentage: false },
+  [TypeAlerte.ABONNEMENT_RAPPEL_RENOUVELLEMENT]: { icon: Bell, color: "text-primary", hasSeuilValeur: false, hasSeuilPourcentage: false },
+  [TypeAlerte.ABONNEMENT_ESSAI_EXPIRE]: { icon: Bell, color: "text-warning", hasSeuilValeur: false, hasSeuilPourcentage: false },
+  [TypeAlerte.MALES_STOCK_BAS]: { icon: AlertTriangle, color: "text-warning", hasSeuilValeur: true, hasSeuilPourcentage: false },
+  [TypeAlerte.FEMELLE_SUREXPLOITEE]: { icon: AlertTriangle, color: "text-danger", hasSeuilValeur: true, hasSeuilPourcentage: false },
+  [TypeAlerte.CONSANGUINITE_RISQUE]: { icon: Activity, color: "text-accent-purple", hasSeuilValeur: false, hasSeuilPourcentage: true },
+  [TypeAlerte.INCUBATION_ECLOSION]: { icon: Clock, color: "text-accent-blue", hasSeuilValeur: false, hasSeuilPourcentage: false },
+  [TypeAlerte.TAUX_SURVIE_CRITIQUE_LOT]: { icon: AlertTriangle, color: "text-danger", hasSeuilValeur: false, hasSeuilPourcentage: true },
 };
 
 interface AlerteConfigItem {
@@ -209,6 +66,7 @@ interface AlertesConfigClientProps {
 }
 
 export function AlertesConfigClient({ configs }: AlertesConfigClientProps) {
+  const t = useTranslations("alertes.config");
   const queryClient = useQueryClient();
   const configService = useConfigService();
 
@@ -293,7 +151,7 @@ export function AlertesConfigClient({ configs }: AlertesConfigClientProps) {
           className="gap-2"
         >
           <RefreshCw className="h-4 w-4" />
-          Verifier maintenant
+          {t("verifierMaintenant")}
         </Button>
       </div>
 
@@ -302,6 +160,8 @@ export function AlertesConfigClient({ configs }: AlertesConfigClientProps) {
         const config = typeAlerteConfig[typeAlerte];
         const Icon = config.icon;
         const enabled = enabledMap[typeAlerte];
+        const typeKey = `types.${typeAlerte}` as const;
+        const label = t(`${typeKey}.label` as Parameters<typeof t>[0]);
 
         return (
           <Card key={typeAlerte} className={enabled ? "border-primary/30" : ""}>
@@ -312,15 +172,15 @@ export function AlertesConfigClient({ configs }: AlertesConfigClientProps) {
                     <Icon className={`h-4 w-4 ${config.color}`} />
                   </div>
                   <div>
-                    <CardTitle className="text-base">{config.label}</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-0.5">{config.description}</p>
+                    <CardTitle className="text-base">{label}</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-0.5">{t(`${typeKey}.description` as Parameters<typeof t>[0])}</p>
                   </div>
                 </div>
                 {/* Toggle switch */}
                 <button
                   role="switch"
                   aria-checked={enabled}
-                  aria-label={`${enabled ? "Desactiver" : "Activer"} l'alerte ${config.label}`}
+                  aria-label={t("ariaToggle", { action: enabled ? t("desactiver") : t("activer"), label })}
                   onClick={() =>
                     setEnabledMap((prev) => ({ ...prev, [typeAlerte]: !prev[typeAlerte] }))
                   }
@@ -342,26 +202,26 @@ export function AlertesConfigClient({ configs }: AlertesConfigClientProps) {
                 {config.hasSeuilValeur && (
                   <Input
                     type="number"
-                    label={config.labelSeuilValeur ?? "Seuil de valeur"}
+                    label={t.has(`${typeKey}.seuilValeur` as Parameters<typeof t>[0]) ? t(`${typeKey}.seuilValeur` as Parameters<typeof t>[0]) : t("seuilValeurDefaut")}
                     min={0}
                     value={seuilValeurMap[typeAlerte]}
                     onChange={(e) =>
                       setSeuilValeurMap((prev) => ({ ...prev, [typeAlerte]: e.target.value }))
                     }
-                    placeholder="Ex: 3"
+                    placeholder={t("placeholderSeuilValeur")}
                   />
                 )}
                 {config.hasSeuilPourcentage && (
                   <Input
                     type="number"
-                    label={config.labelSeuilPourcentage ?? "Seuil en pourcentage (%)"}
+                    label={t.has(`${typeKey}.seuilPourcentage` as Parameters<typeof t>[0]) ? t(`${typeKey}.seuilPourcentage` as Parameters<typeof t>[0]) : t("seuilPourcentageDefaut")}
                     min={0}
                     max={100}
                     value={seuilPourcentageMap[typeAlerte]}
                     onChange={(e) =>
                       setSeuilPourcentageMap((prev) => ({ ...prev, [typeAlerte]: e.target.value }))
                     }
-                    placeholder="Ex: 5"
+                    placeholder={t("placeholderSeuilPourcentage")}
                   />
                 )}
                 <Button
@@ -370,7 +230,7 @@ export function AlertesConfigClient({ configs }: AlertesConfigClientProps) {
                   className="gap-2 self-end"
                 >
                   <Save className="h-4 w-4" />
-                  Sauvegarder
+                  {t("sauvegarder")}
                 </Button>
               </CardContent>
             )}
@@ -383,7 +243,7 @@ export function AlertesConfigClient({ configs }: AlertesConfigClientProps) {
                   className="gap-2"
                 >
                   <Save className="h-4 w-4" />
-                  Sauvegarder
+                  {t("sauvegarder")}
                 </Button>
               </CardContent>
             )}

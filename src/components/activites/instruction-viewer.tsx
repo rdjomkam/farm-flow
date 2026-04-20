@@ -14,7 +14,7 @@
  * R6 : CSS variables du theme
  */
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { InstructionSteps } from "@/components/activites/instruction-steps";
 import Link from "next/link";
 import {
@@ -61,6 +61,7 @@ export function InstructionViewer({
   permissions,
 }: InstructionViewerProps) {
   const t = useTranslations("activites");
+  const locale = useLocale();
   const canComplete =
     permissions.includes(Permission.PLANNING_GERER) &&
     (activite.statut === StatutActivite.PLANIFIEE ||
@@ -151,7 +152,7 @@ export function InstructionViewer({
 
         {/* Date */}
         <p className="mt-2 text-xs text-muted-foreground">
-          {new Date(activite.dateDebut).toLocaleDateString("fr-FR", {
+          {new Date(activite.dateDebut).toLocaleDateString(locale, {
             weekday: "long",
             day: "numeric",
             month: "long",
@@ -271,7 +272,7 @@ export function InstructionViewer({
           {activite.dateTerminee && (
             <p className="text-xs text-success/70 mt-1.5">
               {t("instructionViewer.sections.termineeLe")}{" "}
-              {new Date(activite.dateTerminee).toLocaleDateString("fr-FR", {
+              {new Date(activite.dateTerminee).toLocaleDateString(locale, {
                 day: "numeric",
                 month: "long",
                 year: "numeric",

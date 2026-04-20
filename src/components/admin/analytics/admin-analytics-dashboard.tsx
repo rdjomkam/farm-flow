@@ -14,7 +14,7 @@
 
 import dynamic from "next/dynamic";
 import { useState, useEffect, useCallback } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import {
   Building2,
   CheckCircle2,
@@ -96,25 +96,23 @@ interface ModuleDistPoint {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const XAF = new Intl.NumberFormat("fr-FR", {
-  style: "currency",
-  currency: "XAF",
-  maximumFractionDigits: 0,
-});
-
-function formatXAF(val: number): string {
-  return XAF.format(val);
+function formatXAF(val: number, locale: string): string {
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "XAF",
+    maximumFractionDigits: 0,
+  }).format(val);
 }
 
-function formatShortDate(dateStr: string): string {
+function formatShortDate(dateStr: string, locale: string): string {
   // YYYY-MM-DD or YYYY-MM
   const parts = dateStr.split("-");
   if (parts.length === 2) {
     const d = new Date(dateStr + "-01");
-    return d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
+    return d.toLocaleDateString(locale, { month: "short", year: "2-digit" });
   }
   const d = new Date(dateStr);
-  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  return d.toLocaleDateString(locale, { day: "numeric", month: "short" });
 }
 
 // ---------------------------------------------------------------------------
@@ -197,9 +195,10 @@ interface SitesGrowthChartProps {
   labelTotalCumulatif: string;
   labelNouveaux: string;
   labelAucuneDonnee: string;
+  locale: string;
 }
 
-function SitesGrowthChart({ data, labelTotalCumulatif, labelNouveaux, labelAucuneDonnee }: SitesGrowthChartProps) {
+function SitesGrowthChart({ data, labelTotalCumulatif, labelNouveaux, labelAucuneDonnee, locale }: SitesGrowthChartProps) {
   if (data.length === 0) {
     return (
       <p className="flex h-[180px] items-center justify-center text-sm text-muted-foreground">
@@ -210,7 +209,7 @@ function SitesGrowthChart({ data, labelTotalCumulatif, labelNouveaux, labelAucun
 
   const chartData = data.map((p) => ({
     ...p,
-    dateLabel: formatShortDate(p.date),
+    dateLabel: formatShortDate(p.date, locale),
   }));
 
   return (
@@ -343,9 +342,10 @@ interface RevenueChartProps {
   labelRevenus: string;
   labelMrr: string;
   labelAucuneDonnee: string;
+  locale: string;
 }
 
-function RevenueChart({ data, mrr, labelRevenus, labelMrr, labelAucuneDonnee }: RevenueChartProps) {
+function RevenueChart({ data, mrr, labelRevenus, labelMrr, labelAucuneDonnee, locale }: RevenueChartProps) {
   if (data.length === 0) {
     return (
       <p className="flex h-[180px] items-center justify-center text-sm text-muted-foreground">
@@ -355,7 +355,7 @@ function RevenueChart({ data, mrr, labelRevenus, labelMrr, labelAucuneDonnee }: 
   }
 
   const chartData = data.map((p) => ({
-    date: formatShortDate(p.date),
+    date: formatShortDate(p.date, locale),
     revenus: p.montant,
     mrr,
   }));
@@ -390,7 +390,7 @@ function RevenueChart({ data, mrr, labelRevenus, labelMrr, labelAucuneDonnee }: 
               borderRadius: "8px",
               fontSize: "12px",
             }}
-            formatter={(value) => [typeof value === "number" ? formatXAF(value) : String(value ?? 0)]}
+            formatter={(value) => [typeof value === "number" ? formatXAF(value, locale) : String(value ?? 0)]}
           />
           <Legend iconSize={10} wrapperStyle={{ fontSize: "11px" }} />
           <Bar
@@ -426,6 +426,7 @@ interface AdminAnalyticsDashboardProps {
 
 export function AdminAnalyticsDashboard({ initialKPIs, apiBase = "/api/admin/analytics" }: AdminAnalyticsDashboardProps) {
   const t = useTranslations("admin.analytics");
+  const locale = useLocale();
   const kpis = initialKPIs;
 
   // Sites Growth
@@ -548,7 +549,7 @@ export function AdminAnalyticsDashboard({ initialKPIs, apiBase = "/api/admin/ana
         />
         <KPICard
           title={t("kpis.mrr")}
-          value={formatXAF(kpis.mrrEstime)}
+          value={formatXAF(kpis.mrrEstime, locale)}
           subtitle={t("kpis.mrrSubtitle")}
           icon={TrendingUp}
           iconColor="text-accent-green"
@@ -556,8 +557,8 @@ export function AdminAnalyticsDashboard({ initialKPIs, apiBase = "/api/admin/ana
         />
         <KPICard
           title={t("kpis.revenuTotal")}
-          value={formatXAF(kpis.revenusTotal12m)}
-          subtitle={t("kpis.revenu30j", { montant: formatXAF(kpis.revenusTotal30j) })}
+          value={formatXAF(kpis.revenusTotal12m, locale)}
+          subtitle={t("kpis.revenu30j", { montant: formatXAF(kpis.revenusTotal30j, locale) })}
           icon={Banknote}
           iconColor="text-accent-amber"
           iconBgColor="bg-accent-amber/10"
@@ -578,6 +579,7 @@ export function AdminAnalyticsDashboard({ initialKPIs, apiBase = "/api/admin/ana
             labelTotalCumulatif={t("charts.totalCumulatif")}
             labelNouveaux={t("charts.nouveaux")}
             labelAucuneDonnee={aucuneDonnee}
+            locale={locale}
           />
         </ChartWrapper>
 
@@ -607,6 +609,7 @@ export function AdminAnalyticsDashboard({ initialKPIs, apiBase = "/api/admin/ana
           labelRevenus={t("charts.revenus")}
           labelMrr={t("charts.mrr")}
           labelAucuneDonnee={aucuneDonnee}
+          locale={locale}
         />
       </ChartWrapper>
 

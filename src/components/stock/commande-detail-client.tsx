@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { formatNumber } from "@/lib/format";
 import {
   ArrowLeft,
@@ -99,6 +99,7 @@ function guessTypeFromName(name: string): string {
 
 export function CommandeDetailClient({ commande: initialCommande, permissions }: Props) {
   const t = useTranslations("stock");
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const stockService = useStockService();
@@ -233,7 +234,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
               <Calendar className="h-4 w-4 shrink-0" />
               <span>
                 {t("commandes.detail.commande", {
-                  date: new Date(commande.dateCommande).toLocaleDateString("fr-FR"),
+                  date: new Date(commande.dateCommande).toLocaleDateString(locale),
                 })}
               </span>
             </div>
@@ -242,7 +243,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
                 <PackageCheck className="h-4 w-4 shrink-0" />
                 <span>
                   {t("commandes.detail.livraison", {
-                    date: new Date(commande.dateLivraison).toLocaleDateString("fr-FR"),
+                    date: new Date(commande.dateLivraison).toLocaleDateString(locale),
                   })}
                 </span>
               </div>

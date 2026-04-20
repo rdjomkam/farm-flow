@@ -15,7 +15,7 @@
  */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Lock, Unlock, Loader2, AlertCircle, ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -54,6 +54,7 @@ export function GererRessourcesClient({
 }: GererRessourcesClientProps) {
   const router = useRouter();
   const t = useTranslations("abonnements");
+  const locale = useLocale();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -139,7 +140,7 @@ export function GererRessourcesClient({
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {t("gererRessources.blockedOn", {
-                        date: bac.blockedAt.toLocaleDateString("fr-FR"),
+                        date: bac.blockedAt.toLocaleDateString(locale),
                       })}
                     </p>
                   </div>
@@ -184,7 +185,7 @@ export function GererRessourcesClient({
                     <p className="text-xs text-muted-foreground">
                       {t("gererRessources.waveBlockedStatus", {
                         statut: vague.statut,
-                        date: vague.blockedAt.toLocaleDateString("fr-FR"),
+                        date: vague.blockedAt.toLocaleDateString(locale),
                       })}
                     </p>
                   </div>

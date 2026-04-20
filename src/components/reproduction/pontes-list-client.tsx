@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Egg, ArrowLeft } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -58,6 +58,7 @@ function statutBadgeClass(statut: StatutPonte): string {
 
 export function PontesListClient({ pontes }: PontesListClientProps) {
   const t = useTranslations("reproduction");
+  const locale = useLocale();
   const router = useRouter();
   const [tab, setTab] = useState("toutes");
   const [search, setSearch] = useState("");
@@ -229,7 +230,7 @@ export function PontesListClient({ pontes }: PontesListClientProps) {
                         {/* Right: date + counts */}
                         <div className="text-right text-xs text-muted-foreground shrink-0">
                           <p>
-                            {new Date(p.datePonte).toLocaleDateString("fr-FR")}
+                            {new Date(p.datePonte).toLocaleDateString(locale)}
                           </p>
                           {p._count.incubations > 0 && (
                             <p className="mt-0.5">

@@ -239,7 +239,7 @@ export function ReleveFilterBar({ current, vagues }: Props) {
           value={localVagueId || ALL_VALUE}
           onValueChange={handleVagueChange}
         >
-          <SelectTrigger className="w-44" label="Vague">
+          <SelectTrigger className="w-44" label={t("global.filtres.vague")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -258,7 +258,7 @@ export function ReleveFilterBar({ current, vagues }: Props) {
           onValueChange={handleBacChange}
           disabled={!localVagueId || bacsLoading}
         >
-          <SelectTrigger className="w-36" label="Bac">
+          <SelectTrigger className="w-36" label={t("global.filtres.bac")}>
             <SelectValue placeholder={bacsLoading ? "..." : t("global.filtres.tousBacs")} />
           </SelectTrigger>
           <SelectContent>
@@ -276,7 +276,7 @@ export function ReleveFilterBar({ current, vagues }: Props) {
           value={(localType && isValidTypeReleve(localType) ? localType : null) ?? ALL_VALUE}
           onValueChange={handleTypeChange}
         >
-          <SelectTrigger className="w-44" label="Type">
+          <SelectTrigger className="w-44" label={t("global.filtres.type")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

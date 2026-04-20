@@ -18,7 +18,7 @@ import { PaiementsHistoryList } from "@/components/abonnements/paiements-history
 import { QuotasUsageBar } from "@/components/subscription/quotas-usage-bar";
 import { Permission } from "@/types";
 import { prisma } from "@/lib/db";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import type { Metadata } from "next";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -30,6 +30,7 @@ export const dynamic = "force-dynamic";
 
 export default async function MonAbonnementPage() {
   const t = await getTranslations("abonnements");
+  const locale = await getLocale();
   const session = await getServerSession();
   if (!session) redirect("/login");
   if (!session.activeSiteId) redirect("/settings/sites");
@@ -73,7 +74,7 @@ export default async function MonAbonnementPage() {
               <p className="text-xs text-muted-foreground">{t("monAbonnement.soldeCreditDesc")}</p>
             </div>
             <span className="text-lg font-bold text-primary">
-              {soldeCredit.toLocaleString("fr-FR", { style: "currency", currency: "XAF", minimumFractionDigits: 0 })}
+              {soldeCredit.toLocaleString(locale, { style: "currency", currency: "XAF", minimumFractionDigits: 0 })}
             </span>
           </div>
         )}

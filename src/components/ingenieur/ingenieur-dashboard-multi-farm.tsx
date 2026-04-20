@@ -13,7 +13,7 @@
  */
 
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import {
   AlertTriangle,
   Bell,
@@ -70,6 +70,7 @@ export async function IngenieurDashboardMultiFarm({
   sessionName,
 }: IngenieurDashboardMultiFarmProps) {
   const t = await getTranslations("ingenieur");
+  const locale = await getLocale();
 
   // Charger les données en parallèle
   const [metrics, clientsResult, portefeuilleData] = await Promise.all([
@@ -107,7 +108,7 @@ export async function IngenieurDashboardMultiFarm({
     ? Number(portefeuilleData.portefeuille.soldePending)
     : 0;
 
-  const today = new Date().toLocaleDateString("fr-FR", {
+  const today = new Date().toLocaleDateString(locale, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -150,14 +151,14 @@ export async function IngenieurDashboardMultiFarm({
             <div className="flex items-center gap-2">
               <Bell className="h-4 w-4 text-danger" />
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Alertes actives ({alertesTriees.length})
+                {t("monitoring.alertesActives", { count: alertesTriees.length })}
               </h2>
             </div>
             <Link
               href="/monitoring"
               className="text-xs text-primary hover:underline font-medium flex items-center gap-0.5"
             >
-              Tout voir <ChevronRight className="h-3 w-3" />
+              {t("dashboard.toutVoir")} <ChevronRight className="h-3 w-3" />
             </Link>
           </div>
           <div className="flex flex-col gap-2">
@@ -202,7 +203,7 @@ export async function IngenieurDashboardMultiFarm({
                           </Link>
                           <span className="text-xs text-muted-foreground">
                             {new Date(alerte.createdAt).toLocaleDateString(
-                              "fr-FR"
+                              locale
                             )}
                           </span>
                         </div>
@@ -230,7 +231,7 @@ export async function IngenieurDashboardMultiFarm({
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" />
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Fermes supervisees ({clientsResult.total})
+                {t("dashboard.fermesSuperviseesTitle", { count: clientsResult.total })}
               </h2>
             </div>
             {clientsResult.total > 6 && (
@@ -238,7 +239,7 @@ export async function IngenieurDashboardMultiFarm({
                 href="/monitoring"
                 className="text-xs text-primary hover:underline font-medium flex items-center gap-0.5"
               >
-                Tout voir <ChevronRight className="h-3 w-3" />
+                {t("dashboard.toutVoir")} <ChevronRight className="h-3 w-3" />
               </Link>
             )}
           </div>
@@ -258,21 +259,21 @@ export async function IngenieurDashboardMultiFarm({
           <div className="flex items-center gap-2">
             <Wallet className="h-4 w-4 text-muted-foreground" />
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Mon portefeuille
+              {t("dashboard.monPortefeuille")}
             </h2>
           </div>
           <Link
             href="/mon-portefeuille"
             className="text-xs text-primary hover:underline font-medium flex items-center gap-0.5"
           >
-            Voir details <ChevronRight className="h-3 w-3" />
+            {t("dashboard.voirDetails")} <ChevronRight className="h-3 w-3" />
           </Link>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Card>
             <CardContent className="p-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-1">
-                Disponible
+                {t("dashboard.disponible")}
               </p>
               <p className="text-lg font-bold text-foreground">
                 {formatXAF(solde)}
@@ -282,7 +283,7 @@ export async function IngenieurDashboardMultiFarm({
           <Card>
             <CardContent className="p-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-1">
-                En attente
+                {t("dashboard.enAttente")}
               </p>
               <p className="text-lg font-bold text-warning">
                 {formatXAF(soldePending)}

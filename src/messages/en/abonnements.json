@@ -45,6 +45,10 @@
       "choosePlan": "Choose this plan",
       "unavailable": "Unavailable"
     },
+    "errors": {
+      "generic": "An error occurred.",
+      "serverUnreachable": "Unable to reach the server."
+    },
     "price": {
       "perMonth": "per month",
       "perQuarter": "per quarter",
@@ -183,6 +187,7 @@
     "subscribersPlural": "{count} subscribers",
     "engineerFarms": "{count} farms",
     "noSite": "No site",
+    "statusAriaLabel": "Status: {value}",
     "cancelSubscriptionDesc": "Cancel the subscription for {siteName}? This action is irreversible.",
     "cancelSubscriptionIrreversible": "This action is irreversible.",
     "toggleDeactivateSubscribersDesc": "The plan {nom} has {count} active subscriber{plural}. Existing subscriber{plural} will retain access until expiration, but no new subscriptions will be possible.",

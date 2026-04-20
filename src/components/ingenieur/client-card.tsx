@@ -11,7 +11,7 @@ import {
   Package,
   WifiOff,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatutActivation } from "@/types";
@@ -81,6 +81,7 @@ interface ClientCardProps {
 
 export function ClientCard({ client }: ClientCardProps) {
   const t = useTranslations("ingenieur.clientCard");
+  const locale = useLocale();
   const color = getStatusColor(client);
   const styles = statusStyles[color];
   const Icon = StatusIcon[color];
@@ -94,7 +95,7 @@ export function ClientCard({ client }: ClientCardProps) {
     if (diffDays === 0) return t("dates.aujourdhui");
     if (diffDays === 1) return t("dates.hier");
     if (diffDays < 7) return t("dates.ilYAJours", { count: diffDays });
-    return d.toLocaleDateString("fr-FR");
+    return d.toLocaleDateString(locale);
   }
 
   return (

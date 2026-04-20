@@ -231,6 +231,7 @@
     "commandes": "Commandes",
     "commandesDesc": "{count} en cours"
   },
+  "placeholderExample": "Ex : {value}",
   "actions": {
     "create": "Creer",
     "save": "Enregistrer",

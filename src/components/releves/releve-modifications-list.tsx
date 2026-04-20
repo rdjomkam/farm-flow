@@ -1,19 +1,8 @@
 "use client";
 
 import { Pencil } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import type { ReleveModificationWithUser } from "@/types";
-
-function formatDate(date: Date | string): string {
-  const d = new Date(date);
-  return d.toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 interface ReleveModificationsListProps {
   modifications: ReleveModificationWithUser[];
@@ -21,6 +10,18 @@ interface ReleveModificationsListProps {
 
 export function ReleveModificationsList({ modifications }: ReleveModificationsListProps) {
   const t = useTranslations("releves");
+  const locale = useLocale();
+
+  function formatDate(date: Date | string): string {
+    const d = new Date(date);
+    return d.toLocaleDateString(locale, {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
 
   /** Labels lisibles pour les noms de champs techniques */
   const champLabels: Record<string, string> = {

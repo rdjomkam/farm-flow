@@ -1,4 +1,9 @@
 {
+  "nouvelleNote": {
+    "button": "New note",
+    "title": "New note",
+    "description": "Write a note for this client. Public notes will be visible to the fish farmer."
+  },
   "emptyState": {
     "noNotes": "No notes",
     "noNotesFiltered": "No notes match this filter.",
@@ -64,6 +69,10 @@
   "detail": {
     "myObservation": "My observation",
     "dkfarm": "DKFarm"
+  },
+  "fallbackNames": {
+    "client": "Client",
+    "ingenieur": "Engineer"
   },
   "form": {
     "sectionInfos": "Note information",

@@ -19,7 +19,7 @@
  */
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -43,10 +43,10 @@ export interface FeatureFlagToggleProps {
   updatedByName: string | null;
 }
 
-function formatDate(iso: string | null): string | null {
+function formatDate(iso: string | null, locale: string): string | null {
   if (!iso) return null;
   try {
-    return new Intl.DateTimeFormat("fr-FR", {
+    return new Intl.DateTimeFormat(locale, {
       dateStyle: "short",
       timeStyle: "short",
     }).format(new Date(iso));
@@ -65,6 +65,7 @@ export function FeatureFlagToggle({
   updatedByName,
 }: FeatureFlagToggleProps) {
   const t = useTranslations("backoffice.featureFlags");
+  const locale = useLocale();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -182,7 +183,7 @@ export function FeatureFlagToggle({
                 {currentValue.estimatedEnd && (
                   <p className="text-sm text-muted-foreground">
                     <span className="font-medium">{t("estimatedEndLabel")} : </span>
-                    {formatDate(currentValue.estimatedEnd)}
+                    {formatDate(currentValue.estimatedEnd, locale)}
                   </p>
                 )}
               </div>
@@ -191,7 +192,7 @@ export function FeatureFlagToggle({
             {/* Infos de modification */}
             {updatedAt && (
               <p className="mt-2 text-xs text-muted-foreground">
-                {t("lastUpdated")} : {formatDate(updatedAt)}
+                {t("lastUpdated")} : {formatDate(updatedAt, locale)}
                 {updatedByName && (
                   <> &mdash; <span className="font-medium">{updatedByName}</span></>
                 )}

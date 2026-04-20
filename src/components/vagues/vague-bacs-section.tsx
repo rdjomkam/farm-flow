@@ -32,7 +32,7 @@ export function VagueBacsSection({ bacsActifs, bacsRetires }: VagueBacsSectionPr
       {/* Bacs actifs */}
       {bacsActifs.length === 0 ? (
         <p className="text-sm text-muted-foreground py-2 text-center">
-          Aucun bac actif pour cette vague.
+          {t("aucunBacActif")}
         </p>
       ) : (
         bacsActifs.map((a) => (
@@ -46,11 +46,11 @@ export function VagueBacsSection({ bacsActifs, bacsRetires }: VagueBacsSectionPr
                   )}
                   {a.nombrePoissons != null && (
                     <p className="text-sm text-muted-foreground">
-                      {a.nombrePoissons} poissons
+                      {t("poissons", { count: a.nombrePoissons })}
                     </p>
                   )}
                 </div>
-                <Badge variant="success">Actif</Badge>
+                <Badge variant="success">{t("actif")}</Badge>
               </CardContent>
             </Card>
           </Link>

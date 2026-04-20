@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, Bell, CheckCircle2 } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +60,7 @@ export default async function IngenieurPage() {
   const metricsSerialized = JSON.parse(JSON.stringify(metrics));
 
   const t = await getTranslations("ingenieur");
+  const locale = await getLocale();
 
   return (
     <>
@@ -119,7 +120,7 @@ export default async function IngenieurPage() {
                               {(alerte as typeof alerte & { site?: { name: string } }).site?.name ?? alerte.siteId}
                             </Link>
                             <span className="text-xs text-muted-foreground">
-                              {new Date(alerte.createdAt).toLocaleDateString("fr-FR")}
+                              {new Date(alerte.createdAt).toLocaleDateString(locale)}
                             </span>
                           </div>
                         </div>

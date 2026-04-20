@@ -12,12 +12,24 @@
     "errorRef": "Réf:",
     "notFoundTitle": "Page introuvable",
     "notFoundDescription": "La page que vous cherchez n'existe pas ou a été déplacée.",
+    "backToHome": "Retour au tableau de bord",
     "offlineTitle": "Vous êtes hors ligne",
     "offlineDescription": "Vérifiez votre connexion internet et réessayez. Les données enregistrées hors ligne seront synchronisées automatiquement.",
     "criticalLayoutErrorTitle": "Erreur critique",
     "criticalLayoutErrorDescription": "L'application a rencontré une erreur. Veuillez rafraîchir la page.",
     "cannotDisplay": "Impossible d'afficher {section}. Veuillez réessayer.",
     "thisSection": "cette section"
+  },
+  "sections": {
+    "financialEvolutionChart": "le graphique d'évolution financière",
+    "profitabilityChart": "le graphique de rentabilité",
+    "growthChart": "le graphique de croissance",
+    "releveForm": "le formulaire de relevé",
+    "fcrChart": "le graphique FCR",
+    "perWaveChart": "le graphique par vague",
+    "weeklyFcrChart": "le graphique FCR hebdomadaire",
+    "historyChart": "le graphique historique",
+    "saleForm": "le formulaire de vente"
   },
   "validation": {
     "required": "Champ obligatoire",

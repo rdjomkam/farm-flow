@@ -17,7 +17,10 @@
     "feedNotFound": "Produit aliment introuvable.",
     "minTwoFeeds": "Il faut au moins 2 aliments utilisés pour lancer une simulation.",
     "comparer": "Comparer →",
-    "changerVague": "Changer de vague"
+    "changerVague": "Changer de vague",
+    "waveSummaryBacs": "{count} bac",
+    "waveSummaryBacsPlural": "{count} bacs",
+    "waveSummaryAlevins": "{count} alevins"
   },
   "dashboard": {
     "indicateursCles": "Indicateurs clés",
@@ -53,6 +56,10 @@
     "noDataAvailable": "Aucune donnée disponible"
   },
   "benchmarks": {
+    "EXCELLENT": "Excellent",
+    "BON": "Bon",
+    "ACCEPTABLE": "Acceptable",
+    "MAUVAIS": "Mauvais",
     "fcr": {
       "label": "ICA",
       "full": "ICA (Indice de Conversion Alimentaire)"
@@ -118,12 +125,14 @@
     "currentWeight": "Poids actuel",
     "target": "Objectif",
     "inDays": "dans {count} j",
+    "todayLabel": "Auj.",
     "insufficientData": "Donnees insuffisantes",
     "estimatedHarvest": "Recolte estimee",
     "remainingFeed": "Aliment restant",
     "expectedRevenue": "Revenu attendu",
     "growthCurve": "Courbe de croissance",
     "chartLegend": "Ligne continue = mesures reelles · Pointilles = projection SGR actuel",
+    "tooltipDayLabel": "Jour {day} — {date}",
     "sgrHarvest": "Recolte SGR",
     "gompertzHarvest": "Recolte Gompertz",
     "harvestInDays": "~{count} j",
@@ -153,6 +162,13 @@
       "r2": "R\u00b2",
       "rmse": "RMSE"
     }
+  },
+  "errorSection": {
+    "fcrChart": "le graphique FCR",
+    "perWaveChart": "le graphique par vague",
+    "weeklyFcrChart": "le graphique FCR hebdomadaire",
+    "historyChart": "le graphique historique",
+    "growthChart": "le graphique de croissance"
   },
   "bacs": {
     "noBacs": "Aucun bac assigné à cette vague.",
@@ -268,6 +284,7 @@
   "avertissement": {
     "taillesDifferentes": "Attention : les aliments comparés ont des tailles de granulé différentes. La comparaison du FCR peut être biaisée."
   },
+  "simulerChangementButton": "Simuler un changement d'aliment",
   "simulation": {
     "title": "Simulateur de changement d'aliment",
     "oldFeed": "Aliment actuel",
@@ -335,6 +352,8 @@
     "gompertzParams": "Paramètres Gompertz",
     "gompertzFormule": "W(t) = W∞ × exp(−exp(−k × (t − ti)))",
     "interpolPoints": "Points d'interpolation",
+    "comptage": "Comptage",
+    "proportionnel": "Proportionnel",
     "loading": "Chargement de la trace...",
     "error": "Impossible de charger la trace. Réessayer.",
     "retry": "Réessayer",
@@ -345,6 +364,35 @@
     "periodeN": "Période {n}",
     "fcrVague": "ICA vague",
     "aliment": "Aliment",
-    "gain": "Gain"
+    "gain": "Gain",
+    "detailParBacEtPeriode": "Detail par bac et periode",
+    "agregationGlobale": "Agregation globale",
+    "totalGainLabel": "Total gain",
+    "vaguesIncluses": "Vagues incluses",
+    "vaguesIgnorees": "Vagues ignorees",
+    "paramsMinPoints": "Params: minPoints={count}",
+    "fcrFinalShort": "ICA final",
+    "poidsDebutGompertz": "Poids debut (Gompertz)",
+    "poidsFinGompertz": "Poids fin (Gompertz)",
+    "popDebut": "Pop. debut",
+    "popFin": "Pop. fin",
+    "popMoyenne": "Pop. moyenne",
+    "joursExclusifs": "{count}j exclusifs",
+    "joursMixtes": "{count}j mixtes",
+    "gainParPoisson": "Gain / poisson",
+    "modeleGompertz": "Modele Gompertz",
+    "wInfinityLabel": "W∞ (poids asymptotique)",
+    "kLabel": "K (taux croissance)",
+    "tiLabel": "ti (point inflexion)",
+    "r2QualiteLabel": "R² (qualite ajustement)",
+    "biometriePoints": "{count} point biometrie",
+    "biometriePointsPlural": "{count} points biometrie",
+    "vagueCode": "Vague {code}",
+    "enCours": "en cours",
+    "periodeCount": "{count} periode",
+    "periodeCountPlural": "{count} periodes",
+    "produitLabel": "Produit",
+    "icaFinal": "ICA final",
+    "icaVague": "ICA vague"
   }
 }

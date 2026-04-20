@@ -16,7 +16,12 @@
     "vagueCode": "Vague {code}",
     "aujourdhui": "Aujourd'hui",
     "voirFicheComplete": "Voir la fiche complete du site",
-    "details": "Details"
+    "details": "Details",
+    "monPortefeuille": "Mon portefeuille",
+    "voirDetails": "Voir details",
+    "disponible": "Disponible",
+    "enAttente": "En attente",
+    "fermesSuperviseesTitle": "Fermes supervisees ({count})"
   },
   "monitoring": {
     "noActiveAlerts": "Aucune alerte active sur les sites clients.",
@@ -58,7 +63,18 @@
     "tanks": "Bacs",
     "urgent": "Urgent",
     "client": "Client",
-    "allNotes": "Toutes les notes"
+    "allNotes": "Toutes les notes",
+    "unreadAriaLabel": "Non lue",
+    "seeMore": "Voir plus ({count})",
+    "attentionRequise": "Attention requise",
+    "actifDepuisLe": "Actif depuis le {date}",
+    "expireLe": "Expire le {date}",
+    "vaguesEnCoursTitle": "Vagues en cours ({count})",
+    "graphiquesSuivi": "Graphiques de suivi",
+    "notesRecentes": "Notes recentes",
+    "alevinsCount": "{count} alevins",
+    "bacCount": "{count} bac",
+    "bacsCount": "{count} bacs"
   },
   "stats": {
     "clientsActives": "Clients actifs",
@@ -73,7 +89,13 @@
   },
   "siteClientFallback": "Site client",
   "charts": {
-    "avgWeight": "Poids moyen"
+    "avgWeight": "Poids moyen",
+    "croissanceTitle": "{code} — Croissance (poids moyen)",
+    "survieTitle": "{code} — Taux de survie (%)",
+    "mortalitesTitle": "{code} — Mortalités par événement",
+    "survieSeries": "Survie",
+    "mortsSeries": "Morts",
+    "mortsTooltip": "{count} morts"
   },
   "greeting": "Bonjour, {name}",
   "emptyStates": {

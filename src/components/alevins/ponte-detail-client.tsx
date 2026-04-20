@@ -28,7 +28,7 @@ import {
 import { useAlevinsService } from "@/services";
 import { useApi } from "@/hooks/use-api";
 import { StatutPonte, StatutLotAlevins, Permission } from "@/types";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { formatNumber } from "@/lib/format";
 
 function statutPonteBadgeClass(statut: string): string {
@@ -79,6 +79,7 @@ interface Props {
 
 export function PonteDetailClient({ ponte, femelles, males, permissions }: Props) {
   const t = useTranslations("reproduction");
+  const locale = useLocale();
   const router = useRouter();
   const queryClient = useQueryClient();
   const alevinsService = useAlevinsService();
@@ -292,7 +293,7 @@ export function PonteDetailClient({ ponte, femelles, males, permissions }: Props
           <div className="flex justify-between">
             <span className="text-muted-foreground">{t("alevins.pontes.detail.date")}</span>
             <span>
-              {new Date(ponte.datePonte).toLocaleDateString("fr-FR")}
+              {new Date(ponte.datePonte).toLocaleDateString(locale)}
             </span>
           </div>
           <div className="flex justify-between">

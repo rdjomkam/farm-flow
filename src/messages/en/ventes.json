@@ -54,7 +54,10 @@
       "notes": "Notes (optional)",
       "notesPlaceholder": "Additional information...",
       "submit": "Record sale",
-      "back": "Sales"
+      "back": "Sales",
+      "prefillFromLot": "Sale pre-filled from lot",
+      "prefillFromLotWithCode": "Sale pre-filled from lot {code}",
+      "viewLotAlevins": "View fingerling lot"
     },
     "detail": {
       "poissons": "Fish",
@@ -123,6 +126,11 @@
       "reference": "Reference (optional)",
       "referencePlaceholder": "E.g. MTN-20260310-001"
     }
+  },
+  "errorSection": {
+    "saleForm": "the sale form",
+    "financialEvolutionChart": "the financial evolution chart",
+    "profitabilityChart": "the profitability chart"
   },
   "finances": {
     "title": "Finances",

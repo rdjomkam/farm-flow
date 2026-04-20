@@ -231,6 +231,7 @@
     "commandes": "Orders",
     "commandesDesc": "{count} in progress"
   },
+  "placeholderExample": "E.g.: {value}",
   "actions": {
     "create": "Create",
     "save": "Save",

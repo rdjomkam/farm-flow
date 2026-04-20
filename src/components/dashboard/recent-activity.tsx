@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { TypeReleve } from "@/types";
@@ -27,10 +27,12 @@ export async function RecentActivity({ releves }: RecentActivityProps) {
   if (releves.length === 0) return null;
 
   const t = await getTranslations("releves");
+  const tDash = await getTranslations("dashboard.recentActivity");
+  const locale = await getLocale();
 
   return (
     <section>
-      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Activite recente</h2>
+      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">{tDash("title")}</h2>
       <Card>
         <CardContent className="divide-y divide-border p-0">
           {releves.map((r) => (
@@ -41,10 +43,10 @@ export async function RecentActivity({ releves }: RecentActivityProps) {
                   {t(`types.${r.typeReleve}` as Parameters<typeof t>[0]) || r.typeReleve}
                   {r.vague && <span className="text-muted-foreground font-normal"> &mdash; {r.vague.code}</span>}
                 </p>
-                {r.bac && <p className="text-xs text-muted-foreground">Bac: {r.bac.nom}</p>}
+                {r.bac && <p className="text-xs text-muted-foreground">{tDash("bacLabel", { nom: r.bac.nom })}</p>}
               </div>
               <span className="text-xs text-muted-foreground shrink-0">
-                {new Date(r.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                {new Date(r.createdAt).toLocaleDateString(locale, { day: "numeric", month: "short" })}
               </span>
             </div>
           ))}

@@ -51,7 +51,7 @@ export default async function BackofficeRemisesPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground uppercase tracking-wide">
-            Remises actives
+            {t("pages.remises.remisesActives")}
           </p>
           <p className="text-2xl font-bold text-foreground mt-1">
             {remises.filter((r) => r.isActif).length}
@@ -59,7 +59,7 @@ export default async function BackofficeRemisesPage() {
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground uppercase tracking-wide">
-            Total utilisations
+            {t("pages.remises.totalUtilisations")}
           </p>
           <p className="text-2xl font-bold text-foreground mt-1">
             {remises.reduce((sum, r) => sum + r.nombreUtilisations, 0)}
@@ -67,7 +67,7 @@ export default async function BackofficeRemisesPage() {
         </div>
         <div className="rounded-xl border border-border bg-card p-4 col-span-2 sm:col-span-1">
           <p className="text-xs text-muted-foreground uppercase tracking-wide">
-            Remises globales
+            {t("pages.remises.remisesGlobales")}
           </p>
           <p className="text-2xl font-bold text-foreground mt-1">
             {remises.filter((r) => r.siteId === null).length}

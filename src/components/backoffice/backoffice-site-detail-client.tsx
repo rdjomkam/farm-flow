@@ -11,7 +11,7 @@
 
 import { formatNumber } from "@/lib/format";
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Building2, Users, Layers, Database, CheckCircle, XCircle } from "lucide-react";
 import { SiteStatus, SiteModule } from "@/types";
 import type { AdminSiteDetailResponse } from "@/types";
@@ -69,6 +69,8 @@ interface BackofficeSiteDetailClientProps {
 
 export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSiteDetailClientProps) {
   const t = useTranslations("backoffice");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
   const [site, setSite] = useState(initialSite);
 
   function handleModulesSaved(modules: SiteModule[]) {
@@ -103,7 +105,7 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
             currentStatus={site.status}
             trigger={
               <Button variant="outline" size="sm">
-                Changer le statut
+                {t("sites.detail.changeStatus")}
               </Button>
             }
             onSuccess={handleStatusChanged}
@@ -125,20 +127,20 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
         <TabsContent value="resume">
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <StatCard label="Bacs" value={site.bacCount} icon={<Database className="h-5 w-5" />} />
-              <StatCard label="Vagues" value={site.vagueCount} icon={<Layers className="h-5 w-5" />} />
-              <StatCard label="Releves" value={site.releveCount} icon={<CheckCircle className="h-5 w-5" />} />
-              <StatCard label="Membres" value={site.memberCount} icon={<Users className="h-5 w-5" />} />
+              <StatCard label={t("sites.detail.labels.bacs")} value={site.bacCount} icon={<Database className="h-5 w-5" />} />
+              <StatCard label={t("sites.detail.labels.vagues")} value={site.vagueCount} icon={<Layers className="h-5 w-5" />} />
+              <StatCard label={t("sites.detail.labels.releves")} value={site.releveCount} icon={<CheckCircle className="h-5 w-5" />} />
+              <StatCard label={t("sites.detail.labels.membres")} value={site.memberCount} icon={<Users className="h-5 w-5" />} />
             </div>
 
             <div className="rounded-xl border border-border bg-card divide-y divide-border overflow-hidden">
-              <SiteInfoRow label="ID" value={site.id} mono />
-              <SiteInfoRow label="Nom" value={site.name} />
-              <SiteInfoRow label="Adresse" value={site.address ?? "—"} />
-              <SiteInfoRow label={t("sites.supervise")} value={site.supervised ? "Oui" : "Non"} />
+              <SiteInfoRow label={t("sites.detail.labels.id")} value={site.id} mono />
+              <SiteInfoRow label={t("sites.detail.labels.nom")} value={site.name} />
+              <SiteInfoRow label={t("sites.detail.labels.adresse")} value={site.address ?? "—"} />
+              <SiteInfoRow label={t("sites.supervise")} value={site.supervised ? tCommon("labels.yes") : tCommon("labels.no")} />
               <SiteInfoRow
                 label={t("sites.creeLe")}
-                value={new Date(site.createdAt).toLocaleDateString("fr-FR", {
+                value={new Date(site.createdAt).toLocaleDateString(locale, {
                   day: "2-digit",
                   month: "long",
                   year: "numeric",
@@ -146,7 +148,7 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
               />
               <SiteInfoRow
                 label={t("sites.modifieLe")}
-                value={new Date(site.updatedAt).toLocaleDateString("fr-FR", {
+                value={new Date(site.updatedAt).toLocaleDateString(locale, {
                   day: "2-digit",
                   month: "long",
                   year: "numeric",
@@ -155,7 +157,7 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
               {site.suspendedAt && (
                 <SiteInfoRow
                   label={t("sites.detail.suspendedAt")}
-                  value={new Date(site.suspendedAt).toLocaleDateString("fr-FR", {
+                  value={new Date(site.suspendedAt).toLocaleDateString(locale, {
                     day: "2-digit",
                     month: "long",
                     year: "numeric",
@@ -245,26 +247,26 @@ export function BackofficeSiteDetailClient({ site: initialSite }: BackofficeSite
             </div>
           ) : (
             <div className="rounded-xl border border-border bg-card divide-y divide-border overflow-hidden">
-              <SiteInfoRow label="Plan" value={site.abonnementActif.planNom} />
-              <SiteInfoRow label="Type" value={site.abonnementActif.typePlan} />
-              <SiteInfoRow label="Statut" value={site.abonnementActif.statut} />
+              <SiteInfoRow label={t("sites.detail.labels.plan")} value={site.abonnementActif.planNom} />
+              <SiteInfoRow label={t("sites.detail.labels.type")} value={site.abonnementActif.typePlan} />
+              <SiteInfoRow label={t("sites.detail.labels.statut")} value={site.abonnementActif.statut} />
               <SiteInfoRow label={t("sites.periode")} value={site.abonnementActif.periode} />
               <SiteInfoRow
                 label={t("sites.debut")}
-                value={new Date(site.abonnementActif.dateDebut).toLocaleDateString("fr-FR", {
+                value={new Date(site.abonnementActif.dateDebut).toLocaleDateString(locale, {
                   day: "2-digit", month: "long", year: "numeric",
                 })}
               />
               <SiteInfoRow
-                label="Fin"
-                value={new Date(site.abonnementActif.dateFin).toLocaleDateString("fr-FR", {
+                label={t("sites.detail.labels.fin")}
+                value={new Date(site.abonnementActif.dateFin).toLocaleDateString(locale, {
                   day: "2-digit", month: "long", year: "numeric",
                 })}
               />
               {site.abonnementActif.dateFinGrace && (
                 <SiteInfoRow
                   label={t("sites.finDeGrace")}
-                  value={new Date(site.abonnementActif.dateFinGrace).toLocaleDateString("fr-FR", {
+                  value={new Date(site.abonnementActif.dateFinGrace).toLocaleDateString(locale, {
                     day: "2-digit", month: "long", year: "numeric",
                   })}
                 />

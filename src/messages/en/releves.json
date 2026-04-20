@@ -1,8 +1,14 @@
 {
+  "placeholderExample": "E.g.: {value}",
+  "errorSection": {
+    "recordForm": "the record form"
+  },
   "page": {
     "nouveau": "New record",
     "retourVague": "Back to batch",
-    "nouveau_btn": "New"
+    "nouveau_btn": "New",
+    "labelSingular": "record",
+    "labelPlural": "records"
   },
   "types": {
     "BIOMETRIE": "Biometrics",

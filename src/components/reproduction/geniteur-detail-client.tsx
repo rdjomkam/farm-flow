@@ -12,7 +12,7 @@ import {
   Egg,
   AlertTriangle,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -127,6 +127,8 @@ function ponteBadgeClass(statut: string): string {
 
 export function GeniteurDetailClient({ geniteur, mode, permissions }: Props) {
   const t = useTranslations("reproduction.geniteurs");
+  const tPonteStatuts = useTranslations("reproduction.ponteStatuts");
+  const locale = useLocale();
   const router = useRouter();
   const { call } = useApi();
 
@@ -585,7 +587,7 @@ export function GeniteurDetailClient({ geniteur, mode, permissions }: Props) {
             </p>
             <p className="text-sm font-semibold mt-1">
               {geniteur.dernierePonte
-                ? new Date(geniteur.dernierePonte).toLocaleDateString("fr-FR")
+                ? new Date(geniteur.dernierePonte).toLocaleDateString(locale)
                 : t("stats.aucuneDate")}
             </p>
           </div>
@@ -749,7 +751,7 @@ export function GeniteurDetailClient({ geniteur, mode, permissions }: Props) {
                   <span>
                     {new Date(
                       geniteur.dateRenouvellementGenetique
-                    ).toLocaleDateString("fr-FR")}
+                    ).toLocaleDateString(locale)}
                   </span>
                 </div>
               )}
@@ -857,7 +859,7 @@ export function GeniteurDetailClient({ geniteur, mode, permissions }: Props) {
               {t("detail.acquisition")}
             </span>
             <span>
-              {new Date(geniteur.dateAcquisition).toLocaleDateString("fr-FR")}
+              {new Date(geniteur.dateAcquisition).toLocaleDateString(locale)}
             </span>
           </div>
           {geniteur.notes && (
@@ -896,7 +898,7 @@ export function GeniteurDetailClient({ geniteur, mode, permissions }: Props) {
                       <div>
                         <p className="font-medium text-sm">{p.code}</p>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(p.datePonte).toLocaleDateString("fr-FR")}{" "}
+                          {new Date(p.datePonte).toLocaleDateString(locale)}{" "}
                           — {p._count.lots} lot(s)
                         </p>
                       </div>
@@ -904,10 +906,10 @@ export function GeniteurDetailClient({ geniteur, mode, permissions }: Props) {
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${ponteBadgeClass(p.statut)}`}
                       >
                         {p.statut === StatutPonte.EN_COURS
-                          ? "En cours"
+                          ? tPonteStatuts("EN_COURS")
                           : p.statut === StatutPonte.TERMINEE
-                            ? "Terminée"
-                            : "Échouée"}
+                            ? tPonteStatuts("TERMINEE")
+                            : tPonteStatuts("ECHOUEE")}
                       </span>
                     </div>
                   </Link>
@@ -939,15 +941,16 @@ export function GeniteurDetailClient({ geniteur, mode, permissions }: Props) {
                 <div className="flex items-center gap-2 text-sm">
                   <Egg className="h-4 w-4 text-muted-foreground" />
                   <span>
-                    {totalPontes} ponte{totalPontes > 1 ? "s" : ""} enregistrée
-                    {totalPontes > 1 ? "s" : ""}
+                    {totalPontes > 1
+                      ? t("detail.pontesEnregistreesPlural", { count: totalPontes })
+                      : t("detail.pontesEnregistreesSingular", { count: totalPontes })}
                   </span>
                 </div>
                 <Link
                   href="/reproduction/pontes"
                   className="text-sm text-primary hover:underline w-fit"
                 >
-                  Voir toutes les pontes
+                  {t("detail.voirToutesPontes")}
                 </Link>
               </div>
             )}

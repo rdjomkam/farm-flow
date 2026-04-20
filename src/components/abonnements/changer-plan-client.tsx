@@ -14,7 +14,7 @@
  * Mobile-first (360px)
  */
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { ArrowUp, ArrowDown, Calendar, Check, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -88,6 +88,7 @@ export function ChangerPlanClient({
   vagues,
 }: ChangerPlanClientProps) {
   const t = useTranslations("abonnements");
+  const locale = useLocale();
   const [selectedPlan, setSelectedPlan] = useState<PlanAbonnement | null>(null);
   const [selectedPeriode, setSelectedPeriode] = useState<PeriodeFacturation>(
     abonnement.periode
@@ -190,7 +191,7 @@ export function ChangerPlanClient({
             <Calendar className="h-3.5 w-3.5" />
             <span>
               {t("changerPlan.expiresOn")}{" "}
-              {abonnement.dateFin.toLocaleDateString("fr-FR", {
+              {abonnement.dateFin.toLocaleDateString(locale, {
                 day: "2-digit",
                 month: "2-digit",
                 year: "numeric",
@@ -292,7 +293,7 @@ export function ChangerPlanClient({
                     )}
                     <p className="mt-1 text-xs text-muted-foreground">
                       {t("changerPlan.applicationDate")}{" "}
-                      {abonnement.dateProchainRenouvellement.toLocaleDateString("fr-FR")}
+                      {abonnement.dateProchainRenouvellement.toLocaleDateString(locale)}
                     </p>
                   </div>
                   {(abonnement.downgradeVersId === plan.id) ? (

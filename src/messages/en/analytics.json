@@ -17,7 +17,10 @@
     "feedNotFound": "Feed product not found.",
     "minTwoFeeds": "At least 2 feeds must have been used to run a simulation.",
     "comparer": "Compare →",
-    "changerVague": "Change batch"
+    "changerVague": "Change batch",
+    "waveSummaryBacs": "{count} tank",
+    "waveSummaryBacsPlural": "{count} tanks",
+    "waveSummaryAlevins": "{count} fingerlings"
   },
   "dashboard": {
     "indicateursCles": "Key indicators",
@@ -53,6 +56,10 @@
     "noDataAvailable": "No data available"
   },
   "benchmarks": {
+    "EXCELLENT": "Excellent",
+    "BON": "Good",
+    "ACCEPTABLE": "Acceptable",
+    "MAUVAIS": "Poor",
     "fcr": {
       "label": "FCR",
       "full": "FCR (Feed Conversion Ratio)"
@@ -118,12 +125,14 @@
     "currentWeight": "Current weight",
     "target": "Target",
     "inDays": "in {count} d",
+    "todayLabel": "Today",
     "insufficientData": "Insufficient data",
     "estimatedHarvest": "Estimated harvest",
     "remainingFeed": "Remaining feed",
     "expectedRevenue": "Expected revenue",
     "growthCurve": "Growth curve",
     "chartLegend": "Solid line = actual measurements · Dashed = current SGR projection",
+    "tooltipDayLabel": "Day {day} — {date}",
     "sgrHarvest": "SGR harvest",
     "gompertzHarvest": "Gompertz harvest",
     "harvestInDays": "~{count} d",
@@ -153,6 +162,13 @@
       "r2": "R\u00b2",
       "rmse": "RMSE"
     }
+  },
+  "errorSection": {
+    "fcrChart": "the FCR chart",
+    "perWaveChart": "the per-batch chart",
+    "weeklyFcrChart": "the weekly FCR chart",
+    "historyChart": "the history chart",
+    "growthChart": "the growth chart"
   },
   "bacs": {
     "noBacs": "No tanks assigned to this batch.",
@@ -268,6 +284,7 @@
   "avertissement": {
     "taillesDifferentes": "Warning: feeds compared have different pellet sizes. FCR comparison may be biased."
   },
+  "simulerChangementButton": "Simulate a feed change",
   "simulation": {
     "title": "Feed change simulator",
     "oldFeed": "Current feed",
@@ -335,6 +352,8 @@
     "gompertzParams": "Gompertz parameters",
     "gompertzFormule": "W(t) = W∞ × exp(−exp(−k × (t − ti)))",
     "interpolPoints": "Interpolation points",
+    "comptage": "Count",
+    "proportionnel": "Proportional",
     "loading": "Loading trace...",
     "error": "Failed to load trace. Retry.",
     "retry": "Retry",
@@ -345,6 +364,35 @@
     "periodeN": "Period {n}",
     "fcrVague": "Wave FCR",
     "aliment": "Feed",
-    "gain": "Gain"
+    "gain": "Gain",
+    "detailParBacEtPeriode": "Detail by tank and period",
+    "agregationGlobale": "Global aggregation",
+    "totalGainLabel": "Total gain",
+    "vaguesIncluses": "Included batches",
+    "vaguesIgnorees": "Excluded batches",
+    "paramsMinPoints": "Params: minPoints={count}",
+    "fcrFinalShort": "Final FCR",
+    "poidsDebutGompertz": "Weight start (Gompertz)",
+    "poidsFinGompertz": "Weight end (Gompertz)",
+    "popDebut": "Pop. start",
+    "popFin": "Pop. end",
+    "popMoyenne": "Pop. average",
+    "joursExclusifs": "{count}d exclusive",
+    "joursMixtes": "{count}d mixed",
+    "gainParPoisson": "Gain / fish",
+    "modeleGompertz": "Gompertz model",
+    "wInfinityLabel": "W∞ (asymptotic weight)",
+    "kLabel": "K (growth rate)",
+    "tiLabel": "ti (inflection point)",
+    "r2QualiteLabel": "R² (fit quality)",
+    "biometriePoints": "{count} biometry point",
+    "biometriePointsPlural": "{count} biometry points",
+    "vagueCode": "Batch {code}",
+    "enCours": "in progress",
+    "periodeCount": "{count} period",
+    "periodeCountPlural": "{count} periods",
+    "produitLabel": "Product",
+    "icaFinal": "Final FCR",
+    "icaVague": "Batch FCR"
   }
 }

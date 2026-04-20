@@ -51,14 +51,14 @@ const geistMono = Geist_Mono({
 
 export async function generateMetadata(): Promise<Metadata> {
   let description = "Application de suivi d'élevage de silures";
+  let ogTitle = "FarmFlow — Suivi d'élevage de silures";
   try {
     const t = await getTranslations("common.metadata");
     description = t("appDescription");
+    ogTitle = t("ogTitle");
   } catch (error: unknown) {
-    // Re-throw Next.js internal errors (DYNAMIC_SERVER_USAGE, NEXT_REDIRECT, etc.)
     const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
     if (typeof digest === "string" && /^[A-Z_]/.test(digest)) throw error;
-    // Fallback to hardcoded description
   }
   return {
     title: {
@@ -84,13 +84,13 @@ export async function generateMetadata(): Promise<Metadata> {
       type: "website",
       locale: "fr_CM",
       siteName: "FarmFlow",
-      title: "FarmFlow — Suivi d'elevage de silures",
-      description: "Application de suivi piscicole pour l'elevage de silures",
+      title: ogTitle,
+      description,
     },
     twitter: {
       card: "summary",
-      title: "FarmFlow — Suivi d'elevage de silures",
-      description: "Application de suivi piscicole pour l'elevage de silures",
+      title: ogTitle,
+      description,
     },
   };
 }
@@ -116,6 +116,7 @@ export default async function RootLayout({
   let session: Awaited<ReturnType<typeof getServerSession>> | null = null;
   let role: Role | null = null;
   let isImpersonating = false;
+  let administratorLabel = "Administrateur";
 
   console.log("[RootLayout] START");
   try {
@@ -136,6 +137,12 @@ export default async function RootLayout({
     locale = l;
     messages = m as Record<string, unknown>;
     isSuperAdmin = superAdminUser?.isSuperAdmin ?? false;
+    try {
+      const tCommon = await getTranslations("common.labels");
+      administratorLabel = tCommon("administrator");
+    } catch {
+      // Fallback to hardcoded "Administrateur" already set above
+    }
   } catch (error: unknown) {
     // Re-throw Next.js internal errors (DYNAMIC_SERVER_USAGE, NEXT_REDIRECT, etc.)
     const digest = error instanceof Error && "digest" in error ? (error as Record<string, unknown>).digest : undefined;
@@ -225,7 +232,7 @@ export default async function RootLayout({
                   <ImpersonationBanner
                     targetUserName={session.name}
                     targetUserRole={session.role}
-                    originalUserName={session.originalUserName ?? "Administrateur"}
+                    originalUserName={session.originalUserName ?? administratorLabel}
                   />
                 )}
                 {session?.activeSiteId && (

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,6 +45,7 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
   const router = useRouter();
   const depenseService = useDepenseService();
   const t = useTranslations("depenses");
+  const locale = useLocale();
 
   // Form fields
   const [description, setDescription] = useState("");
@@ -259,7 +260,7 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
                   {commandesLivrees.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.numero} —{" "}
-                      {new Intl.NumberFormat("fr-FR").format(
+                      {new Intl.NumberFormat(locale).format(
                         Math.round(c.montantTotal)
                       )}{" "}
                       FCFA

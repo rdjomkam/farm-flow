@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Plus, Users, Calendar } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ReproductionKpiCards, type ReproductionKpis } from "./reproduction-kpi-cards";
@@ -77,6 +77,7 @@ function SkeletonCard({ className = "" }: { className?: string }) {
 
 function PhaseBreakdown({ data }: { data: LotsKpiData }) {
   const t = useTranslations("reproduction");
+  const locale = useLocale();
 
   const total = data.parPhase.reduce((acc, p) => acc + p.totalPoissons, 0);
 
@@ -113,7 +114,7 @@ function PhaseBreakdown({ data }: { data: LotsKpiData }) {
                   {phaseLabel}
                 </span>
                 <span className="text-muted-foreground tabular-nums">
-                  {p.totalPoissons.toLocaleString("fr-FR")}
+                  {p.totalPoissons.toLocaleString(locale)}
                   <span className="ml-1 text-[10px]">({pct.toFixed(0)}%)</span>
                 </span>
               </div>
@@ -138,6 +139,7 @@ function PhaseBreakdown({ data }: { data: LotsKpiData }) {
 
 export function ReproductionDashboardClient() {
   const t = useTranslations("reproduction.dashboard");
+  const tErrors = useTranslations("reproduction.errors");
 
   const [period, setPeriod] = useState<PeriodKey>("30j");
   const [kpis, setKpis] = useState<ReproductionKpis | null>(null);
@@ -169,7 +171,7 @@ export function ReproductionDashboardClient() {
       ]);
 
       if (!kpisRes.ok || !funnelRes.ok || !lotsRes.ok) {
-        throw new Error("Erreur lors du chargement des donnees.");
+        throw new Error(tErrors("loadingData"));
       }
 
       const [kpisJson, funnelJson, lotsJson] = await Promise.all([
@@ -182,7 +184,7 @@ export function ReproductionDashboardClient() {
       setFunnel(funnelJson.funnel as FunnelItem[]);
       setLotsData(lotsJson.data as LotsKpiData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue.");
+      setError(err instanceof Error ? err.message : tErrors("unknown"));
     } finally {
       setLoading(false);
     }

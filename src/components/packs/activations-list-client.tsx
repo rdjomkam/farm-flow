@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Users, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { formatNumber } from "@/lib/format";
@@ -12,10 +12,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatutActivation } from "@/types";
 
-const statutLabels: Record<StatutActivation, string> = {
-  [StatutActivation.ACTIVE]: "Active",
-  [StatutActivation.EXPIREE]: "Expiree",
-  [StatutActivation.SUSPENDUE]: "Suspendue",
+const STATUT_LABEL_KEYS: Record<StatutActivation, `statutsActivation.${string}`> = {
+  [StatutActivation.ACTIVE]: "statutsActivation.ACTIVE",
+  [StatutActivation.EXPIREE]: "statutsActivation.EXPIREE",
+  [StatutActivation.SUSPENDUE]: "statutsActivation.SUSPENDUE",
 };
 
 const statutVariants: Record<StatutActivation, "en_cours" | "default" | "warning"> = {
@@ -42,6 +42,7 @@ interface Props {
 
 export function ActivationsListClient({ activations }: Props) {
   const t = useTranslations("packs");
+  const locale = useLocale();
   const [tab, setTab] = useState("actives");
   const [search, setSearch] = useState("");
 
@@ -98,16 +99,16 @@ export function ActivationsListClient({ activations }: Props) {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-mono font-semibold text-sm">{act.code}</span>
                           <Badge variant={statutVariants[act.statut as StatutActivation]}>
-                            {statutLabels[act.statut as StatutActivation]}
+                            {t(STATUT_LABEL_KEYS[act.statut as StatutActivation])}
                           </Badge>
                         </div>
                         <p className="font-medium text-sm mt-1">{act.clientSite.name}</p>
                         <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-muted-foreground">
                           <span>Pack : <Link href={`/packs/${act.pack.id}`} className="hover:underline">{act.pack.nom}</Link></span>
                           <span>{formatNumber(act.pack.nombreAlevins)} alevins</span>
-                          <span>{t("activations.activeLe")} {new Date(act.dateActivation).toLocaleDateString("fr-FR")}</span>
+                          <span>{t("activations.activeLe")} {new Date(act.dateActivation).toLocaleDateString(locale)}</span>
                           {act.dateExpiration && (
-                            <span>{t("activations.expireLe")} {new Date(act.dateExpiration).toLocaleDateString("fr-FR")}</span>
+                            <span>{t("activations.expireLe")} {new Date(act.dateExpiration).toLocaleDateString(locale)}</span>
                           )}
                         </div>
                         {act.notes && (

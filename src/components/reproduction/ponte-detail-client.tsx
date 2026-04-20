@@ -681,7 +681,7 @@ export function ReproductionPonteDetailClient({ ponte, permissions }: Props) {
                         type="number"
                         min={0}
                         step={0.1}
-                        placeholder="Ex: 28"
+                        placeholder={t("placeholderExample", { value: "28" })}
                         value={incubationTemp}
                         onChange={(e) => setIncubationTemp(e.target.value)}
                         className="min-h-[44px]"
@@ -695,7 +695,7 @@ export function ReproductionPonteDetailClient({ ponte, permissions }: Props) {
                       <Input
                         type="number"
                         min={0}
-                        placeholder="Ex: 10000"
+                        placeholder={t("placeholderExample", { value: "10000" })}
                         value={incubationNbOeufs}
                         onChange={(e) => setIncubationNbOeufs(e.target.value)}
                         className="min-h-[44px]"

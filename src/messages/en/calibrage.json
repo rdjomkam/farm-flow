@@ -90,13 +90,21 @@
       "TRES_GROS": "Extra large"
     }
   },
+  "list": {
+    "voirTout": "View all ({count})"
+  },
   "card": {
-    "modified": "Modified"
+    "modified": "Modified",
+    "title": "Calibration",
+    "groupe": "{count} group",
+    "groupes": "{count} groups"
   },
   "modifications": {
     "title": "Modification history",
     "before": "Before:",
     "after": "After:",
+    "reason": "Reason",
+    "groupeSummary": "{categorie}: {poissons} fish @ {poids}g",
     "fields": {
       "nombreMorts": "Number of deaths",
       "notes": "Notes",
@@ -118,6 +126,19 @@
     "bilanConservation": "Conservation summary",
     "bilanDetail": "{redistribues} redistributed + {morts} dead = {total} fish",
     "poissons": "{count} fish"
+  },
+  "form": {
+    "selectAtLeastOneSource": "Select at least one source tank.",
+    "selectPlaceholder": "Select...",
+    "bacsVidesError": "The selected tanks contain no fish.",
+    "requis": "Required.",
+    "requisPositif": "Required (> 0).",
+    "stepLabels": {
+      "sources": "Sources",
+      "groupes": "Groups",
+      "mortalite": "Mortality",
+      "recapitulatif": "Summary"
+    }
   },
   "modifierDialog": {
     "trigger": "Edit",
@@ -143,6 +164,7 @@
     "tailleMoyenne": "Average length (cm, optional)",
     "ajouterGroupe": "Add a group",
     "notes": "Notes (optional)",
+    "selectPlaceholder": "Select...",
     "annuler": "Cancel",
     "enregistrer": "Save changes",
     "erreurs": {

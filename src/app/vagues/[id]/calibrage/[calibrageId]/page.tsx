@@ -1,7 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Scissors, Fish, AlertTriangle, Calendar, User } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +56,7 @@ export default async function CalibrageDetailPage({
   if (calibrage.vagueId !== id) notFound();
 
   const t = await getTranslations("calibrage");
+  const locale = await getLocale();
 
   const totalPoissons = calibrage.groupes.reduce(
     (sum, g) => sum + g.nombrePoissons,
@@ -105,7 +106,7 @@ export default async function CalibrageDetailPage({
             <div className="flex items-center gap-2 text-muted-foreground">
               <Calendar className="h-4 w-4 shrink-0" />
               <span>
-                {new Date(calibrage.date).toLocaleDateString("fr-FR", {
+                {new Date(calibrage.date).toLocaleDateString(locale, {
                   weekday: "long",
                   day: "numeric",
                   month: "long",

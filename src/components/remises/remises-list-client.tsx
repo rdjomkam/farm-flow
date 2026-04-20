@@ -12,7 +12,7 @@
  */
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { queryKeys } from "@/lib/query-keys";
 import {
   Dialog,
@@ -68,9 +68,9 @@ const TYPE_COLORS: Record<string, string> = {
   [TypeRemise.MANUELLE]: "bg-slate-100 text-slate-800",
 };
 
-function formatDate(date: Date | string | null): string {
+function formatDate(date: Date | string | null, locale: string): string {
   if (!date) return "—";
-  return new Date(date).toLocaleDateString("fr-FR", {
+  return new Date(date).toLocaleDateString(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -97,6 +97,7 @@ export function RemisesListClient({
 }: RemisesListClientProps) {
   const queryClient = useQueryClient();
   const t = useTranslations("remises");
+  const locale = useLocale();
   const [remises, setRemises] = useState(initialRemises);
   const [activeTab, setActiveTab] = useState<
     "actives" | "expirees" | "toutes"
@@ -308,7 +309,7 @@ export function RemisesListClient({
                     }`}
                   >
                     {t("list.expireLe", {
-                      date: formatDate(remise.dateFin),
+                      date: formatDate(remise.dateFin, locale),
                     })}
                   </span>
                 )}

@@ -360,7 +360,7 @@ export function ModifierCalibrageDialog({
                           label={t("categorie")}
                           error={errors[`groupes_${i}_categorie`]}
                         >
-                          <SelectValue placeholder="Selectionnez..." />
+                          <SelectValue placeholder={t("selectPlaceholder")} />
                         </SelectTrigger>
                         <SelectContent>
                           {Object.values(CategorieCalibrage).map((c) => (
@@ -377,7 +377,7 @@ export function ModifierCalibrageDialog({
                           label={t("bacDestination")}
                           error={errors[`groupes_${i}_bacId`]}
                         >
-                          <SelectValue placeholder="Selectionnez..." />
+                          <SelectValue placeholder={t("selectPlaceholder")} />
                         </SelectTrigger>
                         <SelectContent>
                           {bacs.map((b) => (

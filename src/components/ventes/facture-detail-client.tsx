@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { queryKeys } from "@/lib/query-keys";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { formatNumber } from "@/lib/format";
 import {
   ArrowLeft,
@@ -92,6 +92,7 @@ interface Props {
 
 export function FactureDetailClient({ facture, permissions }: Props) {
   const t = useTranslations("ventes");
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const venteService = useVenteService();
   const [paiementOpen, setPaiementOpen] = useState(false);
@@ -173,7 +174,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
               <Calendar className="h-4 w-4 shrink-0" />
               <span>
                 {t("factures.detail.emission", {
-                  date: new Date(facture.dateEmission).toLocaleDateString("fr-FR"),
+                  date: new Date(facture.dateEmission).toLocaleDateString(locale),
                 })}
               </span>
             </div>
@@ -182,7 +183,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
                 <Calendar className="h-4 w-4 shrink-0" />
                 <span>
                   {t("factures.detail.echeance", {
-                    date: new Date(facture.dateEcheance).toLocaleDateString("fr-FR"),
+                    date: new Date(facture.dateEcheance).toLocaleDateString(locale),
                   })}
                 </span>
               </div>
@@ -347,7 +348,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {new Date(p.date).toLocaleDateString("fr-FR")}
+                      {new Date(p.date).toLocaleDateString(locale)}
                       {p.reference && ` — ${p.reference}`}
                     </p>
                   </div>

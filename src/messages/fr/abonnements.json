@@ -45,6 +45,10 @@
       "choosePlan": "Choisir ce plan",
       "unavailable": "Non disponible"
     },
+    "errors": {
+      "generic": "Une erreur est survenue.",
+      "serverUnreachable": "Impossible de contacter le serveur."
+    },
     "price": {
       "perMonth": "par mois",
       "perQuarter": "par trimestre",
@@ -183,6 +187,7 @@
     "subscribersPlural": "{count} abonnés",
     "engineerFarms": "{count} fermes",
     "noSite": "Sans site",
+    "statusAriaLabel": "Statut : {value}",
     "cancelSubscriptionDesc": "Annuler l'abonnement de {siteName} ? Cette action est irréversible.",
     "cancelSubscriptionIrreversible": "Cette action est irréversible.",
     "toggleDeactivateSubscribersDesc": "Le plan {nom} a {count} abonné{plural} actif{plural}. Les abonnés existants conserveront leur accès jusqu'à expiration, mais aucun nouvel abonnement ne sera possible.",

@@ -16,7 +16,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Building2, Search, Users, Layers } from "lucide-react";
 import { SiteStatus } from "@/types";
 import type { AdminSiteSummary, AdminSitesListResponse } from "@/types";
@@ -55,6 +55,7 @@ interface SiteCardProps {
 
 function SiteCard({ site, onStatusChanged }: SiteCardProps) {
   const t = useTranslations("admin.sites");
+  const locale = useLocale();
   return (
     <div className="rounded-xl border border-border bg-card p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
@@ -78,7 +79,7 @@ function SiteCard({ site, onStatusChanged }: SiteCardProps) {
         </span>
         <span>
           {t("creeLe")}{" "}
-          {new Date(site.createdAt).toLocaleDateString("fr-FR", {
+          {new Date(site.createdAt).toLocaleDateString(locale, {
             day: "2-digit",
             month: "short",
             year: "numeric",
@@ -95,7 +96,7 @@ function SiteCard({ site, onStatusChanged }: SiteCardProps) {
       <div className="flex gap-2 pt-1">
         <Link href={`/admin/sites/${site.id}`} className="flex-1">
           <Button variant="outline" size="sm" className="w-full">
-            Gérer
+            {t("gerer")}
           </Button>
         </Link>
         {site.status !== SiteStatus.ARCHIVED && (
@@ -105,7 +106,7 @@ function SiteCard({ site, onStatusChanged }: SiteCardProps) {
             currentStatus={site.status}
             trigger={
               <Button variant="ghost" size="sm">
-                Actions
+                {t("actionsButton")}
               </Button>
             }
             onSuccess={onStatusChanged}
@@ -128,6 +129,7 @@ function SiteTableRow({
   onStatusChanged: () => void;
 }) {
   const t = useTranslations("admin.sites");
+  const locale = useLocale();
   return (
     <tr className="border-b border-border hover:bg-muted/40 transition-colors">
       <td className="px-4 py-3">
@@ -147,7 +149,7 @@ function SiteTableRow({
       <td className="px-4 py-3 text-sm text-muted-foreground">{site.memberCount}</td>
       <td className="px-4 py-3 text-sm text-muted-foreground">{site.enabledModules.length}</td>
       <td className="px-4 py-3 text-sm text-muted-foreground">
-        {new Date(site.createdAt).toLocaleDateString("fr-FR", {
+        {new Date(site.createdAt).toLocaleDateString(locale, {
           day: "2-digit",
           month: "short",
           year: "numeric",
@@ -157,7 +159,7 @@ function SiteTableRow({
         <div className="flex items-center gap-2">
           <Link href={`/admin/sites/${site.id}`}>
             <Button variant="outline" size="sm">
-              Gérer
+              {t("gerer")}
             </Button>
           </Link>
           {site.status !== SiteStatus.ARCHIVED && (
@@ -167,7 +169,7 @@ function SiteTableRow({
               currentStatus={site.status}
               trigger={
                 <Button variant="ghost" size="sm">
-                  Actions
+                  {t("actionsButton")}
                 </Button>
               }
               onSuccess={onStatusChanged}
@@ -235,9 +237,9 @@ export function AdminSitesList({ initialData }: AdminSitesListProps) {
     <div className="space-y-6" key={refreshKey}>
       {/* KPI Cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Total" value={stats.totalActive + stats.totalSuspended + stats.totalBlocked + stats.totalArchived} />
-        <KpiCard label="Actifs" value={stats.totalActive} color="text-success" />
-        <KpiCard label="Suspendus" value={stats.totalSuspended} color="text-accent-amber" />
+        <KpiCard label={t("kpi.total")} value={stats.totalActive + stats.totalSuspended + stats.totalBlocked + stats.totalArchived} />
+        <KpiCard label={t("kpi.actifs")} value={stats.totalActive} color="text-success" />
+        <KpiCard label={t("kpi.suspendus")} value={stats.totalSuspended} color="text-accent-amber" />
         <KpiCard label={t("bloques")} value={stats.totalBlocked} color="text-danger" />
       </div>
 
@@ -285,25 +287,25 @@ export function AdminSitesList({ initialData }: AdminSitesListProps) {
                     <thead className="bg-muted/50">
                       <tr>
                         <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Nom
+                          {t("table.name")}
                         </th>
                         <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Statut
+                          {t("table.status")}
                         </th>
                         <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Plan
+                          {t("table.plan")}
                         </th>
                         <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Membres
+                          {t("table.members")}
                         </th>
                         <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Modules
+                          {t("table.modules")}
                         </th>
                         <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                           {t("creeLe")}
                         </th>
                         <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Actions
+                          {t("table.actions")}
                         </th>
                       </tr>
                     </thead>

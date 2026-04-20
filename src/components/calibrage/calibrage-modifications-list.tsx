@@ -1,58 +1,8 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Pencil } from "lucide-react";
 import type { CalibrageModificationWithUser } from "@/types";
-
-
-function formatDate(date: Date | string): string {
-  const d = new Date(date);
-  return d.toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatRelativeDate(date: Date | string): string {
-  const d = new Date(date);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffMinutes = Math.floor(diffMs / 60000);
-
-  if (diffMinutes < 1) return "a l'instant";
-  if (diffMinutes < 60) return `il y a ${diffMinutes} min`;
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `il y a ${diffHours}h`;
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays === 1) return "hier";
-  if (diffDays < 7) return `il y a ${diffDays} jours`;
-  return formatDate(date);
-}
-
-/** Tente de parser du JSON serialise pour afficher un resume lisible des groupes */
-function formatGroupesValue(jsonStr: string | null): string {
-  if (!jsonStr) return "—";
-  try {
-    const parsed = JSON.parse(jsonStr);
-    if (!Array.isArray(parsed)) return jsonStr;
-    return parsed
-      .map((g: { categorie?: string; nombrePoissons?: number; poidsMoyen?: number }) =>
-        `${g.categorie ?? "?"} : ${g.nombrePoissons ?? "?"} poissons @ ${g.poidsMoyen ?? "?"}g`
-      )
-      .join(" | ");
-  } catch {
-    return jsonStr;
-  }
-}
-
-function renderValue(champModifie: string, value: string | null): string {
-  if (value === null) return "—";
-  if (champModifie === "groupes") return formatGroupesValue(value);
-  return value;
-}
 
 interface CalibrageModificationsListProps {
   modifications: CalibrageModificationWithUser[];
@@ -62,9 +12,63 @@ export function CalibrageModificationsList({
   modifications,
 }: CalibrageModificationsListProps) {
   const t = useTranslations("calibrage");
+  const tDates = useTranslations("format.dates");
+  const locale = useLocale();
+
+  function formatDate(date: Date | string): string {
+    const d = new Date(date);
+    return d.toLocaleDateString(locale, {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  function formatRelativeDate(date: Date | string): string {
+    const d = new Date(date);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMinutes = Math.floor(diffMs / 60000);
+
+    if (diffMinutes < 1) return tDates("justNow");
+    if (diffMinutes < 60) return tDates("minutesAgo", { count: diffMinutes });
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return tDates("hoursAgo", { count: diffHours });
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) return tDates("yesterday");
+    if (diffDays < 7) return tDates("daysAgo", { count: diffDays });
+    return formatDate(date);
+  }
+
+  function formatGroupesValue(jsonStr: string | null): string {
+    if (!jsonStr) return "—";
+    try {
+      const parsed = JSON.parse(jsonStr);
+      if (!Array.isArray(parsed)) return jsonStr;
+      return parsed
+        .map((g: { categorie?: string; nombrePoissons?: number; poidsMoyen?: number }) =>
+          t("modifications.groupeSummary", {
+            categorie: g.categorie ?? "?",
+            poissons: String(g.nombrePoissons ?? "?"),
+            poids: String(g.poidsMoyen ?? "?"),
+          })
+        )
+        .join(" | ");
+    } catch {
+      return jsonStr;
+    }
+  }
+
+  function renderValue(champModifie: string, value: string | null): string {
+    if (value === null) return "—";
+    if (champModifie === "groupes") return formatGroupesValue(value);
+    return value;
+  }
+
   if (modifications.length === 0) return null;
 
-  // Grouper les modifications par raison + utilisateur + proximite temporelle
   const groupes = modifications.reduce<{
     raison: string;
     user: { id: string; name: string };
@@ -107,7 +111,6 @@ export function CalibrageModificationsList({
             key={idx}
             className="rounded-lg border border-border bg-background p-3 text-sm"
           >
-            {/* En-tete : utilisateur + date */}
             <div className="flex items-center justify-between gap-2 mb-1">
               <span className="font-medium text-foreground">{groupe.user.name}</span>
               <span
@@ -118,12 +121,10 @@ export function CalibrageModificationsList({
               </span>
             </div>
 
-            {/* Raison */}
             <p className="text-xs text-muted-foreground italic mb-2">
-              Raison : &ldquo;{groupe.raison}&rdquo;
+              {t("modifications.reason")} : &ldquo;{groupe.raison}&rdquo;
             </p>
 
-            {/* Champs modifies */}
             <div className="flex flex-col gap-2">
               {groupe.champs.map((champ) => (
                 <div key={champ.id} className="flex flex-col gap-0.5">
@@ -131,7 +132,6 @@ export function CalibrageModificationsList({
                     {t(`modifications.fields.${champ.champModifie}` as Parameters<typeof t>[0]) ?? champ.champModifie}
                   </span>
                   {champ.champModifie === "groupes" ? (
-                    // Affichage special pour les groupes (JSON complexe)
                     <div className="flex flex-col gap-1">
                       <div className="rounded bg-danger/10 px-2 py-1 text-xs text-danger/80">
                         <span className="font-medium">{t("modifications.before")}</span>{" "}

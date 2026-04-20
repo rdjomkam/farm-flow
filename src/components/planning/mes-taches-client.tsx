@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { ClipboardCheck, Calendar, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -95,6 +95,7 @@ function TaskCard({
   t: ReturnType<typeof useTranslations>;
   tActivites: ReturnType<typeof useTranslations>;
 }) {
+  const locale = useLocale();
   const colorDot = typeActiviteColors[activite.typeActivite as TypeActivite] ?? "bg-muted-foreground";
   const isEnRetard = activite.statut === StatutActivite.EN_RETARD;
 
@@ -115,7 +116,7 @@ function TaskCard({
             {activite.bac && ` · ${activite.bac.nom}`}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {new Date(activite.dateDebut).toLocaleDateString("fr-FR", {
+            {new Date(activite.dateDebut).toLocaleDateString(locale, {
               weekday: "short",
               day: "numeric",
               month: "short",

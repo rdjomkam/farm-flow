@@ -1,4 +1,9 @@
 {
+  "skipToMain": "Skip to main content",
+  "networkStatus": {
+    "online": "Online",
+    "offline": "Offline"
+  },
   "fab": {
     "ariaLabel": "New record",
     "toasts": {
@@ -15,5 +20,8 @@
         "description": "Unable to find the active batch. Please try again."
       }
     }
+  },
+  "languageSwitcher": {
+    "ariaLabel": "Current language: {label}. Click to switch"
   }
 }

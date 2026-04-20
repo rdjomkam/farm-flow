@@ -42,7 +42,11 @@
     "amount": "Amount",
     "notes": "Notes",
     "type": "Type",
-    "reference": "Reference"
+    "reference": "Reference",
+    "yes": "Yes",
+    "no": "No",
+    "administrator": "Administrator",
+    "statusAriaLabel": "Status: {value}"
   },
   "confirm": {
     "areYouSure": "Are you sure?",
@@ -55,7 +59,8 @@
     "networkError": "Connection error",
     "unauthorized": "Unauthorized",
     "forbidden": "Access denied",
-    "notFound": "Not found"
+    "notFound": "Not found",
+    "serverContact": "Unable to contact the server."
   },
   "metadata": {
     "appDescription": "Catfish farming tracking application",
@@ -77,7 +82,8 @@
     "adminPlans": "Plan management",
     "adminAbonnements": "Subscription management",
     "adminCommissions": "Commission management",
-    "adminRemises": "Discount management"
+    "adminRemises": "Discount management",
+    "ogTitle": "FarmFlow — Catfish farming management"
   },
   "login": {
     "title": "Login",
@@ -140,6 +146,21 @@
   "loading": {
     "ariaLabel": "Loading",
     "text": "Loading..."
+  },
+  "placeholders": {
+    "min": "Min",
+    "max": "Max",
+    "example": "E.g.: {value}"
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {current} / {total}",
+    "totalItems": "{count} {label} total",
+    "total": "{count} {label} total",
+    "pageIndicator": "Page {current} / {total}",
+    "defaultSingular": "record",
+    "defaultPlural": "records"
   },
   "blockedResource": {
     "badgeLabel": "Blocked",

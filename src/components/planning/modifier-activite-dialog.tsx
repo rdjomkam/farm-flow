@@ -30,14 +30,6 @@ import { TypeActivite, Recurrence, StatutActivite, Permission } from "@/types";
 import type { ActiviteWithRelations } from "@/types";
 import { typeActiviteLabels } from "@/lib/labels/activite";
 
-const recurrenceStaticLabels: Record<string, string> = {
-  [Recurrence.QUOTIDIEN]: "Quotidien",
-  [Recurrence.HEBDOMADAIRE]: "Hebdomadaire",
-  [Recurrence.BIMENSUEL]: "Bimensuel",
-  [Recurrence.MENSUEL]: "Mensuel",
-  [Recurrence.PERSONNALISE]: "Personnalise",
-};
-
 const recurrenceValues = [
   { value: "__none__" },
   { value: Recurrence.QUOTIDIEN },
@@ -74,6 +66,13 @@ export function ModifierActiviteDialog({
   members,
 }: ModifierActiviteDialogProps) {
   const t = useTranslations("planning");
+  const recurrenceLabels: Record<string, string> = {
+    [Recurrence.QUOTIDIEN]: t("recurrences.QUOTIDIEN"),
+    [Recurrence.HEBDOMADAIRE]: t("recurrences.HEBDOMADAIRE"),
+    [Recurrence.BIMENSUEL]: t("recurrences.BIMENSUEL"),
+    [Recurrence.MENSUEL]: t("recurrences.MENSUEL"),
+    [Recurrence.PERSONNALISE]: t("recurrences.PERSONNALISE"),
+  };
   const queryClient = useQueryClient();
   const activiteService = useActiviteService();
   const [open, setOpen] = useState(false);
@@ -170,7 +169,7 @@ export function ModifierActiviteDialog({
           <DialogBody className="flex flex-col gap-4">
           {/* Titre */}
           <Input
-            label="Titre"
+            label={t("modifierActivite.labelTitre")}
             value={titre}
             onChange={(e) => setTitre(e.target.value)}
             disabled={isLocked}
@@ -223,7 +222,7 @@ export function ModifierActiviteDialog({
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.value === "__none__"
                       ? t("options.noneOneTime")
-                      : recurrenceStaticLabels[opt.value]}
+                      : recurrenceLabels[opt.value]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -280,7 +279,7 @@ export function ModifierActiviteDialog({
 
           {/* Description */}
           <Textarea
-            label="Description"
+            label={t("modifierActivite.labelDescription")}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}

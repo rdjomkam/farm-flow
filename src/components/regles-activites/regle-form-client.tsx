@@ -218,6 +218,7 @@ interface PlaceholderPanelProps {
 }
 
 function PlaceholderPanel({ onInsert }: PlaceholderPanelProps) {
+  const t = useTranslations("settings.rules.placeholders");
   const [expanded, setExpanded] = useState(false);
 
   const visible = expanded
@@ -229,10 +230,10 @@ function PlaceholderPanel({ onInsert }: PlaceholderPanelProps) {
       <div className="flex items-center gap-2">
         <Info className="h-4 w-4 text-muted-foreground shrink-0" />
         <span className="text-sm font-medium text-foreground">
-          Placeholders disponibles
+          {t("available")}
         </span>
         <span className="text-xs text-muted-foreground ml-auto">
-          Cliquez pour inserer
+          {t("clickToInsert")}
         </span>
       </div>
       <div className="flex flex-wrap gap-1.5">
@@ -262,13 +263,12 @@ function PlaceholderPanel({ onInsert }: PlaceholderPanelProps) {
           {expanded ? (
             <>
               <ChevronUp className="h-3 w-3" />
-              Afficher moins
+              {t("showLess")}
             </>
           ) : (
             <>
               <ChevronDown className="h-3 w-3" />
-              Voir tous ({KNOWN_PLACEHOLDERS.length - DEFAULT_PLACEHOLDER_COUNT}{" "}
-              de plus)
+              {t("showMore", { count: KNOWN_PLACEHOLDERS.length - DEFAULT_PLACEHOLDER_COUNT })}
             </>
           )}
         </button>
@@ -322,13 +322,14 @@ function SectionHeader({ title, open, onToggle, badge }: SectionHeaderProps) {
 // ---------------------------------------------------------------------------
 
 function TitrePreview({ titreTemplate }: { titreTemplate: string }) {
+  const t = useTranslations("settings");
   const resolved = resolvePreview(titreTemplate);
   if (!titreTemplate.trim()) return null;
 
   return (
     <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
       <p className="text-xs text-muted-foreground mb-1">
-        Apercu avec donnees exemple :
+        {t("rules.placeholders.apercuExemple")}
       </p>
       <p className="text-sm font-medium text-foreground">{resolved}</p>
     </div>
@@ -422,7 +423,7 @@ export function RegleFormClient() {
   const validate = useCallback((): boolean => {
     const errs: FormErrors = {};
 
-    if (!form.typeActivite) errs.typeActivite = "Requis";
+    if (!form.typeActivite) errs.typeActivite = t("rules.placeholders.requis");
 
     // At least one valid condition required
     const validConditions = form.conditions.filter(
@@ -587,7 +588,7 @@ export function RegleFormClient() {
               onValueChange={(v) => setField("typeActivite", v as TypeActivite)}
             >
               <SelectTrigger
-                label="Type d'activite"
+                label={t("rules.detail.typeActiviteLabel")}
                 error={errors.typeActivite}
               >
                 <SelectValue placeholder={t("rules.form.typeActivitePlaceholder")} />
@@ -823,7 +824,7 @@ export function RegleFormClient() {
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
                 <p className="text-xs font-medium text-primary mb-1">{t("rules.form.activitySection")}</p>
                 <p className="text-xs text-muted-foreground">
-                  Les templates d&apos;activite (titre, description, instructions) sont configures dans la section suivante.
+                  {t("rules.form.activitySectionDesc")}
                 </p>
               </div>
             )}
@@ -867,7 +868,7 @@ export function RegleFormClient() {
                   label={t("rules.detail.titreAlerteLabel")}
                   value={form.titreNotificationTemplate}
                   onChange={(v) => setField("titreNotificationTemplate", v)}
-                  placeholder="Ex: Densite elevee — Bac {bac}"
+                  placeholder={t("rules.form.placeholderTitreNotif")}
                   rows={2}
                   required
                   error={errors.titreNotificationTemplate}
@@ -881,7 +882,7 @@ export function RegleFormClient() {
                   label={t("rules.detail.descriptionAlerteLabel")}
                   value={form.descriptionNotificationTemplate}
                   onChange={(v) => setField("descriptionNotificationTemplate", v)}
-                  placeholder="Ex: Densite : {valeur} kg/m3 — Action requise"
+                  placeholder={t("rules.form.placeholderDescNotif")}
                   rows={3}
                   textareaRef={descriptionNotifRef}
                   onFocus={() => setActive(descriptionNotifRef)}
@@ -929,7 +930,7 @@ export function RegleFormClient() {
               label={t("rules.form.nomRegleLabel")}
               value={form.nom}
               onChange={(e) => setField("nom", e.target.value)}
-              placeholder="Ex: Alimentation renforcee phase finition"
+              placeholder={t("rules.form.placeholderNomRegle")}
               error={errors.nom}
               required
               maxLength={100}
@@ -945,7 +946,7 @@ export function RegleFormClient() {
                     label={t("rules.detail.titreActiviteLabel")}
                     value={form.titreTemplate}
                     onChange={(v) => setField("titreTemplate", v)}
-                    placeholder="Ex: Distribuer {quantite_calculee}kg de granule en {bac}"
+                    placeholder={t("rules.form.placeholderTitreTemplate")}
                     rows={2}
                     required
                     error={errors.titreTemplate}
@@ -962,7 +963,7 @@ export function RegleFormClient() {
                   label={t("rules.detail.descriptionActiviteLabel")}
                   value={form.descriptionTemplate}
                   onChange={(v) => setField("descriptionTemplate", v)}
-                  placeholder="Ex: Poids moyen {poids_moyen}g — semaine {semaine} du cycle"
+                  placeholder={t("rules.form.placeholderDescTemplate")}
                   rows={3}
                   textareaRef={descriptionRef}
                   onFocus={() => setActive(descriptionRef)}
@@ -974,9 +975,9 @@ export function RegleFormClient() {
                   label={t("rules.detail.instructionsLabel")}
                   value={form.instructionsTemplate}
                   onChange={(v) => setField("instructionsTemplate", v)}
-                  placeholder={"1. Premiere etape\n2. Deuxieme etape\n3. Verifier le resultat"}
+                  placeholder={t("rules.form.placeholderInstructions")}
                   rows={8}
-                  hint="Format recommande : 1. Premiere etape\n2. Deuxieme etape"
+                  hint={t("rules.form.instructionsHint")}
                   textareaRef={instructionsRef}
                   onFocus={() => setActive(instructionsRef)}
                 />
@@ -989,7 +990,7 @@ export function RegleFormClient() {
                 label={t("rules.detail.nomInterneLabel")}
                 value={form.titreTemplate}
                 onChange={(e) => setField("titreTemplate", e.target.value)}
-                placeholder="Ex: Alerte densite elevee"
+                placeholder={t("rules.form.placeholderNomInterne")}
                 error={errors.titreTemplate}
                 required
                 maxLength={200}

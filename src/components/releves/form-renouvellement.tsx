@@ -81,7 +81,7 @@ export function FormRenouvellement({
         min="0"
         max="100"
         step="0.1"
-        placeholder="Ex : 30"
+        placeholder={t("placeholderExample", { value: "30" })}
         value={values.pourcentageRenouvellement}
         onChange={(e) => handlePctChange(e.target.value)}
         error={errors.pourcentageRenouvellement}
@@ -92,7 +92,7 @@ export function FormRenouvellement({
         type="number"
         min="1"
         step="1"
-        placeholder={hasVolume ? `Ex : ${Math.round(bacVolumeLitres! * 0.3)}` : "Ex : 300"}
+        placeholder={hasVolume ? t("placeholderExample", { value: Math.round(bacVolumeLitres! * 0.3) }) : t("placeholderExample", { value: "300" })}
         value={values.volumeRenouvele}
         onChange={(e) => handleVolChange(e.target.value)}
         error={errors.volumeRenouvele}
@@ -104,7 +104,7 @@ export function FormRenouvellement({
         min="1"
         max="20"
         step="1"
-        placeholder="Ex : 2"
+        placeholder={t("placeholderExample", { value: "2" })}
         value={values.nombreRenouvellements}
         onChange={(e) => onChange("nombreRenouvellements", e.target.value)}
         error={errors.nombreRenouvellements}

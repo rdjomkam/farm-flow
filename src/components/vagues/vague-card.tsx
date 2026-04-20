@@ -3,7 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import { Calendar, Container, Clock } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatutVague } from "@/types";
@@ -21,6 +21,7 @@ interface VagueCardProps {
 
 function VagueCardBase({ vague }: VagueCardProps) {
   const t = useTranslations("vagues");
+  const locale = useLocale();
   const statut = vague.statut as StatutVague;
 
   return (
@@ -34,7 +35,7 @@ function VagueCardBase({ vague }: VagueCardProps) {
           <div className="grid grid-cols-2 gap-y-2 text-sm">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Calendar className="h-3.5 w-3.5" />
-              <span>{new Date(vague.dateDebut).toLocaleDateString("fr-FR")}</span>
+              <span>{new Date(vague.dateDebut).toLocaleDateString(locale)}</span>
             </div>
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Clock className="h-3.5 w-3.5" />

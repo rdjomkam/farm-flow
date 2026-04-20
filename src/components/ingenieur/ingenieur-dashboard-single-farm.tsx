@@ -12,7 +12,7 @@
  */
 
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import {
   AlertTriangle,
   Bell,
@@ -54,9 +54,10 @@ export async function IngenieurDashboardSingleFarm({
   sessionName,
 }: IngenieurDashboardSingleFarmProps) {
   // Charger en parallèle
-  const [t, clientSummary, alertesActives, tasks, dashboardData] =
+  const [t, locale, clientSummary, alertesActives, tasks, dashboardData] =
     await Promise.all([
       getTranslations("ingenieur"),
+      getLocale(),
       getClientIngenieurDetail(vendeurSiteId, clientSiteId),
       prisma.notification.findMany({
         where: {
@@ -70,7 +71,7 @@ export async function IngenieurDashboardSingleFarm({
       getDashboardData(clientSiteId),
     ]);
 
-  const today = new Date().toLocaleDateString("fr-FR", {
+  const today = new Date().toLocaleDateString(locale, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -213,7 +214,7 @@ export async function IngenieurDashboardSingleFarm({
                         {alerte.message}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(alerte.createdAt).toLocaleDateString("fr-FR")}
+                        {new Date(alerte.createdAt).toLocaleDateString(locale)}
                       </p>
                     </div>
                   </div>

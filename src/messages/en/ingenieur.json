@@ -16,7 +16,12 @@
     "vagueCode": "Batch {code}",
     "aujourdhui": "Today",
     "voirFicheComplete": "View full site profile",
-    "details": "Details"
+    "details": "Details",
+    "monPortefeuille": "My wallet",
+    "voirDetails": "View details",
+    "disponible": "Available",
+    "enAttente": "Pending",
+    "fermesSuperviseesTitle": "Supervised farms ({count})"
   },
   "monitoring": {
     "noActiveAlerts": "No active alerts on client sites.",
@@ -58,7 +63,18 @@
     "tanks": "Tanks",
     "urgent": "Urgent",
     "client": "Client",
-    "allNotes": "All notes"
+    "allNotes": "All notes",
+    "unreadAriaLabel": "Unread",
+    "seeMore": "See more ({count})",
+    "attentionRequise": "Attention required",
+    "actifDepuisLe": "Active since {date}",
+    "expireLe": "Expires on {date}",
+    "vaguesEnCoursTitle": "Batches in progress ({count})",
+    "graphiquesSuivi": "Tracking charts",
+    "notesRecentes": "Recent notes",
+    "alevinsCount": "{count} fingerlings",
+    "bacCount": "{count} tank",
+    "bacsCount": "{count} tanks"
   },
   "stats": {
     "clientsActives": "Active clients",
@@ -73,7 +89,13 @@
   },
   "siteClientFallback": "Client site",
   "charts": {
-    "avgWeight": "Average weight"
+    "avgWeight": "Average weight",
+    "croissanceTitle": "{code} — Growth (average weight)",
+    "survieTitle": "{code} — Survival rate (%)",
+    "mortalitesTitle": "{code} — Mortalities per event",
+    "survieSeries": "Survival",
+    "mortsSeries": "Deaths",
+    "mortsTooltip": "{count} deaths"
   },
   "greeting": "Hello, {name}",
   "emptyStates": {

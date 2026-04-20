@@ -244,7 +244,7 @@ export function LotFormClient({ pontes, bacs }: Props) {
               min="1"
               value={form.nombreInitial}
               onChange={(e) => updateField("nombreInitial", e.target.value)}
-              placeholder="Ex: 5000"
+              placeholder={t("placeholderExample", { value: "5000" })}
               className="min-h-[44px]"
             />
             {nombreInitialPrefilled && !errors.nombreInitial && (
@@ -311,7 +311,7 @@ export function LotFormClient({ pontes, bacs }: Props) {
               step="0.01"
               value={form.poidsMoyen}
               onChange={(e) => updateField("poidsMoyen", e.target.value)}
-              placeholder="Ex: 0.5"
+              placeholder={t("placeholderExample", { value: "0.5" })}
               className="min-h-[44px]"
             />
           </div>

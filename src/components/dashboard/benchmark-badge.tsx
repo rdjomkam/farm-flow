@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { BenchmarkLevel } from "@/lib/benchmarks";
 
@@ -8,21 +9,17 @@ interface BenchmarkBadgeProps {
   className?: string;
 }
 
-const levelConfig: Record<BenchmarkLevel, { label: string; classes: string }> = {
+const levelConfig: Record<BenchmarkLevel, { classes: string }> = {
   EXCELLENT: {
-    label: "Excellent",
     classes: "bg-accent-green-muted text-accent-green",
   },
   BON: {
-    label: "Bon",
     classes: "bg-accent-blue-muted text-accent-blue",
   },
   ACCEPTABLE: {
-    label: "Acceptable",
     classes: "bg-accent-amber-muted text-accent-amber",
   },
   MAUVAIS: {
-    label: "Mauvais",
     classes: "bg-accent-red-muted text-accent-red",
   },
 };
@@ -34,6 +31,8 @@ const levelConfig: Record<BenchmarkLevel, { label: string; classes: string }> = 
  * Utilise les CSS variables du theme (R6).
  */
 export function BenchmarkBadge({ level, className }: BenchmarkBadgeProps) {
+  const t = useTranslations("dashboard.benchmark");
+
   if (level === null) return null;
 
   const config = levelConfig[level];
@@ -46,7 +45,7 @@ export function BenchmarkBadge({ level, className }: BenchmarkBadgeProps) {
         className
       )}
     >
-      {config.label}
+      {t(level)}
     </span>
   );
 }

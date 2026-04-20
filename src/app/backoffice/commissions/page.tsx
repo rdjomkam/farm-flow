@@ -89,7 +89,7 @@ export default async function BackofficeCommissionsPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground uppercase tracking-wide">
-            Retraits en attente
+            {t("pages.commissions.retraitsEnAttente")}
           </p>
           <p className="text-2xl font-bold text-foreground mt-1">
             {retraitsDemandes.length}
@@ -97,7 +97,7 @@ export default async function BackofficeCommissionsPage() {
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground uppercase tracking-wide">
-            Total a verser
+            {t("pages.commissions.totalAVerser")}
           </p>
           <p className="text-2xl font-bold text-foreground mt-1">
             {new Intl.NumberFormat("fr-CM", {
@@ -112,7 +112,7 @@ export default async function BackofficeCommissionsPage() {
         </div>
         <div className="rounded-xl border border-border bg-card p-4 col-span-2 sm:col-span-1">
           <p className="text-xs text-muted-foreground uppercase tracking-wide">
-            Retraits traites (recents)
+            {t("pages.commissions.retraitsTraitesRecents")}
           </p>
           <p className="text-2xl font-bold text-foreground mt-1">
             {retraitsTraites.length}

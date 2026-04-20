@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 import type { ProjectionVague } from "@/types";
 import { Role } from "@/types";
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { formatCFA, formatDate } from "@/lib/format";
 
 // Recharts chargés dynamiquement (SSR disabled)
@@ -168,6 +168,7 @@ function HarvestDateBlock({ projection }: { projection: ProjectionVague }) {
  */
 function CourbeProjectionChart({ projection }: { projection: ProjectionVague }) {
   const tAnalytics = useTranslations("analytics");
+  const locale = useLocale();
   const { courbeProjection, joursEcoules, poidsObjectif } = projection;
 
   if (courbeProjection.length === 0) {
@@ -204,7 +205,7 @@ function CourbeProjectionChart({ projection }: { projection: ProjectionVague }) 
                 dateDebut.setDate(dateDebut.getDate() - joursEcoules);
                 const pointDate = new Date(dateDebut);
                 pointDate.setDate(pointDate.getDate() + jour);
-                const dateStr = pointDate.toLocaleDateString("fr-FR", {
+                const dateStr = pointDate.toLocaleDateString(locale, {
                   day: "numeric",
                   month: "short",
                   year: "numeric",
@@ -212,7 +213,7 @@ function CourbeProjectionChart({ projection }: { projection: ProjectionVague }) 
                 return (
                   <div className="rounded-xl border border-border bg-card p-3 shadow-[var(--shadow-elevated)] text-xs">
                     <p className="font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                      Jour {label} — {dateStr}
+                      {tAnalytics("projections.tooltipDayLabel", { day: String(label), date: dateStr })}
                     </p>
                     {payload.map((p) => (
                       <div key={p.name} className="flex items-center gap-2 text-sm">
@@ -233,7 +234,7 @@ function CourbeProjectionChart({ projection }: { projection: ProjectionVague }) 
               x={joursEcoules}
               stroke="var(--muted-foreground)"
               strokeDasharray="4 4"
-              label={{ value: "Auj.", fontSize: 10, fill: "var(--muted-foreground)" }}
+              label={{ value: tAnalytics("projections.todayLabel"), fontSize: 10, fill: "var(--muted-foreground)" }}
             />
             {/* Ligne horizontale objectif */}
             <ReferenceLine
@@ -282,6 +283,7 @@ function CourbeProjectionChart({ projection }: { projection: ProjectionVague }) 
 function ProjectionCard({ projection }: ProjectionCardProps) {
   const [chartExpanded, setChartExpanded] = useState(false);
   const tAnalytics = useTranslations("analytics");
+  const tSections = useTranslations("errors.sections");
 
   return (
     <Card>
@@ -370,7 +372,7 @@ function ProjectionCard({ projection }: ProjectionCardProps) {
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               {tAnalytics("projections.growthCurve")}
             </p>
-            <ErrorBoundary section="le graphique de croissance">
+            <ErrorBoundary section={tSections("growthChart")}>
               <CourbeProjectionChart projection={projection} />
             </ErrorBoundary>
             <p className="text-[10px] text-muted-foreground mt-1 text-center">

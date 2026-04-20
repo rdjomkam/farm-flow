@@ -10,7 +10,7 @@ import {
   Cell,
   LabelList,
 } from "recharts";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // ---------------------------------------------------------------------------
@@ -63,13 +63,14 @@ function CustomTooltip({
   active?: boolean;
   payload?: TooltipPayloadItem[];
 }) {
+  const locale = useLocale();
   if (!active || !payload?.length) return null;
   const item = payload[0].payload as FunnelItem;
   return (
     <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow-md">
       <p className="font-semibold text-foreground">{item.etape}</p>
       <p className="text-muted-foreground">
-        {item.count.toLocaleString("fr-FR")} ({item.pourcentage.toFixed(1)}%)
+        {item.count.toLocaleString(locale)} ({item.pourcentage.toFixed(1)}%)
       </p>
     </div>
   );

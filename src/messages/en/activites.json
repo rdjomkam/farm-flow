@@ -103,7 +103,14 @@
     "frequence": "Frequency",
     "avgWeightFull": "Average weight",
     "poissons": "Fish",
-    "completerReleve": "Complete with a record ({label})"
+    "completerReleve": "Complete with a record ({label})",
+    "poidsProjete": "Projected weight",
+    "poidsProjeteSGR": "Projected weight (SGR)",
+    "recommandationAlimentation": "Feeding recommendation",
+    "donneesInsuffisantes": "Insufficient data to calculate feeding recommendation.",
+    "detailParBac": "Detail per tank ({count} tanks)",
+    "stockLabel": "Stock:",
+    "daysShort": "{count} d"
   },
   "placeholders": {
     "retourRegles": "Back to rules",
@@ -123,6 +130,7 @@
       "editTitle": "Edit placeholder",
       "cleLabel": "Key",
       "cleHint": "Usable in templates as {cle}",
+      "clePatternTitle": "Lowercase letters, digits and underscores only",
       "libelleLabel": "Label",
       "descriptionLabel": "Description",
       "descriptionPlaceholder": "Help text shown in the template editor",

@@ -58,6 +58,7 @@ export function GeniteurForm({
 }: GeniteurFormProps) {
   const t = useTranslations("reproduction.geniteurs");
   const tForm = useTranslations("reproduction.geniteurs.form");
+  const tErrors = useTranslations("reproduction.errors");
 
   // --- Shared fields ---
   const [sexe, setSexe] = useState<SexeReproducteur>(SexeReproducteur.FEMELLE);
@@ -188,7 +189,7 @@ export function GeniteurForm({
       if (!res.ok) {
         const data = await res.json().catch(() => null);
         const msg =
-          data?.error || "Une erreur est survenue lors de la création.";
+          data?.error || tErrors("creationFailed");
         setError(msg);
         return;
       }
@@ -197,7 +198,7 @@ export function GeniteurForm({
       onOpenChange(false);
       onSuccess?.();
     } catch {
-      setError("Une erreur réseau est survenue.");
+      setError(tErrors("networkError"));
     } finally {
       setIsSubmitting(false);
     }

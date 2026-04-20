@@ -4,9 +4,11 @@ import { SilureLogo } from "@/components/ui/silure-logo";
 import { NotificationBell } from "./notification-bell";
 import { cn } from "@/lib/utils";
 import { useNetworkStatus } from "@/hooks/use-network-status";
+import { useTranslations } from "next-intl";
 
 export function IngenieurHeader() {
   const { isOnline } = useNetworkStatus();
+  const t = useTranslations("layout");
 
   return (
     <header className="sticky top-0 z-50 flex flex-col border-b border-border bg-card md:hidden">
@@ -25,7 +27,7 @@ export function IngenieurHeader() {
               "ml-1 h-2 w-2 rounded-full",
               isOnline ? "bg-success" : "bg-destructive"
             )}
-            aria-label={isOnline ? "En ligne" : "Hors ligne"}
+            aria-label={isOnline ? t("networkStatus.online") : t("networkStatus.offline")}
             role="status"
           />
         </div>

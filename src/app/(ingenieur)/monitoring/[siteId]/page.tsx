@@ -12,7 +12,7 @@ import {
   Clock,
   Plus,
 } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { Badge } from "@/components/ui/badge";
@@ -95,6 +95,7 @@ export default async function IngenieurClientDetailPage({
   });
 
   const t = await getTranslations("ingenieur");
+  const locale = await getLocale();
 
   // Serialiser pour les composants client
   const vaguesDetailSerialized = JSON.parse(JSON.stringify(vaguesDetail));
@@ -179,7 +180,7 @@ export default async function IngenieurClientDetailPage({
               {clientSummary.necessiteAttention && (
                 <Badge variant="annulee">
                   <AlertTriangle className="h-3 w-3 mr-1" />
-                  Attention requise
+                  {t("monitoring.attentionRequise")}
                 </Badge>
               )}
             </div>
@@ -194,16 +195,14 @@ export default async function IngenieurClientDetailPage({
             <div className="flex items-center gap-1">
               <Calendar className="h-3.5 w-3.5" />
               <span>
-                Actif depuis le{" "}
-                {new Date(clientSummary.dateActivation).toLocaleDateString("fr-FR")}
+                {t("monitoring.actifDepuisLe", { date: new Date(clientSummary.dateActivation).toLocaleDateString(locale) })}
               </span>
             </div>
             {clientSummary.dateExpiration && (
               <div className="flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" />
                 <span>
-                  Expire le{" "}
-                  {new Date(clientSummary.dateExpiration).toLocaleDateString("fr-FR")}
+                  {t("monitoring.expireLe", { date: new Date(clientSummary.dateExpiration).toLocaleDateString(locale) })}
                 </span>
               </div>
             )}
@@ -287,7 +286,7 @@ export default async function IngenieurClientDetailPage({
         {alertesSerialized.length > 0 && (
           <section>
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Alertes actives ({alertesSerialized.length})
+              {t("monitoring.alertesActives", { count: alertesSerialized.length })}
             </h2>
             <div className="flex flex-col gap-2">
               {alertesSerialized.map((alerte: (typeof alertesSerialized)[number]) => (
@@ -303,7 +302,7 @@ export default async function IngenieurClientDetailPage({
                           {alerte.message}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {new Date(alerte.createdAt).toLocaleDateString("fr-FR")}
+                          {new Date(alerte.createdAt).toLocaleDateString(locale)}
                         </p>
                       </div>
                     </div>
@@ -324,7 +323,7 @@ export default async function IngenieurClientDetailPage({
         {/* Vagues en cours — fiches */}
         <section>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-            Vagues en cours ({vaguesAvecStats.length})
+            {t("monitoring.vaguesEnCoursTitle", { count: vaguesAvecStats.length })}
           </h2>
 
           {vaguesAvecStats.length === 0 ? (
@@ -349,7 +348,7 @@ export default async function IngenieurClientDetailPage({
                       <div>
                         <p className="text-xs text-muted-foreground">{t("monitoring.start")}</p>
                         <p className="text-sm font-medium">
-                          {new Date(vague.dateDebut).toLocaleDateString("fr-FR")}
+                          {new Date(vague.dateDebut).toLocaleDateString(locale)}
                         </p>
                       </div>
                       <div>
@@ -432,7 +431,7 @@ export default async function IngenieurClientDetailPage({
         {vaguesDetailSerialized.length > 0 && (
           <section>
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Graphiques de suivi
+              {t("monitoring.graphiquesSuivi")}
             </h2>
             <IngenieurClientCharts vagues={vaguesDetailSerialized} />
           </section>
@@ -442,7 +441,7 @@ export default async function IngenieurClientDetailPage({
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Notes recentes
+              {t("monitoring.notesRecentes")}
             </h2>
             <NouvelleNoteDialog
               siteId={session.activeSiteId}
@@ -460,7 +459,7 @@ export default async function IngenieurClientDetailPage({
                       <div className="flex items-start justify-between gap-2 mb-1">
                         <div className="flex items-center gap-1.5 min-w-0">
                           {!note.isRead && (
-                            <span className="h-2 w-2 rounded-full bg-primary shrink-0" aria-label="Non lue" />
+                            <span className="h-2 w-2 rounded-full bg-primary shrink-0" aria-label={t("monitoring.unreadAriaLabel")} />
                           )}
                           <p className="text-sm font-medium">{note.titre}</p>
                         </div>
@@ -494,7 +493,7 @@ export default async function IngenieurClientDetailPage({
                         </ReactMarkdown>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(note.createdAt).toLocaleDateString("fr-FR")}
+                        {new Date(note.createdAt).toLocaleDateString(locale)}
                       </p>
                     </CardContent>
                   </Card>
@@ -505,7 +504,7 @@ export default async function IngenieurClientDetailPage({
                   href={`/monitoring/${clientSiteId}/notes`}
                   className="text-sm font-medium text-primary hover:underline text-center py-2"
                 >
-                  Voir plus ({notesSerialized.length})
+                  {t("monitoring.seeMore", { count: notesSerialized.length })}
                 </Link>
               )}
             </div>

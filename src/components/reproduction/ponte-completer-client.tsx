@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Check, ChevronRight, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -96,6 +96,7 @@ function Stepper({
   maxReachedStep: CompleterStep;
 }) {
   const t = useTranslations("reproduction.pontes.form");
+  const tRepro = useTranslations("reproduction");
 
   const steps: { label: string; num: CompleterStep }[] = [
     { label: t("steps.injection"), num: 1 },
@@ -147,7 +148,7 @@ function Stepper({
       </p>
 
       {/* Desktop: full horizontal stepper */}
-      <nav className="hidden md:flex items-center" aria-label="Etapes">
+      <nav className="hidden md:flex items-center" aria-label={tRepro("stepsAriaLabel")}>
         {steps.map((step, i) => (
           <div key={step.num} className="flex items-center flex-1">
             <div className="flex items-center gap-2 shrink-0">
@@ -291,7 +292,7 @@ function Step1InjectionEdit({
           step="0.1"
           value={data.doseMgKg}
           onChange={(e) => onChange({ doseMgKg: e.target.value })}
-          placeholder="Ex: 4.0"
+          placeholder={t("placeholderExample", { value: "4.0" })}
         />
       </div>
 
@@ -375,6 +376,7 @@ function Step2StrippingEdit({
   const tQualite = useTranslations("reproduction.pontes.qualiteOeufs");
   const tMethode = useTranslations("reproduction.pontes.methodeMale");
   const tMotilite = useTranslations("reproduction.pontes.motilite");
+  const locale = useLocale();
 
   const poidsVal = parseFloat(data.poidsOeufsPontesG);
   const nombreOeufsEstime =
@@ -403,7 +405,7 @@ function Step2StrippingEdit({
         hint={
           nombreOeufsEstime !== null
             ? t("nombreOeufsHint", {
-                count: nombreOeufsEstime.toLocaleString("fr-FR"),
+                count: nombreOeufsEstime.toLocaleString(locale),
               })
             : undefined
         }

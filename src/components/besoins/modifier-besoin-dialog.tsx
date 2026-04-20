@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,8 +90,8 @@ function genId() {
   return Math.random().toString(36).slice(2);
 }
 
-function formatMontant(n: number) {
-  return new Intl.NumberFormat("fr-FR", {
+function formatMontant(n: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(n);
@@ -128,6 +128,7 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
   const stockService = useStockService();
   const t = useTranslations("besoins");
   const tStock = useTranslations("stock");
+  const locale = useLocale();
 
   const [open, setOpen] = useState(false);
   const [produits, setProduits] = useState<ProduitOption[]>([]);
@@ -485,7 +486,8 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
                         {t("modifierDialog.sousTotal")}{" "}
                         <span className="font-medium text-foreground">
                           {formatMontant(
-                            (parseFloat(l.quantite) || 0) * (parseFloat(l.prixEstime) || 0)
+                            (parseFloat(l.quantite) || 0) * (parseFloat(l.prixEstime) || 0),
+                            locale
                           )}{" "}
                           FCFA
                         </span>
@@ -510,7 +512,7 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
             {/* Total estime */}
             <div className="mt-3 flex items-center justify-between rounded-lg border border-border px-3 py-2">
               <span className="text-sm font-medium">{t("modifierDialog.totalEstime")}</span>
-              <span className="text-base font-bold">{formatMontant(montantEstime)} FCFA</span>
+              <span className="text-base font-bold">{formatMontant(montantEstime, locale)} FCFA</span>
             </div>
           </div>
 

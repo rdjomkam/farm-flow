@@ -16,7 +16,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { RefreshCw, XCircle, ExternalLink, Calendar, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -88,6 +88,7 @@ function showRenouvelerButton(abonnement: AbonnementWithPlan): boolean {
 export function AbonnementActuelCard({ abonnement }: AbonnementActuelCardProps) {
   const queryClient = useQueryClient();
   const t = useTranslations("abonnements");
+  const locale = useLocale();
   const [annulationDialogOpen, setAnnulationDialogOpen] = useState(false);
   const [annulationLoading, setAnnulationLoading] = useState(false);
   const [annulationError, setAnnulationError] = useState<string | null>(null);
@@ -145,14 +146,14 @@ export function AbonnementActuelCard({ abonnement }: AbonnementActuelCardProps) 
           <Calendar className="h-3.5 w-3.5 shrink-0" />
           <div>
             <p className="font-medium text-foreground">{t("card.startDate")}</p>
-            <p>{new Date(abonnement.dateDebut).toLocaleDateString("fr-FR")}</p>
+            <p>{new Date(abonnement.dateDebut).toLocaleDateString(locale)}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Clock className="h-3.5 w-3.5 shrink-0" />
           <div>
             <p className="font-medium text-foreground">{t("card.expirationDate")}</p>
-            <p>{new Date(abonnement.dateFin).toLocaleDateString("fr-FR")}</p>
+            <p>{new Date(abonnement.dateFin).toLocaleDateString(locale)}</p>
           </div>
         </div>
       </div>
@@ -200,7 +201,7 @@ export function AbonnementActuelCard({ abonnement }: AbonnementActuelCardProps) 
           <p className="font-medium text-warning">{t("card.gracePeriod")}</p>
           <p className="text-muted-foreground mt-0.5">
             {t("card.limitedAccessUntil")}{" "}
-            {new Date(abonnement.dateFinGrace).toLocaleDateString("fr-FR")}
+            {new Date(abonnement.dateFinGrace).toLocaleDateString(locale)}
           </p>
         </div>
       )}

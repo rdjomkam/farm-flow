@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { formatNumber } from "@/lib/format";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
@@ -98,6 +98,7 @@ interface Props {
 
 export function PackDetailClient({ pack, produits, configElevages, plans, permissions }: Props) {
   const t = useTranslations("packs");
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const configService = useConfigService();
   const { call } = useApi();
@@ -614,7 +615,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
                       step={0.001}
                       value={quantite}
                       onChange={(e) => setQuantite(e.target.value)}
-                      placeholder="Ex: 10"
+                      placeholder={t("placeholderExample", { value: "10" })}
                       className="mt-1"
                     />
                   </div>
@@ -695,7 +696,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
                 <div>
                   <p className="font-mono text-sm font-medium">{act.code}</p>
                   <p className="text-xs text-muted-foreground">
-                    {act.clientSite.name} — {new Date(act.dateActivation).toLocaleDateString("fr-FR")}
+                    {act.clientSite.name} — {new Date(act.dateActivation).toLocaleDateString(locale)}
                   </p>
                 </div>
                 <Badge variant={statutActivationVariants[act.statut as StatutActivation]}>

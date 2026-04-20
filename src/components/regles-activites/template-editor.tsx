@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Textarea } from "@/components/ui/textarea";
 import {
   KNOWN_PLACEHOLDERS,
@@ -45,6 +46,7 @@ export function TemplateEditor({
   maxLength,
   customPlaceholders = [],
 }: TemplateEditorProps) {
+  const t = useTranslations("settings.rules.placeholders");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showAll, setShowAll] = useState(false);
 
@@ -112,14 +114,14 @@ export function TemplateEditor({
       {/* Unknown placeholder warning — non-blocking */}
       {!valid && (
         <p className="text-xs text-warning">
-          Placeholders non reconnus : {unknown.map((k) => `{${k}}`).join(", ")} — ils seront remplace par &quot;[donnee non disponible]&quot;.
+          {t("nonReconnus", { keys: unknown.map((k) => `{${k}}`).join(", ") })}
         </p>
       )}
 
       {/* Placeholder chips */}
       <div className="space-y-1.5">
         <p className="text-xs text-muted-foreground">
-          Placeholders systeme :
+          {t("systeme")}
         </p>
         <div className="flex flex-wrap gap-1.5">
           {visibleStaticPlaceholders.map((p) => (
@@ -144,12 +146,12 @@ export function TemplateEditor({
             {showAll ? (
               <>
                 <ChevronUp className="h-3 w-3" />
-                Masquer
+                {t("masquer")}
               </>
             ) : (
               <>
                 <ChevronDown className="h-3 w-3" />
-                Voir tous ({staticPlaceholders.length - INITIAL_VISIBLE} de plus)
+                {t("showMore", { count: staticPlaceholders.length - INITIAL_VISIBLE })}
               </>
             )}
           </button>
@@ -159,7 +161,7 @@ export function TemplateEditor({
         {customOnly.length > 0 && (
           <>
             <p className="text-xs text-muted-foreground mt-2">
-              Placeholders personnalises :
+              {t("personnalises")}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {customOnly.map((p) => (

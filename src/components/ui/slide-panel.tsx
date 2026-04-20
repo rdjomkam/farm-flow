@@ -3,6 +3,7 @@
 import { forwardRef } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 /**
@@ -44,39 +45,42 @@ interface SlidePanelContentProps
 const SlidePanelContent = forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
   SlidePanelContentProps
->(({ className, children, hideCloseButton = false, ...props }, ref) => (
-  <DialogPrimitive.Portal>
-    <SlidePanelOverlay />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        // Mobile : plein ecran (dialog classique)
-        "fixed inset-0 z-50 bg-card shadow-xl flex flex-col",
-        // Desktop : panneau depuis la droite
-        "md:inset-y-0 md:left-auto md:right-0 md:w-[480px] md:rounded-l-2xl md:border-l md:border-border",
-        // Animations
-        "data-[state=open]:animate-in data-[state=open]:fade-in-0",
-        "data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
-        "md:data-[state=open]:slide-in-from-right",
-        "md:data-[state=closed]:slide-out-to-right",
-        "duration-200",
-        className
-      )}
-      {...props}
-    >
-      {children}
-      {!hideCloseButton && (
-        <DialogPrimitive.Close
-          className="absolute right-3 rounded-md p-1 opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px] min-w-[44px] flex items-center justify-center z-10"
-          style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}
-        >
-          <X className="h-5 w-5" />
-          <span className="sr-only">Fermer</span>
-        </DialogPrimitive.Close>
-      )}
-    </DialogPrimitive.Content>
-  </DialogPrimitive.Portal>
-));
+>(({ className, children, hideCloseButton = false, ...props }, ref) => {
+  const t = useTranslations("common.buttons");
+  return (
+    <DialogPrimitive.Portal>
+      <SlidePanelOverlay />
+      <DialogPrimitive.Content
+        ref={ref}
+        className={cn(
+          // Mobile : plein ecran (dialog classique)
+          "fixed inset-0 z-50 bg-card shadow-xl flex flex-col",
+          // Desktop : panneau depuis la droite
+          "md:inset-y-0 md:left-auto md:right-0 md:w-[480px] md:rounded-l-2xl md:border-l md:border-border",
+          // Animations
+          "data-[state=open]:animate-in data-[state=open]:fade-in-0",
+          "data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
+          "md:data-[state=open]:slide-in-from-right",
+          "md:data-[state=closed]:slide-out-to-right",
+          "duration-200",
+          className
+        )}
+        {...props}
+      >
+        {children}
+        {!hideCloseButton && (
+          <DialogPrimitive.Close
+            className="absolute right-3 rounded-md p-1 opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px] min-w-[44px] flex items-center justify-center z-10"
+            style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}
+          >
+            <X className="h-5 w-5" />
+            <span className="sr-only">{t("close")}</span>
+          </DialogPrimitive.Close>
+        )}
+      </DialogPrimitive.Content>
+    </DialogPrimitive.Portal>
+  );
+});
 SlidePanelContent.displayName = "SlidePanelContent";
 
 /**

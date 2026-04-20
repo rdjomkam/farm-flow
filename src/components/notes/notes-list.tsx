@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { FileText, AlertTriangle, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,19 +34,19 @@ interface NotesListProps {
  * Formate une date en relatif (aujourd'hui, hier, ou JJ/MM/AAAA).
  * Accepts a translation function to produce locale-aware labels.
  */
-function formatDate(date: Date | string, t: (key: string, values?: Record<string, string>) => string): string {
+function formatDate(date: Date | string, t: (key: string, values?: Record<string, string>) => string, locale: string): string {
   const d = typeof date === "string" ? new Date(date) : date;
   const now = new Date();
   const diff = now.getTime() - d.getTime();
   const dayMs = 86_400_000;
-  const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const time = d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
   if (diff < dayMs && d.getDate() === now.getDate()) {
     return t("list.todayAt", { time });
   }
   if (diff < 2 * dayMs && d.getDate() === now.getDate() - 1) {
     return t("list.yesterdayAt", { time });
   }
-  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return d.toLocaleDateString(locale, { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 /**
@@ -60,6 +60,7 @@ function NoteCard({
   isClientView: boolean;
 }) {
   const t = useTranslations("notes");
+  const locale = useLocale();
   const [localRead, setLocalRead] = useState(note.isRead);
   const isUnread = !localRead;
 
@@ -104,7 +105,7 @@ function NoteCard({
             )}
           </div>
           <span className="text-xs text-muted-foreground shrink-0">
-            {formatDate(note.createdAt, t)}
+            {formatDate(note.createdAt, t, locale)}
           </span>
         </div>
         <CardTitle className="text-base leading-snug mt-1">{note.titre}</CardTitle>

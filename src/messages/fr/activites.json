@@ -103,7 +103,14 @@
     "frequence": "Frequence",
     "avgWeightFull": "Poids moyen",
     "poissons": "Poissons",
-    "completerReleve": "Terminer avec un releve ({label})"
+    "completerReleve": "Terminer avec un releve ({label})",
+    "poidsProjete": "Poids projeté",
+    "poidsProjeteSGR": "Poids projeté (SGR)",
+    "recommandationAlimentation": "Recommandation d'alimentation",
+    "donneesInsuffisantes": "Donnees insuffisantes pour calculer la recommandation d'alimentation.",
+    "detailParBac": "Detail par bac ({count} bacs)",
+    "stockLabel": "Stock :",
+    "daysShort": "{count} j"
   },
   "placeholders": {
     "retourRegles": "Retour aux regles",
@@ -123,6 +130,7 @@
       "editTitle": "Modifier le placeholder",
       "cleLabel": "Cle",
       "cleHint": "Utilisable dans les templates comme {cle}",
+      "clePatternTitle": "Minuscules, chiffres et underscores uniquement",
       "libelleLabel": "Libelle",
       "descriptionLabel": "Description",
       "descriptionPlaceholder": "Aide affichee dans l'editeur de template",

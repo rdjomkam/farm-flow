@@ -15,7 +15,7 @@
 
 import { formatNumber } from "@/lib/format";
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Building2, Users, Layers, Database, CheckCircle, XCircle } from "lucide-react";
 import { SiteStatus, SiteModule } from "@/types";
 import type { AdminSiteDetailResponse } from "@/types";
@@ -52,6 +52,7 @@ interface AdminSiteDetailClientProps {
 
 export function AdminSiteDetailClient({ site: initialSite }: AdminSiteDetailClientProps) {
   const t = useTranslations("admin.sites");
+  const locale = useLocale();
   const [site, setSite] = useState(initialSite);
 
   function handleModulesSaved(modules: SiteModule[]) {
@@ -110,24 +111,24 @@ export function AdminSiteDetailClient({ site: initialSite }: AdminSiteDetailClie
           <div className="space-y-6">
             {/* Stats */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <StatCard label="Bacs" value={site.bacCount} icon={<Database className="h-5 w-5" />} />
-              <StatCard label="Vagues" value={site.vagueCount} icon={<Layers className="h-5 w-5" />} />
+              <StatCard label={t("detail.stats.bacs")} value={site.bacCount} icon={<Database className="h-5 w-5" />} />
+              <StatCard label={t("detail.stats.vagues")} value={site.vagueCount} icon={<Layers className="h-5 w-5" />} />
               <StatCard label={t("releves")} value={site.releveCount} icon={<CheckCircle className="h-5 w-5" />} />
-              <StatCard label="Membres" value={site.memberCount} icon={<Users className="h-5 w-5" />} />
+              <StatCard label={t("detail.stats.membres")} value={site.memberCount} icon={<Users className="h-5 w-5" />} />
             </div>
 
             {/* Infos du site */}
             <div className="rounded-xl border border-border bg-card divide-y divide-border overflow-hidden">
-              <SiteInfoRow label="ID" value={site.id} mono />
-              <SiteInfoRow label="Nom" value={site.name} />
-              <SiteInfoRow label="Adresse" value={site.address ?? "—"} />
+              <SiteInfoRow label={t("detail.info.id")} value={site.id} mono />
+              <SiteInfoRow label={t("detail.info.nom")} value={site.name} />
+              <SiteInfoRow label={t("detail.info.adresse")} value={site.address ?? "—"} />
               <SiteInfoRow
                 label={t("supervise")}
-                value={site.supervised ? "Oui" : "Non"}
+                value={site.supervised ? t("detail.info.oui") : t("detail.info.non")}
               />
               <SiteInfoRow
                 label={t("creeLe")}
-                value={new Date(site.createdAt).toLocaleDateString("fr-FR", {
+                value={new Date(site.createdAt).toLocaleDateString(locale, {
                   day: "2-digit",
                   month: "long",
                   year: "numeric",
@@ -135,7 +136,7 @@ export function AdminSiteDetailClient({ site: initialSite }: AdminSiteDetailClie
               />
               <SiteInfoRow
                 label={t("modifieLe")}
-                value={new Date(site.updatedAt).toLocaleDateString("fr-FR", {
+                value={new Date(site.updatedAt).toLocaleDateString(locale, {
                   day: "2-digit",
                   month: "long",
                   year: "numeric",
@@ -143,8 +144,8 @@ export function AdminSiteDetailClient({ site: initialSite }: AdminSiteDetailClie
               />
               {site.suspendedAt && (
                 <SiteInfoRow
-                  label="Suspendu le"
-                  value={new Date(site.suspendedAt).toLocaleDateString("fr-FR", {
+                  label={t("detail.info.suspendedAt")}
+                  value={new Date(site.suspendedAt).toLocaleDateString(locale, {
                     day: "2-digit",
                     month: "long",
                     year: "numeric",
@@ -152,7 +153,7 @@ export function AdminSiteDetailClient({ site: initialSite }: AdminSiteDetailClie
                 />
               )}
               {site.suspendedReason && (
-                <SiteInfoRow label="Raison suspension" value={site.suspendedReason} />
+                <SiteInfoRow label={t("detail.info.suspendedReason")} value={site.suspendedReason} />
               )}
             </div>
           </div>
@@ -234,26 +235,26 @@ export function AdminSiteDetailClient({ site: initialSite }: AdminSiteDetailClie
             </div>
           ) : (
             <div className="rounded-xl border border-border bg-card divide-y divide-border overflow-hidden">
-              <SiteInfoRow label="Plan" value={site.abonnementActif.planNom} />
-              <SiteInfoRow label="Type" value={site.abonnementActif.typePlan} />
-              <SiteInfoRow label="Statut" value={site.abonnementActif.statut} />
+              <SiteInfoRow label={t("detail.info.plan")} value={site.abonnementActif.planNom} />
+              <SiteInfoRow label={t("detail.info.type")} value={site.abonnementActif.typePlan} />
+              <SiteInfoRow label={t("detail.info.statut")} value={site.abonnementActif.statut} />
               <SiteInfoRow label={t("periode")} value={site.abonnementActif.periode} />
               <SiteInfoRow
                 label={t("debut")}
-                value={new Date(site.abonnementActif.dateDebut).toLocaleDateString("fr-FR", {
+                value={new Date(site.abonnementActif.dateDebut).toLocaleDateString(locale, {
                   day: "2-digit", month: "long", year: "numeric",
                 })}
               />
               <SiteInfoRow
-                label="Fin"
-                value={new Date(site.abonnementActif.dateFin).toLocaleDateString("fr-FR", {
+                label={t("detail.info.fin")}
+                value={new Date(site.abonnementActif.dateFin).toLocaleDateString(locale, {
                   day: "2-digit", month: "long", year: "numeric",
                 })}
               />
               {site.abonnementActif.dateFinGrace && (
                 <SiteInfoRow
                   label={t("finDeGrace")}
-                  value={new Date(site.abonnementActif.dateFinGrace).toLocaleDateString("fr-FR", {
+                  value={new Date(site.abonnementActif.dateFinGrace).toLocaleDateString(locale, {
                     day: "2-digit", month: "long", year: "numeric",
                   })}
                 />
