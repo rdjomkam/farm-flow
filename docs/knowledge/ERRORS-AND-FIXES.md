@@ -155,6 +155,56 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-089 — Lecture dual-source en mode tout-ou-rien (ADR-043 Bac/AssignationBac)
+**Sprint :** Bugfixing | **Date :** 2026-04-19
+**Sévérité :** Haute
+**Fichier(s) :**
+- `src/app/api/bacs/route.ts`
+- `src/lib/queries/vagues.ts`
+- `src/lib/queries/calibrages.ts`
+
+**Symptôme :**
+Des bacs apparaissent dans le formulaire de calibrage mais sont absents de la liste de sélection du formulaire de relevé pour la même vague — et inversement. Le symptôme est asymétrique selon l'écran car chaque endpoint lit la relation bac↔vague depuis une source primaire différente.
+
+**Cause racine :**
+ADR-043 duplique la relation bac↔vague entre une FK directe (`Bac.vagueId`) et une table associative (`AssignationBac`). Deux endpoints lisaient ces deux sources selon un pattern fallback :
+
+```ts
+// ANTI-PATTERN : fallback tout-ou-rien — NE PAS FAIRE
+const fromAssignations = await prisma.assignationBac.findMany({ where: { vagueId, dateFin: null } });
+if (fromAssignations.length > 0) {
+  return fromAssignations.map(a => a.bac); // bacs présents UNIQUEMENT via Bac.vagueId silencieusement masqués
+} else {
+  return await prisma.bac.findMany({ where: { vagueId } }); // fallback jamais déclenché si 1+ assignation existe
+}
+```
+
+Quand un bac est présent dans une seule source (état incohérent fréquent après calibrage), il est masqué par l'endpoint qui ne consulte pas cette source.
+
+**Fix :**
+UNION des deux sources déduplicée par Map :
+
+```ts
+// PATTERN CORRECT : UNION déduplicée
+const [fromVagueId, fromAssignations] = await Promise.all([
+  prisma.bac.findMany({ where: { vagueId, siteId } }),
+  prisma.assignationBac.findMany({ where: { vagueId, dateFin: null, siteId }, include: { bac: true } }),
+]);
+const map = new Map<string, Bac>();
+fromVagueId.forEach(b => map.set(b.id, b));
+fromAssignations.forEach(a => map.set(a.bac.id, a.bac));
+return [...map.values()].sort((a, b) => a.nom.localeCompare(b.nom));
+```
+
+**Leçon / Règle :**
+Quand une relation est stockée dans deux sources parallèles (FK directe + table associative, cache + DB, etc.), **toute lecture doit UNION les deux sources** et dédupliquer. Un fallback `if (primary.length > 0) return primary` est toujours faux : il masque silencieusement les entités présentes uniquement dans la source secondaire. Appliquer systématiquement le pattern UNION dès l'introduction d'une table associative en parallèle d'une FK existante.
+
+Réserves de suivi ouvertes après fix : aligner la priorité UNION entre `/api/bacs?vagueId` et `getVagueById` (revue : incohérence non bloquante), appliquer clause `OR` d'appartenance à `patchCalibrage` (étape 5 non corrigée).
+
+**Références :** [BUG-040](../bugs/BUG-040.md) | [ADR-043](../decisions/ADR-043-bac-vague-associative-model.md)
+
+---
+
 ### ERR-088 — Migration de permissions : fichiers de labels UI absents du scope ADR
 **Sprint :** ADR-045 | **Date :** 2026-04-07
 **Sévérité :** Moyenne

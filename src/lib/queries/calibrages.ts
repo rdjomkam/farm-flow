@@ -74,8 +74,16 @@ export async function createCalibrage(
     }
 
     // 2. Verify source bacs belong to this vague and have fish
+    // BUG-040: accepter un bac soit via Bac.vagueId soit via AssignationBac active
     const sourceBacs = await tx.bac.findMany({
-      where: { id: { in: data.sourceBacIds }, vagueId: data.vagueId, siteId },
+      where: {
+        id: { in: data.sourceBacIds },
+        siteId,
+        OR: [
+          { vagueId: data.vagueId },
+          { assignations: { some: { vagueId: data.vagueId, dateFin: null } } },
+        ],
+      },
     });
 
     if (sourceBacs.length !== data.sourceBacIds.length) {
@@ -93,10 +101,18 @@ export async function createCalibrage(
     }
 
     // 3. Verify destination bacs belong to the same vague
+    // BUG-040: accepter un bac soit via Bac.vagueId soit via AssignationBac active
     const destBacIds = data.groupes.map((g) => g.destinationBacId);
     const uniqueDestBacIds = [...new Set(destBacIds)];
     const destBacs = await tx.bac.findMany({
-      where: { id: { in: uniqueDestBacIds }, vagueId: data.vagueId, siteId },
+      where: {
+        id: { in: uniqueDestBacIds },
+        siteId,
+        OR: [
+          { vagueId: data.vagueId },
+          { assignations: { some: { vagueId: data.vagueId, dateFin: null } } },
+        ],
+      },
     });
 
     if (destBacs.length !== uniqueDestBacIds.length) {
@@ -227,16 +243,38 @@ export async function createCalibrage(
           select: { id: true, nombrePoissons: true },
         });
 
-        await tx.bac.update({
-          where: { id: bacId },
-          data: { nombrePoissons: { increment: total } },
-        });
-
-        // ADR-043 Phase 2: dual-write sur AssignationBac
         if (assignationDest) {
+          // Cas normal : AssignationBac existe — dual-write
+          await tx.bac.update({
+            where: { id: bacId },
+            data: { nombrePoissons: { increment: total } },
+          });
           await tx.assignationBac.update({
             where: { id: assignationDest.id },
             data: { nombrePoissons: (assignationDest.nombrePoissons ?? 0) + total },
+          });
+        } else {
+          // BUG-040: AssignationBac manquante — create défensif pour le bac destination
+          // (bac présent via Bac.vagueId mais sans AssignationBac active)
+          const bacDest = await tx.bac.findUnique({
+            where: { id: bacId },
+            select: { nombrePoissons: true, nombreInitial: true, poidsMoyenInitial: true },
+          });
+          await tx.assignationBac.create({
+            data: {
+              bacId,
+              vagueId: data.vagueId,
+              siteId,
+              dateAssignation: new Date(),
+              dateFin: null,
+              nombrePoissons: (bacDest?.nombrePoissons ?? 0) + total,
+              nombrePoissonsInitial: bacDest?.nombreInitial ?? 0,
+              poidsMoyenInitial: bacDest?.poidsMoyenInitial ?? 0,
+            },
+          });
+          await tx.bac.update({
+            where: { id: bacId },
+            data: { nombrePoissons: { increment: total } },
           });
         }
       }
@@ -414,7 +452,14 @@ export async function patchCalibrage(
     if (data.groupes !== undefined) {
       const uniqueNewDestIds = [...new Set(data.groupes.map((g) => g.destinationBacId))];
       const destBacs = await tx.bac.findMany({
-        where: { id: { in: uniqueNewDestIds }, vagueId: ancienCalibrage.vague.id, siteId },
+        where: {
+          id: { in: uniqueNewDestIds },
+          siteId,
+          OR: [
+            { vagueId: ancienCalibrage.vague.id },
+            { assignations: { some: { vagueId: ancienCalibrage.vague.id, dateFin: null } } },
+          ],
+        },
       });
       if (destBacs.length !== uniqueNewDestIds.length) {
         throw new Error("Un ou plusieurs bacs de destination n'appartiennent pas a la vague");

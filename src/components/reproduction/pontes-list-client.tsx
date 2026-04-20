@@ -141,7 +141,7 @@ export function PontesListClient({ pontes }: PontesListClientProps) {
       />
 
       {/* Date range */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="min-w-0">
           <Input
             label={t("pontes.dateFrom")}

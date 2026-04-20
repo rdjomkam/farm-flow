@@ -30,31 +30,54 @@ export async function GET(request: NextRequest) {
     let total: number;
 
     if (vagueId) {
-      // ADR-043 Phase 2: retourner les bacs avec assignation active pour cette vague
-      // Fallback: aussi sur Bac.vagueId pour la rétrocompatibilité
-      const assignations = await prisma.assignationBac.findMany({
-        where: { siteId: auth.activeSiteId, vagueId, dateFin: null },
-        include: {
-          bac: {
-            select: {
-              id: true,
-              nom: true,
-              volume: true,
-              nombrePoissons: true,
-              nombreInitial: true,
-              poidsMoyenInitial: true,
-              typeSysteme: true,
-              siteId: true,
-              createdAt: true,
-              updatedAt: true,
+      // BUG-040: UNION des deux sources (AssignationBac active + Bac.vagueId) pour éviter
+      // le "tout-ou-rien" qui masquait silencieusement les bacs sans AssignationBac active.
+      type BacMappedResponse = {
+        id: string;
+        nom: string;
+        volume: number | null;
+        nombrePoissons: number | null;
+        nombreInitial: number | null;
+        poidsMoyenInitial: number | null;
+        typeSysteme: string | null;
+        vagueId: string | null;
+        siteId: string;
+        vagueCode: null;
+        createdAt: Date;
+        updatedAt: Date;
+      };
+
+      const [assignations, bacsByFk] = await Promise.all([
+        prisma.assignationBac.findMany({
+          where: { siteId: auth.activeSiteId, vagueId, dateFin: null },
+          include: {
+            bac: {
+              select: {
+                id: true,
+                nom: true,
+                volume: true,
+                nombrePoissons: true,
+                nombreInitial: true,
+                poidsMoyenInitial: true,
+                typeSysteme: true,
+                siteId: true,
+                createdAt: true,
+                updatedAt: true,
+              },
             },
           },
-        },
-        orderBy: { bac: { nom: "asc" } },
-      });
+          orderBy: { bac: { nom: "asc" } },
+        }),
+        prisma.bac.findMany({
+          where: { siteId: auth.activeSiteId, vagueId },
+          orderBy: { nom: "asc" },
+        }),
+      ]);
 
-      if (assignations.length > 0) {
-        const mapped = assignations.map((a) => ({
+      const byId = new Map<string, BacMappedResponse>();
+      // Source primaire : AssignationBac (données les plus à jour)
+      for (const a of assignations) {
+        byId.set(a.bac.id, {
           id: a.bac.id,
           nom: a.bac.nom,
           volume: a.bac.volume,
@@ -67,29 +90,28 @@ export async function GET(request: NextRequest) {
           vagueCode: null,
           createdAt: a.bac.createdAt,
           updatedAt: a.bac.updatedAt,
-        }));
-        return cachedJson({ data: mapped, total: mapped.length, limit: mapped.length, offset: 0 }, "fast");
+        });
       }
-
-      // Fallback: utiliser Bac.vagueId (rétrocompat Phase 2)
-      const bacs = await prisma.bac.findMany({
-        where: { siteId: auth.activeSiteId, vagueId },
-        orderBy: { nom: "asc" },
-      });
-      const mapped = bacs.map((b) => ({
-        id: b.id,
-        nom: b.nom,
-        volume: b.volume,
-        nombrePoissons: b.nombrePoissons,
-        nombreInitial: b.nombreInitial,
-        poidsMoyenInitial: b.poidsMoyenInitial,
-        typeSysteme: b.typeSysteme ?? null,
-        vagueId: b.vagueId,
-        siteId: b.siteId,
-        vagueCode: null,
-        createdAt: b.createdAt,
-        updatedAt: b.updatedAt,
-      }));
+      // Source secondaire : Bac.vagueId (rétrocompat — ne pas écraser si déjà présent)
+      for (const b of bacsByFk) {
+        if (!byId.has(b.id)) {
+          byId.set(b.id, {
+            id: b.id,
+            nom: b.nom,
+            volume: b.volume,
+            nombrePoissons: b.nombrePoissons,
+            nombreInitial: b.nombreInitial,
+            poidsMoyenInitial: b.poidsMoyenInitial,
+            typeSysteme: b.typeSysteme ?? null,
+            vagueId: b.vagueId,
+            siteId: b.siteId,
+            vagueCode: null,
+            createdAt: b.createdAt,
+            updatedAt: b.updatedAt,
+          });
+        }
+      }
+      const mapped = [...byId.values()].sort((a, b) => a.nom.localeCompare(b.nom));
       return cachedJson({ data: mapped, total: mapped.length, limit: mapped.length, offset: 0 }, "fast");
     } else if (libre) {
       const list = await getBacsLibres(auth.activeSiteId);

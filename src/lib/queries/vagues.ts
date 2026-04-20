@@ -56,14 +56,17 @@ export async function getVagueById(
 
   if (!vague) return null;
 
-  // Construire la liste de bacs depuis les assignations si bacs est vide (rétrocompat Phase 3)
+  // BUG-040: UNION des deux sources pour éviter que l'un masque silencieusement l'autre.
+  // Priorité : AssignationBac (source de vérité ADR-043), fallback sur Bac.vagueId
+  // pour les bacs non encore migrés.
   const bacsFromAssignations = vague.assignations
     .filter((a) => a.dateFin === null)
     .map((a) => ({ id: a.bac.id, nom: a.bac.nom, volume: a.bac.volume }));
 
-  const finalBacs = vague.bacs.length > 0
-    ? vague.bacs
-    : bacsFromAssignations;
+  const byId = new Map<string, { id: string; nom: string; volume: number | null }>();
+  for (const b of bacsFromAssignations) byId.set(b.id, b);
+  for (const b of vague.bacs) if (!byId.has(b.id)) byId.set(b.id, { id: b.id, nom: b.nom, volume: b.volume });
+  const finalBacs = [...byId.values()].sort((a, b) => a.nom.localeCompare(b.nom));
 
   return {
     ...vague,
@@ -115,10 +118,15 @@ export async function getVagueByIdWithReleves(
 
   if (!vague) return null;
 
-  // Fallback: si bacs vide, utiliser les assignations actives
+  // BUG-040: UNION des deux sources pour éviter que l'un masque silencieusement l'autre.
+  // Priorité : AssignationBac (source de vérité ADR-043), fallback sur Bac.vagueId
+  // pour les bacs non encore migrés.
   const bacsFromAssignations = vague.assignations
     .map((a) => ({ id: a.bac.id, nom: a.bac.nom, volume: a.bac.volume }));
-  const finalBacs = vague.bacs.length > 0 ? vague.bacs : bacsFromAssignations;
+  const byIdWithReleves = new Map<string, { id: string; nom: string; volume: number | null }>();
+  for (const b of bacsFromAssignations) byIdWithReleves.set(b.id, b);
+  for (const b of vague.bacs) if (!byIdWithReleves.has(b.id)) byIdWithReleves.set(b.id, { id: b.id, nom: b.nom, volume: b.volume });
+  const finalBacs = [...byIdWithReleves.values()].sort((a, b) => a.nom.localeCompare(b.nom));
 
   return {
     vague: { ...vague, bacs: finalBacs } as unknown as import("@/types").VagueWithBacs,
@@ -360,8 +368,23 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
       }
 
       // Recuperer les bacs a retirer
+      // BUG-040 Fix A: accepter un bac soit via Bac.vagueId soit via AssignationBac active
       const bacsARetirer = await tx.bac.findMany({
-        where: { id: { in: data.removeBacIds }, vagueId: id, siteId },
+        where: {
+          id: { in: data.removeBacIds },
+          siteId,
+          OR: [
+            { vagueId: id },
+            { assignations: { some: { vagueId: id, dateFin: null } } },
+          ],
+        },
+        include: {
+          assignations: {
+            where: { vagueId: id, dateFin: null },
+            select: { id: true, nombrePoissons: true },
+            take: 1,
+          },
+        },
       });
 
       // Verifier que le bac de destination n'est pas dans les bacs a retirer
@@ -371,7 +394,9 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
 
       // Verifier si un bac non vide doit etre transfere
       for (const bacARetirer of bacsARetirer) {
-        const poissonsPresents = bacARetirer.nombrePoissons ?? 0;
+        // BUG-040 Fix B: lire nombrePoissons depuis AssignationBac active en priorité
+        const activeAssignation = bacARetirer.assignations?.[0];
+        const poissonsPresents = activeAssignation?.nombrePoissons ?? bacARetirer.nombrePoissons ?? 0;
         if (poissonsPresents > 0) {
           if (!data.transferDestinationBacId) {
             throw new Error(
@@ -380,15 +405,33 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
           }
 
           // Verifier que le bac de destination appartient a la meme vague
+          // BUG-040 Fix C: clause OR + include AssignationBac active
           const bacDestination = await tx.bac.findFirst({
-            where: { id: data.transferDestinationBacId, vagueId: id, siteId },
+            where: {
+              id: data.transferDestinationBacId,
+              siteId,
+              OR: [
+                { vagueId: id },
+                { assignations: { some: { vagueId: id, dateFin: null } } },
+              ],
+            },
+            include: {
+              assignations: {
+                where: { vagueId: id, dateFin: null },
+                select: { id: true, nombrePoissons: true },
+                take: 1,
+              },
+            },
           });
           if (!bacDestination) {
             throw new Error("Le bac de destination est introuvable ou n'appartient pas a cette vague");
           }
 
           // Transferer les poissons : incrémenter la destination
-          const nouveauNombreDestination = (bacDestination.nombrePoissons ?? 0) + poissonsPresents;
+          // BUG-040 Fix C: lire nombrePoissons depuis AssignationBac active en priorité
+          const destAssignation = bacDestination.assignations?.[0];
+          const destCurrentCount = destAssignation?.nombrePoissons ?? bacDestination.nombrePoissons ?? 0;
+          const nouveauNombreDestination = destCurrentCount + poissonsPresents;
           await tx.bac.update({
             where: { id: data.transferDestinationBacId },
             data: { nombrePoissons: { increment: poissonsPresents } },
