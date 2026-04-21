@@ -23,5 +23,9 @@
   },
   "languageSwitcher": {
     "ariaLabel": "Langue actuelle : {label}. Cliquer pour changer"
+  },
+  "notifications": {
+    "ariaLabel": "Notifications",
+    "ariaLabelUnread": "{count, plural, one {# notification non lue} other {# notifications non lues}}"
   }
 }

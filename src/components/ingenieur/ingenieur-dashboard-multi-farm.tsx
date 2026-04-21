@@ -125,14 +125,11 @@ export async function IngenieurDashboardMultiFarm({
           <p className="text-sm font-medium text-white/70 capitalize">{today}</p>
           <h1 className="text-xl font-bold mt-1">{t("greeting", { name: sessionName })}</h1>
           <p className="text-sm text-white/80 mt-1">
-            {metrics.totalClientsActives} client
-            {metrics.totalClientsActives > 1 ? "s" : ""} actif
-            {metrics.totalClientsActives > 1 ? "s" : ""}
+            {t("dashboard.heroClients", { count: metrics.totalClientsActives })}
             {metrics.alertesActives > 0 && (
               <span className="ml-2 inline-flex items-center gap-1">
                 <AlertTriangle className="h-3.5 w-3.5" />
-                {metrics.alertesActives} alerte
-                {metrics.alertesActives > 1 ? "s" : ""}
+                {t("dashboard.heroAlertes", { count: metrics.alertesActives })}
               </span>
             )}
           </p>

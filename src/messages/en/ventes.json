@@ -155,7 +155,10 @@
     "evolution": {
       "title": "Financial trend (last 12 months)",
       "aucuneDonnee": "No data available",
-      "moisLabel": "Month {label}"
+      "moisLabel": "Month {label}",
+      "legendRevenus": "Revenue",
+      "legendCouts": "Costs",
+      "legendMarge": "Margin"
     },
     "rentabilite": {
       "title": "Profitability by batch (ROI %)"

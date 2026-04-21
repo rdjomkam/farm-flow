@@ -311,6 +311,7 @@ export function FinancesDashboardClient({
                 <Area
                   type="monotone"
                   dataKey="Revenus"
+                  name={t("finances.evolution.legendRevenus")}
                   stroke="hsl(var(--success))"
                   strokeWidth={2}
                   fill="url(#colorRevenus)"
@@ -318,6 +319,7 @@ export function FinancesDashboardClient({
                 <Area
                   type="monotone"
                   dataKey="Couts"
+                  name={t("finances.evolution.legendCouts")}
                   stroke="hsl(var(--danger))"
                   strokeWidth={2}
                   fill="url(#colorCouts)"
@@ -325,6 +327,7 @@ export function FinancesDashboardClient({
                 <Area
                   type="monotone"
                   dataKey="Marge"
+                  name={t("finances.evolution.legendMarge")}
                   stroke="hsl(var(--primary))"
                   strokeWidth={2}
                   fill="url(#colorMarge)"

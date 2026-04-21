@@ -131,6 +131,12 @@
       "noInactiveRules": "No inactive rules.",
       "noRules": "No activity rules."
     },
+    "tabs": {
+      "all": "All",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "totalCount": "{count, plural, one {# rule total} other {# rules total}}",
     "firedOnceBadge": "Already triggered",
     "noConditionSimple": "No composite condition — simple trigger:",
     "titreAlerte": "Alert title",

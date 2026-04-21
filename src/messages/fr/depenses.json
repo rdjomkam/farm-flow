@@ -157,7 +157,12 @@
   "list": {
     "recurring": "Recurrentes",
     "total": "Total : ",
-    "remaining": "Reste : "
+    "remaining": "Reste : ",
+    "newButton": "Nouvelle",
+    "tabAll": "Toutes ({count})",
+    "tabDue": "Dues ({count})",
+    "tabPartial": "Partiel ({count})",
+    "tabPaid": "Payees ({count})"
   },
   "recurrentes": {
     "frequences": {
