@@ -517,7 +517,7 @@ export function ConfigElevageFormClient({ templates }: Props) {
             {section.id === "objectif" && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <NumericField label={t("fields.poidsObjectif")} name="poidsObjectif" value={form.poidsObjectif} onChange={handleNumeric} unit="g" min={100} max={5000} step={50} />
-                <NumericField label={t("fields.dureeEstimee")} name="dureeEstimeeCycle" value={form.dureeEstimeeCycle} onChange={handleNumeric} unit="jours" min={30} max={365} step={1} />
+                <NumericField label={t("fields.dureeEstimee")} name="dureeEstimeeCycle" value={form.dureeEstimeeCycle} onChange={handleNumeric} unit={t("units.jours")} min={30} max={365} step={1} />
                 <NumericField label={t("fields.survieObjectif")} name="tauxSurvieObjectif" value={form.tauxSurvieObjectif} onChange={handleNumeric} unit="%" min={50} max={100} step={1} />
               </div>
             )}
@@ -624,16 +624,16 @@ export function ConfigElevageFormClient({ templates }: Props) {
                 <NumericField label={t("fields.alerteMortaliteQuotidienne")} name="mortaliteQuotidienneAlerte" value={form.mortaliteQuotidienneAlerte} onChange={handleNumeric} unit="%" min={0.1} max={10} step={0.1} />
                 <NumericField label={t("fields.critiqueMortaliteQuotidienne")} name="mortaliteQuotidienneCritique" value={form.mortaliteQuotidienneCritique} onChange={handleNumeric} unit="%" min={0.5} max={20} step={0.1} />
                 <NumericField label={t("fields.fcrAlerteMax")} name="fcrAlerteMax" value={form.fcrAlerteMax} onChange={handleNumeric} min={1} max={5} step={0.1} />
-                <NumericField label={t("fields.stockJoursAlerte")} name="stockJoursAlerte" value={form.stockJoursAlerte} onChange={handleNumeric} unit="jours" min={1} max={30} step={1} />
+                <NumericField label={t("fields.stockJoursAlerte")} name="stockJoursAlerte" value={form.stockJoursAlerte} onChange={handleNumeric} unit={t("units.jours")} min={1} max={30} step={1} />
               </div>
             )}
             {section.id === "tri-biometrie" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <NumericField label={t("fields.triPoidsMin")} name="triPoidsMin" value={form.triPoidsMin} onChange={handleNumeric} unit="g" min={1} max={100} step={1} />
                 <NumericField label={t("fields.triPoidsMax")} name="triPoidsMax" value={form.triPoidsMax} onChange={handleNumeric} unit="g" min={50} max={500} step={5} />
-                <NumericField label={t("fields.triIntervalle")} name="triIntervalleJours" value={form.triIntervalleJours} onChange={handleNumeric} unit="jours" min={7} max={60} step={1} />
-                <NumericField label={t("fields.biometrieDebut")} name="biometrieIntervalleDebut" value={form.biometrieIntervalleDebut} onChange={handleNumeric} unit="jours" min={3} max={30} step={1} />
-                <NumericField label={t("fields.biometrieFin")} name="biometrieIntervalleFin" value={form.biometrieIntervalleFin} onChange={handleNumeric} unit="jours" min={7} max={30} step={1} />
+                <NumericField label={t("fields.triIntervalle")} name="triIntervalleJours" value={form.triIntervalleJours} onChange={handleNumeric} unit={t("units.jours")} min={7} max={60} step={1} />
+                <NumericField label={t("fields.biometrieDebut")} name="biometrieIntervalleDebut" value={form.biometrieIntervalleDebut} onChange={handleNumeric} unit={t("units.jours")} min={3} max={30} step={1} />
+                <NumericField label={t("fields.biometrieFin")} name="biometrieIntervalleFin" value={form.biometrieIntervalleFin} onChange={handleNumeric} unit={t("units.jours")} min={7} max={30} step={1} />
                 <NumericField label={t("fields.echantillonBiometrie")} name="biometrieEchantillonPct" value={form.biometrieEchantillonPct} onChange={handleNumeric} unit="%" min={5} max={30} step={1} />
               </div>
             )}
@@ -642,13 +642,13 @@ export function ConfigElevageFormClient({ templates }: Props) {
                 <NumericField label={t("fields.densiteMax")} name="densiteMaxPoissonsM3" value={form.densiteMaxPoissonsM3} onChange={handleNumeric} unit="poissons/m³" min={10} max={300} step={5} />
                 <NumericField label={t("fields.densiteOptimale")} name="densiteOptimalePoissonsM3" value={form.densiteOptimalePoissonsM3} onChange={handleNumeric} unit="poissons/m³" min={5} max={200} step={5} />
                 <NumericField label={t("fields.changementEauPct")} name="eauChangementPct" value={form.eauChangementPct} onChange={handleNumeric} unit="%" min={10} max={100} step={5} />
-                <NumericField label={t("fields.changementEauFrequence")} name="eauChangementIntervalleJours" value={form.eauChangementIntervalleJours} onChange={handleNumeric} unit="jours" min={1} max={14} step={1} />
+                <NumericField label={t("fields.changementEauFrequence")} name="eauChangementIntervalleJours" value={form.eauChangementIntervalleJours} onChange={handleNumeric} unit={t("units.jours")} min={1} max={14} step={1} />
               </div>
             )}
             {section.id === "recolte" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <NumericField label={t("fields.poidsMinRecoltePartielle")} name="recoltePartiellePoidsSeuil" value={form.recoltePartiellePoidsSeuil} onChange={handleNumeric} unit="g" min={100} max={2000} step={50} />
-                <NumericField label={t("fields.arretAlimentAvantRecolte")} name="recolteJeuneAvantJours" value={form.recolteJeuneAvantJours} onChange={handleNumeric} unit="jours" min={0} max={7} step={1} />
+                <NumericField label={t("fields.arretAlimentAvantRecolte")} name="recolteJeuneAvantJours" value={form.recolteJeuneAvantJours} onChange={handleNumeric} unit={t("units.jours")} min={0} max={7} step={1} />
               </div>
             )}
             {section.id === "gompertz" && (
@@ -663,7 +663,7 @@ export function ConfigElevageFormClient({ templates }: Props) {
                     min={100}
                     max={3000}
                     step={10}
-                    placeholder="ex: 1200"
+                    placeholder={t("placeholders.gompertzWInf")}
                   />
                   <OptionalNumericField
                     label={t("fields.gompertzKDefault")}
@@ -673,18 +673,18 @@ export function ConfigElevageFormClient({ templates }: Props) {
                     min={0.005}
                     max={0.2}
                     step={0.001}
-                    placeholder="ex: 0.018"
+                    placeholder={t("placeholders.gompertzK")}
                   />
                   <OptionalNumericField
                     label={t("fields.gompertzTiDefault")}
                     name="gompertzTiDefault"
                     value={form.gompertzTiDefault}
                     onChange={handleOptionalNumeric}
-                    unit="jours"
+                    unit={t("units.jours")}
                     min={0}
                     max={300}
                     step={1}
-                    placeholder="ex: 95"
+                    placeholder={t("placeholders.gompertzTi")}
                   />
                 </div>
                 <NumericField

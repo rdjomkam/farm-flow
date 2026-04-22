@@ -155,7 +155,10 @@
     "evolution": {
       "title": "Evolution financiere (12 derniers mois)",
       "aucuneDonnee": "Aucune donnee disponible",
-      "moisLabel": "Mois {label}"
+      "moisLabel": "Mois {label}",
+      "legendRevenus": "Revenus",
+      "legendCouts": "Coûts",
+      "legendMarge": "Marge"
     },
     "rentabilite": {
       "title": "Rentabilite par vague (ROI %)"

@@ -224,7 +224,17 @@
       "description": "KPIs consolides de toute la plateforme DKFarm"
     },
     "abonnements": {
-      "title": "Tous les abonnements"
+      "title": "Tous les abonnements",
+      "subtitle": "{total, plural, one {# abonnement} other {# abonnements}} au total"
+    },
+    "modules": {
+      "subtitle": "{count, plural, one {# module enregistre} other {# modules enregistres}}"
+    },
+    "sites": {
+      "subtitle": "{active, plural, one {# site actif} other {# sites actifs}} sur {total} au total"
+    },
+    "plans": {
+      "subtitle": "{count, plural, one {# plan} other {# plans}} au total"
     }
   },
   "siteStatus": {

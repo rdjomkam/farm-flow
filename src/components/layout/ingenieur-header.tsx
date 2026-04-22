@@ -19,7 +19,7 @@ export function IngenieurHeader() {
           <SilureLogo size={20} className="text-primary" />
           <span className="text-sm font-semibold">FarmFlow</span>
           <span className="ml-0.5 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-            Ingénieur
+            {t("ingenieurBadge")}
           </span>
           {/* Network indicator */}
           <div

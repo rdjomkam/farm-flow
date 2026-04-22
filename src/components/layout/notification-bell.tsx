@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Bell } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -9,6 +10,7 @@ import { queryKeys } from "@/lib/query-keys";
 
 export function NotificationBell() {
   const router = useRouter();
+  const t = useTranslations("layout.notifications");
   const notificationService = useNotificationService();
 
   const { data: count = 0 } = useQuery({
@@ -30,7 +32,7 @@ export function NotificationBell() {
         "text-muted-foreground hover:text-foreground hover:bg-muted transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       )}
-      aria-label={count > 0 ? `${count} notification${count > 1 ? "s" : ""} non lue${count > 1 ? "s" : ""}` : "Notifications"}
+      aria-label={count > 0 ? t("ariaLabelUnread", { count }) : t("ariaLabel")}
     >
       <Bell className="h-5 w-5" />
       {count > 0 && (

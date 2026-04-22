@@ -187,7 +187,7 @@ export function DepensesListClient({ depenses, canManage, templatesActifsCount =
             <Link href="/depenses/nouvelle">
               <Button size="sm" className="gap-1.5">
                 <Plus className="h-4 w-4" />
-                Nouvelle
+                {t("list.newButton")}
               </Button>
             </Link>
           )}
@@ -198,16 +198,16 @@ export function DepensesListClient({ depenses, canManage, templatesActifsCount =
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full grid grid-cols-4">
           <TabsTrigger value="toutes">
-            Toutes ({depensesFiltrees.length})
+            {t("list.tabAll", { count: depensesFiltrees.length })}
           </TabsTrigger>
           <TabsTrigger value="non_payees">
-            Dues ({nonPayees.length})
+            {t("list.tabDue", { count: nonPayees.length })}
           </TabsTrigger>
           <TabsTrigger value="partielles">
-            Partiel ({partiellesPay.length})
+            {t("list.tabPartial", { count: partiellesPay.length })}
           </TabsTrigger>
           <TabsTrigger value="payees">
-            Payees ({payees.length})
+            {t("list.tabPaid", { count: payees.length })}
           </TabsTrigger>
         </TabsList>
 

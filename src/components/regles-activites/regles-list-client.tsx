@@ -153,7 +153,7 @@ export function ReglesListClient({ regles: initialRegles, canManage, canManageGl
       {/* ---- Header actions ---- */}
       <div className="flex items-center justify-between gap-3 mb-4">
         <p className="text-xs text-muted-foreground">
-          {regles.length} regle{regles.length !== 1 ? "s" : ""} au total
+          {t("rules.totalCount", { count: regles.length })}
         </p>
         {canManage && (
           <Link href="/settings/regles-activites/nouvelle">
@@ -172,7 +172,7 @@ export function ReglesListClient({ regles: initialRegles, canManage, canManageGl
       >
         <TabsList className="w-full mb-4">
           <TabsTrigger value="all" className="flex-1">
-            Toutes
+            {t("rules.tabs.all")}
             {regles.length > 0 && (
               <span className="ml-1.5 rounded-full bg-muted-foreground/20 px-1.5 py-0.5 text-xs leading-none">
                 {regles.length}
@@ -180,7 +180,7 @@ export function ReglesListClient({ regles: initialRegles, canManage, canManageGl
             )}
           </TabsTrigger>
           <TabsTrigger value="active" className="flex-1">
-            Actives
+            {t("rules.tabs.active")}
             {activeCount > 0 && (
               <span className="ml-1.5 rounded-full bg-primary/20 text-primary px-1.5 py-0.5 text-xs leading-none">
                 {activeCount}
@@ -188,7 +188,7 @@ export function ReglesListClient({ regles: initialRegles, canManage, canManageGl
             )}
           </TabsTrigger>
           <TabsTrigger value="inactive" className="flex-1">
-            Inactives
+            {t("rules.tabs.inactive")}
             {inactiveCount > 0 && (
               <span className="ml-1.5 rounded-full bg-muted-foreground/20 px-1.5 py-0.5 text-xs leading-none">
                 {inactiveCount}
