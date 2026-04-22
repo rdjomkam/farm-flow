@@ -132,5 +132,13 @@
     "description": "Gerez les profils de configuration d'elevage de votre site. Chaque profil definit les benchmarks, les seuils d'alerte et les parametres d'alimentation.",
     "newProfile": "Nouveau profil",
     "editTitle": "Modifier : {nom}"
+  },
+  "placeholders": {
+    "gompertzWInf": "ex : 1200",
+    "gompertzK": "ex : 0.018",
+    "gompertzTi": "ex : 95"
+  },
+  "units": {
+    "jours": "jours"
   }
 }

@@ -21,11 +21,12 @@
       }
     }
   },
-  "languageSwitcher": {
-    "ariaLabel": "Current language: {label}. Click to switch"
-  },
+  "ingenieurBadge": "Engineer",
   "notifications": {
     "ariaLabel": "Notifications",
     "ariaLabelUnread": "{count, plural, one {# unread notification} other {# unread notifications}}"
+  },
+  "languageSwitcher": {
+    "ariaLabel": "Current language: {label}. Click to switch"
   }
 }
