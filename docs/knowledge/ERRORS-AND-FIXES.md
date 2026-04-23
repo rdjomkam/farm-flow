@@ -2309,3 +2309,114 @@ useEffect(() => {
 
 **Leçon / Règle :**
 Tout `addEventListener` dans un `useEffect` React doit avoir son `removeEventListener` correspondant dans le return du cleanup. Cette regle s'applique a tous les objets globaux (window, document, navigator.serviceWorker, etc.). Les objets globaux ne sont pas garbage collectes avec le composant — leurs listeners survivent au demontage. Verifier systematiquement chaque `useEffect` contenant un `addEventListener` lors de la review de composants PWA/SW.
+
+---
+
+### ERR-090 — Route handler duplique la query layer et oublie le dual-write ADR-043 AssignationBac
+**Sprint :** Bugfixing | **Date :** 2026-04-23
+**Sévérité :** Haute
+**Fichier(s) :**
+- `src/app/api/vagues/route.ts`
+- `src/__tests__/api/vagues-distribution.test.ts`
+- `src/__tests__/api/vagues-bug041-assignation-dual-write.test.ts`
+- `scripts/repair-bug041.sql`
+
+**Symptôme :**
+Après création d'une vague avec distribution sur un ou plusieurs bacs via `POST /api/vagues`, la liste des vagues affiche « 0 bac » pour la vague nouvellement créée. Le bac est pourtant bien lié via `Bac.vagueId`. Le problème disparaît après redémarrage ou réassignation manuelle.
+
+**Cause racine :**
+Le route handler `POST /api/vagues` réimplémente sa propre transaction Prisma au lieu de déléguer à `createVague()` dans `src/lib/queries/vagues.ts`. Dans cette transaction, seul `tx.bac.update({ vagueId })` est exécuté ; l'écriture parallèle `tx.assignationBac.create({ bacId, vagueId, dateDebut, dateFin: null })` imposée par ADR-043 (dual-write) a été omise. Or la requête de liste utilise `_count.assignations` pour afficher le nombre de bacs → renvoie 0.
+
+Le test de distribution existant mockait `assignationBac.create` mais n'assertait jamais son appel : la régression est passée silencieusement. C'est la version « write » du jumeau [ERR-089](#err-089) (qui corrigeait la version « read »).
+
+**Fix :**
+1. Ajouter `tx.assignationBac.create({ data: { bacId, vagueId, dateDebut: vague.dateDemarrage, siteId } })` dans la transaction POST pour chaque bac assigné.
+2. Ajouter une assertion `expect(tx.assignationBac.create).toHaveBeenCalledWith(...)` dans `vagues-distribution.test.ts`.
+3. Ajouter un test de non-régression dédié `vagues-bug041-assignation-dual-write.test.ts` couvrant mono-bac et multi-bacs.
+4. Script `scripts/repair-bug041.sql` pour régénérer les `AssignationBac` manquantes sur les données déjà créées en prod.
+
+**Leçon / Règle :**
+- **Ne jamais mocker une méthode Prisma dans un test sans au moins une assertion `toHaveBeenCalled` sur le chemin success.** Un mock silencieux masque les omissions d'écriture.
+- **Toute mutation de données doit être déléguée à `src/lib/queries/*`**, jamais réimplémentée dans un route handler. Si le handler a besoin d'une variante, étendre la query layer, pas dupliquer la logique.
+- Lorsqu'un ADR impose un dual-write (FK directe + table associative), ajouter une assertion jumelle côté read ET côté write dans la suite de tests.
+
+**Références :** [BUG-041](../bugs/BUG-041.md) | [ERR-089](#err-089-—-lecture-dual-source-en-mode-tout-ou-rien-adr-043-bacassignationbac) | [ADR-043](../decisions/ADR-043-bac-vague-associative-model.md)
+
+---
+
+### ERR-091 — Radix Dialog : scroll par défaut absent sur mobile, submit inaccessible
+**Sprint :** Bugfixing | **Date :** 2026-04-23
+**Sévérité :** Haute
+**Fichier(s) :**
+- `src/components/ui/dialog.tsx`
+- `src/components/ui/__tests__/dialog-scroll.test.tsx`
+
+**Symptôme :**
+Sur mobile (375×812, iOS/Android), le bouton « Créer » / « Enregistrer » de ~51 dialogs (dont « Nouvelle vague ») est inatteignable : le contenu déborde sous le bas du viewport et la dialog ne scroll pas. Le problème ne se manifeste pas sur desktop (≥ md).
+
+**Cause racine :**
+Le wrapper partagé `DialogContent` appliquait `md:max-h-[85dvh]` (desktop uniquement) et aucune règle d'overflow par défaut. Radix Dialog n'impose **aucun scroll** nativement sur son content. Le scroll était opt-in via un composant interne `<DialogBody>` que seuls 19/70 dialogs utilisaient — les 51 autres (dont les formulaires de création) n'avaient donc aucun scroll mobile. Violation R-mobile (mobile-first).
+
+**Fix :**
+Appliquer par défaut sur `DialogContent` :
+```tsx
+// mobile-first : prend tout le viewport, scrollable
+"h-[100dvh] max-h-[100dvh] overflow-y-auto"
+// desktop : revient à la modale centrée
+"md:h-auto md:max-h-[85dvh]"
+```
+Et sur `DialogFooter` : `sticky bottom-0 bg-card` pour que les actions restent visibles pendant que le formulaire scrolle. Préserver `padding-bottom: env(safe-area-inset-bottom)` sur le footer pour iOS.
+
+**Leçon / Règle :**
+- **Ne jamais rendre le scroll mobile opt-in.** Tout wrapper de dialog/sheet/drawer DOIT scroller par défaut sur mobile, et imposer un footer sticky si le composant expose un footer.
+- Les règles `max-h-*` doivent cibler mobile d'abord (`max-h-[100dvh]`), puis desktop via `md:`. L'inverse laisse des trous silencieux.
+- Toujours préserver `env(safe-area-inset-bottom)` sur tout élément sticky/fixed en bas de viewport.
+- Un test d'accessibilité doit vérifier que le submit est atteignable à 375px de hauteur réduite (`container.scrollTo(...)` + `isVisible`).
+
+**Références :** [BUG-042](../bugs/BUG-042.md)
+
+---
+
+### ERR-092 — Mobile web : bottom nav jitter + safe-area transparente sans backdrop global
+**Sprint :** Bugfixing | **Date :** 2026-04-23
+**Sévérité :** Moyenne
+**Fichier(s) :**
+- `src/components/layout/farm-bottom-nav.tsx`
+- `src/components/layout/ingenieur-bottom-nav.tsx`
+- `src/components/layout/bottom-nav-skeleton.tsx`
+- `src/app/globals.css`
+- `src/components/layout/__tests__/bottom-nav.test.tsx`
+
+**Symptôme :**
+Sur navigateur mobile (non-PWA, Safari iOS / Chrome Android), deux glitches visuels sur la bottom nav fixée :
+1. **Jitter** : saccades pendant l'animation de la barre d'URL (show/hide du chrome).
+2. **Safe-area transparente** : la bande `env(safe-area-inset-bottom)` (home indicator iOS) laisse transparaître le fond `var(--surface-0)` du `body` au lieu d'afficher `var(--card)` de la nav.
+
+**Cause racine :**
+- **(A) Jitter** : `position: fixed` est ancré au *visual viewport* sur mobile. Sans promotion GPU (`translateZ(0)`), le navigateur repeint la nav à chaque frame d'animation du chrome URL.
+- **(B) Safe-area** : la règle `bg-card` de la nav peint uniquement la *box* de la nav. La bande `env(safe-area-inset-bottom)` est située *sous* cette box (padding-bottom du body) → ne reçoit aucun background. Aucun backdrop global ne garantit `var(--card)` dans cette bande.
+
+**Fix :**
+1. Ajouter `[transform:translateZ(0)] will-change-transform` aux trois variantes de nav (farm, ingenieur, skeleton) pour les promouvoir en couche GPU.
+2. Ajouter dans `globals.css` une règle mobile-only peignant la safe-area :
+```css
+@media (max-width: 767px) {
+  body::after {
+    content: "";
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: env(safe-area-inset-bottom);
+    background: linear-gradient(var(--card), var(--card));
+    background-attachment: fixed;
+    pointer-events: none;
+    z-index: 40; /* sous la nav, au-dessus du body */
+  }
+}
+```
+
+**Leçon / Règle :**
+- **Ne jamais compter sur le `bg-*` d'un élément fixed pour couvrir la safe-area.** La safe-area est *hors* de la box de l'élément — prévoir un backdrop global (`body::after`, `html` background ou `<div>` dédié).
+- **Toute élément `position: fixed` susceptible d'être animé sur mobile doit être promu en couche GPU** via `transform: translateZ(0)` + `will-change: transform`. Sans ça, le browser repaint à chaque transition du chrome URL.
+- Tester systématiquement sur Safari iOS *et* Chrome Android avec barre d'URL visible/masquée — les deux navigateurs déclenchent le jitter différemment.
+
+**Références :** [BUG-043](../bugs/BUG-043.md)

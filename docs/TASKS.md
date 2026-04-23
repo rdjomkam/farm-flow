@@ -7368,3 +7368,10 @@ Activité PLANIFIEE → Pisciculteur effectue la tâche → Crée un Relevé →
 | **54.6** | Component Pattern Upgrades | `FAIT` |
 | **54.7** | Meta & 404 Page | `FAIT` |
 | **54.8** | Tests & Review Sprint 54 | `FAIT` |
+
+---
+
+## Bugs Phase 2 (QA cycle 2026-04-23)
+- BUG-041 — AssignationBac dual-write in POST /api/vagues → FAIT (Haute, 2026-04-23)
+- BUG-042 — Dialog mobile scroll + sticky footer → FAIT (Haute, 2026-04-23)
+- BUG-043 — Mobile bottom nav jitter + safe-area transparency → FAIT (Moyenne, 2026-04-23)

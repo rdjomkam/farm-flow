@@ -245,6 +245,20 @@ export async function POST(request: NextRequest) {
             poidsMoyenInitial: data.poidsMoyenInitial,
           },
         });
+
+        // ADR-043 Phase 2 — dual-write : créer l'AssignationBac active (BUG-041)
+        await tx.assignationBac.create({
+          data: {
+            bacId: entry.bacId,
+            vagueId: vague.id,
+            siteId: auth.activeSiteId,
+            dateAssignation: new Date(data.dateDebut),
+            dateFin: null,
+            nombrePoissonsInitial: entry.nombrePoissons,
+            poidsMoyenInitial: data.poidsMoyenInitial,
+            nombrePoissons: entry.nombrePoissons,
+          },
+        });
       }
 
       return tx.vague.findUnique({

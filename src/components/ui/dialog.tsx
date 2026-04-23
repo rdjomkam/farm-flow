@@ -61,7 +61,15 @@ const DialogContent = forwardRef<
          */}
         <div
           className={cn(
-            "flex flex-col h-full md:max-h-[85dvh] overflow-x-clip",
+            // Layout flex-col
+            "flex flex-col",
+            // Mobile : occupe toute la viewport dynamique et scroll (BUG-042)
+            "h-[100dvh] max-h-[100dvh] overflow-y-auto",
+            // Desktop : redevient compact
+            "md:h-auto md:max-h-[85dvh]",
+            // Conserve overflow-x-clip pour éviter les débordements horizontaux
+            "overflow-x-clip",
+            // Padding safe-area
             "px-4 pt-[max(1rem,env(safe-area-inset-top))] md:px-6 md:pt-0"
           )}
         >
@@ -131,6 +139,10 @@ function DialogFooter({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
     <div
       className={cn(
         "flex flex-col-reverse gap-2 pt-4 shrink-0",
+        // Footer sticky en bas du dialog scrollable (BUG-042)
+        "sticky bottom-0 z-10 bg-card",
+        // Bordure de séparation visuelle quand du contenu passe dessous (mobile)
+        "border-t border-border/40 md:border-0",
         "pb-[max(1rem,env(safe-area-inset-bottom))]",
         "sm:flex-row sm:justify-end",
         "md:pb-6",

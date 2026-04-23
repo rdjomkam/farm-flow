@@ -1,6 +1,6 @@
 export function BottomNavSkeleton() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] md:hidden [transform:translateZ(0)] will-change-transform">
       <div className="flex items-center justify-around">
         {Array.from({ length: 5 }).map((_, i) => (
           <div

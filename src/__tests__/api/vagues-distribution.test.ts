@@ -49,6 +49,9 @@ const mockPrismaVagueCreate = vi.fn();
 const mockPrismaBacFindMany = vi.fn();
 const mockPrismaBacUpdate = vi.fn();
 const mockPrismaTransaction = vi.fn();
+// BUG-041 — ADR-043 Phase 2 dual-write : exposer le mock assignationBac.create
+// pour vérifier qu'il est appelé lors de la création d'une vague.
+const mockAssignationBacCreate = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -142,9 +145,9 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
           findMany: (...args: unknown[]) => mockPrismaBacFindMany(...args),
           update: (...args: unknown[]) => mockPrismaBacUpdate(...args),
         },
-        // ADR-043 Phase 2: mock de la table de jonction AssignationBac
+        // ADR-043 Phase 2: mock de la table de jonction AssignationBac (BUG-041)
         assignationBac: {
-          create: vi.fn().mockResolvedValue({}),
+          create: (...args: unknown[]) => mockAssignationBacCreate(...args),
         },
       };
       return fn(txMock);
@@ -181,6 +184,7 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
       updatedAt: now,
     });
     mockPrismaBacUpdate.mockResolvedValue({});
+    mockAssignationBacCreate.mockResolvedValue({});
   });
 
   // -------------------------------------------------------------------------
@@ -276,6 +280,40 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
         data: expect.objectContaining({ nombrePoissons: 400 }),
       })
     );
+
+    // BUG-041 — ADR-043 Phase 2 dual-write : AssignationBac.create doit être
+    // appelé une fois par bac de la distribution, avec dateFin: null et siteId.
+    expect(mockAssignationBacCreate).toHaveBeenCalledTimes(bacDistribution.length);
+    expect(mockAssignationBacCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          bacId: "bac-1",
+          vagueId: "vague-new",
+          siteId: "site-1",
+          dateFin: null,
+          nombrePoissonsInitial: 600,
+          poidsMoyenInitial: 5.0,
+          nombrePoissons: 600,
+        }),
+      })
+    );
+    expect(mockAssignationBacCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          bacId: "bac-2",
+          vagueId: "vague-new",
+          siteId: "site-1",
+          dateFin: null,
+          nombrePoissonsInitial: 400,
+          poidsMoyenInitial: 5.0,
+          nombrePoissons: 400,
+        }),
+      })
+    );
+    // Vérifier que dateAssignation est bien une Date correspondant à dateDebut
+    const firstCallArg = mockAssignationBacCreate.mock.calls[0][0] as { data: { dateAssignation: Date } };
+    expect(firstCallArg.data.dateAssignation).toBeInstanceOf(Date);
+    expect(firstCallArg.data.dateAssignation.toISOString()).toBe(new Date("2026-03-01").toISOString());
   });
 
   it("accepte une distribution avec un seul bac recevant tous les poissons", async () => {

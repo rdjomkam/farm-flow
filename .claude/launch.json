@@ -10,7 +10,7 @@
     {
       "name": "farm-flow-dev",
       "runtimeExecutable": "/bin/bash",
-      "runtimeArgs": ["-c", "export NVM_DIR=$HOME/.nvm && . $NVM_DIR/nvm.sh && npm run dev"],
+      "runtimeArgs": ["-c", "export PATH=/Users/ronald/.nvm/versions/node/v23.11.1/bin:$PATH && npm run dev"],
       "port": 4200
     }
   ]

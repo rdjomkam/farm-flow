@@ -265,7 +265,7 @@ export function IngenieurBottomNav({
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] md:hidden [transform:translateZ(0)] will-change-transform">
         <div className="flex items-end justify-around px-2">
           {/* 1. Accueil */}
           <Link

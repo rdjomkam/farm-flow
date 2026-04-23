@@ -118,6 +118,23 @@ body {
   position: relative;
 }
 
+/* BUG-043: Mobile bottom safe-area — paint an opaque card-colored backdrop
+   so the home-indicator area never looks transparent when the URL bar
+   animates, even if the fixed nav briefly detaches from the viewport. */
+@media (max-width: 767px) {
+  body {
+    background:
+      linear-gradient(
+        to top,
+        var(--card) 0,
+        var(--card) env(safe-area-inset-bottom),
+        transparent env(safe-area-inset-bottom)
+      )
+      var(--surface-0);
+    background-attachment: fixed;
+  }
+}
+
 /* Subtle grain noise overlay -- imperceptible but adds tactile depth */
 body::before {
   content: "";
