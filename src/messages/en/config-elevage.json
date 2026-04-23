@@ -132,5 +132,13 @@
     "description": "Manage the farming configuration profiles for your site. Each profile defines benchmarks, alert thresholds and feeding parameters.",
     "newProfile": "New profile",
     "editTitle": "Edit: {nom}"
+  },
+  "placeholders": {
+    "gompertzWInf": "e.g. 1200",
+    "gompertzK": "e.g. 0.018",
+    "gompertzTi": "e.g. 95"
+  },
+  "units": {
+    "jours": "days"
   }
 }

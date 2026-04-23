@@ -21,7 +21,9 @@
     "voirDetails": "Voir details",
     "disponible": "Disponible",
     "enAttente": "En attente",
-    "fermesSuperviseesTitle": "Fermes supervisees ({count})"
+    "fermesSuperviseesTitle": "Fermes supervisees ({count})",
+    "heroClients": "{count, plural, one {# client actif} other {# clients actifs}}",
+    "heroAlertes": "{count, plural, one {# alerte} other {# alertes}}"
   },
   "monitoring": {
     "noActiveAlerts": "Aucune alerte active sur les sites clients.",

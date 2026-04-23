@@ -131,6 +131,12 @@
       "noInactiveRules": "Aucune règle inactive.",
       "noRules": "Aucune règle d'activité."
     },
+    "tabs": {
+      "all": "Toutes",
+      "active": "Actives",
+      "inactive": "Inactives"
+    },
+    "totalCount": "{count, plural, one {# regle au total} other {# regles au total}}",
     "firedOnceBadge": "Deja declenchee",
     "noConditionSimple": "Aucune condition composee — declencheur simple :",
     "titreAlerte": "Titre de l'alerte",
