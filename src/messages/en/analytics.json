@@ -212,6 +212,7 @@
     "correlationMortalite": "Mortality correlation",
     "fcrHebdoTitle": "Weekly FCR",
     "mortaliteElevee": "— high",
+    "quantiteKgLabel": "Quantity (kg)",
     "prix": "Price",
     "fournisseur": "Supplier",
     "vagues": "{count} batch(es)",

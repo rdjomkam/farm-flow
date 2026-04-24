@@ -191,6 +191,7 @@ export function FeedVagueBreakdown({ parVague }: FeedVagueBreakdownProps) {
   const tAnalytics = useTranslations("analytics");
   const tSections = useTranslations("errors.sections");
   const locale = useLocale();
+  const quantiteKgLabel = tAnalytics("aliments.quantiteKgLabel");
 
   if (parVague.length === 0) {
     return (
@@ -234,14 +235,14 @@ export function FeedVagueBreakdown({ parVague }: FeedVagueBreakdownProps) {
                     content={
                       <ChartTooltip
                         valueFormatter={(v, name) =>
-                          name === "Quantite (kg)" ? `${v} kg` : v.toFixed(2)
+                          name === quantiteKgLabel ? `${v} kg` : v.toFixed(2)
                         }
                       />
                     }
                   />
                   <Bar
                     dataKey="quantite"
-                    name="Quantite (kg)"
+                    name={quantiteKgLabel}
                     fill="var(--primary)"
                     radius={[4, 4, 0, 0]}
                   />

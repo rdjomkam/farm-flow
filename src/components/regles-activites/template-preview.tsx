@@ -22,11 +22,12 @@ const PLACEHOLDER_REGEX = /\{(\w+)\}/g;
  */
 function resolvePreviewTemplate(
   template: string,
-  customSamples: Record<string, string> = {}
+  customSamples: Record<string, string> = {},
+  fallback = "[donnee non disponible]"
 ): string {
   const allSamples = { ...STATIC_PREVIEW_SAMPLE, ...customSamples };
   return template.replace(PLACEHOLDER_REGEX, (_match, key: string) => {
-    return allSamples[key] ?? "[donnee non disponible]";
+    return allSamples[key] ?? fallback;
   });
 }
 
@@ -63,14 +64,15 @@ export function TemplatePreview({
     customSamples[cp.key] = cp.example;
   }
 
+  const dataFallback = t("rules.placeholders.dataNotAvailable");
   const resolvedTitre = titreTemplate
-    ? resolvePreviewTemplate(titreTemplate, customSamples)
-    : "(aucun titre)";
+    ? resolvePreviewTemplate(titreTemplate, customSamples, dataFallback)
+    : t("rules.placeholders.noTitle");
   const resolvedDescription = descriptionTemplate
-    ? resolvePreviewTemplate(descriptionTemplate, customSamples)
+    ? resolvePreviewTemplate(descriptionTemplate, customSamples, dataFallback)
     : null;
   const resolvedInstructions = instructionsTemplate
-    ? resolvePreviewTemplate(instructionsTemplate, customSamples)
+    ? resolvePreviewTemplate(instructionsTemplate, customSamples, dataFallback)
     : null;
 
   return (
@@ -78,7 +80,7 @@ export function TemplatePreview({
       {/* Header */}
       <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
         <Eye className="h-4 w-4" />
-        Apercu (donnees exemple)
+        {t("rules.placeholders.apercuExemple")}
       </div>
 
       {/* Titre resolu */}

@@ -118,7 +118,9 @@
       "nonReconnus": "Unrecognized placeholders: {keys} — they will be replaced by \"[data not available]\".",
       "apercuExemple": "Preview with sample data:",
       "fictifsWarning": "The displayed values are fictitious. Actual values are calculated during generation.",
-      "requis": "Required"
+      "requis": "Required",
+      "dataNotAvailable": "[data not available]",
+      "noTitle": "(no title)"
     },
     "phases": {
       "allPhases": "All phases"
@@ -230,10 +232,19 @@
       "phaseMaxLabel": "Maximum application phase (optional)",
       "prioriteLabel": "Priority (1=high, 10=low)",
       "severiteChoosePlaceholder": "Choose a severity...",
+      "badgeRequis": "required",
+      "badgeOptionnel": "optional",
       "validation": {
         "conditionsRequises": "At least one trigger condition is required",
         "phaseOrdreInvalide": "Minimum phase must precede maximum phase",
-        "severiteRequise": "Severity is required for alerts"
+        "severiteRequise": "Severity is required for alerts",
+        "intervalleJoursInvalide": "Must be a positive integer (required for Recurring trigger)",
+        "nomMinimum": "Minimum 3 characters required",
+        "nomMaximum": "Maximum 100 characters",
+        "titreTemplateMinimum": "Minimum 5 characters required",
+        "titreTemplateMaximum": "Maximum 200 characters",
+        "titreNotifMinimum": "Minimum 5 characters required",
+        "titreNotifMaximum": "Maximum 200 characters"
       },
       "conditionLabels": {
         "poidsDeclencheur": "Trigger average weight (g)",

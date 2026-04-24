@@ -60,9 +60,9 @@ const EXAMPLE_VALUES: Record<string, string> = {
   valeur_marchande: "1 244 500",
 };
 
-function resolvePreview(template: string): string {
+function resolvePreview(template: string, fallback: string): string {
   return template.replace(/\{(\w+)\}/g, (_, key) => {
-    return EXAMPLE_VALUES[key] ?? "[donnee non disponible]";
+    return EXAMPLE_VALUES[key] ?? fallback;
   });
 }
 
@@ -323,7 +323,7 @@ function SectionHeader({ title, open, onToggle, badge }: SectionHeaderProps) {
 
 function TitrePreview({ titreTemplate }: { titreTemplate: string }) {
   const t = useTranslations("settings");
-  const resolved = resolvePreview(titreTemplate);
+  const resolved = resolvePreview(titreTemplate, t("rules.placeholders.dataNotAvailable"));
   if (!titreTemplate.trim()) return null;
 
   return (
@@ -437,20 +437,20 @@ export function RegleFormClient() {
     if (hasRecurrentCondition) {
       const val = Number(form.intervalleJours);
       if (!form.intervalleJours || isNaN(val) || val <= 0) {
-        errs.intervalleJours = "Doit etre un entier superieur a 0 (requis pour le declencheur Recurrent)";
+        errs.intervalleJours = t("rules.form.validation.intervalleJoursInvalide");
       }
     }
 
     if (!form.nom || form.nom.trim().length < 3) {
-      errs.nom = "Minimum 3 caracteres requis";
+      errs.nom = t("rules.form.validation.nomMinimum");
     } else if (form.nom.trim().length > 100) {
-      errs.nom = "Maximum 100 caracteres";
+      errs.nom = t("rules.form.validation.nomMaximum");
     }
 
     if (!form.titreTemplate || form.titreTemplate.trim().length < 5) {
-      errs.titreTemplate = "Minimum 5 caracteres requis";
+      errs.titreTemplate = t("rules.form.validation.titreTemplateMinimum");
     } else if (form.titreTemplate.trim().length > 200) {
-      errs.titreTemplate = "Maximum 200 caracteres";
+      errs.titreTemplate = t("rules.form.validation.titreTemplateMaximum");
     }
 
     // Phase validation
@@ -469,9 +469,9 @@ export function RegleFormClient() {
         errs.severite = t("rules.form.validation.severiteRequise");
       }
       if (!form.titreNotificationTemplate || form.titreNotificationTemplate.trim().length < 5) {
-        errs.titreNotificationTemplate = "Minimum 5 caracteres requis";
+        errs.titreNotificationTemplate = t("rules.form.validation.titreNotifMinimum");
       } else if (form.titreNotificationTemplate.trim().length > 200) {
-        errs.titreNotificationTemplate = "Maximum 200 caracteres";
+        errs.titreNotificationTemplate = t("rules.form.validation.titreNotifMaximum");
       }
     }
 
@@ -579,7 +579,7 @@ export function RegleFormClient() {
           title={t("rules.form.typeActiviteSection")}
           open={sectionTypeOpen}
           onToggle={() => setSectionTypeOpen(!sectionTypeOpen)}
-          badge="requis"
+          badge={t("rules.form.badgeRequis")}
         />
         {sectionTypeOpen && (
           <div className="flex flex-col gap-4 p-4 rounded-lg border border-border">
@@ -613,7 +613,7 @@ export function RegleFormClient() {
           title={t("rules.form.conditionsSection")}
           open={sectionConditionsOpen}
           onToggle={() => setSectionConditionsOpen(!sectionConditionsOpen)}
-          badge="requis"
+          badge={t("rules.form.badgeRequis")}
         />
         {sectionConditionsOpen && (
           <div className="flex flex-col gap-4 p-4 rounded-lg border border-border">
@@ -798,7 +798,7 @@ export function RegleFormClient() {
           title={t("rules.detail.triggerAction")}
           open={sectionActionOpen}
           onToggle={() => setSectionActionOpen(!sectionActionOpen)}
-          badge="requis"
+          badge={t("rules.form.badgeRequis")}
         />
         {sectionActionOpen && (
           <div className="flex flex-col gap-4 p-4 rounded-lg border border-border">
@@ -921,7 +921,7 @@ export function RegleFormClient() {
           title={form.actionType === ActionRegle.NOTIFICATION ? t("rules.form.identiteNotifSection") : t("rules.form.identiteSection")}
           open={sectionIdentiteOpen}
           onToggle={() => setSectionIdentiteOpen(!sectionIdentiteOpen)}
-          badge="requis"
+          badge={t("rules.form.badgeRequis")}
         />
         {sectionIdentiteOpen && (
           <div className="flex flex-col gap-4 p-4 rounded-lg border border-border">
@@ -1029,7 +1029,7 @@ export function RegleFormClient() {
           title={t("rules.form.avancesSection")}
           open={sectionAvancesOpen}
           onToggle={() => setSectionAvancesOpen(!sectionAvancesOpen)}
-          badge="optionnel"
+          badge={t("rules.form.badgeOptionnel")}
         />
         {sectionAvancesOpen && (
           <div className="flex flex-col gap-4 p-4 rounded-lg border border-border">
