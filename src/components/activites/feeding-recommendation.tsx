@@ -261,7 +261,7 @@ function BacCard({ bac }: BacCardProps) {
         </div>
         <div className="col-span-2">
           <p className="text-xs text-muted-foreground">
-            {bac.nombreVivants} poissons · taux {bac.recommendation.tauxUtilise}%/j
+            {tActivites("feeding.bacFishRate", { fish: bac.nombreVivants, rate: bac.recommendation.tauxUtilise })}
           </p>
         </div>
       </div>
@@ -330,7 +330,7 @@ export function FeedingRecommendation({
   // Quantite par repas (en grammes)
   const quantiteParRepasLabel =
     quantiteDisplay != null && frequenceEffective != null && frequenceEffective > 0
-      ? `${Math.round(quantiteDisplay.valeur / frequenceEffective)} g / repas`
+      ? tActivites("feeding.gramsPerMeal", { count: Math.round(quantiteDisplay.valeur / frequenceEffective) })
       : null;
 
   // Jours de stock estimes
@@ -413,7 +413,7 @@ export function FeedingRecommendation({
           <MetricRow
             icon={<Clock className="h-3.5 w-3.5" />}
             label={tActivites("feeding.frequence")}
-            value={`${frequenceEffective} repas / jour`}
+            value={tActivites("feeding.mealsPerDayValue", { count: frequenceEffective })}
           />
         )}
 
@@ -422,7 +422,7 @@ export function FeedingRecommendation({
             icon={<span className="text-xs font-bold">~</span>}
             label={tActivites("feeding.avgWeightFull")}
             value={`${poidsMoyenUtilise} g`}
-            hint={estProjete ? "projete" : undefined}
+            hint={estProjete ? tActivites("feeding.projected") : undefined}
           />
         )}
 

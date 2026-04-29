@@ -110,7 +110,13 @@
     "donneesInsuffisantes": "Insufficient data to calculate feeding recommendation.",
     "detailParBac": "Detail per tank ({count} tanks)",
     "stockLabel": "Stock:",
-    "daysShort": "{count} d"
+    "daysShort": "{count} d",
+    "mealsPerDayValue": "{count} meals / day",
+    "gramsPerMeal": "{count} g / meal",
+    "projected": "projected",
+    "bacFishRate": "{fish} fish · rate {rate}%/d",
+    "badgeAuto": "Auto",
+    "badgeManual": "Manual"
   },
   "placeholders": {
     "retourRegles": "Back to rules",
