@@ -147,10 +147,10 @@ export function useReleveForm({ produits }: UseReleveFormProps) {
   const t = useTranslations("releves");
 
   const initialActiviteId = searchParams.get("activiteId") ?? "";
-  const initialTypeReleve = searchParams.get("typeReleve") ?? "";
   const initialBacId = searchParams.get("bacId") ?? "";
   const initialVagueId = searchParams.get("vagueId") ?? "";
   const initialLotAlevinsId = searchParams.get("lotAlevinsId") ?? "";
+  const initialTypeReleve = searchParams.get("typeReleve") ?? (initialLotAlevinsId ? TypeReleve.TRI : "");
   const isFromActivite = Boolean(initialActiviteId);
 
   const [vagueId, setVagueId] = useState(initialVagueId);

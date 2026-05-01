@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -99,6 +100,7 @@ export function ReleveFormFields({
   onConsommationsChange,
   onSubmit,
 }: ReleveFormFieldsProps) {
+  const router = useRouter();
   const t = useTranslations("releves");
   const tStock = useTranslations("stock");
   const locale = useLocale();
@@ -265,10 +267,15 @@ export function ReleveFormFields({
         onChange={onNotesChange}
       />
 
-      {/* Submit */}
-      <Button type="submit" className="mt-2">
-        {t("form.fields.submit")}
-      </Button>
+      {/* Actions */}
+      <div className="flex gap-3 mt-2">
+        <Button type="button" variant="outline" className="flex-1" onClick={() => router.back()}>
+          {t("form.fields.cancel")}
+        </Button>
+        <Button type="submit" className="flex-1">
+          {t("form.fields.submit")}
+        </Button>
+      </div>
     </form>
   );
 }

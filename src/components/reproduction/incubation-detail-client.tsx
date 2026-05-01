@@ -148,15 +148,23 @@ export function IncubationDetailClient({ incubation, permissions, produits }: Pr
   const [traitementNotes, setTraitementNotes] = useState("");
   const [traitementLoading, setTraitementLoading] = useState(false);
 
-  // Eclosion form state
+  // Eclosion form state — percentages for easier estimation
   const [eclosionOpen, setEclosionOpen] = useState(false);
-  const [eclosionLarves, setEclosionLarves] = useState("");
-  const [eclosionDeformes, setEclosionDeformes] = useState("");
+  const [eclosionTauxEclosion, setEclosionTauxEclosion] = useState("");
+  const [eclosionTauxDeformes, setEclosionTauxDeformes] = useState("");
   const [eclosionDate, setEclosionDate] = useState(
     new Date().toISOString().slice(0, 16)
   );
   const [eclosionNotes, setEclosionNotes] = useState("");
   const [eclosionLoading, setEclosionLoading] = useState(false);
+
+  const nombreOeufs = incubation.nombreOeufsPlaces ?? 0;
+  const eclosionLarvesEstimees = nombreOeufs > 0 && eclosionTauxEclosion
+    ? Math.round((parseFloat(eclosionTauxEclosion) / 100) * nombreOeufs)
+    : null;
+  const eclosionDeformesEstimes = eclosionLarvesEstimees != null && eclosionTauxDeformes
+    ? Math.round((parseFloat(eclosionTauxDeformes) / 100) * eclosionLarvesEstimees)
+    : null;
 
   const isEnCours =
     incubation.statut === StatutIncubation.EN_COURS ||
@@ -210,7 +218,7 @@ export function IncubationDetailClient({ incubation, permissions, produits }: Pr
   }
 
   async function handleRecordEclosion() {
-    if (!eclosionLarves || !eclosionDate) return;
+    if (!eclosionTauxEclosion || !eclosionDate || eclosionLarvesEstimees == null) return;
 
     setEclosionLoading(true);
     const result = await call(
@@ -219,8 +227,8 @@ export function IncubationDetailClient({ incubation, permissions, produits }: Pr
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nombreLarvesEcloses: parseInt(eclosionLarves, 10),
-          nombreDeformes: eclosionDeformes ? parseInt(eclosionDeformes, 10) : undefined,
+          nombreLarvesEcloses: eclosionLarvesEstimees,
+          nombreDeformes: eclosionDeformesEstimes ?? undefined,
           dateEclosionReelle: new Date(eclosionDate).toISOString(),
           notes: eclosionNotes.trim() || undefined,
         }),
@@ -588,31 +596,56 @@ export function IncubationDetailClient({ incubation, permissions, produits }: Pr
               <DialogTitle>{t("incubations.detail.eclosionTitre")}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-3 py-2">
+              {nombreOeufs > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {t("incubations.detail.baseOeufs", { count: nombreOeufs })}
+                </p>
+              )}
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium">
-                  {t("incubations.detail.nombreLarvesEcloses")} <span className="text-destructive">*</span>
+                  {t("incubations.detail.tauxEclosionInput")} <span className="text-destructive">*</span>
                 </label>
-                <input
-                  type="number"
-                  min={0}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  placeholder={t("incubations.detail.nombreLarvesEclosesPlaceholder")}
-                  value={eclosionLarves}
-                  onChange={(e) => setEclosionLarves(e.target.value)}
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 pr-8 text-sm min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    placeholder={t("incubations.detail.tauxEclosionPlaceholder")}
+                    value={eclosionTauxEclosion}
+                    onChange={(e) => setEclosionTauxEclosion(e.target.value)}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+                </div>
+                {eclosionLarvesEstimees != null && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    ≈ {eclosionLarvesEstimees.toLocaleString()} {t("incubations.detail.larvesEstimees")}
+                  </p>
+                )}
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium">
-                  {t("incubations.detail.nombreDeformes")}
+                  {t("incubations.detail.tauxDeformesInput")}
                 </label>
-                <input
-                  type="number"
-                  min={0}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  placeholder={t("incubations.detail.nombreDeformesPlaceholder")}
-                  value={eclosionDeformes}
-                  onChange={(e) => setEclosionDeformes(e.target.value)}
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 pr-8 text-sm min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    placeholder={t("incubations.detail.tauxDeformesPlaceholder")}
+                    value={eclosionTauxDeformes}
+                    onChange={(e) => setEclosionTauxDeformes(e.target.value)}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+                </div>
+                {eclosionDeformesEstimes != null && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    ≈ {eclosionDeformesEstimes.toLocaleString()} {t("incubations.detail.deformesEstimes")}
+                  </p>
+                )}
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium">
@@ -646,7 +679,7 @@ export function IncubationDetailClient({ incubation, permissions, produits }: Pr
               </DialogClose>
               <Button
                 onClick={handleRecordEclosion}
-                disabled={eclosionLoading || !eclosionLarves || !eclosionDate}
+                disabled={eclosionLoading || !eclosionTauxEclosion || !eclosionDate || eclosionLarvesEstimees == null}
               >
                 {eclosionLoading ? t("incubations.detail.enregistrement") : t("incubations.detail.confirmerEclosion")}
               </Button>

@@ -116,6 +116,7 @@
       "notes": "Notes (optional)",
       "notesPlaceholder": "Additional remarks...",
       "submit": "Save record",
+      "cancel": "Cancel",
       "lotAlevins": "Fry batch",
       "lotAlevinsPlaceholder": "Select a batch",
       "lotAlevinsChargement": "Loading..."

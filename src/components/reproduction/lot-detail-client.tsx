@@ -10,6 +10,7 @@ import {
   GitBranch,
   LogOut,
   ChevronRight,
+  Plus,
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -548,8 +549,14 @@ export function LotDetailClient({ lot, permissions }: Props) {
       {/* Relevés */}
       {(lot.releves ?? []).length > 0 && (
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">{t("detail.releves")}</CardTitle>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/releves/nouveau?lotAlevinsId=${lot.id}`}>
+                <Plus className="h-4 w-4 mr-1" />
+                {t("detail.nouveauReleve")}
+              </Link>
+            </Button>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             {lot.releves!.map((r) => (
@@ -581,7 +588,13 @@ export function LotDetailClient({ lot, permissions }: Props) {
         <Card>
           <CardContent className="flex flex-col items-center py-8 text-center">
             <Fish className="h-10 w-10 text-muted-foreground mb-3" aria-hidden="true" />
-            <p className="text-sm text-muted-foreground">{t("detail.aucunReleve")}</p>
+            <p className="text-sm text-muted-foreground mb-4">{t("detail.aucunReleve")}</p>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/releves/nouveau?lotAlevinsId=${lot.id}`}>
+                <Plus className="h-4 w-4 mr-1" />
+                {t("detail.nouveauReleve")}
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       )}

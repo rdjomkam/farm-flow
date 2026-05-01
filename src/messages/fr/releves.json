@@ -116,6 +116,7 @@
       "notes": "Notes (optionnel)",
       "notesPlaceholder": "Remarques complémentaires...",
       "submit": "Enregistrer le relevé",
+      "cancel": "Annuler",
       "lotAlevins": "Lot d'alevins",
       "lotAlevinsPlaceholder": "Sélectionner un lot",
       "lotAlevinsChargement": "Chargement..."
