@@ -14,9 +14,10 @@ import { getPlansAbonnements } from "@/lib/queries/plans-abonnements";
 import { PlansAdminList } from "@/components/abonnements/plans-admin-list";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Plans",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common.metadata");
+  return { title: t("adminPlans") };
+}
 
 export const dynamic = "force-dynamic";
 

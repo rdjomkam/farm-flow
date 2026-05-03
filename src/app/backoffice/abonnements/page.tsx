@@ -15,9 +15,10 @@ import { AbonnementsAdminList } from "@/components/abonnements/abonnements-admin
 import { StatutAbonnement } from "@/types";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Abonnements",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common.metadata");
+  return { title: t("adminAbonnements") };
+}
 
 export const dynamic = "force-dynamic";
 

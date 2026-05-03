@@ -394,5 +394,8 @@
     "produitLabel": "Produit",
     "icaFinal": "ICA final",
     "icaVague": "ICA vague"
+  },
+  "recommendation": {
+    "title": "Recommandation"
   }
 }

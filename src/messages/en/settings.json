@@ -233,7 +233,10 @@
       "validation": {
         "conditionsRequises": "At least one trigger condition is required",
         "phaseOrdreInvalide": "Minimum phase must precede maximum phase",
-        "severiteRequise": "Severity is required for alerts"
+        "severiteRequise": "Severity is required for alerts",
+        "intervalleJoursRequired": "Must be an integer greater than 0 (required for Recurrent trigger)",
+        "minChars": "Minimum {min} characters required",
+        "maxChars": "Maximum {max} characters"
       },
       "conditionLabels": {
         "poidsDeclencheur": "Trigger average weight (g)",

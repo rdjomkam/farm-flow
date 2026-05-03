@@ -437,20 +437,20 @@ export function RegleFormClient() {
     if (hasRecurrentCondition) {
       const val = Number(form.intervalleJours);
       if (!form.intervalleJours || isNaN(val) || val <= 0) {
-        errs.intervalleJours = "Doit etre un entier superieur a 0 (requis pour le declencheur Recurrent)";
+        errs.intervalleJours = t("rules.form.validation.intervalleJoursRequired");
       }
     }
 
     if (!form.nom || form.nom.trim().length < 3) {
-      errs.nom = "Minimum 3 caracteres requis";
+      errs.nom = t("rules.form.validation.minChars", { min: 3 });
     } else if (form.nom.trim().length > 100) {
-      errs.nom = "Maximum 100 caracteres";
+      errs.nom = t("rules.form.validation.maxChars", { max: 100 });
     }
 
     if (!form.titreTemplate || form.titreTemplate.trim().length < 5) {
-      errs.titreTemplate = "Minimum 5 caracteres requis";
+      errs.titreTemplate = t("rules.form.validation.minChars", { min: 5 });
     } else if (form.titreTemplate.trim().length > 200) {
-      errs.titreTemplate = "Maximum 200 caracteres";
+      errs.titreTemplate = t("rules.form.validation.maxChars", { max: 200 });
     }
 
     // Phase validation
@@ -469,9 +469,9 @@ export function RegleFormClient() {
         errs.severite = t("rules.form.validation.severiteRequise");
       }
       if (!form.titreNotificationTemplate || form.titreNotificationTemplate.trim().length < 5) {
-        errs.titreNotificationTemplate = "Minimum 5 caracteres requis";
+        errs.titreNotificationTemplate = t("rules.form.validation.minChars", { min: 5 });
       } else if (form.titreNotificationTemplate.trim().length > 200) {
-        errs.titreNotificationTemplate = "Maximum 200 caracteres";
+        errs.titreNotificationTemplate = t("rules.form.validation.maxChars", { max: 200 });
       }
     }
 
