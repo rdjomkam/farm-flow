@@ -48,7 +48,7 @@ export async function getVagueById(
       bacs: { orderBy: { nom: "asc" } },
       // ADR-043 Phase 2: inclure toutes les assignations (actives + terminées)
       assignations: {
-        include: { bac: { select: { id: true, nom: true, volume: true } } },
+        include: { bac: { select: { id: true, nom: true, volume: true, nombreInitial: true, poidsMoyenInitial: true } } },
         orderBy: { dateAssignation: "asc" },
       },
     },
@@ -59,13 +59,15 @@ export async function getVagueById(
   // BUG-040: UNION des deux sources pour éviter que l'un masque silencieusement l'autre.
   // Priorité : AssignationBac (source de vérité ADR-043), fallback sur Bac.vagueId
   // pour les bacs non encore migrés.
+  // BUG-044: inclure nombreInitial et poidsMoyenInitial pour que computeVivantsByBac
+  // puisse utiliser la distribution réelle (et non la répartition uniforme).
   const bacsFromAssignations = vague.assignations
     .filter((a) => a.dateFin === null)
-    .map((a) => ({ id: a.bac.id, nom: a.bac.nom, volume: a.bac.volume }));
+    .map((a) => ({ id: a.bac.id, nom: a.bac.nom, volume: a.bac.volume, nombreInitial: a.bac.nombreInitial, poidsMoyenInitial: a.bac.poidsMoyenInitial }));
 
-  const byId = new Map<string, { id: string; nom: string; volume: number | null }>();
+  const byId = new Map<string, { id: string; nom: string; volume: number | null; nombreInitial: number | null; poidsMoyenInitial: number | null }>();
   for (const b of bacsFromAssignations) byId.set(b.id, b);
-  for (const b of vague.bacs) if (!byId.has(b.id)) byId.set(b.id, { id: b.id, nom: b.nom, volume: b.volume });
+  for (const b of vague.bacs) if (!byId.has(b.id)) byId.set(b.id, { id: b.id, nom: b.nom, volume: b.volume, nombreInitial: b.nombreInitial, poidsMoyenInitial: b.poidsMoyenInitial });
   const finalBacs = [...byId.values()].sort((a, b) => a.nom.localeCompare(b.nom));
 
   return {
@@ -94,7 +96,9 @@ export async function getVagueByIdWithReleves(
         // ADR-043 Phase 2: inclure les assignations actives pour fallback
         assignations: {
           where: { dateFin: null },
-          include: { bac: { select: { id: true, nom: true, volume: true } } },
+          // BUG-044: inclure nombreInitial et poidsMoyenInitial pour que computeVivantsByBac
+          // utilise la distribution réelle par bac (et non la répartition uniforme).
+          include: { bac: { select: { id: true, nom: true, volume: true, nombreInitial: true, poidsMoyenInitial: true } } },
         },
       },
     }),
@@ -121,11 +125,13 @@ export async function getVagueByIdWithReleves(
   // BUG-040: UNION des deux sources pour éviter que l'un masque silencieusement l'autre.
   // Priorité : AssignationBac (source de vérité ADR-043), fallback sur Bac.vagueId
   // pour les bacs non encore migrés.
+  // BUG-044: inclure nombreInitial et poidsMoyenInitial pour que computeVivantsByBac
+  // utilise la distribution réelle par bac (et non la répartition uniforme).
   const bacsFromAssignations = vague.assignations
-    .map((a) => ({ id: a.bac.id, nom: a.bac.nom, volume: a.bac.volume }));
-  const byIdWithReleves = new Map<string, { id: string; nom: string; volume: number | null }>();
+    .map((a) => ({ id: a.bac.id, nom: a.bac.nom, volume: a.bac.volume, nombreInitial: a.bac.nombreInitial, poidsMoyenInitial: a.bac.poidsMoyenInitial }));
+  const byIdWithReleves = new Map<string, { id: string; nom: string; volume: number | null; nombreInitial: number | null; poidsMoyenInitial: number | null }>();
   for (const b of bacsFromAssignations) byIdWithReleves.set(b.id, b);
-  for (const b of vague.bacs) if (!byIdWithReleves.has(b.id)) byIdWithReleves.set(b.id, { id: b.id, nom: b.nom, volume: b.volume });
+  for (const b of vague.bacs) if (!byIdWithReleves.has(b.id)) byIdWithReleves.set(b.id, { id: b.id, nom: b.nom, volume: b.volume, nombreInitial: b.nombreInitial, poidsMoyenInitial: b.poidsMoyenInitial });
   const finalBacs = [...byIdWithReleves.values()].sort((a, b) => a.nom.localeCompare(b.nom));
 
   return {

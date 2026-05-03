@@ -118,20 +118,24 @@ body {
   position: relative;
 }
 
-/* BUG-043: Mobile bottom safe-area — paint an opaque card-colored backdrop
-   so the home-indicator area never looks transparent when the URL bar
-   animates, even if the fixed nav briefly detaches from the viewport. */
+/* BUG-043 (v2): Mobile bottom safe-area opaque backdrop.
+   NOTE: `background-attachment: fixed` is ignored by iOS Safari and
+   inconsistent on Chrome Android — we use a dedicated `position: fixed`
+   pseudo-element pinned to the visual viewport bottom instead.
+   Sits at z-index 39 (just under the nav at z-40), so during the URL-bar
+   animation the `env(safe-area-inset-bottom)` band never shows the body
+   background through. */
 @media (max-width: 767px) {
-  body {
-    background:
-      linear-gradient(
-        to top,
-        var(--card) 0,
-        var(--card) env(safe-area-inset-bottom),
-        transparent env(safe-area-inset-bottom)
-      )
-      var(--surface-0);
-    background-attachment: fixed;
+  html::after {
+    content: "";
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: env(safe-area-inset-bottom);
+    background: var(--card);
+    pointer-events: none;
+    z-index: 39;
   }
 }
 

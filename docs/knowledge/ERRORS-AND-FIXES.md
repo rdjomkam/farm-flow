@@ -155,6 +155,36 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-093 — Prisma `select` partiel + cast forcé = helper de calcul reçoit des champs manquants silencieusement
+**Sprint :** Bugfixing | **Date :** 2026-05-03
+**Sévérité :** Haute
+**Fichier(s) :**
+- `src/lib/queries/vagues.ts`
+- `src/lib/calculs.ts`
+
+**Symptôme :**
+Le graphique "Evolution du poids moyen" affiche une valeur incorrecte en production alors que le tableau de bord (stats board) affiche la valeur correcte pour la même vague. L'écart n'est visible qu'avec des données de production où les bacs ont des populations très inégales.
+
+**Cause racine :**
+Quatre problèmes combinés :
+1. Le `select` Prisma dans `getVagueById` ne sélectionnait que `{ id, nom, volume }` sur les bacs — `nombreInitial` et `poidsMoyenInitial` étaient absents du résultat.
+2. Un cast `as Bac[]` masquait l'incohérence : TypeScript croyait que le champ existait, le runtime recevait `undefined`.
+3. Le helper `computeVivantsByBac` (calculs.ts) tombait silencieusement sur un fallback "répartition uniforme" quand `bac.nombreInitial` vaut `undefined`, produisant des vivants erronés par bac.
+4. Le chemin stats board (`getIndicateursVague`) sélectionnait `nombreInitial` explicitement — asymétrie invisible dans les tests unitaires.
+
+**Fix :**
+Ajouter `nombreInitial` et `poidsMoyenInitial` dans le `select` des deux fonctions (`getVagueById` et `getVagueByIdWithReleves`), dans les deux branches de l'union. Supprimer les casts forcés `as Bac[]`.
+
+**Leçon / Règle :**
+- **Auditer les consommateurs avant de réduire un `select` Prisma.** Chaque champ absent du select est `undefined` au runtime — TypeScript ne le détecte pas si un cast forcé (`as Foo`, `as unknown as`) est présent.
+- **Interdire les casts forcés sur les retours Prisma.** Préférer un type intermédiaire (`Pick<Bac, ...>`) aligné sur le select réel, pour que les champs manquants deviennent des erreurs de compilation.
+- **Les helpers à fallback silencieux cachent des bugs upstream.** Un helper qui remplace un champ `undefined` par une valeur par défaut doit au moins émettre un `console.warn` en dev, ou être strict (throw) si le champ est requis pour l'exactitude du calcul.
+- **Quand deux chemins calculent la même valeur et divergent en production**, chercher d'abord un `select` mismatch entre les deux requêtes Prisma correspondantes.
+
+**Références :** [BUG-044](../bugs/BUG-044.md)
+
+---
+
 ### ERR-089 — Lecture dual-source en mode tout-ou-rien (ADR-043 Bac/AssignationBac)
 **Sprint :** Bugfixing | **Date :** 2026-04-19
 **Sévérité :** Haute
@@ -2420,3 +2450,25 @@ Sur navigateur mobile (non-PWA, Safari iOS / Chrome Android), deux glitches visu
 - Tester systématiquement sur Safari iOS *et* Chrome Android avec barre d'URL visible/masquée — les deux navigateurs déclenchent le jitter différemment.
 
 **Références :** [BUG-043](../bugs/BUG-043.md)
+
+**Addendum v2 (2026-04-23) — iOS Safari ignore `background-attachment: fixed`** :
+Le fix v1 utilisait `linear-gradient` + `background-attachment: fixed` sur `body`. **iOS Safari ignore `background-attachment: fixed`** (décision historique MDN pour raisons perf) et Chrome Android a un support incohérent — le dégradé ne se "fixait" jamais en bas du viewport visuel sur mobile réel.
+
+Pattern corrigé (v2, à utiliser désormais) : pseudo-élément `position: fixed` dédié, **sans** `background-attachment` :
+```css
+@media (max-width: 767px) {
+  html::after {
+    content: "";
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: env(safe-area-inset-bottom);
+    background: var(--card);        /* couleur unie, pas de gradient nécessaire */
+    pointer-events: none;
+    z-index: 39;                    /* juste sous la nav à z-40 */
+  }
+}
+```
+
+Note architecturale : `html::after` est préférable à `body::after` ici car `body::before` est déjà utilisé par le grain noise overlay. Utiliser deux pseudo-éléments du même élément peut être gérable mais `html::after` évite toute ambiguïté.
+
+**Règle additionnelle :** **ne jamais utiliser `background-attachment: fixed` pour peindre quelque chose de visible en bas du viewport mobile**. Toujours préférer un élément/pseudo-élément `position: fixed` — compatible iOS + Android.

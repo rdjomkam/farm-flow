@@ -216,7 +216,8 @@
     "retire": "Retiré",
     "actif": "Actif",
     "aucunBacActif": "Aucun bac actif pour cette vague.",
-    "poissons": "{count} poissons"
+    "poissons": "{count} poissons",
+    "poissonsActuels": "{count} actuels ({initial} au départ)"
   },
   "poidsChartSection": "le graphique d'évolution du poids",
   "comparison": {

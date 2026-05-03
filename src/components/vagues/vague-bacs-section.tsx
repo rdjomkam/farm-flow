@@ -10,8 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import type { AssignationBacForVague } from "@/types";
 
 interface VagueBacsSectionProps {
-  /** Assignations actives (dateFin = null) */
-  bacsActifs: AssignationBacForVague[];
+  /** Assignations actives (dateFin = null), enrichies avec le nombre vivants calculé */
+  bacsActifs: (AssignationBacForVague & { vivants: number | null })[];
   /** Assignations terminées (dateFin non null) */
   bacsRetires: AssignationBacForVague[];
 }
@@ -44,11 +44,15 @@ export function VagueBacsSection({ bacsActifs, bacsRetires }: VagueBacsSectionPr
                   {a.bac.volume != null && (
                     <p className="text-sm text-muted-foreground">{a.bac.volume} L</p>
                   )}
-                  {a.nombrePoissons != null && (
+                  {a.vivants != null && a.nombrePoissonsInitial != null ? (
                     <p className="text-sm text-muted-foreground">
-                      {t("poissons", { count: a.nombrePoissons })}
+                      {t("poissonsActuels", { count: a.vivants, initial: a.nombrePoissonsInitial })}
                     </p>
-                  )}
+                  ) : a.vivants != null ? (
+                    <p className="text-sm text-muted-foreground">
+                      {t("poissons", { count: a.vivants })}
+                    </p>
+                  ) : null}
                 </div>
                 <Badge variant="success">{t("actif")}</Badge>
               </CardContent>
