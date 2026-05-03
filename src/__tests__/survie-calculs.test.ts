@@ -285,3 +285,92 @@ describe("computeNombreVivantsVague", () => {
     expect(result.get("bac-1")).toBe(480);
   });
 });
+
+// ---------------------------------------------------------------------------
+// BUG-044 — Régression : distribution inégale par bac (nombreInitial réel vs undefined)
+// Vague 26-02 : 5500 poissons, 3 bacs (3500 / 1800 / 200)
+// Sans fix : nombreInitial = undefined → répartition uniforme ≈ 1833 par bac
+// Avec fix : nombreInitial réel utilisé → vivants corrects par bac
+// ---------------------------------------------------------------------------
+
+describe("BUG-044 — regression : weighted average chart avec distribution inégale", () => {
+  // Bacs avec distribution réelle (3500 / 1800 / 200)
+  const bacsAvecNombreInitial: Bac[] = [
+    { id: "bac-a", nombreInitial: 3500 },
+    { id: "bac-b", nombreInitial: 1800 },
+    { id: "bac-c", nombreInitial: 200 },
+  ];
+
+  // Bacs sans nombreInitial (bug avant fix : les champs étaient strippés lors du select)
+  const bacsSansNombreInitial: Bac[] = [
+    { id: "bac-a", nombreInitial: null },
+    { id: "bac-b", nombreInitial: null },
+    { id: "bac-c", nombreInitial: null },
+  ];
+
+  const releves: Releve[] = [];
+
+  it("avec nombreInitial réel : les vivants reflètent la distribution 3500/1800/200", () => {
+    const result = computeVivantsByBac(bacsAvecNombreInitial, releves, 5500);
+
+    // Aucune mortalité, aucun comptage → vivants = initial par bac
+    expect(result.get("bac-a")).toBe(3500);
+    expect(result.get("bac-b")).toBe(1800);
+    expect(result.get("bac-c")).toBe(200);
+    // Total conservé
+    const total = (result.get("bac-a") ?? 0) + (result.get("bac-b") ?? 0) + (result.get("bac-c") ?? 0);
+    expect(total).toBe(5500);
+  });
+
+  it("BUG : sans nombreInitial (undefined strippé), les vivants tombent sur la répartition uniforme ≈ 1833", () => {
+    // C'est le comportement BUGGY que le fix corrige : avant le fix, les bacs avaient
+    // nombreInitial = undefined car getVagueById ne le sélectionnait pas depuis AssignationBac.
+    const result = computeVivantsByBac(bacsSansNombreInitial, releves, 5500);
+
+    // Répartition uniforme : floor(5500 / 3) = 1833, reste = 1 → dernier bac reçoit 1834
+    expect(result.get("bac-a")).toBe(1833);
+    expect(result.get("bac-b")).toBe(1833);
+    expect(result.get("bac-c")).toBe(1834); // dernier bac reçoit le reste
+    const total = (result.get("bac-a") ?? 0) + (result.get("bac-b") ?? 0) + (result.get("bac-c") ?? 0);
+    expect(total).toBe(5500);
+  });
+
+  it("le poids moyen pondéré diffère significativement entre les deux cas (bug vs fix)", () => {
+    // Biométrie du jour J : bac-a=45g, bac-b=50g, bac-c=80g
+    // Ces valeurs sont proches de la vague 26-02 décrite dans le rapport de bug.
+    const poidsMoyenParBac: Record<string, number> = {
+      "bac-a": 45,
+      "bac-b": 50,
+      "bac-c": 80,
+    };
+
+    // Calcul avec les vivants CORRECTS (fix appliqué)
+    const vivantsAvecFix = computeVivantsByBac(bacsAvecNombreInitial, releves, 5500);
+    let sumWeightedFix = 0;
+    let sumWeightsFix = 0;
+    for (const [bacId, poids] of Object.entries(poidsMoyenParBac)) {
+      const vivants = vivantsAvecFix.get(bacId) ?? 1;
+      sumWeightedFix += poids * vivants;
+      sumWeightsFix += vivants;
+    }
+    const poidsMoyenFix = sumWeightedFix / sumWeightsFix;
+
+    // Calcul avec les vivants BUGGY (sans fix : répartition uniforme)
+    const vivantsSansFix = computeVivantsByBac(bacsSansNombreInitial, releves, 5500);
+    let sumWeightedBug = 0;
+    let sumWeightsBug = 0;
+    for (const [bacId, poids] of Object.entries(poidsMoyenParBac)) {
+      const vivants = vivantsSansFix.get(bacId) ?? 1;
+      sumWeightedBug += poids * vivants;
+      sumWeightsBug += vivants;
+    }
+    const poidsMoyenBug = sumWeightedBug / sumWeightsBug;
+
+    // Le fix donne un poids moyen pondéré nettement plus proche de bac-a (3500 poissons à 45g)
+    // Le bug sur-représentait bac-c (80g) en lui donnant 1833 vivants au lieu de 200.
+    // Fix : (3500*45 + 1800*50 + 200*80) / 5500 = 263500 / 5500 ≈ 47.91g
+    // Bug : (1833*45 + 1833*50 + 1834*80) / 5500 ≈ 58.5g (bac-c sur-représenté : 1834 vivants au lieu de 200)
+    expect(poidsMoyenFix).toBeCloseTo(47.91, 1);
+    expect(poidsMoyenBug).toBeGreaterThan(poidsMoyenFix + 5); // le bug produit une valeur significativement plus haute
+  });
+});

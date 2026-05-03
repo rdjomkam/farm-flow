@@ -93,7 +93,7 @@ describe("BUG-043 — Bottom nav variants apply safe-area padding + GPU layer hi
 // ---------------------------------------------------------------------------
 
 describe("BUG-043 — globals.css mobile safe-area backdrop", () => {
-  it("globals.css paints an opaque card backdrop behind the mobile safe-area", () => {
+  it("globals.css paints an opaque card backdrop behind the mobile safe-area via a fixed pseudo-element (not background-attachment:fixed, which iOS ignores)", () => {
     const css = fs.readFileSync(
       path.join(process.cwd(), "src/app/globals.css"),
       "utf-8"
@@ -101,5 +101,13 @@ describe("BUG-043 — globals.css mobile safe-area backdrop", () => {
     expect(css).toMatch(/@media \(max-width: 767px\)/);
     expect(css).toMatch(/safe-area-inset-bottom/);
     expect(css).toMatch(/var\(--card\)/);
+    // Must use a fixed-position pseudo-element (iOS-compatible), NOT
+    // `background-attachment: fixed` which is ignored on iOS Safari.
+    expect(css).toMatch(/html::after/);
+    expect(css).toMatch(/position:\s*fixed/);
+    // Strip CSS /* ... */ comments before asserting no `background-attachment: fixed`
+    // actually applies (the comment warning readers about its iOS incompatibility is fine).
+    const cssNoComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(cssNoComments).not.toMatch(/background-attachment:\s*fixed/);
   });
 });
