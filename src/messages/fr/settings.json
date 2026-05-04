@@ -118,7 +118,8 @@
       "nonReconnus": "Placeholders non reconnus : {keys} — ils seront remplace par \"[donnee non disponible]\".",
       "apercuExemple": "Apercu avec donnees exemple :",
       "fictifsWarning": "Les valeurs affichees sont fictives. Les valeurs reelles sont calculees lors de la generation.",
-      "requis": "Requis"
+      "requis": "Requis",
+      "dataUnavailable": "[donnee non disponible]"
     },
     "phases": {
       "allPhases": "Toutes les phases"

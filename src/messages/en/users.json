@@ -84,6 +84,7 @@
     "forcerDeconnexionConfirmDescription": "All active sessions of {name} will be deleted. This action cannot be undone.",
     "annuler": "Cancel",
     "compteSysteme": "This user is a system account. Security actions are not available.",
+    "sessionsDeleted": "{count} session(s) deleted.",
     "errors": {
       "motDePasseTropCourt": "Password must be at least 6 characters.",
       "motDePasseNonCorrespondant": "Passwords do not match."

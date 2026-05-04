@@ -114,7 +114,8 @@
     "nomProfilPlaceholder": "Ex: Clarias Standard Cameroun",
     "creer": "Creer le profil",
     "enregistrer": "Enregistrer",
-    "annuler": "Annuler"
+    "annuler": "Annuler",
+    "copieSuffix": "{nom} (copie)"
   },
   "list": {
     "deleteConfirm": "Supprimer le profil \"{nom}\" ?",

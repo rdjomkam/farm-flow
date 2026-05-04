@@ -197,44 +197,41 @@
   },
   "pages": {
     "modules": {
-      "title": "Module registry"
+      "title": "Modules",
+      "subtitle": "{count, plural, one {# module registered} other {# modules registered}}"
     },
     "remises": {
-      "title": "Discount management",
+      "title": "Discounts",
       "subtitle": "Global and per-site discounts",
       "remisesActives": "Active discounts",
       "totalUtilisations": "Total uses",
       "remisesGlobales": "Global discounts"
     },
     "plans": {
-      "title": "Subscription plans"
+      "title": "Plans",
+      "subtitle": "{count, plural, one {# plan} other {# plans}} in total"
     },
     "commissions": {
-      "title": "Commission management",
+      "title": "Commissions",
       "subtitle": "Withdrawals and engineer wallets",
       "retraitsEnAttente": "Pending withdrawals",
       "totalAVerser": "Total to pay",
       "retraitsTraites": "Processed withdrawals (recent)"
     },
     "sites": {
-      "title": "Client site management"
+      "title": "Sites",
+      "subtitle": "{active, plural, one {# active site} other {# active sites}} out of {total} total"
     },
     "dashboard": {
-      "title": "Platform analytics",
+      "title": "Dashboard",
       "description": "Consolidated KPIs for the entire DKFarm platform"
     },
     "abonnements": {
-      "title": "All subscriptions",
+      "title": "Subscriptions",
       "subtitle": "{total, plural, one {# subscription} other {# subscriptions}} in total"
     },
-    "modules": {
-      "subtitle": "{count, plural, one {# module registered} other {# modules registered}}"
-    },
-    "sites": {
-      "subtitle": "{active, plural, one {# active site} other {# active sites}} out of {total} total"
-    },
-    "plans": {
-      "subtitle": "{count, plural, one {# plan} other {# plans}} in total"
+    "featureFlags": {
+      "title": "Feature Flags"
     }
   },
   "siteStatus": {

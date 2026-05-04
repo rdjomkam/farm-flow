@@ -302,7 +302,7 @@ export function ConfigElevageFormClient({ templates }: Props) {
     const tpl = templates.find((tmpl) => tmpl.id === templateId);
     if (!tpl) return;
     setForm({
-      nom: `${tpl.nom} (copie)`,
+      nom: t("form.copieSuffix", { nom: tpl.nom }),
       description: tpl.description,
       isDefault: false,
       isActive: true,

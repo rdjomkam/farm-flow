@@ -60,9 +60,9 @@ const EXAMPLE_VALUES: Record<string, string> = {
   valeur_marchande: "1 244 500",
 };
 
-function resolvePreview(template: string): string {
+function resolvePreview(template: string, fallback: string): string {
   return template.replace(/\{(\w+)\}/g, (_, key) => {
-    return EXAMPLE_VALUES[key] ?? "[donnee non disponible]";
+    return EXAMPLE_VALUES[key] ?? fallback;
   });
 }
 
@@ -323,7 +323,7 @@ function SectionHeader({ title, open, onToggle, badge }: SectionHeaderProps) {
 
 function TitrePreview({ titreTemplate }: { titreTemplate: string }) {
   const t = useTranslations("settings");
-  const resolved = resolvePreview(titreTemplate);
+  const resolved = resolvePreview(titreTemplate, t("rules.placeholders.dataUnavailable"));
   if (!titreTemplate.trim()) return null;
 
   return (
