@@ -183,7 +183,7 @@ export function ReleveTypeSections({
     return (
       <FormSection title={t("form.sections.tri.title")} description={t("form.sections.tri.description")}>
         <MemoFormTri
-          values={{ description: fields.description, lotAlevinsId: fields.lotAlevinsId }}
+          values={{ description: fields.description }}
           onChange={updateField}
           errors={errors}
         />

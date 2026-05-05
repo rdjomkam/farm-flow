@@ -7,16 +7,14 @@ export function validateReleveForm(
   bacId: string,
   typeReleve: string,
   fields: TypedFormFields,
-  t: (key: string) => string
+  t: (key: string) => string,
+  lotAlevinsId?: string
 ): Record<string, string> {
   const errs: Record<string, string> = {};
-  // TRI peut etre lie a un lot d'alevins (sans vagueId/bacId) — XOR gere cote API
-  const isTriWithLot =
-    fields.typeReleve === TypeReleve.TRI &&
-    "lotAlevinsId" in fields &&
-    Boolean(fields.lotAlevinsId);
-  if (!vagueId && !isTriWithLot) errs.vagueId = t("form.errors.vagueId");
-  if (!bacId && !isTriWithLot) errs.bacId = t("form.errors.bacId");
+  // En mode lot d'alevins, vagueId et bacId ne sont pas requis (XOR géré côté API)
+  const isLotMode = Boolean(lotAlevinsId);
+  if (!vagueId && !isLotMode) errs.vagueId = t("form.errors.vagueId");
+  if (!bacId && !isLotMode) errs.bacId = t("form.errors.bacId");
   if (!typeReleve) errs.typeReleve = t("form.errors.typeReleve");
 
   if (fields.typeReleve === TypeReleve.BIOMETRIE) {

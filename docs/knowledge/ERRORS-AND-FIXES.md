@@ -185,6 +185,32 @@ Ajouter `nombreInitial` et `poidsMoyenInitial` dans le `select` des deux fonctio
 
 ---
 
+
+### ERR-094 — Context state perdu dans un discriminated union form : `lotAlevinsId` invisible hors du cas TRI
+**Sprint :** Bugfixing | **Date :** 2026-05-03
+**Sévérité :** Haute
+**Fichier(s) :**
+- `src/components/releves/releve-form-client.tsx`
+
+**Symptôme :**
+Le formulaire `/releves/nouveau` refuse de valider pour les types BIOMETRIE, MORTALITE, etc. quand il est ouvert depuis un lot d'alevins (lotAlevinsId présent dans l'URL). Le champ `lotAlevinsId` n'est jamais envoyé au backend — seul le cas `TRI` fonctionnait.
+
+**Cause racine :**
+`lotAlevinsId` était placé dans la variante `TRI` du discriminated union `TypedFormFields`. La factory `getEmptyFields(type)` est appelée à chaque changement de type, ce qui réinitialise l'intégralité du state typé — y compris le contexte de navigation (d'où vient l'utilisateur). Le backend supportait déjà `lotAlevinsId` pour tous les types (relation XOR, vagueId/bacId nullable), mais l'UI n'exposait jamais ce champ en dehors de TRI.
+
+**Fix :**
+Sortir `lotAlevinsId` du discriminated union et le placer dans un `useState` séparé (state de contexte). Remplacer la condition `isTriWithLot` (type ET contexte) par `isLotMode = Boolean(lotAlevinsId)` (contexte seul). Passer `lotAlevinsId` dans le DTO indépendamment du type.
+
+**Leçon / Règle :**
+- **Discriminated unions = shape de données, pas contexte.** Le contexte (qui est l'utilisateur, depuis quelle entité la navigation arrive) doit vivre dans un `useState` ou prop séparé. Le placer dans une variante du union garantit sa perte à chaque changement de variante.
+- **`getEmptyFields(type)` ne doit toucher que les champs propres au type.** Tous les champs cross-type (identifiants de contexte, mode de navigation) doivent rester en dehors de cette factory.
+- **Quand le backend supporte une relation pour N types mais l'UI ne l'expose que pour un seul**, c'est le signal que la condition UI est trop spécialisée. Dériver depuis le contexte (`Boolean(lotAlevinsId)`), pas depuis la variante du type discriminé.
+- **Une condition `typeX ET contexteY` dans le code est presque toujours réductible à `contexteY` seul.** Se demander : ce comportement est-il vraiment lié au type, ou seulement au contexte ?
+
+**Références :** [BUG-046](../bugs/BUG-046.md)
+
+---
+
 ### ERR-089 — Lecture dual-source en mode tout-ou-rien (ADR-043 Bac/AssignationBac)
 **Sprint :** Bugfixing | **Date :** 2026-04-19
 **Sévérité :** Haute

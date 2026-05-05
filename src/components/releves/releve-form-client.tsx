@@ -6,6 +6,7 @@ import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { ReleveFormFields } from "./releve-form-fields";
 import type { ProduitOption } from "./consommation-fields";
 import { useReleveForm } from "@/hooks/use-releve-form";
+import type { BacResponse } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -14,17 +15,28 @@ import { useReleveForm } from "@/hooks/use-releve-form";
 interface ReleveFormClientProps {
   vagues: { id: string; code: string }[];
   produits: ProduitOption[];
+  /** Présent uniquement si la page a été ouverte depuis un lot d'alevins */
+  lotAlevins?: { id: string; code: string; bacId: string | null };
+  /** Liste de tous les bacs du site — injecté en mode lot (pas filtrée par vague) */
+  bacsDuSite?: BacResponse[];
 }
 
 // ---------------------------------------------------------------------------
 // Container
 // ---------------------------------------------------------------------------
 
-export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
+export function ReleveFormClient({ vagues, produits, lotAlevins, bacsDuSite }: ReleveFormClientProps) {
   const t = useTranslations("releves");
   const tSections = useTranslations("errors.sections");
 
-  const form = useReleveForm({ produits });
+  const form = useReleveForm({
+    produits,
+    overrideInitialBacId: lotAlevins?.bacId ?? undefined,
+  });
+
+  // En mode lot : utiliser la liste des bacs du site injectée par la page serveur
+  // plutôt que celle filtrée par vagueId du hook
+  const bacsToDisplay = form.isLotMode && bacsDuSite ? bacsDuSite : form.bacs;
 
   return (
     <ErrorBoundary section={tSections("releveForm")}>
@@ -56,8 +68,10 @@ export function ReleveFormClient({ vagues, produits }: ReleveFormClientProps) {
           activitesPlanifiees={form.activitesPlanifiees}
           loadingActivites={form.loadingActivites}
           loadingBacs={form.loadingBacs}
-          bacs={form.bacs}
+          bacs={bacsToDisplay}
           isFromActivite={form.isFromActivite}
+          isLotMode={form.isLotMode}
+          lotCode={lotAlevins?.code}
           initialTypeReleve={form.initialTypeReleve}
           initialBacId={form.initialBacId}
           releveActiviteTypeMap={form.releveActiviteTypeMap}

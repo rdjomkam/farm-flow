@@ -15,9 +15,9 @@ import {
 } from "@/components/ui/select";
 import { FormSection } from "@/components/ui/form-section";
 import { ReleveTypeSections } from "./releve-type-sections";
+import { LotAlevinsBanner } from "./lot-alevins-banner";
 import type { ConsommationLine, ProduitOption } from "./consommation-fields";
 import { TypeReleve, StatutActivite, CategorieProduit } from "@/types";
-import type { TriFields } from "@/hooks/use-releve-form";
 import type { BacResponse } from "@/types";
 import type { TypedFormFields, ActivitePlanifiee } from "@/hooks/use-releve-form";
 
@@ -52,6 +52,10 @@ interface ReleveFormFieldsProps {
   loadingBacs: boolean;
   bacs: BacResponse[];
   isFromActivite: boolean;
+  /** Mode lot d'alevins — masque Vague, affiche bac du site pré-rempli */
+  isLotMode: boolean;
+  /** Code du lot d'alevins pour la bannière (ex: "LOT-2026-001") */
+  lotCode?: string;
   initialTypeReleve: string;
   initialBacId: string;
   releveActiviteTypeMap: Partial<Record<string, string>>;
@@ -87,6 +91,8 @@ export function ReleveFormFields({
   loadingBacs,
   bacs,
   isFromActivite,
+  isLotMode,
+  lotCode,
   initialTypeReleve,
   initialBacId,
   releveActiviteTypeMap,
@@ -104,11 +110,6 @@ export function ReleveFormFields({
   const t = useTranslations("releves");
   const tStock = useTranslations("stock");
   const locale = useLocale();
-
-  /** Releve TRI lie directement a un lot d'alevins (sans vague/bac) */
-  const isTriWithLot =
-    fields.typeReleve === TypeReleve.TRI &&
-    Boolean((fields as unknown as TriFields).lotAlevinsId);
 
   /** Unite de l'aliment derive de la premiere ligne de consommation */
   const uniteAliment = useMemo((): string | undefined => {
@@ -134,8 +135,37 @@ export function ReleveFormFields({
         </div>
       )}
 
-      {/* Section identification — masquee pour TRI lie a un lot d'alevins */}
-      {!isTriWithLot && (
+      {/* Mode lot d'alevins : bannière + sélecteur de bac du site */}
+      {isLotMode ? (
+        <FormSection
+          title={t("form.sections.identification.title")}
+          description={t("form.sections.identification.description")}
+        >
+          {lotCode && <LotAlevinsBanner lotCode={lotCode} />}
+
+          <Select
+            value={bacId}
+            onValueChange={onBacChange}
+            disabled={loadingBacs}
+          >
+            <SelectTrigger label={t("form.sections.identification.bacAuto")} error={errors.bacId}>
+              <SelectValue
+                placeholder={
+                  loadingBacs
+                    ? t("form.fields.bacChargement")
+                    : t("form.fields.bacPlaceholder")
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {bacs.map((b) => (
+                <SelectItem key={b.id} value={b.id}>{b.nom} ({b.volume}L)</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormSection>
+      ) : (
+        /* Mode normal — sélecteurs Vague + Bac */
         <FormSection
           title={t("form.sections.identification.title")}
           description={t("form.sections.identification.description")}

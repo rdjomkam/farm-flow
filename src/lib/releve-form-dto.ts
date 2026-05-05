@@ -11,6 +11,8 @@ interface BuildDTOParams {
   releveDate: string;
   fields: TypedFormFields;
   consommations: ConsommationLine[];
+  /** Présent en mode lot d'alevins — XOR avec vagueId (géré par l'API) */
+  lotAlevinsId?: string;
 }
 
 type WithConsommations<T> = T & { consommations?: { produitId: string; quantite: number }[] };
@@ -33,14 +35,26 @@ export function buildReleveDTO({
   releveDate,
   fields,
   consommations,
+  lotAlevinsId,
 }: BuildDTOParams): CreateReleveDTO {
-  const base = {
-    vagueId,
-    bacId,
-    ...(notes.trim() && { notes: notes.trim() }),
-    ...(activiteId && { activiteId }),
-    date: new Date(releveDate).toISOString(),
-  };
+  const isLotMode = Boolean(lotAlevinsId);
+
+  // En mode lot : exclure vagueId, inclure lotAlevinsId ; bacId reste si non vide
+  const base = isLotMode
+    ? {
+        lotAlevinsId: lotAlevinsId as string,
+        ...(bacId && { bacId }),
+        ...(notes.trim() && { notes: notes.trim() }),
+        ...(activiteId && { activiteId }),
+        date: new Date(releveDate).toISOString(),
+      }
+    : {
+        vagueId,
+        bacId,
+        ...(notes.trim() && { notes: notes.trim() }),
+        ...(activiteId && { activiteId }),
+        date: new Date(releveDate).toISOString(),
+      };
 
   if (fields.typeReleve === TypeReleve.BIOMETRIE) {
     return attachConsommations({
@@ -105,18 +119,8 @@ export function buildReleveDTO({
     };
   }
   if (fields.typeReleve === TypeReleve.TRI) {
-    // TRI : linked to lotAlevins (XOR with vagueId — handled by the API)
-    // If lotAlevinsId is set, pass it instead of vagueId
-    const triBase = fields.lotAlevinsId
-      ? {
-          ...(notes.trim() && { notes: notes.trim() }),
-          ...(activiteId && { activiteId }),
-          date: new Date(releveDate).toISOString(),
-          lotAlevinsId: fields.lotAlevinsId,
-        }
-      : base;
     return {
-      ...triBase,
+      ...base,
       typeReleve: TypeReleve.TRI as const,
       description: fields.description.trim(),
     };

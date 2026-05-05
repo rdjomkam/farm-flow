@@ -54,7 +54,9 @@
     "sections": {
       "identification": {
         "title": "Identification",
-        "description": "Batch and tank"
+        "description": "Batch and tank",
+        "lotAlevinsBanner": "Fry batch: {code}",
+        "bacAuto": "Tank (pre-filled from batch — editable)"
       },
       "date": {
         "title": "Record date",

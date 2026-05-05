@@ -54,7 +54,9 @@
     "sections": {
       "identification": {
         "title": "Identification",
-        "description": "Vague et bac concernés"
+        "description": "Vague et bac concernés",
+        "lotAlevinsBanner": "Lot d'alevins : {code}",
+        "bacAuto": "Bac (auto-rempli depuis le lot — modifiable)"
       },
       "date": {
         "title": "Date du releve",
