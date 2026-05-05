@@ -1,7 +1,7 @@
 "use client";
 
-import { Lightbulb } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Lightbulb } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface RecommendationCardProps {
