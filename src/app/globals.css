@@ -118,21 +118,44 @@ body {
   position: relative;
 }
 
-/* BUG-043 (v2): Mobile bottom safe-area opaque backdrop.
+/* BUG-043 (v2) + BUG-047: Mobile safe-area opaque backdrops.
    NOTE: `background-attachment: fixed` is ignored by iOS Safari and
-   inconsistent on Chrome Android — we use a dedicated `position: fixed`
-   pseudo-element pinned to the visual viewport bottom instead.
-   Sits at z-index 39 (just under the nav at z-40), so during the URL-bar
-   animation the `env(safe-area-inset-bottom)` band never shows the body
-   background through. */
+   inconsistent on Chrome Android — we use dedicated `position: fixed`
+   pseudo-elements pinned to the visual viewport edges instead.
+
+   TOP (html::before, z-index 49 — just under header at z-50):
+   BUG-047: Pages without a FarmHeader (login, select-site, error pages)
+   have no component covering safe-area-inset-top. This fixed pseudo-element
+   guarantees the notch area is always opaque regardless of which page is
+   rendered. body::before is already taken by the grain noise overlay, so
+   we use html::before here.
+
+   BOTTOM (html::after, z-index 39 — just under nav at z-40):
+   BUG-043 v2 introduced this for PWA. BUG-047 extends it: on non-PWA
+   Safari iOS the URL bar animation briefly drives env(safe-area-inset-bottom)
+   to 0, making a height:0 element for one frame. Extending by 60px past the
+   visual viewport bottom ensures the opaque band is never zero-height during
+   those transition frames. */
 @media (max-width: 767px) {
+  html::before {
+    content: "";
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: env(safe-area-inset-top);
+    background: var(--card);
+    pointer-events: none;
+    z-index: 49;
+  }
+
   html::after {
     content: "";
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 0;
-    height: env(safe-area-inset-bottom);
+    bottom: -60px;
+    height: calc(env(safe-area-inset-bottom) + 60px);
     background: var(--card);
     pointer-events: none;
     z-index: 39;
