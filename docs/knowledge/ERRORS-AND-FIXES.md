@@ -185,7 +185,6 @@ Ajouter `nombreInitial` et `poidsMoyenInitial` dans le `select` des deux fonctio
 
 ---
 
-
 ### ERR-094 — Context state perdu dans un discriminated union form : `lotAlevinsId` invisible hors du cas TRI
 **Sprint :** Bugfixing | **Date :** 2026-05-03
 **Sévérité :** Haute
@@ -1251,6 +1250,42 @@ Toujours utiliser le champ métier (`date`) pour le tri et l'affichage, pas les 
 ---
 
 ## Catégorie : Build
+
+### ERR-095 — Turbopack cache silencieux sur des règles CSS globales (pseudo-éléments, @media)
+**Sprint :** Bugfixing | **Date :** 2026-05-03
+**Sévérité :** Haute
+**Fichier(s) :** `src/app/globals.css`
+
+**Symptôme :**
+Des nouvelles règles CSS ajoutées dans `globals.css` (pseudo-éléments `html::before` / `html::after`, sélecteurs top-level ou imbriqués dans `@media`) ne sont pas servies par le dev server Next.js (Turbopack). Le fichier sur disque est à jour. `touch` + reload ne changent rien. Les tests Vitest et le build webpack passent, mais `getComputedStyle` sur le pseudo-élément retourne `content: none, position: static` en runtime — la règle est absente du bundle CSS servi.
+
+**Cause racine :**
+Turbopack maintient un cache de modules CSS. Pour certains sélecteurs non-utilitaires (pseudo-éléments, sélecteurs globaux imbriqués dans `@media`), Turbopack ne détecte pas le changement comme nécessitant une recompilation. Le bundle hash ne change pas, aucune erreur n'est émise.
+
+**Diagnostic rapide :**
+Dans la console du navigateur :
+```js
+fetch('/_next/static/chunks/app/layout.css')
+  .then(r => r.text())
+  .then(t => console.log(t.includes('html::after')));
+// false → le sélecteur est absent du CSS servi
+```
+Si le sélecteur est absent alors qu'il est dans le fichier source, c'est ce bug.
+
+**Fix :**
+Arrêter le dev server, supprimer le cache Turbopack, relancer :
+```bash
+rm -rf .next
+npm run dev
+```
+Turbopack recompile depuis zéro et les nouvelles règles apparaissent.
+
+**Leçon / Règle :**
+Ne jamais valider un fix CSS uniquement sur la base "tests passent + build webpack OK". Pour toute règle globale non-utilitaire (`globals.css`, pseudo-éléments, `@media` top-level), vérifier le CSS réellement servi en inspectant le bundle dans le navigateur. En cas de doute sur Turbopack, `rm -rf .next` avant toute validation visuelle.
+
+**Références :** [BUG-047](../bugs/BUG-047.md)
+
+---
 
 ### ERR-006 — Prisma migrate diff inclut le texte de sortie CLI dans le SQL
 **Sprint :** 30 | **Date :** 2026-03-20

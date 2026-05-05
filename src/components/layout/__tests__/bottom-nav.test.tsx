@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { render, screen } from "@testing-library/react";
@@ -89,10 +89,10 @@ describe("BUG-043 — Bottom nav variants apply safe-area padding + GPU layer hi
 });
 
 // ---------------------------------------------------------------------------
-// CSS regression — mobile safe-area backdrop in globals.css
+// CSS regression — mobile safe-area backdrops in globals.css
 // ---------------------------------------------------------------------------
 
-describe("BUG-043 — globals.css mobile safe-area backdrop", () => {
+describe("BUG-043 — globals.css mobile safe-area backdrop (bottom)", () => {
   it("globals.css paints an opaque card backdrop behind the mobile safe-area via a fixed pseudo-element (not background-attachment:fixed, which iOS ignores)", () => {
     const css = fs.readFileSync(
       path.join(process.cwd(), "src/app/globals.css"),
@@ -109,5 +109,63 @@ describe("BUG-043 — globals.css mobile safe-area backdrop", () => {
     // actually applies (the comment warning readers about its iOS incompatibility is fine).
     const cssNoComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
     expect(cssNoComments).not.toMatch(/background-attachment:\s*fixed/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BUG-047 — top safe-area opaque backdrop + extended bottom backdrop
+// ---------------------------------------------------------------------------
+
+describe("BUG-047 — globals.css safe-area backdrops (top + extended bottom)", () => {
+  let css: string;
+  let cssNoComments: string;
+
+  beforeEach(() => {
+    css = fs.readFileSync(
+      path.join(process.cwd(), "src/app/globals.css"),
+      "utf-8"
+    );
+    // Strip comments so assertions target actual CSS rules, not explanatory text.
+    cssNoComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  });
+
+  it("html::before exists for the top safe-area backdrop", () => {
+    expect(cssNoComments).toMatch(/html::before/);
+  });
+
+  it("html::before uses position: fixed", () => {
+    // Extract the html::before block to scope the assertion.
+    const beforeBlock = cssNoComments.match(/html::before\s*\{([^}]+)\}/)?.[1] ?? "";
+    expect(beforeBlock).toMatch(/position:\s*fixed/);
+  });
+
+  it("html::before is pinned to the top of the viewport (top: 0)", () => {
+    const beforeBlock = cssNoComments.match(/html::before\s*\{([^}]+)\}/)?.[1] ?? "";
+    expect(beforeBlock).toMatch(/top:\s*0/);
+  });
+
+  it("html::before covers safe-area-inset-top height", () => {
+    const beforeBlock = cssNoComments.match(/html::before\s*\{([^}]+)\}/)?.[1] ?? "";
+    expect(beforeBlock).toMatch(/height:\s*env\(safe-area-inset-top\)/);
+  });
+
+  it("html::before uses var(--card) background (R6: no hardcoded colour)", () => {
+    const beforeBlock = cssNoComments.match(/html::before\s*\{([^}]+)\}/)?.[1] ?? "";
+    expect(beforeBlock).toMatch(/background:\s*var\(--card\)/);
+  });
+
+  it("html::before sits at z-index 49 (below header z-50, above page content)", () => {
+    const beforeBlock = cssNoComments.match(/html::before\s*\{([^}]+)\}/)?.[1] ?? "";
+    expect(beforeBlock).toMatch(/z-index:\s*49/);
+  });
+
+  it("html::after extends 60px past the visual viewport bottom to absorb Safari URL-bar glitch frames", () => {
+    // During Safari iOS URL-bar animation, env(safe-area-inset-bottom) briefly
+    // drops to 0. A negative bottom offset keeps the element visible even then.
+    const afterBlock = cssNoComments.match(/html::after\s*\{([^}]+)\}/)?.[1] ?? "";
+    // bottom must be a negative value (e.g. -60px)
+    expect(afterBlock).toMatch(/bottom:\s*-\d+px/);
+    // height must incorporate the extra buffer via calc()
+    expect(afterBlock).toMatch(/height:\s*calc\(env\(safe-area-inset-bottom\)\s*\+\s*\d+px\)/);
   });
 });
