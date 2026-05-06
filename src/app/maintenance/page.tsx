@@ -23,7 +23,7 @@ import type { MaintenanceStatusResponse } from "@/types";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("maintenance");
-  return { title: `${t("title")} | DKFarm` };
+  return { title: t("metadataTitle") };
 }
 
 // Desactiver le cache statique — la page doit refleter l'etat courant

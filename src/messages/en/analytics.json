@@ -199,6 +199,7 @@
     "meilleurSGR": "Best SGR",
     "coutKgLabel": "Cost/kg gain",
     "quantiteTotale": "Total quantity",
+    "quantiteKg": "Quantity (kg)",
     "coutTotal": "Total cost",
     "survieAssociee": "Associated survival",
     "fcrMoyen": "Average FCR",

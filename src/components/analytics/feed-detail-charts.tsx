@@ -234,14 +234,14 @@ export function FeedVagueBreakdown({ parVague }: FeedVagueBreakdownProps) {
                     content={
                       <ChartTooltip
                         valueFormatter={(v, name) =>
-                          name === "Quantite (kg)" ? `${v} kg` : v.toFixed(2)
+                          name === tAnalytics("aliments.quantiteKg") ? `${v} kg` : v.toFixed(2)
                         }
                       />
                     }
                   />
                   <Bar
                     dataKey="quantite"
-                    name="Quantite (kg)"
+                    name={tAnalytics("aliments.quantiteKg")}
                     fill="var(--primary)"
                     radius={[4, 4, 0, 0]}
                   />

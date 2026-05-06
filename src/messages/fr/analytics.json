@@ -199,6 +199,7 @@
     "meilleurSGR": "Meilleur TCS",
     "coutKgLabel": "Coût/kg gain",
     "quantiteTotale": "Quantité totale",
+    "quantiteKg": "Quantité (kg)",
     "coutTotal": "Coût total",
     "survieAssociee": "Survie associée",
     "fcrMoyen": "ICA moyen",
