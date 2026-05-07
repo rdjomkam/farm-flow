@@ -217,7 +217,8 @@
     "changementGranule": "Chgt granulé",
     "correlationMortalite": "Corrélation mortalité",
     "aucuneDonneeMortalite": "Aucune donnée de mortalité disponible.",
-    "mortaliteElevee": "— élevée"
+    "mortaliteElevee": "— élevée",
+    "quantiteKg": "Quantité (kg)"
   },
   "tailleGranule": {
     "label": "Taille granulé",

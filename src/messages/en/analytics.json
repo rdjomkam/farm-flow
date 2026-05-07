@@ -217,7 +217,8 @@
     "fournisseur": "Supplier",
     "vagues": "{count} batch(es)",
     "kgUtilisesMeta": "{qty} kg used",
-    "cout": "Cost"
+    "cout": "Cost",
+    "quantiteKg": "Quantity (kg)"
   },
   "tailleGranule": {
     "label": "Pellet size",
