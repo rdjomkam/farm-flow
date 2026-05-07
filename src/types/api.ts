@@ -1744,6 +1744,19 @@ export interface RejeterBesoinsDTO {
   motif?: string;
 }
 
+/**
+ * DTO pour creer a posteriori une commande pour des lignes orphelines
+ * d'un besoin TRAITEE ou CLOTUREE (commandeId IS NULL).
+ */
+export interface CreerCommandeDepuisBesoinDTO {
+  /** IDs des lignes a inclure dans la nouvelle commande (non vide) */
+  ligneBesoinIds: string[];
+  /** Fournisseur a utiliser si le produit n'en a pas (optionnel sinon) */
+  fournisseurId?: string;
+  /** Date de commande ISO 8601 (optionnel, defaut now()) */
+  dateCommande?: string;
+}
+
 /** Reponse liste des listes de besoins */
 export type ListeBesoinsListResponse = PaginatedResponse<ListeBesoinsWithRelations>;
 

@@ -339,14 +339,34 @@ export async function recevoirCommande(
       },
     });
 
-    // Auto-create Depense for this commande (one per commande, anti-doublon)
+    // Auto-create Depense for this commande (one per commande, anti-doublon).
+    //
+    // Anti-double-comptage : si toutes les lignes de la commande sont deja couvertes
+    // par une LigneDepense pre-existante (ex. ligne traitee LIBRE puis recuperee
+    // via creerCommandeDepuisBesoin), on ne re-cree pas de Depense pour eviter le
+    // double comptage. La depense initiale reste la source de verite financiere.
     const depenseExistante = await tx.depense.findFirst({
       where: { commandeId: commande.id },
       select: { id: true },
     });
 
+    const ligneIds = commande.lignes.map((l) => l.id);
+    const lignesDejaComptabilisees = await tx.ligneDepense.findMany({
+      where: { ligneCommandeId: { in: ligneIds } },
+      select: { ligneCommandeId: true },
+    });
+    const idsCouverts = new Set(
+      lignesDejaComptabilisees.map((l) => l.ligneCommandeId)
+    );
+    const toutesLignesDejaBookees =
+      ligneIds.length > 0 && ligneIds.every((id) => idsCouverts.has(id));
+
     let depense = null as { id: string; numero: string; montantTotal: number } | null;
-    if (!depenseExistante && montantRecu > 0) {
+    if (
+      !depenseExistante &&
+      !toutesLignesDejaBookees &&
+      montantRecu > 0
+    ) {
       // Determine dominant category from lignes (most expensive based on received quantities)
       const categoriesDominantes = commande.lignes.reduce(
         (acc, ligne) => {
