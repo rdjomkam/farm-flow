@@ -152,6 +152,15 @@
     "produitLabel": "Produit :",
     "reelLabel": "Reel :",
     "depensesLiees": "Depenses liees ({count})",
-    "annuler": "Annuler"
+    "annuler": "Annuler",
+    "creerCommande": "Creer commande",
+    "creerCommandeTitle": "Creer une commande pour les lignes orphelines",
+    "creerCommandeDescription": "Selectionnez les lignes a inclure dans la commande. Un fournisseur peut etre choisi si certains produits n'en ont pas.",
+    "aCommander": "A commander",
+    "achatDirectBadge": "Achat direct",
+    "fournisseurFallbackLabel": "Fournisseur (si non defini sur le produit)",
+    "fournisseurPlaceholder": "Choisir un fournisseur",
+    "aucuneLigneOrpheline": "Toutes les lignes ont deja une commande.",
+    "confirmerCreationCommande": "Creer la commande"
   }
 }
