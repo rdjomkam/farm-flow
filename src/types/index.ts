@@ -397,6 +397,7 @@ export type {
   ClotureLigneDTO,
   CloturerBesoinsDTO,
   RejeterBesoinsDTO,
+  CreerCommandeDepuisBesoinDTO,
   ListeBesoinsListResponse,
   ListeBesoinsDetailResponse,
 } from "./api";

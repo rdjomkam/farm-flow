@@ -23,6 +23,7 @@ import type {
   TraiterBesoinsDTO,
   CloturerBesoinsDTO,
   RejeterBesoinsDTO,
+  CreerCommandeDepuisBesoinDTO,
 } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -342,6 +343,29 @@ export function useCloturerBesoin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: besoinsKey });
+    },
+  });
+}
+
+export function useCreerCommandeDepuisBesoin() {
+  const queryClient = useQueryClient();
+  const depenseService = useDepenseService();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      dto,
+    }: {
+      id: string;
+      dto: CreerCommandeDepuisBesoinDTO;
+    }) => {
+      const result = await depenseService.creerCommandeDepuisBesoin(id, dto);
+      if (!result.ok) throw new Error(result.error ?? "Erreur creation commande");
+      return result.data as ListeBesoinsWithRelations;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: besoinsKey });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stock.commandes() });
     },
   });
 }

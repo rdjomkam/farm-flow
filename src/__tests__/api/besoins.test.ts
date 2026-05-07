@@ -26,15 +26,19 @@ const mockListeBesoinsFindUniqueOrThrow = vi.fn();
 const mockLigneBesoinCreateMany = vi.fn();
 const mockLigneBesoinDeleteMany = vi.fn();
 const mockLigneBesoinUpdateMany = vi.fn();
+const mockLigneBesoinUpdate = vi.fn();
 const mockLigneBesoinFindMany = vi.fn();
 const mockCommandeCreate = vi.fn();
 const mockCommandeFindFirst = vi.fn();
 const mockDepenseCreate = vi.fn();
 const mockDepenseFindFirst = vi.fn();
 const mockLigneDepenseCreateMany = vi.fn();
+const mockLigneDepenseUpdateMany = vi.fn();
 const mockListeBesoinsVagueCreateMany = vi.fn();
 const mockListeBesoinsVagueDeleteMany = vi.fn();
 const mockListeBesoinsVagueFindMany = vi.fn();
+const mockMouvementStockCreate = vi.fn();
+const mockProduitUpdate = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -51,6 +55,7 @@ vi.mock("@/lib/db", () => ({
       createMany: (...args: unknown[]) => mockLigneBesoinCreateMany(...args),
       deleteMany: (...args: unknown[]) => mockLigneBesoinDeleteMany(...args),
       updateMany: (...args: unknown[]) => mockLigneBesoinUpdateMany(...args),
+      update: (...args: unknown[]) => mockLigneBesoinUpdate(...args),
       findMany: (...args: unknown[]) => mockLigneBesoinFindMany(...args),
     },
     listeBesoinsVague: {
@@ -68,6 +73,13 @@ vi.mock("@/lib/db", () => ({
     },
     ligneDepense: {
       createMany: (...args: unknown[]) => mockLigneDepenseCreateMany(...args),
+      updateMany: (...args: unknown[]) => mockLigneDepenseUpdateMany(...args),
+    },
+    mouvementStock: {
+      create: (...args: unknown[]) => mockMouvementStockCreate(...args),
+    },
+    produit: {
+      update: (...args: unknown[]) => mockProduitUpdate(...args),
     },
     $transaction: vi.fn(async (fn: (tx: unknown) => unknown) =>
       fn({
@@ -82,6 +94,7 @@ vi.mock("@/lib/db", () => ({
           createMany: mockLigneBesoinCreateMany,
           deleteMany: mockLigneBesoinDeleteMany,
           updateMany: mockLigneBesoinUpdateMany,
+          update: mockLigneBesoinUpdate,
           findMany: mockLigneBesoinFindMany,
         },
         listeBesoinsVague: {
@@ -99,6 +112,13 @@ vi.mock("@/lib/db", () => ({
         },
         ligneDepense: {
           createMany: mockLigneDepenseCreateMany,
+          updateMany: mockLigneDepenseUpdateMany,
+        },
+        mouvementStock: {
+          create: mockMouvementStockCreate,
+        },
+        produit: {
+          update: mockProduitUpdate,
         },
       })
     ),
@@ -225,6 +245,8 @@ import {
   approuverBesoins,
   rejeterBesoins,
   cloturerBesoins,
+  traiterBesoins,
+  creerCommandeDepuisBesoin,
 } from "@/lib/queries/besoins";
 
 describe("Workflow — transitions valides", () => {
@@ -799,5 +821,484 @@ describe("POST /api/besoins/[id]/cloturer", () => {
     const data = await res.json();
     expect(data.statut).toBe(StatutBesoins.CLOTUREE);
     expect(data.montantReel).toBe(39300);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// traiterBesoins — comportement enrichi (Fix bug : besoins sans commande / sans stock)
+// ---------------------------------------------------------------------------
+
+describe("traiterBesoins — LIBRE + produit cree un MouvementStock", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("cree un MouvementStock ENTREE et incremente Produit.stockActuel pour LIBRE+produit", async () => {
+    const ligneLibreAvecProduit = {
+      id: "lb-libre-prod",
+      listeBesoinsId: "bes-1",
+      designation: "Aliment 4mm",
+      produitId: "prod-2",
+      quantite: 30,
+      unite: null,
+      prixEstime: 600,
+      prixReel: null,
+      commandeId: null,
+      createdAt: new Date(),
+      produit: {
+        id: "prod-2",
+        nom: "Aliment 4mm",
+        categorie: "ALIMENT",
+        uniteAchat: "sac",
+        contenance: 25,
+        fournisseur: null,
+      },
+    };
+
+    mockListeBesoinsFindFirst.mockResolvedValue({
+      ...FAKE_LISTE_APPROUVEE,
+      lignes: [ligneLibreAvecProduit],
+    });
+    mockCommandeFindFirst.mockResolvedValue(null);
+    mockDepenseCreate.mockResolvedValue({ id: "dep-x", numero: "DEP-2026-001" });
+    mockLigneDepenseCreateMany.mockResolvedValue({ count: 1 });
+    mockMouvementStockCreate.mockResolvedValue({ id: "mvt-1" });
+    mockProduitUpdate.mockResolvedValue({ id: "prod-2" });
+    mockListeBesoinsUpdate.mockResolvedValue({
+      ...FAKE_LISTE_APPROUVEE,
+      statut: StatutBesoins.TRAITEE,
+      lignes: [],
+      depenses: [],
+      demandeur: null,
+      valideur: null,
+      vague: null,
+      _count: { lignes: 1 },
+    });
+
+    await traiterBesoins("bes-1", "site-1", "user-1", {
+      ligneActions: [{ ligneBesoinId: "lb-libre-prod", action: "LIBRE" }],
+    });
+
+    // Verifier creation du mouvement stock ENTREE
+    expect(mockMouvementStockCreate).toHaveBeenCalledTimes(1);
+    const mvtArgs = mockMouvementStockCreate.mock.calls[0][0];
+    expect(mvtArgs.data.produitId).toBe("prod-2");
+    expect(mvtArgs.data.type).toBe("ENTREE");
+    expect(mvtArgs.data.quantite).toBe(30);
+
+    // Verifier increment du stockActuel (avec conversion : 30 sacs * 25 = 750 unites de base)
+    expect(mockProduitUpdate).toHaveBeenCalledTimes(1);
+    const updArgs = mockProduitUpdate.mock.calls[0][0];
+    expect(updArgs.where.id).toBe("prod-2");
+    expect(updArgs.data.stockActuel.increment).toBe(750);
+  });
+
+  it("ne cree pas de MouvementStock pour LIBRE sans produit", async () => {
+    const ligneLibreSansProduit = {
+      id: "lb-libre",
+      listeBesoinsId: "bes-1",
+      designation: "Frais divers",
+      produitId: null,
+      quantite: 1,
+      unite: null,
+      prixEstime: 5000,
+      prixReel: null,
+      commandeId: null,
+      createdAt: new Date(),
+      produit: null,
+    };
+
+    mockListeBesoinsFindFirst.mockResolvedValue({
+      ...FAKE_LISTE_APPROUVEE,
+      lignes: [ligneLibreSansProduit],
+    });
+    mockCommandeFindFirst.mockResolvedValue(null);
+    mockDepenseCreate.mockResolvedValue({ id: "dep-x", numero: "DEP-2026-001" });
+    mockLigneDepenseCreateMany.mockResolvedValue({ count: 1 });
+    mockListeBesoinsUpdate.mockResolvedValue({
+      ...FAKE_LISTE_APPROUVEE,
+      statut: StatutBesoins.TRAITEE,
+      lignes: [],
+      depenses: [],
+      demandeur: null,
+      valideur: null,
+      vague: null,
+      _count: { lignes: 1 },
+    });
+
+    await traiterBesoins("bes-1", "site-1", "user-1", {
+      ligneActions: [{ ligneBesoinId: "lb-libre", action: "LIBRE" }],
+    });
+
+    expect(mockMouvementStockCreate).not.toHaveBeenCalled();
+    expect(mockProduitUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe("traiterBesoins — COMMANDE sans fournisseur leve une erreur", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("rejette une ligne COMMANDE dont le produit n'a pas de fournisseur (et pas de fallback DTO)", async () => {
+    const ligneSansFournisseur = {
+      id: "lb-no-supp",
+      listeBesoinsId: "bes-1",
+      designation: "Produit X",
+      produitId: "prod-orphan",
+      quantite: 5,
+      unite: null,
+      prixEstime: 1000,
+      prixReel: null,
+      commandeId: null,
+      createdAt: new Date(),
+      produit: {
+        id: "prod-orphan",
+        nom: "Produit X",
+        categorie: "ALIMENT",
+        uniteAchat: null,
+        contenance: null,
+        fournisseur: null, // pas de fournisseur sur le produit
+      },
+    };
+
+    mockListeBesoinsFindFirst.mockResolvedValue({
+      ...FAKE_LISTE_APPROUVEE,
+      lignes: [ligneSansFournisseur],
+    });
+
+    await expect(
+      traiterBesoins("bes-1", "site-1", "user-1", {
+        ligneActions: [{ ligneBesoinId: "lb-no-supp", action: "COMMANDE" }],
+      })
+    ).rejects.toThrow(/COMMANDE impossible sans fournisseur/);
+
+    // Aucune commande ne doit etre creee
+    expect(mockCommandeCreate).not.toHaveBeenCalled();
+  });
+
+  it("accepte la commande quand dto.fournisseurId fournit un fallback", async () => {
+    const ligneSansFournisseur = {
+      id: "lb-no-supp",
+      listeBesoinsId: "bes-1",
+      designation: "Produit X",
+      produitId: "prod-orphan",
+      quantite: 5,
+      unite: null,
+      prixEstime: 1000,
+      prixReel: null,
+      commandeId: null,
+      createdAt: new Date(),
+      produit: {
+        id: "prod-orphan",
+        nom: "Produit X",
+        categorie: "ALIMENT",
+        uniteAchat: null,
+        contenance: null,
+        fournisseur: null,
+      },
+    };
+
+    mockListeBesoinsFindFirst.mockResolvedValue({
+      ...FAKE_LISTE_APPROUVEE,
+      lignes: [ligneSansFournisseur],
+    });
+    mockCommandeFindFirst.mockResolvedValue(null);
+    mockCommandeCreate.mockResolvedValue({
+      id: "cmd-1",
+      numero: "CMD-2026-001",
+      lignes: [{ id: "lc-1", produitId: "prod-orphan" }],
+    });
+    mockLigneBesoinUpdateMany.mockResolvedValue({ count: 1 });
+    mockListeBesoinsUpdate.mockResolvedValue({
+      ...FAKE_LISTE_APPROUVEE,
+      statut: StatutBesoins.TRAITEE,
+      lignes: [],
+      depenses: [],
+      demandeur: null,
+      valideur: null,
+      vague: null,
+      _count: { lignes: 1 },
+    });
+
+    await traiterBesoins("bes-1", "site-1", "user-1", {
+      ligneActions: [{ ligneBesoinId: "lb-no-supp", action: "COMMANDE" }],
+      fournisseurId: "fourn-fallback",
+    });
+
+    expect(mockCommandeCreate).toHaveBeenCalledTimes(1);
+    const cmdArgs = mockCommandeCreate.mock.calls[0][0];
+    expect(cmdArgs.data.fournisseurId).toBe("fourn-fallback");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// creerCommandeDepuisBesoin — recuperation post-traitement
+// ---------------------------------------------------------------------------
+
+describe("creerCommandeDepuisBesoin", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const FAKE_LISTE_CLOTUREE = {
+    ...FAKE_LISTE_TRAITEE,
+    statut: StatutBesoins.CLOTUREE,
+  };
+
+  const ORPHELINE_AVEC_FOURNISSEUR = {
+    id: "lb-orph",
+    listeBesoinsId: "bes-1",
+    designation: "Aliment 6mm",
+    produitId: "prod-3",
+    quantite: 10,
+    unite: null,
+    prixEstime: 700,
+    prixReel: 720,
+    commandeId: null,
+    createdAt: new Date(),
+    produit: {
+      id: "prod-3",
+      nom: "Aliment 6mm",
+      categorie: "ALIMENT",
+      uniteAchat: null,
+      contenance: null,
+      fournisseur: { id: "fourn-A" },
+    },
+    lignesDepense: [],
+  };
+
+  it("cree une Commande BROUILLON pour des lignes orphelines (CLOTUREE)", async () => {
+    mockListeBesoinsFindFirst.mockResolvedValue({
+      ...FAKE_LISTE_CLOTUREE,
+      lignes: [ORPHELINE_AVEC_FOURNISSEUR],
+    });
+    mockCommandeFindFirst.mockResolvedValue(null);
+    mockCommandeCreate.mockResolvedValue({
+      id: "cmd-new",
+      numero: "CMD-2026-005",
+      lignes: [{ id: "lc-new", produitId: "prod-3" }],
+    });
+    mockLigneBesoinUpdate.mockResolvedValue({ id: "lb-orph" });
+    mockListeBesoinsFindUniqueOrThrow.mockResolvedValue({
+      ...FAKE_LISTE_CLOTUREE,
+      lignes: [],
+      depenses: [],
+      demandeur: null,
+      valideur: null,
+      vague: null,
+      _count: { lignes: 1 },
+    });
+
+    await creerCommandeDepuisBesoin("bes-1", "site-1", "user-1", {
+      ligneBesoinIds: ["lb-orph"],
+    });
+
+    expect(mockCommandeCreate).toHaveBeenCalledTimes(1);
+    const cmdArgs = mockCommandeCreate.mock.calls[0][0];
+    expect(cmdArgs.data.statut).toBe("BROUILLON");
+    expect(cmdArgs.data.fournisseurId).toBe("fourn-A");
+    expect(cmdArgs.data.listeBesoinsId).toBe("bes-1");
+    // prixUnitaire utilise prixReel quand present
+    expect(cmdArgs.data.lignes.create[0].prixUnitaire).toBe(720);
+
+    // La ligne a son commandeId rempli (et pas LigneDepense.updateMany car aucune existante)
+    expect(mockLigneBesoinUpdate).toHaveBeenCalledTimes(1);
+    expect(mockLigneDepenseUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it("rattache une LigneDepense existante a la nouvelle LigneCommande", async () => {
+    const orphelineAvecDepense = {
+      ...ORPHELINE_AVEC_FOURNISSEUR,
+      id: "lb-orph-2",
+      lignesDepense: [{ id: "ld-existing" }],
+    };
+    mockListeBesoinsFindFirst.mockResolvedValue({
+      ...FAKE_LISTE_CLOTUREE,
+      lignes: [orphelineAvecDepense],
+    });
+    mockCommandeFindFirst.mockResolvedValue(null);
+    mockCommandeCreate.mockResolvedValue({
+      id: "cmd-new",
+      numero: "CMD-2026-006",
+      lignes: [{ id: "lc-new", produitId: "prod-3" }],
+    });
+    mockLigneBesoinUpdate.mockResolvedValue({ id: "lb-orph-2" });
+    mockLigneDepenseUpdateMany.mockResolvedValue({ count: 1 });
+    mockListeBesoinsFindUniqueOrThrow.mockResolvedValue({
+      ...FAKE_LISTE_CLOTUREE,
+      lignes: [],
+      depenses: [],
+      demandeur: null,
+      valideur: null,
+      vague: null,
+      _count: { lignes: 1 },
+    });
+
+    await creerCommandeDepuisBesoin("bes-1", "site-1", "user-1", {
+      ligneBesoinIds: ["lb-orph-2"],
+    });
+
+    // LigneDepense.updateMany doit lier ligneCommandeId pour eviter le double comptage
+    expect(mockLigneDepenseUpdateMany).toHaveBeenCalledTimes(1);
+    const args = mockLigneDepenseUpdateMany.mock.calls[0][0];
+    expect(args.where.ligneBesoinId).toBe("lb-orph-2");
+    expect(args.data.ligneCommandeId).toBe("lc-new");
+  });
+
+  it("rejette une ligne deja liee a une commande", async () => {
+    const dejaCommandee = {
+      ...ORPHELINE_AVEC_FOURNISSEUR,
+      commandeId: "cmd-deja",
+    };
+    mockListeBesoinsFindFirst.mockResolvedValue({
+      ...FAKE_LISTE_CLOTUREE,
+      lignes: [dejaCommandee],
+    });
+
+    await expect(
+      creerCommandeDepuisBesoin("bes-1", "site-1", "user-1", {
+        ligneBesoinIds: ["lb-orph"],
+      })
+    ).rejects.toThrow(/deja liee a une commande/);
+  });
+
+  it("rejette une ligne sans produit", async () => {
+    const ligneSansProduit = {
+      ...ORPHELINE_AVEC_FOURNISSEUR,
+      produitId: null,
+      produit: null,
+    };
+    mockListeBesoinsFindFirst.mockResolvedValue({
+      ...FAKE_LISTE_CLOTUREE,
+      lignes: [ligneSansProduit],
+    });
+
+    await expect(
+      creerCommandeDepuisBesoin("bes-1", "site-1", "user-1", {
+        ligneBesoinIds: ["lb-orph"],
+      })
+    ).rejects.toThrow(/n'a pas de produit lie/);
+  });
+
+  it("rejette si le besoin n'est pas TRAITEE/CLOTUREE", async () => {
+    mockListeBesoinsFindFirst.mockResolvedValue({
+      ...FAKE_LISTE_SOUMISE,
+      lignes: [ORPHELINE_AVEC_FOURNISSEUR],
+    });
+
+    await expect(
+      creerCommandeDepuisBesoin("bes-1", "site-1", "user-1", {
+        ligneBesoinIds: ["lb-orph"],
+      })
+    ).rejects.toThrow(/TRAITEE ou CLOTUREE/);
+  });
+
+  it("rejette si aucun fournisseur resolvable", async () => {
+    const sansFournisseur = {
+      ...ORPHELINE_AVEC_FOURNISSEUR,
+      produit: { ...ORPHELINE_AVEC_FOURNISSEUR.produit, fournisseur: null },
+    };
+    mockListeBesoinsFindFirst.mockResolvedValue({
+      ...FAKE_LISTE_CLOTUREE,
+      lignes: [sansFournisseur],
+    });
+
+    await expect(
+      creerCommandeDepuisBesoin("bes-1", "site-1", "user-1", {
+        ligneBesoinIds: ["lb-orph"],
+      })
+    ).rejects.toThrow(/Aucun fournisseur n'est defini/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/besoins/[id]/commandes — Validation route
+// ---------------------------------------------------------------------------
+
+import { POST as POST_CREER_COMMANDE } from "@/app/api/besoins/[id]/commandes/route";
+
+describe("POST /api/besoins/[id]/commandes", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("retourne 400 si ligneBesoinIds vide", async () => {
+    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
+
+    const req = makeRequest(
+      "http://localhost:3000/api/besoins/bes-1/commandes",
+      {
+        method: "POST",
+        body: JSON.stringify({ ligneBesoinIds: [] }),
+      }
+    );
+    const res = await POST_CREER_COMMANDE(req, PARAMS);
+    expect(res.status).toBe(400);
+  });
+
+  it("retourne 403 sans permission BESOINS_TRAITER", async () => {
+    const { ForbiddenError } = await import("@/lib/permissions");
+    mockRequirePermission.mockRejectedValue(
+      new ForbiddenError("Permission refusee")
+    );
+
+    const req = makeRequest(
+      "http://localhost:3000/api/besoins/bes-1/commandes",
+      {
+        method: "POST",
+        body: JSON.stringify({ ligneBesoinIds: ["lb-1"] }),
+      }
+    );
+    const res = await POST_CREER_COMMANDE(req, PARAMS);
+    expect(res.status).toBe(403);
+  });
+
+  it("retourne 201 apres creation reussie", async () => {
+    mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
+    mockListeBesoinsFindFirst.mockResolvedValue({
+      ...FAKE_LISTE_TRAITEE,
+      lignes: [
+        {
+          id: "lb-1",
+          listeBesoinsId: "bes-1",
+          designation: "Aliment 3mm",
+          produitId: "prod-1",
+          quantite: 50,
+          unite: null,
+          prixEstime: 800,
+          prixReel: null,
+          commandeId: null,
+          createdAt: new Date(),
+          produit: {
+            id: "prod-1",
+            nom: "Aliment 3mm",
+            categorie: "ALIMENT",
+            uniteAchat: null,
+            contenance: null,
+            fournisseur: { id: "fourn-1" },
+          },
+          lignesDepense: [],
+        },
+      ],
+    });
+    mockCommandeFindFirst.mockResolvedValue(null);
+    mockCommandeCreate.mockResolvedValue({
+      id: "cmd-new",
+      numero: "CMD-2026-010",
+      lignes: [{ id: "lc-new", produitId: "prod-1" }],
+    });
+    mockLigneBesoinUpdate.mockResolvedValue({ id: "lb-1" });
+    mockListeBesoinsFindUniqueOrThrow.mockResolvedValue({
+      ...FAKE_LISTE_TRAITEE,
+      lignes: [],
+      depenses: [],
+      demandeur: null,
+      valideur: null,
+      vague: null,
+      _count: { lignes: 1 },
+    });
+
+    const req = makeRequest(
+      "http://localhost:3000/api/besoins/bes-1/commandes",
+      {
+        method: "POST",
+        body: JSON.stringify({ ligneBesoinIds: ["lb-1"] }),
+      }
+    );
+    const res = await POST_CREER_COMMANDE(req, PARAMS);
+    expect(res.status).toBe(201);
   });
 });

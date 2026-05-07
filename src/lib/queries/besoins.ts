@@ -1,14 +1,22 @@
 import { prisma } from "@/lib/db";
 import { generateNextNumero } from "./numero-utils";
-import { StatutBesoins, StatutCommande, CategorieDepense, CategorieProduit } from "@/types";
+import {
+  StatutBesoins,
+  StatutCommande,
+  CategorieDepense,
+  CategorieProduit,
+  TypeMouvement,
+} from "@/types";
 import type {
   CreateListeBesoinsDTO,
   UpdateListeBesoinsDTO,
   ListeBesoinsFilters,
   TraiterBesoinsDTO,
   CloturerBesoinsDTO,
+  CreerCommandeDepuisBesoinDTO,
   VagueRatioDTO,
 } from "@/types";
+import { convertirQuantiteAchat } from "@/lib/calculs";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -477,8 +485,30 @@ export async function traiterBesoins(
       dto.ligneActions.map((a) => [a.ligneBesoinId, a.action])
     );
 
+    // Validation prealable : toute ligne COMMANDE doit avoir un fournisseur resolvable
+    // (sur le produit ou via dto.fournisseurId en fallback). Plus de skip silencieux.
+    const lignesCommandeSansFournisseur: string[] = [];
+    for (const ligne of liste.lignes) {
+      const action = actionsMap.get(ligne.id) ?? "LIBRE";
+      if (action === "COMMANDE") {
+        if (!ligne.produitId || !ligne.produit) {
+          lignesCommandeSansFournisseur.push(ligne.designation);
+          continue;
+        }
+        const fournisseurId =
+          ligne.produit.fournisseur?.id ?? dto.fournisseurId ?? null;
+        if (!fournisseurId) {
+          lignesCommandeSansFournisseur.push(ligne.designation);
+        }
+      }
+    }
+    if (lignesCommandeSansFournisseur.length > 0) {
+      throw new Error(
+        `Action COMMANDE impossible sans fournisseur pour : ${lignesCommandeSansFournisseur.join(", ")}. Selectionnez un fournisseur ou choisissez Achat direct.`
+      );
+    }
+
     // Grouper les lignes COMMANDE par fournisseurId
-    // Lignes sans fournisseurId valide sont exclues du groupement (pas de sentinel "INCONNU")
     const groupesFournisseur = new Map<
       string,
       Array<{
@@ -492,9 +522,9 @@ export async function traiterBesoins(
     for (const ligne of liste.lignes) {
       const action = actionsMap.get(ligne.id) ?? "LIBRE";
       if (action === "COMMANDE" && ligne.produitId && ligne.produit) {
+        // La validation prealable garantit qu'un fournisseur est resolvable
         const fournisseurId =
           ligne.produit.fournisseur?.id ?? dto.fournisseurId ?? null;
-        // Ignorer les lignes sans fournisseurId valide
         if (!fournisseurId) continue;
         if (!groupesFournisseur.has(fournisseurId)) {
           groupesFournisseur.set(fournisseurId, []);
@@ -639,6 +669,33 @@ export async function traiterBesoins(
       });
     }
 
+    // Pour les lignes LIBRE referencant un produit suivi en stock,
+    // creer un MouvementStock ENTREE et incrementer Produit.stockActuel.
+    // Un achat direct introduit physiquement les biens dans le site → le stock doit refleter cela.
+    for (const lb of liste.lignes) {
+      const action = actionsMap.get(lb.id) ?? "LIBRE";
+      if (action !== "LIBRE" || !lb.produitId || !lb.produit) continue;
+
+      const prixUnitaire = lb.prixReel ?? lb.prixEstime;
+      const quantiteBase = convertirQuantiteAchat(lb.quantite, lb.produit);
+      await tx.mouvementStock.create({
+        data: {
+          produitId: lb.produitId,
+          type: TypeMouvement.ENTREE,
+          quantite: lb.quantite,
+          prixTotal: lb.quantite * prixUnitaire,
+          userId,
+          date: new Date(),
+          notes: `Achat direct ${liste.numero}`,
+          siteId,
+        },
+      });
+      await tx.produit.update({
+        where: { id: lb.produitId },
+        data: { stockActuel: { increment: quantiteBase } },
+      });
+    }
+
     // Mettre a jour le statut de la liste
     return tx.listeBesoins.update({
       where: { id },
@@ -688,6 +745,174 @@ export async function cloturerBesoins(
         statut: StatutBesoins.CLOTUREE,
         montantReel,
       },
+      include: INCLUDE_LISTE_BESOINS,
+    });
+  });
+}
+
+/**
+ * Cree une ou plusieurs Commande BROUILLON pour des lignes de besoin orphelines
+ * (commandeId IS NULL) sur une ListeBesoins TRAITEE ou CLOTUREE.
+ *
+ * Use case : recuperer un besoin clos dont certaines lignes n'ont jamais ete
+ * commandees (oubli, fournisseur initialement manquant, etc.).
+ *
+ * - Lignes ciblees : doivent appartenir au besoin, avoir produitId != null, commandeId == null.
+ * - Groupement par fournisseur (du produit ou dto.fournisseurId en fallback).
+ * - Aucune modification du statut de la ListeBesoins.
+ * - Si une LigneDepense existe deja pour la ligne (LIBRE precedent), elle est rattachee
+ *   a la nouvelle LigneCommande pour qu'a la reception, recevoirCommande ne re-cree
+ *   pas une depense en double.
+ */
+export async function creerCommandeDepuisBesoin(
+  id: string,
+  siteId: string,
+  userId: string,
+  dto: CreerCommandeDepuisBesoinDTO
+) {
+  if (!Array.isArray(dto.ligneBesoinIds) || dto.ligneBesoinIds.length === 0) {
+    throw new Error("Au moins une ligne doit etre selectionnee.");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const liste = await tx.listeBesoins.findFirst({
+      where: { id, siteId },
+      include: {
+        lignes: {
+          include: {
+            produit: {
+              include: { fournisseur: { select: { id: true } } },
+            },
+            lignesDepense: { select: { id: true } },
+          },
+        },
+      },
+    });
+    if (!liste) throw new Error("Liste de besoins introuvable");
+    if (
+      liste.statut !== StatutBesoins.TRAITEE &&
+      liste.statut !== StatutBesoins.CLOTUREE
+    ) {
+      throw new Error(
+        `La creation de commande post-traitement n'est possible que pour les besoins TRAITEE ou CLOTUREE (statut actuel : ${liste.statut}).`
+      );
+    }
+
+    const lignesMap = new Map(liste.lignes.map((l) => [l.id, l]));
+    const cibles: typeof liste.lignes = [];
+    for (const ligneId of dto.ligneBesoinIds) {
+      const ligne = lignesMap.get(ligneId);
+      if (!ligne) {
+        throw new Error(`Ligne ${ligneId} introuvable dans le besoin ${liste.numero}.`);
+      }
+      if (!ligne.produitId || !ligne.produit) {
+        throw new Error(
+          `La ligne « ${ligne.designation} » n'a pas de produit lie : impossible de creer une commande.`
+        );
+      }
+      if (ligne.commandeId) {
+        throw new Error(
+          `La ligne « ${ligne.designation} » est deja liee a une commande.`
+        );
+      }
+      cibles.push(ligne);
+    }
+
+    // Verifier que toutes les lignes cibles ont un fournisseur resolvable
+    const sansFournisseur: string[] = [];
+    for (const ligne of cibles) {
+      const fournisseurId =
+        ligne.produit?.fournisseur?.id ?? dto.fournisseurId ?? null;
+      if (!fournisseurId) sansFournisseur.push(ligne.designation);
+    }
+    if (sansFournisseur.length > 0) {
+      throw new Error(
+        `Aucun fournisseur n'est defini pour : ${sansFournisseur.join(", ")}. Selectionnez un fournisseur.`
+      );
+    }
+
+    // Grouper par fournisseur
+    const groupes = new Map<string, typeof cibles>();
+    for (const ligne of cibles) {
+      const fournisseurId =
+        ligne.produit!.fournisseur?.id ?? dto.fournisseurId!;
+      if (!groupes.has(fournisseurId)) groupes.set(fournisseurId, []);
+      groupes.get(fournisseurId)!.push(ligne);
+    }
+
+    const dateCommande = dto.dateCommande ? new Date(dto.dateCommande) : new Date();
+    const annee = dateCommande.getFullYear();
+
+    // Generer numero de base CMD-YYYY-NNN (suivant le pattern de traiterBesoins)
+    const dernierCmd = await tx.commande.findFirst({
+      where: { siteId, numero: { startsWith: `CMD-${annee}-` } },
+      orderBy: { numero: "desc" },
+      select: { numero: true },
+    });
+    let seqCmd = 1;
+    if (dernierCmd) {
+      const p = dernierCmd.numero.split("-")[2];
+      seqCmd = (parseInt(p, 10) || 0) + 1;
+    }
+
+    const commandesCreees: { id: string; numero: string }[] = [];
+
+    for (const [fournisseurId, lignes] of groupes.entries()) {
+      const montantCmd = lignes.reduce(
+        (s, l) => s + l.quantite * (l.prixReel ?? l.prixEstime),
+        0
+      );
+      const numeroCmd = `CMD-${annee}-${String(seqCmd).padStart(3, "0")}`;
+      seqCmd++;
+
+      const commande = await tx.commande.create({
+        data: {
+          numero: numeroCmd,
+          fournisseurId,
+          statut: StatutCommande.BROUILLON,
+          dateCommande,
+          montantTotal: montantCmd,
+          userId,
+          siteId,
+          listeBesoinsId: liste.id,
+          lignes: {
+            create: lignes.map((l) => ({
+              produitId: l.produitId!,
+              quantite: l.quantite,
+              prixUnitaire: l.prixReel ?? l.prixEstime,
+            })),
+          },
+        },
+        include: { lignes: { select: { id: true, produitId: true } } },
+      });
+
+      commandesCreees.push({ id: commande.id, numero: commande.numero });
+
+      // Lier commandeId sur les LigneBesoin et rattacher les LigneDepense existantes
+      for (let i = 0; i < lignes.length; i++) {
+        const ligneBesoin = lignes[i];
+        const ligneCmd = commande.lignes[i];
+        if (!ligneCmd) continue;
+
+        await tx.ligneBesoin.update({
+          where: { id: ligneBesoin.id },
+          data: { commandeId: commande.id },
+        });
+
+        // Si une depense est deja comptabilisee pour cette ligne (cas LIBRE anterieur),
+        // la lier a la nouvelle LigneCommande pour eviter le double comptage a la reception.
+        if (ligneBesoin.lignesDepense && ligneBesoin.lignesDepense.length > 0) {
+          await tx.ligneDepense.updateMany({
+            where: { ligneBesoinId: ligneBesoin.id },
+            data: { ligneCommandeId: ligneCmd.id },
+          });
+        }
+      }
+    }
+
+    // Retourner la ListeBesoins rafraichie (statut inchange)
+    return tx.listeBesoins.findUniqueOrThrow({
+      where: { id },
       include: INCLUDE_LISTE_BESOINS,
     });
   });

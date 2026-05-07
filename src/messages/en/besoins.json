@@ -152,6 +152,15 @@
     "produitLabel": "Product:",
     "reelLabel": "Actual:",
     "depensesLiees": "Linked expenses ({count})",
-    "annuler": "Cancel"
+    "annuler": "Cancel",
+    "creerCommande": "Create order",
+    "creerCommandeTitle": "Create order for orphan lines",
+    "creerCommandeDescription": "Select the lines to include in the order. A supplier can be chosen if some products don't have one.",
+    "aCommander": "To order",
+    "achatDirectBadge": "Direct purchase",
+    "fournisseurFallbackLabel": "Supplier (if not set on product)",
+    "fournisseurPlaceholder": "Choose a supplier",
+    "aucuneLigneOrpheline": "All lines already have an order.",
+    "confirmerCreationCommande": "Create order"
   }
 }

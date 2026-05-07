@@ -27,6 +27,7 @@ import type {
   TraiterBesoinsDTO,
   CloturerBesoinsDTO,
   RejeterBesoinsDTO,
+  CreerCommandeDepuisBesoinDTO,
 } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -346,6 +347,20 @@ export function useDepenseService() {
     [call]
   );
 
+  const creerCommandeDepuisBesoin = useCallback(
+    (id: string, dto: CreerCommandeDepuisBesoinDTO) =>
+      call<ListeBesoinsWithRelations>(
+        `/api/besoins/${id}/commandes`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dto),
+        },
+        { successMessage: "Commande creee." }
+      ),
+    [call]
+  );
+
   const deleteBesoin = useCallback(
     (id: string) =>
       call<{ success: boolean }>(
@@ -382,6 +397,7 @@ export function useDepenseService() {
     rejeterBesoin,
     traiterBesoin,
     cloturerBesoin,
+    creerCommandeDepuisBesoin,
     deleteBesoin,
   };
 }

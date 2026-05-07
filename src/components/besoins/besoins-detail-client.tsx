@@ -14,6 +14,7 @@ import {
   CheckCheck,
   Package,
   ChevronRight,
+  ShoppingCart,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ import {
 import { useTranslations, useLocale } from "next-intl";
 import { StatutBesoins, UniteBesoin } from "@/types";
 import { useDepenseService } from "@/services";
+import { useFournisseursList } from "@/hooks/queries/use-stock-queries";
 import { ModifierBesoinDialog } from "./modifier-besoin-dialog";
 
 // ---------------------------------------------------------------------------
@@ -153,6 +155,11 @@ export function BesoinsDetailClient({
   const [traitOpen, setTraitOpen] = useState(false);
   const [clotureOpen, setClotureOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [creerCommandeOpen, setCreerCommandeOpen] = useState(false);
+  const [selectedOrphelines, setSelectedOrphelines] = useState<Set<string>>(
+    new Set()
+  );
+  const [selectedFournisseurId, setSelectedFournisseurId] = useState<string>("");
 
   // Traitement: action per ligne
   const [ligneActions, setLigneActions] = useState<
@@ -235,6 +242,28 @@ export function BesoinsDetailClient({
       router.push("/besoins");
     }
   }, [depenseService, liste.id, queryClient, router]);
+
+  // Lignes orphelines : referencent un produit mais n'ont pas encore de commande
+  const lignesOrphelines = liste.lignes.filter(
+    (l) => !l.commandeId && l.produitId
+  );
+
+  async function handleCreerCommande() {
+    const ligneBesoinIds = Array.from(selectedOrphelines);
+    if (ligneBesoinIds.length === 0) return;
+    const result = await depenseService.creerCommandeDepuisBesoin(liste.id, {
+      ligneBesoinIds,
+      fournisseurId: selectedFournisseurId || undefined,
+    });
+    if (result.ok && result.data) {
+      setListe(result.data as unknown as ListeBesoinsDetailData);
+      setCreerCommandeOpen(false);
+      setSelectedOrphelines(new Set());
+      setSelectedFournisseurId("");
+      queryClient.invalidateQueries({ queryKey: ["besoins"] });
+      queryClient.invalidateQueries({ queryKey: ["stock", "commandes"] });
+    }
+  }
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
@@ -590,6 +619,40 @@ export function BesoinsDetailClient({
         </Dialog>
       )}
 
+      {/* Bouton Creer commande pour lignes orphelines (besoin TRAITEE/CLOTUREE) */}
+      {canProcess &&
+        (statut === StatutBesoins.TRAITEE ||
+          statut === StatutBesoins.CLOTUREE) &&
+        lignesOrphelines.length > 0 && (
+          <CreerCommandeDialog
+            open={creerCommandeOpen}
+            onOpenChange={(o) => {
+              setCreerCommandeOpen(o);
+              if (o) {
+                setSelectedOrphelines(
+                  new Set(lignesOrphelines.map((l) => l.id))
+                );
+                setSelectedFournisseurId("");
+              }
+            }}
+            lignesOrphelines={lignesOrphelines}
+            selected={selectedOrphelines}
+            onToggle={(id) => {
+              setSelectedOrphelines((prev) => {
+                const next = new Set(prev);
+                if (next.has(id)) next.delete(id);
+                else next.add(id);
+                return next;
+              });
+            }}
+            fournisseurId={selectedFournisseurId}
+            onFournisseurChange={setSelectedFournisseurId}
+            onSubmit={handleCreerCommande}
+            t={t}
+            uniteLabel={uniteLabel}
+          />
+        )}
+
       {/* Lignes de besoin */}
       <Card className="mb-4">
         <CardHeader className="p-4 pb-2">
@@ -630,7 +693,7 @@ export function BesoinsDetailClient({
                         </p>
                       )}
                     </div>
-                    {l.commande && (
+                    {l.commande ? (
                       <Link
                         href={`/stock/commandes/${l.commande.id}`}
                         className="flex-shrink-0"
@@ -642,7 +705,17 @@ export function BesoinsDetailClient({
                           <ChevronRight className="h-3 w-3 ml-0.5" />
                         </Badge>
                       </Link>
-                    )}
+                    ) : (statut === StatutBesoins.TRAITEE ||
+                        statut === StatutBesoins.CLOTUREE) ? (
+                      <Badge
+                        variant={l.produitId ? "warning" : "default"}
+                        className="text-xs flex-shrink-0"
+                      >
+                        {l.produitId
+                          ? t("detail.aCommander")
+                          : t("detail.achatDirectBadge")}
+                      </Badge>
+                    ) : null}
                   </div>
                 </div>
               ))}
@@ -683,5 +756,117 @@ export function BesoinsDetailClient({
         </Card>
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sous-composant : Dialog de creation de commande pour lignes orphelines
+// ---------------------------------------------------------------------------
+
+interface CreerCommandeDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  lignesOrphelines: LigneBesoinData[];
+  selected: Set<string>;
+  onToggle: (id: string) => void;
+  fournisseurId: string;
+  onFournisseurChange: (id: string) => void;
+  onSubmit: () => void;
+  t: ReturnType<typeof useTranslations>;
+  uniteLabel: (u: UniteBesoin | string | null) => string;
+}
+
+function CreerCommandeDialog({
+  open,
+  onOpenChange,
+  lignesOrphelines,
+  selected,
+  onToggle,
+  fournisseurId,
+  onFournisseurChange,
+  onSubmit,
+  t,
+  uniteLabel,
+}: CreerCommandeDialogProps) {
+  const { data: fournisseurs } = useFournisseursList();
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild>
+        <Button variant="primary" className="w-full mb-4">
+          <ShoppingCart className="h-4 w-4 mr-1" />
+          {t("detail.creerCommande")}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("detail.creerCommandeTitle")}</DialogTitle>
+        </DialogHeader>
+        <DialogBody>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-muted-foreground">
+              {t("detail.creerCommandeDescription")}
+            </p>
+            {lignesOrphelines.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">
+                {t("detail.aucuneLigneOrpheline")}
+              </p>
+            ) : (
+              lignesOrphelines.map((l) => (
+                <label
+                  key={l.id}
+                  className="flex items-start gap-2 border border-border rounded p-3 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={selected.has(l.id)}
+                    onChange={() => onToggle(l.id)}
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{l.designation}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {l.quantite} {uniteLabel(l.unite ?? l.produit?.unite ?? "")}
+                    </p>
+                  </div>
+                </label>
+              ))
+            )}
+            <div>
+              <label className="text-xs text-muted-foreground">
+                {t("detail.fournisseurFallbackLabel")}
+              </label>
+              <Select
+                value={fournisseurId}
+                onValueChange={onFournisseurChange}
+              >
+                <SelectTrigger className="w-full mt-1">
+                  <SelectValue placeholder={t("detail.fournisseurPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(fournisseurs ?? []).map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.nom}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </DialogBody>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="ghost">{t("detail.annuler")}</Button>
+          </DialogClose>
+          <Button
+            variant="primary"
+            onClick={onSubmit}
+            disabled={selected.size === 0}
+          >
+            {t("detail.confirmerCreationCommande")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
