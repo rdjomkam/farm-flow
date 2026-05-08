@@ -44,11 +44,12 @@ function ConfidenceBadge({ level }: { level: string }) {
 }
 
 function FlagBadge({ type }: { type: "LOW_CONFIDENCE" | "HIGH_FCR" | "INSUFFICIENT_DATA" }) {
-  const t = useTranslations("analytics.fcrTrace.confidence");
+  const tConf = useTranslations("analytics.fcrTrace.confidence");
+  const tTrace = useTranslations("analytics.fcrTrace");
   const configs = {
     LOW_CONFIDENCE: { label: "R² < 0.85", className: "bg-amber-100 text-amber-700" },
-    HIGH_FCR: { label: "ICA > 3.0", className: "bg-red-100 text-red-700" },
-    INSUFFICIENT_DATA: { label: t("INSUFFICIENT_DATA"), className: "bg-gray-100 text-gray-600" },
+    HIGH_FCR: { label: tTrace("fcrHighWarning"), className: "bg-red-100 text-red-700" },
+    INSUFFICIENT_DATA: { label: tConf("INSUFFICIENT_DATA"), className: "bg-gray-100 text-gray-600" },
   };
   const { label, className } = configs[type];
   return (
@@ -99,7 +100,7 @@ function PeriodeBacRow({ periode }: { periode: FCRBacPeriode }) {
         <div className="flex items-center gap-2 shrink-0">
           {periode.fcr !== null && (
             <span className="text-xs font-semibold text-primary tabular-nums">
-              ICA {fmt(periode.fcr)}
+              {t("fcrInlineLabel")} {fmt(periode.fcr)}
             </span>
           )}
           {periode.flagHighFCR && <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />}
@@ -151,7 +152,7 @@ function PeriodeBacRow({ periode }: { periode: FCRBacPeriode }) {
         {/* FCR formula */}
         {periode.fcr !== null && (
           <div className="border-t border-border pt-2 flex items-center justify-between">
-            <span className="text-muted-foreground">ICA</span>
+            <span className="text-muted-foreground">{t("fcrInlineLabel")}</span>
             <code className="font-mono font-semibold text-primary text-xs">
               {fmt(periode.qtyAlimentKg)} / {fmt(periode.gainBiomasseKg)} = {fmt(periode.fcr)}
             </code>
@@ -222,7 +223,7 @@ function VagueSection({ vague, defaultOpen }: { vague: FCRByFeedVague; defaultOp
         <div className="flex items-center gap-2 shrink-0">
           {vague.fcrVague !== null && (
             <span className="text-sm font-bold text-primary tabular-nums">
-              ICA {fmt(vague.fcrVague)}
+              {t("fcrInlineLabel")} {fmt(vague.fcrVague)}
             </span>
           )}
           {vague.insufficientData && <FlagBadge type="INSUFFICIENT_DATA" />}
@@ -307,7 +308,7 @@ function AggregationSection({
         {t("agregationGlobale")}
       </p>
       <code className="block text-xs font-mono text-muted-foreground">
-        ICA = Σ aliment (vagues valides) / Σ gain biomasse
+        {t("fcrFormulaDisplay")}
       </code>
       <div className="grid grid-cols-2 gap-2 text-xs pt-1">
         <LabelValue label={t("totalAliment")} value={`${fmt(totalAlimentKg)} kg`} />

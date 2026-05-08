@@ -132,6 +132,9 @@
     "expectedRevenue": "Expected revenue",
     "growthCurve": "Growth curve",
     "chartLegend": "Solid line = actual measurements · Dashed = current SGR projection",
+    "objectiveLabel": "Obj. {value}g",
+    "actualWeightSeries": "Actual weight",
+    "projectedWeightSeries": "Projected weight",
     "tooltipDayLabel": "Day {day} — {date}",
     "sgrHarvest": "SGR harvest",
     "gompertzHarvest": "Gompertz harvest",
@@ -218,7 +221,10 @@
     "vagues": "{count} batch(es)",
     "kgUtilisesMeta": "{qty} kg used",
     "cout": "Cost",
-    "quantiteKg": "Quantity (kg)"
+    "quantiteKg": "Quantity (kg)",
+    "fcrChartName": "FCR",
+    "periodesParBac": "{count} period per tank",
+    "periodesParBacPlural": "{count} periods per tank"
   },
   "tailleGranule": {
     "label": "Pellet size",
@@ -395,7 +401,10 @@
     "periodeCountPlural": "{count} periods",
     "produitLabel": "Product",
     "icaFinal": "Final FCR",
-    "icaVague": "Batch FCR"
+    "icaVague": "Batch FCR",
+    "fcrInlineLabel": "FCR",
+    "fcrHighWarning": "FCR > 3.0",
+    "fcrFormulaDisplay": "FCR = Σ feed (valid batches) / Σ biomass gain"
   },
   "recommendation": {
     "title": "Recommendation"

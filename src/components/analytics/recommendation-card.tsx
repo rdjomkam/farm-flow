@@ -10,6 +10,7 @@ interface RecommendationCardProps {
 
 export function RecommendationCard({ recommandation }: RecommendationCardProps) {
   const t = useTranslations("analytics");
+
   if (!recommandation) return null;
 
   return (
