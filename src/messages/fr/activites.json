@@ -157,5 +157,10 @@
       "enregistrer": "Enregistrer"
     },
     "supprimer": "Supprimer ce placeholder personnalise ?"
+  },
+  "list": {
+    "count": "{count} activite",
+    "countPlural": "{count} activites",
+    "filtered": "(filtre)"
   }
 }

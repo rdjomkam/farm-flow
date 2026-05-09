@@ -117,6 +117,8 @@ export default async function RootLayout({
   let role: Role | null = null;
   let isImpersonating = false;
   let administratorLabel = "Administrateur";
+  let criticalErrorTitle = "Erreur critique";
+  let criticalErrorDescription = "L'application a rencontré une erreur. Veuillez rafraîchir la page.";
 
   console.log("[RootLayout] START");
   try {
@@ -140,8 +142,11 @@ export default async function RootLayout({
     try {
       const tCommon = await getTranslations("common.labels");
       administratorLabel = tCommon("administrator");
+      const tErrors = await getTranslations("errors.page");
+      criticalErrorTitle = tErrors("criticalLayoutErrorTitle");
+      criticalErrorDescription = tErrors("criticalLayoutErrorDescription");
     } catch {
-      // Fallback to hardcoded "Administrateur" already set above
+      // Fallback to hardcoded strings already set above
     }
   } catch (error: unknown) {
     // Re-throw Next.js internal errors (DYNAMIC_SERVER_USAGE, NEXT_REDIRECT, etc.)
@@ -256,9 +261,9 @@ export default async function RootLayout({
         <body>
           <div style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center", fontFamily: "system-ui, sans-serif", padding: "1rem", textAlign: "center" }}>
             <div>
-              <h1 style={{ fontSize: "1.25rem", fontWeight: 600 }}>Erreur critique</h1>
+              <h1 style={{ fontSize: "1.25rem", fontWeight: 600 }}>{criticalErrorTitle}</h1>
               <p style={{ color: "#6b7280", marginTop: "0.5rem" }}>
-                L&apos;application a rencontré une erreur. Veuillez rafraîchir la page.
+                {criticalErrorDescription}
               </p>
             </div>
           </div>

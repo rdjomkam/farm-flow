@@ -157,5 +157,10 @@
       "enregistrer": "Save"
     },
     "supprimer": "Delete this custom placeholder?"
+  },
+  "list": {
+    "count": "{count} activity",
+    "countPlural": "{count} activities",
+    "filtered": "(filtered)"
   }
 }
