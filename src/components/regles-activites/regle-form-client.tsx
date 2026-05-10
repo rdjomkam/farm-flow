@@ -41,28 +41,23 @@ import {
 // Helpers — résolution du preview avec valeurs d'exemple
 // ---------------------------------------------------------------------------
 
-const EXAMPLE_VALUES: Record<string, string> = {
-  quantite_calculee: "1,25",
-  taille: "12,5",
-  poids_moyen: "185,3",
-  stock: "50,00",
-  taux: "3,50",
-  valeur: "1,42",
-  semaine: "8",
-  produit: "Granule 3mm Pro",
-  seuil: "200,00",
-  jours_restants: "45",
-  quantite_recommandee: "25,00",
-  bac: "Bac 3",
-  biomasse: "124,50",
-  vague: "V2026-03",
-  jours_ecoules: "55",
-  valeur_marchande: "1 244 500",
-};
+const EXAMPLE_KEYS = [
+  "quantite_calculee", "taille", "poids_moyen", "stock", "taux", "valeur",
+  "semaine", "produit", "seuil", "jours_restants", "quantite_recommandee",
+  "bac", "biomasse", "vague", "jours_ecoules", "valeur_marchande",
+] as const;
 
-function resolvePreview(template: string, fallback: string): string {
+function buildExampleValues(t: (key: string) => string): Record<string, string> {
+  const values: Record<string, string> = {};
+  for (const key of EXAMPLE_KEYS) {
+    values[key] = t(`placeholders.${key}.example`);
+  }
+  return values;
+}
+
+function resolvePreview(template: string, exampleValues: Record<string, string>, fallback: string): string {
   return template.replace(/\{(\w+)\}/g, (_, key) => {
-    return EXAMPLE_VALUES[key] ?? fallback;
+    return exampleValues[key] ?? fallback;
   });
 }
 
@@ -323,7 +318,9 @@ function SectionHeader({ title, open, onToggle, badge }: SectionHeaderProps) {
 
 function TitrePreview({ titreTemplate }: { titreTemplate: string }) {
   const t = useTranslations("settings");
-  const resolved = resolvePreview(titreTemplate, t("rules.placeholders.dataUnavailable"));
+  const exampleValues = buildExampleValues(t);
+  const fallback = t("rules.placeholders.dataNotAvailable");
+  const resolved = resolvePreview(titreTemplate, exampleValues, fallback);
   if (!titreTemplate.trim()) return null;
 
   return (

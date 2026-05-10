@@ -116,10 +116,10 @@
       "personnalises": "Custom placeholders:",
       "masquer": "Hide",
       "nonReconnus": "Unrecognized placeholders: {keys} — they will be replaced by \"[data not available]\".",
+      "dataNotAvailable": "[data not available]",
       "apercuExemple": "Preview with sample data:",
       "fictifsWarning": "The displayed values are fictitious. Actual values are calculated during generation.",
-      "requis": "Required",
-      "dataUnavailable": "[data unavailable]"
+      "requis": "Required"
     },
     "phases": {
       "allPhases": "All phases"
