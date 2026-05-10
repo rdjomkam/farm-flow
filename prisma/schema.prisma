@@ -1033,6 +1033,7 @@ model User {
   notesEnvoyees          NoteIngenieur[]         @relation("NotesEnvoyees")
   // Sprint 24 — Calibrage
   calibrages             Calibrage[]             @relation("CalibrageUser")
+  releves                Releve[]                @relation("ReleveUser")
   // Sprint 26 — Modification tracking (ADR-014/ADR-015)
   releveModifications    ReleveModification[]
   calibrageModifications CalibrageModification[]
@@ -1234,6 +1235,8 @@ model Releve {
   bac        Bac?       @relation(fields: [bacId], references: [id])
   siteId     String
   site       Site       @relation(fields: [siteId], references: [id])
+  userId     String?
+  user       User?      @relation("ReleveUser", fields: [userId], references: [id])
   notes      String?
 
   // Champs biométrie
@@ -1299,6 +1302,7 @@ model Releve {
   @@index([calibrageId])
   @@index([siteId])
   @@index([lotAlevinsId])
+  @@index([userId])
 }
 
 // ──────────────────────────────────────────

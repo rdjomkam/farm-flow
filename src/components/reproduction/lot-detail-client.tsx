@@ -101,6 +101,7 @@ interface ReleveSummary {
   volumeRenouvele?: number | null;
   nombreRenouvellements?: number | null;
   consommations?: { produit: { nom: string; unite: string }; quantite: number }[];
+  user?: { name: string | null } | null;
 }
 
 interface VagueInfo {
@@ -596,6 +597,11 @@ export function LotDetailClient({ lot, permissions }: Props) {
                 {(r.consommations ?? []).length > 0 && (
                   <div className="text-xs text-muted-foreground">
                     {r.consommations!.map((c) => `${c.produit.nom} (${c.quantite} ${c.produit.unite})`).join(", ")}
+                  </div>
+                )}
+                {r.user?.name && (
+                  <div className="text-xs text-muted-foreground italic">
+                    — {r.user.name}
                   </div>
                 )}
               </div>

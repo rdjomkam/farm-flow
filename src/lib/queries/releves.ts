@@ -224,6 +224,7 @@ export async function createReleve(siteId: string, userId: string, data: CreateR
       vagueId: data.vagueId ?? null,
       bacId: data.bacId ?? null,
       siteId,
+      userId,
       notes: data.notes ?? null,
       // R1-S4 — lien lot d'alevins optionnel (ADR-044 §5.2, XOR avec vagueId)
       ...(data.lotAlevinsId && { lotAlevinsId: data.lotAlevinsId }),
