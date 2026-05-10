@@ -8,6 +8,8 @@ import { AccessDenied } from "@/components/ui/access-denied";
 import { CalibrageFormClient } from "@/components/calibrage/calibrage-form-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getVagueById } from "@/lib/queries/vagues";
+import { prisma } from "@/lib/db";
+import { computeVivantsByBac } from "@/lib/calculs";
 import { Permission, StatutVague, TypeSystemeBac } from "@/types";
 import type { BacResponse } from "@/types";
 
@@ -37,11 +39,24 @@ export default async function NouveauCalibragePage({
 
   const t = await getTranslations("calibrage.page");
 
+  // Fetch mortality + comptage relevés to compute live fish counts
+  const releves = await prisma.releve.findMany({
+    where: { vagueId: id, siteId: session.activeSiteId, typeReleve: { in: ["MORTALITE", "COMPTAGE"] } },
+    select: { bacId: true, typeReleve: true, nombreMorts: true, nombreCompte: true, date: true },
+    orderBy: { date: "asc" },
+  });
+
+  const vivantsByBac = computeVivantsByBac(
+    vague.bacs.map((b) => ({ id: b.id, nombreInitial: b.nombreInitial ?? null })),
+    releves,
+    vague.nombreInitial
+  );
+
   const bacs: BacResponse[] = vague.bacs.map((b) => ({
     id: b.id,
     nom: b.nom,
     volume: b.volume ?? 0,
-    nombrePoissons: b.nombrePoissons ?? 0,
+    nombrePoissons: vivantsByBac.get(b.id) ?? b.nombrePoissons ?? 0,
     nombreInitial: b.nombreInitial ?? null,
     poidsMoyenInitial: b.poidsMoyenInitial ?? null,
     typeSysteme: (b.typeSysteme as TypeSystemeBac | null) ?? null,

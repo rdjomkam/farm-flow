@@ -321,6 +321,25 @@ export async function createReleve(siteId: string, userId: string, data: CreateR
       }
     }
 
+    // Decrement fish count on mortality
+    if (data.typeReleve === TypeReleveEnum.MORTALITE && data.bacId && data.nombreMorts) {
+      await tx.bac.update({
+        where: { id: data.bacId },
+        data: { nombrePoissons: { decrement: data.nombreMorts } },
+      });
+      if (data.vagueId) {
+        const activeAssignation = await tx.assignationBac.findFirst({
+          where: { bacId: data.bacId, vagueId: data.vagueId, dateFin: null },
+        });
+        if (activeAssignation) {
+          await tx.assignationBac.update({
+            where: { id: activeAssignation.id },
+            data: { nombrePoissons: { decrement: data.nombreMorts } },
+          });
+        }
+      }
+    }
+
     // Liaison Planning ↔ Releve : auto-match ou liaison explicite
     const mappedTypeActivite = Object.entries(ACTIVITE_RELEVE_TYPE_MAP).find(
       ([, relType]) => relType === data.typeReleve
