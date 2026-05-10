@@ -15,6 +15,7 @@
     "toutes": "All"
   },
   "activations": {
+    "packLabel": "Pack:",
     "activeLe": "Activated on",
     "expireLe": "Expires on"
   },

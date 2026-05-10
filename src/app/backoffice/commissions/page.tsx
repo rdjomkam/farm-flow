@@ -15,9 +15,10 @@ import { AdminRetraitsList } from "@/components/commissions/admin-retraits-list"
 import { StatutPaiementAbo } from "@/types";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Commissions",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common.metadata");
+  return { title: t("adminCommissions") };
+}
 
 export const dynamic = "force-dynamic";
 

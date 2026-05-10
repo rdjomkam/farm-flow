@@ -30,7 +30,7 @@ export function ConfigElevageListClient({ configs: initialConfigs }: Props) {
   };
 
   const handleDupliquer = async (id: string, nom: string) => {
-    const nouveauNom = prompt(t("list.duplicatePrompt"), `${nom} (copie)`);
+    const nouveauNom = prompt(t("list.duplicatePrompt"), t("form.copieSuffix", { nom }));
     if (!nouveauNom) return;
     const result = await configService.dupliquerConfig(id, { nom: nouveauNom });
     if (result.ok && result.data) {

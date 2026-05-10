@@ -334,6 +334,7 @@
       "periode": "Période",
       "produitAlimentaire": "Produit alimentaire",
       "rechercheDescription": "Recherche dans la description",
+      "rechercheDescriptionPlaceholder": "Ex : \"stress\", \"coloration\"...",
       "filtresSpecifiques": "Filtres {type}",
       "frequenceAlimentation": "Fréquence d'alimentation",
       "poidsMoyen": "Poids moyen",

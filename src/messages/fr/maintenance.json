@@ -1,7 +1,9 @@
 {
+  "metadataTitle": "Maintenance | DKFarm",
   "title": "Plateforme en maintenance",
   "defaultMessage": "La plateforme DKFarm est temporairement indisponible pour une maintenance. Nous faisons de notre mieux pour revenir rapidement.",
   "estimatedEnd": "Retour prevu",
   "instructions": "Revenez plus tard ou contactez votre administrateur si le probleme persiste.",
-  "disableMaintenanceLink": "Desactiver la maintenance (backoffice)"
+  "disableMaintenanceLink": "Desactiver la maintenance (backoffice)",
+  "metaTitle": "Maintenance"
 }

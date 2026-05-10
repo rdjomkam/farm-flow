@@ -149,7 +149,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
             nombreAlevins: String(b.nombreAlevins),
             poidsMoyenInitial: String(b.poidsMoyenInitial),
           }))
-        : [{ nom: "Bac 1", volume: "", nombreAlevins: String(pack.nombreAlevins), poidsMoyenInitial: String(pack.poidsMoyenInitial) }]
+        : [{ nom: t("detail.bacLabel", { index: 1 }), volume: "", nombreAlevins: String(pack.nombreAlevins), poidsMoyenInitial: String(pack.poidsMoyenInitial) }]
     );
     setConfigBacsOpen(true);
   }
@@ -157,7 +157,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
   function addLocalBac() {
     setLocalBacs((prev) => [
       ...prev,
-      { nom: `Bac ${prev.length + 1}`, volume: "", nombreAlevins: "", poidsMoyenInitial: String(pack.poidsMoyenInitial) },
+      { nom: t("detail.bacLabel", { index: prev.length + 1 }), volume: "", nombreAlevins: "", poidsMoyenInitial: String(pack.poidsMoyenInitial) },
     ]);
   }
 
@@ -643,7 +643,7 @@ export function PackDetailClient({ pack, produits, configElevages, plans, permis
                 <div>
                   <p className="font-medium text-sm">{pp.produit.nom}</p>
                   <p className="text-xs text-muted-foreground">
-                    Quantite : {pp.quantite} {pp.unite ?? pp.produit.unite} — {formatNumber(pp.produit.prixUnitaire)} FCFA/{pp.produit.unite}
+                    {t("detail.quantiteLabelSansUnite")} : {pp.quantite} {pp.unite ?? pp.produit.unite} — {formatNumber(pp.produit.prixUnitaire)} FCFA/{pp.produit.unite}
                   </p>
                 </div>
                 {canManage && (

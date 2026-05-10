@@ -231,8 +231,8 @@ export function ActiviteListClient({
       {/* Barre filtres */}
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
-          {filtered.length} activite{filtered.length > 1 ? "s" : ""}
-          {hasActiveFilters && " (filtre)"}
+          {filtered.length > 1 ? t("list.countPlural", { count: filtered.length }) : t("list.count", { count: filtered.length })}
+          {hasActiveFilters && ` ${t("list.filtered")}`}
         </p>
         <Button
           variant="secondary"

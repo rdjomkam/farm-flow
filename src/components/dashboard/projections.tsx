@@ -242,7 +242,7 @@ function CourbeProjectionChart({ projection }: { projection: ProjectionVague }) 
               stroke="var(--accent-amber)"
               strokeDasharray="4 4"
               label={{
-                value: `Obj. ${poidsObjectif}g`,
+                value: tAnalytics("projections.objectiveLabel", { value: String(poidsObjectif) }),
                 fontSize: 10,
                 fill: "var(--accent-amber)",
               }}
@@ -251,7 +251,7 @@ function CourbeProjectionChart({ projection }: { projection: ProjectionVague }) 
             <Line
               type="monotone"
               dataKey="poidsReel"
-              name="poidsReel"
+              name={tAnalytics("projections.actualWeightSeries")}
               stroke="var(--primary)"
               strokeWidth={2}
               dot={{ r: 3, fill: "var(--primary)" }}
@@ -262,7 +262,7 @@ function CourbeProjectionChart({ projection }: { projection: ProjectionVague }) 
             <Line
               type="monotone"
               dataKey="poidsProjecte"
-              name="poidsProjecte"
+              name={tAnalytics("projections.projectedWeightSeries")}
               stroke="var(--accent-blue)"
               strokeWidth={2}
               strokeDasharray="6 3"

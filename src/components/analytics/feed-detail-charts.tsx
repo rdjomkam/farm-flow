@@ -163,7 +163,7 @@ export function FeedFCRChart({ evolutionFCR }: FeedFCRChartProps) {
                   <Line
                     type="monotone"
                     dataKey="fcr"
-                    name="FCR"
+                    name={tAnalytics("aliments.fcrChartName")}
                     stroke="var(--primary)"
                     strokeWidth={2}
                     dot={{ r: 3 }}
@@ -234,20 +234,20 @@ export function FeedVagueBreakdown({ parVague }: FeedVagueBreakdownProps) {
                     content={
                       <ChartTooltip
                         valueFormatter={(v, name) =>
-                          name === "Quantite (kg)" ? `${v} kg` : v.toFixed(2)
+                          name === tAnalytics("aliments.quantiteKg") ? `${v} kg` : v.toFixed(2)
                         }
                       />
                     }
                   />
                   <Bar
                     dataKey="quantite"
-                    name="Quantite (kg)"
+                    name={tAnalytics("aliments.quantiteKg")}
                     fill="var(--primary)"
                     radius={[4, 4, 0, 0]}
                   />
                   <Bar
                     dataKey="fcr"
-                    name="FCR"
+                    name={tAnalytics("aliments.fcrChartName")}
                     fill="hsl(var(--chart-2, 217 91% 60%))"
                     radius={[4, 4, 0, 0]}
                   />
@@ -278,7 +278,7 @@ export function FeedVagueBreakdown({ parVague }: FeedVagueBreakdownProps) {
               {v.periodesBac && v.periodesBac.length > 0 && (
                 <details className="mt-2">
                   <summary className="text-xs text-muted-foreground cursor-pointer select-none hover:text-foreground">
-                    {v.periodesBac.length} periode{v.periodesBac.length !== 1 ? "s" : ""} par bac
+                    {v.periodesBac.length !== 1 ? tAnalytics("aliments.periodesParBacPlural", { count: v.periodesBac.length }) : tAnalytics("aliments.periodesParBac", { count: v.periodesBac.length })}
                   </summary>
                   <div className="mt-1 flex flex-col gap-1 pl-2 border-l border-border">
                     {v.periodesBac.map((p, idx) => (
@@ -291,7 +291,7 @@ export function FeedVagueBreakdown({ parVague }: FeedVagueBreakdownProps) {
                         {" · "}
                         {p.qtyAlimentKg.toFixed(1)} kg
                         {p.fcr !== null && (
-                          <span className="ml-1 text-primary font-semibold">ICA {p.fcr.toFixed(2)}</span>
+                          <span className="ml-1 text-primary font-semibold">{tAnalytics("aliments.fcrChartName")} {p.fcr.toFixed(2)}</span>
                         )}
                       </div>
                     ))}

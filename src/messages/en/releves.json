@@ -334,6 +334,7 @@
       "periode": "Period",
       "produitAlimentaire": "Feed product",
       "rechercheDescription": "Search in description",
+      "rechercheDescriptionPlaceholder": "E.g.: \"stress\", \"coloration\"...",
       "filtresSpecifiques": "{type} filters",
       "frequenceAlimentation": "Feeding frequency",
       "poidsMoyen": "Average weight",

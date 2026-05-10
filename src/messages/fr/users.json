@@ -84,6 +84,7 @@
     "forcerDeconnexionConfirmDescription": "Toutes les sessions actives de {name} seront supprimees. Cette action ne peut pas etre annulee.",
     "annuler": "Annuler",
     "compteSysteme": "Cet utilisateur est un compte systeme. Les actions de securite ne sont pas disponibles.",
+    "sessionsDeleted": "{count} session(s) supprimee(s).",
     "errors": {
       "motDePasseTropCourt": "Le mot de passe doit contenir au moins 6 caracteres.",
       "motDePasseNonCorrespondant": "Les mots de passe ne correspondent pas."

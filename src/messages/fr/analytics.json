@@ -132,6 +132,9 @@
     "expectedRevenue": "Revenu attendu",
     "growthCurve": "Courbe de croissance",
     "chartLegend": "Ligne continue = mesures reelles · Pointilles = projection SGR actuel",
+    "objectiveLabel": "Obj. {value}g",
+    "actualWeightSeries": "Poids réel",
+    "projectedWeightSeries": "Poids projeté",
     "tooltipDayLabel": "Jour {day} — {date}",
     "sgrHarvest": "Recolte SGR",
     "gompertzHarvest": "Recolte Gompertz",
@@ -199,6 +202,7 @@
     "meilleurSGR": "Meilleur TCS",
     "coutKgLabel": "Coût/kg gain",
     "quantiteTotale": "Quantité totale",
+    "quantiteKg": "Quantité (kg)",
     "coutTotal": "Coût total",
     "survieAssociee": "Survie associée",
     "fcrMoyen": "ICA moyen",
@@ -216,7 +220,11 @@
     "changementGranule": "Chgt granulé",
     "correlationMortalite": "Corrélation mortalité",
     "aucuneDonneeMortalite": "Aucune donnée de mortalité disponible.",
-    "mortaliteElevee": "— élevée"
+    "mortaliteElevee": "— élevée",
+    "quantiteKg": "Quantité (kg)",
+    "fcrChartName": "ICA",
+    "periodesParBac": "{count} période par bac",
+    "periodesParBacPlural": "{count} périodes par bac"
   },
   "tailleGranule": {
     "label": "Taille granulé",
@@ -393,6 +401,12 @@
     "periodeCountPlural": "{count} periodes",
     "produitLabel": "Produit",
     "icaFinal": "ICA final",
-    "icaVague": "ICA vague"
+    "icaVague": "ICA vague",
+    "fcrInlineLabel": "ICA",
+    "fcrHighWarning": "ICA > 3.0",
+    "fcrFormulaDisplay": "ICA = Σ aliment (vagues valides) / Σ gain biomasse"
+  },
+  "recommendation": {
+    "title": "Recommandation"
   }
 }

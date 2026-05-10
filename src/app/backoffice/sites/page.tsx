@@ -14,9 +14,10 @@ import { getAdminSites } from "@/lib/queries/admin-sites";
 import { BackofficeSitesList } from "@/components/backoffice/backoffice-sites-list";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Sites",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common.metadata");
+  return { title: t("adminSites") };
+}
 
 export const dynamic = "force-dynamic";
 

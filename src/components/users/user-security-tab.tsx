@@ -88,7 +88,7 @@ export function UserSecurityTab({
       const resultData = data as { deletedCount?: number } | null;
       if (resultData?.deletedCount !== undefined) {
         toast({
-          title: `${resultData.deletedCount} session(s) supprimee(s).`,
+          title: t("security.sessionsDeleted", { count: resultData.deletedCount }),
           variant: "success",
         });
       }

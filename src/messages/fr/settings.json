@@ -116,6 +116,7 @@
       "personnalises": "Placeholders personnalises :",
       "masquer": "Masquer",
       "nonReconnus": "Placeholders non reconnus : {keys} — ils seront remplace par \"[donnee non disponible]\".",
+      "dataNotAvailable": "[donnee non disponible]",
       "apercuExemple": "Apercu avec donnees exemple :",
       "fictifsWarning": "Les valeurs affichees sont fictives. Les valeurs reelles sont calculees lors de la generation.",
       "requis": "Requis"
@@ -233,7 +234,10 @@
       "validation": {
         "conditionsRequises": "Au moins une condition de declenchement est requise",
         "phaseOrdreInvalide": "La phase minimale doit preceder la phase maximale",
-        "severiteRequise": "La severite est requise pour les alertes"
+        "severiteRequise": "La severite est requise pour les alertes",
+        "intervalleJoursRequired": "Doit etre un entier superieur a 0 (requis pour le declencheur Recurrent)",
+        "minChars": "Minimum {min} caracteres requis",
+        "maxChars": "Maximum {max} caracteres"
       },
       "conditionLabels": {
         "poidsDeclencheur": "Poids moyen declencheur (g)",
