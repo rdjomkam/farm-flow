@@ -48,7 +48,7 @@ export async function getVagueById(
       bacs: { orderBy: { nom: "asc" } },
       // ADR-043 Phase 2: inclure toutes les assignations (actives + terminées)
       assignations: {
-        include: { bac: { select: { id: true, nom: true, volume: true, nombreInitial: true, poidsMoyenInitial: true } } },
+        include: { bac: { select: { id: true, nom: true, volume: true, nombreInitial: true, poidsMoyenInitial: true, nombrePoissons: true } } },
         orderBy: { dateAssignation: "asc" },
       },
     },
@@ -63,11 +63,11 @@ export async function getVagueById(
   // puisse utiliser la distribution réelle (et non la répartition uniforme).
   const bacsFromAssignations = vague.assignations
     .filter((a) => a.dateFin === null)
-    .map((a) => ({ id: a.bac.id, nom: a.bac.nom, volume: a.bac.volume, nombreInitial: a.bac.nombreInitial, poidsMoyenInitial: a.bac.poidsMoyenInitial }));
+    .map((a) => ({ id: a.bac.id, nom: a.bac.nom, volume: a.bac.volume, nombreInitial: a.bac.nombreInitial, poidsMoyenInitial: a.bac.poidsMoyenInitial, nombrePoissons: a.nombrePoissons ?? a.bac.nombrePoissons ?? 0 }));
 
-  const byId = new Map<string, { id: string; nom: string; volume: number | null; nombreInitial: number | null; poidsMoyenInitial: number | null }>();
+  const byId = new Map<string, { id: string; nom: string; volume: number | null; nombreInitial: number | null; poidsMoyenInitial: number | null; nombrePoissons: number }>();
   for (const b of bacsFromAssignations) byId.set(b.id, b);
-  for (const b of vague.bacs) if (!byId.has(b.id)) byId.set(b.id, { id: b.id, nom: b.nom, volume: b.volume, nombreInitial: b.nombreInitial, poidsMoyenInitial: b.poidsMoyenInitial });
+  for (const b of vague.bacs) if (!byId.has(b.id)) byId.set(b.id, { id: b.id, nom: b.nom, volume: b.volume, nombreInitial: b.nombreInitial, poidsMoyenInitial: b.poidsMoyenInitial, nombrePoissons: b.nombrePoissons ?? 0 });
   const finalBacs = [...byId.values()].sort((a, b) => a.nom.localeCompare(b.nom));
 
   return {
@@ -98,7 +98,7 @@ export async function getVagueByIdWithReleves(
           where: { dateFin: null },
           // BUG-044: inclure nombreInitial et poidsMoyenInitial pour que computeVivantsByBac
           // utilise la distribution réelle par bac (et non la répartition uniforme).
-          include: { bac: { select: { id: true, nom: true, volume: true, nombreInitial: true, poidsMoyenInitial: true } } },
+          include: { bac: { select: { id: true, nom: true, volume: true, nombreInitial: true, poidsMoyenInitial: true, nombrePoissons: true } } },
         },
       },
     }),
@@ -128,10 +128,10 @@ export async function getVagueByIdWithReleves(
   // BUG-044: inclure nombreInitial et poidsMoyenInitial pour que computeVivantsByBac
   // utilise la distribution réelle par bac (et non la répartition uniforme).
   const bacsFromAssignations = vague.assignations
-    .map((a) => ({ id: a.bac.id, nom: a.bac.nom, volume: a.bac.volume, nombreInitial: a.bac.nombreInitial, poidsMoyenInitial: a.bac.poidsMoyenInitial }));
-  const byIdWithReleves = new Map<string, { id: string; nom: string; volume: number | null; nombreInitial: number | null; poidsMoyenInitial: number | null }>();
+    .map((a) => ({ id: a.bac.id, nom: a.bac.nom, volume: a.bac.volume, nombreInitial: a.bac.nombreInitial, poidsMoyenInitial: a.bac.poidsMoyenInitial, nombrePoissons: a.nombrePoissons ?? a.bac.nombrePoissons ?? 0 }));
+  const byIdWithReleves = new Map<string, { id: string; nom: string; volume: number | null; nombreInitial: number | null; poidsMoyenInitial: number | null; nombrePoissons: number }>();
   for (const b of bacsFromAssignations) byIdWithReleves.set(b.id, b);
-  for (const b of vague.bacs) if (!byIdWithReleves.has(b.id)) byIdWithReleves.set(b.id, { id: b.id, nom: b.nom, volume: b.volume, nombreInitial: b.nombreInitial, poidsMoyenInitial: b.poidsMoyenInitial });
+  for (const b of vague.bacs) if (!byIdWithReleves.has(b.id)) byIdWithReleves.set(b.id, { id: b.id, nom: b.nom, volume: b.volume, nombreInitial: b.nombreInitial, poidsMoyenInitial: b.poidsMoyenInitial, nombrePoissons: b.nombrePoissons ?? 0 });
   const finalBacs = [...byIdWithReleves.values()].sort((a, b) => a.nom.localeCompare(b.nom));
 
   return {
