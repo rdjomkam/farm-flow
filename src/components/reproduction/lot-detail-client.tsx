@@ -27,6 +27,7 @@ import {
 import { useApi } from "@/hooks/use-api";
 import { PhaseLot, StatutLotAlevins, DestinationLot, Permission } from "@/types";
 import { LotPhaseStepper } from "./lot-phase-stepper";
+import { ReleveDetails } from "@/components/releves/releve-details";
 import { LotSplitDialog } from "./lot-split-dialog";
 import { LotSortieDialog } from "./lot-sortie-dialog";
 
@@ -81,6 +82,26 @@ interface ReleveSummary {
   date: string;
   typeReleve: string;
   notes: string | null;
+  quantiteAliment?: number | null;
+  typeAliment?: string | null;
+  frequenceAliment?: number | null;
+  nombreMorts?: number | null;
+  causeMortalite?: string | null;
+  poidsMoyen?: number | null;
+  tailleMoyenne?: number | null;
+  echantillonCount?: number | null;
+  nombreCompte?: number | null;
+  methodeComptage?: string | null;
+  temperature?: number | null;
+  ph?: number | null;
+  oxygene?: number | null;
+  ammoniac?: number | null;
+  description?: string | null;
+  pourcentageRenouvellement?: number | null;
+  volumeRenouvele?: number | null;
+  nombreRenouvellements?: number | null;
+  consommations?: { produit: { nom: string; unite: string }; quantite: number }[];
+  user?: { name: string | null } | null;
 }
 
 interface VagueInfo {
@@ -562,21 +583,27 @@ export function LotDetailClient({ lot, permissions }: Props) {
             {lot.releves!.map((r) => (
               <div
                 key={r.id}
-                className="flex items-start justify-between p-3 rounded-lg border border-border text-sm"
+                className="flex flex-col gap-1 p-3 rounded-lg border border-border text-sm"
               >
-                <div className="flex flex-col gap-0.5">
+                <div className="flex items-center justify-between">
                   <span className="font-medium">
                     {typeReleveLabels[r.typeReleve] ?? r.typeReleve}
                   </span>
-                  {r.notes && (
-                    <span className="text-xs text-muted-foreground line-clamp-1">
-                      {r.notes}
-                    </span>
-                  )}
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    {new Date(r.date).toLocaleDateString(locale)}
+                  </span>
                 </div>
-                <span className="text-xs text-muted-foreground shrink-0">
-                  {new Date(r.date).toLocaleDateString(locale)}
-                </span>
+                <ReleveDetails releve={r as any} />
+                {(r.consommations ?? []).length > 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    {r.consommations!.map((c) => `${c.produit.nom} (${c.quantite} ${c.produit.unite})`).join(", ")}
+                  </div>
+                )}
+                {r.user?.name && (
+                  <div className="text-xs text-muted-foreground italic">
+                    — {r.user.name}
+                  </div>
+                )}
               </div>
             ))}
           </CardContent>
