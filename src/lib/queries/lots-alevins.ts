@@ -438,7 +438,6 @@ export async function getLotById(id: string, siteId: string) {
           volumeRenouvele: true,
           nombreRenouvellements: true,
           consommations: { include: { produit: { select: { nom: true, unite: true } } } },
-          user: { select: { name: true } },
         },
       },
     },
