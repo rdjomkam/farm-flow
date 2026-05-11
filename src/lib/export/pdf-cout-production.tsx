@@ -553,6 +553,9 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
             <Text style={styles.sectionTitle}>
               Dépenses récurrentes ({depensesRecurrentes.length})
             </Text>
+            <Text style={{ fontSize: 7, color: colors.muted, marginBottom: 6 }}>
+              Ratio = (jours × poissons initiaux) / total toutes vagues
+            </Text>
             <View style={styles.tableHeader}>
               <Text style={[styles.tableHeaderText, styles.colRecDesc]}>Description</Text>
               <Text style={[styles.tableHeaderText, styles.colRecMensuel]}>Coût/mois</Text>
@@ -561,24 +564,45 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
               <Text style={[styles.tableHeaderText, styles.colRecMois]}>Mois</Text>
             </View>
             {depensesRecurrentes.map((r, i) => (
-              <View
-                key={i}
-                style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]}
-                wrap={false}
-              >
-                <Text style={[styles.tableCell, styles.colRecDesc]}>{r.description}</Text>
-                <Text style={[styles.tableCell, styles.colRecMensuel]}>
-                  {formatMontant(r.coutMensuel)}
-                </Text>
-                <Text style={[styles.tableCell, styles.colRecRatio]}>
-                  {formatPct(r.ratioMoyen)}
-                </Text>
-                <Text style={[styles.tableCell, styles.colRecPart, { fontFamily: "Helvetica-Bold" }]}>
-                  {formatMontant(r.montantImpute)}
-                </Text>
-                <Text style={[styles.tableCell, styles.colRecMois]}>
-                  {r.moisImputes}
-                </Text>
+              <View key={i} wrap={false}>
+                <View
+                  style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]}
+                >
+                  <Text style={[styles.tableCell, styles.colRecDesc]}>{r.description}</Text>
+                  <Text style={[styles.tableCell, styles.colRecMensuel]}>
+                    {formatMontant(r.coutMensuel)}
+                  </Text>
+                  <Text style={[styles.tableCell, styles.colRecRatio]}>
+                    {formatPct(r.ratioMoyen)}
+                  </Text>
+                  <Text style={[styles.tableCell, styles.colRecPart, { fontFamily: "Helvetica-Bold" }]}>
+                    {formatMontant(r.montantImpute)}
+                  </Text>
+                  <Text style={[styles.tableCell, styles.colRecMois]}>
+                    {r.moisImputes}
+                  </Text>
+                </View>
+                {r.ratioDetail.map((rd) => (
+                  <View key={rd.mois} style={{ paddingLeft: 12, paddingVertical: 2, paddingRight: 8, backgroundColor: i % 2 === 1 ? colors.lightBg : "#ffffff" }}>
+                    <Text style={{ fontSize: 7, fontFamily: "Helvetica-Bold", color: colors.muted, marginBottom: 1 }}>
+                      {rd.mois}
+                    </Text>
+                    {rd.vagues.map((v) => (
+                      <View key={v.code} style={{ flexDirection: "row", justifyContent: "space-between", paddingLeft: 6 }}>
+                        <Text style={{ fontSize: 7, color: colors.muted }}>{v.code}</Text>
+                        <Text style={{ fontSize: 7, color: colors.muted }}>
+                          {v.jours}j × {formatNumPDF(v.nombreInitial)} = {formatNumPDF(v.poids)}
+                        </Text>
+                      </View>
+                    ))}
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", paddingLeft: 6, borderTopWidth: 0.5, borderTopColor: colors.border, borderTopStyle: "solid", marginTop: 1, paddingTop: 1 }}>
+                      <Text style={{ fontSize: 7, fontFamily: "Helvetica-Bold", color: colors.dark }}>Cette vague</Text>
+                      <Text style={{ fontSize: 7, fontFamily: "Helvetica-Bold", color: colors.dark }}>
+                        {formatNumPDF(rd.poidsCible)} / {formatNumPDF(rd.totalPoids)} = {(rd.ratio * 100).toFixed(1)} %
+                      </Text>
+                    </View>
+                  </View>
+                ))}
               </View>
             ))}
           </>

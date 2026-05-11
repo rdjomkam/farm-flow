@@ -662,6 +662,21 @@ export interface CoutProductionDepenseMultiVague {
   montantImpute: number;
 }
 
+export interface CoutProductionRatioDetailVague {
+  code: string;
+  jours: number;
+  nombreInitial: number;
+  poids: number;
+}
+
+export interface CoutProductionRatioDetail {
+  mois: string;
+  poidsCible: number;
+  totalPoids: number;
+  ratio: number;
+  vagues: CoutProductionRatioDetailVague[];
+}
+
 export interface CoutProductionDepenseRecurrente {
   description: string;
   categorie: CategorieDepense;
@@ -669,6 +684,7 @@ export interface CoutProductionDepenseRecurrente {
   moisImputes: number;
   ratioMoyen: number;
   montantImpute: number;
+  ratioDetail: CoutProductionRatioDetail[];
 }
 
 export interface CoutProductionVente {
@@ -876,6 +892,7 @@ export async function getCoutProductionVague(
       where: { siteId },
       select: {
         id: true,
+        code: true,
         dateDebut: true,
         dateFin: true,
         nombreInitial: true,
@@ -1096,22 +1113,31 @@ export async function getCoutProductionVague(
     let montantImputeTotal = 0;
     let moisImputes = 0;
     let sommeRatios = 0;
+    const ratioDetail: CoutProductionRatioDetail[] = [];
 
-    for (const { debutMois, finMois } of moisVague) {
-      // Jours de la vague cible dans ce mois
+    for (const { debutMois, finMois, label } of moisVague) {
       const joursVagueCibleMois = joursVagueDansMois(vagueCibleObj, debutMois, finMois);
       if (joursVagueCibleMois <= 0) continue;
 
-      // Poids = jours × nombreInitial pour chaque vague du site dans ce mois
       const poidsCible = joursVagueCibleMois * vague.nombreInitial;
       let totalPoids = 0;
+      const vaguesDetail: CoutProductionRatioDetailVague[] = [];
+
       for (const autreVague of toutesVaguesSite) {
         const jours = joursVagueDansMois(
           { dateDebut: autreVague.dateDebut, dateFin: autreVague.dateFin },
           debutMois,
           finMois
         );
-        totalPoids += jours * autreVague.nombreInitial;
+        if (jours <= 0) continue;
+        const poids = jours * autreVague.nombreInitial;
+        totalPoids += poids;
+        vaguesDetail.push({
+          code: autreVague.code,
+          jours,
+          nombreInitial: autreVague.nombreInitial,
+          poids,
+        });
       }
 
       if (totalPoids <= 0) continue;
@@ -1122,6 +1148,14 @@ export async function getCoutProductionVague(
       montantImputeTotal += montantMois;
       moisImputes += 1;
       sommeRatios += ratio;
+
+      ratioDetail.push({
+        mois: label,
+        poidsCible,
+        totalPoids,
+        ratio: Math.round(ratio * 10000) / 10000,
+        vagues: vaguesDetail,
+      });
     }
 
     if (moisImputes === 0) continue;
@@ -1136,6 +1170,7 @@ export async function getCoutProductionVague(
       moisImputes,
       ratioMoyen: Math.round(ratioMoyen * 10000) / 10000,
       montantImpute: Math.round(montantImputeTotal),
+      ratioDetail,
     });
   }
 

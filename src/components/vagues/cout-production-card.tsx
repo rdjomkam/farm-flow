@@ -24,7 +24,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ExportButton } from "@/components/ui/export-button";
 import { formatNumber } from "@/lib/format";
-import type { CoutProductionVague } from "@/lib/queries/finances";
+import type { CoutProductionVague, CoutProductionDepenseRecurrente } from "@/lib/queries/finances";
 import { CategorieDepense } from "@/types";
 
 interface CoutProductionCardProps {
@@ -288,23 +288,12 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
                 {/* Dépenses récurrentes */}
                 {depensesRecurrentes.length > 0 && (
                   <DetailSection title="Dépenses récurrentes">
+                    <p className="text-xs text-muted-foreground -mt-1 mb-2">
+                      Ratio = (jours × poissons initiaux) / total toutes vagues
+                    </p>
                     <div className="space-y-2">
                       {depensesRecurrentes.map((dep, i) => (
-                        <div key={i} className="rounded-md bg-muted/50 p-2 space-y-1">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="text-sm font-medium leading-tight min-w-0 truncate">
-                              {dep.description}
-                            </p>
-                            <span className="text-sm font-semibold tabular-nums shrink-0">
-                              {formatNumber(dep.montantImpute)} FCFA
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
-                            <span>Mensuel : {formatNumber(Math.round(dep.coutMensuel))} FCFA</span>
-                            <span>{dep.moisImputes} mois</span>
-                            <span>Ratio moy. : {(dep.ratioMoyen * 100).toFixed(1)} %</span>
-                          </div>
-                        </div>
+                        <RecurringExpenseCard key={i} dep={dep} />
                       ))}
                     </div>
                   </DetailSection>
@@ -355,6 +344,66 @@ function BiomasseBanner({ biomasseKg }: { biomasseKg: number }) {
       <p className="text-xs text-muted-foreground text-right leading-tight max-w-[160px]">
         Base du calcul coût/kg
       </p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// RecurringExpenseCard — carte dépense récurrente avec détail ratio expandable
+// ---------------------------------------------------------------------------
+
+function RecurringExpenseCard({ dep }: { dep: CoutProductionDepenseRecurrente }) {
+  const [showDetail, setShowDetail] = useState(false);
+
+  return (
+    <div className="rounded-md bg-muted/50 p-2 space-y-1">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-medium leading-tight min-w-0 truncate">
+          {dep.description}
+        </p>
+        <span className="text-sm font-semibold tabular-nums shrink-0">
+          {formatNumber(dep.montantImpute)} FCFA
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+        <span>Mensuel : {formatNumber(Math.round(dep.coutMensuel))} FCFA</span>
+        <span>{dep.moisImputes} mois</span>
+        <span>Ratio moy. : {(dep.ratioMoyen * 100).toFixed(1)} %</span>
+      </div>
+      {dep.ratioDetail.length > 0 && (
+        <button
+          type="button"
+          className="text-xs underline text-muted-foreground hover:text-foreground"
+          onClick={() => setShowDetail((v) => !v)}
+        >
+          {showDetail ? "Masquer le détail" : "Voir le détail du calcul"}
+        </button>
+      )}
+      {showDetail && dep.ratioDetail.length > 0 && (
+        <div className="mt-1 space-y-2 border-t border-border pt-1.5">
+          {dep.ratioDetail.map((rd) => (
+            <div key={rd.mois} className="space-y-0.5">
+              <p className="text-xs font-medium">{rd.mois}</p>
+              <div className="space-y-0.5 pl-2">
+                {rd.vagues.map((v) => (
+                  <div key={v.code} className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{v.code}</span>
+                    <span className="tabular-nums">
+                      {v.jours}j × {formatNumber(v.nombreInitial)} = {formatNumber(v.poids)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between text-xs font-medium pl-2 border-t border-border/50 pt-0.5">
+                <span>Cette vague</span>
+                <span className="tabular-nums">
+                  {formatNumber(rd.poidsCible)} / {formatNumber(rd.totalPoids)} = {(rd.ratio * 100).toFixed(1)} %
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
