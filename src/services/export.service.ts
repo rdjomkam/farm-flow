@@ -76,6 +76,15 @@ export function useExportService() {
     [download]
   );
 
+  const coutProductionPdf = useCallback(
+    (vagueId: string, vagueCode: string) =>
+      download(
+        `/api/export/vague/${vagueId}/cout-production`,
+        `cout-production-${vagueCode}.pdf`
+      ),
+    [download]
+  );
+
   return {
     vaguePdf,
     vagueReleves,
@@ -84,5 +93,6 @@ export function useExportService() {
     stock,
     finances,
     facturePdf,
+    coutProductionPdf,
   };
 }

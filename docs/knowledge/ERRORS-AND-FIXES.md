@@ -155,6 +155,158 @@ Le seed est toujours en SQL brut, jamais en TypeScript.
 
 ## Catégorie : Code
 
+### ERR-100 — ExportButton : `className="h-8"` écrase le touch target mobile interne
+**Sprint :** CP-3 | **Date :** 2026-05-11
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/components/vagues/cout-production-card.tsx`
+
+**Symptôme :**
+Le bouton d'export PDF dans la carte de coût de production mesure 32 px de hauteur sur mobile au lieu des 44 px minimum requis. Le composant `ExportButton` possède en interne un `min-h-[44px]` pour respecter les cibles tactiles mobile, mais le consommateur lui passe `className="h-8"` (32 px), ce qui l'écrase via la cascade Tailwind.
+
+**Cause racine :**
+`h-8` (hauteur fixe) a une spécificité supérieure à `min-h-[44px]` dans la cascade CSS. Passer une classe de hauteur fixe à un composant qui exprime sa contrainte d'accessibilité via `min-height` annule silencieusement cette contrainte.
+
+**Fix :**
+Supprimer `h-8` du `className` passé à `ExportButton`. Laisser la hauteur être gouvernée par les variants internes du composant.
+
+**Leçon / Règle :**
+Ne jamais passer de classes de hauteur fixe (`h-*`) à des composants UI qui définissent leur accessibilité via `min-h-[44px]`. Si une variante de taille est nécessaire, utiliser les props `size` ou `variant` exposées par le composant — pas un override CSS externe. Valider les touch targets (min 44 px) lors de la review mobile.
+
+---
+
+### ERR-099 — R2 : `labelCategorie()` utilise des strings en dur absents de l'enum `CategorieDepense`
+**Sprint :** CP-2 | **Date :** 2026-05-11
+**Sévérité :** Haute
+**Fichier(s) :** `src/lib/export/pdf-cout-production.tsx`
+
+**Symptôme :**
+La fonction `labelCategorie()` contient un `switch` avec des cas `"MEDICAMENT"`, `"ENTRETIEN"`, `"ENERGIE"`, `"MAIN_OEUVRE"` — valeurs qui n'existent pas dans l'enum `CategorieDepense`. Les valeurs réelles de l'enum sont : `ALIMENT`, `INTRANT`, `EQUIPEMENT`, `ELECTRICITE`, `EAU`, `LOYER`, `SALAIRE`, `TRANSPORT`, `VETERINAIRE`, `REPARATION`, `INVESTISSEMENT`, `AUTRE`. Au runtime, aucun cas du switch ne correspond, toutes les catégories tombent dans le `default`, et les libellés affichés sont tous identiques (la valeur par défaut).
+
+**Cause racine :**
+Double violation R2 : (1) les noms de valeurs ont été écrits de mémoire sans consulter la définition de l'enum dans `prisma/schema.prisma` ou `src/types/index.ts` ; (2) l'enum `CategorieDepense` n'a pas été importé, donc TypeScript ne pouvait pas signaler les cas non couverts.
+
+**Fix :**
+Importer `CategorieDepense` depuis `@/types`. Réécrire le switch en utilisant `CategorieDepense.ALIMENT`, `CategorieDepense.ELECTRICITE`, etc. Ajouter un cas `"MULTI_VAGUE"` (bucket synthétique, voir ERR-098) pour les coûts partagés.
+
+```typescript
+import { CategorieDepense } from "@/types";
+
+function labelCategorie(cat: CategorieDepense | "MULTI_VAGUE"): string {
+  switch (cat) {
+    case CategorieDepense.ALIMENT:      return "Alimentation";
+    case CategorieDepense.SALAIRE:      return "Salaires";
+    case CategorieDepense.ELECTRICITE:  return "Électricité";
+    // ... tous les 12 membres + "MULTI_VAGUE"
+    default: return cat;
+  }
+}
+```
+
+**Leçon / Règle :**
+Avant d'écrire un label mapping pour un enum, toujours lire sa définition dans `prisma/schema.prisma` (section `enum CategorieDepense`) ou `src/types/index.ts`. Ne jamais deviner les noms de valeurs. Importer l'enum et utiliser ses membres : TypeScript signalera alors tout cas manquant si le switch n'est pas exhaustif (avec `--noImplicitReturns` ou un `default` retournant `never`).
+
+---
+
+### ERR-098 — Type union non créé pour un bucket synthétique hors-enum (variante F4)
+**Sprint :** CP-1 | **Date :** 2026-05-11
+**Sévérité :** Basse
+**Fichier(s) :** `src/lib/queries/finances.ts`
+
+**Symptôme :**
+La fonction `getCoutProductionVague()` agrège les dépenses par catégorie, dont un bucket synthétique `"MULTI_VAGUE"` pour les coûts partagés entre plusieurs vagues. Ce bucket n'existe pas dans l'enum `CategorieDepense`. Le type de retour de la fonction l'acceptait silencieusement car tout était typé `string`, masquant l'incohérence.
+
+**Cause racine :**
+Quand un bucket synthétique est introduit dans une logique d'agrégation (valeur non présente dans l'enum officiel), il doit être rendu explicite dans le système de types. Sans type union, toute la couche type doit être élargie à `string` — ce qui perd la sûreté sur les valeurs légitimes.
+
+**Fix :**
+Créer un type union local : `type CategorieDepenseOuSynthetique = CategorieDepense | "MULTI_VAGUE"`. Utiliser ce type dans l'interface de retour de la fonction à la place de `string`.
+
+```typescript
+type CategorieDepenseOuSynthetique = CategorieDepense | "MULTI_VAGUE";
+
+interface CoutParCategorie {
+  categorie: CategorieDepenseOuSynthetique;
+  total: number;
+}
+```
+
+**Leçon / Règle :**
+Quand une fonction d'agrégation introduit un bucket synthétique absent de l'enum officiel, ne pas élargir le type à `string` — créer un type union local `EnumOfficiel | "VALEUR_SYNTHETIQUE"`. Cela documente explicitement les valeurs non-standard tout en préservant la sûreté de type sur les valeurs légitimes.
+
+---
+
+### ERR-097 — R3 : interfaces de retour typées `string` au lieu de l'enum correspondant
+**Sprint :** CP-1 | **Date :** 2026-05-11
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/queries/finances.ts`
+
+**Symptôme :**
+Les interfaces TypeScript décrivant le retour de `getCoutProductionVague()` contenaient `categorie: string` et `statut: string` à la place de `CategorieDepense` et `StatutVague`. TypeScript ne se plaignait pas à la compilation car les valeurs réelles (issues de Prisma) sont assignables à `string`. Mais les consommateurs de ces interfaces ne bénéficiaient d'aucune sûreté de type sur ces champs.
+
+**Cause racine :**
+Lors de l'écriture rapide d'une interface de retour, on a utilisé `string` comme type "générique" pour des champs qui correspondent en réalité à des enums Prisma. Ce pattern est une violation de R3 (Prisma = TypeScript identiques) : les champs Prisma typés `CategorieDepense` ou `StatutVague` doivent avoir le même type dans l'interface TypeScript miroir.
+
+**Fix :**
+Remplacer `string` par l'enum importé dans chaque interface de retour :
+
+```typescript
+// Avant (violation R3) :
+interface CoutParCategorie {
+  categorie: string;
+}
+interface CoutProductionResult {
+  statut: string;
+}
+
+// Après (R3 respectée) :
+import { CategorieDepense, StatutVague } from "@/types";
+interface CoutParCategorie {
+  categorie: CategorieDepense;
+}
+interface CoutProductionResult {
+  statut: StatutVague;
+}
+```
+
+**Leçon / Règle :**
+R3 s'applique aux interfaces de retour de fonctions, pas seulement aux modèles miroirs de Prisma. Chaque champ d'une interface qui correspond à un enum Prisma doit être typé avec cet enum (importé depuis `@/types`), jamais avec `string`. Auditer les interfaces de retour des fonctions de query layer lors de chaque review.
+
+---
+
+### ERR-096 — R2 : string en dur comme valeur dans une `Map` initialisée avec des clés d'enum
+**Sprint :** CP-1 | **Date :** 2026-05-11
+**Sévérité :** Moyenne
+**Fichier(s) :** `src/lib/queries/finances.ts`
+
+**Symptôme :**
+Une `Map` de correspondance (lookup) est initialisée avec des strings en dur comme clés : `new Map([["ALIMENT", "Alimentation"], ...])`. TypeScript ne lève aucune erreur si la Map est typée `Map<string, string>`. Si la valeur de l'enum `CategorieDepense.ALIMENT` change de nom, aucun compilateur ne signale la clé obsolète.
+
+**Cause racine :**
+Variante de ERR-018 : R2 est respecté pour les comparaisons et les filtres Prisma, mais oublié lors de l'initialisation des structures de données (Map, objet littéral) qui servent de lookup par valeur d'enum. Le problème est identique que la structure soit un objet (`{ ALIMENT: "..." }`) ou une Map.
+
+**Fix :**
+Typer la Map avec l'enum et utiliser les membres de l'enum comme clés :
+
+```typescript
+// Avant (violation R2) :
+const categorieMap = new Map([
+  ["ALIMENT", "Alimentation"],
+  ["MEDICAMENT", "Médicaments"],
+]);
+
+// Après (R2 respectée) :
+import { CategorieDepense } from "@/types";
+const categorieMap = new Map<CategorieDepense, string>([
+  [CategorieDepense.ALIMENT, "Alimentation"],
+  [CategorieDepense.MEDICAMENT, "Médicaments"],
+]);
+```
+
+**Leçon / Règle :**
+ERR-018 (objet constant indexé par enum) et cette entrée (Map initialisée avec des clés d'enum) sont la même violation R2. Typer explicitement `Map<MonEnum, ...>` et utiliser `MonEnum.VALEUR` comme clé garantit que le compilateur détecte toute clé obsolète après renommage d'enum. Voir aussi ERR-018 et ERR-031 pour les autres variantes du pattern.
+
+---
+
 ### ERR-093 — Prisma `select` partiel + cast forcé = helper de calcul reçoit des champs manquants silencieusement
 **Sprint :** Bugfixing | **Date :** 2026-05-03
 **Sévérité :** Haute

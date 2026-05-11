@@ -14,11 +14,13 @@ import { VagueBacsSection } from "@/components/vagues/vague-bacs-section";
 import { VagueBacsTimeline } from "@/components/vagues/vague-bacs-timeline";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { CalibragesList } from "@/components/calibrage/calibrages-list";
+import { CoutProductionCard } from "@/components/vagues/cout-production-card";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getVagueById } from "@/lib/queries/vagues";
 import { getReleves } from "@/lib/queries/releves";
 import { getIndicateursVague } from "@/lib/queries/indicateurs";
 import { getCalibrages } from "@/lib/queries/calibrages";
+import { getCoutProductionVague } from "@/lib/queries/finances";
 import { prisma } from "@/lib/db";
 import { computeVivantsByBac } from "@/lib/calculs";
 import { genererCourbeGompertz, calibrerGompertz, isCachedGompertzValid } from "@/lib/gompertz";
@@ -49,7 +51,7 @@ export default async function VagueDetailPage({
   const locale = await getLocale();
 
   const { id } = await params;
-  const [vague, biometriesData, relevesPreview, indicateurs, produitsDb, calibragesDb, gompertzRecord, configElevages, assignationsDb] = await Promise.all([
+  const [vague, biometriesData, relevesPreview, indicateurs, produitsDb, calibragesDb, gompertzRecord, configElevages, assignationsDb, coutProduction] = await Promise.all([
     getVagueById(id, session.activeSiteId),
     // Biometries pour le graphique — select restreint (ADR-038 A-D2)
     prisma.releve.findMany({
@@ -82,6 +84,8 @@ export default async function VagueDetailPage({
       include: { bac: { select: { id: true, nom: true, volume: true } } },
       orderBy: { dateAssignation: "asc" },
     }),
+    // Coût de production — erreur non-bloquante : on attrape pour éviter de crasher la page
+    getCoutProductionVague(id, session.activeSiteId).catch(() => null),
   ]);
 
   if (!vague) notFound();
@@ -315,6 +319,11 @@ export default async function VagueDetailPage({
           joursActuels={Math.floor((Date.now() - new Date(vague.dateDebut).getTime()) / 86400000)}
           dateDebut={new Date(vague.dateDebut)}
         />
+
+        {/* Coût de production */}
+        {permissions.includes(Permission.FINANCES_VOIR) && coutProduction && (
+          <CoutProductionCard data={coutProduction} vagueId={id} />
+        )}
 
         {/* Calibrages */}
         {permissions.includes(Permission.CALIBRAGES_VOIR) && (
