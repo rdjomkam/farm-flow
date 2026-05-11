@@ -83,6 +83,7 @@ export const PERMISSION_GROUPS = {
     Permission.VAGUES_VOIR,
     Permission.VAGUES_CREER,
     Permission.VAGUES_MODIFIER,
+    Permission.VAGUES_SUPPRIMER,
     Permission.BACS_GERER,
     Permission.BACS_MODIFIER,
     Permission.RELEVES_VOIR,

@@ -218,7 +218,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requirePermission(request, Permission.VAGUES_MODIFIER);
+    const auth = await requirePermission(request, Permission.VAGUES_SUPPRIMER);
     const { id } = await params;
     await deleteVague(id, auth.activeSiteId);
     return NextResponse.json({ success: true });
