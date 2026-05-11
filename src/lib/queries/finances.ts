@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { CategorieProduit, CategorieDepense, TypeMouvement, StatutDepense, FrequenceRecurrence, StatutVague } from "@/types";
-import { getPrixParUniteBase, computeNombreVivantsVague } from "@/lib/calculs";
+import { getPrixParUniteBase, computeNombreVivantsVague, computeVivantsByBac } from "@/lib/calculs";
 
 // ---------------------------------------------------------------------------
 // Types de retour locaux
@@ -917,34 +917,44 @@ export async function getCoutProductionVague(
 
   // -------------------------------------------------------------------------
   // 2bis. Calcul biomasse estimée (pour coutParKg)
+  // Même logique per-bac que getIndicateursVague pour cohérence
   // -------------------------------------------------------------------------
 
-  const nombreVivants = computeNombreVivantsVague(
-    bacsVague,
-    relevesVague,
-    vague.nombreInitial
-  );
+  const hasPerBacReleves = relevesVague.some((r) => r.bacId !== null);
+  const vivantsByBac = computeVivantsByBac(bacsVague, relevesVague, vague.nombreInitial);
 
-  // Poids moyen : weighted average from last biometrie relevé per bac, or global
-  const biometrieReleves = relevesVague
-    .filter((r) => r.typeReleve === "BIOMETRIE" && r.poidsMoyen !== null)
-    .sort((a, b) => {
-      const da = a.date ? new Date(a.date).getTime() : 0;
-      const db = b.date ? new Date(b.date).getTime() : 0;
-      return da - db;
-    });
+  let biomasseKg: number | null = null;
 
-  let poidsMoyenGlobal: number | null = null;
-  if (biometrieReleves.length > 0) {
-    // Use the last biometrie relevé (most recent)
-    const lastBiometrie = biometrieReleves[biometrieReleves.length - 1];
-    poidsMoyenGlobal = lastBiometrie.poidsMoyen as number;
+  if (hasPerBacReleves && bacsVague.length > 0) {
+    const biometriesParBac = new Map<string, { poidsMoyen: number }>();
+    for (const r of relevesVague) {
+      if (r.typeReleve === "BIOMETRIE" && r.poidsMoyen !== null && r.bacId) {
+        biometriesParBac.set(r.bacId, { poidsMoyen: r.poidsMoyen });
+      }
+    }
+
+    let totalBiomasse = 0;
+    let hasBiomasse = false;
+    for (const bac of bacsVague) {
+      const bio = biometriesParBac.get(bac.id);
+      const vivantsBac = vivantsByBac.get(bac.id) ?? 0;
+      if (bio && vivantsBac > 0) {
+        totalBiomasse += (bio.poidsMoyen * vivantsBac) / 1000;
+        hasBiomasse = true;
+      }
+    }
+    biomasseKg = hasBiomasse ? Math.round(totalBiomasse * 100) / 100 : null;
+  } else {
+    const nombreVivants = computeNombreVivantsVague(bacsVague, relevesVague, vague.nombreInitial);
+    const biometrieReleves = relevesVague
+      .filter((r) => r.typeReleve === "BIOMETRIE" && r.poidsMoyen !== null);
+    if (biometrieReleves.length > 0) {
+      const last = biometrieReleves[biometrieReleves.length - 1];
+      biomasseKg = nombreVivants > 0
+        ? Math.round(((last.poidsMoyen as number) * nombreVivants) / 1000 * 100) / 100
+        : null;
+    }
   }
-
-  const biomasseKg: number | null =
-    poidsMoyenGlobal !== null && nombreVivants > 0
-      ? (poidsMoyenGlobal * nombreVivants) / 1000
-      : null;
 
   // -------------------------------------------------------------------------
   // 3. Calcul cout aliments
