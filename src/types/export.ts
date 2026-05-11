@@ -27,6 +27,7 @@ import type {
   UniteStock,
   StatutVague,
 } from "@/types";
+import type { CoutProductionVague } from "@/lib/queries/finances";
 
 // ---------------------------------------------------------------------------
 // Types communs
@@ -553,4 +554,33 @@ export interface ExportVentesExcelDTO {
   dateFin: Date;
   /** Lignes de données pré-récupérées de la base */
   rows: VenteExcelRow[];
+}
+
+// ---------------------------------------------------------------------------
+// DTOs PDF — Coût de Production par Vague
+// ---------------------------------------------------------------------------
+
+/**
+ * DTO pour générer le rapport de coût de production d'une vague en PDF.
+ *
+ * Structure du PDF :
+ * - En-tête : site, code vague, nom vague, dates, statut
+ * - Résumé : coût total, revenus, marge, ROI, coût/kg, prix moyen vente/kg, marge/kg
+ * - Coûts par catégorie : tableau de répartition
+ * - Détail alimentation : par produit (quantité, prix unitaire, total)
+ * - Dépenses directes : (description, catégorie, montant, date)
+ * - Dépenses multi-vagues : (description, montant total, ratio, part allouée)
+ * - Dépenses récurrentes : (description, coût mensuel, ratio moyen, part allouée, mois concernés)
+ * - Ventes : (client, quantité, poids, montant, date)
+ * - Formule de calcul
+ */
+export interface CreateCoutProductionPDFDTO {
+  /** Informations du site (ferme) pour l'en-tête */
+  site: SiteInfoExport;
+
+  /** Date de génération du rapport */
+  dateGeneration: string;
+
+  /** Données complètes du coût de production de la vague */
+  coutProduction: CoutProductionVague;
 }

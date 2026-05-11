@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { CategorieProduit, CategorieDepense, TypeMouvement, StatutDepense } from "@/types";
+import { CategorieProduit, CategorieDepense, TypeMouvement, StatutDepense, FrequenceRecurrence, StatutVague } from "@/types";
 import { getPrixParUniteBase } from "@/lib/calculs";
 
 // ---------------------------------------------------------------------------
@@ -622,5 +622,586 @@ export async function getTopClients(
       .filter((c) => c.nombreVentes > 0)
       .sort((a, b) => b.totalVentes - a.totalVentes)
       .slice(0, limit),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Query 5 — Cout de production complet d'une vague
+// ---------------------------------------------------------------------------
+
+/**
+ * Interfaces de retour de getCoutProductionVague
+ */
+type CategorieDepenseAffichage = CategorieDepense | "MULTI_VAGUE";
+
+export interface CoutProductionVagueCategorie {
+  categorie: CategorieDepenseAffichage;
+  montant: number;
+  pourcentage: number;
+  parKg: number | null;
+}
+
+export interface CoutProductionDetailAliment {
+  produit: string;
+  quantite: number;
+  prixUnitaire: number;
+  total: number;
+}
+
+export interface CoutProductionDepenseDirecte {
+  date: Date;
+  categorie: CategorieDepense;
+  description: string;
+  montant: number;
+}
+
+export interface CoutProductionDepenseMultiVague {
+  description: string;
+  montantTotal: number;
+  ratio: number;
+  montantImpute: number;
+}
+
+export interface CoutProductionDepenseRecurrente {
+  description: string;
+  categorie: CategorieDepense;
+  coutMensuel: number;
+  moisImputes: number;
+  ratioMoyen: number;
+  montantImpute: number;
+}
+
+export interface CoutProductionVente {
+  date: Date;
+  client: string;
+  poidsKg: number;
+  prixKg: number;
+  montant: number;
+}
+
+export interface CoutProductionVague {
+  vague: {
+    id: string;
+    code: string;
+    statut: StatutVague;
+    dateDebut: Date;
+    dateFin: Date | null;
+    nombreInitial: number;
+    dureeJours: number;
+  };
+
+  resume: {
+    coutTotal: number;
+    poidsTotalVendu: number;
+    coutParKg: number | null;
+    prixMoyenVenteKg: number | null;
+    margeParKg: number | null;
+    revenus: number;
+    marge: number;
+    roi: number | null;
+  };
+
+  coutParCategorie: CoutProductionVagueCategorie[];
+
+  detailAliments: CoutProductionDetailAliment[];
+
+  depensesDirectes: CoutProductionDepenseDirecte[];
+
+  depensesMultiVagues: CoutProductionDepenseMultiVague[];
+
+  depensesRecurrentes: CoutProductionDepenseRecurrente[];
+
+  ventes: CoutProductionVente[];
+
+  formule: {
+    coutAliments: number;
+    coutDepensesDirectes: number;
+    coutMultiVagues: number;
+    coutRecurrents: number;
+    coutTotal: number;
+    poidsVendu: number;
+    coutParKg: number | null;
+  };
+}
+
+/**
+ * Calcule le cout de production complet d'une vague de poissons.
+ *
+ * ## Conventions anti double-comptage
+ * - **Aliments** : Les `ReleveConsommation` font foi pour les aliments.
+ *   Les `Depense` avec `categorieDepense = ALIMENT` sont EXCLUES des depenses
+ *   directes pour eviter de compter deux fois.
+ * - **Commandes** : Les `Depense` liees a une commande (`commandeId != null`)
+ *   sont exclues — elles sont deja tracees via MouvementStock.
+ *
+ * ## Allocation des depenses recurrentes
+ * Pour chaque `DepenseRecurrente` active (isActive = true ou
+ * derniereGeneration >= dateDebut de la vague), sur chaque mois calendaire
+ * de la vie de la vague :
+ * 1. Convertir en cout mensuel (MENSUEL x1, TRIMESTRIEL /3, ANNUEL /12).
+ * 2. Lister toutes les vagues du site actives ce mois (chevauchement).
+ * 3. Calculer les jours d'activite de chaque vague dans ce mois.
+ * 4. Quote-part = (joursVagueCible / totalJoursVagues) * coutMensuel.
+ *
+ * ## Vague EN_COURS
+ * `dateFin ?? new Date()` est utilise pour le calcul de duree et les
+ * allocations de depenses recurrentes.
+ *
+ * @param vagueId - ID de la vague a analyser
+ * @param siteId  - ID du site (multi-tenancy, R8)
+ */
+export async function getCoutProductionVague(
+  vagueId: string,
+  siteId: string
+): Promise<CoutProductionVague> {
+  // -------------------------------------------------------------------------
+  // 1. Charger la vague cible
+  // -------------------------------------------------------------------------
+  const vague = await prisma.vague.findUniqueOrThrow({
+    where: { id: vagueId, siteId },
+    select: {
+      id: true,
+      code: true,
+      statut: true,
+      dateDebut: true,
+      dateFin: true,
+      nombreInitial: true,
+    },
+  });
+
+  const dateFin = vague.dateFin ?? new Date();
+  const dureeMs = dateFin.getTime() - vague.dateDebut.getTime();
+  const dureeJours = Math.max(1, Math.round(dureeMs / (1000 * 60 * 60 * 24)));
+
+  // -------------------------------------------------------------------------
+  // 2. Charger toutes les donnees en parallele
+  // -------------------------------------------------------------------------
+  const [
+    releveConsommations,
+    depensesDirectes,
+    depensesBesoinsMultiVague,
+    depensesRecurrentesBrutes,
+    toutesVaguesSite,
+    ventes,
+  ] = await Promise.all([
+    // 2a. Consommations aliments (fait foi pour les aliments — ERR-093)
+    prisma.releveConsommation.findMany({
+      where: {
+        siteId,
+        releve: { vagueId },
+      },
+      select: {
+        quantite: true,
+        produit: {
+          select: {
+            nom: true,
+            prixUnitaire: true,
+            uniteAchat: true,
+            contenance: true,
+          },
+        },
+      },
+    }),
+
+    // 2b. Depenses directes liees a la vague
+    // Exclure: commandeId non null (anti double-comptage MouvementStock)
+    // Exclure: categorieDepense = ALIMENT (anti double-comptage ReleveConsommation)
+    prisma.depense.findMany({
+      where: {
+        siteId,
+        vagueId,
+        commandeId: null,
+        categorieDepense: { not: CategorieDepense.ALIMENT },
+      },
+      select: {
+        date: true,
+        categorieDepense: true,
+        description: true,
+        montantTotal: true,
+      },
+    }),
+
+    // 2c. Depenses multi-vague via ListeBesoins (vagueId null, listeBesoinsId non null)
+    // Exclure: commandeId non null + categorieDepense = ALIMENT
+    prisma.depense.findMany({
+      where: {
+        siteId,
+        listeBesoinsId: { not: null },
+        vagueId: null,
+        commandeId: null,
+        categorieDepense: { not: CategorieDepense.ALIMENT },
+      },
+      select: {
+        description: true,
+        montantTotal: true,
+        listeBesoins: {
+          select: {
+            vagues: {
+              select: { vagueId: true, ratio: true },
+            },
+          },
+        },
+      },
+    }),
+
+    // 2d. Depenses recurrentes du site
+    // isActive = true OU derniereGeneration >= dateDebut vague
+    prisma.depenseRecurrente.findMany({
+      where: {
+        siteId,
+        OR: [
+          { isActive: true },
+          { derniereGeneration: { gte: vague.dateDebut } },
+        ],
+        // createdAt <= dateFin vague (borne inf de validite — convention)
+        createdAt: { lte: dateFin },
+      },
+      select: {
+        description: true,
+        categorieDepense: true,
+        montantEstime: true,
+        frequence: true,
+        createdAt: true,
+        derniereGeneration: true,
+        isActive: true,
+      },
+    }),
+
+    // 2e. Toutes les vagues actives du site (pour allocation prorata mensuel)
+    prisma.vague.findMany({
+      where: { siteId },
+      select: {
+        id: true,
+        dateDebut: true,
+        dateFin: true,
+      },
+    }),
+
+    // 2f. Ventes de la vague
+    prisma.vente.findMany({
+      where: { siteId, vagueId },
+      select: {
+        createdAt: true,
+        poidsTotalKg: true,
+        prixUnitaireKg: true,
+        montantTotal: true,
+        client: { select: { nom: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+
+  // -------------------------------------------------------------------------
+  // 3. Calcul cout aliments
+  // -------------------------------------------------------------------------
+
+  // Aggreger par produit pour detailAliments
+  const alimentsMap = new Map<
+    string,
+    { quantite: number; prixUnitaire: number; total: number }
+  >();
+
+  let coutAliments = 0;
+  for (const rc of releveConsommations) {
+    const prixBase = getPrixParUniteBase(rc.produit);
+    const ligneTotal = rc.quantite * prixBase;
+    coutAliments += ligneTotal;
+
+    const existing = alimentsMap.get(rc.produit.nom) ?? {
+      quantite: 0,
+      prixUnitaire: prixBase,
+      total: 0,
+    };
+    existing.quantite += rc.quantite;
+    existing.total += ligneTotal;
+    alimentsMap.set(rc.produit.nom, existing);
+  }
+
+  const detailAliments: CoutProductionDetailAliment[] = Array.from(
+    alimentsMap.entries()
+  ).map(([nom, data]) => ({
+    produit: nom,
+    quantite: Math.round(data.quantite * 1000) / 1000,
+    prixUnitaire: Math.round(data.prixUnitaire * 100) / 100,
+    total: Math.round(data.total),
+  }));
+
+  // -------------------------------------------------------------------------
+  // 4. Calcul depenses directes (hors aliments, hors commandes)
+  // -------------------------------------------------------------------------
+
+  let coutDepensesDirectes = 0;
+  const depensesDirectesResult: CoutProductionDepenseDirecte[] = [];
+
+  for (const dep of depensesDirectes) {
+    coutDepensesDirectes += dep.montantTotal;
+    depensesDirectesResult.push({
+      date: dep.date,
+      categorie: dep.categorieDepense as unknown as CategorieDepense,
+      description: dep.description,
+      montant: Math.round(dep.montantTotal),
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // 5. Calcul depenses multi-vagues (prorata ratio ListeBesoins)
+  // -------------------------------------------------------------------------
+
+  let coutMultiVagues = 0;
+  const depensesMultiVaguesResult: CoutProductionDepenseMultiVague[] = [];
+
+  for (const dep of depensesBesoinsMultiVague) {
+    const vagueEntry = dep.listeBesoins?.vagues.find((v) => v.vagueId === vagueId);
+    if (!vagueEntry) continue;
+
+    const montantImpute = dep.montantTotal * vagueEntry.ratio;
+    coutMultiVagues += montantImpute;
+    depensesMultiVaguesResult.push({
+      description: dep.description,
+      montantTotal: Math.round(dep.montantTotal),
+      ratio: vagueEntry.ratio,
+      montantImpute: Math.round(montantImpute),
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // 6. Calcul depenses recurrentes (allocation prorata mensuel)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Retourne le nombre de jours de chevauchement entre une vague et un mois.
+   * debutMois et finMois sont les bornes inclusives du mois calendaire.
+   */
+  function joursVagueDansMois(
+    v: { dateDebut: Date; dateFin: Date | null },
+    debutMois: Date,
+    finMois: Date
+  ): number {
+    const vDebut = v.dateDebut;
+    const vFin = v.dateFin ?? new Date();
+    const debut = vDebut > debutMois ? vDebut : debutMois;
+    const fin = vFin < finMois ? vFin : finMois;
+    const diffMs = fin.getTime() - debut.getTime();
+    if (diffMs < 0) return 0;
+    return Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1;
+  }
+
+  // Generer la liste des mois calendaires couverts par la vague cible
+  const moisVague: Array<{ debutMois: Date; finMois: Date; label: string }> = [];
+  {
+    const d = new Date(
+      vague.dateDebut.getFullYear(),
+      vague.dateDebut.getMonth(),
+      1
+    );
+    const dernierMois = new Date(dateFin.getFullYear(), dateFin.getMonth(), 1);
+    while (d <= dernierMois) {
+      const year = d.getFullYear();
+      const month = d.getMonth();
+      const debutMois = new Date(year, month, 1);
+      const finMois = new Date(year, month + 1, 0); // dernier jour du mois
+      moisVague.push({
+        debutMois,
+        finMois,
+        label: `${year}-${String(month + 1).padStart(2, "0")}`,
+      });
+      d.setMonth(d.getMonth() + 1);
+    }
+  }
+
+  // Vague cible comme objet pour joursVagueDansMois
+  const vagueCibleObj = { dateDebut: vague.dateDebut, dateFin: vague.dateFin };
+
+  let coutRecurrents = 0;
+  const depensesRecurrentesResult: CoutProductionDepenseRecurrente[] = [];
+
+  for (const dr of depensesRecurrentesBrutes) {
+    // Convertir en cout mensuel selon frequence
+    let coutMensuel: number;
+    if (dr.frequence === FrequenceRecurrence.MENSUEL) {
+      coutMensuel = dr.montantEstime;
+    } else if (dr.frequence === FrequenceRecurrence.TRIMESTRIEL) {
+      coutMensuel = dr.montantEstime / 3;
+    } else {
+      // ANNUEL
+      coutMensuel = dr.montantEstime / 12;
+    }
+
+    let montantImputeTotal = 0;
+    let moisImputes = 0;
+    let sommeRatios = 0;
+
+    for (const { debutMois, finMois } of moisVague) {
+      // Jours de la vague cible dans ce mois
+      const joursVagueCibleMois = joursVagueDansMois(vagueCibleObj, debutMois, finMois);
+      if (joursVagueCibleMois <= 0) continue;
+
+      // Jours totaux de toutes les vagues du site dans ce mois
+      let totalJoursVagues = 0;
+      for (const autreVague of toutesVaguesSite) {
+        totalJoursVagues += joursVagueDansMois(
+          { dateDebut: autreVague.dateDebut, dateFin: autreVague.dateFin },
+          debutMois,
+          finMois
+        );
+      }
+
+      if (totalJoursVagues <= 0) continue;
+
+      const ratio = joursVagueCibleMois / totalJoursVagues;
+      const montantMois = ratio * coutMensuel;
+
+      montantImputeTotal += montantMois;
+      moisImputes += 1;
+      sommeRatios += ratio;
+    }
+
+    if (moisImputes === 0) continue;
+
+    const ratioMoyen = sommeRatios / moisImputes;
+    coutRecurrents += montantImputeTotal;
+
+    depensesRecurrentesResult.push({
+      description: dr.description,
+      categorie: dr.categorieDepense as unknown as CategorieDepense,
+      coutMensuel: Math.round(coutMensuel * 100) / 100,
+      moisImputes,
+      ratioMoyen: Math.round(ratioMoyen * 10000) / 10000,
+      montantImpute: Math.round(montantImputeTotal),
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // 7. Ventes
+  // -------------------------------------------------------------------------
+
+  let revenus = 0;
+  let poidsTotalVendu = 0;
+  const ventesResult: CoutProductionVente[] = [];
+
+  for (const v of ventes) {
+    revenus += v.montantTotal;
+    poidsTotalVendu += v.poidsTotalKg;
+    ventesResult.push({
+      date: v.createdAt,
+      client: v.client.nom,
+      poidsKg: Math.round(v.poidsTotalKg * 100) / 100,
+      prixKg: Math.round(v.prixUnitaireKg * 100) / 100,
+      montant: Math.round(v.montantTotal),
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // 8. Agregation finale
+  // -------------------------------------------------------------------------
+
+  const coutTotal =
+    coutAliments + coutDepensesDirectes + coutMultiVagues + coutRecurrents;
+
+  const coutParKg = poidsTotalVendu > 0 ? coutTotal / poidsTotalVendu : null;
+  const prixMoyenVenteKg = poidsTotalVendu > 0 ? revenus / poidsTotalVendu : null;
+  const marge = revenus - coutTotal;
+  const roi = coutTotal > 0 ? (marge / coutTotal) * 100 : null;
+  const margeParKg =
+    coutParKg !== null && prixMoyenVenteKg !== null
+      ? prixMoyenVenteKg - coutParKg
+      : null;
+
+  // -------------------------------------------------------------------------
+  // 9. Repartition par categorie
+  // -------------------------------------------------------------------------
+
+  const categorieMap = new Map<CategorieDepenseAffichage, number>();
+
+  // Aliments
+  if (coutAliments > 0) {
+    categorieMap.set(CategorieDepense.ALIMENT, (categorieMap.get(CategorieDepense.ALIMENT) ?? 0) + coutAliments);
+  }
+
+  // Depenses directes — agreger par categorieDepense
+  for (const dep of depensesDirectes) {
+    const cat = dep.categorieDepense as CategorieDepense;
+    categorieMap.set(cat, (categorieMap.get(cat) ?? 0) + dep.montantTotal);
+  }
+
+  // Depenses multi-vagues — agreger par categorie de la depense source
+  // (on n'a pas la categorie dans la sous-requete — on les groupe sous "MULTI_VAGUE")
+  for (const dep of depensesMultiVaguesResult) {
+    const montant = dep.montantImpute;
+    categorieMap.set(
+      "MULTI_VAGUE",
+      (categorieMap.get("MULTI_VAGUE") ?? 0) + montant
+    );
+  }
+
+  // Depenses recurrentes — agreger par categorieDepense
+  for (const dr of depensesRecurrentesResult) {
+    const cat = dr.categorie;
+    categorieMap.set(cat, (categorieMap.get(cat) ?? 0) + dr.montantImpute);
+  }
+
+  const coutParCategorie: CoutProductionVagueCategorie[] = Array.from(
+    categorieMap.entries()
+  )
+    .filter(([, montant]) => montant > 0)
+    .map(([categorie, montant]) => ({
+      categorie,
+      montant: Math.round(montant),
+      pourcentage:
+        coutTotal > 0
+          ? Math.round((montant / coutTotal) * 10000) / 100
+          : 0,
+      parKg:
+        poidsTotalVendu > 0
+          ? Math.round((montant / poidsTotalVendu) * 100) / 100
+          : null,
+    }))
+    .sort((a, b) => b.montant - a.montant);
+
+  // -------------------------------------------------------------------------
+  // 10. Retour
+  // -------------------------------------------------------------------------
+
+  return {
+    vague: {
+      id: vague.id,
+      code: vague.code,
+      statut: vague.statut as unknown as StatutVague,
+      dateDebut: vague.dateDebut,
+      dateFin: vague.dateFin,
+      nombreInitial: vague.nombreInitial,
+      dureeJours,
+    },
+
+    resume: {
+      coutTotal: Math.round(coutTotal),
+      poidsTotalVendu: Math.round(poidsTotalVendu * 100) / 100,
+      coutParKg: coutParKg !== null ? Math.round(coutParKg * 100) / 100 : null,
+      prixMoyenVenteKg:
+        prixMoyenVenteKg !== null
+          ? Math.round(prixMoyenVenteKg * 100) / 100
+          : null,
+      margeParKg: margeParKg !== null ? Math.round(margeParKg * 100) / 100 : null,
+      revenus: Math.round(revenus),
+      marge: Math.round(marge),
+      roi: roi !== null ? Math.round(roi * 100) / 100 : null,
+    },
+
+    coutParCategorie,
+    detailAliments,
+    depensesDirectes: depensesDirectesResult,
+    depensesMultiVagues: depensesMultiVaguesResult,
+    depensesRecurrentes: depensesRecurrentesResult,
+    ventes: ventesResult,
+
+    formule: {
+      coutAliments: Math.round(coutAliments),
+      coutDepensesDirectes: Math.round(coutDepensesDirectes),
+      coutMultiVagues: Math.round(coutMultiVagues),
+      coutRecurrents: Math.round(coutRecurrents),
+      coutTotal: Math.round(coutTotal),
+      poidsVendu: Math.round(poidsTotalVendu * 100) / 100,
+      coutParKg: coutParKg !== null ? Math.round(coutParKg * 100) / 100 : null,
+    },
   };
 }
