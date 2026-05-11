@@ -5,7 +5,14 @@
  *
  * Affiche :
  * - Résumé toujours visible : coût total, coût/kg, prix vente/kg, marge/kg, ROI
- * - Détail expandable : répartition par catégorie + revenus/marge
+ * - Détail expandable :
+ *   - Biomasse estimée
+ *   - Répartition par catégorie
+ *   - Détail alimentation
+ *   - Dépenses directes
+ *   - Dépenses partagées multi-vagues
+ *   - Dépenses récurrentes
+ *   - Revenus et marge
  * - Bouton d'export PDF via ExportButton
  *
  * Story CP-3 — Mobile-first (360px), règles R2 + R6
@@ -56,7 +63,7 @@ function getCategorieLabel(categorie: string): string {
 export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
   const [expanded, setExpanded] = useState(false);
 
-  const { resume, coutParCategorie } = data;
+  const { resume, coutParCategorie, detailAliments, depensesDirectes, depensesMultiVagues, depensesRecurrentes } = data;
   const isEmpty = resume.coutTotal === 0;
 
   const margeColor =
@@ -160,38 +167,148 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
             </div>
 
             {/* Détail expandable */}
-            {expanded && coutParCategorie.length > 0 && (
-              <div className="mt-4 space-y-3 border-t border-border pt-3">
-                <h3 className="text-sm font-medium text-muted-foreground">
-                  Répartition par catégorie
-                </h3>
+            {expanded && (
+              <div className="mt-4 space-y-4 border-t border-border pt-3">
 
-                <div className="space-y-2">
-                  {coutParCategorie.map((item) => (
-                    <div key={item.categorie} className="space-y-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-foreground">
-                          {getCategorieLabel(item.categorie)}
-                        </span>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-muted-foreground text-xs">
-                            {item.pourcentage.toFixed(1)} %
-                          </span>
-                          <span className="font-medium tabular-nums">
-                            {formatNumber(item.montant)} FCFA
-                          </span>
+                {/* Biomasse estimée */}
+                {resume.biomasseKg !== null && (
+                  <BiomasseBanner biomasseKg={resume.biomasseKg} />
+                )}
+
+                {/* Répartition par catégorie */}
+                {coutParCategorie.length > 0 && (
+                  <DetailSection title="Répartition par catégorie">
+                    <div className="space-y-2">
+                      {coutParCategorie.map((item) => (
+                        <div key={item.categorie} className="space-y-1">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-foreground">
+                              {getCategorieLabel(item.categorie)}
+                            </span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-muted-foreground text-xs">
+                                {item.pourcentage.toFixed(1)} %
+                              </span>
+                              <span className="font-medium tabular-nums">
+                                {formatNumber(item.montant)} FCFA
+                              </span>
+                            </div>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-primary/70"
+                              style={{ width: `${Math.min(item.pourcentage, 100)}%` }}
+                            />
+                          </div>
                         </div>
-                      </div>
-                      {/* Progress bar */}
-                      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-primary/70"
-                          style={{ width: `${Math.min(item.pourcentage, 100)}%` }}
-                        />
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </DetailSection>
+                )}
+
+                {/* Détail alimentation */}
+                {detailAliments.length > 0 && (
+                  <DetailSection title="Détail alimentation">
+                    <div className="space-y-2">
+                      {detailAliments.map((aliment) => (
+                        <div
+                          key={aliment.produit}
+                          className="rounded-md bg-muted/50 p-2 space-y-1"
+                        >
+                          <p className="text-sm font-medium leading-tight">{aliment.produit}</p>
+                          <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                            <span>Qté : {formatNumber(aliment.quantite)} kg</span>
+                            <span>Prix unitaire : {formatNumber(Math.round(aliment.prixUnitaire))} FCFA/kg</span>
+                          </div>
+                          <p className="text-sm font-semibold tabular-nums text-right">
+                            {formatNumber(aliment.total)} FCFA
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </DetailSection>
+                )}
+
+                {/* Dépenses directes */}
+                {depensesDirectes.length > 0 && (
+                  <DetailSection title="Dépenses directes">
+                    <div className="space-y-2">
+                      {depensesDirectes.map((dep, i) => (
+                        <div key={i} className="rounded-md bg-muted/50 p-2 space-y-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium leading-tight truncate">
+                                {dep.description}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {getCategorieLabel(dep.categorie)} ·{" "}
+                                {dep.date
+                                  ? new Date(dep.date).toLocaleDateString("fr-FR", {
+                                      day: "2-digit",
+                                      month: "short",
+                                      year: "numeric",
+                                    })
+                                  : "—"}
+                              </p>
+                            </div>
+                            <span className="text-sm font-semibold tabular-nums shrink-0">
+                              {formatNumber(dep.montant)} FCFA
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </DetailSection>
+                )}
+
+                {/* Dépenses partagées multi-vagues */}
+                {depensesMultiVagues.length > 0 && (
+                  <DetailSection title="Dépenses partagées (multi-vagues)">
+                    <div className="space-y-2">
+                      {depensesMultiVagues.map((dep, i) => (
+                        <div key={i} className="rounded-md bg-muted/50 p-2 space-y-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm font-medium leading-tight min-w-0 truncate">
+                              {dep.description}
+                            </p>
+                            <span className="text-sm font-semibold tabular-nums shrink-0">
+                              {formatNumber(dep.montantImpute)} FCFA
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                            <span>Total : {formatNumber(dep.montantTotal)} FCFA</span>
+                            <span>Ratio : {(dep.ratio * 100).toFixed(1)} %</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </DetailSection>
+                )}
+
+                {/* Dépenses récurrentes */}
+                {depensesRecurrentes.length > 0 && (
+                  <DetailSection title="Dépenses récurrentes">
+                    <div className="space-y-2">
+                      {depensesRecurrentes.map((dep, i) => (
+                        <div key={i} className="rounded-md bg-muted/50 p-2 space-y-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm font-medium leading-tight min-w-0 truncate">
+                              {dep.description}
+                            </p>
+                            <span className="text-sm font-semibold tabular-nums shrink-0">
+                              {formatNumber(dep.montantImpute)} FCFA
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                            <span>Mensuel : {formatNumber(Math.round(dep.coutMensuel))} FCFA</span>
+                            <span>{dep.moisImputes} mois</span>
+                            <span>Ratio moy. : {(dep.ratioMoyen * 100).toFixed(1)} %</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </DetailSection>
+                )}
 
                 {/* Revenus et marge */}
                 <div className="border-t border-border pt-2 mt-2 space-y-1">
@@ -219,6 +336,44 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// BiomasseBanner — affiche la biomasse estimée en évidence
+// ---------------------------------------------------------------------------
+
+function BiomasseBanner({ biomasseKg }: { biomasseKg: number }) {
+  return (
+    <div className="rounded-md bg-primary/10 border border-primary/20 px-3 py-2 flex items-center justify-between gap-2">
+      <div>
+        <p className="text-xs text-muted-foreground">Biomasse estimée</p>
+        <p className="text-sm font-semibold" style={{ color: "var(--primary)" }}>
+          {formatNumber(Math.round(biomasseKg * 10) / 10)} kg
+        </p>
+      </div>
+      <p className="text-xs text-muted-foreground text-right leading-tight max-w-[160px]">
+        Base du calcul coût/kg
+      </p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// DetailSection — section avec titre dans le détail expandable
+// ---------------------------------------------------------------------------
+
+interface DetailSectionProps {
+  title: string;
+  children: React.ReactNode;
+}
+
+function DetailSection({ title, children }: DetailSectionProps) {
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
+      {children}
+    </div>
   );
 }
 

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { CategorieProduit, CategorieDepense, TypeMouvement, StatutDepense, FrequenceRecurrence, StatutVague } from "@/types";
-import { getPrixParUniteBase } from "@/lib/calculs";
+import { getPrixParUniteBase, computeNombreVivantsVague } from "@/lib/calculs";
 
 // ---------------------------------------------------------------------------
 // Types de retour locaux
@@ -693,6 +693,7 @@ export interface CoutProductionVague {
   resume: {
     coutTotal: number;
     poidsTotalVendu: number;
+    biomasseKg: number | null;
     coutParKg: number | null;
     prixMoyenVenteKg: number | null;
     margeParKg: number | null;
@@ -720,6 +721,7 @@ export interface CoutProductionVague {
     coutRecurrents: number;
     coutTotal: number;
     poidsVendu: number;
+    biomasseKg: number | null;
     coutParKg: number | null;
   };
 }
@@ -783,6 +785,8 @@ export async function getCoutProductionVague(
     depensesRecurrentesBrutes,
     toutesVaguesSite,
     ventes,
+    bacsVague,
+    relevesVague,
   ] = await Promise.all([
     // 2a. Consommations aliments (fait foi pour les aliments — ERR-093)
     prisma.releveConsommation.findMany({
@@ -889,7 +893,58 @@ export async function getCoutProductionVague(
       },
       orderBy: { createdAt: "asc" },
     }),
+
+    // 2g. Bacs de la vague (for biomass calculation)
+    prisma.bac.findMany({
+      where: { siteId, vagueId },
+      select: { id: true, nombreInitial: true },
+    }),
+
+    // 2h. Releves de la vague (for biomass calculation)
+    prisma.releve.findMany({
+      where: { siteId, vagueId },
+      select: {
+        bacId: true,
+        typeReleve: true,
+        nombreMorts: true,
+        nombreCompte: true,
+        date: true,
+        poidsMoyen: true,
+      },
+      orderBy: { date: "asc" },
+    }),
   ]);
+
+  // -------------------------------------------------------------------------
+  // 2bis. Calcul biomasse estimée (pour coutParKg)
+  // -------------------------------------------------------------------------
+
+  const nombreVivants = computeNombreVivantsVague(
+    bacsVague,
+    relevesVague,
+    vague.nombreInitial
+  );
+
+  // Poids moyen : weighted average from last biometrie relevé per bac, or global
+  const biometrieReleves = relevesVague
+    .filter((r) => r.typeReleve === "BIOMETRIE" && r.poidsMoyen !== null)
+    .sort((a, b) => {
+      const da = a.date ? new Date(a.date).getTime() : 0;
+      const db = b.date ? new Date(b.date).getTime() : 0;
+      return da - db;
+    });
+
+  let poidsMoyenGlobal: number | null = null;
+  if (biometrieReleves.length > 0) {
+    // Use the last biometrie relevé (most recent)
+    const lastBiometrie = biometrieReleves[biometrieReleves.length - 1];
+    poidsMoyenGlobal = lastBiometrie.poidsMoyen as number;
+  }
+
+  const biomasseKg: number | null =
+    poidsMoyenGlobal !== null && nombreVivants > 0
+      ? (poidsMoyenGlobal * nombreVivants) / 1000
+      : null;
 
   // -------------------------------------------------------------------------
   // 3. Calcul cout aliments
@@ -1098,7 +1153,8 @@ export async function getCoutProductionVague(
   const coutTotal =
     coutAliments + coutDepensesDirectes + coutMultiVagues + coutRecurrents;
 
-  const coutParKg = poidsTotalVendu > 0 ? coutTotal / poidsTotalVendu : null;
+  const coutParKg =
+    biomasseKg !== null && biomasseKg > 0 ? coutTotal / biomasseKg : null;
   const prixMoyenVenteKg = poidsTotalVendu > 0 ? revenus / poidsTotalVendu : null;
   const marge = revenus - coutTotal;
   const roi = coutTotal > 0 ? (marge / coutTotal) * 100 : null;
@@ -1152,8 +1208,8 @@ export async function getCoutProductionVague(
           ? Math.round((montant / coutTotal) * 10000) / 100
           : 0,
       parKg:
-        poidsTotalVendu > 0
-          ? Math.round((montant / poidsTotalVendu) * 100) / 100
+        biomasseKg !== null && biomasseKg > 0
+          ? Math.round((montant / biomasseKg) * 100) / 100
           : null,
     }))
     .sort((a, b) => b.montant - a.montant);
@@ -1176,6 +1232,7 @@ export async function getCoutProductionVague(
     resume: {
       coutTotal: Math.round(coutTotal),
       poidsTotalVendu: Math.round(poidsTotalVendu * 100) / 100,
+      biomasseKg: biomasseKg !== null ? Math.round(biomasseKg * 100) / 100 : null,
       coutParKg: coutParKg !== null ? Math.round(coutParKg * 100) / 100 : null,
       prixMoyenVenteKg:
         prixMoyenVenteKg !== null
@@ -1201,6 +1258,7 @@ export async function getCoutProductionVague(
       coutRecurrents: Math.round(coutRecurrents),
       coutTotal: Math.round(coutTotal),
       poidsVendu: Math.round(poidsTotalVendu * 100) / 100,
+      biomasseKg: biomasseKg !== null ? Math.round(biomasseKg * 100) / 100 : null,
       coutParKg: coutParKg !== null ? Math.round(coutParKg * 100) / 100 : null,
     },
   };

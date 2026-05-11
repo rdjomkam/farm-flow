@@ -18,7 +18,6 @@ import {
 } from "@react-pdf/renderer";
 import type { CreateCoutProductionPDFDTO } from "@/types/export";
 import { StatutVague, CategorieDepense } from "@/types";
-import { formatNumber } from "@/lib/format";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -32,13 +31,19 @@ function formatDate(date: Date | string): string {
   });
 }
 
+function formatNumPDF(n: number): string {
+  const abs = Math.abs(Math.round(n));
+  const formatted = abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return n < 0 ? "-" + formatted : formatted;
+}
+
 function formatMontant(n: number): string {
-  return formatNumber(n) + " FCFA";
+  return formatNumPDF(n) + " FCFA";
 }
 
 function formatMontantNullable(n: number | null): string {
   if (n === null) return "—";
-  return formatNumber(n) + " FCFA";
+  return formatNumPDF(n) + " FCFA";
 }
 
 function formatPct(ratio: number): string {
@@ -405,9 +410,9 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
             </Text>
           </View>
           <View style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>Poids vendu</Text>
+            <Text style={styles.kpiLabel}>Biomasse estimée</Text>
             <Text style={styles.kpiValue}>
-              {resume.poidsTotalVendu.toFixed(2)} kg
+              {resume.biomasseKg !== null ? formatNumPDF(Math.round(resume.biomasseKg * 10) / 10) + " kg" : "—"}
             </Text>
           </View>
         </View>
@@ -630,9 +635,9 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
           <Text style={styles.formuleTotal}>
             = Coût total : {formatMontant(formule.coutTotal)}
           </Text>
-          {formule.coutParKg !== null && (
+          {formule.coutParKg !== null && formule.biomasseKg !== null && (
             <Text style={[styles.formuleText, { marginTop: 4 }]}>
-              Coût par kg ({formule.poidsVendu} kg vendus) : {formatMontant(formule.coutParKg)}
+              Coût par kg (biomasse estimée : {formatNumPDF(Math.round(formule.biomasseKg * 10) / 10)} kg) : {formatMontant(formule.coutParKg)}
             </Text>
           )}
         </View>
