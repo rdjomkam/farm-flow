@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MoreVertical, Plus, Scissors, Pencil, FileText, FileSpreadsheet, XCircle, Container } from "lucide-react";
+import { MoreVertical, Plus, Scissors, Pencil, FileText, FileSpreadsheet, XCircle, Container, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,7 @@ import {
 import { ModifierVagueDialog } from "./modifier-vague-dialog";
 import { CloturerDialog } from "./cloturer-dialog";
 import { GererBacsDialog } from "./gerer-bacs-dialog";
+import { SupprimerVagueDialog } from "./supprimer-vague-dialog";
 import { Permission } from "@/types";
 import type { Bac } from "@/types";
 import { useExportService } from "@/services";
@@ -54,11 +55,13 @@ export function VagueActionMenu({
   const [modifierOpen, setModifierOpen] = useState(false);
   const [cloturerOpen, setCloturerOpen] = useState(false);
   const [gererBacsOpen, setGererBacsOpen] = useState(false);
+  const [supprimerOpen, setSupprimerOpen] = useState(false);
 
   const canModifier = isEnCours && permissions.includes(Permission.VAGUES_MODIFIER);
   const canCalibrage = isEnCours && permissions.includes(Permission.CALIBRAGES_CREER);
   const canCloturer = isEnCours;
   const canGererBacs = isEnCours && permissions.includes(Permission.VAGUES_MODIFIER);
+  const canSupprimer = permissions.includes(Permission.VAGUES_MODIFIER);
 
   return (
     <>
@@ -131,6 +134,17 @@ export function VagueActionMenu({
               {t("actionMenu.cloturer")}
             </DropdownMenuItem>
           )}
+
+          {canSupprimer && <DropdownMenuSeparator />}
+          {canSupprimer && (
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onSelect={() => setSupprimerOpen(true)}
+            >
+              <Trash2 className="h-4 w-4" />
+              Supprimer la vague
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -159,6 +173,13 @@ export function VagueActionMenu({
         permissions={permissions}
         open={gererBacsOpen}
         onOpenChange={setGererBacsOpen}
+      />
+
+      <SupprimerVagueDialog
+        vagueId={vagueId}
+        vagueCode={vagueCode}
+        open={supprimerOpen}
+        onOpenChange={setSupprimerOpen}
       />
     </>
   );

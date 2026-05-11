@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getVagueById, updateVague } from "@/lib/queries/vagues";
+import { getVagueById, updateVague, deleteVague } from "@/lib/queries/vagues";
 import { getReleves } from "@/lib/queries/releves";
 import { getIndicateursVague } from "@/lib/queries/indicateurs";
 import { requirePermission } from "@/lib/permissions";
@@ -209,6 +209,24 @@ export async function PUT(
         { match: ["contient", "poissons"], status: 422 },
       ],
       code: ErrorKeys.SERVER_UPDATE_VAGUE,
+    });
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const auth = await requirePermission(request, Permission.VAGUES_MODIFIER);
+    const { id } = await params;
+    await deleteVague(id, auth.activeSiteId);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return handleApiError("DELETE /api/vagues/[id]", error, "Erreur lors de la suppression de la vague.", {
+      statusMap: [
+        { match: ["introuvable", "accès refusé"], status: 404 },
+      ],
     });
   }
 }

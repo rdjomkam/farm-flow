@@ -277,6 +277,94 @@ export async function cloturerVague(id: string, siteId: string, dateFin?: string
   });
 }
 
+/**
+ * Supprimer une vague et toutes ses données en cascade.
+ *
+ * Ordre de suppression (child-first pour respecter les FK) :
+ *   1. ReleveConsommation (enfant de Releve)
+ *   2. MouvementStock liés aux Releves (via releveId) — désassocier avant de supprimer les releves
+ *   3. Releve (avec ses relations Cascade : ReleveModification, Activite via releveId)
+ *   4. CalibrageGroupe (Cascade depuis Calibrage, mais on fait explicitement pour être sûr)
+ *   5. Calibrage (Cascade CalibrageGroupe, CalibrageModification)
+ *   6. MouvementStock liés à la vague (vagueId)
+ *   7. Paiement (enfant de Facture, Cascade depuis Facture)
+ *   8. Facture (enfant de Vente — 1:1)
+ *   9. Vente
+ *  10. Activite (vagueId)
+ *  11. HistoriqueNutritionnel (vagueId)
+ *  12. Libérer les Bacs (vagueId → null, sans les supprimer)
+ *  13. Vague (Cascade : AssignationBac, ListeBesoinsVague, GompertzVague, NoteIngenieur SetNull, Depense SetNull)
+ */
+export async function deleteVague(id: string, siteId: string): Promise<void> {
+  return prisma.$transaction(async (tx) => {
+    // Vérifier l'existence et le siteId
+    const vague = await tx.vague.findFirst({ where: { id, siteId } });
+    if (!vague) {
+      throw new Error("Vague introuvable ou accès refusé.");
+    }
+
+    // 1. ReleveConsommation (enfants des Releves de cette vague)
+    await tx.releveConsommation.deleteMany({
+      where: { releve: { vagueId: id } },
+    });
+
+    // 2. Désassocier MouvementStock des relevés avant suppression des relevés
+    //    (MouvementStock.releveId n'a pas de Cascade, il faut mettre à null)
+    await tx.mouvementStock.updateMany({
+      where: { releve: { vagueId: id }, siteId },
+      data: { releveId: null },
+    });
+
+    // 3. Releve (Cascade : ReleveModification, et Activite.releveId mis à null via SetNull implicite)
+    await tx.releve.deleteMany({ where: { vagueId: id, siteId } });
+
+    // 4. CalibrageGroupe (Cascade depuis Calibrage, mais on supprime explicitement pour clarté)
+    await tx.calibrageGroupe.deleteMany({
+      where: { calibrage: { vagueId: id } },
+    });
+
+    // 5. Calibrage (Cascade : CalibrageModification)
+    await tx.calibrage.deleteMany({ where: { vagueId: id, siteId } });
+
+    // 6. MouvementStock liés directement à la vague (vagueId)
+    await tx.mouvementStock.deleteMany({ where: { vagueId: id, siteId } });
+
+    // 7-9. Ventes et leurs factures/paiements (Paiement a Cascade depuis Facture)
+    //      On supprime Paiement via Facture.paiements (Cascade), puis Facture, puis Vente
+    const factures = await tx.facture.findMany({
+      where: { vente: { vagueId: id } },
+      select: { id: true },
+    });
+    if (factures.length > 0) {
+      const factureIds = factures.map((f) => f.id);
+      // Paiement a onDelete: Cascade depuis Facture — la suppression des factures suffira
+      await tx.paiement.deleteMany({ where: { factureId: { in: factureIds } } });
+      await tx.facture.deleteMany({ where: { id: { in: factureIds } } });
+    }
+    await tx.vente.deleteMany({ where: { vagueId: id, siteId } });
+
+    // 10. Activite (vagueId nullable, mais on supprime celles liées à la vague)
+    await tx.activite.deleteMany({ where: { vagueId: id, siteId } });
+
+    // 11. HistoriqueNutritionnel
+    await tx.historiqueNutritionnel.deleteMany({ where: { vagueId: id, siteId } });
+
+    // 12. Libérer les Bacs (ne pas les supprimer — juste détacher de la vague)
+    await tx.bac.updateMany({
+      where: { vagueId: id, siteId },
+      data: {
+        vagueId: null,
+        nombrePoissons: null,
+        nombreInitial: null,
+        poidsMoyenInitial: null,
+      },
+    });
+
+    // 13. Supprimer la Vague (Cascade : AssignationBac, ListeBesoinsVague, GompertzVague)
+    await tx.vague.delete({ where: { id } });
+  });
+}
+
 /** Mettre a jour une vague (modification partielle) */
 export async function updateVague(id: string, siteId: string, data: UpdateVagueDTO) {
   // Si cloture demandee, deleguer a cloturerVague

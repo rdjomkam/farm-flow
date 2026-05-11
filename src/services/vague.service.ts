@@ -96,5 +96,15 @@ export function useVagueService() {
     [call]
   );
 
-  return { list, get, create, update, cloture, listBacs };
+  const remove = useCallback(
+    (id: string) =>
+      call<{ success: boolean }>(
+        `/api/vagues/${id}`,
+        { method: "DELETE" },
+        { successMessage: "Vague supprimée." }
+      ),
+    [call]
+  );
+
+  return { list, get, create, update, cloture, listBacs, remove };
 }
