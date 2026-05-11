@@ -742,8 +742,8 @@ export interface CoutProductionVague {
  * de la vie de la vague :
  * 1. Convertir en cout mensuel (MENSUEL x1, TRIMESTRIEL /3, ANNUEL /12).
  * 2. Lister toutes les vagues du site actives ce mois (chevauchement).
- * 3. Calculer les jours d'activite de chaque vague dans ce mois.
- * 4. Quote-part = (joursVagueCible / totalJoursVagues) * coutMensuel.
+ * 3. Calculer le poids de chaque vague : jours d'activite * nombreInitial.
+ * 4. Quote-part = (poidsCible / totalPoids) * coutMensuel.
  *
  * ## Vague EN_COURS
  * `dateFin ?? new Date()` est utilise pour le calcul de duree et les
@@ -878,6 +878,7 @@ export async function getCoutProductionVague(
         id: true,
         dateDebut: true,
         dateFin: true,
+        nombreInitial: true,
       },
     }),
 
@@ -1101,19 +1102,21 @@ export async function getCoutProductionVague(
       const joursVagueCibleMois = joursVagueDansMois(vagueCibleObj, debutMois, finMois);
       if (joursVagueCibleMois <= 0) continue;
 
-      // Jours totaux de toutes les vagues du site dans ce mois
-      let totalJoursVagues = 0;
+      // Poids = jours × nombreInitial pour chaque vague du site dans ce mois
+      const poidsCible = joursVagueCibleMois * vague.nombreInitial;
+      let totalPoids = 0;
       for (const autreVague of toutesVaguesSite) {
-        totalJoursVagues += joursVagueDansMois(
+        const jours = joursVagueDansMois(
           { dateDebut: autreVague.dateDebut, dateFin: autreVague.dateFin },
           debutMois,
           finMois
         );
+        totalPoids += jours * autreVague.nombreInitial;
       }
 
-      if (totalJoursVagues <= 0) continue;
+      if (totalPoids <= 0) continue;
 
-      const ratio = joursVagueCibleMois / totalJoursVagues;
+      const ratio = poidsCible / totalPoids;
       const montantMois = ratio * coutMensuel;
 
       montantImputeTotal += montantMois;
