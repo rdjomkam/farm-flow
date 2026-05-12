@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   colMvPart: { flex: 2, textAlign: "right" },
   // Colonnes — dépenses récurrentes
   colRecDesc: { flex: 3 },
-  colRecMensuel: { flex: 2, textAlign: "right" },
+  colRecPaye: { flex: 2, textAlign: "right" },
   colRecRatio: { flex: 1, textAlign: "right" },
   colRecPart: { flex: 2, textAlign: "right" },
   colRecMois: { flex: 1, textAlign: "right" },
@@ -558,7 +558,7 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
             </Text>
             <View style={styles.tableHeader}>
               <Text style={[styles.tableHeaderText, styles.colRecDesc]}>Description</Text>
-              <Text style={[styles.tableHeaderText, styles.colRecMensuel]}>Coût/mois</Text>
+              <Text style={[styles.tableHeaderText, styles.colRecPaye]}>Payé</Text>
               <Text style={[styles.tableHeaderText, styles.colRecRatio]}>Ratio moy.</Text>
               <Text style={[styles.tableHeaderText, styles.colRecPart]}>Part allouée</Text>
               <Text style={[styles.tableHeaderText, styles.colRecMois]}>Mois</Text>
@@ -569,8 +569,8 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
                   style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]}
                 >
                   <Text style={[styles.tableCell, styles.colRecDesc]}>{r.description}</Text>
-                  <Text style={[styles.tableCell, styles.colRecMensuel]}>
-                    {formatMontant(r.coutMensuel)}
+                  <Text style={[styles.tableCell, styles.colRecPaye]}>
+                    {formatMontant(r.montantPayeTotal)}
                   </Text>
                   <Text style={[styles.tableCell, styles.colRecRatio]}>
                     {formatPct(r.ratioMoyen)}
@@ -579,7 +579,7 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
                     {formatMontant(r.montantImpute)}
                   </Text>
                   <Text style={[styles.tableCell, styles.colRecMois]}>
-                    {r.moisImputes}
+                    {r.moisCouverts}
                   </Text>
                 </View>
                 {r.ratioDetail.map((rd) => (

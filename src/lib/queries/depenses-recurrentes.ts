@@ -240,6 +240,7 @@ export async function genererDepensesRecurrentes(
           montantPaye: 0,
           statut: StatutDepense.NON_PAYEE,
           date: now,
+          depenseRecurrenteId: template.id,
           userId,
           siteId,
         },

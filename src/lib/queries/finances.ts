@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { CategorieProduit, CategorieDepense, TypeMouvement, StatutDepense, FrequenceRecurrence, StatutVague } from "@/types";
+import { CategorieProduit, CategorieDepense, TypeMouvement, StatutDepense, StatutVague } from "@/types";
 import { getPrixParUniteBase, computeNombreVivantsVague, computeVivantsByBac } from "@/lib/calculs";
 
 // ---------------------------------------------------------------------------
@@ -680,8 +680,8 @@ export interface CoutProductionRatioDetail {
 export interface CoutProductionDepenseRecurrente {
   description: string;
   categorie: CategorieDepense;
-  coutMensuel: number;
-  moisImputes: number;
+  montantPayeTotal: number;
+  moisCouverts: number;
   ratioMoyen: number;
   montantImpute: number;
   ratioDetail: CoutProductionRatioDetail[];
@@ -753,13 +753,12 @@ export interface CoutProductionVague {
  *   sont exclues — elles sont deja tracees via MouvementStock.
  *
  * ## Allocation des depenses recurrentes
- * Pour chaque `DepenseRecurrente` active (isActive = true ou
- * derniereGeneration >= dateDebut de la vague), sur chaque mois calendaire
- * de la vie de la vague :
- * 1. Convertir en cout mensuel (MENSUEL x1, TRIMESTRIEL /3, ANNUEL /12).
- * 2. Lister toutes les vagues du site actives ce mois (chevauchement).
- * 3. Calculer le poids de chaque vague : jours d'activite * nombreInitial.
- * 4. Quote-part = (poidsCible / totalPoids) * coutMensuel.
+ * Utilise les `Depense` reelles generees depuis les templates `DepenseRecurrente`
+ * (via `depenseRecurrenteId`). Seul `montantPaye` est pris en compte.
+ * Pour chaque mois ou une depense reelle existe :
+ * 1. Lister toutes les vagues du site actives ce mois (chevauchement).
+ * 2. Calculer le poids de chaque vague : jours d'activite * nombreInitial.
+ * 3. Quote-part = (poidsCible / totalPoids) * montantPaye du mois.
  *
  * ## Vague EN_COURS
  * `dateFin ?? new Date()` est utilise pour le calcul de duree et les
@@ -798,7 +797,7 @@ export async function getCoutProductionVague(
     releveConsommations,
     depensesDirectes,
     depensesBesoinsMultiVague,
-    depensesRecurrentesBrutes,
+    depensesRecurrentesReelles,
     toutesVaguesSite,
     ventes,
     bacsVague,
@@ -826,11 +825,13 @@ export async function getCoutProductionVague(
     // 2b. Depenses directes liees a la vague
     // Exclure: commandeId non null (anti double-comptage MouvementStock)
     // Exclure: categorieDepense = ALIMENT (anti double-comptage ReleveConsommation)
+    // Exclure: depenseRecurrenteId non null (comptees separement via montantPaye)
     prisma.depense.findMany({
       where: {
         siteId,
         vagueId,
         commandeId: null,
+        depenseRecurrenteId: null,
         categorieDepense: { not: CategorieDepense.ALIMENT },
       },
       select: {
@@ -864,26 +865,23 @@ export async function getCoutProductionVague(
       },
     }),
 
-    // 2d. Depenses recurrentes du site
-    // isActive = true OU derniereGeneration >= dateDebut vague
-    prisma.depenseRecurrente.findMany({
+    // 2d. Depenses generees depuis des templates recurrents (avec paiements reels)
+    prisma.depense.findMany({
       where: {
         siteId,
-        OR: [
-          { isActive: true },
-          { derniereGeneration: { gte: vague.dateDebut } },
-        ],
-        // createdAt <= dateFin vague (borne inf de validite — convention)
-        createdAt: { lte: dateFin },
+        depenseRecurrenteId: { not: null },
+        date: { gte: vague.dateDebut, lte: dateFin },
       },
       select: {
-        description: true,
-        categorieDepense: true,
-        montantEstime: true,
-        frequence: true,
-        createdAt: true,
-        derniereGeneration: true,
-        isActive: true,
+        date: true,
+        montantPaye: true,
+        depenseRecurrente: {
+          select: {
+            id: true,
+            description: true,
+            categorieDepense: true,
+          },
+        },
       },
     }),
 
@@ -1051,10 +1049,6 @@ export async function getCoutProductionVague(
   // 6. Calcul depenses recurrentes (allocation prorata mensuel)
   // -------------------------------------------------------------------------
 
-  /**
-   * Retourne le nombre de jours de chevauchement entre une vague et un mois.
-   * debutMois et finMois sont les bornes inclusives du mois calendaire.
-   */
   function joursVagueDansMois(
     v: { dateDebut: Date; dateFin: Date | null },
     debutMois: Date,
@@ -1082,7 +1076,7 @@ export async function getCoutProductionVague(
       const year = d.getFullYear();
       const month = d.getMonth();
       const debutMois = new Date(year, month, 1);
-      const finMois = new Date(year, month + 1, 0); // dernier jour du mois
+      const finMois = new Date(year, month + 1, 0);
       moisVague.push({
         debutMois,
         finMois,
@@ -1092,30 +1086,49 @@ export async function getCoutProductionVague(
     }
   }
 
-  // Vague cible comme objet pour joursVagueDansMois
   const vagueCibleObj = { dateDebut: vague.dateDebut, dateFin: vague.dateFin };
+
+  // Grouper les depenses reelles par template recurrent et par mois
+  const recParTemplate = new Map<
+    string,
+    {
+      description: string;
+      categorie: CategorieDepense;
+      parMois: Map<string, number>;
+    }
+  >();
+
+  for (const dep of depensesRecurrentesReelles) {
+    if (!dep.depenseRecurrente || dep.montantPaye <= 0) continue;
+    const templateId = dep.depenseRecurrente.id;
+    const moisLabel = `${dep.date.getFullYear()}-${String(dep.date.getMonth() + 1).padStart(2, "0")}`;
+
+    let entry = recParTemplate.get(templateId);
+    if (!entry) {
+      entry = {
+        description: dep.depenseRecurrente.description,
+        categorie: dep.depenseRecurrente.categorieDepense as unknown as CategorieDepense,
+        parMois: new Map(),
+      };
+      recParTemplate.set(templateId, entry);
+    }
+    entry.parMois.set(moisLabel, (entry.parMois.get(moisLabel) ?? 0) + dep.montantPaye);
+  }
 
   let coutRecurrents = 0;
   const depensesRecurrentesResult: CoutProductionDepenseRecurrente[] = [];
 
-  for (const dr of depensesRecurrentesBrutes) {
-    // Convertir en cout mensuel selon frequence
-    let coutMensuel: number;
-    if (dr.frequence === FrequenceRecurrence.MENSUEL) {
-      coutMensuel = dr.montantEstime;
-    } else if (dr.frequence === FrequenceRecurrence.TRIMESTRIEL) {
-      coutMensuel = dr.montantEstime / 3;
-    } else {
-      // ANNUEL
-      coutMensuel = dr.montantEstime / 12;
-    }
-
+  for (const [, template] of recParTemplate) {
     let montantImputeTotal = 0;
-    let moisImputes = 0;
+    let moisCouverts = 0;
     let sommeRatios = 0;
+    let montantPayeTotal = 0;
     const ratioDetail: CoutProductionRatioDetail[] = [];
 
     for (const { debutMois, finMois, label } of moisVague) {
+      const montantPayeMois = template.parMois.get(label);
+      if (!montantPayeMois || montantPayeMois <= 0) continue;
+
       const joursVagueCibleMois = joursVagueDansMois(vagueCibleObj, debutMois, finMois);
       if (joursVagueCibleMois <= 0) continue;
 
@@ -1143,10 +1156,11 @@ export async function getCoutProductionVague(
       if (totalPoids <= 0) continue;
 
       const ratio = poidsCible / totalPoids;
-      const montantMois = ratio * coutMensuel;
+      const montantMois = ratio * montantPayeMois;
 
       montantImputeTotal += montantMois;
-      moisImputes += 1;
+      montantPayeTotal += montantPayeMois;
+      moisCouverts += 1;
       sommeRatios += ratio;
 
       ratioDetail.push({
@@ -1158,16 +1172,16 @@ export async function getCoutProductionVague(
       });
     }
 
-    if (moisImputes === 0) continue;
+    if (moisCouverts === 0) continue;
 
-    const ratioMoyen = sommeRatios / moisImputes;
+    const ratioMoyen = sommeRatios / moisCouverts;
     coutRecurrents += montantImputeTotal;
 
     depensesRecurrentesResult.push({
-      description: dr.description,
-      categorie: dr.categorieDepense as unknown as CategorieDepense,
-      coutMensuel: Math.round(coutMensuel * 100) / 100,
-      moisImputes,
+      description: template.description,
+      categorie: template.categorie,
+      montantPayeTotal: Math.round(montantPayeTotal),
+      moisCouverts,
       ratioMoyen: Math.round(ratioMoyen * 10000) / 10000,
       montantImpute: Math.round(montantImputeTotal),
       ratioDetail,

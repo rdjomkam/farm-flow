@@ -366,8 +366,8 @@ function RecurringExpenseCard({ dep }: { dep: CoutProductionDepenseRecurrente })
         </span>
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
-        <span>Mensuel : {formatNumber(Math.round(dep.coutMensuel))} FCFA</span>
-        <span>{dep.moisImputes} mois</span>
+        <span>Payé : {formatNumber(dep.montantPayeTotal)} FCFA</span>
+        <span>{dep.moisCouverts} mois</span>
         <span>Ratio moy. : {(dep.ratioMoyen * 100).toFixed(1)} %</span>
       </div>
       {dep.ratioDetail.length > 0 && (

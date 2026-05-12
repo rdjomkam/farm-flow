@@ -2053,6 +2053,11 @@ model Depense {
   vagueId          String?
   vague            Vague?              @relation(fields: [vagueId], references: [id], onDelete: SetNull)
   /**
+   * Lien optionnel vers le template récurrent d'origine
+   */
+  depenseRecurrenteId String?
+  depenseRecurrente   DepenseRecurrente? @relation(fields: [depenseRecurrenteId], references: [id], onDelete: SetNull)
+  /**
    * Lien optionnel vers la liste de besoins d'origine
    */
   listeBesoinsId   String?
@@ -2076,6 +2081,7 @@ model Depense {
   @@index([commandeId])
   @@index([vagueId])
   @@index([listeBesoinsId])
+  @@index([depenseRecurrenteId])
   @@index([date])
 }
 
@@ -2242,6 +2248,7 @@ model DepenseRecurrente {
   user               User                @relation(fields: [userId], references: [id])
   siteId             String
   site               Site                @relation(fields: [siteId], references: [id])
+  depenses           Depense[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
