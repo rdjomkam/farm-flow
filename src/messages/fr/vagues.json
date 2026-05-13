@@ -117,7 +117,70 @@
     "gererBacs": "Gérer les bacs",
     "rapportPdf": "Rapport PDF",
     "exportReleves": "Export relevés",
-    "cloturer": "Clôturer"
+    "cloturer": "Clôturer",
+    "supprimer": "Supprimer la vague"
+  },
+  "deleteDialog": {
+    "title": "Supprimer la vague {code}",
+    "description": "Cette action est irréversible. Tous les relevés, calibrages, ventes, factures, paiements, mouvements de stock et activités associés à cette vague seront définitivement supprimés. Les bacs assignés seront libérés (non supprimés).",
+    "confirmInstruction": "Pour confirmer, tapez le code de la vague :",
+    "inputLabel": "Code de la vague",
+    "cancel": "Annuler",
+    "deleting": "Suppression...",
+    "confirmButton": "Supprimer définitivement"
+  },
+  "coutProduction": {
+    "title": "Coût de production",
+    "exportPdf": "Exporter PDF",
+    "expandDetail": "Voir le détail",
+    "collapseDetail": "Réduire le détail",
+    "emptyState": "Aucun coût enregistré pour cette vague.",
+    "summary": {
+      "coutTotal": "Coût total",
+      "coutParKg": "Coût / kg",
+      "prixVenteParKg": "Prix vente / kg",
+      "margeParKg": "Marge / kg",
+      "roi": "ROI"
+    },
+    "sections": {
+      "repartitionCategorie": "Répartition par catégorie",
+      "detailAlimentation": "Détail alimentation",
+      "depensesDirectes": "Dépenses directes",
+      "depensesPartagees": "Dépenses partagées (multi-vagues)",
+      "depensesRecurrentes": "Dépenses récurrentes",
+      "ratioExplanation": "Ratio = (jours × poissons initiaux) / total toutes vagues"
+    },
+    "labels": {
+      "revenus": "Revenus",
+      "margeBrute": "Marge brute",
+      "biomasseEstimee": "Biomasse estimée",
+      "baseCalcul": "Base du calcul coût/kg",
+      "quantite": "Qté : {value} kg",
+      "prixUnitaire": "Prix unitaire : {value} FCFA/kg",
+      "total": "Total : {value} FCFA",
+      "ratio": "Ratio : {value} %",
+      "paye": "Payé : {value} FCFA",
+      "mois": "{count} mois",
+      "ratioMoyen": "Ratio moy. : {value} %",
+      "masquerDetail": "Masquer le détail",
+      "voirDetailCalcul": "Voir le détail du calcul",
+      "cetteVague": "Cette vague",
+      "coutsPartages": "Coûts partagés"
+    },
+    "categories": {
+      "ALIMENT": "Alimentation",
+      "INTRANT": "Intrants",
+      "EQUIPEMENT": "Équipement",
+      "ELECTRICITE": "Électricité",
+      "EAU": "Eau",
+      "LOYER": "Loyer",
+      "SALAIRE": "Salaires",
+      "TRANSPORT": "Transport",
+      "VETERINAIRE": "Vétérinaire",
+      "REPARATION": "Réparation",
+      "INVESTISSEMENT": "Investissement",
+      "AUTRE": "Autre"
+    }
   },
   "gererBacs": {
     "title": "Gérer les bacs",
@@ -249,72 +312,6 @@
       "coutAliment": "Cout aliment",
       "revenuVentes": "Revenu ventes",
       "margeBrute": "Marge brute"
-    }
-  },
-  "delete": {
-    "title": "Supprimer la vague {code}",
-    "description": "Cette action est irréversible. Tous les relevés, calibrages, ventes, factures, paiements, mouvements de stock et activités associés à cette vague seront définitivement supprimés. Les bacs assignés seront libérés (non supprimés).",
-    "confirmPrompt": "Pour confirmer, tapez le code de la vague :",
-    "inputLabel": "Code de la vague",
-    "cancel": "Annuler",
-    "submit": "Supprimer définitivement",
-    "submitting": "Suppression..."
-  },
-  "coutProduction": {
-    "title": "Coût de production",
-    "exportPdf": "Exporter PDF",
-    "expandAriaLabel": "Voir le détail",
-    "collapseAriaLabel": "Réduire le détail",
-    "empty": "Aucun coût enregistré pour cette vague.",
-    "summary": {
-      "coutTotal": "Coût total",
-      "coutParKg": "Coût / kg",
-      "prixVenteParKg": "Prix vente / kg",
-      "margeParKg": "Marge / kg",
-      "roi": "ROI"
-    },
-    "sections": {
-      "repartitionCategorie": "Répartition par catégorie",
-      "detailAlimentation": "Détail alimentation",
-      "depensesDirectes": "Dépenses directes",
-      "depensesPartagees": "Dépenses partagées (multi-vagues)",
-      "depensesRecurrentes": "Dépenses récurrentes",
-      "ratioExplanation": "Ratio = (jours × poissons initiaux) / total toutes vagues"
-    },
-    "labels": {
-      "qte": "Qté : {value} kg",
-      "prixUnitaire": "Prix unitaire : {value} FCFA/kg",
-      "total": "Total : {value} FCFA",
-      "ratio": "Ratio : {value} %",
-      "mensuel": "Mensuel : {value} FCFA",
-      "mois": "{count} mois",
-      "ratioMoyen": "Ratio moy. : {value} %",
-      "revenus": "Revenus",
-      "margeBrute": "Marge brute",
-      "cetteVague": "Cette vague"
-    },
-    "biomasse": {
-      "title": "Biomasse estimée",
-      "baseCout": "Base du calcul coût/kg"
-    },
-    "detail": {
-      "show": "Voir le détail du calcul",
-      "hide": "Masquer le détail"
-    },
-    "categories": {
-      "ALIMENT": "Alimentation",
-      "INTRANT": "Intrants",
-      "EQUIPEMENT": "Équipement",
-      "ELECTRICITE": "Électricité",
-      "EAU": "Eau",
-      "LOYER": "Loyer",
-      "SALAIRE": "Salaires",
-      "TRANSPORT": "Transport",
-      "VETERINAIRE": "Vétérinaire",
-      "REPARATION": "Réparation",
-      "INVESTISSEMENT": "Investissement",
-      "AUTRE": "Autre",
-      "MULTI_VAGUE": "Coûts partagés"
     }
   }
 }

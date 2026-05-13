@@ -34,7 +34,7 @@ export function SupprimerVagueDialog({
   const router = useRouter();
   const queryClient = useQueryClient();
   const vagueService = useVagueService();
-  const t = useTranslations("vagues.delete");
+  const t = useTranslations("vagues");
   const [confirmation, setConfirmation] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -72,21 +72,21 @@ export function SupprimerVagueDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="h-5 w-5 shrink-0" />
-            {t("title", { code: vagueCode })}
+            {t("deleteDialog.title", { code: vagueCode })}
           </DialogTitle>
           <DialogDescription>
-            {t("description")}
+            {t("deleteDialog.description")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">
-            {t("confirmPrompt")}&nbsp;
+            {t("deleteDialog.confirmInstruction")}{" "}
             <strong className="text-foreground">{vagueCode}</strong>
           </p>
           <Input
             id="confirmation"
-            label={t("inputLabel")}
+            label={t("deleteDialog.inputLabel")}
             placeholder={vagueCode}
             value={confirmation}
             onChange={(e) => setConfirmation(e.target.value)}
@@ -101,14 +101,14 @@ export function SupprimerVagueDialog({
             onClick={() => handleOpenChange(false)}
             disabled={loading}
           >
-            {t("cancel")}
+            {t("deleteDialog.cancel")}
           </Button>
           <Button
             variant="danger"
             onClick={handleSupprimer}
             disabled={!isConfirmed || loading}
           >
-            {loading ? t("submitting") : t("submit")}
+            {loading ? t("deleteDialog.deleting") : t("deleteDialog.confirmButton")}
           </Button>
         </DialogFooter>
       </DialogContent>

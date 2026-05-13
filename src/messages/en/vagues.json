@@ -117,7 +117,70 @@
     "gererBacs": "Manage tanks",
     "rapportPdf": "PDF Report",
     "exportReleves": "Export records",
-    "cloturer": "Close"
+    "cloturer": "Close",
+    "supprimer": "Delete batch"
+  },
+  "deleteDialog": {
+    "title": "Delete batch {code}",
+    "description": "This action is irreversible. All records, gradings, sales, invoices, payments, stock movements and activities associated with this batch will be permanently deleted. Assigned tanks will be released (not deleted).",
+    "confirmInstruction": "To confirm, type the batch code:",
+    "inputLabel": "Batch code",
+    "cancel": "Cancel",
+    "deleting": "Deleting...",
+    "confirmButton": "Delete permanently"
+  },
+  "coutProduction": {
+    "title": "Production cost",
+    "exportPdf": "Export PDF",
+    "expandDetail": "Show details",
+    "collapseDetail": "Hide details",
+    "emptyState": "No costs recorded for this batch.",
+    "summary": {
+      "coutTotal": "Total cost",
+      "coutParKg": "Cost / kg",
+      "prixVenteParKg": "Sale price / kg",
+      "margeParKg": "Margin / kg",
+      "roi": "ROI"
+    },
+    "sections": {
+      "repartitionCategorie": "Breakdown by category",
+      "detailAlimentation": "Feed details",
+      "depensesDirectes": "Direct expenses",
+      "depensesPartagees": "Shared expenses (multi-batch)",
+      "depensesRecurrentes": "Recurring expenses",
+      "ratioExplanation": "Ratio = (days × initial fish) / total all batches"
+    },
+    "labels": {
+      "revenus": "Revenue",
+      "margeBrute": "Gross margin",
+      "biomasseEstimee": "Estimated biomass",
+      "baseCalcul": "Basis for cost/kg calculation",
+      "quantite": "Qty: {value} kg",
+      "prixUnitaire": "Unit price: {value} FCFA/kg",
+      "total": "Total: {value} FCFA",
+      "ratio": "Ratio: {value} %",
+      "paye": "Paid: {value} FCFA",
+      "mois": "{count} months",
+      "ratioMoyen": "Avg. ratio: {value} %",
+      "masquerDetail": "Hide details",
+      "voirDetailCalcul": "Show calculation details",
+      "cetteVague": "This batch",
+      "coutsPartages": "Shared costs"
+    },
+    "categories": {
+      "ALIMENT": "Feed",
+      "INTRANT": "Inputs",
+      "EQUIPEMENT": "Equipment",
+      "ELECTRICITE": "Electricity",
+      "EAU": "Water",
+      "LOYER": "Rent",
+      "SALAIRE": "Wages",
+      "TRANSPORT": "Transport",
+      "VETERINAIRE": "Veterinary",
+      "REPARATION": "Repairs",
+      "INVESTISSEMENT": "Investment",
+      "AUTRE": "Other"
+    }
   },
   "gererBacs": {
     "title": "Manage tanks",
@@ -249,72 +312,6 @@
       "coutAliment": "Feed cost",
       "revenuVentes": "Sales revenue",
       "margeBrute": "Gross margin"
-    }
-  },
-  "delete": {
-    "title": "Delete batch {code}",
-    "description": "This action is irreversible. All records, gradings, sales, invoices, payments, stock movements and activities associated with this batch will be permanently deleted. Assigned tanks will be released (not deleted).",
-    "confirmPrompt": "To confirm, type the batch code:",
-    "inputLabel": "Batch code",
-    "cancel": "Cancel",
-    "submit": "Delete permanently",
-    "submitting": "Deleting..."
-  },
-  "coutProduction": {
-    "title": "Production cost",
-    "exportPdf": "Export PDF",
-    "expandAriaLabel": "Show details",
-    "collapseAriaLabel": "Collapse details",
-    "empty": "No costs recorded for this batch.",
-    "summary": {
-      "coutTotal": "Total cost",
-      "coutParKg": "Cost / kg",
-      "prixVenteParKg": "Sale price / kg",
-      "margeParKg": "Margin / kg",
-      "roi": "ROI"
-    },
-    "sections": {
-      "repartitionCategorie": "Breakdown by category",
-      "detailAlimentation": "Feed details",
-      "depensesDirectes": "Direct expenses",
-      "depensesPartagees": "Shared expenses (multi-batch)",
-      "depensesRecurrentes": "Recurring expenses",
-      "ratioExplanation": "Ratio = (days × initial fish) / total all batches"
-    },
-    "labels": {
-      "qte": "Qty: {value} kg",
-      "prixUnitaire": "Unit price: {value} FCFA/kg",
-      "total": "Total: {value} FCFA",
-      "ratio": "Ratio: {value} %",
-      "mensuel": "Monthly: {value} FCFA",
-      "mois": "{count} months",
-      "ratioMoyen": "Avg ratio: {value} %",
-      "revenus": "Revenue",
-      "margeBrute": "Gross margin",
-      "cetteVague": "This batch"
-    },
-    "biomasse": {
-      "title": "Estimated biomass",
-      "baseCout": "Basis for cost/kg calculation"
-    },
-    "detail": {
-      "show": "Show calculation details",
-      "hide": "Hide details"
-    },
-    "categories": {
-      "ALIMENT": "Feed",
-      "INTRANT": "Inputs",
-      "EQUIPEMENT": "Equipment",
-      "ELECTRICITE": "Electricity",
-      "EAU": "Water",
-      "LOYER": "Rent",
-      "SALAIRE": "Wages",
-      "TRANSPORT": "Transport",
-      "VETERINAIRE": "Veterinary",
-      "REPARATION": "Repair",
-      "INVESTISSEMENT": "Investment",
-      "AUTRE": "Other",
-      "MULTI_VAGUE": "Shared costs"
     }
   }
 }
