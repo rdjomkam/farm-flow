@@ -465,7 +465,7 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
 
         {/* ===================== COÛT DE PRODUCTION ===================== */}
         {data.coutProduction && (
-          <>
+          <View wrap={false}>
             <Text style={styles.sectionTitle}>Coût de production</Text>
             <View style={styles.kpisGrid}>
               <View style={styles.kpiCard}>
@@ -489,12 +489,12 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                 <Text style={styles.kpiValue}>{formatNum(data.coutProduction.roi, 1, "%")}</Text>
               </View>
             </View>
-          </>
+          </View>
         )}
 
         {/* ===================== BACS ===================== */}
         {data.bacs.length > 0 && (
-          <>
+          <View wrap={false}>
             <Text style={styles.sectionTitle}>
               Bacs ({data.bacs.length})
             </Text>
@@ -511,12 +511,12 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                 </View>
               ))}
             </View>
-          </>
+          </View>
         )}
 
         {/* ===================== HISTORIQUE DES BACS ===================== */}
         {data.assignationTimeline && data.assignationTimeline.length > 0 && (
-          <>
+          <View wrap={false}>
             <Text style={styles.sectionTitle}>Historique des bacs</Text>
             <View style={styles.tableHeader}>
               <Text style={[styles.tableHeaderText, { width: 70 }]}>Bac</Text>
@@ -538,12 +538,12 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                 <Text style={[styles.tableCell, { flex: 1 }]}>{a.mortalites > 0 ? a.mortalites : "—"}</Text>
               </View>
             ))}
-          </>
+          </View>
         )}
 
         {/* ===================== ÉVOLUTION DU POIDS PAR BAC ===================== */}
         {data.evolutionPoidsTable && data.evolutionPoidsTable.length > 0 && (
-          <>
+          <View wrap={false}>
             <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Évolution du poids par bac</Text>
             <View style={styles.tableHeader}>
               <Text style={[styles.tableHeaderText, { width: 65 }]}>Date</Text>
@@ -563,12 +563,12 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                 <Text style={[styles.tableCell, { flex: 1 }]}>{row.echantillon ?? "—"}</Text>
               </View>
             ))}
-          </>
+          </View>
         )}
 
         {/* ===================== POIDS MOYEN PONDÉRÉ + GOMPERTZ ===================== */}
         {data.evolutionPoidsMoyen && data.evolutionPoidsMoyen.length > 0 && (
-          <>
+          <View wrap={false}>
             <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Poids moyen pondéré (tous bacs)</Text>
             <View style={styles.tableHeader}>
               <Text style={[styles.tableHeaderText, { width: 65 }]}>Date</Text>
@@ -602,12 +602,12 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                 )}
               </View>
             ))}
-          </>
+          </View>
         )}
 
         {/* ===================== MODÈLE DE CROISSANCE (GOMPERTZ) ===================== */}
         {data.gompertz && (
-          <>
+          <View wrap={false}>
             <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Modèle de croissance (Gompertz)</Text>
             <View style={styles.infoCard}>
               <View style={styles.infoRow}>
@@ -647,12 +647,12 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                 </View>
               )}
             </View>
-          </>
+          </View>
         )}
 
         {/* ===================== CALIBRAGES ===================== */}
         {data.calibrageHistory && data.calibrageHistory.length > 0 && (
-          <>
+          <View wrap={false}>
             <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Calibrages ({data.calibrageHistory.length})</Text>
             {data.calibrageHistory.map((cal, ci) => (
               <View key={ci} style={[styles.infoCard, { marginBottom: 6 }]} wrap={false}>
@@ -670,12 +670,12 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                 </View>
               </View>
             ))}
-          </>
+          </View>
         )}
 
         {/* ===================== RÉSUMÉ MORTALITÉ ===================== */}
         {data.mortalitySummary && (
-          <>
+          <View wrap={false}>
             <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Résumé mortalité</Text>
             <View style={styles.kpisGrid}>
               <View style={styles.kpiCard}>
@@ -688,7 +688,7 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
               </View>
             </View>
             {data.mortalitySummary.topCauses.length > 0 && (
-              <>
+              <View>
                 <View style={styles.tableHeader}>
                   <Text style={[styles.tableHeaderText, { flex: 1 }]}>Cause</Text>
                   <Text style={[styles.tableHeaderText, { width: 60 }]}>Nombre</Text>
@@ -699,14 +699,14 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                     <Text style={[styles.tableCell, { width: 60 }]}>{c.count}</Text>
                   </View>
                 ))}
-              </>
+              </View>
             )}
-          </>
+          </View>
         )}
 
         {/* ===================== RÉSUMÉ ALIMENTATION ===================== */}
         {data.feedingSummary && (
-          <>
+          <View wrap={false}>
             <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Résumé alimentation</Text>
             <View style={styles.kpisGrid}>
               <View style={styles.kpiCard}>
@@ -719,7 +719,7 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
               </View>
             </View>
             {data.feedingSummary.typeBreakdown.length > 0 && (
-              <>
+              <View>
                 <View style={styles.tableHeader}>
                   <Text style={[styles.tableHeaderText, { flex: 1 }]}>Type</Text>
                   <Text style={[styles.tableHeaderText, { width: 60 }]}>Relevés</Text>
@@ -732,14 +732,14 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                     <Text style={[styles.tableCell, { width: 70 }]}>{formatNum(t.totalKg, 1)}</Text>
                   </View>
                 ))}
-              </>
+              </View>
             )}
-          </>
+          </View>
         )}
 
         {/* ===================== RÉSUMÉ QUALITÉ EAU ===================== */}
         {data.waterQualitySummary && (data.waterQualitySummary.temperature || data.waterQualitySummary.ph || data.waterQualitySummary.oxygene || data.waterQualitySummary.ammoniac) && (
-          <>
+          <View wrap={false}>
             <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Résumé qualité eau</Text>
             <View style={styles.statGrid}>
               {data.waterQualitySummary.temperature && (
@@ -775,12 +775,12 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                 </View>
               )}
             </View>
-          </>
+          </View>
         )}
 
         {/* ===================== CONSOMMATION DE STOCK ===================== */}
         {data.stockConsumption && data.stockConsumption.length > 0 && (
-          <>
+          <View wrap={false}>
             <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Consommation de stock</Text>
             <View style={styles.tableHeader}>
               <Text style={[styles.tableHeaderText, { flex: 1 }]}>Produit</Text>
@@ -802,13 +802,13 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                 )}
               </View>
             ))}
-          </>
+          </View>
         )}
 
         {/* ===================== RELEVÉS ===================== */}
         {data.releves.length > 0 && (
-          <>
-            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>
+          <View>
+            <Text style={[styles.sectionTitle, { marginTop: 16 }]} minPresenceAhead={40}>
               Relevés ({data.releves.length})
             </Text>
             {/* Header */}
@@ -851,7 +851,7 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                 </Text>
               </View>
             ))}
-          </>
+          </View>
         )}
 
         {/* ===================== FOOTER ===================== */}
