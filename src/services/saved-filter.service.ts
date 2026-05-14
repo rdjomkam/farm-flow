@@ -23,11 +23,21 @@ export function useSavedFilterService() {
     [call]
   );
 
+  const updateSavedFilter = useCallback(
+    (id: string, filters: Record<string, unknown>) =>
+      call<SavedFilter>(`/api/saved-filters/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filters }),
+      }),
+    [call]
+  );
+
   const deleteSavedFilter = useCallback(
     (id: string) =>
       call<{ ok: true }>(`/api/saved-filters/${id}`, { method: "DELETE" }),
     [call]
   );
 
-  return { listSavedFilters, createSavedFilter, deleteSavedFilter };
+  return { listSavedFilters, createSavedFilter, updateSavedFilter, deleteSavedFilter };
 }

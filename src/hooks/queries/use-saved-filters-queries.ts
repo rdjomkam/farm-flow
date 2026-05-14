@@ -33,6 +33,21 @@ export function useCreateSavedFilter() {
   });
 }
 
+export function useUpdateSavedFilter() {
+  const service = useSavedFilterService();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, page, filters }: { id: string; page: SavedFilterPage; filters: Record<string, unknown> }) => {
+      const result = await service.updateSavedFilter(id, filters);
+      if (!result.ok) throw new Error(result.error ?? "Failed to update");
+      return { id, page };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.savedFilters.list(data.page) });
+    },
+  });
+}
+
 export function useDeleteSavedFilter() {
   const service = useSavedFilterService();
   const queryClient = useQueryClient();

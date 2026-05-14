@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SheetClose } from "@/components/ui/sheet";
@@ -82,24 +82,28 @@ export function CommandesFilterSheet({
     loadIntoForm(current);
   }, [current]);
 
-  function handleApply() {
-    const filters: CommandeFilterValues = {};
+  const formFilters = useMemo<CommandeFilterValues>(() => {
+    const f: CommandeFilterValues = {};
     const statutCsv = arrayToCsv(localStatuts);
-    if (statutCsv) filters.statut = statutCsv;
-    if (localSearch) filters.search = localSearch;
+    if (statutCsv) f.statut = statutCsv;
+    if (localSearch) f.search = localSearch;
     const fournisseurCsv = arrayToCsv(localFournisseurIds);
-    if (fournisseurCsv) filters.fournisseurId = fournisseurCsv;
+    if (fournisseurCsv) f.fournisseurId = fournisseurCsv;
     const userCsv = arrayToCsv(localUserIds);
-    if (userCsv) filters.userId = userCsv;
+    if (userCsv) f.userId = userCsv;
     const produitCsv = arrayToCsv(localProduitIds);
-    if (produitCsv) filters.produitId = produitCsv;
-    if (localDateFrom) filters.dateFrom = localDateFrom;
-    if (localDateTo) filters.dateTo = localDateTo;
-    if (localMontantMin) filters.montantMin = localMontantMin;
-    if (localMontantMax) filters.montantMax = localMontantMax;
-    if (localHasFacture) filters.hasFacture = true;
-    if (localHasListeBesoins) filters.hasListeBesoins = true;
-    onApply(filters);
+    if (produitCsv) f.produitId = produitCsv;
+    if (localDateFrom) f.dateFrom = localDateFrom;
+    if (localDateTo) f.dateTo = localDateTo;
+    if (localMontantMin) f.montantMin = localMontantMin;
+    if (localMontantMax) f.montantMax = localMontantMax;
+    if (localHasFacture) f.hasFacture = true;
+    if (localHasListeBesoins) f.hasListeBesoins = true;
+    return f;
+  }, [localStatuts, localSearch, localFournisseurIds, localUserIds, localProduitIds, localDateFrom, localDateTo, localMontantMin, localMontantMax, localHasFacture, localHasListeBesoins]);
+
+  function handleApply() {
+    onApply(formFilters);
   }
 
   const statutOptions = Object.values(StatutCommande).map((s) => ({
@@ -145,7 +149,7 @@ export function CommandesFilterSheet({
       {/* Saved filters */}
       <SavedFiltersSection
         page="commandes"
-        currentFilters={current}
+        currentFilters={formFilters}
         onLoadFilter={(filters) => loadIntoForm(filters as CommandeFilterValues)}
         hasActiveFilters={activeCount > 0}
       />

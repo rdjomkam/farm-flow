@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { TypeReleve, StatutVague, CauseMortalite, MethodeComptage } from "@/types";
@@ -150,34 +150,66 @@ export function RelevesFilterSheet({
   const [bacs, setBacs] = useState<BacOption[]>([]);
   const [bacsLoading, setBacsLoading] = useState(false);
 
-  // Synchroniser avec les filtres actuels quand ils changent (retour navigateur)
+  function loadIntoForm(f: Partial<ReleveSearchParams>) {
+    setLocalVagueId(f.vagueId ?? ALL_VALUE);
+    setLocalBacId(f.bacId ?? ALL_VALUE);
+    setLocalType(f.typeReleve ?? ALL_VALUE);
+    setLocalDateFrom(f.dateFrom ?? "");
+    setLocalDateTo(f.dateTo ?? "");
+    setLocalModifie(f.modifie === "true");
+    setLocalPoidsMoyenMin(f.poidsMoyenMin ?? "");
+    setLocalPoidsMoyenMax(f.poidsMoyenMax ?? "");
+    setLocalTailleMoyenneMin(f.tailleMoyenneMin ?? "");
+    setLocalTailleMoyenneMax(f.tailleMoyenneMax ?? "");
+    setLocalCauseMortalite(f.causeMortalite ?? ALL_VALUE);
+    setLocalNombreMortsMin(f.nombreMortsMin ?? "");
+    setLocalNombreMortsMax(f.nombreMortsMax ?? "");
+    setLocalProduitId(f.produitId ?? ALL_VALUE);
+    setLocalFrequenceAlimentMin(f.frequenceAlimentMin ?? "");
+    setLocalFrequenceAlimentMax(f.frequenceAlimentMax ?? "");
+    setLocalTemperatureMin(f.temperatureMin ?? "");
+    setLocalTemperatureMax(f.temperatureMax ?? "");
+    setLocalPhMin(f.phMin ?? "");
+    setLocalPhMax(f.phMax ?? "");
+    setLocalMethodeComptage(f.methodeComptage ?? ALL_VALUE);
+    setLocalDescriptionSearch(f.descriptionSearch ?? "");
+    setLocalPourcentageMin(f.pourcentageMin ?? "");
+    setLocalPourcentageMax(f.pourcentageMax ?? "");
+  }
+
   useEffect(() => {
-    setLocalVagueId(current.vagueId ?? ALL_VALUE);
-    setLocalBacId(current.bacId ?? ALL_VALUE);
-    setLocalType(current.typeReleve ?? ALL_VALUE);
-    setLocalDateFrom(current.dateFrom ?? "");
-    setLocalDateTo(current.dateTo ?? "");
-    setLocalModifie(current.modifie === "true");
-    // Filtres specifiques
-    setLocalPoidsMoyenMin(current.poidsMoyenMin ?? "");
-    setLocalPoidsMoyenMax(current.poidsMoyenMax ?? "");
-    setLocalTailleMoyenneMin(current.tailleMoyenneMin ?? "");
-    setLocalTailleMoyenneMax(current.tailleMoyenneMax ?? "");
-    setLocalCauseMortalite(current.causeMortalite ?? ALL_VALUE);
-    setLocalNombreMortsMin(current.nombreMortsMin ?? "");
-    setLocalNombreMortsMax(current.nombreMortsMax ?? "");
-    setLocalProduitId(current.produitId ?? ALL_VALUE);
-    setLocalFrequenceAlimentMin(current.frequenceAlimentMin ?? "");
-    setLocalFrequenceAlimentMax(current.frequenceAlimentMax ?? "");
-    setLocalTemperatureMin(current.temperatureMin ?? "");
-    setLocalTemperatureMax(current.temperatureMax ?? "");
-    setLocalPhMin(current.phMin ?? "");
-    setLocalPhMax(current.phMax ?? "");
-    setLocalMethodeComptage(current.methodeComptage ?? ALL_VALUE);
-    setLocalDescriptionSearch(current.descriptionSearch ?? "");
-    setLocalPourcentageMin(current.pourcentageMin ?? "");
-    setLocalPourcentageMax(current.pourcentageMax ?? "");
+    loadIntoForm(current);
   }, [current]);
+
+  const formFilters = useMemo<Partial<ReleveSearchParams>>(() => {
+    const base: Partial<ReleveSearchParams> = {
+      vagueId: localVagueId !== ALL_VALUE ? localVagueId : undefined,
+      bacId: localBacId !== ALL_VALUE ? localBacId : undefined,
+      typeReleve: localType !== ALL_VALUE ? localType : undefined,
+      dateFrom: localDateFrom || undefined,
+      dateTo: localDateTo || undefined,
+      modifie: localModifie ? "true" : undefined,
+    };
+    if (localPoidsMoyenMin) base.poidsMoyenMin = localPoidsMoyenMin;
+    if (localPoidsMoyenMax) base.poidsMoyenMax = localPoidsMoyenMax;
+    if (localTailleMoyenneMin) base.tailleMoyenneMin = localTailleMoyenneMin;
+    if (localTailleMoyenneMax) base.tailleMoyenneMax = localTailleMoyenneMax;
+    if (localCauseMortalite !== ALL_VALUE) base.causeMortalite = localCauseMortalite;
+    if (localNombreMortsMin) base.nombreMortsMin = localNombreMortsMin;
+    if (localNombreMortsMax) base.nombreMortsMax = localNombreMortsMax;
+    if (localProduitId !== ALL_VALUE) base.produitId = localProduitId;
+    if (localFrequenceAlimentMin) base.frequenceAlimentMin = localFrequenceAlimentMin;
+    if (localFrequenceAlimentMax) base.frequenceAlimentMax = localFrequenceAlimentMax;
+    if (localTemperatureMin) base.temperatureMin = localTemperatureMin;
+    if (localTemperatureMax) base.temperatureMax = localTemperatureMax;
+    if (localPhMin) base.phMin = localPhMin;
+    if (localPhMax) base.phMax = localPhMax;
+    if (localMethodeComptage !== ALL_VALUE) base.methodeComptage = localMethodeComptage;
+    if (localDescriptionSearch) base.descriptionSearch = localDescriptionSearch;
+    if (localPourcentageMin) base.pourcentageMin = localPourcentageMin;
+    if (localPourcentageMax) base.pourcentageMax = localPourcentageMax;
+    return base;
+  }, [localVagueId, localBacId, localType, localDateFrom, localDateTo, localModifie, localPoidsMoyenMin, localPoidsMoyenMax, localTailleMoyenneMin, localTailleMoyenneMax, localCauseMortalite, localNombreMortsMin, localNombreMortsMax, localProduitId, localFrequenceAlimentMin, localFrequenceAlimentMax, localTemperatureMin, localTemperatureMax, localPhMin, localPhMax, localMethodeComptage, localDescriptionSearch, localPourcentageMin, localPourcentageMax]);
 
   // Charger les bacs quand la vague locale change
   useEffect(() => {
@@ -244,51 +276,7 @@ export function RelevesFilterSheet({
   }
 
   function handleApply() {
-    const base: Partial<ReleveSearchParams> = {
-      vagueId: localVagueId !== ALL_VALUE ? localVagueId : undefined,
-      bacId: localBacId !== ALL_VALUE ? localBacId : undefined,
-      typeReleve: localType !== ALL_VALUE ? localType : undefined,
-      dateFrom: localDateFrom || undefined,
-      dateTo: localDateTo || undefined,
-      modifie: localModifie ? "true" : undefined,
-    };
-
-    // Filtres specifiques selon le type selectionne
-    if (localType === TypeReleve.BIOMETRIE) {
-      if (localPoidsMoyenMin) base.poidsMoyenMin = localPoidsMoyenMin;
-      if (localPoidsMoyenMax) base.poidsMoyenMax = localPoidsMoyenMax;
-      if (localTailleMoyenneMin) base.tailleMoyenneMin = localTailleMoyenneMin;
-      if (localTailleMoyenneMax) base.tailleMoyenneMax = localTailleMoyenneMax;
-    }
-    if (localType === TypeReleve.MORTALITE) {
-      if (localCauseMortalite !== ALL_VALUE) base.causeMortalite = localCauseMortalite;
-      if (localNombreMortsMin) base.nombreMortsMin = localNombreMortsMin;
-      if (localNombreMortsMax) base.nombreMortsMax = localNombreMortsMax;
-    }
-    if (localType === TypeReleve.ALIMENTATION) {
-      if (localFrequenceAlimentMin) base.frequenceAlimentMin = localFrequenceAlimentMin;
-      if (localFrequenceAlimentMax) base.frequenceAlimentMax = localFrequenceAlimentMax;
-    }
-    // produitId est independant du type car il filtre via ReleveConsommation
-    if (localProduitId !== ALL_VALUE) base.produitId = localProduitId;
-    if (localType === TypeReleve.QUALITE_EAU) {
-      if (localTemperatureMin) base.temperatureMin = localTemperatureMin;
-      if (localTemperatureMax) base.temperatureMax = localTemperatureMax;
-      if (localPhMin) base.phMin = localPhMin;
-      if (localPhMax) base.phMax = localPhMax;
-    }
-    if (localType === TypeReleve.COMPTAGE) {
-      if (localMethodeComptage !== ALL_VALUE) base.methodeComptage = localMethodeComptage;
-    }
-    if (localType === TypeReleve.OBSERVATION) {
-      if (localDescriptionSearch) base.descriptionSearch = localDescriptionSearch;
-    }
-    if (localType === TypeReleve.RENOUVELLEMENT) {
-      if (localPourcentageMin) base.pourcentageMin = localPourcentageMin;
-      if (localPourcentageMax) base.pourcentageMax = localPourcentageMax;
-    }
-
-    onApply(base);
+    onApply(formFilters);
   }
 
   const showTypeSpecific = localType !== ALL_VALUE;
@@ -327,8 +315,8 @@ export function RelevesFilterSheet({
       {/* Saved filters */}
       <SavedFiltersSection
         page="releves"
-        currentFilters={current}
-        onLoadFilter={(filters) => onApply(filters as Partial<ReleveSearchParams>)}
+        currentFilters={formFilters}
+        onLoadFilter={(filters) => loadIntoForm(filters as Partial<ReleveSearchParams>)}
         hasActiveFilters={activeCount > 0}
       />
 
