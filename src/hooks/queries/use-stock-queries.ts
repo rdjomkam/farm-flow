@@ -87,7 +87,7 @@ export function useCommandesList(options?: {
     },
     staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,
-    initialData: options?.initialData,
+    placeholderData: options?.initialData,
   });
 }
 
