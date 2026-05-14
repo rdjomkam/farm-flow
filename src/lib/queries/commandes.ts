@@ -34,10 +34,19 @@ export async function getCommandes(
   filters?: CommandeFilters,
   pagination?: { limit: number; offset: number }
 ) {
+  const montantRange: { gte?: number; lte?: number } = {};
+  if (filters?.montantMin !== undefined) montantRange.gte = filters.montantMin;
+  if (filters?.montantMax !== undefined) montantRange.lte = filters.montantMax;
+  const hasMontantRange = Object.keys(montantRange).length > 0;
+
   const where = {
     siteId,
     ...(filters?.statut && { statut: filters.statut }),
     ...(filters?.fournisseurId && { fournisseurId: filters.fournisseurId }),
+    ...(filters?.userId && { userId: filters.userId }),
+    ...(filters?.produitId && {
+      lignes: { some: { produitId: filters.produitId } },
+    }),
     ...(filters?.dateFrom || filters?.dateTo
       ? {
           dateCommande: {
@@ -46,6 +55,21 @@ export async function getCommandes(
           },
         }
       : {}),
+    ...(hasMontantRange && { montantTotal: montantRange }),
+    ...(filters?.search && {
+      OR: [
+        { numero: { contains: filters.search, mode: "insensitive" as const } },
+        {
+          fournisseur: {
+            nom: { contains: filters.search, mode: "insensitive" as const },
+          },
+        },
+      ],
+    }),
+    ...(filters?.hasFacture === true && { factureUrl: { not: null } }),
+    ...(filters?.hasFacture === false && { factureUrl: null }),
+    ...(filters?.hasListeBesoins === true && { listeBesoinsId: { not: null } }),
+    ...(filters?.hasListeBesoins === false && { listeBesoinsId: null }),
   };
 
   const limit = pagination?.limit ?? 50;

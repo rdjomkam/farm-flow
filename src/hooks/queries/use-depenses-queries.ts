@@ -216,7 +216,7 @@ export function useGenererDepensesRecurrentes() {
 // --- Besoins ---
 
 export function useBesoinsList(
-  filters?: { statut?: string },
+  filters?: Record<string, string | number | boolean | undefined>,
   options?: { initialData?: ListeBesoinsWithRelations[] },
 ) {
   const depenseService = useDepenseService();

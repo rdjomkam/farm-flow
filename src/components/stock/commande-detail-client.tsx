@@ -126,16 +126,21 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
     queryClient.invalidateQueries({ queryKey: queryKeys.produits.all });
   }
 
+  async function refreshCommande() {
+    const result = await stockService.getCommande(commande.id);
+    if (result.ok && result.data) setCommande(result.data as unknown as CommandeData);
+  }
+
   async function handleAction(action: string) {
     if (action === "envoyer") {
       const result = await stockService.envoyerCommande(commande.id);
-      if (result.ok) invalidateCommandes();
+      if (result.ok) { invalidateCommandes(); await refreshCommande(); }
     } else if (action === "annuler") {
       const result = await stockService.annulerCommande(commande.id);
-      if (result.ok) invalidateCommandes();
+      if (result.ok) { invalidateCommandes(); await refreshCommande(); }
     } else if (action === "cloturer") {
       const result = await stockService.cloturerCommande(commande.id);
-      if (result.ok) invalidateCommandes();
+      if (result.ok) { invalidateCommandes(); await refreshCommande(); }
     }
   }
 
@@ -338,6 +343,7 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
                   onOpenChange={setRecevoirOpen}
                   onSuccess={() => {
                     invalidateCommandes();
+                    refreshCommande();
                   }}
                 />
               </>

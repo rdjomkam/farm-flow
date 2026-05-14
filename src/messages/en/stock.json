@@ -196,7 +196,27 @@
       }
     },
     "formatNonAutorise": "Format not allowed. Use PDF, JPG or PNG.",
-    "fichierTropVolumineux": "File too large ({taille} MB). Max 10 MB."
+    "fichierTropVolumineux": "File too large ({taille} MB). Max 10 MB.",
+    "filtres": {
+      "titre": "Filters",
+      "recherche": "Search",
+      "recherchePlaceholder": "Number or supplier...",
+      "fournisseur": "Supplier",
+      "tousFournisseurs": "All suppliers",
+      "creePar": "Created by",
+      "tousUtilisateurs": "All",
+      "produit": "Product",
+      "tousProduits": "All products",
+      "periode": "Period",
+      "du": "From",
+      "au": "To",
+      "montant": "Amount (FCFA)",
+      "hasFacture": "Has invoice",
+      "hasListeBesoins": "Linked to a need",
+      "effacer": "Clear",
+      "appliquer": "Apply ({count})",
+      "appliquerSimple": "Apply"
+    }
   },
   "mouvements": {
     "title": "Movements",

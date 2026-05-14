@@ -49,6 +49,33 @@ export async function GET(request: NextRequest) {
     const dateTo = searchParams.get("dateTo");
     if (dateTo) filters.dateTo = dateTo;
 
+    const valideurId = searchParams.get("valideurId");
+    if (valideurId) filters.valideurId = valideurId;
+
+    const dateLimiteFrom = searchParams.get("dateLimiteFrom");
+    if (dateLimiteFrom) filters.dateLimiteFrom = dateLimiteFrom;
+
+    const dateLimiteTo = searchParams.get("dateLimiteTo");
+    if (dateLimiteTo) filters.dateLimiteTo = dateLimiteTo;
+
+    const montantEstimeMinRaw = searchParams.get("montantEstimeMin");
+    if (montantEstimeMinRaw !== null) {
+      const parsed = parseFloat(montantEstimeMinRaw);
+      if (isFinite(parsed)) filters.montantEstimeMin = parsed;
+    }
+
+    const montantEstimeMaxRaw = searchParams.get("montantEstimeMax");
+    if (montantEstimeMaxRaw !== null) {
+      const parsed = parseFloat(montantEstimeMaxRaw);
+      if (isFinite(parsed)) filters.montantEstimeMax = parsed;
+    }
+
+    const search = searchParams.get("search");
+    if (search) filters.search = search.trim();
+
+    const hasCommandeRaw = searchParams.get("hasCommande");
+    if (hasCommandeRaw === "true") filters.hasCommande = true;
+
     const paginationResult = parsePaginationQuery(searchParams);
     if (!paginationResult.valid) {
       return apiError(400, paginationResult.error);

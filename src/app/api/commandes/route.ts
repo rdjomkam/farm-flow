@@ -32,6 +32,35 @@ export async function GET(request: NextRequest) {
     const dateTo = searchParams.get("dateTo");
     if (dateTo) filters.dateTo = dateTo;
 
+    const userId = searchParams.get("userId");
+    if (userId) filters.userId = userId;
+
+    const produitId = searchParams.get("produitId");
+    if (produitId) filters.produitId = produitId;
+
+    const montantMinRaw = searchParams.get("montantMin");
+    if (montantMinRaw !== null) {
+      const montantMin = parseFloat(montantMinRaw);
+      if (isFinite(montantMin)) filters.montantMin = montantMin;
+    }
+
+    const montantMaxRaw = searchParams.get("montantMax");
+    if (montantMaxRaw !== null) {
+      const montantMax = parseFloat(montantMaxRaw);
+      if (isFinite(montantMax)) filters.montantMax = montantMax;
+    }
+
+    const search = searchParams.get("search");
+    if (search) filters.search = search.trim();
+
+    const hasFactureRaw = searchParams.get("hasFacture");
+    if (hasFactureRaw === "true") filters.hasFacture = true;
+    else if (hasFactureRaw === "false") filters.hasFacture = false;
+
+    const hasListeBesoinsRaw = searchParams.get("hasListeBesoins");
+    if (hasListeBesoinsRaw === "true") filters.hasListeBesoins = true;
+    else if (hasListeBesoinsRaw === "false") filters.hasListeBesoins = false;
+
     const { data, total } = await getCommandes(auth.activeSiteId, filters, { limit, offset });
 
     return NextResponse.json({ data, total, limit, offset });

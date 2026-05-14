@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { formatNumber } from "@/lib/format";
-import { Plus, ShoppingCart, ArrowLeft, Calendar, Trash2 } from "lucide-react";
+import { Plus, ShoppingCart, ArrowLeft, Calendar, Trash2, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,9 +27,12 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { StatutCommande, UniteStock, Permission } from "@/types";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { StatutCommande, Permission } from "@/types";
 import type { Commande } from "@/types";
 import { useCreateCommande, useCommandesList } from "@/hooks/queries/use-stock-queries";
+import { CommandesFilterSheet } from "./commandes-filter-sheet";
+import type { CommandeFilterValues } from "./commandes-filter-sheet";
 
 const statutVariants: Record<StatutCommande, "default" | "info" | "en_cours" | "warning"> = {
   [StatutCommande.BROUILLON]: "default",
@@ -62,18 +65,24 @@ interface Props {
   fournisseurs: { id: string; nom: string }[];
   produits: { id: string; nom: string; unite: string; uniteAchat: string | null; contenance: number | null; prixUnitaire: number }[];
   permissions: Permission[];
+  users: { id: string; name: string }[];
 }
 
-export function CommandesListClient({ commandes: initialCommandes, fournisseurs, produits, permissions }: Props) {
+export function CommandesListClient({ commandes: initialCommandes, fournisseurs, produits, permissions, users }: Props) {
   const t = useTranslations("stock");
   const locale = useLocale();
   const createCommandeMutation = useCreateCommande();
-  const { data: commandesRaw = initialCommandes } = useCommandesList({
-    initialData: initialCommandes as unknown as Commande[],
-  });
-  const commandes = commandesRaw as unknown as CommandeData[];
+
   const [tab, setTab] = useState("tous");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [filters, setFilters] = useState<Record<string, string | number | boolean | undefined>>({});
+
+  const { data: commandesRaw = initialCommandes } = useCommandesList({
+    initialData: initialCommandes as unknown as Commande[],
+    filters,
+  });
+  const commandes = commandesRaw as unknown as CommandeData[];
 
   // Form state
   const [fournisseurId, setFournisseurId] = useState("");
@@ -84,10 +93,60 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
     { produitId: "", quantite: "", prixUnitaire: "" },
   ]);
 
-  const filtered =
-    tab === "tous"
-      ? commandes
-      : commandes.filter((c) => c.statut === tab);
+  // Active filter count — excludes statut (handled by tabs)
+  const activeFilterCount = Object.entries(filters).filter(
+    ([key, val]) => key !== "statut" && val !== undefined && val !== ""
+  ).length;
+
+  // Current filter values for the sheet (excluding statut)
+  const currentFilterValues: CommandeFilterValues = {
+    search: filters.search as string | undefined,
+    fournisseurId: filters.fournisseurId as string | undefined,
+    userId: filters.userId as string | undefined,
+    produitId: filters.produitId as string | undefined,
+    dateFrom: filters.dateFrom as string | undefined,
+    dateTo: filters.dateTo as string | undefined,
+    montantMin: filters.montantMin !== undefined ? String(filters.montantMin) : undefined,
+    montantMax: filters.montantMax !== undefined ? String(filters.montantMax) : undefined,
+    hasFacture: filters.hasFacture as boolean | undefined,
+    hasListeBesoins: filters.hasListeBesoins as boolean | undefined,
+  };
+
+  function handleTabChange(value: string) {
+    setTab(value);
+    if (value === "tous") {
+      setFilters((prev) => {
+        const { statut: _, ...rest } = prev;
+        return rest;
+      });
+    } else {
+      setFilters((prev) => ({ ...prev, statut: value }));
+    }
+  }
+
+  function handleApplyFilters(sheetFilters: CommandeFilterValues) {
+    const newFilters: Record<string, string | number | boolean | undefined> = {};
+    if (tab !== "tous") newFilters.statut = tab;
+    if (sheetFilters.search) newFilters.search = sheetFilters.search;
+    if (sheetFilters.fournisseurId) newFilters.fournisseurId = sheetFilters.fournisseurId;
+    if (sheetFilters.userId) newFilters.userId = sheetFilters.userId;
+    if (sheetFilters.produitId) newFilters.produitId = sheetFilters.produitId;
+    if (sheetFilters.dateFrom) newFilters.dateFrom = sheetFilters.dateFrom;
+    if (sheetFilters.dateTo) newFilters.dateTo = sheetFilters.dateTo;
+    if (sheetFilters.montantMin) newFilters.montantMin = parseFloat(sheetFilters.montantMin);
+    if (sheetFilters.montantMax) newFilters.montantMax = parseFloat(sheetFilters.montantMax);
+    if (sheetFilters.hasFacture) newFilters.hasFacture = true;
+    if (sheetFilters.hasListeBesoins) newFilters.hasListeBesoins = true;
+    setFilters(newFilters);
+    setSheetOpen(false);
+  }
+
+  function handleClearFilters() {
+    const newFilters: Record<string, string | number | boolean | undefined> = {};
+    if (tab !== "tous") newFilters.statut = tab;
+    setFilters(newFilters);
+    setSheetOpen(false);
+  }
 
   function resetForm() {
     setFournisseurId("");
@@ -161,140 +220,171 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
         {t("actions.back")}
       </Link>
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
           {t("commandes.count", { count: commandes.length })}
         </p>
-        {permissions.includes(Permission.APPROVISIONNEMENT_GERER) && (
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-1" />
-                {t("commandes.new")}
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{t("commandes.add")}</DialogTitle>
-              </DialogHeader>
-              <DialogBody className="flex flex-col gap-4 py-2">
-                <Select value={fournisseurId} onValueChange={setFournisseurId}>
-                  <SelectTrigger label={t("commandes.fields.fournisseur")}>
-                    <SelectValue placeholder={t("commandes.fields.choix")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {fournisseurs.map((f) => (
-                      <SelectItem key={f.id} value={f.id}>
-                        {f.nom}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  label={t("commandes.fields.date")}
-                  type="date"
-                  value={dateCommande}
-                  onChange={(e) => setDateCommande(e.target.value)}
-                />
-
-                <div className="space-y-3">
-                  <p className="text-sm font-medium">{t("commandes.fields.lignes")}</p>
-                  {lignes.map((ligne, i) => {
-                    const selectedProduit = produits.find(
-                      (p) => p.id === ligne.produitId
-                    );
-                    const unite = selectedProduit
-                      ? (selectedProduit.uniteAchat
-                          ? uniteLabel(selectedProduit.uniteAchat)
-                          : uniteLabel(selectedProduit.unite))
-                      : "";
-                    return (
-                      <Card key={i}>
-                        <CardContent className="p-3 flex flex-col gap-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">
-                              {t("commandes.fields.ligne", { n: i + 1 })}
-                            </span>
-                            {lignes.length > 1 && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => removeLigne(i)}
-                              >
-                                <Trash2 className="h-3 w-3 text-danger" />
-                              </Button>
-                            )}
-                          </div>
-                          <Select
-                            value={ligne.produitId}
-                            onValueChange={(v) => updateLigne(i, "produitId", v)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder={t("commandes.fields.produit")} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {produits.map((p) => (
-                                <SelectItem key={p.id} value={p.id}>
-                                  {p.nom}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <div className="grid grid-cols-2 gap-2">
-                            <Input
-                              type="number"
-                              placeholder={unite
-                                ? t("commandes.lignes.qteWithUnit", { unit: unite })
-                                : t("commandes.lignes.qtePlaceholder")}
-                              value={ligne.quantite}
-                              onChange={(e) =>
-                                updateLigne(i, "quantite", e.target.value)
-                              }
-                            />
-                            <Input
-                              type="number"
-                              placeholder={t("commandes.lignes.prixPlaceholder")}
-                              value={ligne.prixUnitaire}
-                              onChange={(e) =>
-                                updateLigne(i, "prixUnitaire", e.target.value)
-                              }
-                            />
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={addLigne}
-                    className="w-full"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    {t("commandes.lignes.add")}
-                  </Button>
-                </div>
-
-                {montantTotal > 0 && (
-                  <div className="text-right font-semibold">
-                    {t("commandes.fields.total", { montant: formatNumber(montantTotal) })}
-                  </div>
+        <div className="flex items-center gap-2">
+          {/* Filter button */}
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="relative">
+                <SlidersHorizontal className="h-4 w-4" />
+                {activeFilterCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
                 )}
-              </DialogBody>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline">{t("actions.cancel")}</Button>
-                </DialogClose>
-                <Button onClick={handleCreate} disabled={!isValid}>
-                  {t("actions.create")}
+              </Button>
+            </SheetTrigger>
+            <SheetContent
+              className="!left-auto !right-0 !inset-y-0 !w-full sm:!w-96 !p-0 flex flex-col data-[state=open]:!slide-in-from-right data-[state=closed]:!slide-out-to-right"
+              hideCloseButton
+            >
+              <CommandesFilterSheet
+                current={currentFilterValues}
+                fournisseurs={fournisseurs}
+                users={users}
+                produits={produits.map((p) => ({ id: p.id, nom: p.nom }))}
+                onApply={handleApplyFilters}
+                onClear={handleClearFilters}
+                activeCount={activeFilterCount}
+              />
+            </SheetContent>
+          </Sheet>
+
+          {/* Create button */}
+          {permissions.includes(Permission.APPROVISIONNEMENT_GERER) && (
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  {t("commandes.new")}
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        )}
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{t("commandes.add")}</DialogTitle>
+                </DialogHeader>
+                <DialogBody className="flex flex-col gap-4 py-2">
+                  <Select value={fournisseurId} onValueChange={setFournisseurId}>
+                    <SelectTrigger label={t("commandes.fields.fournisseur")}>
+                      <SelectValue placeholder={t("commandes.fields.choix")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fournisseurs.map((f) => (
+                        <SelectItem key={f.id} value={f.id}>
+                          {f.nom}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    label={t("commandes.fields.date")}
+                    type="date"
+                    value={dateCommande}
+                    onChange={(e) => setDateCommande(e.target.value)}
+                  />
+
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">{t("commandes.fields.lignes")}</p>
+                    {lignes.map((ligne, i) => {
+                      const selectedProduit = produits.find(
+                        (p) => p.id === ligne.produitId
+                      );
+                      const unite = selectedProduit
+                        ? (selectedProduit.uniteAchat
+                            ? uniteLabel(selectedProduit.uniteAchat)
+                            : uniteLabel(selectedProduit.unite))
+                        : "";
+                      return (
+                        <Card key={i}>
+                          <CardContent className="p-3 flex flex-col gap-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">
+                                {t("commandes.fields.ligne", { n: i + 1 })}
+                              </span>
+                              {lignes.length > 1 && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => removeLigne(i)}
+                                >
+                                  <Trash2 className="h-3 w-3 text-danger" />
+                                </Button>
+                              )}
+                            </div>
+                            <Select
+                              value={ligne.produitId}
+                              onValueChange={(v) => updateLigne(i, "produitId", v)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder={t("commandes.fields.produit")} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {produits.map((p) => (
+                                  <SelectItem key={p.id} value={p.id}>
+                                    {p.nom}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <div className="grid grid-cols-2 gap-2">
+                              <Input
+                                type="number"
+                                placeholder={unite
+                                  ? t("commandes.lignes.qteWithUnit", { unit: unite })
+                                  : t("commandes.lignes.qtePlaceholder")}
+                                value={ligne.quantite}
+                                onChange={(e) =>
+                                  updateLigne(i, "quantite", e.target.value)
+                                }
+                              />
+                              <Input
+                                type="number"
+                                placeholder={t("commandes.lignes.prixPlaceholder")}
+                                value={ligne.prixUnitaire}
+                                onChange={(e) =>
+                                  updateLigne(i, "prixUnitaire", e.target.value)
+                                }
+                              />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={addLigne}
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      {t("commandes.lignes.add")}
+                    </Button>
+                  </div>
+
+                  {montantTotal > 0 && (
+                    <div className="text-right font-semibold">
+                      {t("commandes.fields.total", { montant: formatNumber(montantTotal) })}
+                    </div>
+                  )}
+                </DialogBody>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="outline">{t("actions.cancel")}</Button>
+                  </DialogClose>
+                  <Button onClick={handleCreate} disabled={!isValid}>
+                    {t("actions.create")}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
       </div>
 
-      <Tabs value={tab} onValueChange={setTab}>
+      <Tabs value={tab} onValueChange={handleTabChange}>
         <div className="overflow-x-auto -mx-4 px-4">
           <TabsList className="w-max">
             <TabsTrigger value="tous">{t("commandes.tabs.all")}</TabsTrigger>
@@ -306,14 +396,14 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
           </TabsList>
         </div>
         <TabsContent value={tab}>
-          {filtered.length === 0 ? (
+          {commandes.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <ShoppingCart className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-muted-foreground">{t("commandes.empty")}</p>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {filtered.map((c) => (
+              {commandes.map((c) => (
                 <Link key={c.id} href={`/stock/commandes/${c.id}`}>
                   <Card className="hover:ring-1 hover:ring-primary/30 transition-all">
                     <CardContent className="p-3">

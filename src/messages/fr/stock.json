@@ -196,7 +196,27 @@
       }
     },
     "formatNonAutorise": "Format non autorise. Utiliser PDF, JPG ou PNG.",
-    "fichierTropVolumineux": "Fichier trop volumineux ({taille} Mo). Max 10 Mo."
+    "fichierTropVolumineux": "Fichier trop volumineux ({taille} Mo). Max 10 Mo.",
+    "filtres": {
+      "titre": "Filtres",
+      "recherche": "Rechercher",
+      "recherchePlaceholder": "Numero ou fournisseur...",
+      "fournisseur": "Fournisseur",
+      "tousFournisseurs": "Tous les fournisseurs",
+      "creePar": "Cree par",
+      "tousUtilisateurs": "Tous",
+      "produit": "Produit",
+      "tousProduits": "Tous les produits",
+      "periode": "Periode",
+      "du": "Du",
+      "au": "Au",
+      "montant": "Montant (FCFA)",
+      "hasFacture": "A une facture",
+      "hasListeBesoins": "Lie a un besoin",
+      "effacer": "Effacer",
+      "appliquer": "Appliquer ({count})",
+      "appliquerSimple": "Appliquer"
+    }
   },
   "mouvements": {
     "title": "Mouvements",

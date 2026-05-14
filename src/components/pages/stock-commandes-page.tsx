@@ -39,6 +39,11 @@ export default async function StockCommandesPage() {
       prixUnitaire: p.prixUnitaire,
     }));
 
+    // Extract unique users from commandes data
+    const users = Array.from(
+      new Map(commandes.data.map((c) => [c.user.id, c.user])).values()
+    );
+
     return (
       <>
         <Header title={t("commandes.title")} />
@@ -48,6 +53,7 @@ export default async function StockCommandesPage() {
             fournisseurs={fournisseurOptions}
             produits={JSON.parse(JSON.stringify(produitOptions))}
             permissions={permissions}
+            users={users}
           />
         </div>
       </>

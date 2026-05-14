@@ -162,5 +162,25 @@
     "fournisseurPlaceholder": "Choisir un fournisseur",
     "aucuneLigneOrpheline": "Toutes les lignes ont deja une commande.",
     "confirmerCreationCommande": "Creer la commande"
+  },
+  "filtres": {
+    "titre": "Filtres",
+    "recherche": "Rechercher",
+    "recherchePlaceholder": "Numero ou titre...",
+    "demandeur": "Demandeur",
+    "tousUtilisateurs": "Tous",
+    "valideur": "Valideur",
+    "vague": "Vague",
+    "toutesVagues": "Toutes les vagues",
+    "dateCreation": "Date de creation",
+    "dateLimite": "Date limite",
+    "du": "Du",
+    "au": "Au",
+    "montantEstime": "Montant estime (FCFA)",
+    "enRetard": "En retard",
+    "hasCommande": "A une commande liee",
+    "effacer": "Effacer",
+    "appliquer": "Appliquer ({count})",
+    "appliquerSimple": "Appliquer"
   }
 }

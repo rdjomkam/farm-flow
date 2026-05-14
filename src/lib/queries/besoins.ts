@@ -200,10 +200,27 @@ export async function getListeBesoins(
   pagination?: { limit: number; offset: number }
 ) {
   const maintenant = new Date();
-  const where = {
+
+  // Build AND conditions to combine search OR with other clauses safely
+  const andConditions: object[] = [];
+
+  if (filters?.search) {
+    const term = filters.search.trim();
+    if (term) {
+      andConditions.push({
+        OR: [
+          { numero: { contains: term, mode: "insensitive" } },
+          { titre: { contains: term, mode: "insensitive" } },
+        ],
+      });
+    }
+  }
+
+  const where: Record<string, unknown> = {
     siteId,
     ...(filters?.statut && { statut: filters.statut }),
     ...(filters?.demandeurId && { demandeurId: filters.demandeurId }),
+    ...(filters?.valideurId && { valideurId: filters.valideurId }),
     ...(filters?.vagueId && {
       vagues: { some: { vagueId: filters.vagueId } },
     }),
@@ -215,6 +232,25 @@ export async function getListeBesoins(
           },
         }
       : {}),
+    ...(filters?.dateLimiteFrom || filters?.dateLimiteTo
+      ? {
+          dateLimite: {
+            ...(filters.dateLimiteFrom && { gte: new Date(filters.dateLimiteFrom) }),
+            ...(filters.dateLimiteTo && { lte: new Date(filters.dateLimiteTo) }),
+          },
+        }
+      : {}),
+    ...(filters?.montantEstimeMin !== undefined || filters?.montantEstimeMax !== undefined
+      ? {
+          montantEstime: {
+            ...(filters.montantEstimeMin !== undefined && { gte: filters.montantEstimeMin }),
+            ...(filters.montantEstimeMax !== undefined && { lte: filters.montantEstimeMax }),
+          },
+        }
+      : {}),
+    ...(filters?.hasCommande === true && {
+      lignes: { some: { commandeId: { not: null } } },
+    }),
     // Filtre enRetard : dateLimite depassee et statut non terminal (ADR-017.2)
     ...(filters?.enRetard
       ? {
@@ -223,6 +259,10 @@ export async function getListeBesoins(
         }
       : {}),
   };
+
+  if (andConditions.length > 0) {
+    where.AND = andConditions;
+  }
 
   const limit = pagination?.limit ?? 50;
   const offset = pagination?.offset ?? 0;

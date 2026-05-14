@@ -100,7 +100,16 @@ export function useStockService() {
   // -- Commandes --
 
   const listCommandes = useCallback(
-    () => call<CommandeListResponse>("/api/commandes"),
+    (filters?: Record<string, string | number | boolean | undefined>) => {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, val]) => {
+          if (val !== undefined && val !== "") params.set(key, String(val));
+        });
+      }
+      const qs = params.toString();
+      return call<CommandeListResponse>(`/api/commandes${qs ? `?${qs}` : ""}`);
+    },
     [call]
   );
 

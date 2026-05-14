@@ -253,11 +253,15 @@ export function useDepenseService() {
   // -- Besoins --
 
   const listBesoins = useCallback(
-    (params?: { statut?: string }) => {
-      const qs = params?.statut
-        ? `?statut=${encodeURIComponent(params.statut)}`
-        : "";
-      return call<ListeBesoinsListResponse>(`/api/besoins${qs}`);
+    (filters?: Record<string, string | number | boolean | undefined>) => {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, val]) => {
+          if (val !== undefined && val !== "") params.set(key, String(val));
+        });
+      }
+      const qs = params.toString();
+      return call<ListeBesoinsListResponse>(`/api/besoins${qs ? `?${qs}` : ""}`);
     },
     [call]
   );

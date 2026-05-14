@@ -162,5 +162,25 @@
     "fournisseurPlaceholder": "Choose a supplier",
     "aucuneLigneOrpheline": "All lines already have an order.",
     "confirmerCreationCommande": "Create order"
+  },
+  "filtres": {
+    "titre": "Filters",
+    "recherche": "Search",
+    "recherchePlaceholder": "Number or title...",
+    "demandeur": "Requester",
+    "tousUtilisateurs": "All",
+    "valideur": "Validator",
+    "vague": "Batch",
+    "toutesVagues": "All batches",
+    "dateCreation": "Creation date",
+    "dateLimite": "Deadline",
+    "du": "From",
+    "au": "To",
+    "montantEstime": "Estimated amount (FCFA)",
+    "enRetard": "Overdue",
+    "hasCommande": "Has a linked order",
+    "effacer": "Clear",
+    "appliquer": "Apply ({count})",
+    "appliquerSimple": "Apply"
   }
 }

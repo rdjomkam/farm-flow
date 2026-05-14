@@ -808,6 +808,13 @@ export interface CommandeFilters {
   statut?: StatutCommande;
   dateFrom?: string;
   dateTo?: string;
+  userId?: string;
+  produitId?: string;
+  montantMin?: number;
+  montantMax?: number;
+  search?: string;
+  hasFacture?: boolean;
+  hasListeBesoins?: boolean;
 }
 
 /** Reponse liste des commandes */
@@ -1703,6 +1710,20 @@ export interface ListeBesoinsFilters {
   dateTo?: string;
   /** Filtrer les besoins dont la dateLimite est depassee et statut non terminal */
   enRetard?: boolean;
+  /** Filtrer par valideur (userId de la personne qui a approuve/rejete) */
+  valideurId?: string;
+  /** Filtrer par date limite (borne inferieure ISO 8601) */
+  dateLimiteFrom?: string;
+  /** Filtrer par date limite (borne superieure ISO 8601) */
+  dateLimiteTo?: string;
+  /** Montant estime minimum (FCFA) */
+  montantEstimeMin?: number;
+  /** Montant estime maximum (FCFA) */
+  montantEstimeMax?: number;
+  /** Recherche textuelle sur numero et titre */
+  search?: string;
+  /** true = uniquement les listes ayant au moins une ligne liee a une commande */
+  hasCommande?: boolean;
 }
 
 /** Choix de traitement pour une ligne (COMMANDE = via commande fournisseur, LIBRE = achat direct) */

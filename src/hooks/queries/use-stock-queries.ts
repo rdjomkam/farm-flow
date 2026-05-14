@@ -71,13 +71,17 @@ export function useUpdateProduit() {
 
 // --- Commandes ---
 
-export function useCommandesList(options?: { initialData?: Commande[] }) {
+export function useCommandesList(options?: {
+  initialData?: Commande[];
+  filters?: Record<string, string | number | boolean | undefined>;
+}) {
   const stockService = useStockService();
+  const filters = options?.filters;
 
   return useQuery({
-    queryKey: queryKeys.stock.commandes(),
+    queryKey: queryKeys.stock.commandes(filters as Record<string, unknown>),
     queryFn: async () => {
-      const result = await stockService.listCommandes();
+      const result = await stockService.listCommandes(filters);
       if (!result.ok || !result.data) throw new Error(result.error ?? "Erreur chargement commandes");
       return (result.data as PaginatedResponse<Commande>).data;
     },
