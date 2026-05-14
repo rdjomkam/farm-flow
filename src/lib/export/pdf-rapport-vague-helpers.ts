@@ -232,14 +232,17 @@ export function buildEvolutionPoidsMoyenTable(
  */
 export function buildMortalitySummary(
   releves: RawReleve[],
-  nombreInitial: number
+  nombreInitial: number,
+  calibrageMorts = 0
 ): MortalitySummaryPDF {
   const mortaliteReleves = releves.filter((r) => r.typeReleve === "MORTALITE");
 
-  const totalMorts = mortaliteReleves.reduce(
+  const mortsReleves = mortaliteReleves.reduce(
     (sum, r) => sum + (r.nombreMorts ?? 0),
     0
   );
+
+  const totalMorts = mortsReleves + calibrageMorts;
 
   const tauxMortalite =
     nombreInitial > 0 ? (totalMorts / nombreInitial) * 100 : 0;
@@ -248,6 +251,9 @@ export function buildMortalitySummary(
   for (const r of mortaliteReleves) {
     const cause = r.causeMortalite ?? "INCONNUE";
     causeCount.set(cause, (causeCount.get(cause) ?? 0) + 1);
+  }
+  if (calibrageMorts > 0) {
+    causeCount.set("CALIBRAGE", calibrageMorts);
   }
 
   const topCauses = Array.from(causeCount.entries())
