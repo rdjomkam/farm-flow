@@ -436,22 +436,30 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
             <Text style={styles.kpiUnit}>Dernière biométrie</Text>
           </View>
           <View style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>FCR</Text>
+            <Text style={styles.kpiLabel}>
+              {data.locale === "en" ? "FCR" : "TCA"}
+            </Text>
             <Text style={styles.kpiValue}>
               {data.kpis.fcr !== null
                 ? formatNum(data.kpis.fcr, 2)
                 : "—"}
             </Text>
-            <Text style={styles.kpiUnit}>kg aliment / kg gain</Text>
+            <Text style={styles.kpiUnit}>
+              {data.locale === "en" ? "kg feed / kg gain" : "kg aliment / kg gain"}
+            </Text>
           </View>
           <View style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>SGR</Text>
+            <Text style={styles.kpiLabel}>
+              {data.locale === "en" ? "SGR" : "TCS"}
+            </Text>
             <Text style={styles.kpiValue}>
               {data.kpis.sgr !== null
                 ? formatNum(data.kpis.sgr, 2, "%/j")
                 : "—"}
             </Text>
-            <Text style={styles.kpiUnit}>Croissance journalière</Text>
+            <Text style={styles.kpiUnit}>
+              {data.locale === "en" ? "Daily growth rate" : "Croissance journalière"}
+            </Text>
           </View>
         </View>
 
@@ -511,42 +519,87 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
           <>
             <Text style={styles.sectionTitle}>Historique des bacs</Text>
             <View style={styles.tableHeader}>
-              <Text style={[styles.tableHeaderText, { width: 80 }]}>Bac</Text>
-              <Text style={[styles.tableHeaderText, { width: 70 }]}>Assigné le</Text>
-              <Text style={[styles.tableHeaderText, { width: 70 }]}>Retiré le</Text>
-              <Text style={[styles.tableHeaderText, { width: 60 }]}>Volume (L)</Text>
-              <Text style={[styles.tableHeaderText, { flex: 1 }]}>Poissons</Text>
+              <Text style={[styles.tableHeaderText, { width: 70 }]}>Bac</Text>
+              <Text style={[styles.tableHeaderText, { width: 65 }]}>Assigné le</Text>
+              <Text style={[styles.tableHeaderText, { width: 60 }]}>Retiré le</Text>
+              <Text style={[styles.tableHeaderText, { width: 50 }]}>Vol. (L)</Text>
+              <Text style={[styles.tableHeaderText, { width: 50 }]}>Initial</Text>
+              <Text style={[styles.tableHeaderText, { width: 50 }]}>Actuel</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1 }]}>Morts</Text>
             </View>
             {data.assignationTimeline.map((a, i) => (
               <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]} wrap={false}>
-                <Text style={[styles.tableCell, { width: 80, fontFamily: "Helvetica-Bold" }]}>{a.nomBac}</Text>
-                <Text style={[styles.tableCell, { width: 70 }]}>{formatDate(a.dateAssignation)}</Text>
-                <Text style={[styles.tableCell, { width: 70 }]}>{a.dateFin ? formatDate(a.dateFin) : "Actif"}</Text>
-                <Text style={[styles.tableCell, { width: 60 }]}>{a.volume ?? "—"}</Text>
-                <Text style={[styles.tableCell, { flex: 1 }]}>{a.nombrePoissons ?? "—"}</Text>
+                <Text style={[styles.tableCell, { width: 70, fontFamily: "Helvetica-Bold" }]}>{a.nomBac}</Text>
+                <Text style={[styles.tableCell, { width: 65 }]}>{formatDate(a.dateAssignation)}</Text>
+                <Text style={[styles.tableCell, { width: 60 }]}>{a.dateFin ? formatDate(a.dateFin) : "Actif"}</Text>
+                <Text style={[styles.tableCell, { width: 50 }]}>{a.volume ?? "—"}</Text>
+                <Text style={[styles.tableCell, { width: 50 }]}>{a.nombrePoissons ?? "—"}</Text>
+                <Text style={[styles.tableCell, { width: 50 }]}>{a.nombrePoissonsCourant ?? "—"}</Text>
+                <Text style={[styles.tableCell, { flex: 1 }]}>{a.mortalites > 0 ? a.mortalites : "—"}</Text>
               </View>
             ))}
           </>
         )}
 
-        {/* ===================== ÉVOLUTION DU POIDS ===================== */}
+        {/* ===================== ÉVOLUTION DU POIDS PAR BAC ===================== */}
         {data.evolutionPoidsTable && data.evolutionPoidsTable.length > 0 && (
           <>
-            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Évolution du poids</Text>
+            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Évolution du poids par bac</Text>
             <View style={styles.tableHeader}>
               <Text style={[styles.tableHeaderText, { width: 65 }]}>Date</Text>
-              <Text style={[styles.tableHeaderText, { width: 45 }]}>Jour</Text>
-              <Text style={[styles.tableHeaderText, { width: 70 }]}>Poids (g)</Text>
-              <Text style={[styles.tableHeaderText, { width: 70 }]}>Taille (cm)</Text>
+              <Text style={[styles.tableHeaderText, { width: 35 }]}>Jour</Text>
+              <Text style={[styles.tableHeaderText, { width: 65 }]}>Bac</Text>
+              <Text style={[styles.tableHeaderText, { width: 60 }]}>Poids (g)</Text>
+              <Text style={[styles.tableHeaderText, { width: 60 }]}>Taille (cm)</Text>
               <Text style={[styles.tableHeaderText, { flex: 1 }]}>Échantillon</Text>
             </View>
             {data.evolutionPoidsTable.map((row, i) => (
               <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]} wrap={false}>
                 <Text style={[styles.tableCell, { width: 65 }]}>{formatDate(row.date)}</Text>
-                <Text style={[styles.tableCell, { width: 45 }]}>J{row.jourDepuisDebut}</Text>
-                <Text style={[styles.tableCell, { width: 70, fontFamily: "Helvetica-Bold" }]}>{formatNum(row.poidsMoyen, 1)}</Text>
-                <Text style={[styles.tableCell, { width: 70 }]}>{formatNum(row.tailleMoyenne, 1)}</Text>
+                <Text style={[styles.tableCell, { width: 35 }]}>J{row.jourDepuisDebut}</Text>
+                <Text style={[styles.tableCell, { width: 65 }]}>{row.nomBac}</Text>
+                <Text style={[styles.tableCell, { width: 60, fontFamily: "Helvetica-Bold" }]}>{formatNum(row.poidsMoyen, 1)}</Text>
+                <Text style={[styles.tableCell, { width: 60 }]}>{formatNum(row.tailleMoyenne, 1)}</Text>
                 <Text style={[styles.tableCell, { flex: 1 }]}>{row.echantillon ?? "—"}</Text>
+              </View>
+            ))}
+          </>
+        )}
+
+        {/* ===================== POIDS MOYEN PONDÉRÉ + GOMPERTZ ===================== */}
+        {data.evolutionPoidsMoyen && data.evolutionPoidsMoyen.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Poids moyen pondéré (tous bacs)</Text>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderText, { width: 65 }]}>Date</Text>
+              <Text style={[styles.tableHeaderText, { width: 35 }]}>Jour</Text>
+              <Text style={[styles.tableHeaderText, { width: 70 }]}>Mesuré (g)</Text>
+              {data.gompertz && (
+                <>
+                  <Text style={[styles.tableHeaderText, { width: 70 }]}>Gompertz (g)</Text>
+                  <Text style={[styles.tableHeaderText, { flex: 1 }]}>Écart (g)</Text>
+                </>
+              )}
+              {!data.gompertz && (
+                <Text style={[styles.tableHeaderText, { flex: 1 }]}></Text>
+              )}
+            </View>
+            {data.evolutionPoidsMoyen.map((row, i) => (
+              <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]} wrap={false}>
+                <Text style={[styles.tableCell, { width: 65 }]}>{formatDate(row.date)}</Text>
+                <Text style={[styles.tableCell, { width: 35 }]}>J{row.jourDepuisDebut}</Text>
+                <Text style={[styles.tableCell, { width: 70, fontFamily: "Helvetica-Bold" }]}>{formatNum(row.poidsMoyenMesure, 1)}</Text>
+                {data.gompertz && (
+                  <>
+                    <Text style={[styles.tableCell, { width: 70 }]}>{formatNum(row.poidsPreditGompertz, 1)}</Text>
+                    <Text style={[styles.tableCell, { flex: 1, color: row.ecart !== null && row.ecart < 0 ? "#dc2626" : "#16a34a" }]}>
+                      {row.ecart !== null ? (row.ecart >= 0 ? "+" : "") + formatNum(row.ecart, 1) : "—"}
+                    </Text>
+                  </>
+                )}
+                {!data.gompertz && (
+                  <Text style={[styles.tableCell, { flex: 1 }]}></Text>
+                )}
               </View>
             ))}
           </>

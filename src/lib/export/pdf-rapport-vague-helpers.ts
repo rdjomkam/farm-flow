@@ -8,6 +8,7 @@
 
 import type {
   EvolutionPoidsTableRow,
+  EvolutionPoidsMoyenRow,
   MortalitySummaryPDF,
   FeedingSummaryPDF,
   WaterQualitySummaryPDF,
@@ -22,6 +23,7 @@ import type {
 export interface RawReleve {
   date: Date;
   typeReleve: string;
+  bacId: string | null;
   poidsMoyen: number | null;
   tailleMoyenne: number | null;
   echantillonCount: number | null;
@@ -50,19 +52,30 @@ export interface GompertzRecord {
 }
 
 // ---------------------------------------------------------------------------
-// 1. buildEvolutionPoidsTable
+// Bac info pour le calcul des vivants par bac à une date donnée
+// ---------------------------------------------------------------------------
+
+export interface BacInfo {
+  id: string;
+  nom: string;
+  nombreInitial: number | null;
+}
+
+// ---------------------------------------------------------------------------
+// 1. buildEvolutionPoidsTable (per-bac)
 // ---------------------------------------------------------------------------
 
 /**
- * Construit le tableau d'évolution du poids à partir des relevés biométriques.
+ * Construit le tableau d'évolution du poids par bac.
  *
  * - Filtre les relevés BIOMETRIE ayant un poidsMoyen non nul
- * - Calcule le nombre de jours depuis la date de début de la vague
- * - Trie par date ASC
+ * - Résout le nom du bac via bacNameMap
+ * - Trie par date ASC puis nom de bac
  */
 export function buildEvolutionPoidsTable(
   releves: RawReleve[],
-  dateDebut: Date
+  dateDebut: Date,
+  bacNameMap: Map<string, string>
 ): EvolutionPoidsTableRow[] {
   return releves
     .filter((r) => r.typeReleve === "BIOMETRIE" && r.poidsMoyen !== null)
@@ -72,10 +85,138 @@ export function buildEvolutionPoidsTable(
       jourDepuisDebut: Math.floor(
         (r.date.getTime() - dateDebut.getTime()) / 86400000
       ),
+      nomBac: (r.bacId && bacNameMap.get(r.bacId)) || "—",
       poidsMoyen: r.poidsMoyen as number,
       tailleMoyenne: r.tailleMoyenne,
       echantillon: r.echantillonCount,
     }));
+}
+
+// ---------------------------------------------------------------------------
+// 1b. buildEvolutionPoidsMoyenTable (weighted avg across bacs + Gompertz)
+// ---------------------------------------------------------------------------
+
+/**
+ * Calcule le poids prédit par le modèle de Gompertz à un jour donné.
+ * W(t) = wInfinity * exp(-exp(-k * (t - ti)))
+ */
+function gompertzPredict(
+  gompertz: GompertzRecord,
+  jourDepuisDebut: number
+): number {
+  const { wInfinity, k, ti } = gompertz;
+  return wInfinity * Math.exp(-Math.exp(-k * (jourDepuisDebut - ti)));
+}
+
+/**
+ * Calcule le nombre de vivants par bac à une date donnée.
+ * vivants = nombreInitial - sum(mortalités avant ou à cette date pour ce bac)
+ */
+function computeVivantsParBacAtDate(
+  bacs: BacInfo[],
+  releves: RawReleve[],
+  nombreInitialVague: number,
+  atDate: Date
+): Map<string, number> {
+  const nombreInitialParBac = bacs.length > 0
+    ? Math.floor(nombreInitialVague / bacs.length)
+    : nombreInitialVague;
+  const reste = bacs.length > 0
+    ? nombreInitialVague - nombreInitialParBac * bacs.length
+    : 0;
+
+  const result = new Map<string, number>();
+
+  for (let idx = 0; idx < bacs.length; idx++) {
+    const bac = bacs[idx];
+    const isLast = idx === bacs.length - 1;
+    const initialBac = bac.nombreInitial ?? (nombreInitialParBac + (isLast ? reste : 0));
+
+    const mortsJusquaDate = releves
+      .filter(
+        (r) =>
+          r.typeReleve === "MORTALITE" &&
+          r.bacId === bac.id &&
+          r.date.getTime() <= atDate.getTime()
+      )
+      .reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
+
+    result.set(bac.id, Math.max(0, initialBac - mortsJusquaDate));
+  }
+
+  return result;
+}
+
+/**
+ * Construit le tableau d'évolution du poids moyen pondéré par les vivants
+ * à chaque date de biométrie, avec la prédiction Gompertz.
+ *
+ * Pour chaque date unique de biométrie :
+ * 1. Calcule vivants par bac à cette date (initial - mortalités cumulées)
+ * 2. Pondère les poids mesurés par bac : sum(poids_bac * vivants_bac) / sum(vivants_bac)
+ * 3. Calcule le poids prédit Gompertz si le modèle est disponible
+ */
+export function buildEvolutionPoidsMoyenTable(
+  releves: RawReleve[],
+  bacs: BacInfo[],
+  nombreInitialVague: number,
+  dateDebut: Date,
+  gompertz: GompertzRecord | null
+): EvolutionPoidsMoyenRow[] {
+  const biometries = releves
+    .filter((r) => r.typeReleve === "BIOMETRIE" && r.poidsMoyen !== null && r.bacId !== null)
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  const dateGroups = new Map<string, RawReleve[]>();
+  for (const r of biometries) {
+    const key = r.date.toISOString().slice(0, 10);
+    const group = dateGroups.get(key) ?? [];
+    group.push(r);
+    dateGroups.set(key, group);
+  }
+
+  const rows: EvolutionPoidsMoyenRow[] = [];
+
+  for (const [, group] of dateGroups) {
+    const refDate = group[0].date;
+    const jourDepuisDebut = Math.floor(
+      (refDate.getTime() - dateDebut.getTime()) / 86400000
+    );
+
+    const vivantsMap = computeVivantsParBacAtDate(bacs, releves, nombreInitialVague, refDate);
+
+    let totalPoidsWeighted = 0;
+    let totalVivants = 0;
+
+    for (const r of group) {
+      const vivants = vivantsMap.get(r.bacId!) ?? 0;
+      totalPoidsWeighted += (r.poidsMoyen as number) * vivants;
+      totalVivants += vivants;
+    }
+
+    if (totalVivants === 0) continue;
+
+    const poidsMoyenMesure = Math.round((totalPoidsWeighted / totalVivants) * 100) / 100;
+
+    let poidsPreditGompertz: number | null = null;
+    if (gompertz) {
+      poidsPreditGompertz = Math.round(gompertzPredict(gompertz, jourDepuisDebut) * 100) / 100;
+    }
+
+    const ecart = poidsPreditGompertz !== null
+      ? Math.round((poidsMoyenMesure - poidsPreditGompertz) * 100) / 100
+      : null;
+
+    rows.push({
+      date: refDate,
+      jourDepuisDebut,
+      poidsMoyenMesure,
+      poidsPreditGompertz,
+      ecart,
+    });
+  }
+
+  return rows;
 }
 
 // ---------------------------------------------------------------------------
@@ -103,7 +244,6 @@ export function buildMortalitySummary(
   const tauxMortalite =
     nombreInitial > 0 ? (totalMorts / nombreInitial) * 100 : 0;
 
-  // Compter les occurrences par cause
   const causeCount = new Map<string, number>();
   for (const r of mortaliteReleves) {
     const cause = r.causeMortalite ?? "INCONNUE";
@@ -138,7 +278,6 @@ export function buildFeedingSummary(releves: RawReleve[]): FeedingSummaryPDF {
     0
   );
 
-  // Moyenne de fréquence en ignorant les nulls
   const frequences = alimentReleves
     .map((r) => r.frequenceAliment)
     .filter((f): f is number => f !== null);
@@ -148,7 +287,6 @@ export function buildFeedingSummary(releves: RawReleve[]): FeedingSummaryPDF {
       ? frequences.reduce((sum, f) => sum + f, 0) / frequences.length
       : null;
 
-  // Grouper par type d'aliment
   const typeMap = new Map<string, { count: number; totalKg: number }>();
   for (const r of alimentReleves) {
     const type = r.typeAliment ?? "INCONNU";
@@ -237,7 +375,6 @@ export function buildGompertzSection(
 
   if (targetWeight !== null && targetWeight < wInfinity && k > 0) {
     const ratio = targetWeight / wInfinity;
-    // ratio must be in (0, 1) for a valid Gompertz inverse
     if (ratio > 0 && ratio < 1) {
       const t = ti - (1 / k) * Math.log(-Math.log(ratio));
       if (isFinite(t) && t >= 0) {

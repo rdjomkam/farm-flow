@@ -13,12 +13,13 @@ import { getIndicateursVague } from "@/lib/queries/indicateurs";
 import { getCoutProductionVague } from "@/lib/queries/finances";
 import {
   buildEvolutionPoidsTable,
+  buildEvolutionPoidsMoyenTable,
   buildMortalitySummary,
   buildFeedingSummary,
   buildWaterQualitySummary,
   buildGompertzSection,
 } from "@/lib/export/pdf-rapport-vague-helpers";
-import type { RawReleve } from "@/lib/export/pdf-rapport-vague-helpers";
+import type { RawReleve, BacInfo } from "@/lib/export/pdf-rapport-vague-helpers";
 import { renderRapportVaguePDF } from "@/lib/export/pdf-rapport-vague";
 import { Permission, TypeReleve, StatutVague, CauseMortalite, TypeMouvement } from "@/types";
 import type { CreateRapportVaguePDFDTO, ReleveRapportPDF, StockConsumptionPDFRow } from "@/types/export";
@@ -129,26 +130,48 @@ export async function GET(
       }
     }
 
+    // Locale from cookie (fallback: "fr")
+    const locale = request.cookies.get("NEXT_LOCALE")?.value ?? "fr";
+
     // Build aggregated sections using helpers
     const rawReleves = allReleves as unknown as RawReleve[];
-    const evolutionPoidsTable = buildEvolutionPoidsTable(rawReleves, vague.dateDebut);
+
+    // Bac name map for per-bac weight table
+    const bacNameMap = new Map<string, string>();
+    for (const b of vague.bacs) bacNameMap.set(b.id, b.nom);
+
+    // BacInfo for weighted average computation
+    const bacInfos: BacInfo[] = vague.bacs.map((b) => ({
+      id: b.id,
+      nom: b.nom,
+      nombreInitial: b.nombreInitial ?? null,
+    }));
+
+    const evolutionPoidsTable = buildEvolutionPoidsTable(rawReleves, vague.dateDebut, bacNameMap);
     const mortalitySummary = buildMortalitySummary(rawReleves, vague.nombreInitial);
     const feedingSummary = buildFeedingSummary(rawReleves);
     const waterQualitySummary = buildWaterQualitySummary(rawReleves);
     const targetWeight = configElevageData?.poidsObjectif ?? null;
-    const gompertzSection = buildGompertzSection(
-      gompertzRecord
-        ? {
-            wInfinity: gompertzRecord.wInfinity,
-            k: gompertzRecord.k,
-            ti: gompertzRecord.ti,
-            r2: gompertzRecord.r2,
-            rmse: gompertzRecord.rmse,
-            confidenceLevel: gompertzRecord.confidenceLevel,
-          }
-        : null,
+
+    const gompertzRec = gompertzRecord
+      ? {
+          wInfinity: gompertzRecord.wInfinity,
+          k: gompertzRecord.k,
+          ti: gompertzRecord.ti,
+          r2: gompertzRecord.r2,
+          rmse: gompertzRecord.rmse,
+          confidenceLevel: gompertzRecord.confidenceLevel,
+        }
+      : null;
+
+    const gompertzSection = buildGompertzSection(gompertzRec, vague.dateDebut, targetWeight);
+
+    const evolutionPoidsMoyen = buildEvolutionPoidsMoyenTable(
+      rawReleves,
+      bacInfos,
+      vague.nombreInitial,
       vague.dateDebut,
-      targetWeight
+      gompertzRec
     );
 
     // Map calibrages
@@ -163,14 +186,28 @@ export async function GET(
       nombreMorts: c.nombreMorts,
     }));
 
-    // Map assignations
-    const assignationTimeline = assignationsDb.map((a) => ({
-      nomBac: a.bac.nom,
-      dateAssignation: a.dateAssignation,
-      dateFin: a.dateFin,
-      volume: a.bac.volume,
-      nombrePoissons: a.nombrePoissons,
-    }));
+    // Map assignations with mortality and current count per bac
+    const mortalitesParBac = new Map<string, number>();
+    for (const r of allReleves) {
+      if (r.typeReleve === TypeReleve.MORTALITE && r.bacId) {
+        mortalitesParBac.set(r.bacId, (mortalitesParBac.get(r.bacId) ?? 0) + (r.nombreMorts ?? 0));
+      }
+    }
+
+    const assignationTimeline = assignationsDb.map((a) => {
+      const bacId = vague.bacs.find((b) => b.nom === a.bac.nom)?.id;
+      const mortalites = bacId ? (mortalitesParBac.get(bacId) ?? 0) : 0;
+      const initial = a.nombrePoissons ?? 0;
+      return {
+        nomBac: a.bac.nom,
+        dateAssignation: a.dateAssignation,
+        dateFin: a.dateFin,
+        volume: a.bac.volume,
+        nombrePoissons: a.nombrePoissons,
+        nombrePoissonsCourant: initial > 0 ? initial - mortalites : null,
+        mortalites,
+      };
+    });
 
     // Aggregate stock consumption
     const stockMap = new Map<string, StockConsumptionPDFRow>();
@@ -250,7 +287,9 @@ export async function GET(
       // Sections enrichies
       coutProduction: coutProductionSection,
       evolutionPoidsTable,
+      evolutionPoidsMoyen,
       gompertz: gompertzSection,
+      locale,
       calibrageHistory,
       assignationTimeline,
       mortalitySummary,
