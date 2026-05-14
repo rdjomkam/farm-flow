@@ -237,9 +237,19 @@ export interface CoutProductionPDFSection {
 export interface EvolutionPoidsTableRow {
   date: Date;
   jourDepuisDebut: number;
+  nomBac: string;
   poidsMoyen: number;
   tailleMoyenne: number | null;
   echantillon: number | null;
+}
+
+/** Ligne du tableau d'évolution du poids moyen pondéré (tous bacs) avec prédiction Gompertz */
+export interface EvolutionPoidsMoyenRow {
+  date: Date;
+  jourDepuisDebut: number;
+  poidsMoyenMesure: number;
+  poidsPreditGompertz: number | null;
+  ecart: number | null;
 }
 
 /** Section modèle de croissance Gompertz */
@@ -276,6 +286,8 @@ export interface AssignationBacPDFRow {
   dateFin: Date | null;
   volume: number | null;
   nombrePoissons: number | null;
+  nombrePoissonsCourant: number | null;
+  mortalites: number;
 }
 
 /** Résumé de mortalité */
@@ -367,10 +379,14 @@ export interface CreateRapportVaguePDFDTO {
   // --- Sections enrichies (optionnelles) ---
   /** Résumé des coûts de production (null si permission FINANCES_VOIR absente) */
   coutProduction?: CoutProductionPDFSection | null;
-  /** Tableau détaillé d'évolution du poids avec jours depuis début */
+  /** Tableau détaillé d'évolution du poids par bac */
   evolutionPoidsTable: EvolutionPoidsTableRow[];
+  /** Tableau d'évolution du poids moyen pondéré (tous bacs) avec Gompertz */
+  evolutionPoidsMoyen: EvolutionPoidsMoyenRow[];
   /** Paramètres du modèle de croissance Gompertz (null si non calculé) */
   gompertz?: GompertzPDFSection | null;
+  /** Locale pour les labels (fr ou en) */
+  locale: string;
   /** Historique des sessions de calibrage */
   calibrageHistory: CalibragePDFRow[];
   /** Timeline d'assignation des bacs à la vague */
