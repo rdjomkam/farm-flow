@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+// Tabs removed — status filtering moved into the filter sheet
 import {
   Dialog,
   DialogTrigger,
@@ -73,7 +73,6 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
   const locale = useLocale();
   const createCommandeMutation = useCreateCommande();
 
-  const [tab, setTab] = useState("tous");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [filters, setFilters] = useState<Record<string, string | number | boolean | undefined>>({});
@@ -93,13 +92,12 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
     { produitId: "", quantite: "", prixUnitaire: "" },
   ]);
 
-  // Active filter count — excludes statut (handled by tabs)
   const activeFilterCount = Object.entries(filters).filter(
-    ([key, val]) => key !== "statut" && val !== undefined && val !== ""
+    ([, val]) => val !== undefined && val !== ""
   ).length;
 
-  // Current filter values for the sheet (excluding statut)
   const currentFilterValues: CommandeFilterValues = {
+    statut: filters.statut as string | undefined,
     search: filters.search as string | undefined,
     fournisseurId: filters.fournisseurId as string | undefined,
     userId: filters.userId as string | undefined,
@@ -112,21 +110,9 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
     hasListeBesoins: filters.hasListeBesoins as boolean | undefined,
   };
 
-  function handleTabChange(value: string) {
-    setTab(value);
-    if (value === "tous") {
-      setFilters((prev) => {
-        const { statut: _, ...rest } = prev;
-        return rest;
-      });
-    } else {
-      setFilters((prev) => ({ ...prev, statut: value }));
-    }
-  }
-
   function handleApplyFilters(sheetFilters: CommandeFilterValues) {
     const newFilters: Record<string, string | number | boolean | undefined> = {};
-    if (tab !== "tous") newFilters.statut = tab;
+    if (sheetFilters.statut) newFilters.statut = sheetFilters.statut;
     if (sheetFilters.search) newFilters.search = sheetFilters.search;
     if (sheetFilters.fournisseurId) newFilters.fournisseurId = sheetFilters.fournisseurId;
     if (sheetFilters.userId) newFilters.userId = sheetFilters.userId;
@@ -142,9 +128,7 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
   }
 
   function handleClearFilters() {
-    const newFilters: Record<string, string | number | boolean | undefined> = {};
-    if (tab !== "tous") newFilters.statut = tab;
-    setFilters(newFilters);
+    setFilters({});
     setSheetOpen(false);
   }
 
@@ -384,60 +368,46 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
         </div>
       </div>
 
-      <Tabs value={tab} onValueChange={handleTabChange}>
-        <div className="overflow-x-auto -mx-4 px-4">
-          <TabsList className="w-max">
-            <TabsTrigger value="tous">{t("commandes.tabs.all")}</TabsTrigger>
-            {Object.values(StatutCommande).map((val) => (
-              <TabsTrigger key={val} value={val}>
-                {statutLabel(val)}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+      {commandes.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <ShoppingCart className="h-12 w-12 text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">{t("commandes.empty")}</p>
         </div>
-        <TabsContent value={tab}>
-          {commandes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <ShoppingCart className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">{t("commandes.empty")}</p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {commandes.map((c) => (
-                <Link key={c.id} href={`/stock/commandes/${c.id}`}>
-                  <Card className="hover:ring-1 hover:ring-primary/30 transition-all">
-                    <CardContent className="p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="font-medium text-sm">{c.numero}</p>
-                        <Badge variant={statutVariants[c.statut as StatutCommande]}>
-                          {statutLabel(c.statut)}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground truncate">
-                          {c.fournisseur.nom}
-                        </span>
-                        <span className="font-semibold shrink-0">
-                          {formatNumber(c.montantTotal)} FCFA
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between mt-1 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(c.dateCommande).toLocaleDateString(locale)}
-                        </div>
-                        <span>
-                          {c._count.lignes} ligne{c._count.lignes > 1 ? "s" : ""}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {commandes.map((c) => (
+            <Link key={c.id} href={`/stock/commandes/${c.id}`}>
+              <Card className="hover:ring-1 hover:ring-primary/30 transition-all">
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-medium text-sm">{c.numero}</p>
+                    <Badge variant={statutVariants[c.statut as StatutCommande]}>
+                      {statutLabel(c.statut)}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground truncate">
+                      {c.fournisseur.nom}
+                    </span>
+                    <span className="font-semibold shrink-0">
+                      {formatNumber(c.montantTotal)} FCFA
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {new Date(c.dateCommande).toLocaleDateString(locale)}
+                    </div>
+                    <span>
+                      {c._count.lignes} ligne{c._count.lignes > 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

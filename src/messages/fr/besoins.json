@@ -165,6 +165,8 @@
   },
   "filtres": {
     "titre": "Filtres",
+    "statut": "Statut",
+    "tousStatuts": "Tous les statuts",
     "recherche": "Rechercher",
     "recherchePlaceholder": "Numero ou titre...",
     "demandeur": "Demandeur",

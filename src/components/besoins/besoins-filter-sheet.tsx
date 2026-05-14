@@ -11,10 +11,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { StatutBesoins } from "@/types";
 
 const ALL_VALUE = "__all__";
 
 export interface BesoinsFilterValues {
+  statut?: string;
   search?: string;
   demandeurId?: string;
   valideurId?: string;
@@ -50,6 +52,7 @@ export function BesoinsFilterSheet({
   const tCommon = useTranslations("common");
 
   // Local state — changes are only applied on "Appliquer"
+  const [localStatut, setLocalStatut] = useState(current.statut ?? ALL_VALUE);
   const [localSearch, setLocalSearch] = useState(current.search ?? "");
   const [localDemandeurId, setLocalDemandeurId] = useState(current.demandeurId ?? ALL_VALUE);
   const [localValideurId, setLocalValideurId] = useState(current.valideurId ?? ALL_VALUE);
@@ -65,6 +68,7 @@ export function BesoinsFilterSheet({
 
   // Sync with parent filters when they change (e.g. back navigation)
   useEffect(() => {
+    setLocalStatut(current.statut ?? ALL_VALUE);
     setLocalSearch(current.search ?? "");
     setLocalDemandeurId(current.demandeurId ?? ALL_VALUE);
     setLocalValideurId(current.valideurId ?? ALL_VALUE);
@@ -81,6 +85,7 @@ export function BesoinsFilterSheet({
 
   function handleApply() {
     const filters: BesoinsFilterValues = {
+      statut: localStatut !== ALL_VALUE ? localStatut : undefined,
       search: localSearch || undefined,
       demandeurId: localDemandeurId !== ALL_VALUE ? localDemandeurId : undefined,
       valideurId: localValideurId !== ALL_VALUE ? localValideurId : undefined,
@@ -141,6 +146,24 @@ export function BesoinsFilterSheet({
             placeholder={t("filtres.recherchePlaceholder")}
             className="h-10 rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
+        </div>
+
+        {/* Statut */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium">{t("filtres.statut")}</label>
+          <Select value={localStatut} onValueChange={setLocalStatut}>
+            <SelectTrigger>
+              <SelectValue placeholder={t("filtres.tousStatuts")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_VALUE}>{t("filtres.tousStatuts")}</SelectItem>
+              {Object.values(StatutBesoins).map((s) => (
+                <SelectItem key={s} value={s}>
+                  {t(`statuts.${s}` as Parameters<typeof t>[0])}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Demandeur */}

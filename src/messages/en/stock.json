@@ -199,6 +199,8 @@
     "fichierTropVolumineux": "File too large ({taille} MB). Max 10 MB.",
     "filtres": {
       "titre": "Filters",
+      "statut": "Status",
+      "tousStatuts": "All statuses",
       "recherche": "Search",
       "recherchePlaceholder": "Number or supplier...",
       "fournisseur": "Supplier",

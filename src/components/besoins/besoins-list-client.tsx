@@ -7,7 +7,6 @@ import { Plus, ClipboardList, Calendar, User, AlertCircle, Clock, SlidersHorizon
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { StatutBesoins } from "@/types";
 import { useBesoinsList } from "@/hooks/queries/use-depenses-queries";
@@ -85,22 +84,8 @@ function getDateLimiteStatus(dateLimite: string | null, statut: string): "retard
   return "ok";
 }
 
-/** Count active filters (excluding statut which is driven by tabs) */
 function countActiveFilters(filters: BesoinsFilterValues): number {
-  return [
-    filters.search,
-    filters.demandeurId,
-    filters.valideurId,
-    filters.vagueId,
-    filters.dateFrom,
-    filters.dateTo,
-    filters.dateLimiteFrom,
-    filters.dateLimiteTo,
-    filters.montantEstimeMin,
-    filters.montantEstimeMax,
-    filters.enRetard,
-    filters.hasCommande,
-  ].filter(Boolean).length;
+  return Object.values(filters).filter(Boolean).length;
 }
 
 // ---------------------------------------------------------------------------
@@ -113,31 +98,26 @@ export function BesoinsListClient({
 }: Props) {
   const t = useTranslations("besoins");
   const locale = useLocale();
-  const [activeTab, setActiveTab] = useState("toutes");
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [filters, setFilters] = useState<BesoinsFilterValues>({});
 
-  // Filters state — statut is driven by tabs, other filters go through the sheet
-  const [extraFilters, setExtraFilters] = useState<BesoinsFilterValues>({});
-
-  // Build combined query filters (statut + extra)
   const queryFilters = useMemo(() => {
-    const statut = activeTab !== "toutes" ? getStatutForTab(activeTab) : undefined;
     const combined: Record<string, string | number | boolean | undefined> = {};
-    if (statut) combined.statut = statut;
-    if (extraFilters.search) combined.search = extraFilters.search;
-    if (extraFilters.demandeurId) combined.demandeurId = extraFilters.demandeurId;
-    if (extraFilters.valideurId) combined.valideurId = extraFilters.valideurId;
-    if (extraFilters.vagueId) combined.vagueId = extraFilters.vagueId;
-    if (extraFilters.dateFrom) combined.dateFrom = extraFilters.dateFrom;
-    if (extraFilters.dateTo) combined.dateTo = extraFilters.dateTo;
-    if (extraFilters.dateLimiteFrom) combined.dateLimiteFrom = extraFilters.dateLimiteFrom;
-    if (extraFilters.dateLimiteTo) combined.dateLimiteTo = extraFilters.dateLimiteTo;
-    if (extraFilters.montantEstimeMin) combined.montantEstimeMin = extraFilters.montantEstimeMin;
-    if (extraFilters.montantEstimeMax) combined.montantEstimeMax = extraFilters.montantEstimeMax;
-    if (extraFilters.enRetard) combined.enRetard = true;
-    if (extraFilters.hasCommande) combined.hasCommande = true;
+    if (filters.statut) combined.statut = filters.statut;
+    if (filters.search) combined.search = filters.search;
+    if (filters.demandeurId) combined.demandeurId = filters.demandeurId;
+    if (filters.valideurId) combined.valideurId = filters.valideurId;
+    if (filters.vagueId) combined.vagueId = filters.vagueId;
+    if (filters.dateFrom) combined.dateFrom = filters.dateFrom;
+    if (filters.dateTo) combined.dateTo = filters.dateTo;
+    if (filters.dateLimiteFrom) combined.dateLimiteFrom = filters.dateLimiteFrom;
+    if (filters.dateLimiteTo) combined.dateLimiteTo = filters.dateLimiteTo;
+    if (filters.montantEstimeMin) combined.montantEstimeMin = filters.montantEstimeMin;
+    if (filters.montantEstimeMax) combined.montantEstimeMax = filters.montantEstimeMax;
+    if (filters.enRetard) combined.enRetard = true;
+    if (filters.hasCommande) combined.hasCommande = true;
     return Object.keys(combined).length > 0 ? combined : undefined;
-  }, [activeTab, extraFilters]);
+  }, [filters]);
 
   const { data: listesBesoinsRaw = initialListesBesoins } = useBesoinsList(queryFilters, {
     initialData: initialListesBesoins as unknown as ListeBesoinsWithRelations[],
@@ -166,30 +146,17 @@ export function BesoinsListClient({
     return Array.from(map.entries()).map(([id, code]) => ({ id, code }));
   }, [initialListesBesoins]);
 
-  function handleTabChange(value: string) {
-    setActiveTab(value);
-  }
-
-  function handleApplyFilters(filters: BesoinsFilterValues) {
-    setExtraFilters(filters);
+  function handleApplyFilters(newFilters: BesoinsFilterValues) {
+    setFilters(newFilters);
     setSheetOpen(false);
   }
 
   function handleClearFilters() {
-    setExtraFilters({});
+    setFilters({});
     setSheetOpen(false);
   }
 
-  const activeFilterCount = countActiveFilters(extraFilters);
-
-  const tabs: { value: string; label: string; statuts: string[] | null }[] = [
-    { value: "toutes", label: t("list.tabs.toutes"), statuts: null },
-    { value: "soumises", label: t("list.tabs.soumises"), statuts: [StatutBesoins.SOUMISE] },
-    { value: "approuvees", label: t("list.tabs.approuvees"), statuts: [StatutBesoins.APPROUVEE] },
-    { value: "traitees", label: t("list.tabs.traitees"), statuts: [StatutBesoins.TRAITEE] },
-    { value: "cloturees", label: t("list.tabs.cloturees"), statuts: [StatutBesoins.CLOTUREE] },
-    { value: "rejetees", label: t("list.tabs.rejetees"), statuts: [StatutBesoins.REJETEE] },
-  ];
+  const activeFilterCount = countActiveFilters(filters);
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
@@ -222,7 +189,7 @@ export function BesoinsListClient({
               hideCloseButton
             >
               <BesoinsFilterSheet
-                current={extraFilters}
+                current={filters}
                 users={users}
                 vagues={vagues}
                 onApply={handleApplyFilters}
@@ -243,53 +210,24 @@ export function BesoinsListClient({
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <div className="overflow-x-auto -mx-4 px-4">
-          <TabsList className="w-max mb-4">
-          {tabs.map((tab) => (
-            <TabsTrigger
-              key={tab.value}
-              value={tab.value}
-              className="text-xs whitespace-nowrap"
-            >
-              {tab.label}
-              {tab.statuts && (
-                <span className="ml-1 text-xs opacity-70">
-                  (
-                  {
-                    initialListesBesoins.filter((lb) =>
-                      tab.statuts!.includes(lb.statut)
-                    ).length
-                  }
-                  )
-                </span>
-              )}
-            </TabsTrigger>
-          ))}
-          </TabsList>
+      {listesBesoins.length === 0 ? (
+        <div className="text-center py-12">
+          <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+          <p className="text-muted-foreground text-sm">
+            {t("list.empty")}
+          </p>
+          {canCreate && activeFilterCount === 0 && (
+            <Button asChild variant="primary" className="mt-4">
+              <Link href="/besoins/nouveau">
+                <Plus className="h-4 w-4 mr-1" />
+                {t("list.creer")}
+              </Link>
+            </Button>
+          )}
         </div>
-
-        {/* Single TabsContent — dynamic value tied to activeTab (Pattern C2) */}
-        <TabsContent value={activeTab}>
-          {listesBesoins.length === 0 ? (
-            <div className="text-center py-12">
-              <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-              <p className="text-muted-foreground text-sm">
-                {t("list.empty")}
-              </p>
-              {canCreate && activeTab === "toutes" && activeFilterCount === 0 && (
-                <Button asChild variant="primary" className="mt-4">
-                  <Link href="/besoins/nouveau">
-                    <Plus className="h-4 w-4 mr-1" />
-                    {t("list.creer")}
-                  </Link>
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {listesBesoins.map((lb) => (
+      ) : (
+        <div className="space-y-3">
+          {listesBesoins.map((lb) => (
                 <Link key={lb.id} href={`/besoins/${lb.id}`}>
                   <Card className="hover:shadow-md transition-shadow cursor-pointer my-4">
                     <CardContent className="p-4">
@@ -398,24 +336,7 @@ export function BesoinsListClient({
                 </Link>
               ))}
             </div>
-          )}
-        </TabsContent>
-      </Tabs>
+      )}
     </div>
   );
-}
-
-// ---------------------------------------------------------------------------
-// Helper — map tab value to StatutBesoins enum value
-// ---------------------------------------------------------------------------
-
-function getStatutForTab(tab: string): StatutBesoins | undefined {
-  const map: Record<string, StatutBesoins> = {
-    soumises: StatutBesoins.SOUMISE,
-    approuvees: StatutBesoins.APPROUVEE,
-    traitees: StatutBesoins.TRAITEE,
-    cloturees: StatutBesoins.CLOTUREE,
-    rejetees: StatutBesoins.REJETEE,
-  };
-  return map[tab];
 }

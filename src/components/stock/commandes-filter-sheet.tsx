@@ -11,10 +11,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { StatutCommande } from "@/types";
 
 const ALL_VALUE = "__all__";
 
 export interface CommandeFilterValues {
+  statut?: string;
   search?: string;
   fournisseurId?: string;
   userId?: string;
@@ -49,6 +51,7 @@ export function CommandesFilterSheet({
   const t = useTranslations("stock");
   const tCommon = useTranslations("common");
 
+  const [localStatut, setLocalStatut] = useState(current.statut ?? ALL_VALUE);
   const [localSearch, setLocalSearch] = useState(current.search ?? "");
   const [localFournisseurId, setLocalFournisseurId] = useState(current.fournisseurId ?? ALL_VALUE);
   const [localUserId, setLocalUserId] = useState(current.userId ?? ALL_VALUE);
@@ -62,6 +65,7 @@ export function CommandesFilterSheet({
 
   // Sync with current filters on external change
   useEffect(() => {
+    setLocalStatut(current.statut ?? ALL_VALUE);
     setLocalSearch(current.search ?? "");
     setLocalFournisseurId(current.fournisseurId ?? ALL_VALUE);
     setLocalUserId(current.userId ?? ALL_VALUE);
@@ -76,6 +80,7 @@ export function CommandesFilterSheet({
 
   function handleApply() {
     const filters: CommandeFilterValues = {};
+    if (localStatut !== ALL_VALUE) filters.statut = localStatut;
     if (localSearch) filters.search = localSearch;
     if (localFournisseurId !== ALL_VALUE) filters.fournisseurId = localFournisseurId;
     if (localUserId !== ALL_VALUE) filters.userId = localUserId;
@@ -133,6 +138,24 @@ export function CommandesFilterSheet({
             placeholder={t("commandes.filtres.recherchePlaceholder")}
             className="h-10 rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
+        </div>
+
+        {/* Statut */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium">{t("commandes.filtres.statut")}</label>
+          <Select value={localStatut} onValueChange={setLocalStatut}>
+            <SelectTrigger>
+              <SelectValue placeholder={t("commandes.filtres.tousStatuts")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_VALUE}>{t("commandes.filtres.tousStatuts")}</SelectItem>
+              {Object.values(StatutCommande).map((s) => (
+                <SelectItem key={s} value={s}>
+                  {t(`statuts.${s}` as Parameters<typeof t>[0])}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Fournisseur */}

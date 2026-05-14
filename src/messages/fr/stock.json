@@ -199,6 +199,8 @@
     "fichierTropVolumineux": "Fichier trop volumineux ({taille} Mo). Max 10 Mo.",
     "filtres": {
       "titre": "Filtres",
+      "statut": "Statut",
+      "tousStatuts": "Tous les statuts",
       "recherche": "Rechercher",
       "recherchePlaceholder": "Numero ou fournisseur...",
       "fournisseur": "Fournisseur",
