@@ -1,0 +1,190 @@
+/**
+ * recurrence-handler.ts — Gestion des activites recurrentes et des retards.
+ *
+ * Deux responsabilites :
+ *  1. Creer la prochaine occurrence d'une activite recurrente terminee,
+ *     si elle est due (nextDateDebut <= maintenant).
+ *  2. Passer a EN_RETARD les activites PLANIFIEE dont la dateFin est depassee.
+ *
+ * Appele par le CRON /api/activites/generer apres runEngineForSite().
+ */
+
+import { prisma } from "@/lib/db";
+import { Recurrence, StatutActivite } from "@/generated/prisma/enums";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export interface RecurrenceResult {
+  created: number;
+  markedOverdue: number;
+  errors: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Calcule la prochaine dateDebut a partir d'une date de reference et d'une recurrence.
+ * Retourne null si la recurrence est PERSONNALISE (pas de generation automatique).
+ */
+function calcNextDateDebut(reference: Date, recurrence: Recurrence): Date | null {
+  const next = new Date(reference);
+
+  switch (recurrence) {
+    case Recurrence.QUOTIDIEN:
+      next.setDate(next.getDate() + 1);
+      return next;
+
+    case Recurrence.HEBDOMADAIRE:
+      next.setDate(next.getDate() + 7);
+      return next;
+
+    case Recurrence.BIMENSUEL:
+      next.setDate(next.getDate() + 14);
+      return next;
+
+    case Recurrence.MENSUEL:
+      next.setMonth(next.getMonth() + 1);
+      return next;
+
+    case Recurrence.PERSONNALISE:
+      // Pas de generation automatique pour PERSONNALISE
+      return null;
+
+    default:
+      return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Fonction principale
+// ---------------------------------------------------------------------------
+
+/**
+ * Traite les activites recurrentes et les retards pour un site.
+ *
+ * @param siteId - ID du site (R8)
+ * @returns Compteurs de creations et mises a jour effectuees
+ */
+export async function processRecurringActivities(
+  siteId: string
+): Promise<RecurrenceResult> {
+  const errors: string[] = [];
+  let created = 0;
+  let markedOverdue = 0;
+  const now = new Date();
+
+  // ---- 1. Generer les prochaines occurrences des activites recurrentes terminee ----
+
+  const activitesTerminees = await prisma.activite.findMany({
+    where: {
+      siteId,
+      recurrence: { not: null },
+      statut: StatutActivite.TERMINEE,
+    },
+    select: {
+      id: true,
+      titre: true,
+      description: true,
+      typeActivite: true,
+      recurrence: true,
+      vagueId: true,
+      bacId: true,
+      assigneAId: true,
+      userId: true,
+      instructionsDetaillees: true,
+      priorite: true,
+      dateDebut: true,
+      dateFin: true,
+      dateTerminee: true,
+    },
+  });
+
+  for (const activite of activitesTerminees) {
+    try {
+      if (!activite.recurrence) continue;
+
+      // Calculer la prochaine dateDebut
+      const referenceDate = activite.dateTerminee ?? activite.dateFin ?? activite.dateDebut;
+      const nextDateDebut = calcNextDateDebut(referenceDate, activite.recurrence as Recurrence);
+
+      if (!nextDateDebut) continue; // PERSONNALISE — skip
+
+      // Ne creer que si c'est du (nextDateDebut <= maintenant)
+      if (nextDateDebut > now) continue;
+
+      // Verifier qu'il n'existe pas deja une occurrence PLANIFIEE avec les memes caracteristiques
+      const dejaExistante = await prisma.activite.findFirst({
+        where: {
+          siteId,
+          titre: activite.titre,
+          typeActivite: activite.typeActivite,
+          statut: StatutActivite.PLANIFIEE,
+          vagueId: activite.vagueId ?? undefined,
+          bacId: activite.bacId ?? undefined,
+        },
+        select: { id: true },
+      });
+
+      if (dejaExistante) continue;
+
+      // Calculer la dateFin de la nouvelle occurrence (meme duree que l'originale)
+      let nextDateFin: Date | null = null;
+      if (activite.dateFin) {
+        const dureeMs = activite.dateFin.getTime() - activite.dateDebut.getTime();
+        nextDateFin = new Date(nextDateDebut.getTime() + dureeMs);
+      }
+
+      // Creer la prochaine occurrence
+      await prisma.activite.create({
+        data: {
+          titre: activite.titre,
+          description: activite.description,
+          typeActivite: activite.typeActivite,
+          recurrence: activite.recurrence,
+          vagueId: activite.vagueId,
+          bacId: activite.bacId,
+          assigneAId: activite.assigneAId,
+          userId: activite.userId,
+          siteId,
+          instructionsDetaillees: activite.instructionsDetaillees,
+          priorite: activite.priorite,
+          statut: StatutActivite.PLANIFIEE,
+          dateDebut: nextDateDebut,
+          dateFin: nextDateFin,
+          isAutoGenerated: true,
+        },
+      });
+
+      created++;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push(`[Recurrence] Activite ${activite.id} : ${msg}`);
+    }
+  }
+
+  // ---- 2. Passer EN_RETARD les activites PLANIFIEE dont la dateFin est depassee ----
+
+  try {
+    const result = await prisma.activite.updateMany({
+      where: {
+        siteId,
+        statut: StatutActivite.PLANIFIEE,
+        dateFin: { not: null, lt: now },
+      },
+      data: {
+        statut: StatutActivite.EN_RETARD,
+      },
+    });
+
+    markedOverdue = result.count;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    errors.push(`[Overdue] Site ${siteId} : ${msg}`);
+  }
+
+  return { created, markedOverdue, errors };
+}

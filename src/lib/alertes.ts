@@ -10,9 +10,10 @@
 
 import { prisma } from "@/lib/db";
 import { formatDate } from "@/lib/format";
-import { StatutAlerte, TypeAlerte, TypeReleve } from "@/generated/prisma/enums";
+import { StatutAlerte, StatutActivite, TypeAlerte, TypeReleve } from "@/generated/prisma/enums";
 import { StatutBesoins } from "@/types";
 import type { ConfigElevage } from "@/types";
+
 
 // ---------------------------------------------------------------------------
 // Types locaux
@@ -361,6 +362,41 @@ export async function verifierBesoinsEnRetard(siteId: string): Promise<void> {
   }
 }
 
+/**
+ * ACTIVITE_EN_RETARD : cherche les activites avec statut EN_RETARD et cree
+ * une notification pour l'assigne (ou le createur si pas d'assigne).
+ * Deduplication : une seule notification active par activite en retard par jour.
+ */
+export async function verifierActivitesEnRetard(siteId: string): Promise<void> {
+  const activitesEnRetard = await prisma.activite.findMany({
+    where: {
+      siteId,
+      statut: StatutActivite.EN_RETARD,
+    },
+    select: {
+      id: true,
+      titre: true,
+      dateFin: true,
+      assigneAId: true,
+      userId: true,
+    },
+  });
+
+  for (const activite of activitesEnRetard) {
+    const targetUserId = activite.assigneAId ?? activite.userId;
+    const dateLimiteFormatee = activite.dateFin ? formatDate(activite.dateFin) : "date inconnue";
+
+    await creerNotificationSiAbsente(
+      siteId,
+      targetUserId,
+      TypeAlerte.ACTIVITE_EN_RETARD,
+      `Activite en retard : ${activite.titre}`,
+      `L'activite "${activite.titre}" prevue pour le ${dateLimiteFormatee} n'a pas ete completee.`,
+      "/planning"
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Fonction principale
 // ---------------------------------------------------------------------------
@@ -415,6 +451,10 @@ export async function verifierAlertes(
         case TypeAlerte.PERSONNALISEE:
           // Gestion manuelle — ignoree dans la verification automatique
           break;
+
+        // ACTIVITE_EN_RETARD est gere globalement par site (pas per-user-config),
+        // appele separement via verifierActivitesEnRetard(siteId).
+        // La constante castee est utilisee pour matcher la valeur string.
 
         default:
           break;

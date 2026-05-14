@@ -15,10 +15,12 @@ import { NextRequest, NextResponse } from "next/server";
 import * as crypto from "crypto";
 import { prisma } from "@/lib/db";
 import { runEngineForSite } from "@/lib/activity-engine";
+import { processRecurringActivities } from "@/lib/activity-engine/recurrence-handler";
 import { runEngineerAlerts } from "@/lib/activity-engine/engineer-alerts";
 import { getOrCreateSystemUser } from "@/lib/queries/users";
 import { runLifecycle } from "@/lib/queries/lifecycle";
 import { genererDepensesRecurrentes } from "@/lib/queries/depenses-recurrentes";
+import { verifierActivitesEnRetard } from "@/lib/alertes";
 import { apiError, handleApiError } from "@/lib/api-utils";
 
 // ---------------------------------------------------------------------------
@@ -94,6 +96,10 @@ export async function POST(request: NextRequest) {
     let totalSuspensionsPackActivation = 0;
     let totalActivitesArchivees = 0;
 
+    // Compteurs pour les recurrences et retards
+    let totalRecurrenceCreated = 0;
+    let totalMarkedOverdue = 0;
+
     for (const site of sitesQuery) {
       try {
         // ---- Generer les activites planifiees ----
@@ -104,6 +110,27 @@ export async function POST(request: NextRequest) {
         totalCreated += siteResult.created;
         totalSkipped += siteResult.skipped;
         allErrors.push(...siteResult.errors);
+
+        // ---- Traiter les recurrences et marquer les retards ----
+        try {
+          const recurrenceResult = await processRecurringActivities(site.id);
+          totalRecurrenceCreated += recurrenceResult.created;
+          totalMarkedOverdue += recurrenceResult.markedOverdue;
+          allErrors.push(...recurrenceResult.errors);
+        } catch (recurrenceError) {
+          const msg = recurrenceError instanceof Error ? recurrenceError.message : String(recurrenceError);
+          allErrors.push(`[Recurrences] Site ${site.id} : ${msg}`);
+          console.error(`[CRON] Erreur recurrences site ${site.id}:`, recurrenceError);
+        }
+
+        // ---- Alerter les activites en retard ----
+        try {
+          await verifierActivitesEnRetard(site.id);
+        } catch (retardError) {
+          const msg = retardError instanceof Error ? retardError.message : String(retardError);
+          allErrors.push(`[Alertes retard activites] Site ${site.id} : ${msg}`);
+          console.error(`[CRON] Erreur alertes retard activites site ${site.id}:`, retardError);
+        }
 
         // ---- Generer les alertes ingenieur pour ce site ----
         try {
@@ -151,6 +178,8 @@ export async function POST(request: NextRequest) {
         sitesTraites: sitesQuery.length,
         activitesCrees: totalCreated,
         activitesSautees: totalSkipped,
+        recurrencesCreees: totalRecurrenceCreated,
+        activitesMarqueesEnRetard: totalMarkedOverdue,
         alertesIngenieurCreees: totalAlertesCreees,
         alertesIngenieurSautees: totalAlertesSautees,
         depensesRecurrentesGenerees: totalDepensesGenerees,
