@@ -18,6 +18,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { RelevesFilterSheet } from "./releves-filter-sheet";
+import { SavedFiltersChips } from "@/components/filters/saved-filters-chips";
 import { countActiveFilters, ALL_VALUE, ALL_FILTER_PARAMS } from "@/lib/releve-search-params";
 import type { ReleveSearchParams } from "@/lib/releve-search-params";
 
@@ -230,6 +231,10 @@ export function ReleveFilterBar({ current, vagues }: Props) {
             />
           </SheetContent>
         </Sheet>
+        <SavedFiltersChips
+          page="releves"
+          onLoadFilter={(f) => { updateMultipleParams(f as Partial<ReleveSearchParams>); }}
+        />
       </div>
 
       {/* Desktop (>= md) : barre inline */}

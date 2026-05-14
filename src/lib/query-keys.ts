@@ -129,4 +129,8 @@ export const queryKeys = {
   remises: {
     all: ["remises"] as const,
   },
+  savedFilters: {
+    all: ["saved-filters"] as const,
+    list: (page: string) => ["saved-filters", page] as const,
+  },
 } as const;

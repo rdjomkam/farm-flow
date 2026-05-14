@@ -689,6 +689,7 @@ model Site {
   idempotencyRecords     IdempotencyRecord[]
   // ADR-043 — Historique des assignations (Phase 2)
   assignationsBac        AssignationBac[]
+  savedFilters           SavedFilter[]
   // R1-S3 — Module Reproduction : lots géniteurs, incubations, traitements
   lotGeniteurs           LotGeniteurs[]
   incubations            Incubation[]
@@ -1067,6 +1068,7 @@ model User {
   ownedSites             Site[]                  @relation("SiteOwner")
   essaisUtilises         EssaiUtilise[]          @relation("EssaisUtilises")
   auditsAbonnement       AbonnementAudit[]       @relation("AuditsAbonnement")
+  savedFilters           SavedFilter[]           @relation("SavedFilters")
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
   fraisPaiementDepenses  FraisPaiementDepense[]
@@ -3498,4 +3500,24 @@ model AbonnementAudit {
   @@index([abonnementId])
   @@index([userId])
   @@index([createdAt])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Saved Filters
+// ──────────────────────────────────────────
+
+model SavedFilter {
+  id        String   @id @default(cuid())
+  name      String
+  page      String   // "besoins" | "commandes" | "releves"
+  filters   Json
+  userId    String
+  user      User     @relation("SavedFilters", fields: [userId], references: [id], onDelete: Cascade)
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, siteId, page, name])
+  @@index([userId, siteId, page])
 }

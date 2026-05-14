@@ -636,3 +636,6 @@ export type {
   ViewVagueAction,
   ViewStockAction,
 } from "./notifications";
+
+// Saved Filters
+export type { SavedFilter, SavedFilterPage, CreateSavedFilterDTO } from "./api";

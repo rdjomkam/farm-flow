@@ -170,5 +170,15 @@
     "upgradeMessage": "Upgrade your plan to access this resource and other advanced features.",
     "upgradeButton": "Upgrade plan",
     "closeButton": "Close"
+  },
+  "savedFilters": {
+    "title": "Saved filters",
+    "save": "Save",
+    "namePlaceholder": "Filter name",
+    "nameRequired": "Name is required",
+    "duplicate": "This name already exists",
+    "saved": "Filter saved",
+    "deleted": "Filter deleted",
+    "empty": "No saved filters"
   }
 }

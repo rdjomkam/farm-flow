@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, ArrowLeft } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
@@ -143,6 +143,16 @@ export default async function RelevesPage({
       <Header title={t("global.title")} />
 
       <div className="flex flex-col gap-4 p-4 pb-20">
+        {current.vagueId && vagueForChip?.code && (
+          <Link
+            href={`/vagues/${current.vagueId}`}
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {vagueForChip.code}
+          </Link>
+        )}
+
         {/* Barre d'actions : filtres + bouton nouveau */}
         <div className="flex items-center justify-between gap-3">
           <ReleveFilterBar current={current} vagues={vagues} />

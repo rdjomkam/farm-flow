@@ -33,15 +33,23 @@ export async function GET(request: NextRequest) {
     const filters: ListeBesoinsFilters = {};
 
     const statut = searchParams.get("statut");
-    if (statut && VALID_STATUTS.includes(statut as StatutBesoins)) {
-      filters.statut = statut as StatutBesoins;
+    if (statut) {
+      const parts = statut.split(",").filter((s) => VALID_STATUTS.includes(s as StatutBesoins)) as StatutBesoins[];
+      if (parts.length === 1) filters.statut = parts[0];
+      else if (parts.length > 1) filters.statut = parts;
     }
 
     const demandeurId = searchParams.get("demandeurId");
-    if (demandeurId) filters.demandeurId = demandeurId;
+    if (demandeurId) {
+      const parts = demandeurId.split(",").filter(Boolean);
+      filters.demandeurId = parts.length === 1 ? parts[0] : parts;
+    }
 
     const vagueId = searchParams.get("vagueId");
-    if (vagueId) filters.vagueId = vagueId;
+    if (vagueId) {
+      const parts = vagueId.split(",").filter(Boolean);
+      filters.vagueId = parts.length === 1 ? parts[0] : parts;
+    }
 
     const dateFrom = searchParams.get("dateFrom");
     if (dateFrom) filters.dateFrom = dateFrom;
@@ -50,7 +58,10 @@ export async function GET(request: NextRequest) {
     if (dateTo) filters.dateTo = dateTo;
 
     const valideurId = searchParams.get("valideurId");
-    if (valideurId) filters.valideurId = valideurId;
+    if (valideurId) {
+      const parts = valideurId.split(",").filter(Boolean);
+      filters.valideurId = parts.length === 1 ? parts[0] : parts;
+    }
 
     const dateLimiteFrom = searchParams.get("dateLimiteFrom");
     if (dateLimiteFrom) filters.dateLimiteFrom = dateLimiteFrom;
@@ -75,6 +86,12 @@ export async function GET(request: NextRequest) {
 
     const hasCommandeRaw = searchParams.get("hasCommande");
     if (hasCommandeRaw === "true") filters.hasCommande = true;
+
+    const produitId = searchParams.get("produitId");
+    if (produitId) {
+      const parts = produitId.split(",").filter(Boolean);
+      filters.produitId = parts.length === 1 ? parts[0] : parts;
+    }
 
     const paginationResult = parsePaginationQuery(searchParams);
     if (!paginationResult.valid) {

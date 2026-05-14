@@ -172,6 +172,8 @@
     "demandeur": "Requester",
     "tousUtilisateurs": "All",
     "valideur": "Validator",
+    "produit": "Product",
+    "tousProduits": "All products",
     "vague": "Batch",
     "toutesVagues": "All batches",
     "dateCreation": "Creation date",

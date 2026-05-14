@@ -170,5 +170,15 @@
     "min": "Min",
     "max": "Max",
     "example": "Ex : {value}"
+  },
+  "savedFilters": {
+    "title": "Filtres enregistres",
+    "save": "Enregistrer",
+    "namePlaceholder": "Nom du filtre",
+    "nameRequired": "Le nom est requis",
+    "duplicate": "Ce nom existe deja",
+    "saved": "Filtre enregistre",
+    "deleted": "Filtre supprime",
+    "empty": "Aucun filtre enregistre"
   }
 }

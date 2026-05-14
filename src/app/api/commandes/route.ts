@@ -22,21 +22,32 @@ export async function GET(request: NextRequest) {
 
     const filters: CommandeFilters = {};
     const statut = searchParams.get("statut");
-    if (statut && VALID_STATUTS.includes(statut as StatutCommande)) {
-      filters.statut = statut as StatutCommande;
+    if (statut) {
+      const parts = statut.split(",").filter((s) => VALID_STATUTS.includes(s as StatutCommande)) as StatutCommande[];
+      if (parts.length === 1) filters.statut = parts[0];
+      else if (parts.length > 1) filters.statut = parts;
     }
     const fournisseurId = searchParams.get("fournisseurId");
-    if (fournisseurId) filters.fournisseurId = fournisseurId;
+    if (fournisseurId) {
+      const parts = fournisseurId.split(",").filter(Boolean);
+      filters.fournisseurId = parts.length === 1 ? parts[0] : parts;
+    }
     const dateFrom = searchParams.get("dateFrom");
     if (dateFrom) filters.dateFrom = dateFrom;
     const dateTo = searchParams.get("dateTo");
     if (dateTo) filters.dateTo = dateTo;
 
     const userId = searchParams.get("userId");
-    if (userId) filters.userId = userId;
+    if (userId) {
+      const parts = userId.split(",").filter(Boolean);
+      filters.userId = parts.length === 1 ? parts[0] : parts;
+    }
 
     const produitId = searchParams.get("produitId");
-    if (produitId) filters.produitId = produitId;
+    if (produitId) {
+      const parts = produitId.split(",").filter(Boolean);
+      filters.produitId = parts.length === 1 ? parts[0] : parts;
+    }
 
     const montantMinRaw = searchParams.get("montantMin");
     if (montantMinRaw !== null) {

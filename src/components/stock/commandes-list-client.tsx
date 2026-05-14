@@ -33,6 +33,7 @@ import type { Commande } from "@/types";
 import { useCreateCommande, useCommandesList } from "@/hooks/queries/use-stock-queries";
 import { CommandesFilterSheet } from "./commandes-filter-sheet";
 import type { CommandeFilterValues } from "./commandes-filter-sheet";
+import { SavedFiltersChips } from "@/components/filters/saved-filters-chips";
 
 const statutVariants: Record<StatutCommande, "default" | "info" | "en_cours" | "warning"> = {
   [StatutCommande.BROUILLON]: "default",
@@ -367,6 +368,11 @@ export function CommandesListClient({ commandes: initialCommandes, fournisseurs,
           )}
         </div>
       </div>
+
+      <SavedFiltersChips
+        page="commandes"
+        onLoadFilter={(f) => handleApplyFilters(f as CommandeFilterValues)}
+      />
 
       {commandes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">

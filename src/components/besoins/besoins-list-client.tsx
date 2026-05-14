@@ -13,6 +13,7 @@ import { useBesoinsList } from "@/hooks/queries/use-depenses-queries";
 import type { ListeBesoinsWithRelations } from "@/types";
 import { BesoinsFilterSheet } from "./besoins-filter-sheet";
 import type { BesoinsFilterValues } from "./besoins-filter-sheet";
+import { SavedFiltersChips } from "@/components/filters/saved-filters-chips";
 
 const statutVariants: Record<
   StatutBesoins,
@@ -47,6 +48,7 @@ interface ListeBesoinsData {
 
 interface Props {
   listesBesoins: ListeBesoinsData[];
+  produits: { id: string; nom: string }[];
   canCreate: boolean;
   canApprove: boolean;
   canProcess: boolean;
@@ -94,6 +96,7 @@ function countActiveFilters(filters: BesoinsFilterValues): number {
 
 export function BesoinsListClient({
   listesBesoins: initialListesBesoins,
+  produits,
   canCreate,
 }: Props) {
   const t = useTranslations("besoins");
@@ -105,6 +108,7 @@ export function BesoinsListClient({
     const combined: Record<string, string | number | boolean | undefined> = {};
     if (filters.statut) combined.statut = filters.statut;
     if (filters.search) combined.search = filters.search;
+    if (filters.produitId) combined.produitId = filters.produitId;
     if (filters.demandeurId) combined.demandeurId = filters.demandeurId;
     if (filters.valideurId) combined.valideurId = filters.valideurId;
     if (filters.vagueId) combined.vagueId = filters.vagueId;
@@ -191,6 +195,7 @@ export function BesoinsListClient({
               <BesoinsFilterSheet
                 current={filters}
                 users={users}
+                produits={produits}
                 vagues={vagues}
                 onApply={handleApplyFilters}
                 onClear={handleClearFilters}
@@ -209,6 +214,11 @@ export function BesoinsListClient({
           )}
         </div>
       </div>
+
+      <SavedFiltersChips
+        page="besoins"
+        onLoadFilter={(f) => setFilters(f as BesoinsFilterValues)}
+      />
 
       {listesBesoins.length === 0 ? (
         <div className="text-center py-12">

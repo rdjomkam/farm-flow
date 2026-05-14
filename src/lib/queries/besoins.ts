@@ -218,11 +218,21 @@ export async function getListeBesoins(
 
   const where: Record<string, unknown> = {
     siteId,
-    ...(filters?.statut && { statut: filters.statut }),
-    ...(filters?.demandeurId && { demandeurId: filters.demandeurId }),
-    ...(filters?.valideurId && { valideurId: filters.valideurId }),
+    ...(filters?.statut && {
+      statut: Array.isArray(filters.statut) ? { in: filters.statut } : filters.statut,
+    }),
+    ...(filters?.demandeurId && {
+      demandeurId: Array.isArray(filters.demandeurId) ? { in: filters.demandeurId } : filters.demandeurId,
+    }),
+    ...(filters?.valideurId && {
+      valideurId: Array.isArray(filters.valideurId) ? { in: filters.valideurId } : filters.valideurId,
+    }),
     ...(filters?.vagueId && {
-      vagues: { some: { vagueId: filters.vagueId } },
+      vagues: {
+        some: {
+          vagueId: Array.isArray(filters.vagueId) ? { in: filters.vagueId } : filters.vagueId,
+        },
+      },
     }),
     ...(filters?.dateFrom || filters?.dateTo
       ? {
@@ -248,6 +258,13 @@ export async function getListeBesoins(
           },
         }
       : {}),
+    ...(filters?.produitId && {
+      lignes: {
+        some: {
+          produitId: Array.isArray(filters.produitId) ? { in: filters.produitId } : filters.produitId,
+        },
+      },
+    }),
     ...(filters?.hasCommande === true && {
       lignes: { some: { commandeId: { not: null } } },
     }),
