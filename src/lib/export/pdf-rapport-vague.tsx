@@ -38,7 +38,9 @@ function formatNum(n: number | null | undefined, decimals = 1, suffix = ""): str
 
 function formatFCFA(n: number | null | undefined): string {
   if (n === null || n === undefined) return "—";
-  return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n) + " FCFA";
+  const abs = Math.abs(Math.round(n));
+  const s = abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return (n < 0 ? "-" : "") + s + " FCFA";
 }
 
 const typeReleveLabels: Record<TypeReleve, string> = {
@@ -145,9 +147,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.lightBg,
     borderRadius: 4,
     padding: 10,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
-    borderLeftStyle: "solid",
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   kpiLabel: {
     fontSize: 7,
