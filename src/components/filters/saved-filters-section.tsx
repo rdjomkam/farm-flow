@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Bookmark, Plus, X, Loader2, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSavedFilters, useCreateSavedFilter, useUpdateSavedFilter, useDeleteSavedFilter } from "@/hooks/queries/use-saved-filters-queries";
@@ -23,6 +23,11 @@ export function SavedFiltersSection({
 }: SavedFiltersSectionProps) {
   const t = useTranslations("common.savedFilters");
   const { data: savedFilters = [], isLoading } = useSavedFilters(page);
+
+  const formHasValues = useMemo(() => {
+    if (!currentFilters || typeof currentFilters !== "object") return false;
+    return Object.values(currentFilters).some((v) => v !== undefined && v !== "" && v !== false);
+  }, [currentFilters]);
   const createMutation = useCreateSavedFilter();
   const updateMutation = useUpdateSavedFilter();
   const deleteMutation = useDeleteSavedFilter();
@@ -84,7 +89,7 @@ export function SavedFiltersSection({
               setShowInput(true);
             }
           }}
-          disabled={!hasActiveFilters && !showInput}
+          disabled={!formHasValues && !showInput}
           className="shrink-0 inline-flex items-center gap-1 h-8 px-3 rounded-full border border-dashed border-border text-xs font-medium text-muted-foreground hover:bg-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {showInput ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
