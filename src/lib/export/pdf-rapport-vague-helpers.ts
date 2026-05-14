@@ -164,7 +164,7 @@ export function buildEvolutionPoidsMoyenTable(
   gompertz: GompertzRecord | null
 ): EvolutionPoidsMoyenRow[] {
   const biometries = releves
-    .filter((r) => r.typeReleve === "BIOMETRIE" && r.poidsMoyen !== null && r.bacId !== null)
+    .filter((r) => r.typeReleve === "BIOMETRIE" && r.poidsMoyen !== null)
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 
   const dateGroups = new Map<string, RawReleve[]>();
@@ -183,20 +183,29 @@ export function buildEvolutionPoidsMoyenTable(
       (refDate.getTime() - dateDebut.getTime()) / 86400000
     );
 
-    const vivantsMap = computeVivantsParBacAtDate(bacs, releves, nombreInitialVague, refDate);
+    const withBac = group.filter((r) => r.bacId !== null);
 
-    let totalPoidsWeighted = 0;
-    let totalVivants = 0;
+    let poidsMoyenMesure: number;
 
-    for (const r of group) {
-      const vivants = vivantsMap.get(r.bacId!) ?? 0;
-      totalPoidsWeighted += (r.poidsMoyen as number) * vivants;
-      totalVivants += vivants;
+    if (withBac.length > 0 && bacs.length > 0) {
+      const vivantsMap = computeVivantsParBacAtDate(bacs, releves, nombreInitialVague, refDate);
+      let totalPoidsWeighted = 0;
+      let totalVivants = 0;
+      for (const r of withBac) {
+        const vivants = vivantsMap.get(r.bacId!) ?? 0;
+        totalPoidsWeighted += (r.poidsMoyen as number) * vivants;
+        totalVivants += vivants;
+      }
+      if (totalVivants > 0) {
+        poidsMoyenMesure = Math.round((totalPoidsWeighted / totalVivants) * 100) / 100;
+      } else {
+        const sum = group.reduce((s, r) => s + (r.poidsMoyen as number), 0);
+        poidsMoyenMesure = Math.round((sum / group.length) * 100) / 100;
+      }
+    } else {
+      const sum = group.reduce((s, r) => s + (r.poidsMoyen as number), 0);
+      poidsMoyenMesure = Math.round((sum / group.length) * 100) / 100;
     }
-
-    if (totalVivants === 0) continue;
-
-    const poidsMoyenMesure = Math.round((totalPoidsWeighted / totalVivants) * 100) / 100;
 
     let poidsPreditGompertz: number | null = null;
     if (gompertz) {
@@ -250,10 +259,10 @@ export function buildMortalitySummary(
   const causeCount = new Map<string, number>();
   for (const r of mortaliteReleves) {
     const cause = r.causeMortalite ?? "INCONNUE";
-    causeCount.set(cause, (causeCount.get(cause) ?? 0) + 1);
+    causeCount.set(cause, (causeCount.get(cause) ?? 0) + (r.nombreMorts ?? 0));
   }
   if (calibrageMorts > 0) {
-    causeCount.set("CALIBRAGE", calibrageMorts);
+    causeCount.set("CALIBRAGE", (causeCount.get("CALIBRAGE") ?? 0) + calibrageMorts);
   }
 
   const topCauses = Array.from(causeCount.entries())
