@@ -143,7 +143,7 @@ export default async function RelevesPage({
       <Header title={t("global.title")} />
 
       <div className="flex flex-col gap-4 p-4 pb-20">
-        {current.vagueId && vagueForChip?.code && (
+        {rawParams.from === "vague" && current.vagueId && vagueForChip?.code && (
           <Link
             href={`/vagues/${current.vagueId}`}
             className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
