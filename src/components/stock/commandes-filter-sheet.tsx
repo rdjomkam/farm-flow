@@ -64,18 +64,22 @@ export function CommandesFilterSheet({
   const [localHasFacture, setLocalHasFacture] = useState(current.hasFacture ?? false);
   const [localHasListeBesoins, setLocalHasListeBesoins] = useState(current.hasListeBesoins ?? false);
 
+  function loadIntoForm(f: CommandeFilterValues) {
+    setLocalStatuts(csvToArray(f.statut));
+    setLocalSearch(f.search ?? "");
+    setLocalFournisseurIds(csvToArray(f.fournisseurId));
+    setLocalUserIds(csvToArray(f.userId));
+    setLocalProduitIds(csvToArray(f.produitId));
+    setLocalDateFrom(f.dateFrom ?? "");
+    setLocalDateTo(f.dateTo ?? "");
+    setLocalMontantMin(f.montantMin ?? "");
+    setLocalMontantMax(f.montantMax ?? "");
+    setLocalHasFacture(f.hasFacture ?? false);
+    setLocalHasListeBesoins(f.hasListeBesoins ?? false);
+  }
+
   useEffect(() => {
-    setLocalStatuts(csvToArray(current.statut));
-    setLocalSearch(current.search ?? "");
-    setLocalFournisseurIds(csvToArray(current.fournisseurId));
-    setLocalUserIds(csvToArray(current.userId));
-    setLocalProduitIds(csvToArray(current.produitId));
-    setLocalDateFrom(current.dateFrom ?? "");
-    setLocalDateTo(current.dateTo ?? "");
-    setLocalMontantMin(current.montantMin ?? "");
-    setLocalMontantMax(current.montantMax ?? "");
-    setLocalHasFacture(current.hasFacture ?? false);
-    setLocalHasListeBesoins(current.hasListeBesoins ?? false);
+    loadIntoForm(current);
   }, [current]);
 
   function handleApply() {
@@ -142,7 +146,7 @@ export function CommandesFilterSheet({
       <SavedFiltersSection
         page="commandes"
         currentFilters={current}
-        onLoadFilter={(filters) => onApply(filters as CommandeFilterValues)}
+        onLoadFilter={(filters) => loadIntoForm(filters as CommandeFilterValues)}
         hasActiveFilters={activeCount > 0}
       />
 

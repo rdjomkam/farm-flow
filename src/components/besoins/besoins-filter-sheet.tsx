@@ -70,21 +70,25 @@ export function BesoinsFilterSheet({
   const [localEnRetard, setLocalEnRetard] = useState(current.enRetard ?? false);
   const [localHasCommande, setLocalHasCommande] = useState(current.hasCommande ?? false);
 
+  function loadIntoForm(f: BesoinsFilterValues) {
+    setLocalStatuts(csvToArray(f.statut));
+    setLocalSearch(f.search ?? "");
+    setLocalProduitIds(csvToArray(f.produitId));
+    setLocalDemandeurIds(csvToArray(f.demandeurId));
+    setLocalValideurIds(csvToArray(f.valideurId));
+    setLocalVagueIds(csvToArray(f.vagueId));
+    setLocalDateFrom(f.dateFrom ?? "");
+    setLocalDateTo(f.dateTo ?? "");
+    setLocalDateLimiteFrom(f.dateLimiteFrom ?? "");
+    setLocalDateLimiteTo(f.dateLimiteTo ?? "");
+    setLocalMontantMin(f.montantEstimeMin ?? "");
+    setLocalMontantMax(f.montantEstimeMax ?? "");
+    setLocalEnRetard(f.enRetard ?? false);
+    setLocalHasCommande(f.hasCommande ?? false);
+  }
+
   useEffect(() => {
-    setLocalStatuts(csvToArray(current.statut));
-    setLocalSearch(current.search ?? "");
-    setLocalProduitIds(csvToArray(current.produitId));
-    setLocalDemandeurIds(csvToArray(current.demandeurId));
-    setLocalValideurIds(csvToArray(current.valideurId));
-    setLocalVagueIds(csvToArray(current.vagueId));
-    setLocalDateFrom(current.dateFrom ?? "");
-    setLocalDateTo(current.dateTo ?? "");
-    setLocalDateLimiteFrom(current.dateLimiteFrom ?? "");
-    setLocalDateLimiteTo(current.dateLimiteTo ?? "");
-    setLocalMontantMin(current.montantEstimeMin ?? "");
-    setLocalMontantMax(current.montantEstimeMax ?? "");
-    setLocalEnRetard(current.enRetard ?? false);
-    setLocalHasCommande(current.hasCommande ?? false);
+    loadIntoForm(current);
   }, [current]);
 
   function handleApply() {
@@ -151,7 +155,7 @@ export function BesoinsFilterSheet({
       <SavedFiltersSection
         page="besoins"
         currentFilters={current}
-        onLoadFilter={(filters) => onApply(filters as BesoinsFilterValues)}
+        onLoadFilter={(filters) => loadIntoForm(filters as BesoinsFilterValues)}
         hasActiveFilters={activeCount > 0}
       />
 
