@@ -34,6 +34,7 @@ import { useCreateCommande, useCommandesList } from "@/hooks/queries/use-stock-q
 const statutVariants: Record<StatutCommande, "default" | "info" | "en_cours" | "warning"> = {
   [StatutCommande.BROUILLON]: "default",
   [StatutCommande.ENVOYEE]: "info",
+  [StatutCommande.LIVREE_PARTIELLEMENT]: "warning",
   [StatutCommande.LIVREE]: "en_cours",
   [StatutCommande.ANNULEE]: "warning",
 };

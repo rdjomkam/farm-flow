@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { annulerCommande } from "@/lib/queries/commandes";
+import { cloturerCommande } from "@/lib/queries/commandes";
 import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
-import { apiError, handleApiError } from "@/lib/api-utils";
+import { handleApiError } from "@/lib/api-utils";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -11,14 +11,9 @@ export async function POST(request: NextRequest, { params }: Params) {
     const auth = await requirePermission(request, Permission.APPROVISIONNEMENT_GERER);
     const { id } = await params;
 
-    const commande = await annulerCommande(id, auth.activeSiteId);
+    const commande = await cloturerCommande(id, auth.activeSiteId);
     return NextResponse.json(commande);
   } catch (error) {
-    return handleApiError("POST /api/commandes/[id]/annuler", error, "Erreur serveur lors de l'annulation de la commande.", {
-      statusMap: [
-        { match: "deja", status: 409 },
-        { match: "livree", status: 409 },
-      ],
-    });
+    return handleApiError("POST /api/commandes/[id]/cloturer", error, "Erreur serveur lors de la cloture de la commande.");
   }
 }

@@ -143,6 +143,16 @@ export function useStockService() {
     [call]
   );
 
+  const cloturerCommande = useCallback(
+    (id: string) =>
+      call<CommandeWithRelations>(
+        `/api/commandes/${id}/cloturer`,
+        { method: "POST" },
+        { successMessage: "Commande clôturée." }
+      ),
+    [call]
+  );
+
   // -- Fournisseurs --
 
   const listFournisseurs = useCallback(
@@ -252,6 +262,7 @@ export function useStockService() {
     createCommande,
     envoyerCommande,
     annulerCommande,
+    cloturerCommande,
     recevoirCommande,
     uploadFactureCommande,
     getFactureCommandeUrl,

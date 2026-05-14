@@ -21,6 +21,7 @@ import {
   Package,
   ExternalLink,
   ClipboardList,
+  Receipt,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +44,7 @@ import { ReceptionCommandeDialog } from "@/components/stock/reception-commande-d
 const statutVariants: Record<StatutCommande, "default" | "info" | "en_cours" | "warning"> = {
   [StatutCommande.BROUILLON]: "default",
   [StatutCommande.ENVOYEE]: "info",
+  [StatutCommande.LIVREE_PARTIELLEMENT]: "warning",
   [StatutCommande.LIVREE]: "en_cours",
   [StatutCommande.ANNULEE]: "warning",
 };
@@ -73,6 +75,7 @@ interface CommandeData {
   user: { id: string; name: string };
   lignes: LigneData[];
   listeBesoins?: { id: string; numero: string; titre: string } | null;
+  depenses?: { id: string; numero: string; montantTotal: number; date: string }[];
 }
 
 interface Props {
@@ -129,6 +132,9 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
       if (result.ok) invalidateCommandes();
     } else if (action === "annuler") {
       const result = await stockService.annulerCommande(commande.id);
+      if (result.ok) invalidateCommandes();
+    } else if (action === "cloturer") {
+      const result = await stockService.cloturerCommande(commande.id);
       if (result.ok) invalidateCommandes();
     }
   }
@@ -304,51 +310,98 @@ export function CommandeDetailClient({ commande: initialCommande, permissions }:
       />
 
       {/* Order actions */}
-      {canManage && (statut === StatutCommande.BROUILLON || statut === StatutCommande.ENVOYEE) && (
-        <div className="flex gap-2">
-          {statut === StatutCommande.BROUILLON && (
-            <Button
-              className="flex-1"
-              onClick={() => handleAction("envoyer")}
-            >
-              <Send className="h-4 w-4 mr-1" />
-              {t("commandes.detail.envoyer")}
-            </Button>
-          )}
-          {statut === StatutCommande.ENVOYEE && (
-            <>
+      {canManage && (statut === StatutCommande.BROUILLON || statut === StatutCommande.ENVOYEE || statut === StatutCommande.LIVREE_PARTIELLEMENT) && (
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            {statut === StatutCommande.BROUILLON && (
               <Button
                 className="flex-1"
-                onClick={() => setRecevoirOpen(true)}
+                onClick={() => handleAction("envoyer")}
               >
-                <PackageCheck className="h-4 w-4 mr-1" />
-                {t("commandes.detail.receptionner")}
+                <Send className="h-4 w-4 mr-1" />
+                {t("commandes.detail.envoyer")}
               </Button>
+            )}
+            {(statut === StatutCommande.ENVOYEE || statut === StatutCommande.LIVREE_PARTIELLEMENT) && (
+              <>
+                <Button
+                  className="flex-1"
+                  onClick={() => setRecevoirOpen(true)}
+                >
+                  <PackageCheck className="h-4 w-4 mr-1" />
+                  {t("commandes.detail.receptionner")}
+                </Button>
 
-              {/* Reception dialog with line-level quantities */}
-              <ReceptionCommandeDialog
-                commande={commande}
-                open={recevoirOpen}
-                onOpenChange={setRecevoirOpen}
-                onSuccess={() => {
-                  invalidateCommandes();
-                }}
-              />
-            </>
+                <ReceptionCommandeDialog
+                  commande={commande}
+                  open={recevoirOpen}
+                  onOpenChange={setRecevoirOpen}
+                  onSuccess={() => {
+                    invalidateCommandes();
+                  }}
+                />
+              </>
+            )}
+            {(statut === StatutCommande.BROUILLON || statut === StatutCommande.ENVOYEE) && (
+              <Button
+                variant="danger"
+                className="flex-1"
+                onClick={() => handleAction("annuler")}
+              >
+                <X className="h-4 w-4 mr-1" />
+                {t("commandes.detail.annuler")}
+              </Button>
+            )}
+          </div>
+          {statut === StatutCommande.LIVREE_PARTIELLEMENT && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => handleAction("cloturer")}
+            >
+              <Package className="h-4 w-4 mr-1" />
+              {t("commandes.detail.cloturer")}
+            </Button>
           )}
-          <Button
-            variant="danger"
-            className="flex-1"
-            onClick={() => handleAction("annuler")}
-          >
-            <X className="h-4 w-4 mr-1" />
-            {t("commandes.detail.annuler")}
-          </Button>
         </div>
       )}
 
+      {/* Linked expenses */}
+      {commande.depenses && commande.depenses.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Receipt className="h-4 w-4" />
+              {t("commandes.detail.depensesLiees")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0 flex flex-col gap-2">
+            {commande.depenses.map((dep) => (
+              <Link
+                key={dep.id}
+                href={`/depenses/${dep.id}`}
+                className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-sm font-medium">{dep.numero}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(dep.date).toLocaleDateString(locale)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold">
+                    {formatNumber(dep.montantTotal)} FCFA
+                  </span>
+                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Supplier invoice section */}
-      {canManage && statut === StatutCommande.LIVREE && (
+      {canManage && (statut === StatutCommande.LIVREE || statut === StatutCommande.LIVREE_PARTIELLEMENT) && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">

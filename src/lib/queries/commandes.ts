@@ -83,6 +83,10 @@ export async function getCommandeById(id: string, siteId: string) {
         orderBy: { createdAt: "asc" },
       },
       listeBesoins: { select: { id: true, numero: true, titre: true } },
+      depenses: {
+        select: { id: true, numero: true, montantTotal: true, date: true },
+        orderBy: { date: "desc" },
+      },
       mouvements: {
         include: {
           produit: { select: { id: true, nom: true } },
@@ -229,9 +233,12 @@ export async function recevoirCommande(
 
     if (!commande) throw new Error("Commande introuvable");
 
-    if (commande.statut !== StatutCommande.ENVOYEE) {
+    if (
+      commande.statut !== StatutCommande.ENVOYEE &&
+      commande.statut !== StatutCommande.LIVREE_PARTIELLEMENT
+    ) {
       throw new Error(
-        `Impossible de recevoir une commande avec le statut ${commande.statut}. La commande doit etre en statut ENVOYEE.`
+        `Impossible de recevoir une commande avec le statut ${commande.statut}. La commande doit etre en statut ENVOYEE ou LIVREE_PARTIELLEMENT.`
       );
     }
 
@@ -257,45 +264,43 @@ export async function recevoirCommande(
         }
       }
 
-      // Validate that all lignes are covered
-      const providedIds = new Set(lignesRecues.map((lr) => lr.ligneId));
-      for (const ligne of commande.lignes) {
-        if (!providedIds.has(ligne.id)) {
-          throw new Error(
-            `La ligne ${ligne.id} (${ligne.produit.nom}) n'est pas couverte dans les quantites recues. Toutes les lignes doivent etre renseignees.`
-          );
-        }
+      // Lines not provided default to 0 (partial reception)
+      ligneMap = new Map(commande.lignes.map((l) => [l.id, 0]));
+      for (const lr of lignesRecues) {
+        ligneMap.set(lr.ligneId, lr.quantiteRecue);
       }
-
-      ligneMap = new Map(lignesRecues.map((lr) => [lr.ligneId, lr.quantiteRecue]));
     } else {
       // Fallback: use quantite commandee
       ligneMap = new Map(commande.lignes.map((l) => [l.id, l.quantite]));
     }
 
-    // Detect surlivraisons
+    // Detect surlivraisons (cumul deja recu + cette reception)
     for (const ligne of commande.lignes) {
-      const qrecue = ligneMap.get(ligne.id) ?? ligne.quantite;
-      if (qrecue > ligne.quantite) {
+      const qCetteReception = ligneMap.get(ligne.id) ?? 0;
+      const dejaRecu = ligne.quantiteRecue ?? 0;
+      const cumulTotal = dejaRecu + qCetteReception;
+      if (cumulTotal > ligne.quantite) {
         avertissements.push(
-          `${ligne.produit.nom} : surlivraison detectee (commande: ${ligne.quantite}, recu: ${qrecue}).`
+          `${ligne.produit.nom} : surlivraison detectee (commande: ${ligne.quantite}, deja recu: ${dejaRecu}, cette reception: ${qCetteReception}, cumul: ${cumulTotal}).`
         );
       }
     }
 
     // Create ENTREE mouvement for each ligne with quantiteRecue > 0 + update stock
-    for (const ligne of commande.lignes) {
-      const qrecue = ligneMap.get(ligne.id) ?? ligne.quantite;
+    let montantCetteReception = 0;
 
-      if (qrecue > 0) {
-        const quantiteBase = convertirQuantiteAchat(qrecue, ligne.produit);
+    for (const ligne of commande.lignes) {
+      const qCetteReception = ligneMap.get(ligne.id) ?? 0;
+
+      if (qCetteReception > 0) {
+        const quantiteBase = convertirQuantiteAchat(qCetteReception, ligne.produit);
 
         await tx.mouvementStock.create({
           data: {
             produitId: ligne.produitId,
             type: TypeMouvement.ENTREE,
-            quantite: qrecue,
-            prixTotal: qrecue * ligne.prixUnitaire,
+            quantite: qCetteReception,
+            prixTotal: qCetteReception * ligne.prixUnitaire,
             commandeId: commande.id,
             userId,
             date: livraisonDate,
@@ -308,28 +313,38 @@ export async function recevoirCommande(
           where: { id: ligne.produitId },
           data: { stockActuel: { increment: quantiteBase } },
         });
+
+        montantCetteReception += qCetteReception * ligne.prixUnitaire;
       }
 
-      // Update ligne with quantiteRecue (including 0)
+      // Increment quantiteRecue (cumulative across receptions)
+      const nouveauCumul = (ligne.quantiteRecue ?? 0) + qCetteReception;
       await tx.ligneCommande.update({
         where: { id: ligne.id },
-        data: { quantiteRecue: qrecue },
+        data: { quantiteRecue: nouveauCumul },
       });
     }
 
-    // Calculate montantRecu
-    const montantRecu = commande.lignes.reduce((sum, ligne) => {
-      const qrecue = ligneMap.get(ligne.id) ?? ligne.quantite;
-      return sum + qrecue * ligne.prixUnitaire;
-    }, 0);
+    // Calculate cumulative montantRecu
+    const montantRecuCumul = (commande.montantRecu ?? 0) + montantCetteReception;
 
-    // Update commande statut + date livraison + montantRecu
+    // Determine new status: LIVREE if all lines fully received, else LIVREE_PARTIELLEMENT
+    const toutesLignesCompletes = commande.lignes.every((ligne) => {
+      const qCetteReception = ligneMap.get(ligne.id) ?? 0;
+      const cumulTotal = (ligne.quantiteRecue ?? 0) + qCetteReception;
+      return cumulTotal >= ligne.quantite;
+    });
+
+    const nouveauStatut = toutesLignesCompletes
+      ? StatutCommande.LIVREE
+      : StatutCommande.LIVREE_PARTIELLEMENT;
+
     const commandeMiseAJour = await tx.commande.update({
       where: { id: commande.id },
       data: {
-        statut: StatutCommande.LIVREE,
+        statut: nouveauStatut,
         dateLivraison: livraisonDate,
-        montantRecu,
+        montantRecu: montantRecuCumul,
       },
       include: {
         fournisseur: { select: { id: true, nom: true } },
@@ -339,17 +354,11 @@ export async function recevoirCommande(
       },
     });
 
-    // Auto-create Depense for this commande (one per commande, anti-doublon).
+    // Auto-create Depense for this reception (one per reception, not per commande).
     //
     // Anti-double-comptage : si toutes les lignes de la commande sont deja couvertes
     // par une LigneDepense pre-existante (ex. ligne traitee LIBRE puis recuperee
-    // via creerCommandeDepuisBesoin), on ne re-cree pas de Depense pour eviter le
-    // double comptage. La depense initiale reste la source de verite financiere.
-    const depenseExistante = await tx.depense.findFirst({
-      where: { commandeId: commande.id },
-      select: { id: true },
-    });
-
+    // via creerCommandeDepuisBesoin), on ne cree pas de Depense.
     const ligneIds = commande.lignes.map((l) => l.id);
     const lignesDejaComptabilisees = await tx.ligneDepense.findMany({
       where: { ligneCommandeId: { in: ligneIds } },
@@ -363,16 +372,15 @@ export async function recevoirCommande(
 
     let depense = null as { id: string; numero: string; montantTotal: number } | null;
     if (
-      !depenseExistante &&
       !toutesLignesDejaBookees &&
-      montantRecu > 0
+      montantCetteReception > 0
     ) {
-      // Determine dominant category from lignes (most expensive based on received quantities)
       const categoriesDominantes = commande.lignes.reduce(
         (acc, ligne) => {
-          const qrecue = ligneMap.get(ligne.id) ?? ligne.quantite;
+          const qCetteReception = ligneMap.get(ligne.id) ?? 0;
+          if (qCetteReception <= 0) return acc;
           const cat = ligne.produit.categorie;
-          acc[cat] = (acc[cat] ?? 0) + qrecue * ligne.prixUnitaire;
+          acc[cat] = (acc[cat] ?? 0) + qCetteReception * ligne.prixUnitaire;
           return acc;
         },
         {} as Record<string, number>
@@ -381,15 +389,14 @@ export async function recevoirCommande(
         Object.entries(categoriesDominantes).sort(([, a], [, b]) => b - a)[0]?.[0] ?? CategorieProduit.ALIMENT
       ) as CategorieProduit;
 
-      // Generate numero DEP-YYYY-NNN (findFirst+orderBy to avoid race condition)
       const depNumero = await generateNextNumero(tx, "depense", "DEP", siteId);
 
       depense = await tx.depense.create({
         data: {
           numero: depNumero,
-          description: `Commande ${commande.numero}`,
+          description: `Commande ${commande.numero} — reception`,
           categorieDepense: categorieDepenseFromProduit(categorieDominante),
-          montantTotal: montantRecu,
+          montantTotal: montantCetteReception,
           date: livraisonDate,
           commandeId: commande.id,
           listeBesoinsId: commande.listeBesoinsId ?? undefined,
@@ -397,6 +404,27 @@ export async function recevoirCommande(
           siteId,
         },
       });
+
+      const lignesDepenseData = commande.lignes
+        .filter((l) => (ligneMap.get(l.id) ?? 0) > 0)
+        .map((l) => {
+          const qCetteReception = ligneMap.get(l.id) ?? 0;
+          return {
+            depenseId: depense!.id,
+            designation: l.produit.nom,
+            categorieDepense: categorieDepenseFromProduit(l.produit.categorie as CategorieProduit),
+            quantite: qCetteReception,
+            prixUnitaire: l.prixUnitaire,
+            montantTotal: qCetteReception * l.prixUnitaire,
+            produitId: l.produitId,
+            ligneCommandeId: l.id,
+            siteId,
+          };
+        });
+
+      if (lignesDepenseData.length > 0) {
+        await tx.ligneDepense.createMany({ data: lignesDepenseData });
+      }
     }
 
     return { commande: commandeMiseAJour, depense, avertissements };
@@ -412,8 +440,13 @@ export async function annulerCommande(id: string, siteId: string) {
 
     if (!commande) throw new Error("Commande introuvable");
 
-    if (commande.statut === StatutCommande.LIVREE) {
-      throw new Error("Impossible d'annuler une commande deja livree");
+    if (
+      commande.statut === StatutCommande.LIVREE ||
+      commande.statut === StatutCommande.LIVREE_PARTIELLEMENT
+    ) {
+      throw new Error(
+        "Impossible d'annuler une commande qui a deja ete (partiellement) livree"
+      );
     }
 
     if (commande.statut === StatutCommande.ANNULEE) {
@@ -425,6 +458,37 @@ export async function annulerCommande(id: string, siteId: string) {
       data: { statut: StatutCommande.ANNULEE },
       include: {
         fournisseur: { select: { id: true, nom: true } },
+      },
+    });
+  });
+}
+
+/** Cloture une commande partiellement livree (force LIVREE_PARTIELLEMENT -> LIVREE) */
+export async function cloturerCommande(id: string, siteId: string) {
+  return prisma.$transaction(async (tx) => {
+    const commande = await tx.commande.findFirst({
+      where: { id, siteId },
+    });
+
+    if (!commande) throw new Error("Commande introuvable");
+
+    if (commande.statut !== StatutCommande.LIVREE_PARTIELLEMENT) {
+      throw new Error(
+        `Impossible de cloturer une commande avec le statut ${commande.statut}. La commande doit etre en statut LIVREE_PARTIELLEMENT.`
+      );
+    }
+
+    return tx.commande.update({
+      where: { id: commande.id },
+      data: {
+        statut: StatutCommande.LIVREE,
+        dateLivraison: new Date(),
+      },
+      include: {
+        fournisseur: { select: { id: true, nom: true } },
+        lignes: {
+          include: { produit: { select: { id: true, nom: true, unite: true } } },
+        },
       },
     });
   });

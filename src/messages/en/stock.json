@@ -24,6 +24,7 @@
   "statuts": {
     "BROUILLON": "Draft",
     "ENVOYEE": "Sent",
+    "LIVREE_PARTIELLEMENT": "Partially delivered",
     "LIVREE": "Delivered",
     "ANNULEE": "Cancelled"
   },
@@ -168,6 +169,9 @@
       "envoyer": "Send",
       "receptionner": "Receive",
       "annuler": "Cancel",
+      "cloturer": "Close order",
+      "cloturerConfirm": "Are you sure you want to close this order? No further deliveries will be possible.",
+      "depensesLiees": "Linked expenses",
       "confirmerReception": "Confirm reception",
       "receptionDescription": "Verify the quantities actually received for each item.",
       "dateLivraison": "Delivery date",
@@ -180,6 +184,7 @@
         "quantitesRecues": "Received quantities",
         "commande": "Ordered",
         "recu": "Received",
+        "dejaRecu": "Already received",
         "commandeLabel": "{quantite} {unite}",
         "montantReel": "Actual amount",
         "montantValue": "{montant} FCFA",

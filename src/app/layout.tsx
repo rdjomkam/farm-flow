@@ -217,6 +217,22 @@ export default async function RootLayout({
       <html lang={locale}>
         <head>
           <AppleSplashLinks />
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+(function(){
+  if(!('serviceWorker' in navigator)) return;
+  var t = setTimeout(function(){
+    navigator.serviceWorker.getRegistrations().then(function(regs){
+      regs.forEach(function(r){ r.unregister(); });
+      if(regs.length) window.location.reload();
+    });
+  }, 8000);
+  window.addEventListener('load', function(){ clearTimeout(t); });
+})();
+`,
+            }}
+          />
         </head>
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}

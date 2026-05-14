@@ -94,6 +94,7 @@ enum TypeMouvement {
 enum StatutCommande {
   BROUILLON
   ENVOYEE
+  LIVREE_PARTIELLEMENT
   LIVREE
   ANNULEE
 }

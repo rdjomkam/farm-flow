@@ -260,6 +260,7 @@ export enum TypeMouvement {
 export enum StatutCommande {
   BROUILLON = "BROUILLON",
   ENVOYEE = "ENVOYEE",
+  LIVREE_PARTIELLEMENT = "LIVREE_PARTIELLEMENT",
   LIVREE = "LIVREE",
   ANNULEE = "ANNULEE",
 }

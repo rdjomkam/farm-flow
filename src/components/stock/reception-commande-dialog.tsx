@@ -35,6 +35,7 @@ interface LigneProduit {
 interface LigneData {
   id: string;
   quantite: number;
+  quantiteRecue: number | null;
   prixUnitaire: number;
   produit: LigneProduit;
 }
@@ -49,6 +50,7 @@ interface LigneReceptionState {
   ligneId: string;
   produit: { nom: string; unite: string; uniteAchat: string | null };
   quantiteCommandee: number;
+  dejaRecue: number;
   prixUnitaire: number;
   quantiteRecue: string; // string for controlled input
 }
@@ -98,19 +100,24 @@ export function ReceptionCommandeDialog({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Initialize lignes state: pre-fill quantiteRecue with quantite commandee
+  // Initialize lignes state: pre-fill with remaining quantity (commandee - deja recue)
   const [lignesState, setLignesState] = useState<LigneReceptionState[]>(() =>
-    commande.lignes.map((ligne) => ({
-      ligneId: ligne.id,
-      produit: {
-        nom: ligne.produit.nom,
-        unite: ligne.produit.unite,
-        uniteAchat: ligne.produit.uniteAchat,
-      },
-      quantiteCommandee: ligne.quantite,
-      prixUnitaire: ligne.prixUnitaire,
-      quantiteRecue: String(ligne.quantite),
-    }))
+    commande.lignes.map((ligne) => {
+      const dejaRecue = ligne.quantiteRecue ?? 0;
+      const restant = Math.max(0, ligne.quantite - dejaRecue);
+      return {
+        ligneId: ligne.id,
+        produit: {
+          nom: ligne.produit.nom,
+          unite: ligne.produit.unite,
+          uniteAchat: ligne.produit.uniteAchat,
+        },
+        quantiteCommandee: ligne.quantite,
+        dejaRecue,
+        prixUnitaire: ligne.prixUnitaire,
+        quantiteRecue: String(restant),
+      };
+    })
   );
 
   // Live-compute montant reel
@@ -211,19 +218,23 @@ export function ReceptionCommandeDialog({
     if (!value) {
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
-      // Reset lignes to initial (commandee) values
       setLignesState(
-        commande.lignes.map((ligne) => ({
-          ligneId: ligne.id,
-          produit: {
-            nom: ligne.produit.nom,
-            unite: ligne.produit.unite,
-            uniteAchat: ligne.produit.uniteAchat,
-          },
-          quantiteCommandee: ligne.quantite,
-          prixUnitaire: ligne.prixUnitaire,
-          quantiteRecue: String(ligne.quantite),
-        }))
+        commande.lignes.map((ligne) => {
+          const dejaRecue = ligne.quantiteRecue ?? 0;
+          const restant = Math.max(0, ligne.quantite - dejaRecue);
+          return {
+            ligneId: ligne.id,
+            produit: {
+              nom: ligne.produit.nom,
+              unite: ligne.produit.unite,
+              uniteAchat: ligne.produit.uniteAchat,
+            },
+            quantiteCommandee: ligne.quantite,
+            dejaRecue,
+            prixUnitaire: ligne.prixUnitaire,
+            quantiteRecue: String(restant),
+          };
+        })
       );
     }
     onOpenChange(value);
@@ -261,12 +272,12 @@ export function ReceptionCommandeDialog({
                 const isValidValue = !isNaN(qr) && qr >= 0;
                 const unite = displayUnite(commande.lignes[idx], t);
 
-                // Determine badge
+                const cumulTotal = ligne.dejaRecue + (isValidValue ? qr : 0);
                 let badge: "complet" | "partiel" | "zero" | "surlivraison" | null = null;
                 if (isValidValue) {
                   if (qr === 0) badge = "zero";
-                  else if (qr > ligne.quantiteCommandee) badge = "surlivraison";
-                  else if (qr < ligne.quantiteCommandee) badge = "partiel";
+                  else if (cumulTotal > ligne.quantiteCommandee) badge = "surlivraison";
+                  else if (cumulTotal < ligne.quantiteCommandee) badge = "partiel";
                   else badge = "complet";
                 }
 
@@ -294,6 +305,9 @@ export function ReceptionCommandeDialog({
                       {t("commandes.detail.reception.commande")}
                       {" : "}
                       {ligne.quantiteCommandee} {unite}
+                      {ligne.dejaRecue > 0 && (
+                        <> — {t("commandes.detail.reception.dejaRecu")} : {ligne.dejaRecue} {unite}</>
+                      )}
                     </p>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground shrink-0">
@@ -378,7 +392,7 @@ export function ReceptionCommandeDialog({
           {/* Avertissements (surlivraisons visibles avant soumission) */}
           {lignesState.some((l) => {
             const qr = parseFloat(l.quantiteRecue);
-            return !isNaN(qr) && qr > l.quantiteCommandee;
+            return !isNaN(qr) && (l.dejaRecue + qr) > l.quantiteCommandee;
           }) && (
             <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3">
               <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
@@ -389,11 +403,11 @@ export function ReceptionCommandeDialog({
                 {lignesState
                   .filter((l) => {
                     const qr = parseFloat(l.quantiteRecue);
-                    return !isNaN(qr) && qr > l.quantiteCommandee;
+                    return !isNaN(qr) && (l.dejaRecue + qr) > l.quantiteCommandee;
                   })
                   .map((l) => (
                     <p key={l.ligneId} className="text-xs text-muted-foreground">
-                      {l.produit.nom} : {l.quantiteRecue} &gt; {l.quantiteCommandee}
+                      {l.produit.nom} : {l.dejaRecue} + {l.quantiteRecue} &gt; {l.quantiteCommandee}
                     </p>
                   ))}
               </div>
