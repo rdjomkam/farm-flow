@@ -178,6 +178,8 @@
     "nameRequired": "Le nom est requis",
     "duplicate": "Ce nom existe deja",
     "saved": "Filtre enregistre",
+    "update": "Mettre a jour",
+    "updated": "Filtre mis a jour",
     "deleted": "Filtre supprime",
     "empty": "Aucun filtre enregistre"
   }

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Bookmark, Plus, X, Loader2 } from "lucide-react";
+import { Bookmark, Plus, X, Loader2, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useSavedFilters, useCreateSavedFilter, useDeleteSavedFilter } from "@/hooks/queries/use-saved-filters-queries";
+import { useSavedFilters, useCreateSavedFilter, useUpdateSavedFilter, useDeleteSavedFilter } from "@/hooks/queries/use-saved-filters-queries";
 import type { SavedFilterPage } from "@/types";
 
 interface SavedFiltersSectionProps {
@@ -24,11 +24,13 @@ export function SavedFiltersSection({
   const t = useTranslations("common.savedFilters");
   const { data: savedFilters = [], isLoading } = useSavedFilters(page);
   const createMutation = useCreateSavedFilter();
+  const updateMutation = useUpdateSavedFilter();
   const deleteMutation = useDeleteSavedFilter();
 
   const [showInput, setShowInput] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   async function handleSave() {
     const trimmed = name.trim();
@@ -46,8 +48,24 @@ export function SavedFiltersSection({
     }
   }
 
+  async function handleUpdate() {
+    if (!activeId) return;
+    await updateMutation.mutateAsync({ id: activeId, page, filters: currentFilters });
+    setActiveId(null);
+  }
+
   function handleDelete(id: string) {
+    if (activeId === id) setActiveId(null);
     deleteMutation.mutate({ id, page });
+  }
+
+  function handleChipClick(id: string, filters: unknown) {
+    if (activeId === id) {
+      setActiveId(null);
+    } else {
+      setActiveId(id);
+      onLoadFilter(filters);
+    }
   }
 
   if (isLoading && savedFilters.length === 0) return null;
@@ -73,28 +91,53 @@ export function SavedFiltersSection({
           {t("save")}
         </button>
 
-        {savedFilters.map((sf) => (
-          <button
-            key={sf.id}
-            type="button"
-            onClick={() => onLoadFilter(sf.filters)}
-            className="group shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-border bg-background text-xs font-medium hover:bg-accent transition-colors"
-          >
-            <Bookmark className="h-3 w-3 text-primary" />
-            <span className="truncate max-w-[120px]">{sf.name}</span>
-            <span
-              role="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete(sf.id);
-              }}
-              className="hidden group-hover:inline-flex items-center justify-center h-4 w-4 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+        {savedFilters.map((sf) => {
+          const isActive = activeId === sf.id;
+          return (
+            <button
+              key={sf.id}
+              type="button"
+              onClick={() => handleChipClick(sf.id, sf.filters)}
+              className={`group shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-xs font-medium transition-colors ${
+                isActive
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-background hover:bg-accent"
+              }`}
             >
-              <X className="h-2.5 w-2.5" />
-            </span>
-          </button>
-        ))}
+              <Bookmark className={`h-3 w-3 ${isActive ? "text-primary-foreground" : "text-primary"}`} />
+              <span className="truncate max-w-[120px]">{sf.name}</span>
+              {!isActive && (
+                <span
+                  role="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(sf.id);
+                  }}
+                  className="hidden group-hover:inline-flex items-center justify-center h-4 w-4 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
+
+      {activeId && (
+        <button
+          type="button"
+          onClick={handleUpdate}
+          disabled={updateMutation.isPending}
+          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+        >
+          {updateMutation.isPending ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <Check className="h-3 w-3" />
+          )}
+          {t("update")}
+        </button>
+      )}
 
       {showInput && (
         <div className="flex items-center gap-2">

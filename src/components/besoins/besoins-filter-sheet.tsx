@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SheetClose } from "@/components/ui/sheet";
@@ -91,24 +91,25 @@ export function BesoinsFilterSheet({
     loadIntoForm(current);
   }, [current]);
 
+  const formFilters = useMemo<BesoinsFilterValues>(() => ({
+    statut: arrayToCsv(localStatuts),
+    search: localSearch || undefined,
+    produitId: arrayToCsv(localProduitIds),
+    demandeurId: arrayToCsv(localDemandeurIds),
+    valideurId: arrayToCsv(localValideurIds),
+    vagueId: arrayToCsv(localVagueIds),
+    dateFrom: localDateFrom || undefined,
+    dateTo: localDateTo || undefined,
+    dateLimiteFrom: localDateLimiteFrom || undefined,
+    dateLimiteTo: localDateLimiteTo || undefined,
+    montantEstimeMin: localMontantMin || undefined,
+    montantEstimeMax: localMontantMax || undefined,
+    enRetard: localEnRetard || undefined,
+    hasCommande: localHasCommande || undefined,
+  }), [localStatuts, localSearch, localProduitIds, localDemandeurIds, localValideurIds, localVagueIds, localDateFrom, localDateTo, localDateLimiteFrom, localDateLimiteTo, localMontantMin, localMontantMax, localEnRetard, localHasCommande]);
+
   function handleApply() {
-    const filters: BesoinsFilterValues = {
-      statut: arrayToCsv(localStatuts),
-      search: localSearch || undefined,
-      produitId: arrayToCsv(localProduitIds),
-      demandeurId: arrayToCsv(localDemandeurIds),
-      valideurId: arrayToCsv(localValideurIds),
-      vagueId: arrayToCsv(localVagueIds),
-      dateFrom: localDateFrom || undefined,
-      dateTo: localDateTo || undefined,
-      dateLimiteFrom: localDateLimiteFrom || undefined,
-      dateLimiteTo: localDateLimiteTo || undefined,
-      montantEstimeMin: localMontantMin || undefined,
-      montantEstimeMax: localMontantMax || undefined,
-      enRetard: localEnRetard || undefined,
-      hasCommande: localHasCommande || undefined,
-    };
-    onApply(filters);
+    onApply(formFilters);
   }
 
   const statutOptions = Object.values(StatutBesoins).map((s) => ({
@@ -154,7 +155,7 @@ export function BesoinsFilterSheet({
       {/* Saved filters */}
       <SavedFiltersSection
         page="besoins"
-        currentFilters={current}
+        currentFilters={formFilters}
         onLoadFilter={(filters) => loadIntoForm(filters as BesoinsFilterValues)}
         hasActiveFilters={activeCount > 0}
       />
