@@ -36,6 +36,11 @@ function formatNum(n: number | null | undefined, decimals = 1, suffix = ""): str
   return n.toFixed(decimals) + (suffix ? ` ${suffix}` : "");
 }
 
+function formatFCFA(n: number | null | undefined): string {
+  if (n === null || n === undefined) return "—";
+  return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n) + " FCFA";
+}
+
 const typeReleveLabels: Record<TypeReleve, string> = {
   [TypeReleve.BIOMETRIE]: "Biométrie",
   [TypeReleve.MORTALITE]: "Mortalité",
@@ -213,6 +218,74 @@ const styles = StyleSheet.create({
   tableCell: {
     fontSize: 8,
   },
+  // Stat grid for water quality
+  statGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 8,
+  },
+  statCard: {
+    flex: 1,
+    minWidth: "22%",
+    backgroundColor: colors.lightBg,
+    borderRadius: 4,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  statLabel: {
+    fontSize: 7,
+    color: colors.muted,
+    marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  },
+  statRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 1,
+  },
+  statKey: {
+    fontSize: 7,
+    color: colors.muted,
+  },
+  statValue: {
+    fontSize: 8,
+    fontFamily: "Helvetica-Bold",
+  },
+  // Info card (for Gompertz)
+  infoCard: {
+    backgroundColor: colors.lightBg,
+    borderRadius: 4,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 8,
+  },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    borderBottomStyle: "solid" as const,
+  },
+  infoLabel: {
+    fontSize: 8,
+    color: colors.muted,
+  },
+  infoValue: {
+    fontSize: 8,
+    fontFamily: "Helvetica-Bold",
+  },
+  // Empty state
+  emptyText: {
+    fontSize: 8,
+    color: colors.muted,
+    fontStyle: "italic",
+    marginBottom: 8,
+  },
   colDate: { width: 55 },
   colType: { width: 60 },
   colBac: { width: 60 },
@@ -381,6 +454,35 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
           </View>
         </View>
 
+        {/* ===================== COÛT DE PRODUCTION ===================== */}
+        {data.coutProduction && (
+          <>
+            <Text style={styles.sectionTitle}>Coût de production</Text>
+            <View style={styles.kpisGrid}>
+              <View style={styles.kpiCard}>
+                <Text style={styles.kpiLabel}>Coût total</Text>
+                <Text style={styles.kpiValue}>{formatFCFA(data.coutProduction.coutTotal)}</Text>
+              </View>
+              <View style={styles.kpiCard}>
+                <Text style={styles.kpiLabel}>Coût / kg</Text>
+                <Text style={styles.kpiValue}>{formatFCFA(data.coutProduction.coutParKg)}</Text>
+              </View>
+              <View style={styles.kpiCard}>
+                <Text style={styles.kpiLabel}>Prix vente / kg</Text>
+                <Text style={styles.kpiValue}>{formatFCFA(data.coutProduction.prixMoyenVenteKg)}</Text>
+              </View>
+              <View style={styles.kpiCard}>
+                <Text style={styles.kpiLabel}>Marge / kg</Text>
+                <Text style={styles.kpiValue}>{formatFCFA(data.coutProduction.margeParKg)}</Text>
+              </View>
+              <View style={styles.kpiCard}>
+                <Text style={styles.kpiLabel}>ROI</Text>
+                <Text style={styles.kpiValue}>{formatNum(data.coutProduction.roi, 1, "%")}</Text>
+              </View>
+            </View>
+          </>
+        )}
+
         {/* ===================== BACS ===================== */}
         {data.bacs.length > 0 && (
           <>
@@ -400,6 +502,252 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                 </View>
               ))}
             </View>
+          </>
+        )}
+
+        {/* ===================== HISTORIQUE DES BACS ===================== */}
+        {data.assignationTimeline && data.assignationTimeline.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Historique des bacs</Text>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderText, { width: 80 }]}>Bac</Text>
+              <Text style={[styles.tableHeaderText, { width: 70 }]}>Assigné le</Text>
+              <Text style={[styles.tableHeaderText, { width: 70 }]}>Retiré le</Text>
+              <Text style={[styles.tableHeaderText, { width: 60 }]}>Volume (L)</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1 }]}>Poissons</Text>
+            </View>
+            {data.assignationTimeline.map((a, i) => (
+              <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]} wrap={false}>
+                <Text style={[styles.tableCell, { width: 80, fontFamily: "Helvetica-Bold" }]}>{a.nomBac}</Text>
+                <Text style={[styles.tableCell, { width: 70 }]}>{formatDate(a.dateAssignation)}</Text>
+                <Text style={[styles.tableCell, { width: 70 }]}>{a.dateFin ? formatDate(a.dateFin) : "Actif"}</Text>
+                <Text style={[styles.tableCell, { width: 60 }]}>{a.volume ?? "—"}</Text>
+                <Text style={[styles.tableCell, { flex: 1 }]}>{a.nombrePoissons ?? "—"}</Text>
+              </View>
+            ))}
+          </>
+        )}
+
+        {/* ===================== ÉVOLUTION DU POIDS ===================== */}
+        {data.evolutionPoidsTable && data.evolutionPoidsTable.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Évolution du poids</Text>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderText, { width: 65 }]}>Date</Text>
+              <Text style={[styles.tableHeaderText, { width: 45 }]}>Jour</Text>
+              <Text style={[styles.tableHeaderText, { width: 70 }]}>Poids (g)</Text>
+              <Text style={[styles.tableHeaderText, { width: 70 }]}>Taille (cm)</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1 }]}>Échantillon</Text>
+            </View>
+            {data.evolutionPoidsTable.map((row, i) => (
+              <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]} wrap={false}>
+                <Text style={[styles.tableCell, { width: 65 }]}>{formatDate(row.date)}</Text>
+                <Text style={[styles.tableCell, { width: 45 }]}>J{row.jourDepuisDebut}</Text>
+                <Text style={[styles.tableCell, { width: 70, fontFamily: "Helvetica-Bold" }]}>{formatNum(row.poidsMoyen, 1)}</Text>
+                <Text style={[styles.tableCell, { width: 70 }]}>{formatNum(row.tailleMoyenne, 1)}</Text>
+                <Text style={[styles.tableCell, { flex: 1 }]}>{row.echantillon ?? "—"}</Text>
+              </View>
+            ))}
+          </>
+        )}
+
+        {/* ===================== MODÈLE DE CROISSANCE (GOMPERTZ) ===================== */}
+        {data.gompertz && (
+          <>
+            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Modèle de croissance (Gompertz)</Text>
+            <View style={styles.infoCard}>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Confiance</Text>
+                <Text style={styles.infoValue}>{data.gompertz.confidenceLevel}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>R²</Text>
+                <Text style={styles.infoValue}>{formatNum(data.gompertz.r2, 4)}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>RMSE</Text>
+                <Text style={styles.infoValue}>{formatNum(data.gompertz.rmse, 2, "g")}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Poids asymptotique (W∞)</Text>
+                <Text style={styles.infoValue}>{formatNum(data.gompertz.wInfinity, 0, "g")}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Taux de croissance (k)</Text>
+                <Text style={styles.infoValue}>{formatNum(data.gompertz.k, 4)}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Point d&apos;inflexion (ti)</Text>
+                <Text style={styles.infoValue}>J{formatNum(data.gompertz.ti, 0)}</Text>
+              </View>
+              {data.gompertz.targetWeight && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Poids cible</Text>
+                  <Text style={styles.infoValue}>{formatNum(data.gompertz.targetWeight, 0, "g")}</Text>
+                </View>
+              )}
+              {data.gompertz.predictedHarvestDate && (
+                <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+                  <Text style={styles.infoLabel}>Date de récolte prédite</Text>
+                  <Text style={[styles.infoValue, { color: colors.primary }]}>{data.gompertz.predictedHarvestDate}</Text>
+                </View>
+              )}
+            </View>
+          </>
+        )}
+
+        {/* ===================== CALIBRAGES ===================== */}
+        {data.calibrageHistory && data.calibrageHistory.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Calibrages ({data.calibrageHistory.length})</Text>
+            {data.calibrageHistory.map((cal, ci) => (
+              <View key={ci} style={[styles.infoCard, { marginBottom: 6 }]} wrap={false}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+                  <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold" }}>{formatDate(cal.date)}</Text>
+                  <Text style={{ fontSize: 8, color: colors.muted }}>{cal.totalRedistribue} poissons redistribués{cal.nombreMorts > 0 ? ` · ${cal.nombreMorts} morts` : ""}</Text>
+                </View>
+                <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
+                  {cal.groupes.map((g, gi) => (
+                    <View key={gi} style={[styles.bacChip, { minWidth: 80 }]}>
+                      <Text style={styles.bacNom}>{g.categorie}</Text>
+                      <Text style={styles.bacDetail}>{g.nombrePoissons} poissons{g.poidsMoyen ? ` · ${g.poidsMoyen}g` : ""}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ))}
+          </>
+        )}
+
+        {/* ===================== RÉSUMÉ MORTALITÉ ===================== */}
+        {data.mortalitySummary && (
+          <>
+            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Résumé mortalité</Text>
+            <View style={styles.kpisGrid}>
+              <View style={styles.kpiCard}>
+                <Text style={styles.kpiLabel}>Total morts</Text>
+                <Text style={styles.kpiValue}>{data.mortalitySummary.totalMorts}</Text>
+              </View>
+              <View style={styles.kpiCard}>
+                <Text style={styles.kpiLabel}>Taux de mortalité</Text>
+                <Text style={styles.kpiValue}>{formatNum(data.mortalitySummary.tauxMortalite, 1, "%")}</Text>
+              </View>
+            </View>
+            {data.mortalitySummary.topCauses.length > 0 && (
+              <>
+                <View style={styles.tableHeader}>
+                  <Text style={[styles.tableHeaderText, { flex: 1 }]}>Cause</Text>
+                  <Text style={[styles.tableHeaderText, { width: 60 }]}>Nombre</Text>
+                </View>
+                {data.mortalitySummary.topCauses.map((c, i) => (
+                  <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]} wrap={false}>
+                    <Text style={[styles.tableCell, { flex: 1 }]}>{c.cause}</Text>
+                    <Text style={[styles.tableCell, { width: 60 }]}>{c.count}</Text>
+                  </View>
+                ))}
+              </>
+            )}
+          </>
+        )}
+
+        {/* ===================== RÉSUMÉ ALIMENTATION ===================== */}
+        {data.feedingSummary && (
+          <>
+            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Résumé alimentation</Text>
+            <View style={styles.kpisGrid}>
+              <View style={styles.kpiCard}>
+                <Text style={styles.kpiLabel}>Total aliment</Text>
+                <Text style={styles.kpiValue}>{formatNum(data.feedingSummary.totalAlimentKg, 1, "kg")}</Text>
+              </View>
+              <View style={styles.kpiCard}>
+                <Text style={styles.kpiLabel}>Fréquence moyenne</Text>
+                <Text style={styles.kpiValue}>{data.feedingSummary.frequenceMoyenne !== null ? `${formatNum(data.feedingSummary.frequenceMoyenne, 1)}x/jour` : "—"}</Text>
+              </View>
+            </View>
+            {data.feedingSummary.typeBreakdown.length > 0 && (
+              <>
+                <View style={styles.tableHeader}>
+                  <Text style={[styles.tableHeaderText, { flex: 1 }]}>Type</Text>
+                  <Text style={[styles.tableHeaderText, { width: 60 }]}>Relevés</Text>
+                  <Text style={[styles.tableHeaderText, { width: 70 }]}>Total (kg)</Text>
+                </View>
+                {data.feedingSummary.typeBreakdown.map((t, i) => (
+                  <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]} wrap={false}>
+                    <Text style={[styles.tableCell, { flex: 1 }]}>{t.type}</Text>
+                    <Text style={[styles.tableCell, { width: 60 }]}>{t.count}</Text>
+                    <Text style={[styles.tableCell, { width: 70 }]}>{formatNum(t.totalKg, 1)}</Text>
+                  </View>
+                ))}
+              </>
+            )}
+          </>
+        )}
+
+        {/* ===================== RÉSUMÉ QUALITÉ EAU ===================== */}
+        {data.waterQualitySummary && (data.waterQualitySummary.temperature || data.waterQualitySummary.ph || data.waterQualitySummary.oxygene || data.waterQualitySummary.ammoniac) && (
+          <>
+            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Résumé qualité eau</Text>
+            <View style={styles.statGrid}>
+              {data.waterQualitySummary.temperature && (
+                <View style={styles.statCard}>
+                  <Text style={styles.statLabel}>Température (°C)</Text>
+                  <View style={styles.statRow}><Text style={styles.statKey}>Min</Text><Text style={styles.statValue}>{formatNum(data.waterQualitySummary.temperature.min, 1)}</Text></View>
+                  <View style={styles.statRow}><Text style={styles.statKey}>Moy</Text><Text style={styles.statValue}>{formatNum(data.waterQualitySummary.temperature.avg, 1)}</Text></View>
+                  <View style={styles.statRow}><Text style={styles.statKey}>Max</Text><Text style={styles.statValue}>{formatNum(data.waterQualitySummary.temperature.max, 1)}</Text></View>
+                </View>
+              )}
+              {data.waterQualitySummary.ph && (
+                <View style={styles.statCard}>
+                  <Text style={styles.statLabel}>pH</Text>
+                  <View style={styles.statRow}><Text style={styles.statKey}>Min</Text><Text style={styles.statValue}>{formatNum(data.waterQualitySummary.ph.min, 1)}</Text></View>
+                  <View style={styles.statRow}><Text style={styles.statKey}>Moy</Text><Text style={styles.statValue}>{formatNum(data.waterQualitySummary.ph.avg, 1)}</Text></View>
+                  <View style={styles.statRow}><Text style={styles.statKey}>Max</Text><Text style={styles.statValue}>{formatNum(data.waterQualitySummary.ph.max, 1)}</Text></View>
+                </View>
+              )}
+              {data.waterQualitySummary.oxygene && (
+                <View style={styles.statCard}>
+                  <Text style={styles.statLabel}>Oxygène (mg/L)</Text>
+                  <View style={styles.statRow}><Text style={styles.statKey}>Min</Text><Text style={styles.statValue}>{formatNum(data.waterQualitySummary.oxygene.min, 1)}</Text></View>
+                  <View style={styles.statRow}><Text style={styles.statKey}>Moy</Text><Text style={styles.statValue}>{formatNum(data.waterQualitySummary.oxygene.avg, 1)}</Text></View>
+                  <View style={styles.statRow}><Text style={styles.statKey}>Max</Text><Text style={styles.statValue}>{formatNum(data.waterQualitySummary.oxygene.max, 1)}</Text></View>
+                </View>
+              )}
+              {data.waterQualitySummary.ammoniac && (
+                <View style={styles.statCard}>
+                  <Text style={styles.statLabel}>Ammoniac (mg/L)</Text>
+                  <View style={styles.statRow}><Text style={styles.statKey}>Min</Text><Text style={styles.statValue}>{formatNum(data.waterQualitySummary.ammoniac.min, 2)}</Text></View>
+                  <View style={styles.statRow}><Text style={styles.statKey}>Moy</Text><Text style={styles.statValue}>{formatNum(data.waterQualitySummary.ammoniac.avg, 2)}</Text></View>
+                  <View style={styles.statRow}><Text style={styles.statKey}>Max</Text><Text style={styles.statValue}>{formatNum(data.waterQualitySummary.ammoniac.max, 2)}</Text></View>
+                </View>
+              )}
+            </View>
+          </>
+        )}
+
+        {/* ===================== CONSOMMATION DE STOCK ===================== */}
+        {data.stockConsumption && data.stockConsumption.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Consommation de stock</Text>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderText, { flex: 1 }]}>Produit</Text>
+              <Text style={[styles.tableHeaderText, { width: 70 }]}>Catégorie</Text>
+              <Text style={[styles.tableHeaderText, { width: 60 }]}>Quantité</Text>
+              <Text style={[styles.tableHeaderText, { width: 50 }]}>Unité</Text>
+              {data.coutProduction && (
+                <Text style={[styles.tableHeaderText, { width: 80 }]}>Coût</Text>
+              )}
+            </View>
+            {data.stockConsumption.map((s, i) => (
+              <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]} wrap={false}>
+                <Text style={[styles.tableCell, { flex: 1, fontFamily: "Helvetica-Bold" }]}>{s.nomProduit}</Text>
+                <Text style={[styles.tableCell, { width: 70 }]}>{s.categorie}</Text>
+                <Text style={[styles.tableCell, { width: 60 }]}>{formatNum(s.quantite, 1)}</Text>
+                <Text style={[styles.tableCell, { width: 50 }]}>{s.unite}</Text>
+                {data.coutProduction && (
+                  <Text style={[styles.tableCell, { width: 80 }]}>{formatFCFA(s.prixTotal)}</Text>
+                )}
+              </View>
+            ))}
           </>
         )}
 
@@ -445,7 +793,7 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                     { color: colors.muted },
                   ]}
                 >
-                  {r.notes ? r.notes.slice(0, 40) : "—"}
+                  {r.notes ? r.notes.slice(0, 120) : "—"}
                 </Text>
               </View>
             ))}

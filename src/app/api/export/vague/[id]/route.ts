@@ -10,9 +10,18 @@ import { requirePermission } from "@/lib/permissions";
 import { handleApiError } from "@/lib/api-utils";
 import { getVagueById } from "@/lib/queries/vagues";
 import { getIndicateursVague } from "@/lib/queries/indicateurs";
+import { getCoutProductionVague } from "@/lib/queries/finances";
+import {
+  buildEvolutionPoidsTable,
+  buildMortalitySummary,
+  buildFeedingSummary,
+  buildWaterQualitySummary,
+  buildGompertzSection,
+} from "@/lib/export/pdf-rapport-vague-helpers";
+import type { RawReleve } from "@/lib/export/pdf-rapport-vague-helpers";
 import { renderRapportVaguePDF } from "@/lib/export/pdf-rapport-vague";
-import { Permission, TypeReleve, StatutVague, CauseMortalite } from "@/types";
-import type { CreateRapportVaguePDFDTO, ReleveRapportPDF } from "@/types/export";
+import { Permission, TypeReleve, StatutVague, CauseMortalite, TypeMouvement } from "@/types";
+import type { CreateRapportVaguePDFDTO, ReleveRapportPDF, StockConsumptionPDFRow } from "@/types/export";
 import { prisma } from "@/lib/db";
 
 export async function GET(
@@ -28,8 +37,18 @@ export async function GET(
 
     const { id } = await params;
 
-    // Récupérer la vague + relevés séparément (ADR-038 — getVagueById ne retourne plus de relevés)
-    const [vague, allReleves, indicateurs, site] = await Promise.all([
+    // Récupérer la vague + relevés + données enrichies en parallèle
+    const [
+      vague,
+      allReleves,
+      indicateurs,
+      site,
+      calibragesDb,
+      assignationsDb,
+      gompertzRecord,
+      configElevageData,
+      mouvementsStock,
+    ] = await Promise.all([
       getVagueById(id, auth.activeSiteId),
       prisma.releve.findMany({
         where: { vagueId: id, siteId: auth.activeSiteId },
@@ -39,6 +58,42 @@ export async function GET(
       prisma.site.findUnique({
         where: { id: auth.activeSiteId },
         select: { name: true, address: true },
+      }),
+      // Calibrages for this vague
+      prisma.calibrage.findMany({
+        where: { vagueId: id, siteId: auth.activeSiteId },
+        include: {
+          groupes: {
+            include: { destinationBac: { select: { nom: true } } },
+          },
+        },
+        orderBy: { date: "asc" },
+      }),
+      // Bac assignment timeline
+      prisma.assignationBac.findMany({
+        where: { vagueId: id, siteId: auth.activeSiteId },
+        include: { bac: { select: { nom: true, volume: true } } },
+        orderBy: { dateAssignation: "asc" },
+      }),
+      // Gompertz growth model
+      prisma.gompertzVague.findFirst({
+        where: { vagueId: id, siteId: auth.activeSiteId },
+      }),
+      // ConfigElevage for target weight (via vague's configElevageId)
+      prisma.vague.findUnique({
+        where: { id },
+        select: { configElevageId: true },
+      }).then(async (v) => {
+        if (!v?.configElevageId) return null;
+        return prisma.configElevage.findUnique({
+          where: { id: v.configElevageId },
+          select: { poidsObjectif: true },
+        });
+      }),
+      // Stock consumption (SORTIE movements for this vague)
+      prisma.mouvementStock.findMany({
+        where: { vagueId: id, siteId: auth.activeSiteId, type: TypeMouvement.SORTIE },
+        include: { produit: { select: { nom: true, categorie: true, unite: true } } },
       }),
     ]);
 
@@ -55,6 +110,87 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    // Conditional cost of production fetch (requires FINANCES_VOIR permission)
+    const hasFinancesPermission = auth.permissions.includes(Permission.FINANCES_VOIR);
+    let coutProductionSection = null;
+    if (hasFinancesPermission) {
+      try {
+        const coutProd = await getCoutProductionVague(id, auth.activeSiteId);
+        coutProductionSection = {
+          coutTotal: coutProd.resume.coutTotal,
+          coutParKg: coutProd.resume.coutParKg,
+          prixMoyenVenteKg: coutProd.resume.prixMoyenVenteKg,
+          margeParKg: coutProd.resume.margeParKg,
+          roi: coutProd.resume.roi,
+        };
+      } catch {
+        // Cost computation may fail — section simply omitted
+      }
+    }
+
+    // Build aggregated sections using helpers
+    const rawReleves = allReleves as unknown as RawReleve[];
+    const evolutionPoidsTable = buildEvolutionPoidsTable(rawReleves, vague.dateDebut);
+    const mortalitySummary = buildMortalitySummary(rawReleves, vague.nombreInitial);
+    const feedingSummary = buildFeedingSummary(rawReleves);
+    const waterQualitySummary = buildWaterQualitySummary(rawReleves);
+    const targetWeight = configElevageData?.poidsObjectif ?? null;
+    const gompertzSection = buildGompertzSection(
+      gompertzRecord
+        ? {
+            wInfinity: gompertzRecord.wInfinity,
+            k: gompertzRecord.k,
+            ti: gompertzRecord.ti,
+            r2: gompertzRecord.r2,
+            rmse: gompertzRecord.rmse,
+            confidenceLevel: gompertzRecord.confidenceLevel,
+          }
+        : null,
+      vague.dateDebut,
+      targetWeight
+    );
+
+    // Map calibrages
+    const calibrageHistory = calibragesDb.map((c) => ({
+      date: c.date,
+      groupes: c.groupes.map((g) => ({
+        categorie: g.categorie,
+        nombrePoissons: g.nombrePoissons,
+        poidsMoyen: g.poidsMoyen,
+      })),
+      totalRedistribue: c.groupes.reduce((sum, g) => sum + g.nombrePoissons, 0),
+      nombreMorts: c.nombreMorts,
+    }));
+
+    // Map assignations
+    const assignationTimeline = assignationsDb.map((a) => ({
+      nomBac: a.bac.nom,
+      dateAssignation: a.dateAssignation,
+      dateFin: a.dateFin,
+      volume: a.bac.volume,
+      nombrePoissons: a.nombrePoissons,
+    }));
+
+    // Aggregate stock consumption
+    const stockMap = new Map<string, StockConsumptionPDFRow>();
+    for (const m of mouvementsStock) {
+      const key = m.produitId;
+      const existing = stockMap.get(key);
+      if (existing) {
+        existing.quantite += m.quantite;
+        existing.prixTotal = (existing.prixTotal ?? 0) + (m.prixTotal ?? 0);
+      } else {
+        stockMap.set(key, {
+          nomProduit: m.produit.nom,
+          categorie: m.produit.categorie,
+          quantite: m.quantite,
+          unite: m.produit.unite,
+          prixTotal: hasFinancesPermission ? m.prixTotal : null,
+        });
+      }
+    }
+    const stockConsumption = Array.from(stockMap.values());
 
     // Construire les relevés pour le rapport
     const releves: ReleveRapportPDF[] = allReleves.map((r) => ({
@@ -111,6 +247,16 @@ export async function GET(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
       ),
       evolutionPoids,
+      // Sections enrichies
+      coutProduction: coutProductionSection,
+      evolutionPoidsTable,
+      gompertz: gompertzSection,
+      calibrageHistory,
+      assignationTimeline,
+      mortalitySummary,
+      feedingSummary,
+      waterQualitySummary,
+      stockConsumption,
     };
 
     // Générer le PDF (renderRapportVaguePDF utilise JSX natif dans le fichier .tsx)

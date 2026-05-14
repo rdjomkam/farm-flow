@@ -272,6 +272,8 @@ enum TypeAlerte {
   INCUBATION_ECLOSION
   /** Taux de survie d'un lot d'alevins sous le seuil critique — Sprint R1 */
   TAUX_SURVIE_CRITIQUE_LOT
+  /** Activite planifiee dont la date de fin est depassee */
+  ACTIVITE_EN_RETARD
 }
 
 enum StatutAlerte {

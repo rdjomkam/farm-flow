@@ -19,3 +19,4 @@ export { evaluateFormula, validateFormulaSyntax, extractFormulaIdentifiers } fro
 export type { FeedingRecommendation } from "./feeding";
 export type { GeneratorResult } from "./generator";
 export { runEngineForSite, generateOnboardingActivities } from "./orchestrator";
+export { processRecurringActivities } from "./recurrence-handler";

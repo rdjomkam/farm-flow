@@ -224,6 +224,97 @@ export interface EvolutionPoidsExport {
   poidsMoyen: number;
 }
 
+/** Section coût de production (conditionnel FINANCES_VOIR) */
+export interface CoutProductionPDFSection {
+  coutTotal: number;
+  coutParKg: number | null;
+  prixMoyenVenteKg: number | null;
+  margeParKg: number | null;
+  roi: number | null;
+}
+
+/** Ligne du tableau d'évolution du poids */
+export interface EvolutionPoidsTableRow {
+  date: Date;
+  jourDepuisDebut: number;
+  poidsMoyen: number;
+  tailleMoyenne: number | null;
+  echantillon: number | null;
+}
+
+/** Section modèle de croissance Gompertz */
+export interface GompertzPDFSection {
+  confidenceLevel: string;
+  r2: number;
+  rmse: number;
+  wInfinity: number;
+  k: number;
+  ti: number;
+  predictedHarvestDate: string | null;
+  targetWeight: number | null;
+}
+
+/** Groupe de calibrage dans une ligne de calibrage */
+export interface CalibrageGroupePDF {
+  categorie: string;
+  nombrePoissons: number;
+  poidsMoyen: number | null;
+}
+
+/** Ligne d'historique de calibrage */
+export interface CalibragePDFRow {
+  date: Date;
+  groupes: CalibrageGroupePDF[];
+  totalRedistribue: number;
+  nombreMorts: number;
+}
+
+/** Ligne de la timeline d'assignation des bacs */
+export interface AssignationBacPDFRow {
+  nomBac: string;
+  dateAssignation: Date;
+  dateFin: Date | null;
+  volume: number | null;
+  nombrePoissons: number | null;
+}
+
+/** Résumé de mortalité */
+export interface MortalitySummaryPDF {
+  totalMorts: number;
+  tauxMortalite: number;
+  topCauses: { cause: string; count: number }[];
+}
+
+/** Résumé d'alimentation */
+export interface FeedingSummaryPDF {
+  totalAlimentKg: number;
+  frequenceMoyenne: number | null;
+  typeBreakdown: { type: string; count: number; totalKg: number }[];
+}
+
+/** Résumé qualité eau (min/avg/max par métrique) */
+export interface WaterQualityMetricPDF {
+  avg: number;
+  min: number;
+  max: number;
+}
+
+export interface WaterQualitySummaryPDF {
+  temperature: WaterQualityMetricPDF | null;
+  ph: WaterQualityMetricPDF | null;
+  oxygene: WaterQualityMetricPDF | null;
+  ammoniac: WaterQualityMetricPDF | null;
+}
+
+/** Ligne de consommation de stock */
+export interface StockConsumptionPDFRow {
+  nomProduit: string;
+  categorie: string;
+  quantite: number;
+  unite: string;
+  prixTotal: number | null;
+}
+
 /**
  * DTO pour générer un rapport de vague en PDF.
  *
@@ -272,6 +363,26 @@ export interface CreateRapportVaguePDFDTO {
    * Tableau vide si aucun relevé biométrie disponible.
    */
   evolutionPoids: EvolutionPoidsExport[];
+
+  // --- Sections enrichies (optionnelles) ---
+  /** Résumé des coûts de production (null si permission FINANCES_VOIR absente) */
+  coutProduction?: CoutProductionPDFSection | null;
+  /** Tableau détaillé d'évolution du poids avec jours depuis début */
+  evolutionPoidsTable: EvolutionPoidsTableRow[];
+  /** Paramètres du modèle de croissance Gompertz (null si non calculé) */
+  gompertz?: GompertzPDFSection | null;
+  /** Historique des sessions de calibrage */
+  calibrageHistory: CalibragePDFRow[];
+  /** Timeline d'assignation des bacs à la vague */
+  assignationTimeline: AssignationBacPDFRow[];
+  /** Résumé agrégé de la mortalité */
+  mortalitySummary: MortalitySummaryPDF;
+  /** Résumé agrégé de l'alimentation */
+  feedingSummary: FeedingSummaryPDF;
+  /** Résumé agrégé de la qualité de l'eau */
+  waterQualitySummary: WaterQualitySummaryPDF;
+  /** Détail de la consommation de stock liée à la vague */
+  stockConsumption: StockConsumptionPDFRow[];
 }
 
 // ---------------------------------------------------------------------------
