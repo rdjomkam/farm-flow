@@ -148,7 +148,8 @@ export async function GET(
     }));
 
     const evolutionPoidsTable = buildEvolutionPoidsTable(rawReleves, vague.dateDebut, bacNameMap);
-    const mortalitySummary = buildMortalitySummary(rawReleves, vague.nombreInitial);
+    const calibrageMorts = calibragesDb.reduce((sum, c) => sum + (c.nombreMorts ?? 0), 0);
+    const mortalitySummary = buildMortalitySummary(rawReleves, vague.nombreInitial, calibrageMorts);
     const feedingSummary = buildFeedingSummary(rawReleves);
     const waterQualitySummary = buildWaterQualitySummary(rawReleves);
     const targetWeight = configElevageData?.poidsObjectif ?? null;
