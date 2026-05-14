@@ -804,12 +804,12 @@ export interface UpdateCommandeDTO {
 
 /** Filtres pour lister les commandes */
 export interface CommandeFilters {
-  fournisseurId?: string;
-  statut?: StatutCommande;
+  fournisseurId?: string | string[];
+  statut?: StatutCommande | StatutCommande[];
   dateFrom?: string;
   dateTo?: string;
-  userId?: string;
-  produitId?: string;
+  userId?: string | string[];
+  produitId?: string | string[];
   montantMin?: number;
   montantMax?: number;
   search?: string;
@@ -1699,19 +1699,19 @@ export interface UpdateListeBesoinsDTO {
 
 /** Filtres pour lister les listes de besoins */
 export interface ListeBesoinsFilters {
-  statut?: StatutBesoins;
-  demandeurId?: string;
+  statut?: StatutBesoins | StatutBesoins[];
+  demandeurId?: string | string[];
   /**
    * Filtrer par vague : retourne les listes ayant au moins une association avec cette vague.
    * Implementation : EXISTS sur ListeBesoinsVague.vagueId
    */
-  vagueId?: string;
+  vagueId?: string | string[];
   dateFrom?: string;
   dateTo?: string;
   /** Filtrer les besoins dont la dateLimite est depassee et statut non terminal */
   enRetard?: boolean;
   /** Filtrer par valideur (userId de la personne qui a approuve/rejete) */
-  valideurId?: string;
+  valideurId?: string | string[];
   /** Filtrer par date limite (borne inferieure ISO 8601) */
   dateLimiteFrom?: string;
   /** Filtrer par date limite (borne superieure ISO 8601) */
@@ -1724,6 +1724,8 @@ export interface ListeBesoinsFilters {
   search?: string;
   /** true = uniquement les listes ayant au moins une ligne liee a une commande */
   hasCommande?: boolean;
+  /** Filtrer les listes ayant au moins une ligne avec ce produitId */
+  produitId?: string | string[];
 }
 
 /** Choix de traitement pour une ligne (COMMANDE = via commande fournisseur, LIBRE = achat direct) */
@@ -3026,4 +3028,27 @@ export interface MaintenanceStatusResponse {
   maintenanceMode: boolean;
   message: string | null;
   estimatedEnd: string | null;
+}
+
+// ──────────────────────────────────────────
+// Saved Filters
+// ──────────────────────────────────────────
+
+export type SavedFilterPage = "besoins" | "commandes" | "releves";
+
+export interface SavedFilter {
+  id: string;
+  name: string;
+  page: SavedFilterPage;
+  filters: Record<string, unknown>;
+  userId: string;
+  siteId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSavedFilterDTO {
+  name: string;
+  page: SavedFilterPage;
+  filters: Record<string, unknown>;
 }

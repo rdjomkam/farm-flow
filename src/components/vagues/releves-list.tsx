@@ -215,7 +215,7 @@ export function RelevesList({ releves, produits = [], permissions, limit, vagueI
           )}
           {hasMore && vagueId && (
             <Link
-              href={`/vagues/${vagueId}/releves`}
+              href={`/releves?vagueId=${vagueId}`}
               className="mt-2 flex items-center justify-center gap-1 rounded-md border border-border py-2 text-sm font-medium text-primary hover:bg-accent transition-colors"
             >
               {t("list.voirTout", { count: releves.length })}

@@ -4,20 +4,14 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SheetClose } from "@/components/ui/sheet";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
+import { SavedFiltersSection } from "@/components/filters/saved-filters-section";
 import { StatutBesoins } from "@/types";
-
-const ALL_VALUE = "__all__";
 
 export interface BesoinsFilterValues {
   statut?: string;
   search?: string;
+  produitId?: string;
   demandeurId?: string;
   valideurId?: string;
   vagueId?: string;
@@ -34,15 +28,25 @@ export interface BesoinsFilterValues {
 interface Props {
   current: BesoinsFilterValues;
   users: { id: string; name: string }[];
+  produits: { id: string; nom: string }[];
   vagues: { id: string; code: string }[];
   onApply: (filters: BesoinsFilterValues) => void;
   onClear: () => void;
   activeCount: number;
 }
 
+function csvToArray(csv?: string): string[] {
+  return csv ? csv.split(",").filter(Boolean) : [];
+}
+
+function arrayToCsv(arr: string[]): string | undefined {
+  return arr.length > 0 ? arr.join(",") : undefined;
+}
+
 export function BesoinsFilterSheet({
   current,
   users,
+  produits,
   vagues,
   onApply,
   onClear,
@@ -51,12 +55,12 @@ export function BesoinsFilterSheet({
   const t = useTranslations("besoins");
   const tCommon = useTranslations("common");
 
-  // Local state — changes are only applied on "Appliquer"
-  const [localStatut, setLocalStatut] = useState(current.statut ?? ALL_VALUE);
+  const [localStatuts, setLocalStatuts] = useState<string[]>(csvToArray(current.statut));
   const [localSearch, setLocalSearch] = useState(current.search ?? "");
-  const [localDemandeurId, setLocalDemandeurId] = useState(current.demandeurId ?? ALL_VALUE);
-  const [localValideurId, setLocalValideurId] = useState(current.valideurId ?? ALL_VALUE);
-  const [localVagueId, setLocalVagueId] = useState(current.vagueId ?? ALL_VALUE);
+  const [localProduitIds, setLocalProduitIds] = useState<string[]>(csvToArray(current.produitId));
+  const [localDemandeurIds, setLocalDemandeurIds] = useState<string[]>(csvToArray(current.demandeurId));
+  const [localValideurIds, setLocalValideurIds] = useState<string[]>(csvToArray(current.valideurId));
+  const [localVagueIds, setLocalVagueIds] = useState<string[]>(csvToArray(current.vagueId));
   const [localDateFrom, setLocalDateFrom] = useState(current.dateFrom ?? "");
   const [localDateTo, setLocalDateTo] = useState(current.dateTo ?? "");
   const [localDateLimiteFrom, setLocalDateLimiteFrom] = useState(current.dateLimiteFrom ?? "");
@@ -66,13 +70,13 @@ export function BesoinsFilterSheet({
   const [localEnRetard, setLocalEnRetard] = useState(current.enRetard ?? false);
   const [localHasCommande, setLocalHasCommande] = useState(current.hasCommande ?? false);
 
-  // Sync with parent filters when they change (e.g. back navigation)
   useEffect(() => {
-    setLocalStatut(current.statut ?? ALL_VALUE);
+    setLocalStatuts(csvToArray(current.statut));
     setLocalSearch(current.search ?? "");
-    setLocalDemandeurId(current.demandeurId ?? ALL_VALUE);
-    setLocalValideurId(current.valideurId ?? ALL_VALUE);
-    setLocalVagueId(current.vagueId ?? ALL_VALUE);
+    setLocalProduitIds(csvToArray(current.produitId));
+    setLocalDemandeurIds(csvToArray(current.demandeurId));
+    setLocalValideurIds(csvToArray(current.valideurId));
+    setLocalVagueIds(csvToArray(current.vagueId));
     setLocalDateFrom(current.dateFrom ?? "");
     setLocalDateTo(current.dateTo ?? "");
     setLocalDateLimiteFrom(current.dateLimiteFrom ?? "");
@@ -85,11 +89,12 @@ export function BesoinsFilterSheet({
 
   function handleApply() {
     const filters: BesoinsFilterValues = {
-      statut: localStatut !== ALL_VALUE ? localStatut : undefined,
+      statut: arrayToCsv(localStatuts),
       search: localSearch || undefined,
-      demandeurId: localDemandeurId !== ALL_VALUE ? localDemandeurId : undefined,
-      valideurId: localValideurId !== ALL_VALUE ? localValideurId : undefined,
-      vagueId: localVagueId !== ALL_VALUE ? localVagueId : undefined,
+      produitId: arrayToCsv(localProduitIds),
+      demandeurId: arrayToCsv(localDemandeurIds),
+      valideurId: arrayToCsv(localValideurIds),
+      vagueId: arrayToCsv(localVagueIds),
       dateFrom: localDateFrom || undefined,
       dateTo: localDateTo || undefined,
       dateLimiteFrom: localDateLimiteFrom || undefined,
@@ -101,6 +106,15 @@ export function BesoinsFilterSheet({
     };
     onApply(filters);
   }
+
+  const statutOptions = Object.values(StatutBesoins).map((s) => ({
+    value: s,
+    label: t(`statuts.${s}` as Parameters<typeof t>[0]),
+  }));
+
+  const userOptions = users.map((u) => ({ value: u.id, label: u.name }));
+  const produitOptions = produits.map((p) => ({ value: p.id, label: p.nom }));
+  const vagueOptions = vagues.map((v) => ({ value: v.id, label: v.code }));
 
   return (
     <div className="flex flex-col h-full">
@@ -133,6 +147,14 @@ export function BesoinsFilterSheet({
         </div>
       </div>
 
+      {/* Saved filters */}
+      <SavedFiltersSection
+        page="besoins"
+        currentFilters={current}
+        onLoadFilter={(filters) => onApply(filters as BesoinsFilterValues)}
+        hasActiveFilters={activeCount > 0}
+      />
+
       {/* Scrollable body */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-4">
 
@@ -151,73 +173,56 @@ export function BesoinsFilterSheet({
         {/* Statut */}
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">{t("filtres.statut")}</label>
-          <Select value={localStatut} onValueChange={setLocalStatut}>
-            <SelectTrigger>
-              <SelectValue placeholder={t("filtres.tousStatuts")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_VALUE}>{t("filtres.tousStatuts")}</SelectItem>
-              {Object.values(StatutBesoins).map((s) => (
-                <SelectItem key={s} value={s}>
-                  {t(`statuts.${s}` as Parameters<typeof t>[0])}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={statutOptions}
+            selected={localStatuts}
+            onChange={setLocalStatuts}
+            placeholder={t("filtres.tousStatuts")}
+          />
         </div>
 
         {/* Demandeur */}
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">{t("filtres.demandeur")}</label>
-          <Select value={localDemandeurId} onValueChange={setLocalDemandeurId}>
-            <SelectTrigger>
-              <SelectValue placeholder={t("filtres.tousUtilisateurs")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_VALUE}>{t("filtres.tousUtilisateurs")}</SelectItem>
-              {users.map((u) => (
-                <SelectItem key={u.id} value={u.id}>
-                  {u.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={userOptions}
+            selected={localDemandeurIds}
+            onChange={setLocalDemandeurIds}
+            placeholder={t("filtres.tousUtilisateurs")}
+          />
         </div>
 
         {/* Valideur */}
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">{t("filtres.valideur")}</label>
-          <Select value={localValideurId} onValueChange={setLocalValideurId}>
-            <SelectTrigger>
-              <SelectValue placeholder={t("filtres.tousUtilisateurs")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_VALUE}>{t("filtres.tousUtilisateurs")}</SelectItem>
-              {users.map((u) => (
-                <SelectItem key={u.id} value={u.id}>
-                  {u.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={userOptions}
+            selected={localValideurIds}
+            onChange={setLocalValideurIds}
+            placeholder={t("filtres.tousUtilisateurs")}
+          />
+        </div>
+
+        {/* Produit */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium">{t("filtres.produit")}</label>
+          <MultiSelect
+            options={produitOptions}
+            selected={localProduitIds}
+            onChange={setLocalProduitIds}
+            placeholder={t("filtres.tousProduits")}
+          />
         </div>
 
         {/* Vague */}
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">{t("filtres.vague")}</label>
-          <Select value={localVagueId} onValueChange={setLocalVagueId}>
-            <SelectTrigger>
-              <SelectValue placeholder={t("filtres.toutesVagues")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_VALUE}>{t("filtres.toutesVagues")}</SelectItem>
-              {vagues.map((v) => (
-                <SelectItem key={v.id} value={v.id}>
-                  {v.code}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={vagueOptions}
+            selected={localVagueIds}
+            onChange={setLocalVagueIds}
+            placeholder={t("filtres.toutesVagues")}
+          />
         </div>
 
         {/* Date de création range */}

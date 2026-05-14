@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SheetClose } from "@/components/ui/sheet";
+import { SavedFiltersSection } from "@/components/filters/saved-filters-section";
 import { ALL_VALUE } from "@/lib/releve-search-params";
 import type { ReleveSearchParams } from "@/lib/releve-search-params";
 
@@ -322,6 +323,14 @@ export function RelevesFilterSheet({
           </SheetClose>
         </div>
       </div>
+
+      {/* Saved filters */}
+      <SavedFiltersSection
+        page="releves"
+        currentFilters={current}
+        onLoadFilter={(filters) => onApply(filters as Partial<ReleveSearchParams>)}
+        hasActiveFilters={activeCount > 0}
+      />
 
       {/* Corps scrollable */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-4">

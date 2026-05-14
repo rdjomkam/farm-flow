@@ -4,16 +4,9 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SheetClose } from "@/components/ui/sheet";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
+import { SavedFiltersSection } from "@/components/filters/saved-filters-section";
 import { StatutCommande } from "@/types";
-
-const ALL_VALUE = "__all__";
 
 export interface CommandeFilterValues {
   statut?: string;
@@ -39,6 +32,14 @@ interface Props {
   activeCount: number;
 }
 
+function csvToArray(csv?: string): string[] {
+  return csv ? csv.split(",").filter(Boolean) : [];
+}
+
+function arrayToCsv(arr: string[]): string | undefined {
+  return arr.length > 0 ? arr.join(",") : undefined;
+}
+
 export function CommandesFilterSheet({
   current,
   fournisseurs,
@@ -51,11 +52,11 @@ export function CommandesFilterSheet({
   const t = useTranslations("stock");
   const tCommon = useTranslations("common");
 
-  const [localStatut, setLocalStatut] = useState(current.statut ?? ALL_VALUE);
+  const [localStatuts, setLocalStatuts] = useState<string[]>(csvToArray(current.statut));
   const [localSearch, setLocalSearch] = useState(current.search ?? "");
-  const [localFournisseurId, setLocalFournisseurId] = useState(current.fournisseurId ?? ALL_VALUE);
-  const [localUserId, setLocalUserId] = useState(current.userId ?? ALL_VALUE);
-  const [localProduitId, setLocalProduitId] = useState(current.produitId ?? ALL_VALUE);
+  const [localFournisseurIds, setLocalFournisseurIds] = useState<string[]>(csvToArray(current.fournisseurId));
+  const [localUserIds, setLocalUserIds] = useState<string[]>(csvToArray(current.userId));
+  const [localProduitIds, setLocalProduitIds] = useState<string[]>(csvToArray(current.produitId));
   const [localDateFrom, setLocalDateFrom] = useState(current.dateFrom ?? "");
   const [localDateTo, setLocalDateTo] = useState(current.dateTo ?? "");
   const [localMontantMin, setLocalMontantMin] = useState(current.montantMin ?? "");
@@ -63,13 +64,12 @@ export function CommandesFilterSheet({
   const [localHasFacture, setLocalHasFacture] = useState(current.hasFacture ?? false);
   const [localHasListeBesoins, setLocalHasListeBesoins] = useState(current.hasListeBesoins ?? false);
 
-  // Sync with current filters on external change
   useEffect(() => {
-    setLocalStatut(current.statut ?? ALL_VALUE);
+    setLocalStatuts(csvToArray(current.statut));
     setLocalSearch(current.search ?? "");
-    setLocalFournisseurId(current.fournisseurId ?? ALL_VALUE);
-    setLocalUserId(current.userId ?? ALL_VALUE);
-    setLocalProduitId(current.produitId ?? ALL_VALUE);
+    setLocalFournisseurIds(csvToArray(current.fournisseurId));
+    setLocalUserIds(csvToArray(current.userId));
+    setLocalProduitIds(csvToArray(current.produitId));
     setLocalDateFrom(current.dateFrom ?? "");
     setLocalDateTo(current.dateTo ?? "");
     setLocalMontantMin(current.montantMin ?? "");
@@ -80,11 +80,15 @@ export function CommandesFilterSheet({
 
   function handleApply() {
     const filters: CommandeFilterValues = {};
-    if (localStatut !== ALL_VALUE) filters.statut = localStatut;
+    const statutCsv = arrayToCsv(localStatuts);
+    if (statutCsv) filters.statut = statutCsv;
     if (localSearch) filters.search = localSearch;
-    if (localFournisseurId !== ALL_VALUE) filters.fournisseurId = localFournisseurId;
-    if (localUserId !== ALL_VALUE) filters.userId = localUserId;
-    if (localProduitId !== ALL_VALUE) filters.produitId = localProduitId;
+    const fournisseurCsv = arrayToCsv(localFournisseurIds);
+    if (fournisseurCsv) filters.fournisseurId = fournisseurCsv;
+    const userCsv = arrayToCsv(localUserIds);
+    if (userCsv) filters.userId = userCsv;
+    const produitCsv = arrayToCsv(localProduitIds);
+    if (produitCsv) filters.produitId = produitCsv;
     if (localDateFrom) filters.dateFrom = localDateFrom;
     if (localDateTo) filters.dateTo = localDateTo;
     if (localMontantMin) filters.montantMin = localMontantMin;
@@ -93,6 +97,15 @@ export function CommandesFilterSheet({
     if (localHasListeBesoins) filters.hasListeBesoins = true;
     onApply(filters);
   }
+
+  const statutOptions = Object.values(StatutCommande).map((s) => ({
+    value: s,
+    label: t(`statuts.${s}` as Parameters<typeof t>[0]),
+  }));
+
+  const fournisseurOptions = fournisseurs.map((f) => ({ value: f.id, label: f.nom }));
+  const userOptions = users.map((u) => ({ value: u.id, label: u.name }));
+  const produitOptions = produits.map((p) => ({ value: p.id, label: p.nom }));
 
   return (
     <div className="flex flex-col h-full">
@@ -125,6 +138,14 @@ export function CommandesFilterSheet({
         </div>
       </div>
 
+      {/* Saved filters */}
+      <SavedFiltersSection
+        page="commandes"
+        currentFilters={current}
+        onLoadFilter={(filters) => onApply(filters as CommandeFilterValues)}
+        hasActiveFilters={activeCount > 0}
+      />
+
       {/* Corps scrollable */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-4">
 
@@ -143,73 +164,45 @@ export function CommandesFilterSheet({
         {/* Statut */}
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">{t("commandes.filtres.statut")}</label>
-          <Select value={localStatut} onValueChange={setLocalStatut}>
-            <SelectTrigger>
-              <SelectValue placeholder={t("commandes.filtres.tousStatuts")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_VALUE}>{t("commandes.filtres.tousStatuts")}</SelectItem>
-              {Object.values(StatutCommande).map((s) => (
-                <SelectItem key={s} value={s}>
-                  {t(`statuts.${s}` as Parameters<typeof t>[0])}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={statutOptions}
+            selected={localStatuts}
+            onChange={setLocalStatuts}
+            placeholder={t("commandes.filtres.tousStatuts")}
+          />
         </div>
 
         {/* Fournisseur */}
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">{t("commandes.filtres.fournisseur")}</label>
-          <Select value={localFournisseurId} onValueChange={setLocalFournisseurId}>
-            <SelectTrigger>
-              <SelectValue placeholder={t("commandes.filtres.tousFournisseurs")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_VALUE}>{t("commandes.filtres.tousFournisseurs")}</SelectItem>
-              {fournisseurs.map((f) => (
-                <SelectItem key={f.id} value={f.id}>
-                  {f.nom}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={fournisseurOptions}
+            selected={localFournisseurIds}
+            onChange={setLocalFournisseurIds}
+            placeholder={t("commandes.filtres.tousFournisseurs")}
+          />
         </div>
 
         {/* Cree par */}
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">{t("commandes.filtres.creePar")}</label>
-          <Select value={localUserId} onValueChange={setLocalUserId}>
-            <SelectTrigger>
-              <SelectValue placeholder={t("commandes.filtres.tousUtilisateurs")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_VALUE}>{t("commandes.filtres.tousUtilisateurs")}</SelectItem>
-              {users.map((u) => (
-                <SelectItem key={u.id} value={u.id}>
-                  {u.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={userOptions}
+            selected={localUserIds}
+            onChange={setLocalUserIds}
+            placeholder={t("commandes.filtres.tousUtilisateurs")}
+          />
         </div>
 
         {/* Produit */}
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">{t("commandes.filtres.produit")}</label>
-          <Select value={localProduitId} onValueChange={setLocalProduitId}>
-            <SelectTrigger>
-              <SelectValue placeholder={t("commandes.filtres.tousProduits")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_VALUE}>{t("commandes.filtres.tousProduits")}</SelectItem>
-              {produits.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.nom}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={produitOptions}
+            selected={localProduitIds}
+            onChange={setLocalProduitIds}
+            placeholder={t("commandes.filtres.tousProduits")}
+          />
         </div>
 
         {/* Periode */}

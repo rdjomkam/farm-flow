@@ -4,6 +4,7 @@ import { Header } from "@/components/layout/header";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { getListeBesoins } from "@/lib/queries/besoins";
+import { getProduits } from "@/lib/queries/produits";
 import { Permission } from "@/types";
 import { BesoinsListClient } from "@/components/besoins/besoins-list-client";
 
@@ -19,7 +20,10 @@ export default async function BesoinsPage() {
     ]);
     if (!permissions) return <AccessDenied />;
 
-    const listesBesoins = await getListeBesoins(session.activeSiteId);
+    const [listesBesoins, produits] = await Promise.all([
+      getListeBesoins(session.activeSiteId),
+      getProduits(session.activeSiteId),
+    ]);
 
     const canCreate = permissions.includes(Permission.BESOINS_SOUMETTRE);
     const canApprove = permissions.includes(Permission.BESOINS_APPROUVER);
@@ -30,6 +34,7 @@ export default async function BesoinsPage() {
         <Header title={t("page.title")} />
         <BesoinsListClient
           listesBesoins={JSON.parse(JSON.stringify(listesBesoins.data))}
+          produits={produits.data.map((p) => ({ id: p.id, nom: p.nom }))}
           canCreate={canCreate}
           canApprove={canApprove}
           canProcess={canProcess}

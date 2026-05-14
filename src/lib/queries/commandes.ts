@@ -41,11 +41,21 @@ export async function getCommandes(
 
   const where = {
     siteId,
-    ...(filters?.statut && { statut: filters.statut }),
-    ...(filters?.fournisseurId && { fournisseurId: filters.fournisseurId }),
-    ...(filters?.userId && { userId: filters.userId }),
+    ...(filters?.statut && {
+      statut: Array.isArray(filters.statut) ? { in: filters.statut } : filters.statut,
+    }),
+    ...(filters?.fournisseurId && {
+      fournisseurId: Array.isArray(filters.fournisseurId) ? { in: filters.fournisseurId } : filters.fournisseurId,
+    }),
+    ...(filters?.userId && {
+      userId: Array.isArray(filters.userId) ? { in: filters.userId } : filters.userId,
+    }),
     ...(filters?.produitId && {
-      lignes: { some: { produitId: filters.produitId } },
+      lignes: {
+        some: {
+          produitId: Array.isArray(filters.produitId) ? { in: filters.produitId } : filters.produitId,
+        },
+      },
     }),
     ...(filters?.dateFrom || filters?.dateTo
       ? {
