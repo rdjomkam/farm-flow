@@ -19,7 +19,7 @@
  */
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { ChevronDown, ChevronUp, TrendingDown, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ const KNOWN_CATEGORIES = new Set([
 export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
   const [expanded, setExpanded] = useState(false);
   const t = useTranslations("vagues");
+  const locale = useLocale();
 
   function getCategorieLabel(categorie: string): string {
     if (categorie === "MULTI_VAGUE") return t("coutProduction.labels.coutsPartages");
@@ -232,7 +233,7 @@ export function CoutProductionCard({ data, vagueId }: CoutProductionCardProps) {
                               <p className="text-xs text-muted-foreground">
                                 {getCategorieLabel(dep.categorie)} ·{" "}
                                 {dep.date
-                                  ? new Date(dep.date).toLocaleDateString("fr-FR", {
+                                  ? new Date(dep.date).toLocaleDateString(locale, {
                                       day: "2-digit",
                                       month: "short",
                                       year: "numeric",
