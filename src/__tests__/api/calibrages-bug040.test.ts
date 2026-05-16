@@ -34,6 +34,7 @@ const mockAssignationBacUpdate = vi.fn();
 const mockAssignationBacUpdateMany = vi.fn();
 const mockAssignationBacCreate = vi.fn();
 const mockReleveCreate = vi.fn();
+const mockReleveFindMany = vi.fn();
 
 /** Simule prisma.$transaction en exécutant le callback avec un tx mock complet */
 const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
@@ -58,6 +59,7 @@ const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
     },
     releve: {
       create: (...args: unknown[]) => mockReleveCreate(...args),
+      findMany: (...args: unknown[]) => mockReleveFindMany(...args),
     },
   };
   return fn(tx);
@@ -165,18 +167,22 @@ function makeDto(overrides?: Partial<CreateCalibrageDTO>): CreateCalibrageDTO {
 describe("createCalibrage — Fix 4 BUG-040 : bac source via AssignationBac accepté", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // BUG-048 : par defaut, pas de releves → vivants = nombreInitial des bacs
+    mockReleveFindMany.mockResolvedValue([]);
   });
 
   it("accepte un bac source sans Bac.vagueId mais avec AssignationBac active pour la vague", async () => {
     mockVagueFindFirst.mockResolvedValue(vagueEnCours);
 
-    // tx.bac.findMany est appelé 3 fois :
+    // tx.bac.findMany est appelé 4 fois :
     //  1. vérification bacs sources (retourne le bac source)
     //  2. vérification bacs destination (retourne le bac dest)
-    //  3. snapshot allBacsOfVague
+    //  3. allBacsVague pour computeVivantsByBac (BUG-048)
+    //  4. snapshot allBacsOfVague
     mockBacFindMany
       .mockResolvedValueOnce([bacSourceViaAssignationOnly]) // sources
       .mockResolvedValueOnce([bacDestSanAssignation])       // destinations
+      .mockResolvedValueOnce([bacSourceViaAssignationOnly, bacDestSanAssignation]) // BUG-048 vivants
       .mockResolvedValueOnce([bacSourceViaAssignationOnly, bacDestSanAssignation]); // snapshot
 
     mockCalibrageCreate.mockResolvedValue(fakeCalibrageCreated);
@@ -229,6 +235,7 @@ describe("createCalibrage — Fix 4 BUG-040 : bac source via AssignationBac acce
     mockBacFindMany
       .mockResolvedValueOnce([bacSourceViaAssignationOnly]) // sources
       .mockResolvedValueOnce([bacDestAssignationOnly])      // destinations (trouvé via OR)
+      .mockResolvedValueOnce([bacSourceViaAssignationOnly]) // BUG-048 vivants
       .mockResolvedValueOnce([bacSourceViaAssignationOnly]);
 
     mockCalibrageCreate.mockResolvedValue(fakeCalibrageCreated);
@@ -270,6 +277,8 @@ describe("createCalibrage — Fix 4 BUG-040 : bac source via AssignationBac acce
 describe("createCalibrage — Fix 5 BUG-040 : create défensif AssignationBac manquante", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // BUG-048 : par defaut, pas de releves → vivants = nombreInitial des bacs
+    mockReleveFindMany.mockResolvedValue([]);
   });
 
   it("crée une AssignationBac pour un bac destination sans assignation préalable", async () => {
@@ -277,6 +286,7 @@ describe("createCalibrage — Fix 5 BUG-040 : create défensif AssignationBac ma
     mockBacFindMany
       .mockResolvedValueOnce([bacSourceViaAssignationOnly]) // sources
       .mockResolvedValueOnce([bacDestSanAssignation])       // destinations
+      .mockResolvedValueOnce([bacSourceViaAssignationOnly, bacDestSanAssignation]) // BUG-048 vivants
       .mockResolvedValueOnce([bacSourceViaAssignationOnly, bacDestSanAssignation]); // snapshot
 
     mockCalibrageCreate.mockResolvedValue(fakeCalibrageCreated);
@@ -321,6 +331,7 @@ describe("createCalibrage — Fix 5 BUG-040 : create défensif AssignationBac ma
     mockBacFindMany
       .mockResolvedValueOnce([bacSourceViaAssignationOnly])
       .mockResolvedValueOnce([bacDestSanAssignation])
+      .mockResolvedValueOnce([bacSourceViaAssignationOnly, bacDestSanAssignation]) // BUG-048 vivants
       .mockResolvedValueOnce([bacSourceViaAssignationOnly, bacDestSanAssignation]);
 
     mockCalibrageCreate.mockResolvedValue(fakeCalibrageCreated);
@@ -350,6 +361,7 @@ describe("createCalibrage — Fix 5 BUG-040 : create défensif AssignationBac ma
     mockBacFindMany
       .mockResolvedValueOnce([bacSourceViaAssignationOnly])
       .mockResolvedValueOnce([bacDestAvecPoissons])
+      .mockResolvedValueOnce([bacSourceViaAssignationOnly, bacDestAvecPoissons]) // BUG-048 vivants
       .mockResolvedValueOnce([bacSourceViaAssignationOnly, bacDestAvecPoissons]);
 
     mockCalibrageCreate.mockResolvedValue(fakeCalibrageCreated);

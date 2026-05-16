@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { generateNextNumero } from "./numero-utils";
-import { StatutVague } from "@/types";
+import { StatutVague, TypeReleve } from "@/types";
+import { computeVivantsByBac } from "@/lib/calculs";
 import type { CreateVenteDTO, VenteFilters } from "@/types";
 
 /** Liste les ventes d'un site avec filtres et pagination */
@@ -68,9 +69,12 @@ export async function getVenteById(id: string, siteId: string) {
  * Regles metier :
  * 1. Le client doit appartenir au site et etre actif
  * 2. La vague doit appartenir au site
- * 3. La quantite de poissons vendus ne peut pas depasser le total disponible
- *    dans les bacs de la vague
- * 4. Les poissons sont deduits des bacs proportionnellement
+ * 3. Le nombre de poissons est calcule cote serveur :
+ *    `quantitePoissons = round(poidsTotalKg * 1000 / poidsMoyenG)`
+ *    `poidsMoyenG` provient du DTO (override manuel) sinon de la derniere
+ *    BIOMETRIE de la vague. Erreur 400 si aucune des deux sources n'est disponible.
+ * 4. Le nombre calcule ne peut pas depasser le total disponible dans les bacs
+ * 5. Les poissons sont deduits des bacs proportionnellement
  */
 export async function createVente(
   siteId: string,
@@ -94,6 +98,71 @@ export async function createVente(
       throw new Error("Impossible de vendre depuis une vague annulee");
     }
 
+    // Resolve poidsMoyen (g) — manual override (DTO) or weighted average
+    // of the last BIOMETRIE per bac (same logic as getIndicateursVague).
+    let poidsMoyenG = data.poidsMoyenG;
+    if (poidsMoyenG == null) {
+      const vagueWithReleves = await tx.vague.findFirst({
+        where: { id: data.vagueId, siteId },
+        select: {
+          nombreInitial: true,
+          bacs: { select: { id: true, nombreInitial: true } },
+          releves: {
+            orderBy: { date: "asc" },
+            select: {
+              typeReleve: true,
+              date: true,
+              bacId: true,
+              poidsMoyen: true,
+              nombreMorts: true,
+              nombreCompte: true,
+            },
+          },
+        },
+      });
+
+      if (vagueWithReleves && vagueWithReleves.bacs.length > 0) {
+        const biometriesParBac = new Map<string, number>();
+        for (const r of vagueWithReleves.releves) {
+          if (r.typeReleve === TypeReleve.BIOMETRIE && r.bacId && r.poidsMoyen != null) {
+            biometriesParBac.set(r.bacId, r.poidsMoyen);
+          }
+        }
+
+        if (biometriesParBac.size > 0) {
+          const vivantsByBac = computeVivantsByBac(
+            vagueWithReleves.bacs,
+            vagueWithReleves.releves,
+            vagueWithReleves.nombreInitial
+          );
+          let totalPoidsWeighted = 0;
+          let totalVivantsForWeight = 0;
+          for (const bac of vagueWithReleves.bacs) {
+            const poids = biometriesParBac.get(bac.id);
+            if (poids == null) continue;
+            const vivantsBac = vivantsByBac.get(bac.id) ?? 0;
+            totalPoidsWeighted += poids * vivantsBac;
+            totalVivantsForWeight += vivantsBac;
+          }
+          if (totalVivantsForWeight > 0) {
+            poidsMoyenG = totalPoidsWeighted / totalVivantsForWeight;
+          }
+        }
+      }
+    }
+
+    if (!poidsMoyenG || poidsMoyenG <= 0) {
+      throw new Error(
+        "Aucun poids moyen disponible pour cette vague. Saisissez-le manuellement ou enregistrez une biometrie."
+      );
+    }
+
+    // Compute quantitePoissons from kg + average weight in grams
+    const quantitePoissons = Math.max(
+      1,
+      Math.round((data.poidsTotalKg * 1000) / poidsMoyenG)
+    );
+
     // Get all bacs of this vague with their fish count
     const bacs = await tx.bac.findMany({
       where: { vagueId: data.vagueId, siteId },
@@ -106,14 +175,14 @@ export async function createVente(
       0
     );
 
-    if (data.quantitePoissons > totalDisponible) {
+    if (quantitePoissons > totalDisponible) {
       throw new Error(
-        `Stock poissons insuffisant. Disponible : ${totalDisponible}, demande : ${data.quantitePoissons}`
+        `Stock poissons insuffisant. Disponible : ${totalDisponible}, calcule : ${quantitePoissons}`
       );
     }
 
     // Deduct fish proportionally from bacs
-    let remaining = data.quantitePoissons;
+    let remaining = quantitePoissons;
     for (const bac of bacs) {
       if (remaining <= 0) break;
       const available = bac.nombrePoissons ?? 0;
@@ -145,7 +214,7 @@ export async function createVente(
         numero,
         clientId: data.clientId,
         vagueId: data.vagueId,
-        quantitePoissons: data.quantitePoissons,
+        quantitePoissons,
         poidsTotalKg: data.poidsTotalKg,
         prixUnitaireKg: data.prixUnitaireKg,
         montantTotal,

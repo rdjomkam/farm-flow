@@ -39,16 +39,16 @@ export default async function NouveauCalibragePage({
 
   const t = await getTranslations("calibrage.page");
 
-  // Fetch mortality + comptage relevés to compute live fish counts
-  const releves = await prisma.releve.findMany({
-    where: { vagueId: id, siteId: session.activeSiteId, typeReleve: { in: ["MORTALITE", "COMPTAGE"] } },
-    select: { bacId: true, typeReleve: true, nombreMorts: true, nombreCompte: true, date: true },
+  // BUG-048 : utiliser computeVivantsByBac comme source de verite unique
+  // (Bac.nombrePoissons n'est pas decremente par les mortalites)
+  const relevesForVivants = await prisma.releve.findMany({
+    where: { vagueId: id, siteId: session.activeSiteId },
     orderBy: { date: "asc" },
+    select: { typeReleve: true, date: true, nombreMorts: true, nombreCompte: true, bacId: true },
   });
-
   const vivantsByBac = computeVivantsByBac(
-    vague.bacs.map((b) => ({ id: b.id, nombreInitial: b.nombreInitial ?? null })),
-    releves,
+    vague.bacs,
+    relevesForVivants,
     vague.nombreInitial
   );
 

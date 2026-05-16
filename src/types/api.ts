@@ -859,13 +859,19 @@ export interface ClientListResponse {
 // Ventes
 // ---------------------------------------------------------------------------
 
-/** DTO pour creer une vente */
+/** DTO pour creer une vente
+ *
+ * `quantitePoissons` est calcule par le serveur a partir du poids total
+ * et du poids moyen (auto-recupere de la derniere biometrie, ou fourni
+ * manuellement via `poidsMoyenG`).
+ */
 export interface CreateVenteDTO {
   clientId: string;
   vagueId: string;
-  quantitePoissons: number;
   poidsTotalKg: number;
   prixUnitaireKg: number;
+  /** Poids moyen unitaire en grammes (override de la biometrie). Requis si aucune biometrie. */
+  poidsMoyenG?: number;
   notes?: string;
 }
 

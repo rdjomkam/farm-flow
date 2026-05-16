@@ -153,7 +153,6 @@ describe("POST /api/ventes", () => {
   const validBody = {
     clientId: "c-1",
     vagueId: "v-1",
-    quantitePoissons: 50,
     poidsTotalKg: 25,
     prixUnitaireKg: 2000,
     notes: "Livraison mardi",
@@ -164,6 +163,7 @@ describe("POST /api/ventes", () => {
       id: "vte-new",
       numero: "VTE-2026-002",
       montantTotal: 50000,
+      quantitePoissons: 50,
       ...validBody,
     };
     mockCreateVente.mockResolvedValue(fakeVente);
@@ -181,11 +181,60 @@ describe("POST /api/ventes", () => {
     expect(mockCreateVente).toHaveBeenCalledWith("site-1", "user-1", {
       clientId: "c-1",
       vagueId: "v-1",
-      quantitePoissons: 50,
       poidsTotalKg: 25,
       prixUnitaireKg: 2000,
+      poidsMoyenG: undefined,
       notes: "Livraison mardi",
     });
+  });
+
+  it("transmet poidsMoyenG quand fourni manuellement", async () => {
+    mockCreateVente.mockResolvedValue({ id: "vte-2", numero: "VTE-2026-003" });
+
+    await POST(
+      makeRequest("/api/ventes", {
+        method: "POST",
+        body: JSON.stringify({ ...validBody, poidsMoyenG: 850 }),
+      })
+    );
+
+    expect(mockCreateVente).toHaveBeenCalledWith(
+      "site-1",
+      "user-1",
+      expect.objectContaining({ poidsMoyenG: 850 })
+    );
+  });
+
+  it("retourne 400 si poidsMoyenG <= 0", async () => {
+    const response = await POST(
+      makeRequest("/api/ventes", {
+        method: "POST",
+        body: JSON.stringify({ ...validBody, poidsMoyenG: -10 }),
+      })
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.errors).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "poidsMoyenG" })])
+    );
+  });
+
+  it("retourne 400 si aucun poids moyen disponible", async () => {
+    mockCreateVente.mockRejectedValue(
+      new Error("Aucun poids moyen disponible pour cette vague. Saisissez-le manuellement ou enregistrez une biometrie.")
+    );
+
+    const response = await POST(
+      makeRequest("/api/ventes", {
+        method: "POST",
+        body: JSON.stringify(validBody),
+      })
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.message).toContain("poids moyen");
   });
 
   it("retourne 400 si clientId manquant", async () => {
@@ -215,21 +264,6 @@ describe("POST /api/ventes", () => {
     expect(response.status).toBe(400);
     expect(data.errors).toEqual(
       expect.arrayContaining([expect.objectContaining({ field: "vagueId" })])
-    );
-  });
-
-  it("retourne 400 si quantitePoissons <= 0", async () => {
-    const response = await POST(
-      makeRequest("/api/ventes", {
-        method: "POST",
-        body: JSON.stringify({ ...validBody, quantitePoissons: 0 }),
-      })
-    );
-    const data = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(data.errors).toEqual(
-      expect.arrayContaining([expect.objectContaining({ field: "quantitePoissons" })])
     );
   });
 
