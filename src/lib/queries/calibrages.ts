@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { StatutVague, TypeReleve, CauseMortalite, MethodeComptage, CategorieCalibrage } from "@/types";
 import type { CreateCalibrageDTO, PatchCalibrageBody, CalibrageSnapshot } from "@/types";
 import type { CalibrageWithModifications, CalibrageModificationWithUser } from "@/types";
+import { computeVivantsByBac } from "@/lib/calculs";
 
 /** Liste les calibrages d'un site avec filtres optionnels */
 export async function getCalibrages(
@@ -121,9 +122,30 @@ export async function createCalibrage(
       );
     }
 
-    // 4. Conservation check
+    // 4. Conservation check — utilise computeVivantsByBac (BUG-048)
+    // Bac.nombrePoissons n'est PAS decremente par les mortalites ; on doit
+    // donc recalculer les vivants en combinant nombreInitial + comptages + mortalites.
+    const allBacsVague = await tx.bac.findMany({
+      where: { vagueId: data.vagueId, siteId },
+      select: { id: true, nombreInitial: true },
+    });
+    const relevesForVivants = await tx.releve.findMany({
+      where: {
+        siteId,
+        vagueId: data.vagueId,
+        typeReleve: { in: [TypeReleve.MORTALITE, TypeReleve.COMPTAGE] },
+      },
+      orderBy: { date: "asc" },
+      select: { bacId: true, typeReleve: true, nombreMorts: true, nombreCompte: true, date: true },
+    });
+    const vivantsByBac = computeVivantsByBac(
+      allBacsVague,
+      relevesForVivants,
+      vague.nombreInitial
+    );
+
     const totalSourcePoissons = sourceBacs.reduce(
-      (sum, bac) => sum + (bac.nombrePoissons ?? 0),
+      (sum, bac) => sum + (vivantsByBac.get(bac.id) ?? bac.nombrePoissons ?? 0),
       0
     );
     const totalGroupePoissons = data.groupes.reduce(
