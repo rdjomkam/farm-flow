@@ -66,16 +66,20 @@ export async function POST(request: NextRequest) {
       errors.push({ field: "vagueId", message: "La vague est obligatoire." });
     }
 
-    if (typeof body.quantitePoissons !== "number" || body.quantitePoissons <= 0) {
-      errors.push({ field: "quantitePoissons", message: "La quantite de poissons doit etre > 0." });
-    }
-
     if (typeof body.poidsTotalKg !== "number" || body.poidsTotalKg <= 0) {
       errors.push({ field: "poidsTotalKg", message: "Le poids total doit etre > 0." });
     }
 
     if (typeof body.prixUnitaireKg !== "number" || body.prixUnitaireKg <= 0) {
       errors.push({ field: "prixUnitaireKg", message: "Le prix unitaire doit etre > 0." });
+    }
+
+    if (
+      body.poidsMoyenG !== undefined &&
+      body.poidsMoyenG !== null &&
+      (typeof body.poidsMoyenG !== "number" || body.poidsMoyenG <= 0)
+    ) {
+      errors.push({ field: "poidsMoyenG", message: "Le poids moyen doit etre > 0." });
     }
 
     if (errors.length > 0) {
@@ -85,9 +89,12 @@ export async function POST(request: NextRequest) {
     const data: CreateVenteDTO = {
       clientId: body.clientId,
       vagueId: body.vagueId,
-      quantitePoissons: body.quantitePoissons,
       poidsTotalKg: body.poidsTotalKg,
       prixUnitaireKg: body.prixUnitaireKg,
+      poidsMoyenG:
+        typeof body.poidsMoyenG === "number" && body.poidsMoyenG > 0
+          ? body.poidsMoyenG
+          : undefined,
       notes: body.notes?.trim() || undefined,
     };
 
@@ -104,6 +111,7 @@ export async function POST(request: NextRequest) {
       statusMap: [
         { match: "inactif", status: 404 },
         { match: ["insuffisant", "annulee"], status: 409 },
+        { match: "poids moyen", status: 400 },
       ],
     });
   }

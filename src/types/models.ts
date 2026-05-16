@@ -188,6 +188,7 @@ export enum CauseMortalite {
   STRESS = "STRESS",
   PREDATION = "PREDATION",
   CANNIBALISME = "CANNIBALISME",
+  AVARIE = "AVARIE",
   INCONNUE = "INCONNUE",
   AUTRE = "AUTRE",
 }

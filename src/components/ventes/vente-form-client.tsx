@@ -31,6 +31,8 @@ interface VagueOption {
   id: string;
   code: string;
   poissonsDisponibles: number;
+  /** Dernier poids moyen (g) constate via BIOMETRIE, null si absent */
+  dernierPoidsMoyenG: number | null;
 }
 
 interface PrefillData {
@@ -56,29 +58,53 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
 
   const [clientId, setClientId] = useState(prefill?.clientId ?? "");
   const [vagueId, setVagueId] = useState("");
-  const [quantitePoissons, setQuantitePoissons] = useState(
-    prefill?.quantite !== undefined ? String(prefill.quantite) : ""
-  );
   const [poidsTotalKg, setPoidsTotalKg] = useState(
     prefill?.poidsTotalKg !== undefined ? String(prefill.poidsTotalKg) : ""
   );
   const [prixUnitaireKg, setPrixUnitaireKg] = useState("");
+  // Si prefill fournit quantite ET poidsTotalKg (cas lot alevins), pre-deduire
+  // le poids moyen unitaire pour preserver le nombre de poissons attendu.
+  const prefillPoidsMoyenG =
+    prefill?.quantite && prefill.quantite > 0 && prefill.poidsTotalKg && prefill.poidsTotalKg > 0
+      ? Math.round((prefill.poidsTotalKg * 1000) / prefill.quantite)
+      : null;
+  const [poidsMoyenG, setPoidsMoyenG] = useState(
+    prefillPoidsMoyenG != null ? String(prefillPoidsMoyenG) : ""
+  );
+  const [poidsMoyenTouched, setPoidsMoyenTouched] = useState(
+    prefillPoidsMoyenG != null
+  );
   const [notes, setNotes] = useState("");
 
   const selectedVague = vagues.find((v) => v.id === vagueId);
   const montantTotal =
     (parseFloat(poidsTotalKg) || 0) * (parseFloat(prixUnitaireKg) || 0);
 
+  const autoPoidsMoyenG = selectedVague?.dernierPoidsMoyenG ?? null;
+  const effectivePoidsMoyenG = poidsMoyenTouched
+    ? parseFloat(poidsMoyenG) || 0
+    : autoPoidsMoyenG ?? (parseFloat(poidsMoyenG) || 0);
+
+  const poidsTotalKgNum = parseFloat(poidsTotalKg) || 0;
+  const estimatedPoissons =
+    effectivePoidsMoyenG > 0 && poidsTotalKgNum > 0
+      ? Math.max(1, Math.round((poidsTotalKgNum * 1000) / effectivePoidsMoyenG))
+      : 0;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!clientId || !vagueId) return;
 
+    const manualPoidsMoyen = poidsMoyenTouched ? parseFloat(poidsMoyenG) : NaN;
+
     const result = await venteService.createVente({
       clientId,
       vagueId,
-      quantitePoissons: parseInt(quantitePoissons),
       poidsTotalKg: parseFloat(poidsTotalKg),
       prixUnitaireKg: parseFloat(prixUnitaireKg),
+      ...(Number.isFinite(manualPoidsMoyen) && manualPoidsMoyen > 0
+        ? { poidsMoyenG: manualPoidsMoyen }
+        : {}),
       ...(notes.trim() && { notes: notes.trim() }),
     });
 
@@ -90,12 +116,16 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
     }
   }
 
+  const needsManualPoidsMoyen = !!selectedVague && autoPoidsMoyenG == null;
+  const manualPoidsMoyenValid =
+    !needsManualPoidsMoyen || (parseFloat(poidsMoyenG) || 0) > 0;
+
   const isValid =
     clientId &&
     vagueId &&
-    parseInt(quantitePoissons) > 0 &&
     parseFloat(poidsTotalKg) > 0 &&
-    parseFloat(prixUnitaireKg) > 0;
+    parseFloat(prixUnitaireKg) > 0 &&
+    manualPoidsMoyenValid;
 
   return (
     <ErrorBoundary section={tSections("saleForm")}>
@@ -174,16 +204,6 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <Input
-              label={t("ventes.form.nombrePoissons")}
-              type="number"
-              min="1"
-              max={selectedVague?.poissonsDisponibles ?? undefined}
-              placeholder={t("ventes.form.nombrePoissonsPlaceholder")}
-              required
-              value={quantitePoissons}
-              onChange={(e) => setQuantitePoissons(e.target.value)}
-            />
-            <Input
               label={t("ventes.form.poidsTotalKg")}
               type="number"
               min="0.1"
@@ -202,6 +222,39 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
               value={prixUnitaireKg}
               onChange={(e) => setPrixUnitaireKg(e.target.value)}
             />
+            <div className="flex flex-col gap-1">
+              <Input
+                label={t("ventes.form.poidsMoyenG")}
+                type="number"
+                min="1"
+                step="1"
+                placeholder={
+                  autoPoidsMoyenG != null
+                    ? String(Math.round(autoPoidsMoyenG))
+                    : t("ventes.form.poidsMoyenGPlaceholder")
+                }
+                required={needsManualPoidsMoyen}
+                value={poidsMoyenG}
+                onChange={(e) => {
+                  setPoidsMoyenG(e.target.value);
+                  setPoidsMoyenTouched(true);
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                {autoPoidsMoyenG != null && !poidsMoyenTouched
+                  ? t("ventes.form.poidsMoyenAuto", {
+                      poids: Math.round(autoPoidsMoyenG),
+                    })
+                  : needsManualPoidsMoyen
+                  ? t("ventes.form.poidsMoyenRequired")
+                  : t("ventes.form.poidsMoyenOverride")}
+              </p>
+              {estimatedPoissons > 0 && (
+                <p className="text-xs font-medium text-foreground">
+                  {t("ventes.form.estimatedPoissons", { count: estimatedPoissons })}
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
 

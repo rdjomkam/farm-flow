@@ -526,6 +526,71 @@ export async function getRelevesByType(siteId: string, vagueId: string, type: Ty
 }
 
 /**
+ * Retourne le poids moyen actuel (en grammes) d'une vague, calcule comme
+ * la moyenne ponderee de la derniere BIOMETRIE de chaque bac (poids
+ * moyen pondere par le nombre de vivants par bac).
+ *
+ * Meme logique que `getIndicateursVague` (voir src/lib/queries/indicateurs.ts)
+ * mais isolee pour les usages qui n'ont besoin que du poids moyen
+ * (formulaire de vente, etc.).
+ *
+ * Retourne `null` si la vague n'existe pas ou si aucune biometrie n'a
+ * ete enregistree sur les bacs de cette vague.
+ */
+export async function getPoidsMoyenActuelVague(
+  siteId: string,
+  vagueId: string
+): Promise<number | null> {
+  const { computeVivantsByBac } = await import("@/lib/calculs");
+
+  const vague = await prisma.vague.findFirst({
+    where: { id: vagueId, siteId },
+    select: {
+      nombreInitial: true,
+      bacs: { select: { id: true, nombreInitial: true } },
+      releves: {
+        orderBy: { date: "asc" },
+        select: {
+          typeReleve: true,
+          date: true,
+          bacId: true,
+          poidsMoyen: true,
+          nombreMorts: true,
+          nombreCompte: true,
+        },
+      },
+    },
+  });
+
+  if (!vague || vague.bacs.length === 0) return null;
+
+  const biometriesParBac = new Map<string, number>();
+  for (const r of vague.releves) {
+    if (r.typeReleve === TypeReleveEnum.BIOMETRIE && r.bacId && r.poidsMoyen != null) {
+      biometriesParBac.set(r.bacId, r.poidsMoyen);
+    }
+  }
+
+  if (biometriesParBac.size === 0) return null;
+
+  const vivantsByBac = computeVivantsByBac(vague.bacs, vague.releves, vague.nombreInitial);
+
+  let totalPoidsWeighted = 0;
+  let totalVivantsForWeight = 0;
+  for (const bac of vague.bacs) {
+    const poids = biometriesParBac.get(bac.id);
+    if (poids == null) continue;
+    const vivantsBac = vivantsByBac.get(bac.id) ?? 0;
+    totalPoidsWeighted += poids * vivantsBac;
+    totalVivantsForWeight += vivantsBac;
+  }
+
+  if (totalVivantsForWeight <= 0) return null;
+
+  return Math.round((totalPoidsWeighted / totalVivantsForWeight) * 100) / 100;
+}
+
+/**
  * Supprime un releve et restaure le stock consomme.
  *
  * Transaction atomique :

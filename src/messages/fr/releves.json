@@ -159,6 +159,7 @@
         "STRESS": "Stress",
         "PREDATION": "Prédation",
         "CANNIBALISME": "Cannibalisme",
+        "AVARIE": "Avarie (perte en élevage)",
         "INCONNUE": "Inconnue",
         "AUTRE": "Autre"
       }

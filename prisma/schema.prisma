@@ -41,6 +41,7 @@ enum CauseMortalite {
   STRESS
   PREDATION
   CANNIBALISME
+  AVARIE
   INCONNUE
   AUTRE
 }

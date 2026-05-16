@@ -5,6 +5,7 @@ import { VenteFormClient } from "@/components/ventes/vente-form-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { getClients } from "@/lib/queries/clients";
+import { getPoidsMoyenActuelVague } from "@/lib/queries/releves";
 import { prisma } from "@/lib/db";
 import { StatutVague, Permission } from "@/types";
 
@@ -27,12 +28,13 @@ export default async function NouvelleVentePage({ searchParams }: NouvelleVenteP
 
   const t = await getTranslations("ventes");
   const params = await searchParams;
+  const activeSiteId = session.activeSiteId;
 
   const [clients, vagues] = await Promise.all([
-    getClients(session.activeSiteId),
+    getClients(activeSiteId),
     prisma.vague.findMany({
       where: {
-        siteId: session.activeSiteId,
+        siteId: activeSiteId,
         statut: { not: StatutVague.ANNULEE },
       },
       include: {
@@ -46,20 +48,24 @@ export default async function NouvelleVentePage({ searchParams }: NouvelleVenteP
   let lotCode: string | null = null;
   if (params.lotAlevinsId) {
     const lot = await prisma.lotAlevins.findFirst({
-      where: { id: params.lotAlevinsId, siteId: session.activeSiteId },
+      where: { id: params.lotAlevinsId, siteId: activeSiteId },
       select: { code: true },
     });
     lotCode = lot?.code ?? null;
   }
 
   const clientOptions = clients.map((c) => ({ id: c.id, nom: c.nom }));
-  const vagueOptions = vagues.map((v) => ({
+  const vaguePoidsMoyens = await Promise.all(
+    vagues.map((v) => getPoidsMoyenActuelVague(activeSiteId, v.id))
+  );
+  const vagueOptions = vagues.map((v, idx) => ({
     id: v.id,
     code: v.code,
     poissonsDisponibles: v.bacs.reduce(
       (sum, bac) => sum + (bac.nombrePoissons ?? 0),
       0
     ),
+    dernierPoidsMoyenG: vaguePoidsMoyens[idx],
   }));
 
   const prefill = params.lotAlevinsId
