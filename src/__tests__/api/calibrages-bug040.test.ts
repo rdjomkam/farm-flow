@@ -243,10 +243,10 @@ describe("createCalibrage — Fix 4 BUG-040 : bac source via AssignationBac acce
     mockAssignationBacUpdateMany.mockResolvedValue({ count: 1 });
 
     // AssignationBac existante pour le bac destination
-    const existingAssignation = { id: "assignation-dest-001", nombrePoissons: 0 };
+    const existingAssignation = { id: "assignation-dest-001", nombreActuel: 0 };
     mockAssignationBacFindFirst.mockResolvedValue(existingAssignation);
     mockBacUpdate.mockResolvedValue({ ...bacDestAssignationOnly, nombrePoissons: 200 });
-    mockAssignationBacUpdate.mockResolvedValue({ id: "assignation-dest-001", nombrePoissons: 200 });
+    mockAssignationBacUpdate.mockResolvedValue({ id: "assignation-dest-001", nombreActuel: 200 });
     mockAssignationBacUpdateMany.mockResolvedValue({ count: 1 });
     mockReleveCreate.mockResolvedValue({});
 
@@ -322,8 +322,8 @@ describe("createCalibrage — Fix 5 BUG-040 : create défensif AssignationBac ma
     expect(createCall.data.vagueId).toBe(VAGUE_ID);
     expect(createCall.data.siteId).toBe(SITE_ID);
     expect(createCall.data.dateFin).toBeNull();
-    // nombrePoissons = existant (0) + reçus (200) = 200
-    expect(createCall.data.nombrePoissons).toBe(200);
+    // nombreActuel = existant (0) + reçus (200) = 200
+    expect(createCall.data.nombreActuel).toBe(200);
   });
 
   it("ne crée pas d'AssignationBac si une existe déjà pour le bac destination", async () => {
@@ -338,11 +338,11 @@ describe("createCalibrage — Fix 5 BUG-040 : create défensif AssignationBac ma
     mockBacUpdateMany.mockResolvedValue({ count: 1 });
 
     // AssignationBac déjà existante pour le bac destination → pas de create défensif
-    const existingAssignation = { id: "assignation-existing", nombrePoissons: 50 };
+    const existingAssignation = { id: "assignation-existing", nombreActuel: 50 };
     mockAssignationBacFindFirst.mockResolvedValue(existingAssignation);
 
     // Cas normal : update direct via assignationBac.update (pas create)
-    mockAssignationBacUpdate.mockResolvedValue({ id: "assignation-existing", nombrePoissons: 250 });
+    mockAssignationBacUpdate.mockResolvedValue({ id: "assignation-existing", nombreActuel: 250 });
     mockAssignationBacUpdateMany.mockResolvedValue({ count: 1 });
     mockBacUpdate.mockResolvedValue({ ...bacDestSanAssignation, nombrePoissons: 250 });
     mockReleveCreate.mockResolvedValue({});
@@ -353,7 +353,7 @@ describe("createCalibrage — Fix 5 BUG-040 : create défensif AssignationBac ma
     expect(mockAssignationBacCreate).not.toHaveBeenCalled();
   });
 
-  it("le create défensif utilise nombrePoissons = (existant + total reçu)", async () => {
+  it("le create défensif utilise nombreActuel = (existant + total reçu)", async () => {
     // Bac destination avec 30 poissons existants + 200 reçus = 230
     const bacDestAvecPoissons = { ...bacDestSanAssignation, nombrePoissons: 30 };
 
@@ -382,7 +382,7 @@ describe("createCalibrage — Fix 5 BUG-040 : create défensif AssignationBac ma
 
     const createCall = mockAssignationBacCreate.mock.calls[0][0];
     // 30 (existants) + 200 (reçus du groupe) = 230
-    expect(createCall.data.nombrePoissons).toBe(230);
+    expect(createCall.data.nombreActuel).toBe(230);
   });
 });
 

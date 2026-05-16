@@ -145,9 +145,9 @@ function setupHappyPathMocks() {
   mockCalibrageCreate.mockResolvedValue(fakeCalibrageCreated);
   mockBacUpdateMany.mockResolvedValue({ count: 1 });
   mockAssignationBacUpdateMany.mockResolvedValue({ count: 1 });
-  mockAssignationBacFindFirst.mockResolvedValue({ id: "a-1", nombrePoissons: 0 });
+  mockAssignationBacFindFirst.mockResolvedValue({ id: "a-1", nombreActuel: 0 });
   mockBacUpdate.mockResolvedValue({ ...bacDest, nombrePoissons: 5004 });
-  mockAssignationBacUpdate.mockResolvedValue({ id: "a-1", nombrePoissons: 5004 });
+  mockAssignationBacUpdate.mockResolvedValue({ id: "a-1", nombreActuel: 5004 });
   mockReleveCreate.mockResolvedValue({});
 }
 

@@ -6,7 +6,7 @@
  *   1. Bac appartenant uniquement via AssignationBac (Bac.vagueId = null)
  *      → le retrait réussit et ferme l'assignation
  *   2. nombrePoissons lu depuis AssignationBac (prioritaire sur Bac.nombrePoissons)
- *      → bac.update(increment = 150), assignationBac.updateMany(nombrePoissons = 230)
+ *      → bac.update(increment = 150), assignationBac.updateMany(nombreActuel = 230)
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";

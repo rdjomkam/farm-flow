@@ -92,9 +92,9 @@ export default async function BacDetailPage({
               siteId: a.siteId,
               dateAssignation: a.dateAssignation,
               dateFin: a.dateFin,
-              nombrePoissonsInitial: a.nombrePoissonsInitial,
+              nombreInitial: a.nombreInitial,
               poidsMoyenInitial: a.poidsMoyenInitial,
-              nombrePoissons: a.nombrePoissons,
+              nombreActuel: a.nombreActuel,
               createdAt: a.createdAt,
               updatedAt: a.updatedAt,
               vague: {

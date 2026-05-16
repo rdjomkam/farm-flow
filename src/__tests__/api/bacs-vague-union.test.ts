@@ -106,7 +106,7 @@ function makeAssignation(opts: {
   nom: string;
   volume: number;
   nombrePoissons: number;
-  nombrePoissonsInitial?: number;
+  nombreInitial?: number;
   poidsMoyenInitial?: number;
 }) {
   return {
@@ -115,15 +115,15 @@ function makeAssignation(opts: {
     vagueId: VAGUE_ID,
     siteId: "site-1",
     dateFin: null,
-    nombrePoissons: opts.nombrePoissons,
-    nombrePoissonsInitial: opts.nombrePoissonsInitial ?? opts.nombrePoissons,
+    nombreActuel: opts.nombrePoissons,
+    nombreInitial: opts.nombreInitial ?? opts.nombrePoissons,
     poidsMoyenInitial: opts.poidsMoyenInitial ?? 50,
     bac: {
       id: opts.bacId,
       nom: opts.nom,
       volume: opts.volume,
       nombrePoissons: opts.nombrePoissons,
-      nombreInitial: opts.nombrePoissonsInitial ?? opts.nombrePoissons,
+      nombreInitial: opts.nombreInitial ?? opts.nombrePoissons,
       poidsMoyenInitial: opts.poidsMoyenInitial ?? 50,
       typeSysteme: null,
       siteId: "site-1",

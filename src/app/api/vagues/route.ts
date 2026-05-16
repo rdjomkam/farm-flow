@@ -254,9 +254,9 @@ export async function POST(request: NextRequest) {
             siteId: auth.activeSiteId,
             dateAssignation: new Date(data.dateDebut),
             dateFin: null,
-            nombrePoissonsInitial: entry.nombrePoissons,
+            nombreInitial: entry.nombrePoissons,
             poidsMoyenInitial: data.poidsMoyenInitial,
-            nombrePoissons: entry.nombrePoissons,
+            nombreActuel: entry.nombrePoissons,
           },
         });
       }

@@ -1203,25 +1203,25 @@ model Vague {
  * ajouté manuellement dans la migration (non générée par Prisma).
  */
 model AssignationBac {
-  id                    String    @id @default(cuid())
-  bacId                 String
-  bac                   Bac       @relation(fields: [bacId], references: [id], onDelete: Cascade)
-  vagueId               String
-  vague                 Vague     @relation(fields: [vagueId], references: [id], onDelete: Cascade)
-  siteId                String
-  site                  Site      @relation(fields: [siteId], references: [id])
+  id              String    @id @default(cuid())
+  bacId           String
+  bac             Bac       @relation(fields: [bacId], references: [id], onDelete: Cascade)
+  vagueId         String
+  vague           Vague     @relation(fields: [vagueId], references: [id], onDelete: Cascade)
+  siteId          String
+  site            Site      @relation(fields: [siteId], references: [id])
   /** Date de début de l'assignation (= date de création de la vague ou d'ajout du bac) */
-  dateAssignation       DateTime  @default(now())
+  dateAssignation DateTime  @default(now())
   /** Date de fin de l'assignation — null = assignation active */
-  dateFin               DateTime?
-  /** Nombre de poissons initial dans ce bac au démarrage de l'assignation */
-  nombrePoissonsInitial Int?
+  dateFin         DateTime?
+  /** Nombre de poissons reçus à l'ouverture de cette assignation — immuable après création */
+  nombreInitial   Int?      @map("nombrePoissonsInitial")
   /** Poids moyen initial des poissons en grammes au démarrage de l'assignation */
-  poidsMoyenInitial     Float?
-  /** Nombre de poissons actuel dans ce bac (mis à jour via comptages/calibrages/ventes) */
-  nombrePoissons        Int?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  poidsMoyenInitial Float?
+  /** Nombre de poissons réellement présents maintenant (décrémenté par mortalité/vente, override par comptage) */
+  nombreActuel    Int?      @map("nombrePoissons")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@index([bacId])
   @@index([vagueId])
@@ -1272,6 +1272,11 @@ model Releve {
   // Champs comptage
   nombreCompte    Int?
   methodeComptage MethodeComptage?
+  // ADR-049 — écart constaté lors d'un COMPTAGE (nombreActuel_avant - nombreCompte)
+  ecartConstate   Int?
+
+  // ADR-049 — delta appliqué sur AssignationBac.nombreActuel (pour idempotence edit/delete)
+  appliedDelta    Int?
 
   // Champs observation
   description String?

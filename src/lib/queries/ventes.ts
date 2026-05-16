@@ -197,7 +197,7 @@ export async function createVente(
       // ADR-043 Phase 2: dual-write sur AssignationBac
       await tx.assignationBac.updateMany({
         where: { bacId: bac.id, vagueId: data.vagueId, dateFin: null },
-        data: { nombrePoissons: newCount },
+        data: { nombreActuel: newCount },
       });
       remaining -= toDeduct;
     }

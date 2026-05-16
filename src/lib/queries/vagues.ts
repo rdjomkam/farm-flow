@@ -63,7 +63,7 @@ export async function getVagueById(
   // puisse utiliser la distribution réelle (et non la répartition uniforme).
   const bacsFromAssignations = vague.assignations
     .filter((a) => a.dateFin === null)
-    .map((a) => ({ id: a.bac.id, nom: a.bac.nom, volume: a.bac.volume, nombreInitial: a.bac.nombreInitial, poidsMoyenInitial: a.bac.poidsMoyenInitial, nombrePoissons: a.nombrePoissons ?? a.bac.nombrePoissons ?? 0 }));
+    .map((a) => ({ id: a.bac.id, nom: a.bac.nom, volume: a.bac.volume, nombreInitial: a.bac.nombreInitial, poidsMoyenInitial: a.bac.poidsMoyenInitial, nombrePoissons: a.nombreActuel ?? a.bac.nombrePoissons ?? 0 }));
 
   const byId = new Map<string, { id: string; nom: string; volume: number | null; nombreInitial: number | null; poidsMoyenInitial: number | null; nombrePoissons: number }>();
   for (const b of bacsFromAssignations) byId.set(b.id, b);
@@ -128,7 +128,7 @@ export async function getVagueByIdWithReleves(
   // BUG-044: inclure nombreInitial et poidsMoyenInitial pour que computeVivantsByBac
   // utilise la distribution réelle par bac (et non la répartition uniforme).
   const bacsFromAssignations = vague.assignations
-    .map((a) => ({ id: a.bac.id, nom: a.bac.nom, volume: a.bac.volume, nombreInitial: a.bac.nombreInitial, poidsMoyenInitial: a.bac.poidsMoyenInitial, nombrePoissons: a.nombrePoissons ?? a.bac.nombrePoissons ?? 0 }));
+    .map((a) => ({ id: a.bac.id, nom: a.bac.nom, volume: a.bac.volume, nombreInitial: a.bac.nombreInitial, poidsMoyenInitial: a.bac.poidsMoyenInitial, nombrePoissons: a.nombreActuel ?? a.bac.nombrePoissons ?? 0 }));
   const byIdWithReleves = new Map<string, { id: string; nom: string; volume: number | null; nombreInitial: number | null; poidsMoyenInitial: number | null; nombrePoissons: number }>();
   for (const b of bacsFromAssignations) byIdWithReleves.set(b.id, b);
   for (const b of vague.bacs) if (!byIdWithReleves.has(b.id)) byIdWithReleves.set(b.id, { id: b.id, nom: b.nom, volume: b.volume, nombreInitial: b.nombreInitial, poidsMoyenInitial: b.poidsMoyenInitial, nombrePoissons: b.nombrePoissons ?? 0 });
@@ -203,9 +203,9 @@ export async function createVague(siteId: string, data: CreateVagueDTO) {
           siteId,
           dateAssignation: new Date(data.dateDebut),
           dateFin: null,
-          nombrePoissonsInitial: entry.nombrePoissons,
+          nombreInitial: entry.nombrePoissons,
           poidsMoyenInitial: data.poidsMoyenInitial,
-          nombrePoissons: entry.nombrePoissons,
+          nombreActuel: entry.nombrePoissons,
         },
       });
     }
@@ -431,9 +431,9 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
             siteId,
             dateAssignation: new Date(),
             dateFin: null,
-            nombrePoissonsInitial: entry.nombrePoissons,
+            nombreInitial: entry.nombrePoissons,
             poidsMoyenInitial: vague.poidsMoyenInitial,
-            nombrePoissons: entry.nombrePoissons,
+            nombreActuel: entry.nombrePoissons,
           },
         });
 
@@ -475,7 +475,7 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
         include: {
           assignations: {
             where: { vagueId: id, dateFin: null },
-            select: { id: true, nombrePoissons: true },
+            select: { id: true, nombreActuel: true },
             take: 1,
           },
         },
@@ -488,9 +488,9 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
 
       // Verifier si un bac non vide doit etre transfere
       for (const bacARetirer of bacsARetirer) {
-        // BUG-040 Fix B: lire nombrePoissons depuis AssignationBac active en priorité
+        // BUG-040 Fix B: lire nombreActuel depuis AssignationBac active en priorité
         const activeAssignation = bacARetirer.assignations?.[0];
-        const poissonsPresents = activeAssignation?.nombrePoissons ?? bacARetirer.nombrePoissons ?? 0;
+        const poissonsPresents = activeAssignation?.nombreActuel ?? bacARetirer.nombrePoissons ?? 0;
         if (poissonsPresents > 0) {
           if (!data.transferDestinationBacId) {
             throw new Error(
@@ -512,7 +512,7 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
             include: {
               assignations: {
                 where: { vagueId: id, dateFin: null },
-                select: { id: true, nombrePoissons: true },
+                select: { id: true, nombreActuel: true },
                 take: 1,
               },
             },
@@ -522,9 +522,9 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
           }
 
           // Transferer les poissons : incrémenter la destination
-          // BUG-040 Fix C: lire nombrePoissons depuis AssignationBac active en priorité
+          // BUG-040 Fix C: lire nombreActuel depuis AssignationBac active en priorité
           const destAssignation = bacDestination.assignations?.[0];
-          const destCurrentCount = destAssignation?.nombrePoissons ?? bacDestination.nombrePoissons ?? 0;
+          const destCurrentCount = destAssignation?.nombreActuel ?? bacDestination.nombrePoissons ?? 0;
           const nouveauNombreDestination = destCurrentCount + poissonsPresents;
           await tx.bac.update({
             where: { id: data.transferDestinationBacId },
@@ -534,7 +534,7 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
           // ADR-043 Phase 2: mettre à jour l'assignation active de la destination
           await tx.assignationBac.updateMany({
             where: { bacId: data.transferDestinationBacId, vagueId: id, dateFin: null },
-            data: { nombrePoissons: nouveauNombreDestination },
+            data: { nombreActuel: nouveauNombreDestination },
           });
 
           // Creer COMPTAGE=0 pour le bac source (maintenant vide)

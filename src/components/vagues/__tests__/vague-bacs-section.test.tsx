@@ -50,7 +50,7 @@ function makeAssignation(overrides: Partial<AssignationBacForVague> = {}): Assig
     dateAssignation: new Date("2026-01-01"),
     dateFin: null,
     nombrePoissons: 3500,
-    nombrePoissonsInitial: 3500,
+    nombreInitial: 3500,
     bac: { id: "bac-1", nom: "Bac A", volume: 5000 },
     ...overrides,
   };
@@ -61,8 +61,8 @@ function makeAssignation(overrides: Partial<AssignationBacForVague> = {}): Assig
 // ---------------------------------------------------------------------------
 
 describe("BUG-045 — VagueBacsSection vivants par bac actif", () => {
-  it("affiche 'X actuels (Y au départ)' quand vivants et nombrePoissonsInitial sont définis", () => {
-    const assignation = makeAssignation({ nombrePoissonsInitial: 3500 });
+  it("affiche 'X actuels (Y au départ)' quand vivants et nombreInitial sont définis", () => {
+    const assignation = makeAssignation({ nombreInitial: 3500 });
     const bacsActifs = [{ ...assignation, vivants: 3405 as number | null }];
 
     render(
@@ -78,8 +78,8 @@ describe("BUG-045 — VagueBacsSection vivants par bac actif", () => {
     expect(el).toBeDefined();
   });
 
-  it("affiche 'X poissons' quand vivants est défini mais nombrePoissonsInitial est null", () => {
-    const assignation = makeAssignation({ nombrePoissonsInitial: null });
+  it("affiche 'X poissons' quand vivants est défini mais nombreInitial est null", () => {
+    const assignation = makeAssignation({ nombreInitial: null });
     const bacsActifs = [{ ...assignation, vivants: 3405 as number | null }];
 
     render(
@@ -97,7 +97,7 @@ describe("BUG-045 — VagueBacsSection vivants par bac actif", () => {
   });
 
   it("ne crashe pas et n'affiche rien de lié aux poissons quand vivants est null", () => {
-    const assignation = makeAssignation({ nombrePoissonsInitial: 3500 });
+    const assignation = makeAssignation({ nombreInitial: 3500 });
     const bacsActifs = [{ ...assignation, vivants: null as number | null }];
 
     // Should render without throwing
@@ -114,12 +114,12 @@ describe("BUG-045 — VagueBacsSection vivants par bac actif", () => {
     expect(screen.queryByText((text) => text.includes("3500"))).toBeNull();
   });
 
-  it("les bacs retirés affichent toujours nombrePoissonsInitial (comportement inchangé)", () => {
+  it("les bacs retirés affichent toujours nombreInitial (comportement inchangé)", () => {
     const retired = makeAssignation({
       id: "assign-2",
       bacId: "bac-2",
       dateFin: new Date("2026-03-01"),
-      nombrePoissonsInitial: 2000,
+      nombreInitial: 2000,
       bac: { id: "bac-2", nom: "Bac B", volume: 3000 },
     });
 

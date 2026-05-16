@@ -335,7 +335,7 @@ export async function createReleve(siteId: string, userId: string, data: CreateR
         if (activeAssignation) {
           await tx.assignationBac.update({
             where: { id: activeAssignation.id },
-            data: { nombrePoissons: { decrement: data.nombreMorts } },
+            data: { nombreActuel: { decrement: data.nombreMorts } },
           });
         }
       }

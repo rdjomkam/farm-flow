@@ -36,8 +36,8 @@ export async function getBacs(
       id: b.id,
       nom: b.nom,
       volume: b.volume,
-      nombrePoissons: activeAssignation?.nombrePoissons ?? b.nombrePoissons,
-      nombreInitial: activeAssignation?.nombrePoissonsInitial ?? b.nombreInitial,
+      nombrePoissons: activeAssignation?.nombreActuel ?? b.nombrePoissons,
+      nombreInitial: activeAssignation?.nombreInitial ?? b.nombreInitial,
       poidsMoyenInitial: activeAssignation?.poidsMoyenInitial ?? b.poidsMoyenInitial,
       typeSysteme: (b.typeSysteme as TypeSystemeBac | null) ?? null,
       isBlocked: b.isBlocked ?? false,
@@ -73,8 +73,8 @@ export async function getBacById(id: string, siteId: string) {
     ...bac,
     // Exposer les champs depuis l'assignation active en priorité (dual-source)
     vagueId: activeAssignation?.vagueId ?? bac.vagueId,
-    nombrePoissons: activeAssignation?.nombrePoissons ?? bac.nombrePoissons,
-    nombreInitial: activeAssignation?.nombrePoissonsInitial ?? bac.nombreInitial,
+    nombrePoissons: activeAssignation?.nombreActuel ?? bac.nombrePoissons,
+    nombreInitial: activeAssignation?.nombreInitial ?? bac.nombreInitial,
     poidsMoyenInitial: activeAssignation?.poidsMoyenInitial ?? bac.poidsMoyenInitial,
     vagueCode: activeAssignation?.vague?.code ?? bac.vague?.code ?? null,
   };
@@ -162,8 +162,8 @@ export async function updateBac(id: string, siteId: string, data: UpdateBacDTO) 
     await prisma.assignationBac.update({
       where: { id: activeAssignation.id },
       data: {
-        ...(newNombrePoissons !== undefined && { nombrePoissons: newNombrePoissons }),
-        ...(data.nombreInitial !== undefined && { nombrePoissonsInitial: data.nombreInitial }),
+        ...(newNombrePoissons !== undefined && { nombreActuel: newNombrePoissons }),
+        ...(data.nombreInitial !== undefined && { nombreInitial: data.nombreInitial }),
         ...(data.poidsMoyenInitial !== undefined && { poidsMoyenInitial: data.poidsMoyenInitial }),
       },
     });
@@ -214,9 +214,9 @@ export async function assignerBac(
         siteId,
         dateAssignation: options?.dateAssignation ?? new Date(),
         dateFin: null,
-        nombrePoissonsInitial: options?.nombrePoissons ?? null,
+        nombreInitial: options?.nombrePoissons ?? null,
         poidsMoyenInitial: options?.poidsMoyenInitial ?? null,
-        nombrePoissons: options?.nombrePoissons ?? null,
+        nombreActuel: options?.nombrePoissons ?? null,
       },
     });
   });

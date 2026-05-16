@@ -501,12 +501,12 @@ export interface AssignationBac {
   dateAssignation: Date;
   /** Date de fin — null = assignation active */
   dateFin: Date | null;
-  /** Nombre de poissons initial dans ce bac au démarrage de l'assignation */
-  nombrePoissonsInitial: number | null;
+  /** Nombre de poissons reçus à l'ouverture de cette assignation — immuable après création */
+  nombreInitial: number | null;
   /** Poids moyen initial des poissons en grammes */
   poidsMoyenInitial: number | null;
-  /** Nombre de poissons actuel dans ce bac (mis à jour via comptages/calibrages/ventes) */
-  nombrePoissons: number | null;
+  /** Nombre de poissons réellement présents maintenant (décrémenté par mortalité/vente, override par comptage) */
+  nombreActuel: number | null;
   createdAt: Date;
   updatedAt: Date;
 }

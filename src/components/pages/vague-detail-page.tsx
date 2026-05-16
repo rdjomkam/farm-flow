@@ -350,7 +350,7 @@ export default async function VagueDetailPage({
             <VagueBacsSection
               bacsActifs={(assignationsDb.filter((a) => a.dateFin === null) as AssignationBacForVague[]).map((a) => ({
                 ...a,
-                vivants: vivantsByBac.get(a.bacId) ?? a.nombrePoissons ?? null,
+                vivants: vivantsByBac.get(a.bacId) ?? a.nombreActuel ?? null,
               }))}
               bacsRetires={assignationsDb.filter((a) => a.dateFin !== null) as AssignationBacForVague[]}
             />

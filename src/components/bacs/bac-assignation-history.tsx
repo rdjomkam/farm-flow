@@ -72,19 +72,19 @@ export async function BacAssignationHistory({ assignations }: BacAssignationHist
                   </p>
 
                   {/* Effectifs initial → actuel */}
-                  {(a.nombrePoissonsInitial != null || a.nombrePoissons != null) && (
+                  {(a.nombreInitial != null || a.nombreActuel != null) && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      {a.nombrePoissonsInitial != null ? (
+                      {a.nombreInitial != null ? (
                         <>
-                          {t("poissonsDepart", { count: a.nombrePoissonsInitial })}
-                          {a.nombrePoissons != null && a.nombrePoissons !== a.nombrePoissonsInitial && (
-                            <> {t("arrow")} <span className="font-medium">{a.nombrePoissons}</span> {t("aLaFin")}</>
+                          {t("poissonsDepart", { count: a.nombreInitial })}
+                          {a.nombreActuel != null && a.nombreActuel !== a.nombreInitial && (
+                            <> {t("arrow")} <span className="font-medium">{a.nombreActuel}</span> {t("aLaFin")}</>
                           )}
                         </>
                       ) : (
                         <>
-                          {a.nombrePoissons != null && (
-                            <>{t("poissons", { count: a.nombrePoissons })}</>
+                          {a.nombreActuel != null && (
+                            <>{t("poissons", { count: a.nombreActuel })}</>
                           )}
                         </>
                       )}

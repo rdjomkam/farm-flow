@@ -275,9 +275,9 @@ export async function transfererLotVersVague(
           siteId,
           dateAssignation: new Date(),
           dateFin: null,
-          nombrePoissonsInitial: null, // pas de distribution par bac dans ce flux
+          nombreInitial: null, // pas de distribution par bac dans ce flux
           poidsMoyenInitial: lot.poidsMoyen ?? null,
-          nombrePoissons: null,
+          nombreActuel: null,
         },
       });
     }

@@ -195,11 +195,11 @@ export async function getIndicateursBac(
       where: { id: bacId, siteId },
       select: { id: true, nom: true, volume: true, nombreInitial: true },
     }),
-    // ADR-043 Phase 2: lire nombrePoissonsInitial depuis AssignationBac
+    // ADR-043 Phase 2: lire nombreInitial depuis AssignationBac
     prisma.assignationBac.findFirst({
       where: { bacId, vagueId, siteId },
       orderBy: { dateAssignation: "asc" },
-      select: { nombrePoissonsInitial: true },
+      select: { nombreInitial: true },
     }),
   ]);
 
@@ -219,10 +219,10 @@ export async function getIndicateursBac(
     },
   });
 
-  // ADR-043 Phase 2: préférer AssignationBac.nombrePoissonsInitial si disponible
+  // ADR-043 Phase 2: préférer AssignationBac.nombreInitial si disponible
   const bacWithBestNombreInitial = {
     ...bac,
-    nombreInitial: assignation?.nombrePoissonsInitial ?? bac.nombreInitial,
+    nombreInitial: assignation?.nombreInitial ?? bac.nombreInitial,
   };
 
   // ADR-043 Phase 2: utiliser le nombre d'assignations si _count.bacs est insuffisant

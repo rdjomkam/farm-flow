@@ -44,9 +44,9 @@ export function VagueBacsSection({ bacsActifs, bacsRetires }: VagueBacsSectionPr
                   {a.bac.volume != null && (
                     <p className="text-sm text-muted-foreground">{a.bac.volume} L</p>
                   )}
-                  {a.vivants != null && a.nombrePoissonsInitial != null ? (
+                  {a.vivants != null && a.nombreInitial != null ? (
                     <p className="text-sm text-muted-foreground">
-                      {t("poissonsActuels", { count: a.vivants, initial: a.nombrePoissonsInitial })}
+                      {t("poissonsActuels", { count: a.vivants, initial: a.nombreInitial })}
                     </p>
                   ) : a.vivants != null ? (
                     <p className="text-sm text-muted-foreground">
@@ -92,9 +92,9 @@ export function VagueBacsSection({ bacsActifs, bacsRetires }: VagueBacsSectionPr
                       {a.bac.volume != null && (
                         <p className="text-sm text-muted-foreground">{a.bac.volume} L</p>
                       )}
-                      {a.nombrePoissonsInitial != null && (
+                      {a.nombreInitial != null && (
                         <p className="text-xs text-muted-foreground">
-                          {t("poissonsDepart", { count: a.nombrePoissonsInitial })}
+                          {t("poissonsDepart", { count: a.nombreInitial })}
                         </p>
                       )}
                     </div>

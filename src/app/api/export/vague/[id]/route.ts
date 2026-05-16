@@ -198,13 +198,13 @@ export async function GET(
     const assignationTimeline = assignationsDb.map((a) => {
       const bacId = vague.bacs.find((b) => b.nom === a.bac.nom)?.id;
       const mortalites = bacId ? (mortalitesParBac.get(bacId) ?? 0) : 0;
-      const initial = a.nombrePoissons ?? 0;
+      const initial = a.nombreActuel ?? 0;
       return {
         nomBac: a.bac.nom,
         dateAssignation: a.dateAssignation,
         dateFin: a.dateFin,
         volume: a.bac.volume,
-        nombrePoissons: a.nombrePoissons,
+        nombrePoissons: a.nombreActuel,
         nombrePoissonsCourant: initial > 0 ? initial - mortalites : null,
         mortalites,
       };
