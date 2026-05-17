@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { apiError, handleApiError } from "@/lib/api-utils";
 
-const VALID_PAGES = ["besoins", "commandes", "releves"];
+const VALID_PAGES = ["besoins", "commandes", "releves", "mouvements", "depenses"];
 
 export async function GET(request: NextRequest) {
   try {
