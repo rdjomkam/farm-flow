@@ -73,7 +73,7 @@ interface LigneBesoinData {
   prixEstime: number;
   prixReel: number | null;
   commandeId: string | null;
-  produit: { id: string; nom: string; unite: string } | null;
+  produit: { id: string; nom: string; unite: string; fournisseurId: string | null } | null;
   commande: { id: string; numero: string; statut: string } | null;
 }
 
@@ -206,16 +206,31 @@ export function BesoinsDetailClient({
     }
   }
 
+  // Detect lines marked COMMANDE whose product has no fournisseur
+  const needsFournisseurFallback = liste.lignes.some(
+    (l) =>
+      ligneActions[l.id] === "COMMANDE" &&
+      l.produitId &&
+      l.produit &&
+      !l.produit.fournisseurId
+  );
+
+  const { data: fournisseursList } = useFournisseursList();
+
+  const [traitFournisseurId, setTraitFournisseurId] = useState<string>("");
+
   async function handleTraiter() {
     const ligneActionsArr = Object.entries(ligneActions).map(
       ([ligneBesoinId, action]) => ({ ligneBesoinId, action })
     );
     const result = await depenseService.traiterBesoin(liste.id, {
       ligneActions: ligneActionsArr,
+      ...(traitFournisseurId && { fournisseurId: traitFournisseurId }),
     });
     if (result.ok && result.data) {
       setListe(result.data as unknown as ListeBesoinsDetailData);
       setTraitOpen(false);
+      setTraitFournisseurId("");
       queryClient.invalidateQueries({ queryKey: ["besoins"] });
     }
   }
@@ -541,8 +556,38 @@ export function BesoinsDetailClient({
                       <SelectItem value="LIBRE">{t("detail.achatDirect")}</SelectItem>
                     </SelectContent>
                   </Select>
+                  {ligneActions[l.id] === "COMMANDE" && l.produit && !l.produit.fournisseurId && (
+                    <p className="text-xs text-amber-600">
+                      ⚠ Ce produit n&apos;a pas de fournisseur. Sélectionnez un fournisseur ci-dessous.
+                    </p>
+                  )}
                 </div>
               ))}
+              {needsFournisseurFallback && (
+                <div className="border border-amber-200 bg-amber-50 rounded p-3 space-y-2">
+                  <p className="text-sm font-medium text-amber-800">
+                    Fournisseur requis
+                  </p>
+                  <p className="text-xs text-amber-700">
+                    Certains produits n&apos;ont pas de fournisseur assigné. Sélectionnez le fournisseur pour ces commandes.
+                  </p>
+                  <Select
+                    value={traitFournisseurId}
+                    onValueChange={setTraitFournisseurId}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Choisir un fournisseur..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(fournisseursList ?? []).map((f: { id: string; nom: string }) => (
+                        <SelectItem key={f.id} value={f.id}>
+                          {f.nom}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             </DialogBody>
             <DialogFooter>
@@ -552,6 +597,7 @@ export function BesoinsDetailClient({
               <Button
                 variant="primary"
                 onClick={handleTraiter}
+                disabled={needsFournisseurFallback && !traitFournisseurId}
               >
                 {t("detail.confirmerTraitement")}
               </Button>

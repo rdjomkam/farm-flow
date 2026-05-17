@@ -177,7 +177,7 @@ const INCLUDE_LISTE_BESOINS = {
   },
   lignes: {
     include: {
-      produit: { select: { id: true, nom: true, unite: true } },
+      produit: { select: { id: true, nom: true, unite: true, fournisseurId: true } },
       commande: { select: { id: true, numero: true, statut: true } },
     },
     orderBy: { createdAt: "asc" as const },
