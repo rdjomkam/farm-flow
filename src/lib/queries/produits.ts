@@ -44,7 +44,11 @@ export async function getProduitById(id: string, siteId: string) {
       mouvements: {
         orderBy: { date: "desc" },
         take: 20,
-        include: { user: { select: { id: true, name: true } } },
+        include: {
+          user: { select: { id: true, name: true } },
+          vague: { select: { id: true, code: true } },
+          commande: { select: { id: true, numero: true } },
+        },
       },
     },
   });

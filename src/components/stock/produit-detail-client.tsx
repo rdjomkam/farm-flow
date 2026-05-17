@@ -53,6 +53,8 @@ interface MouvementData {
   date: string;
   notes: string | null;
   user: { id: string; name: string };
+  vague: { id: string; code: string } | null;
+  commande: { id: string; numero: string } | null;
 }
 
 interface ProduitData {
@@ -411,38 +413,65 @@ export function ProduitDetailClient({ produit, fournisseurs }: Props) {
               {t("produits.detail.noMovement")}
             </p>
           ) : (
-            <div className="divide-y divide-border">
+            <div className="flex flex-col gap-2 p-3">
               {produit.mouvements.map((m) => {
                 const isEntree = m.type === TypeMouvement.ENTREE;
+                const hasAchat = isEntree && produit.uniteAchat && produit.contenance;
+                const displayUnite = hasAchat
+                  ? uniteLabel(produit.uniteAchat!)
+                  : baseUniteLabel;
+                const equivalence = hasAchat
+                  ? `${m.quantite * produit.contenance!} ${baseUniteLabel}`
+                  : null;
                 return (
-                  <div key={m.id} className="flex items-center gap-3 px-4 py-3">
-                    <div className={`flex h-8 w-8 items-center justify-center rounded-full shrink-0 ${
-                      isEntree ? "bg-success/10" : "bg-danger/10"
-                    }`}>
-                      {isEntree ? (
-                        <TrendingUp className="h-4 w-4 text-success" />
-                      ) : (
-                        <TrendingDown className="h-4 w-4 text-danger" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">
-                        {isEntree ? "+" : "-"}{formatNum(m.quantite)} {baseUniteLabel}
-                      </p>
-                      {m.notes && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          {m.notes}
-                        </p>
-                      )}
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        {formatDateTime(m.date)}
+                  <Card key={m.id}>
+                    <CardContent className="flex items-center gap-3 p-3">
+                      <div className={`flex h-9 w-9 items-center justify-center rounded-full shrink-0 ${
+                        isEntree ? "bg-success/10" : "bg-danger/10"
+                      }`}>
+                        {isEntree ? (
+                          <TrendingUp className="h-4 w-4 text-success" />
+                        ) : (
+                          <TrendingDown className="h-4 w-4 text-danger" />
+                        )}
                       </div>
-                      <p className="text-xs text-muted-foreground">{m.user.name}</p>
-                    </div>
-                  </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge variant={isEntree ? "en_cours" : "warning"}>
+                            {isEntree ? "+" : "-"}{m.quantite} {displayUnite}
+                            {equivalence && ` (${equivalence})`}
+                          </Badge>
+                          {m.vague && (
+                            <Badge variant="default" className="text-xs">
+                              {m.vague.code}
+                            </Badge>
+                          )}
+                          {m.commande && (
+                            <Badge variant="info" className="text-xs">
+                              {m.commande.numero}
+                            </Badge>
+                          )}
+                        </div>
+                        {m.notes && (
+                          <p className="text-xs text-muted-foreground mt-0.5 break-words line-clamp-2">
+                            {m.notes}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          {formatDateTime(m.date)}
+                        </div>
+                        {m.prixTotal != null && (
+                          <p className="text-xs text-muted-foreground">
+                            {formatNum(m.prixTotal)} FCFA
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground">{m.user.name}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
                 );
               })}
             </div>
