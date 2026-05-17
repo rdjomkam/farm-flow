@@ -75,10 +75,6 @@ export function useDepenseService() {
         },
         {
           successMessage: "Depense enregistree !",
-          offlineCapable: true,
-          entityType: "depense",
-          entityLabel: "Dépense",
-          priority: 2,
         }
       ),
     [call]

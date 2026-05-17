@@ -151,6 +151,28 @@
     "confirmeSuppression": "Cette action est irreversible. Le paiement et ses frais supplementaires seront definitivement supprimes.",
     "paiementSupprime": "Paiement supprime."
   },
+  "filtres": {
+    "titre": "Filtres",
+    "recherche": "Rechercher",
+    "recherchePlaceholder": "Numero, description...",
+    "statut": "Statut",
+    "tousStatuts": "Tous les statuts",
+    "categorie": "Categorie",
+    "toutesCategories": "Toutes les categories",
+    "vague": "Vague",
+    "toutesVagues": "Toutes les vagues",
+    "commande": "Commande",
+    "toutesCommandes": "Toutes les commandes",
+    "creePar": "Cree par",
+    "tousUtilisateurs": "Tous",
+    "periode": "Periode",
+    "du": "Du",
+    "au": "Au",
+    "montant": "Montant (FCFA)",
+    "effacer": "Effacer",
+    "appliquer": "Appliquer ({count})",
+    "appliquerSimple": "Appliquer"
+  },
   "emptyState": {
     "noExpenses": "Aucune depense"
   },

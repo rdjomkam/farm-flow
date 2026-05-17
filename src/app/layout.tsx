@@ -18,8 +18,6 @@ import { getSubscriptionStatus, isBlocked } from "@/lib/abonnements/check-subscr
 import { prisma } from "@/lib/db";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { Permission, Role, SiteModule, StatutAbonnement, TypePlan } from "@/types";
-import { SwRegister } from "@/components/pwa/sw-register";
-import { AppleSplashLinks } from "@/components/pwa/apple-splash-links";
 import "./globals.css";
 
 /**
@@ -66,20 +64,6 @@ export async function generateMetadata(): Promise<Metadata> {
       template: "%s | FarmFlow",
     },
     description,
-    manifest: "/manifest.json",
-    appleWebApp: {
-      capable: true,
-      statusBarStyle: "black-translucent",
-      title: "FarmFlow",
-    },
-    icons: {
-      apple: [
-        { url: "/apple-touch-icon-180.png", sizes: "180x180" },
-        { url: "/apple-touch-icon-152.png", sizes: "152x152" },
-        { url: "/apple-touch-icon-120.png", sizes: "120x120" },
-        { url: "/apple-touch-icon.png" },
-      ],
-    },
     openGraph: {
       type: "website",
       locale: "fr_CM",
@@ -216,19 +200,15 @@ export default async function RootLayout({
     return (
       <html lang={locale}>
         <head>
-          <AppleSplashLinks />
           <script
             dangerouslySetInnerHTML={{
               __html: `
 (function(){
   if(!('serviceWorker' in navigator)) return;
-  var t = setTimeout(function(){
-    navigator.serviceWorker.getRegistrations().then(function(regs){
-      regs.forEach(function(r){ r.unregister(); });
-      if(regs.length) window.location.reload();
-    });
-  }, 8000);
-  window.addEventListener('load', function(){ clearTimeout(t); });
+  navigator.serviceWorker.getRegistrations().then(function(regs){
+    regs.forEach(function(r){ r.unregister(); });
+    if(regs.length) window.location.reload();
+  });
 })();
 `,
             }}
@@ -260,7 +240,6 @@ export default async function RootLayout({
               </GlobalLoadingProvider>
             </ToastProvider>
             </QueryProvider>
-          <SwRegister />
           </NextIntlClientProvider>
         </body>
       </html>

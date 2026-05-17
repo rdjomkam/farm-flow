@@ -1,21 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import Link from "next/link";
-import { Plus, Receipt, Calendar, ArrowUpRight, RefreshCw, ChevronRight } from "lucide-react";
+import { Plus, Receipt, Calendar, ArrowUpRight, RefreshCw, ChevronRight, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-} from "@/components/ui/select";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { CategorieDepense, StatutDepense } from "@/types";
+import { DepensesFilterSheet } from "./depenses-filter-sheet";
+import type { DepenseFilterValues } from "./depenses-filter-sheet";
+import { SavedFiltersChips } from "@/components/filters/saved-filters-chips";
 
 // ---------------------------------------------------------------------------
 // Labels & variants
@@ -56,13 +52,6 @@ interface Props {
   templatesActifsCount?: number;
 }
 
-interface DepensesListProps {
-  depenses: DepenseData[];
-  noExpensesLabel: string;
-  statutLabels: Record<StatutDepense, string>;
-  categorieLabels: Record<CategorieDepense, string>;
-}
-
 interface DepenseCardProps {
   depense: DepenseData;
   statutLabels: Record<StatutDepense, string>;
@@ -91,8 +80,8 @@ function formatDate(dateStr: string, locale: string): string {
 
 export function DepensesListClient({ depenses, canManage, templatesActifsCount = 0 }: Props) {
   const t = useTranslations("depenses");
-  const [categorieFilter, setCategorieFilter] = useState<string>("TOUTES");
-  const [activeTab, setActiveTab] = useState("toutes");
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [filters, setFilters] = useState<DepenseFilterValues>({});
 
   const statutLabels: Record<StatutDepense, string> = {
     [StatutDepense.NON_PAYEE]: t("statuts.NON_PAYEE"),
@@ -115,25 +104,92 @@ export function DepensesListClient({ depenses, canManage, templatesActifsCount =
     [CategorieDepense.AUTRE]: t("categories.AUTRE"),
   };
 
-  function handleCategorieChange(value: string) {
-    setCategorieFilter(value);
-    setActiveTab("toutes");
+  const activeFilterCount = Object.entries(filters).filter(
+    ([, val]) => val !== undefined && val !== ""
+  ).length;
+
+  const uniqueVagues = useMemo(() => {
+    const map = new Map<string, { id: string; code: string }>();
+    for (const d of depenses) {
+      if (d.vague) map.set(d.vague.id, d.vague);
+    }
+    return Array.from(map.values());
+  }, [depenses]);
+
+  const uniqueCommandes = useMemo(() => {
+    const map = new Map<string, { id: string; numero: string }>();
+    for (const d of depenses) {
+      if (d.commande) map.set(d.commande.id, d.commande);
+    }
+    return Array.from(map.values());
+  }, [depenses]);
+
+  const filtered = useMemo(() => {
+    let result = depenses;
+
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      result = result.filter(
+        (d) =>
+          d.numero.toLowerCase().includes(q) ||
+          d.description.toLowerCase().includes(q) ||
+          (d.commande && d.commande.numero.toLowerCase().includes(q)) ||
+          (d.vague && d.vague.code.toLowerCase().includes(q))
+      );
+    }
+
+    if (filters.statut) {
+      const statuts = filters.statut.split(",");
+      result = result.filter((d) => statuts.includes(d.statut));
+    }
+
+    if (filters.categorie) {
+      const cats = filters.categorie.split(",");
+      result = result.filter((d) => cats.includes(d.categorieDepense));
+    }
+
+    if (filters.vagueId) {
+      const ids = filters.vagueId.split(",");
+      result = result.filter((d) => d.vague && ids.includes(d.vague.id));
+    }
+
+    if (filters.commandeId) {
+      const ids = filters.commandeId.split(",");
+      result = result.filter((d) => d.commande && ids.includes(d.commande.id));
+    }
+
+    if (filters.dateFrom) {
+      const from = new Date(filters.dateFrom).getTime();
+      result = result.filter((d) => new Date(d.date).getTime() >= from);
+    }
+
+    if (filters.dateTo) {
+      const to = new Date(filters.dateTo).getTime() + 86400000;
+      result = result.filter((d) => new Date(d.date).getTime() < to);
+    }
+
+    if (filters.montantMin) {
+      const min = parseFloat(filters.montantMin);
+      result = result.filter((d) => d.montantTotal >= min);
+    }
+
+    if (filters.montantMax) {
+      const max = parseFloat(filters.montantMax);
+      result = result.filter((d) => d.montantTotal <= max);
+    }
+
+    return result;
+  }, [depenses, filters]);
+
+  function handleApplyFilters(sheetFilters: DepenseFilterValues) {
+    setFilters(sheetFilters);
+    setSheetOpen(false);
   }
 
-  const depensesFiltrees =
-    categorieFilter === "TOUTES"
-      ? depenses
-      : depenses.filter((d) => d.categorieDepense === categorieFilter);
-
-  const nonPayees = depensesFiltrees.filter(
-    (d) => d.statut === StatutDepense.NON_PAYEE
-  );
-  const partiellesPay = depensesFiltrees.filter(
-    (d) => d.statut === StatutDepense.PAYEE_PARTIELLEMENT
-  );
-  const payees = depensesFiltrees.filter(
-    (d) => d.statut === StatutDepense.PAYEE
-  );
+  function handleClearFilters() {
+    setFilters({});
+    setSheetOpen(false);
+  }
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -156,25 +212,36 @@ export function DepensesListClient({ depenses, canManage, templatesActifsCount =
 
       {/* Header actions */}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex-1 max-w-xs">
-          <Select
-            value={categorieFilter}
-            onValueChange={handleCategorieChange}
-          >
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder={t("recurrentes.categoriePlaceholder")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="TOUTES">{t("recurrentes.categoriePlaceholder")}</SelectItem>
-              {Object.values(CategorieDepense).map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {categorieLabels[cat as CategorieDepense]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <p className="text-sm text-muted-foreground">
+          {t("list.tabAll", { count: filtered.length })}
+        </p>
         <div className="flex items-center gap-2 shrink-0">
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="relative">
+                <SlidersHorizontal className="h-4 w-4" />
+                {activeFilterCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent
+              className="!left-auto !right-0 !inset-y-0 !w-full sm:!w-96 !p-0 flex flex-col data-[state=open]:!slide-in-from-right data-[state=closed]:!slide-out-to-right"
+              hideCloseButton
+            >
+              <DepensesFilterSheet
+                current={filters}
+                vagues={uniqueVagues}
+                commandes={uniqueCommandes}
+                onApply={handleApplyFilters}
+                onClear={handleClearFilters}
+                activeCount={activeFilterCount}
+              />
+            </SheetContent>
+          </Sheet>
+
           {canManage && (
             <Link href="/depenses/recurrentes">
               <Button variant="outline" size="sm" className="gap-1.5">
@@ -194,59 +261,24 @@ export function DepensesListClient({ depenses, canManage, templatesActifsCount =
         </div>
       </div>
 
-      {/* Tabs par statut */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full grid grid-cols-4">
-          <TabsTrigger value="toutes">
-            {t("list.tabAll", { count: depensesFiltrees.length })}
-          </TabsTrigger>
-          <TabsTrigger value="non_payees">
-            {t("list.tabDue", { count: nonPayees.length })}
-          </TabsTrigger>
-          <TabsTrigger value="partielles">
-            {t("list.tabPartial", { count: partiellesPay.length })}
-          </TabsTrigger>
-          <TabsTrigger value="payees">
-            {t("list.tabPaid", { count: payees.length })}
-          </TabsTrigger>
-        </TabsList>
+      <SavedFiltersChips
+        page="depenses"
+        onLoadFilter={(f) => setFilters(f as DepenseFilterValues)}
+      />
 
-        <TabsContent value="toutes" className="mt-3">
-          <DepensesList depenses={depensesFiltrees} noExpensesLabel={t("emptyState.noExpenses")} statutLabels={statutLabels} categorieLabels={categorieLabels} />
-        </TabsContent>
-        <TabsContent value="non_payees" className="mt-3">
-          <DepensesList depenses={nonPayees} noExpensesLabel={t("emptyState.noExpenses")} statutLabels={statutLabels} categorieLabels={categorieLabels} />
-        </TabsContent>
-        <TabsContent value="partielles" className="mt-3">
-          <DepensesList depenses={partiellesPay} noExpensesLabel={t("emptyState.noExpenses")} statutLabels={statutLabels} categorieLabels={categorieLabels} />
-        </TabsContent>
-        <TabsContent value="payees" className="mt-3">
-          <DepensesList depenses={payees} noExpensesLabel={t("emptyState.noExpenses")} statutLabels={statutLabels} categorieLabels={categorieLabels} />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// DepensesList sub-component
-// ---------------------------------------------------------------------------
-
-function DepensesList({ depenses, noExpensesLabel, statutLabels, categorieLabels }: DepensesListProps) {
-  if (depenses.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground">
-        <Receipt className="h-10 w-10 opacity-30" />
-        <p className="text-sm">{noExpensesLabel}</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-3">
-      {depenses.map((dep) => (
-        <DepenseCard key={dep.id} depense={dep} statutLabels={statutLabels} categorieLabels={categorieLabels} />
-      ))}
+      {/* List */}
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground">
+          <Receipt className="h-10 w-10 opacity-30" />
+          <p className="text-sm">{t("emptyState.noExpenses")}</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {filtered.map((dep) => (
+            <DepenseCard key={dep.id} depense={dep} statutLabels={statutLabels} categorieLabels={categorieLabels} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -276,10 +308,10 @@ function DepenseCard({ depense, statutLabels, categorieLabels }: DepenseCardProp
           {/* Header row */}
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="font-semibold text-sm leading-tight truncate">
+              <p className="font-semibold text-sm leading-tight break-words">
                 {depense.numero}
               </p>
-              <p className="text-xs text-muted-foreground truncate mt-0.5">
+              <p className="text-xs text-muted-foreground break-words line-clamp-2 mt-0.5">
                 {depense.description}
               </p>
             </div>
@@ -334,14 +366,14 @@ function DepenseCard({ depense, statutLabels, categorieLabels }: DepenseCardProp
             </div>
             <div className="flex items-center gap-2">
               {depense.commande && (
-                <span className="truncate max-w-[120px]">
+                <Badge variant="info" className="text-xs">
                   {depense.commande.numero}
-                </span>
+                </Badge>
               )}
               {depense.vague && (
-                <span className="truncate max-w-[80px]">
+                <Badge variant="default" className="text-xs">
                   {depense.vague.code}
-                </span>
+                </Badge>
               )}
               <ArrowUpRight className="h-3.5 w-3.5" />
             </div>

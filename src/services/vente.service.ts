@@ -49,10 +49,6 @@ export function useVenteService() {
         },
         {
           successMessage: "Vente enregistrée !",
-          offlineCapable: true,
-          entityType: "vente",
-          entityLabel: "Vente",
-          priority: 2,
         }
       ),
     [call]

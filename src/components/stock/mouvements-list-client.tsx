@@ -13,12 +13,12 @@ import {
   TrendingDown,
   Calendar,
   ArrowUpDown,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogTrigger,
@@ -36,8 +36,12 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { TypeMouvement, Permission } from "@/types";
 import { useStockService } from "@/services";
+import { MouvementsFilterSheet } from "./mouvements-filter-sheet";
+import type { MouvementFilterValues } from "./mouvements-filter-sheet";
+import { SavedFiltersChips } from "@/components/filters/saved-filters-chips";
 
 interface MouvementData {
   id: string;
@@ -63,8 +67,9 @@ export function MouvementsListClient({ mouvements, produits, vagues, permissions
   const t = useTranslations("stock");
   const queryClient = useQueryClient();
   const stockService = useStockService();
-  const [tab, setTab] = useState("tous");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [filters, setFilters] = useState<MouvementFilterValues>({});
 
   // Form state
   const [produitId, setProduitId] = useState("");
@@ -75,10 +80,75 @@ export function MouvementsListClient({ mouvements, produits, vagues, permissions
   const [vagueId, setVagueId] = useState("");
   const [notes, setNotes] = useState("");
 
-  const filtered = useMemo(
-    () => (tab === "tous" ? mouvements : mouvements.filter((m) => m.type === tab)),
-    [tab, mouvements]
-  );
+  const activeFilterCount = Object.entries(filters).filter(
+    ([, val]) => val !== undefined && val !== "" && val !== false
+  ).length;
+
+  const filtered = useMemo(() => {
+    let result = mouvements;
+
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      result = result.filter(
+        (m) =>
+          m.produit.nom.toLowerCase().includes(q) ||
+          (m.notes && m.notes.toLowerCase().includes(q)) ||
+          (m.vague && m.vague.code.toLowerCase().includes(q)) ||
+          (m.commande && m.commande.numero.toLowerCase().includes(q))
+      );
+    }
+
+    if (filters.type) {
+      const types = filters.type.split(",");
+      result = result.filter((m) => types.includes(m.type));
+    }
+
+    if (filters.produitId) {
+      const ids = filters.produitId.split(",");
+      result = result.filter((m) => ids.includes(m.produit.id));
+    }
+
+    if (filters.vagueId) {
+      const ids = filters.vagueId.split(",");
+      result = result.filter((m) => m.vague && ids.includes(m.vague.id));
+    }
+
+    if (filters.dateFrom) {
+      const from = new Date(filters.dateFrom).getTime();
+      result = result.filter((m) => new Date(m.date).getTime() >= from);
+    }
+
+    if (filters.dateTo) {
+      const to = new Date(filters.dateTo).getTime() + 86400000;
+      result = result.filter((m) => new Date(m.date).getTime() < to);
+    }
+
+    if (filters.montantMin) {
+      const min = parseFloat(filters.montantMin);
+      result = result.filter((m) => m.prixTotal != null && m.prixTotal >= min);
+    }
+
+    if (filters.montantMax) {
+      const max = parseFloat(filters.montantMax);
+      result = result.filter((m) => m.prixTotal != null && m.prixTotal <= max);
+    }
+
+    if (filters.hasCommande) {
+      result = result.filter((m) => m.commande != null);
+    }
+
+    return result;
+  }, [mouvements, filters]);
+
+  function handleApplyFilters(sheetFilters: MouvementFilterValues) {
+    setFilters(sheetFilters);
+    setSheetOpen(false);
+  }
+
+  function handleClearFilters() {
+    setFilters({});
+    setSheetOpen(false);
+  }
 
   function resetForm() {
     setProduitId("");
@@ -123,11 +193,38 @@ export function MouvementsListClient({ mouvements, produits, vagues, permissions
         {t("actions.back")}
       </Link>
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
-          {t("mouvements.count", { count: mouvements.length })}
+          {t("mouvements.count", { count: filtered.length })}
         </p>
-        {permissions.includes(Permission.STOCK_GERER) && (
+        <div className="flex items-center gap-2">
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="relative">
+                <SlidersHorizontal className="h-4 w-4" />
+                {activeFilterCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent
+              className="!left-auto !right-0 !inset-y-0 !w-full sm:!w-96 !p-0 flex flex-col data-[state=open]:!slide-in-from-right data-[state=closed]:!slide-out-to-right"
+              hideCloseButton
+            >
+              <MouvementsFilterSheet
+                current={filters}
+                produits={produits.map((p) => ({ id: p.id, nom: p.nom }))}
+                vagues={vagues}
+                onApply={handleApplyFilters}
+                onClear={handleClearFilters}
+                activeCount={activeFilterCount}
+              />
+            </SheetContent>
+          </Sheet>
+
+          {permissions.includes(Permission.STOCK_GERER) && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm">
@@ -219,19 +316,16 @@ export function MouvementsListClient({ mouvements, produits, vagues, permissions
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        )}
+          )}
+        </div>
       </div>
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <div className="overflow-x-auto -mx-4 px-4">
-          <TabsList className="w-max">
-            <TabsTrigger value="tous">{t("mouvements.tabs.all")}</TabsTrigger>
-            <TabsTrigger value={TypeMouvement.ENTREE}>{t("mouvements.tabs.entrees")}</TabsTrigger>
-            <TabsTrigger value={TypeMouvement.SORTIE}>{t("mouvements.tabs.sorties")}</TabsTrigger>
-          </TabsList>
-        </div>
-        <TabsContent value={tab}>
-          {filtered.length === 0 ? (
+      <SavedFiltersChips
+        page="mouvements"
+        onLoadFilter={(f) => setFilters(f as MouvementFilterValues)}
+      />
+
+      {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <ArrowUpDown className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-muted-foreground">{t("mouvements.empty")}</p>
@@ -261,27 +355,27 @@ export function MouvementsListClient({ mouvements, produits, vagues, permissions
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-sm truncate">
+                        <p className="font-medium text-sm break-words">
                           {m.produit.nom}
                         </p>
-                        <div className="flex items-center gap-2 mt-0.5">
+                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                           <Badge variant={isEntree ? "en_cours" : "warning"}>
                             {isEntree ? "+" : "-"}{m.quantite} {displayUnite}
                             {equivalence && ` (${equivalence})`}
                           </Badge>
                           {m.vague && (
-                            <span className="text-xs text-muted-foreground">
+                            <Badge variant="default" className="text-xs">
                               {m.vague.code}
-                            </span>
+                            </Badge>
                           )}
                           {m.commande && (
-                            <span className="text-xs text-muted-foreground">
+                            <Badge variant="info" className="text-xs">
                               {m.commande.numero}
-                            </span>
+                            </Badge>
                           )}
                         </div>
                         {m.notes && (
-                          <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                          <p className="text-xs text-muted-foreground mt-0.5 break-words line-clamp-2">
                             {m.notes}
                           </p>
                         )}
@@ -306,8 +400,6 @@ export function MouvementsListClient({ mouvements, produits, vagues, permissions
               })}
             </div>
           )}
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }

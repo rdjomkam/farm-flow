@@ -79,8 +79,6 @@ import frPacks from "@/messages/fr/packs.json";
 import enPacks from "@/messages/en/packs.json";
 import frPlanning from "@/messages/fr/planning.json";
 import enPlanning from "@/messages/en/planning.json";
-import frPwa from "@/messages/fr/pwa.json";
-import enPwa from "@/messages/en/pwa.json";
 import frRemises from "@/messages/fr/remises.json";
 import enRemises from "@/messages/en/remises.json";
 import frSites from "@/messages/fr/sites.json";
@@ -189,7 +187,6 @@ const namespaceFiles: Record<
   observations: { fr: frObservations as Record<string, unknown>, en: enObservations as Record<string, unknown> },
   packs: { fr: frPacks as Record<string, unknown>, en: enPacks as Record<string, unknown> },
   planning: { fr: frPlanning as Record<string, unknown>, en: enPlanning as Record<string, unknown> },
-  pwa: { fr: frPwa as Record<string, unknown>, en: enPwa as Record<string, unknown> },
   remises: { fr: frRemises as Record<string, unknown>, en: enRemises as Record<string, unknown> },
   sites: { fr: frSites as Record<string, unknown>, en: enSites as Record<string, unknown> },
   reproduction: { fr: frReproduction as Record<string, unknown>, en: enReproduction as Record<string, unknown> },

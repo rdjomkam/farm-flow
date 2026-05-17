@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { useApi } from "@/hooks/use-api";
-import { TypeReleve } from "@/types";
+
 import type { CreateReleveDTO, ReleveListResponse, PatchReleveResponse } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -52,10 +52,6 @@ export function useReleveService() {
         },
         {
           successMessage: "Relevé enregistré !",
-          offlineCapable: true,
-          entityType: "releve",
-          entityLabel: `Relevé ${dto.typeReleve?.toLowerCase() ?? ""}`,
-          priority: dto.typeReleve === TypeReleve.MORTALITE ? 1 : 2,
         }
       ),
     [call]

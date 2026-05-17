@@ -232,6 +232,27 @@
       "entrees": "Entrees",
       "sorties": "Sorties"
     },
+    "filtres": {
+      "titre": "Filtres",
+      "recherche": "Rechercher",
+      "recherchePlaceholder": "Produit, notes...",
+      "type": "Type",
+      "tousTypes": "Tous les types",
+      "produit": "Produit",
+      "tousProduits": "Tous les produits",
+      "vague": "Vague",
+      "toutesVagues": "Toutes les vagues",
+      "creePar": "Cree par",
+      "tousUtilisateurs": "Tous",
+      "periode": "Periode",
+      "du": "Du",
+      "au": "Au",
+      "montant": "Montant (FCFA)",
+      "hasCommande": "Lie a une commande",
+      "effacer": "Effacer",
+      "appliquer": "Appliquer ({count})",
+      "appliquerSimple": "Appliquer"
+    },
     "fields": {
       "produit": "Produit",
       "produitPlaceholder": "Choisir un produit",

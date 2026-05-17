@@ -9,29 +9,9 @@ import { useGlobalLoading } from "@/contexts/global-loading.context";
 // ---------------------------------------------------------------------------
 
 export interface ApiCallOptions {
-  /**
-   * Ne pas afficher de toast en cas d'erreur.
-   * A utiliser quand l'appelant gère l'erreur lui-même.
-   */
   silentError?: boolean;
-  /**
-   * Ne pas contribuer au compteur de loading global.
-   * A utiliser pour le polling silencieux (ex: notification-bell).
-   */
   silentLoading?: boolean;
-  /**
-   * Message toast affiché en cas de succès.
-   * Si absent, aucun toast de succès n'est affiché.
-   */
   successMessage?: string;
-  /** Enable offline queue for this mutation (POST/PUT/PATCH/DELETE) */
-  offlineCapable?: boolean;
-  /** Entity type for queue categorization (e.g. "releve", "vente") */
-  entityType?: string;
-  /** Human-readable label for queue display (e.g. "Relevé mortalité 12/03") */
-  entityLabel?: string;
-  /** Queue priority: 1=Critical, 2=Standard, 3=Low */
-  priority?: 1 | 2 | 3;
 }
 
 export interface ApiResult<T> {
@@ -43,10 +23,6 @@ export interface ApiResult<T> {
   ok: boolean;
   /** Code HTTP de la réponse (null si erreur réseau) */
   status?: number;
-  /** True if item was queued offline instead of sent */
-  offline?: boolean;
-  /** Temporary ID assigned to offline item */
-  tempId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -93,10 +69,6 @@ export function useApi() {
         silentError = false,
         silentLoading = false,
         successMessage,
-        offlineCapable = false,
-        entityType,
-        entityLabel,
-        priority,
       } = options ?? {};
 
       const isMutation =
@@ -143,52 +115,6 @@ export function useApi() {
 
         return { data, error: null, ok: true, status: res.status };
       } catch {
-        // Offline queue: if mutation + offlineCapable, queue instead of error
-        if (
-          offlineCapable &&
-          init?.method &&
-          ["POST", "PUT", "PATCH", "DELETE"].includes(init.method.toUpperCase())
-        ) {
-          try {
-            // Get session info from cookie or session mirror
-            const sessionRes = await fetch("/api/auth/session", { cache: "no-store" }).catch(() => null);
-            let userId = "";
-            let siteId = "";
-            if (sessionRes?.ok) {
-              const session = await sessionRes.json();
-              userId = session.userId ?? "";
-              siteId = session.activeSiteId ?? "";
-            }
-
-            if (userId && siteId) {
-              const { enqueue } = await import("@/lib/offline/queue");
-              const body = init.body ? JSON.parse(init.body as string) : null;
-              const tempId = crypto.randomUUID();
-              await enqueue({
-                url,
-                method: init.method,
-                body,
-                entityType: entityType ?? "unknown",
-                entityLabel: entityLabel ?? url,
-                priority: priority ?? 2,
-                userId,
-                siteId,
-              });
-
-              toast({ title: "Enregistré hors ligne", variant: "info" });
-              return {
-                data: { _offline: true, tempId } as T,
-                error: null,
-                ok: true,
-                offline: true,
-                tempId,
-              };
-            }
-          } catch (queueError) {
-            console.error("[Offline Queue] Failed to enqueue:", queueError);
-          }
-        }
-
         const message = "Erreur réseau. Vérifiez votre connexion.";
         if (!silentError) {
           toast({ title: message, variant: "error" });
@@ -257,7 +183,7 @@ export function useApi() {
         if (!silentLoading) decrement();
       }
     },
-    [toast, increment, decrement, incrementMutation, decrementMutation]
+    [toast, increment, decrement]
   );
 
   return { call, download };

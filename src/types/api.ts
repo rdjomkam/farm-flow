@@ -3040,7 +3040,7 @@ export interface MaintenanceStatusResponse {
 // Saved Filters
 // ──────────────────────────────────────────
 
-export type SavedFilterPage = "besoins" | "commandes" | "releves";
+export type SavedFilterPage = "besoins" | "commandes" | "releves" | "mouvements" | "depenses";
 
 export interface SavedFilter {
   id: string;

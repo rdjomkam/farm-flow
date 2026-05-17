@@ -151,6 +151,28 @@
     "confirmeSuppression": "This action is irreversible. The payment and its additional fees will be permanently deleted.",
     "paiementSupprime": "Payment deleted."
   },
+  "filtres": {
+    "titre": "Filters",
+    "recherche": "Search",
+    "recherchePlaceholder": "Number, description...",
+    "statut": "Status",
+    "tousStatuts": "All statuses",
+    "categorie": "Category",
+    "toutesCategories": "All categories",
+    "vague": "Batch",
+    "toutesVagues": "All batches",
+    "commande": "Order",
+    "toutesCommandes": "All orders",
+    "creePar": "Created by",
+    "tousUtilisateurs": "All",
+    "periode": "Period",
+    "du": "From",
+    "au": "To",
+    "montant": "Amount (FCFA)",
+    "effacer": "Clear",
+    "appliquer": "Apply ({count})",
+    "appliquerSimple": "Apply"
+  },
   "emptyState": {
     "noExpenses": "No expenses"
   },
