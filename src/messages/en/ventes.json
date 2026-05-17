@@ -150,8 +150,14 @@
       "creances": "Receivables",
       "creancesSub": "Collections: {montant}"
     },
+    "coutsDetail": {
+      "title": "Cost breakdown",
+      "total": "Total costs",
+      "legendStock": "Stock (purchases)",
+      "legendDepenses": "Operating expenses"
+    },
     "depenses": {
-      "title": "Expenses (excl. orders)",
+      "title": "Expenses",
       "voirTout": "View all",
       "total": "Total",
       "payees": "Paid",

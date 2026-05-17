@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
-import { TrendingUp, TrendingDown, DollarSign, AlertCircle, Receipt } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, AlertCircle, Receipt, PieChart } from "lucide-react";
 
 // Lazy loading Recharts — ssr: false obligatoire (no SSR, window/document deps)
 const ResponsiveContainer = dynamic(
@@ -173,7 +173,66 @@ export function FinancesDashboardClient({
         />
       </div>
 
-      {/* Expenses section (Sprint 18) */}
+      {/* Cost detail section */}
+      {resume.coutsDetail.length > 0 && (
+        <Card>
+          <CardHeader className="pb-0">
+            <CardTitle className="text-base flex items-center gap-2">
+              <PieChart className="h-4 w-4" />
+              {t("finances.coutsDetail.title")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="flex flex-col gap-2">
+              {resume.coutsDetail.map((ligne) => {
+                const pct =
+                  resume.coutsTotaux > 0
+                    ? Math.round((ligne.montant / resume.coutsTotaux) * 100)
+                    : 0;
+                return (
+                  <div key={`${ligne.type}-${ligne.label}`} className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground w-28 truncate shrink-0">
+                      {ligne.label}
+                    </span>
+                    <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${ligne.type === "stock" ? "bg-primary" : "bg-warning"}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-medium w-20 text-right shrink-0">
+                      {formatCompact(ligne.montant, locale)}
+                    </span>
+                    <span className="text-xs text-muted-foreground w-10 text-right shrink-0">
+                      {pct}%
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-3 pt-3 border-t flex items-center justify-between">
+              <span className="text-xs text-muted-foreground font-medium uppercase">
+                {t("finances.coutsDetail.total")}
+              </span>
+              <span className="text-sm font-bold">
+                {formatCompact(resume.coutsTotaux, locale)}
+              </span>
+            </div>
+            <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <span className="inline-block w-2 h-2 rounded-full bg-primary" />
+                {t("finances.coutsDetail.legendStock")}
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="inline-block w-2 h-2 rounded-full bg-warning" />
+                {t("finances.coutsDetail.legendDepenses")}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Expenses payment status */}
       {resume.depensesTotales > 0 && (
         <Card>
           <CardHeader className="pb-0">

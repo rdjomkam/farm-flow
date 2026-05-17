@@ -150,8 +150,14 @@
       "creances": "Creances",
       "creancesSub": "Encaissements: {montant}"
     },
+    "coutsDetail": {
+      "title": "Detail des couts",
+      "total": "Total couts",
+      "legendStock": "Stock (achats)",
+      "legendDepenses": "Depenses operationnelles"
+    },
     "depenses": {
-      "title": "Depenses (hors commandes)",
+      "title": "Depenses",
       "voirTout": "Voir tout",
       "total": "Total",
       "payees": "Payees",

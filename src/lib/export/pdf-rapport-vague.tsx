@@ -126,13 +126,11 @@ const styles = StyleSheet.create({
   },
   // Section titre
   sectionTitle: {
-    fontSize: 8,
+    fontSize: 10,
     fontFamily: "Helvetica-Bold",
-    color: colors.muted,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
+    color: colors.dark,
     marginBottom: 8,
-    marginTop: 14,
+    marginTop: 16,
   },
   // KPIs
   kpisGrid: {
@@ -194,27 +192,24 @@ const styles = StyleSheet.create({
   // Tableau relevés
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: colors.primary,
+    backgroundColor: "#f1f5f9",
     paddingVertical: 6,
     paddingHorizontal: 8,
-    borderRadius: 4,
-    marginBottom: 0,
   },
   tableHeaderText: {
-    color: "#ffffff",
+    color: colors.dark,
     fontFamily: "Helvetica-Bold",
-    fontSize: 8,
+    fontSize: 7.5,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   tableRow: {
     flexDirection: "row",
-    paddingVertical: 6,
+    paddingVertical: 5,
     paddingHorizontal: 8,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0.5,
     borderBottomColor: colors.border,
     borderBottomStyle: "solid",
-  },
-  tableRowAlt: {
-    backgroundColor: colors.lightBg,
   },
   tableCell: {
     fontSize: 8,
@@ -528,7 +523,7 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
               <Text style={[styles.tableHeaderText, { flex: 1 }]}>Morts</Text>
             </View>
             {data.assignationTimeline.map((a, i) => (
-              <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]} wrap={false}>
+              <View key={i} style={[styles.tableRow]} wrap={false}>
                 <Text style={[styles.tableCell, { width: 70, fontFamily: "Helvetica-Bold" }]}>{a.nomBac}</Text>
                 <Text style={[styles.tableCell, { width: 65 }]}>{formatDate(a.dateAssignation)}</Text>
                 <Text style={[styles.tableCell, { width: 60 }]}>{a.dateFin ? formatDate(a.dateFin) : "Actif"}</Text>
@@ -554,7 +549,7 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
               <Text style={[styles.tableHeaderText, { flex: 1 }]}>Échantillon</Text>
             </View>
             {data.evolutionPoidsTable.map((row, i) => (
-              <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]} wrap={false}>
+              <View key={i} style={[styles.tableRow]} wrap={false}>
                 <Text style={[styles.tableCell, { width: 65 }]}>{formatDate(row.date)}</Text>
                 <Text style={[styles.tableCell, { width: 35 }]}>J{row.jourDepuisDebut}</Text>
                 <Text style={[styles.tableCell, { width: 65 }]}>{row.nomBac}</Text>
@@ -585,7 +580,7 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
               )}
             </View>
             {data.evolutionPoidsMoyen.map((row, i) => (
-              <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]} wrap={false}>
+              <View key={i} style={[styles.tableRow]} wrap={false}>
                 <Text style={[styles.tableCell, { width: 65 }]}>{formatDate(row.date)}</Text>
                 <Text style={[styles.tableCell, { width: 35 }]}>J{row.jourDepuisDebut}</Text>
                 <Text style={[styles.tableCell, { width: 70, fontFamily: "Helvetica-Bold" }]}>{formatNum(row.poidsMoyenMesure, 1)}</Text>
@@ -694,7 +689,7 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                   <Text style={[styles.tableHeaderText, { width: 60 }]}>Nombre</Text>
                 </View>
                 {data.mortalitySummary.topCauses.map((c, i) => (
-                  <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]} wrap={false}>
+                  <View key={i} style={[styles.tableRow]} wrap={false}>
                     <Text style={[styles.tableCell, { flex: 1 }]}>{c.cause}</Text>
                     <Text style={[styles.tableCell, { width: 60 }]}>{c.count}</Text>
                   </View>
@@ -726,7 +721,7 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                   <Text style={[styles.tableHeaderText, { width: 70 }]}>Total (kg)</Text>
                 </View>
                 {data.feedingSummary.typeBreakdown.map((t, i) => (
-                  <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]} wrap={false}>
+                  <View key={i} style={[styles.tableRow]} wrap={false}>
                     <Text style={[styles.tableCell, { flex: 1 }]}>{t.type}</Text>
                     <Text style={[styles.tableCell, { width: 60 }]}>{t.count}</Text>
                     <Text style={[styles.tableCell, { width: 70 }]}>{formatNum(t.totalKg, 1)}</Text>
@@ -792,7 +787,7 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
               )}
             </View>
             {data.stockConsumption.map((s, i) => (
-              <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]} wrap={false}>
+              <View key={i} style={[styles.tableRow]} wrap={false}>
                 <Text style={[styles.tableCell, { flex: 1, fontFamily: "Helvetica-Bold" }]}>{s.nomProduit}</Text>
                 <Text style={[styles.tableCell, { width: 70 }]}>{s.categorie}</Text>
                 <Text style={[styles.tableCell, { width: 60 }]}>{formatNum(s.quantite, 1)}</Text>
@@ -822,10 +817,7 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
             {data.releves.map((r, i) => (
               <View
                 key={i}
-                style={[
-                  styles.tableRow,
-                  i % 2 === 1 ? styles.tableRowAlt : {},
-                ]}
+                style={styles.tableRow}
                 wrap={false}
               >
                 <Text style={[styles.tableCell, styles.colDate]}>

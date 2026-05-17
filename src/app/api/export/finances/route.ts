@@ -14,6 +14,8 @@ import {
   getRentabiliteParVague,
   getEvolutionFinanciere,
   getTopClients,
+  getCoutsParMoisParType,
+  getCoutsDetailParMois,
 } from "@/lib/queries/finances";
 import { renderRapportFinancierPDF } from "@/lib/export/pdf-rapport-financier";
 import { Permission } from "@/types";
@@ -43,11 +45,13 @@ export async function GET(request: NextRequest) {
       : undefined;
 
     // Récupérer toutes les données financières en parallèle
-    const [resume, parVague, evolution, topClientsData, site] = await Promise.all([
+    const [resume, parVague, evolution, topClientsData, coutsParMois, coutsDetailMois, site] = await Promise.all([
       getResumeFinancier(auth.activeSiteId, periode),
       getRentabiliteParVague(auth.activeSiteId),
       getEvolutionFinanciere(auth.activeSiteId, 12),
       getTopClients(auth.activeSiteId, 10),
+      getCoutsParMoisParType(auth.activeSiteId, 12),
+      getCoutsDetailParMois(auth.activeSiteId, 12),
       prisma.site.findUnique({
         where: { id: auth.activeSiteId },
         select: { name: true, address: true },
@@ -59,6 +63,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Construire le DTO
+    const creancesClients = topClientsData.clients
+      .filter((c) => c.totalVentes > c.totalPaye)
+      .map((c) => ({
+        nomClient: c.nom,
+        totalVentes: c.totalVentes,
+        totalPaye: c.totalPaye,
+        resteARegler: c.totalVentes - c.totalPaye,
+      }))
+      .sort((a, b) => b.resteARegler - a.resteARegler);
+
     const dto: CreateRapportFinancierPDFDTO = {
       site: {
         name: site.name,
@@ -73,6 +87,8 @@ export async function GET(request: NextRequest) {
         coutsTotal: resume.coutsTotaux,
         margeNette: resume.margeBrute,
         tauxMarge: resume.tauxMarge ?? 0,
+        encaissements: resume.encaissements,
+        creances: resume.creances,
       },
       ventesParVague: parVague.vagues.map((v) => ({
         codeVague: v.code,
@@ -91,6 +107,29 @@ export async function GET(request: NextRequest) {
         couts: m.couts,
         marge: m.marge,
       })),
+      coutsDetail: resume.coutsDetail,
+      creancesClients,
+      depensesSummary: {
+        total: resume.depensesTotales,
+        payees: resume.depensesPayees,
+        impayees: resume.depensesImpayees,
+      },
+      coutsParMois,
+      coutsDetailParMois: {
+        moisList: coutsDetailMois.moisList,
+        lignesParMois: Object.fromEntries(
+          Object.entries(coutsDetailMois.lignesParMois).map(([mois, lignes]) => [
+            mois,
+            lignes.map((l) => ({
+              date: l.date.toISOString().slice(0, 10),
+              description: l.description,
+              categorie: l.categorie,
+              type: l.type,
+              montant: l.montant,
+            })),
+          ])
+        ),
+      },
     };
 
     // Générer le PDF (renderRapportFinancierPDF utilise JSX natif dans le fichier .tsx)

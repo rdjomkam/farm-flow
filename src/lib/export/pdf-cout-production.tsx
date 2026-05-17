@@ -163,13 +163,11 @@ const styles = StyleSheet.create({
   },
   // Section titre
   sectionTitle: {
-    fontSize: 8,
+    fontSize: 10,
     fontFamily: "Helvetica-Bold",
-    color: colors.muted,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
+    color: colors.dark,
     marginBottom: 8,
-    marginTop: 16,
+    marginTop: 18,
   },
   // KPIs / Résumé
   kpisGrid: {
@@ -183,9 +181,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.lightBg,
     borderRadius: 4,
     padding: 8,
-    borderTopWidth: 3,
-    borderTopColor: colors.primary,
-    borderTopStyle: "solid",
   },
   kpiLabel: {
     fontSize: 7,
@@ -203,26 +198,24 @@ const styles = StyleSheet.create({
   // Tableau
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: colors.primary,
+    backgroundColor: "#f1f5f9",
     paddingVertical: 5,
     paddingHorizontal: 8,
-    borderRadius: 4,
   },
   tableHeaderText: {
-    color: "#ffffff",
+    color: colors.dark,
     fontFamily: "Helvetica-Bold",
-    fontSize: 8,
+    fontSize: 7.5,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   tableRow: {
     flexDirection: "row",
     paddingVertical: 5,
     paddingHorizontal: 8,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0.5,
     borderBottomColor: colors.border,
     borderBottomStyle: "solid",
-  },
-  tableRowAlt: {
-    backgroundColor: colors.lightBg,
   },
   tableCell: {
     fontSize: 8,
@@ -232,9 +225,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.lightBg,
     borderRadius: 4,
     padding: 10,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
-    borderLeftStyle: "solid",
   },
   formuleText: {
     fontSize: 8,
@@ -430,7 +420,7 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
             {coutParCategorie.map((c, i) => (
               <View
                 key={i}
-                style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]}
+                style={[styles.tableRow]}
                 wrap={false}
               >
                 <Text style={[styles.tableCell, styles.colCat]}>
@@ -465,7 +455,7 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
             {detailAliments.map((a, i) => (
               <View
                 key={i}
-                style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]}
+                style={[styles.tableRow]}
                 wrap={false}
               >
                 <Text style={[styles.tableCell, styles.colAlProduit]}>{a.produit}</Text>
@@ -496,7 +486,7 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
             {depensesDirectes.map((d, i) => (
               <View
                 key={i}
-                style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]}
+                style={[styles.tableRow]}
                 wrap={false}
               >
                 <Text style={[styles.tableCell, styles.colDepDate]}>
@@ -529,7 +519,7 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
             {depensesMultiVagues.map((m, i) => (
               <View
                 key={i}
-                style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]}
+                style={[styles.tableRow]}
                 wrap={false}
               >
                 <Text style={[styles.tableCell, styles.colMvDesc]}>{m.description}</Text>
@@ -566,7 +556,7 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
             {depensesRecurrentes.map((r, i) => (
               <View key={i} wrap={false}>
                 <View
-                  style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]}
+                  style={[styles.tableRow]}
                 >
                   <Text style={[styles.tableCell, styles.colRecDesc]}>{r.description}</Text>
                   <Text style={[styles.tableCell, styles.colRecPaye]}>
@@ -583,7 +573,7 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
                   </Text>
                 </View>
                 {r.ratioDetail.map((rd) => (
-                  <View key={rd.mois} style={{ paddingLeft: 12, paddingVertical: 2, paddingRight: 8, backgroundColor: i % 2 === 1 ? colors.lightBg : "#ffffff" }}>
+                  <View key={rd.mois} style={{ paddingLeft: 12, paddingVertical: 2, paddingRight: 8, backgroundColor: "#ffffff" }}>
                     <Text style={{ fontSize: 7, fontFamily: "Helvetica-Bold", color: colors.muted, marginBottom: 1 }}>
                       {rd.mois}
                     </Text>
@@ -623,7 +613,7 @@ export function CoutProductionPDF({ data }: { data: CreateCoutProductionPDFDTO }
             {ventes.map((v, i) => (
               <View
                 key={i}
-                style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]}
+                style={[styles.tableRow]}
                 wrap={false}
               >
                 <Text style={[styles.tableCell, styles.colVClient]}>{v.client}</Text>

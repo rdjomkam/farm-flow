@@ -18,7 +18,6 @@ import {
 } from "@react-pdf/renderer";
 import type { CreateFacturePDFDTO } from "@/types/export";
 import { StatutFacture, ModePaiement } from "@/types";
-import { formatNumber } from "@/lib/format";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -32,8 +31,13 @@ function formatDate(date: Date | string): string {
   });
 }
 
+function fmtNum(n: number): string {
+  const s = Math.abs(Math.round(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return n < 0 ? "-" + s : s;
+}
+
 function formatMontant(n: number): string {
-  return formatNumber(n) + " FCFA";
+  return fmtNum(n) + " FCFA";
 }
 
 const statutLabels: Record<StatutFacture, string> = {
@@ -139,11 +143,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 8,
+    fontSize: 10,
     fontFamily: "Helvetica-Bold",
-    color: colors.muted,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
+    color: colors.dark,
     marginBottom: 6,
   },
   clientName: {
@@ -162,27 +164,24 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: colors.primary,
+    backgroundColor: "#f1f5f9",
     paddingVertical: 7,
     paddingHorizontal: 10,
-    borderRadius: 4,
-    marginBottom: 0,
   },
   tableHeaderText: {
-    color: "#ffffff",
+    color: colors.dark,
     fontFamily: "Helvetica-Bold",
-    fontSize: 9,
+    fontSize: 8,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   tableRow: {
     flexDirection: "row",
     paddingVertical: 8,
     paddingHorizontal: 10,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0.5,
     borderBottomColor: colors.border,
     borderBottomStyle: "solid",
-  },
-  tableRowAlt: {
-    backgroundColor: colors.lightBg,
   },
   colDesignation: { flex: 3 },
   colQte: { flex: 1, textAlign: "right" },
@@ -392,7 +391,7 @@ export function FacturePDF({ data }: { data: CreateFacturePDFDTO }) {
               {data.poidsTotalKg} kg
             </Text>
             <Text style={[styles.tableCell, styles.colPrix]}>
-              {formatNumber(data.prixUnitaireKg)} F
+              {fmtNum(data.prixUnitaireKg)} F
             </Text>
             <Text style={[styles.tableCell, styles.colTotal, { fontFamily: "Helvetica-Bold" }]}>
               {formatMontant(data.montantTotal)}

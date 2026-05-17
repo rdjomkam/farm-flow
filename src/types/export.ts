@@ -409,14 +409,12 @@ export interface CreateRapportVaguePDFDTO {
  * KPIs financiers globaux pour la période couverte.
  */
 export interface KPIsFinanciersPDF {
-  /** Total des revenus de ventes (en FCFA) */
   revenusTotal: number;
-  /** Total des coûts (aliments + intrants + équipements) (en FCFA) */
   coutsTotal: number;
-  /** Marge brute = revenus - coûts (en FCFA) */
   margeNette: number;
-  /** Taux de marge = margeNette / revenusTotal × 100 */
   tauxMarge: number;
+  encaissements: number;
+  creances: number;
 }
 
 /**
@@ -459,34 +457,64 @@ export interface EvolutionMensuellePDF {
   marge: number;
 }
 
+/** Ligne de détail des coûts */
+export interface CoutDetailPDF {
+  type: "stock" | "depense";
+  label: string;
+  montant: number;
+}
+
+/** Créance client détaillée */
+export interface CreanceClientPDF {
+  nomClient: string;
+  totalVentes: number;
+  totalPaye: number;
+  resteARegler: number;
+}
+
+/** Ligne de la matrice coûts par mois × catégorie */
+export interface CoutMoisCategoriePDF {
+  mois: string;
+  categorie: string;
+  type: "stock" | "depense";
+  montant: number;
+}
+
+/** Ligne concrète de coût (mouvement stock ou dépense individuelle) */
+export interface CoutDetailConcretPDF {
+  date: string;
+  description: string;
+  categorie: string;
+  type: "stock" | "depense";
+  montant: number;
+}
+
 /**
  * DTO pour générer le rapport financier en PDF.
- *
- * Structure du PDF :
- * - En-tête : site, période couverte
- * - KPIs globaux : revenus, coûts, marge, taux de marge
- * - Tableau ventes par vague
- * - Top 5 clients (ou moins)
- * - Évolution mensuelle (tableau revenus/coûts/marge par mois)
  */
 export interface CreateRapportFinancierPDFDTO {
-  /** Informations du site (ferme) pour l'en-tête */
   site: SiteInfoExport;
-
-  /** Période couverte par le rapport */
   periode: PeriodeExport;
-
-  /** KPIs financiers globaux sur la période */
   kpis: KPIsFinanciersPDF;
-
-  /** Détail des ventes groupées par vague (trié par montant DESC) */
   ventesParVague: VenteParVaguePDF[];
-
-  /** Top clients par montant total (max 10 entrées) */
   topClients: TopClientPDF[];
-
-  /** Évolution mensuelle des revenus, coûts et marge */
   evolutionMensuelle: EvolutionMensuellePDF[];
+  coutsDetail: CoutDetailPDF[];
+  creancesClients: CreanceClientPDF[];
+  depensesSummary: {
+    total: number;
+    payees: number;
+    impayees: number;
+  };
+  coutsParMois: {
+    lignes: CoutMoisCategoriePDF[];
+    categories: string[];
+    moisList: string[];
+  };
+  coutsDetailParMois: {
+    moisList: string[];
+    lignesParMois: Record<string, CoutDetailConcretPDF[]>;
+  };
 }
 
 // ---------------------------------------------------------------------------

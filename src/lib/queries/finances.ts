@@ -6,6 +6,12 @@ import { getPrixParUniteBase, computeNombreVivantsVague, computeVivantsByBac } f
 // Types de retour locaux
 // ---------------------------------------------------------------------------
 
+export interface CoutDetailLigne {
+  type: "stock" | "depense";
+  label: string;
+  montant: number;
+}
+
 export interface ResumeFinancier {
   revenus: number;
   coutsAliments: number;
@@ -19,14 +25,16 @@ export interface ResumeFinancier {
   prixMoyenVenteKg: number | null;
   nombreVentes: number;
   nombreFactures: number;
-  /** Total des depenses (hors commande — anti double-comptage) */
+  /** Total de TOUTES les depenses (pour affichage paiement) */
   depensesTotales: number;
-  /** Depenses payees (hors commande) */
+  /** Depenses payees (toutes) */
   depensesPayees: number;
-  /** Depenses impayees ou partiellement payees (hors commande) */
+  /** Depenses impayees ou partiellement payees (toutes) */
   depensesImpayees: number;
-  /** Repartition par categorie (hors commande) */
+  /** Repartition par categorie (toutes depenses) */
   depensesParCategorie: Partial<Record<CategorieDepense, number>>;
+  /** Ventilation detaillee des couts par type */
+  coutsDetail: CoutDetailLigne[];
 }
 
 export interface RentabiliteVague {
@@ -152,6 +160,7 @@ export async function getResumeFinancier(
     coutsIntrants,
     coutsEquipements,
     depensesHorsCommande,
+    toutesDepenses,
   ] = await Promise.all([
     // Revenus : SUM et COUNT des ventes + SUM poids
     prisma.vente.aggregate({
@@ -185,13 +194,25 @@ export async function getResumeFinancier(
     sumCoutsParCategorie(siteId, CategorieProduit.INTRANT, dateFilterStock),
     sumCoutsParCategorie(siteId, CategorieProduit.EQUIPEMENT, dateFilterStock),
 
-    // Depenses hors-commande : anti double-comptage
-    // Les depenses liees a une Commande sont deja comptees dans MouvementStock
-    // Seules les depenses sans commandeId sont ajoutees ici
+    // Depenses hors-commande : anti double-comptage pour le calcul des COUTS
     prisma.depense.findMany({
       where: {
         siteId,
         commandeId: null,
+        ...(dateFilterStock && { date: dateFilterStock }),
+      },
+      select: {
+        montantTotal: true,
+        montantPaye: true,
+        statut: true,
+        categorieDepense: true,
+      },
+    }),
+
+    // TOUTES les depenses : pour le suivi des PAIEMENTS (payees/impayees)
+    prisma.depense.findMany({
+      where: {
+        siteId,
         ...(dateFilterStock && { date: dateFilterStock }),
       },
       select: {
@@ -209,13 +230,23 @@ export async function getResumeFinancier(
 
   const encaissements = paiementAgg._sum.montant ?? 0;
 
-  // Agregation des depenses hors-commande
+  // Agregation des depenses hors-commande (pour calcul des COUTS uniquement)
+  let depensesHCTotal = 0;
+  const depensesHCParCategorie: Partial<Record<CategorieDepense, number>> = {};
+
+  for (const dep of depensesHorsCommande) {
+    depensesHCTotal += dep.montantTotal;
+    const cat = dep.categorieDepense as CategorieDepense;
+    depensesHCParCategorie[cat] = (depensesHCParCategorie[cat] ?? 0) + dep.montantTotal;
+  }
+
+  // Agregation de TOUTES les depenses (pour suivi PAIEMENT)
   let depensesTotales = 0;
   let depensesPayees = 0;
   let depensesImpayees = 0;
   const depensesParCategorie: Partial<Record<CategorieDepense, number>> = {};
 
-  for (const dep of depensesHorsCommande) {
+  for (const dep of toutesDepenses) {
     depensesTotales += dep.montantTotal;
     if (dep.statut === StatutDepense.PAYEE) {
       depensesPayees += dep.montantTotal;
@@ -226,12 +257,25 @@ export async function getResumeFinancier(
     depensesParCategorie[cat] = (depensesParCategorie[cat] ?? 0) + dep.montantTotal;
   }
 
+  // Couts : stock + depenses hors-commande (anti double-comptage)
   const coutsStock = coutsAliments + coutsIntrants + coutsEquipements;
-  const coutsTotaux = coutsStock + depensesTotales;
+  const coutsTotaux = coutsStock + depensesHCTotal;
   const margeBrute = revenus - coutsTotaux;
   const tauxMarge = revenus > 0 ? (margeBrute / revenus) * 100 : null;
   const creances = revenus - encaissements;
   const prixMoyenVenteKg = poidsTotalKg > 0 ? revenus / poidsTotalKg : null;
+
+  // Ventilation detaillee des couts par type
+  const coutsDetail: CoutDetailLigne[] = [];
+  if (coutsAliments > 0) coutsDetail.push({ type: "stock", label: "ALIMENT", montant: Math.round(coutsAliments) });
+  if (coutsIntrants > 0) coutsDetail.push({ type: "stock", label: "INTRANT", montant: Math.round(coutsIntrants) });
+  if (coutsEquipements > 0) coutsDetail.push({ type: "stock", label: "EQUIPEMENT", montant: Math.round(coutsEquipements) });
+  for (const [cat, montant] of Object.entries(depensesHCParCategorie)) {
+    if ((montant as number) > 0) {
+      coutsDetail.push({ type: "depense", label: cat, montant: Math.round(montant as number) });
+    }
+  }
+  coutsDetail.sort((a, b) => b.montant - a.montant);
 
   return {
     revenus: Math.round(revenus),
@@ -253,6 +297,7 @@ export async function getResumeFinancier(
     depensesParCategorie: Object.fromEntries(
       Object.entries(depensesParCategorie).map(([k, v]) => [k, Math.round(v as number)])
     ) as Partial<Record<CategorieDepense, number>>,
+    coutsDetail,
   };
 }
 
@@ -547,6 +592,214 @@ export async function getEvolutionFinanciere(
   });
 
   return { evolution };
+}
+
+// ---------------------------------------------------------------------------
+// Query 3b — Ventilation mensuelle des couts par categorie
+// ---------------------------------------------------------------------------
+
+export interface CoutMoisCategorie {
+  mois: string;
+  categorie: string;
+  type: "stock" | "depense";
+  montant: number;
+}
+
+export interface CoutsParMoisParType {
+  lignes: CoutMoisCategorie[];
+  categories: string[];
+  moisList: string[];
+}
+
+export async function getCoutsParMoisParType(
+  siteId: string,
+  moisCount: number = 12
+): Promise<CoutsParMoisParType> {
+  const now = new Date();
+  const dateDebut = new Date(now.getFullYear(), now.getMonth() - (moisCount - 1), 1);
+
+  const [mouvements, depenses] = await Promise.all([
+    prisma.mouvementStock.findMany({
+      where: {
+        siteId,
+        type: TypeMouvement.ENTREE,
+        prixTotal: { not: null },
+        date: { gte: dateDebut },
+      },
+      select: {
+        date: true,
+        prixTotal: true,
+        produit: { select: { categorie: true } },
+      },
+    }),
+    prisma.depense.findMany({
+      where: {
+        siteId,
+        commandeId: null,
+        date: { gte: dateDebut },
+      },
+      select: { date: true, montantTotal: true, categorieDepense: true },
+    }),
+  ]);
+
+  const moisList: string[] = [];
+  for (let i = 0; i < moisCount; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - (moisCount - 1) + i, 1);
+    moisList.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
+
+  const toMois = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+
+  // mois -> categorie -> montant
+  const grid = new Map<string, Map<string, { montant: number; type: "stock" | "depense" }>>();
+  for (const m of moisList) grid.set(m, new Map());
+
+  const categoriesSet = new Set<string>();
+
+  for (const mv of mouvements) {
+    const mois = toMois(mv.date);
+    const cat = mv.produit.categorie as string;
+    categoriesSet.add(cat);
+    const row = grid.get(mois);
+    if (!row) continue;
+    const entry = row.get(cat) ?? { montant: 0, type: "stock" as const };
+    entry.montant += mv.prixTotal ?? 0;
+    row.set(cat, entry);
+  }
+
+  for (const dep of depenses) {
+    const mois = toMois(dep.date);
+    const cat = dep.categorieDepense as string;
+    categoriesSet.add(cat);
+    const row = grid.get(mois);
+    if (!row) continue;
+    const entry = row.get(cat) ?? { montant: 0, type: "depense" as const };
+    entry.montant += dep.montantTotal;
+    row.set(cat, entry);
+  }
+
+  const lignes: CoutMoisCategorie[] = [];
+  for (const mois of moisList) {
+    const row = grid.get(mois)!;
+    for (const [cat, data] of row) {
+      if (data.montant > 0) {
+        lignes.push({
+          mois,
+          categorie: cat,
+          type: data.type,
+          montant: Math.round(data.montant),
+        });
+      }
+    }
+  }
+
+  const categories = Array.from(categoriesSet).sort();
+
+  return { lignes, categories, moisList };
+}
+
+// ---------------------------------------------------------------------------
+// Query 3c — Détail concret des coûts par mois (lignes individuelles)
+// ---------------------------------------------------------------------------
+
+export interface CoutDetailLigneConcrete {
+  date: Date;
+  mois: string;
+  description: string;
+  categorie: string;
+  type: "stock" | "depense";
+  montant: number;
+}
+
+export interface CoutsDetailParMois {
+  moisList: string[];
+  lignesParMois: Record<string, CoutDetailLigneConcrete[]>;
+}
+
+export async function getCoutsDetailParMois(
+  siteId: string,
+  moisCount: number = 12
+): Promise<CoutsDetailParMois> {
+  const now = new Date();
+  const dateDebut = new Date(now.getFullYear(), now.getMonth() - (moisCount - 1), 1);
+
+  const [mouvements, depenses] = await Promise.all([
+    prisma.mouvementStock.findMany({
+      where: {
+        siteId,
+        type: TypeMouvement.ENTREE,
+        prixTotal: { not: null },
+        date: { gte: dateDebut },
+      },
+      select: {
+        date: true,
+        prixTotal: true,
+        quantite: true,
+        notes: true,
+        produit: { select: { nom: true, categorie: true } },
+      },
+      orderBy: { date: "asc" },
+    }),
+    prisma.depense.findMany({
+      where: {
+        siteId,
+        commandeId: null,
+        date: { gte: dateDebut },
+      },
+      select: {
+        date: true,
+        montantTotal: true,
+        description: true,
+        categorieDepense: true,
+      },
+      orderBy: { date: "asc" },
+    }),
+  ]);
+
+  const toMois = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+
+  const moisList: string[] = [];
+  for (let i = 0; i < moisCount; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - (moisCount - 1) + i, 1);
+    moisList.push(toMois(d));
+  }
+
+  const lignesParMois: Record<string, CoutDetailLigneConcrete[]> = {};
+
+  for (const mv of mouvements) {
+    const mois = toMois(mv.date);
+    if (!moisList.includes(mois)) continue;
+    if (!lignesParMois[mois]) lignesParMois[mois] = [];
+    lignesParMois[mois].push({
+      date: mv.date,
+      mois,
+      description: `${mv.produit.nom} (${mv.quantite} unités)`,
+      categorie: mv.produit.categorie as string,
+      type: "stock",
+      montant: Math.round(mv.prixTotal ?? 0),
+    });
+  }
+
+  for (const dep of depenses) {
+    const mois = toMois(dep.date);
+    if (!moisList.includes(mois)) continue;
+    if (!lignesParMois[mois]) lignesParMois[mois] = [];
+    lignesParMois[mois].push({
+      date: dep.date,
+      mois,
+      description: dep.description,
+      categorie: dep.categorieDepense as string,
+      type: "depense",
+      montant: Math.round(dep.montantTotal),
+    });
+  }
+
+  // Filter to months that have data
+  const moisAvecData = moisList.filter((m) => lignesParMois[m]?.length > 0);
+
+  return { moisList: moisAvecData, lignesParMois };
 }
 
 // ---------------------------------------------------------------------------
