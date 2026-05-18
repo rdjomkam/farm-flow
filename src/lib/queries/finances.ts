@@ -1112,10 +1112,11 @@ export async function getCoutProductionVague(
     relevesVague,
   ] = await Promise.all([
     // 2a. Consommations aliments (fait foi pour les aliments — ERR-093)
+    // Filtre par dateFin : exclure les releves posterieurs a la cloture
     prisma.releveConsommation.findMany({
       where: {
         siteId,
-        releve: { vagueId },
+        releve: { vagueId, date: { lte: dateFin } },
       },
       select: {
         quantite: true,
@@ -1134,6 +1135,7 @@ export async function getCoutProductionVague(
     // Exclure: commandeId non null (anti double-comptage MouvementStock)
     // Exclure: categorieDepense = ALIMENT (anti double-comptage ReleveConsommation)
     // Exclure: depenseRecurrenteId non null (comptees separement via montantPaye)
+    // Filtre par dateFin : exclure les depenses posterieures a la cloture
     prisma.depense.findMany({
       where: {
         siteId,
@@ -1141,6 +1143,7 @@ export async function getCoutProductionVague(
         commandeId: null,
         depenseRecurrenteId: null,
         categorieDepense: { not: CategorieDepense.ALIMENT },
+        date: { lte: dateFin },
       },
       select: {
         date: true,
@@ -1152,6 +1155,7 @@ export async function getCoutProductionVague(
 
     // 2c. Depenses multi-vague via ListeBesoins (vagueId null, listeBesoinsId non null)
     // Exclure: commandeId non null + categorieDepense = ALIMENT
+    // Filtre par dateFin : exclure les depenses posterieures a la cloture
     prisma.depense.findMany({
       where: {
         siteId,
@@ -1159,6 +1163,7 @@ export async function getCoutProductionVague(
         vagueId: null,
         commandeId: null,
         categorieDepense: { not: CategorieDepense.ALIMENT },
+        date: { lte: dateFin },
       },
       select: {
         description: true,
@@ -1225,8 +1230,9 @@ export async function getCoutProductionVague(
     }),
 
     // 2h. Releves de la vague (for biomass calculation)
+    // Filtre par dateFin : biomasse a la date de cloture
     prisma.releve.findMany({
-      where: { siteId, vagueId },
+      where: { siteId, vagueId, date: { lte: dateFin } },
       select: {
         bacId: true,
         typeReleve: true,
