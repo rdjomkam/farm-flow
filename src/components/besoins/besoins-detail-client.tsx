@@ -259,16 +259,12 @@ export function BesoinsDetailClient({
     }
   }, [depenseService, liste.id, queryClient, router]);
 
-  // Lignes orphelines : referencent un produit mais n'ont pas encore de commande
+  // Lignes orphelines : referencent un produit, pas de commande, pas de depense directe
   const lignesOrphelines = liste.lignes.filter(
-    (l) => !l.commandeId && l.produitId
+    (l) => !l.commandeId && l.produitId && (l.lignesDepense?.length ?? 0) === 0
   );
-  const lignesEnAttente = lignesOrphelines.filter(
-    (l) => (l.lignesDepense?.length ?? 0) === 0
-  );
-  const lignesDejaTraitees = lignesOrphelines.filter(
-    (l) => (l.lignesDepense?.length ?? 0) > 0
-  );
+  const lignesEnAttente = lignesOrphelines;
+  const lignesDejaTraitees: typeof lignesOrphelines = [];
 
   async function handleTraiterOrphelines() {
     const lignesCommande = Object.entries(orphelineActions)
