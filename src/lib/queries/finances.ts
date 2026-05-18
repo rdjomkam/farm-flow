@@ -540,7 +540,15 @@ export async function getEvolutionFinanciere(
         commandeId: null,
         date: { gte: dateDebut },
       },
-      select: { date: true, montantTotal: true },
+      select: {
+        date: true,
+        montantTotal: true,
+        listeBesoinsId: true,
+        lignes: {
+          where: { produitId: null },
+          select: { montantTotal: true },
+        },
+      },
     }),
   ]);
 
@@ -585,7 +593,14 @@ export async function getEvolutionFinanciere(
       d.date.getMonth() + 1
     ).padStart(2, "0")}`;
     const agg = agregats.get(mois);
-    if (agg) agg.couts += d.montantTotal;
+    if (!agg) continue;
+    if (d.listeBesoinsId) {
+      for (const ligne of d.lignes) {
+        agg.couts += ligne.montantTotal;
+      }
+    } else {
+      agg.couts += d.montantTotal;
+    }
   }
 
   // Affecter les paiements
