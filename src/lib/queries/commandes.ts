@@ -487,6 +487,44 @@ export async function annulerCommande(id: string, siteId: string) {
       throw new Error("Cette commande est deja annulee");
     }
 
+    const lignesBesoins = await tx.ligneBesoin.findMany({
+      where: { commandeId: commande.id },
+      select: { id: true },
+    });
+
+    if (lignesBesoins.length > 0) {
+      const ligneBesoinIds = lignesBesoins.map((l) => l.id);
+
+      const lignesDepense = await tx.ligneDepense.findMany({
+        where: {
+          ligneBesoinId: { in: ligneBesoinIds },
+          depense: { listeBesoinsId: { not: null }, commandeId: null },
+        },
+        select: { id: true, depenseId: true },
+      });
+
+      if (lignesDepense.length > 0) {
+        const depenseIds = [...new Set(lignesDepense.map((l) => l.depenseId))];
+        const ligneDepenseIds = lignesDepense.map((l) => l.id);
+
+        await tx.ligneDepense.deleteMany({
+          where: { id: { in: ligneDepenseIds } },
+        });
+
+        for (const depenseId of depenseIds) {
+          const aggregate = await tx.ligneDepense.aggregate({
+            where: { depenseId },
+            _sum: { montantTotal: true },
+          });
+
+          await tx.depense.update({
+            where: { id: depenseId },
+            data: { montantTotal: aggregate._sum.montantTotal ?? 0 },
+          });
+        }
+      }
+    }
+
     return tx.commande.update({
       where: { id: commande.id },
       data: { statut: StatutCommande.ANNULEE },
