@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { useApi } from "@/hooks/use-api";
 import type {
   CreateVenteDTO,
+  UpdateVenteDTO,
   VenteListResponse,
   FactureListResponse,
   FactureDetailResponse,
@@ -50,6 +51,20 @@ export function useVenteService() {
         {
           successMessage: "Vente enregistrée !",
         }
+      ),
+    [call]
+  );
+
+  const updateVente = useCallback(
+    (id: string, dto: UpdateVenteDTO) =>
+      call<VenteWithRelations>(
+        `/api/ventes/${id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dto),
+        },
+        { successMessage: "Vente modifiée." }
       ),
     [call]
   );
@@ -157,6 +172,7 @@ export function useVenteService() {
     listVentes,
     getVente,
     createVente,
+    updateVente,
     deleteVente,
     listFactures,
     getFacture,

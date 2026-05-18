@@ -23,24 +23,29 @@ export async function POST(
     const body = await request.json();
     const errors: { field: string; message: string }[] = [];
 
-    if (
-      !Array.isArray(body.ligneBesoinIds) ||
-      body.ligneBesoinIds.length === 0
-    ) {
+    const hasCommande = Array.isArray(body.ligneBesoinIds) && body.ligneBesoinIds.length > 0;
+    const hasDepense = Array.isArray(body.lignesDepense) && body.lignesDepense.length > 0;
+
+    if (!hasCommande && !hasDepense) {
       errors.push({
         field: "ligneBesoinIds",
-        message: "ligneBesoinIds doit etre un tableau non vide.",
+        message: "Au moins ligneBesoinIds ou lignesDepense doit etre un tableau non vide.",
       });
-    } else {
-      body.ligneBesoinIds.forEach((idLigne: unknown, i: number) => {
-        if (!idLigne || typeof idLigne !== "string") {
+    }
+
+    const validateStringArray = (arr: unknown[], field: string) => {
+      arr.forEach((item: unknown, i: number) => {
+        if (!item || typeof item !== "string") {
           errors.push({
-            field: `ligneBesoinIds[${i}]`,
-            message: `ligneBesoinIds[${i}] doit etre une chaine.`,
+            field: `${field}[${i}]`,
+            message: `${field}[${i}] doit etre une chaine.`,
           });
         }
       });
-    }
+    };
+
+    if (hasCommande) validateStringArray(body.ligneBesoinIds, "ligneBesoinIds");
+    if (hasDepense) validateStringArray(body.lignesDepense, "lignesDepense");
 
     if (
       body.fournisseurId !== undefined &&
@@ -69,7 +74,8 @@ export async function POST(
     }
 
     const dto: CreerCommandeDepuisBesoinDTO = {
-      ligneBesoinIds: body.ligneBesoinIds,
+      ligneBesoinIds: body.ligneBesoinIds ?? [],
+      lignesDepense: body.lignesDepense ?? [],
       fournisseurId: body.fournisseurId || undefined,
       dateCommande: body.dateCommande || undefined,
     };

@@ -75,6 +75,7 @@ interface LigneBesoinData {
   commandeId: string | null;
   produit: { id: string; nom: string; unite: string; fournisseurId: string | null } | null;
   commande: { id: string; numero: string; statut: string } | null;
+  lignesDepense?: { id: string }[];
 }
 
 interface ListeBesoinsDetailData {
@@ -156,9 +157,9 @@ export function BesoinsDetailClient({
   const [clotureOpen, setClotureOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [creerCommandeOpen, setCreerCommandeOpen] = useState(false);
-  const [selectedOrphelines, setSelectedOrphelines] = useState<Set<string>>(
-    new Set()
-  );
+  const [orphelineActions, setOrphelineActions] = useState<
+    Record<string, "COMMANDE" | "DEPENSE">
+  >({});
   const [selectedFournisseurId, setSelectedFournisseurId] = useState<string>("");
 
   // Traitement: action per ligne
@@ -262,21 +263,34 @@ export function BesoinsDetailClient({
   const lignesOrphelines = liste.lignes.filter(
     (l) => !l.commandeId && l.produitId
   );
+  const lignesEnAttente = lignesOrphelines.filter(
+    (l) => (l.lignesDepense?.length ?? 0) === 0
+  );
+  const lignesDejaTraitees = lignesOrphelines.filter(
+    (l) => (l.lignesDepense?.length ?? 0) > 0
+  );
 
-  async function handleCreerCommande() {
-    const ligneBesoinIds = Array.from(selectedOrphelines);
-    if (ligneBesoinIds.length === 0) return;
+  async function handleTraiterOrphelines() {
+    const lignesCommande = Object.entries(orphelineActions)
+      .filter(([, action]) => action === "COMMANDE")
+      .map(([id]) => id);
+    const lignesDepenseIds = Object.entries(orphelineActions)
+      .filter(([, action]) => action === "DEPENSE")
+      .map(([id]) => id);
+    if (lignesCommande.length === 0 && lignesDepenseIds.length === 0) return;
     const result = await depenseService.creerCommandeDepuisBesoin(liste.id, {
-      ligneBesoinIds,
+      ligneBesoinIds: lignesCommande,
+      lignesDepense: lignesDepenseIds,
       fournisseurId: selectedFournisseurId || undefined,
     });
     if (result.ok && result.data) {
       setListe(result.data as unknown as ListeBesoinsDetailData);
       setCreerCommandeOpen(false);
-      setSelectedOrphelines(new Set());
+      setOrphelineActions({});
       setSelectedFournisseurId("");
       queryClient.invalidateQueries({ queryKey: ["besoins"] });
       queryClient.invalidateQueries({ queryKey: ["stock", "commandes"] });
+      queryClient.invalidateQueries({ queryKey: ["depenses"] });
     }
   }
 
@@ -665,35 +679,36 @@ export function BesoinsDetailClient({
         </Dialog>
       )}
 
-      {/* Bouton Creer commande pour lignes orphelines (besoin TRAITEE/CLOTUREE) */}
+      {/* Bouton traiter lignes en attente (besoin TRAITEE/CLOTUREE) */}
       {canProcess &&
         (statut === StatutBesoins.TRAITEE ||
           statut === StatutBesoins.CLOTUREE) &&
         lignesOrphelines.length > 0 && (
-          <CreerCommandeDialog
+          <TraiterOrphelinesDialog
             open={creerCommandeOpen}
             onOpenChange={(o) => {
               setCreerCommandeOpen(o);
               if (o) {
-                setSelectedOrphelines(
-                  new Set(lignesOrphelines.map((l) => l.id))
+                setOrphelineActions(
+                  Object.fromEntries(
+                    lignesEnAttente.map((l) => [
+                      l.id,
+                      l.produit?.fournisseurId ? "COMMANDE" as const : "DEPENSE" as const,
+                    ])
+                  )
                 );
                 setSelectedFournisseurId("");
               }
             }}
-            lignesOrphelines={lignesOrphelines}
-            selected={selectedOrphelines}
-            onToggle={(id) => {
-              setSelectedOrphelines((prev) => {
-                const next = new Set(prev);
-                if (next.has(id)) next.delete(id);
-                else next.add(id);
-                return next;
-              });
-            }}
+            lignesEnAttente={lignesEnAttente}
+            lignesDejaTraitees={lignesDejaTraitees}
+            orphelineActions={orphelineActions}
+            onActionChange={(id, action) =>
+              setOrphelineActions((prev) => ({ ...prev, [id]: action }))
+            }
             fournisseurId={selectedFournisseurId}
             onFournisseurChange={setSelectedFournisseurId}
-            onSubmit={handleCreerCommande}
+            onSubmit={handleTraiterOrphelines}
             t={t}
             uniteLabel={uniteLabel}
           />
@@ -806,15 +821,16 @@ export function BesoinsDetailClient({
 }
 
 // ---------------------------------------------------------------------------
-// Sous-composant : Dialog de creation de commande pour lignes orphelines
+// Sous-composant : Dialog de traitement des lignes en attente
 // ---------------------------------------------------------------------------
 
-interface CreerCommandeDialogProps {
+interface TraiterOrphelinesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  lignesOrphelines: LigneBesoinData[];
-  selected: Set<string>;
-  onToggle: (id: string) => void;
+  lignesEnAttente: LigneBesoinData[];
+  lignesDejaTraitees: LigneBesoinData[];
+  orphelineActions: Record<string, "COMMANDE" | "DEPENSE">;
+  onActionChange: (id: string, action: "COMMANDE" | "DEPENSE") => void;
   fournisseurId: string;
   onFournisseurChange: (id: string) => void;
   onSubmit: () => void;
@@ -822,25 +838,35 @@ interface CreerCommandeDialogProps {
   uniteLabel: (u: UniteBesoin | string | null) => string;
 }
 
-function CreerCommandeDialog({
+function TraiterOrphelinesDialog({
   open,
   onOpenChange,
-  lignesOrphelines,
-  selected,
-  onToggle,
+  lignesEnAttente,
+  lignesDejaTraitees,
+  orphelineActions,
+  onActionChange,
   fournisseurId,
   onFournisseurChange,
   onSubmit,
   t,
   uniteLabel,
-}: CreerCommandeDialogProps) {
+}: TraiterOrphelinesDialogProps) {
   const { data: fournisseurs } = useFournisseursList();
+
+  const needsFournisseur = lignesEnAttente.some(
+    (l) =>
+      orphelineActions[l.id] === "COMMANDE" &&
+      l.produit &&
+      !l.produit.fournisseurId
+  );
+
+  const hasActions = Object.values(orphelineActions).length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <Button variant="primary" className="w-full mb-4">
-          <ShoppingCart className="h-4 w-4 mr-1" />
+          <Settings className="h-4 w-4 mr-1" />
           {t("detail.creerCommande")}
         </Button>
       </DialogTrigger>
@@ -850,54 +876,86 @@ function CreerCommandeDialog({
         </DialogHeader>
         <DialogBody>
           <div className="space-y-3 py-2">
-            <p className="text-sm text-muted-foreground">
-              {t("detail.creerCommandeDescription")}
-            </p>
-            {lignesOrphelines.length === 0 ? (
+            {lignesEnAttente.length > 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {t("detail.creerCommandeDescription")}
+              </p>
+            ) : (
               <p className="text-sm text-muted-foreground italic">
                 {t("detail.aucuneLigneOrpheline")}
               </p>
-            ) : (
-              lignesOrphelines.map((l) => (
-                <label
-                  key={l.id}
-                  className="flex items-start gap-2 border border-border rounded p-3 cursor-pointer"
+            )}
+
+            {lignesEnAttente.map((l) => (
+              <div key={l.id} className="border border-border rounded p-3 space-y-2">
+                <p className="text-sm font-medium">{l.designation}</p>
+                <p className="text-xs text-muted-foreground">
+                  {l.quantite} {uniteLabel(l.unite ?? l.produit?.unite ?? "")}
+                </p>
+                <Select
+                  value={orphelineActions[l.id] ?? "DEPENSE"}
+                  onValueChange={(v) =>
+                    onActionChange(l.id, v as "COMMANDE" | "DEPENSE")
+                  }
                 >
-                  <input
-                    type="checkbox"
-                    className="mt-1"
-                    checked={selected.has(l.id)}
-                    onChange={() => onToggle(l.id)}
-                  />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{l.designation}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="COMMANDE">
+                      {t("detail.actionCommande")}
+                    </SelectItem>
+                    <SelectItem value="DEPENSE">
+                      {t("detail.actionDepenseDirecte")}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                {orphelineActions[l.id] === "COMMANDE" && l.produit && !l.produit.fournisseurId && (
+                  <p className="text-xs text-amber-600">
+                    {t("detail.aucunFournisseur")}
+                  </p>
+                )}
+              </div>
+            ))}
+
+            {lignesDejaTraitees.length > 0 && (
+              <div className="space-y-2 opacity-60">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  {t("detail.ligneDejaTraitee")}
+                </p>
+                {lignesDejaTraitees.map((l) => (
+                  <div key={l.id} className="border border-border rounded p-3 bg-muted/30">
+                    <p className="text-sm">{l.designation}</p>
+                    <p className="text-xs text-muted-foreground">
                       {l.quantite} {uniteLabel(l.unite ?? l.produit?.unite ?? "")}
                     </p>
                   </div>
-                </label>
-              ))
+                ))}
+              </div>
             )}
-            <div>
-              <label className="text-xs text-muted-foreground">
-                {t("detail.fournisseurFallbackLabel")}
-              </label>
-              <Select
-                value={fournisseurId}
-                onValueChange={onFournisseurChange}
-              >
-                <SelectTrigger className="w-full mt-1">
-                  <SelectValue placeholder={t("detail.fournisseurPlaceholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {(fournisseurs ?? []).map((f) => (
-                    <SelectItem key={f.id} value={f.id}>
-                      {f.nom}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+
+            {needsFournisseur && (
+              <div className="border border-amber-200 bg-amber-50 rounded p-3 space-y-2">
+                <p className="text-sm font-medium text-amber-800">
+                  {t("detail.fournisseurFallbackLabel")}
+                </p>
+                <Select
+                  value={fournisseurId}
+                  onValueChange={onFournisseurChange}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={t("detail.fournisseurPlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(fournisseurs ?? []).map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.nom}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
         </DialogBody>
         <DialogFooter>
@@ -907,7 +965,7 @@ function CreerCommandeDialog({
           <Button
             variant="primary"
             onClick={onSubmit}
-            disabled={selected.size === 0}
+            disabled={!hasActions || (needsFournisseur && !fournisseurId)}
           >
             {t("detail.confirmerCreationCommande")}
           </Button>

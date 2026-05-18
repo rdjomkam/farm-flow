@@ -875,6 +875,17 @@ export interface CreateVenteDTO {
   notes?: string;
 }
 
+export interface UpdateVenteDTO {
+  clientId?: string;
+  vagueId?: string;
+  poidsTotalKg?: number;
+  prixUnitaireKg?: number;
+  poidsMoyenG?: number;
+  notes?: string;
+  /** Motif obligatoire de la modification */
+  motif: string;
+}
+
 /** Reponse liste des ventes */
 export type VenteListResponse = PaginatedResponse<Vente>;
 
@@ -1778,8 +1789,10 @@ export interface RejeterBesoinsDTO {
  * d'un besoin TRAITEE ou CLOTUREE (commandeId IS NULL).
  */
 export interface CreerCommandeDepuisBesoinDTO {
-  /** IDs des lignes a inclure dans la nouvelle commande (non vide) */
+  /** IDs des lignes a inclure dans la nouvelle commande */
   ligneBesoinIds: string[];
+  /** IDs des lignes a reconduire en depense directe (optionnel) */
+  lignesDepense?: string[];
   /** Fournisseur a utiliser si le produit n'en a pas (optionnel sinon) */
   fournisseurId?: string;
   /** Date de commande ISO 8601 (optionnel, defaut now()) */

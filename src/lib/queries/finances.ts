@@ -195,6 +195,7 @@ export async function getResumeFinancier(
     sumCoutsParCategorie(siteId, CategorieProduit.EQUIPEMENT, dateFilterStock),
 
     // Depenses hors-commande : anti double-comptage pour le calcul des COUTS
+    // On inclut les lignes pour exclure celles avec produitId (deja comptees via MouvementStock ENTREE)
     prisma.depense.findMany({
       where: {
         siteId,
@@ -206,6 +207,11 @@ export async function getResumeFinancier(
         montantPaye: true,
         statut: true,
         categorieDepense: true,
+        listeBesoinsId: true,
+        lignes: {
+          where: { produitId: null },
+          select: { montantTotal: true, categorieDepense: true },
+        },
       },
     }),
 
@@ -231,13 +237,25 @@ export async function getResumeFinancier(
   const encaissements = paiementAgg._sum.montant ?? 0;
 
   // Agregation des depenses hors-commande (pour calcul des COUTS uniquement)
+  // Pour les depenses issues de besoins (listeBesoinsId != null), ne compter que les
+  // lignes SANS produitId — les lignes avec produitId sont deja comptees via MouvementStock ENTREE.
   let depensesHCTotal = 0;
   const depensesHCParCategorie: Partial<Record<CategorieDepense, number>> = {};
 
   for (const dep of depensesHorsCommande) {
-    depensesHCTotal += dep.montantTotal;
-    const cat = dep.categorieDepense as CategorieDepense;
-    depensesHCParCategorie[cat] = (depensesHCParCategorie[cat] ?? 0) + dep.montantTotal;
+    if (dep.listeBesoinsId && dep.lignes.length >= 0) {
+      // Depense issue d'un besoin : ne compter que les lignes sans produit
+      for (const ligne of dep.lignes) {
+        depensesHCTotal += ligne.montantTotal;
+        const cat = (ligne.categorieDepense ?? dep.categorieDepense) as CategorieDepense;
+        depensesHCParCategorie[cat] = (depensesHCParCategorie[cat] ?? 0) + ligne.montantTotal;
+      }
+    } else {
+      // Depense manuelle (pas de besoin) : compter le montantTotal complet
+      depensesHCTotal += dep.montantTotal;
+      const cat = dep.categorieDepense as CategorieDepense;
+      depensesHCParCategorie[cat] = (depensesHCParCategorie[cat] ?? 0) + dep.montantTotal;
+    }
   }
 
   // Agregation de TOUTES les depenses (pour suivi PAIEMENT)
@@ -638,7 +656,16 @@ export async function getCoutsParMoisParType(
         commandeId: null,
         date: { gte: dateDebut },
       },
-      select: { date: true, montantTotal: true, categorieDepense: true },
+      select: {
+        date: true,
+        montantTotal: true,
+        categorieDepense: true,
+        listeBesoinsId: true,
+        lignes: {
+          where: { produitId: null },
+          select: { montantTotal: true, categorieDepense: true },
+        },
+      },
     }),
   ]);
 
@@ -670,13 +697,22 @@ export async function getCoutsParMoisParType(
 
   for (const dep of depenses) {
     const mois = toMois(dep.date);
-    const cat = dep.categorieDepense as string;
-    categoriesSet.add(cat);
-    const row = grid.get(mois);
-    if (!row) continue;
-    const entry = row.get(cat) ?? { montant: 0, type: "depense" as const };
-    entry.montant += dep.montantTotal;
-    row.set(cat, entry);
+    const addToGrid = (cat: string, montant: number) => {
+      categoriesSet.add(cat);
+      const row = grid.get(mois);
+      if (!row) return;
+      const entry = row.get(cat) ?? { montant: 0, type: "depense" as const };
+      entry.montant += montant;
+      row.set(cat, entry);
+    };
+
+    if (dep.listeBesoinsId) {
+      for (const ligne of dep.lignes) {
+        addToGrid((ligne.categorieDepense ?? dep.categorieDepense) as string, ligne.montantTotal);
+      }
+    } else {
+      addToGrid(dep.categorieDepense as string, dep.montantTotal);
+    }
   }
 
   const lignes: CoutMoisCategorie[] = [];
@@ -752,6 +788,11 @@ export async function getCoutsDetailParMois(
         montantTotal: true,
         description: true,
         categorieDepense: true,
+        listeBesoinsId: true,
+        lignes: {
+          where: { produitId: null },
+          select: { montantTotal: true, designation: true, categorieDepense: true },
+        },
       },
       orderBy: { date: "asc" },
     }),
@@ -786,14 +827,28 @@ export async function getCoutsDetailParMois(
     const mois = toMois(dep.date);
     if (!moisList.includes(mois)) continue;
     if (!lignesParMois[mois]) lignesParMois[mois] = [];
-    lignesParMois[mois].push({
-      date: dep.date,
-      mois,
-      description: dep.description,
-      categorie: dep.categorieDepense as string,
-      type: "depense",
-      montant: Math.round(dep.montantTotal),
-    });
+
+    if (dep.listeBesoinsId) {
+      for (const ligne of dep.lignes) {
+        lignesParMois[mois].push({
+          date: dep.date,
+          mois,
+          description: ligne.designation ?? dep.description,
+          categorie: (ligne.categorieDepense ?? dep.categorieDepense) as string,
+          type: "depense",
+          montant: Math.round(ligne.montantTotal),
+        });
+      }
+    } else {
+      lignesParMois[mois].push({
+        date: dep.date,
+        mois,
+        description: dep.description,
+        categorie: dep.categorieDepense as string,
+        type: "depense",
+        montant: Math.round(dep.montantTotal),
+      });
+    }
   }
 
   // Filter to months that have data

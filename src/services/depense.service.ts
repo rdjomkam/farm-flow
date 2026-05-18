@@ -356,7 +356,7 @@ export function useDepenseService() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dto),
         },
-        { successMessage: "Commande creee." }
+        { successMessage: "Lignes traitees." }
       ),
     [call]
   );

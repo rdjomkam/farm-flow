@@ -159,9 +159,10 @@ enum Permission {
   // Clients (2)
   CLIENTS_VOIR
   CLIENTS_GERER
-  // Ventes (4)
+  // Ventes (5)
   VENTES_VOIR
   VENTES_CREER
+  VENTES_MODIFIER
   FACTURES_VOIR
   FACTURES_GERER
   // Paiements (1)

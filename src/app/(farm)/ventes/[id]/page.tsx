@@ -4,7 +4,9 @@ import { VenteDetailClient } from "@/components/ventes/vente-detail-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { getVenteById } from "@/lib/queries/ventes";
-import { Permission } from "@/types";
+import { getClients } from "@/lib/queries/clients";
+import { prisma } from "@/lib/db";
+import { Permission, StatutVague } from "@/types";
 
 export default async function VenteDetailPage({
   params,
@@ -19,9 +21,34 @@ export default async function VenteDetailPage({
   if (!permissions) return <AccessDenied />;
 
   const { id } = await params;
-  const vente = await getVenteById(id, session.activeSiteId);
+  const activeSiteId = session.activeSiteId;
+
+  const [vente, clients, vagues] = await Promise.all([
+    getVenteById(id, activeSiteId),
+    getClients(activeSiteId),
+    prisma.vague.findMany({
+      where: {
+        siteId: activeSiteId,
+        statut: { not: StatutVague.ANNULEE },
+      },
+      include: {
+        bacs: { select: { nombrePoissons: true } },
+      },
+      orderBy: { dateDebut: "desc" },
+    }),
+  ]);
 
   if (!vente) notFound();
+
+  const clientOptions = clients.map((c) => ({ id: c.id, nom: c.nom }));
+  const vagueOptions = vagues.map((v) => ({
+    id: v.id,
+    code: v.code,
+    poissonsDisponibles: v.bacs.reduce(
+      (sum, bac) => sum + (bac.nombrePoissons ?? 0),
+      0
+    ),
+  }));
 
   return (
     <>
@@ -30,6 +57,8 @@ export default async function VenteDetailPage({
         <VenteDetailClient
           vente={JSON.parse(JSON.stringify(vente))}
           permissions={permissions}
+          clients={clientOptions}
+          vagues={vagueOptions}
         />
       </div>
     </>

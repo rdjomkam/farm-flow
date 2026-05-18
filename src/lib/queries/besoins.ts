@@ -179,6 +179,7 @@ const INCLUDE_LISTE_BESOINS = {
     include: {
       produit: { select: { id: true, nom: true, unite: true, fournisseurId: true } },
       commande: { select: { id: true, numero: true, statut: true } },
+      lignesDepense: { select: { id: true } },
     },
     orderBy: { createdAt: "asc" as const },
   },
@@ -827,7 +828,9 @@ export async function creerCommandeDepuisBesoin(
   userId: string,
   dto: CreerCommandeDepuisBesoinDTO
 ) {
-  if (!Array.isArray(dto.ligneBesoinIds) || dto.ligneBesoinIds.length === 0) {
+  const hasCommande = Array.isArray(dto.ligneBesoinIds) && dto.ligneBesoinIds.length > 0;
+  const hasDepense = Array.isArray(dto.lignesDepense) && dto.lignesDepense.length > 0;
+  if (!hasCommande && !hasDepense) {
     throw new Error("Au moins une ligne doit etre selectionnee.");
   }
 
@@ -843,6 +846,7 @@ export async function creerCommandeDepuisBesoin(
             lignesDepense: { select: { id: true } },
           },
         },
+        depenses: { select: { id: true, montantTotal: true } },
       },
     });
     if (!liste) throw new Error("Liste de besoins introuvable");
@@ -851,13 +855,15 @@ export async function creerCommandeDepuisBesoin(
       liste.statut !== StatutBesoins.CLOTUREE
     ) {
       throw new Error(
-        `La creation de commande post-traitement n'est possible que pour les besoins TRAITEE ou CLOTUREE (statut actuel : ${liste.statut}).`
+        `Le traitement post-traitement n'est possible que pour les besoins TRAITEE ou CLOTUREE (statut actuel : ${liste.statut}).`
       );
     }
 
     const lignesMap = new Map(liste.lignes.map((l) => [l.id, l]));
-    const cibles: typeof liste.lignes = [];
-    for (const ligneId of dto.ligneBesoinIds) {
+
+    // --- Partie COMMANDE ---
+    const ciblesCommande: typeof liste.lignes = [];
+    for (const ligneId of dto.ligneBesoinIds ?? []) {
       const ligne = lignesMap.get(ligneId);
       if (!ligne) {
         throw new Error(`Ligne ${ligneId} introuvable dans le besoin ${liste.numero}.`);
@@ -872,12 +878,12 @@ export async function creerCommandeDepuisBesoin(
           `La ligne « ${ligne.designation} » est deja liee a une commande.`
         );
       }
-      cibles.push(ligne);
+      ciblesCommande.push(ligne);
     }
 
-    // Verifier que toutes les lignes cibles ont un fournisseur resolvable
+    // Verifier fournisseur uniquement sur les lignes COMMANDE
     const sansFournisseur: string[] = [];
-    for (const ligne of cibles) {
+    for (const ligne of ciblesCommande) {
       const fournisseurId =
         ligne.produit?.fournisseur?.id ?? dto.fournisseurId ?? null;
       if (!fournisseurId) sansFournisseur.push(ligne.designation);
@@ -888,86 +894,183 @@ export async function creerCommandeDepuisBesoin(
       );
     }
 
-    // Grouper par fournisseur
-    const groupes = new Map<string, typeof cibles>();
-    for (const ligne of cibles) {
-      const fournisseurId =
-        ligne.produit!.fournisseur?.id ?? dto.fournisseurId!;
-      if (!groupes.has(fournisseurId)) groupes.set(fournisseurId, []);
-      groupes.get(fournisseurId)!.push(ligne);
+    // --- Partie DEPENSE DIRECTE ---
+    const ciblesDepense: typeof liste.lignes = [];
+    for (const ligneId of dto.lignesDepense ?? []) {
+      const ligne = lignesMap.get(ligneId);
+      if (!ligne) {
+        throw new Error(`Ligne ${ligneId} introuvable dans le besoin ${liste.numero}.`);
+      }
+      // Skip si deja traitee en depense
+      if (ligne.lignesDepense && ligne.lignesDepense.length > 0) continue;
+      if (!ligne.produitId || !ligne.produit) continue;
+      ciblesDepense.push(ligne);
     }
 
-    const dateCommande = dto.dateCommande ? new Date(dto.dateCommande) : new Date();
-    const annee = dateCommande.getFullYear();
+    // --- Creer les commandes ---
+    if (ciblesCommande.length > 0) {
+      const groupes = new Map<string, typeof ciblesCommande>();
+      for (const ligne of ciblesCommande) {
+        const fournisseurId =
+          ligne.produit!.fournisseur?.id ?? dto.fournisseurId!;
+        if (!groupes.has(fournisseurId)) groupes.set(fournisseurId, []);
+        groupes.get(fournisseurId)!.push(ligne);
+      }
 
-    // Generer numero de base CMD-YYYY-NNN (suivant le pattern de traiterBesoins)
-    const dernierCmd = await tx.commande.findFirst({
-      where: { siteId, numero: { startsWith: `CMD-${annee}-` } },
-      orderBy: { numero: "desc" },
-      select: { numero: true },
-    });
-    let seqCmd = 1;
-    if (dernierCmd) {
-      const p = dernierCmd.numero.split("-")[2];
-      seqCmd = (parseInt(p, 10) || 0) + 1;
-    }
+      const dateCommande = dto.dateCommande ? new Date(dto.dateCommande) : new Date();
+      const annee = dateCommande.getFullYear();
 
-    const commandesCreees: { id: string; numero: string }[] = [];
-
-    for (const [fournisseurId, lignes] of groupes.entries()) {
-      const montantCmd = lignes.reduce(
-        (s, l) => s + l.quantite * (l.prixReel ?? l.prixEstime),
-        0
-      );
-      const numeroCmd = `CMD-${annee}-${String(seqCmd).padStart(3, "0")}`;
-      seqCmd++;
-
-      const commande = await tx.commande.create({
-        data: {
-          numero: numeroCmd,
-          fournisseurId,
-          statut: StatutCommande.BROUILLON,
-          dateCommande,
-          montantTotal: montantCmd,
-          userId,
-          siteId,
-          listeBesoinsId: liste.id,
-          lignes: {
-            create: lignes.map((l) => ({
-              produitId: l.produitId!,
-              quantite: l.quantite,
-              prixUnitaire: l.prixReel ?? l.prixEstime,
-            })),
-          },
-        },
-        include: { lignes: { select: { id: true, produitId: true } } },
+      const dernierCmd = await tx.commande.findFirst({
+        where: { siteId, numero: { startsWith: `CMD-${annee}-` } },
+        orderBy: { numero: "desc" },
+        select: { numero: true },
       });
+      let seqCmd = 1;
+      if (dernierCmd) {
+        const p = dernierCmd.numero.split("-")[2];
+        seqCmd = (parseInt(p, 10) || 0) + 1;
+      }
 
-      commandesCreees.push({ id: commande.id, numero: commande.numero });
+      for (const [fournisseurId, lignes] of groupes.entries()) {
+        const montantCmd = lignes.reduce(
+          (s, l) => s + l.quantite * (l.prixReel ?? l.prixEstime),
+          0
+        );
+        const numeroCmd = `CMD-${annee}-${String(seqCmd).padStart(3, "0")}`;
+        seqCmd++;
 
-      // Lier commandeId sur les LigneBesoin et rattacher les LigneDepense existantes
-      for (let i = 0; i < lignes.length; i++) {
-        const ligneBesoin = lignes[i];
-        const ligneCmd = commande.lignes[i];
-        if (!ligneCmd) continue;
-
-        await tx.ligneBesoin.update({
-          where: { id: ligneBesoin.id },
-          data: { commandeId: commande.id },
+        const commande = await tx.commande.create({
+          data: {
+            numero: numeroCmd,
+            fournisseurId,
+            statut: StatutCommande.BROUILLON,
+            dateCommande,
+            montantTotal: montantCmd,
+            userId,
+            siteId,
+            listeBesoinsId: liste.id,
+            lignes: {
+              create: lignes.map((l) => ({
+                produitId: l.produitId!,
+                quantite: l.quantite,
+                prixUnitaire: l.prixReel ?? l.prixEstime,
+              })),
+            },
+          },
+          include: { lignes: { select: { id: true, produitId: true } } },
         });
 
-        // Si une depense est deja comptabilisee pour cette ligne (cas LIBRE anterieur),
-        // la lier a la nouvelle LigneCommande pour eviter le double comptage a la reception.
-        if (ligneBesoin.lignesDepense && ligneBesoin.lignesDepense.length > 0) {
-          await tx.ligneDepense.updateMany({
-            where: { ligneBesoinId: ligneBesoin.id },
-            data: { ligneCommandeId: ligneCmd.id },
+        for (let i = 0; i < lignes.length; i++) {
+          const ligneBesoin = lignes[i];
+          const ligneCmd = commande.lignes[i];
+          if (!ligneCmd) continue;
+
+          await tx.ligneBesoin.update({
+            where: { id: ligneBesoin.id },
+            data: { commandeId: commande.id },
           });
+
+          if (ligneBesoin.lignesDepense && ligneBesoin.lignesDepense.length > 0) {
+            await tx.ligneDepense.updateMany({
+              where: { ligneBesoinId: ligneBesoin.id },
+              data: { ligneCommandeId: ligneCmd.id },
+            });
+          }
         }
       }
     }
 
-    // Retourner la ListeBesoins rafraichie (statut inchange)
+    // --- Creer les depenses directes ---
+    if (ciblesDepense.length > 0) {
+      const lignesDepenseData = ciblesDepense.map((lb) => {
+        const prixUnitaire = lb.prixReel ?? lb.prixEstime;
+        const montantLigne = lb.quantite * prixUnitaire;
+        const cat = categorieProduitToDepense(lb.produit?.categorie);
+        return {
+          designation: lb.designation,
+          categorieDepense: cat,
+          quantite: lb.quantite,
+          prixUnitaire,
+          montantTotal: montantLigne,
+          produitId: lb.produitId ?? null,
+          ligneBesoinId: lb.id,
+          siteId,
+        };
+      });
+
+      const montantTotalDepense = lignesDepenseData.reduce(
+        (acc, l) => acc + l.montantTotal,
+        0
+      );
+
+      // Reutiliser la depense existante de la liste si presente
+      const depenseExistante = liste.depenses[0] ?? null;
+
+      let depenseId: string;
+      if (depenseExistante) {
+        await tx.depense.update({
+          where: { id: depenseExistante.id },
+          data: {
+            montantTotal: { increment: montantTotalDepense },
+          },
+        });
+        depenseId = depenseExistante.id;
+      } else {
+        const numeroDep = await generateNextNumero(tx, "depense", "DEP", siteId);
+        const categorieDepense = computeDominantCategorie(lignesDepenseData);
+        const depense = await tx.depense.create({
+          data: {
+            numero: numeroDep,
+            description: `Depense directe — ${liste.titre}`,
+            categorieDepense,
+            montantTotal: montantTotalDepense,
+            date: new Date(),
+            listeBesoinsId: liste.id,
+            userId,
+            siteId,
+          },
+        });
+        depenseId = depense.id;
+      }
+
+      await tx.ligneDepense.createMany({
+        data: lignesDepenseData.map((l) => ({
+          depenseId,
+          designation: l.designation,
+          categorieDepense: l.categorieDepense,
+          quantite: l.quantite,
+          prixUnitaire: l.prixUnitaire,
+          montantTotal: l.montantTotal,
+          produitId: l.produitId,
+          ligneBesoinId: l.ligneBesoinId,
+          siteId,
+        })),
+      });
+
+      // Creer les mouvements de stock ENTREE pour chaque ligne depense directe
+      for (const lb of ciblesDepense) {
+        if (!lb.produitId || !lb.produit) continue;
+        const prixUnitaire = lb.prixReel ?? lb.prixEstime;
+        const quantiteBase = convertirQuantiteAchat(lb.quantite, lb.produit);
+        await tx.mouvementStock.create({
+          data: {
+            produitId: lb.produitId,
+            type: TypeMouvement.ENTREE,
+            quantite: lb.quantite,
+            prixTotal: lb.quantite * prixUnitaire,
+            userId,
+            date: new Date(),
+            notes: `Depense directe ${liste.numero}`,
+            siteId,
+          },
+        });
+        await tx.produit.update({
+          where: { id: lb.produitId },
+          data: { stockActuel: { increment: quantiteBase } },
+        });
+      }
+    }
+
     return tx.listeBesoins.findUniqueOrThrow({
       where: { id },
       include: INCLUDE_LISTE_BESOINS,

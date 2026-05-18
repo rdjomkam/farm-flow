@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { generateNextNumero } from "./numero-utils";
 import { StatutVague, TypeReleve } from "@/types";
 import { computeVivantsByBac } from "@/lib/calculs";
-import type { CreateVenteDTO, VenteFilters } from "@/types";
+import type { CreateVenteDTO, UpdateVenteDTO, VenteFilters } from "@/types";
 
 /** Liste les ventes d'un site avec filtres et pagination */
 export async function getVentes(
@@ -228,5 +228,280 @@ export async function createVente(
         user: { select: { id: true, name: true } },
       },
     });
+  });
+}
+
+/**
+ * Modifie une vente existante (transaction atomique).
+ *
+ * Si le poids ou la vague changent :
+ * 1. Restituer les poissons de l'ancienne vente dans les bacs de l'ancienne vague
+ * 2. Recalculer quantitePoissons avec le nouveau poids/poidsMoyen
+ * 3. Deduire les poissons de la nouvelle vague
+ *
+ * Si la facture existe, son montantTotal est mis a jour.
+ * Un SiteAuditLog est cree avec le motif et les valeurs avant/apres.
+ */
+export async function updateVente(
+  venteId: string,
+  siteId: string,
+  userId: string,
+  dto: UpdateVenteDTO
+) {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.vente.findFirst({
+      where: { id: venteId, siteId },
+      include: {
+        facture: { select: { id: true } },
+        vague: { select: { id: true, code: true } },
+        client: { select: { id: true, nom: true } },
+      },
+    });
+    if (!existing) throw new Error("Vente introuvable");
+
+    const newClientId = dto.clientId ?? existing.clientId;
+    const newVagueId = dto.vagueId ?? existing.vagueId;
+    const newPoidsTotalKg = dto.poidsTotalKg ?? existing.poidsTotalKg;
+    const newPrixUnitaireKg = dto.prixUnitaireKg ?? existing.prixUnitaireKg;
+    const newNotes = dto.notes !== undefined ? dto.notes : existing.notes;
+
+    // Validate new client
+    if (newClientId !== existing.clientId) {
+      const client = await tx.client.findFirst({
+        where: { id: newClientId, siteId, isActive: true },
+      });
+      if (!client) throw new Error("Client introuvable ou inactif");
+    }
+
+    // Validate new vague
+    if (newVagueId !== existing.vagueId) {
+      const vague = await tx.vague.findFirst({
+        where: { id: newVagueId, siteId },
+      });
+      if (!vague) throw new Error("Vague introuvable");
+      if (vague.statut === StatutVague.ANNULEE) {
+        throw new Error("Impossible de vendre depuis une vague annulee");
+      }
+    }
+
+    const needsStockAdjust =
+      newPoidsTotalKg !== existing.poidsTotalKg ||
+      newVagueId !== existing.vagueId ||
+      (dto.poidsMoyenG != null && dto.poidsMoyenG !== 0);
+
+    let newQuantitePoissons = existing.quantitePoissons;
+
+    if (needsStockAdjust) {
+      // --- Step 1: Restore fish to old vague bacs ---
+      const oldBacs = await tx.bac.findMany({
+        where: { vagueId: existing.vagueId, siteId },
+        orderBy: { nom: "asc" },
+      });
+
+      const totalOldFish = oldBacs.reduce(
+        (sum, b) => sum + (b.nombrePoissons ?? 0),
+        0
+      );
+      let toRestore = existing.quantitePoissons;
+      for (const bac of oldBacs) {
+        if (toRestore <= 0) break;
+        const current = bac.nombrePoissons ?? 0;
+        // Distribute proportionally based on current share, or equally if all empty
+        const share =
+          totalOldFish > 0
+            ? Math.round((current / totalOldFish) * existing.quantitePoissons)
+            : Math.round(existing.quantitePoissons / oldBacs.length);
+        const restore = Math.min(toRestore, share || toRestore);
+        const newCount = current + restore;
+        await tx.bac.update({
+          where: { id: bac.id },
+          data: { nombrePoissons: newCount },
+        });
+        await tx.assignationBac.updateMany({
+          where: { bacId: bac.id, vagueId: existing.vagueId, dateFin: null },
+          data: { nombreActuel: newCount },
+        });
+        toRestore -= restore;
+      }
+      // If rounding left some fish unrestored, add to last bac
+      if (toRestore > 0 && oldBacs.length > 0) {
+        const lastBac = oldBacs[oldBacs.length - 1];
+        const lastCount = (lastBac.nombrePoissons ?? 0) +
+          existing.quantitePoissons -
+          (existing.quantitePoissons - toRestore);
+        await tx.bac.update({
+          where: { id: lastBac.id },
+          data: { nombrePoissons: { increment: toRestore } },
+        });
+        await tx.assignationBac.updateMany({
+          where: { bacId: lastBac.id, vagueId: existing.vagueId, dateFin: null },
+          data: { nombreActuel: lastCount },
+        });
+      }
+
+      // --- Step 2: Resolve poidsMoyenG for new vague ---
+      let poidsMoyenG = dto.poidsMoyenG;
+      if (poidsMoyenG == null) {
+        const vagueWithReleves = await tx.vague.findFirst({
+          where: { id: newVagueId, siteId },
+          select: {
+            nombreInitial: true,
+            bacs: { select: { id: true, nombreInitial: true } },
+            releves: {
+              orderBy: { date: "asc" },
+              select: {
+                typeReleve: true,
+                date: true,
+                bacId: true,
+                poidsMoyen: true,
+                nombreMorts: true,
+                nombreCompte: true,
+              },
+            },
+          },
+        });
+
+        if (vagueWithReleves && vagueWithReleves.bacs.length > 0) {
+          const biometriesParBac = new Map<string, number>();
+          for (const r of vagueWithReleves.releves) {
+            if (r.typeReleve === TypeReleve.BIOMETRIE && r.bacId && r.poidsMoyen != null) {
+              biometriesParBac.set(r.bacId, r.poidsMoyen);
+            }
+          }
+
+          if (biometriesParBac.size > 0) {
+            const vivantsByBac = computeVivantsByBac(
+              vagueWithReleves.bacs,
+              vagueWithReleves.releves,
+              vagueWithReleves.nombreInitial
+            );
+            let totalPoidsWeighted = 0;
+            let totalVivantsForWeight = 0;
+            for (const bac of vagueWithReleves.bacs) {
+              const poids = biometriesParBac.get(bac.id);
+              if (poids == null) continue;
+              const vivantsBac = vivantsByBac.get(bac.id) ?? 0;
+              totalPoidsWeighted += poids * vivantsBac;
+              totalVivantsForWeight += vivantsBac;
+            }
+            if (totalVivantsForWeight > 0) {
+              poidsMoyenG = totalPoidsWeighted / totalVivantsForWeight;
+            }
+          }
+        }
+      }
+
+      if (!poidsMoyenG || poidsMoyenG <= 0) {
+        throw new Error(
+          "Aucun poids moyen disponible pour cette vague. Saisissez-le manuellement ou enregistrez une biometrie."
+        );
+      }
+
+      // --- Step 3: Calculate new quantity and deduct from new vague bacs ---
+      newQuantitePoissons = Math.max(
+        1,
+        Math.round((newPoidsTotalKg * 1000) / poidsMoyenG)
+      );
+
+      const newBacs = await tx.bac.findMany({
+        where: { vagueId: newVagueId, siteId },
+        orderBy: { nom: "asc" },
+      });
+
+      const totalDisponible = newBacs.reduce(
+        (sum, b) => sum + (b.nombrePoissons ?? 0),
+        0
+      );
+
+      if (newQuantitePoissons > totalDisponible) {
+        throw new Error(
+          `Stock poissons insuffisant. Disponible : ${totalDisponible}, calcule : ${newQuantitePoissons}`
+        );
+      }
+
+      let remaining = newQuantitePoissons;
+      for (const bac of newBacs) {
+        if (remaining <= 0) break;
+        const available = bac.nombrePoissons ?? 0;
+        if (available <= 0) continue;
+        const toDeduct = Math.min(remaining, available);
+        const newCount = available - toDeduct;
+        await tx.bac.update({
+          where: { id: bac.id },
+          data: { nombrePoissons: newCount },
+        });
+        await tx.assignationBac.updateMany({
+          where: { bacId: bac.id, vagueId: newVagueId, dateFin: null },
+          data: { nombreActuel: newCount },
+        });
+        remaining -= toDeduct;
+      }
+    }
+
+    const newMontantTotal = newPoidsTotalKg * newPrixUnitaireKg;
+
+    // Update the vente
+    const updated = await tx.vente.update({
+      where: { id: venteId },
+      data: {
+        clientId: newClientId,
+        vagueId: newVagueId,
+        poidsTotalKg: newPoidsTotalKg,
+        prixUnitaireKg: newPrixUnitaireKg,
+        quantitePoissons: newQuantitePoissons,
+        montantTotal: newMontantTotal,
+        notes: newNotes,
+      },
+      include: {
+        client: { select: { id: true, nom: true } },
+        vague: { select: { id: true, code: true } },
+        user: { select: { id: true, name: true } },
+        facture: { select: { id: true, numero: true, statut: true, montantPaye: true, montantTotal: true } },
+      },
+    });
+
+    // Update facture if exists
+    if (existing.facture && newMontantTotal !== existing.montantTotal) {
+      await tx.facture.update({
+        where: { id: existing.facture.id },
+        data: { montantTotal: newMontantTotal },
+      });
+    }
+
+    // Audit log
+    await tx.siteAuditLog.create({
+      data: {
+        siteId,
+        actorId: userId,
+        action: "VENTE_MODIFIEE",
+        details: {
+          motif: dto.motif,
+          before: {
+            clientId: existing.clientId,
+            clientNom: existing.client.nom,
+            vagueId: existing.vagueId,
+            vagueCode: existing.vague.code,
+            poidsTotalKg: existing.poidsTotalKg,
+            prixUnitaireKg: existing.prixUnitaireKg,
+            quantitePoissons: existing.quantitePoissons,
+            montantTotal: existing.montantTotal,
+            notes: existing.notes,
+          },
+          after: {
+            clientId: updated.clientId,
+            clientNom: updated.client.nom,
+            vagueId: updated.vagueId,
+            vagueCode: updated.vague.code,
+            poidsTotalKg: updated.poidsTotalKg,
+            prixUnitaireKg: updated.prixUnitaireKg,
+            quantitePoissons: updated.quantitePoissons,
+            montantTotal: updated.montantTotal,
+            notes: updated.notes,
+          },
+        },
+      },
+    });
+
+    return updated;
   });
 }

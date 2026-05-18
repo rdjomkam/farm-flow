@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { queryKeys } from "@/lib/query-keys";
 import { useTranslations, useLocale } from "next-intl";
 import { formatNumber } from "@/lib/format";
@@ -11,12 +13,32 @@ import {
   Waves,
   Calendar,
   FileText,
-  ShoppingCart,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
 import { StatutFacture, Permission } from "@/types";
+import type { UpdateVenteDTO } from "@/types";
 import { useVenteService } from "@/services";
 
 const statutVariants: Record<string, "default" | "info" | "warning" | "terminee" | "annulee"> = {
@@ -55,16 +77,39 @@ interface VenteData {
   } | null;
 }
 
+interface ClientOption {
+  id: string;
+  nom: string;
+}
+
+interface VagueOption {
+  id: string;
+  code: string;
+  poissonsDisponibles: number;
+}
+
 interface Props {
   vente: VenteData;
   permissions: Permission[];
+  clients?: ClientOption[];
+  vagues?: VagueOption[];
 }
 
-export function VenteDetailClient({ vente, permissions }: Props) {
+export function VenteDetailClient({ vente, permissions, clients = [], vagues = [] }: Props) {
   const t = useTranslations("ventes");
   const locale = useLocale();
   const queryClient = useQueryClient();
   const venteService = useVenteService();
+  const router = useRouter();
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editClientId, setEditClientId] = useState(vente.client.id);
+  const [editVagueId, setEditVagueId] = useState(vente.vague.id);
+  const [editPoidsTotalKg, setEditPoidsTotalKg] = useState(String(vente.poidsTotalKg));
+  const [editPrixUnitaireKg, setEditPrixUnitaireKg] = useState(String(vente.prixUnitaireKg));
+  const [editNotes, setEditNotes] = useState(vente.notes ?? "");
+  const [editMotif, setEditMotif] = useState("");
 
   const statutLabel = (s: string) =>
     t(`factures.statuts.${s}` as Parameters<typeof t>[0]) || s;
@@ -76,6 +121,50 @@ export function VenteDetailClient({ vente, permissions }: Props) {
       queryClient.invalidateQueries({ queryKey: queryKeys.factures.all });
     }
   }
+
+  function resetEditForm() {
+    setEditClientId(vente.client.id);
+    setEditVagueId(vente.vague.id);
+    setEditPoidsTotalKg(String(vente.poidsTotalKg));
+    setEditPrixUnitaireKg(String(vente.prixUnitaireKg));
+    setEditNotes(vente.notes ?? "");
+    setEditMotif("");
+  }
+
+  async function handleSaveEdit() {
+    setEditLoading(true);
+    try {
+      const dto: UpdateVenteDTO = { motif: editMotif.trim() };
+
+      if (editClientId !== vente.client.id) dto.clientId = editClientId;
+      if (editVagueId !== vente.vague.id) dto.vagueId = editVagueId;
+      const poids = parseFloat(editPoidsTotalKg);
+      if (!isNaN(poids) && poids !== vente.poidsTotalKg) dto.poidsTotalKg = poids;
+      const prix = parseFloat(editPrixUnitaireKg);
+      if (!isNaN(prix) && prix !== vente.prixUnitaireKg) dto.prixUnitaireKg = prix;
+      if (editNotes !== (vente.notes ?? "")) dto.notes = editNotes || undefined;
+
+      const result = await venteService.updateVente(vente.id, dto);
+      if (result.ok) {
+        setEditOpen(false);
+        queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.factures.all });
+        router.refresh();
+      }
+    } finally {
+      setEditLoading(false);
+    }
+  }
+
+  const canEdit = permissions.includes(Permission.VENTES_MODIFIER);
+  const editMontantPreview = (() => {
+    const p = parseFloat(editPoidsTotalKg);
+    const px = parseFloat(editPrixUnitaireKg);
+    return !isNaN(p) && !isNaN(px) ? p * px : 0;
+  })();
+
+  const vagueChanged = editVagueId !== vente.vague.id;
+  const motifValid = editMotif.trim().length > 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -92,13 +181,146 @@ export function VenteDetailClient({ vente, permissions }: Props) {
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-lg">{vente.numero}</h2>
-            {vente.facture ? (
-              <Badge variant={statutVariants[vente.facture.statut] ?? "default"}>
-                {statutLabel(vente.facture.statut)}
-              </Badge>
-            ) : (
-              <Badge variant="default">{t("ventes.sansFature")}</Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {canEdit && (
+                <Dialog open={editOpen} onOpenChange={(open) => {
+                  setEditOpen(open);
+                  if (open) resetEditForm();
+                }}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Pencil className="h-4 w-4 mr-1" />
+                      {t("ventes.detail.modifier")}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>{t("ventes.detail.modifierTitle")}</DialogTitle>
+                      <DialogDescription>
+                        {t("ventes.detail.modifierDescription")}
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="flex flex-col gap-4 py-2">
+                      {/* Client */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium">{t("ventes.form.client")}</label>
+                        <Select value={editClientId} onValueChange={setEditClientId}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {clients.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.nom}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Vague */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium">{t("ventes.form.vague")}</label>
+                        <Select value={editVagueId} onValueChange={setEditVagueId}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {vagues.map((v) => (
+                              <SelectItem key={v.id} value={v.id}>
+                                {v.code} ({v.poissonsDisponibles} poissons)
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {vagueChanged && (
+                          <p className="text-xs text-orange-600">
+                            {t("ventes.detail.vagueChangeWarning")}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Poids total */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium">{t("ventes.form.poidsTotalKg")}</label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min="0.1"
+                          value={editPoidsTotalKg}
+                          onChange={(e) => setEditPoidsTotalKg(e.target.value)}
+                        />
+                      </div>
+
+                      {/* Prix unitaire */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium">{t("ventes.form.prixUnitaireKg")}</label>
+                        <Input
+                          type="number"
+                          step="1"
+                          min="1"
+                          value={editPrixUnitaireKg}
+                          onChange={(e) => setEditPrixUnitaireKg(e.target.value)}
+                        />
+                      </div>
+
+                      {/* Montant preview */}
+                      <div className="rounded-lg bg-muted/50 p-3 text-center">
+                        <p className="text-lg font-bold">
+                          {formatNumber(editMontantPreview)} FCFA
+                        </p>
+                        <p className="text-xs text-muted-foreground">{t("ventes.detail.montantTotal")}</p>
+                      </div>
+
+                      {/* Notes */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium">{t("ventes.form.notes")}</label>
+                        <Textarea
+                          value={editNotes}
+                          onChange={(e) => setEditNotes(e.target.value)}
+                          placeholder={t("ventes.form.notesPlaceholder")}
+                          rows={2}
+                        />
+                      </div>
+
+                      {/* Motif (obligatoire) */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium">
+                          {t("ventes.detail.motifLabel")} <span className="text-destructive">*</span>
+                        </label>
+                        <Textarea
+                          value={editMotif}
+                          onChange={(e) => setEditMotif(e.target.value)}
+                          placeholder={t("ventes.detail.motifPlaceholder")}
+                          rows={2}
+                        />
+                      </div>
+                    </div>
+
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button variant="outline">{t("paiements.cancel")}</Button>
+                      </DialogClose>
+                      <Button
+                        onClick={handleSaveEdit}
+                        disabled={editLoading || !motifValid}
+                        className="min-h-[44px]"
+                      >
+                        {editLoading ? "..." : t("ventes.detail.enregistrerModification")}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              )}
+              {vente.facture ? (
+                <Badge variant={statutVariants[vente.facture.statut] ?? "default"}>
+                  {statutLabel(vente.facture.statut)}
+                </Badge>
+              ) : (
+                <Badge variant="default">{t("ventes.sansFature")}</Badge>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-col gap-2 text-sm">

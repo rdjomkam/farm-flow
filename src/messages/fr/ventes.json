@@ -76,7 +76,14 @@
       "payeLabel": "Paye : {paye} / {total} F",
       "genererFacture": "Generer la facture",
       "creePar": "Cree par {name}",
-      "back": "Ventes"
+      "back": "Ventes",
+      "modifier": "Modifier",
+      "modifierTitle": "Modifier la vente",
+      "modifierDescription": "Modifiez les champs souhaites. Un motif est obligatoire.",
+      "motifLabel": "Motif de modification",
+      "motifPlaceholder": "Ex: Erreur de pesee, changement de client...",
+      "enregistrerModification": "Enregistrer la modification",
+      "vagueChangeWarning": "Changer la vague va ajuster le stock de poissons."
     }
   },
   "factures": {

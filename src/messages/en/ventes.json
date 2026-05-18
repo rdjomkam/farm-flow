@@ -76,7 +76,14 @@
       "payeLabel": "Paid: {paye} / {total} F",
       "genererFacture": "Generate invoice",
       "creePar": "Created by {name}",
-      "back": "Sales"
+      "back": "Sales",
+      "modifier": "Edit",
+      "modifierTitle": "Edit sale",
+      "modifierDescription": "Edit the desired fields. A reason is required.",
+      "motifLabel": "Reason for modification",
+      "motifPlaceholder": "E.g. Weighing error, client change...",
+      "enregistrerModification": "Save modification",
+      "vagueChangeWarning": "Changing the batch will adjust fish stock."
     }
   },
   "factures": {

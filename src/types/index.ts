@@ -321,6 +321,7 @@ export type {
   UpdateClientDTO,
   ClientListResponse,
   CreateVenteDTO,
+  UpdateVenteDTO,
   VenteListResponse,
   VenteFilters,
   CreateFactureDTO,
