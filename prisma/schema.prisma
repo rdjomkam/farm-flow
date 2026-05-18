@@ -1397,6 +1397,8 @@ model MouvementStock {
   commande       Commande?     @relation(fields: [commandeId], references: [id])
   releveId       String?
   releve         Releve?       @relation(fields: [releveId], references: [id])
+  depenseId      String?
+  depense        Depense?      @relation(fields: [depenseId], references: [id], onDelete: SetNull)
   userId         String
   user           User          @relation(fields: [userId], references: [id])
   date           DateTime
@@ -1414,6 +1416,7 @@ model MouvementStock {
   @@index([vagueId])
   @@index([commandeId])
   @@index([releveId])
+  @@index([depenseId])
 }
 
 model Commande {
@@ -2095,6 +2098,7 @@ model Depense {
    * Lignes de détail catégorielles (ADR-027) — optionnelles pour les dépenses manuelles
    */
   lignes           LigneDepense[]
+  mouvements       MouvementStock[]
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
 
