@@ -280,6 +280,12 @@ export enum StatutFacture {
   ANNULEE = "ANNULEE",
 }
 
+/** Statut d'une vente (cycle de vie livraison) */
+export enum StatutVente {
+  EN_PREPARATION = "EN_PREPARATION",
+  LIVREE = "LIVREE",
+}
+
 /** Mode de paiement */
 export enum ModePaiement {
   ESPECES = "ESPECES",
@@ -940,6 +946,11 @@ export interface Vente {
   /** Montant total de la vente */
   montantTotal: number;
   notes: string | null;
+  dateCommande: Date;
+  statut: StatutVente;
+  dateLivraison: Date | null;
+  poidsLivreKg: number | null;
+  quantiteLivree: number | null;
   /** ID du site (ferme) — R8 */
   siteId: string;
   /** Utilisateur ayant enregistre la vente */

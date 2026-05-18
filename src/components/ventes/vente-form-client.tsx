@@ -74,6 +74,9 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
   const [poidsMoyenTouched, setPoidsMoyenTouched] = useState(
     prefillPoidsMoyenG != null
   );
+  const [dateCommande, setDateCommande] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
   const [notes, setNotes] = useState("");
 
   const selectedVague = vagues.find((v) => v.id === vagueId);
@@ -106,6 +109,7 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
         ? { poidsMoyenG: manualPoidsMoyen }
         : {}),
       ...(notes.trim() && { notes: notes.trim() }),
+      ...(dateCommande && { dateCommande }),
     });
 
     if (result.ok) {
@@ -194,6 +198,13 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
                 {t("ventes.form.poissonsDisponibles", { count: selectedVague.poissonsDisponibles })}
               </p>
             )}
+
+            <Input
+              label={t("ventes.form.dateCommande")}
+              type="date"
+              value={dateCommande}
+              onChange={(e) => setDateCommande(e.target.value)}
+            />
           </CardContent>
         </Card>
 

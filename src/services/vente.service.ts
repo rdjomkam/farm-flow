@@ -5,6 +5,7 @@ import { useApi } from "@/hooks/use-api";
 import type {
   CreateVenteDTO,
   UpdateVenteDTO,
+  ClotureVenteDTO,
   VenteListResponse,
   FactureListResponse,
   FactureDetailResponse,
@@ -65,6 +66,20 @@ export function useVenteService() {
           body: JSON.stringify(dto),
         },
         { successMessage: "Vente modifiée." }
+      ),
+    [call]
+  );
+
+  const cloturerVente = useCallback(
+    (id: string, dto: ClotureVenteDTO) =>
+      call<VenteWithRelations>(
+        `/api/ventes/${id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dto),
+        },
+        { successMessage: "Livraison clôturée." }
       ),
     [call]
   );
@@ -173,6 +188,7 @@ export function useVenteService() {
     getVente,
     createVente,
     updateVente,
+    cloturerVente,
     deleteVente,
     listFactures,
     getFacture,

@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/db";
 import { generateNextNumero } from "./numero-utils";
-import { StatutVague, TypeReleve } from "@/types";
+import { StatutVague, StatutVente, TypeReleve, CauseMortalite } from "@/types";
 import { computeVivantsByBac } from "@/lib/calculs";
-import type { CreateVenteDTO, UpdateVenteDTO, VenteFilters } from "@/types";
+import type { CreateVenteDTO, UpdateVenteDTO, ClotureVenteDTO, VenteFilters } from "@/types";
 
 /** Liste les ventes d'un site avec filtres et pagination */
 export async function getVentes(
@@ -218,6 +218,8 @@ export async function createVente(
         poidsTotalKg: data.poidsTotalKg,
         prixUnitaireKg: data.prixUnitaireKg,
         montantTotal,
+        dateCommande: data.dateCommande ? new Date(data.dateCommande) : new Date(),
+        statut: StatutVente.EN_PREPARATION,
         notes: data.notes ?? null,
         userId,
         siteId,
@@ -498,6 +500,184 @@ export async function updateVente(
             montantTotal: updated.montantTotal,
             notes: updated.notes,
           },
+        },
+      },
+    });
+
+    return updated;
+  });
+}
+
+/**
+ * Cloture une vente apres livraison (transaction atomique).
+ *
+ * 1. Valide statut EN_PREPARATION et 0 < poidsLivreKg <= poidsTotalKg
+ * 2. Calcule quantiteLivree et nombreMorts a partir du poidsMoyenG
+ * 3. Si perte > 0 : cree des releves MORTALITE/AVARIE proportionnels par bac
+ *    et decremente Bac.nombrePoissons + AssignationBac.nombreActuel
+ * 4. Recalcule montantTotal sur le poids livre
+ * 5. Met a jour la facture si elle existe
+ * 6. Cree un SiteAuditLog VENTE_CLOTUREE
+ */
+export async function cloturerVente(
+  venteId: string,
+  siteId: string,
+  userId: string,
+  dto: ClotureVenteDTO
+) {
+  return prisma.$transaction(async (tx) => {
+    const vente = await tx.vente.findFirst({
+      where: { id: venteId, siteId },
+      include: {
+        facture: { select: { id: true } },
+        vague: { select: { id: true, code: true, nombreInitial: true } },
+        client: { select: { id: true, nom: true } },
+      },
+    });
+    if (!vente) throw new Error("Vente introuvable");
+
+    if (vente.statut !== StatutVente.EN_PREPARATION) {
+      throw new Error("Cette vente est deja cloturee");
+    }
+
+    if (dto.poidsLivreKg <= 0) {
+      throw new Error("Le poids livre doit etre superieur a 0");
+    }
+    if (dto.poidsLivreKg > vente.poidsTotalKg) {
+      throw new Error(
+        `Le poids livre (${dto.poidsLivreKg} kg) ne peut pas depasser le poids commande (${vente.poidsTotalKg} kg)`
+      );
+    }
+
+    const poidsMoyenG = (vente.poidsTotalKg * 1000) / vente.quantitePoissons;
+    const quantiteLivree = Math.min(
+      vente.quantitePoissons,
+      Math.max(1, Math.round((dto.poidsLivreKg * 1000) / poidsMoyenG))
+    );
+    const nombreMorts = vente.quantitePoissons - quantiteLivree;
+
+    const newMontantTotal = dto.poidsLivreKg * vente.prixUnitaireKg;
+    const dateLivraison = dto.dateLivraison ? new Date(dto.dateLivraison) : new Date();
+
+    // If loss > 0, create AVARIE releves and decrement bac fish counts
+    if (nombreMorts > 0) {
+      const bacs = await tx.bac.findMany({
+        where: { vagueId: vente.vagueId, siteId },
+        orderBy: { nom: "asc" },
+      });
+
+      const totalFish = bacs.reduce((sum, b) => sum + (b.nombrePoissons ?? 0), 0);
+
+      let mortsRestants = nombreMorts;
+      for (const bac of bacs) {
+        if (mortsRestants <= 0) break;
+        const available = bac.nombrePoissons ?? 0;
+        if (available <= 0) continue;
+
+        // Proportional distribution
+        const share = totalFish > 0
+          ? Math.round((available / totalFish) * nombreMorts)
+          : Math.round(nombreMorts / bacs.length);
+        const mortsForBac = Math.min(mortsRestants, Math.min(share || 1, available));
+        const newCount = available - mortsForBac;
+
+        await tx.bac.update({
+          where: { id: bac.id },
+          data: { nombrePoissons: newCount },
+        });
+        await tx.assignationBac.updateMany({
+          where: { bacId: bac.id, vagueId: vente.vagueId, dateFin: null },
+          data: { nombreActuel: newCount },
+        });
+
+        await tx.releve.create({
+          data: {
+            date: dateLivraison,
+            typeReleve: TypeReleve.MORTALITE,
+            vagueId: vente.vagueId,
+            bacId: bac.id,
+            siteId,
+            userId,
+            nombreMorts: mortsForBac,
+            causeMortalite: CauseMortalite.AVARIE,
+            notes: `Perte transport vente ${vente.numero} — ${mortsForBac} poissons`,
+          },
+        });
+
+        mortsRestants -= mortsForBac;
+      }
+
+      // Rounding remainder goes to last bac with fish
+      if (mortsRestants > 0 && bacs.length > 0) {
+        for (let i = bacs.length - 1; i >= 0; i--) {
+          const bac = bacs[i];
+          const currentFish = (bac.nombrePoissons ?? 0) -
+            (nombreMorts - mortsRestants > 0 ? 0 : 0);
+          // Re-read actual count after previous updates
+          const freshBac = await tx.bac.findUnique({ where: { id: bac.id } });
+          const freshCount = freshBac?.nombrePoissons ?? 0;
+          if (freshCount <= 0) continue;
+
+          const extra = Math.min(mortsRestants, freshCount);
+          await tx.bac.update({
+            where: { id: bac.id },
+            data: { nombrePoissons: freshCount - extra },
+          });
+          await tx.assignationBac.updateMany({
+            where: { bacId: bac.id, vagueId: vente.vagueId, dateFin: null },
+            data: { nombreActuel: freshCount - extra },
+          });
+          mortsRestants -= extra;
+          if (mortsRestants <= 0) break;
+        }
+      }
+    }
+
+    // Update the vente
+    const updated = await tx.vente.update({
+      where: { id: venteId },
+      data: {
+        statut: StatutVente.LIVREE,
+        poidsLivreKg: dto.poidsLivreKg,
+        quantiteLivree,
+        dateLivraison,
+        montantTotal: newMontantTotal,
+      },
+      include: {
+        client: { select: { id: true, nom: true } },
+        vague: { select: { id: true, code: true } },
+        user: { select: { id: true, name: true } },
+        facture: { select: { id: true, numero: true, statut: true, montantPaye: true, montantTotal: true } },
+      },
+    });
+
+    // Update facture if exists
+    if (vente.facture) {
+      await tx.facture.update({
+        where: { id: vente.facture.id },
+        data: { montantTotal: newMontantTotal },
+      });
+    }
+
+    // Audit log
+    await tx.siteAuditLog.create({
+      data: {
+        siteId,
+        actorId: userId,
+        action: "VENTE_CLOTUREE",
+        details: {
+          venteNumero: vente.numero,
+          clientNom: vente.client.nom,
+          vagueCode: vente.vague.code,
+          poidsCommande: vente.poidsTotalKg,
+          poidsLivre: dto.poidsLivreKg,
+          pertePoids: vente.poidsTotalKg - dto.poidsLivreKg,
+          quantiteCommandee: vente.quantitePoissons,
+          quantiteLivree,
+          nombreMorts,
+          ancienMontant: vente.montantTotal,
+          nouveauMontant: newMontantTotal,
+          dateLivraison: dateLivraison.toISOString(),
         },
       },
     });

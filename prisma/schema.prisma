@@ -115,6 +115,11 @@ enum ModePaiement {
   CHEQUE
 }
 
+enum StatutVente {
+  EN_PREPARATION
+  LIVREE
+}
+
 enum ActionRegle {
   ACTIVITE
   NOTIFICATION
@@ -1505,28 +1510,34 @@ model Client {
 }
 
 model Vente {
-  id               String   @id @default(cuid())
-  numero           String   @unique
+  id               String      @id @default(cuid())
+  numero           String      @unique
   clientId         String
-  client           Client   @relation(fields: [clientId], references: [id])
+  client           Client      @relation(fields: [clientId], references: [id])
   vagueId          String
-  vague            Vague    @relation(fields: [vagueId], references: [id])
+  vague            Vague       @relation(fields: [vagueId], references: [id])
   quantitePoissons Int
   poidsTotalKg     Float
   prixUnitaireKg   Float
   montantTotal     Float
+  dateCommande     DateTime    @default(now())
+  statut           StatutVente @default(EN_PREPARATION)
+  dateLivraison    DateTime?
+  poidsLivreKg     Float?
+  quantiteLivree   Int?
   notes            String?
   siteId           String
-  site             Site     @relation(fields: [siteId], references: [id])
+  site             Site        @relation(fields: [siteId], references: [id])
   userId           String
-  user             User     @relation("VenteUser", fields: [userId], references: [id])
+  user             User        @relation("VenteUser", fields: [userId], references: [id])
   facture          Facture?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
   @@index([siteId])
   @@index([clientId])
   @@index([vagueId])
+  @@index([statut])
 }
 
 model Facture {

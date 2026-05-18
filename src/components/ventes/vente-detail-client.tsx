@@ -14,6 +14,9 @@ import {
   Calendar,
   FileText,
   Pencil,
+  Truck,
+  AlertTriangle,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,8 +40,8 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { StatutFacture, Permission } from "@/types";
-import type { UpdateVenteDTO } from "@/types";
+import { StatutFacture, StatutVente, Permission } from "@/types";
+import type { UpdateVenteDTO, ClotureVenteDTO } from "@/types";
 import { useVenteService } from "@/services";
 
 const statutVariants: Record<string, "default" | "info" | "warning" | "terminee" | "annulee"> = {
@@ -47,6 +50,11 @@ const statutVariants: Record<string, "default" | "info" | "warning" | "terminee"
   [StatutFacture.PAYEE_PARTIELLEMENT]: "warning",
   [StatutFacture.PAYEE]: "terminee",
   [StatutFacture.ANNULEE]: "annulee",
+};
+
+const venteStatutVariants: Record<string, "warning" | "terminee"> = {
+  [StatutVente.EN_PREPARATION]: "warning",
+  [StatutVente.LIVREE]: "terminee",
 };
 
 interface VenteData {
@@ -58,6 +66,11 @@ interface VenteData {
   montantTotal: number;
   notes: string | null;
   createdAt: string;
+  dateCommande: string;
+  statut: string;
+  dateLivraison: string | null;
+  poidsLivreKg: number | null;
+  quantiteLivree: number | null;
   client: {
     id: string;
     nom: string;
@@ -111,6 +124,14 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
   const [editNotes, setEditNotes] = useState(vente.notes ?? "");
   const [editMotif, setEditMotif] = useState("");
 
+  // Closure dialog state
+  const [clotureOpen, setClotureOpen] = useState(false);
+  const [clotureLoading, setClotureLoading] = useState(false);
+  const [cloturePoidsLivre, setCloturePoidsLivre] = useState("");
+  const [clotureDateLivraison, setClotureDateLivraison] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
+
   const statutLabel = (s: string) =>
     t(`factures.statuts.${s}` as Parameters<typeof t>[0]) || s;
 
@@ -155,6 +176,37 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
       setEditLoading(false);
     }
   }
+
+  async function handleCloture() {
+    setClotureLoading(true);
+    try {
+      const dto: ClotureVenteDTO = {
+        poidsLivreKg: parseFloat(cloturePoidsLivre),
+        ...(clotureDateLivraison && { dateLivraison: clotureDateLivraison }),
+      };
+      const result = await venteService.cloturerVente(vente.id, dto);
+      if (result.ok) {
+        setClotureOpen(false);
+        queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.factures.all });
+        router.refresh();
+      }
+    } finally {
+      setClotureLoading(false);
+    }
+  }
+
+  const cloturePoidsNum = parseFloat(cloturePoidsLivre) || 0;
+  const cloturePertePoids = vente.poidsTotalKg - cloturePoidsNum;
+  const cloturePoidsMoyenG = vente.quantitePoissons > 0
+    ? (vente.poidsTotalKg * 1000) / vente.quantitePoissons
+    : 0;
+  const clotureQuantiteLivree = cloturePoidsMoyenG > 0 && cloturePoidsNum > 0
+    ? Math.min(vente.quantitePoissons, Math.max(1, Math.round((cloturePoidsNum * 1000) / cloturePoidsMoyenG)))
+    : 0;
+  const cloturePertePoissons = vente.quantitePoissons - clotureQuantiteLivree;
+  const clotureNouveauMontant = cloturePoidsNum * vente.prixUnitaireKg;
+  const clotureValid = cloturePoidsNum > 0 && cloturePoidsNum <= vente.poidsTotalKg;
 
   const canEdit = permissions.includes(Permission.VENTES_MODIFIER);
   const editMontantPreview = (() => {
@@ -313,6 +365,9 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
                   </DialogContent>
                 </Dialog>
               )}
+              <Badge variant={venteStatutVariants[vente.statut] ?? "warning"}>
+                {t(`ventes.detail.statut${vente.statut}` as Parameters<typeof t>[0])}
+              </Badge>
               {vente.facture ? (
                 <Badge variant={statutVariants[vente.facture.statut] ?? "default"}>
                   {statutLabel(vente.facture.statut)}
@@ -335,7 +390,7 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
             <div className="flex items-center gap-2 text-muted-foreground">
               <Calendar className="h-4 w-4 shrink-0" />
               <span>
-                {new Date(vente.createdAt).toLocaleDateString(locale)}
+                {t("ventes.detail.dateCommande")} : {new Date(vente.dateCommande).toLocaleDateString(locale)}
               </span>
             </div>
           </div>
@@ -372,6 +427,124 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
         </p>
         <p className="text-xs text-muted-foreground">{t("ventes.detail.montantTotal")}</p>
       </div>
+
+      {/* Delivery section */}
+      {vente.statut === StatutVente.LIVREE ? (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              {t("ventes.detail.dateLivraison")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <div className="flex flex-col gap-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t("ventes.detail.dateLivraison")}</span>
+                <span>{vente.dateLivraison ? new Date(vente.dateLivraison).toLocaleDateString(locale) : "-"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t("ventes.detail.poidsLivreKg")}</span>
+                <span>{vente.poidsLivreKg} kg</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t("ventes.detail.quantiteLivree")}</span>
+                <span>{vente.quantiteLivree}</span>
+              </div>
+              {vente.poidsLivreKg != null && vente.poidsLivreKg < vente.poidsTotalKg && (
+                <div className="flex justify-between text-orange-600">
+                  <span>{t("ventes.detail.pertePoids")}</span>
+                  <span>{(vente.poidsTotalKg - vente.poidsLivreKg).toFixed(1)} kg</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ) : canEdit ? (
+        <Dialog open={clotureOpen} onOpenChange={(open) => {
+          setClotureOpen(open);
+          if (open) {
+            setCloturePoidsLivre("");
+            setClotureDateLivraison(new Date().toISOString().slice(0, 10));
+          }
+        }}>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="w-full min-h-[48px]">
+              <Truck className="h-4 w-4 mr-2" />
+              {t("ventes.detail.cloturerLivraison")}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t("ventes.detail.cloturerTitle")}</DialogTitle>
+              <DialogDescription>
+                {t("ventes.detail.cloturerDescription")}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex flex-col gap-4 py-2">
+              <Input
+                label={t("ventes.detail.poidsLivreKg")}
+                type="number"
+                step="0.1"
+                min="0.1"
+                max={vente.poidsTotalKg}
+                placeholder={t("ventes.detail.poidsLivrePlaceholder")}
+                value={cloturePoidsLivre}
+                onChange={(e) => setCloturePoidsLivre(e.target.value)}
+              />
+
+              <Input
+                label={t("ventes.detail.dateLivraison")}
+                type="date"
+                value={clotureDateLivraison}
+                onChange={(e) => setClotureDateLivraison(e.target.value)}
+              />
+
+              {cloturePoidsNum > 0 && cloturePoidsNum <= vente.poidsTotalKg && (
+                <div className="rounded-lg bg-muted/50 p-3 flex flex-col gap-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{t("ventes.detail.nouveauMontant")}</span>
+                    <span className="font-bold">{formatNumber(clotureNouveauMontant)} FCFA</span>
+                  </div>
+                  {cloturePertePoids > 0 && (
+                    <>
+                      <div className="flex justify-between text-sm text-orange-600">
+                        <span>{t("ventes.detail.pertePoids")}</span>
+                        <span>{cloturePertePoids.toFixed(1)} kg</span>
+                      </div>
+                      <div className="flex justify-between text-sm text-orange-600">
+                        <span>{t("ventes.detail.pertePoissons")}</span>
+                        <span>~{cloturePertePoissons}</span>
+                      </div>
+                      <div className="flex items-start gap-2 rounded-md bg-orange-50 dark:bg-orange-950/20 p-2 text-xs text-orange-700 dark:text-orange-400">
+                        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                        <span>{t("ventes.detail.avarieWarning")}</span>
+                      </div>
+                    </>
+                  )}
+                  {cloturePertePoids === 0 && (
+                    <p className="text-xs text-emerald-600">{t("ventes.detail.livraisonComplete")}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline">{t("paiements.cancel")}</Button>
+              </DialogClose>
+              <Button
+                onClick={handleCloture}
+                disabled={clotureLoading || !clotureValid}
+                className="min-h-[44px]"
+              >
+                {clotureLoading ? "..." : t("ventes.detail.confirmerCloture")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
 
       {/* Facture section */}
       {vente.facture ? (

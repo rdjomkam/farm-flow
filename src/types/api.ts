@@ -872,6 +872,8 @@ export interface CreateVenteDTO {
   prixUnitaireKg: number;
   /** Poids moyen unitaire en grammes (override de la biometrie). Requis si aucune biometrie. */
   poidsMoyenG?: number;
+  /** Date de commande (ISO 8601). Defaut: maintenant. */
+  dateCommande?: string;
   notes?: string;
 }
 
@@ -889,10 +891,18 @@ export interface UpdateVenteDTO {
 /** Reponse liste des ventes */
 export type VenteListResponse = PaginatedResponse<Vente>;
 
+/** DTO pour cloturer la livraison d'une vente */
+export interface ClotureVenteDTO {
+  poidsLivreKg: number;
+  /** Date de livraison (ISO 8601). Defaut: maintenant. */
+  dateLivraison?: string;
+}
+
 /** Filtres pour lister les ventes */
 export interface VenteFilters {
   clientId?: string;
   vagueId?: string;
+  statut?: string;
   dateFrom?: string;
   dateTo?: string;
 }

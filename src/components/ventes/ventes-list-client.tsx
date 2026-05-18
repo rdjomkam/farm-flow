@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
-import { StatutFacture, Permission } from "@/types";
+import { StatutFacture, StatutVente, Permission } from "@/types";
 import { useVentesList } from "@/hooks/queries/use-ventes-queries";
 import type { VenteWithRelations } from "@/types";
 
@@ -121,13 +121,18 @@ export function VentesListClient({ initialVentes, clients, vagues, permissions }
                           {v.client.nom} — {v.vague.code}
                         </p>
                       </div>
-                      {v.facture ? (
-                        <Badge variant={statutVariants[v.facture.statut] ?? "default"}>
-                          {statutLabel(v.facture.statut)}
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Badge variant={v.statut === StatutVente.LIVREE ? "terminee" : "warning"}>
+                          {t(`ventes.detail.statut${v.statut}` as Parameters<typeof t>[0])}
                         </Badge>
-                      ) : (
-                        <Badge variant="default">{t("ventes.sansFature")}</Badge>
-                      )}
+                        {v.facture ? (
+                          <Badge variant={statutVariants[v.facture.statut] ?? "default"}>
+                            {statutLabel(v.facture.statut)}
+                          </Badge>
+                        ) : (
+                          <Badge variant="default">{t("ventes.sansFature")}</Badge>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">
