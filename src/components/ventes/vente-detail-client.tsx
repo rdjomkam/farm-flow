@@ -121,6 +121,9 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
   const [editVagueId, setEditVagueId] = useState(vente.vague.id);
   const [editPoidsTotalKg, setEditPoidsTotalKg] = useState(String(vente.poidsTotalKg));
   const [editPrixUnitaireKg, setEditPrixUnitaireKg] = useState(String(vente.prixUnitaireKg));
+  const [editDateCommande, setEditDateCommande] = useState(
+    vente.dateCommande ? new Date(vente.dateCommande).toISOString().slice(0, 10) : ""
+  );
   const [editNotes, setEditNotes] = useState(vente.notes ?? "");
   const [editMotif, setEditMotif] = useState("");
 
@@ -148,6 +151,9 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
     setEditVagueId(vente.vague.id);
     setEditPoidsTotalKg(String(vente.poidsTotalKg));
     setEditPrixUnitaireKg(String(vente.prixUnitaireKg));
+    setEditDateCommande(
+      vente.dateCommande ? new Date(vente.dateCommande).toISOString().slice(0, 10) : ""
+    );
     setEditNotes(vente.notes ?? "");
     setEditMotif("");
   }
@@ -163,6 +169,10 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
       if (!isNaN(poids) && poids !== vente.poidsTotalKg) dto.poidsTotalKg = poids;
       const prix = parseFloat(editPrixUnitaireKg);
       if (!isNaN(prix) && prix !== vente.prixUnitaireKg) dto.prixUnitaireKg = prix;
+      const origDate = vente.dateCommande
+        ? new Date(vente.dateCommande).toISOString().slice(0, 10)
+        : "";
+      if (editDateCommande !== origDate) dto.dateCommande = editDateCommande;
       if (editNotes !== (vente.notes ?? "")) dto.notes = editNotes || undefined;
 
       const result = await venteService.updateVente(vente.id, dto);
@@ -314,6 +324,16 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
                           min="1"
                           value={editPrixUnitaireKg}
                           onChange={(e) => setEditPrixUnitaireKg(e.target.value)}
+                        />
+                      </div>
+
+                      {/* Date de commande */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium">{t("ventes.detail.dateCommande")}</label>
+                        <Input
+                          type="date"
+                          value={editDateCommande}
+                          onChange={(e) => setEditDateCommande(e.target.value)}
                         />
                       </div>
 

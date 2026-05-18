@@ -266,6 +266,9 @@ export async function updateVente(
     const newPoidsTotalKg = dto.poidsTotalKg ?? existing.poidsTotalKg;
     const newPrixUnitaireKg = dto.prixUnitaireKg ?? existing.prixUnitaireKg;
     const newNotes = dto.notes !== undefined ? dto.notes : existing.notes;
+    const newDateCommande = dto.dateCommande
+      ? new Date(dto.dateCommande)
+      : existing.dateCommande;
 
     // Validate new client
     if (newClientId !== existing.clientId) {
@@ -452,6 +455,7 @@ export async function updateVente(
         prixUnitaireKg: newPrixUnitaireKg,
         quantitePoissons: newQuantitePoissons,
         montantTotal: newMontantTotal,
+        dateCommande: newDateCommande,
         notes: newNotes,
       },
       include: {
@@ -487,6 +491,7 @@ export async function updateVente(
             prixUnitaireKg: existing.prixUnitaireKg,
             quantitePoissons: existing.quantitePoissons,
             montantTotal: existing.montantTotal,
+            dateCommande: existing.dateCommande,
             notes: existing.notes,
           },
           after: {
@@ -498,6 +503,7 @@ export async function updateVente(
             prixUnitaireKg: updated.prixUnitaireKg,
             quantitePoissons: updated.quantitePoissons,
             montantTotal: updated.montantTotal,
+            dateCommande: updated.dateCommande,
             notes: updated.notes,
           },
         },

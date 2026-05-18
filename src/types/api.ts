@@ -883,6 +883,7 @@ export interface UpdateVenteDTO {
   poidsTotalKg?: number;
   prixUnitaireKg?: number;
   poidsMoyenG?: number;
+  dateCommande?: string;
   notes?: string;
   /** Motif obligatoire de la modification */
   motif: string;

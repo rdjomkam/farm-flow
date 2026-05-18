@@ -39,6 +39,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       body.poidsTotalKg !== undefined ||
       body.prixUnitaireKg !== undefined ||
       body.poidsMoyenG !== undefined ||
+      body.dateCommande !== undefined ||
       body.notes !== undefined;
 
     if (!hasChange) {
