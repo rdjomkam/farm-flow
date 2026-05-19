@@ -5,7 +5,10 @@
     "nouveau": "New",
     "retourVague": "Back to batch",
     "aucunCalibrage": "No grading records",
-    "aucunCalibrageDescription": "The first grading of this batch will appear here."
+    "aucunCalibrageDescription": "The first grading of this batch will appear here.",
+    "list": {
+      "voirTout": "View all ({count})"
+    }
   },
   "categories": {
     "PETIT": "Small",
@@ -89,9 +92,6 @@
       "GROS": "Large",
       "TRES_GROS": "Extra large"
     }
-  },
-  "list": {
-    "voirTout": "View all ({count})"
   },
   "card": {
     "modified": "Modified",

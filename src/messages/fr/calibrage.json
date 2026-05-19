@@ -5,7 +5,10 @@
     "nouveau": "Nouveau",
     "retourVague": "Retour à la vague",
     "aucunCalibrage": "Aucun calibrage",
-    "aucunCalibrageDescription": "Le premier calibrage de cette vague apparaitra ici."
+    "aucunCalibrageDescription": "Le premier calibrage de cette vague apparaitra ici.",
+    "list": {
+      "voirTout": "Voir tout ({count})"
+    }
   },
   "categories": {
     "PETIT": "Petit",
@@ -89,9 +92,6 @@
       "GROS": "Gros",
       "TRES_GROS": "Tres gros"
     }
-  },
-  "list": {
-    "voirTout": "Voir tout ({count})"
   },
   "card": {
     "modified": "Modifie",

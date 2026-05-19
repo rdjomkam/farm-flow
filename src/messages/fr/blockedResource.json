@@ -1,0 +1,9 @@
+{
+  "badgeLabel": "Bloque",
+  "title": "Ressource bloquee",
+  "description": "Cette ressource n'est pas disponible avec votre plan actuel.",
+  "descriptionWithName": "{name} n'est pas disponible avec votre plan actuel.",
+  "upgradeMessage": "Passez a un plan superieur pour debloquer cette fonctionnalite et bien d'autres.",
+  "upgradeButton": "Changer de plan",
+  "closeButton": "Fermer"
+}
