@@ -166,7 +166,10 @@
       "modePlaceholder": "Selectionner",
       "reference": "Reference (optionnel)",
       "referencePlaceholder": "Ex: MTN-20260310-001"
-    }
+    },
+    "deleteTitle": "Supprimer le paiement",
+    "deleteDescription": "Etes-vous sur de vouloir supprimer ce paiement de {montant} F ? Cette action est irreversible.",
+    "deleteConfirm": "Supprimer"
   },
   "errorSection": {
     "saleForm": "le formulaire de vente",

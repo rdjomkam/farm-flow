@@ -166,7 +166,10 @@
       "modePlaceholder": "Select",
       "reference": "Reference (optional)",
       "referencePlaceholder": "E.g. MTN-20260310-001"
-    }
+    },
+    "deleteTitle": "Delete payment",
+    "deleteDescription": "Are you sure you want to delete this payment of {montant} F? This action cannot be undone.",
+    "deleteConfirm": "Delete"
   },
   "errorSection": {
     "saleForm": "the sale form",

@@ -13,22 +13,30 @@ import {
   Users,
   CreditCard,
   Plus,
-  FileText,
   Waves,
   RefreshCw,
   Trash2,
+  MoreVertical,
+  Download,
+  Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ExportButton } from "@/components/ui/export-button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
   Dialog,
-  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogBody,
   DialogFooter,
   DialogClose,
@@ -41,7 +49,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StatutFacture, ModePaiement, Permission } from "@/types";
-import { useVenteService } from "@/services";
+import { useVenteService, useExportService } from "@/services";
 
 const statutVariants: Record<StatutFacture, "default" | "info" | "warning" | "terminee" | "annulee"> = {
   [StatutFacture.BROUILLON]: "default",
@@ -100,6 +108,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
   const router = useRouter();
   const venteService = useVenteService();
   const [paiementOpen, setPaiementOpen] = useState(false);
+  const [deletePaiementId, setDeletePaiementId] = useState<string | null>(null);
 
   const [montant, setMontant] = useState("");
   const [mode, setMode] = useState("");
@@ -155,9 +164,11 @@ export function FactureDetailClient({ facture, permissions }: Props) {
     }
   }
 
-  async function handleDeletePaiement(paiementId: string) {
-    const result = await venteService.deletePaiement(facture.id, paiementId);
+  async function handleConfirmDeletePaiement() {
+    if (!deletePaiementId) return;
+    const result = await venteService.deletePaiement(facture.id, deletePaiementId);
     if (result.ok) {
+      setDeletePaiementId(null);
       await queryClient.invalidateQueries({ queryKey: queryKeys.factures.all });
       await queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
       router.refresh();
@@ -169,16 +180,66 @@ export function FactureDetailClient({ facture, permissions }: Props) {
     permissions.includes(Permission.PAIEMENTS_SUPPRIMER);
 
   const montantDesync = facture.montantTotal !== facture.vente.montantTotal;
+  const exportService = useExportService();
+
+  const canManage = permissions.includes(Permission.FACTURES_GERER) && statut !== StatutFacture.ANNULEE;
+  const canExport = permissions.includes(Permission.EXPORT_DONNEES);
+  const canSend = statut === StatutFacture.BROUILLON && permissions.includes(Permission.FACTURES_GERER);
+  const canPay = canAddPaiement && permissions.includes(Permission.PAIEMENTS_CREER);
+  const hasMenuItems = canExport || canManage || canSend || canPay;
 
   return (
     <div className="flex flex-col gap-4">
-      <Link
-        href="/factures"
-        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        {t("factures.detail.back")}
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link
+          href="/factures"
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {t("factures.detail.back")}
+        </Link>
+        {hasMenuItems && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+                <MoreVertical className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {canPay && (
+                <DropdownMenuItem onSelect={() => setPaiementOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  {t("paiements.add")}
+                </DropdownMenuItem>
+              )}
+              {canSend && (
+                <DropdownMenuItem onSelect={handleEnvoyer}>
+                  <Send className="h-4 w-4" />
+                  {t("factures.detail.envoyer")}
+                </DropdownMenuItem>
+              )}
+              {canManage && (
+                <DropdownMenuItem onSelect={handleRegenerer}>
+                  <RefreshCw className="h-4 w-4" />
+                  {t("factures.detail.regenerer")}
+                </DropdownMenuItem>
+              )}
+              {canExport && (canPay || canSend || canManage) && <DropdownMenuSeparator />}
+              {canExport && (
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    exportService.facturePdf(facture.id, facture.numero);
+                  }}
+                >
+                  <Download className="h-4 w-4" />
+                  PDF
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
 
       {/* Header */}
       <Card>
@@ -262,95 +323,90 @@ export function FactureDetailClient({ facture, permissions }: Props) {
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex flex-wrap gap-2">
-        {/* PDF export button */}
-        {permissions.includes(Permission.EXPORT_DONNEES) && (
-          <ExportButton
-            href={`/api/export/facture/${facture.id}`}
-            filename={`facture-${facture.numero}.pdf`}
-            label="PDF"
-            variant="outline"
-          />
-        )}
-        {permissions.includes(Permission.FACTURES_GERER) && statut !== StatutFacture.ANNULEE && (
-          <Button variant="outline" size="sm" onClick={handleRegenerer}>
-            <RefreshCw className="h-4 w-4 mr-1" />
-            {t("factures.detail.regenerer")}
-          </Button>
-        )}
-        {statut === StatutFacture.BROUILLON && permissions.includes(Permission.FACTURES_GERER) && (
-          <Button
-            className="flex-1"
-            onClick={handleEnvoyer}
-          >
-            <FileText className="h-4 w-4 mr-1" />
-            {t("factures.detail.envoyer")}
-          </Button>
-        )}
-        {canAddPaiement && permissions.includes(Permission.PAIEMENTS_CREER) && (
-          <Dialog
-            open={paiementOpen}
-            onOpenChange={(open) => {
-              setPaiementOpen(open);
-              if (!open) resetPaiementForm();
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button className="flex-1" variant={statut === StatutFacture.BROUILLON ? "outline" : "primary"}>
-                <Plus className="h-4 w-4 mr-1" />
-                {t("paiements.add")}
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{t("paiements.register")}</DialogTitle>
-              </DialogHeader>
-              <DialogBody>
-              <div className="flex flex-col gap-4 py-2">
-                <Input
-                  label={t("paiements.fields.montant", { max: formatNumber(resteAPayer) })}
-                  type="number"
-                  min="1"
-                  max={resteAPayer}
-                  placeholder={t("paiements.fields.montantPlaceholder")}
-                  value={montant}
-                  onChange={(e) => setMontant(e.target.value)}
-                  autoFocus
-                />
-                <Select value={mode} onValueChange={setMode}>
-                  <SelectTrigger label={t("paiements.fields.mode")}>
-                    <SelectValue placeholder={t("paiements.fields.modePlaceholder")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(ModePaiement).map((value) => (
-                      <SelectItem key={value} value={value}>{modeLabel(value)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  label={t("paiements.fields.reference")}
-                  placeholder={t("paiements.fields.referencePlaceholder")}
-                  value={reference}
-                  onChange={(e) => setReference(e.target.value)}
-                />
-              </div>
-              </DialogBody>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline">{t("paiements.cancel")}</Button>
-                </DialogClose>
-                <Button
-                  onClick={handlePaiement}
-                  disabled={!montant || !mode}
-                >
-                  {t("paiements.confirm")}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        )}
-      </div>
+      {/* Payment dialog */}
+      <Dialog
+        open={paiementOpen}
+        onOpenChange={(open) => {
+          setPaiementOpen(open);
+          if (!open) resetPaiementForm();
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("paiements.register")}</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <div className="flex flex-col gap-4 py-2">
+              <Input
+                label={t("paiements.fields.montant", { max: formatNumber(resteAPayer) })}
+                type="number"
+                min="1"
+                max={resteAPayer}
+                placeholder={t("paiements.fields.montantPlaceholder")}
+                value={montant}
+                onChange={(e) => setMontant(e.target.value)}
+                autoFocus
+              />
+              <Select value={mode} onValueChange={setMode}>
+                <SelectTrigger label={t("paiements.fields.mode")}>
+                  <SelectValue placeholder={t("paiements.fields.modePlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(ModePaiement).map((value) => (
+                    <SelectItem key={value} value={value}>{modeLabel(value)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                label={t("paiements.fields.reference")}
+                placeholder={t("paiements.fields.referencePlaceholder")}
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+              />
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">{t("paiements.cancel")}</Button>
+            </DialogClose>
+            <Button
+              onClick={handlePaiement}
+              disabled={!montant || !mode}
+            >
+              {t("paiements.confirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete payment confirmation dialog */}
+      <Dialog
+        open={deletePaiementId !== null}
+        onOpenChange={(open) => { if (!open) setDeletePaiementId(null); }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">
+              {t("paiements.deleteTitle")}
+            </DialogTitle>
+            <DialogDescription>
+              {t("paiements.deleteDescription", {
+                montant: formatNumber(
+                  facture.paiements.find((p) => p.id === deletePaiementId)?.montant ?? 0
+                ),
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">{t("paiements.cancel")}</Button>
+            </DialogClose>
+            <Button variant="danger" onClick={handleConfirmDeletePaiement}>
+              {t("paiements.deleteConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Sale details */}
       <Card>
@@ -412,7 +468,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
                         variant="ghost"
                         size="sm"
                         className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                        onClick={() => handleDeletePaiement(p.id)}
+                        onClick={() => setDeletePaiementId(p.id)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
