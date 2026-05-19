@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { queryKeys } from "@/lib/query-keys";
 import { useTranslations, useLocale } from "next-intl";
@@ -96,6 +97,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
   const t = useTranslations("ventes");
   const locale = useLocale();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const venteService = useVenteService();
   const [paiementOpen, setPaiementOpen] = useState(false);
 
@@ -131,6 +133,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
       resetPaiementForm();
       await queryClient.invalidateQueries({ queryKey: queryKeys.factures.all });
       await queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
+      router.refresh();
     }
   }
 
@@ -139,6 +142,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
     if (result.ok) {
       await queryClient.invalidateQueries({ queryKey: queryKeys.factures.all });
       await queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
+      router.refresh();
     }
   }
 
@@ -147,6 +151,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
     if (result.ok) {
       await queryClient.invalidateQueries({ queryKey: queryKeys.factures.all });
       await queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
+      router.refresh();
     }
   }
 
@@ -155,6 +160,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
     if (result.ok) {
       await queryClient.invalidateQueries({ queryKey: queryKeys.factures.all });
       await queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
+      router.refresh();
     }
   }
 
