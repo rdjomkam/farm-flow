@@ -447,7 +447,8 @@ export async function updateVente(
       }
     }
 
-    const newMontantTotal = newPoidsTotalKg * newPrixUnitaireKg;
+    const poidsFacturation = existing.poidsLivreKg ?? newPoidsTotalKg;
+    const newMontantTotal = poidsFacturation * newPrixUnitaireKg;
 
     // Update the vente
     const updated = await tx.vente.update({
