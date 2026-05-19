@@ -765,12 +765,20 @@ export function BesoinsDetailClient({
                     ) : (statut === StatutBesoins.TRAITEE ||
                         statut === StatutBesoins.CLOTUREE) ? (
                       <Badge
-                        variant={l.produitId ? "warning" : "default"}
+                        variant={
+                          (l.lignesDepense?.length ?? 0) > 0
+                            ? "default"
+                            : l.produitId
+                              ? "warning"
+                              : "default"
+                        }
                         className="text-xs flex-shrink-0"
                       >
-                        {l.produitId
-                          ? t("detail.aCommander")
-                          : t("detail.achatDirectBadge")}
+                        {(l.lignesDepense?.length ?? 0) > 0
+                          ? t("detail.achatDirectBadge")
+                          : l.produitId
+                            ? t("detail.aCommander")
+                            : t("detail.achatDirectBadge")}
                       </Badge>
                     ) : null}
                   </div>

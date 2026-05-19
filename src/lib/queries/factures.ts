@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { generateNextNumero } from "./numero-utils";
-import { StatutFacture } from "@/types";
+import { StatutFacture, StatutVente } from "@/types";
 import type {
   CreateFactureDTO,
   UpdateFactureDTO,
@@ -101,6 +101,10 @@ export async function createFacture(
       throw new Error("Cette vente a deja une facture associee");
     }
 
+    if (vente.statut !== StatutVente.LIVREE) {
+      throw new Error("La facture ne peut etre generee que pour une vente livree");
+    }
+
     // Generate numero FAC-YYYY-NNN (findFirst+orderBy to avoid race condition)
     const numero = await generateNextNumero(tx, "facture", "FAC", siteId);
 
@@ -160,6 +164,57 @@ export async function updateFacture(
 }
 
 /**
+ * Regenere une facture en resynchronisant le montant depuis la vente.
+ * Utile apres cloture de livraison (poids livre fait foi du montant).
+ */
+export async function regenererFacture(
+  factureId: string,
+  siteId: string,
+) {
+  return prisma.$transaction(async (tx) => {
+    const facture = await tx.facture.findFirst({
+      where: { id: factureId, siteId },
+      include: { vente: { select: { montantTotal: true, statut: true } } },
+    });
+    if (!facture) throw new Error("Facture introuvable");
+
+    if (facture.vente.statut === StatutVente.CLOTUREE) {
+      throw new Error("Impossible de regenerer la facture d'une vente cloturee");
+    }
+
+    if (facture.statut === StatutFacture.ANNULEE) {
+      throw new Error("Impossible de regenerer une facture annulee");
+    }
+
+    const newMontant = facture.vente.montantTotal;
+    if (newMontant === facture.montantTotal) {
+      return tx.facture.findFirst({
+        where: { id: factureId },
+        include: {
+          vente: { include: { client: { select: { id: true, nom: true } } } },
+          paiements: { orderBy: { date: "desc" } },
+        },
+      });
+    }
+
+    const newStatut = facture.montantPaye >= newMontant
+      ? StatutFacture.PAYEE
+      : facture.montantPaye > 0
+        ? StatutFacture.PAYEE_PARTIELLEMENT
+        : facture.statut;
+
+    return tx.facture.update({
+      where: { id: factureId },
+      data: { montantTotal: newMontant, statut: newStatut },
+      include: {
+        vente: { include: { client: { select: { id: true, nom: true } } } },
+        paiements: { orderBy: { date: "desc" } },
+      },
+    });
+  });
+}
+
+/**
  * Ajoute un paiement a une facture (transaction atomique).
  *
  * Regles metier :
@@ -180,24 +235,18 @@ export async function ajouterPaiement(
     // Get facture with current state
     const facture = await tx.facture.findFirst({
       where: { id: factureId, siteId },
+      include: { vente: { select: { statut: true } } },
     });
     if (!facture) throw new Error("Facture introuvable");
+
+    if (facture.vente.statut === StatutVente.CLOTUREE) {
+      throw new Error("Impossible de modifier les paiements d'une vente cloturee");
+    }
 
     if (facture.statut === StatutFacture.ANNULEE) {
       throw new Error("Impossible d'ajouter un paiement a une facture annulee");
     }
 
-    if (facture.statut === StatutFacture.PAYEE) {
-      throw new Error("Cette facture est deja entierement payee");
-    }
-
-    // Check remaining amount
-    const resteAPayer = facture.montantTotal - facture.montantPaye;
-    if (data.montant > resteAPayer) {
-      throw new Error(
-        `Le montant depasse le reste a payer. Reste : ${resteAPayer} FCFA, saisi : ${data.montant} FCFA`
-      );
-    }
 
     // Create paiement
     const paiement = await tx.paiement.create({

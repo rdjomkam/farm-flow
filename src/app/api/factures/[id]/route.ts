@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getFactureById, updateFacture } from "@/lib/queries/factures";
+import { getFactureById, updateFacture, regenererFacture } from "@/lib/queries/factures";
 import { requirePermission } from "@/lib/permissions";
 import { Permission, StatutFacture } from "@/types";
 import type { UpdateFactureDTO } from "@/types";
@@ -56,5 +56,22 @@ export async function PUT(request: NextRequest, { params }: Params) {
     return NextResponse.json(facture);
   } catch (error) {
     return handleApiError("PUT /api/factures/[id]", error, "Erreur serveur.");
+  }
+}
+
+export async function PATCH(request: NextRequest, { params }: Params) {
+  try {
+    const auth = await requirePermission(request, Permission.FACTURES_GERER);
+    const { id } = await params;
+    const body = await request.json();
+
+    if (body.action === "regenerer") {
+      const facture = await regenererFacture(id, auth.activeSiteId);
+      return NextResponse.json(facture);
+    }
+
+    return apiError(400, "Action inconnue.");
+  } catch (error) {
+    return handleApiError("PATCH /api/factures/[id]", error, "Erreur serveur.");
   }
 }

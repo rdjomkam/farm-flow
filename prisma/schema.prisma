@@ -118,6 +118,7 @@ enum ModePaiement {
 enum StatutVente {
   EN_PREPARATION
   LIVREE
+  CLOTUREE
 }
 
 enum ActionRegle {

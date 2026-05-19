@@ -14,6 +14,7 @@ import {
   Plus,
   FileText,
   Waves,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ExportButton } from "@/components/ui/export-button";
@@ -103,8 +104,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
 
   const statut = facture.statut as StatutFacture;
   const resteAPayer = facture.montantTotal - facture.montantPaye;
-  const canAddPaiement =
-    statut !== StatutFacture.PAYEE && statut !== StatutFacture.ANNULEE;
+  const canAddPaiement = statut !== StatutFacture.ANNULEE;
 
   const statutLabel = (s: string) =>
     t(`factures.statuts.${s}` as Parameters<typeof t>[0]) || s;
@@ -140,6 +140,16 @@ export function FactureDetailClient({ facture, permissions }: Props) {
       await queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
     }
   }
+
+  async function handleRegenerer() {
+    const result = await venteService.regenererFacture(facture.id);
+    if (result.ok) {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.factures.all });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
+    }
+  }
+
+  const montantDesync = facture.montantTotal !== facture.vente.montantTotal;
 
   return (
     <div className="flex flex-col gap-4">
@@ -217,6 +227,22 @@ export function FactureDetailClient({ facture, permissions }: Props) {
         </CardContent>
       </Card>
 
+      {/* Desync warning */}
+      {montantDesync && permissions.includes(Permission.FACTURES_GERER) && statut !== StatutFacture.ANNULEE && (
+        <div className="rounded-lg border border-orange-300 bg-orange-50 p-3 flex items-center justify-between gap-2">
+          <p className="text-sm text-orange-800">
+            {t("factures.detail.montantDesync", {
+              factureTotal: formatNumber(facture.montantTotal),
+              venteTotal: formatNumber(facture.vente.montantTotal),
+            })}
+          </p>
+          <Button variant="outline" size="sm" onClick={handleRegenerer} className="shrink-0">
+            <RefreshCw className="h-4 w-4 mr-1" />
+            {t("factures.detail.regenerer")}
+          </Button>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex flex-wrap gap-2">
         {/* PDF export button */}
@@ -227,6 +253,12 @@ export function FactureDetailClient({ facture, permissions }: Props) {
             label="PDF"
             variant="outline"
           />
+        )}
+        {permissions.includes(Permission.FACTURES_GERER) && statut !== StatutFacture.ANNULEE && (
+          <Button variant="outline" size="sm" onClick={handleRegenerer}>
+            <RefreshCw className="h-4 w-4 mr-1" />
+            {t("factures.detail.regenerer")}
+          </Button>
         )}
         {statut === StatutFacture.BROUILLON && permissions.includes(Permission.FACTURES_GERER) && (
           <Button

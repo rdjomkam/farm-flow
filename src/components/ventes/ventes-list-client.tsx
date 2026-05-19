@@ -122,7 +122,7 @@ export function VentesListClient({ initialVentes, clients, vagues, permissions }
                         </p>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
-                        <Badge variant={v.statut === StatutVente.LIVREE ? "terminee" : "warning"}>
+                        <Badge variant={v.statut === StatutVente.CLOTUREE ? "default" : v.statut === StatutVente.LIVREE ? "terminee" : "warning"}>
                           {t(`ventes.detail.statut${v.statut}` as Parameters<typeof t>[0])}
                         </Badge>
                         {v.facture ? (
@@ -138,8 +138,9 @@ export function VentesListClient({ initialVentes, clients, vagues, permissions }
                       <span className="text-muted-foreground">
                         {v.quantitePoissons} {t("ventes.detail.poissons")} — {v.poidsTotalKg} kg
                       </span>
-                      <span className="font-semibold">
+                      <span className="font-semibold" title={v.statut === StatutVente.EN_PREPARATION ? t("ventes.detail.montantEstime") : t("ventes.detail.montantFinal")}>
                         {formatNumber(v.montantTotal)} F
+                        {v.statut === StatutVente.EN_PREPARATION && <span className="text-xs font-normal text-muted-foreground ml-1">~</span>}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">

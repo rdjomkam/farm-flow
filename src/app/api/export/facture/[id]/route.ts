@@ -70,6 +70,8 @@ export async function GET(
       vagueCode: facture.vente.vague?.code ?? "—",
       quantitePoissons: facture.vente.quantitePoissons,
       poidsTotalKg: facture.vente.poidsTotalKg,
+      poidsLivreKg: facture.vente.poidsLivreKg,
+      quantiteLivree: facture.vente.quantiteLivree,
       prixUnitaireKg: facture.vente.prixUnitaireKg,
       montantTotal: facture.vente.montantTotal,
       montantFacture: facture.montantTotal,

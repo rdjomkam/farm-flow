@@ -284,6 +284,7 @@ export enum StatutFacture {
 export enum StatutVente {
   EN_PREPARATION = "EN_PREPARATION",
   LIVREE = "LIVREE",
+  CLOTUREE = "CLOTUREE",
 }
 
 /** Mode de paiement */

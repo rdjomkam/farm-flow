@@ -84,6 +84,20 @@ export function useVenteService() {
     [call]
   );
 
+  const cloturerDefinitivement = useCallback(
+    (id: string) =>
+      call<VenteWithRelations>(
+        `/api/ventes/${id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "cloturer_definitivement" }),
+        },
+        { successMessage: "Vente clôturée définitivement." }
+      ),
+    [call]
+  );
+
   const deleteVente = useCallback(
     (id: string) =>
       call<{ message: string }>(
@@ -130,6 +144,20 @@ export function useVenteService() {
           body: JSON.stringify(dto),
         },
         { successMessage: "Paiement enregistré." }
+      ),
+    [call]
+  );
+
+  const regenererFacture = useCallback(
+    (factureId: string) =>
+      call<FactureDetailResponse>(
+        `/api/factures/${factureId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "regenerer" }),
+        },
+        { successMessage: "Facture régénérée." }
       ),
     [call]
   );
@@ -189,11 +217,13 @@ export function useVenteService() {
     createVente,
     updateVente,
     cloturerVente,
+    cloturerDefinitivement,
     deleteVente,
     listFactures,
     getFacture,
     updateFacture,
     addPaiement,
+    regenererFacture,
     listClients,
     createClient,
     updateClient,

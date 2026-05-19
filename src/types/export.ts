@@ -128,11 +128,15 @@ export interface CreateFacturePDFDTO {
   vagueCode: string;
   /** Nombre de poissons vendus */
   quantitePoissons: number;
-  /** Poids total en kilogrammes */
+  /** Poids total commandé en kilogrammes */
   poidsTotalKg: number;
+  /** Poids réellement livré (fait foi du montant) */
+  poidsLivreKg: number | null;
+  /** Quantité de poissons livrés */
+  quantiteLivree: number | null;
   /** Prix unitaire par kilogramme (en FCFA) */
   prixUnitaireKg: number;
-  /** Montant total de la vente (poidsTotalKg × prixUnitaireKg) */
+  /** Montant total de la vente (basé sur poids livré si disponible) */
   montantTotal: number;
 
   // --- Récapitulatif financier ---

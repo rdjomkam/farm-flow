@@ -261,6 +261,10 @@ export async function updateVente(
     });
     if (!existing) throw new Error("Vente introuvable");
 
+    if (existing.statut === StatutVente.CLOTUREE) {
+      throw new Error("Une vente cloturee ne peut plus etre modifiee");
+    }
+
     const newClientId = dto.clientId ?? existing.clientId;
     const newVagueId = dto.vagueId ?? existing.vagueId;
     const newPoidsTotalKg = dto.poidsTotalKg ?? existing.poidsTotalKg;
@@ -684,6 +688,60 @@ export async function cloturerVente(
           ancienMontant: vente.montantTotal,
           nouveauMontant: newMontantTotal,
           dateLivraison: dateLivraison.toISOString(),
+        },
+      },
+    });
+
+    return updated;
+  });
+}
+
+/**
+ * Cloture definitive d'une vente (LIVREE → CLOTUREE).
+ * Etat terminal : plus aucune modification possible.
+ */
+export async function cloturerDefinitivement(
+  venteId: string,
+  siteId: string,
+  userId: string,
+) {
+  return prisma.$transaction(async (tx) => {
+    const vente = await tx.vente.findFirst({
+      where: { id: venteId, siteId },
+      include: {
+        client: { select: { nom: true } },
+        vague: { select: { code: true } },
+        facture: { select: { id: true, statut: true, montantTotal: true, montantPaye: true } },
+      },
+    });
+    if (!vente) throw new Error("Vente introuvable");
+
+    if (vente.statut !== StatutVente.LIVREE) {
+      throw new Error("Seule une vente livree peut etre cloturee definitivement");
+    }
+
+    const updated = await tx.vente.update({
+      where: { id: venteId },
+      data: { statut: StatutVente.CLOTUREE },
+      include: {
+        client: { select: { id: true, nom: true } },
+        vague: { select: { id: true, code: true } },
+        user: { select: { id: true, name: true } },
+        facture: { select: { id: true, numero: true, statut: true, montantPaye: true, montantTotal: true } },
+      },
+    });
+
+    await tx.siteAuditLog.create({
+      data: {
+        siteId,
+        actorId: userId,
+        action: "VENTE_CLOTUREE_DEFINITIVEMENT",
+        details: {
+          venteNumero: vente.numero,
+          clientNom: vente.client.nom,
+          vagueCode: vente.vague.code,
+          montantTotal: vente.montantTotal,
+          factureStatut: vente.facture?.statut ?? null,
         },
       },
     });

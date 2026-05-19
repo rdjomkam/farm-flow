@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getVenteById, updateVente, cloturerVente } from "@/lib/queries/ventes";
+import { getVenteById, updateVente, cloturerVente, cloturerDefinitivement } from "@/lib/queries/ventes";
 import { requirePermission } from "@/lib/permissions";
 import { Permission } from "@/types";
 import type { UpdateVenteDTO, ClotureVenteDTO } from "@/types";
@@ -57,13 +57,19 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const auth = await requirePermission(request, Permission.VENTES_MODIFIER);
     const { id } = await params;
-    const body = (await request.json()) as ClotureVenteDTO;
+    const body = await request.json();
 
-    if (!body.poidsLivreKg || body.poidsLivreKg <= 0) {
+    if (body.action === "cloturer_definitivement") {
+      const result = await cloturerDefinitivement(id, auth.activeSiteId, auth.userId);
+      return NextResponse.json(result);
+    }
+
+    const dto = body as ClotureVenteDTO;
+    if (!dto.poidsLivreKg || dto.poidsLivreKg <= 0) {
       return apiError(400, "Le poids livré doit être supérieur à 0.");
     }
 
-    const result = await cloturerVente(id, auth.activeSiteId, auth.userId, body);
+    const result = await cloturerVente(id, auth.activeSiteId, auth.userId, dto);
     return NextResponse.json(result);
   } catch (error) {
     return handleApiError("PATCH /api/ventes/[id]", error, "Erreur serveur.");

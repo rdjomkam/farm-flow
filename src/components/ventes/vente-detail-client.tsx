@@ -17,6 +17,7 @@ import {
   Truck,
   AlertTriangle,
   CheckCircle2,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,9 +53,10 @@ const statutVariants: Record<string, "default" | "info" | "warning" | "terminee"
   [StatutFacture.ANNULEE]: "annulee",
 };
 
-const venteStatutVariants: Record<string, "warning" | "terminee"> = {
+const venteStatutVariants: Record<string, "warning" | "terminee" | "default"> = {
   [StatutVente.EN_PREPARATION]: "warning",
   [StatutVente.LIVREE]: "terminee",
+  [StatutVente.CLOTUREE]: "default",
 };
 
 interface VenteData {
@@ -206,6 +208,14 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
     }
   }
 
+  async function handleCloturerDefinitivement() {
+    const result = await venteService.cloturerDefinitivement(vente.id);
+    if (result.ok) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
+      router.refresh();
+    }
+  }
+
   const cloturePoidsNum = parseFloat(cloturePoidsLivre) || 0;
   const cloturePertePoids = vente.poidsTotalKg - cloturePoidsNum;
   const cloturePoidsMoyenG = vente.quantitePoissons > 0
@@ -218,7 +228,7 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
   const clotureNouveauMontant = cloturePoidsNum * vente.prixUnitaireKg;
   const clotureValid = cloturePoidsNum > 0 && cloturePoidsNum <= vente.poidsTotalKg;
 
-  const canEdit = permissions.includes(Permission.VENTES_MODIFIER);
+  const canEdit = permissions.includes(Permission.VENTES_MODIFIER) && vente.statut !== StatutVente.CLOTUREE;
   const editMontantPreview = (() => {
     const p = parseFloat(editPoidsTotalKg);
     const px = parseFloat(editPrixUnitaireKg);
@@ -445,7 +455,11 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
         <p className="text-2xl font-bold">
           {formatNumber(vente.montantTotal)} FCFA
         </p>
-        <p className="text-xs text-muted-foreground">{t("ventes.detail.montantTotal")}</p>
+        <p className="text-xs text-muted-foreground">
+          {vente.statut === StatutVente.EN_PREPARATION
+            ? t("ventes.detail.montantEstime")
+            : t("ventes.detail.montantFinal")}
+        </p>
       </div>
 
       {/* Delivery section */}
@@ -566,6 +580,18 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
         </Dialog>
       ) : null}
 
+      {/* Clôturer définitivement (LIVREE → CLOTUREE) */}
+      {vente.statut === StatutVente.LIVREE && permissions.includes(Permission.VENTES_MODIFIER) && (
+        <Button
+          variant="outline"
+          className="w-full min-h-[48px]"
+          onClick={handleCloturerDefinitivement}
+        >
+          <Lock className="h-4 w-4 mr-2" />
+          {t("ventes.detail.cloturerDefinitivement")}
+        </Button>
+      )}
+
       {/* Facture section */}
       {vente.facture ? (
         <Card>
@@ -592,10 +618,14 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
             </Link>
           </CardContent>
         </Card>
-      ) : permissions.includes(Permission.VENTES_CREER) ? (
+      ) : permissions.includes(Permission.VENTES_CREER) && vente.statut === StatutVente.LIVREE ? (
         <Button onClick={handleCreateFacture} className="w-full min-h-[48px]">
           <FileText className="h-4 w-4 mr-2" /> {t("ventes.detail.genererFacture")}
         </Button>
+      ) : permissions.includes(Permission.VENTES_CREER) && vente.statut === StatutVente.EN_PREPARATION ? (
+        <p className="text-xs text-center text-muted-foreground py-2">
+          {t("ventes.detail.factureApresLivraison")}
+        </p>
       ) : null}
 
       {/* Client info */}
