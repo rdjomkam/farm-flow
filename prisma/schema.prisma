@@ -171,8 +171,9 @@ enum Permission {
   VENTES_MODIFIER
   FACTURES_VOIR
   FACTURES_GERER
-  // Paiements (1)
+  // Paiements (2)
   PAIEMENTS_CREER
+  PAIEMENTS_SUPPRIMER
   // Alevins (6) — gate de module Reproduction + legacy soft-deprecated
   ALEVINS_VOIR
   ALEVINS_GERER

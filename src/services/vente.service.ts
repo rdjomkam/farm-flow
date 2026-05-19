@@ -148,6 +148,16 @@ export function useVenteService() {
     [call]
   );
 
+  const deletePaiement = useCallback(
+    (factureId: string, paiementId: string) =>
+      call<{ deleted: boolean }>(
+        `/api/factures/${factureId}/paiements/${paiementId}`,
+        { method: "DELETE" },
+        { successMessage: "Paiement supprimé." }
+      ),
+    [call]
+  );
+
   const regenererFacture = useCallback(
     (factureId: string) =>
       call<FactureDetailResponse>(
@@ -223,6 +233,7 @@ export function useVenteService() {
     getFacture,
     updateFacture,
     addPaiement,
+    deletePaiement,
     regenererFacture,
     listClients,
     createClient,

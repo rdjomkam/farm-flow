@@ -57,6 +57,7 @@ export enum Permission {
   FACTURES_GERER = "FACTURES_GERER",
   // Paiements
   PAIEMENTS_CREER = "PAIEMENTS_CREER",
+  PAIEMENTS_SUPPRIMER = "PAIEMENTS_SUPPRIMER",
   // Alevins (legacy — soft-deprecated, gate de module Reproduction conserve)
   ALEVINS_VOIR = "ALEVINS_VOIR",
   ALEVINS_GERER = "ALEVINS_GERER",

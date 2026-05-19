@@ -290,3 +290,60 @@ export async function ajouterPaiement(
     return paiement;
   });
 }
+
+/**
+ * Supprime un paiement d'une facture (transaction atomique).
+ *
+ * Regles metier :
+ * 1. La facture doit appartenir au site et ne pas etre ANNULEE
+ * 2. La vente ne doit pas etre CLOTUREE
+ * 3. Recalcule montantPaye = SUM(paiements restants)
+ * 4. Met a jour le statut de la facture
+ */
+export async function supprimerPaiement(
+  siteId: string,
+  factureId: string,
+  paiementId: string,
+) {
+  return prisma.$transaction(async (tx) => {
+    const paiement = await tx.paiement.findFirst({
+      where: { id: paiementId, factureId, siteId },
+      include: {
+        facture: {
+          select: { statut: true, montantTotal: true, vente: { select: { statut: true } } },
+        },
+      },
+    });
+    if (!paiement) throw new Error("Paiement introuvable");
+
+    if (paiement.facture.vente.statut === StatutVente.CLOTUREE) {
+      throw new Error("Impossible de modifier les paiements d'une vente cloturee");
+    }
+
+    if (paiement.facture.statut === StatutFacture.ANNULEE) {
+      throw new Error("Impossible de supprimer un paiement d'une facture annulee");
+    }
+
+    await tx.paiement.delete({ where: { id: paiementId } });
+
+    const aggregation = await tx.paiement.aggregate({
+      where: { factureId },
+      _sum: { montant: true },
+    });
+    const newMontantPaye = aggregation._sum.montant ?? 0;
+
+    const newStatut =
+      newMontantPaye >= paiement.facture.montantTotal
+        ? StatutFacture.PAYEE
+        : newMontantPaye > 0
+          ? StatutFacture.PAYEE_PARTIELLEMENT
+          : StatutFacture.ENVOYEE;
+
+    await tx.facture.update({
+      where: { id: factureId },
+      data: { montantPaye: newMontantPaye, statut: newStatut },
+    });
+
+    return { deleted: true };
+  });
+}

@@ -15,6 +15,7 @@ import {
   FileText,
   Waves,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ExportButton } from "@/components/ui/export-button";
@@ -148,6 +149,18 @@ export function FactureDetailClient({ facture, permissions }: Props) {
       await queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
     }
   }
+
+  async function handleDeletePaiement(paiementId: string) {
+    const result = await venteService.deletePaiement(facture.id, paiementId);
+    if (result.ok) {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.factures.all });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
+    }
+  }
+
+  const canDeletePaiement =
+    statut !== StatutFacture.ANNULEE &&
+    permissions.includes(Permission.PAIEMENTS_SUPPRIMER);
 
   const montantDesync = facture.montantTotal !== facture.vente.montantTotal;
 
@@ -384,9 +397,21 @@ export function FactureDetailClient({ facture, permissions }: Props) {
                       {p.reference && ` — ${p.reference}`}
                     </p>
                   </div>
-                  <p className="text-sm font-semibold shrink-0">
-                    {formatNumber(p.montant)} F
-                  </p>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <p className="text-sm font-semibold">
+                      {formatNumber(p.montant)} F
+                    </p>
+                    {canDeletePaiement && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                        onClick={() => handleDeletePaiement(p.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
