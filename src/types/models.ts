@@ -951,6 +951,8 @@ export interface Vente {
   dateCommande: Date;
   statut: StatutVente;
   dateLivraison: Date | null;
+  poidsCommandeKg: number | null;
+  quantiteCommandee: number | null;
   poidsLivreKg: number | null;
   quantiteLivree: number | null;
   /** ID du site (ferme) — R8 */

@@ -71,6 +71,8 @@ interface VenteData {
   dateCommande: string;
   statut: string;
   dateLivraison: string | null;
+  poidsCommandeKg: number | null;
+  quantiteCommandee: number | null;
   poidsLivreKg: number | null;
   quantiteLivree: number | null;
   client: {
@@ -477,18 +479,20 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
                 <span className="text-muted-foreground">{t("ventes.detail.dateLivraison")}</span>
                 <span>{vente.dateLivraison ? new Date(vente.dateLivraison).toLocaleDateString(locale) : "-"}</span>
               </div>
+              {vente.poidsCommandeKg != null && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t("ventes.detail.poidsCommandeKg")}</span>
+                  <span>{vente.poidsCommandeKg} kg</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("ventes.detail.poidsLivreKg")}</span>
-                <span>{vente.poidsLivreKg} kg</span>
+                <span>{vente.poidsTotalKg} kg</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t("ventes.detail.quantiteLivree")}</span>
-                <span>{vente.quantiteLivree}</span>
-              </div>
-              {vente.poidsLivreKg != null && vente.poidsLivreKg < vente.poidsTotalKg && (
+              {vente.poidsCommandeKg != null && vente.poidsCommandeKg > vente.poidsTotalKg && (
                 <div className="flex justify-between text-orange-600">
                   <span>{t("ventes.detail.pertePoids")}</span>
-                  <span>{(vente.poidsTotalKg - vente.poidsLivreKg).toFixed(1)} kg</span>
+                  <span>{(vente.poidsCommandeKg - vente.poidsTotalKg).toFixed(1)} kg</span>
                 </div>
               )}
             </div>

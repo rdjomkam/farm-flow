@@ -1528,6 +1528,8 @@ model Vente {
   dateCommande     DateTime    @default(now())
   statut           StatutVente @default(EN_PREPARATION)
   dateLivraison    DateTime?
+  poidsCommandeKg  Float?
+  quantiteCommandee Int?
   poidsLivreKg     Float?
   quantiteLivree   Int?
   notes            String?

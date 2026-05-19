@@ -447,8 +447,7 @@ export async function updateVente(
       }
     }
 
-    const poidsFacturation = existing.poidsLivreKg ?? newPoidsTotalKg;
-    const newMontantTotal = poidsFacturation * newPrixUnitaireKg;
+    const newMontantTotal = newPoidsTotalKg * newPrixUnitaireKg;
 
     // Update the vente
     const updated = await tx.vente.update({
@@ -649,8 +648,12 @@ export async function cloturerVente(
       where: { id: venteId },
       data: {
         statut: StatutVente.LIVREE,
+        poidsCommandeKg: vente.poidsTotalKg,
+        quantiteCommandee: vente.quantitePoissons,
         poidsLivreKg: dto.poidsLivreKg,
         quantiteLivree,
+        poidsTotalKg: dto.poidsLivreKg,
+        quantitePoissons: quantiteLivree,
         dateLivraison,
         montantTotal: newMontantTotal,
       },

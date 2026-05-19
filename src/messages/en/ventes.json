@@ -95,6 +95,7 @@
       "cloturerDefinitivement": "Close permanently",
       "dateCommande": "Order date",
       "dateLivraison": "Delivery date",
+      "poidsCommandeKg": "Ordered weight",
       "poidsLivreKg": "Delivered weight",
       "quantiteLivree": "Quantity delivered",
       "cloturerLivraison": "Close delivery",

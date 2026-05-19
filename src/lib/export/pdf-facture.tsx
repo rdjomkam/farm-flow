@@ -384,11 +384,11 @@ export function FacturePDF({ data }: { data: CreateFacturePDFDTO }) {
                 Silures — Vague {data.vagueCode}
               </Text>
               <Text style={[styles.tableCell, { color: colors.muted, fontSize: 8 }]}>
-                {data.quantiteLivree ?? data.quantitePoissons} poissons · {data.venteNumero}
+                {data.quantitePoissons} poissons · {data.venteNumero}
               </Text>
             </View>
             <Text style={[styles.tableCell, styles.colQte]}>
-              {data.poidsLivreKg ?? data.poidsTotalKg} kg
+              {data.poidsTotalKg} kg
             </Text>
             <Text style={[styles.tableCell, styles.colPrix]}>
               {fmtNum(data.prixUnitaireKg)} F
