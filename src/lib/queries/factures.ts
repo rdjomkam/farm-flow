@@ -174,7 +174,7 @@ export async function regenererFacture(
   return prisma.$transaction(async (tx) => {
     const facture = await tx.facture.findFirst({
       where: { id: factureId, siteId },
-      include: { vente: { select: { montantTotal: true, statut: true } } },
+      include: { vente: { select: { poidsTotalKg: true, prixUnitaireKg: true, montantTotal: true, statut: true } } },
     });
     if (!facture) throw new Error("Facture introuvable");
 
@@ -186,7 +186,17 @@ export async function regenererFacture(
       throw new Error("Impossible de regenerer une facture annulee");
     }
 
-    const newMontant = facture.vente.montantTotal;
+    // Recompute from weight * price to ensure correctness after delivery cloture
+    const newMontant = facture.vente.poidsTotalKg * facture.vente.prixUnitaireKg;
+
+    // Also fix vente.montantTotal if it drifted
+    if (newMontant !== facture.vente.montantTotal) {
+      await tx.vente.update({
+        where: { id: facture.venteId },
+        data: { montantTotal: newMontant },
+      });
+    }
+
     if (newMontant === facture.montantTotal) {
       return tx.facture.findFirst({
         where: { id: factureId },
