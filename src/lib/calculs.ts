@@ -267,7 +267,8 @@ export function calculerROI(
 export function computeVivantsByBac(
   bacs: { id: string; nombreInitial: number | null }[],
   releves: { bacId: string | null; typeReleve: string; nombreMorts: number | null; nombreCompte: number | null; nombreVendus?: number | null; date?: string | Date | null }[],
-  nombreInitialVague: number
+  nombreInitialVague: number,
+  options?: { excludeVentes?: boolean }
 ): Map<string, number> {
   // Utiliser floor + distribuer le reste au dernier bac pour eviter la perte de poissons
   // Exemple : 1000 / 3 = [334, 333, 333] (total = 1000)
@@ -302,7 +303,7 @@ export function computeVivantsByBac(
         mortsPostComptageParBac.set(r.bacId, (mortsPostComptageParBac.get(r.bacId) ?? 0) + morts);
       }
     }
-    if (r.typeReleve === "VENTE" && r.bacId) {
+    if (r.typeReleve === "VENTE" && r.bacId && !options?.excludeVentes) {
       const vendus = r.nombreVendus ?? 0;
       mortsParBac.set(r.bacId, (mortsParBac.get(r.bacId) ?? 0) + vendus);
 
@@ -342,7 +343,8 @@ export function computeVivantsByBac(
 export function computeNombreVivantsVague(
   bacs: { id: string; nombreInitial: number | null }[],
   releves: { bacId: string | null; typeReleve: string; nombreMorts: number | null; nombreCompte: number | null; nombreVendus?: number | null; date?: string | Date | null }[],
-  nombreInitialVague: number
+  nombreInitialVague: number,
+  options?: { excludeVentes?: boolean }
 ): number {
   if (bacs.length === 0) {
     // Fallback: no bacs attached, use global logic
@@ -353,7 +355,7 @@ export function computeNombreVivantsVague(
       const mortsApres = releves
         .filter(r => r.typeReleve === "MORTALITE" && r.date && new Date(r.date) > lastDate)
         .reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
-      const vendusApres = releves
+      const vendusApres = options?.excludeVentes ? 0 : releves
         .filter(r => r.typeReleve === "VENTE" && r.date && new Date(r.date) > lastDate)
         .reduce((sum, r) => sum + (r.nombreVendus ?? 0), 0);
       return Math.max(0, lastComptage.nombreCompte! - mortsApres - vendusApres);
@@ -361,12 +363,12 @@ export function computeNombreVivantsVague(
     const totalMorts = releves
       .filter(r => r.typeReleve === "MORTALITE")
       .reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
-    const totalVendus = releves
+    const totalVendus = options?.excludeVentes ? 0 : releves
       .filter(r => r.typeReleve === "VENTE")
       .reduce((sum, r) => sum + (r.nombreVendus ?? 0), 0);
     return Math.max(0, nombreInitialVague - totalMorts - totalVendus);
   }
-  const vivantsByBac = computeVivantsByBac(bacs, releves, nombreInitialVague);
+  const vivantsByBac = computeVivantsByBac(bacs, releves, nombreInitialVague, options);
   let total = 0;
   for (const v of vivantsByBac.values()) total += v;
   return total;

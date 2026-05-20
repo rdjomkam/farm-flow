@@ -95,13 +95,14 @@ function calculerSurvieMoyenneVagues(
   const survies: number[] = [];
 
   for (const vague of vagues) {
-    const nombreVivants = computeNombreVivantsVague(
+    const nombreVivantsForSurvie = computeNombreVivantsVague(
       vague.bacs ?? [],
       vague.releves.map(r => ({ ...r, bacId: r.bacId ?? null })),
-      vague.nombreInitial
+      vague.nombreInitial,
+      { excludeVentes: true }
     );
 
-    const survie = calculerTauxSurvie(nombreVivants, vague.nombreInitial);
+    const survie = calculerTauxSurvie(nombreVivantsForSurvie, vague.nombreInitial);
     if (survie !== null) {
       survies.push(survie);
     }

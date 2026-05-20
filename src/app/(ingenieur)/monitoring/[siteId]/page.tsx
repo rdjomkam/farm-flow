@@ -118,7 +118,8 @@ export default async function IngenieurClientDetailPage({
     const totalMortalites = mortalites.reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
     const dernierePoidsMoyen = biometries.at(-1)?.poidsMoyen ?? null;
     const nombreVivants = computeNombreVivantsVague(vague.bacs, vague.releves, vague.nombreInitial);
-    const tauxSurvie = calculerTauxSurvie(nombreVivants, vague.nombreInitial);
+    const nombreVivantsForSurvie = computeNombreVivantsVague(vague.bacs, vague.releves, vague.nombreInitial, { excludeVentes: true });
+    const tauxSurvie = calculerTauxSurvie(nombreVivantsForSurvie, vague.nombreInitial);
 
     const joursEcoules = Math.floor(
       (new Date().getTime() - new Date(vague.dateDebut).getTime()) / (1000 * 60 * 60 * 24)

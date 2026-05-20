@@ -583,6 +583,7 @@ async function computeAlimentMetrics(
     const poidsMoyen = derniereBio?.poidsMoyen ?? null;
 
     const nombreVivants = computeNombreVivantsVague(vague.bacs, releves, vague.nombreInitial);
+    const nombreVivantsForSurvie = computeNombreVivantsVague(vague.bacs, releves, vague.nombreInitial, { excludeVentes: true });
 
     const now = vague.dateFin ?? new Date();
     const jours = Math.max(
@@ -596,7 +597,7 @@ async function computeAlimentMetrics(
     const quantite = fcrVague.totalAlimentKg;
 
     const sgr = calculerSGR(vague.poidsMoyenInitial, poidsMoyen, jours);
-    const tauxSurvie = calculerTauxSurvie(nombreVivants, vague.nombreInitial);
+    const tauxSurvie = calculerTauxSurvie(nombreVivantsForSurvie, vague.nombreInitial);
     const coutKg = calculerCoutParKgGain(quantite, prixBase, gainBiomasse);
 
     const adg = calculerADG(vague.poidsMoyenInitial, poidsMoyen, jours);
@@ -1350,6 +1351,7 @@ export async function getComparaisonVagues(
     const poidsMoyenDebut = premiereBio?.poidsMoyen ?? vague.poidsMoyenInitial;
 
     const nombreVivants = computeNombreVivantsVague(vague.bacs, releves, vague.nombreInitial);
+    const nombreVivantsForSurvie = computeNombreVivantsVague(vague.bacs, releves, vague.nombreInitial, { excludeVentes: true });
 
     // BUG 1 fix: hybrid aliment sum — prioritise quantiteAliment (direct entry) if non-null,
     // otherwise fall back to sum of ReleveConsommation (stock-linked). Never add both.
@@ -1368,7 +1370,7 @@ export async function getComparaisonVagues(
         : null;
 
     const fcrGlobal = calculerFCR(totalAliment, gainBiomasse);
-    const tauxSurvie = calculerTauxSurvie(nombreVivants, vague.nombreInitial);
+    const tauxSurvie = calculerTauxSurvie(nombreVivantsForSurvie, vague.nombreInitial);
 
     // SGR moyen : utilise poidsMoyenDebut et poidsMoyenFinal sur la duree totale
     const sgrMoyen = calculerSGR(poidsMoyenDebut, poidsMoyenFinal, dureeJours);

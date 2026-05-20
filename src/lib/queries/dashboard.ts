@@ -76,6 +76,8 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
   const vagues: VagueDashboardSummary[] = vaguesActives.map((v) => {
     const biometries = v.releves.filter((r) => r.typeReleve === TypeReleve.BIOMETRIE);
     const nombreVivants = computeNombreVivantsVague(v.bacs, v.releves, v.nombreInitial);
+    // For survival rate, exclude sales — sold fish are alive, just not in the farm
+    const nombreVivantsForSurvie = computeNombreVivantsVague(v.bacs, v.releves, v.nombreInitial, { excludeVentes: true });
     const hasPerBacReleves = v.releves.some((r) => r.bacId !== null);
 
     const now = new Date();
@@ -83,7 +85,7 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
       (now.getTime() - v.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    const tauxSurvie = calculerTauxSurvie(nombreVivants, v.nombreInitial);
+    const tauxSurvie = calculerTauxSurvie(nombreVivantsForSurvie, v.nombreInitial);
 
     let poidsMoyen: number | null = null;
     let biomasse: number | null = null;
@@ -422,13 +424,14 @@ export async function getDashboardIndicateurs(
     const totalMortalites = mortalites.reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
     const totalAliment = alimentations.reduce((sum, r) => sum + (r.quantiteAliment ?? 0), 0);
     const nombreVivants = computeNombreVivantsVague(v.bacs, v.releves, v.nombreInitial);
+    const nombreVivantsForSurvie = computeNombreVivantsVague(v.bacs, v.releves, v.nombreInitial, { excludeVentes: true });
 
     const now = v.dateFin ?? new Date();
     const joursEcoules = Math.floor(
       (now.getTime() - v.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    const tauxSurvie = calculerTauxSurvie(nombreVivants, v.nombreInitial);
+    const tauxSurvie = calculerTauxSurvie(nombreVivantsForSurvie, v.nombreInitial);
     const biomasse = calculerBiomasse(poidsMoyen, nombreVivants);
     const biomasseInitiale = calculerBiomasse(v.poidsMoyenInitial, v.nombreInitial);
     const gainBiomasse =

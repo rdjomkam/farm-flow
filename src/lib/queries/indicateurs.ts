@@ -158,6 +158,11 @@ export async function getIndicateursVague(
     biomasse = calculerBiomasse(poidsMoyen, nombreVivants);
   }
 
+  // For survival rate, exclude sales — sold fish are alive, just not in the farm
+  const nombreVivantsForSurvie = hasPerBacReleves && vague.bacs.length > 0
+    ? computeNombreVivantsVague(vague.bacs, vague.releves, vague.nombreInitial, { excludeVentes: true })
+    : nombreVivants; // No per-bac releves means no VENTE releves either
+
   // Jours ecoules
   const now = vague.dateFin ?? new Date();
   const joursEcoules = Math.floor(
@@ -171,7 +176,7 @@ export async function getIndicateursVague(
     ? totalPoidsInitialWeighted / totalNombreInitialBacs
     : vague.poidsMoyenInitial;
 
-  const tauxSurvie = calculerTauxSurvie(nombreVivants, nombreInitialEffectif);
+  const tauxSurvie = calculerTauxSurvie(nombreVivantsForSurvie, nombreInitialEffectif);
   const gainPoids = calculerGainPoids(poidsMoyen, poidsMoyenInitialEffectif);
   const sgr = calculerSGR(poidsMoyenInitialEffectif, poidsMoyen, joursEcoules);
   const biomasseInitiale = calculerBiomasse(poidsMoyenInitialEffectif, nombreInitialEffectif);
