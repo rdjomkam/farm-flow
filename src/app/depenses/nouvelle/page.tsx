@@ -7,6 +7,7 @@ import { getVagues } from "@/lib/queries/vagues";
 import { getCommandes } from "@/lib/queries/commandes";
 import { Permission, StatutCommande } from "@/types";
 import { DepenseFormClient } from "@/components/depenses/depense-form-client";
+import { prisma } from "@/lib/db";
 
 export default async function NouvelleDepensePage() {
   const session = await getServerSession();
@@ -21,9 +22,14 @@ export default async function NouvelleDepensePage() {
 
   const t = await getTranslations("depenses.page");
 
-  const [vaguesResult, commandesResult] = await Promise.all([
+  const [vaguesResult, commandesResult, unitesProduction] = await Promise.all([
     getVagues(session.activeSiteId),
     getCommandes(session.activeSiteId),
+    prisma.uniteProduction.findMany({
+      where: { siteId: session.activeSiteId, isActive: true },
+      select: { id: true, code: true, nom: true, type: true },
+      orderBy: { nom: "asc" },
+    }),
   ]);
 
   // Seules les commandes LIVREES sans depense associee (displayed as optional link)
@@ -41,6 +47,7 @@ export default async function NouvelleDepensePage() {
           numero: c.numero,
           montantTotal: c.montantTotal,
         }))}
+        unitesProduction={unitesProduction}
       />
     </>
   );

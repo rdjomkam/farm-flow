@@ -5,7 +5,6 @@ import { VenteFormClient } from "@/components/ventes/vente-form-client";
 import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { getClients } from "@/lib/queries/clients";
-import { getPoidsMoyenActuelVague } from "@/lib/queries/releves";
 import { prisma } from "@/lib/db";
 import { StatutVague, Permission } from "@/types";
 
@@ -30,16 +29,15 @@ export default async function NouvelleVentePage({ searchParams }: NouvelleVenteP
   const params = await searchParams;
   const activeSiteId = session.activeSiteId;
 
+  // Fetch clients and active vagues (bac data loaded dynamically by the form via API)
   const [clients, vagues] = await Promise.all([
     getClients(activeSiteId),
     prisma.vague.findMany({
       where: {
         siteId: activeSiteId,
-        statut: { not: StatutVague.ANNULEE },
+        statut: { notIn: [StatutVague.ANNULEE, StatutVague.TERMINEE] },
       },
-      include: {
-        bacs: { select: { id: true, nom: true, nombrePoissons: true } },
-      },
+      select: { id: true, code: true },
       orderBy: { dateDebut: "desc" },
     }),
   ]);
@@ -55,19 +53,7 @@ export default async function NouvelleVentePage({ searchParams }: NouvelleVenteP
   }
 
   const clientOptions = clients.map((c) => ({ id: c.id, nom: c.nom }));
-  const vaguePoidsMoyens = await Promise.all(
-    vagues.map((v) => getPoidsMoyenActuelVague(activeSiteId, v.id))
-  );
-  const vagueOptions = vagues.map((v, idx) => ({
-    id: v.id,
-    code: v.code,
-    poissonsDisponibles: v.bacs.reduce(
-      (sum, bac) => sum + (bac.nombrePoissons ?? 0),
-      0
-    ),
-    dernierPoidsMoyenG: vaguePoidsMoyens[idx],
-    bacs: v.bacs.map((b) => ({ id: b.id, nom: b.nom, nombrePoissons: b.nombrePoissons ?? 0 })),
-  }));
+  const vagueOptions = vagues.map((v) => ({ id: v.id, code: v.code }));
 
   const prefill = params.lotAlevinsId
     ? {

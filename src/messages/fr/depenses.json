@@ -128,6 +128,7 @@
     "optional": "(facultatif)",
     "noWave": "Aucune vague",
     "noOrder": "Aucune commande",
+    "noUnit": "Aucune unité",
     "notes": "Notes",
     "notesPlaceholder": "Informations complementaires...",
     "createExpense": "Creer la depense",
@@ -137,7 +138,8 @@
       "montantTotal": "Montant total (FCFA)",
       "date": "Date",
       "vagueAssociee": "Vague associee",
-      "commandeLiee": "Commande liee"
+      "commandeLiee": "Commande liee",
+      "uniteProduction": "Unité de production"
     }
   },
   "deleteDepense": {

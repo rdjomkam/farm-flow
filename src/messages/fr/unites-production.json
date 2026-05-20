@@ -1,0 +1,72 @@
+{
+  "unitesProduction": {
+    "title": "Unités de production",
+    "subtitle": "Gérez vos centres de coût par type de production",
+    "create": "Nouvelle unité",
+    "empty": "Aucune unité de production",
+    "emptyDesc": "Créez des unités pour séparer les coûts entre reproduction et grossissement.",
+    "types": {
+      "REPRODUCTION": "Reproduction",
+      "GROSSISSEMENT": "Grossissement"
+    },
+    "form": {
+      "code": "Code",
+      "codePlaceholder": "Ex: REPRO-01",
+      "nom": "Nom",
+      "nomPlaceholder": "Ex: Reproduction principale",
+      "type": "Type",
+      "typePlaceholder": "Choisir le type",
+      "description": "Description",
+      "descriptionPlaceholder": "Description optionnelle",
+      "submit": "Créer l'unité",
+      "update": "Enregistrer"
+    },
+    "detail": {
+      "vagues": "Vagues",
+      "depenses": "Dépenses",
+      "transfertsSortants": "Transferts sortants",
+      "transfertsEntrants": "Transferts entrants",
+      "aucuneVague": "Aucune vague assignée"
+    },
+    "actions": {
+      "edit": "Modifier",
+      "deactivate": "Désactiver",
+      "activate": "Réactiver"
+    }
+  },
+  "transferts": {
+    "title": "Transferts internes",
+    "subtitle": "Historique des transferts entre unités de production",
+    "create": "Nouveau transfert",
+    "empty": "Aucun transfert interne",
+    "emptyDesc": "Les transferts internes enregistrent le mouvement de poissons entre unités avec un prix de cession.",
+    "form": {
+      "uniteSource": "Unité source",
+      "uniteSourcePlaceholder": "Sélectionner l'unité source",
+      "uniteDestination": "Unité destination",
+      "uniteDestinationPlaceholder": "Sélectionner l'unité destination",
+      "lotAlevins": "Lot d'alevins",
+      "lotAlevinsPlaceholder": "Optionnel — lot transféré",
+      "vagueDestination": "Vague destination",
+      "vagueDestinationPlaceholder": "Optionnel — vague créée",
+      "nombrePoissons": "Nombre de poissons",
+      "poidsMoyenG": "Poids moyen (g)",
+      "prixUnitaire": "Prix unitaire",
+      "prixBase": "Base de prix",
+      "prixBasePAR_POISSON": "Par poisson",
+      "prixBasePAR_KG": "Par kg",
+      "date": "Date du transfert",
+      "description": "Description",
+      "descriptionPlaceholder": "Optionnel",
+      "montantTotal": "Montant total",
+      "submit": "Enregistrer le transfert"
+    },
+    "card": {
+      "de": "De",
+      "vers": "Vers",
+      "poissons": "{count} poissons",
+      "revenuSource": "Revenu pour {unite}",
+      "coutDestination": "Coût pour {unite}"
+    }
+  }
+}

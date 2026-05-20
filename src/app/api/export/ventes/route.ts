@@ -46,7 +46,14 @@ export async function GET(request: NextRequest) {
       numero: v.numero,
       date: v.createdAt,
       nomClient: v.client.nom,
-      codeVague: v.vague.code,
+      // Pour les ventes multi-vague, vagueId est null — on liste les codes des lignes
+      codeVague: v.vague?.code ?? (
+        (v as unknown as { lignes?: Array<{ vague?: { code?: string } }> }).lignes
+          ?.map((l) => l.vague?.code)
+          .filter(Boolean)
+          .join(", ")
+        ?? ""
+      ),
       quantitePoissons: v.quantitePoissons,
       poidsTotalKg: v.poidsTotalKg,
       prixUnitaireKg: v.prixUnitaireKg,

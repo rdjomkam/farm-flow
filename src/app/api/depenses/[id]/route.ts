@@ -107,6 +107,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       }),
       ...(body.vagueId !== undefined && { vagueId: body.vagueId }),
       ...(body.notes !== undefined && { notes: body.notes }),
+      ...(body.uniteProductionId !== undefined && { uniteProductionId: body.uniteProductionId ?? null }),
     };
 
     const depense = await updateDepense(id, auth.activeSiteId, data);

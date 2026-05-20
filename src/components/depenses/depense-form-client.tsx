@@ -32,16 +32,24 @@ interface CommandeOption {
   montantTotal: number;
 }
 
+interface UniteProductionOption {
+  id: string;
+  code: string;
+  nom: string;
+  type: string;
+}
+
 interface Props {
   vagues: VagueOption[];
   commandesLivrees: CommandeOption[];
+  unitesProduction: UniteProductionOption[];
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
+export function DepenseFormClient({ vagues, commandesLivrees, unitesProduction }: Props) {
   const router = useRouter();
   const depenseService = useDepenseService();
   const t = useTranslations("depenses");
@@ -58,6 +66,7 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
   const [vagueId, setVagueId] = useState<string>("");
   const [commandeId, setCommandeId] = useState<string>("");
   const [notes, setNotes] = useState("");
+  const [uniteProductionId, setUniteProductionId] = useState<string>("");
 
   const errors: Record<string, string> = {};
   const [submitErrors, setSubmitErrors] = useState<
@@ -125,6 +134,7 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
         : undefined,
       vagueId: vagueId || undefined,
       commandeId: commandeId || undefined,
+      uniteProductionId: uniteProductionId || undefined,
       notes: notes.trim() || undefined,
     });
 
@@ -240,6 +250,23 @@ export function DepenseFormClient({ vagues, commandesLivrees }: Props) {
                   {vagues.map((v) => (
                     <SelectItem key={v.id} value={v.id}>
                       {v.code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {/* Unité de production — shown when no vague is selected (auto-inherited otherwise) */}
+            {unitesProduction.length > 0 && !vagueId && (
+              <Select value={uniteProductionId || "__aucune"} onValueChange={(v) => setUniteProductionId(v === "__aucune" ? "" : v)}>
+                <SelectTrigger id="uniteProduction" label={t("form.labels.uniteProduction")}>
+                  <SelectValue placeholder={t("form.noUnit")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__aucune">{t("form.noUnit")}</SelectItem>
+                  {unitesProduction.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.nom} ({u.code})
                     </SelectItem>
                   ))}
                 </SelectContent>

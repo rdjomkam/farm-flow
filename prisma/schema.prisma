@@ -123,6 +123,11 @@ enum StatutVente {
   CLOTUREE
 }
 
+enum TypeUniteProduction {
+  REPRODUCTION
+  GROSSISSEMENT
+}
+
 enum ActionRegle {
   ACTIVITE
   NOTIFICATION
@@ -656,6 +661,7 @@ model Site {
   releveConsommations    ReleveConsommation[]
   clients                Client[]
   ventes                 Vente[]
+  lignesVente            LigneVente[]             @relation("SiteLignesVente")
   factures               Facture[]
   paiements              Paiement[]
   reproducteurs          Reproducteur[]
@@ -703,6 +709,9 @@ model Site {
   // ADR-043 — Historique des assignations (Phase 2)
   assignationsBac        AssignationBac[]
   savedFilters           SavedFilter[]
+  // Unités de production & transferts internes
+  unitesProduction       UniteProduction[]
+  transfertsInternes     TransfertInterne[]
   // R1-S3 — Module Reproduction : lots géniteurs, incubations, traitements
   lotGeniteurs           LotGeniteurs[]
   incubations            Incubation[]
@@ -1082,6 +1091,7 @@ model User {
   essaisUtilises         EssaiUtilise[]          @relation("EssaisUtilises")
   auditsAbonnement       AbonnementAudit[]       @relation("AuditsAbonnement")
   savedFilters           SavedFilter[]           @relation("SavedFilters")
+  transfertsInternes     TransfertInterne[]
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
   fraisPaiementDepenses  FraisPaiementDepense[]
@@ -1134,6 +1144,7 @@ model Bac {
   lotsAlevins         LotAlevins[]
   activites           Activite[]
   calibrageGroupesDst CalibrageGroupe[] @relation("GroupeDestBac")
+  lignesVente         LigneVente[]      @relation("BacLignesVente")
   // ADR-043 — Historique des assignations (Phase 2)
   assignations        AssignationBac[]
   // R1-S3 — Lots géniteurs hébergés dans ce bac
@@ -1161,6 +1172,11 @@ model Vague {
    */
   isBlocked              Boolean                  @default(false)
   poidsObjectifKg        Float?
+  /**
+   * Unité de production à laquelle cette vague est rattachée (REPRODUCTION ou GROSSISSEMENT)
+   */
+  uniteProductionId      String?
+  uniteProduction        UniteProduction?         @relation(fields: [uniteProductionId], references: [id], onDelete: SetNull)
   siteId                 String
   site                   Site                     @relation(fields: [siteId], references: [id])
   /**
@@ -1177,6 +1193,7 @@ model Vague {
   releves                Releve[]
   mouvements             MouvementStock[]
   ventes                 Vente[]
+  lignesVente            LigneVente[]             @relation("VagueLignesVente")
   lotsAlevinsTransferes  LotAlevins[]
   activites              Activite[]
   depenses               Depense[]
@@ -1191,12 +1208,15 @@ model Vague {
   gompertz               GompertzVague?
   // ADR-043 — Historique des assignations (Phase 2)
   assignations           AssignationBac[]
+  // Transferts internes entrants depuis une unité de production
+  transfertsEntrants     TransfertInterne[]       @relation("TransfertEntrant")
   createdAt              DateTime                 @default(now())
   updatedAt              DateTime                 @updatedAt
 
   @@index([siteId])
   @@index([configElevageId])
   @@index([packActivationId])
+  @@index([uniteProductionId])
 }
 
 /**
@@ -1528,8 +1548,8 @@ model Vente {
   numero           String      @unique
   clientId         String
   client           Client      @relation(fields: [clientId], references: [id])
-  vagueId          String
-  vague            Vague       @relation(fields: [vagueId], references: [id])
+  vagueId          String?
+  vague            Vague?      @relation(fields: [vagueId], references: [id])
   quantitePoissons Int
   poidsTotalKg     Float
   prixUnitaireKg   Float
@@ -1548,6 +1568,7 @@ model Vente {
   user             User        @relation("VenteUser", fields: [userId], references: [id])
   facture          Facture?
   releves          Releve[]    @relation("VenteReleves")
+  lignes           LigneVente[] @relation("VenteLignes")
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
@@ -1555,6 +1576,29 @@ model Vente {
   @@index([clientId])
   @@index([vagueId])
   @@index([statut])
+}
+
+model LigneVente {
+  id             String   @id @default(cuid())
+  venteId        String
+  vente          Vente    @relation("VenteLignes", fields: [venteId], references: [id], onDelete: Cascade)
+  vagueId        String
+  vague          Vague    @relation("VagueLignesVente", fields: [vagueId], references: [id])
+  bacId          String
+  bac            Bac      @relation("BacLignesVente", fields: [bacId], references: [id])
+  poidsTotalKg   Float
+  poidsMoyenG    Float
+  nombrePoissons Int
+  siteId         String
+  site           Site     @relation("SiteLignesVente", fields: [siteId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([venteId, vagueId, bacId])
+  @@index([venteId])
+  @@index([vagueId])
+  @@index([bacId])
+  @@index([siteId])
 }
 
 model Facture {
@@ -1714,6 +1758,7 @@ model LotAlevins {
   poidsObjectifG        Float?
   destinationSortie     DestinationLot?
   releves               Releve[]
+  transfertsInternes    TransfertInterne[]
   siteId                String
   site                  Site             @relation(fields: [siteId], references: [id])
   createdAt             DateTime         @default(now())
@@ -2093,6 +2138,11 @@ model Depense {
   vagueId          String?
   vague            Vague?              @relation(fields: [vagueId], references: [id], onDelete: SetNull)
   /**
+   * Unité de production concernée (REPRODUCTION ou GROSSISSEMENT) — nullable
+   */
+  uniteProductionId String?
+  uniteProduction   UniteProduction?   @relation(fields: [uniteProductionId], references: [id], onDelete: SetNull)
+  /**
    * Lien optionnel vers le template récurrent d'origine
    */
   depenseRecurrenteId String?
@@ -2121,6 +2171,7 @@ model Depense {
   @@index([siteId, statut])
   @@index([commandeId])
   @@index([vagueId])
+  @@index([uniteProductionId])
   @@index([listeBesoinsId])
   @@index([depenseRecurrenteId])
   @@index([date])
@@ -2289,6 +2340,11 @@ model DepenseRecurrente {
   user               User                @relation(fields: [userId], references: [id])
   siteId             String
   site               Site                @relation(fields: [siteId], references: [id])
+  /**
+   * Unité de production concernée (REPRODUCTION ou GROSSISSEMENT) — nullable
+   */
+  uniteProductionId  String?
+  uniteProduction    UniteProduction?    @relation(fields: [uniteProductionId], references: [id], onDelete: SetNull)
   depenses           Depense[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
@@ -2296,6 +2352,7 @@ model DepenseRecurrente {
   @@index([siteId])
   @@index([siteId, isActive])
   @@index([siteId, frequence])
+  @@index([uniteProductionId])
 }
 
 // ──────────────────────────────────────────
@@ -3571,4 +3628,85 @@ model SavedFilter {
 
   @@unique([userId, siteId, page, name])
   @@index([userId, siteId, page])
+}
+
+// ──────────────────────────────────────────
+// Modèles — Unités de production
+// ──────────────────────────────────────────
+
+/**
+ * UniteProduction — Unité organisationnelle de production (REPRODUCTION ou GROSSISSEMENT).
+ * Permet la séparation comptable des coûts entre la nurserie/reproduction et l'élevage grossissement.
+ * R8 : siteId obligatoire.
+ */
+model UniteProduction {
+  id          String              @id @default(cuid())
+  code        String
+  nom         String
+  type        TypeUniteProduction
+  description String?
+  isActive    Boolean             @default(true)
+
+  siteId      String
+  site        Site                @relation(fields: [siteId], references: [id])
+
+  vagues              Vague[]
+  depenses            Depense[]
+  depensesRecurrentes DepenseRecurrente[]
+  transfertsSortants  TransfertInterne[]  @relation("TransfertSource")
+  transfertsEntrants  TransfertInterne[]  @relation("TransfertDestination")
+
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@unique([siteId, code])
+  @@index([siteId])
+  @@index([siteId, type])
+}
+
+/**
+ * TransfertInterne — Transfert d'animaux (alevins ou poissons) d'une unité de production à une autre.
+ * Utilisé notamment pour valoriser le transfert de lots d'alevins depuis la REPRODUCTION
+ * vers le GROSSISSEMENT, avec un prix de cession interne.
+ * R8 : siteId obligatoire.
+ */
+model TransfertInterne {
+  id                 String          @id @default(cuid())
+  code               String          @unique
+  date               DateTime        @default(now())
+
+  uniteSourceId      String
+  uniteSource        UniteProduction @relation("TransfertSource", fields: [uniteSourceId], references: [id])
+
+  uniteDestinationId String
+  uniteDestination   UniteProduction @relation("TransfertDestination", fields: [uniteDestinationId], references: [id])
+
+  lotAlevinsId          String?
+  lotAlevins            LotAlevins?  @relation(fields: [lotAlevinsId], references: [id])
+  vagueDestinationId    String?
+  vagueDestination      Vague?       @relation("TransfertEntrant", fields: [vagueDestinationId], references: [id])
+
+  nombrePoissons        Int
+  poidsMoyenG           Float?
+  prixUnitaire          Float
+  /**
+   * Base de calcul du prix : "PAR_POISSON" ou "PAR_KG"
+   */
+  prixBase              String       @default("PAR_POISSON")
+  montantTotal          Float
+
+  description           String?
+
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id])
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteId])
+  @@index([uniteSourceId])
+  @@index([uniteDestinationId])
+  @@index([lotAlevinsId])
 }

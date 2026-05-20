@@ -36,6 +36,7 @@ import {
   PackageCheck,
   NotebookPen,
   Eye,
+  Factory,
 } from "lucide-react";
 import { NotificationBell } from "./notification-bell";
 import { LanguageSwitcher } from "./language-switcher";
@@ -151,6 +152,7 @@ export function FarmSidebar({
         { href: "/settings/sites", labelKey: "items.gestionSites", icon: Building2 },
         { href: "/settings/alertes", labelKey: "items.alertes", icon: BellRing },
         { href: "/settings/config-elevage", labelKey: "items.configElevage", icon: ClipboardCheck },
+        { href: "/unites-production", labelKey: "items.unitesProduction", icon: Factory },
         { href: "/users", labelKey: "modules.utilisateurs", icon: Users },
       ],
       permissionRequired: Permission.SITE_GERER,

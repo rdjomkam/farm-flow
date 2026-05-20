@@ -70,7 +70,24 @@
       "back": "Ventes",
       "prefillFromLot": "Vente pre-remplie depuis le lot",
       "prefillFromLotWithCode": "Vente pre-remplie depuis le lot {code}",
-      "viewLotAlevins": "Voir le lot d'alevins"
+      "viewLotAlevins": "Voir le lot d'alevins",
+      "sources": "Sources de poissons",
+      "addSource": "Ajouter un autre lot",
+      "removeSource": "Supprimer",
+      "selectVague": "Selectionner un lot",
+      "weightTaken": "Poids preleve (kg)",
+      "avgWeight": "Poids moyen (g)",
+      "estimatedFish": "≈ {count} poissons",
+      "staleBiometry": "Poids moyen date de {days} jour(s) — pensez a peser",
+      "noBiometry": "Aucune biometrie enregistree pour ce bac",
+      "totalWeight": "Poids total",
+      "totalFish": "Poissons total (estime)",
+      "totalAmount": "Montant total",
+      "sourceSubtotal": "Sous-total : {weight} kg · ≈ {fish} poissons",
+      "loadingBacs": "Chargement des bacs...",
+      "noBacsInVague": "Aucun bac actif dans ce lot",
+      "clientEtPrix": "Client et prix",
+      "summary": "Recapitulatif"
     },
     "detail": {
       "poissons": "Poissons",
@@ -114,7 +131,16 @@
       "avarieWarning": "La difference sera enregistree comme perte AVARIE dans les bacs.",
       "confirmerCloture": "Confirmer la cloture",
       "livraisonComplete": "Livraison complete — aucune perte",
-      "livraisonAvecPerte": "Livraison avec perte de {perte} kg"
+      "livraisonAvecPerte": "Livraison avec perte de {perte} kg",
+      "sources": "Sources",
+      "perBac": "Par bac",
+      "multipleBatches": "Lots multiples",
+      "fishCount": "{count} poissons",
+      "sourcesNote": "Les sources ne peuvent pas etre modifiees ici. Creez une nouvelle vente pour changer les lots.",
+      "deleteTitle": "Supprimer la vente",
+      "deleteDescription": "Etes-vous sur de vouloir supprimer la vente {numero} ? Cette action est irreversible.",
+      "deleteWarning": "Les poissons seront restitues dans les bacs, et la facture associee sera supprimee.",
+      "deleteConfirm": "Supprimer la vente"
     }
   },
   "factures": {
@@ -232,6 +258,19 @@
       "rapportPdf": "Rapport PDF",
       "ventesExcel": "Export ventes Excel",
       "stockExcel": "Export stock Excel"
+    },
+    "parUnite": {
+      "title": "Résultat par unité de production",
+      "unite": "Unité",
+      "revenus": "Revenus",
+      "couts": "Coûts",
+      "marge": "Marge",
+      "transfertsIn": "Transferts entrants",
+      "transfertsOut": "Transferts sortants",
+      "vagues": "{count} vague(s)",
+      "depenses": "{count} dépense(s)",
+      "nonAffecte": "Non affecté",
+      "aucuneUnite": "Aucune unité de production configurée."
     }
   }
 }

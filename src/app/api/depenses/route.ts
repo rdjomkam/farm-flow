@@ -154,6 +154,7 @@ export async function POST(request: NextRequest) {
       vagueId: body.vagueId || undefined,
       commandeId: body.commandeId || undefined,
       notes: body.notes?.trim() || undefined,
+      uniteProductionId: body.uniteProductionId || undefined,
     };
 
     const depense = await createDepense(auth.activeSiteId, auth.userId, data);

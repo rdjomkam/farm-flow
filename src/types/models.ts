@@ -290,6 +290,12 @@ export enum StatutVente {
   CLOTUREE = "CLOTUREE",
 }
 
+/** Type d'unite de production */
+export enum TypeUniteProduction {
+  REPRODUCTION = "REPRODUCTION",
+  GROSSISSEMENT = "GROSSISSEMENT",
+}
+
 /** Mode de paiement */
 export enum ModePaiement {
   ESPECES = "ESPECES",
@@ -938,9 +944,29 @@ export interface Client {
 }
 
 /**
+/**
+ * LigneVente — ligne d'une vente multi-vague.
+ *
+ * Chaque ligne reference une vague + un bac avec le poids associe.
+ */
+export interface LigneVente {
+  id: string;
+  venteId: string;
+  vagueId: string;
+  bacId: string;
+  poidsTotalKg: number;
+  poidsMoyenG: number;
+  nombrePoissons: number;
+  siteId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
  * Vente — transaction de vente de poissons.
  *
- * Chaque vente est liee a un client et a une vague.
+ * Chaque vente est liee a un client. vagueId est nullable car une vente
+ * peut desormais porter plusieurs lignes (LigneVente) referençant differentes vagues.
  * Le montantTotal est calcule : poidsTotalKg * prixUnitaireKg.
  */
 export interface Vente {
@@ -948,7 +974,7 @@ export interface Vente {
   /** Numero unique de la vente (ex: "VTE-2026-001") */
   numero: string;
   clientId: string;
-  vagueId: string;
+  vagueId: string | null;
   /** Nombre de poissons vendus */
   quantitePoissons: number;
   /** Poids total en kg */
@@ -976,9 +1002,10 @@ export interface Vente {
 /** Vente avec ses relations chargees */
 export interface VenteWithRelations extends Vente {
   client: Client;
-  vague: Vague;
+  vague: Vague | null;
   user: User;
   facture: Facture | null;
+  lignes?: LigneVente[];
 }
 
 /**
@@ -3568,4 +3595,70 @@ export interface PlatformAuditLog {
   action: string;
   details: Record<string, unknown> | null;
   createdAt: Date;
+}
+
+// ---------------------------------------------------------------------------
+// Modeles — UniteProduction & TransfertInterne
+// ---------------------------------------------------------------------------
+
+/**
+ * UniteProduction — Centre de cout regroupant des vagues et depenses
+ * par type de production (REPRODUCTION ou GROSSISSEMENT).
+ */
+export interface UniteProduction {
+  id: string;
+  code: string;
+  nom: string;
+  type: TypeUniteProduction;
+  description: string | null;
+  isActive: boolean;
+  siteId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UniteProductionWithRelations extends UniteProduction {
+  vagues: { id: string; code: string; statut: string }[];
+  _count?: {
+    vagues: number;
+    depenses: number;
+    transfertsSortants: number;
+    transfertsEntrants: number;
+  };
+}
+
+/**
+ * TransfertInterne — Enregistre le transfert financier entre unites de production
+ * (ex: alevins de reproduction vers grossissement avec prix de cession).
+ *
+ * Pour l'unite source : revenu interne.
+ * Pour l'unite destination : cout d'acquisition.
+ */
+export interface TransfertInterne {
+  id: string;
+  code: string;
+  date: Date;
+  uniteSourceId: string;
+  uniteDestinationId: string;
+  lotAlevinsId: string | null;
+  vagueDestinationId: string | null;
+  nombrePoissons: number;
+  poidsMoyenG: number | null;
+  prixUnitaire: number;
+  /** "PAR_POISSON" | "PAR_KG" */
+  prixBase: string;
+  montantTotal: number;
+  description: string | null;
+  siteId: string;
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TransfertInterneWithRelations extends TransfertInterne {
+  uniteSource: { id: string; code: string; nom: string; type: TypeUniteProduction };
+  uniteDestination: { id: string; code: string; nom: string; type: TypeUniteProduction };
+  lotAlevins: { id: string; code: string } | null;
+  vagueDestination: { id: string; code: string } | null;
+  user: { id: string; name: string };
 }

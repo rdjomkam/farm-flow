@@ -45,7 +45,12 @@ export function VentesListClient({ initialVentes, clients, vagues, permissions }
 
   const filtered = ventes.filter((v) => {
     if (filterClient !== "all" && v.client.id !== filterClient) return false;
-    if (filterVague !== "all" && v.vague.id !== filterVague) return false;
+    // Pour les ventes multi-vague, vagueId est null — chercher dans les lignes
+    if (filterVague !== "all") {
+      const inLignes = v.lignes?.some((l: { vagueId: string }) => l.vagueId === filterVague);
+      const inDirect = v.vague?.id === filterVague;
+      if (!inLignes && !inDirect) return false;
+    }
     return true;
   });
 
@@ -118,7 +123,12 @@ export function VentesListClient({ initialVentes, clients, vagues, permissions }
                       <div className="min-w-0">
                         <p className="font-semibold">{v.numero}</p>
                         <p className="text-sm text-muted-foreground truncate">
-                          {v.client.nom} — {v.vague.code}
+                          {v.client.nom}
+                          {v.vague?.code
+                            ? ` — ${v.vague.code}`
+                            : v.lignes && v.lignes.length > 0
+                            ? ` — ${[...new Set((v.lignes as Array<{ vague?: { code?: string } }>).map((l) => l.vague?.code).filter(Boolean))].join(", ")}`
+                            : ""}
                         </p>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">

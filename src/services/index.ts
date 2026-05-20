@@ -48,3 +48,6 @@ export { useConfigService } from "./config.service";
 
 // -- Ingenieur & Notes --
 export { useNoteService } from "./note.service";
+
+// -- Unites de production & Transferts internes --
+export { useUniteProductionService } from "./unite-production.service";

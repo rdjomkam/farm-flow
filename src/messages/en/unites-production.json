@@ -1,0 +1,72 @@
+{
+  "unitesProduction": {
+    "title": "Production units",
+    "subtitle": "Manage your cost centers by production type",
+    "create": "New unit",
+    "empty": "No production units",
+    "emptyDesc": "Create units to separate costs between reproduction and grow-out.",
+    "types": {
+      "REPRODUCTION": "Reproduction",
+      "GROSSISSEMENT": "Grow-out"
+    },
+    "form": {
+      "code": "Code",
+      "codePlaceholder": "E.g. REPRO-01",
+      "nom": "Name",
+      "nomPlaceholder": "E.g. Main reproduction",
+      "type": "Type",
+      "typePlaceholder": "Choose type",
+      "description": "Description",
+      "descriptionPlaceholder": "Optional description",
+      "submit": "Create unit",
+      "update": "Save"
+    },
+    "detail": {
+      "vagues": "Batches",
+      "depenses": "Expenses",
+      "transfertsSortants": "Outgoing transfers",
+      "transfertsEntrants": "Incoming transfers",
+      "aucuneVague": "No batch assigned"
+    },
+    "actions": {
+      "edit": "Edit",
+      "deactivate": "Deactivate",
+      "activate": "Reactivate"
+    }
+  },
+  "transferts": {
+    "title": "Internal transfers",
+    "subtitle": "History of transfers between production units",
+    "create": "New transfer",
+    "empty": "No internal transfers",
+    "emptyDesc": "Internal transfers record fish movement between units with a transfer price.",
+    "form": {
+      "uniteSource": "Source unit",
+      "uniteSourcePlaceholder": "Select source unit",
+      "uniteDestination": "Destination unit",
+      "uniteDestinationPlaceholder": "Select destination unit",
+      "lotAlevins": "Fry batch",
+      "lotAlevinsPlaceholder": "Optional — transferred batch",
+      "vagueDestination": "Destination batch",
+      "vagueDestinationPlaceholder": "Optional — created batch",
+      "nombrePoissons": "Number of fish",
+      "poidsMoyenG": "Average weight (g)",
+      "prixUnitaire": "Unit price",
+      "prixBase": "Price basis",
+      "prixBasePAR_POISSON": "Per fish",
+      "prixBasePAR_KG": "Per kg",
+      "date": "Transfer date",
+      "description": "Description",
+      "descriptionPlaceholder": "Optional",
+      "montantTotal": "Total amount",
+      "submit": "Record transfer"
+    },
+    "card": {
+      "de": "From",
+      "vers": "To",
+      "poissons": "{count} fish",
+      "revenuSource": "Revenue for {unite}",
+      "coutDestination": "Cost for {unite}"
+    }
+  }
+}

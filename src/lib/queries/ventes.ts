@@ -1,8 +1,66 @@
 import { prisma } from "@/lib/db";
 import { generateNextNumero } from "./numero-utils";
 import { StatutVague, StatutVente, TypeReleve, CauseMortalite } from "@/types";
-import { computeVivantsByBac } from "@/lib/calculs";
-import type { CreateVenteDTO, UpdateVenteDTO, ClotureVenteDTO, VenteFilters } from "@/types";
+import type {
+  CreateVenteDTO,
+  CreateLigneVenteDTO,
+  UpdateVenteDTO,
+  ClotureVenteDTO,
+  VenteFilters,
+} from "@/types";
+
+// ---------------------------------------------------------------------------
+// Shared include shapes
+// ---------------------------------------------------------------------------
+
+/** Include standard pour les listes de ventes */
+const VENTE_LIST_INCLUDE = {
+  client: { select: { id: true, nom: true } },
+  vague: { select: { id: true, code: true } },
+  user: { select: { id: true, name: true } },
+  facture: { select: { id: true, numero: true, statut: true, montantPaye: true } },
+  lignes: {
+    select: {
+      id: true,
+      vagueId: true,
+      bacId: true,
+      poidsTotalKg: true,
+      poidsMoyenG: true,
+      nombrePoissons: true,
+      vague: { select: { id: true, code: true } },
+      bac: { select: { id: true, nom: true } },
+    },
+  },
+  _count: { select: { lignes: true } },
+} as const;
+
+/** Include complet pour une vente unique */
+const VENTE_DETAIL_INCLUDE = {
+  client: true,
+  vague: { select: { id: true, code: true, statut: true } },
+  user: { select: { id: true, name: true } },
+  facture: {
+    include: {
+      paiements: { orderBy: { date: "desc" as const } },
+    },
+  },
+  lignes: {
+    select: {
+      id: true,
+      vagueId: true,
+      bacId: true,
+      poidsTotalKg: true,
+      poidsMoyenG: true,
+      nombrePoissons: true,
+      vague: { select: { id: true, code: true } },
+      bac: { select: { id: true, nom: true } },
+    },
+  },
+} as const;
+
+// ---------------------------------------------------------------------------
+// Read helpers
+// ---------------------------------------------------------------------------
 
 /** Liste les ventes d'un site avec filtres et pagination */
 export async function getVentes(
@@ -13,12 +71,15 @@ export async function getVentes(
   const where = {
     siteId,
     ...(filters?.clientId && { clientId: filters.clientId }),
-    ...(filters?.vagueId && { vagueId: filters.vagueId }),
+    // Pour multi-vague : chercher parmi les lignes plutot que sur vagueId direct
+    ...(filters?.vagueId && {
+      lignes: { some: { vagueId: filters.vagueId } },
+    }),
     ...(filters?.dateFrom || filters?.dateTo
       ? {
           createdAt: {
-            ...(filters?.dateFrom && { gte: new Date(filters.dateFrom) }),
-            ...(filters?.dateTo && { lte: new Date(filters.dateTo) }),
+            ...(filters.dateFrom && { gte: new Date(filters.dateFrom) }),
+            ...(filters.dateTo && { lte: new Date(filters.dateTo) }),
           },
         }
       : {}),
@@ -30,12 +91,7 @@ export async function getVentes(
   const [data, total] = await Promise.all([
     prisma.vente.findMany({
       where,
-      include: {
-        client: { select: { id: true, nom: true } },
-        vague: { select: { id: true, code: true } },
-        user: { select: { id: true, name: true } },
-        facture: { select: { id: true, numero: true, statut: true, montantPaye: true } },
-      },
+      include: VENTE_LIST_INCLUDE,
       orderBy: { createdAt: "desc" },
       take: limit,
       skip: offset,
@@ -46,35 +102,189 @@ export async function getVentes(
   return { data, total };
 }
 
-/** Recupere une vente par ID avec ses relations */
+/** Recupere une vente par ID avec ses relations completes */
 export async function getVenteById(id: string, siteId: string) {
   return prisma.vente.findFirst({
     where: { id, siteId },
-    include: {
-      client: true,
-      vague: { select: { id: true, code: true, statut: true } },
-      user: { select: { id: true, name: true } },
-      facture: {
-        include: {
-          paiements: { orderBy: { date: "desc" } },
-        },
-      },
-    },
+    include: VENTE_DETAIL_INCLUDE,
   });
 }
 
+// ---------------------------------------------------------------------------
+// Helpers internes
+// ---------------------------------------------------------------------------
+
 /**
- * Cree une vente avec deduction des poissons (transaction atomique).
+ * Resout le poidsMoyenG pour un bac donne en cherchant le dernier releve BIOMETRIE.
+ * Retourne null si aucune biometrie n'est trouvee pour ce bac.
+ */
+async function resolvePoidsMoyenG(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  bacId: string,
+  vagueId: string,
+  siteId: string
+): Promise<number | null> {
+  const latestBio = await tx.releve.findFirst({
+    where: {
+      bacId,
+      vagueId,
+      siteId,
+      typeReleve: TypeReleve.BIOMETRIE,
+      poidsMoyen: { not: null },
+    },
+    orderBy: { date: "desc" },
+    select: { poidsMoyen: true },
+  });
+  return latestBio?.poidsMoyen ?? null;
+}
+
+/**
+ * Valide et enrichit une ligne de vente.
+ * Verifie : vague, bac dans la vague, poidsMoyenG disponible, stock suffisant.
+ * Retourne { poidsMoyenG, nombrePoissons, bacNom }.
+ */
+async function validateAndEnrichLigne(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  ligne: CreateLigneVenteDTO,
+  siteId: string
+): Promise<{ poidsMoyenG: number; nombrePoissons: number; bacNom: string }> {
+  // Valider la vague
+  const vague = await tx.vague.findFirst({
+    where: { id: ligne.vagueId, siteId },
+    select: { id: true, statut: true },
+  });
+  if (!vague) throw new Error(`Vague ${ligne.vagueId} introuvable`);
+  if (vague.statut === StatutVague.ANNULEE) {
+    throw new Error(`Impossible de vendre depuis une vague annulee (${ligne.vagueId})`);
+  }
+
+  // Valider le bac appartient a cette vague via AssignationBac active
+  const assignation = await tx.assignationBac.findFirst({
+    where: { bacId: ligne.bacId, vagueId: ligne.vagueId, dateFin: null },
+    select: { nombreActuel: true },
+  });
+  const bac = await tx.bac.findFirst({
+    where: { id: ligne.bacId, siteId },
+    select: { id: true, nom: true, nombrePoissons: true },
+  });
+  if (!bac) throw new Error(`Bac ${ligne.bacId} introuvable`);
+  if (!assignation) {
+    throw new Error(
+      `Le bac "${bac.nom}" n'est pas actuellement assigne a la vague specifie`
+    );
+  }
+
+  // Resoudre poidsMoyenG : DTO en priorite, sinon derniere biometrie du bac
+  let poidsMoyenG = ligne.poidsMoyenG ?? null;
+  if (poidsMoyenG == null || poidsMoyenG <= 0) {
+    poidsMoyenG = await resolvePoidsMoyenG(tx, ligne.bacId, ligne.vagueId, siteId);
+    if (poidsMoyenG == null) {
+      throw new Error(
+        `Aucune biometrie disponible pour le bac "${bac.nom}". ` +
+          `Enregistrez une biometrie ou saisissez le poids moyen manuellement.`
+      );
+    }
+  }
+
+  // Calculer le nombre de poissons
+  const nombrePoissons = Math.max(
+    1,
+    Math.round((ligne.poidsTotalKg * 1000) / poidsMoyenG)
+  );
+
+  // Verifier le stock via AssignationBac.nombreActuel (source de verite ADR-043)
+  const disponible = assignation.nombreActuel ?? 0;
+  if (nombrePoissons > disponible) {
+    throw new Error(
+      `Stock insuffisant dans "${bac.nom}" : disponible ${disponible}, calcule ${nombrePoissons} ` +
+        `(${ligne.poidsTotalKg} kg / ${poidsMoyenG} g)`
+    );
+  }
+
+  return { poidsMoyenG, nombrePoissons, bacNom: bac.nom };
+}
+
+/**
+ * Applique les deductions de stock et cree les releves VENTE pour un ensemble de lignes.
+ * Pattern commun entre createVente et updateVente.
+ */
+async function applyLignesStock(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  venteId: string,
+  venteNumero: string,
+  lignesEnrichies: Array<{
+    ligne: CreateLigneVenteDTO;
+    poidsMoyenG: number;
+    nombrePoissons: number;
+    bacNom: string;
+  }>,
+  venteDate: Date,
+  siteId: string,
+  userId: string
+): Promise<void> {
+  for (const { ligne, poidsMoyenG, nombrePoissons, bacNom } of lignesEnrichies) {
+    // Lire le compte actuel (peut avoir change depuis la validation si plusieurs lignes du meme bac)
+    const currentBac = await tx.bac.findUnique({
+      where: { id: ligne.bacId },
+      select: { nombrePoissons: true },
+    });
+    const currentCount = currentBac?.nombrePoissons ?? 0;
+    const newCount = Math.max(0, currentCount - nombrePoissons);
+
+    // ADR-043 : dual-write Bac + AssignationBac
+    await tx.bac.update({
+      where: { id: ligne.bacId },
+      data: { nombrePoissons: newCount },
+    });
+    await tx.assignationBac.updateMany({
+      where: { bacId: ligne.bacId, vagueId: ligne.vagueId, dateFin: null },
+      data: { nombreActuel: newCount },
+    });
+
+    // Creer la LigneVente
+    await tx.ligneVente.create({
+      data: {
+        venteId,
+        vagueId: ligne.vagueId,
+        bacId: ligne.bacId,
+        poidsTotalKg: ligne.poidsTotalKg,
+        poidsMoyenG,
+        nombrePoissons,
+        siteId,
+      },
+    });
+
+    // Creer le releve VENTE pour la tracabilite sur la timeline de la vague
+    await tx.releve.create({
+      data: {
+        date: venteDate,
+        typeReleve: TypeReleve.VENTE,
+        vagueId: ligne.vagueId,
+        bacId: ligne.bacId,
+        siteId,
+        userId,
+        nombreVendus: nombrePoissons,
+        venteId,
+        notes: `Vente ${venteNumero} — ${nombrePoissons} poissons (${bacNom})`,
+      },
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// createVente
+// ---------------------------------------------------------------------------
+
+/**
+ * Cree une vente multi-vague multi-bac (transaction atomique).
  *
- * Regles metier :
- * 1. Le client doit appartenir au site et etre actif
- * 2. La vague doit appartenir au site
- * 3. Le nombre de poissons est calcule cote serveur :
- *    `quantitePoissons = round(poidsTotalKg * 1000 / poidsMoyenG)`
- *    `poidsMoyenG` provient du DTO (override manuel) sinon de la derniere
- *    BIOMETRIE de la vague. Erreur 400 si aucune des deux sources n'est disponible.
- * 4. Le nombre calcule ne peut pas depasser le total disponible dans les bacs
- * 5. Les poissons sont deduits des bacs proportionnellement
+ * Flux :
+ * 1. Valider le client
+ * 2. Pour chaque ligne : valider vague, bac, resoudre poidsMoyenG, verifier stock
+ * 3. Calculer les agregats (poidsTotalKg, quantitePoissons, montantTotal)
+ * 4. Generer le numero
+ * 5. Creer la Vente avec vagueId: null (multi-vague)
+ * 6. Creer les LigneVente + deduire stock + creer releves VENTE
  */
 export async function createVente(
   siteId: string,
@@ -82,143 +292,54 @@ export async function createVente(
   data: CreateVenteDTO
 ) {
   return prisma.$transaction(async (tx) => {
-    // Verify client belongs to site and is active
+    // Etape 1 : Valider le client
     const client = await tx.client.findFirst({
       where: { id: data.clientId, siteId, isActive: true },
     });
     if (!client) throw new Error("Client introuvable ou inactif");
 
-    // Verify vague belongs to site
-    const vague = await tx.vague.findFirst({
-      where: { id: data.vagueId, siteId },
-    });
-    if (!vague) throw new Error("Vague introuvable");
-
-    if (vague.statut === StatutVague.ANNULEE) {
-      throw new Error("Impossible de vendre depuis une vague annulee");
+    if (!data.lignes || data.lignes.length === 0) {
+      throw new Error("Au moins une ligne de vente est requise");
     }
 
-    // Resolve poidsMoyen (g) — manual override (DTO) or weighted average
-    // of the last BIOMETRIE per bac (same logic as getIndicateursVague).
-    let poidsMoyenG = data.poidsMoyenG;
-    if (poidsMoyenG == null) {
-      const vagueWithReleves = await tx.vague.findFirst({
-        where: { id: data.vagueId, siteId },
-        select: {
-          nombreInitial: true,
-          bacs: { select: { id: true, nombreInitial: true } },
-          releves: {
-            orderBy: { date: "asc" },
-            select: {
-              typeReleve: true,
-              date: true,
-              bacId: true,
-              poidsMoyen: true,
-              nombreMorts: true,
-              nombreVendus: true,
-              nombreCompte: true,
-            },
-          },
-        },
-      });
+    // Etape 2 : Valider et enrichir toutes les lignes
+    const lignesEnrichies: Array<{
+      ligne: CreateLigneVenteDTO;
+      poidsMoyenG: number;
+      nombrePoissons: number;
+      bacNom: string;
+    }> = [];
 
-      if (vagueWithReleves && vagueWithReleves.bacs.length > 0) {
-        const biometriesParBac = new Map<string, number>();
-        for (const r of vagueWithReleves.releves) {
-          if (r.typeReleve === TypeReleve.BIOMETRIE && r.bacId && r.poidsMoyen != null) {
-            biometriesParBac.set(r.bacId, r.poidsMoyen);
-          }
-        }
-
-        if (biometriesParBac.size > 0) {
-          const vivantsByBac = computeVivantsByBac(
-            vagueWithReleves.bacs,
-            vagueWithReleves.releves,
-            vagueWithReleves.nombreInitial
-          );
-          let totalPoidsWeighted = 0;
-          let totalVivantsForWeight = 0;
-          for (const bac of vagueWithReleves.bacs) {
-            const poids = biometriesParBac.get(bac.id);
-            if (poids == null) continue;
-            const vivantsBac = vivantsByBac.get(bac.id) ?? 0;
-            totalPoidsWeighted += poids * vivantsBac;
-            totalVivantsForWeight += vivantsBac;
-          }
-          if (totalVivantsForWeight > 0) {
-            poidsMoyenG = totalPoidsWeighted / totalVivantsForWeight;
-          }
-        }
-      }
+    for (const ligne of data.lignes) {
+      const enriched = await validateAndEnrichLigne(tx, ligne, siteId);
+      lignesEnrichies.push({ ligne, ...enriched });
     }
 
-    if (!poidsMoyenG || poidsMoyenG <= 0) {
-      throw new Error(
-        "Aucun poids moyen disponible pour cette vague. Saisissez-le manuellement ou enregistrez une biometrie."
-      );
-    }
-
-    // Compute quantitePoissons from kg + average weight in grams
-    const quantitePoissons = Math.max(
-      1,
-      Math.round((data.poidsTotalKg * 1000) / poidsMoyenG)
+    // Etape 3 : Calculer les agregats
+    const poidsTotalKg = lignesEnrichies.reduce(
+      (sum, { ligne }) => sum + ligne.poidsTotalKg,
+      0
     );
-
-    // Get all bacs of this vague with their fish count
-    const bacs = await tx.bac.findMany({
-      where: { vagueId: data.vagueId, siteId },
-      orderBy: { nom: "asc" },
-    });
-
-    // Determine actual quantitePoissons and validate stock
-    let finalQuantitePoissons: number;
-
-    if (data.bacDeductions && data.bacDeductions.length > 0) {
-      // Explicit per-bac deductions: sum of quantities is the actual fish count
-      finalQuantitePoissons = data.bacDeductions.reduce((s, d) => s + d.quantite, 0);
-
-      // Validate each bac exists in this vague and has enough stock
-      for (const deduction of data.bacDeductions) {
-        const bac = bacs.find((b) => b.id === deduction.bacId);
-        if (!bac) {
-          throw new Error(`Bac ${deduction.bacId} introuvable dans la vague`);
-        }
-        const available = bac.nombrePoissons ?? 0;
-        if (deduction.quantite > available) {
-          throw new Error(
-            `Stock insuffisant dans ${bac.nom} : disponible ${available}, demande ${deduction.quantite}`
-          );
-        }
-      }
-    } else {
-      // Proportional distribution: validate total available
-      finalQuantitePoissons = quantitePoissons;
-      const totalDisponible = bacs.reduce(
-        (sum, bac) => sum + (bac.nombrePoissons ?? 0),
-        0
-      );
-      if (finalQuantitePoissons > totalDisponible) {
-        throw new Error(
-          `Stock poissons insuffisant. Disponible : ${totalDisponible}, calcule : ${finalQuantitePoissons}`
-        );
-      }
-    }
-
-    // Generate numero VTE-YYYY-NNN (findFirst+orderBy to avoid race condition)
-    const numero = await generateNextNumero(tx, "vente", "VTE", siteId);
-
-    // Calculate montant
-    const montantTotal = data.poidsTotalKg * data.prixUnitaireKg;
+    const quantitePoissons = lignesEnrichies.reduce(
+      (sum, { nombrePoissons }) => sum + nombrePoissons,
+      0
+    );
+    const montantTotal = poidsTotalKg * data.prixUnitaireKg;
     const venteDate = data.dateCommande ? new Date(data.dateCommande) : new Date();
 
-    // Create vente FIRST so we have vente.id for VENTE relevés
-    const vente = await tx.vente.create({
+    // Etape 4 : Generer le numero
+    const numero = await generateNextNumero(tx, "vente", "VTE", siteId);
+
+    // Etape 5 : Creer la vente (vagueId: null pour multi-vague)
+    // Prisma 7 prisma-client: create without include to avoid relation constraints,
+    // then fetch with include after all lignes are created.
+    const venteRaw = await tx.vente.create({
       data: {
         numero,
         clientId: data.clientId,
-        vagueId: data.vagueId,
-        quantitePoissons: finalQuantitePoissons,
-        poidsTotalKg: data.poidsTotalKg,
+        vagueId: null,
+        quantitePoissons,
+        poidsTotalKg,
         prixUnitaireKg: data.prixUnitaireKg,
         montantTotal,
         dateCommande: venteDate,
@@ -227,95 +348,45 @@ export async function createVente(
         userId,
         siteId,
       },
-      include: {
-        client: { select: { id: true, nom: true } },
-        vague: { select: { id: true, code: true } },
-        user: { select: { id: true, name: true } },
-      },
     });
 
-    if (data.bacDeductions && data.bacDeductions.length > 0) {
-      // Explicit per-bac deductions
-      for (const deduction of data.bacDeductions) {
-        const bac = bacs.find((b) => b.id === deduction.bacId)!;
-        const available = bac.nombrePoissons ?? 0;
-        const newCount = available - deduction.quantite;
+    // Etape 6 : Creer LigneVente, deduire stock, creer releves VENTE
+    await applyLignesStock(
+      tx,
+      venteRaw.id,
+      numero,
+      lignesEnrichies,
+      venteDate,
+      siteId,
+      userId
+    );
 
-        await tx.bac.update({
-          where: { id: bac.id },
-          data: { nombrePoissons: newCount },
-        });
-        await tx.assignationBac.updateMany({
-          where: { bacId: bac.id, vagueId: data.vagueId, dateFin: null },
-          data: { nombreActuel: newCount },
-        });
-        await tx.releve.create({
-          data: {
-            date: venteDate,
-            typeReleve: TypeReleve.VENTE,
-            vagueId: data.vagueId,
-            bacId: bac.id,
-            siteId,
-            userId,
-            nombreVendus: deduction.quantite,
-            venteId: vente.id,
-            notes: `Vente ${numero} — ${deduction.quantite} poissons`,
-          },
-        });
-      }
-    } else {
-      // Deduct fish proportionally from bacs + create VENTE relevés
-      let remaining = finalQuantitePoissons;
-      for (const bac of bacs) {
-        if (remaining <= 0) break;
-        const available = bac.nombrePoissons ?? 0;
-        if (available <= 0) continue;
-
-        const toDeduct = Math.min(remaining, available);
-        const newCount = available - toDeduct;
-        await tx.bac.update({
-          where: { id: bac.id },
-          data: { nombrePoissons: newCount },
-        });
-        // ADR-043 Phase 2: dual-write sur AssignationBac
-        await tx.assignationBac.updateMany({
-          where: { bacId: bac.id, vagueId: data.vagueId, dateFin: null },
-          data: { nombreActuel: newCount },
-        });
-
-        // Auto-create VENTE relevé for traceability on vague timeline
-        await tx.releve.create({
-          data: {
-            date: venteDate,
-            typeReleve: TypeReleve.VENTE,
-            vagueId: data.vagueId,
-            bacId: bac.id,
-            siteId,
-            userId,
-            nombreVendus: toDeduct,
-            venteId: vente.id,
-            notes: `Vente ${numero} — ${toDeduct} poissons`,
-          },
-        });
-
-        remaining -= toDeduct;
-      }
-    }
+    // Etape 7 : Recharger la vente avec toutes ses relations
+    const vente = await tx.vente.findUniqueOrThrow({
+      where: { id: venteRaw.id },
+      include: VENTE_LIST_INCLUDE,
+    });
 
     return vente;
   });
 }
 
+// ---------------------------------------------------------------------------
+// updateVente
+// ---------------------------------------------------------------------------
+
 /**
  * Modifie une vente existante (transaction atomique).
  *
- * Si le poids ou la vague changent :
- * 1. Restituer les poissons de l'ancienne vente dans les bacs de l'ancienne vague
- * 2. Recalculer quantitePoissons avec le nouveau poids/poidsMoyen
- * 3. Deduire les poissons de la nouvelle vague
+ * Si dto.lignes est fourni :
+ *   1. Supprimer les anciens releves VENTE
+ *   2. Restituer les poissons de chaque ancienne LigneVente
+ *   3. Supprimer les anciennes LigneVente
+ *   4. Appliquer les nouvelles lignes (meme logique que createVente)
+ *   5. Recalculer les agregats
  *
- * Si la facture existe, son montantTotal est mis a jour.
- * Un SiteAuditLog est cree avec le motif et les valeurs avant/apres.
+ * Si dto.lignes n'est pas fourni : mettre a jour les champs simples uniquement.
+ * La facture et le SiteAuditLog sont toujours mis a jour.
  */
 export async function updateVente(
   venteId: string,
@@ -324,12 +395,14 @@ export async function updateVente(
   dto: UpdateVenteDTO
 ) {
   return prisma.$transaction(async (tx) => {
+    // Charger la vente avec ses lignes
     const existing = await tx.vente.findFirst({
       where: { id: venteId, siteId },
       include: {
         facture: { select: { id: true } },
         vague: { select: { id: true, code: true } },
         client: { select: { id: true, nom: true } },
+        lignes: true,
       },
     });
     if (!existing) throw new Error("Vente introuvable");
@@ -339,15 +412,13 @@ export async function updateVente(
     }
 
     const newClientId = dto.clientId ?? existing.clientId;
-    const newVagueId = dto.vagueId ?? existing.vagueId;
-    const newPoidsTotalKg = dto.poidsTotalKg ?? existing.poidsTotalKg;
     const newPrixUnitaireKg = dto.prixUnitaireKg ?? existing.prixUnitaireKg;
     const newNotes = dto.notes !== undefined ? dto.notes : existing.notes;
     const newDateCommande = dto.dateCommande
       ? new Date(dto.dateCommande)
       : existing.dateCommande;
 
-    // Validate new client
+    // Valider le nouveau client si change
     if (newClientId !== existing.clientId) {
       const client = await tx.client.findFirst({
         where: { id: newClientId, siteId, isActive: true },
@@ -355,240 +426,78 @@ export async function updateVente(
       if (!client) throw new Error("Client introuvable ou inactif");
     }
 
-    // Validate new vague
-    if (newVagueId !== existing.vagueId) {
-      const vague = await tx.vague.findFirst({
-        where: { id: newVagueId, siteId },
-      });
-      if (!vague) throw new Error("Vague introuvable");
-      if (vague.statut === StatutVague.ANNULEE) {
-        throw new Error("Impossible de vendre depuis une vague annulee");
-      }
-    }
-
-    const needsStockAdjust =
-      newPoidsTotalKg !== existing.poidsTotalKg ||
-      newVagueId !== existing.vagueId ||
-      (dto.poidsMoyenG != null && dto.poidsMoyenG !== 0) ||
-      (dto.bacDeductions != null && dto.bacDeductions.length > 0);
-
+    let newPoidsTotalKg = existing.poidsTotalKg;
     let newQuantitePoissons = existing.quantitePoissons;
 
-    if (needsStockAdjust) {
-      // Delete old VENTE relevés before restoring fish
+    if (dto.lignes && dto.lignes.length > 0) {
+      // --- Restitution des poissons des anciennes lignes ---
+      // Supprimer d'abord les releves VENTE lies a cette vente
       await tx.releve.deleteMany({ where: { venteId } });
 
-      // --- Step 1: Restore fish to old vague bacs ---
-      const oldBacs = await tx.bac.findMany({
-        where: { vagueId: existing.vagueId, siteId },
-        orderBy: { nom: "asc" },
-      });
+      // Restituer le stock de chaque ancienne LigneVente
+      for (const oldLigne of existing.lignes) {
+        // Lire le compte actuel avant restitution
+        const currentBac = await tx.bac.findUnique({
+          where: { id: oldLigne.bacId },
+          select: { nombrePoissons: true },
+        });
+        const currentCount = currentBac?.nombrePoissons ?? 0;
+        const restoredCount = currentCount + oldLigne.nombrePoissons;
 
-      const totalOldFish = oldBacs.reduce(
-        (sum, b) => sum + (b.nombrePoissons ?? 0),
+        // ADR-043 : dual-write
+        await tx.bac.update({
+          where: { id: oldLigne.bacId },
+          data: { nombrePoissons: restoredCount },
+        });
+        await tx.assignationBac.updateMany({
+          where: {
+            bacId: oldLigne.bacId,
+            vagueId: oldLigne.vagueId,
+            dateFin: null,
+          },
+          data: { nombreActuel: restoredCount },
+        });
+      }
+
+      // Supprimer les anciennes LigneVente (la contrainte cascade s'en charge aussi,
+      // mais on le fait explicitement pour garder le controle)
+      await tx.ligneVente.deleteMany({ where: { venteId } });
+
+      // --- Valider et enrichir les nouvelles lignes ---
+      const lignesEnrichies: Array<{
+        ligne: CreateLigneVenteDTO;
+        poidsMoyenG: number;
+        nombrePoissons: number;
+        bacNom: string;
+      }> = [];
+
+      for (const ligne of dto.lignes) {
+        const enriched = await validateAndEnrichLigne(tx, ligne, siteId);
+        lignesEnrichies.push({ ligne, ...enriched });
+      }
+
+      // Recalculer les agregats
+      newPoidsTotalKg = lignesEnrichies.reduce(
+        (sum, { ligne }) => sum + ligne.poidsTotalKg,
         0
       );
-      let toRestore = existing.quantitePoissons;
-      for (const bac of oldBacs) {
-        if (toRestore <= 0) break;
-        const current = bac.nombrePoissons ?? 0;
-        // Distribute proportionally based on current share, or equally if all empty
-        const share =
-          totalOldFish > 0
-            ? Math.round((current / totalOldFish) * existing.quantitePoissons)
-            : Math.round(existing.quantitePoissons / oldBacs.length);
-        const restore = Math.min(toRestore, share || toRestore);
-        const newCount = current + restore;
-        await tx.bac.update({
-          where: { id: bac.id },
-          data: { nombrePoissons: newCount },
-        });
-        await tx.assignationBac.updateMany({
-          where: { bacId: bac.id, vagueId: existing.vagueId, dateFin: null },
-          data: { nombreActuel: newCount },
-        });
-        toRestore -= restore;
-      }
-      // If rounding left some fish unrestored, add to last bac
-      if (toRestore > 0 && oldBacs.length > 0) {
-        const lastBac = oldBacs[oldBacs.length - 1];
-        const lastCount = (lastBac.nombrePoissons ?? 0) +
-          existing.quantitePoissons -
-          (existing.quantitePoissons - toRestore);
-        await tx.bac.update({
-          where: { id: lastBac.id },
-          data: { nombrePoissons: { increment: toRestore } },
-        });
-        await tx.assignationBac.updateMany({
-          where: { bacId: lastBac.id, vagueId: existing.vagueId, dateFin: null },
-          data: { nombreActuel: lastCount },
-        });
-      }
+      newQuantitePoissons = lignesEnrichies.reduce(
+        (sum, { nombrePoissons }) => sum + nombrePoissons,
+        0
+      );
 
-      const newBacs = await tx.bac.findMany({
-        where: { vagueId: newVagueId, siteId },
-        orderBy: { nom: "asc" },
-      });
-
-      if (dto.bacDeductions && dto.bacDeductions.length > 0) {
-        // --- Step 2 (explicit): Use per-bac deductions directly ---
-        newQuantitePoissons = dto.bacDeductions.reduce((s, d) => s + d.quantite, 0);
-
-        // Validate each bac and available stock
-        for (const deduction of dto.bacDeductions) {
-          const bac = newBacs.find((b) => b.id === deduction.bacId);
-          if (!bac) {
-            throw new Error(`Bac ${deduction.bacId} introuvable dans la vague`);
-          }
-          const available = bac.nombrePoissons ?? 0;
-          if (deduction.quantite > available) {
-            throw new Error(
-              `Stock insuffisant dans ${bac.nom} : disponible ${available}, demande ${deduction.quantite}`
-            );
-          }
-        }
-
-        // --- Step 3 (explicit): Deduct and create relevés ---
-        for (const deduction of dto.bacDeductions) {
-          const bac = newBacs.find((b) => b.id === deduction.bacId)!;
-          const available = bac.nombrePoissons ?? 0;
-          const newCount = available - deduction.quantite;
-
-          await tx.bac.update({
-            where: { id: bac.id },
-            data: { nombrePoissons: newCount },
-          });
-          await tx.assignationBac.updateMany({
-            where: { bacId: bac.id, vagueId: newVagueId, dateFin: null },
-            data: { nombreActuel: newCount },
-          });
-          await tx.releve.create({
-            data: {
-              date: newDateCommande,
-              typeReleve: TypeReleve.VENTE,
-              vagueId: newVagueId,
-              bacId: bac.id,
-              siteId,
-              userId,
-              nombreVendus: deduction.quantite,
-              venteId,
-              notes: `Vente ${existing.numero} — ${deduction.quantite} poissons`,
-            },
-          });
-        }
-      } else {
-        // --- Step 2: Resolve poidsMoyenG for new vague ---
-        let poidsMoyenG = dto.poidsMoyenG;
-        if (poidsMoyenG == null) {
-          const vagueWithReleves = await tx.vague.findFirst({
-            where: { id: newVagueId, siteId },
-            select: {
-              nombreInitial: true,
-              bacs: { select: { id: true, nombreInitial: true } },
-              releves: {
-                orderBy: { date: "asc" },
-                select: {
-                  typeReleve: true,
-                  date: true,
-                  bacId: true,
-                  poidsMoyen: true,
-                  nombreMorts: true,
-                  nombreVendus: true,
-                  nombreCompte: true,
-                },
-              },
-            },
-          });
-
-          if (vagueWithReleves && vagueWithReleves.bacs.length > 0) {
-            const biometriesParBac = new Map<string, number>();
-            for (const r of vagueWithReleves.releves) {
-              if (r.typeReleve === TypeReleve.BIOMETRIE && r.bacId && r.poidsMoyen != null) {
-                biometriesParBac.set(r.bacId, r.poidsMoyen);
-              }
-            }
-
-            if (biometriesParBac.size > 0) {
-              const vivantsByBac = computeVivantsByBac(
-                vagueWithReleves.bacs,
-                vagueWithReleves.releves,
-                vagueWithReleves.nombreInitial
-              );
-              let totalPoidsWeighted = 0;
-              let totalVivantsForWeight = 0;
-              for (const bac of vagueWithReleves.bacs) {
-                const poids = biometriesParBac.get(bac.id);
-                if (poids == null) continue;
-                const vivantsBac = vivantsByBac.get(bac.id) ?? 0;
-                totalPoidsWeighted += poids * vivantsBac;
-                totalVivantsForWeight += vivantsBac;
-              }
-              if (totalVivantsForWeight > 0) {
-                poidsMoyenG = totalPoidsWeighted / totalVivantsForWeight;
-              }
-            }
-          }
-        }
-
-        if (!poidsMoyenG || poidsMoyenG <= 0) {
-          throw new Error(
-            "Aucun poids moyen disponible pour cette vague. Saisissez-le manuellement ou enregistrez une biometrie."
-          );
-        }
-
-        // --- Step 3: Calculate new quantity and deduct proportionally ---
-        newQuantitePoissons = Math.max(
-          1,
-          Math.round((newPoidsTotalKg * 1000) / poidsMoyenG)
-        );
-
-        const totalDisponible = newBacs.reduce(
-          (sum, b) => sum + (b.nombrePoissons ?? 0),
-          0
-        );
-
-        if (newQuantitePoissons > totalDisponible) {
-          throw new Error(
-            `Stock poissons insuffisant. Disponible : ${totalDisponible}, calcule : ${newQuantitePoissons}`
-          );
-        }
-
-        let remaining = newQuantitePoissons;
-        for (const bac of newBacs) {
-          if (remaining <= 0) break;
-          const available = bac.nombrePoissons ?? 0;
-          if (available <= 0) continue;
-          const toDeduct = Math.min(remaining, available);
-          const newCount = available - toDeduct;
-          await tx.bac.update({
-            where: { id: bac.id },
-            data: { nombrePoissons: newCount },
-          });
-          await tx.assignationBac.updateMany({
-            where: { bacId: bac.id, vagueId: newVagueId, dateFin: null },
-            data: { nombreActuel: newCount },
-          });
-
-          // Auto-create VENTE relevé for traceability
-          await tx.releve.create({
-            data: {
-              date: newDateCommande,
-              typeReleve: TypeReleve.VENTE,
-              vagueId: newVagueId,
-              bacId: bac.id,
-              siteId,
-              userId,
-              nombreVendus: toDeduct,
-              venteId,
-              notes: `Vente ${existing.numero} — ${toDeduct} poissons`,
-            },
-          });
-
-          remaining -= toDeduct;
-        }
-      }
+      // Appliquer le nouveau stock + creer LigneVente + releves VENTE
+      await applyLignesStock(
+        tx,
+        venteId,
+        existing.numero,
+        lignesEnrichies,
+        newDateCommande,
+        siteId,
+        userId
+      );
     } else {
-      // No stock adjustment needed — but sync VENTE relevé dates if dateCommande changed
+      // Pas de modification de lignes — synchroniser juste les dates si besoin
       if (newDateCommande.getTime() !== existing.dateCommande.getTime()) {
         await tx.releve.updateMany({
           where: { venteId },
@@ -599,34 +508,66 @@ export async function updateVente(
 
     const newMontantTotal = newPoidsTotalKg * newPrixUnitaireKg;
 
-    // Update the vente
-    const updated = await tx.vente.update({
+    // Mettre a jour la vente
+    // Prisma 7 prisma-client: update without include, then fetch separately
+    await tx.vente.update({
       where: { id: venteId },
       data: {
         clientId: newClientId,
-        vagueId: newVagueId,
-        poidsTotalKg: newPoidsTotalKg,
         prixUnitaireKg: newPrixUnitaireKg,
+        poidsTotalKg: newPoidsTotalKg,
         quantitePoissons: newQuantitePoissons,
         montantTotal: newMontantTotal,
         dateCommande: newDateCommande,
         notes: newNotes,
       },
+    });
+
+    const updated = await tx.vente.findUniqueOrThrow({
+      where: { id: venteId },
       include: {
         client: { select: { id: true, nom: true } },
         vague: { select: { id: true, code: true } },
         user: { select: { id: true, name: true } },
-        facture: { select: { id: true, numero: true, statut: true, montantPaye: true, montantTotal: true } },
+        facture: {
+          select: {
+            id: true,
+            numero: true,
+            statut: true,
+            montantPaye: true,
+            montantTotal: true,
+          },
+        },
+        lignes: {
+          select: {
+            id: true,
+            vagueId: true,
+            bacId: true,
+            poidsTotalKg: true,
+            poidsMoyenG: true,
+            nombrePoissons: true,
+            vague: { select: { id: true, code: true } },
+            bac: { select: { id: true, nom: true } },
+          },
+        },
       },
     });
 
-    // Update facture if exists
+    // Mettre a jour la facture si le montant change
     if (existing.facture && newMontantTotal !== existing.montantTotal) {
       await tx.facture.update({
         where: { id: existing.facture.id },
         data: { montantTotal: newMontantTotal },
       });
     }
+
+    // Extraire les codes vagues des lignes pour l'audit log
+    const oldVagueCodes = [
+      ...new Set(existing.lignes.map((l) => l.vagueId)),
+    ];
+    const newVagueCodes = [
+      ...new Set(updated.lignes.map((l) => l.vague.code)),
+    ];
 
     // Audit log
     await tx.siteAuditLog.create({
@@ -639,26 +580,26 @@ export async function updateVente(
           before: {
             clientId: existing.clientId,
             clientNom: existing.client.nom,
-            vagueId: existing.vagueId,
-            vagueCode: existing.vague.code,
+            vagueCodes: oldVagueCodes,
             poidsTotalKg: existing.poidsTotalKg,
             prixUnitaireKg: existing.prixUnitaireKg,
             quantitePoissons: existing.quantitePoissons,
             montantTotal: existing.montantTotal,
             dateCommande: existing.dateCommande,
             notes: existing.notes,
+            nbLignes: existing.lignes.length,
           },
           after: {
             clientId: updated.clientId,
             clientNom: updated.client.nom,
-            vagueId: updated.vagueId,
-            vagueCode: updated.vague.code,
+            vagueCodes: newVagueCodes,
             poidsTotalKg: updated.poidsTotalKg,
             prixUnitaireKg: updated.prixUnitaireKg,
             quantitePoissons: updated.quantitePoissons,
             montantTotal: updated.montantTotal,
             dateCommande: updated.dateCommande,
             notes: updated.notes,
+            nbLignes: updated.lignes.length,
           },
         },
       },
@@ -668,16 +609,119 @@ export async function updateVente(
   });
 }
 
+// ---------------------------------------------------------------------------
+// deleteVente
+// ---------------------------------------------------------------------------
+
 /**
- * Cloture une vente apres livraison (transaction atomique).
+ * Supprime une vente et restaure le stock de poissons (transaction atomique).
+ *
+ * Flux :
+ * 1. Charger la vente avec ses lignes, facture, paiements
+ * 2. Supprimer les paiements lies a la facture
+ * 3. Supprimer la facture
+ * 4. Supprimer les releves VENTE lies a cette vente
+ * 5. Restaurer le stock par bac (ADR-043 dual-write)
+ * 6. Supprimer les LigneVente
+ * 7. Supprimer la vente
+ * 8. Audit log
+ */
+export async function deleteVente(
+  venteId: string,
+  siteId: string,
+  userId: string
+) {
+  return prisma.$transaction(async (tx) => {
+    const vente = await tx.vente.findFirst({
+      where: { id: venteId, siteId },
+      include: {
+        client: { select: { nom: true } },
+        facture: { select: { id: true } },
+        lignes: true,
+      },
+    });
+    if (!vente) throw new Error("Vente introuvable");
+
+    if (vente.statut === StatutVente.CLOTUREE) {
+      throw new Error("Une vente cloturee ne peut pas etre supprimee");
+    }
+
+    // 1. Supprimer les paiements lies a la facture
+    if (vente.facture) {
+      await tx.paiement.deleteMany({ where: { factureId: vente.facture.id } });
+      await tx.facture.delete({ where: { id: vente.facture.id } });
+    }
+
+    // 2. Supprimer les releves VENTE + MORTALITE/AVARIE lies a cette vente
+    await tx.releve.deleteMany({ where: { venteId } });
+
+    // 3. Restaurer le stock par bac (inverse de applyLignesStock)
+    for (const ligne of vente.lignes) {
+      const currentBac = await tx.bac.findUnique({
+        where: { id: ligne.bacId },
+        select: { nombrePoissons: true },
+      });
+      const currentCount = currentBac?.nombrePoissons ?? 0;
+      const restoredCount = currentCount + ligne.nombrePoissons;
+
+      // ADR-043 : dual-write Bac + AssignationBac
+      await tx.bac.update({
+        where: { id: ligne.bacId },
+        data: { nombrePoissons: restoredCount },
+      });
+      await tx.assignationBac.updateMany({
+        where: {
+          bacId: ligne.bacId,
+          vagueId: ligne.vagueId,
+          dateFin: null,
+        },
+        data: { nombreActuel: restoredCount },
+      });
+    }
+
+    // 4. Supprimer les LigneVente
+    await tx.ligneVente.deleteMany({ where: { venteId } });
+
+    // 5. Supprimer la vente
+    await tx.vente.delete({ where: { id: venteId } });
+
+    // 6. Audit log
+    const vagueCodes = [...new Set(vente.lignes.map((l) => l.vagueId))];
+    await tx.siteAuditLog.create({
+      data: {
+        siteId,
+        actorId: userId,
+        action: "VENTE_SUPPRIMEE",
+        details: {
+          venteNumero: vente.numero,
+          clientNom: vente.client.nom,
+          vagueIds: vagueCodes,
+          poidsTotalKg: vente.poidsTotalKg,
+          quantitePoissons: vente.quantitePoissons,
+          montantTotal: vente.montantTotal,
+          nbLignes: vente.lignes.length,
+        },
+      },
+    });
+
+    return { message: "Vente supprimee avec succes" };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// cloturerVente
+// ---------------------------------------------------------------------------
+
+/**
+ * Cloture une vente apres livraison physique (transaction atomique).
  *
  * 1. Valide statut EN_PREPARATION et 0 < poidsLivreKg <= poidsTotalKg
- * 2. Calcule quantiteLivree et nombreMorts a partir du poidsMoyenG
- * 3. Si perte > 0 : cree des releves MORTALITE/AVARIE proportionnels par bac
- *    et decremente Bac.nombrePoissons + AssignationBac.nombreActuel
- * 4. Recalcule montantTotal sur le poids livre
- * 5. Met a jour la facture si elle existe
- * 6. Cree un SiteAuditLog VENTE_CLOTUREE
+ * 2. Calcule le poidsMoyenG global (moyenne ponderee des lignes)
+ * 3. Calcule la quantiteLivree et le nombre de morts
+ * 4. Si pertes > 0 : distribue les morts proportionnellement par LigneVente,
+ *    cree des releves MORTALITE/AVARIE et decremente le stock par bac
+ * 5. Recalcule montantTotal sur le poids livre
+ * 6. Met a jour la facture et cree un SiteAuditLog
  */
 export async function cloturerVente(
   venteId: string,
@@ -692,6 +736,7 @@ export async function cloturerVente(
         facture: { select: { id: true } },
         vague: { select: { id: true, code: true, nombreInitial: true } },
         client: { select: { id: true, nom: true } },
+        lignes: true,
       },
     });
     if (!vente) throw new Error("Vente introuvable");
@@ -699,7 +744,6 @@ export async function cloturerVente(
     if (vente.statut !== StatutVente.EN_PREPARATION) {
       throw new Error("Cette vente est deja cloturee");
     }
-
     if (dto.poidsLivreKg <= 0) {
       throw new Error("Le poids livre doit etre superieur a 0");
     }
@@ -709,92 +753,102 @@ export async function cloturerVente(
       );
     }
 
-    const poidsMoyenG = (vente.poidsTotalKg * 1000) / vente.quantitePoissons;
+    // Calculer le poidsMoyenG global (moyenne ponderee sur toutes les lignes)
+    // poidsMoyenG = sum(poidsTotalKg_i * 1000) / sum(nombrePoissons_i)
+    const totalPoidsG = vente.lignes.reduce(
+      (sum, l) => sum + l.poidsTotalKg * 1000,
+      0
+    );
+    const totalPoissons = vente.lignes.reduce(
+      (sum, l) => sum + l.nombrePoissons,
+      0
+    );
+    const poidsMoyenG = totalPoissons > 0 ? totalPoidsG / totalPoissons : 0;
+
+    if (poidsMoyenG <= 0) {
+      throw new Error(
+        "Impossible de calculer le poids moyen : aucune ligne de vente trouvee"
+      );
+    }
+
     const quantiteLivree = Math.min(
       vente.quantitePoissons,
       Math.max(1, Math.round((dto.poidsLivreKg * 1000) / poidsMoyenG))
     );
     const nombreMorts = vente.quantitePoissons - quantiteLivree;
-
     const newMontantTotal = dto.poidsLivreKg * vente.prixUnitaireKg;
-    const dateLivraison = dto.dateLivraison ? new Date(dto.dateLivraison) : new Date();
+    const dateLivraison = dto.dateLivraison
+      ? new Date(dto.dateLivraison)
+      : new Date();
 
-    // If loss > 0, create AVARIE releves and decrement bac fish counts
-    if (nombreMorts > 0) {
-      const bacs = await tx.bac.findMany({
-        where: { vagueId: vente.vagueId, siteId },
-        orderBy: { nom: "asc" },
-      });
-
-      const totalFish = bacs.reduce((sum, b) => sum + (b.nombrePoissons ?? 0), 0);
-
+    // Si pertes > 0 : distribuer proportionnellement par LigneVente
+    if (nombreMorts > 0 && vente.lignes.length > 0) {
+      const totalLossKg = vente.poidsTotalKg - dto.poidsLivreKg;
       let mortsRestants = nombreMorts;
-      for (const bac of bacs) {
-        if (mortsRestants <= 0) break;
-        const available = bac.nombrePoissons ?? 0;
-        if (available <= 0) continue;
 
-        // Proportional distribution
-        const share = totalFish > 0
-          ? Math.round((available / totalFish) * nombreMorts)
-          : Math.round(nombreMorts / bacs.length);
-        const mortsForBac = Math.min(mortsRestants, Math.min(share || 1, available));
-        const newCount = available - mortsForBac;
+      for (let i = 0; i < vente.lignes.length; i++) {
+        const ligne = vente.lignes[i];
+        const isLast = i === vente.lignes.length - 1;
 
+        // Pertes kg proportionnelles a cette ligne
+        const lineLossKg = isLast
+          ? 0 // on utilisera mortsRestants directement
+          : (ligne.poidsTotalKg / vente.poidsTotalKg) * totalLossKg;
+
+        // Nombre de morts pour cette ligne (avec gestion du reste sur la derniere)
+        const nombreMortsLigne = isLast
+          ? mortsRestants
+          : Math.round((lineLossKg * 1000) / ligne.poidsMoyenG);
+
+        if (nombreMortsLigne <= 0) continue;
+
+        // Lire le compte actuel du bac (post-deductions precedentes)
+        const freshBac = await tx.bac.findUnique({
+          where: { id: ligne.bacId },
+          select: { nombrePoissons: true },
+        });
+        const freshCount = freshBac?.nombrePoissons ?? 0;
+
+        // Ne pas deduire plus que ce qui est disponible
+        const effectiveMorts = Math.min(nombreMortsLigne, freshCount);
+        if (effectiveMorts <= 0) {
+          mortsRestants -= nombreMortsLigne;
+          continue;
+        }
+
+        const newCount = freshCount - effectiveMorts;
+
+        // ADR-043 : dual-write
         await tx.bac.update({
-          where: { id: bac.id },
+          where: { id: ligne.bacId },
           data: { nombrePoissons: newCount },
         });
         await tx.assignationBac.updateMany({
-          where: { bacId: bac.id, vagueId: vente.vagueId, dateFin: null },
+          where: { bacId: ligne.bacId, vagueId: ligne.vagueId, dateFin: null },
           data: { nombreActuel: newCount },
         });
 
+        // Releve MORTALITE/AVARIE pour la tracabilite
         await tx.releve.create({
           data: {
             date: dateLivraison,
             typeReleve: TypeReleve.MORTALITE,
-            vagueId: vente.vagueId,
-            bacId: bac.id,
+            vagueId: ligne.vagueId,
+            bacId: ligne.bacId,
             siteId,
             userId,
-            nombreMorts: mortsForBac,
+            nombreMorts: effectiveMorts,
             causeMortalite: CauseMortalite.AVARIE,
-            notes: `Perte transport vente ${vente.numero} — ${mortsForBac} poissons`,
+            notes: `Perte transport vente ${vente.numero} — ${effectiveMorts} poissons`,
           },
         });
 
-        mortsRestants -= mortsForBac;
-      }
-
-      // Rounding remainder goes to last bac with fish
-      if (mortsRestants > 0 && bacs.length > 0) {
-        for (let i = bacs.length - 1; i >= 0; i--) {
-          const bac = bacs[i];
-          const currentFish = (bac.nombrePoissons ?? 0) -
-            (nombreMorts - mortsRestants > 0 ? 0 : 0);
-          // Re-read actual count after previous updates
-          const freshBac = await tx.bac.findUnique({ where: { id: bac.id } });
-          const freshCount = freshBac?.nombrePoissons ?? 0;
-          if (freshCount <= 0) continue;
-
-          const extra = Math.min(mortsRestants, freshCount);
-          await tx.bac.update({
-            where: { id: bac.id },
-            data: { nombrePoissons: freshCount - extra },
-          });
-          await tx.assignationBac.updateMany({
-            where: { bacId: bac.id, vagueId: vente.vagueId, dateFin: null },
-            data: { nombreActuel: freshCount - extra },
-          });
-          mortsRestants -= extra;
-          if (mortsRestants <= 0) break;
-        }
+        mortsRestants -= effectiveMorts;
       }
     }
 
-    // Update the vente
-    const updated = await tx.vente.update({
+    // Mettre a jour la vente — Prisma 7: update then fetch separately
+    await tx.vente.update({
       where: { id: venteId },
       data: {
         statut: StatutVente.LIVREE,
@@ -807,21 +861,48 @@ export async function cloturerVente(
         dateLivraison,
         montantTotal: newMontantTotal,
       },
+    });
+
+    const updated = await tx.vente.findUniqueOrThrow({
+      where: { id: venteId },
       include: {
         client: { select: { id: true, nom: true } },
         vague: { select: { id: true, code: true } },
         user: { select: { id: true, name: true } },
-        facture: { select: { id: true, numero: true, statut: true, montantPaye: true, montantTotal: true } },
+        facture: {
+          select: {
+            id: true,
+            numero: true,
+            statut: true,
+            montantPaye: true,
+            montantTotal: true,
+          },
+        },
+        lignes: {
+          select: {
+            id: true,
+            vagueId: true,
+            bacId: true,
+            poidsTotalKg: true,
+            poidsMoyenG: true,
+            nombrePoissons: true,
+            vague: { select: { id: true, code: true } },
+            bac: { select: { id: true, nom: true } },
+          },
+        },
       },
     });
 
-    // Update facture if exists
+    // Mettre a jour la facture si elle existe
     if (vente.facture) {
       await tx.facture.update({
         where: { id: vente.facture.id },
         data: { montantTotal: newMontantTotal },
       });
     }
+
+    // Codes vagues sources pour l'audit log
+    const vagueCodes = [...new Set(vente.lignes.map((l) => l.vagueId))];
 
     // Audit log
     await tx.siteAuditLog.create({
@@ -832,7 +913,7 @@ export async function cloturerVente(
         details: {
           venteNumero: vente.numero,
           clientNom: vente.client.nom,
-          vagueCode: vente.vague.code,
+          vagueIds: vagueCodes,
           poidsCommande: vente.poidsTotalKg,
           poidsLivre: dto.poidsLivreKg,
           pertePoids: vente.poidsTotalKg - dto.poidsLivreKg,
@@ -850,14 +931,18 @@ export async function cloturerVente(
   });
 }
 
+// ---------------------------------------------------------------------------
+// cloturerDefinitivement
+// ---------------------------------------------------------------------------
+
 /**
- * Cloture definitive d'une vente (LIVREE → CLOTUREE).
- * Etat terminal : plus aucune modification possible.
+ * Cloture definitive d'une vente (LIVREE -> CLOTUREE).
+ * Etat terminal : aucune modification possible apres.
  */
 export async function cloturerDefinitivement(
   venteId: string,
   siteId: string,
-  userId: string,
+  userId: string
 ) {
   return prisma.$transaction(async (tx) => {
     const vente = await tx.vente.findFirst({
@@ -865,7 +950,20 @@ export async function cloturerDefinitivement(
       include: {
         client: { select: { nom: true } },
         vague: { select: { code: true } },
-        facture: { select: { id: true, statut: true, montantTotal: true, montantPaye: true } },
+        lignes: {
+          select: {
+            vagueId: true,
+            vague: { select: { code: true } },
+          },
+        },
+        facture: {
+          select: {
+            id: true,
+            statut: true,
+            montantTotal: true,
+            montantPaye: true,
+          },
+        },
       },
     });
     if (!vente) throw new Error("Vente introuvable");
@@ -874,16 +972,53 @@ export async function cloturerDefinitivement(
       throw new Error("Seule une vente livree peut etre cloturee definitivement");
     }
 
-    const updated = await tx.vente.update({
+    await tx.vente.update({
       where: { id: venteId },
       data: { statut: StatutVente.CLOTUREE },
+    });
+
+    const updated = await tx.vente.findUniqueOrThrow({
+      where: { id: venteId },
       include: {
         client: { select: { id: true, nom: true } },
         vague: { select: { id: true, code: true } },
         user: { select: { id: true, name: true } },
-        facture: { select: { id: true, numero: true, statut: true, montantPaye: true, montantTotal: true } },
+        facture: {
+          select: {
+            id: true,
+            numero: true,
+            statut: true,
+            montantPaye: true,
+            montantTotal: true,
+          },
+        },
+        lignes: {
+          select: {
+            id: true,
+            vagueId: true,
+            bacId: true,
+            poidsTotalKg: true,
+            poidsMoyenG: true,
+            nombrePoissons: true,
+            vague: { select: { id: true, code: true } },
+            bac: { select: { id: true, nom: true } },
+          },
+        },
       },
     });
+
+    // Extraire les codes vagues sources depuis les lignes
+    const vagueCodes = [
+      ...new Set(
+        vente.lignes
+          .map((l) => l.vague?.code)
+          .filter((code): code is string => code != null)
+      ),
+    ];
+    // Fallback sur la vague directe si pas de lignes (ventes legacy)
+    if (vagueCodes.length === 0 && vente.vague?.code) {
+      vagueCodes.push(vente.vague.code);
+    }
 
     await tx.siteAuditLog.create({
       data: {
@@ -893,7 +1028,7 @@ export async function cloturerDefinitivement(
         details: {
           venteNumero: vente.numero,
           clientNom: vente.client.nom,
-          vagueCode: vente.vague.code,
+          vagueCodes,
           montantTotal: vente.montantTotal,
           factureStatut: vente.facture?.statut ?? null,
         },

@@ -16,7 +16,7 @@ export default async function VaguesPage() {
   if (!session.activeSiteId) redirect("/settings/sites");
 
   try {
-    const [permissions, t, vaguesResult, bacsLibresRaw, configElevages] = await Promise.all([
+    const [permissions, t, vaguesResult, bacsLibresRaw, configElevages, unitesProduction] = await Promise.all([
       checkPagePermission(session, Permission.VAGUES_VOIR),
       getTranslations("vagues"),
       getVagues(session.activeSiteId),
@@ -24,6 +24,11 @@ export default async function VaguesPage() {
       prisma.configElevage.findMany({
         where: { siteId: session.activeSiteId },
         select: { id: true, nom: true },
+        orderBy: { nom: "asc" },
+      }),
+      prisma.uniteProduction.findMany({
+        where: { siteId: session.activeSiteId, isActive: true },
+        select: { id: true, code: true, nom: true, type: true },
         orderBy: { nom: "asc" },
       }),
     ]);
@@ -69,7 +74,7 @@ export default async function VaguesPage() {
     return (
       <>
         <Header title={t("page.title")} />
-        <VaguesListClient vagues={vagues} bacsLibres={bacsLibres} permissions={permissions} configElevages={configElevages} />
+        <VaguesListClient vagues={vagues} bacsLibres={bacsLibres} permissions={permissions} configElevages={configElevages} unitesProduction={unitesProduction} />
       </>
     );
   } catch (error: unknown) {

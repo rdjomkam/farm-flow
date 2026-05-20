@@ -1326,8 +1326,10 @@ export async function getComparaisonVagues(
 
   const ventesByVague = new Map<string, number>();
   for (const v of allVentes) {
-    const current = ventesByVague.get(v.vagueId) ?? 0;
-    ventesByVague.set(v.vagueId, current + v.montantTotal);
+    if (v.vagueId) {
+      const current = ventesByVague.get(v.vagueId) ?? 0;
+      ventesByVague.set(v.vagueId, current + v.montantTotal);
+    }
   }
 
   // Calculer les indicateurs pour chaque vague

@@ -10,6 +10,7 @@ import {
   getRentabiliteParVague,
   getEvolutionFinanciere,
   getTopClients,
+  getResumeFinancierParUnite,
   genererDepensesRecurrentes,
 } from "@/lib/queries";
 import { Permission } from "@/types";
@@ -30,11 +31,12 @@ export default async function FinancesPage() {
 
   const t = await getTranslations("depenses.page");
 
-  const [resume, parVague, evolution, topClients] = await Promise.all([
+  const [resume, parVague, evolution, topClients, resumeParUnite] = await Promise.all([
     getResumeFinancier(siteId),
     getRentabiliteParVague(siteId),
     getEvolutionFinanciere(siteId, 12),
     getTopClients(siteId, 5),
+    getResumeFinancierParUnite(siteId).catch(() => null),
   ]);
 
   return (
@@ -48,6 +50,7 @@ export default async function FinancesPage() {
           parVague={parVague}
           evolution={evolution}
           topClients={topClients}
+          resumeParUnite={resumeParUnite}
         />
       </div>
     </>

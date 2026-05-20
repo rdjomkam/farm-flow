@@ -70,7 +70,24 @@
       "back": "Sales",
       "prefillFromLot": "Sale pre-filled from lot",
       "prefillFromLotWithCode": "Sale pre-filled from lot {code}",
-      "viewLotAlevins": "View fingerling lot"
+      "viewLotAlevins": "View fingerling lot",
+      "sources": "Fish sources",
+      "addSource": "Add another batch",
+      "removeSource": "Remove",
+      "selectVague": "Select a batch",
+      "weightTaken": "Weight taken (kg)",
+      "avgWeight": "Avg. weight (g)",
+      "estimatedFish": "≈ {count} fish",
+      "staleBiometry": "Average weight from {days} day(s) ago — consider measuring",
+      "noBiometry": "No biometry recorded for this tank",
+      "totalWeight": "Total weight",
+      "totalFish": "Total fish (estimated)",
+      "totalAmount": "Total amount",
+      "sourceSubtotal": "Subtotal: {weight} kg · ≈ {fish} fish",
+      "loadingBacs": "Loading tanks...",
+      "noBacsInVague": "No active tanks in this batch",
+      "clientEtPrix": "Client and price",
+      "summary": "Summary"
     },
     "detail": {
       "poissons": "Fish",
@@ -114,7 +131,16 @@
       "avarieWarning": "The difference will be recorded as AVARIE loss in the tanks.",
       "confirmerCloture": "Confirm closure",
       "livraisonComplete": "Full delivery — no loss",
-      "livraisonAvecPerte": "Delivery with {perte} kg loss"
+      "livraisonAvecPerte": "Delivery with {perte} kg loss",
+      "sources": "Sources",
+      "perBac": "Per tank",
+      "multipleBatches": "Multiple batches",
+      "fishCount": "{count} fish",
+      "sourcesNote": "Sources cannot be edited here. Create a new sale to change batches.",
+      "deleteTitle": "Delete sale",
+      "deleteDescription": "Are you sure you want to delete sale {numero}? This action cannot be undone.",
+      "deleteWarning": "Fish will be restored to their tanks, and the associated invoice will be deleted.",
+      "deleteConfirm": "Delete sale"
     }
   },
   "factures": {
@@ -232,6 +258,19 @@
       "rapportPdf": "PDF Report",
       "ventesExcel": "Export sales Excel",
       "stockExcel": "Export stock Excel"
+    },
+    "parUnite": {
+      "title": "P&L by production unit",
+      "unite": "Unit",
+      "revenus": "Revenue",
+      "couts": "Costs",
+      "marge": "Margin",
+      "transfertsIn": "Incoming transfers",
+      "transfertsOut": "Outgoing transfers",
+      "vagues": "{count} batch(es)",
+      "depenses": "{count} expense(s)",
+      "nonAffecte": "Unassigned",
+      "aucuneUnite": "No production units configured."
     }
   }
 }

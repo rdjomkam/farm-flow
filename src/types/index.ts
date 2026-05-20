@@ -92,6 +92,8 @@ export {
   TailleGranule,
   FormeAliment,
   ComportementAlimentaire,
+  // Unite de Production
+  TypeUniteProduction,
 } from "./models";
 export type {
   Site,
@@ -126,6 +128,7 @@ export type {
   ReleveConsommation,
   ReleveConsommationWithRelations,
   Client,
+  LigneVente,
   Vente,
   VenteWithRelations,
   Facture,
@@ -229,6 +232,11 @@ export type {
   // ADR-021 — Admin Plateforme
   ModuleDefinition,
   SiteAuditLog,
+  // Unite de Production & Transfert Interne
+  UniteProduction,
+  UniteProductionWithRelations,
+  TransfertInterne,
+  TransfertInterneWithRelations,
 } from "./models";
 
 // Types authentification et multi-tenancy (DTOs, session, contexte)
@@ -321,6 +329,7 @@ export type {
   CreateClientDTO,
   UpdateClientDTO,
   ClientListResponse,
+  CreateLigneVenteDTO,
   CreateVenteDTO,
   UpdateVenteDTO,
   ClotureVenteDTO,
@@ -642,3 +651,9 @@ export type {
 
 // Saved Filters
 export type { SavedFilter, SavedFilterPage, CreateSavedFilterDTO } from "./api";
+// Unite de Production & Transfert Interne — DTOs
+export type {
+  CreateUniteProductionDTO,
+  UpdateUniteProductionDTO,
+  CreateTransfertInterneDTO,
+} from "./api";

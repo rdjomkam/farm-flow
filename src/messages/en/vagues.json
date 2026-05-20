@@ -84,6 +84,8 @@
       "poidsMoyenInitial": "Initial average weight (g)",
       "origineAlevins": "Fry origin (optional)",
       "origineAlevinsFr": "E.g.: Local hatchery",
+      "uniteProduction": "Production unit",
+      "uniteProductionPlaceholder": "Select a unit",
       "configElevage": "Farming configuration",
       "configElevagePlaceholder": "Select a configuration",
       "aucunBacLibre": "No free tanks available.",

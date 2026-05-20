@@ -27,6 +27,8 @@ interface ModifierVagueDialogProps {
   origineAlevins: string | null;
   configElevageId: string | null;
   configElevages: { id: string; nom: string }[];
+  unitesProduction: { id: string; code: string; nom: string; type: string }[];
+  uniteProductionId: string | null;
   poidsObjectifKg: number | null;
   permissions: Permission[];
   open?: boolean;
@@ -40,6 +42,8 @@ export function ModifierVagueDialog({
   origineAlevins,
   configElevageId,
   configElevages,
+  unitesProduction,
+  uniteProductionId,
   poidsObjectifKg,
   permissions,
   open: controlledOpen,
@@ -56,6 +60,7 @@ export function ModifierVagueDialog({
   const [origine, setOrigine] = useState(origineAlevins ?? "");
   const [configId, setConfigId] = useState(configElevageId ?? "");
   const [objectif, setObjectif] = useState(poidsObjectifKg != null ? String(poidsObjectifKg) : "");
+  const [uniteId, setUniteId] = useState(uniteProductionId ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   function resetForm() {
@@ -64,6 +69,7 @@ export function ModifierVagueDialog({
     setOrigine(origineAlevins ?? "");
     setConfigId(configElevageId ?? "");
     setObjectif(poidsObjectifKg != null ? String(poidsObjectifKg) : "");
+    setUniteId(uniteProductionId ?? "");
     setErrors({});
   }
 
@@ -83,6 +89,7 @@ export function ModifierVagueDialog({
       poidsMoyenInitial: Number(poids),
       origineAlevins: origine.trim() || null,
       ...(configId && { configElevageId: configId }),
+      uniteProductionId: uniteId || null,
       poidsObjectifKg: objectif ? Number(objectif) : null,
     });
 
@@ -164,6 +171,22 @@ export function ModifierVagueDialog({
               </SelectContent>
             </Select>
           </div>
+          {unitesProduction.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">{t("form.fields.uniteProduction")}</label>
+              <Select value={uniteId || "__aucune"} onValueChange={(v) => setUniteId(v === "__aucune" ? "" : v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("form.fields.uniteProductionPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__aucune">{t("form.fields.uniteProductionPlaceholder")}</SelectItem>
+                  {unitesProduction.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>{u.nom} ({u.code})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               {t("form.cancel")}

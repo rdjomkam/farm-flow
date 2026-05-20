@@ -84,6 +84,17 @@ export const queryKeys = {
     list: (filters?: Record<string, unknown>) => ["besoins", "list", filters] as const,
   },
 
+  // --- Unites de production ---
+  unitesProduction: {
+    all: ["unites-production"] as const,
+    list: (filters?: Record<string, unknown>) => ["unites-production", "list", filters] as const,
+    detail: (id: string) => ["unites-production", "detail", id] as const,
+  },
+  transfertsInternes: {
+    all: ["transferts-internes"] as const,
+    list: (filters?: Record<string, unknown>) => ["transferts-internes", "list", filters] as const,
+  },
+
   // --- Planning ---
   planning: {
     activites: (filters?: Record<string, unknown>) => ["planning", "activites", filters] as const,

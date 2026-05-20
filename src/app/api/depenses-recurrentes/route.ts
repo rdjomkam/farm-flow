@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
       frequence: body.frequence as FrequenceRecurrence,
       jourDuMois: body.jourDuMois,
       isActive: body.isActive,
+      uniteProductionId: body.uniteProductionId || undefined,
     };
 
     const template = await createDepenseRecurrente(auth.activeSiteId, auth.userId, dto);

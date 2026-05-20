@@ -29,9 +29,10 @@ interface VaguesListClientProps {
   bacsLibres: BacResponse[];
   permissions: Permission[];
   configElevages: { id: string; nom: string }[];
+  unitesProduction: { id: string; code: string; nom: string; type: string }[];
 }
 
-export function VaguesListClient({ vagues: initialVagues, bacsLibres, permissions, configElevages }: VaguesListClientProps) {
+export function VaguesListClient({ vagues: initialVagues, bacsLibres, permissions, configElevages, unitesProduction }: VaguesListClientProps) {
   const createVagueMutation = useCreateVague();
   const { data: vagues = initialVagues } = useVaguesList(undefined, { initialData: initialVagues });
   const t = useTranslations("vagues");
@@ -44,6 +45,10 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
   const [poidsMoyenInitial, setPoidsMoyenInitial] = useState("");
   const [origineAlevins, setOrigineAlevins] = useState("");
   const [configElevageId, setConfigElevageId] = useState("");
+  const [uniteProductionId, setUniteProductionId] = useState(
+    // Auto-select grossissement unit if only one exists
+    unitesProduction.find((u) => u.type === "GROSSISSEMENT")?.id ?? ""
+  );
   const [selectedBacs, setSelectedBacs] = useState<string[]>([]);
   // distribution: bacId -> nombrePoissons string (kept as string for input binding)
   const [distributionMap, setDistributionMap] = useState<Record<string, string>>({});
@@ -60,6 +65,7 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
     setPoidsMoyenInitial("");
     setOrigineAlevins("");
     setConfigElevageId("");
+    setUniteProductionId(unitesProduction.find((u) => u.type === "GROSSISSEMENT")?.id ?? "");
     setSelectedBacs([]);
     setDistributionMap({});
     setErrors({});
@@ -152,6 +158,7 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
         poidsMoyenInitial: Number(poidsMoyenInitial),
         origineAlevins: origineAlevins.trim() || undefined,
         configElevageId,
+        uniteProductionId: uniteProductionId || undefined,
         bacDistribution,
       });
       setDialogOpen(false);
@@ -230,6 +237,21 @@ export function VaguesListClient({ vagues: initialVagues, bacsLibres, permission
                   error={errors.dateDebut}
                 />
               </FormSection>
+
+              {unitesProduction.length > 0 && (
+                <FormSection title={t("form.fields.uniteProduction")}>
+                  <Select value={uniteProductionId} onValueChange={setUniteProductionId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("form.fields.uniteProductionPlaceholder")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {unitesProduction.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>{u.nom} ({u.code})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormSection>
+              )}
 
               <FormSection title={t("form.sections.population.title")} description={t("form.sections.population.description")}>
                 <Input

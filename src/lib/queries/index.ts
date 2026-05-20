@@ -142,6 +142,7 @@ export {
   getRentabiliteParVague,
   getEvolutionFinanciere,
   getTopClients,
+  getResumeFinancierParUnite,
 } from "./finances";
 export type {
   ResumeFinancier,
@@ -151,6 +152,8 @@ export type {
   EvolutionFinanciere,
   TopClient,
   TopClients,
+  ResumeParUnite,
+  ResumeFinancierParUnite,
 } from "./finances";
 
 export {

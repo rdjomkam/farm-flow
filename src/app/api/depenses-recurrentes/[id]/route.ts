@@ -81,6 +81,7 @@ export async function PUT(
       ...(body.frequence !== undefined && { frequence: body.frequence as FrequenceRecurrence }),
       ...(body.jourDuMois !== undefined && { jourDuMois: body.jourDuMois }),
       ...(body.isActive !== undefined && { isActive: body.isActive }),
+      ...(body.uniteProductionId !== undefined && { uniteProductionId: body.uniteProductionId ?? null }),
     };
 
     const updated = await updateDepenseRecurrente(id, auth.activeSiteId, dto);

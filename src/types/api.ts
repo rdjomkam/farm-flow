@@ -245,6 +245,8 @@ export interface CreateVagueDTO {
   configElevageId: string;
   /** Objectif biomasse en kg (poids total a vendre) */
   poidsObjectifKg?: number | null;
+  /** Unite de production associee (REPRODUCTION ou GROSSISSEMENT) */
+  uniteProductionId?: string;
   /** Distribution des alevins par bac */
   bacDistribution: BacStockingEntry[];
 }
@@ -265,6 +267,8 @@ export interface UpdateVagueDTO {
   configElevageId?: string;
   /** Objectif biomasse en kg (poids total a vendre) */
   poidsObjectifKg?: number | null;
+  /** Unite de production associee */
+  uniteProductionId?: string | null;
   /** Ajouter des bacs a la vague avec leur nombre de poissons */
   addBacs?: { bacId: string; nombrePoissons: number }[];
   /** Retirer des bacs de la vague */
@@ -863,40 +867,33 @@ export interface ClientListResponse {
 // Ventes
 // ---------------------------------------------------------------------------
 
-/** DTO pour creer une vente
- *
- * `quantitePoissons` est calcule par le serveur a partir du poids total
- * et du poids moyen (auto-recupere de la derniere biometrie, ou fourni
- * manuellement via `poidsMoyenG`).
- */
+/** Une ligne dans une vente multi-vague */
+export interface CreateLigneVenteDTO {
+  vagueId: string;
+  bacId: string;
+  poidsTotalKg: number;
+  /** Poids moyen par poisson en grammes. Auto-rempli depuis la derniere biometrie si omis par le serveur. */
+  poidsMoyenG?: number;
+}
+
+/** DTO pour creer une vente multi-vague */
 export interface CreateVenteDTO {
   clientId: string;
-  vagueId: string;
-  poidsTotalKg: number;
   prixUnitaireKg: number;
-  /** Poids moyen unitaire en grammes (override de la biometrie). Requis si aucune biometrie. */
-  poidsMoyenG?: number;
   /** Date de commande (ISO 8601). Defaut: maintenant. */
   dateCommande?: string;
   notes?: string;
-  /** Deductions explicites par bac. Quand fourni, les poissons sont preleves exactement de ces bacs.
-   *  La somme des quantites devient le quantitePoissons de la vente.
-   *  Quand omis, la distribution proportionnelle est utilisee. */
-  bacDeductions?: Array<{ bacId: string; quantite: number }>;
+  /** Lignes de vente : une par combinaison vague+bac */
+  lignes: CreateLigneVenteDTO[];
 }
 
 export interface UpdateVenteDTO {
   clientId?: string;
-  vagueId?: string;
-  poidsTotalKg?: number;
   prixUnitaireKg?: number;
-  poidsMoyenG?: number;
   dateCommande?: string;
   notes?: string;
-  /** Deductions explicites par bac. Quand fourni, les poissons sont preleves exactement de ces bacs.
-   *  La somme des quantites devient le quantitePoissons de la vente.
-   *  Quand omis, la distribution proportionnelle est utilisee. */
-  bacDeductions?: Array<{ bacId: string; quantite: number }>;
+  /** Remplacement complet des lignes. Si fourni, toutes les anciennes lignes sont remplacees. */
+  lignes?: CreateLigneVenteDTO[];
   /** Motif obligatoire de la modification */
   motif: string;
 }
@@ -1560,6 +1557,8 @@ export interface CreateDepenseDTO {
   commandeId?: string;
   /** Notes libres (optionnel) */
   notes?: string;
+  /** Unite de production associee (optionnel) */
+  uniteProductionId?: string;
 }
 
 /** DTO pour modifier une depense (champs tous optionnels) */
@@ -1571,6 +1570,8 @@ export interface UpdateDepenseDTO {
   dateEcheance?: string | null;
   vagueId?: string | null;
   notes?: string | null;
+  /** Unite de production associee */
+  uniteProductionId?: string | null;
 }
 
 /** Filtres pour lister les depenses */
@@ -1844,6 +1845,8 @@ export interface CreateDepenseRecurrenteDTO {
   /** Jour du mois (1-28, defaut 1) */
   jourDuMois?: number;
   isActive?: boolean;
+  /** Unite de production associee (optionnel — null = repartie sur toutes) */
+  uniteProductionId?: string;
 }
 
 /** DTO pour modifier un template de depense recurrente */
@@ -1854,6 +1857,8 @@ export interface UpdateDepenseRecurrenteDTO {
   frequence?: FrequenceRecurrence;
   jourDuMois?: number;
   isActive?: boolean;
+  /** Unite de production associee */
+  uniteProductionId?: string | null;
 }
 
 /** Reponse apres generation des depenses recurrentes */
@@ -3093,4 +3098,39 @@ export interface CreateSavedFilterDTO {
   name: string;
   page: SavedFilterPage;
   filters: Record<string, unknown>;
+}
+
+// ---------------------------------------------------------------------------
+// DTOs — UniteProduction
+// ---------------------------------------------------------------------------
+
+export interface CreateUniteProductionDTO {
+  code: string;
+  nom: string;
+  type: string; // TypeUniteProduction
+  description?: string;
+}
+
+export interface UpdateUniteProductionDTO {
+  nom?: string;
+  description?: string;
+  isActive?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// DTOs — TransfertInterne
+// ---------------------------------------------------------------------------
+
+export interface CreateTransfertInterneDTO {
+  uniteSourceId: string;
+  uniteDestinationId: string;
+  lotAlevinsId?: string;
+  vagueDestinationId?: string;
+  nombrePoissons: number;
+  poidsMoyenG?: number;
+  prixUnitaire: number;
+  /** "PAR_POISSON" | "PAR_KG" — defaults to PAR_POISSON */
+  prixBase?: string;
+  date?: string;
+  description?: string;
 }

@@ -38,6 +38,7 @@ import {
   LayoutDashboard,
   Fish,
   ThermometerSun,
+  Factory,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -264,6 +265,12 @@ const SHEET_GROUPS: SheetNavGroup[] = [
         labelKey: "items.profilsElevage",
         icon: ClipboardCheck,
         permissionRequired: Permission.GERER_CONFIG_ELEVAGE,
+      },
+      {
+        href: "/unites-production",
+        labelKey: "items.unitesProduction",
+        icon: Factory,
+        permissionRequired: Permission.FINANCES_VOIR,
       },
       {
         href: "/users",

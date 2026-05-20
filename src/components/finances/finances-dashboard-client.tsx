@@ -77,12 +77,15 @@ function formatCompact(amount: number, locale: string): string {
 }
 
 import { KPICard } from "@/components/ui/kpi-card";
+import { PerUnitPnl } from "./per-unit-pnl";
+import type { ResumeFinancierParUnite } from "@/lib/queries/finances";
 
 interface FinancesDashboardClientProps {
   resume: ResumeFinancier;
   parVague: RentabiliteParVague;
   evolution: EvolutionFinanciere;
   topClients: TopClients;
+  resumeParUnite?: ResumeFinancierParUnite | null;
 }
 
 export function FinancesDashboardClient({
@@ -90,6 +93,7 @@ export function FinancesDashboardClient({
   parVague,
   evolution,
   topClients,
+  resumeParUnite,
 }: FinancesDashboardClientProps) {
   const t = useTranslations("ventes");
   const tSections = useTranslations("errors.sections");
@@ -493,6 +497,11 @@ export function FinancesDashboardClient({
             })}
           </CardContent>
         </Card>
+      )}
+
+      {/* Per-unit P&L */}
+      {resumeParUnite && resumeParUnite.unites.length > 0 && (
+        <PerUnitPnl unites={resumeParUnite.unites} nonAffecte={resumeParUnite.nonAffecte} />
       )}
 
       {/* Additional stats */}

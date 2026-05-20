@@ -128,6 +128,7 @@
     "optional": "(optional)",
     "noWave": "No wave",
     "noOrder": "No order",
+    "noUnit": "No unit",
     "notes": "Notes",
     "notesPlaceholder": "Additional information...",
     "createExpense": "Create expense",
@@ -137,7 +138,8 @@
       "montantTotal": "Total amount (FCFA)",
       "date": "Date",
       "vagueAssociee": "Associated batch",
-      "commandeLiee": "Linked order"
+      "commandeLiee": "Linked order",
+      "uniteProduction": "Production unit"
     }
   },
   "deleteDepense": {

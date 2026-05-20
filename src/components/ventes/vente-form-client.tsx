@@ -1,17 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
 import { formatNumber } from "@/lib/format";
-import { ArrowLeft, ShoppingCart, Fish, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  ArrowLeft,
+  ShoppingCart,
+  Fish,
+  Plus,
+  Trash2,
+  AlertTriangle,
+  Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// Card imports removed — form uses flat sections instead
 import {
   Select,
   SelectTrigger,
@@ -22,24 +30,18 @@ import {
 import { useVenteService } from "@/services";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
 interface ClientOption {
   id: string;
   nom: string;
 }
 
-interface BacOption {
-  id: string;
-  nom: string;
-  nombrePoissons: number;
-}
-
 interface VagueOption {
   id: string;
   code: string;
-  poissonsDisponibles: number;
-  /** Dernier poids moyen (g) constate via BIOMETRIE, null si absent */
-  dernierPoidsMoyenG: number | null;
-  bacs: BacOption[];
 }
 
 interface PrefillData {
@@ -50,11 +52,70 @@ interface PrefillData {
   clientId?: string;
 }
 
+interface BacEntry {
+  bacId: string;
+  nom: string;
+  /** Nombre de poissons actuellement disponibles dans le bac */
+  nombrePoissons: number;
+  /** Bac selectionne pour cette vente */
+  selected: boolean;
+  /** Poids total preleve depuis ce bac (saisie utilisateur) */
+  poidsTotalKg: string;
+  /** Poids moyen unitaire en grammes (auto-rempli depuis biometrie) */
+  poidsMoyenG: string;
+  /** True si poidsMoyenG a ete auto-rempli depuis la derniere biometrie */
+  poidsMoyenAutoFilled: boolean;
+  /** Date de la derniere biometrie (null si aucune) */
+  biometryDate: Date | null;
+  /** Nombre de jours depuis la derniere biometrie (null si aucune) */
+  biometryDaysAgo: number | null;
+}
+
+interface VagueSource {
+  /** ID de la vague selectionnee (vide si non encore choisie) */
+  vagueId: string;
+  bacs: BacEntry[];
+  loading: boolean;
+}
+
 interface Props {
   clients: ClientOption[];
   vagues: VagueOption[];
   prefill?: PrefillData;
 }
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function computeFishCount(poidsTotalKg: string, poidsMoyenG: string): number {
+  const weight = parseFloat(poidsTotalKg);
+  const avgG = parseFloat(poidsMoyenG);
+  if (weight > 0 && avgG > 0) {
+    return Math.max(1, Math.round((weight * 1000) / avgG));
+  }
+  return 0;
+}
+
+function computeSourceWeight(source: VagueSource): number {
+  return source.bacs
+    .filter((b) => b.selected)
+    .reduce((s, b) => s + (parseFloat(b.poidsTotalKg) || 0), 0);
+}
+
+function computeSourceFish(source: VagueSource): number {
+  return source.bacs
+    .filter((b) => b.selected)
+    .reduce((s, b) => s + computeFishCount(b.poidsTotalKg, b.poidsMoyenG), 0);
+}
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 export function VenteFormClient({ clients, vagues, prefill }: Props) {
   const t = useTranslations("ventes");
@@ -63,84 +124,189 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
   const queryClient = useQueryClient();
   const venteService = useVenteService();
 
+  // --- Card 1: Client & Price ---
   const [clientId, setClientId] = useState(prefill?.clientId ?? "");
-  const [vagueId, setVagueId] = useState("");
-  const [poidsTotalKg, setPoidsTotalKg] = useState(
-    prefill?.poidsTotalKg !== undefined ? String(prefill.poidsTotalKg) : ""
-  );
   const [prixUnitaireKg, setPrixUnitaireKg] = useState("");
-  // Si prefill fournit quantite ET poidsTotalKg (cas lot alevins), pre-deduire
-  // le poids moyen unitaire pour preserver le nombre de poissons attendu.
-  const prefillPoidsMoyenG =
-    prefill?.quantite && prefill.quantite > 0 && prefill.poidsTotalKg && prefill.poidsTotalKg > 0
-      ? Math.round((prefill.poidsTotalKg * 1000) / prefill.quantite)
-      : null;
-  const [poidsMoyenG, setPoidsMoyenG] = useState(
-    prefillPoidsMoyenG != null ? String(prefillPoidsMoyenG) : ""
-  );
-  const [poidsMoyenTouched, setPoidsMoyenTouched] = useState(
-    prefillPoidsMoyenG != null
-  );
-  const [dateCommande, setDateCommande] = useState(
-    new Date().toISOString().slice(0, 10)
-  );
+  const [dateCommande, setDateCommande] = useState(todayIso);
   const [notes, setNotes] = useState("");
 
-  // Per-bac deductions state
-  const [chooseBacs, setChooseBacs] = useState(false);
-  // Map bacId -> quantity string
-  const [bacQuantites, setBacQuantites] = useState<Record<string, string>>({});
+  // --- Card 2: Fish sources (dynamic, repeatable) ---
+  const [sources, setSources] = useState<VagueSource[]>([
+    { vagueId: "", bacs: [], loading: false },
+  ]);
 
-  const selectedVague = vagues.find((v) => v.id === vagueId);
-  const montantTotal =
-    (parseFloat(poidsTotalKg) || 0) * (parseFloat(prixUnitaireKg) || 0);
+  // --- Computed totals ---
+  const totalWeight = sources.reduce(
+    (s, src) => s + computeSourceWeight(src),
+    0
+  );
+  const totalFish = sources.reduce((s, src) => s + computeSourceFish(src), 0);
+  const totalAmount = totalWeight * (parseFloat(prixUnitaireKg) || 0);
 
-  const autoPoidsMoyenG = selectedVague?.dernierPoidsMoyenG ?? null;
-  const effectivePoidsMoyenG = poidsMoyenTouched
-    ? parseFloat(poidsMoyenG) || 0
-    : autoPoidsMoyenG ?? (parseFloat(poidsMoyenG) || 0);
+  // ---------------------------------------------------------------------------
+  // Source management
+  // ---------------------------------------------------------------------------
 
-  const poidsTotalKgNum = parseFloat(poidsTotalKg) || 0;
-  const estimatedPoissonsAuto =
-    effectivePoidsMoyenG > 0 && poidsTotalKgNum > 0
-      ? Math.max(1, Math.round((poidsTotalKgNum * 1000) / effectivePoidsMoyenG))
-      : 0;
+  const addSource = () => {
+    setSources((prev) => [...prev, { vagueId: "", bacs: [], loading: false }]);
+  };
 
-  // When chooseBacs is enabled, sum bac quantities replaces auto estimate
-  const bacDeductionsActive =
-    chooseBacs && selectedVague != null && selectedVague.bacs.length > 0;
-  const bacDeductionsList = bacDeductionsActive
-    ? selectedVague!.bacs
-        .map((b) => ({ bacId: b.id, quantite: parseInt(bacQuantites[b.id] ?? "0", 10) || 0 }))
-        .filter((d) => d.quantite > 0)
-    : [];
-  const totalFromBacs = bacDeductionsList.reduce((s, d) => s + d.quantite, 0);
-  const estimatedPoissons = bacDeductionsActive ? totalFromBacs : estimatedPoissonsAuto;
+  const removeSource = (index: number) => {
+    setSources((prev) => prev.filter((_, i) => i !== index));
+  };
 
-  function handleVagueChange(newVagueId: string) {
-    setVagueId(newVagueId);
-    // Reset bac quantities when vague changes
-    setChooseBacs(false);
-    setBacQuantites({});
+  const updateSource = useCallback(
+    (index: number, updater: (s: VagueSource) => VagueSource) => {
+      setSources((prev) =>
+        prev.map((s, i) => (i === index ? updater(s) : s))
+      );
+    },
+    []
+  );
+
+  // ---------------------------------------------------------------------------
+  // Vague selection → load bacs from API
+  // ---------------------------------------------------------------------------
+
+  async function handleVagueSelect(sourceIndex: number, vagueId: string) {
+    updateSource(sourceIndex, (s) => ({
+      ...s,
+      vagueId,
+      bacs: [],
+      loading: true,
+    }));
+
+    try {
+      const res = await fetch(`/api/vagues/${vagueId}/bacs-biometry`);
+      if (!res.ok) throw new Error("API error");
+      const data: {
+        bacs: {
+          bacId: string;
+          nom: string;
+          nombrePoissons: number;
+          dernierPoidsMoyenG: number | null;
+          derniereBiometrieDate: string | null;
+        }[];
+      } = await res.json();
+
+      const today = new Date();
+      const bacs: BacEntry[] = data.bacs.map((b) => {
+        const biometryDate = b.derniereBiometrieDate
+          ? new Date(b.derniereBiometrieDate)
+          : null;
+        const biometryDaysAgo = biometryDate
+          ? Math.floor(
+              (today.getTime() - biometryDate.getTime()) /
+                (1000 * 60 * 60 * 24)
+            )
+          : null;
+        return {
+          bacId: b.bacId,
+          nom: b.nom,
+          nombrePoissons: b.nombrePoissons,
+          selected: false,
+          poidsTotalKg: "",
+          poidsMoyenG:
+            b.dernierPoidsMoyenG != null
+              ? String(Math.round(b.dernierPoidsMoyenG))
+              : "",
+          poidsMoyenAutoFilled: b.dernierPoidsMoyenG != null,
+          biometryDate,
+          biometryDaysAgo,
+        };
+      });
+
+      updateSource(sourceIndex, (s) => ({ ...s, vagueId, bacs, loading: false }));
+    } catch {
+      updateSource(sourceIndex, (s) => ({ ...s, loading: false }));
+    }
   }
+
+  // ---------------------------------------------------------------------------
+  // Bac entry updaters
+  // ---------------------------------------------------------------------------
+
+  function toggleBac(sourceIndex: number, bacId: string) {
+    updateSource(sourceIndex, (s) => ({
+      ...s,
+      bacs: s.bacs.map((b) =>
+        b.bacId === bacId ? { ...b, selected: !b.selected } : b
+      ),
+    }));
+  }
+
+  function updateBacField(
+    sourceIndex: number,
+    bacId: string,
+    field: "poidsTotalKg" | "poidsMoyenG",
+    value: string
+  ) {
+    updateSource(sourceIndex, (s) => ({
+      ...s,
+      bacs: s.bacs.map((b) =>
+        b.bacId === bacId
+          ? {
+              ...b,
+              [field]: value,
+              // If user manually edits poidsMoyenG, it's no longer auto-filled
+              ...(field === "poidsMoyenG" ? { poidsMoyenAutoFilled: false } : {}),
+            }
+          : b
+      ),
+    }));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Validation
+  // ---------------------------------------------------------------------------
+
+  const selectedVagueIds = sources
+    .filter((s) => s.vagueId !== "")
+    .map((s) => s.vagueId);
+
+  const hasAtLeastOneSelectedBac = sources.some((s) =>
+    s.bacs.some(
+      (b) =>
+        b.selected &&
+        parseFloat(b.poidsTotalKg) > 0
+    )
+  );
+
+  const isValid =
+    clientId !== "" &&
+    parseFloat(prixUnitaireKg) > 0 &&
+    hasAtLeastOneSelectedBac;
+
+  // ---------------------------------------------------------------------------
+  // Submit
+  // ---------------------------------------------------------------------------
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!clientId || !vagueId) return;
+    if (!isValid) return;
 
-    const manualPoidsMoyen = poidsMoyenTouched ? parseFloat(poidsMoyenG) : NaN;
+    const lignes = sources.flatMap((source) =>
+      source.bacs
+        .filter((b) => b.selected && parseFloat(b.poidsTotalKg) > 0)
+        .map((b) => ({
+          vagueId: source.vagueId,
+          bacId: b.bacId,
+          poidsTotalKg: parseFloat(b.poidsTotalKg),
+          // Only send poidsMoyenG if user manually entered it (not auto-filled)
+          ...(!b.poidsMoyenAutoFilled && parseFloat(b.poidsMoyenG) > 0
+            ? { poidsMoyenG: parseFloat(b.poidsMoyenG) }
+            : {}),
+        }))
+    );
+
+    if (lignes.length === 0) return;
 
     const result = await venteService.createVente({
       clientId,
-      vagueId,
-      poidsTotalKg: parseFloat(poidsTotalKg),
       prixUnitaireKg: parseFloat(prixUnitaireKg),
-      ...(Number.isFinite(manualPoidsMoyen) && manualPoidsMoyen > 0
-        ? { poidsMoyenG: manualPoidsMoyen }
-        : {}),
+      lignes,
       ...(notes.trim() && { notes: notes.trim() }),
       ...(dateCommande && { dateCommande }),
-      ...(bacDeductionsList.length > 0 ? { bacDeductions: bacDeductionsList } : {}),
     });
 
     if (result.ok) {
@@ -151,115 +317,62 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
     }
   }
 
-  // In bac mode, poidsMoyenG is not needed (quantities come from bacs)
-  const needsManualPoidsMoyen = !!selectedVague && autoPoidsMoyenG == null && !bacDeductionsActive;
-  const manualPoidsMoyenValid =
-    !needsManualPoidsMoyen || (parseFloat(poidsMoyenG) || 0) > 0;
-
-  // In bac mode, at least one bac must have a quantity
-  const bacModeValid = !bacDeductionsActive || bacDeductionsList.length > 0;
-
-  const isValid =
-    clientId &&
-    vagueId &&
-    parseFloat(poidsTotalKg) > 0 &&
-    parseFloat(prixUnitaireKg) > 0 &&
-    manualPoidsMoyenValid &&
-    bacModeValid;
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
 
   return (
     <ErrorBoundary section={tSections("saleForm")}>
-    <div className="flex flex-col gap-4">
-      <Link
-        href="/ventes"
-        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        {t("ventes.form.back")}
-      </Link>
+      <div className="flex flex-col gap-4">
+        <Link
+          href="/ventes"
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {t("ventes.form.back")}
+        </Link>
 
-      {/* Banner: pre-filled from lot alevins */}
-      {prefill?.lotAlevinsId && (
-        <div className="flex items-start gap-3 rounded-lg border border-accent-green-muted bg-accent-green-muted/30 p-3">
-          <Fish className="h-5 w-5 text-accent-green mt-0.5 shrink-0" aria-hidden="true" />
-          <div className="flex flex-col gap-0.5 text-sm">
-            <span className="font-medium text-accent-green">
-              {prefill.lotCode
-                ? t("ventes.form.prefillFromLotWithCode", { code: prefill.lotCode })
-                : t("ventes.form.prefillFromLot")}
-            </span>
-            <Link
-              href={`/reproduction/lots/${prefill.lotAlevinsId}`}
-              className="text-xs text-muted-foreground underline hover:text-foreground transition-colors"
-            >
-              {t("ventes.form.viewLotAlevins")}
-            </Link>
+        {/* Banner: pre-filled from lot alevins */}
+        {prefill?.lotAlevinsId && (
+          <div className="flex items-start gap-3 rounded-lg border border-accent-green-muted bg-accent-green-muted/30 p-3">
+            <Fish className="h-5 w-5 text-accent-green mt-0.5 shrink-0" aria-hidden="true" />
+            <div className="flex flex-col gap-0.5 text-sm">
+              <span className="font-medium text-accent-green">
+                {prefill.lotCode
+                  ? t("ventes.form.prefillFromLotWithCode", { code: prefill.lotCode })
+                  : t("ventes.form.prefillFromLot")}
+              </span>
+              <Link
+                href={`/reproduction/lots/${prefill.lotAlevinsId}`}
+                className="text-xs text-muted-foreground underline hover:text-foreground transition-colors"
+              >
+                {t("ventes.form.viewLotAlevins")}
+              </Link>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-        {/* Step 1: Client + Vague */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{t("ventes.form.clientEtVague")}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
+
+          {/* Section 1: Client & Price — flat, no card */}
+          <section className="flex flex-col gap-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+              {t("ventes.form.clientEtPrix")}
+            </p>
+
             <Select value={clientId} onValueChange={setClientId}>
               <SelectTrigger label={t("ventes.form.client")} required aria-required="true">
                 <SelectValue placeholder={t("ventes.form.clientPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {clients.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.nom}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={vagueId} onValueChange={handleVagueChange}>
-              <SelectTrigger label={t("ventes.form.vague")} required aria-required="true">
-                <SelectValue placeholder={t("ventes.form.vaguePlaceholder")} />
-              </SelectTrigger>
-              <SelectContent>
-                {vagues.map((v) => (
-                  <SelectItem key={v.id} value={v.id}>
-                    {t("ventes.form.vagueOption", { code: v.code, count: v.poissonsDisponibles })}
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.nom}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            {selectedVague && (
-              <p className="text-xs text-muted-foreground">
-                {t("ventes.form.poissonsDisponibles", { count: selectedVague.poissonsDisponibles })}
-              </p>
-            )}
-
-            <Input
-              label={t("ventes.form.dateCommande")}
-              type="date"
-              value={dateCommande}
-              onChange={(e) => setDateCommande(e.target.value)}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Step 2: Quantities */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{t("ventes.form.quantitesPrix")}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <Input
-              label={t("ventes.form.poidsTotalKg")}
-              type="number"
-              min="0.1"
-              step="0.1"
-              placeholder={t("ventes.form.poidsTotalKgPlaceholder")}
-              required
-              value={poidsTotalKg}
-              onChange={(e) => setPoidsTotalKg(e.target.value)}
-            />
             <Input
               label={t("ventes.form.prixUnitaireKg")}
               type="number"
@@ -269,135 +382,335 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
               value={prixUnitaireKg}
               onChange={(e) => setPrixUnitaireKg(e.target.value)}
             />
-            <div className="flex flex-col gap-1">
-              <Input
-                label={t("ventes.form.poidsMoyenG")}
-                type="number"
-                min="1"
-                step="1"
-                placeholder={
-                  autoPoidsMoyenG != null
-                    ? String(Math.round(autoPoidsMoyenG))
-                    : t("ventes.form.poidsMoyenGPlaceholder")
-                }
-                required={needsManualPoidsMoyen}
-                value={poidsMoyenG}
-                onChange={(e) => {
-                  setPoidsMoyenG(e.target.value);
-                  setPoidsMoyenTouched(true);
-                }}
-              />
-              <p className="text-xs text-muted-foreground">
-                {autoPoidsMoyenG != null && !poidsMoyenTouched
-                  ? t("ventes.form.poidsMoyenAuto", {
-                      poids: Math.round(autoPoidsMoyenG),
-                    })
-                  : needsManualPoidsMoyen
-                  ? t("ventes.form.poidsMoyenRequired")
-                  : t("ventes.form.poidsMoyenOverride")}
-              </p>
-              {estimatedPoissons > 0 && (
-                <p className="text-xs font-medium text-foreground">
-                  {t("ventes.form.estimatedPoissons", { count: estimatedPoissons })}
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Per-bac deductions (optional) */}
-        {selectedVague && selectedVague.bacs.length > 0 && (
-          <Card>
-            <CardHeader className="pb-2">
-              <button
-                type="button"
-                className="flex items-center justify-between w-full text-left"
-                onClick={() => {
-                  setChooseBacs((prev) => !prev);
-                  if (chooseBacs) setBacQuantites({});
-                }}
-                aria-expanded={chooseBacs}
-              >
-                <div className="flex flex-col gap-0.5">
-                  <CardTitle className="text-sm">{t("ventes.form.chooseBacs")}</CardTitle>
-                  <p className="text-xs text-muted-foreground font-normal">
-                    {t("ventes.form.chooseBacsDesc")}
-                  </p>
-                </div>
-                {chooseBacs ? (
-                  <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
-                )}
-              </button>
-            </CardHeader>
-            {chooseBacs && (
-              <CardContent className="flex flex-col gap-3">
-                {selectedVague.bacs.map((bac) => (
-                  <div key={bac.id} className="flex items-center gap-3">
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <span className="text-sm font-medium truncate">{bac.nom}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {t("ventes.form.bacDisponible", { count: bac.nombrePoissons })}
-                      </span>
-                    </div>
-                    <Input
-                      aria-label={`${t("ventes.form.bacQuantite")} — ${bac.nom}`}
-                      type="number"
-                      min="0"
-                      max={bac.nombrePoissons}
-                      step="1"
-                      placeholder="0"
-                      value={bacQuantites[bac.id] ?? ""}
-                      onChange={(e) =>
-                        setBacQuantites((prev) => ({ ...prev, [bac.id]: e.target.value }))
-                      }
-                      className="w-24 text-right"
-                    />
-                  </div>
-                ))}
-                {totalFromBacs > 0 && (
-                  <p className="text-xs font-medium text-foreground pt-1 border-t">
-                    {t("ventes.form.totalFromBacs", {
-                      count: totalFromBacs,
-                      nbBacs: bacDeductionsList.length,
-                    })}
-                  </p>
-                )}
-              </CardContent>
-            )}
-          </Card>
-        )}
+            <Input
+              label={t("ventes.form.dateCommande")}
+              type="date"
+              value={dateCommande}
+              onChange={(e) => setDateCommande(e.target.value)}
+            />
+          </section>
 
-        {/* Total preview */}
-        {montantTotal > 0 && (
-          <div className="rounded-lg bg-muted/50 p-4 text-center">
-            <p className="text-2xl font-bold">
-              {formatNumber(montantTotal)} FCFA
+          {/* Section 2: Fish Sources — flat, no card */}
+          <section className="flex flex-col gap-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+              {t("ventes.form.sources")}
             </p>
-            <p className="text-xs text-muted-foreground">{t("ventes.form.montantTotal")}</p>
-          </div>
+
+            {sources.map((source, sourceIndex) => (
+              <SourceBlock
+                key={sourceIndex}
+                source={source}
+                sourceIndex={sourceIndex}
+                vagues={vagues}
+                selectedVagueIds={selectedVagueIds}
+                canRemove={sources.length > 1}
+                onVagueSelect={(vagueId) => handleVagueSelect(sourceIndex, vagueId)}
+                onToggleBac={(bacId) => toggleBac(sourceIndex, bacId)}
+                onUpdateBacField={(bacId, field, value) =>
+                  updateBacField(sourceIndex, bacId, field, value)
+                }
+                onRemove={() => removeSource(sourceIndex)}
+                t={t}
+              />
+            ))}
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={addSource}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t("ventes.form.addSource")}
+            </Button>
+          </section>
+
+          {/* Summary — lightweight bg, no card */}
+          {totalWeight > 0 && (
+            <section className="rounded-lg bg-muted/40 px-4 py-3 flex flex-col gap-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{t("ventes.form.totalWeight")}</span>
+                <span className="font-medium">{totalWeight.toFixed(2)} kg</span>
+              </div>
+              {totalFish > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{t("ventes.form.totalFish")}</span>
+                  <span className="font-medium">≈ {totalFish}</span>
+                </div>
+              )}
+              {totalAmount > 0 && (
+                <div className="flex justify-between items-baseline text-sm border-t border-muted pt-2 mt-1">
+                  <span className="font-semibold">{t("ventes.form.totalAmount")}</span>
+                  <span className="text-2xl font-bold">{formatNumber(totalAmount)} FCFA</span>
+                </div>
+              )}
+
+              {/* Per-vague breakdown */}
+              {sources.some(
+                (s) => s.vagueId && computeSourceWeight(s) > 0
+              ) && (
+                <div className="border-t border-muted pt-2 mt-1 flex flex-col gap-1">
+                  {sources
+                    .filter((s) => s.vagueId && computeSourceWeight(s) > 0)
+                    .map((s) => {
+                      const vagueCode =
+                        vagues.find((v) => v.id === s.vagueId)?.code ?? s.vagueId;
+                      const w = computeSourceWeight(s);
+                      const f = computeSourceFish(s);
+                      return (
+                        <p key={s.vagueId} className="text-xs text-muted-foreground">
+                          {t("ventes.form.sourceSubtotal", {
+                            weight: w.toFixed(2),
+                            fish: f,
+                          })}{" "}
+                          — {vagueCode}
+                        </p>
+                      );
+                    })}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* Notes */}
+          <Textarea
+            label={t("ventes.form.notes")}
+            placeholder={t("ventes.form.notesPlaceholder")}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={2}
+          />
+
+          <Button
+            type="submit"
+            disabled={!isValid}
+            className="w-full min-h-[48px]"
+          >
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            {t("ventes.form.submit")}
+          </Button>
+        </form>
+      </div>
+    </ErrorBoundary>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// SourceBlock sub-component
+// ---------------------------------------------------------------------------
+
+interface SourceBlockProps {
+  source: VagueSource;
+  sourceIndex: number;
+  vagues: VagueOption[];
+  selectedVagueIds: string[];
+  canRemove: boolean;
+  onVagueSelect: (vagueId: string) => void;
+  onToggleBac: (bacId: string) => void;
+  onUpdateBacField: (
+    bacId: string,
+    field: "poidsTotalKg" | "poidsMoyenG",
+    value: string
+  ) => void;
+  onRemove: () => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  t: (key: string, params?: Record<string, any>) => string;
+}
+
+function SourceBlock({
+  source,
+  sourceIndex,
+  vagues,
+  selectedVagueIds,
+  canRemove,
+  onVagueSelect,
+  onToggleBac,
+  onUpdateBacField,
+  onRemove,
+  t,
+}: SourceBlockProps) {
+  const sourceWeight = computeSourceWeight(source);
+  const sourceFish = computeSourceFish(source);
+
+  // Vagues available for this source: all vagues minus those already selected in OTHER sources
+  const availableVagues = vagues.filter(
+    (v) =>
+      v.id === source.vagueId ||
+      !selectedVagueIds.includes(v.id) ||
+      source.vagueId === v.id
+  );
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Header row: source label + remove — no border, just a tinted label */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-primary/70 tracking-wide">
+          Lot #{sourceIndex + 1}
+        </p>
+        {canRemove && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-destructive hover:text-destructive"
+            onClick={onRemove}
+            aria-label={t("ventes.form.removeSource")}
+          >
+            <Trash2 className="h-3.5 w-3.5 mr-1" />
+            {t("ventes.form.removeSource")}
+          </Button>
+        )}
+      </div>
+
+      {/* Vague selector */}
+      <Select value={source.vagueId} onValueChange={onVagueSelect}>
+        <SelectTrigger label={t("ventes.form.vague")} required>
+          <SelectValue placeholder={t("ventes.form.selectVague")} />
+        </SelectTrigger>
+        <SelectContent>
+          {availableVagues.map((v) => (
+            <SelectItem key={v.id} value={v.id}>
+              {v.code}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {/* Loading state */}
+      {source.loading && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          {t("ventes.form.loadingBacs")}
+        </div>
+      )}
+
+      {/* No bacs */}
+      {!source.loading &&
+        source.vagueId !== "" &&
+        source.bacs.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            {t("ventes.form.noBacsInVague")}
+          </p>
         )}
 
-        {/* Notes */}
-        <Textarea
-          label={t("ventes.form.notes")}
-          placeholder={t("ventes.form.notesPlaceholder")}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={2}
-        />
+      {/* Bac list — flat toggle rows, no outer wrapper */}
+      {!source.loading && source.bacs.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {source.bacs.map((bac) => {
+            const isStale =
+              bac.biometryDate === null ||
+              bac.biometryDaysAgo === null ||
+              bac.biometryDaysAgo > 1;
+            const fishCount = computeFishCount(bac.poidsTotalKg, bac.poidsMoyenG);
 
-        <Button
-          type="submit"
-          disabled={!isValid}
-          className="w-full min-h-[48px]"
-        >
-          <ShoppingCart className="h-4 w-4 mr-2" />
-          {t("ventes.form.submit")}
-        </Button>
-      </form>
+            return (
+              <div
+                key={bac.bacId}
+                className={`rounded-lg px-3 py-2.5 flex flex-col gap-2 transition-colors ${
+                  bac.selected
+                    ? "bg-primary/5"
+                    : "bg-muted/30"
+                }`}
+              >
+                {/* Bac toggle header */}
+                <button
+                  type="button"
+                  className="flex items-center gap-3 w-full text-left"
+                  onClick={() => onToggleBac(bac.bacId)}
+                  aria-pressed={bac.selected}
+                >
+                  {/* Custom checkbox */}
+                  <span
+                    className={`h-5 w-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                      bac.selected
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-muted-foreground/30"
+                    }`}
+                    aria-hidden="true"
+                  >
+                    {bac.selected && (
+                      <svg
+                        viewBox="0 0 12 12"
+                        fill="none"
+                        className="h-3 w-3"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M2 6l3 3 5-5" />
+                      </svg>
+                    )}
+                  </span>
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <span className="text-sm font-medium">{bac.nom}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {bac.nombrePoissons} poissons disponibles
+                    </span>
+                  </div>
+                </button>
+
+                {/* Bac warning badges (always visible) */}
+                {isStale && (
+                  <div className="flex items-start gap-1.5 ml-8">
+                    <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" aria-hidden="true" />
+                    <p className="text-xs text-amber-600">
+                      {bac.biometryDate === null
+                        ? t("ventes.form.noBiometry")
+                        : t("ventes.form.staleBiometry", {
+                            days: bac.biometryDaysAgo,
+                          })}
+                    </p>
+                  </div>
+                )}
+
+                {/* Bac weight + avg weight inputs (only when selected) */}
+                {bac.selected && (
+                  <div className="flex flex-col gap-2 ml-8">
+                    <Input
+                      label={t("ventes.form.weightTaken")}
+                      type="number"
+                      min="0.01"
+                      step="0.1"
+                      placeholder="Ex: 12.5"
+                      required
+                      value={bac.poidsTotalKg}
+                      onChange={(e) =>
+                        onUpdateBacField(bac.bacId, "poidsTotalKg", e.target.value)
+                      }
+                    />
+                    <Input
+                      label={t("ventes.form.avgWeight")}
+                      type="number"
+                      min="1"
+                      step="1"
+                      placeholder="Ex: 850"
+                      value={bac.poidsMoyenG}
+                      onChange={(e) =>
+                        onUpdateBacField(bac.bacId, "poidsMoyenG", e.target.value)
+                      }
+                    />
+                    {fishCount > 0 && (
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {t("ventes.form.estimatedFish", { count: fishCount })}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Source subtotal */}
+      {sourceWeight > 0 && (
+        <p className="text-xs text-muted-foreground">
+          {t("ventes.form.sourceSubtotal", {
+            weight: sourceWeight.toFixed(2),
+            fish: sourceFish,
+          })}
+        </p>
+      )}
     </div>
-    </ErrorBoundary>
   );
 }

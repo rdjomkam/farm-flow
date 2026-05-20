@@ -18,15 +18,25 @@ import {
   AlertTriangle,
   CheckCircle2,
   Lock,
+  Fish,
+  Info,
+  Trash2,
+  MoreVertical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -59,6 +69,17 @@ const venteStatutVariants: Record<string, "warning" | "terminee" | "default"> = 
   [StatutVente.CLOTUREE]: "default",
 };
 
+interface LigneVenteDisplay {
+  id: string;
+  vagueId: string;
+  bacId: string;
+  poidsTotalKg: number;
+  poidsMoyenG: number;
+  nombrePoissons: number;
+  vague?: { id: string; code: string } | null;
+  bac?: { id: string; nom: string } | null;
+}
+
 interface VenteData {
   id: string;
   numero: string;
@@ -82,7 +103,7 @@ interface VenteData {
     email: string | null;
     adresse: string | null;
   };
-  vague: { id: string; code: string; statut: string };
+  vague: { id: string; code: string; statut: string } | null;
   user: { id: string; name: string };
   facture: {
     id: string;
@@ -92,6 +113,7 @@ interface VenteData {
     montantTotal: number;
     paiements: { id: string; montant: number; mode: string; date: string }[];
   } | null;
+  lignes?: LigneVenteDisplay[];
 }
 
 interface ClientOption {
@@ -122,14 +144,16 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
   const [editOpen, setEditOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [editClientId, setEditClientId] = useState(vente.client.id);
-  const [editVagueId, setEditVagueId] = useState(vente.vague.id);
-  const [editPoidsTotalKg, setEditPoidsTotalKg] = useState(String(vente.poidsTotalKg));
   const [editPrixUnitaireKg, setEditPrixUnitaireKg] = useState(String(vente.prixUnitaireKg));
   const [editDateCommande, setEditDateCommande] = useState(
     vente.dateCommande ? new Date(vente.dateCommande).toISOString().slice(0, 10) : ""
   );
   const [editNotes, setEditNotes] = useState(vente.notes ?? "");
   const [editMotif, setEditMotif] = useState("");
+
+  // Delete dialog state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Closure dialog state
   const [clotureOpen, setClotureOpen] = useState(false);
@@ -152,8 +176,6 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
 
   function resetEditForm() {
     setEditClientId(vente.client.id);
-    setEditVagueId(vente.vague.id);
-    setEditPoidsTotalKg(String(vente.poidsTotalKg));
     setEditPrixUnitaireKg(String(vente.prixUnitaireKg));
     setEditDateCommande(
       vente.dateCommande ? new Date(vente.dateCommande).toISOString().slice(0, 10) : ""
@@ -168,9 +190,6 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
       const dto: UpdateVenteDTO = { motif: editMotif.trim() };
 
       if (editClientId !== vente.client.id) dto.clientId = editClientId;
-      if (editVagueId !== vente.vague.id) dto.vagueId = editVagueId;
-      const poids = parseFloat(editPoidsTotalKg);
-      if (!isNaN(poids) && poids !== vente.poidsTotalKg) dto.poidsTotalKg = poids;
       const prix = parseFloat(editPrixUnitaireKg);
       if (!isNaN(prix) && prix !== vente.prixUnitaireKg) dto.prixUnitaireKg = prix;
       const origDate = vente.dateCommande
@@ -218,6 +237,20 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
     }
   }
 
+  async function handleDelete() {
+    setDeleteLoading(true);
+    try {
+      const result = await venteService.deleteVente(vente.id);
+      if (result.ok) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.factures.all });
+        router.push("/ventes");
+      }
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
+
   const cloturePoidsNum = parseFloat(cloturePoidsLivre) || 0;
   const cloturePertePoids = vente.poidsTotalKg - cloturePoidsNum;
   const cloturePoidsMoyenG = vente.quantitePoissons > 0
@@ -231,185 +264,336 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
   const clotureValid = cloturePoidsNum > 0 && cloturePoidsNum <= vente.poidsTotalKg;
 
   const canEdit = permissions.includes(Permission.VENTES_MODIFIER) && vente.statut !== StatutVente.CLOTUREE;
-  const editMontantPreview = (() => {
-    const p = parseFloat(editPoidsTotalKg);
-    const px = parseFloat(editPrixUnitaireKg);
-    return !isNaN(p) && !isNaN(px) ? p * px : 0;
-  })();
-
-  const vagueChanged = editVagueId !== vente.vague.id;
   const motifValid = editMotif.trim().length > 0;
+
+  // Derive vague display label
+  const lignes = vente.lignes ?? [];
+  const vagueCodes = [...new Set(
+    lignes.map((l) => l.vague?.code).filter((c): c is string => c != null)
+  )];
+  const vagueLabel = vente.vague?.code
+    ? vente.vague.code
+    : vagueCodes.length > 0
+    ? vagueCodes.join(", ")
+    : t("ventes.detail.multipleBatches");
+
+  // Group lignes by vague for the sources section
+  const lignesParVague: Record<string, { vagueCode: string; lignes: LigneVenteDisplay[] }> = {};
+  for (const ligne of lignes) {
+    const code = ligne.vague?.code ?? ligne.vagueId;
+    if (!lignesParVague[code]) {
+      lignesParVague[code] = { vagueCode: code, lignes: [] };
+    }
+    lignesParVague[code].lignes.push(ligne);
+  }
 
   return (
     <div className="flex flex-col gap-4">
-      <Link
-        href="/ventes"
-        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        {t("ventes.detail.back")}
-      </Link>
+      {/* Back + context menu row */}
+      <div className="flex items-center justify-between">
+        <Link
+          href="/ventes"
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {t("ventes.detail.back")}
+        </Link>
 
-      {/* Header */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-lg">{vente.numero}</h2>
-            <div className="flex items-center gap-2">
-              {canEdit && (
-                <Dialog open={editOpen} onOpenChange={(open) => {
-                  setEditOpen(open);
-                  if (open) resetEditForm();
-                }}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Pencil className="h-4 w-4 mr-1" />
-                      {t("ventes.detail.modifier")}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>{t("ventes.detail.modifierTitle")}</DialogTitle>
-                      <DialogDescription>
-                        {t("ventes.detail.modifierDescription")}
-                      </DialogDescription>
-                    </DialogHeader>
+        {canEdit && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+                <MoreVertical className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {/* Edit */}
+              <DropdownMenuItem
+                onSelect={() => { resetEditForm(); setEditOpen(true); }}
+              >
+                <Pencil className="h-4 w-4" />
+                {t("ventes.detail.modifier")}
+              </DropdownMenuItem>
 
-                    <div className="flex flex-col gap-4 py-2">
-                      {/* Client */}
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium">{t("ventes.form.client")}</label>
-                        <Select value={editClientId} onValueChange={setEditClientId}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {clients.map((c) => (
-                              <SelectItem key={c.id} value={c.id}>
-                                {c.nom}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Vague */}
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium">{t("ventes.form.vague")}</label>
-                        <Select value={editVagueId} onValueChange={setEditVagueId}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {vagues.map((v) => (
-                              <SelectItem key={v.id} value={v.id}>
-                                {v.code} ({v.poissonsDisponibles} poissons)
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {vagueChanged && (
-                          <p className="text-xs text-orange-600">
-                            {t("ventes.detail.vagueChangeWarning")}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Poids total */}
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium">{t("ventes.form.poidsTotalKg")}</label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          min="0.1"
-                          value={editPoidsTotalKg}
-                          onChange={(e) => setEditPoidsTotalKg(e.target.value)}
-                        />
-                      </div>
-
-                      {/* Prix unitaire */}
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium">{t("ventes.form.prixUnitaireKg")}</label>
-                        <Input
-                          type="number"
-                          step="1"
-                          min="1"
-                          value={editPrixUnitaireKg}
-                          onChange={(e) => setEditPrixUnitaireKg(e.target.value)}
-                        />
-                      </div>
-
-                      {/* Date de commande */}
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium">{t("ventes.detail.dateCommande")}</label>
-                        <Input
-                          type="date"
-                          value={editDateCommande}
-                          onChange={(e) => setEditDateCommande(e.target.value)}
-                        />
-                      </div>
-
-                      {/* Montant preview */}
-                      <div className="rounded-lg bg-muted/50 p-3 text-center">
-                        <p className="text-lg font-bold">
-                          {formatNumber(editMontantPreview)} FCFA
-                        </p>
-                        <p className="text-xs text-muted-foreground">{t("ventes.detail.montantTotal")}</p>
-                      </div>
-
-                      {/* Notes */}
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium">{t("ventes.form.notes")}</label>
-                        <Textarea
-                          value={editNotes}
-                          onChange={(e) => setEditNotes(e.target.value)}
-                          placeholder={t("ventes.form.notesPlaceholder")}
-                          rows={2}
-                        />
-                      </div>
-
-                      {/* Motif (obligatoire) */}
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium">
-                          {t("ventes.detail.motifLabel")} <span className="text-destructive">*</span>
-                        </label>
-                        <Textarea
-                          value={editMotif}
-                          onChange={(e) => setEditMotif(e.target.value)}
-                          placeholder={t("ventes.detail.motifPlaceholder")}
-                          rows={2}
-                        />
-                      </div>
-                    </div>
-
-                    <DialogFooter>
-                      <DialogClose asChild>
-                        <Button variant="outline">{t("paiements.cancel")}</Button>
-                      </DialogClose>
-                      <Button
-                        onClick={handleSaveEdit}
-                        disabled={editLoading || !motifValid}
-                        className="min-h-[44px]"
-                      >
-                        {editLoading ? "..." : t("ventes.detail.enregistrerModification")}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+              {/* Close delivery (EN_PREPARATION only) */}
+              {vente.statut === StatutVente.EN_PREPARATION && (
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setCloturePoidsLivre("");
+                    setClotureDateLivraison(new Date().toISOString().slice(0, 10));
+                    setClotureOpen(true);
+                  }}
+                >
+                  <Truck className="h-4 w-4" />
+                  {t("ventes.detail.cloturerLivraison")}
+                </DropdownMenuItem>
               )}
-              <Badge variant={venteStatutVariants[vente.statut] ?? "warning"}>
-                {t(`ventes.detail.statut${vente.statut}` as Parameters<typeof t>[0])}
-              </Badge>
-              {vente.facture ? (
-                <Badge variant={statutVariants[vente.facture.statut] ?? "default"}>
-                  {statutLabel(vente.facture.statut)}
-                </Badge>
-              ) : (
-                <Badge variant="default">{t("ventes.sansFature")}</Badge>
+
+              {/* Close definitively (LIVREE only) */}
+              {vente.statut === StatutVente.LIVREE && (
+                <DropdownMenuItem onSelect={handleCloturerDefinitivement}>
+                  <Lock className="h-4 w-4" />
+                  {t("ventes.detail.cloturerDefinitivement")}
+                </DropdownMenuItem>
               )}
+
+              {/* Generate invoice (LIVREE + no facture) */}
+              {!vente.facture && vente.statut === StatutVente.LIVREE && permissions.includes(Permission.VENTES_CREER) && (
+                <DropdownMenuItem onSelect={handleCreateFacture}>
+                  <FileText className="h-4 w-4" />
+                  {t("ventes.detail.genererFacture")}
+                </DropdownMenuItem>
+              )}
+
+              {/* Delete */}
+              {vente.statut !== StatutVente.CLOTUREE && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onSelect={() => setDeleteOpen(true)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {t("ventes.detail.deleteConfirm")}
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+
+      {/* Delete dialog (controlled, no trigger) */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t("ventes.detail.deleteTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("ventes.detail.deleteDescription", { numero: vente.numero })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg bg-destructive/10 p-3 flex items-start gap-2 text-sm text-destructive">
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>{t("ventes.detail.deleteWarning")}</span>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">{t("paiements.cancel")}</Button>
+            </DialogClose>
+            <Button
+              variant="danger"
+              onClick={handleDelete}
+              disabled={deleteLoading}
+              className="min-h-[44px]"
+            >
+              {deleteLoading ? "..." : t("ventes.detail.deleteConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit dialog (controlled, no trigger) */}
+      <Dialog open={editOpen} onOpenChange={(open) => {
+        setEditOpen(open);
+        if (open) resetEditForm();
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("ventes.detail.modifierTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("ventes.detail.modifierDescription")}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4 py-2">
+            {/* Client */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">{t("ventes.form.client")}</label>
+              <Select value={editClientId} onValueChange={setEditClientId}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.nom}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Sources (read-only note) */}
+            {lignes.length > 0 && (
+              <div className="rounded-lg border border-dashed p-3 flex items-start gap-2">
+                <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground">
+                  {t("ventes.detail.sourcesNote")}
+                </p>
+              </div>
+            )}
+
+            {/* Prix unitaire */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">{t("ventes.form.prixUnitaireKg")}</label>
+              <Input
+                type="number"
+                step="1"
+                min="1"
+                value={editPrixUnitaireKg}
+                onChange={(e) => setEditPrixUnitaireKg(e.target.value)}
+              />
+            </div>
+
+            {/* Date de commande */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">{t("ventes.detail.dateCommande")}</label>
+              <Input
+                type="date"
+                value={editDateCommande}
+                onChange={(e) => setEditDateCommande(e.target.value)}
+              />
+            </div>
+
+            {/* Notes */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">{t("ventes.form.notes")}</label>
+              <Textarea
+                value={editNotes}
+                onChange={(e) => setEditNotes(e.target.value)}
+                placeholder={t("ventes.form.notesPlaceholder")}
+                rows={2}
+              />
+            </div>
+
+            {/* Motif (obligatoire) */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">
+                {t("ventes.detail.motifLabel")} <span className="text-destructive">*</span>
+              </label>
+              <Textarea
+                value={editMotif}
+                onChange={(e) => setEditMotif(e.target.value)}
+                placeholder={t("ventes.detail.motifPlaceholder")}
+                rows={2}
+              />
             </div>
           </div>
 
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">{t("paiements.cancel")}</Button>
+            </DialogClose>
+            <Button
+              onClick={handleSaveEdit}
+              disabled={editLoading || !motifValid}
+              className="min-h-[44px]"
+            >
+              {editLoading ? "..." : t("ventes.detail.enregistrerModification")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cloture dialog (controlled, no trigger) */}
+      <Dialog open={clotureOpen} onOpenChange={(open) => {
+        setClotureOpen(open);
+        if (open) {
+          setCloturePoidsLivre("");
+          setClotureDateLivraison(new Date().toISOString().slice(0, 10));
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("ventes.detail.cloturerTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("ventes.detail.cloturerDescription")}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4 py-2">
+            <Input
+              label={t("ventes.detail.poidsLivreKg")}
+              type="number"
+              step="0.1"
+              min="0.1"
+              max={vente.poidsTotalKg}
+              placeholder={t("ventes.detail.poidsLivrePlaceholder")}
+              value={cloturePoidsLivre}
+              onChange={(e) => setCloturePoidsLivre(e.target.value)}
+            />
+
+            <Input
+              label={t("ventes.detail.dateLivraison")}
+              type="date"
+              value={clotureDateLivraison}
+              onChange={(e) => setClotureDateLivraison(e.target.value)}
+            />
+
+            {cloturePoidsNum > 0 && cloturePoidsNum <= vente.poidsTotalKg && (
+              <div className="rounded-lg bg-muted/50 p-3 flex flex-col gap-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{t("ventes.detail.nouveauMontant")}</span>
+                  <span className="font-bold">{formatNumber(clotureNouveauMontant)} FCFA</span>
+                </div>
+                {cloturePertePoids > 0 && (
+                  <>
+                    <div className="flex justify-between text-sm text-orange-600">
+                      <span>{t("ventes.detail.pertePoids")}</span>
+                      <span>{cloturePertePoids.toFixed(1)} kg</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-orange-600">
+                      <span>{t("ventes.detail.pertePoissons")}</span>
+                      <span>~{cloturePertePoissons}</span>
+                    </div>
+                    <div className="flex items-start gap-2 rounded-md bg-orange-50 dark:bg-orange-950/20 p-2 text-xs text-orange-700 dark:text-orange-400">
+                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <span>{t("ventes.detail.avarieWarning")}</span>
+                    </div>
+                  </>
+                )}
+                {cloturePertePoids === 0 && (
+                  <p className="text-xs text-emerald-600">{t("ventes.detail.livraisonComplete")}</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">{t("paiements.cancel")}</Button>
+            </DialogClose>
+            <Button
+              onClick={handleCloture}
+              disabled={clotureLoading || !clotureValid}
+              className="min-h-[44px]"
+            >
+              {clotureLoading ? "..." : t("ventes.detail.confirmerCloture")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Title + badges */}
+      <div className="flex flex-col gap-1">
+        <h2 className="font-semibold text-lg">{vente.numero}</h2>
+        <div className="flex items-center gap-2">
+          <Badge variant={venteStatutVariants[vente.statut] ?? "warning"}>
+            {t(`ventes.detail.statut${vente.statut}` as Parameters<typeof t>[0])}
+          </Badge>
+          {vente.facture ? (
+            <Badge variant={statutVariants[vente.facture.statut] ?? "default"}>
+              {statutLabel(vente.facture.statut)}
+            </Badge>
+          ) : (
+            <Badge variant="default">{t("ventes.sansFature")}</Badge>
+          )}
+        </div>
+      </div>
+
+      {/* Header info */}
+      <Card>
+        <CardContent className="p-4">
           <div className="flex flex-col gap-2 text-sm">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Users className="h-4 w-4 shrink-0" />
@@ -417,7 +601,7 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Waves className="h-4 w-4 shrink-0" />
-              <span>{vente.vague.code}</span>
+              <span>{vagueLabel}</span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Calendar className="h-4 w-4 shrink-0" />
@@ -452,6 +636,53 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
         </CardContent>
       </Card>
 
+      {/* Sources section — lignes par vague/bac */}
+      {lignes.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Fish className="h-4 w-4" />
+              {t("ventes.detail.sources")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0 flex flex-col gap-3">
+            {Object.values(lignesParVague).map(({ vagueCode, lignes: groupLignes }) => (
+              <div key={vagueCode} className="flex flex-col gap-2">
+                {/* Vague header */}
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  {vagueCode}
+                </p>
+                {/* Per-bac cards */}
+                {groupLignes.map((ligne) => (
+                  <div
+                    key={ligne.id}
+                    className="rounded-lg bg-muted/30 p-3 flex flex-col gap-1"
+                  >
+                    <p className="font-medium text-sm">
+                      {ligne.bac?.nom ?? t("ventes.detail.perBac")}
+                    </p>
+                    <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground mt-1">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-foreground font-medium">{ligne.poidsTotalKg} kg</span>
+                        <span>{t("ventes.detail.poidsTotalKg")}</span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-foreground font-medium">{ligne.poidsMoyenG} g</span>
+                        <span>{t("ventes.form.avgWeight")}</span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-foreground font-medium">{ligne.nombrePoissons}</span>
+                        <span>{t("ventes.detail.poissons")}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Total */}
       <div className="rounded-lg bg-muted/50 p-4 text-center">
         <p className="text-2xl font-bold">
@@ -464,8 +695,8 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
         </p>
       </div>
 
-      {/* Delivery section */}
-      {vente.statut === StatutVente.LIVREE ? (
+      {/* Delivery info (read-only, shown when LIVREE or CLOTUREE) */}
+      {(vente.statut === StatutVente.LIVREE || vente.statut === StatutVente.CLOTUREE) && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
@@ -498,106 +729,17 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
             </div>
           </CardContent>
         </Card>
-      ) : canEdit ? (
-        <Dialog open={clotureOpen} onOpenChange={(open) => {
-          setClotureOpen(open);
-          if (open) {
-            setCloturePoidsLivre("");
-            setClotureDateLivraison(new Date().toISOString().slice(0, 10));
-          }
-        }}>
-          <DialogTrigger asChild>
-            <Button variant="outline" className="w-full min-h-[48px]">
-              <Truck className="h-4 w-4 mr-2" />
-              {t("ventes.detail.cloturerLivraison")}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>{t("ventes.detail.cloturerTitle")}</DialogTitle>
-              <DialogDescription>
-                {t("ventes.detail.cloturerDescription")}
-              </DialogDescription>
-            </DialogHeader>
+      )}
 
-            <div className="flex flex-col gap-4 py-2">
-              <Input
-                label={t("ventes.detail.poidsLivreKg")}
-                type="number"
-                step="0.1"
-                min="0.1"
-                max={vente.poidsTotalKg}
-                placeholder={t("ventes.detail.poidsLivrePlaceholder")}
-                value={cloturePoidsLivre}
-                onChange={(e) => setCloturePoidsLivre(e.target.value)}
-              />
-
-              <Input
-                label={t("ventes.detail.dateLivraison")}
-                type="date"
-                value={clotureDateLivraison}
-                onChange={(e) => setClotureDateLivraison(e.target.value)}
-              />
-
-              {cloturePoidsNum > 0 && cloturePoidsNum <= vente.poidsTotalKg && (
-                <div className="rounded-lg bg-muted/50 p-3 flex flex-col gap-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t("ventes.detail.nouveauMontant")}</span>
-                    <span className="font-bold">{formatNumber(clotureNouveauMontant)} FCFA</span>
-                  </div>
-                  {cloturePertePoids > 0 && (
-                    <>
-                      <div className="flex justify-between text-sm text-orange-600">
-                        <span>{t("ventes.detail.pertePoids")}</span>
-                        <span>{cloturePertePoids.toFixed(1)} kg</span>
-                      </div>
-                      <div className="flex justify-between text-sm text-orange-600">
-                        <span>{t("ventes.detail.pertePoissons")}</span>
-                        <span>~{cloturePertePoissons}</span>
-                      </div>
-                      <div className="flex items-start gap-2 rounded-md bg-orange-50 dark:bg-orange-950/20 p-2 text-xs text-orange-700 dark:text-orange-400">
-                        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                        <span>{t("ventes.detail.avarieWarning")}</span>
-                      </div>
-                    </>
-                  )}
-                  {cloturePertePoids === 0 && (
-                    <p className="text-xs text-emerald-600">{t("ventes.detail.livraisonComplete")}</p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline">{t("paiements.cancel")}</Button>
-              </DialogClose>
-              <Button
-                onClick={handleCloture}
-                disabled={clotureLoading || !clotureValid}
-                className="min-h-[44px]"
-              >
-                {clotureLoading ? "..." : t("ventes.detail.confirmerCloture")}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      ) : null}
-
-      {/* Clôturer définitivement (LIVREE → CLOTUREE) */}
-      {vente.statut === StatutVente.LIVREE && permissions.includes(Permission.VENTES_MODIFIER) && (
-        <Button
-          variant="outline"
-          className="w-full min-h-[48px]"
-          onClick={handleCloturerDefinitivement}
-        >
-          <Lock className="h-4 w-4 mr-2" />
-          {t("ventes.detail.cloturerDefinitivement")}
-        </Button>
+      {/* Invoice hint for EN_PREPARATION */}
+      {!vente.facture && vente.statut === StatutVente.EN_PREPARATION && permissions.includes(Permission.VENTES_CREER) && (
+        <p className="text-xs text-center text-muted-foreground py-2">
+          {t("ventes.detail.factureApresLivraison")}
+        </p>
       )}
 
       {/* Facture section */}
-      {vente.facture ? (
+      {vente.facture && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">{t("ventes.detail.factureAssociee")}</CardTitle>
@@ -622,15 +764,7 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
             </Link>
           </CardContent>
         </Card>
-      ) : permissions.includes(Permission.VENTES_CREER) && vente.statut === StatutVente.LIVREE ? (
-        <Button onClick={handleCreateFacture} className="w-full min-h-[48px]">
-          <FileText className="h-4 w-4 mr-2" /> {t("ventes.detail.genererFacture")}
-        </Button>
-      ) : permissions.includes(Permission.VENTES_CREER) && vente.statut === StatutVente.EN_PREPARATION ? (
-        <p className="text-xs text-center text-muted-foreground py-2">
-          {t("ventes.detail.factureApresLivraison")}
-        </p>
-      ) : null}
+      )}
 
       {/* Client info */}
       <Card>

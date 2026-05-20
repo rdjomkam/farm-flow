@@ -51,7 +51,7 @@ export default async function VagueDetailPage({
   const locale = await getLocale();
 
   const { id } = await params;
-  const [vague, biometriesData, relevesPreview, indicateurs, produitsDb, calibragesDb, gompertzRecord, configElevages, assignationsDb, coutProduction] = await Promise.all([
+  const [vague, biometriesData, relevesPreview, indicateurs, produitsDb, calibragesDb, gompertzRecord, configElevages, assignationsDb, coutProduction, unitesProduction] = await Promise.all([
     getVagueById(id, session.activeSiteId),
     // Biometries pour le graphique — select restreint (ADR-038 A-D2)
     prisma.releve.findMany({
@@ -86,6 +86,11 @@ export default async function VagueDetailPage({
     }),
     // Coût de production — erreur non-bloquante : on attrape pour éviter de crasher la page
     getCoutProductionVague(id, session.activeSiteId).catch(() => null),
+    prisma.uniteProduction.findMany({
+      where: { siteId: session.activeSiteId, isActive: true },
+      select: { id: true, code: true, nom: true, type: true },
+      orderBy: { nom: "asc" },
+    }),
   ]);
 
   if (!vague) notFound();
@@ -340,6 +345,8 @@ export default async function VagueDetailPage({
               origineAlevins={vague.origineAlevins}
               configElevageId={vague.configElevageId}
               configElevages={configElevages}
+              unitesProduction={unitesProduction}
+              uniteProductionId={(vague as { uniteProductionId?: string | null }).uniteProductionId ?? null}
               poidsObjectifKg={vague.poidsObjectifKg ?? null}
               permissions={permissions}
               isEnCours={isEnCours}

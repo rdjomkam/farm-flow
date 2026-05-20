@@ -168,6 +168,7 @@ export async function POST(request: NextRequest) {
       origineAlevins: body.origineAlevins ?? undefined,
       configElevageId: body.configElevageId,
       poidsObjectifKg: body.poidsObjectifKg != null ? Number(body.poidsObjectifKg) : undefined,
+      uniteProductionId: body.uniteProductionId || undefined,
       bacDistribution: body.bacDistribution,
     };
 
@@ -232,6 +233,7 @@ export async function POST(request: NextRequest) {
           poidsMoyenInitial: data.poidsMoyenInitial,
           origineAlevins: data.origineAlevins ?? null,
           configElevageId: data.configElevageId,
+          uniteProductionId: data.uniteProductionId ?? null,
           siteId: auth.activeSiteId,
         },
       });

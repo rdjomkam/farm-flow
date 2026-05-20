@@ -79,6 +79,33 @@ export interface TopClients {
   clients: TopClient[];
 }
 
+export interface ResumeParUnite {
+  uniteId: string;
+  code: string;
+  nom: string;
+  type: string;
+  /** Revenue from ventes linked to vagues in this unit */
+  revenus: number;
+  /** Costs: depenses assigned to this unit + stock consumption from unit vagues */
+  couts: number;
+  /** Revenue - couts */
+  marge: number;
+  /** Internal transfer revenue (when this unit is source) */
+  revenusTransferts: number;
+  /** Internal transfer cost (when this unit is destination) */
+  coutsTransferts: number;
+  /** Number of vagues in this unit */
+  nombreVagues: number;
+  /** Number of depenses in this unit */
+  nombreDepenses: number;
+}
+
+export interface ResumeFinancierParUnite {
+  unites: ResumeParUnite[];
+  /** Costs not assigned to any unit */
+  nonAffecte: { couts: number; nombreDepenses: number };
+}
+
 // ---------------------------------------------------------------------------
 // Helpers internes
 // ---------------------------------------------------------------------------
@@ -411,6 +438,7 @@ export async function getRentabiliteParVague(
     { revenus: number; poidsTotalKg: number; nombreVentes: number }
   >();
   for (const v of toutesVentes) {
+    if (!v.vagueId) continue;
     const existing = ventesByVague.get(v.vagueId) ?? {
       revenus: 0,
       poidsTotalKg: 0,
@@ -1657,6 +1685,230 @@ export async function getCoutProductionVague(
       poidsVendu: Math.round(poidsTotalVendu * 100) / 100,
       biomasseKg: biomasseKg !== null ? Math.round(biomasseKg * 100) / 100 : null,
       coutParKg: coutParKg !== null ? Math.round(coutParKg * 100) / 100 : null,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Query 6 — Resume financier par unite de production
+// ---------------------------------------------------------------------------
+
+/**
+ * Calcule les indicateurs financiers ventiles par unite de production (REPRODUCTION / GROSSISSEMENT).
+ *
+ * Pour chaque unite :
+ * - revenus           : SUM(Vente.montantTotal) des ventes liees aux vagues de l'unite
+ * - couts             : SUM(Depense.montantTotal) assignees a l'unite (commandeId null)
+ *                       + SUM(ReleveConsommation.quantite * prixParUniteBase) pour les vagues de l'unite
+ * - marge             : revenus - couts
+ * - revenusTransferts : SUM(TransfertInterne.montantTotal) quand l'unite est source
+ * - coutsTransferts   : SUM(TransfertInterne.montantTotal) quand l'unite est destination
+ * - nombreVagues      : nombre de vagues dans l'unite
+ * - nombreDepenses    : nombre de depenses directement assignees a l'unite
+ *
+ * Les depenses avec commandeId sont exclues (anti double-comptage via MouvementStock).
+ * Les couts non affectes (depenses sans uniteProductionId ni vagueId) sont regroupes
+ * dans nonAffecte.
+ *
+ * @param siteId - ID du site (multi-tenancy, R8)
+ */
+export async function getResumeFinancierParUnite(
+  siteId: string
+): Promise<ResumeFinancierParUnite> {
+  // -------------------------------------------------------------------------
+  // 1. Charger toutes les donnees en parallele
+  // -------------------------------------------------------------------------
+  const [
+    unites,
+    vagues,
+    ventes,
+    depenses,
+    consommations,
+    transferts,
+  ] = await Promise.all([
+    // 1a. Unites de production actives du site
+    prisma.uniteProduction.findMany({
+      where: { siteId, isActive: true },
+      select: { id: true, code: true, nom: true, type: true },
+      orderBy: { code: "asc" },
+    }),
+
+    // 1b. Toutes les vagues du site (pour mapper vagueId -> uniteProductionId)
+    prisma.vague.findMany({
+      where: { siteId },
+      select: { id: true, uniteProductionId: true },
+    }),
+
+    // 1c. Toutes les ventes du site (pour mapper via vague -> unite)
+    prisma.vente.findMany({
+      where: { siteId },
+      select: { vagueId: true, montantTotal: true },
+    }),
+
+    // 1d. Depenses hors-commande du site (anti double-comptage)
+    prisma.depense.findMany({
+      where: { siteId, commandeId: null },
+      select: { uniteProductionId: true, vagueId: true, montantTotal: true },
+    }),
+
+    // 1e. Consommations aliments pour les vagues du site
+    prisma.releveConsommation.findMany({
+      where: { siteId },
+      select: {
+        quantite: true,
+        releve: { select: { vagueId: true } },
+        produit: { select: { prixUnitaire: true, uniteAchat: true, contenance: true } },
+      },
+    }),
+
+    // 1f. Transferts internes du site
+    prisma.transfertInterne.findMany({
+      where: { siteId },
+      select: { uniteSourceId: true, uniteDestinationId: true, montantTotal: true },
+    }),
+  ]);
+
+  // -------------------------------------------------------------------------
+  // 2. Construire les index en memoire
+  // -------------------------------------------------------------------------
+
+  // Map vagueId -> uniteProductionId (null si non affectee)
+  const vagueToUnite = new Map<string, string | null>();
+  for (const v of vagues) {
+    vagueToUnite.set(v.id, v.uniteProductionId);
+  }
+
+  // Set des uniteIds connus (pour detecter les unites inactives/supprimees)
+  const uniteIds = new Set(unites.map((u) => u.id));
+
+  // -------------------------------------------------------------------------
+  // 3. Agreger les revenus par unite (via vague)
+  // -------------------------------------------------------------------------
+
+  const revenusByUnite = new Map<string, number>();
+  for (const vente of ventes) {
+    const uniteId = vente.vagueId ? vagueToUnite.get(vente.vagueId) ?? null : null;
+    if (uniteId && uniteIds.has(uniteId)) {
+      revenusByUnite.set(uniteId, (revenusByUnite.get(uniteId) ?? 0) + vente.montantTotal);
+    }
+    // ventes sans unite ou unite inactive sont ignorees pour la ventilation
+  }
+
+  // -------------------------------------------------------------------------
+  // 4. Agreger les couts par unite
+  //    - depenses directement liees a l'unite (uniteProductionId non null)
+  //    - depenses liees a une vague de l'unite (vagueId non null, uniteProductionId null)
+  //    - consommations des vagues de l'unite
+  // -------------------------------------------------------------------------
+
+  const coutsByUnite = new Map<string, number>();
+  const depensesCountByUnite = new Map<string, number>();
+  let coutNonAffecte = 0;
+  let depensesNonAffectees = 0;
+
+  for (const dep of depenses) {
+    let uniteId: string | null = null;
+
+    if (dep.uniteProductionId && uniteIds.has(dep.uniteProductionId)) {
+      // Depense directement assignee a une unite
+      uniteId = dep.uniteProductionId;
+    } else if (dep.vagueId) {
+      // Depense liee a une vague — resoudre via la vague
+      const vagueUniteId = vagueToUnite.get(dep.vagueId) ?? null;
+      if (vagueUniteId && uniteIds.has(vagueUniteId)) {
+        uniteId = vagueUniteId;
+      }
+    }
+
+    if (uniteId) {
+      coutsByUnite.set(uniteId, (coutsByUnite.get(uniteId) ?? 0) + dep.montantTotal);
+      depensesCountByUnite.set(uniteId, (depensesCountByUnite.get(uniteId) ?? 0) + 1);
+    } else {
+      // Aucune unite trouvee — non affecte
+      coutNonAffecte += dep.montantTotal;
+      depensesNonAffectees += 1;
+    }
+  }
+
+  // Consommations aliments (cout stock par vague -> unite)
+  for (const rc of consommations) {
+    const vagueId = rc.releve.vagueId;
+    if (!vagueId) continue;
+    const uniteId = vagueToUnite.get(vagueId) ?? null;
+    if (!uniteId || !uniteIds.has(uniteId)) continue;
+    const coutLigne = rc.quantite * getPrixParUniteBase(rc.produit);
+    coutsByUnite.set(uniteId, (coutsByUnite.get(uniteId) ?? 0) + coutLigne);
+  }
+
+  // -------------------------------------------------------------------------
+  // 5. Agreger les transferts internes par unite
+  // -------------------------------------------------------------------------
+
+  const revenusTransfertsByUnite = new Map<string, number>();
+  const coutsTransfertsByUnite = new Map<string, number>();
+
+  for (const t of transferts) {
+    // Unite source recoit un revenu (elle cede les animaux)
+    if (uniteIds.has(t.uniteSourceId)) {
+      revenusTransfertsByUnite.set(
+        t.uniteSourceId,
+        (revenusTransfertsByUnite.get(t.uniteSourceId) ?? 0) + t.montantTotal
+      );
+    }
+    // Unite destination supporte un cout (elle recoit les animaux)
+    if (uniteIds.has(t.uniteDestinationId)) {
+      coutsTransfertsByUnite.set(
+        t.uniteDestinationId,
+        (coutsTransfertsByUnite.get(t.uniteDestinationId) ?? 0) + t.montantTotal
+      );
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // 6. Compter les vagues par unite
+  // -------------------------------------------------------------------------
+
+  const vagueCountByUnite = new Map<string, number>();
+  for (const v of vagues) {
+    if (v.uniteProductionId && uniteIds.has(v.uniteProductionId)) {
+      vagueCountByUnite.set(
+        v.uniteProductionId,
+        (vagueCountByUnite.get(v.uniteProductionId) ?? 0) + 1
+      );
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // 7. Construire le tableau de retour
+  // -------------------------------------------------------------------------
+
+  const unitesResult: ResumeParUnite[] = unites.map((unite) => {
+    const revenus = Math.round(revenusByUnite.get(unite.id) ?? 0);
+    const couts = Math.round(coutsByUnite.get(unite.id) ?? 0);
+    const revenusTransferts = Math.round(revenusTransfertsByUnite.get(unite.id) ?? 0);
+    const coutsTransferts = Math.round(coutsTransfertsByUnite.get(unite.id) ?? 0);
+    const marge = revenus - couts;
+
+    return {
+      uniteId: unite.id,
+      code: unite.code,
+      nom: unite.nom,
+      type: unite.type as string,
+      revenus,
+      couts,
+      marge,
+      revenusTransferts,
+      coutsTransferts,
+      nombreVagues: vagueCountByUnite.get(unite.id) ?? 0,
+      nombreDepenses: depensesCountByUnite.get(unite.id) ?? 0,
+    };
+  });
+
+  return {
+    unites: unitesResult,
+    nonAffecte: {
+      couts: Math.round(coutNonAffecte),
+      nombreDepenses: depensesNonAffectees,
     },
   };
 }

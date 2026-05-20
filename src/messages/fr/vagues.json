@@ -84,6 +84,8 @@
       "poidsMoyenInitial": "Poids moyen initial (g)",
       "origineAlevins": "Origine des alevins (optionnel)",
       "origineAlevinsFr": "Ex : Écloserie locale",
+      "uniteProduction": "Unité de production",
+      "uniteProductionPlaceholder": "Sélectionnez une unité",
       "configElevage": "Configuration d'élevage",
       "configElevagePlaceholder": "Sélectionnez une configuration",
       "aucunBacLibre": "Aucun bac libre disponible.",
