@@ -167,6 +167,7 @@ export async function POST(request: NextRequest) {
       poidsMoyenInitial: body.poidsMoyenInitial,
       origineAlevins: body.origineAlevins ?? undefined,
       configElevageId: body.configElevageId,
+      poidsObjectifKg: body.poidsObjectifKg != null ? Number(body.poidsObjectifKg) : undefined,
       bacDistribution: body.bacDistribution,
     };
 

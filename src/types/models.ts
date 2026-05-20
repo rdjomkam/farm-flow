@@ -175,6 +175,8 @@ export enum TypeReleve {
   RENOUVELLEMENT = "RENOUVELLEMENT",
   /** Tri des poissons par taille dans un bac — Sprint Reproduction R1 */
   TRI = "TRI",
+  /** Releve auto-cree lors d'une vente — tracabilite deduction poissons */
+  VENTE = "VENTE",
 }
 
 /** Type d'aliment distribue */
@@ -555,6 +557,8 @@ export interface Vague {
   statut: StatutVague;
   /** True si la vague est bloquée (accès restreint suite à abonnement expiré) — Sprint 45 */
   isBlocked: boolean;
+  /** Objectif biomasse en kg (poids total a vendre) */
+  poidsObjectifKg: number | null;
   /** Config d'elevage associee (nullable) — Sprint 19 */
   configElevageId: string | null;
   /** Pack activation source (nullable) — Sprint 20 */
@@ -618,6 +622,12 @@ export interface Releve {
   nombreMorts: number | null;
   /** Cause presumee de la mortalite */
   causeMortalite: CauseMortalite | null;
+
+  // --- Champs vente ---
+  /** Nombre de poissons vendus depuis ce bac (typeReleve = VENTE) */
+  nombreVendus: number | null;
+  /** ID de la vente source */
+  venteId: string | null;
 
   // --- Champs alimentation ---
   /** Quantite d'aliment distribue, en kg */

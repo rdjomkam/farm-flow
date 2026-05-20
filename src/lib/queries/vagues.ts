@@ -178,6 +178,7 @@ export async function createVague(siteId: string, data: CreateVagueDTO) {
         poidsMoyenInitial: data.poidsMoyenInitial,
         origineAlevins: data.origineAlevins ?? null,
         configElevageId: data.configElevageId,
+        poidsObjectifKg: data.poidsObjectifKg ?? null,
         siteId,
       },
     });
@@ -611,6 +612,7 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
         ...(data.poidsMoyenInitial !== undefined && { poidsMoyenInitial: data.poidsMoyenInitial }),
         ...(data.origineAlevins !== undefined && { origineAlevins: data.origineAlevins }),
         ...(data.configElevageId !== undefined && { configElevageId: data.configElevageId }),
+        ...(data.poidsObjectifKg !== undefined && { poidsObjectifKg: data.poidsObjectifKg }),
       },
       include: {
         _count: {

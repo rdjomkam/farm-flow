@@ -78,7 +78,9 @@
     "waterQuality": "Water quality",
     "count": "Count",
     "observation": "Observation",
-    "renewal": "Renewal"
+    "renewal": "Renewal",
+    "sorting": "Sorting",
+    "sale": "Sale"
   },
   "phases": {
     "ACCLIMATATION": "Acclimatation",

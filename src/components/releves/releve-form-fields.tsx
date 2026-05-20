@@ -233,7 +233,7 @@ export function ReleveFormFields({
             <SelectValue placeholder={t("form.fields.typeRelevePlaceholder")} />
           </SelectTrigger>
           <SelectContent>
-            {Object.values(TypeReleve).map((tp) => (
+            {Object.values(TypeReleve).filter(tp => tp !== TypeReleve.VENTE).map((tp) => (
               <SelectItem key={tp} value={tp}>{t(`types.${tp}`)}</SelectItem>
             ))}
           </SelectContent>

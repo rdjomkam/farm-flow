@@ -122,7 +122,7 @@ export default async function VagueDetailPage({
   const relevesForVivants = await prisma.releve.findMany({
     where: { vagueId: id, siteId: session.activeSiteId },
     orderBy: { date: "asc" },
-    select: { typeReleve: true, date: true, nombreMorts: true, nombreCompte: true, bacId: true },
+    select: { typeReleve: true, date: true, nombreMorts: true, nombreVendus: true, nombreCompte: true, bacId: true },
   });
   const vivantsByBac = computeVivantsByBac(vague.bacs, relevesForVivants, vague.nombreInitial);
   const biometries = biometriesData.filter(
@@ -295,6 +295,7 @@ export default async function VagueDetailPage({
               origineAlevins={vague.origineAlevins}
               configElevageId={vague.configElevageId}
               configElevages={configElevages}
+              poidsObjectifKg={vague.poidsObjectifKg ?? null}
               permissions={permissions}
               isEnCours={isEnCours}
               canExport={permissions.includes(Permission.EXPORT_DONNEES)}

@@ -42,10 +42,15 @@ const getVaguesWithReleves = cache(async (siteId: string) => {
           date: true,
           poidsMoyen: true,
           nombreMorts: true,
+          nombreVendus: true,
           nombreCompte: true,
           quantiteAliment: true,
           bacId: true,
         },
+      },
+      ventes: {
+        where: { statut: { in: ["LIVREE", "CLOTUREE"] } },
+        select: { poidsTotalKg: true },
       },
       configElevage: { select: { poidsObjectif: true } },
     },
@@ -114,6 +119,13 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
       biomasse = calculerBiomasse(poidsMoyen, nombreVivants);
     }
 
+    const totalVenduKg = (v as Record<string, unknown>).ventes
+      ? ((v as Record<string, unknown>).ventes as { poidsTotalKg: number }[]).reduce(
+          (sum: number, vt: { poidsTotalKg: number }) => sum + vt.poidsTotalKg,
+          0
+        )
+      : null;
+
     return {
       id: v.id,
       code: v.code,
@@ -123,6 +135,8 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
       biomasse: biomasse !== null ? Math.round(biomasse * 100) / 100 : null,
       nombreBacs: v._count.bacs,
       statut: v.statut as StatutVague,
+      poidsObjectifKg: v.poidsObjectifKg ?? null,
+      totalVenduKg: totalVenduKg != null && totalVenduKg > 0 ? Math.round(totalVenduKg * 100) / 100 : null,
     };
   });
 

@@ -32,6 +32,7 @@ const typeReleveLabels: Record<TypeReleve, string> = {
   [TypeReleve.OBSERVATION]: "OBSERVATION",
   [TypeReleve.RENOUVELLEMENT]: "RENOUVELLEMENT",
   [TypeReleve.TRI]: "TRI",
+  [TypeReleve.VENTE]: "VENTE",
 };
 
 // ---------------------------------------------------------------------------

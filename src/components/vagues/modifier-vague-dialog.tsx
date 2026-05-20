@@ -27,6 +27,7 @@ interface ModifierVagueDialogProps {
   origineAlevins: string | null;
   configElevageId: string | null;
   configElevages: { id: string; nom: string }[];
+  poidsObjectifKg: number | null;
   permissions: Permission[];
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -39,6 +40,7 @@ export function ModifierVagueDialog({
   origineAlevins,
   configElevageId,
   configElevages,
+  poidsObjectifKg,
   permissions,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
@@ -53,6 +55,7 @@ export function ModifierVagueDialog({
   const [poids, setPoids] = useState(String(poidsMoyenInitial));
   const [origine, setOrigine] = useState(origineAlevins ?? "");
   const [configId, setConfigId] = useState(configElevageId ?? "");
+  const [objectif, setObjectif] = useState(poidsObjectifKg != null ? String(poidsObjectifKg) : "");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   function resetForm() {
@@ -60,6 +63,7 @@ export function ModifierVagueDialog({
     setPoids(String(poidsMoyenInitial));
     setOrigine(origineAlevins ?? "");
     setConfigId(configElevageId ?? "");
+    setObjectif(poidsObjectifKg != null ? String(poidsObjectifKg) : "");
     setErrors({});
   }
 
@@ -79,6 +83,7 @@ export function ModifierVagueDialog({
       poidsMoyenInitial: Number(poids),
       origineAlevins: origine.trim() || null,
       ...(configId && { configElevageId: configId }),
+      poidsObjectifKg: objectif ? Number(objectif) : null,
     });
 
     if (result.ok) {
@@ -135,6 +140,16 @@ export function ModifierVagueDialog({
             placeholder={t("form.fields.origineAlevinsFr")}
             value={origine}
             onChange={(e) => setOrigine(e.target.value)}
+          />
+          <Input
+            id="poidsObjectifKg"
+            label={t("form.fields.poidsObjectifKg")}
+            type="number"
+            min="0"
+            step="0.1"
+            placeholder={t("form.fields.poidsObjectifKgPlaceholder")}
+            value={objectif}
+            onChange={(e) => setObjectif(e.target.value)}
           />
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium">{t("form.fields.configElevage")}</label>

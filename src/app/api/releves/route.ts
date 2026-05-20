@@ -166,6 +166,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // VENTE relevés are auto-created by createVente — block manual creation
+    if (body.typeReleve === TypeReleve.VENTE) {
+      return apiError(400, "Les releves de type VENTE sont crees automatiquement lors d'une vente.", {
+        errors: [{ field: "typeReleve", message: "Type VENTE non autorise en creation manuelle." }],
+      });
+    }
+
     // ADR-044 §R3 — Validation XOR : vagueId et lotAlevinsId sont mutuellement exclusifs
     const hasVagueId = body.vagueId != null && body.vagueId !== "";
     const hasLotAlevinsId = body.lotAlevinsId != null && body.lotAlevinsId !== "";

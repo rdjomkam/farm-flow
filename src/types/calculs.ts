@@ -196,6 +196,8 @@ export interface VagueDashboardSummary {
   biomasse: number | null;
   nombreBacs: number;
   statut: StatutVague;
+  poidsObjectifKg: number | null;
+  totalVenduKg: number | null;
 }
 
 /**

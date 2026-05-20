@@ -115,6 +115,7 @@ export async function createVente(
               bacId: true,
               poidsMoyen: true,
               nombreMorts: true,
+              nombreVendus: true,
               nombreCompte: true,
             },
           },
@@ -181,7 +182,37 @@ export async function createVente(
       );
     }
 
-    // Deduct fish proportionally from bacs
+    // Generate numero VTE-YYYY-NNN (findFirst+orderBy to avoid race condition)
+    const numero = await generateNextNumero(tx, "vente", "VTE", siteId);
+
+    // Calculate montant
+    const montantTotal = data.poidsTotalKg * data.prixUnitaireKg;
+    const venteDate = data.dateCommande ? new Date(data.dateCommande) : new Date();
+
+    // Create vente FIRST so we have vente.id for VENTE relevés
+    const vente = await tx.vente.create({
+      data: {
+        numero,
+        clientId: data.clientId,
+        vagueId: data.vagueId,
+        quantitePoissons,
+        poidsTotalKg: data.poidsTotalKg,
+        prixUnitaireKg: data.prixUnitaireKg,
+        montantTotal,
+        dateCommande: venteDate,
+        statut: StatutVente.EN_PREPARATION,
+        notes: data.notes ?? null,
+        userId,
+        siteId,
+      },
+      include: {
+        client: { select: { id: true, nom: true } },
+        vague: { select: { id: true, code: true } },
+        user: { select: { id: true, name: true } },
+      },
+    });
+
+    // Deduct fish proportionally from bacs + create VENTE relevés
     let remaining = quantitePoissons;
     for (const bac of bacs) {
       if (remaining <= 0) break;
@@ -199,37 +230,26 @@ export async function createVente(
         where: { bacId: bac.id, vagueId: data.vagueId, dateFin: null },
         data: { nombreActuel: newCount },
       });
+
+      // Auto-create VENTE relevé for traceability on vague timeline
+      await tx.releve.create({
+        data: {
+          date: venteDate,
+          typeReleve: TypeReleve.VENTE,
+          vagueId: data.vagueId,
+          bacId: bac.id,
+          siteId,
+          userId,
+          nombreVendus: toDeduct,
+          venteId: vente.id,
+          notes: `Vente ${numero} — ${toDeduct} poissons`,
+        },
+      });
+
       remaining -= toDeduct;
     }
 
-    // Generate numero VTE-YYYY-NNN (findFirst+orderBy to avoid race condition)
-    const numero = await generateNextNumero(tx, "vente", "VTE", siteId);
-
-    // Calculate montant
-    const montantTotal = data.poidsTotalKg * data.prixUnitaireKg;
-
-    // Create vente
-    return tx.vente.create({
-      data: {
-        numero,
-        clientId: data.clientId,
-        vagueId: data.vagueId,
-        quantitePoissons,
-        poidsTotalKg: data.poidsTotalKg,
-        prixUnitaireKg: data.prixUnitaireKg,
-        montantTotal,
-        dateCommande: data.dateCommande ? new Date(data.dateCommande) : new Date(),
-        statut: StatutVente.EN_PREPARATION,
-        notes: data.notes ?? null,
-        userId,
-        siteId,
-      },
-      include: {
-        client: { select: { id: true, nom: true } },
-        vague: { select: { id: true, code: true } },
-        user: { select: { id: true, name: true } },
-      },
-    });
+    return vente;
   });
 }
 
@@ -301,6 +321,9 @@ export async function updateVente(
     let newQuantitePoissons = existing.quantitePoissons;
 
     if (needsStockAdjust) {
+      // Delete old VENTE relevés before restoring fish
+      await tx.releve.deleteMany({ where: { venteId } });
+
       // --- Step 1: Restore fish to old vague bacs ---
       const oldBacs = await tx.bac.findMany({
         where: { vagueId: existing.vagueId, siteId },
@@ -364,6 +387,7 @@ export async function updateVente(
                 bacId: true,
                 poidsMoyen: true,
                 nombreMorts: true,
+                nombreVendus: true,
                 nombreCompte: true,
               },
             },
@@ -443,6 +467,22 @@ export async function updateVente(
           where: { bacId: bac.id, vagueId: newVagueId, dateFin: null },
           data: { nombreActuel: newCount },
         });
+
+        // Auto-create VENTE relevé for traceability
+        await tx.releve.create({
+          data: {
+            date: newDateCommande,
+            typeReleve: TypeReleve.VENTE,
+            vagueId: newVagueId,
+            bacId: bac.id,
+            siteId,
+            userId,
+            nombreVendus: toDeduct,
+            venteId,
+            notes: `Vente ${existing.numero} — ${toDeduct} poissons`,
+          },
+        });
+
         remaining -= toDeduct;
       }
     }

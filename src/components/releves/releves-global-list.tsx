@@ -22,6 +22,7 @@ const typeVariants: Record<TypeReleve, "info" | "warning" | "default"> = {
   [TypeReleve.OBSERVATION]: "default",
   [TypeReleve.RENOUVELLEMENT]: "default",
   [TypeReleve.TRI]: "default",
+  [TypeReleve.VENTE]: "warning",
 };
 
 interface Props {

@@ -59,6 +59,7 @@ export async function GET(
         date: true,
         poidsMoyen: true,
         nombreMorts: true,
+        nombreVendus: true,
         nombreCompte: true,
         bacId: true,
       },

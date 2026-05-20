@@ -32,6 +32,7 @@ export async function getIndicateursVague(
           poidsMoyen: true,
           tailleMoyenne: true,
           nombreMorts: true,
+          nombreVendus: true,
           quantiteAliment: true,
           nombreCompte: true,
         },

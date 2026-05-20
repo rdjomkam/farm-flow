@@ -49,6 +49,7 @@ export async function GET(
       gompertzRecord,
       configElevageData,
       mouvementsStock,
+      ventesDb,
     ] = await Promise.all([
       getVagueById(id, auth.activeSiteId),
       prisma.releve.findMany({
@@ -95,6 +96,12 @@ export async function GET(
       prisma.mouvementStock.findMany({
         where: { vagueId: id, siteId: auth.activeSiteId, type: TypeMouvement.SORTIE },
         include: { produit: { select: { nom: true, categorie: true, unite: true } } },
+      }),
+      // Ventes for this vague
+      prisma.vente.findMany({
+        where: { vagueId: id, siteId: auth.activeSiteId },
+        include: { client: { select: { nom: true } } },
+        orderBy: { dateCommande: "asc" },
       }),
     ]);
 
@@ -297,6 +304,22 @@ export async function GET(
       feedingSummary,
       waterQualitySummary,
       stockConsumption,
+      salesSummary: {
+        ventes: ventesDb.map((v) => ({
+          numero: v.numero,
+          clientNom: v.client.nom,
+          date: v.dateCommande,
+          quantitePoissons: v.quantitePoissons,
+          poidsTotalKg: v.poidsTotalKg,
+          prixUnitaireKg: v.prixUnitaireKg,
+          montantTotal: v.montantTotal,
+          statut: v.statut,
+        })),
+        totalPoidsKg: ventesDb.reduce((s, v) => s + v.poidsTotalKg, 0),
+        totalMontant: ventesDb.reduce((s, v) => s + v.montantTotal, 0),
+        totalPoissonsVendus: ventesDb.reduce((s, v) => s + v.quantitePoissons, 0),
+        poidsObjectifKg: vague.poidsObjectifKg ?? null,
+      },
     };
 
     // Générer le PDF (renderRapportVaguePDF utilise JSX natif dans le fichier .tsx)

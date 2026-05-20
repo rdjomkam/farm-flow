@@ -95,5 +95,13 @@ export const ReleveDetails = memo(function ReleveDetails({ releve }: { releve: R
         <div className="text-sm text-muted-foreground">{t("details.renouvellement")}</div>
       );
     }
+    case TypeReleve.VENTE: {
+      const count = releve.nombreVendus ?? 0;
+      return (
+        <div className="text-sm text-muted-foreground">
+          {count > 1 ? t("details.vendus", { count }) : t("details.vendu", { count })}
+        </div>
+      );
+    }
   }
 });

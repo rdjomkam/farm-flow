@@ -20,6 +20,7 @@ interface VagueSummaryCardProps {
 
 export async function VagueSummaryCard({ vague, index = 0 }: VagueSummaryCardProps) {
   const t = await getTranslations("vagues");
+  const td = await getTranslations("dashboard.vagues");
 
   return (
     <Link href={`/vagues/${vague.id}`}>
@@ -65,6 +66,23 @@ export async function VagueSummaryCard({ vague, index = 0 }: VagueSummaryCardPro
             <p className="mt-2 text-xs text-muted-foreground">
               {t("indicateurs.poidsMoyen")} : {formatNum(vague.poidsMoyen, 1, "g")}
             </p>
+          )}
+          {vague.poidsObjectifKg != null && vague.poidsObjectifKg > 0 && (
+            <div className="mt-2">
+              <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                <span>{td("objectifLabel")}</span>
+                <span>{formatNum(vague.totalVenduKg ?? 0, 1)} / {formatNum(vague.poidsObjectifKg, 0)} kg</span>
+              </div>
+              <div className="h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-accent-green transition-all"
+                  style={{ width: `${Math.min(100, Math.round(((vague.totalVenduKg ?? 0) / vague.poidsObjectifKg) * 100))}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5 text-right">
+                {Math.round(((vague.totalVenduKg ?? 0) / vague.poidsObjectifKg) * 100)}%
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>

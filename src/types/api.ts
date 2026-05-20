@@ -243,6 +243,8 @@ export interface CreateVagueDTO {
   origineAlevins?: string;
   /** Configuration d'elevage liee a cette vague */
   configElevageId: string;
+  /** Objectif biomasse en kg (poids total a vendre) */
+  poidsObjectifKg?: number | null;
   /** Distribution des alevins par bac */
   bacDistribution: BacStockingEntry[];
 }
@@ -261,6 +263,8 @@ export interface UpdateVagueDTO {
   origineAlevins?: string | null;
   /** Configuration d'elevage liee a cette vague */
   configElevageId?: string;
+  /** Objectif biomasse en kg (poids total a vendre) */
+  poidsObjectifKg?: number | null;
   /** Ajouter des bacs a la vague avec leur nombre de poissons */
   addBacs?: { bacId: string; nombrePoissons: number }[];
   /** Retirer des bacs de la vague */

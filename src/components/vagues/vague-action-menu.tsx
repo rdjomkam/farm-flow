@@ -28,6 +28,7 @@ interface VagueActionMenuProps {
   origineAlevins: string | null;
   configElevageId: string | null;
   configElevages: { id: string; nom: string }[];
+  poidsObjectifKg: number | null;
   permissions: Permission[];
   isEnCours: boolean;
   canExport: boolean;
@@ -43,6 +44,7 @@ export function VagueActionMenu({
   origineAlevins,
   configElevageId,
   configElevages,
+  poidsObjectifKg,
   permissions,
   isEnCours,
   canExport,
@@ -155,6 +157,7 @@ export function VagueActionMenu({
         origineAlevins={origineAlevins}
         configElevageId={configElevageId}
         configElevages={configElevages}
+        poidsObjectifKg={poidsObjectifKg}
         permissions={permissions}
         open={modifierOpen}
         onOpenChange={setModifierOpen}

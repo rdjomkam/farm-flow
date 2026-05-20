@@ -19,7 +19,10 @@
     "emptyTitle": "Aucune vague en cours",
     "emptyDescription": "Créez une vague pour commencer le suivi de vos silures.",
     "createWave": "Créer une vague",
-    "biomasse": "{value} kg de biomasse"
+    "biomasse": "{value} kg de biomasse",
+    "objectif": "Objectif : {vendu} / {objectif} kg ({pct}%)",
+    "objectifLabel": "Objectif biomasse",
+    "sansObjectif": "Aucun objectif défini"
   },
   "benchmarks": {
     "EXCELLENT": "Excellent",

@@ -403,6 +403,27 @@ export interface CreateRapportVaguePDFDTO {
   waterQualitySummary: WaterQualitySummaryPDF;
   /** Détail de la consommation de stock liée à la vague */
   stockConsumption: StockConsumptionPDFRow[];
+  /** Résumé des ventes de la vague */
+  salesSummary: SalesSummaryPDF;
+}
+
+export interface SalesPDFRow {
+  numero: string;
+  clientNom: string;
+  date: Date;
+  quantitePoissons: number;
+  poidsTotalKg: number;
+  prixUnitaireKg: number;
+  montantTotal: number;
+  statut: string;
+}
+
+export interface SalesSummaryPDF {
+  ventes: SalesPDFRow[];
+  totalPoidsKg: number;
+  totalMontant: number;
+  totalPoissonsVendus: number;
+  poidsObjectifKg: number | null;
 }
 
 // ---------------------------------------------------------------------------

@@ -27,6 +27,8 @@ enum TypeReleve {
   RENOUVELLEMENT
   /** Tri des poissons par taille dans un bac — Sprint Reproduction R1 */
   TRI
+  /** Relevé auto-créé lors d'une vente — traçabilité déduction poissons */
+  VENTE
 }
 
 enum TypeAliment {
@@ -1158,6 +1160,7 @@ model Vague {
    * Vague bloquée — ADR-020.
    */
   isBlocked              Boolean                  @default(false)
+  poidsObjectifKg        Float?
   siteId                 String
   site                   Site                     @relation(fields: [siteId], references: [id])
   /**
@@ -1263,6 +1266,11 @@ model Releve {
   nombreMorts    Int?
   causeMortalite CauseMortalite?
 
+  // Champs vente (typeReleve = VENTE) — nombre de poissons vendus depuis ce bac
+  nombreVendus Int?
+  venteId      String?
+  vente        Vente?  @relation("VenteReleves", fields: [venteId], references: [id], onDelete: SetNull)
+
   // Champs alimentation
   typeAliment      TypeAliment?
   quantiteAliment  Float?
@@ -1323,6 +1331,7 @@ model Releve {
   @@index([siteId])
   @@index([lotAlevinsId])
   @@index([userId])
+  @@index([venteId])
 }
 
 // ──────────────────────────────────────────
@@ -1538,6 +1547,7 @@ model Vente {
   userId           String
   user             User        @relation("VenteUser", fields: [userId], references: [id])
   facture          Facture?
+  releves          Releve[]    @relation("VenteReleves")
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 

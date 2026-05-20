@@ -10,6 +10,7 @@ const typeColors: Record<string, string> = {
   [TypeReleve.QUALITE_EAU]: "bg-accent-cyan",
   [TypeReleve.COMPTAGE]: "bg-accent-purple",
   [TypeReleve.OBSERVATION]: "bg-accent-amber",
+  [TypeReleve.VENTE]: "bg-accent-amber",
 };
 
 interface RecentActivityProps {

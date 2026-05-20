@@ -52,6 +52,7 @@ const typeReleveLabels: Record<TypeReleve, string> = {
   [TypeReleve.OBSERVATION]: "Observation",
   [TypeReleve.RENOUVELLEMENT]: "Renouvellement",
   [TypeReleve.TRI]: "Tri",
+  [TypeReleve.VENTE]: "Vente",
 };
 
 const statutLabels: Record<StatutVague, string> = {
@@ -694,6 +695,112 @@ export function RapportVaguePDF({ data }: { data: CreateRapportVaguePDFDTO }) {
                     <Text style={[styles.tableCell, { width: 60 }]}>{c.count}</Text>
                   </View>
                 ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* ===================== VENTES ===================== */}
+        {data.salesSummary && (
+          <View wrap={false}>
+            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>
+              {data.locale === "en" ? "Sales" : "Ventes"}
+            </Text>
+            {data.salesSummary.ventes.length === 0 ? (
+              <Text style={styles.emptyText}>
+                {data.locale === "en" ? "No sales" : "Aucune vente"}
+              </Text>
+            ) : (
+              <View>
+                {/* Table header */}
+                <View style={styles.tableHeader}>
+                  <Text style={[styles.tableHeaderText, { width: 55 }]}>N°</Text>
+                  <Text style={[styles.tableHeaderText, { width: 65 }]}>
+                    {data.locale === "en" ? "Client" : "Client"}
+                  </Text>
+                  <Text style={[styles.tableHeaderText, { width: 50 }]}>
+                    {data.locale === "en" ? "Date" : "Date"}
+                  </Text>
+                  <Text style={[styles.tableHeaderText, { width: 45 }]}>
+                    {data.locale === "en" ? "Fish" : "Poissons"}
+                  </Text>
+                  <Text style={[styles.tableHeaderText, { width: 55 }]}>
+                    {data.locale === "en" ? "Weight (kg)" : "Poids (kg)"}
+                  </Text>
+                  <Text style={[styles.tableHeaderText, { width: 50 }]}>
+                    {data.locale === "en" ? "Price/kg" : "Prix/kg"}
+                  </Text>
+                  <Text style={[styles.tableHeaderText, { flex: 1 }]}>
+                    {data.locale === "en" ? "Amount" : "Montant"}
+                  </Text>
+                </View>
+
+                {/* Table rows */}
+                {data.salesSummary.ventes.map((v, i) => (
+                  <View key={i} style={[styles.tableRow]} wrap={false}>
+                    <Text style={[styles.tableCell, { width: 55, fontFamily: "Helvetica-Bold" }]}>
+                      {v.numero}
+                    </Text>
+                    <Text style={[styles.tableCell, { width: 65 }]}>{v.clientNom}</Text>
+                    <Text style={[styles.tableCell, { width: 50 }]}>{formatDate(v.date)}</Text>
+                    <Text style={[styles.tableCell, { width: 45 }]}>{v.quantitePoissons}</Text>
+                    <Text style={[styles.tableCell, { width: 55 }]}>{formatNum(v.poidsTotalKg, 2)}</Text>
+                    <Text style={[styles.tableCell, { width: 50 }]}>{formatFCFA(v.prixUnitaireKg)}</Text>
+                    <Text style={[styles.tableCell, { flex: 1 }]}>{formatFCFA(v.montantTotal)}</Text>
+                  </View>
+                ))}
+
+                {/* Totals row */}
+                <View
+                  style={[
+                    styles.tableRow,
+                    {
+                      backgroundColor: "#f1f5f9",
+                      borderTopWidth: 1,
+                      borderTopColor: colors.border,
+                      borderTopStyle: "solid",
+                    },
+                  ]}
+                  wrap={false}
+                >
+                  <Text style={[styles.tableCell, { width: 55, fontFamily: "Helvetica-Bold" }]}>
+                    {data.locale === "en" ? "Total" : "Total"}
+                  </Text>
+                  <Text style={[styles.tableCell, { width: 65 }]}></Text>
+                  <Text style={[styles.tableCell, { width: 50 }]}></Text>
+                  <Text style={[styles.tableCell, { width: 45, fontFamily: "Helvetica-Bold" }]}>
+                    {data.salesSummary.totalPoissonsVendus}
+                  </Text>
+                  <Text style={[styles.tableCell, { width: 55, fontFamily: "Helvetica-Bold" }]}>
+                    {formatNum(data.salesSummary.totalPoidsKg, 2)}
+                  </Text>
+                  <Text style={[styles.tableCell, { width: 50 }]}></Text>
+                  <Text style={[styles.tableCell, { flex: 1, fontFamily: "Helvetica-Bold" }]}>
+                    {formatFCFA(data.salesSummary.totalMontant)}
+                  </Text>
+                </View>
+
+                {/* Objective progress */}
+                {data.salesSummary.poidsObjectifKg !== null && (
+                  <Text
+                    style={[
+                      styles.emptyText,
+                      { marginTop: 4, fontStyle: "normal", color: colors.muted },
+                    ]}
+                  >
+                    {data.locale === "en" ? "Objective" : "Objectif"}:{" "}
+                    {formatNum(data.salesSummary.totalPoidsKg, 2)} /{" "}
+                    {formatNum(data.salesSummary.poidsObjectifKg, 2)} kg (
+                    {formatNum(
+                      data.salesSummary.poidsObjectifKg > 0
+                        ? (data.salesSummary.totalPoidsKg / data.salesSummary.poidsObjectifKg) * 100
+                        : 0,
+                      1,
+                      "%"
+                    )}
+                    )
+                  </Text>
+                )}
               </View>
             )}
           </View>

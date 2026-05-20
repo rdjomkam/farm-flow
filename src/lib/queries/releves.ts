@@ -576,6 +576,7 @@ export async function getPoidsMoyenActuelVague(
           bacId: true,
           poidsMoyen: true,
           nombreMorts: true,
+          nombreVendus: true,
           nombreCompte: true,
         },
       },

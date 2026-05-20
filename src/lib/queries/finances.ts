@@ -1252,6 +1252,7 @@ export async function getCoutProductionVague(
         bacId: true,
         typeReleve: true,
         nombreMorts: true,
+        nombreVendus: true,
         nombreCompte: true,
         date: true,
         poidsMoyen: true,

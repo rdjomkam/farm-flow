@@ -86,7 +86,9 @@
       "origineAlevinsFr": "Ex : Écloserie locale",
       "configElevage": "Configuration d'élevage",
       "configElevagePlaceholder": "Sélectionnez une configuration",
-      "aucunBacLibre": "Aucun bac libre disponible."
+      "aucunBacLibre": "Aucun bac libre disponible.",
+      "poidsObjectifKg": "Objectif biomasse (kg)",
+      "poidsObjectifKgPlaceholder": "Ex : 500"
     },
     "errors": {
       "code": "Le code est obligatoire.",

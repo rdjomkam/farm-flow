@@ -19,7 +19,10 @@
     "emptyTitle": "No waves in progress",
     "emptyDescription": "Create a wave to start tracking your catfish.",
     "createWave": "Create a wave",
-    "biomasse": "{value} kg biomass"
+    "biomasse": "{value} kg biomass",
+    "objectif": "Objective: {vendu} / {objectif} kg ({pct}%)",
+    "objectifLabel": "Biomass objective",
+    "sansObjectif": "No objective set"
   },
   "benchmarks": {
     "EXCELLENT": "Excellent",

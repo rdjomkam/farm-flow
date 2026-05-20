@@ -181,6 +181,7 @@ export async function PUT(
     if (body.poidsMoyenInitial !== undefined) data.poidsMoyenInitial = body.poidsMoyenInitial;
     if (body.origineAlevins !== undefined) data.origineAlevins = body.origineAlevins;
     if (body.configElevageId !== undefined) data.configElevageId = body.configElevageId;
+    if (body.poidsObjectifKg !== undefined) data.poidsObjectifKg = body.poidsObjectifKg != null ? Number(body.poidsObjectifKg) : null;
 
     const vague = await updateVague(id, auth.activeSiteId, data);
 

@@ -266,7 +266,7 @@ export function calculerROI(
  */
 export function computeVivantsByBac(
   bacs: { id: string; nombreInitial: number | null }[],
-  releves: { bacId: string | null; typeReleve: string; nombreMorts: number | null; nombreCompte: number | null; date?: string | Date | null }[],
+  releves: { bacId: string | null; typeReleve: string; nombreMorts: number | null; nombreCompte: number | null; nombreVendus?: number | null; date?: string | Date | null }[],
   nombreInitialVague: number
 ): Map<string, number> {
   // Utiliser floor + distribuer le reste au dernier bac pour eviter la perte de poissons
@@ -289,7 +289,7 @@ export function computeVivantsByBac(
     }
   }
 
-  // Group mortalites by bacId — all deaths, and post-comptage deaths separately
+  // Group removals (mortality + sales) by bacId — all removals, and post-comptage separately
   const mortsParBac = new Map<string, number>();
   const mortsPostComptageParBac = new Map<string, number>();
   for (const r of releves) {
@@ -300,6 +300,15 @@ export function computeVivantsByBac(
       const comptage = comptagesParBac.get(r.bacId);
       if (comptage && r.date && new Date(r.date) > comptage.date) {
         mortsPostComptageParBac.set(r.bacId, (mortsPostComptageParBac.get(r.bacId) ?? 0) + morts);
+      }
+    }
+    if (r.typeReleve === "VENTE" && r.bacId) {
+      const vendus = r.nombreVendus ?? 0;
+      mortsParBac.set(r.bacId, (mortsParBac.get(r.bacId) ?? 0) + vendus);
+
+      const comptage = comptagesParBac.get(r.bacId);
+      if (comptage && r.date && new Date(r.date) > comptage.date) {
+        mortsPostComptageParBac.set(r.bacId, (mortsPostComptageParBac.get(r.bacId) ?? 0) + vendus);
       }
     }
   }
@@ -332,7 +341,7 @@ export function computeVivantsByBac(
  */
 export function computeNombreVivantsVague(
   bacs: { id: string; nombreInitial: number | null }[],
-  releves: { bacId: string | null; typeReleve: string; nombreMorts: number | null; nombreCompte: number | null; date?: string | Date | null }[],
+  releves: { bacId: string | null; typeReleve: string; nombreMorts: number | null; nombreCompte: number | null; nombreVendus?: number | null; date?: string | Date | null }[],
   nombreInitialVague: number
 ): number {
   if (bacs.length === 0) {
@@ -344,12 +353,18 @@ export function computeNombreVivantsVague(
       const mortsApres = releves
         .filter(r => r.typeReleve === "MORTALITE" && r.date && new Date(r.date) > lastDate)
         .reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
-      return lastComptage.nombreCompte! - mortsApres;
+      const vendusApres = releves
+        .filter(r => r.typeReleve === "VENTE" && r.date && new Date(r.date) > lastDate)
+        .reduce((sum, r) => sum + (r.nombreVendus ?? 0), 0);
+      return lastComptage.nombreCompte! - mortsApres - vendusApres;
     }
     const totalMorts = releves
       .filter(r => r.typeReleve === "MORTALITE")
       .reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
-    return nombreInitialVague - totalMorts;
+    const totalVendus = releves
+      .filter(r => r.typeReleve === "VENTE")
+      .reduce((sum, r) => sum + (r.nombreVendus ?? 0), 0);
+    return nombreInitialVague - totalMorts - totalVendus;
   }
   const vivantsByBac = computeVivantsByBac(bacs, releves, nombreInitialVague);
   let total = 0;

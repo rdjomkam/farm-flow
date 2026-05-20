@@ -86,7 +86,9 @@
       "origineAlevinsFr": "E.g.: Local hatchery",
       "configElevage": "Farming configuration",
       "configElevagePlaceholder": "Select a configuration",
-      "aucunBacLibre": "No free tanks available."
+      "aucunBacLibre": "No free tanks available.",
+      "poidsObjectifKg": "Biomass objective (kg)",
+      "poidsObjectifKgPlaceholder": "e.g. 500"
     },
     "errors": {
       "code": "Code is required.",

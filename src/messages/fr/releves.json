@@ -18,7 +18,8 @@
     "COMPTAGE": "Comptage",
     "OBSERVATION": "Observation",
     "RENOUVELLEMENT": "Renouvellement eau",
-    "TRI": "Tri par taille"
+    "TRI": "Tri par taille",
+    "VENTE": "Vente"
   },
   "list": {
     "title": "Relevés ({count})",
@@ -43,7 +44,9 @@
     "morts": "{count} morts",
     "poissons": "{count} poissons",
     "xParJour": "{count}x/jour",
-    "renouvellement": "Renouvellement d'eau"
+    "renouvellement": "Renouvellement d'eau",
+    "vendus": "{count} poissons vendus",
+    "vendu": "{count} poisson vendu"
   },
   "form": {
     "title": "Saisir un releve",
