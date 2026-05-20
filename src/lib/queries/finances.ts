@@ -1545,8 +1545,13 @@ export async function getCoutProductionVague(
   const coutTotal =
     coutAliments + coutDepensesDirectes + coutMultiVagues + coutRecurrents;
 
+  // biomasseProduite = biomasse restante en ferme + biomasse deja vendue
+  // Pour le cout de production, on divise par la biomasse TOTALE produite,
+  // pas seulement ce qui reste apres les ventes.
+  const biomasseProduite =
+    biomasseKg !== null ? biomasseKg + poidsTotalVendu : poidsTotalVendu > 0 ? poidsTotalVendu : null;
   const coutParKg =
-    biomasseKg !== null && biomasseKg > 0 ? coutTotal / biomasseKg : null;
+    biomasseProduite !== null && biomasseProduite > 0 ? coutTotal / biomasseProduite : null;
   const prixMoyenVenteKg = poidsTotalVendu > 0 ? revenus / poidsTotalVendu : null;
   const marge = revenus - coutTotal;
   const roi = coutTotal > 0 ? (marge / coutTotal) * 100 : null;
@@ -1600,8 +1605,8 @@ export async function getCoutProductionVague(
           ? Math.round((montant / coutTotal) * 10000) / 100
           : 0,
       parKg:
-        biomasseKg !== null && biomasseKg > 0
-          ? Math.round((montant / biomasseKg) * 100) / 100
+        biomasseProduite !== null && biomasseProduite > 0
+          ? Math.round((montant / biomasseProduite) * 100) / 100
           : null,
     }))
     .sort((a, b) => b.montant - a.montant);
