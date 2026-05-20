@@ -2,13 +2,32 @@ import { prisma } from "@/lib/db";
 import type { Permission } from "@/types";
 import { SYSTEM_ROLE_DEFINITIONS } from "@/lib/permissions-constants";
 
-/** Synchronise les permissions des roles systeme avec les definitions courantes */
+/** Synchronise les permissions des roles systeme avec les definitions courantes.
+ *  Resilient: si une valeur enum n'existe pas encore en DB (migration pending),
+ *  on log un warning au lieu de crasher la page.
+ */
 export async function syncSystemRolePermissions(siteId: string) {
   for (const def of SYSTEM_ROLE_DEFINITIONS) {
-    await prisma.siteRole.updateMany({
-      where: { siteId, name: def.name, isSystem: true },
-      data: { permissions: [...def.permissions] },
-    });
+    try {
+      await prisma.siteRole.updateMany({
+        where: { siteId, name: def.name, isSystem: true },
+        data: { permissions: [...def.permissions] },
+      });
+    } catch (error: unknown) {
+      // P2007 = invalid enum value — happens when code has new permissions
+      // but the DB migration hasn't run yet. Non-fatal: skip this sync.
+      const isPrismaEnumError =
+        error instanceof Error &&
+        "code" in error &&
+        (error as { code: string }).code === "P2007";
+      if (isPrismaEnumError) {
+        console.warn(
+          `[syncSystemRolePermissions] Skipping role "${def.name}" — DB enum out of sync (pending migration?)`
+        );
+      } else {
+        throw error;
+      }
+    }
   }
 }
 
