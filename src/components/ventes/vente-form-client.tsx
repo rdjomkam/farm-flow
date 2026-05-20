@@ -7,7 +7,7 @@ import Link from "next/link";
 import { queryKeys } from "@/lib/query-keys";
 import { useTranslations } from "next-intl";
 import { formatNumber } from "@/lib/format";
-import { ArrowLeft, ShoppingCart, Fish } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Fish, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,12 +27,19 @@ interface ClientOption {
   nom: string;
 }
 
+interface BacOption {
+  id: string;
+  nom: string;
+  nombrePoissons: number;
+}
+
 interface VagueOption {
   id: string;
   code: string;
   poissonsDisponibles: number;
   /** Dernier poids moyen (g) constate via BIOMETRIE, null si absent */
   dernierPoidsMoyenG: number | null;
+  bacs: BacOption[];
 }
 
 interface PrefillData {
@@ -79,6 +86,11 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
   );
   const [notes, setNotes] = useState("");
 
+  // Per-bac deductions state
+  const [chooseBacs, setChooseBacs] = useState(false);
+  // Map bacId -> quantity string
+  const [bacQuantites, setBacQuantites] = useState<Record<string, string>>({});
+
   const selectedVague = vagues.find((v) => v.id === vagueId);
   const montantTotal =
     (parseFloat(poidsTotalKg) || 0) * (parseFloat(prixUnitaireKg) || 0);
@@ -89,10 +101,28 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
     : autoPoidsMoyenG ?? (parseFloat(poidsMoyenG) || 0);
 
   const poidsTotalKgNum = parseFloat(poidsTotalKg) || 0;
-  const estimatedPoissons =
+  const estimatedPoissonsAuto =
     effectivePoidsMoyenG > 0 && poidsTotalKgNum > 0
       ? Math.max(1, Math.round((poidsTotalKgNum * 1000) / effectivePoidsMoyenG))
       : 0;
+
+  // When chooseBacs is enabled, sum bac quantities replaces auto estimate
+  const bacDeductionsActive =
+    chooseBacs && selectedVague != null && selectedVague.bacs.length > 0;
+  const bacDeductionsList = bacDeductionsActive
+    ? selectedVague!.bacs
+        .map((b) => ({ bacId: b.id, quantite: parseInt(bacQuantites[b.id] ?? "0", 10) || 0 }))
+        .filter((d) => d.quantite > 0)
+    : [];
+  const totalFromBacs = bacDeductionsList.reduce((s, d) => s + d.quantite, 0);
+  const estimatedPoissons = bacDeductionsActive ? totalFromBacs : estimatedPoissonsAuto;
+
+  function handleVagueChange(newVagueId: string) {
+    setVagueId(newVagueId);
+    // Reset bac quantities when vague changes
+    setChooseBacs(false);
+    setBacQuantites({});
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -110,6 +140,7 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
         : {}),
       ...(notes.trim() && { notes: notes.trim() }),
       ...(dateCommande && { dateCommande }),
+      ...(bacDeductionsList.length > 0 ? { bacDeductions: bacDeductionsList } : {}),
     });
 
     if (result.ok) {
@@ -120,16 +151,21 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
     }
   }
 
-  const needsManualPoidsMoyen = !!selectedVague && autoPoidsMoyenG == null;
+  // In bac mode, poidsMoyenG is not needed (quantities come from bacs)
+  const needsManualPoidsMoyen = !!selectedVague && autoPoidsMoyenG == null && !bacDeductionsActive;
   const manualPoidsMoyenValid =
     !needsManualPoidsMoyen || (parseFloat(poidsMoyenG) || 0) > 0;
+
+  // In bac mode, at least one bac must have a quantity
+  const bacModeValid = !bacDeductionsActive || bacDeductionsList.length > 0;
 
   const isValid =
     clientId &&
     vagueId &&
     parseFloat(poidsTotalKg) > 0 &&
     parseFloat(prixUnitaireKg) > 0 &&
-    manualPoidsMoyenValid;
+    manualPoidsMoyenValid &&
+    bacModeValid;
 
   return (
     <ErrorBoundary section={tSections("saleForm")}>
@@ -180,7 +216,7 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
               </SelectContent>
             </Select>
 
-            <Select value={vagueId} onValueChange={setVagueId}>
+            <Select value={vagueId} onValueChange={handleVagueChange}>
               <SelectTrigger label={t("ventes.form.vague")} required aria-required="true">
                 <SelectValue placeholder={t("ventes.form.vaguePlaceholder")} />
               </SelectTrigger>
@@ -268,6 +304,70 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
             </div>
           </CardContent>
         </Card>
+
+        {/* Per-bac deductions (optional) */}
+        {selectedVague && selectedVague.bacs.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <button
+                type="button"
+                className="flex items-center justify-between w-full text-left"
+                onClick={() => {
+                  setChooseBacs((prev) => !prev);
+                  if (chooseBacs) setBacQuantites({});
+                }}
+                aria-expanded={chooseBacs}
+              >
+                <div className="flex flex-col gap-0.5">
+                  <CardTitle className="text-sm">{t("ventes.form.chooseBacs")}</CardTitle>
+                  <p className="text-xs text-muted-foreground font-normal">
+                    {t("ventes.form.chooseBacsDesc")}
+                  </p>
+                </div>
+                {chooseBacs ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
+                )}
+              </button>
+            </CardHeader>
+            {chooseBacs && (
+              <CardContent className="flex flex-col gap-3">
+                {selectedVague.bacs.map((bac) => (
+                  <div key={bac.id} className="flex items-center gap-3">
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="text-sm font-medium truncate">{bac.nom}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {t("ventes.form.bacDisponible", { count: bac.nombrePoissons })}
+                      </span>
+                    </div>
+                    <Input
+                      aria-label={`${t("ventes.form.bacQuantite")} — ${bac.nom}`}
+                      type="number"
+                      min="0"
+                      max={bac.nombrePoissons}
+                      step="1"
+                      placeholder="0"
+                      value={bacQuantites[bac.id] ?? ""}
+                      onChange={(e) =>
+                        setBacQuantites((prev) => ({ ...prev, [bac.id]: e.target.value }))
+                      }
+                      className="w-24 text-right"
+                    />
+                  </div>
+                ))}
+                {totalFromBacs > 0 && (
+                  <p className="text-xs font-medium text-foreground pt-1 border-t">
+                    {t("ventes.form.totalFromBacs", {
+                      count: totalFromBacs,
+                      nbBacs: bacDeductionsList.length,
+                    })}
+                  </p>
+                )}
+              </CardContent>
+            )}
+          </Card>
+        )}
 
         {/* Total preview */}
         {montantTotal > 0 && (

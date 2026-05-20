@@ -38,10 +38,8 @@ ALTER TABLE "Vague" ADD COLUMN "poidsObjectifKg" DOUBLE PRECISION;
 
 -- ============================================
 -- BACKFILL: Create VENTE relevés for existing ventes
--- For each vente that has quantitePoissons > 0,
--- create a single VENTE relevé linked to the vague.
--- We use the first bac assigned to the vague as bacId
--- (simplified — exact per-bac split is unknown for historical data).
+-- Distributes sold fish proportionally across all active bacs
+-- assigned to the vague, based on each bac's share of total fish.
 -- ============================================
 INSERT INTO "Releve" (
   "id", "date", "typeReleve", "vagueId", "bacId", "siteId", "userId",
@@ -52,21 +50,29 @@ SELECT
   v."dateCommande",
   'VENTE'::"TypeReleve",
   v."vagueId",
-  (
-    SELECT ab."bacId"
-    FROM "AssignationBac" ab
-    WHERE ab."vagueId" = v."vagueId" AND ab."dateFin" IS NULL
-    ORDER BY ab."createdAt" ASC
-    LIMIT 1
-  ),
+  ab."bacId",
   v."siteId",
   v."userId",
-  v."quantitePoissons",
+  -- Distribute proportionally: last bac gets the remainder
+  CASE
+    WHEN ab.rn = ab.total_bacs THEN
+      v."quantitePoissons" - (v."quantitePoissons" / ab.total_bacs) * (ab.total_bacs - 1)
+    ELSE
+      v."quantitePoissons" / ab.total_bacs
+  END,
   v."id",
-  CONCAT('Backfill — Vente ', v."numero", ' — ', v."quantitePoissons", ' poissons'),
+  CONCAT('Backfill — Vente ', v."numero", ' — bac ', ab.rn, '/', ab.total_bacs),
   NOW(),
   NOW()
 FROM "Vente" v
+CROSS JOIN LATERAL (
+  SELECT
+    a."bacId",
+    ROW_NUMBER() OVER (ORDER BY a."createdAt" ASC) AS rn,
+    COUNT(*) OVER () AS total_bacs
+  FROM "AssignationBac" a
+  WHERE a."vagueId" = v."vagueId" AND a."dateFin" IS NULL
+) ab
 WHERE v."quantitePoissons" > 0
   AND NOT EXISTS (
     SELECT 1 FROM "Releve" r WHERE r."venteId" = v."id"

@@ -879,6 +879,10 @@ export interface CreateVenteDTO {
   /** Date de commande (ISO 8601). Defaut: maintenant. */
   dateCommande?: string;
   notes?: string;
+  /** Deductions explicites par bac. Quand fourni, les poissons sont preleves exactement de ces bacs.
+   *  La somme des quantites devient le quantitePoissons de la vente.
+   *  Quand omis, la distribution proportionnelle est utilisee. */
+  bacDeductions?: Array<{ bacId: string; quantite: number }>;
 }
 
 export interface UpdateVenteDTO {
@@ -889,6 +893,10 @@ export interface UpdateVenteDTO {
   poidsMoyenG?: number;
   dateCommande?: string;
   notes?: string;
+  /** Deductions explicites par bac. Quand fourni, les poissons sont preleves exactement de ces bacs.
+   *  La somme des quantites devient le quantitePoissons de la vente.
+   *  Quand omis, la distribution proportionnelle est utilisee. */
+  bacDeductions?: Array<{ bacId: string; quantite: number }>;
   /** Motif obligatoire de la modification */
   motif: string;
 }

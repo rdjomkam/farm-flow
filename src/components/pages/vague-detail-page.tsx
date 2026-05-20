@@ -23,7 +23,7 @@ import { getCalibrages } from "@/lib/queries/calibrages";
 import { getCoutProductionVague } from "@/lib/queries/finances";
 import { prisma } from "@/lib/db";
 import { computeVivantsByBac } from "@/lib/calculs";
-import { genererCourbeGompertz, calibrerGompertz, isCachedGompertzValid } from "@/lib/gompertz";
+import { genererCourbeGompertz, calibrerGompertz, isCachedGompertzValid, mergeLockedCurve, buildDisplayCurve, type LockedCurve } from "@/lib/gompertz";
 import { StatutVague, TypeReleve, CategorieProduit, Permission } from "@/types";
 import type { Bac, Releve, EvolutionPoidsPoint, IndicateursVague as IndicateursType, CalibrageWithRelations, AssignationBacForVague } from "@/types";
 import type { ProduitOption } from "@/components/releves/consommation-fields";
@@ -206,17 +206,62 @@ export default async function VagueDetailPage({
 
   const hasGompertz = effectiveGompertz !== null;
 
+  // Compute lastObservationDay for locked curve logic
+  const sortedDateKeys = Array.from(groupedByDate.keys()).sort();
+  const lastObsDay = sortedDateKeys.length > 0
+    ? Math.floor((new Date(sortedDateKeys[sortedDateKeys.length - 1] + "T00:00:00").getTime() - new Date(vague.dateDebut).getTime()) / 86400000)
+    : 0;
+
   const gompertzByJour = new Map<number, number>();
   if (hasGompertz && effectiveGompertz) {
     const maxJour = Math.max(200, groupedByDate.size > 0
-      ? Math.floor(
-          (new Date(Array.from(groupedByDate.keys()).sort().at(-1)! + "T00:00:00").getTime() - vague.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
-        ) + 30
+      ? lastObsDay + 30
       : 200
     );
-    const courbeGompertz = genererCourbeGompertz(effectiveGompertz.params, maxJour, 1);
-    for (const pt of courbeGompertz) {
+    const freshCurve = genererCourbeGompertz(effectiveGompertz.params, maxJour, 1);
+
+    // Use locked curve from existing record to freeze past predictions
+    const existingLocked = (gompertzRecord?.lockedCurve as LockedCurve) ?? null;
+    const previousLastObsDay = gompertzRecord?.lastObservationDay ?? null;
+    const displayCurve = buildDisplayCurve(existingLocked, freshCurve, lastObsDay);
+
+    for (const pt of displayCurve) {
       gompertzByJour.set(pt.jour, Math.round(pt.poids * 100) / 100);
+    }
+
+    // Persist locked curve if calibration happened (fire and forget in server component)
+    if (!cachedIsValid && effectiveGompertz) {
+      const newLockedCurve = mergeLockedCurve(existingLocked, previousLastObsDay, freshCurve, lastObsDay);
+      prisma.gompertzVague.upsert({
+        where: { vagueId: id },
+        create: {
+          vagueId: id,
+          siteId: session.activeSiteId,
+          wInfinity: effectiveGompertz.params.wInfinity,
+          k: effectiveGompertz.params.k,
+          ti: effectiveGompertz.params.ti,
+          r2: effectiveGompertz.r2,
+          rmse: effectiveGompertz.rmse,
+          biometrieCount: effectiveGompertz.biometrieCount,
+          confidenceLevel: effectiveGompertz.confidenceLevel,
+          configWInfUsed: configWInf,
+          lockedCurve: newLockedCurve,
+          lastObservationDay: lastObsDay,
+        },
+        update: {
+          wInfinity: effectiveGompertz.params.wInfinity,
+          k: effectiveGompertz.params.k,
+          ti: effectiveGompertz.params.ti,
+          r2: effectiveGompertz.r2,
+          rmse: effectiveGompertz.rmse,
+          biometrieCount: effectiveGompertz.biometrieCount,
+          confidenceLevel: effectiveGompertz.confidenceLevel,
+          configWInfUsed: configWInf,
+          lockedCurve: newLockedCurve,
+          lastObservationDay: lastObsDay,
+          calculatedAt: new Date(),
+        },
+      }).catch(() => { /* non-critical — will recalculate next time */ });
     }
   }
 

@@ -82,6 +82,23 @@ export async function POST(request: NextRequest) {
       errors.push({ field: "poidsMoyenG", message: "Le poids moyen doit etre > 0." });
     }
 
+    // Validate bacDeductions if provided
+    if (body.bacDeductions !== undefined && body.bacDeductions !== null) {
+      if (!Array.isArray(body.bacDeductions)) {
+        errors.push({ field: "bacDeductions", message: "bacDeductions doit etre un tableau." });
+      } else {
+        for (let i = 0; i < body.bacDeductions.length; i++) {
+          const d = body.bacDeductions[i];
+          if (!d || typeof d.bacId !== "string" || !d.bacId) {
+            errors.push({ field: `bacDeductions[${i}].bacId`, message: "bacId est obligatoire." });
+          }
+          if (typeof d?.quantite !== "number" || !Number.isInteger(d.quantite) || d.quantite <= 0) {
+            errors.push({ field: `bacDeductions[${i}].quantite`, message: "quantite doit etre un entier positif." });
+          }
+        }
+      }
+    }
+
     if (errors.length > 0) {
       return apiError(400, "Erreurs de validation", { errors });
     }
@@ -96,6 +113,10 @@ export async function POST(request: NextRequest) {
           ? body.poidsMoyenG
           : undefined,
       notes: body.notes?.trim() || undefined,
+      bacDeductions:
+        Array.isArray(body.bacDeductions) && body.bacDeductions.length > 0
+          ? body.bacDeductions
+          : undefined,
     };
 
     const vente = await createVente(auth.activeSiteId, auth.userId, data);

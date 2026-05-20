@@ -324,10 +324,10 @@ export function computeVivantsByBac(
     const comptage = comptagesParBac.get(bac.id);
     if (comptage) {
       const mortsApres = mortsPostComptageParBac.get(bac.id) ?? 0;
-      result.set(bac.id, comptage.count - mortsApres);
+      result.set(bac.id, Math.max(0, comptage.count - mortsApres));
     } else {
       const mortsBac = mortsParBac.get(bac.id) ?? 0;
-      result.set(bac.id, initialBac - mortsBac);
+      result.set(bac.id, Math.max(0, initialBac - mortsBac));
     }
   }
 
@@ -356,7 +356,7 @@ export function computeNombreVivantsVague(
       const vendusApres = releves
         .filter(r => r.typeReleve === "VENTE" && r.date && new Date(r.date) > lastDate)
         .reduce((sum, r) => sum + (r.nombreVendus ?? 0), 0);
-      return lastComptage.nombreCompte! - mortsApres - vendusApres;
+      return Math.max(0, lastComptage.nombreCompte! - mortsApres - vendusApres);
     }
     const totalMorts = releves
       .filter(r => r.typeReleve === "MORTALITE")
@@ -364,7 +364,7 @@ export function computeNombreVivantsVague(
     const totalVendus = releves
       .filter(r => r.typeReleve === "VENTE")
       .reduce((sum, r) => sum + (r.nombreVendus ?? 0), 0);
-    return nombreInitialVague - totalMorts - totalVendus;
+    return Math.max(0, nombreInitialVague - totalMorts - totalVendus);
   }
   const vivantsByBac = computeVivantsByBac(bacs, releves, nombreInitialVague);
   let total = 0;

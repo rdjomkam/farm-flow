@@ -669,3 +669,80 @@ export function genererCourbeGompertz(
   }
   return result;
 }
+
+// ─── Locked curve helpers ────────────────────────────────────────────────────
+
+/**
+ * Locked curve type: map of day → predicted weight (g).
+ * Predictions for days ≤ lastObservationDay are frozen and never change.
+ */
+export type LockedCurve = Record<number, number>;
+
+/**
+ * Merges locked (frozen) predictions with fresh predictions from a new calibration.
+ *
+ * Rules:
+ *   - Days ≤ previousLastObsDay: keep the locked value (immutable history)
+ *   - Days > previousLastObsDay: use the new curve value
+ *   - This ensures past predictions never change even when the model is recalibrated
+ *
+ * @param existingLocked  - Previously frozen predictions (null on first calibration)
+ * @param previousLastObsDay - The lastObservationDay from the previous calibration
+ * @param newCurve        - Fresh curve generated from new calibration params
+ * @param newLastObsDay   - The current lastObservationDay (latest biometry)
+ * @returns Updated locked curve with frozen past + new future
+ */
+export function mergeLockedCurve(
+  existingLocked: LockedCurve | null,
+  previousLastObsDay: number | null,
+  newCurve: Array<{ jour: number; poids: number }>,
+  newLastObsDay: number
+): LockedCurve {
+  const result: LockedCurve = {};
+
+  // Carry over all existing locked predictions (they never change)
+  if (existingLocked) {
+    for (const [jourStr, poids] of Object.entries(existingLocked)) {
+      result[Number(jourStr)] = poids;
+    }
+  }
+
+  // For days between (previousLastObsDay+1) and newLastObsDay,
+  // lock the NEW predictions (these are the predictions that were "future"
+  // at previous calibration but now have real data nearby)
+  const lockFrom = (previousLastObsDay ?? -1) + 1;
+  for (const pt of newCurve) {
+    if (pt.jour >= lockFrom && pt.jour <= newLastObsDay) {
+      // Only lock if not already frozen
+      if (!(pt.jour in result)) {
+        result[pt.jour] = Math.round(pt.poids * 100) / 100;
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Builds the final display curve by combining locked predictions (past)
+ * with fresh predictions (future) from the latest calibration.
+ *
+ * @param locked         - Frozen predictions from lockedCurve
+ * @param freshCurve     - Full curve from latest calibration params
+ * @param lastObsDay     - Latest biometry day (boundary between locked and fresh)
+ * @returns Merged curve array for display
+ */
+export function buildDisplayCurve(
+  locked: LockedCurve | null,
+  freshCurve: Array<{ jour: number; poids: number }>,
+  lastObsDay: number
+): Array<{ jour: number; poids: number }> {
+  return freshCurve.map((pt) => {
+    // For days at or before the last observation: use locked prediction if available
+    if (locked && pt.jour <= lastObsDay && pt.jour in locked) {
+      return { jour: pt.jour, poids: locked[pt.jour] };
+    }
+    // For future days: use fresh curve from latest calibration
+    return pt;
+  });
+}

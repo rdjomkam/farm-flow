@@ -7,7 +7,10 @@ import {
   genererCourbeGompertz,
   projeterDateRecolte,
   isCachedGompertzValid,
+  mergeLockedCurve,
+  buildDisplayCurve,
   type GompertzParams,
+  type LockedCurve,
 } from "@/lib/gompertz";
 import { apiError, handleApiError } from "@/lib/api-utils";
 import { computeVivantsByBac } from "@/lib/calculs";
@@ -47,12 +50,12 @@ export async function GET(
       return apiError(404, "Vague introuvable.");
     }
 
-    // 2. Fetch all BIOMETRIE + MORTALITE + COMPTAGE releves for aggregation
+    // 2. Fetch all relevant releves for aggregation
     const allReleves = await prisma.releve.findMany({
       where: {
         vagueId,
         siteId: auth.activeSiteId,
-        typeReleve: { in: [TypeReleve.BIOMETRIE, TypeReleve.MORTALITE, TypeReleve.COMPTAGE] },
+        typeReleve: { in: [TypeReleve.BIOMETRIE, TypeReleve.MORTALITE, TypeReleve.COMPTAGE, TypeReleve.VENTE] },
       },
       select: {
         typeReleve: true,
@@ -83,6 +86,13 @@ export async function GET(
 
     // biometrieCount = unique dates (not raw releve count)
     const biometrieCount = groupedByDate.size;
+    const vagueStartMs = vague.dateDebut.getTime();
+
+    // Compute the last observation day (latest biometry date as days since vague start)
+    const sortedDateKeys = Array.from(groupedByDate.keys()).sort();
+    const lastObsDay = sortedDateKeys.length > 0
+      ? Math.floor((new Date(sortedDateKeys[sortedDateKeys.length - 1] + "T00:00:00").getTime() - vagueStartMs) / 86400000)
+      : 0;
 
     // Lazy calibration: recalibrate if biometrieCount changed, no record, or config threshold lowered
     const existingGompertz = vague.gompertz;
@@ -98,6 +108,8 @@ export async function GET(
     let rmse: number | null = null;
     let confidenceLevel: string = "INSUFFICIENT_DATA";
     let storedBiometrieCount = biometrieCount;
+    let lockedCurve: LockedCurve | null = (existingGompertz?.lockedCurve as LockedCurve) ?? null;
+    let previousLastObsDay: number | null = existingGompertz?.lastObservationDay ?? null;
 
     if (!needsCalibration && existingGompertz) {
       // Use cached calibration
@@ -112,7 +124,6 @@ export async function GET(
       storedBiometrieCount = existingGompertz.biometrieCount;
     } else if (biometrieCount < minPoints) {
       // Not enough data — return early with INSUFFICIENT_DATA
-      // Still upsert with count=0 or current to track state (only if count changed)
       if (needsCalibration) {
         await prisma.gompertzVague.upsert({
           where: { vagueId },
@@ -145,7 +156,6 @@ export async function GET(
       });
     } else {
       // Build weighted-average points per unique date
-      const vagueStartMs = vague.dateDebut.getTime();
       const points = Array.from(groupedByDate.entries())
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([dateKey, releves]) => {
@@ -173,7 +183,6 @@ export async function GET(
       const result = calibrerGompertz({ points, initialGuess }, minPoints);
 
       if (!result) {
-        // calibrerGompertz returned null (< 5 points after filtering nulls)
         return NextResponse.json({
           vagueId,
           calibration: null,
@@ -182,7 +191,13 @@ export async function GET(
         });
       }
 
-      // Upsert GompertzVague record
+      // Generate fresh curve from new params
+      const freshCurve = genererCourbeGompertz(result.params, 200, 1);
+
+      // Merge locked curve: freeze past predictions, update future ones
+      lockedCurve = mergeLockedCurve(lockedCurve, previousLastObsDay, freshCurve, lastObsDay);
+
+      // Upsert GompertzVague record with locked curve
       await prisma.gompertzVague.upsert({
         where: { vagueId },
         create: {
@@ -196,6 +211,8 @@ export async function GET(
           biometrieCount: result.biometrieCount,
           confidenceLevel: result.confidenceLevel,
           configWInfUsed: configWInf,
+          lockedCurve: lockedCurve,
+          lastObservationDay: lastObsDay,
         },
         update: {
           wInfinity: result.params.wInfinity,
@@ -206,6 +223,8 @@ export async function GET(
           biometrieCount: result.biometrieCount,
           confidenceLevel: result.confidenceLevel,
           configWInfUsed: configWInf,
+          lockedCurve: lockedCurve,
+          lastObservationDay: lastObsDay,
           calculatedAt: new Date(),
         },
       });
@@ -226,10 +245,11 @@ export async function GET(
       });
     }
 
-    // 5. Generate the Gompertz curve (0 to 200 days, step 1)
-    const courbe = genererCourbeGompertz(calibrationParams, 200, 1);
+    // 5. Generate the display curve — locked past + fresh future
+    const freshCurve = genererCourbeGompertz(calibrationParams, 200, 1);
+    const courbe = buildDisplayCurve(lockedCurve, freshCurve, lastObsDay);
 
-    // 6. Project harvest date
+    // 6. Project harvest date (uses latest params for future projection)
     const targetWeight =
       vague.configElevage?.poidsObjectif ?? DEFAULT_TARGET_WEIGHT_G;
 

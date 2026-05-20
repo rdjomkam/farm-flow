@@ -3447,6 +3447,19 @@ model GompertzVague {
    */
   configWInfUsed Float?
 
+  /**
+   * Frozen curve predictions: JSON map { jour: poids } for days ≤ lastObservationDay.
+   * Once a prediction is recorded for a day, it never changes — even after recalibration.
+   * Only predictions for days BEYOND lastObservationDay are regenerated from new params.
+   */
+  lockedCurve Json?
+
+  /**
+   * The latest biometry day (days since vague start) at the time of last calibration.
+   * Predictions for days ≤ this value are frozen in lockedCurve.
+   */
+  lastObservationDay Int?
+
   siteId String
   site   Site   @relation(fields: [siteId], references: [id])
 

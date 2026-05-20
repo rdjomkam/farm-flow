@@ -38,7 +38,7 @@ export default async function NouvelleVentePage({ searchParams }: NouvelleVenteP
         statut: { not: StatutVague.ANNULEE },
       },
       include: {
-        bacs: { select: { nombrePoissons: true } },
+        bacs: { select: { id: true, nom: true, nombrePoissons: true } },
       },
       orderBy: { dateDebut: "desc" },
     }),
@@ -66,6 +66,7 @@ export default async function NouvelleVentePage({ searchParams }: NouvelleVenteP
       0
     ),
     dernierPoidsMoyenG: vaguePoidsMoyens[idx],
+    bacs: v.bacs.map((b) => ({ id: b.id, nom: b.nom, nombrePoissons: b.nombrePoissons ?? 0 })),
   }));
 
   const prefill = params.lotAlevinsId

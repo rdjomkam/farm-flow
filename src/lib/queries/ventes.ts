@@ -170,16 +170,38 @@ export async function createVente(
       orderBy: { nom: "asc" },
     });
 
-    // Calculate total available fish
-    const totalDisponible = bacs.reduce(
-      (sum, bac) => sum + (bac.nombrePoissons ?? 0),
-      0
-    );
+    // Determine actual quantitePoissons and validate stock
+    let finalQuantitePoissons: number;
 
-    if (quantitePoissons > totalDisponible) {
-      throw new Error(
-        `Stock poissons insuffisant. Disponible : ${totalDisponible}, calcule : ${quantitePoissons}`
+    if (data.bacDeductions && data.bacDeductions.length > 0) {
+      // Explicit per-bac deductions: sum of quantities is the actual fish count
+      finalQuantitePoissons = data.bacDeductions.reduce((s, d) => s + d.quantite, 0);
+
+      // Validate each bac exists in this vague and has enough stock
+      for (const deduction of data.bacDeductions) {
+        const bac = bacs.find((b) => b.id === deduction.bacId);
+        if (!bac) {
+          throw new Error(`Bac ${deduction.bacId} introuvable dans la vague`);
+        }
+        const available = bac.nombrePoissons ?? 0;
+        if (deduction.quantite > available) {
+          throw new Error(
+            `Stock insuffisant dans ${bac.nom} : disponible ${available}, demande ${deduction.quantite}`
+          );
+        }
+      }
+    } else {
+      // Proportional distribution: validate total available
+      finalQuantitePoissons = quantitePoissons;
+      const totalDisponible = bacs.reduce(
+        (sum, bac) => sum + (bac.nombrePoissons ?? 0),
+        0
       );
+      if (finalQuantitePoissons > totalDisponible) {
+        throw new Error(
+          `Stock poissons insuffisant. Disponible : ${totalDisponible}, calcule : ${finalQuantitePoissons}`
+        );
+      }
     }
 
     // Generate numero VTE-YYYY-NNN (findFirst+orderBy to avoid race condition)
@@ -195,7 +217,7 @@ export async function createVente(
         numero,
         clientId: data.clientId,
         vagueId: data.vagueId,
-        quantitePoissons,
+        quantitePoissons: finalQuantitePoissons,
         poidsTotalKg: data.poidsTotalKg,
         prixUnitaireKg: data.prixUnitaireKg,
         montantTotal,
@@ -212,41 +234,72 @@ export async function createVente(
       },
     });
 
-    // Deduct fish proportionally from bacs + create VENTE relevés
-    let remaining = quantitePoissons;
-    for (const bac of bacs) {
-      if (remaining <= 0) break;
-      const available = bac.nombrePoissons ?? 0;
-      if (available <= 0) continue;
+    if (data.bacDeductions && data.bacDeductions.length > 0) {
+      // Explicit per-bac deductions
+      for (const deduction of data.bacDeductions) {
+        const bac = bacs.find((b) => b.id === deduction.bacId)!;
+        const available = bac.nombrePoissons ?? 0;
+        const newCount = available - deduction.quantite;
 
-      const toDeduct = Math.min(remaining, available);
-      const newCount = available - toDeduct;
-      await tx.bac.update({
-        where: { id: bac.id },
-        data: { nombrePoissons: newCount },
-      });
-      // ADR-043 Phase 2: dual-write sur AssignationBac
-      await tx.assignationBac.updateMany({
-        where: { bacId: bac.id, vagueId: data.vagueId, dateFin: null },
-        data: { nombreActuel: newCount },
-      });
+        await tx.bac.update({
+          where: { id: bac.id },
+          data: { nombrePoissons: newCount },
+        });
+        await tx.assignationBac.updateMany({
+          where: { bacId: bac.id, vagueId: data.vagueId, dateFin: null },
+          data: { nombreActuel: newCount },
+        });
+        await tx.releve.create({
+          data: {
+            date: venteDate,
+            typeReleve: TypeReleve.VENTE,
+            vagueId: data.vagueId,
+            bacId: bac.id,
+            siteId,
+            userId,
+            nombreVendus: deduction.quantite,
+            venteId: vente.id,
+            notes: `Vente ${numero} — ${deduction.quantite} poissons`,
+          },
+        });
+      }
+    } else {
+      // Deduct fish proportionally from bacs + create VENTE relevés
+      let remaining = finalQuantitePoissons;
+      for (const bac of bacs) {
+        if (remaining <= 0) break;
+        const available = bac.nombrePoissons ?? 0;
+        if (available <= 0) continue;
 
-      // Auto-create VENTE relevé for traceability on vague timeline
-      await tx.releve.create({
-        data: {
-          date: venteDate,
-          typeReleve: TypeReleve.VENTE,
-          vagueId: data.vagueId,
-          bacId: bac.id,
-          siteId,
-          userId,
-          nombreVendus: toDeduct,
-          venteId: vente.id,
-          notes: `Vente ${numero} — ${toDeduct} poissons`,
-        },
-      });
+        const toDeduct = Math.min(remaining, available);
+        const newCount = available - toDeduct;
+        await tx.bac.update({
+          where: { id: bac.id },
+          data: { nombrePoissons: newCount },
+        });
+        // ADR-043 Phase 2: dual-write sur AssignationBac
+        await tx.assignationBac.updateMany({
+          where: { bacId: bac.id, vagueId: data.vagueId, dateFin: null },
+          data: { nombreActuel: newCount },
+        });
 
-      remaining -= toDeduct;
+        // Auto-create VENTE relevé for traceability on vague timeline
+        await tx.releve.create({
+          data: {
+            date: venteDate,
+            typeReleve: TypeReleve.VENTE,
+            vagueId: data.vagueId,
+            bacId: bac.id,
+            siteId,
+            userId,
+            nombreVendus: toDeduct,
+            venteId: vente.id,
+            notes: `Vente ${numero} — ${toDeduct} poissons`,
+          },
+        });
+
+        remaining -= toDeduct;
+      }
     }
 
     return vente;
@@ -316,7 +369,8 @@ export async function updateVente(
     const needsStockAdjust =
       newPoidsTotalKg !== existing.poidsTotalKg ||
       newVagueId !== existing.vagueId ||
-      (dto.poidsMoyenG != null && dto.poidsMoyenG !== 0);
+      (dto.poidsMoyenG != null && dto.poidsMoyenG !== 0) ||
+      (dto.bacDeductions != null && dto.bacDeductions.length > 0);
 
     let newQuantitePoissons = existing.quantitePoissons;
 
@@ -371,119 +425,175 @@ export async function updateVente(
         });
       }
 
-      // --- Step 2: Resolve poidsMoyenG for new vague ---
-      let poidsMoyenG = dto.poidsMoyenG;
-      if (poidsMoyenG == null) {
-        const vagueWithReleves = await tx.vague.findFirst({
-          where: { id: newVagueId, siteId },
-          select: {
-            nombreInitial: true,
-            bacs: { select: { id: true, nombreInitial: true } },
-            releves: {
-              orderBy: { date: "asc" },
-              select: {
-                typeReleve: true,
-                date: true,
-                bacId: true,
-                poidsMoyen: true,
-                nombreMorts: true,
-                nombreVendus: true,
-                nombreCompte: true,
-              },
-            },
-          },
-        });
-
-        if (vagueWithReleves && vagueWithReleves.bacs.length > 0) {
-          const biometriesParBac = new Map<string, number>();
-          for (const r of vagueWithReleves.releves) {
-            if (r.typeReleve === TypeReleve.BIOMETRIE && r.bacId && r.poidsMoyen != null) {
-              biometriesParBac.set(r.bacId, r.poidsMoyen);
-            }
-          }
-
-          if (biometriesParBac.size > 0) {
-            const vivantsByBac = computeVivantsByBac(
-              vagueWithReleves.bacs,
-              vagueWithReleves.releves,
-              vagueWithReleves.nombreInitial
-            );
-            let totalPoidsWeighted = 0;
-            let totalVivantsForWeight = 0;
-            for (const bac of vagueWithReleves.bacs) {
-              const poids = biometriesParBac.get(bac.id);
-              if (poids == null) continue;
-              const vivantsBac = vivantsByBac.get(bac.id) ?? 0;
-              totalPoidsWeighted += poids * vivantsBac;
-              totalVivantsForWeight += vivantsBac;
-            }
-            if (totalVivantsForWeight > 0) {
-              poidsMoyenG = totalPoidsWeighted / totalVivantsForWeight;
-            }
-          }
-        }
-      }
-
-      if (!poidsMoyenG || poidsMoyenG <= 0) {
-        throw new Error(
-          "Aucun poids moyen disponible pour cette vague. Saisissez-le manuellement ou enregistrez une biometrie."
-        );
-      }
-
-      // --- Step 3: Calculate new quantity and deduct from new vague bacs ---
-      newQuantitePoissons = Math.max(
-        1,
-        Math.round((newPoidsTotalKg * 1000) / poidsMoyenG)
-      );
-
       const newBacs = await tx.bac.findMany({
         where: { vagueId: newVagueId, siteId },
         orderBy: { nom: "asc" },
       });
 
-      const totalDisponible = newBacs.reduce(
-        (sum, b) => sum + (b.nombrePoissons ?? 0),
-        0
-      );
+      if (dto.bacDeductions && dto.bacDeductions.length > 0) {
+        // --- Step 2 (explicit): Use per-bac deductions directly ---
+        newQuantitePoissons = dto.bacDeductions.reduce((s, d) => s + d.quantite, 0);
 
-      if (newQuantitePoissons > totalDisponible) {
-        throw new Error(
-          `Stock poissons insuffisant. Disponible : ${totalDisponible}, calcule : ${newQuantitePoissons}`
+        // Validate each bac and available stock
+        for (const deduction of dto.bacDeductions) {
+          const bac = newBacs.find((b) => b.id === deduction.bacId);
+          if (!bac) {
+            throw new Error(`Bac ${deduction.bacId} introuvable dans la vague`);
+          }
+          const available = bac.nombrePoissons ?? 0;
+          if (deduction.quantite > available) {
+            throw new Error(
+              `Stock insuffisant dans ${bac.nom} : disponible ${available}, demande ${deduction.quantite}`
+            );
+          }
+        }
+
+        // --- Step 3 (explicit): Deduct and create relevés ---
+        for (const deduction of dto.bacDeductions) {
+          const bac = newBacs.find((b) => b.id === deduction.bacId)!;
+          const available = bac.nombrePoissons ?? 0;
+          const newCount = available - deduction.quantite;
+
+          await tx.bac.update({
+            where: { id: bac.id },
+            data: { nombrePoissons: newCount },
+          });
+          await tx.assignationBac.updateMany({
+            where: { bacId: bac.id, vagueId: newVagueId, dateFin: null },
+            data: { nombreActuel: newCount },
+          });
+          await tx.releve.create({
+            data: {
+              date: newDateCommande,
+              typeReleve: TypeReleve.VENTE,
+              vagueId: newVagueId,
+              bacId: bac.id,
+              siteId,
+              userId,
+              nombreVendus: deduction.quantite,
+              venteId,
+              notes: `Vente ${existing.numero} — ${deduction.quantite} poissons`,
+            },
+          });
+        }
+      } else {
+        // --- Step 2: Resolve poidsMoyenG for new vague ---
+        let poidsMoyenG = dto.poidsMoyenG;
+        if (poidsMoyenG == null) {
+          const vagueWithReleves = await tx.vague.findFirst({
+            where: { id: newVagueId, siteId },
+            select: {
+              nombreInitial: true,
+              bacs: { select: { id: true, nombreInitial: true } },
+              releves: {
+                orderBy: { date: "asc" },
+                select: {
+                  typeReleve: true,
+                  date: true,
+                  bacId: true,
+                  poidsMoyen: true,
+                  nombreMorts: true,
+                  nombreVendus: true,
+                  nombreCompte: true,
+                },
+              },
+            },
+          });
+
+          if (vagueWithReleves && vagueWithReleves.bacs.length > 0) {
+            const biometriesParBac = new Map<string, number>();
+            for (const r of vagueWithReleves.releves) {
+              if (r.typeReleve === TypeReleve.BIOMETRIE && r.bacId && r.poidsMoyen != null) {
+                biometriesParBac.set(r.bacId, r.poidsMoyen);
+              }
+            }
+
+            if (biometriesParBac.size > 0) {
+              const vivantsByBac = computeVivantsByBac(
+                vagueWithReleves.bacs,
+                vagueWithReleves.releves,
+                vagueWithReleves.nombreInitial
+              );
+              let totalPoidsWeighted = 0;
+              let totalVivantsForWeight = 0;
+              for (const bac of vagueWithReleves.bacs) {
+                const poids = biometriesParBac.get(bac.id);
+                if (poids == null) continue;
+                const vivantsBac = vivantsByBac.get(bac.id) ?? 0;
+                totalPoidsWeighted += poids * vivantsBac;
+                totalVivantsForWeight += vivantsBac;
+              }
+              if (totalVivantsForWeight > 0) {
+                poidsMoyenG = totalPoidsWeighted / totalVivantsForWeight;
+              }
+            }
+          }
+        }
+
+        if (!poidsMoyenG || poidsMoyenG <= 0) {
+          throw new Error(
+            "Aucun poids moyen disponible pour cette vague. Saisissez-le manuellement ou enregistrez une biometrie."
+          );
+        }
+
+        // --- Step 3: Calculate new quantity and deduct proportionally ---
+        newQuantitePoissons = Math.max(
+          1,
+          Math.round((newPoidsTotalKg * 1000) / poidsMoyenG)
         );
+
+        const totalDisponible = newBacs.reduce(
+          (sum, b) => sum + (b.nombrePoissons ?? 0),
+          0
+        );
+
+        if (newQuantitePoissons > totalDisponible) {
+          throw new Error(
+            `Stock poissons insuffisant. Disponible : ${totalDisponible}, calcule : ${newQuantitePoissons}`
+          );
+        }
+
+        let remaining = newQuantitePoissons;
+        for (const bac of newBacs) {
+          if (remaining <= 0) break;
+          const available = bac.nombrePoissons ?? 0;
+          if (available <= 0) continue;
+          const toDeduct = Math.min(remaining, available);
+          const newCount = available - toDeduct;
+          await tx.bac.update({
+            where: { id: bac.id },
+            data: { nombrePoissons: newCount },
+          });
+          await tx.assignationBac.updateMany({
+            where: { bacId: bac.id, vagueId: newVagueId, dateFin: null },
+            data: { nombreActuel: newCount },
+          });
+
+          // Auto-create VENTE relevé for traceability
+          await tx.releve.create({
+            data: {
+              date: newDateCommande,
+              typeReleve: TypeReleve.VENTE,
+              vagueId: newVagueId,
+              bacId: bac.id,
+              siteId,
+              userId,
+              nombreVendus: toDeduct,
+              venteId,
+              notes: `Vente ${existing.numero} — ${toDeduct} poissons`,
+            },
+          });
+
+          remaining -= toDeduct;
+        }
       }
-
-      let remaining = newQuantitePoissons;
-      for (const bac of newBacs) {
-        if (remaining <= 0) break;
-        const available = bac.nombrePoissons ?? 0;
-        if (available <= 0) continue;
-        const toDeduct = Math.min(remaining, available);
-        const newCount = available - toDeduct;
-        await tx.bac.update({
-          where: { id: bac.id },
-          data: { nombrePoissons: newCount },
+    } else {
+      // No stock adjustment needed — but sync VENTE relevé dates if dateCommande changed
+      if (newDateCommande.getTime() !== existing.dateCommande.getTime()) {
+        await tx.releve.updateMany({
+          where: { venteId },
+          data: { date: newDateCommande },
         });
-        await tx.assignationBac.updateMany({
-          where: { bacId: bac.id, vagueId: newVagueId, dateFin: null },
-          data: { nombreActuel: newCount },
-        });
-
-        // Auto-create VENTE relevé for traceability
-        await tx.releve.create({
-          data: {
-            date: newDateCommande,
-            typeReleve: TypeReleve.VENTE,
-            vagueId: newVagueId,
-            bacId: bac.id,
-            siteId,
-            userId,
-            nombreVendus: toDeduct,
-            venteId,
-            notes: `Vente ${existing.numero} — ${toDeduct} poissons`,
-          },
-        });
-
-        remaining -= toDeduct;
       }
     }
 
