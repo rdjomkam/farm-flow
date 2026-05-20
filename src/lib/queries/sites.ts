@@ -105,8 +105,11 @@ export async function updateSite(
 
 /** Ajoute un membre a un site avec un role de site specifique */
 export async function addMember(siteId: string, userId: string, siteRoleId: string) {
-  return prisma.siteMember.create({
+  const created = await prisma.siteMember.create({
     data: { userId, siteId, siteRoleId },
+  });
+  return prisma.siteMember.findUniqueOrThrow({
+    where: { userId_siteId: { userId: created.userId, siteId: created.siteId } },
     include: {
       user: { select: { id: true, name: true, email: true, phone: true } },
       siteRole: true,

@@ -172,7 +172,7 @@ export async function createActivite(
     if (!bac) throw new Error("Bac introuvable");
   }
 
-  return prisma.activite.create({
+  const created = await prisma.activite.create({
     data: {
       titre: data.titre,
       description: data.description ?? null,
@@ -189,6 +189,9 @@ export async function createActivite(
       userId,
       siteId,
     },
+  });
+  return prisma.activite.findUniqueOrThrow({
+    where: { id: created.id },
     include: {
       vague: { select: { id: true, code: true } },
       bac: { select: { id: true, nom: true } },
@@ -410,13 +413,16 @@ export async function completeActivite(
       });
       if (alreadyLinked) throw new Error("Ce releve est deja lie a une autre activite");
 
-      return tx.activite.update({
+      await tx.activite.update({
         where: { id },
         data: {
           statut: StatutActivite.TERMINEE,
           dateTerminee: new Date(),
           releveId: data.releveId,
         },
+      });
+      return tx.activite.findUniqueOrThrow({
+        where: { id },
         include: {
           vague: { select: { id: true, code: true } },
           bac: { select: { id: true, nom: true } },

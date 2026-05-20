@@ -305,7 +305,7 @@ export async function createPonteV2(siteId: string, dto: CreatePonteV2DTO) {
     }
 
     // --- Creation de la ponte ---
-    const ponte = await tx.ponte.create({
+    const ponteRaw = await tx.ponte.create({
       data: {
         code,
         femelleId: femelleId!,
@@ -326,6 +326,9 @@ export async function createPonteV2(siteId: string, dto: CreatePonteV2DTO) {
         notes: dto.notes ?? null,
         siteId,
       },
+    });
+    const ponte = await tx.ponte.findUniqueOrThrow({
+      where: { id: ponteRaw.id },
       include: {
         femelle: { select: { id: true, code: true } },
         male: { select: { id: true, code: true } },
@@ -386,7 +389,7 @@ export async function createPonte(siteId: string, data: CreatePonteDTO) {
     }
   }
 
-  return prisma.ponte.create({
+  const created = await prisma.ponte.create({
     data: {
       code: data.code,
       femelleId: data.femelleId,
@@ -397,6 +400,10 @@ export async function createPonte(siteId: string, data: CreatePonteDTO) {
       notes: data.notes ?? null,
       siteId,
     },
+  });
+
+  return prisma.ponte.findUniqueOrThrow({
+    where: { id: created.id },
     include: {
       femelle: { select: { id: true, code: true } },
       male: { select: { id: true, code: true } },

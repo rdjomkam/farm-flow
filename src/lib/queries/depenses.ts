@@ -130,17 +130,23 @@ export async function createDepense(
     }
 
     // Verify vague belongs to site if provided
+    let resolvedUniteProductionId = data.uniteProductionId ?? null;
     if (data.vagueId) {
       const vague = await tx.vague.findFirst({
         where: { id: data.vagueId, siteId },
+        select: { id: true, uniteProductionId: true },
       });
       if (!vague) throw new Error("Vague introuvable");
+      // Auto-inherit uniteProductionId from vague if not explicitly provided
+      if (!resolvedUniteProductionId && vague.uniteProductionId) {
+        resolvedUniteProductionId = vague.uniteProductionId;
+      }
     }
 
     // Generate numero DEP-YYYY-NNN (findFirst+orderBy to avoid race condition)
     const numero = await generateNextNumero(tx, "depense", "DEP", siteId);
 
-    return tx.depense.create({
+    const created = await tx.depense.create({
       data: {
         numero,
         description: data.description,
@@ -151,9 +157,14 @@ export async function createDepense(
         vagueId: data.vagueId ?? null,
         commandeId: data.commandeId ?? null,
         notes: data.notes ?? null,
+        uniteProductionId: resolvedUniteProductionId,
         userId,
         siteId,
       },
+    });
+
+    return tx.depense.findUniqueOrThrow({
+      where: { id: created.id },
       include: {
         user: { select: { id: true, name: true } },
         commande: { select: { id: true, numero: true } },
@@ -207,6 +218,7 @@ export async function updateDepense(
         }),
         ...(data.vagueId !== undefined && { vagueId: data.vagueId }),
         ...(data.notes !== undefined && { notes: data.notes }),
+        ...(data.uniteProductionId !== undefined && { uniteProductionId: data.uniteProductionId }),
       },
     });
 
@@ -291,7 +303,7 @@ export async function ajouterPaiementDepense(
     }
 
     // Create paiement
-    const paiement = await tx.paiementDepense.create({
+    const paiementCreated = await tx.paiementDepense.create({
       data: {
         depenseId,
         montant: data.montant,
@@ -300,6 +312,9 @@ export async function ajouterPaiementDepense(
         userId,
         siteId,
       },
+    });
+    const paiement = await tx.paiementDepense.findUniqueOrThrow({
+      where: { id: paiementCreated.id },
       include: {
         user: { select: { id: true, name: true } },
         fraisSupp: true,
@@ -495,7 +510,7 @@ export async function ajusterDepense(
     }
 
     // 3. Create AjustementDepense record (R8: siteId)
-    const ajustement = await tx.ajustementDepense.create({
+    const ajustementCreated = await tx.ajustementDepense.create({
       data: {
         depenseId: id,
         montantAvant: depense.montantTotal,
@@ -504,6 +519,9 @@ export async function ajusterDepense(
         userId,
         siteId,
       },
+    });
+    const ajustement = await tx.ajustementDepense.findUniqueOrThrow({
+      where: { id: ajustementCreated.id },
       include: {
         user: { select: { id: true, name: true } },
       },
@@ -642,7 +660,7 @@ export async function ajusterFraisDepense(
     }
 
     // 6. Create AjustementDepense record (audit trail — R8: siteId)
-    const ajustement = await tx.ajustementDepense.create({
+    const ajustementCreated2 = await tx.ajustementDepense.create({
       data: {
         depenseId: id,
         montantAvant,
@@ -657,6 +675,9 @@ export async function ajusterFraisDepense(
           : resultFrais?.id ?? null,  // live record ID for AJOUTE and MODIFIE
         actionFrais: data.action,
       },
+    });
+    const ajustement = await tx.ajustementDepense.findUniqueOrThrow({
+      where: { id: ajustementCreated2.id },
       include: {
         user: { select: { id: true, name: true } },
       },

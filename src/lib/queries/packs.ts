@@ -90,7 +90,7 @@ export async function createPack(data: CreatePackDTO & { userId: string; siteId:
     throw new Error("Le prix total ne peut pas etre negatif.");
   }
 
-  return prisma.pack.create({
+  const created = await prisma.pack.create({
     data: {
       nom: data.nom,
       description: data.description,
@@ -103,6 +103,9 @@ export async function createPack(data: CreatePackDTO & { userId: string; siteId:
       userId: data.userId,
       siteId: data.siteId,
     },
+  });
+  return prisma.pack.findUniqueOrThrow({
+    where: { id: created.id },
     include: {
       configElevage: { select: { id: true, nom: true } },
       user: { select: { id: true, name: true } },
@@ -157,7 +160,7 @@ export async function updatePack(id: string, siteId: string, data: UpdatePackDTO
     }
   }
 
-  return prisma.pack.update({
+  await prisma.pack.update({
     where: { id },
     data: {
       ...(data.nom !== undefined && { nom: data.nom }),
@@ -169,6 +172,9 @@ export async function updatePack(id: string, siteId: string, data: UpdatePackDTO
       ...(data.isActive !== undefined && { isActive: data.isActive }),
       ...(data.planId !== undefined && { planId: data.planId }),
     },
+  });
+  return prisma.pack.findUniqueOrThrow({
+    where: { id },
     include: {
       configElevage: { select: { id: true, nom: true } },
       user: { select: { id: true, name: true } },
@@ -246,13 +252,16 @@ export async function addPackProduit(
     throw new Error("La quantite doit etre superieure a 0.");
   }
 
-  return prisma.packProduit.create({
+  const createdProduit = await prisma.packProduit.create({
     data: {
       packId,
       produitId: data.produitId,
       quantite: data.quantite,
       unite: data.unite ?? null,
     },
+  });
+  return prisma.packProduit.findUniqueOrThrow({
+    where: { id: createdProduit.id },
     include: {
       produit: {
         select: { id: true, nom: true, categorie: true, unite: true, prixUnitaire: true, stockActuel: true },

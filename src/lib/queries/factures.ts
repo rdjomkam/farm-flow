@@ -108,7 +108,8 @@ export async function createFacture(
     // Generate numero FAC-YYYY-NNN (findFirst+orderBy to avoid race condition)
     const numero = await generateNextNumero(tx, "facture", "FAC", siteId);
 
-    return tx.facture.create({
+    // Prisma 7 prisma-client: split write + include into two calls (unchecked vs checked input types)
+    const created = await tx.facture.create({
       data: {
         numero,
         venteId: data.venteId,
@@ -118,6 +119,9 @@ export async function createFacture(
         userId,
         siteId,
       },
+    });
+    return tx.facture.findUniqueOrThrow({
+      where: { id: created.id },
       include: {
         vente: {
           include: {
@@ -213,9 +217,13 @@ export async function regenererFacture(
         ? StatutFacture.PAYEE_PARTIELLEMENT
         : facture.statut;
 
-    return tx.facture.update({
+    // Prisma 7 prisma-client: split write + include into two calls
+    await tx.facture.update({
       where: { id: factureId },
       data: { montantTotal: newMontant, statut: newStatut },
+    });
+    return tx.facture.findUniqueOrThrow({
+      where: { id: factureId },
       include: {
         vente: { include: { client: { select: { id: true, nom: true } } } },
         paiements: { orderBy: { date: "desc" } },
@@ -258,8 +266,8 @@ export async function ajouterPaiement(
     }
 
 
-    // Create paiement
-    const paiement = await tx.paiement.create({
+    // Create paiement — Prisma 7 prisma-client: split write + include into two calls
+    const createdPaiement = await tx.paiement.create({
       data: {
         factureId,
         montant: data.montant,
@@ -268,6 +276,9 @@ export async function ajouterPaiement(
         userId,
         siteId,
       },
+    });
+    const paiement = await tx.paiement.findUniqueOrThrow({
+      where: { id: createdPaiement.id },
       include: {
         user: { select: { id: true, name: true } },
       },

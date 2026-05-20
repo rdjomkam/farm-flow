@@ -108,7 +108,7 @@ export async function createDepenseRecurrente(
     throw new Error("jourDuMois doit etre compris entre 1 et 28.");
   }
 
-  return prisma.depenseRecurrente.create({
+  const created = await prisma.depenseRecurrente.create({
     data: {
       description: data.description,
       categorieDepense: data.categorieDepense,
@@ -116,9 +116,14 @@ export async function createDepenseRecurrente(
       frequence: data.frequence,
       jourDuMois,
       isActive: data.isActive ?? true,
+      uniteProductionId: data.uniteProductionId ?? null,
       userId,
       siteId,
     },
+  });
+
+  return prisma.depenseRecurrente.findUniqueOrThrow({
+    where: { id: created.id },
     include: {
       user: { select: { id: true, name: true } },
     },
@@ -144,6 +149,7 @@ export async function updateDepenseRecurrente(
       ...(data.frequence !== undefined && { frequence: data.frequence }),
       ...(data.jourDuMois !== undefined && { jourDuMois: data.jourDuMois }),
       ...(data.isActive !== undefined && { isActive: data.isActive }),
+      ...(data.uniteProductionId !== undefined && { uniteProductionId: data.uniteProductionId }),
     },
   });
 

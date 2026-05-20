@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { StatutLotAlevins, StatutVague, PhaseLot, DestinationLot } from "@/types";
+import { StatutLotAlevins, StatutVague, PhaseLot, DestinationLot, TypeUniteProduction } from "@/types";
 import type {
   CreateLotAlevinsDTO,
   UpdateLotAlevinsDTO,
@@ -114,7 +114,7 @@ export async function createLotAlevins(
   const nombreActuel =
     data.nombreActuel !== undefined ? data.nombreActuel : data.nombreInitial;
 
-  return prisma.lotAlevins.create({
+  const created = await prisma.lotAlevins.create({
     data: {
       code: data.code,
       ponteId: data.ponteId,
@@ -126,6 +126,9 @@ export async function createLotAlevins(
       notes: data.notes ?? null,
       siteId,
     },
+  });
+  return prisma.lotAlevins.findUniqueOrThrow({
+    where: { id: created.id },
     include: {
       ponte: { select: { id: true, code: true } },
       bac: { select: { id: true, nom: true } },
@@ -260,6 +263,17 @@ export async function transfererLotVersVague(
       },
     });
 
+    // Auto-assign to GROSSISSEMENT unit if one exists
+    const grossUnit = await tx.uniteProduction.findFirst({
+      where: { siteId, type: TypeUniteProduction.GROSSISSEMENT, isActive: true },
+    });
+    if (grossUnit) {
+      await tx.vague.update({
+        where: { id: nouvelleVague.id },
+        data: { uniteProductionId: grossUnit.id },
+      });
+    }
+
     // 4. Assigner les bacs a la vague (backward compat: écrire sur Bac)
     await tx.bac.updateMany({
       where: { id: { in: vagueData.bacIds }, siteId },
@@ -283,13 +297,17 @@ export async function transfererLotVersVague(
     }
 
     // 5. Mettre a jour le lot : statut TRANSFERE, vagueDestinationId, dateTransfert
-    const lotMisAJour = await tx.lotAlevins.update({
+    await tx.lotAlevins.update({
       where: { id: lotId },
       data: {
         statut: StatutLotAlevins.TRANSFERE,
         vagueDestinationId: nouvelleVague.id,
         dateTransfert: new Date(),
       },
+    });
+
+    return tx.lotAlevins.findUniqueOrThrow({
+      where: { id: lotId },
       include: {
         ponte: { select: { id: true, code: true } },
         bac: { select: { id: true, nom: true } },
@@ -300,8 +318,6 @@ export async function transfererLotVersVague(
         },
       },
     });
-
-    return lotMisAJour;
   });
 }
 
@@ -492,7 +508,7 @@ export async function createLot(siteId: string, dto: CreateLotAlevinsDTO) {
   const nombreActuel =
     dto.nombreActuel !== undefined ? dto.nombreActuel : dto.nombreInitial;
 
-  return prisma.lotAlevins.create({
+  const created = await prisma.lotAlevins.create({
     data: {
       code: dto.code,
       ponteId: dto.ponteId,
@@ -511,6 +527,9 @@ export async function createLot(siteId: string, dto: CreateLotAlevinsDTO) {
       poidsObjectifG: dto.poidsObjectifG ?? null,
       siteId,
     },
+  });
+  return prisma.lotAlevins.findUniqueOrThrow({
+    where: { id: created.id },
     include: {
       ponte: { select: { id: true, code: true } },
       bac: { select: { id: true, nom: true } },

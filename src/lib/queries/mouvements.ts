@@ -102,7 +102,8 @@ export async function createMouvement(
     }
 
     // Create mouvement (record keeps original quantity in purchase unit)
-    const mouvement = await tx.mouvementStock.create({
+    // Split create + findUniqueOrThrow to avoid Prisma 7 unchecked/checked input conflict
+    const created = await tx.mouvementStock.create({
       data: {
         produitId: data.produitId,
         type: data.type,
@@ -117,10 +118,6 @@ export async function createMouvement(
         lotFabrication: data.lotFabrication ?? null,
         siteId,
       },
-      include: {
-        produit: { select: { id: true, nom: true, unite: true, uniteAchat: true, contenance: true } },
-        user: { select: { id: true, name: true } },
-      },
     });
 
     // Update stock (use converted base quantity for ENTREE, raw for SORTIE)
@@ -130,6 +127,12 @@ export async function createMouvement(
       data: { stockActuel: { increment: delta } },
     });
 
-    return mouvement;
+    return tx.mouvementStock.findUniqueOrThrow({
+      where: { id: created.id },
+      include: {
+        produit: { select: { id: true, nom: true, unite: true, uniteAchat: true, contenance: true } },
+        user: { select: { id: true, name: true } },
+      },
+    });
   });
 }

@@ -469,12 +469,15 @@ export async function approuverBesoins(
     if (!liste) throw new Error("Liste de besoins introuvable");
     verifierTransition(liste.statut, StatutBesoins.APPROUVEE);
 
-    return tx.listeBesoins.update({
+    await tx.listeBesoins.update({
       where: { id },
       data: {
         statut: StatutBesoins.APPROUVEE,
         valideurId,
       },
+    });
+    return tx.listeBesoins.findUniqueOrThrow({
+      where: { id },
       include: INCLUDE_LISTE_BESOINS,
     });
   });
@@ -494,13 +497,16 @@ export async function rejeterBesoins(
     if (!liste) throw new Error("Liste de besoins introuvable");
     verifierTransition(liste.statut, StatutBesoins.REJETEE);
 
-    return tx.listeBesoins.update({
+    await tx.listeBesoins.update({
       where: { id },
       data: {
         statut: StatutBesoins.REJETEE,
         valideurId,
         motifRejet: motif ?? null,
       },
+    });
+    return tx.listeBesoins.findUniqueOrThrow({
+      where: { id },
       include: INCLUDE_LISTE_BESOINS,
     });
   });
@@ -623,7 +629,7 @@ export async function traiterBesoins(
       const numeroCmd = `CMD-${annee}-${String(seqCmd).padStart(3, "0")}`;
       seqCmd++;
 
-      const commande = await tx.commande.create({
+      const commandeCreated = await tx.commande.create({
         data: {
           numero: numeroCmd,
           fournisseurId,
@@ -641,6 +647,9 @@ export async function traiterBesoins(
             })),
           },
         },
+      });
+      const commande = await tx.commande.findUniqueOrThrow({
+        where: { id: commandeCreated.id },
         include: { lignes: { select: { id: true, produitId: true } } },
       });
 
@@ -939,7 +948,7 @@ export async function creerCommandeDepuisBesoin(
         const numeroCmd = `CMD-${annee}-${String(seqCmd).padStart(3, "0")}`;
         seqCmd++;
 
-        const commande = await tx.commande.create({
+        const commandeCreated2 = await tx.commande.create({
           data: {
             numero: numeroCmd,
             fournisseurId,
@@ -957,6 +966,9 @@ export async function creerCommandeDepuisBesoin(
               })),
             },
           },
+        });
+        const commande = await tx.commande.findUniqueOrThrow({
+          where: { id: commandeCreated2.id },
           include: { lignes: { select: { id: true, produitId: true } } },
         });
 

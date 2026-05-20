@@ -89,7 +89,7 @@ export async function createNote(
       throw new Error("La note parente est introuvable.");
     }
 
-    return prisma.noteIngenieur.create({
+    const createdReply = await prisma.noteIngenieur.create({
       data: {
         titre: data.titre?.trim() ? data.titre.trim() : `Re: ${parent.titre}`,
         contenu: data.contenu.trim(),
@@ -103,6 +103,9 @@ export async function createNote(
         siteId,
         replyToId: data.replyToId,
       },
+    });
+    return prisma.noteIngenieur.findUniqueOrThrow({
+      where: { id: createdReply.id },
       include: noteInclude,
     });
   }
@@ -134,7 +137,7 @@ export async function createNote(
     }
   }
 
-  return prisma.noteIngenieur.create({
+  const createdRoot = await prisma.noteIngenieur.create({
     data: {
       titre: data.titre.trim(),
       contenu: data.contenu.trim(),
@@ -148,6 +151,9 @@ export async function createNote(
       siteId,
       replyToId: null,
     },
+  });
+  return prisma.noteIngenieur.findUniqueOrThrow({
+    where: { id: createdRoot.id },
     include: noteInclude,
   });
 }
@@ -361,7 +367,7 @@ export async function createObservationClient(
       throw new Error("La note parente est introuvable.");
     }
 
-    return prisma.noteIngenieur.create({
+    const createdObsReply = await prisma.noteIngenieur.create({
       data: {
         titre: data.titre,
         contenu: data.contenu,
@@ -376,12 +382,15 @@ export async function createObservationClient(
         vagueId: parent.vagueId,
         replyToId: data.replyToId,
       },
+    });
+    return prisma.noteIngenieur.findUniqueOrThrow({
+      where: { id: createdObsReply.id },
       include: noteInclude,
     });
   }
 
   // --- Root observation path ---
-  return prisma.noteIngenieur.create({
+  const createdObsRoot = await prisma.noteIngenieur.create({
     data: {
       titre: data.titre,
       contenu: data.contenu,
@@ -399,6 +408,9 @@ export async function createObservationClient(
       vagueId: data.vagueId ?? null,
       replyToId: null,
     },
+  });
+  return prisma.noteIngenieur.findUniqueOrThrow({
+    where: { id: createdObsRoot.id },
     include: noteInclude,
   });
 }

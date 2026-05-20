@@ -151,7 +151,7 @@ export async function createLotGeniteurs(
     throw new Error(`Le code "${code}" est déjà utilisé`);
   }
 
-  return prisma.lotGeniteurs.create({
+  const created = await prisma.lotGeniteurs.create({
     data: {
       code,
       nom: dto.nom,
@@ -176,6 +176,10 @@ export async function createLotGeniteurs(
       notes: dto.notes ?? null,
       siteId,
     },
+  });
+
+  return prisma.lotGeniteurs.findUniqueOrThrow({
+    where: { id: created.id },
     include: {
       bac: { select: { id: true, nom: true, volume: true } },
       _count: {

@@ -163,7 +163,7 @@ export async function createCommande(
     const numero = await generateNextNumero(tx, "commande", "CMD", siteId);
 
     // Create commande + lignes
-    return tx.commande.create({
+    const created = await tx.commande.create({
       data: {
         numero,
         fournisseurId: data.fournisseurId,
@@ -179,6 +179,9 @@ export async function createCommande(
           })),
         },
       },
+    });
+    return tx.commande.findUniqueOrThrow({
+      where: { id: created.id },
       include: {
         fournisseur: { select: { id: true, nom: true } },
         lignes: {
@@ -204,9 +207,12 @@ export async function envoyerCommande(id: string, siteId: string) {
       );
     }
 
-    return tx.commande.update({
+    await tx.commande.update({
       where: { id: commande.id },
       data: { statut: StatutCommande.ENVOYEE },
+    });
+    return tx.commande.findUniqueOrThrow({
+      where: { id: commande.id },
       include: {
         fournisseur: { select: { id: true, nom: true } },
         _count: { select: { lignes: true } },
@@ -373,13 +379,16 @@ export async function recevoirCommande(
       ? StatutCommande.LIVREE
       : StatutCommande.LIVREE_PARTIELLEMENT;
 
-    const commandeMiseAJour = await tx.commande.update({
+    await tx.commande.update({
       where: { id: commande.id },
       data: {
         statut: nouveauStatut,
         dateLivraison: livraisonDate,
         montantRecu: montantRecuCumul,
       },
+    });
+    const commandeMiseAJour = await tx.commande.findUniqueOrThrow({
+      where: { id: commande.id },
       include: {
         fournisseur: { select: { id: true, nom: true } },
         lignes: {
@@ -525,9 +534,12 @@ export async function annulerCommande(id: string, siteId: string) {
       }
     }
 
-    return tx.commande.update({
+    await tx.commande.update({
       where: { id: commande.id },
       data: { statut: StatutCommande.ANNULEE },
+    });
+    return tx.commande.findUniqueOrThrow({
+      where: { id: commande.id },
       include: {
         fournisseur: { select: { id: true, nom: true } },
       },
@@ -550,12 +562,15 @@ export async function cloturerCommande(id: string, siteId: string) {
       );
     }
 
-    return tx.commande.update({
+    await tx.commande.update({
       where: { id: commande.id },
       data: {
         statut: StatutCommande.LIVREE,
         dateLivraison: new Date(),
       },
+    });
+    return tx.commande.findUniqueOrThrow({
+      where: { id: commande.id },
       include: {
         fournisseur: { select: { id: true, nom: true } },
         lignes: {

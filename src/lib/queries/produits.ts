@@ -81,7 +81,8 @@ export async function createProduit(siteId: string, data: CreateProduitDTO) {
     if (!fournisseur) throw new Error("Fournisseur introuvable");
   }
 
-  return prisma.produit.create({
+  // Split create + findUniqueOrThrow to avoid Prisma 7 unchecked/checked input conflict
+  const created = await prisma.produit.create({
     data: {
       nom: data.nom,
       categorie: data.categorie,
@@ -99,6 +100,10 @@ export async function createProduit(siteId: string, data: CreateProduitDTO) {
       phasesCibles: data.phasesCibles ?? [],
       siteId,
     },
+  });
+
+  return prisma.produit.findUniqueOrThrow({
+    where: { id: created.id },
     include: {
       fournisseur: { select: { id: true, nom: true } },
     },

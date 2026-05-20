@@ -193,7 +193,7 @@ export async function createCalibrage(
 
     // 6. Create Calibrage with nested CalibrageGroupe records
     const calibrageDate = data.date ? new Date(data.date) : new Date();
-    const calibrage = await tx.calibrage.create({
+    const calibrageRaw = await tx.calibrage.create({
       data: {
         vagueId: data.vagueId,
         sourceBacIds: data.sourceBacIds,
@@ -213,6 +213,9 @@ export async function createCalibrage(
           })),
         },
       },
+    });
+    const calibrage = await tx.calibrage.findUniqueOrThrow({
+      where: { id: calibrageRaw.id },
       include: {
         vague: { select: { id: true, code: true } },
         user: { select: { id: true, name: true } },

@@ -26,6 +26,7 @@ export async function getVagues(
             assignations: { where: { dateFin: null } },
           },
         },
+        uniteProduction: { select: { id: true, code: true, nom: true, type: true } },
       },
       orderBy: { dateDebut: "desc" },
       take: limit,
@@ -51,6 +52,7 @@ export async function getVagueById(
         include: { bac: { select: { id: true, nom: true, volume: true, nombreInitial: true, poidsMoyenInitial: true, nombrePoissons: true } } },
         orderBy: { dateAssignation: "asc" },
       },
+      uniteProduction: { select: { id: true, code: true, nom: true, type: true } },
     },
   });
 
@@ -100,6 +102,7 @@ export async function getVagueByIdWithReleves(
           // utilise la distribution réelle par bac (et non la répartition uniforme).
           include: { bac: { select: { id: true, nom: true, volume: true, nombreInitial: true, poidsMoyenInitial: true, nombrePoissons: true } } },
         },
+        uniteProduction: { select: { id: true, code: true, nom: true, type: true } },
       },
     }),
     prisma.releve.findMany({
@@ -179,6 +182,7 @@ export async function createVague(siteId: string, data: CreateVagueDTO) {
         origineAlevins: data.origineAlevins ?? null,
         configElevageId: data.configElevageId,
         poidsObjectifKg: data.poidsObjectifKg ?? null,
+        uniteProductionId: data.uniteProductionId ?? null,
         siteId,
       },
     });
@@ -603,7 +607,7 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
     }
 
     // Mettre a jour les champs simples
-    return tx.vague.update({
+    await tx.vague.update({
       where: { id },
       data: {
         ...(data.statut && { statut: data.statut }),
@@ -613,7 +617,11 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
         ...(data.origineAlevins !== undefined && { origineAlevins: data.origineAlevins }),
         ...(data.configElevageId !== undefined && { configElevageId: data.configElevageId }),
         ...(data.poidsObjectifKg !== undefined && { poidsObjectifKg: data.poidsObjectifKg }),
+        ...(data.uniteProductionId !== undefined && { uniteProductionId: data.uniteProductionId }),
       },
+    });
+    return tx.vague.findUniqueOrThrow({
+      where: { id },
       include: {
         _count: {
           select: {

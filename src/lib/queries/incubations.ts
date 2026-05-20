@@ -211,7 +211,7 @@ export async function createIncubation(
     dateEclosionPrevue = new Date(dto.dateEclosionPrevue);
   }
 
-  return prisma.incubation.create({
+  const created = await prisma.incubation.create({
     data: {
       code,
       ponteId: dto.ponteId,
@@ -225,6 +225,10 @@ export async function createIncubation(
       notes: dto.notes ?? null,
       siteId,
     },
+  });
+
+  return prisma.incubation.findUniqueOrThrow({
+    where: { id: created.id },
     include: {
       ponte: {
         select: { id: true, code: true, datePonte: true, statut: true },

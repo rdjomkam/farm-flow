@@ -34,7 +34,7 @@ export async function createSiteRole(
   siteId: string,
   data: { name: string; description?: string; permissions: Permission[] }
 ) {
-  return prisma.siteRole.create({
+  const created = await prisma.siteRole.create({
     data: {
       name: data.name,
       description: data.description ?? null,
@@ -42,6 +42,9 @@ export async function createSiteRole(
       isSystem: false,
       siteId,
     },
+  });
+  return prisma.siteRole.findUniqueOrThrow({
+    where: { id: created.id },
     include: { _count: { select: { members: true } } },
   });
 }
