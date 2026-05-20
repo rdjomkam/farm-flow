@@ -171,6 +171,7 @@ export function VenteDetailClient({ vente, permissions, clients = [], vagues = [
     if (result.ok) {
       queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.factures.all });
+      router.refresh();
     }
   }
 

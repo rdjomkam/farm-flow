@@ -90,7 +90,7 @@ interface FactureData {
       telephone: string | null;
       email: string | null;
     };
-    vague: { id: string; code: string };
+    vague: { id: string; code: string } | null;
   };
   user: { id: string; name: string };
   paiements: PaiementData[];
@@ -258,7 +258,7 @@ export function FactureDetailClient({ facture, permissions }: Props) {
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Waves className="h-4 w-4 shrink-0" />
-              <span>{facture.vente.vague.code} — {facture.vente.numero}</span>
+              <span>{facture.vente.vague ? `${facture.vente.vague.code} — ` : ""}{facture.vente.numero}</span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Calendar className="h-4 w-4 shrink-0" />
