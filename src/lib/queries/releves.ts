@@ -191,7 +191,7 @@ export async function createReleve(siteId: string, userId: string, data: CreateR
         where: { bacId: data.bacId!, vagueId: data.vagueId!, dateFin: null },
       });
 
-      if (!assignationActive && bac.vagueId !== data.vagueId) {
+      if (!assignationActive) {
         throw new Error("Ce bac n'appartient pas a la vague selectionnee");
       }
 
@@ -322,22 +322,16 @@ export async function createReleve(siteId: string, userId: string, data: CreateR
       }
     }
 
-    // Decrement fish count on mortality
-    if (data.typeReleve === TypeReleveEnum.MORTALITE && data.bacId && data.nombreMorts) {
-      await tx.bac.update({
-        where: { id: data.bacId },
-        data: { nombrePoissons: { decrement: data.nombreMorts } },
+    // Decrement fish count on mortality — ADR-043 Phase 3: AssignationBac only
+    if (data.typeReleve === TypeReleveEnum.MORTALITE && data.bacId && data.nombreMorts && data.vagueId) {
+      const activeAssignation = await tx.assignationBac.findFirst({
+        where: { bacId: data.bacId, vagueId: data.vagueId, dateFin: null },
       });
-      if (data.vagueId) {
-        const activeAssignation = await tx.assignationBac.findFirst({
-          where: { bacId: data.bacId, vagueId: data.vagueId, dateFin: null },
+      if (activeAssignation) {
+        await tx.assignationBac.update({
+          where: { id: activeAssignation.id },
+          data: { nombreActuel: { decrement: data.nombreMorts } },
         });
-        if (activeAssignation) {
-          await tx.assignationBac.update({
-            where: { id: activeAssignation.id },
-            data: { nombreActuel: { decrement: data.nombreMorts } },
-          });
-        }
       }
     }
 
@@ -563,11 +557,15 @@ export async function getPoidsMoyenActuelVague(
 ): Promise<number | null> {
   const { computeVivantsByBac } = await import("@/lib/calculs");
 
+  // ADR-043 Phase 3 : source bacs from AssignationBac, not Vague.bacs
   const vague = await prisma.vague.findFirst({
     where: { id: vagueId, siteId },
     select: {
       nombreInitial: true,
-      bacs: { select: { id: true, nombreInitial: true } },
+      assignations: {
+        where: { dateFin: null },
+        select: { bac: { select: { id: true } }, nombreInitial: true },
+      },
       releves: {
         orderBy: { date: "asc" },
         select: {
@@ -583,7 +581,12 @@ export async function getPoidsMoyenActuelVague(
     },
   });
 
-  if (!vague || vague.bacs.length === 0) return null;
+  const bacs = vague?.assignations.map((a) => ({
+    id: a.bac.id,
+    nombreInitial: a.nombreInitial,
+  })) ?? [];
+
+  if (!vague || bacs.length === 0) return null;
 
   const biometriesParBac = new Map<string, number>();
   for (const r of vague.releves) {
@@ -594,11 +597,11 @@ export async function getPoidsMoyenActuelVague(
 
   if (biometriesParBac.size === 0) return null;
 
-  const vivantsByBac = computeVivantsByBac(vague.bacs, vague.releves, vague.nombreInitial);
+  const vivantsByBac = computeVivantsByBac(bacs, vague.releves, vague.nombreInitial);
 
   let totalPoidsWeighted = 0;
   let totalVivantsForWeight = 0;
-  for (const bac of vague.bacs) {
+  for (const bac of bacs) {
     const poids = biometriesParBac.get(bac.id);
     if (poids == null) continue;
     const vivantsBac = vivantsByBac.get(bac.id) ?? 0;

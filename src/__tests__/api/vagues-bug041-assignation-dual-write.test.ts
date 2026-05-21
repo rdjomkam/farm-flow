@@ -141,6 +141,8 @@ describe("BUG-041 — POST /api/vagues dual-write AssignationBac (ADR-043 Phase 
           update: (...args: unknown[]) => mockPrismaBacUpdate(...args),
         },
         assignationBac: {
+          // ADR-043 Phase 3: findMany used to check occupation before creating
+          findMany: vi.fn().mockResolvedValue([]),
           create: (...args: unknown[]) => mockAssignationBacCreate(...args),
         },
       };
@@ -167,6 +169,7 @@ describe("BUG-041 — POST /api/vagues dual-write AssignationBac (ADR-043 Phase 
       updatedAt: now,
     });
 
+    // ADR-043 Phase 3: vague.findUnique retourne assignations (plus bacs)
     mockPrismaVagueFindUnique.mockImplementation(({ where }: { where: { code?: string; id?: string } }) => {
       if (where.id) {
         return Promise.resolve({
@@ -180,9 +183,10 @@ describe("BUG-041 — POST /api/vagues dual-write AssignationBac (ADR-043 Phase 
           origineAlevins: null,
           createdAt: now,
           updatedAt: now,
-          bacs: [
-            { id: "bac-a", nom: "Etang A", nombrePoissons: 600, nombreInitial: 600, poidsMoyenInitial: 5.0 },
-            { id: "bac-b", nom: "Etang B", nombrePoissons: 400, nombreInitial: 400, poidsMoyenInitial: 5.0 },
+          // ADR-043 Phase 3: assignations actives (plus bacs)
+          assignations: [
+            { id: "assign-bac-a", bacId: "bac-a", vagueId: "vague-041", dateFin: null, nombreInitial: 600, nombreActuel: 600, poidsMoyenInitial: 5.0, bac: { id: "bac-a", nom: "Etang A", volume: 1000 } },
+            { id: "assign-bac-b", bacId: "bac-b", vagueId: "vague-041", dateFin: null, nombreInitial: 400, nombreActuel: 400, poidsMoyenInitial: 5.0, bac: { id: "bac-b", nom: "Etang B", volume: 800 } },
           ],
         });
       }
@@ -212,13 +216,14 @@ describe("BUG-041 — POST /api/vagues dual-write AssignationBac (ADR-043 Phase 
     }));
     const data = await response.json();
 
-    // Le POST réussit et renvoie nombreBacs = 2 (lu depuis vague.bacs.length).
+    // Le POST réussit et renvoie nombreBacs = 2 (lu depuis vague.assignations.length).
     expect(response.status).toBe(201);
     expect(data.nombreBacs).toBe(2);
 
-    // Cœur de la non-régression : dual-write AssignationBac.
+    // Cœur de la non-régression : AssignationBac.create appelé pour chaque bac.
     expect(mockAssignationBacCreate).toHaveBeenCalledTimes(2);
 
+    // ADR-043 Phase 3: le DTO utilise nombreActuel (pas nombrePoissons)
     expect(mockAssignationBacCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -227,7 +232,7 @@ describe("BUG-041 — POST /api/vagues dual-write AssignationBac (ADR-043 Phase 
           siteId: "site-1",
           dateFin: null,
           nombreInitial: 600,
-          nombrePoissons: 600,
+          nombreActuel: 600,
           poidsMoyenInitial: 5.0,
         }),
       })
@@ -241,7 +246,7 @@ describe("BUG-041 — POST /api/vagues dual-write AssignationBac (ADR-043 Phase 
           siteId: "site-1",
           dateFin: null,
           nombreInitial: 400,
-          nombrePoissons: 400,
+          nombreActuel: 400,
           poidsMoyenInitial: 5.0,
         }),
       })

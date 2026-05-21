@@ -23,17 +23,23 @@ export async function GET(
     const auth = await requirePermission(request, Permission.VAGUES_VOIR);
     const { id } = await params;
 
-    // Charger la vague avec tous ses bacs et releves
-    const vague = await prisma.vague.findFirst({
+    // Charger la vague avec ses assignations actives et releves
+    // ADR-043 Phase 3: on lit nombreInitial depuis AssignationBac (source de vérité)
+    const vagueRaw = await prisma.vague.findFirst({
       where: { id, siteId: auth.activeSiteId },
       include: {
-        bacs: {
+        assignations: {
+          where: { dateFin: null },
           select: {
-            id: true,
-            nom: true,
-            volume: true,
             nombreInitial: true,
-            typeSysteme: true,
+            bac: {
+              select: {
+                id: true,
+                nom: true,
+                volume: true,
+                typeSysteme: true,
+              },
+            },
           },
         },
         releves: {
@@ -51,15 +57,24 @@ export async function GET(
       },
     });
 
-    if (!vague) {
+    if (!vagueRaw) {
       return apiError(404, "Vague introuvable.");
     }
 
-    if (vague.bacs.length === 0) {
+    // Construire la liste de bacs depuis les assignations actives
+    const vagueBacs = vagueRaw.assignations.map((a) => ({
+      id: a.bac.id,
+      nom: a.bac.nom,
+      volume: a.bac.volume,
+      nombreInitial: a.nombreInitial,
+      typeSysteme: a.bac.typeSysteme,
+    }));
+
+    if (vagueBacs.length === 0) {
       return NextResponse.json({ densites: [] });
     }
 
-    const relevesAdaptes = vague.releves.map((r) => ({
+    const relevesAdaptes = vagueRaw.releves.map((r) => ({
       bacId: r.bacId ?? null,
       typeReleve: r.typeReleve,
       nombreMorts: r.nombreMorts ?? null,
@@ -68,7 +83,7 @@ export async function GET(
       date: r.date,
     }));
 
-    const allBacsSimple = vague.bacs.map((b) => ({
+    const allBacsSimple = vagueBacs.map((b) => ({
       id: b.id,
       nombreInitial: b.nombreInitial,
     }));
@@ -77,12 +92,12 @@ export async function GET(
     const configElevage = await getConfigElevageDefaut(auth.activeSiteId);
     const configPourSeuils = configElevage ?? CONFIG_ELEVAGE_DEFAULTS;
 
-    const densites: BacDensiteResponse[] = vague.bacs.map((bac) => {
+    const densites: BacDensiteResponse[] = vagueBacs.map((bac) => {
       const densiteKgM3 = calculerDensiteBac(
         { id: bac.id, volume: bac.volume, nombreInitial: bac.nombreInitial },
         allBacsSimple,
         relevesAdaptes,
-        vague.nombreInitial
+        vagueRaw.nombreInitial
       );
 
       const statut = getStatutDensite(

@@ -22,6 +22,7 @@ const mockBacFindUnique = vi.fn();
 const mockBacUpdate = vi.fn();
 const mockBacUpdateMany = vi.fn();
 const mockCalibrageCreate = vi.fn();
+const mockAssignationBacFindMany = vi.fn();
 const mockAssignationBacFindFirst = vi.fn();
 const mockAssignationBacUpdate = vi.fn();
 const mockAssignationBacUpdateMany = vi.fn();
@@ -38,8 +39,13 @@ const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
       update: (...args: unknown[]) => mockBacUpdate(...args),
       updateMany: (...args: unknown[]) => mockBacUpdateMany(...args),
     },
-    calibrage: { create: (...args: unknown[]) => mockCalibrageCreate(...args) },
+    calibrage: {
+      create: (...args: unknown[]) => mockCalibrageCreate(...args),
+      findUniqueOrThrow: (...args: unknown[]) => mockCalibrageCreate(...args),
+    },
     assignationBac: {
+      // ADR-043 Phase 3: findMany needed for source/dest/all bacs lookups
+      findMany: (...args: unknown[]) => mockAssignationBacFindMany(...args),
       findFirst: (...args: unknown[]) => mockAssignationBacFindFirst(...args),
       update: (...args: unknown[]) => mockAssignationBacUpdate(...args),
       updateMany: (...args: unknown[]) => mockAssignationBacUpdateMany(...args),
@@ -98,6 +104,32 @@ const bacDest = {
   siteId: SITE_ID,
 };
 
+/** AssignationBac active pour le bac source (nombreActuel = 5048, stale vs mortalites) */
+const assignationBacSrc = {
+  id: "assignation-src-001",
+  bacId: BAC_SRC,
+  vagueId: VAGUE_ID,
+  siteId: SITE_ID,
+  dateFin: null,
+  nombreActuel: 5048,
+  nombreInitial: 5048,
+  poidsMoyenInitial: 50,
+  bac: { id: BAC_SRC, nom: "Bac source" },
+};
+
+/** AssignationBac active pour le bac destination */
+const assignationBacDest = {
+  id: "assignation-dest-001",
+  bacId: BAC_DEST,
+  vagueId: VAGUE_ID,
+  siteId: SITE_ID,
+  dateFin: null,
+  nombreActuel: 0,
+  nombreInitial: null,
+  poidsMoyenInitial: null,
+  bac: { id: BAC_DEST, nom: "Bac dest" },
+};
+
 const fakeCalibrageCreated = {
   id: "calibrage-bug048",
   vagueId: VAGUE_ID,
@@ -151,6 +183,21 @@ function setupHappyPathMocks() {
   mockReleveCreate.mockResolvedValue({});
 }
 
+/**
+ * Configure mockAssignationBacFindMany pour les 4 appels dans createCalibrage :
+ * 1. source validation
+ * 2. dest validation
+ * 3. all bacs for computeVivantsByBac (conservation)
+ * 4. snapshot
+ */
+function setupAssignationBacFindMany() {
+  mockAssignationBacFindMany
+    .mockResolvedValueOnce([assignationBacSrc])                    // 1. source validation
+    .mockResolvedValueOnce([{ bacId: BAC_DEST }])                  // 2. dest validation
+    .mockResolvedValueOnce([{ bacId: BAC_SRC, nombreInitial: 5048 }]) // 3. vivants
+    .mockResolvedValueOnce([assignationBacSrc, assignationBacDest]); // 4. snapshot
+}
+
 describe("createCalibrage — BUG-048 : conservation basee sur computeVivantsByBac", () => {
   beforeEach(() => {
     // resetAllMocks() vide aussi les queues mockResolvedValueOnce (clearAllMocks ne le fait pas)
@@ -159,12 +206,8 @@ describe("createCalibrage — BUG-048 : conservation basee sur computeVivantsByB
 
   it("accepte un calibrage qui redistribue exactement les vivants reels (apres mortalites)", async () => {
     setupHappyPathMocks();
-    // tx.bac.findMany : sources, destinations, allBacsVague (vivants), snapshot
-    mockBacFindMany
-      .mockResolvedValueOnce([bacSource])
-      .mockResolvedValueOnce([bacDest])
-      .mockResolvedValueOnce([bacSource, bacDest])
-      .mockResolvedValueOnce([bacSource, bacDest]);
+    // tx.assignationBac.findMany : sources, destinations, allBacsVague (vivants), snapshot
+    setupAssignationBacFindMany();
     // 44 mortalites enregistrees → vivants = 5048 - 44 = 5004
     mockReleveFindMany.mockResolvedValue(relevesAvecMortalites(44));
 
@@ -176,11 +219,7 @@ describe("createCalibrage — BUG-048 : conservation basee sur computeVivantsByB
 
   it("rejette un calibrage qui se base sur Bac.nombrePoissons stale (ignore les mortalites)", async () => {
     setupHappyPathMocks();
-    mockBacFindMany
-      .mockResolvedValueOnce([bacSource])
-      .mockResolvedValueOnce([bacDest])
-      .mockResolvedValueOnce([bacSource, bacDest])
-      .mockResolvedValueOnce([bacSource, bacDest]);
+    setupAssignationBacFindMany();
     mockReleveFindMany.mockResolvedValue(relevesAvecMortalites(44));
 
     // Le DTO redistribue 5048 (valeur stale) → conservation doit rejeter
@@ -191,11 +230,7 @@ describe("createCalibrage — BUG-048 : conservation basee sur computeVivantsByB
 
   it("rejette un calibrage dont groupes + morts != vivants reels", async () => {
     setupHappyPathMocks();
-    mockBacFindMany
-      .mockResolvedValueOnce([bacSource])
-      .mockResolvedValueOnce([bacDest])
-      .mockResolvedValueOnce([bacSource, bacDest])
-      .mockResolvedValueOnce([bacSource, bacDest]);
+    setupAssignationBacFindMany();
     mockReleveFindMany.mockResolvedValue(relevesAvecMortalites(10));
     // vivants = 5048 - 10 = 5038. DTO : 5000 + 30 morts = 5030 ≠ 5038
     await expect(
@@ -205,11 +240,7 @@ describe("createCalibrage — BUG-048 : conservation basee sur computeVivantsByB
 
   it("sans aucun releve, conservation se base sur nombreInitial (vivants = nombreInitial)", async () => {
     setupHappyPathMocks();
-    mockBacFindMany
-      .mockResolvedValueOnce([bacSource])
-      .mockResolvedValueOnce([bacDest])
-      .mockResolvedValueOnce([bacSource, bacDest])
-      .mockResolvedValueOnce([bacSource, bacDest]);
+    setupAssignationBacFindMany();
     mockReleveFindMany.mockResolvedValue([]); // aucune mortalite
 
     await expect(

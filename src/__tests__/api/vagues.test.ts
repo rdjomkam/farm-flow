@@ -52,6 +52,8 @@ const mockPrismaVagueCreate = vi.fn();
 const mockPrismaBacFindMany = vi.fn();
 const mockPrismaBacUpdate = vi.fn();
 const mockPrismaTransaction = vi.fn();
+// ADR-043 Phase 3: mock pour AssignationBac.findMany (vérifie les bacs déjà assignés)
+const mockAssignationBacFindMany = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -144,7 +146,7 @@ describe("GET /api/vagues", () => {
           origineAlevins: "Ecloserie Douala",
           createdAt: pastDate,
           updatedAt: now,
-          _count: { bacs: 3, releves: 10 },
+          _count: { assignations: 3, releves: 10 },
         },
       ],
       total: 1,
@@ -176,7 +178,7 @@ describe("GET /api/vagues", () => {
           origineAlevins: null,
           createdAt: pastDate,
           updatedAt: now,
-          _count: { bacs: 2, releves: 5 },
+          _count: { assignations: 2, releves: 5 },
         },
       ],
       total: 1,
@@ -229,7 +231,8 @@ describe("POST /api/vagues", () => {
     origineAlevins: "Production locale",
     createdAt: now,
     updatedAt: now,
-    bacs: [{ id: "bac-1" }, { id: "bac-2" }],
+    // ADR-043 Phase 3: vague returned with assignations, not bacs
+    assignations: [{ id: "a-1" }, { id: "a-2" }],
   };
 
   beforeEach(() => {
@@ -251,8 +254,10 @@ describe("POST /api/vagues", () => {
           findMany: (...args: unknown[]) => mockPrismaBacFindMany(...args),
           update: (...args: unknown[]) => mockPrismaBacUpdate(...args),
         },
-        // ADR-043 Phase 2: mock de la table de jonction AssignationBac
+        // ADR-043 Phase 3: mock de la table de jonction AssignationBac
         assignationBac: {
+          // findMany used to check existing assignations (configured per test via mockAssignationBacFindMany)
+          findMany: (...args: unknown[]) => mockAssignationBacFindMany(...args),
           create: vi.fn().mockResolvedValue({}),
         },
       };
@@ -260,9 +265,11 @@ describe("POST /api/vagues", () => {
     });
     // Par défaut : bacs libres disponibles
     mockPrismaBacFindMany.mockResolvedValue([
-      { id: "bac-1", nom: "Bac 1", vagueId: null, siteId: "site-1" },
-      { id: "bac-2", nom: "Bac 2", vagueId: null, siteId: "site-1" },
+      { id: "bac-1", nom: "Bac 1", siteId: "site-1" },
+      { id: "bac-2", nom: "Bac 2", siteId: "site-1" },
     ]);
+    // ADR-043 Phase 3: par défaut aucune assignation existante (bacs libres)
+    mockAssignationBacFindMany.mockResolvedValue([]);
     // Pas de code en double
     mockPrismaVagueFindUnique.mockResolvedValue(null);
     // Création retourne la vague
@@ -412,10 +419,13 @@ describe("POST /api/vagues", () => {
   });
 
   it("retourne 409 quand un bac est deja assigne", async () => {
-    // Simuler un bac déjà assigné à une vague via la transaction inline
+    // ADR-043 Phase 3: simuler un bac déjà assigné via AssignationBac (source de vérité)
     mockPrismaBacFindMany.mockResolvedValue([
-      { id: "bac-1", nom: "Bac 1", vagueId: "vague-existante", siteId: "site-1" },
-      { id: "bac-2", nom: "Bac 2", vagueId: null, siteId: "site-1" },
+      { id: "bac-1", nom: "Bac 1", siteId: "site-1" },
+      { id: "bac-2", nom: "Bac 2", siteId: "site-1" },
+    ]);
+    mockAssignationBacFindMany.mockResolvedValue([
+      { bacId: "bac-1", dateFin: null, bac: { nom: "Bac 1" } },
     ]);
 
     const request = makeRequest("/api/vagues", {
@@ -454,7 +464,7 @@ describe("POST /api/vagues", () => {
   it("retourne 404 quand un bac est introuvable", async () => {
     // Simuler des bacs introuvables (moins de bacs retournés que demandés)
     mockPrismaBacFindMany.mockResolvedValue([
-      { id: "bac-1", nom: "Bac 1", vagueId: null, siteId: "site-1" },
+      { id: "bac-1", nom: "Bac 1", siteId: "site-1" },
       // bac-2 manquant
     ]);
 

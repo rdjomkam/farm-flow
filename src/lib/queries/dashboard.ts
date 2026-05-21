@@ -33,8 +33,16 @@ const getVaguesWithReleves = cache(async (siteId: string) => {
   return prisma.vague.findMany({
     where: { siteId, statut: StatutVague.EN_COURS },
     include: {
-      _count: { select: { bacs: true } },
-      bacs: { select: { id: true, volume: true, nombreInitial: true } },
+      _count: { select: { assignations: { where: { dateFin: null } } } },
+      assignations: {
+        where: { dateFin: null },
+        select: {
+          nombreInitial: true,
+          nombreActuel: true,
+          poidsMoyenInitial: true,
+          bac: { select: { id: true, volume: true } },
+        },
+      },
       releves: {
         orderBy: { date: "asc" },
         select: {
@@ -74,10 +82,17 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
   ]);
 
   const vagues: VagueDashboardSummary[] = vaguesActives.map((v) => {
+    // ADR-043 Phase 3: build bacs list from active assignations
+    const bacsFromAssignations = v.assignations.map((a) => ({
+      id: a.bac.id,
+      volume: a.bac.volume,
+      nombreInitial: a.nombreInitial,
+    }));
+
     const biometries = v.releves.filter((r) => r.typeReleve === TypeReleve.BIOMETRIE);
-    const nombreVivants = computeNombreVivantsVague(v.bacs, v.releves, v.nombreInitial);
+    const nombreVivants = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial);
     // For survival rate, exclude sales — sold fish are alive, just not in the farm
-    const nombreVivantsForSurvie = computeNombreVivantsVague(v.bacs, v.releves, v.nombreInitial, { excludeVentes: true });
+    const nombreVivantsForSurvie = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial, { excludeVentes: true });
     const hasPerBacReleves = v.releves.some((r) => r.bacId !== null);
 
     const now = new Date();
@@ -90,9 +105,9 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
     let poidsMoyen: number | null = null;
     let biomasse: number | null = null;
 
-    if (hasPerBacReleves && v.bacs.length > 0) {
+    if (hasPerBacReleves && bacsFromAssignations.length > 0) {
       // Per-bac weighted calculation (same logic as indicateurs.ts)
-      const vivantsByBac = computeVivantsByBac(v.bacs, v.releves, v.nombreInitial);
+      const vivantsByBac = computeVivantsByBac(bacsFromAssignations, v.releves, v.nombreInitial);
       const biometriesParBac = new Map<string, (typeof biometries)[0]>();
       for (const b of biometries) {
         if (b.bacId) biometriesParBac.set(b.bacId, b);
@@ -101,7 +116,7 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
       let hasBiomasse = false;
       let totalPoidsWeighted = 0;
       let totalVivantsForWeight = 0;
-      for (const bac of v.bacs) {
+      for (const bac of bacsFromAssignations) {
         const vivantsBac = vivantsByBac.get(bac.id) ?? 0;
         const bio = biometriesParBac.get(bac.id);
         if (bio && bio.poidsMoyen !== null) {
@@ -135,7 +150,7 @@ export async function getDashboardData(siteId: string): Promise<DashboardData> {
       poidsMoyen,
       tauxSurvie: tauxSurvie !== null ? Math.round(tauxSurvie * 100) / 100 : null,
       biomasse: biomasse !== null ? Math.round(biomasse * 100) / 100 : null,
-      nombreBacs: v._count.bacs,
+      nombreBacs: v._count.assignations,
       statut: v.statut as StatutVague,
       poidsObjectifKg: v.poidsObjectifKg ?? null,
       totalVenduKg: totalVenduKg != null && totalVenduKg > 0 ? Math.round(totalVenduKg * 100) / 100 : null,
@@ -186,12 +201,19 @@ export async function getProjectionsDashboard(siteId: string): Promise<Projectio
   const now = new Date();
 
   return vaguesActives.map((v) => {
+    // ADR-043 Phase 3: build bacs list from active assignations
+    const bacsFromAssignations = v.assignations.map((a) => ({
+      id: a.bac.id,
+      volume: a.bac.volume,
+      nombreInitial: a.nombreInitial,
+    }));
+
     const biometriesRaw = v.releves
       .filter((r) => r.typeReleve === TypeReleve.BIOMETRIE && r.poidsMoyen !== null)
       .sort((a, b) => a.date.getTime() - b.date.getTime());
 
     const alimentations = v.releves.filter((r) => r.typeReleve === TypeReleve.ALIMENTATION);
-    const nombreVivants = computeNombreVivantsVague(v.bacs, v.releves, v.nombreInitial);
+    const nombreVivants = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial);
     const totalAliment = alimentations.reduce((sum, r) => sum + (r.quantiteAliment ?? 0), 0);
 
     const joursEcoules = Math.floor(
@@ -199,7 +221,7 @@ export async function getProjectionsDashboard(siteId: string): Promise<Projectio
     );
 
     // Agréger les biométries par date (moyenne pondérée par vivantsByBac)
-    const vivantsByBac = computeVivantsByBac(v.bacs, v.releves, v.nombreInitial);
+    const vivantsByBac = computeVivantsByBac(bacsFromAssignations, v.releves, v.nombreInitial);
     const groupedByDate = new Map<string, typeof biometriesRaw>();
     for (const r of biometriesRaw) {
       const key = new Date(r.date).toISOString().slice(0, 10);
@@ -415,6 +437,13 @@ export async function getDashboardIndicateurs(
   const resultats: IndicateursBenchmarkVague[] = [];
 
   for (const v of vagues) {
+    // ADR-043 Phase 3: build bacs list from active assignations
+    const bacsFromAssignations = v.assignations.map((a) => ({
+      id: a.bac.id,
+      volume: a.bac.volume,
+      nombreInitial: a.nombreInitial,
+    }));
+
     const biometries = v.releves.filter((r) => r.typeReleve === TypeReleve.BIOMETRIE);
     const mortalites = v.releves.filter((r) => r.typeReleve === TypeReleve.MORTALITE);
     const alimentations = v.releves.filter((r) => r.typeReleve === TypeReleve.ALIMENTATION);
@@ -423,8 +452,8 @@ export async function getDashboardIndicateurs(
     const poidsMoyen = biometries.at(-1)?.poidsMoyen ?? null;
     const totalMortalites = mortalites.reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
     const totalAliment = alimentations.reduce((sum, r) => sum + (r.quantiteAliment ?? 0), 0);
-    const nombreVivants = computeNombreVivantsVague(v.bacs, v.releves, v.nombreInitial);
-    const nombreVivantsForSurvie = computeNombreVivantsVague(v.bacs, v.releves, v.nombreInitial, { excludeVentes: true });
+    const nombreVivants = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial);
+    const nombreVivantsForSurvie = computeNombreVivantsVague(bacsFromAssignations, v.releves, v.nombreInitial, { excludeVentes: true });
 
     const now = v.dateFin ?? new Date();
     const joursEcoules = Math.floor(
@@ -440,8 +469,8 @@ export async function getDashboardIndicateurs(
     const sgr = calculerSGR(v.poidsMoyenInitial, poidsMoyen, joursEcoules);
     const tauxMortalite = calculerTauxMortalite(totalMortalites, v.nombreInitial);
 
-    // Densite : poissons / m3 en utilisant le volume total des bacs
-    const volumeTotalLitres = v.bacs.reduce((sum, b) => sum + (b.volume ?? 0), 0);
+    // Densite : poissons / m3 en utilisant le volume total des bacs (depuis assignations)
+    const volumeTotalLitres = bacsFromAssignations.reduce((sum, b) => sum + (b.volume ?? 0), 0);
     const volumeTotalM3 = volumeTotalLitres > 0 ? volumeTotalLitres / 1000 : null;
     const densite =
       nombreVivants !== null && volumeTotalM3 !== null && volumeTotalM3 > 0

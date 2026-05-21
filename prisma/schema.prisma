@@ -1124,11 +1124,6 @@ model Bac {
   id                  String            @id @default(cuid())
   nom                 String
   volume              Float?
-  nombrePoissons      Int?
-  nombreInitial       Int?
-  poidsMoyenInitial   Float?
-  vagueId             String?
-  vague               Vague?            @relation(fields: [vagueId], references: [id])
   /**
    * Type de système d'élevage — détermine les seuils de densité applicables.
    * Null = BAC_BETON par défaut dans le moteur d'alertes.
@@ -1145,7 +1140,7 @@ model Bac {
   activites           Activite[]
   calibrageGroupesDst CalibrageGroupe[] @relation("GroupeDestBac")
   lignesVente         LigneVente[]      @relation("BacLignesVente")
-  // ADR-043 — Historique des assignations (Phase 2)
+  // ADR-043 Phase 3 — AssignationBac is the single source of truth for wave assignment & fish counts
   assignations        AssignationBac[]
   // R1-S3 — Lots géniteurs hébergés dans ce bac
   lotGeniteurs        LotGeniteurs[]
@@ -1154,7 +1149,6 @@ model Bac {
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
-  @@index([vagueId])
   @@index([siteId])
 }
 
@@ -1189,7 +1183,6 @@ model Vague {
    */
   packActivationId       String?
   packActivation         PackActivation?          @relation(fields: [packActivationId], references: [id], onDelete: SetNull)
-  bacs                   Bac[]
   releves                Releve[]
   mouvements             MouvementStock[]
   ventes                 Vente[]
@@ -1222,9 +1215,10 @@ model Vague {
 /**
  * AssignationBac — table d'association Bac <-> Vague avec historique.
  *
- * ADR-043 (Phase 2) : remplace la FK nullable Bac.vagueId comme source de vérité
- * pour les assignations. Pendant la Phase 2, Bac.vagueId est conservé en double source
- * de vérité pour la rétrocompatibilité. Phase 3 (future) supprimera Bac.vagueId.
+ * ADR-043 Phase 3 : source de vérité UNIQUE pour l'assignation d'un bac à une vague
+ * et pour les compteurs de production (nombreActuel, nombreInitial, poidsMoyenInitial).
+ * Les champs Bac.vagueId, Bac.nombrePoissons, Bac.nombreInitial, Bac.poidsMoyenInitial
+ * ont été supprimés.
  *
  * dateFin = null  : assignation active (bac actuellement dans la vague)
  * dateFin non-null: assignation terminée (bac retiré ou vague clôturée)
@@ -1550,6 +1544,8 @@ model Vente {
   client           Client      @relation(fields: [clientId], references: [id])
   vagueId          String?
   vague            Vague?      @relation(fields: [vagueId], references: [id])
+  uniteProductionId String?
+  uniteProduction  UniteProduction? @relation(fields: [uniteProductionId], references: [id])
   quantitePoissons Int
   poidsTotalKg     Float
   prixUnitaireKg   Float
@@ -1575,29 +1571,32 @@ model Vente {
   @@index([siteId])
   @@index([clientId])
   @@index([vagueId])
+  @@index([uniteProductionId])
   @@index([statut])
 }
 
 model LigneVente {
-  id             String   @id @default(cuid())
+  id             String      @id @default(cuid())
   venteId        String
-  vente          Vente    @relation("VenteLignes", fields: [venteId], references: [id], onDelete: Cascade)
-  vagueId        String
-  vague          Vague    @relation("VagueLignesVente", fields: [vagueId], references: [id])
-  bacId          String
-  bac            Bac      @relation("BacLignesVente", fields: [bacId], references: [id])
+  vente          Vente       @relation("VenteLignes", fields: [venteId], references: [id], onDelete: Cascade)
+  vagueId        String?
+  vague          Vague?      @relation("VagueLignesVente", fields: [vagueId], references: [id])
+  bacId          String?
+  bac            Bac?        @relation("BacLignesVente", fields: [bacId], references: [id])
+  lotAlevinsId   String?
+  lotAlevins     LotAlevins? @relation("LotAlevinsLignesVente", fields: [lotAlevinsId], references: [id])
   poidsTotalKg   Float
   poidsMoyenG    Float
   nombrePoissons Int
   siteId         String
-  site           Site     @relation("SiteLignesVente", fields: [siteId], references: [id])
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  site           Site        @relation("SiteLignesVente", fields: [siteId], references: [id])
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
-  @@unique([venteId, vagueId, bacId])
   @@index([venteId])
   @@index([vagueId])
   @@index([bacId])
+  @@index([lotAlevinsId])
   @@index([siteId])
 }
 
@@ -1759,6 +1758,7 @@ model LotAlevins {
   destinationSortie     DestinationLot?
   releves               Releve[]
   transfertsInternes    TransfertInterne[]
+  lignesVente           LigneVente[]     @relation("LotAlevinsLignesVente")
   siteId                String
   site                  Site             @relation(fields: [siteId], references: [id])
   createdAt             DateTime         @default(now())
@@ -3651,6 +3651,7 @@ model UniteProduction {
   site        Site                @relation(fields: [siteId], references: [id])
 
   vagues              Vague[]
+  ventes              Vente[]
   depenses            Depense[]
   depensesRecurrentes DepenseRecurrente[]
   transfertsSortants  TransfertInterne[]  @relation("TransfertSource")

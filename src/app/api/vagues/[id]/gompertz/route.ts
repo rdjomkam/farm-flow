@@ -26,13 +26,17 @@ export async function GET(
     const { id: vagueId } = await params;
 
     // 1. Fetch vague, verify it belongs to the active site (R8)
+    // ADR-043 Phase 3: nombreInitial vient de AssignationBac, pas de Bac
     const vague = await prisma.vague.findFirst({
       where: { id: vagueId, siteId: auth.activeSiteId },
       select: {
         id: true,
         dateDebut: true,
         nombreInitial: true,
-        bacs: { select: { id: true, nombreInitial: true } },
+        assignations: {
+          where: { dateFin: null },
+          select: { nombreInitial: true, bac: { select: { id: true } } },
+        },
         configElevage: {
           select: {
             poidsObjectif: true,
@@ -70,7 +74,12 @@ export async function GET(
     });
 
     // 3. Compute vivantsByBac for weighted-average aggregation
-    const vivantsByBac = computeVivantsByBac(vague.bacs, allReleves, vague.nombreInitial);
+    // ADR-043 Phase 3: construire les bacs depuis les assignations actives
+    const vagueBacs = vague.assignations.map((a) => ({
+      id: a.bac.id,
+      nombreInitial: a.nombreInitial,
+    }));
+    const vivantsByBac = computeVivantsByBac(vagueBacs, allReleves, vague.nombreInitial);
 
     // 4. Aggregate biometries by date (weighted average per unique date)
     const biometriesRaw = allReleves.filter(

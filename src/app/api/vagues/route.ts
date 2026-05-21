@@ -45,8 +45,8 @@ export async function GET(request: NextRequest) {
         nombreInitial: v.nombreInitial,
         poidsMoyenInitial: v.poidsMoyenInitial,
         origineAlevins: v.origineAlevins,
-        // ADR-043 Phase 2: préférer le compte d'assignations actives
-        nombreBacs: (v._count as { assignations?: number }).assignations ?? v._count.bacs,
+        // ADR-043 Phase 3: assignations actives sont la seule source de vérité
+        nombreBacs: (v._count as { assignations?: number }).assignations ?? 0,
         joursEcoules,
         createdAt: v.createdAt,
       };
@@ -212,9 +212,13 @@ export async function POST(request: NextRequest) {
         throw new Error("Un ou plusieurs bacs sont introuvables");
       }
 
-      const bacsOccupes = bacs.filter((b) => b.vagueId !== null);
-      if (bacsOccupes.length > 0) {
-        const noms = bacsOccupes.map((b) => b.nom).join(", ");
+      // ADR-043 Phase 3: vérifier l'occupation via AssignationBac (source de vérité)
+      const existingAssignations = await tx.assignationBac.findMany({
+        where: { bacId: { in: bacIds }, dateFin: null },
+        include: { bac: { select: { nom: true } } },
+      });
+      if (existingAssignations.length > 0) {
+        const noms = existingAssignations.map((a) => a.bac.nom).join(", ");
         throw new Error(`Bacs déjà assignés à une vague : ${noms}`);
       }
 
@@ -238,18 +242,8 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // ADR-043 Phase 3: créer uniquement les AssignationBac (plus de dual-write sur Bac)
       for (const entry of data.bacDistribution) {
-        await tx.bac.update({
-          where: { id: entry.bacId, siteId: auth.activeSiteId },
-          data: {
-            vagueId: vague.id,
-            nombrePoissons: entry.nombrePoissons,
-            nombreInitial: entry.nombrePoissons,
-            poidsMoyenInitial: data.poidsMoyenInitial,
-          },
-        });
-
-        // ADR-043 Phase 2 — dual-write : créer l'AssignationBac active (BUG-041)
         await tx.assignationBac.create({
           data: {
             bacId: entry.bacId,
@@ -266,7 +260,12 @@ export async function POST(request: NextRequest) {
 
       return tx.vague.findUnique({
         where: { id: vague.id },
-        include: { bacs: true },
+        include: {
+          assignations: {
+            where: { dateFin: null },
+            select: { id: true },
+          },
+        },
       });
     }).catch((err: Error & { quotaLimite?: number | null }) => {
       if (err.message === "QUOTA_DEPASSE") {
@@ -306,7 +305,7 @@ export async function POST(request: NextRequest) {
         nombreInitial: vague.nombreInitial,
         poidsMoyenInitial: vague.poidsMoyenInitial,
         origineAlevins: vague.origineAlevins,
-        nombreBacs: vague.bacs.length,
+        nombreBacs: vague.assignations.length,
         joursEcoules,
         createdAt: vague.createdAt,
       },

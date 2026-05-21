@@ -54,7 +54,8 @@ export default async function AnalyticsBacsPage({
                   <div>
                     <p className="text-sm font-semibold">{v.code}</p>
                     <p className="text-xs text-muted-foreground">
-                      {v._count.bacs > 1 ? t("waveSummaryBacsPlural", { count: v._count.bacs }) : t("waveSummaryBacs", { count: v._count.bacs })} —{" "}
+                      {/* ADR-043 Phase 3: _count.assignations (actives) remplace _count.bacs */}
+                    {((v._count as { assignations?: number }).assignations ?? 0) > 1 ? t("waveSummaryBacsPlural", { count: (v._count as { assignations?: number }).assignations ?? 0 }) : t("waveSummaryBacs", { count: (v._count as { assignations?: number }).assignations ?? 0 })} —{" "}
                       {t("waveSummaryAlevins", { count: v.nombreInitial })}
                     </p>
                   </div>

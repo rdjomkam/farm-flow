@@ -32,7 +32,11 @@ export default async function VenteDetailPage({
         statut: { not: StatutVague.ANNULEE },
       },
       include: {
-        bacs: { select: { nombrePoissons: true } },
+        // ADR-043 Phase 3: lire le stock de poissons depuis AssignationBac
+        assignations: {
+          where: { dateFin: null },
+          select: { nombreActuel: true },
+        },
       },
       orderBy: { dateDebut: "desc" },
     }),
@@ -44,8 +48,8 @@ export default async function VenteDetailPage({
   const vagueOptions = vagues.map((v) => ({
     id: v.id,
     code: v.code,
-    poissonsDisponibles: v.bacs.reduce(
-      (sum, bac) => sum + (bac.nombrePoissons ?? 0),
+    poissonsDisponibles: v.assignations.reduce(
+      (sum, a) => sum + (a.nombreActuel ?? 0),
       0
     ),
   }));

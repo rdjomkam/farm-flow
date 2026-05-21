@@ -1,16 +1,15 @@
 /**
- * Tests de non-régression BUG-040 — GET /api/bacs?vagueId=X
+ * Tests de non-régression — GET /api/bacs?vagueId=X
  *
- * Vérifie que la logique UNION des deux sources (AssignationBac + Bac.vagueId)
- * retourne bien TOUS les bacs d'une vague sans doublons, quelle que soit
- * la source qui les référence.
+ * ADR-043 Phase 3: AssignationBac est la seule source de vérité.
+ * La logique UNION (AssignationBac + Bac.vagueId) est supprimée.
+ * Les tests vérifient uniquement le comportement basé sur AssignationBac.
  *
  * Cas couverts :
- *   1. Bac uniquement via AssignationBac (Bac.vagueId = null) → doit apparaître
- *   2. Bac uniquement via Bac.vagueId (pas d'AssignationBac active) → doit apparaître
- *   3. Vague mixte (deux sources) → UNION sans doublon
- *   4. Bac présent dans les deux sources → pas de doublon, AssignationBac prioritaire
- *      pour nombrePoissons
+ *   1. Bac via AssignationBac active → apparaît dans la liste
+ *   2. Aucun bac → liste vide
+ *   3. Plusieurs bacs via AssignationBac → liste complète
+ *   4. nombrePoissons lu depuis AssignationBac.nombreActuel
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -41,17 +40,11 @@ vi.mock("@/lib/queries/abonnements", () => ({
 }));
 
 const mockAssignationBacFindMany = vi.fn();
-const mockBacFindMany = vi.fn();
-const mockPrismaTransaction = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
-    $transaction: (...args: unknown[]) => mockPrismaTransaction(...args),
     assignationBac: {
       findMany: (...args: unknown[]) => mockAssignationBacFindMany(...args),
-    },
-    bac: {
-      findMany: (...args: unknown[]) => mockBacFindMany(...args),
     },
   },
 }));
@@ -122,9 +115,6 @@ function makeAssignation(opts: {
       id: opts.bacId,
       nom: opts.nom,
       volume: opts.volume,
-      nombrePoissons: opts.nombrePoissons,
-      nombreInitial: opts.nombreInitial ?? opts.nombrePoissons,
-      poidsMoyenInitial: opts.poidsMoyenInitial ?? 50,
       typeSysteme: null,
       siteId: "site-1",
       createdAt: new Date("2025-01-01"),
@@ -133,44 +123,20 @@ function makeAssignation(opts: {
   };
 }
 
-/** Fabrique un Bac.findMany (sans include) */
-function makeBac(opts: {
-  bacId: string;
-  nom: string;
-  volume: number;
-  vagueId: string | null;
-  nombrePoissons?: number;
-}) {
-  return {
-    id: opts.bacId,
-    nom: opts.nom,
-    volume: opts.volume,
-    vagueId: opts.vagueId,
-    nombrePoissons: opts.nombrePoissons ?? null,
-    nombreInitial: opts.nombrePoissons ?? null,
-    poidsMoyenInitial: null,
-    typeSysteme: null,
-    siteId: "site-1",
-    createdAt: new Date("2025-01-01"),
-    updatedAt: new Date("2025-01-01"),
-  };
-}
-
 // ---------------------------------------------------------------------------
-// Tests — BUG-040
+// Tests — ADR-043 Phase 3 (AssignationBac uniquement)
 // ---------------------------------------------------------------------------
 
-describe("GET /api/bacs?vagueId — UNION des deux sources (BUG-040)", () => {
+describe("GET /api/bacs?vagueId — AssignationBac source unique (ADR-043 Phase 3)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
   });
 
   // -------------------------------------------------------------------------
-  // Cas 1 : bac uniquement via AssignationBac (Bac.vagueId = null)
+  // Cas 1 : bac via AssignationBac active → apparaît dans la liste
   // -------------------------------------------------------------------------
-  it("Cas 1 — bac sans Bac.vagueId mais avec AssignationBac active doit apparaître", async () => {
-    // Ce bac n'a pas de vagueId direct mais a une AssignationBac active
+  it("Cas 1 — bac avec AssignationBac active doit apparaître", async () => {
     const assignation = makeAssignation({
       bacId: "bac-assignation-only",
       nom: "Bac Assignation",
@@ -179,8 +145,6 @@ describe("GET /api/bacs?vagueId — UNION des deux sources (BUG-040)", () => {
     });
 
     mockAssignationBacFindMany.mockResolvedValue([assignation]);
-    // Bac.vagueId = null → Bac.findMany ne retourne rien
-    mockBacFindMany.mockResolvedValue([]);
 
     const response = await GET(makeRequest(`/api/bacs?vagueId=${VAGUE_ID}`));
     const body = await response.json();
@@ -192,50 +156,37 @@ describe("GET /api/bacs?vagueId — UNION des deux sources (BUG-040)", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Cas 2 : bac uniquement via Bac.vagueId (pas d'AssignationBac active)
+  // Cas 2 : vague sans aucun bac — retourne liste vide
   // -------------------------------------------------------------------------
-  it("Cas 2 — bac avec Bac.vagueId mais sans AssignationBac active doit apparaître", async () => {
-    // Ce bac a un vagueId direct mais aucune AssignationBac active
-    const bac = makeBac({
-      bacId: "bac-fk-only",
-      nom: "Bac FK",
-      volume: 800,
-      vagueId: VAGUE_ID,
-      nombrePoissons: 150,
-    });
-
+  it("Cas 2 — vague sans bacs retourne une liste vide", async () => {
     mockAssignationBacFindMany.mockResolvedValue([]);
-    mockBacFindMany.mockResolvedValue([bac]);
 
     const response = await GET(makeRequest(`/api/bacs?vagueId=${VAGUE_ID}`));
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.data).toHaveLength(1);
-    expect(body.data[0].id).toBe("bac-fk-only");
-    expect(body.data[0].nombrePoissons).toBe(150);
+    expect(body.data).toHaveLength(0);
+    expect(body.total).toBe(0);
   });
 
   // -------------------------------------------------------------------------
-  // Cas 3 : vague mixte — un bac via AssignationBac, un autre via Bac.vagueId
+  // Cas 3 : plusieurs bacs via AssignationBac → liste complète
   // -------------------------------------------------------------------------
-  it("Cas 3 — vague mixte retourne l'UNION des deux sources sans doublon", async () => {
-    const assignation = makeAssignation({
+  it("Cas 3 — plusieurs bacs via AssignationBac retourne tous les bacs", async () => {
+    const assignationA = makeAssignation({
       bacId: "bac-a",
       nom: "Bac A",
       volume: 1000,
       nombrePoissons: 200,
     });
-    const bacLegacy = makeBac({
+    const assignationB = makeAssignation({
       bacId: "bac-b",
       nom: "Bac B",
       volume: 800,
-      vagueId: VAGUE_ID,
-      nombrePoissons: 100,
+      nombrePoissons: 150,
     });
 
-    mockAssignationBacFindMany.mockResolvedValue([assignation]);
-    mockBacFindMany.mockResolvedValue([bacLegacy]);
+    mockAssignationBacFindMany.mockResolvedValue([assignationA, assignationB]);
 
     const response = await GET(makeRequest(`/api/bacs?vagueId=${VAGUE_ID}`));
     const body = await response.json();
@@ -248,80 +199,26 @@ describe("GET /api/bacs?vagueId — UNION des deux sources (BUG-040)", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Cas 4 : bac présent dans les DEUX sources — pas de doublon
-  //         AssignationBac est prioritaire pour nombrePoissons
+  // Cas 4 : nombrePoissons provient de AssignationBac.nombreActuel
   // -------------------------------------------------------------------------
-  it("Cas 4 — bac dans les deux sources : une seule occurrence, valeur AssignationBac prioritaire", async () => {
-    // Le bac est présent dans AssignationBac (200 poissons) ET dans Bac.vagueId (stale: 50)
+  it("Cas 4 — nombrePoissons lu depuis AssignationBac.nombreActuel (200), pas depuis Bac.nombrePoissons", async () => {
+    // L'API lit nombreActuel de l'AssignationBac
     const assignation = makeAssignation({
       bacId: "bac-dual",
       nom: "Bac Dual",
       volume: 1500,
-      nombrePoissons: 200, // valeur à jour dans AssignationBac
-    });
-    const bacFk = makeBac({
-      bacId: "bac-dual",
-      nom: "Bac Dual",
-      volume: 1500,
-      vagueId: VAGUE_ID,
-      nombrePoissons: 50, // valeur stale dans Bac.vagueId
+      nombrePoissons: 200, // valeur à jour dans AssignationBac.nombreActuel
     });
 
     mockAssignationBacFindMany.mockResolvedValue([assignation]);
-    mockBacFindMany.mockResolvedValue([bacFk]);
 
     const response = await GET(makeRequest(`/api/bacs?vagueId=${VAGUE_ID}`));
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    // Pas de doublon
     expect(body.data).toHaveLength(1);
     expect(body.data[0].id).toBe("bac-dual");
-    // La valeur provient d'AssignationBac (prioritaire)
+    // La valeur provient de AssignationBac.nombreActuel
     expect(body.data[0].nombrePoissons).toBe(200);
-  });
-
-  // -------------------------------------------------------------------------
-  // Cas 5 : vague sans aucun bac — retourne liste vide (régression safe)
-  // -------------------------------------------------------------------------
-  it("Cas 5 — vague sans bacs retourne une liste vide", async () => {
-    mockAssignationBacFindMany.mockResolvedValue([]);
-    mockBacFindMany.mockResolvedValue([]);
-
-    const response = await GET(makeRequest(`/api/bacs?vagueId=${VAGUE_ID}`));
-    const body = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(body.data).toHaveLength(0);
-    expect(body.total).toBe(0);
-  });
-
-  // -------------------------------------------------------------------------
-  // Cas 6 : tri alphabétique stable après UNION
-  // -------------------------------------------------------------------------
-  it("Cas 6 — les bacs de l'UNION sont triés par nom (ordre alphabétique)", async () => {
-    const assignation = makeAssignation({
-      bacId: "bac-z",
-      nom: "Zephyr",
-      volume: 1000,
-      nombrePoissons: 100,
-    });
-    const bacLegacy = makeBac({
-      bacId: "bac-a",
-      nom: "Alpha",
-      volume: 500,
-      vagueId: VAGUE_ID,
-      nombrePoissons: 50,
-    });
-
-    mockAssignationBacFindMany.mockResolvedValue([assignation]);
-    mockBacFindMany.mockResolvedValue([bacLegacy]);
-
-    const response = await GET(makeRequest(`/api/bacs?vagueId=${VAGUE_ID}`));
-    const body = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(body.data[0].nom).toBe("Alpha");
-    expect(body.data[1].nom).toBe("Zephyr");
   });
 });

@@ -86,8 +86,8 @@ type VagueSummary = {
   code: string;
   statut: string;
   nombreInitial: number;
-  // ADR-043 Phase 2: assignations count added — keep bacs for compat
-  _count: { bacs: number; releves: number; assignations?: number };
+  // ADR-043 Phase 3: bacs supprimé — uniquement assignations (actives) et releves
+  _count: { releves: number; assignations: number; bacs?: number };
 };
 
 function statutClass(statut: string): string {
@@ -509,7 +509,8 @@ export function VaguesComparisonClient({ vagues }: VaguesComparisonClientProps) 
                         <div>
                           <p className="text-sm font-semibold">{v.code}</p>
                           <p className="text-xs text-muted-foreground">
-                            {tVagues("comparison.alevins", { count: v.nombreInitial })} — {v._count.bacs > 1 ? tVagues("card.bacs", { count: v._count.bacs }) : tVagues("card.bac", { count: v._count.bacs })} — {v._count.releves > 1 ? tVagues("comparison.releves", { count: v._count.releves }) : tVagues("comparison.releve", { count: v._count.releves })}
+                            {/* ADR-043 Phase 3: utiliser assignations au lieu de bacs */}
+                            {tVagues("comparison.alevins", { count: v.nombreInitial })} — {(v._count.assignations ?? 0) > 1 ? tVagues("card.bacs", { count: v._count.assignations ?? 0 }) : tVagues("card.bac", { count: v._count.assignations ?? 0 })} — {v._count.releves > 1 ? tVagues("comparison.releves", { count: v._count.releves }) : tVagues("comparison.releve", { count: v._count.releves })}
                           </p>
                         </div>
                       </div>

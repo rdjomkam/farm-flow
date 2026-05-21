@@ -56,6 +56,24 @@ export function useVenteService() {
     [call]
   );
 
+  /** POST /api/ventes with raw body (for reproduction alevins sales) */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const createVenteRaw = useCallback(
+    (body: Record<string, unknown>) =>
+      call<VenteWithRelations>(
+        "/api/ventes",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        },
+        {
+          successMessage: "Vente d'alevins enregistrée !",
+        }
+      ),
+    [call]
+  );
+
   const updateVente = useCallback(
     (id: string, dto: UpdateVenteDTO) =>
       call<VenteWithRelations>(
@@ -225,6 +243,7 @@ export function useVenteService() {
     listVentes,
     getVente,
     createVente,
+    createVenteRaw,
     updateVente,
     cloturerVente,
     cloturerDefinitivement,

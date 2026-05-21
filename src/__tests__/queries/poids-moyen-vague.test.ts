@@ -3,6 +3,9 @@
  *
  * Verifie que la fonction calcule correctement la moyenne ponderee de la
  * derniere BIOMETRIE par bac, ponderee par le nombre de vivants.
+ *
+ * ADR-043 Phase 3: les bacs sont lus depuis vague.assignations (dateFin: null),
+ * plus depuis vague.bacs.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -19,6 +22,14 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+/** Fabrique une assignation active avec nombreInitial */
+function makeAssignation(bacId: string, nombreInitial: number) {
+  return {
+    bac: { id: bacId },
+    nombreInitial,
+  };
+}
+
 describe("getPoidsMoyenActuelVague", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -30,10 +41,11 @@ describe("getPoidsMoyenActuelVague", () => {
     expect(result).toBeNull();
   });
 
-  it("retourne null si la vague n'a aucun bac", async () => {
+  it("retourne null si la vague n'a aucune assignation active", async () => {
     mockVagueFindFirst.mockResolvedValue({
       nombreInitial: 100,
-      bacs: [],
+      // ADR-043 Phase 3: assignations au lieu de bacs
+      assignations: [],
       releves: [],
     });
     const result = await getPoidsMoyenActuelVague("site-1", "v-1");
@@ -43,7 +55,7 @@ describe("getPoidsMoyenActuelVague", () => {
   it("retourne null si aucune biometrie n'a ete enregistree", async () => {
     mockVagueFindFirst.mockResolvedValue({
       nombreInitial: 100,
-      bacs: [{ id: "b-1", nombreInitial: 100 }],
+      assignations: [makeAssignation("b-1", 100)],
       releves: [],
     });
     const result = await getPoidsMoyenActuelVague("site-1", "v-1");
@@ -53,7 +65,7 @@ describe("getPoidsMoyenActuelVague", () => {
   it("retourne la derniere biometrie pour un bac unique", async () => {
     mockVagueFindFirst.mockResolvedValue({
       nombreInitial: 100,
-      bacs: [{ id: "b-1", nombreInitial: 100 }],
+      assignations: [makeAssignation("b-1", 100)],
       releves: [
         {
           typeReleve: TypeReleve.BIOMETRIE,
@@ -84,9 +96,9 @@ describe("getPoidsMoyenActuelVague", () => {
     // Moyenne ponderee = (100*1000 + 50*400) / (100+50) = 120000/150 = 800
     mockVagueFindFirst.mockResolvedValue({
       nombreInitial: 150,
-      bacs: [
-        { id: "b-A", nombreInitial: 100 },
-        { id: "b-B", nombreInitial: 50 },
+      assignations: [
+        makeAssignation("b-A", 100),
+        makeAssignation("b-B", 50),
       ],
       releves: [
         {
@@ -114,7 +126,7 @@ describe("getPoidsMoyenActuelVague", () => {
   it("ne prend en compte que la derniere biometrie par bac (les releves arrivent tries asc)", async () => {
     mockVagueFindFirst.mockResolvedValue({
       nombreInitial: 100,
-      bacs: [{ id: "b-1", nombreInitial: 100 }],
+      assignations: [makeAssignation("b-1", 100)],
       releves: [
         {
           typeReleve: TypeReleve.BIOMETRIE,
@@ -144,9 +156,9 @@ describe("getPoidsMoyenActuelVague", () => {
     // Moyenne = 800
     mockVagueFindFirst.mockResolvedValue({
       nombreInitial: 100,
-      bacs: [
-        { id: "b-A", nombreInitial: 50 },
-        { id: "b-B", nombreInitial: 50 },
+      assignations: [
+        makeAssignation("b-A", 50),
+        makeAssignation("b-B", 50),
       ],
       releves: [
         {
@@ -169,9 +181,9 @@ describe("getPoidsMoyenActuelVague", () => {
     // Moyenne ponderee = (50*1000 + 100*500) / (50+100) = 100000/150 = 666.67
     mockVagueFindFirst.mockResolvedValue({
       nombreInitial: 200,
-      bacs: [
-        { id: "b-A", nombreInitial: 100 },
-        { id: "b-B", nombreInitial: 100 },
+      assignations: [
+        makeAssignation("b-A", 100),
+        makeAssignation("b-B", 100),
       ],
       releves: [
         {

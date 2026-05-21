@@ -72,7 +72,11 @@ export async function getLotAlevinsById(id: string, siteId: string) {
       bac: true,
       vagueDestination: {
         include: {
-          bacs: { select: { id: true, nom: true } },
+          // ADR-043 Phase 3: lire les bacs depuis assignations actives
+          assignations: {
+            where: { dateFin: null },
+            select: { bac: { select: { id: true, nom: true } } },
+          },
         },
       },
     },
@@ -237,9 +241,13 @@ export async function transfererLotVersVague(
       throw new Error("Un ou plusieurs bacs sont introuvables");
     }
 
-    const bacsOccupes = bacs.filter((b) => b.vagueId !== null);
-    if (bacsOccupes.length > 0) {
-      const noms = bacsOccupes.map((b) => b.nom).join(", ");
+    // ADR-043 Phase 3 : verifier occupation via AssignationBac
+    const existingAssignations = await tx.assignationBac.findMany({
+      where: { bacId: { in: vagueData.bacIds }, dateFin: null },
+      include: { bac: { select: { nom: true } } },
+    });
+    if (existingAssignations.length > 0) {
+      const noms = existingAssignations.map((a) => a.bac.nom).join(", ");
       throw new Error(`Bacs deja assignes a une vague : ${noms}`);
     }
 
@@ -274,13 +282,7 @@ export async function transfererLotVersVague(
       });
     }
 
-    // 4. Assigner les bacs a la vague (backward compat: écrire sur Bac)
-    await tx.bac.updateMany({
-      where: { id: { in: vagueData.bacIds }, siteId },
-      data: { vagueId: nouvelleVague.id },
-    });
-
-    // ADR-043 Phase 2: créer les AssignationBac correspondantes
+    // 4. ADR-043 Phase 3: créer les AssignationBac (seule source de vérité)
     for (const bacId of vagueData.bacIds) {
       await tx.assignationBac.create({
         data: {
@@ -312,8 +314,12 @@ export async function transfererLotVersVague(
         ponte: { select: { id: true, code: true } },
         bac: { select: { id: true, nom: true } },
         vagueDestination: {
+          // ADR-043 Phase 3: lire les bacs depuis assignations actives
           include: {
-            bacs: { select: { id: true, nom: true } },
+            assignations: {
+              where: { dateFin: null },
+              select: { bac: { select: { id: true, nom: true } } },
+            },
           },
         },
       },
@@ -391,8 +397,12 @@ export async function getLotById(id: string, siteId: string) {
       },
       bac: true,
       vagueDestination: {
+        // ADR-043 Phase 3: lire les bacs depuis assignations actives
         include: {
-          bacs: { select: { id: true, nom: true } },
+          assignations: {
+            where: { dateFin: null },
+            select: { bac: { select: { id: true, nom: true } } },
+          },
         },
       },
       incubation: {

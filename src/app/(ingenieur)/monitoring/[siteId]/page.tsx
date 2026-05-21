@@ -75,7 +75,11 @@ export default async function IngenieurClientDetailPage({
           notes: true,
         },
       },
-      bacs: { select: { id: true, nom: true, nombreInitial: true } },
+      // ADR-043 Phase 3: lire nombreInitial depuis AssignationBac
+      assignations: {
+        where: { dateFin: null },
+        select: { nombreInitial: true, bac: { select: { id: true, nom: true } } },
+      },
     },
     orderBy: { dateDebut: "asc" },
   });
@@ -117,8 +121,14 @@ export default async function IngenieurClientDetailPage({
     const mortalites = vague.releves.filter((r) => r.typeReleve === TypeReleve.MORTALITE);
     const totalMortalites = mortalites.reduce((sum, r) => sum + (r.nombreMorts ?? 0), 0);
     const dernierePoidsMoyen = biometries.at(-1)?.poidsMoyen ?? null;
-    const nombreVivants = computeNombreVivantsVague(vague.bacs, vague.releves, vague.nombreInitial);
-    const nombreVivantsForSurvie = computeNombreVivantsVague(vague.bacs, vague.releves, vague.nombreInitial, { excludeVentes: true });
+    // ADR-043 Phase 3: construire les bacs depuis les assignations actives
+    const vagueBacs = vague.assignations.map((a) => ({
+      id: a.bac.id,
+      nom: a.bac.nom,
+      nombreInitial: a.nombreInitial,
+    }));
+    const nombreVivants = computeNombreVivantsVague(vagueBacs, vague.releves, vague.nombreInitial);
+    const nombreVivantsForSurvie = computeNombreVivantsVague(vagueBacs, vague.releves, vague.nombreInitial, { excludeVentes: true });
     const tauxSurvie = calculerTauxSurvie(nombreVivantsForSurvie, vague.nombreInitial);
 
     const joursEcoules = Math.floor(
@@ -135,7 +145,7 @@ export default async function IngenieurClientDetailPage({
       tauxSurvie,
       dernierePoidsMoyen,
       joursEcoules,
-      nombreBacs: vague.bacs.length,
+      nombreBacs: vagueBacs.length,
       nombreReleves: vague.releves.length,
       sgr: indicateursParVague[i]?.sgr ?? null,
       fcr: indicateursParVague[i]?.fcr ?? null,

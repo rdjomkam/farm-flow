@@ -200,7 +200,7 @@ export async function PUT(
       nombreInitial: vague.nombreInitial,
       poidsMoyenInitial: vague.poidsMoyenInitial,
       origineAlevins: vague.origineAlevins,
-      nombreBacs: vague._count.bacs,
+      nombreBacs: (vague._count as { assignations?: number }).assignations ?? 0,
       joursEcoules,
       createdAt: vague.createdAt,
     });

@@ -30,88 +30,39 @@ export async function GET(request: NextRequest) {
     let total: number;
 
     if (vagueId) {
-      // BUG-040: UNION des deux sources (AssignationBac active + Bac.vagueId) pour éviter
-      // le "tout-ou-rien" qui masquait silencieusement les bacs sans AssignationBac active.
-      type BacMappedResponse = {
-        id: string;
-        nom: string;
-        volume: number | null;
-        nombrePoissons: number | null;
-        nombreInitial: number | null;
-        poidsMoyenInitial: number | null;
-        typeSysteme: string | null;
-        vagueId: string | null;
-        siteId: string;
-        vagueCode: null;
-        createdAt: Date;
-        updatedAt: Date;
-      };
-
-      const [assignations, bacsByFk] = await Promise.all([
-        prisma.assignationBac.findMany({
-          where: { siteId: auth.activeSiteId, vagueId, dateFin: null },
-          include: {
-            bac: {
-              select: {
-                id: true,
-                nom: true,
-                volume: true,
-                nombrePoissons: true,
-                nombreInitial: true,
-                poidsMoyenInitial: true,
-                typeSysteme: true,
-                siteId: true,
-                createdAt: true,
-                updatedAt: true,
-              },
+      // ADR-043 Phase 3: AssignationBac est la seule source de vérité pour l'assignation
+      const assignations = await prisma.assignationBac.findMany({
+        where: { siteId: auth.activeSiteId, vagueId, dateFin: null },
+        include: {
+          bac: {
+            select: {
+              id: true,
+              nom: true,
+              volume: true,
+              typeSysteme: true,
+              siteId: true,
+              createdAt: true,
+              updatedAt: true,
             },
           },
-          orderBy: { bac: { nom: "asc" } },
-        }),
-        prisma.bac.findMany({
-          where: { siteId: auth.activeSiteId, vagueId },
-          orderBy: { nom: "asc" },
-        }),
-      ]);
+        },
+        orderBy: { bac: { nom: "asc" } },
+      });
 
-      const byId = new Map<string, BacMappedResponse>();
-      // Source primaire : AssignationBac (données les plus à jour)
-      for (const a of assignations) {
-        byId.set(a.bac.id, {
-          id: a.bac.id,
-          nom: a.bac.nom,
-          volume: a.bac.volume,
-          nombrePoissons: a.nombreActuel ?? a.bac.nombrePoissons,
-          nombreInitial: a.nombreInitial ?? a.bac.nombreInitial,
-          poidsMoyenInitial: a.poidsMoyenInitial ?? a.bac.poidsMoyenInitial,
-          typeSysteme: a.bac.typeSysteme ?? null,
-          vagueId,
-          siteId: a.bac.siteId,
-          vagueCode: null,
-          createdAt: a.bac.createdAt,
-          updatedAt: a.bac.updatedAt,
-        });
-      }
-      // Source secondaire : Bac.vagueId (rétrocompat — ne pas écraser si déjà présent)
-      for (const b of bacsByFk) {
-        if (!byId.has(b.id)) {
-          byId.set(b.id, {
-            id: b.id,
-            nom: b.nom,
-            volume: b.volume,
-            nombrePoissons: b.nombrePoissons,
-            nombreInitial: b.nombreInitial,
-            poidsMoyenInitial: b.poidsMoyenInitial,
-            typeSysteme: b.typeSysteme ?? null,
-            vagueId: b.vagueId,
-            siteId: b.siteId,
-            vagueCode: null,
-            createdAt: b.createdAt,
-            updatedAt: b.updatedAt,
-          });
-        }
-      }
-      const mapped = [...byId.values()].sort((a, b) => a.nom.localeCompare(b.nom));
+      const mapped = assignations.map((a) => ({
+        id: a.bac.id,
+        nom: a.bac.nom,
+        volume: a.bac.volume,
+        nombrePoissons: a.nombreActuel ?? null,
+        nombreInitial: a.nombreInitial ?? null,
+        poidsMoyenInitial: a.poidsMoyenInitial ?? null,
+        typeSysteme: a.bac.typeSysteme ?? null,
+        vagueId,
+        siteId: a.bac.siteId,
+        vagueCode: null,
+        createdAt: a.bac.createdAt,
+        updatedAt: a.bac.updatedAt,
+      }));
       return cachedJson({ data: mapped, total: mapped.length, limit: mapped.length, offset: 0 }, "fast");
     } else if (libre) {
       const list = await getBacsLibres(auth.activeSiteId);
@@ -119,11 +70,11 @@ export async function GET(request: NextRequest) {
         id: b.id,
         nom: b.nom,
         volume: b.volume,
-        nombrePoissons: b.nombrePoissons,
-        nombreInitial: b.nombreInitial,
-        poidsMoyenInitial: b.poidsMoyenInitial,
+        nombrePoissons: null,
+        nombreInitial: null,
+        poidsMoyenInitial: null,
         typeSysteme: b.typeSysteme ?? null,
-        vagueId: b.vagueId,
+        vagueId: null,
         siteId: b.siteId,
         vagueCode: null,
         createdAt: b.createdAt,
@@ -164,24 +115,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (
-      body.nombrePoissons != null &&
-      (typeof body.nombrePoissons !== "number" || body.nombrePoissons < 0)
-    ) {
-      errors.push({
-        field: "nombrePoissons",
-        message: "Le nombre de poissons doit etre un nombre positif ou nul.",
-      });
-    }
-
     if (errors.length > 0) {
       return apiError(400, "Erreurs de validation", { errors });
     }
 
+    // ADR-043 Phase 3: Bac ne reçoit plus nombrePoissons à la création
     const data: CreateBacDTO = {
       nom: body.nom.trim(),
       volume: body.volume,
-      ...(body.nombrePoissons != null && { nombrePoissons: body.nombrePoissons }),
     };
 
     // Vérifier le quota et créer le bac dans une transaction atomique (R4)
@@ -210,12 +151,11 @@ export async function POST(request: NextRequest) {
         throw err;
       }
 
-      // 4. Créer le bac
+      // 4. Créer le bac — ADR-043 Phase 3: pas de données de production sur Bac
       return tx.bac.create({
         data: {
           nom: data.nom,
           volume: data.volume,
-          nombrePoissons: data.nombrePoissons ?? null,
           siteId: auth.activeSiteId,
         },
       });

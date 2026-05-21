@@ -83,7 +83,8 @@ export interface ClientsIngenieurPaginated {
 function calculerSurvieMoyenneVagues(
   vagues: Array<{
     nombreInitial: number;
-    bacs?: Array<{ id: string; nombreInitial: number | null }>;
+    // ADR-043 Phase 3: bacs via assignations
+    assignations?: Array<{ nombreInitial: number | null; bac: { id: string } }>;
     releves: Array<{
       typeReleve: string;
       nombreMorts: number | null;
@@ -95,8 +96,13 @@ function calculerSurvieMoyenneVagues(
   const survies: number[] = [];
 
   for (const vague of vagues) {
+    // ADR-043 Phase 3: build bacs list from active assignations
+    const bacsFromAssignations = (vague.assignations ?? []).map((a) => ({
+      id: a.bac.id,
+      nombreInitial: a.nombreInitial,
+    }));
     const nombreVivantsForSurvie = computeNombreVivantsVague(
-      vague.bacs ?? [],
+      bacsFromAssignations,
       vague.releves.map(r => ({ ...r, bacId: r.bacId ?? null })),
       vague.nombreInitial,
       { excludeVentes: true }
@@ -138,7 +144,14 @@ export async function getIngenieurDashboardMetrics(
           vagues: {
             where: { statut: StatutVague.EN_COURS },
             include: {
-              bacs: { select: { id: true, nombreInitial: true } },
+              // ADR-043 Phase 3: lire les bacs depuis assignations actives
+              assignations: {
+                where: { dateFin: null },
+                select: {
+                  nombreInitial: true,
+                  bac: { select: { id: true } },
+                },
+              },
               releves: {
                 orderBy: { date: "asc" as const },
                 select: {
@@ -236,7 +249,14 @@ export async function getClientsIngenieur(
             select: {
               id: true,
               nombreInitial: true,
-              bacs: { select: { id: true, nombreInitial: true } },
+              // ADR-043 Phase 3: lire les bacs depuis assignations actives
+              assignations: {
+                where: { dateFin: null },
+                select: {
+                  nombreInitial: true,
+                  bac: { select: { id: true } },
+                },
+              },
               releves: {
                 orderBy: { date: "asc" as const },
                 select: {
@@ -360,7 +380,14 @@ export async function getClientIngenieurDetail(
             select: {
               id: true,
               nombreInitial: true,
-              bacs: { select: { id: true, nombreInitial: true } },
+              // ADR-043 Phase 3: lire les bacs depuis assignations actives
+              assignations: {
+                where: { dateFin: null },
+                select: {
+                  nombreInitial: true,
+                  bac: { select: { id: true } },
+                },
+              },
               releves: {
                 orderBy: { date: "asc" as const },
                 select: {

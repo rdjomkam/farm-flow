@@ -36,7 +36,8 @@ export default async function BacDetailPage({
 
   if (!bac) notFound();
 
-  const isOccupe = bac.vagueId !== null || bac.assignations.some((a) => a.dateFin === null);
+  // ADR-043 Phase 3: vagueId n'existe plus sur Bac — occupation via AssignationBac uniquement
+  const isOccupe = bac.assignations.some((a) => a.dateFin === null);
 
   return (
     <>

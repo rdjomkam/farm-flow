@@ -29,6 +29,7 @@ const mockBacFindUnique = vi.fn();
 const mockBacUpdate = vi.fn();
 const mockBacUpdateMany = vi.fn();
 const mockCalibrageCreate = vi.fn();
+const mockAssignationBacFindMany = vi.fn();
 const mockAssignationBacFindFirst = vi.fn();
 const mockAssignationBacUpdate = vi.fn();
 const mockAssignationBacUpdateMany = vi.fn();
@@ -50,8 +51,11 @@ const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
     },
     calibrage: {
       create: (...args: unknown[]) => mockCalibrageCreate(...args),
+      findUniqueOrThrow: (...args: unknown[]) => mockCalibrageCreate(...args),
     },
     assignationBac: {
+      // ADR-043 Phase 3: findMany needed for source/dest/all bacs lookups
+      findMany: (...args: unknown[]) => mockAssignationBacFindMany(...args),
       findFirst: (...args: unknown[]) => mockAssignationBacFindFirst(...args),
       update: (...args: unknown[]) => mockAssignationBacUpdate(...args),
       updateMany: (...args: unknown[]) => mockAssignationBacUpdateMany(...args),
@@ -88,28 +92,54 @@ const vagueEnCours = {
   siteId: SITE_ID,
 };
 
-/** Bac source : lié via AssignationBac uniquement (Bac.vagueId = null) */
+/** Bac source : lié via AssignationBac uniquement */
 const bacSourceViaAssignationOnly = {
   id: "bac-src-assignation",
   nom: "Source Assignation",
   volume: 1000,
-  vagueId: null, // Pas de FK direct — présent uniquement via AssignationBac
+  vagueId: null,
   nombrePoissons: 200,
   nombreInitial: 200,
   poidsMoyenInitial: 50,
   siteId: SITE_ID,
 };
 
-/** Bac destination : lié via Bac.vagueId, sans AssignationBac active */
+/** AssignationBac active pour le bac source */
+const assignationBacSource = {
+  id: "assignation-src-001",
+  bacId: bacSourceViaAssignationOnly.id,
+  vagueId: VAGUE_ID,
+  siteId: SITE_ID,
+  dateFin: null,
+  nombreActuel: 200,
+  nombreInitial: 200,
+  poidsMoyenInitial: 50,
+  bac: { id: bacSourceViaAssignationOnly.id, nom: bacSourceViaAssignationOnly.nom },
+};
+
+/** Bac destination : sans AssignationBac active préalable */
 const bacDestSanAssignation = {
   id: "bac-dest-fk",
   nom: "Dest FK",
   volume: 800,
-  vagueId: VAGUE_ID, // Lié via FK mais sans AssignationBac
+  vagueId: VAGUE_ID,
   nombrePoissons: 0,
   nombreInitial: null,
   poidsMoyenInitial: null,
   siteId: SITE_ID,
+};
+
+/** AssignationBac active pour le bac destination */
+const assignationBacDest = {
+  id: "assignation-dest-001",
+  bacId: bacDestSanAssignation.id,
+  vagueId: VAGUE_ID,
+  siteId: SITE_ID,
+  dateFin: null,
+  nombreActuel: 0,
+  nombreInitial: null,
+  poidsMoyenInitial: null,
+  bac: { id: bacDestSanAssignation.id, nom: bacDestSanAssignation.nom },
 };
 
 /** Résultat calibrage minimal retourné par tx.calibrage.create */
@@ -174,28 +204,24 @@ describe("createCalibrage — Fix 4 BUG-040 : bac source via AssignationBac acce
   it("accepte un bac source sans Bac.vagueId mais avec AssignationBac active pour la vague", async () => {
     mockVagueFindFirst.mockResolvedValue(vagueEnCours);
 
-    // tx.bac.findMany est appelé 4 fois :
-    //  1. vérification bacs sources (retourne le bac source)
-    //  2. vérification bacs destination (retourne le bac dest)
-    //  3. allBacsVague pour computeVivantsByBac (BUG-048)
-    //  4. snapshot allBacsOfVague
-    mockBacFindMany
-      .mockResolvedValueOnce([bacSourceViaAssignationOnly]) // sources
-      .mockResolvedValueOnce([bacDestSanAssignation])       // destinations
-      .mockResolvedValueOnce([bacSourceViaAssignationOnly, bacDestSanAssignation]) // BUG-048 vivants
-      .mockResolvedValueOnce([bacSourceViaAssignationOnly, bacDestSanAssignation]); // snapshot
+    // tx.assignationBac.findMany est appelé 4 fois :
+    //  1. vérification bacs sources → retourne l'assignation source
+    //  2. vérification bacs destination → retourne l'assignation dest
+    //  3. allBacsVague pour computeVivantsByBac (BUG-048) → toutes les assignations
+    //  4. snapshot allBacsOfVague → toutes les assignations
+    mockAssignationBacFindMany
+      .mockResolvedValueOnce([assignationBacSource])                           // sources
+      .mockResolvedValueOnce([{ bacId: assignationBacDest.bacId }])            // destinations (select bacId)
+      .mockResolvedValueOnce([{ bacId: assignationBacSource.bacId, nombreInitial: 200 }]) // BUG-048 vivants
+      .mockResolvedValueOnce([assignationBacSource, assignationBacDest]);      // snapshot
 
+    mockReleveFindMany.mockResolvedValue([]); // pas de mortalités
     mockCalibrageCreate.mockResolvedValue(fakeCalibrageCreated);
     mockBacUpdateMany.mockResolvedValue({ count: 1 });
     mockAssignationBacUpdateMany.mockResolvedValue({ count: 1 });
 
     // Pour le bac destination : pas d'AssignationBac existante → create défensif
-    mockAssignationBacFindFirst.mockResolvedValue(null);
-    mockBacFindUnique.mockResolvedValue({
-      nombrePoissons: 0,
-      nombreInitial: null,
-      poidsMoyenInitial: null,
-    });
+    mockAssignationBacFindFirst.mockResolvedValue(null).mockResolvedValueOnce(null);
     mockAssignationBacCreate.mockResolvedValue({
       id: "new-assignation",
       bacId: bacDestSanAssignation.id,
@@ -209,35 +235,23 @@ describe("createCalibrage — Fix 4 BUG-040 : bac source via AssignationBac acce
       createCalibrage(SITE_ID, USER_ID, makeDto())
     ).resolves.toBeDefined();
 
-    // Vérifier que la recherche des bacs sources utilise bien la clause OR (BUG-040 Fix 4)
-    const sourceCall = mockBacFindMany.mock.calls[0][0];
-    expect(sourceCall.where.OR).toBeDefined();
-    expect(sourceCall.where.OR).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ vagueId: VAGUE_ID }),
-        expect.objectContaining({
-          assignations: expect.objectContaining({
-            some: expect.objectContaining({ vagueId: VAGUE_ID, dateFin: null }),
-          }),
-        }),
-      ])
-    );
+    // Vérifier que la recherche des bacs sources passe bien par assignationBac.findMany
+    expect(mockAssignationBacFindMany).toHaveBeenCalled();
+    const sourceCall = mockAssignationBacFindMany.mock.calls[0][0];
+    expect(sourceCall.where.bacId).toEqual({ in: [bacSourceViaAssignationOnly.id] });
+    expect(sourceCall.where.vagueId).toBe(VAGUE_ID);
+    expect(sourceCall.where.dateFin).toBeNull();
   });
 
   it("accepte un bac destination sans Bac.vagueId mais avec AssignationBac active", async () => {
-    // Bac destination lié uniquement via AssignationBac
-    const bacDestAssignationOnly = {
-      ...bacDestSanAssignation,
-      vagueId: null, // pas de FK direct
-    };
-
     mockVagueFindFirst.mockResolvedValue(vagueEnCours);
-    mockBacFindMany
-      .mockResolvedValueOnce([bacSourceViaAssignationOnly]) // sources
-      .mockResolvedValueOnce([bacDestAssignationOnly])      // destinations (trouvé via OR)
-      .mockResolvedValueOnce([bacSourceViaAssignationOnly]) // BUG-048 vivants
-      .mockResolvedValueOnce([bacSourceViaAssignationOnly]);
+    mockAssignationBacFindMany
+      .mockResolvedValueOnce([assignationBacSource])                                    // sources
+      .mockResolvedValueOnce([{ bacId: assignationBacDest.bacId }])                    // destinations
+      .mockResolvedValueOnce([{ bacId: assignationBacSource.bacId, nombreInitial: 200 }]) // BUG-048 vivants
+      .mockResolvedValueOnce([assignationBacSource, assignationBacDest]);               // snapshot
 
+    mockReleveFindMany.mockResolvedValue([]);
     mockCalibrageCreate.mockResolvedValue(fakeCalibrageCreated);
     mockBacUpdateMany.mockResolvedValue({ count: 1 });
     mockAssignationBacUpdateMany.mockResolvedValue({ count: 1 });
@@ -245,24 +259,25 @@ describe("createCalibrage — Fix 4 BUG-040 : bac source via AssignationBac acce
     // AssignationBac existante pour le bac destination
     const existingAssignation = { id: "assignation-dest-001", nombreActuel: 0 };
     mockAssignationBacFindFirst.mockResolvedValue(existingAssignation);
-    mockBacUpdate.mockResolvedValue({ ...bacDestAssignationOnly, nombrePoissons: 200 });
     mockAssignationBacUpdate.mockResolvedValue({ id: "assignation-dest-001", nombreActuel: 200 });
-    mockAssignationBacUpdateMany.mockResolvedValue({ count: 1 });
     mockReleveCreate.mockResolvedValue({});
 
     await expect(
       createCalibrage(SITE_ID, USER_ID, makeDto())
     ).resolves.toBeDefined();
 
-    // Vérifier que la recherche des bacs destinations utilise aussi le OR (BUG-040 Fix 4)
-    const destCall = mockBacFindMany.mock.calls[1][0];
-    expect(destCall.where.OR).toBeDefined();
+    // Vérifier que la recherche des bacs destinations passe par assignationBac.findMany
+    expect(mockAssignationBacFindMany).toHaveBeenCalledTimes(4);
+    const destCall = mockAssignationBacFindMany.mock.calls[1][0];
+    expect(destCall.where.bacId).toEqual({ in: [bacDestSanAssignation.id] });
+    expect(destCall.where.vagueId).toBe(VAGUE_ID);
+    expect(destCall.where.dateFin).toBeNull();
   });
 
   it("rejette un bac source qui n'appartient pas du tout à la vague (ni FK ni AssignationBac)", async () => {
     mockVagueFindFirst.mockResolvedValue(vagueEnCours);
-    // findMany retourne 0 bac → validation échoue
-    mockBacFindMany.mockResolvedValueOnce([]); // sources introuvables
+    // assignationBac.findMany retourne 0 → validation échoue
+    mockAssignationBacFindMany.mockResolvedValue([]);
 
     await expect(
       createCalibrage(SITE_ID, USER_ID, makeDto())
@@ -283,32 +298,33 @@ describe("createCalibrage — Fix 5 BUG-040 : create défensif AssignationBac ma
 
   it("crée une AssignationBac pour un bac destination sans assignation préalable", async () => {
     mockVagueFindFirst.mockResolvedValue(vagueEnCours);
-    mockBacFindMany
-      .mockResolvedValueOnce([bacSourceViaAssignationOnly]) // sources
-      .mockResolvedValueOnce([bacDestSanAssignation])       // destinations
-      .mockResolvedValueOnce([bacSourceViaAssignationOnly, bacDestSanAssignation]) // BUG-048 vivants
-      .mockResolvedValueOnce([bacSourceViaAssignationOnly, bacDestSanAssignation]); // snapshot
+    // 4 appels à assignationBac.findMany :
+    // 1. source validation → assignation source trouvée
+    // 2. dest validation → assignation dest trouvée (pour valider appartenance)
+    // 3. vivants BUG-048
+    // 4. snapshot
+    mockAssignationBacFindMany
+      .mockResolvedValueOnce([assignationBacSource])                                    // sources
+      .mockResolvedValueOnce([{ bacId: assignationBacDest.bacId }])                    // destinations
+      .mockResolvedValueOnce([{ bacId: assignationBacSource.bacId, nombreInitial: 200 }]) // BUG-048 vivants
+      .mockResolvedValueOnce([assignationBacSource, assignationBacDest]);               // snapshot
 
+    mockReleveFindMany.mockResolvedValue([]);
     mockCalibrageCreate.mockResolvedValue(fakeCalibrageCreated);
     mockBacUpdateMany.mockResolvedValue({ count: 1 });
     mockAssignationBacUpdateMany.mockResolvedValue({ count: 1 });
 
     // Pas d'AssignationBac active pour le bac destination → doit déclencher create défensif
+    // findFirst: 1er appel = null (pas d'active), 2ème appel = null (historique)
     mockAssignationBacFindFirst.mockResolvedValue(null);
-    mockBacFindUnique.mockResolvedValue({
-      nombrePoissons: 0,
-      nombreInitial: null,
-      poidsMoyenInitial: null,
-    });
     const mockCreatedAssignation = {
       id: "new-assignation-defensive",
       bacId: bacDestSanAssignation.id,
       vagueId: VAGUE_ID,
       siteId: SITE_ID,
-      nombrePoissons: 200,
+      nombreActuel: 200,
     };
     mockAssignationBacCreate.mockResolvedValue(mockCreatedAssignation);
-    mockBacUpdate.mockResolvedValue({ ...bacDestSanAssignation, nombrePoissons: 200 });
     mockReleveCreate.mockResolvedValue({});
 
     await createCalibrage(SITE_ID, USER_ID, makeDto());
@@ -322,18 +338,19 @@ describe("createCalibrage — Fix 5 BUG-040 : create défensif AssignationBac ma
     expect(createCall.data.vagueId).toBe(VAGUE_ID);
     expect(createCall.data.siteId).toBe(SITE_ID);
     expect(createCall.data.dateFin).toBeNull();
-    // nombreActuel = existant (0) + reçus (200) = 200
+    // nombreActuel = total reçu (200)
     expect(createCall.data.nombreActuel).toBe(200);
   });
 
   it("ne crée pas d'AssignationBac si une existe déjà pour le bac destination", async () => {
     mockVagueFindFirst.mockResolvedValue(vagueEnCours);
-    mockBacFindMany
-      .mockResolvedValueOnce([bacSourceViaAssignationOnly])
-      .mockResolvedValueOnce([bacDestSanAssignation])
-      .mockResolvedValueOnce([bacSourceViaAssignationOnly, bacDestSanAssignation]) // BUG-048 vivants
-      .mockResolvedValueOnce([bacSourceViaAssignationOnly, bacDestSanAssignation]);
+    mockAssignationBacFindMany
+      .mockResolvedValueOnce([assignationBacSource])                                    // sources
+      .mockResolvedValueOnce([{ bacId: assignationBacDest.bacId }])                    // destinations
+      .mockResolvedValueOnce([{ bacId: assignationBacSource.bacId, nombreInitial: 200 }]) // BUG-048 vivants
+      .mockResolvedValueOnce([assignationBacSource, assignationBacDest]);               // snapshot
 
+    mockReleveFindMany.mockResolvedValue([]);
     mockCalibrageCreate.mockResolvedValue(fakeCalibrageCreated);
     mockBacUpdateMany.mockResolvedValue({ count: 1 });
 
@@ -344,7 +361,6 @@ describe("createCalibrage — Fix 5 BUG-040 : create défensif AssignationBac ma
     // Cas normal : update direct via assignationBac.update (pas create)
     mockAssignationBacUpdate.mockResolvedValue({ id: "assignation-existing", nombreActuel: 250 });
     mockAssignationBacUpdateMany.mockResolvedValue({ count: 1 });
-    mockBacUpdate.mockResolvedValue({ ...bacDestSanAssignation, nombrePoissons: 250 });
     mockReleveCreate.mockResolvedValue({});
 
     await createCalibrage(SITE_ID, USER_ID, makeDto());
@@ -353,36 +369,31 @@ describe("createCalibrage — Fix 5 BUG-040 : create défensif AssignationBac ma
     expect(mockAssignationBacCreate).not.toHaveBeenCalled();
   });
 
-  it("le create défensif utilise nombreActuel = (existant + total reçu)", async () => {
-    // Bac destination avec 30 poissons existants + 200 reçus = 230
-    const bacDestAvecPoissons = { ...bacDestSanAssignation, nombrePoissons: 30 };
+  it("le create défensif utilise nombreActuel = total reçu (AssignationBac manquante)", async () => {
+    // Bac destination sans AssignationBac active — le create défensif reçoit le total du groupe
 
     mockVagueFindFirst.mockResolvedValue(vagueEnCours);
-    mockBacFindMany
-      .mockResolvedValueOnce([bacSourceViaAssignationOnly])
-      .mockResolvedValueOnce([bacDestAvecPoissons])
-      .mockResolvedValueOnce([bacSourceViaAssignationOnly, bacDestAvecPoissons]) // BUG-048 vivants
-      .mockResolvedValueOnce([bacSourceViaAssignationOnly, bacDestAvecPoissons]);
+    mockAssignationBacFindMany
+      .mockResolvedValueOnce([assignationBacSource])                                    // sources
+      .mockResolvedValueOnce([{ bacId: assignationBacDest.bacId }])                    // destinations
+      .mockResolvedValueOnce([{ bacId: assignationBacSource.bacId, nombreInitial: 200 }]) // BUG-048 vivants
+      .mockResolvedValueOnce([assignationBacSource, assignationBacDest]);               // snapshot
 
+    mockReleveFindMany.mockResolvedValue([]);
     mockCalibrageCreate.mockResolvedValue(fakeCalibrageCreated);
     mockBacUpdateMany.mockResolvedValue({ count: 1 });
     mockAssignationBacUpdateMany.mockResolvedValue({ count: 1 });
 
+    // findFirst: null pour active, null pour historique
     mockAssignationBacFindFirst.mockResolvedValue(null);
-    mockBacFindUnique.mockResolvedValue({
-      nombrePoissons: 30, // valeur existante dans le bac
-      nombreInitial: null,
-      poidsMoyenInitial: null,
-    });
     mockAssignationBacCreate.mockResolvedValue({ id: "new-def" });
-    mockBacUpdate.mockResolvedValue({ ...bacDestAvecPoissons, nombrePoissons: 230 });
     mockReleveCreate.mockResolvedValue({});
 
     await createCalibrage(SITE_ID, USER_ID, makeDto());
 
     const createCall = mockAssignationBacCreate.mock.calls[0][0];
-    // 30 (existants) + 200 (reçus du groupe) = 230
-    expect(createCall.data.nombreActuel).toBe(230);
+    // total reçu du groupe = 200
+    expect(createCall.data.nombreActuel).toBe(200);
   });
 });
 
@@ -398,6 +409,7 @@ const mockVagueFindFirstPatch = vi.fn();
 const mockBacFindManyPatch = vi.fn();
 const mockBacUpdatePatch = vi.fn();
 const mockBacUpdateManyPatch = vi.fn();
+const mockAssignationBacFindManyPatch = vi.fn();
 const mockAssignationBacFindFirstPatch = vi.fn();
 const mockAssignationBacUpdatePatch = vi.fn();
 const mockAssignationBacUpdateManyPatch = vi.fn();
@@ -429,6 +441,8 @@ const mockTransactionPatch = vi.fn(async (fn: (tx: unknown) => Promise<unknown>)
       createMany: (...args: unknown[]) => mockCalibrageModificationCreateMany(...args),
     },
     assignationBac: {
+      // ADR-043 Phase 3: findMany needed for source/dest/all bacs lookups in patchCalibrage
+      findMany: (...args: unknown[]) => mockAssignationBacFindManyPatch(...args),
       findFirst: (...args: unknown[]) => mockAssignationBacFindFirstPatch(...args),
       update: (...args: unknown[]) => mockAssignationBacUpdatePatch(...args),
       updateMany: (...args: unknown[]) => mockAssignationBacUpdateManyPatch(...args),
@@ -462,14 +476,21 @@ describe("patchCalibrage — Réserve 2 BUG-040 : bac destination via Assignatio
           update: (...args: unknown[]) => mockBacUpdate(...args),
           updateMany: (...args: unknown[]) => mockBacUpdateMany(...args),
         },
-        calibrage: { create: (...args: unknown[]) => mockCalibrageCreate(...args) },
+        calibrage: {
+          create: (...args: unknown[]) => mockCalibrageCreate(...args),
+          findUniqueOrThrow: (...args: unknown[]) => mockCalibrageCreate(...args),
+        },
         assignationBac: {
+          findMany: (...args: unknown[]) => mockAssignationBacFindMany(...args),
           findFirst: (...args: unknown[]) => mockAssignationBacFindFirst(...args),
           update: (...args: unknown[]) => mockAssignationBacUpdate(...args),
           updateMany: (...args: unknown[]) => mockAssignationBacUpdateMany(...args),
           create: (...args: unknown[]) => mockAssignationBacCreate(...args),
         },
-        releve: { create: (...args: unknown[]) => mockReleveCreate(...args) },
+        releve: {
+          create: (...args: unknown[]) => mockReleveCreate(...args),
+          findMany: (...args: unknown[]) => mockReleveFindMany(...args),
+        },
       };
       return fn(tx);
     });
@@ -546,23 +567,35 @@ describe("patchCalibrage — Réserve 2 BUG-040 : bac destination via Assignatio
       ],
     };
 
+    const assignationDestViaAssignationOnly = {
+      id: "assignation-dest-via-assignation",
+      bacId: bacDestViaAssignationOnly.id,
+      vagueId: VAGUE_ID,
+      siteId: SITE_ID,
+      dateFin: null,
+      nombreActuel: 200,
+      nombreInitial: null,
+      poidsMoyenInitial: null,
+      bac: { id: bacDestViaAssignationOnly.id, nom: bacDestViaAssignationOnly.nom },
+    };
+
     mockCalibrageFindFirst
       .mockResolvedValueOnce(ancienCalibrage) // Étape 1 — fetch calibrage existant
       .mockResolvedValueOnce(updatedCalibrage); // Étape 9d — fetch calibrage mis à jour
 
-    // Étape 5 : findMany pour vérification des bacs destination
-    // Le bac destination est trouvé via la clause OR (AssignationBac active)
-    mockBacFindManyPatch
-      .mockResolvedValueOnce([bacDestViaAssignationOnly]); // Étape 5 : vérification appartenance
+    // assignationBac.findMany appelé 2 fois :
+    // 1. étape 5 : vérification appartenance bacs destination
+    // 2. étape 5b : snapshot all bacs de la vague
+    mockAssignationBacFindManyPatch
+      .mockResolvedValueOnce([{ bacId: bacDestViaAssignationOnly.id }]) // étape 5 : dest trouvé
+      .mockResolvedValueOnce([assignationDestViaAssignationOnly]);       // étape 5b : snapshot
 
-    // Étapes 6, 7 — opérations sur bacs et assignations
-    mockBacUpdatePatch.mockResolvedValue({ id: "any" });
-    mockBacUpdateManyPatch.mockResolvedValue({ count: 1 });
-    mockAssignationBacFindFirstPatch.mockResolvedValue(null); // pas d'assignation active
+    // Étapes 6, 7 — opérations sur assignations
+    mockAssignationBacFindFirstPatch.mockResolvedValue(null); // pas d'assignation active dans rollback
     mockAssignationBacUpdatePatch.mockResolvedValue({ id: "any" });
-    mockAssignationBacUpdateManyPatch.mockResolvedValue({ count: 0 });
+    mockAssignationBacUpdateManyPatch.mockResolvedValue({ count: 1 });
 
-    // Étape 5b — snapshot
+    // Étape 5b — vague pour snapshot
     mockVagueFindFirstPatch.mockResolvedValue({
       id: VAGUE_ID,
       code: "V-2025-001",
@@ -570,8 +603,6 @@ describe("patchCalibrage — Réserve 2 BUG-040 : bac destination via Assignatio
       poidsMoyenInitial: 50,
       statut: StatutVague.EN_COURS,
     });
-    mockBacFindManyPatch
-      .mockResolvedValueOnce([bacDestViaAssignationOnly]); // snapshot bacs de la vague
 
     // Étape 8 — releves
     mockReleveDeleteMany.mockResolvedValue({ count: 2 });
@@ -599,18 +630,11 @@ describe("patchCalibrage — Réserve 2 BUG-040 : bac destination via Assignatio
       }, "Test réserve 2")
     ).resolves.toBeDefined();
 
-    // Vérifier que la clause OR est bien présente dans la recherche des bacs destination (étape 5)
-    const step5Call = mockBacFindManyPatch.mock.calls[0][0];
-    expect(step5Call.where.OR).toBeDefined();
-    expect(step5Call.where.OR).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ vagueId: VAGUE_ID }),
-        expect.objectContaining({
-          assignations: expect.objectContaining({
-            some: expect.objectContaining({ vagueId: VAGUE_ID, dateFin: null }),
-          }),
-        }),
-      ])
-    );
+    // Vérifier que la vérification des bacs destination passe par assignationBac.findMany (étape 5)
+    expect(mockAssignationBacFindManyPatch).toHaveBeenCalled();
+    const step5Call = mockAssignationBacFindManyPatch.mock.calls[0][0];
+    expect(step5Call.where.bacId).toEqual({ in: [bacDestViaAssignationOnly.id] });
+    expect(step5Call.where.vagueId).toBe(VAGUE_ID);
+    expect(step5Call.where.dateFin).toBeNull();
   });
 });

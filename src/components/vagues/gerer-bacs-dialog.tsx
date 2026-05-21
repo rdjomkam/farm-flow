@@ -24,13 +24,13 @@ import {
 } from "@/components/ui/select";
 import { queryKeys } from "@/lib/query-keys";
 import { Permission } from "@/types";
-import type { Bac } from "@/types";
+import type { BacResponse } from "@/types";
 import { useVagueService } from "@/services";
 import { useBacsLibres } from "@/hooks/queries/use-bacs-queries";
 
 interface GererBacsDialogProps {
   vagueId: string;
-  currentBacs: Bac[];
+  currentBacs: BacResponse[];
   permissions: Permission[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -113,7 +113,7 @@ export function GererBacsDialog({
     }
   }
 
-  async function handleRemoveBac(bac: Bac) {
+  async function handleRemoveBac(bac: BacResponse) {
     if (!canRemove) return;
 
     const poissonsPresents = bac.nombrePoissons ?? 0;

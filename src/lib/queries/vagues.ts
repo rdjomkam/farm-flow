@@ -18,10 +18,9 @@ export async function getVagues(
     prisma.vague.findMany({
       where,
       include: {
-        // ADR-043 Phase 2: compter les assignations actives (et garder aussi _count.bacs pour compat)
+        // ADR-043 Phase 3: compter uniquement les assignations actives
         _count: {
           select: {
-            bacs: true,
             releves: true,
             assignations: { where: { dateFin: null } },
           },
@@ -46,10 +45,9 @@ export async function getVagueById(
   const vague = await prisma.vague.findFirst({
     where: { id, siteId },
     include: {
-      bacs: { orderBy: { nom: "asc" } },
-      // ADR-043 Phase 2: inclure toutes les assignations (actives + terminées)
+      // ADR-043 Phase 3: AssignationBac est la seule source de vérité
       assignations: {
-        include: { bac: { select: { id: true, nom: true, volume: true, nombreInitial: true, poidsMoyenInitial: true, nombrePoissons: true } } },
+        include: { bac: { select: { id: true, nom: true, volume: true } } },
         orderBy: { dateAssignation: "asc" },
       },
       uniteProduction: { select: { id: true, code: true, nom: true, type: true } },
@@ -58,24 +56,23 @@ export async function getVagueById(
 
   if (!vague) return null;
 
-  // BUG-040: UNION des deux sources pour éviter que l'un masque silencieusement l'autre.
-  // Priorité : AssignationBac (source de vérité ADR-043), fallback sur Bac.vagueId
-  // pour les bacs non encore migrés.
-  // BUG-044: inclure nombreInitial et poidsMoyenInitial pour que computeVivantsByBac
-  // puisse utiliser la distribution réelle (et non la répartition uniforme).
-  const bacsFromAssignations = vague.assignations
+  // ADR-043 Phase 3: construire la liste des bacs depuis les assignations actives uniquement
+  const bacs = vague.assignations
     .filter((a) => a.dateFin === null)
-    .map((a) => ({ id: a.bac.id, nom: a.bac.nom, volume: a.bac.volume, nombreInitial: a.bac.nombreInitial, poidsMoyenInitial: a.bac.poidsMoyenInitial, nombrePoissons: a.nombreActuel ?? a.bac.nombrePoissons ?? 0 }));
-
-  const byId = new Map<string, { id: string; nom: string; volume: number | null; nombreInitial: number | null; poidsMoyenInitial: number | null; nombrePoissons: number }>();
-  for (const b of bacsFromAssignations) byId.set(b.id, b);
-  for (const b of vague.bacs) if (!byId.has(b.id)) byId.set(b.id, { id: b.id, nom: b.nom, volume: b.volume, nombreInitial: b.nombreInitial, poidsMoyenInitial: b.poidsMoyenInitial, nombrePoissons: b.nombrePoissons ?? 0 });
-  const finalBacs = [...byId.values()].sort((a, b) => a.nom.localeCompare(b.nom));
+    .map((a) => ({
+      id: a.bac.id,
+      nom: a.bac.nom,
+      volume: a.bac.volume,
+      nombrePoissons: a.nombreActuel ?? 0,
+      nombreInitial: a.nombreInitial ?? 0,
+      poidsMoyenInitial: a.poidsMoyenInitial ?? 0,
+    }))
+    .sort((a, b) => a.nom.localeCompare(b.nom));
 
   return {
     ...vague,
-    bacs: finalBacs as import("@/types").Bac[],
-  } as import("@/types").VagueWithBacs;
+    bacs: bacs as unknown as import("@/types").BacAvecProduction[],
+  } as unknown as import("@/types").VagueWithBacs;
 }
 
 /**
@@ -94,13 +91,10 @@ export async function getVagueByIdWithReleves(
     prisma.vague.findFirst({
       where: { id, siteId },
       include: {
-        bacs: { orderBy: { nom: "asc" } },
-        // ADR-043 Phase 2: inclure les assignations actives pour fallback
+        // ADR-043 Phase 3: assignations actives uniquement pour reconstruire les bacs
         assignations: {
           where: { dateFin: null },
-          // BUG-044: inclure nombreInitial et poidsMoyenInitial pour que computeVivantsByBac
-          // utilise la distribution réelle par bac (et non la répartition uniforme).
-          include: { bac: { select: { id: true, nom: true, volume: true, nombreInitial: true, poidsMoyenInitial: true, nombrePoissons: true } } },
+          include: { bac: { select: { id: true, nom: true, volume: true } } },
         },
         uniteProduction: { select: { id: true, code: true, nom: true, type: true } },
       },
@@ -125,17 +119,17 @@ export async function getVagueByIdWithReleves(
 
   if (!vague) return null;
 
-  // BUG-040: UNION des deux sources pour éviter que l'un masque silencieusement l'autre.
-  // Priorité : AssignationBac (source de vérité ADR-043), fallback sur Bac.vagueId
-  // pour les bacs non encore migrés.
-  // BUG-044: inclure nombreInitial et poidsMoyenInitial pour que computeVivantsByBac
-  // utilise la distribution réelle par bac (et non la répartition uniforme).
-  const bacsFromAssignations = vague.assignations
-    .map((a) => ({ id: a.bac.id, nom: a.bac.nom, volume: a.bac.volume, nombreInitial: a.bac.nombreInitial, poidsMoyenInitial: a.bac.poidsMoyenInitial, nombrePoissons: a.nombreActuel ?? a.bac.nombrePoissons ?? 0 }));
-  const byIdWithReleves = new Map<string, { id: string; nom: string; volume: number | null; nombreInitial: number | null; poidsMoyenInitial: number | null; nombrePoissons: number }>();
-  for (const b of bacsFromAssignations) byIdWithReleves.set(b.id, b);
-  for (const b of vague.bacs) if (!byIdWithReleves.has(b.id)) byIdWithReleves.set(b.id, { id: b.id, nom: b.nom, volume: b.volume, nombreInitial: b.nombreInitial, poidsMoyenInitial: b.poidsMoyenInitial, nombrePoissons: b.nombrePoissons ?? 0 });
-  const finalBacs = [...byIdWithReleves.values()].sort((a, b) => a.nom.localeCompare(b.nom));
+  // ADR-043 Phase 3: construire la liste des bacs depuis les assignations actives
+  const finalBacs = vague.assignations
+    .map((a) => ({
+      id: a.bac.id,
+      nom: a.bac.nom,
+      volume: a.bac.volume,
+      nombrePoissons: a.nombreActuel ?? 0,
+      nombreInitial: a.nombreInitial ?? 0,
+      poidsMoyenInitial: a.poidsMoyenInitial ?? 0,
+    }))
+    .sort((a, b) => a.nom.localeCompare(b.nom));
 
   return {
     vague: { ...vague, bacs: finalBacs } as unknown as import("@/types").VagueWithBacs,
@@ -149,7 +143,7 @@ export async function createVague(siteId: string, data: CreateVagueDTO) {
   return prisma.$transaction(async (tx) => {
     const bacIds = data.bacDistribution.map((e) => e.bacId);
 
-    // Verifier que tous les bacs existent, sont libres, et appartiennent au site
+    // Verifier que tous les bacs existent et appartiennent au site
     const bacs = await tx.bac.findMany({
       where: { id: { in: bacIds }, siteId },
     });
@@ -158,9 +152,13 @@ export async function createVague(siteId: string, data: CreateVagueDTO) {
       throw new Error("Un ou plusieurs bacs sont introuvables");
     }
 
-    const bacsOccupes = bacs.filter((b) => b.vagueId !== null);
-    if (bacsOccupes.length > 0) {
-      const noms = bacsOccupes.map((b) => b.nom).join(", ");
+    // ADR-043 Phase 3: vérifier l'occupation via AssignationBac (source de vérité)
+    const existingAssignations = await tx.assignationBac.findMany({
+      where: { bacId: { in: bacIds }, dateFin: null },
+      include: { bac: { select: { nom: true } } },
+    });
+    if (existingAssignations.length > 0) {
+      const noms = existingAssignations.map((a) => a.bac.nom).join(", ");
       throw new Error(`Bacs déjà assignés à une vague : ${noms}`);
     }
 
@@ -187,20 +185,8 @@ export async function createVague(siteId: string, data: CreateVagueDTO) {
       },
     });
 
-    // Assigner les bacs avec leur distribution d'alevins
+    // Assigner les bacs via AssignationBac (ADR-043 Phase 3 — plus de dual-write sur Bac)
     for (const entry of data.bacDistribution) {
-      // Backward compat: toujours écrire sur Bac (Phase 2 dual-write)
-      await tx.bac.update({
-        where: { id: entry.bacId, siteId },
-        data: {
-          vagueId: vague.id,
-          nombrePoissons: entry.nombrePoissons,
-          nombreInitial: entry.nombrePoissons,
-          poidsMoyenInitial: data.poidsMoyenInitial,
-        },
-      });
-
-      // ADR-043 Phase 2: créer l'AssignationBac correspondante
       await tx.assignationBac.create({
         data: {
           bacId: entry.bacId,
@@ -218,7 +204,6 @@ export async function createVague(siteId: string, data: CreateVagueDTO) {
     return tx.vague.findUnique({
       where: { id: vague.id },
       include: {
-        bacs: true,
         assignations: {
           where: { dateFin: null },
           include: { bac: { select: { id: true, nom: true, volume: true } } },
@@ -233,7 +218,6 @@ export async function cloturerVague(id: string, siteId: string, dateFin?: string
   return prisma.$transaction(async (tx) => {
     const vague = await tx.vague.findFirst({
       where: { id, siteId },
-      include: { bacs: true },
     });
 
     if (!vague) {
@@ -246,18 +230,8 @@ export async function cloturerVague(id: string, siteId: string, dateFin?: string
 
     const dateFinDate = dateFin ? new Date(dateFin) : new Date();
 
-    // Liberer tous les bacs et remettre les compteurs a zero (backward compat)
-    await tx.bac.updateMany({
-      where: { vagueId: id, siteId },
-      data: {
-        vagueId: null,
-        nombrePoissons: null,
-        nombreInitial: null,
-        poidsMoyenInitial: null,
-      },
-    });
-
-    // ADR-043 Phase 2: fermer toutes les assignations actives de cette vague
+    // ADR-043 Phase 3: fermer toutes les assignations actives de cette vague
+    // (Bac n'a plus de vagueId/nombrePoissons — plus de dual-write)
     await tx.assignationBac.updateMany({
       where: { vagueId: id, siteId, dateFin: null },
       data: { dateFin: dateFinDate },
@@ -273,7 +247,6 @@ export async function cloturerVague(id: string, siteId: string, dateFin?: string
       include: {
         _count: {
           select: {
-            bacs: true,
             assignations: true,
           },
         },
@@ -290,15 +263,14 @@ export async function cloturerVague(id: string, siteId: string, dateFin?: string
  *   2. MouvementStock liés aux Releves (via releveId) — désassocier avant de supprimer les releves
  *   3. Releve (avec ses relations Cascade : ReleveModification, Activite via releveId)
  *   4. CalibrageGroupe (Cascade depuis Calibrage, mais on fait explicitement pour être sûr)
- *   5. Calibrage (Cascade CalibrageGroupe, CalibrageModification)
+ *   5. Calibrage (Cascade CalibrageModification)
  *   6. MouvementStock liés à la vague (vagueId)
  *   7. Paiement (enfant de Facture, Cascade depuis Facture)
  *   8. Facture (enfant de Vente — 1:1)
  *   9. Vente
  *  10. Activite (vagueId)
  *  11. HistoriqueNutritionnel (vagueId)
- *  12. Libérer les Bacs (vagueId → null, sans les supprimer)
- *  13. Vague (Cascade : AssignationBac, ListeBesoinsVague, GompertzVague, NoteIngenieur SetNull, Depense SetNull)
+ *  12. Vague (Cascade : AssignationBac, ListeBesoinsVague, GompertzVague, NoteIngenieur SetNull, Depense SetNull)
  */
 export async function deleteVague(id: string, siteId: string): Promise<void> {
   return prisma.$transaction(async (tx) => {
@@ -354,18 +326,8 @@ export async function deleteVague(id: string, siteId: string): Promise<void> {
     // 11. HistoriqueNutritionnel
     await tx.historiqueNutritionnel.deleteMany({ where: { vagueId: id, siteId } });
 
-    // 12. Libérer les Bacs (ne pas les supprimer — juste détacher de la vague)
-    await tx.bac.updateMany({
-      where: { vagueId: id, siteId },
-      data: {
-        vagueId: null,
-        nombrePoissons: null,
-        nombreInitial: null,
-        poidsMoyenInitial: null,
-      },
-    });
-
-    // 13. Supprimer la Vague (Cascade : AssignationBac, ListeBesoinsVague, GompertzVague)
+    // 12. Supprimer la Vague (Cascade : AssignationBac, ListeBesoinsVague, GompertzVague)
+    //     ADR-043 Phase 3 : plus de Bac.vagueId à remettre à null — AssignationBac est supprimée en cascade
     await tx.vague.delete({ where: { id } });
   });
 }
@@ -383,7 +345,6 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
       include: {
         _count: {
           select: {
-            bacs: true,
             assignations: { where: { dateFin: null } },
           },
         },
@@ -409,26 +370,19 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
         throw new Error("Un ou plusieurs bacs sont introuvables");
       }
 
-      const bacsOccupes = bacs.filter((b) => b.vagueId !== null);
-      if (bacsOccupes.length > 0) {
-        const noms = bacsOccupes.map((b) => b.nom).join(", ");
+      // ADR-043 Phase 3: vérifier l'occupation via AssignationBac (source de vérité)
+      const existingAssignations = await tx.assignationBac.findMany({
+        where: { bacId: { in: bacIds }, dateFin: null },
+        include: { bac: { select: { nom: true } } },
+      });
+      if (existingAssignations.length > 0) {
+        const noms = existingAssignations.map((a) => a.bac.nom).join(", ");
         throw new Error(`Bacs déjà assignés à une vague : ${noms}`);
       }
 
       let totalPoissonAjoutes = 0;
       for (const entry of data.addBacs) {
-        // Backward compat: toujours écrire sur Bac (Phase 2 dual-write)
-        await tx.bac.update({
-          where: { id: entry.bacId, siteId },
-          data: {
-            vagueId: id,
-            nombrePoissons: entry.nombrePoissons,
-            nombreInitial: entry.nombrePoissons,
-            poidsMoyenInitial: vague.poidsMoyenInitial,
-          },
-        });
-
-        // ADR-043 Phase 2: créer l'AssignationBac
+        // ADR-043 Phase 3: créer l'AssignationBac (plus de dual-write sur Bac)
         await tx.assignationBac.create({
           data: {
             bacId: entry.bacId,
@@ -457,32 +411,21 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
         throw new Error("Le retrait de bacs n'est possible que sur une vague en cours");
       }
 
-      // ADR-043 Phase 2: utiliser le compte d'assignations actives
-      const currentBacCount = vague._count.assignations > 0
-        ? vague._count.assignations
-        : vague._count.bacs;
+      const currentBacCount = vague._count.assignations;
 
       if (currentBacCount - data.removeBacIds.length < 1) {
         throw new Error("Impossible de retirer tous les bacs : une vague doit avoir au moins un bac");
       }
 
-      // Recuperer les bacs a retirer
-      // BUG-040 Fix A: accepter un bac soit via Bac.vagueId soit via AssignationBac active
-      const bacsARetirer = await tx.bac.findMany({
+      // Recuperer les assignations actives des bacs à retirer
+      const assignationsARetirer = await tx.assignationBac.findMany({
         where: {
-          id: { in: data.removeBacIds },
-          siteId,
-          OR: [
-            { vagueId: id },
-            { assignations: { some: { vagueId: id, dateFin: null } } },
-          ],
+          bacId: { in: data.removeBacIds },
+          vagueId: id,
+          dateFin: null,
         },
         include: {
-          assignations: {
-            where: { vagueId: id, dateFin: null },
-            select: { id: true, nombreActuel: true },
-            take: 1,
-          },
+          bac: { select: { id: true, nom: true } },
         },
       });
 
@@ -492,51 +435,36 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
       }
 
       // Verifier si un bac non vide doit etre transfere
-      for (const bacARetirer of bacsARetirer) {
-        // BUG-040 Fix B: lire nombreActuel depuis AssignationBac active en priorité
-        const activeAssignation = bacARetirer.assignations?.[0];
-        const poissonsPresents = activeAssignation?.nombreActuel ?? bacARetirer.nombrePoissons ?? 0;
+      for (const assignation of assignationsARetirer) {
+        // ADR-043 Phase 3: lire nombreActuel depuis AssignationBac (source de vérité)
+        const poissonsPresents = assignation.nombreActuel ?? 0;
         if (poissonsPresents > 0) {
           if (!data.transferDestinationBacId) {
             throw new Error(
-              `Le bac ${bacARetirer.nom} contient ${poissonsPresents} poissons. Veuillez les transférer vers un autre bac avant de le retirer.`
+              `Le bac ${assignation.bac.nom} contient ${poissonsPresents} poissons. Veuillez les transférer vers un autre bac avant de le retirer.`
             );
           }
 
           // Verifier que le bac de destination appartient a la meme vague
-          // BUG-040 Fix C: clause OR + include AssignationBac active
-          const bacDestination = await tx.bac.findFirst({
+          const destAssignation = await tx.assignationBac.findFirst({
             where: {
-              id: data.transferDestinationBacId,
-              siteId,
-              OR: [
-                { vagueId: id },
-                { assignations: { some: { vagueId: id, dateFin: null } } },
-              ],
+              bacId: data.transferDestinationBacId,
+              vagueId: id,
+              dateFin: null,
             },
             include: {
-              assignations: {
-                where: { vagueId: id, dateFin: null },
-                select: { id: true, nombreActuel: true },
-                take: 1,
-              },
+              bac: { select: { id: true, nom: true } },
             },
           });
-          if (!bacDestination) {
+          if (!destAssignation) {
             throw new Error("Le bac de destination est introuvable ou n'appartient pas a cette vague");
           }
 
-          // Transferer les poissons : incrémenter la destination
-          // BUG-040 Fix C: lire nombreActuel depuis AssignationBac active en priorité
-          const destAssignation = bacDestination.assignations?.[0];
-          const destCurrentCount = destAssignation?.nombreActuel ?? bacDestination.nombrePoissons ?? 0;
+          // Transferer les poissons : incrémenter la destination via AssignationBac
+          const destCurrentCount = destAssignation.nombreActuel ?? 0;
           const nouveauNombreDestination = destCurrentCount + poissonsPresents;
-          await tx.bac.update({
-            where: { id: data.transferDestinationBacId },
-            data: { nombrePoissons: { increment: poissonsPresents } },
-          });
 
-          // ADR-043 Phase 2: mettre à jour l'assignation active de la destination
+          // ADR-043 Phase 3: mettre à jour l'assignation active de la destination
           await tx.assignationBac.updateMany({
             where: { bacId: data.transferDestinationBacId, vagueId: id, dateFin: null },
             data: { nombreActuel: nouveauNombreDestination },
@@ -549,9 +477,9 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
               typeReleve: TypeReleve.COMPTAGE,
               nombreCompte: 0,
               methodeComptage: MethodeComptage.DIRECT,
-              notes: `Transfert lors du retrait du bac ${bacARetirer.nom}`,
+              notes: `Transfert lors du retrait du bac ${assignation.bac.nom}`,
               vagueId: id,
-              bacId: bacARetirer.id,
+              bacId: assignation.bac.id,
               siteId,
             },
           });
@@ -563,7 +491,7 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
               typeReleve: TypeReleve.COMPTAGE,
               nombreCompte: nouveauNombreDestination,
               methodeComptage: MethodeComptage.DIRECT,
-              notes: `Transfert depuis le bac ${bacARetirer.nom} lors de son retrait`,
+              notes: `Transfert depuis le bac ${assignation.bac.nom} lors de son retrait`,
               vagueId: id,
               bacId: data.transferDestinationBacId,
               siteId,
@@ -572,18 +500,8 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
         }
       }
 
-      // Liberer les bacs (ne jamais decrementer vague.nombreInitial) — backward compat
-      await tx.bac.updateMany({
-        where: { id: { in: data.removeBacIds }, vagueId: id, siteId },
-        data: {
-          vagueId: null,
-          nombrePoissons: null,
-          nombreInitial: null,
-          poidsMoyenInitial: null,
-        },
-      });
-
-      // ADR-043 Phase 2: fermer les assignations actives des bacs retirés
+      // ADR-043 Phase 3: fermer les assignations actives des bacs retirés
+      // (plus de Bac.vagueId/nombrePoissons à remettre à null)
       await tx.assignationBac.updateMany({
         where: { bacId: { in: data.removeBacIds }, vagueId: id, dateFin: null },
         data: { dateFin: new Date() },
@@ -625,7 +543,6 @@ export async function updateVague(id: string, siteId: string, data: UpdateVagueD
       include: {
         _count: {
           select: {
-            bacs: true,
             assignations: { where: { dateFin: null } },
           },
         },

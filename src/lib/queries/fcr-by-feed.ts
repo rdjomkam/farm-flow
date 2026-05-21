@@ -701,6 +701,7 @@ export async function getFCRByFeed(
   if (!produit) return null;
 
   // Step 1: Find all vagues with ReleveConsommation for this product
+  // ADR-043 Phase 3: lire les bacs depuis assignations actives
   const vaguesRaw = await prisma.vague.findMany({
     where: {
       siteId,
@@ -713,7 +714,10 @@ export async function getFCRByFeed(
       },
     },
     include: {
-      bacs: true,
+      assignations: {
+        where: { dateFin: null },
+        select: { bac: { select: { id: true } } },
+      },
     },
   });
 
@@ -998,7 +1002,8 @@ export async function getFCRByFeed(
       ),
     }));
 
-    const nbBacs = vague.bacs.length || 1;
+    // ADR-043 Phase 3: compter les bacs depuis assignations actives
+    const nbBacs = vague.assignations.length || 1;
 
     for (const [bacId, { bacNom, days }] of bacConsoMap) {
       const periodes = segmenterPeriodesParBac(days, bacId, bacNom);

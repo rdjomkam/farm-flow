@@ -93,6 +93,7 @@ function makeProduit(overrides: {
  */
 function setupVagueWithConsoNoBio(vagueId: string, produitId: string, quantite: number) {
   // getFCRByFeed step 1 — vague.findMany (find vagues with consommations for this product)
+  // ADR-043 Phase 3: vague uses assignations instead of bacs
   mockVagueFindMany.mockResolvedValueOnce([
     {
       id: vagueId,
@@ -101,7 +102,7 @@ function setupVagueWithConsoNoBio(vagueId: string, produitId: string, quantite: 
       poidsMoyenInitial: 5,
       dateDebut: new Date("2026-01-01"),
       dateFin: null,
-      bacs: [],
+      assignations: [],
       sourceBacIds: [],
     },
   ]);
@@ -115,6 +116,7 @@ function setupVagueWithConsoNoBio(vagueId: string, produitId: string, quantite: 
   });
 
   // getVague metadata (in computeAlimentMetrics wrapper — vague.findMany for SGR)
+  // ADR-043 Phase 3: vague uses assignations instead of bacs
   mockVagueFindMany.mockResolvedValueOnce([
     {
       id: vagueId,
@@ -123,7 +125,7 @@ function setupVagueWithConsoNoBio(vagueId: string, produitId: string, quantite: 
       poidsMoyenInitial: 5,
       dateDebut: new Date("2026-01-01"),
       dateFin: null,
-      bacs: [],
+      assignations: [],
     },
   ]);
 

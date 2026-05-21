@@ -22,7 +22,15 @@ export async function getIndicateursVague(
   const vague = await prisma.vague.findFirst({
     where: { id: vagueId, siteId },
     include: {
-      bacs: { select: { id: true, nombrePoissons: true, nombreInitial: true, poidsMoyenInitial: true } },
+      // ADR-043 Phase 3: lire nombreInitial/poidsMoyenInitial depuis AssignationBac
+      assignations: {
+        where: { dateFin: null },
+        select: {
+          nombreInitial: true,
+          poidsMoyenInitial: true,
+          bac: { select: { id: true } },
+        },
+      },
       releves: {
         orderBy: { date: "asc" },
         select: {
@@ -41,6 +49,13 @@ export async function getIndicateursVague(
   });
 
   if (!vague) return null;
+
+  // ADR-043 Phase 3: build bacs list from active assignations
+  const bacsFromAssignations = vague.assignations.map((a) => ({
+    id: a.bac.id,
+    nombreInitial: a.nombreInitial,
+    poidsMoyenInitial: a.poidsMoyenInitial,
+  }));
 
   // Separer les releves par type
   const biometries = vague.releves.filter((r) => r.typeReleve === TypeReleve.BIOMETRIE);
@@ -67,11 +82,11 @@ export async function getIndicateursVague(
   let totalNombreInitialBacs = 0;
   let totalPoidsInitialWeighted = 0;
 
-  if (hasPerBacReleves && vague.bacs.length > 0) {
+  if (hasPerBacReleves && bacsFromAssignations.length > 0) {
     // --- Per-bac calculation: biomasse = SUM(biomasse_bac), poidsMoyen weighted by vivants ---
-    const nombreInitialParBac = Math.round(vague.nombreInitial / vague.bacs.length);
+    const nombreInitialParBac = Math.round(vague.nombreInitial / bacsFromAssignations.length);
 
-    const vivantsByBac = computeVivantsByBac(vague.bacs, vague.releves, vague.nombreInitial);
+    const vivantsByBac = computeVivantsByBac(bacsFromAssignations, vague.releves, vague.nombreInitial);
 
     // Group mortalites by bacId (still needed for totalMortsAll)
     const mortsParBac = new Map<string, number>();
@@ -96,7 +111,7 @@ export async function getIndicateursVague(
     let totalVivantsAll = 0;
     let totalMortsAll = 0;
 
-    for (const bac of vague.bacs) {
+    for (const bac of bacsFromAssignations) {
       const mortsBac = mortsParBac.get(bac.id) ?? 0;
       totalMortsAll += mortsBac;
 
@@ -147,7 +162,7 @@ export async function getIndicateursVague(
       0
     );
 
-    nombreVivants = computeNombreVivantsVague(vague.bacs, vague.releves, vague.nombreInitial);
+    nombreVivants = computeNombreVivantsVague(bacsFromAssignations, vague.releves, vague.nombreInitial);
 
     if (biometries.length > 0) {
       const derniereBiometrie = biometries.at(-1);
@@ -159,8 +174,8 @@ export async function getIndicateursVague(
   }
 
   // For survival rate, exclude sales — sold fish are alive, just not in the farm
-  const nombreVivantsForSurvie = hasPerBacReleves && vague.bacs.length > 0
-    ? computeNombreVivantsVague(vague.bacs, vague.releves, vague.nombreInitial, { excludeVentes: true })
+  const nombreVivantsForSurvie = hasPerBacReleves && bacsFromAssignations.length > 0
+    ? computeNombreVivantsVague(bacsFromAssignations, vague.releves, vague.nombreInitial, { excludeVentes: true })
     : nombreVivants; // No per-bac releves means no VENTE releves either
 
   // Jours ecoules
@@ -172,7 +187,7 @@ export async function getIndicateursVague(
   // Indicateurs calcules via fonctions pures de calculs.ts
   // Toujours utiliser vague.nombreInitial comme reference (Fix 3 — survie post-calibrage)
   const nombreInitialEffectif = vague.nombreInitial;
-  const poidsMoyenInitialEffectif = hasPerBacReleves && vague.bacs.length > 0 && totalNombreInitialBacs > 0
+  const poidsMoyenInitialEffectif = hasPerBacReleves && bacsFromAssignations.length > 0 && totalNombreInitialBacs > 0
     ? totalPoidsInitialWeighted / totalNombreInitialBacs
     : vague.poidsMoyenInitial;
 

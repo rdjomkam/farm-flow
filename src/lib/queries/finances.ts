@@ -1019,10 +1019,10 @@ export async function getCoutProductionVague(
       orderBy: { createdAt: "asc" },
     }),
 
-    // 2g. Bacs de la vague (for biomass calculation)
-    prisma.bac.findMany({
-      where: { siteId, vagueId },
-      select: { id: true, nombreInitial: true },
+    // 2g. Bacs de la vague via AssignationBac (ADR-043 Phase 3 — source de vérité)
+    prisma.assignationBac.findMany({
+      where: { siteId, vagueId, dateFin: null },
+      select: { nombreInitial: true, bac: { select: { id: true } } },
     }),
 
     // 2h. Releves de la vague (for biomass calculation)
@@ -1053,17 +1053,20 @@ export async function getCoutProductionVague(
   // biomasseProduite = biomasseKg (restante) + poidsTotalVendu (reel)
   // -------------------------------------------------------------------------
 
+  // ADR-043 Phase 3: mapper les assignations en forme {id, nombreInitial} pour les calculs
+  const bacsVagueMapped = bacsVague.map((a) => ({ id: a.bac.id, nombreInitial: a.nombreInitial }));
+
   const hasPerBacReleves = relevesVague.some((r) => r.bacId !== null);
   // excludeVentes=true : on ignore les releves VENTE pour eviter les incoherences
   // Les ventes reelles seront soustraites plus bas via quantitePoissons
-  const vivantsByBac = computeVivantsByBac(bacsVague, relevesVague, vague.nombreInitial, { excludeVentes: true });
+  const vivantsByBac = computeVivantsByBac(bacsVagueMapped, relevesVague, vague.nombreInitial, { excludeVentes: true });
 
   // Nombre total de poissons reellement vendus (source de verite : Vente)
   const totalPoissonsVendus = ventes.reduce((acc, v) => acc + v.quantitePoissons, 0);
 
   let biomasseKg: number | null = null;
 
-  if (hasPerBacReleves && bacsVague.length > 0) {
+  if (hasPerBacReleves && bacsVagueMapped.length > 0) {
     const biometriesParBac = new Map<string, { poidsMoyen: number }>();
     for (const r of relevesVague) {
       if (r.typeReleve === "BIOMETRIE" && r.poidsMoyen !== null && r.bacId) {
@@ -1075,7 +1078,7 @@ export async function getCoutProductionVague(
     let biomasseAvantVentes = 0;
     let totalVivantsAvantVentes = 0;
     let hasBiomasse = false;
-    for (const bac of bacsVague) {
+    for (const bac of bacsVagueMapped) {
       const bio = biometriesParBac.get(bac.id);
       const vivantsBac = vivantsByBac.get(bac.id) ?? 0;
       totalVivantsAvantVentes += vivantsBac;
@@ -1092,7 +1095,7 @@ export async function getCoutProductionVague(
       biomasseKg = Math.round(biomasseAvantVentes * ratioRestant * 100) / 100;
     }
   } else {
-    const nombreVivants = computeNombreVivantsVague(bacsVague, relevesVague, vague.nombreInitial, { excludeVentes: true });
+    const nombreVivants = computeNombreVivantsVague(bacsVagueMapped, relevesVague, vague.nombreInitial, { excludeVentes: true });
     const biometrieReleves = relevesVague
       .filter((r) => r.typeReleve === "BIOMETRIE" && r.poidsMoyen !== null);
     if (biometrieReleves.length > 0) {

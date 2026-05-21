@@ -48,7 +48,14 @@ export default async function IngenieurVagueDetailPage({
       releves: {
         orderBy: { date: "asc" },
       },
-      bacs: { select: { id: true, nom: true, nombrePoissons: true } },
+      // ADR-043 Phase 3: nombrePoissons vient de AssignationBac.nombreActuel
+      assignations: {
+        where: { dateFin: null },
+        select: {
+          nombreActuel: true,
+          bac: { select: { id: true, nom: true } },
+        },
+      },
     },
   });
 
@@ -75,8 +82,15 @@ export default async function IngenieurVagueDetailPage({
     joursEcoules: 0,
   };
 
+  // ADR-043 Phase 3: construire les bacs depuis les assignations actives
+  const vagueBacs = vague.assignations.map((a) => ({
+    id: a.bac.id,
+    nom: a.bac.nom,
+    nombrePoissons: a.nombreActuel ?? 0,
+  }));
+
   // Build chart data from biometrie releves — aggregate by date (weighted avg across bacs)
-  const bacsMap = new Map(vague.bacs.map((b) => [b.id, b]));
+  const bacsMap = new Map(vagueBacs.map((b) => [b.id, b]));
   const biometries = vague.releves.filter(
     (r) => r.typeReleve === TypeReleve.BIOMETRIE && r.poidsMoyen !== null
   );
@@ -151,8 +165,8 @@ export default async function IngenieurVagueDetailPage({
           <div className="flex items-center gap-1 text-sm text-muted-foreground min-w-0">
             <Container className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">
-              {vague.bacs.length > 1 ? tIngenieur("monitoring.bacsCount", { count: vague.bacs.length }) : tIngenieur("monitoring.bacCount", { count: vague.bacs.length })}
-              {vague.bacs.length > 0 && ` (${vague.bacs.map((b) => b.nom).join(", ")})`}
+              {vagueBacs.length > 1 ? tIngenieur("monitoring.bacsCount", { count: vagueBacs.length }) : tIngenieur("monitoring.bacCount", { count: vagueBacs.length })}
+              {vagueBacs.length > 0 && ` (${vagueBacs.map((b) => b.nom).join(", ")})`}
             </span>
           </div>
         </section>

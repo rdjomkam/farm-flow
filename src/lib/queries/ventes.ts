@@ -1,9 +1,18 @@
 import { prisma } from "@/lib/db";
 import { generateNextNumero } from "./numero-utils";
-import { StatutVague, StatutVente, TypeReleve, CauseMortalite } from "@/types";
+import {
+  StatutVague,
+  StatutVente,
+  TypeReleve,
+  CauseMortalite,
+  StatutLotAlevins,
+  PhaseLot,
+  TypeUniteProduction,
+} from "@/types";
 import type {
   CreateVenteDTO,
   CreateLigneVenteDTO,
+  CreateVenteAlevinsDTO,
   UpdateVenteDTO,
   ClotureVenteDTO,
   VenteFilters,
@@ -17,6 +26,7 @@ import type {
 const VENTE_LIST_INCLUDE = {
   client: { select: { id: true, nom: true } },
   vague: { select: { id: true, code: true } },
+  uniteProduction: { select: { id: true, code: true, nom: true, type: true } },
   user: { select: { id: true, name: true } },
   facture: { select: { id: true, numero: true, statut: true, montantPaye: true } },
   lignes: {
@@ -24,11 +34,13 @@ const VENTE_LIST_INCLUDE = {
       id: true,
       vagueId: true,
       bacId: true,
+      lotAlevinsId: true,
       poidsTotalKg: true,
       poidsMoyenG: true,
       nombrePoissons: true,
       vague: { select: { id: true, code: true } },
       bac: { select: { id: true, nom: true } },
+      lotAlevins: { select: { id: true, code: true, nombreActuel: true, poidsMoyen: true } },
     },
   },
   _count: { select: { lignes: true } },
@@ -38,6 +50,7 @@ const VENTE_LIST_INCLUDE = {
 const VENTE_DETAIL_INCLUDE = {
   client: true,
   vague: { select: { id: true, code: true, statut: true } },
+  uniteProduction: { select: { id: true, code: true, nom: true, type: true } },
   user: { select: { id: true, name: true } },
   facture: {
     include: {
@@ -49,11 +62,13 @@ const VENTE_DETAIL_INCLUDE = {
       id: true,
       vagueId: true,
       bacId: true,
+      lotAlevinsId: true,
       poidsTotalKg: true,
       poidsMoyenG: true,
       nombrePoissons: true,
       vague: { select: { id: true, code: true } },
       bac: { select: { id: true, nom: true } },
+      lotAlevins: { select: { id: true, code: true, nombreActuel: true, poidsMoyen: true, phase: true } },
     },
   },
   releves: {
@@ -179,7 +194,7 @@ async function validateAndEnrichLigne(
   });
   const bac = await tx.bac.findFirst({
     where: { id: ligne.bacId, siteId },
-    select: { id: true, nom: true, nombrePoissons: true },
+    select: { id: true, nom: true },
   });
   if (!bac) throw new Error(`Bac ${ligne.bacId} introuvable`);
   if (!assignation) {
@@ -237,19 +252,16 @@ async function applyLignesStock(
   userId: string
 ): Promise<void> {
   for (const { ligne, poidsMoyenG, nombrePoissons, bacNom } of lignesEnrichies) {
-    // Lire le compte actuel (peut avoir change depuis la validation si plusieurs lignes du meme bac)
-    const currentBac = await tx.bac.findUnique({
-      where: { id: ligne.bacId },
-      select: { nombrePoissons: true },
+    // ADR-043 : lire AssignationBac.nombreActuel comme source de verite
+    // (peut avoir change depuis la validation si plusieurs lignes du meme bac)
+    const assignation = await tx.assignationBac.findFirst({
+      where: { bacId: ligne.bacId, vagueId: ligne.vagueId, dateFin: null },
+      select: { nombreActuel: true },
     });
-    const currentCount = currentBac?.nombrePoissons ?? 0;
+    const currentCount = assignation?.nombreActuel ?? 0;
     const newCount = Math.max(0, currentCount - nombrePoissons);
 
-    // ADR-043 : dual-write Bac + AssignationBac
-    await tx.bac.update({
-      where: { id: ligne.bacId },
-      data: { nombrePoissons: newCount },
-    });
+    // ADR-043 Phase 3 : AssignationBac est la seule source de verite
     await tx.assignationBac.updateMany({
       where: { bacId: ligne.bacId, vagueId: ligne.vagueId, dateFin: null },
       data: { nombreActuel: newCount },
@@ -352,6 +364,7 @@ export async function createVente(
         numero,
         clientId: data.clientId,
         vagueId: null,
+        uniteProductionId: data.uniteProductionId ?? null,
         quantitePoissons,
         poidsTotalKg,
         prixUnitaireKg: data.prixUnitaireKg,
@@ -376,6 +389,159 @@ export async function createVente(
     );
 
     // Etape 7 : Recharger la vente avec toutes ses relations
+    const vente = await tx.vente.findUniqueOrThrow({
+      where: { id: venteRaw.id },
+      include: VENTE_LIST_INCLUDE,
+    });
+
+    return vente;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// createVenteAlevins — Vente d'alevins depuis une unite de reproduction
+// ---------------------------------------------------------------------------
+
+/**
+ * Cree une vente d'alevins (reproduction) — transaction atomique.
+ *
+ * Flux :
+ * 1. Valider client et unite de production (type REPRODUCTION)
+ * 2. Pour chaque ligne : valider lot, verifier stock (nombreActuel >= quantite)
+ * 3. Calculer les agregats (quantitePoissons, poidsTotalKg estime, montantTotal)
+ * 4. Generer le numero
+ * 5. Creer la Vente avec uniteProductionId
+ * 6. Creer les LigneVente avec lotAlevinsId, deduire nombreActuel
+ * 7. Marquer les lots entierement vendus comme SORTI/VENTE_ALEVINS
+ */
+export async function createVenteAlevins(
+  siteId: string,
+  userId: string,
+  data: CreateVenteAlevinsDTO
+) {
+  return prisma.$transaction(async (tx) => {
+    // 1. Valider le client
+    const client = await tx.client.findFirst({
+      where: { id: data.clientId, siteId, isActive: true },
+    });
+    if (!client) throw new Error("Client introuvable ou inactif");
+
+    // Valider l'unite de production (doit etre REPRODUCTION)
+    const unite = await tx.uniteProduction.findFirst({
+      where: { id: data.uniteProductionId, siteId, isActive: true },
+    });
+    if (!unite) throw new Error("Unite de production introuvable ou inactive");
+    if (unite.type !== TypeUniteProduction.REPRODUCTION) {
+      throw new Error("L'unite de production doit etre de type REPRODUCTION pour une vente d'alevins");
+    }
+
+    if (!data.lignes || data.lignes.length === 0) {
+      throw new Error("Au moins une ligne de vente est requise");
+    }
+
+    // 2. Valider et enrichir les lignes
+    const lignesEnrichies: Array<{
+      lotAlevinsId: string;
+      nombrePoissons: number;
+      poidsMoyenG: number;
+      poidsTotalKg: number;
+      lotCode: string;
+    }> = [];
+
+    for (const ligne of data.lignes) {
+      const lot = await tx.lotAlevins.findFirst({
+        where: { id: ligne.lotAlevinsId, siteId },
+      });
+      if (!lot) throw new Error(`Lot d'alevins introuvable: ${ligne.lotAlevinsId}`);
+      if (lot.statut === StatutLotAlevins.TRANSFERE || lot.statut === StatutLotAlevins.PERDU) {
+        throw new Error(`Le lot ${lot.code} n'est plus disponible (statut: ${lot.statut})`);
+      }
+      if (lot.nombreActuel < ligne.nombrePoissons) {
+        throw new Error(
+          `Stock insuffisant sur le lot ${lot.code}: ${lot.nombreActuel} disponibles, ${ligne.nombrePoissons} demandes`
+        );
+      }
+
+      const poidsMoyenG = lot.poidsMoyen ?? 0;
+      const poidsTotalKg = (ligne.nombrePoissons * poidsMoyenG) / 1000;
+
+      lignesEnrichies.push({
+        lotAlevinsId: ligne.lotAlevinsId,
+        nombrePoissons: ligne.nombrePoissons,
+        poidsMoyenG,
+        poidsTotalKg,
+        lotCode: lot.code,
+      });
+    }
+
+    // 3. Calculer les agregats
+    const quantitePoissons = lignesEnrichies.reduce((sum, l) => sum + l.nombrePoissons, 0);
+    const poidsTotalKg = lignesEnrichies.reduce((sum, l) => sum + l.poidsTotalKg, 0);
+    // prixUnitaire = prix par alevin, montant = quantite * prixUnitaire
+    const montantTotal = quantitePoissons * data.prixUnitaire;
+    const venteDate = data.dateCommande ? new Date(data.dateCommande) : new Date();
+
+    // 4. Generer le numero
+    const numero = await generateNextNumero(tx, "vente", "VTE", siteId);
+
+    // 5. Creer la vente
+    const venteRaw = await tx.vente.create({
+      data: {
+        numero,
+        clientId: data.clientId,
+        vagueId: null,
+        uniteProductionId: data.uniteProductionId,
+        quantitePoissons,
+        poidsTotalKg,
+        // prixUnitaireKg stocke le prix unitaire (par alevin pour reproduction)
+        prixUnitaireKg: data.prixUnitaire,
+        montantTotal,
+        dateCommande: venteDate,
+        statut: StatutVente.EN_PREPARATION,
+        notes: data.notes ?? null,
+        userId,
+        siteId,
+      },
+    });
+
+    // 6. Creer les LigneVente et deduire stock sur les lots
+    for (const ligneData of lignesEnrichies) {
+      await tx.ligneVente.create({
+        data: {
+          venteId: venteRaw.id,
+          lotAlevinsId: ligneData.lotAlevinsId,
+          vagueId: null,
+          bacId: null,
+          poidsTotalKg: ligneData.poidsTotalKg,
+          poidsMoyenG: ligneData.poidsMoyenG,
+          nombrePoissons: ligneData.nombrePoissons,
+          siteId,
+        },
+      });
+
+      // Deduire nombreActuel sur le lot
+      const updated = await tx.lotAlevins.update({
+        where: { id: ligneData.lotAlevinsId },
+        data: {
+          nombreActuel: { decrement: ligneData.nombrePoissons },
+        },
+      });
+
+      // 7. Si lot entierement vendu, marquer comme SORTI
+      if (updated.nombreActuel <= 0) {
+        await tx.lotAlevins.update({
+          where: { id: ligneData.lotAlevinsId },
+          data: {
+            statut: StatutLotAlevins.TRANSFERE,
+            phase: PhaseLot.SORTI,
+            destinationSortie: "VENTE_ALEVINS",
+            dateTransfert: venteDate,
+          },
+        });
+      }
+    }
+
+    // Recharger la vente avec relations
     const vente = await tx.vente.findUniqueOrThrow({
       where: { id: venteRaw.id },
       include: VENTE_LIST_INCLUDE,
@@ -450,19 +616,18 @@ export async function updateVente(
 
       // Restituer le stock de chaque ancienne LigneVente
       for (const oldLigne of existing.lignes) {
-        // Lire le compte actuel avant restitution
-        const currentBac = await tx.bac.findUnique({
-          where: { id: oldLigne.bacId },
-          select: { nombrePoissons: true },
+        // Lignes reproduction (lotAlevinsId set, pas de bacId) — gerer separement
+        if (!oldLigne.bacId || !oldLigne.vagueId) continue;
+
+        // ADR-043 : lire AssignationBac.nombreActuel comme source de verite
+        const assignation = await tx.assignationBac.findFirst({
+          where: { bacId: oldLigne.bacId, vagueId: oldLigne.vagueId, dateFin: null },
+          select: { nombreActuel: true },
         });
-        const currentCount = currentBac?.nombrePoissons ?? 0;
+        const currentCount = assignation?.nombreActuel ?? 0;
         const restoredCount = currentCount + oldLigne.nombrePoissons;
 
-        // ADR-043 : dual-write
-        await tx.bac.update({
-          where: { id: oldLigne.bacId },
-          data: { nombrePoissons: restoredCount },
-        });
+        // ADR-043 Phase 3 : AssignationBac seule source de verite
         await tx.assignationBac.updateMany({
           where: {
             bacId: oldLigne.bacId,
@@ -580,7 +745,7 @@ export async function updateVente(
       ...new Set(existing.lignes.map((l) => l.vagueId)),
     ];
     const newVagueCodes = [
-      ...new Set(updated.lignes.map((l) => l.vague.code)),
+      ...new Set(updated.lignes.map((l) => l.vague?.code ?? null).filter((c): c is string => c !== null)),
     ];
 
     // Audit log
@@ -693,22 +858,20 @@ export async function deleteVente(
       }
     }
 
-    // 3. Restaurer le stock par bac (ADR-043 dual-write)
+    // 3. Restaurer le stock par bac (ADR-043 : lire AssignationBac comme source de verite)
     for (const [key, { vagueId, toRestore }] of restoreMap) {
       if (toRestore <= 0) continue;
       const bacId = key.split("__")[0];
 
-      const currentBac = await tx.bac.findUnique({
-        where: { id: bacId },
-        select: { nombrePoissons: true },
+      // ADR-043 : lire AssignationBac.nombreActuel comme source de verite
+      const assignation = await tx.assignationBac.findFirst({
+        where: { bacId, vagueId, dateFin: null },
+        select: { nombreActuel: true },
       });
-      const currentCount = currentBac?.nombrePoissons ?? 0;
+      const currentCount = assignation?.nombreActuel ?? 0;
       const restoredCount = currentCount + toRestore;
 
-      await tx.bac.update({
-        where: { id: bacId },
-        data: { nombrePoissons: restoredCount },
-      });
+      // ADR-043 Phase 3 : AssignationBac seule source de verite
       await tx.assignationBac.updateMany({
         where: { bacId, vagueId, dateFin: null },
         data: { nombreActuel: restoredCount },

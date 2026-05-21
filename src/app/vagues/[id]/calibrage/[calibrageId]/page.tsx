@@ -41,14 +41,17 @@ export default async function CalibrageDetailPage({
   if (!permissions) return <AccessDenied />;
 
   const { id, calibrageId } = await params;
-  const [calibrage, bacsDb] = await Promise.all([
+  // ADR-043 Phase 3: les bacs actifs viennent de AssignationBac (vagueId n'existe plus sur Bac)
+  const [calibrage, assignationsActives] = await Promise.all([
     getCalibrageById(calibrageId, session.activeSiteId),
-    prisma.bac.findMany({
-      where: { vagueId: id, siteId: session.activeSiteId },
-      select: { id: true, nom: true },
-      orderBy: { nom: "asc" },
+    prisma.assignationBac.findMany({
+      where: { vagueId: id, siteId: session.activeSiteId, dateFin: null },
+      select: { bac: { select: { id: true, nom: true } } },
+      orderBy: { bac: { nom: "asc" } },
     }),
   ]);
+
+  const bacsDb = assignationsActives.map((a) => a.bac);
 
   if (!calibrage) notFound();
 

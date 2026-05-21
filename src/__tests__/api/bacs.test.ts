@@ -413,16 +413,5 @@ describe("POST /api/bacs", () => {
     expect(data.errors.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("retourne 400 si nombrePoissons est negatif", async () => {
-    const request = makeRequest("/api/bacs", {
-      method: "POST",
-      body: JSON.stringify({ nom: "Bac X", volume: 1000, nombrePoissons: -5 }),
-    });
-
-    const response = await POST(request);
-    const data = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(data.errors.some((e: { field: string }) => e.field === "nombrePoissons")).toBe(true);
-  });
+  // ADR-043: nombrePoissons removed from CreateBacDTO — test obsolete, removed
 });

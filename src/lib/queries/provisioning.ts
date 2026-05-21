@@ -355,15 +355,24 @@ export async function activerPack(
 
     if (!packBacs || packBacs.length === 0) {
       // Backward compat: create 1 default bac with pack-level data
-      await tx.bac.create({
+      // ADR-043 Phase 3: removed vagueId/nombrePoissons/nombreInitial/poidsMoyenInitial from Bac
+      const bac1 = await tx.bac.create({
         data: {
           nom: "Bac 1",
           volume: null,
+          siteId: clientSite.id,
+        },
+      });
+      // ADR-043 Phase 3: create AssignationBac as the source of truth
+      await tx.assignationBac.create({
+        data: {
+          bacId: bac1.id,
           vagueId: vague.id,
           siteId: clientSite.id,
-          nombrePoissons: pack.nombreAlevins,
           nombreInitial: pack.nombreAlevins,
+          nombreActuel: pack.nombreAlevins,
           poidsMoyenInitial: pack.poidsMoyenInitial,
+          dateAssignation: new Date(),
         },
       });
       bacsCreated.push({ nom: "Bac 1", nombreAlevins: pack.nombreAlevins, volume: null });
@@ -374,16 +383,25 @@ export async function activerPack(
         throw new Error(`Config bacs invalide: somme (${sum}) != total (${pack.nombreAlevins}).`);
       }
       // Create each configured bac
+      // ADR-043 Phase 3: removed vagueId/nombrePoissons/nombreInitial/poidsMoyenInitial from Bac
       for (const pb of packBacs) {
-        await tx.bac.create({
+        const bac = await tx.bac.create({
           data: {
             nom: pb.nom,
             volume: pb.volume,
+            siteId: clientSite.id,
+          },
+        });
+        // ADR-043 Phase 3: create AssignationBac as the source of truth
+        await tx.assignationBac.create({
+          data: {
+            bacId: bac.id,
             vagueId: vague.id,
             siteId: clientSite.id,
-            nombrePoissons: pb.nombreAlevins,
             nombreInitial: pb.nombreAlevins,
+            nombreActuel: pb.nombreAlevins,
             poidsMoyenInitial: pb.poidsMoyenInitial,
+            dateAssignation: new Date(),
           },
         });
         bacsCreated.push({ nom: pb.nom, nombreAlevins: pb.nombreAlevins, volume: pb.volume });

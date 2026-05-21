@@ -4,11 +4,14 @@
  * Verifie que le taux de survie utilise TOUJOURS vague.nombreInitial comme
  * denominateur, et jamais la somme des nombreInitial des bacs.
  *
+ * ADR-043 Phase 3: les bacs sont lus depuis vague.assignations (dateFin: null),
+ * plus depuis vague.bacs.
+ *
  * Cas couverts :
  *   1. nombreInitial vague > somme des nombreInitial bacs → survie basee sur vague
  *   2. Bac ajoute en cours de vague (bac.nombreInitial > vague.nombreInitial initial)
  *      → survie toujours par rapport a vague.nombreInitial
- *   3. Vague sans bac → survie basee sur vague.nombreInitial (fallback)
+ *   3. Vague sans assignation → survie basee sur vague.nombreInitial (fallback)
  *   4. Aucune mortalite → tauxSurvie = 100
  *   5. Toutes mortalites → tauxSurvie proche de 0
  *
@@ -42,11 +45,27 @@ function d(iso: string): Date {
   return new Date(iso);
 }
 
-/** Cree un objet vague minimal avec bacs et releves */
+/**
+ * Cree une assignation active minimale pour un bac.
+ * ADR-043 Phase 3: les indicateurs lisent nombreInitial/poidsMoyenInitial depuis AssignationBac.
+ */
+function makeAssignation(opts: {
+  bacId: string;
+  nombreInitial: number;
+  poidsMoyenInitial: number;
+}) {
+  return {
+    nombreInitial: opts.nombreInitial,
+    poidsMoyenInitial: opts.poidsMoyenInitial,
+    bac: { id: opts.bacId },
+  };
+}
+
+/** Cree un objet vague minimal avec assignations et releves */
 function makeVague(overrides: {
   nombreInitial: number;
   poidsMoyenInitial: number;
-  bacs?: { id: string; nombrePoissons: number | null; nombreInitial: number | null; poidsMoyenInitial: number | null }[];
+  assignations?: ReturnType<typeof makeAssignation>[];
   releves?: {
     typeReleve: string;
     date: Date;
@@ -68,7 +87,8 @@ function makeVague(overrides: {
     nombreInitial: overrides.nombreInitial,
     poidsMoyenInitial: overrides.poidsMoyenInitial,
     origineAlevins: null,
-    bacs: overrides.bacs ?? [],
+    // ADR-043 Phase 3: assignations actives (dateFin: null) au lieu de bacs
+    assignations: overrides.assignations ?? [],
     releves: overrides.releves ?? [],
   };
 }
@@ -86,15 +106,15 @@ describe("getIndicateursVague — tauxSurvie utilise vague.nombreInitial", () =>
   //   Si on utilisait la somme des bacs, le denominateur serait different
   it("utilise vague.nombreInitial comme denominateur (pas la somme des bacs)", async () => {
     // vague.nombreInitial = 500
-    // bac-1.nombreInitial = 200 (distribue a ce bac)
-    // bac-2.nombreInitial = 200 (distribue a ce bac)
-    // Somme bacs = 400 ≠ 500 (vague en a 500 car l'historique est plus grand)
+    // assignation bac-1.nombreInitial = 200
+    // assignation bac-2.nombreInitial = 200
+    // Somme assignations = 400 ≠ 500 (vague en a 500 car l'historique est plus grand)
     const vague = makeVague({
       nombreInitial: 500,
       poidsMoyenInitial: 10,
-      bacs: [
-        { id: "bac-1", nombrePoissons: 195, nombreInitial: 200, poidsMoyenInitial: 10 },
-        { id: "bac-2", nombrePoissons: 190, nombreInitial: 200, poidsMoyenInitial: 10 },
+      assignations: [
+        makeAssignation({ bacId: "bac-1", nombreInitial: 200, poidsMoyenInitial: 10 }),
+        makeAssignation({ bacId: "bac-2", nombreInitial: 200, poidsMoyenInitial: 10 }),
       ],
       releves: [
         // 10 morts dans bac-1
@@ -109,7 +129,7 @@ describe("getIndicateursVague — tauxSurvie utilise vague.nombreInitial", () =>
     const result = await getIndicateursVague("site-1", "vague-1");
     expect(result).not.toBeNull();
 
-    // vivants = (200-10) + (200-10) = 380 (fallback: bac.nombreInitial - mortsBac)
+    // vivants = (200-10) + (200-10) = 380 (fallback: assignation.nombreInitial - mortsBac)
     // tauxSurvie = 380 / 500 * 100 = 76%  (denominateur = vague.nombreInitial)
     // Si on avait utilise la somme des bacs (400) : 380/400 = 95% → mauvais
     expect(result!.tauxSurvie).toBeCloseTo(76, 0);
@@ -120,16 +140,16 @@ describe("getIndicateursVague — tauxSurvie utilise vague.nombreInitial", () =>
   //   vague.nombreInitial = 300 (avant ajout)
   //   Puis on a incremente vague.nombreInitial lors de l'ajout du bac-2
   //   Au moment du test, vague.nombreInitial = 500 (300 + 200)
-  //   bac-1.nombreInitial = 300, bac-2.nombreInitial = 200
+  //   assignation bac-1.nombreInitial = 300, assignation bac-2.nombreInitial = 200
   //   Morts = 50 total → vivants = 450
   //   tauxSurvie = 450 / 500 = 90%
   it("taux de survie correct quand un bac a ete ajoute en cours de vague", async () => {
     const vague = makeVague({
       nombreInitial: 500, // apres ajout du bac-2
       poidsMoyenInitial: 10,
-      bacs: [
-        { id: "bac-1", nombrePoissons: 270, nombreInitial: 300, poidsMoyenInitial: 10 },
-        { id: "bac-2", nombrePoissons: 180, nombreInitial: 200, poidsMoyenInitial: 10 },
+      assignations: [
+        makeAssignation({ bacId: "bac-1", nombreInitial: 300, poidsMoyenInitial: 10 }),
+        makeAssignation({ bacId: "bac-2", nombreInitial: 200, poidsMoyenInitial: 10 }),
       ],
       releves: [
         { typeReleve: TypeReleve.MORTALITE, date: d("2026-01-10"), bacId: "bac-1", poidsMoyen: null, tailleMoyenne: null, nombreMorts: 30, quantiteAliment: null, nombreCompte: null },
@@ -148,12 +168,12 @@ describe("getIndicateursVague — tauxSurvie utilise vague.nombreInitial", () =>
     expect(result!.tauxSurvie).toBeCloseTo(90, 0);
   });
 
-  // Test 3 — Vague sans bac (bacs=[]) : fallback sur logique globale
-  it("calcule le taux de survie correctement quand aucun bac attache", async () => {
+  // Test 3 — Vague sans assignation (assignations=[]) : fallback sur logique globale
+  it("calcule le taux de survie correctement quand aucune assignation active", async () => {
     const vague = makeVague({
       nombreInitial: 400,
       poidsMoyenInitial: 10,
-      bacs: [],
+      assignations: [],
       releves: [
         // 40 morts globales (bacId null)
         { typeReleve: TypeReleve.MORTALITE, date: d("2026-01-05"), bacId: null, poidsMoyen: null, tailleMoyenne: null, nombreMorts: 40, quantiteAliment: null, nombreCompte: null },
@@ -176,9 +196,9 @@ describe("getIndicateursVague — tauxSurvie utilise vague.nombreInitial", () =>
     const vague = makeVague({
       nombreInitial: 500,
       poidsMoyenInitial: 10,
-      bacs: [
-        { id: "bac-1", nombrePoissons: 250, nombreInitial: 250, poidsMoyenInitial: 10 },
-        { id: "bac-2", nombrePoissons: 250, nombreInitial: 250, poidsMoyenInitial: 10 },
+      assignations: [
+        makeAssignation({ bacId: "bac-1", nombreInitial: 250, poidsMoyenInitial: 10 }),
+        makeAssignation({ bacId: "bac-2", nombreInitial: 250, poidsMoyenInitial: 10 }),
       ],
       releves: [],
     });
@@ -197,8 +217,8 @@ describe("getIndicateursVague — tauxSurvie utilise vague.nombreInitial", () =>
     const vague = makeVague({
       nombreInitial: 500,
       poidsMoyenInitial: 10,
-      bacs: [
-        { id: "bac-1", nombrePoissons: 0, nombreInitial: 500, poidsMoyenInitial: 10 },
+      assignations: [
+        makeAssignation({ bacId: "bac-1", nombreInitial: 500, poidsMoyenInitial: 10 }),
       ],
       releves: [
         { typeReleve: TypeReleve.MORTALITE, date: d("2026-01-05"), bacId: "bac-1", poidsMoyen: null, tailleMoyenne: null, nombreMorts: 500, quantiteAliment: null, nombreCompte: null },
@@ -233,8 +253,8 @@ describe("getIndicateursVague — tauxSurvie utilise vague.nombreInitial", () =>
     const vague = makeVague({
       nombreInitial: 500,
       poidsMoyenInitial: 10,
-      bacs: [
-        { id: "bac-1", nombrePoissons: 450, nombreInitial: 500, poidsMoyenInitial: 10 },
+      assignations: [
+        makeAssignation({ bacId: "bac-1", nombreInitial: 500, poidsMoyenInitial: 10 }),
       ],
       releves: [
         { typeReleve: TypeReleve.COMPTAGE, date: d("2026-01-10"), bacId: "bac-1", poidsMoyen: null, tailleMoyenne: null, nombreMorts: null, quantiteAliment: null, nombreCompte: 460 },

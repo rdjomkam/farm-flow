@@ -6,7 +6,7 @@ import { getServerSession, checkPagePermission } from "@/lib/auth";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { getClients } from "@/lib/queries/clients";
 import { prisma } from "@/lib/db";
-import { StatutVague, Permission } from "@/types";
+import { StatutVague, Permission, TypeUniteProduction, StatutLotAlevins, PhaseLot } from "@/types";
 
 interface NouvelleVentePageProps {
   searchParams: Promise<{
@@ -29,8 +29,8 @@ export default async function NouvelleVentePage({ searchParams }: NouvelleVenteP
   const params = await searchParams;
   const activeSiteId = session.activeSiteId;
 
-  // Fetch clients and active vagues (bac data loaded dynamically by the form via API)
-  const [clients, vagues] = await Promise.all([
+  // Fetch clients, active vagues, production units, and alevin lots
+  const [clients, vagues, unites, lotsAlevins] = await Promise.all([
     getClients(activeSiteId),
     prisma.vague.findMany({
       where: {
@@ -39,6 +39,28 @@ export default async function NouvelleVentePage({ searchParams }: NouvelleVenteP
       },
       select: { id: true, code: true },
       orderBy: { dateDebut: "desc" },
+    }),
+    prisma.uniteProduction.findMany({
+      where: { siteId: activeSiteId, isActive: true },
+      select: { id: true, code: true, nom: true, type: true },
+      orderBy: { code: "asc" },
+    }),
+    prisma.lotAlevins.findMany({
+      where: {
+        siteId: activeSiteId,
+        statut: { in: [StatutLotAlevins.EN_INCUBATION, StatutLotAlevins.EN_ELEVAGE] },
+        phase: { in: [PhaseLot.NURSERIE, PhaseLot.ALEVINAGE] },
+        nombreActuel: { gt: 0 },
+      },
+      select: {
+        id: true,
+        code: true,
+        nombreActuel: true,
+        poidsMoyen: true,
+        phase: true,
+        ponte: { select: { code: true } },
+      },
+      orderBy: { createdAt: "desc" },
     }),
   ]);
 
@@ -54,6 +76,20 @@ export default async function NouvelleVentePage({ searchParams }: NouvelleVenteP
 
   const clientOptions = clients.map((c) => ({ id: c.id, nom: c.nom }));
   const vagueOptions = vagues.map((v) => ({ id: v.id, code: v.code }));
+  const uniteOptions = unites.map((u) => ({
+    id: u.id,
+    code: u.code,
+    nom: u.nom,
+    type: u.type as TypeUniteProduction,
+  }));
+  const lotOptions = lotsAlevins.map((l) => ({
+    id: l.id,
+    code: l.code,
+    nombreActuel: l.nombreActuel,
+    poidsMoyen: l.poidsMoyen,
+    phase: l.phase as PhaseLot,
+    ponteCode: l.ponte.code,
+  }));
 
   const prefill = params.lotAlevinsId
     ? {
@@ -72,6 +108,8 @@ export default async function NouvelleVentePage({ searchParams }: NouvelleVenteP
         <VenteFormClient
           clients={clientOptions}
           vagues={vagueOptions}
+          unites={uniteOptions}
+          lotsAlevins={lotOptions}
           prefill={prefill}
         />
       </div>

@@ -462,7 +462,9 @@ export interface SessionWithUser extends Session {
  * Bac — contenant physique (bac en beton, plastique ou etang).
  *
  * Regle metier : un bac ne peut etre assigne qu'a UNE SEULE vague a la fois.
- * vagueId est nullable : null = bac libre.
+ * ADR-043 Phase 3 : Bac ne contient que les caracteristiques physiques du bac.
+ * Les donnees de production (nombrePoissons, nombreInitial, poidsMoyenInitial, vagueId)
+ * sont dans AssignationBac, la seule source de verite.
  */
 export interface Bac {
   id: string;
@@ -470,21 +472,12 @@ export interface Bac {
   nom: string;
   /** Volume en litres (nullable — peut etre null pour les bacs provisionnés via Pack) */
   volume: number | null;
-  /** Nombre de poissons actuellement dans le bac (mis a jour via comptages) */
-  nombrePoissons: number | null;
-  /** ID de la vague assignee, null si le bac est libre */
-  vagueId: string | null;
-  /** Nombre initial de poissons au demarrage du calibrage (nullable) */
-  nombreInitial: number | null;
-  /** Poids moyen initial des poissons en grammes au demarrage du calibrage (nullable) */
-  poidsMoyenInitial: number | null;
   /**
    * Type de systeme d'elevage — determine les seuils de densite applicables.
    * Null pour les bacs existants = traite comme BAC_BETON par defaut dans le moteur d'alertes.
-   * Sprint 27-28 (ADR-density-alerts, section 5.2)
    */
   typeSysteme: TypeSystemeBac | null;
-  /** True si le bac est bloqué (accès restreint suite à abonnement expiré) — Sprint 45 */
+  /** True si le bac est bloqué (accès restreint suite à abonnement expiré) */
   isBlocked: boolean;
   /** ID du site (ferme) — R8 */
   siteId: string;
@@ -492,11 +485,6 @@ export interface Bac {
   assignations?: AssignationBac[];
   createdAt: Date;
   updatedAt: Date;
-}
-
-/** Bac avec sa relation vague chargee */
-export interface BacWithVague extends Bac {
-  vague: Vague | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -575,14 +563,31 @@ export interface Vague {
   updatedAt: Date;
 }
 
+/**
+ * Bac avec les champs de production synthétisés depuis AssignationBac.
+ * ADR-043 Phase 3 : ces champs sont dérivés de l'assignation active,
+ * pas stockés sur le modèle Bac en base.
+ */
+export interface BacAvecProduction extends Bac {
+  /** Nombre de poissons actuels (AssignationBac.nombreActuel) */
+  nombrePoissons: number;
+  /** Nombre initial de poissons (AssignationBac.nombreInitial) */
+  nombreInitial: number;
+  /** Poids moyen initial en grammes (AssignationBac.poidsMoyenInitial) */
+  poidsMoyenInitial: number;
+  /** ID de la vague assignée (dérivé) */
+  vagueId?: string | null;
+}
+
 /** Vague avec ses bacs uniquement (sans releves) */
 export interface VagueWithBacs extends Vague {
-  bacs: Bac[];
+  /** Bacs actifs avec champs de production synthétisés depuis AssignationBac */
+  bacs: BacAvecProduction[];
 }
 
 /** Vague avec ses relations bacs et releves chargees */
 export interface VagueWithRelations extends Vague {
-  bacs: Bac[];
+  bacs: BacAvecProduction[];
   releves: Releve[];
 }
 
@@ -952,8 +957,12 @@ export interface Client {
 export interface LigneVente {
   id: string;
   venteId: string;
-  vagueId: string;
-  bacId: string;
+  /** Vague source (grossissement) — null pour ventes reproduction */
+  vagueId: string | null;
+  /** Bac source (grossissement) — null pour ventes reproduction */
+  bacId: string | null;
+  /** Lot d'alevins source (reproduction) — null pour ventes grossissement */
+  lotAlevinsId: string | null;
   poidsTotalKg: number;
   poidsMoyenG: number;
   nombrePoissons: number;
@@ -975,11 +984,13 @@ export interface Vente {
   numero: string;
   clientId: string;
   vagueId: string | null;
+  /** Unite de production liee (discrimine GROSSISSEMENT vs REPRODUCTION) */
+  uniteProductionId: string | null;
   /** Nombre de poissons vendus */
   quantitePoissons: number;
   /** Poids total en kg */
   poidsTotalKg: number;
-  /** Prix de vente par kg */
+  /** Prix unitaire — FCFA/kg pour grossissement, FCFA/alevin pour reproduction */
   prixUnitaireKg: number;
   /** Montant total de la vente */
   montantTotal: number;
@@ -1003,6 +1014,7 @@ export interface Vente {
 export interface VenteWithRelations extends Vente {
   client: Client;
   vague: Vague | null;
+  uniteProduction: { id: string; code: string; nom: string; type: TypeUniteProduction } | null;
   user: User;
   facture: Facture | null;
   lignes?: LigneVente[];

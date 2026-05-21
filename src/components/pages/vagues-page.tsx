@@ -48,23 +48,26 @@ export default async function VaguesPage() {
         nombreInitial: v.nombreInitial,
         poidsMoyenInitial: v.poidsMoyenInitial,
         origineAlevins: v.origineAlevins,
-        nombreBacs: v._count.bacs,
+        // ADR-043 Phase 3: assignations actives remplacent _count.bacs
+        nombreBacs: (v._count as { assignations?: number }).assignations ?? 0,
         joursEcoules,
         createdAt: v.createdAt,
         isBlocked: (v as { isBlocked?: boolean }).isBlocked ?? false,
       };
     });
 
+    // ADR-043 Phase 3: les bacs libres n'ont pas d'assignation active
+    // — les champs de production (nombrePoissons, vagueId, etc.) sont null par définition
     const bacsLibres: BacResponse[] = bacsLibresRaw.map((b) => ({
       id: b.id,
       nom: b.nom,
       volume: b.volume,
-      nombrePoissons: b.nombrePoissons,
-      nombreInitial: b.nombreInitial,
-      poidsMoyenInitial: b.poidsMoyenInitial,
+      nombrePoissons: null,
+      nombreInitial: null,
+      poidsMoyenInitial: null,
       typeSysteme: (b.typeSysteme as TypeSystemeBac | null) ?? null,
       isBlocked: (b as { isBlocked?: boolean }).isBlocked ?? false,
-      vagueId: b.vagueId,
+      vagueId: null,
       siteId: b.siteId,
       vagueCode: null,
       createdAt: b.createdAt,

@@ -49,9 +49,9 @@ const mockPrismaVagueCreate = vi.fn();
 const mockPrismaBacFindMany = vi.fn();
 const mockPrismaBacUpdate = vi.fn();
 const mockPrismaTransaction = vi.fn();
-// BUG-041 — ADR-043 Phase 2 dual-write : exposer le mock assignationBac.create
-// pour vérifier qu'il est appelé lors de la création d'une vague.
+// ADR-043 Phase 3: mocks pour AssignationBac (source de vérité pour l'occupation des bacs)
 const mockAssignationBacCreate = vi.fn();
+const mockAssignationBacFindMany = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -145,8 +145,10 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
           findMany: (...args: unknown[]) => mockPrismaBacFindMany(...args),
           update: (...args: unknown[]) => mockPrismaBacUpdate(...args),
         },
-        // ADR-043 Phase 2: mock de la table de jonction AssignationBac (BUG-041)
+        // ADR-043 Phase 3: mock de la table de jonction AssignationBac (source de vérité)
         assignationBac: {
+          // findMany used to check existing assignations before creation
+          findMany: (...args: unknown[]) => mockAssignationBacFindMany(...args),
           create: (...args: unknown[]) => mockAssignationBacCreate(...args),
         },
       };
@@ -155,10 +157,10 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
     // Par défaut : pas de bacs occupés, code unique
     mockPrismaBacFindMany.mockImplementation(({ where }: { where: { id: { in: string[] } } }) => {
       const ids = where.id.in;
+      // ADR-043 Phase 3: bacs no longer have vagueId field
       return Promise.resolve(ids.map((id: string) => ({
         id,
         nom: `Bac ${id}`,
-        vagueId: null,
         siteId: "site-1",
       })));
     });
@@ -185,6 +187,8 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
     });
     mockPrismaBacUpdate.mockResolvedValue({});
     mockAssignationBacCreate.mockResolvedValue({});
+    // ADR-043 Phase 3: par défaut aucune assignation existante (bacs libres)
+    mockAssignationBacFindMany.mockResolvedValue([]);
   });
 
   // -------------------------------------------------------------------------
@@ -197,9 +201,10 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
     ];
 
     // Mock tx.bac.findMany pour retourner des bacs libres avec les bons ids
+    // ADR-043 Phase 3: bacs no longer have vagueId field
     mockPrismaBacFindMany.mockResolvedValue([
-      { id: "bac-1", nom: "Bac A", vagueId: null, siteId: "site-1" },
-      { id: "bac-2", nom: "Bac B", vagueId: null, siteId: "site-1" },
+      { id: "bac-1", nom: "Bac A", siteId: "site-1" },
+      { id: "bac-2", nom: "Bac B", siteId: "site-1" },
     ]);
 
     // Mock tx.vague.create pour retourner la vague créée
@@ -218,7 +223,8 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
       updatedAt: now,
     });
 
-    // Mock tx.vague.findUnique (appelé après create avec include: {bacs: true})
+    // Mock tx.vague.findUnique (appelé après create avec include: {assignations: true})
+    // ADR-043 Phase 3: retourner assignations (plus de bacs directs)
     mockPrismaVagueFindUnique.mockImplementation(({ where }: { where: { code?: string; id?: string } }) => {
       if (where.id) {
         return Promise.resolve({
@@ -232,9 +238,9 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
           origineAlevins: null,
           createdAt: now,
           updatedAt: now,
-          bacs: [
-            { id: "bac-1", nom: "Bac A", nombrePoissons: 600, nombreInitial: 600, poidsMoyenInitial: 5.0 },
-            { id: "bac-2", nom: "Bac B", nombrePoissons: 400, nombreInitial: 400, poidsMoyenInitial: 5.0 },
+          assignations: [
+            { id: "a-1" },
+            { id: "a-2" },
           ],
         });
       }
@@ -269,20 +275,11 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
         }),
       })
     );
-    // Vérifier que bac.update a été appelé avec les bons nombrePoissons
-    expect(mockPrismaBacUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ nombrePoissons: 600 }),
-      })
-    );
-    expect(mockPrismaBacUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ nombrePoissons: 400 }),
-      })
-    );
+    // ADR-043 Phase 3: bac.update n'est plus appelé (plus de dual-write sur Bac)
+    expect(mockPrismaBacUpdate).not.toHaveBeenCalled();
 
-    // BUG-041 — ADR-043 Phase 2 dual-write : AssignationBac.create doit être
-    // appelé une fois par bac de la distribution, avec dateFin: null et siteId.
+    // ADR-043 Phase 3: AssignationBac.create doit être appelé une fois par bac,
+    // avec nombreInitial, nombreActuel et poidsMoyenInitial (plus de champ nombrePoissons)
     expect(mockAssignationBacCreate).toHaveBeenCalledTimes(bacDistribution.length);
     expect(mockAssignationBacCreate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -292,8 +289,8 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
           siteId: "site-1",
           dateFin: null,
           nombreInitial: 600,
+          nombreActuel: 600,
           poidsMoyenInitial: 5.0,
-          nombrePoissons: 600,
         }),
       })
     );
@@ -305,8 +302,8 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
           siteId: "site-1",
           dateFin: null,
           nombreInitial: 400,
+          nombreActuel: 400,
           poidsMoyenInitial: 5.0,
-          nombrePoissons: 400,
         }),
       })
     );
@@ -317,8 +314,9 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
   });
 
   it("accepte une distribution avec un seul bac recevant tous les poissons", async () => {
+    // ADR-043 Phase 3: bacs no longer have vagueId field
     mockPrismaBacFindMany.mockResolvedValue([
-      { id: "bac-3", nom: "Bac C", vagueId: null, siteId: "site-1" },
+      { id: "bac-3", nom: "Bac C", siteId: "site-1" },
     ]);
 
     mockPrismaVagueCreate.mockResolvedValue({
@@ -336,6 +334,7 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
       updatedAt: now,
     });
 
+    // ADR-043 Phase 3: retourner assignations (plus de bacs directs)
     mockPrismaVagueFindUnique.mockImplementation(({ where }: { where: { code?: string; id?: string } }) => {
       if (where.id) {
         return Promise.resolve({
@@ -349,8 +348,8 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
           origineAlevins: null,
           createdAt: now,
           updatedAt: now,
-          bacs: [
-            { id: "bac-3", nom: "Bac C", nombrePoissons: 500, nombreInitial: 500, poidsMoyenInitial: 3.0 },
+          assignations: [
+            { id: "a-1" },
           ],
         });
       }
@@ -383,12 +382,8 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
         }),
       })
     );
-    // Vérifier que bac.update a bien été appelé avec les bons nombrePoissons
-    expect(mockPrismaBacUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ nombrePoissons: 500 }),
-      })
-    );
+    // ADR-043 Phase 3: bac.update n'est plus appelé (plus de dual-write sur Bac)
+    expect(mockPrismaBacUpdate).not.toHaveBeenCalled();
   });
 
   // -------------------------------------------------------------------------
@@ -664,9 +659,12 @@ describe("POST /api/vagues — bacDistribution (BUG-033)", () => {
   // Verifier que ces erreurs remontent correctement avec bacDistribution
   // -------------------------------------------------------------------------
   it("retourne 409 quand un bac dans la distribution est deja assigne a une vague", async () => {
-    // Simuler un bac déjà assigné à une vague via tx.bac.findMany dans la transaction inline
+    // ADR-043 Phase 3: simuler un bac déjà assigné via AssignationBac (source de vérité)
     mockPrismaBacFindMany.mockResolvedValue([
-      { id: "bac-already-assigned", nom: "Bac A", vagueId: "vague-existante", siteId: "site-1" },
+      { id: "bac-already-assigned", nom: "Bac A", siteId: "site-1" },
+    ]);
+    mockAssignationBacFindMany.mockResolvedValue([
+      { bacId: "bac-already-assigned", dateFin: null, bac: { nom: "Bac A" } },
     ]);
 
     const body = {

@@ -17,7 +17,7 @@ import { CloturerDialog } from "./cloturer-dialog";
 import { GererBacsDialog } from "./gerer-bacs-dialog";
 import { SupprimerVagueDialog } from "./supprimer-vague-dialog";
 import { Permission } from "@/types";
-import type { Bac } from "@/types";
+import type { BacResponse } from "@/types";
 import { useExportService } from "@/services";
 
 interface VagueActionMenuProps {
@@ -34,7 +34,7 @@ interface VagueActionMenuProps {
   permissions: Permission[];
   isEnCours: boolean;
   canExport: boolean;
-  currentBacs?: Bac[];
+  currentBacs?: BacResponse[];
   className?: string;
 }
 

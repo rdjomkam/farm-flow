@@ -144,18 +144,22 @@ describe("GET /api/ventes", () => {
 // ---------------------------------------------------------------------------
 // POST /api/ventes
 // ---------------------------------------------------------------------------
+// ADR-043 Phase 3: la vente grossissement utilise maintenant un tableau "lignes"
+// avec un bacId par ligne. Chaque ligne = { vagueId, bacId, poidsTotalKg, poidsMoyenG? }
 describe("POST /api/ventes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRequirePermission.mockResolvedValue(AUTH_CONTEXT);
   });
 
+  // Format de corps valide selon la nouvelle API
   const validBody = {
     clientId: "c-1",
-    vagueId: "v-1",
-    poidsTotalKg: 25,
     prixUnitaireKg: 2000,
     notes: "Livraison mardi",
+    lignes: [
+      { vagueId: "v-1", bacId: "bac-1", poidsTotalKg: 25 },
+    ],
   };
 
   it("cree une vente avec des donnees valides", async () => {
@@ -163,8 +167,6 @@ describe("POST /api/ventes", () => {
       id: "vte-new",
       numero: "VTE-2026-002",
       montantTotal: 50000,
-      quantitePoissons: 50,
-      ...validBody,
     };
     mockCreateVente.mockResolvedValue(fakeVente);
 
@@ -178,14 +180,17 @@ describe("POST /api/ventes", () => {
 
     expect(response.status).toBe(201);
     expect(data.numero).toBe("VTE-2026-002");
-    expect(mockCreateVente).toHaveBeenCalledWith("site-1", "user-1", {
-      clientId: "c-1",
-      vagueId: "v-1",
-      poidsTotalKg: 25,
-      prixUnitaireKg: 2000,
-      poidsMoyenG: undefined,
-      notes: "Livraison mardi",
-    });
+    expect(mockCreateVente).toHaveBeenCalledWith(
+      "site-1",
+      "user-1",
+      expect.objectContaining({
+        clientId: "c-1",
+        prixUnitaireKg: 2000,
+        lignes: expect.arrayContaining([
+          expect.objectContaining({ vagueId: "v-1", bacId: "bac-1", poidsTotalKg: 25 }),
+        ]),
+      })
+    );
   });
 
   it("transmet poidsMoyenG quand fourni manuellement", async () => {
@@ -194,14 +199,21 @@ describe("POST /api/ventes", () => {
     await POST(
       makeRequest("/api/ventes", {
         method: "POST",
-        body: JSON.stringify({ ...validBody, poidsMoyenG: 850 }),
+        body: JSON.stringify({
+          ...validBody,
+          lignes: [{ vagueId: "v-1", bacId: "bac-1", poidsTotalKg: 25, poidsMoyenG: 850 }],
+        }),
       })
     );
 
     expect(mockCreateVente).toHaveBeenCalledWith(
       "site-1",
       "user-1",
-      expect.objectContaining({ poidsMoyenG: 850 })
+      expect.objectContaining({
+        lignes: expect.arrayContaining([
+          expect.objectContaining({ poidsMoyenG: 850 }),
+        ]),
+      })
     );
   });
 
@@ -209,18 +221,22 @@ describe("POST /api/ventes", () => {
     const response = await POST(
       makeRequest("/api/ventes", {
         method: "POST",
-        body: JSON.stringify({ ...validBody, poidsMoyenG: -10 }),
+        body: JSON.stringify({
+          ...validBody,
+          lignes: [{ vagueId: "v-1", bacId: "bac-1", poidsTotalKg: 25, poidsMoyenG: -10 }],
+        }),
       })
     );
     const data = await response.json();
 
     expect(response.status).toBe(400);
     expect(data.errors).toEqual(
-      expect.arrayContaining([expect.objectContaining({ field: "poidsMoyenG" })])
+      expect.arrayContaining([expect.objectContaining({ field: "lignes[0].poidsMoyenG" })])
     );
   });
 
-  it("retourne 400 si aucun poids moyen disponible", async () => {
+  it("retourne 409 si aucun poids moyen disponible (pas de biometrie)", async () => {
+    // Le message contient "disponible" → 409 selon le statusMap de la route
     mockCreateVente.mockRejectedValue(
       new Error("Aucun poids moyen disponible pour cette vague. Saisissez-le manuellement ou enregistrez une biometrie.")
     );
@@ -233,8 +249,8 @@ describe("POST /api/ventes", () => {
     );
     const data = await response.json();
 
-    expect(response.status).toBe(400);
-    expect(data.message).toContain("poids moyen");
+    expect(response.status).toBe(409);
+    expect(data.message).toMatch(/disponible|poids moyen/i);
   });
 
   it("retourne 400 si clientId manquant", async () => {
@@ -252,33 +268,39 @@ describe("POST /api/ventes", () => {
     );
   });
 
-  it("retourne 400 si vagueId manquant", async () => {
+  it("retourne 400 si vagueId manquant dans une ligne", async () => {
     const response = await POST(
       makeRequest("/api/ventes", {
         method: "POST",
-        body: JSON.stringify({ ...validBody, vagueId: undefined }),
+        body: JSON.stringify({
+          ...validBody,
+          lignes: [{ bacId: "bac-1", poidsTotalKg: 25 }],
+        }),
       })
     );
     const data = await response.json();
 
     expect(response.status).toBe(400);
     expect(data.errors).toEqual(
-      expect.arrayContaining([expect.objectContaining({ field: "vagueId" })])
+      expect.arrayContaining([expect.objectContaining({ field: "lignes[0].vagueId" })])
     );
   });
 
-  it("retourne 400 si poidsTotalKg <= 0", async () => {
+  it("retourne 400 si poidsTotalKg <= 0 dans une ligne", async () => {
     const response = await POST(
       makeRequest("/api/ventes", {
         method: "POST",
-        body: JSON.stringify({ ...validBody, poidsTotalKg: -5 }),
+        body: JSON.stringify({
+          ...validBody,
+          lignes: [{ vagueId: "v-1", bacId: "bac-1", poidsTotalKg: -5 }],
+        }),
       })
     );
     const data = await response.json();
 
     expect(response.status).toBe(400);
     expect(data.errors).toEqual(
-      expect.arrayContaining([expect.objectContaining({ field: "poidsTotalKg" })])
+      expect.arrayContaining([expect.objectContaining({ field: "lignes[0].poidsTotalKg" })])
     );
   });
 
@@ -294,6 +316,21 @@ describe("POST /api/ventes", () => {
     expect(response.status).toBe(400);
     expect(data.errors).toEqual(
       expect.arrayContaining([expect.objectContaining({ field: "prixUnitaireKg" })])
+    );
+  });
+
+  it("retourne 400 si lignes est vide ou absent", async () => {
+    const response = await POST(
+      makeRequest("/api/ventes", {
+        method: "POST",
+        body: JSON.stringify({ ...validBody, lignes: [] }),
+      })
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.errors).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "lignes" })])
     );
   });
 

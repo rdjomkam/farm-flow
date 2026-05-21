@@ -184,14 +184,12 @@ import type { IndicateursVague } from "./calculs";
 // Bacs
 // ---------------------------------------------------------------------------
 
-/** DTO pour creer un nouveau bac */
+/** DTO pour creer un nouveau bac — ADR-043 Phase 3: pas de champs production */
 export interface CreateBacDTO {
   /** Nom du bac (ex: "Bac 1") */
   nom: string;
   /** Volume en litres */
   volume: number;
-  /** Nombre de poissons initial (optionnel, mis a jour via comptages) */
-  nombrePoissons?: number;
 }
 
 /** DTO pour modifier un bac (PUT /api/bacs/[id]) — permission BACS_MODIFIER requise */
@@ -200,20 +198,26 @@ export interface UpdateBacDTO {
   nom?: string;
   /** Nouveau volume en litres */
   volume?: number;
-  /** Nombre de poissons actuel */
-  nombrePoissons?: number;
-  /** Nombre initial de poissons */
-  nombreInitial?: number;
-  /** Poids moyen initial en grammes */
-  poidsMoyenInitial?: number;
-  /** Type de systeme d'elevage — Sprint 27-28 (ADR-density-alerts, section 5.2) */
+  /** Type de systeme d'elevage */
   typeSysteme?: string;
 }
 
-/** Reponse d'un bac avec indication d'occupation */
+/**
+ * Reponse d'un bac avec donnees de production derivees de AssignationBac.
+ * ADR-043 Phase 3 : les champs production sont supprimes de Bac et re-ajoutes
+ * ici comme champs derives pour la retrocompat frontend.
+ */
 export interface BacResponse extends Bac {
   /** Code de la vague assignee si occupee, null si libre */
   vagueCode: string | null;
+  /** ID de la vague assignee (from active AssignationBac), null si libre */
+  vagueId: string | null;
+  /** Nombre de poissons actuels (from AssignationBac.nombreActuel) */
+  nombrePoissons: number | null;
+  /** Nombre initial de poissons (from AssignationBac.nombreInitial) */
+  nombreInitial: number | null;
+  /** Poids moyen initial en grammes (from AssignationBac.poidsMoyenInitial) */
+  poidsMoyenInitial: number | null;
 }
 
 /** Reponse liste des bacs */
@@ -868,7 +872,7 @@ export interface ClientListResponse {
 // Ventes
 // ---------------------------------------------------------------------------
 
-/** Une ligne dans une vente multi-vague */
+/** Une ligne dans une vente grossissement (vague+bac) */
 export interface CreateLigneVenteDTO {
   vagueId: string;
   bacId: string;
@@ -877,15 +881,37 @@ export interface CreateLigneVenteDTO {
   poidsMoyenG?: number;
 }
 
-/** DTO pour creer une vente multi-vague */
+/** Une ligne dans une vente reproduction (lot d'alevins) */
+export interface CreateLigneVenteAlevinsDTO {
+  lotAlevinsId: string;
+  /** Nombre d'alevins a vendre depuis ce lot */
+  nombrePoissons: number;
+}
+
+/** DTO pour creer une vente multi-vague (grossissement) */
 export interface CreateVenteDTO {
   clientId: string;
   prixUnitaireKg: number;
+  /** Unite de production (optionnel, pour lier la vente a une unite) */
+  uniteProductionId?: string;
   /** Date de commande (ISO 8601). Defaut: maintenant. */
   dateCommande?: string;
   notes?: string;
   /** Lignes de vente : une par combinaison vague+bac */
   lignes: CreateLigneVenteDTO[];
+}
+
+/** DTO pour creer une vente d'alevins (reproduction) */
+export interface CreateVenteAlevinsDTO {
+  clientId: string;
+  /** Prix unitaire par alevin (FCFA) */
+  prixUnitaire: number;
+  uniteProductionId: string;
+  /** Date de commande (ISO 8601). Defaut: maintenant. */
+  dateCommande?: string;
+  notes?: string;
+  /** Lignes de vente : une par lot d'alevins */
+  lignes: CreateLigneVenteAlevinsDTO[];
 }
 
 export interface UpdateVenteDTO {

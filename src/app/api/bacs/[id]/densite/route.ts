@@ -15,31 +15,37 @@ export async function GET(
     const auth = await requirePermission(request, Permission.BACS_GERER);
     const { id } = await params;
 
-    // Charger le bac avec sa vague et les releves
+    // ADR-043 Phase 3: charger le bac avec l'assignation active (source de vérité)
     const bac = await prisma.bac.findFirst({
       where: { id, siteId: auth.activeSiteId },
       include: {
-        vague: {
+        assignations: {
+          where: { dateFin: null },
+          take: 1,
           include: {
-            bacs: {
-              select: {
-                id: true,
-                nombreInitial: true,
-              },
-            },
-            releves: {
-              orderBy: { date: "asc" },
-              select: {
-                id: true,
-                typeReleve: true,
-                date: true,
-                poidsMoyen: true,
-                nombreMorts: true,
-                nombreCompte: true,
-                bacId: true,
-                pourcentageRenouvellement: true,
-                volumeRenouvele: true,
-                nombreRenouvellements: true,
+            vague: {
+              include: {
+                assignations: {
+                  where: { dateFin: null },
+                  include: {
+                    bac: { select: { id: true } },
+                  },
+                },
+                releves: {
+                  orderBy: { date: "asc" },
+                  select: {
+                    id: true,
+                    typeReleve: true,
+                    date: true,
+                    poidsMoyen: true,
+                    nombreMorts: true,
+                    nombreCompte: true,
+                    bacId: true,
+                    pourcentageRenouvellement: true,
+                    volumeRenouvele: true,
+                    nombreRenouvellements: true,
+                  },
+                },
               },
             },
           },
@@ -51,8 +57,10 @@ export async function GET(
       return apiError(404, "Bac introuvable.");
     }
 
+    const activeAssignation = bac.assignations?.[0] ?? null;
+
     // Si le bac n'est pas assigne a une vague, densite inconnue
-    if (!bac.vague) {
+    if (!activeAssignation?.vague) {
       return NextResponse.json({
         densiteKgM3: null,
         statut: "INCONNU",
@@ -62,8 +70,15 @@ export async function GET(
       });
     }
 
-    const allBacs = bac.vague.bacs;
-    const releves = bac.vague.releves.map((r) => ({
+    const vague = activeAssignation.vague;
+
+    // Construire allBacs depuis les assignations actives de la vague (source de vérité)
+    const allBacs = vague.assignations.map((a) => ({
+      id: a.bac.id,
+      nombreInitial: a.nombreInitial ?? null,
+    }));
+
+    const releves = vague.releves.map((r) => ({
       bacId: r.bacId ?? null,
       typeReleve: r.typeReleve,
       nombreMorts: r.nombreMorts ?? null,
@@ -72,11 +87,12 @@ export async function GET(
       date: r.date,
     }));
 
+    // Lire nombreInitial depuis l'assignation active (ADR-043 Phase 3)
     const densiteKgM3 = calculerDensiteBac(
-      { id: bac.id, volume: bac.volume, nombreInitial: bac.nombreInitial },
+      { id: bac.id, volume: bac.volume, nombreInitial: activeAssignation.nombreInitial ?? null },
       allBacs,
       releves,
-      bac.vague.nombreInitial
+      vague.nombreInitial
     );
 
     // Charger la config elevage du site pour les seuils differencies
@@ -93,7 +109,7 @@ export async function GET(
     const fenetreJours = (configElevage as { fenetreRenouvellementJours?: number } | null)
       ?.fenetreRenouvellementJours ?? CONFIG_ELEVAGE_DEFAULTS.fenetreRenouvellementJours ?? 7;
 
-    const relevesRenouvellement = bac.vague.releves
+    const relevesRenouvellement = vague.releves
       .filter((r) => r.typeReleve === TypeReleve.RENOUVELLEMENT && r.bacId === bac.id)
       .map((r) => ({
         date: r.date,
@@ -110,7 +126,7 @@ export async function GET(
 
     // ---- Jours depuis dernier releve qualite eau ----
     const WAT_OFFSET_MS = 1 * 60 * 60 * 1000;
-    const derniereQualiteEau = bac.vague.releves
+    const derniereQualiteEau = vague.releves
       .filter((r) => r.typeReleve === TypeReleve.QUALITE_EAU && r.bacId === bac.id)
       .at(-1) ?? null;
 

@@ -47,7 +47,7 @@ export function VentesListClient({ initialVentes, clients, vagues, permissions }
     if (filterClient !== "all" && v.client.id !== filterClient) return false;
     // Pour les ventes multi-vague, vagueId est null — chercher dans les lignes
     if (filterVague !== "all") {
-      const inLignes = v.lignes?.some((l: { vagueId: string }) => l.vagueId === filterVague);
+      const inLignes = v.lignes?.some((l: { vagueId: string | null }) => l.vagueId === filterVague);
       const inDirect = v.vague?.id === filterVague;
       if (!inLignes && !inDirect) return false;
     }

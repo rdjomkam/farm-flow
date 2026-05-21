@@ -35,16 +35,14 @@ export async function runEngineForSite(
     prisma.vague.findMany({
       where: { siteId, statut: StatutVague.EN_COURS },
       include: {
-        bacs: {
-          // ADR-043 Phase 2: le filtre vagueId est redondant sur la relation vague.bacs
-          // mais conservé pour la rétrocompatibilité Phase 2 (fera l'objet d'une cleanup en Phase 3)
+        // ADR-043 Phase 3 : bacs via AssignationBac
+        assignations: {
+          where: { dateFin: null },
           select: {
-            id: true,
-            nom: true,
-            volume: true,
-            nombrePoissons: true,
+            nombreActuel: true,
             nombreInitial: true,
             poidsMoyenInitial: true,
+            bac: { select: { id: true, nom: true, volume: true } },
           },
         },
         releves: {
@@ -157,10 +155,20 @@ export async function runEngineForSite(
     const stockCast = produits as unknown as Parameters<typeof buildEvaluationContext>[2];
     const configCast = (vague.configElevage ?? null) as unknown as Parameters<typeof buildEvaluationContext>[3];
 
-    if (vague.bacs && vague.bacs.length > 0) {
-      const allBacsCast = vague.bacs as unknown as Parameters<typeof buildEvaluationContext>[5];
+    // ADR-043 Phase 3 : mapper les assignations en bacs pour le moteur d'alertes
+    const mappedBacs = vague.assignations.map((a) => ({
+      id: a.bac.id,
+      nom: a.bac.nom,
+      volume: a.bac.volume,
+      nombrePoissons: a.nombreActuel,
+      nombreInitial: a.nombreInitial,
+      poidsMoyenInitial: a.poidsMoyenInitial,
+    }));
+
+    if (mappedBacs.length > 0) {
+      const allBacsCast = mappedBacs as unknown as Parameters<typeof buildEvaluationContext>[5];
       // Per-bac contexts
-      for (const bac of vague.bacs) {
+      for (const bac of mappedBacs) {
         contextes.push(
           buildEvaluationContext(vagueCtx, relevesCast, stockCast, configCast, bac, allBacsCast)
         );

@@ -44,6 +44,22 @@ interface VagueOption {
   code: string;
 }
 
+interface UniteOption {
+  id: string;
+  code: string;
+  nom: string;
+  type: "REPRODUCTION" | "GROSSISSEMENT";
+}
+
+interface LotAlevinsOption {
+  id: string;
+  code: string;
+  nombreActuel: number;
+  poidsMoyen: number | null;
+  phase: string;
+  ponteCode: string;
+}
+
 interface PrefillData {
   lotAlevinsId: string;
   lotCode?: string;
@@ -78,9 +94,17 @@ interface VagueSource {
   loading: boolean;
 }
 
+/** Ligne alevin pour vente reproduction */
+interface AlevinsLigne {
+  lotAlevinsId: string;
+  nombrePoissons: string;
+}
+
 interface Props {
   clients: ClientOption[];
   vagues: VagueOption[];
+  unites: UniteOption[];
+  lotsAlevins: LotAlevinsOption[];
   prefill?: PrefillData;
 }
 
@@ -117,12 +141,17 @@ function todayIso(): string {
 // Component
 // ---------------------------------------------------------------------------
 
-export function VenteFormClient({ clients, vagues, prefill }: Props) {
+export function VenteFormClient({ clients, vagues, unites, lotsAlevins, prefill }: Props) {
   const t = useTranslations("ventes");
   const tSections = useTranslations("errors.sections");
   const router = useRouter();
   const queryClient = useQueryClient();
   const venteService = useVenteService();
+
+  // --- Unite de production (step 0) ---
+  const [uniteProductionId, setUniteProductionId] = useState("");
+  const selectedUnite = unites.find((u) => u.id === uniteProductionId);
+  const isReproduction = selectedUnite?.type === "REPRODUCTION";
 
   // --- Card 1: Client & Price ---
   const [clientId, setClientId] = useState(prefill?.clientId ?? "");
@@ -130,18 +159,31 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
   const [dateCommande, setDateCommande] = useState(todayIso);
   const [notes, setNotes] = useState("");
 
-  // --- Card 2: Fish sources (dynamic, repeatable) ---
+  // --- Card 2a: Fish sources for GROSSISSEMENT (dynamic, repeatable) ---
   const [sources, setSources] = useState<VagueSource[]>([
     { vagueId: "", bacs: [], loading: false },
   ]);
 
-  // --- Computed totals ---
+  // --- Card 2b: Alevin lots for REPRODUCTION ---
+  const [alevinsLignes, setAlevinsLignes] = useState<AlevinsLigne[]>([
+    { lotAlevinsId: "", nombrePoissons: "" },
+  ]);
+
+  // --- Computed totals (GROSSISSEMENT) ---
   const totalWeight = sources.reduce(
     (s, src) => s + computeSourceWeight(src),
     0
   );
   const totalFish = sources.reduce((s, src) => s + computeSourceFish(src), 0);
-  const totalAmount = totalWeight * (parseFloat(prixUnitaireKg) || 0);
+  const totalAmount = isReproduction
+    ? alevinsLignes.reduce((s, l) => s + (parseInt(l.nombrePoissons, 10) || 0), 0) * (parseFloat(prixUnitaireKg) || 0)
+    : totalWeight * (parseFloat(prixUnitaireKg) || 0);
+
+  // --- Computed totals (REPRODUCTION) ---
+  const totalAlevins = alevinsLignes.reduce(
+    (s, l) => s + (parseInt(l.nombrePoissons, 10) || 0),
+    0
+  );
 
   // ---------------------------------------------------------------------------
   // Source management
@@ -272,10 +314,18 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
     )
   );
 
-  const isValid =
-    clientId !== "" &&
-    parseFloat(prixUnitaireKg) > 0 &&
-    hasAtLeastOneSelectedBac;
+  const hasAtLeastOneAlevinsLigne = alevinsLignes.some(
+    (l) => l.lotAlevinsId !== "" && parseInt(l.nombrePoissons, 10) > 0
+  );
+
+  const isValid = isReproduction
+    ? clientId !== "" &&
+      parseFloat(prixUnitaireKg) > 0 &&
+      uniteProductionId !== "" &&
+      hasAtLeastOneAlevinsLigne
+    : clientId !== "" &&
+      parseFloat(prixUnitaireKg) > 0 &&
+      hasAtLeastOneSelectedBac;
 
   // ---------------------------------------------------------------------------
   // Submit
@@ -285,35 +335,65 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
     e.preventDefault();
     if (!isValid) return;
 
-    const lignes = sources.flatMap((source) =>
-      source.bacs
-        .filter((b) => b.selected && parseFloat(b.poidsTotalKg) > 0)
-        .map((b) => ({
-          vagueId: source.vagueId,
-          bacId: b.bacId,
-          poidsTotalKg: parseFloat(b.poidsTotalKg),
-          // Only send poidsMoyenG if user manually entered it (not auto-filled)
-          ...(!b.poidsMoyenAutoFilled && parseFloat(b.poidsMoyenG) > 0
-            ? { poidsMoyenG: parseFloat(b.poidsMoyenG) }
-            : {}),
-        }))
-    );
+    if (isReproduction) {
+      // Reproduction: vente d'alevins
+      const lignes = alevinsLignes
+        .filter((l) => l.lotAlevinsId !== "" && parseInt(l.nombrePoissons, 10) > 0)
+        .map((l) => ({
+          lotAlevinsId: l.lotAlevinsId,
+          nombrePoissons: parseInt(l.nombrePoissons, 10),
+        }));
 
-    if (lignes.length === 0) return;
+      if (lignes.length === 0) return;
 
-    const result = await venteService.createVente({
-      clientId,
-      prixUnitaireKg: parseFloat(prixUnitaireKg),
-      lignes,
-      ...(notes.trim() && { notes: notes.trim() }),
-      ...(dateCommande && { dateCommande }),
-    });
+      const result = await venteService.createVenteRaw({
+        typeVente: "alevins",
+        clientId,
+        prixUnitaire: parseFloat(prixUnitaireKg),
+        uniteProductionId,
+        lignes,
+        ...(notes.trim() && { notes: notes.trim() }),
+        ...(dateCommande && { dateCommande }),
+      });
 
-    if (result.ok) {
-      queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.clients.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
-      router.push("/ventes");
+      if (result.ok) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.clients.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+        router.push("/ventes");
+      }
+    } else {
+      // Grossissement: vente classique
+      const lignes = sources.flatMap((source) =>
+        source.bacs
+          .filter((b) => b.selected && parseFloat(b.poidsTotalKg) > 0)
+          .map((b) => ({
+            vagueId: source.vagueId,
+            bacId: b.bacId,
+            poidsTotalKg: parseFloat(b.poidsTotalKg),
+            ...(!b.poidsMoyenAutoFilled && parseFloat(b.poidsMoyenG) > 0
+              ? { poidsMoyenG: parseFloat(b.poidsMoyenG) }
+              : {}),
+          }))
+      );
+
+      if (lignes.length === 0) return;
+
+      const result = await venteService.createVente({
+        clientId,
+        prixUnitaireKg: parseFloat(prixUnitaireKg),
+        uniteProductionId: uniteProductionId || undefined,
+        lignes,
+        ...(notes.trim() && { notes: notes.trim() }),
+        ...(dateCommande && { dateCommande }),
+      });
+
+      if (result.ok) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.ventes.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.clients.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+        router.push("/ventes");
+      }
     }
   }
 
@@ -354,6 +434,32 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
 
+          {/* Section 0: Unite de production selector */}
+          {unites.length > 0 && (
+            <section className="flex flex-col gap-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+                {t("ventes.form.uniteProduction")}
+              </p>
+              <Select value={uniteProductionId} onValueChange={(val) => {
+                setUniteProductionId(val);
+                // Reset sources when switching unit type
+                setSources([{ vagueId: "", bacs: [], loading: false }]);
+                setAlevinsLignes([{ lotAlevinsId: "", nombrePoissons: "" }]);
+              }}>
+                <SelectTrigger label={t("ventes.form.uniteProduction")} required>
+                  <SelectValue placeholder={t("ventes.form.uniteProductionPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {unites.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.nom} ({u.type === "REPRODUCTION" ? t("ventes.form.typeReproduction") : t("ventes.form.typeGrossissement")})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </section>
+          )}
+
           {/* Section 1: Client & Price — flat, no card */}
           <section className="flex flex-col gap-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-primary">
@@ -374,10 +480,10 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
             </Select>
 
             <Input
-              label={t("ventes.form.prixUnitaireKg")}
+              label={isReproduction ? t("ventes.form.prixUnitaireAlevin") : t("ventes.form.prixUnitaireKg")}
               type="number"
               min="1"
-              placeholder={t("ventes.form.prixUnitaireKgPlaceholder")}
+              placeholder={isReproduction ? t("ventes.form.prixUnitaireAlevinPlaceholder") : t("ventes.form.prixUnitaireKgPlaceholder")}
               required
               value={prixUnitaireKg}
               onChange={(e) => setPrixUnitaireKg(e.target.value)}
@@ -391,43 +497,149 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
             />
           </section>
 
-          {/* Section 2: Fish Sources — flat, no card */}
-          <section className="flex flex-col gap-5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-              {t("ventes.form.sources")}
-            </p>
+          {/* Section 2a: Fish Sources for GROSSISSEMENT */}
+          {!isReproduction && (
+            <section className="flex flex-col gap-5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+                {t("ventes.form.sources")}
+              </p>
 
-            {sources.map((source, sourceIndex) => (
-              <SourceBlock
-                key={sourceIndex}
-                source={source}
-                sourceIndex={sourceIndex}
-                vagues={vagues}
-                selectedVagueIds={selectedVagueIds}
-                canRemove={sources.length > 1}
-                onVagueSelect={(vagueId) => handleVagueSelect(sourceIndex, vagueId)}
-                onToggleBac={(bacId) => toggleBac(sourceIndex, bacId)}
-                onUpdateBacField={(bacId, field, value) =>
-                  updateBacField(sourceIndex, bacId, field, value)
+              {sources.map((source, sourceIndex) => (
+                <SourceBlock
+                  key={sourceIndex}
+                  source={source}
+                  sourceIndex={sourceIndex}
+                  vagues={vagues}
+                  selectedVagueIds={selectedVagueIds}
+                  canRemove={sources.length > 1}
+                  onVagueSelect={(vagueId) => handleVagueSelect(sourceIndex, vagueId)}
+                  onToggleBac={(bacId) => toggleBac(sourceIndex, bacId)}
+                  onUpdateBacField={(bacId, field, value) =>
+                    updateBacField(sourceIndex, bacId, field, value)
+                  }
+                  onRemove={() => removeSource(sourceIndex)}
+                  t={t}
+                />
+              ))}
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={addSource}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                {t("ventes.form.addSource")}
+              </Button>
+            </section>
+          )}
+
+          {/* Section 2b: Alevin lots for REPRODUCTION */}
+          {isReproduction && (
+            <section className="flex flex-col gap-5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+                {t("ventes.form.sourcesAlevins")}
+              </p>
+
+              {alevinsLignes.map((ligne, idx) => {
+                const selectedLotIds = alevinsLignes.filter((_, i) => i !== idx).map((l) => l.lotAlevinsId);
+                const availableLots = lotsAlevins.filter(
+                  (l) => l.id === ligne.lotAlevinsId || !selectedLotIds.includes(l.id)
+                );
+                const selectedLot = lotsAlevins.find((l) => l.id === ligne.lotAlevinsId);
+
+                return (
+                  <div key={idx} className="flex flex-col gap-3 rounded-lg bg-muted/30 p-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-primary/70 tracking-wide">
+                        {t("ventes.form.lotLabel")} #{idx + 1}
+                      </p>
+                      {alevinsLignes.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-destructive hover:text-destructive"
+                          onClick={() => setAlevinsLignes((prev) => prev.filter((_, i) => i !== idx))}
+                          aria-label={t("ventes.form.removeSource")}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-1" />
+                          {t("ventes.form.removeSource")}
+                        </Button>
+                      )}
+                    </div>
+
+                    <Select
+                      value={ligne.lotAlevinsId}
+                      onValueChange={(val) =>
+                        setAlevinsLignes((prev) =>
+                          prev.map((l, i) => (i === idx ? { ...l, lotAlevinsId: val } : l))
+                        )
+                      }
+                    >
+                      <SelectTrigger label={t("ventes.form.lotAlevins")} required>
+                        <SelectValue placeholder={t("ventes.form.lotAlevinsPlaceholder")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableLots.map((l) => (
+                          <SelectItem key={l.id} value={l.id}>
+                            {l.code} — {l.nombreActuel} alevins ({l.phase})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {selectedLot && (
+                      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                        <span>{t("ventes.form.lotDisponible", { count: selectedLot.nombreActuel })}</span>
+                        {selectedLot.poidsMoyen && (
+                          <span>· {selectedLot.poidsMoyen}g {t("ventes.form.avgWeight")}</span>
+                        )}
+                        <span>· {t("ventes.form.lotPonte")}: {selectedLot.ponteCode}</span>
+                      </div>
+                    )}
+
+                    <Input
+                      label={t("ventes.form.nombreAlevins")}
+                      type="number"
+                      min="1"
+                      max={selectedLot?.nombreActuel}
+                      placeholder={t("ventes.form.nombreAlevinsPlaceholder")}
+                      required
+                      value={ligne.nombrePoissons}
+                      onChange={(e) =>
+                        setAlevinsLignes((prev) =>
+                          prev.map((l, i) => (i === idx ? { ...l, nombrePoissons: e.target.value } : l))
+                        )
+                      }
+                    />
+
+                    {selectedLot && parseInt(ligne.nombrePoissons, 10) > selectedLot.nombreActuel && (
+                      <p className="text-xs text-destructive flex items-center gap-1">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        {t("ventes.form.stockInsuffisant")}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() =>
+                  setAlevinsLignes((prev) => [...prev, { lotAlevinsId: "", nombrePoissons: "" }])
                 }
-                onRemove={() => removeSource(sourceIndex)}
-                t={t}
-              />
-            ))}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                {t("ventes.form.addLotAlevins")}
+              </Button>
+            </section>
+          )}
 
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={addSource}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              {t("ventes.form.addSource")}
-            </Button>
-          </section>
-
-          {/* Summary — lightweight bg, no card */}
-          {totalWeight > 0 && (
+          {/* Summary — GROSSISSEMENT */}
+          {!isReproduction && totalWeight > 0 && (
             <section className="rounded-lg bg-muted/40 px-4 py-3 flex flex-col gap-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">{t("ventes.form.totalWeight")}</span>
@@ -468,6 +680,22 @@ export function VenteFormClient({ clients, vagues, prefill }: Props) {
                         </p>
                       );
                     })}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* Summary — REPRODUCTION */}
+          {isReproduction && totalAlevins > 0 && (
+            <section className="rounded-lg bg-muted/40 px-4 py-3 flex flex-col gap-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{t("ventes.form.totalAlevins")}</span>
+                <span className="font-medium">{formatNumber(totalAlevins)}</span>
+              </div>
+              {totalAmount > 0 && (
+                <div className="flex justify-between items-baseline text-sm border-t border-muted pt-2 mt-1">
+                  <span className="font-semibold">{t("ventes.form.totalAmount")}</span>
+                  <span className="text-2xl font-bold">{formatNumber(totalAmount)} FCFA</span>
                 </div>
               )}
             </section>

@@ -182,20 +182,19 @@ export async function getIndicateursBac(
         poidsMoyenInitial: true,
         dateDebut: true,
         dateFin: true,
+        // ADR-043 Phase 3: compter les assignations actives
         _count: {
           select: {
-            bacs: true,
-            // ADR-043 Phase 2: compter aussi les assignations
-            assignations: { where: { vagueId } },
+            assignations: { where: { dateFin: null } },
           },
         },
       },
     }),
     prisma.bac.findFirst({
       where: { id: bacId, siteId },
-      select: { id: true, nom: true, volume: true, nombreInitial: true },
+      select: { id: true, nom: true, volume: true },
     }),
-    // ADR-043 Phase 2: lire nombreInitial depuis AssignationBac
+    // ADR-043 Phase 3: lire nombreInitial depuis AssignationBac
     prisma.assignationBac.findFirst({
       where: { bacId, vagueId, siteId },
       orderBy: { dateAssignation: "asc" },
@@ -219,16 +218,14 @@ export async function getIndicateursBac(
     },
   });
 
-  // ADR-043 Phase 2: préférer AssignationBac.nombreInitial si disponible
+  // ADR-043 Phase 3: préférer AssignationBac.nombreInitial si disponible
   const bacWithBestNombreInitial = {
     ...bac,
-    nombreInitial: assignation?.nombreInitial ?? bac.nombreInitial,
+    nombreInitial: assignation?.nombreInitial ?? null,
   };
 
-  // ADR-043 Phase 2: utiliser le nombre d'assignations si _count.bacs est insuffisant
-  const totalBacs = vague._count.bacs > 0
-    ? vague._count.bacs
-    : (vague._count as { assignations?: number }).assignations ?? 1;
+  // ADR-043 Phase 3: utiliser le nombre d'assignations actives
+  const totalBacs = vague._count.assignations || 1;
 
   return computeIndicateursBac(
     bacWithBestNombreInitial,
@@ -261,15 +258,28 @@ export async function getComparaisonBacs(
       poidsMoyenInitial: true,
       dateDebut: true,
       dateFin: true,
-      bacs: {
-        select: { id: true, nom: true, volume: true, nombreInitial: true },
+      // ADR-043 Phase 3: lire les bacs depuis assignations actives
+      assignations: {
+        where: { dateFin: null },
+        select: {
+          nombreInitial: true,
+          bac: { select: { id: true, nom: true, volume: true } },
+        },
       },
     },
   });
 
   if (!vague) return null;
 
-  const totalBacs = vague.bacs.length || 1;
+  // ADR-043 Phase 3: build bacs list from active assignations
+  const bacsFromAssignations = vague.assignations.map((a) => ({
+    id: a.bac.id,
+    nom: a.bac.nom,
+    volume: a.bac.volume,
+    nombreInitial: a.nombreInitial,
+  }));
+
+  const totalBacs = bacsFromAssignations.length || 1;
 
   // Fetch all releves for this vague in one query
   const allReleves = await prisma.releve.findMany({
@@ -297,7 +307,7 @@ export async function getComparaisonBacs(
   }
 
   // Compute indicators for each bac
-  const bacs: IndicateursBac[] = vague.bacs.map((bac) => {
+  const bacs: IndicateursBac[] = bacsFromAssignations.map((bac) => {
     const bacReleves = relevesByBac.get(bac.id) ?? [];
     return computeIndicateursBac(
       bac,
@@ -313,7 +323,7 @@ export async function getComparaisonBacs(
 
   // Generate alerts (pass nombreInitialBac per-bac for local mortality rate computation)
   const alertes: AlerteBac[] = bacs.flatMap((b) => {
-    const bacData = vague.bacs.find((vb) => vb.id === b.bacId);
+    const bacData = bacsFromAssignations.find((vb) => vb.id === b.bacId);
     const initBac = bacData?.nombreInitial ?? Math.round(vague.nombreInitial / totalBacs);
     return genererAlertes(b, initBac);
   });
@@ -338,7 +348,7 @@ export async function getHistoriqueBac(
 ): Promise<HistoriqueBac | null> {
   const bac = await prisma.bac.findFirst({
     where: { id: bacId, siteId },
-    select: { id: true, nom: true, volume: true, nombreInitial: true },
+    select: { id: true, nom: true, volume: true },
   });
 
   if (!bac) return null;
@@ -367,7 +377,8 @@ export async function getHistoriqueBac(
       poidsMoyenInitial: true,
       dateDebut: true,
       dateFin: true,
-      _count: { select: { bacs: true } },
+      // ADR-043 Phase 3: compter les assignations actives
+      _count: { select: { assignations: { where: { dateFin: null } } } },
     },
   });
 
@@ -398,14 +409,15 @@ export async function getHistoriqueBac(
   const cycles: HistoriqueBacCycle[] = vagues.map((vague) => {
     const vagueReleves = relevesByVague.get(vague.id) ?? [];
     const ind = computeIndicateursBac(
-      bac,
+      // ADR-043 Phase 3: nombreInitial is not on Bac anymore — use null (computeIndicateursBac falls back to uniform distribution)
+      { ...bac, nombreInitial: null },
       vague.id,
       vague.nombreInitial,
       vague.poidsMoyenInitial,
       vague.dateDebut,
       vague.dateFin,
       vagueReleves,
-      vague._count.bacs || 1
+      vague._count.assignations || 1
     );
     return {
       vagueId: vague.id,
@@ -517,7 +529,14 @@ async function computeAlimentMetrics(
           poidsMoyenInitial: true,
           dateDebut: true,
           dateFin: true,
-          bacs: { select: { id: true, nombreInitial: true } },
+          // ADR-043 Phase 3: lire les bacs depuis assignations actives
+          assignations: {
+            where: { dateFin: null },
+            select: {
+              nombreInitial: true,
+              bac: { select: { id: true } },
+            },
+          },
         },
       })
     : [];
@@ -582,8 +601,10 @@ async function computeAlimentMetrics(
     const derniereBio = biometries.at(-1);
     const poidsMoyen = derniereBio?.poidsMoyen ?? null;
 
-    const nombreVivants = computeNombreVivantsVague(vague.bacs, releves, vague.nombreInitial);
-    const nombreVivantsForSurvie = computeNombreVivantsVague(vague.bacs, releves, vague.nombreInitial, { excludeVentes: true });
+    // ADR-043 Phase 3: build bacs list from active assignations
+    const bacsVague = vague.assignations.map((a) => ({ id: a.bac.id, nombreInitial: a.nombreInitial }));
+    const nombreVivants = computeNombreVivantsVague(bacsVague, releves, vague.nombreInitial);
+    const nombreVivantsForSurvie = computeNombreVivantsVague(bacsVague, releves, vague.nombreInitial, { excludeVentes: true });
 
     const now = vague.dateFin ?? new Date();
     const jours = Math.max(
@@ -1054,8 +1075,14 @@ export async function getAnalyticsDashboard(siteId: string): Promise<AnalyticsDa
       poidsMoyenInitial: true,
       dateDebut: true,
       dateFin: true,
-      bacs: { select: { id: true, nom: true, volume: true, nombreInitial: true } },
-      _count: { select: { bacs: true } },
+      // ADR-043 Phase 3: lire les bacs depuis assignations actives
+      assignations: {
+        where: { dateFin: null },
+        select: {
+          nombreInitial: true,
+          bac: { select: { id: true, nom: true, volume: true } },
+        },
+      },
     },
   });
 
@@ -1094,9 +1121,16 @@ export async function getAnalyticsDashboard(siteId: string): Promise<AnalyticsDa
     let meilleurDensite = Infinity;
 
     for (const vague of vaguesActives) {
-      const totalBacs = vague._count.bacs || 1;
+      // ADR-043 Phase 3: build bacs list from active assignations
+      const bacsFromAssignations = vague.assignations.map((a) => ({
+        id: a.bac.id,
+        nom: a.bac.nom,
+        volume: a.bac.volume,
+        nombreInitial: a.nombreInitial,
+      }));
+      const totalBacs = bacsFromAssignations.length || 1;
 
-      for (const bac of vague.bacs) {
+      for (const bac of bacsFromAssignations) {
         const key: ReleveKey = `${vague.id}:${bac.id}`;
         const bacReleves = relevesByVagueBac.get(key) ?? [];
 
@@ -1285,7 +1319,14 @@ export async function getComparaisonVagues(
         dateFin: true,
         nombreInitial: true,
         poidsMoyenInitial: true,
-        bacs: { select: { id: true, nombreInitial: true } },
+        // ADR-043 Phase 3: lire les bacs depuis assignations actives
+        assignations: {
+          where: { dateFin: null },
+          select: {
+            nombreInitial: true,
+            bac: { select: { id: true } },
+          },
+        },
       },
       orderBy: { dateDebut: "asc" },
     }),
@@ -1334,6 +1375,9 @@ export async function getComparaisonVagues(
 
   // Calculer les indicateurs pour chaque vague
   const result: IndicateursVagueComparaison[] = vagues.map((vague) => {
+    // ADR-043 Phase 3: build bacs list from active assignations
+    const bacsVague = vague.assignations.map((a) => ({ id: a.bac.id, nombreInitial: a.nombreInitial }));
+
     const releves = relevesByVague.get(vague.id) ?? [];
     const now = vague.dateFin ?? new Date();
     const dureeJours = Math.max(
@@ -1352,8 +1396,8 @@ export async function getComparaisonVagues(
     const poidsMoyenFinal = derniereBio?.poidsMoyen ?? null;
     const poidsMoyenDebut = premiereBio?.poidsMoyen ?? vague.poidsMoyenInitial;
 
-    const nombreVivants = computeNombreVivantsVague(vague.bacs, releves, vague.nombreInitial);
-    const nombreVivantsForSurvie = computeNombreVivantsVague(vague.bacs, releves, vague.nombreInitial, { excludeVentes: true });
+    const nombreVivants = computeNombreVivantsVague(bacsVague, releves, vague.nombreInitial);
+    const nombreVivantsForSurvie = computeNombreVivantsVague(bacsVague, releves, vague.nombreInitial, { excludeVentes: true });
 
     // BUG 1 fix: hybrid aliment sum — prioritise quantiteAliment (direct entry) if non-null,
     // otherwise fall back to sum of ReleveConsommation (stock-linked). Never add both.
@@ -1424,7 +1468,7 @@ export async function getComparaisonVagues(
       revenuVentes,
       margeBrute: margeBrute !== null ? Math.round(margeBrute) : null,
       roi: roi !== null ? Math.round(roi * 100) / 100 : null,
-      nombreBacs: vague.bacs.length,
+      nombreBacs: bacsVague.length,
     };
   });
 
@@ -1457,7 +1501,7 @@ export async function getComparaisonVagues(
  * @returns Liste des alertes ration actives
  */
 export async function getAlertesRation(siteId: string): Promise<AlerteRation[]> {
-  // 1. Recuperer les vagues actives avec leur ConfigElevage et bacs
+  // 1. Recuperer les vagues actives avec leur ConfigElevage et assignations (ADR-043 Phase 3)
   const vagues = await prisma.vague.findMany({
     where: { siteId, statut: StatutVague.EN_COURS },
     select: {
@@ -1466,7 +1510,14 @@ export async function getAlertesRation(siteId: string): Promise<AlerteRation[]> 
       nombreInitial: true,
       poidsMoyenInitial: true,
       configElevage: true,
-      bacs: { select: { id: true, nombreInitial: true } },
+      // ADR-043 Phase 3: lire les bacs depuis assignations actives
+      assignations: {
+        where: { dateFin: null },
+        select: {
+          nombreInitial: true,
+          bac: { select: { id: true } },
+        },
+      },
     },
   });
 
@@ -1521,12 +1572,14 @@ export async function getAlertesRation(siteId: string): Promise<AlerteRation[]> 
     if (alimentationReleves.length < 3) continue;
 
     // 3. Calculer le nombre de vivants pour estimer la biomasse
+    // ADR-043 Phase 3: build bacs list from active assignations
+    const bacsVague = vague.assignations.map((a) => ({ id: a.bac.id, nombreInitial: a.nombreInitial }));
     const relevesPourVivants = [
       ...mortaliteReleves,
       ...comptageReleves,
     ];
     const nombreVivants = computeNombreVivantsVague(
-      vague.bacs,
+      bacsVague,
       relevesPourVivants,
       vague.nombreInitial
     );
@@ -1788,7 +1841,7 @@ export async function getFCRHebdomadaire(
   // Filter out null vagueIds — consommations from lot d'alevins releves don't have vagueId (R3-S5)
   const vagueIds = [...new Set(consommations.map((c) => c.releve.vagueId).filter((id): id is string => id !== null))];
 
-  // 4. Charger les vagues avec leurs bacs
+  // 4. Charger les vagues avec leurs assignations (ADR-043 Phase 3)
   const vagues = await prisma.vague.findMany({
     where: { id: { in: vagueIds }, siteId },
     select: {
@@ -1797,7 +1850,14 @@ export async function getFCRHebdomadaire(
       poidsMoyenInitial: true,
       dateDebut: true,
       dateFin: true,
-      bacs: { select: { id: true, nombreInitial: true } },
+      // ADR-043 Phase 3: lire les bacs depuis assignations actives
+      assignations: {
+        where: { dateFin: null },
+        select: {
+          nombreInitial: true,
+          bac: { select: { id: true } },
+        },
+      },
     },
   });
   const vagueMap = new Map(vagues.map((v) => [v.id, v]));
@@ -1885,9 +1945,11 @@ export async function getFCRHebdomadaire(
     const { debut, fin } = getISOWeekBounds(semaine);
 
     // Nombre de vivants pour le gain de biomasse
+    // ADR-043 Phase 3: build bacs list from active assignations
+    const bacsVague = vague.assignations.map((a) => ({ id: a.bac.id, nombreInitial: a.nombreInitial }));
     const vivantsReleves = vivantsByVague.get(vid) ?? [];
     const nombreVivants = computeNombreVivantsVague(
-      vague.bacs,
+      bacsVague,
       vivantsReleves,
       vague.nombreInitial
     );

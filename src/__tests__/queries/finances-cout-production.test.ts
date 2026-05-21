@@ -14,7 +14,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getCoutProductionVague } from "@/lib/queries/finances";
-import { CategorieDepense, FrequenceRecurrence } from "@/types";
+import { CategorieDepense } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Mocks Prisma
@@ -26,6 +26,9 @@ const mockDepenseFindMany = vi.fn();
 const mockDepenseRecurrenteFindMany = vi.fn();
 const mockVagueFindMany = vi.fn();
 const mockVenteFindMany = vi.fn();
+// ADR-043 Phase 3: nouvelles dépendances de getCoutProductionVague
+const mockAssignationBacFindMany = vi.fn();
+const mockReleveFindMany = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -45,6 +48,13 @@ vi.mock("@/lib/db", () => ({
     },
     vente: {
       findMany: (...args: unknown[]) => mockVenteFindMany(...args),
+    },
+    // ADR-043 Phase 3: getCoutProductionVague lit les bacs depuis AssignationBac
+    assignationBac: {
+      findMany: (...args: unknown[]) => mockAssignationBacFindMany(...args),
+    },
+    releve: {
+      findMany: (...args: unknown[]) => mockReleveFindMany(...args),
     },
   },
 }));
@@ -68,14 +78,18 @@ const vagueBase = {
 
 /**
  * Réinitialise tous les mocks avec des retours vides (cas nominal sans données).
+ * ADR-043 Phase 3: ajouter assignationBac et releve dans les mocks vides.
  */
 function mockAllEmpty() {
   mockReleveConsommationFindMany.mockResolvedValue([]);
-  // depense.findMany est appelé 2 fois : depenses directes + multi-vague
+  // depense.findMany est appelé 3 fois : directes + multi-vague + récurrentes générées
   mockDepenseFindMany.mockResolvedValue([]);
   mockDepenseRecurrenteFindMany.mockResolvedValue([]);
   mockVagueFindMany.mockResolvedValue([vagueBase]);
   mockVenteFindMany.mockResolvedValue([]);
+  // ADR-043 Phase 3: bacs via AssignationBac + releves pour biomasse
+  mockAssignationBacFindMany.mockResolvedValue([]);
+  mockReleveFindMany.mockResolvedValue([]);
 }
 
 // ---------------------------------------------------------------------------
@@ -302,116 +316,143 @@ describe("getCoutProductionVague — dépenses récurrentes prorata", () => {
     mockAllEmpty();
   });
 
-  it("alloue ~50% d'une dépense mensuelle si 2 vagues actives le même mois", async () => {
-    // Vague cible : 2026-01-01 → 2026-01-31
-    // Vague concurrente : 2026-01-01 → 2026-01-31 (exactement la même durée)
-    // → chaque vague a 50% des jours → ratio = 0.5
-    // Dépense récurrente : électricité 100 000 CFA/mois
-    // → montant imputé à notre vague = 50 000 CFA
+  it("alloue ~50% d'une dépense payée si 2 vagues actives le même mois avec même poids", async () => {
+    // ADR-043: getCoutProductionVague lit les Depense générées (depenseRecurrenteId != null)
+    // avec montantPaye, et alloue proportionnellement via jours × nombreInitial des vagues.
+    // Vague cible : 2026-01-01 → 2026-01-31, nombreInitial = 1000
+    // Vague concurrente : 2026-01-01 → 2026-01-31, nombreInitial = 1000 (même poids)
+    // → ratio = 0.5 → 50% du montant payé (100 000) = 50 000 CFA
 
     const vagueConcurrente = {
       id: "vague-concurrent-001",
+      code: "V-CONCURRENT",
       dateDebut: new Date("2026-01-01"),
       dateFin: new Date("2026-01-31"),
+      nombreInitial: 1000,
     };
 
-    // toutesVaguesSite inclut les 2 vagues
-    mockVagueFindMany.mockResolvedValue([vagueBase, vagueConcurrente]);
+    mockVagueFindMany.mockResolvedValue([{ ...vagueBase, code: "V-2026-001" }, vagueConcurrente]);
 
-    mockDepenseRecurrenteFindMany.mockResolvedValue([
-      {
-        description: "Électricité",
-        categorieDepense: CategorieDepense.ELECTRICITE,
-        montantEstime: 100000,
-        frequence: FrequenceRecurrence.MENSUEL,
-        createdAt: new Date("2025-12-01"),
-        derniereGeneration: new Date("2026-01-31"),
-        isActive: true,
-      },
-    ]);
+    // depense.findMany appelé 3 fois dans Promise.all :
+    // 1ère (directes), 2ème (multi-vague), 3ème (récurrentes générées avec montantPaye)
+    mockDepenseFindMany
+      .mockResolvedValueOnce([]) // directes
+      .mockResolvedValueOnce([]) // multi-vague
+      .mockResolvedValueOnce([   // récurrentes générées
+        {
+          date: new Date("2026-01-31"),
+          montantPaye: 100000,
+          depenseRecurrente: {
+            id: "template-elec-001",
+            description: "Électricité",
+            categorieDepense: CategorieDepense.ELECTRICITE,
+          },
+        },
+      ]);
 
     const result = await getCoutProductionVague(VAGUE_ID, SITE_ID);
 
     expect(result.depensesRecurrentes).toHaveLength(1);
     const dr = result.depensesRecurrentes[0];
     expect(dr.description).toBe("Électricité");
-    expect(dr.coutMensuel).toBe(100000);
-    expect(dr.moisImputes).toBe(1);
-    // Ratio moyen ~0.5 (50%)
+    expect(dr.montantPayeTotal).toBe(100000);
+    expect(dr.moisCouverts).toBe(1);
+    // Ratio moyen ~0.5 (50%) — 2 vagues avec même poids
     expect(dr.ratioMoyen).toBeCloseTo(0.5, 2);
     // Montant imputé ~50 000 CFA
-    expect(dr.montantImpute).toBeCloseTo(50000, -2); // tolérance 100 CFA
+    expect(dr.montantImpute).toBeCloseTo(50000, -2);
     expect(result.formule.coutRecurrents).toBeCloseTo(50000, -2);
   });
 
   it("alloue 100% si la vague cible est la seule active ce mois", async () => {
-    // Une seule vague → ratio = 1.0 → 100% de la dépense
-    mockVagueFindMany.mockResolvedValue([vagueBase]);
+    // Une seule vague → ratio = 1.0 → 100% du montant payé
+    mockVagueFindMany.mockResolvedValue([{ ...vagueBase, code: "V-2026-001" }]);
 
-    mockDepenseRecurrenteFindMany.mockResolvedValue([
-      {
-        description: "Loyer pompe",
-        categorieDepense: CategorieDepense.LOYER,
-        montantEstime: 30000,
-        frequence: FrequenceRecurrence.MENSUEL,
-        createdAt: new Date("2025-12-01"),
-        derniereGeneration: new Date("2026-01-31"),
-        isActive: true,
-      },
-    ]);
+    mockDepenseFindMany
+      .mockResolvedValueOnce([]) // directes
+      .mockResolvedValueOnce([]) // multi-vague
+      .mockResolvedValueOnce([   // récurrentes générées
+        {
+          date: new Date("2026-01-15"),
+          montantPaye: 30000,
+          depenseRecurrente: {
+            id: "template-loyer-001",
+            description: "Loyer pompe",
+            categorieDepense: CategorieDepense.LOYER,
+          },
+        },
+      ]);
 
     const result = await getCoutProductionVague(VAGUE_ID, SITE_ID);
 
+    expect(result.depensesRecurrentes).toHaveLength(1);
     const dr = result.depensesRecurrentes[0];
     expect(dr.ratioMoyen).toBeCloseTo(1.0, 2);
-    expect(dr.montantImpute).toBe(30000);
-  });
-
-  it("convertit correctement TRIMESTRIEL en cout mensuel (÷3)", async () => {
-    mockVagueFindMany.mockResolvedValue([vagueBase]);
-
-    mockDepenseRecurrenteFindMany.mockResolvedValue([
-      {
-        description: "Maintenance trimestrielle",
-        categorieDepense: CategorieDepense.REPARATION,
-        montantEstime: 90000,
-        frequence: FrequenceRecurrence.TRIMESTRIEL,
-        createdAt: new Date("2025-12-01"),
-        derniereGeneration: new Date("2026-01-31"),
-        isActive: true,
-      },
-    ]);
-
-    const result = await getCoutProductionVague(VAGUE_ID, SITE_ID);
-
-    const dr = result.depensesRecurrentes[0];
-    // 90000 / 3 = 30000 CFA/mois
-    expect(dr.coutMensuel).toBeCloseTo(30000, 2);
-    // 1 mois × ratio 1.0 × 30000 = 30000
     expect(dr.montantImpute).toBeCloseTo(30000, -2);
   });
 
-  it("convertit correctement ANNUEL en cout mensuel (÷12)", async () => {
-    mockVagueFindMany.mockResolvedValue([vagueBase]);
+  it("cumule plusieurs paiements récurrents du même template sur un mois", async () => {
+    // 2 paiements du même template en janvier : 15000 + 15000 = 30000
+    // Seule vague → ratio 1.0 → montant imputé total = 30000
+    mockVagueFindMany.mockResolvedValue([{ ...vagueBase, code: "V-2026-001" }]);
 
-    mockDepenseRecurrenteFindMany.mockResolvedValue([
-      {
-        description: "Assurance annuelle",
-        categorieDepense: CategorieDepense.AUTRE,
-        montantEstime: 120000,
-        frequence: FrequenceRecurrence.ANNUEL,
-        createdAt: new Date("2025-12-01"),
-        derniereGeneration: new Date("2026-01-31"),
-        isActive: true,
-      },
-    ]);
+    mockDepenseFindMany
+      .mockResolvedValueOnce([]) // directes
+      .mockResolvedValueOnce([]) // multi-vague
+      .mockResolvedValueOnce([   // récurrentes générées (2 paiements)
+        {
+          date: new Date("2026-01-15"),
+          montantPaye: 15000,
+          depenseRecurrente: {
+            id: "template-rep-001",
+            description: "Maintenance",
+            categorieDepense: CategorieDepense.REPARATION,
+          },
+        },
+        {
+          date: new Date("2026-01-28"),
+          montantPaye: 15000,
+          depenseRecurrente: {
+            id: "template-rep-001",
+            description: "Maintenance",
+            categorieDepense: CategorieDepense.REPARATION,
+          },
+        },
+      ]);
 
     const result = await getCoutProductionVague(VAGUE_ID, SITE_ID);
 
+    expect(result.depensesRecurrentes).toHaveLength(1);
     const dr = result.depensesRecurrentes[0];
-    // 120000 / 12 = 10000 CFA/mois
-    expect(dr.coutMensuel).toBeCloseTo(10000, 2);
-    expect(dr.montantImpute).toBeCloseTo(10000, -2);
+    // Les 2 paiements sont cumulés dans le même mois (montantPayeTotal = 30000)
+    expect(dr.montantPayeTotal).toBeCloseTo(30000, -2);
+    expect(dr.montantImpute).toBeCloseTo(30000, -2);
+  });
+
+  it("ignore les paiements récurrents avec montantPaye = 0", async () => {
+    // montantPaye = 0 → ignoré dans le calcul
+    mockVagueFindMany.mockResolvedValue([{ ...vagueBase, code: "V-2026-001" }]);
+
+    mockDepenseFindMany
+      .mockResolvedValueOnce([]) // directes
+      .mockResolvedValueOnce([]) // multi-vague
+      .mockResolvedValueOnce([   // récurrente générée mais non payée
+        {
+          date: new Date("2026-01-15"),
+          montantPaye: 0,
+          depenseRecurrente: {
+            id: "template-001",
+            description: "Dépense nulle",
+            categorieDepense: CategorieDepense.AUTRE,
+          },
+        },
+      ]);
+
+    const result = await getCoutProductionVague(VAGUE_ID, SITE_ID);
+
+    // Les paiements à 0 sont ignorés
+    expect(result.depensesRecurrentes).toHaveLength(0);
+    expect(result.formule.coutRecurrents).toBe(0);
   });
 });
 
@@ -664,9 +705,9 @@ describe("getCoutProductionVague — formule d'agrégation", () => {
       },
     ]);
 
-    // Dépenses directes : 3 000 VETERINAIRE + multi 2 000
+    // depense.findMany est appelé 3 fois (directes, multi-vague, récurrentes générées)
     mockDepenseFindMany
-      .mockResolvedValueOnce([
+      .mockResolvedValueOnce([  // 1ère: directes
         {
           date: new Date("2026-01-15"),
           categorieDepense: CategorieDepense.VETERINAIRE,
@@ -674,7 +715,7 @@ describe("getCoutProductionVague — formule d'agrégation", () => {
           montantTotal: 3000,
         },
       ])
-      .mockResolvedValueOnce([
+      .mockResolvedValueOnce([  // 2ème: multi-vague
         {
           description: "Achat partagé",
           montantTotal: 4000,
@@ -682,21 +723,20 @@ describe("getCoutProductionVague — formule d'agrégation", () => {
             vagues: [{ vagueId: VAGUE_ID, ratio: 0.5 }],
           },
         },
+      ])
+      .mockResolvedValueOnce([  // 3ème: récurrentes générées (ADR-043)
+        {
+          date: new Date("2026-01-15"),
+          montantPaye: 1000,
+          depenseRecurrente: {
+            id: "template-eau-001",
+            description: "Eau",
+            categorieDepense: CategorieDepense.EAU,
+          },
+        },
       ]);
 
-    // Récurrent : 1 000 CFA/mois, ratio 1.0 (seule vague)
-    mockDepenseRecurrenteFindMany.mockResolvedValue([
-      {
-        description: "Eau",
-        categorieDepense: CategorieDepense.EAU,
-        montantEstime: 1000,
-        frequence: FrequenceRecurrence.MENSUEL,
-        createdAt: new Date("2025-12-01"),
-        derniereGeneration: new Date("2026-01-31"),
-        isActive: true,
-      },
-    ]);
-    mockVagueFindMany.mockResolvedValue([vagueBase]);
+    mockVagueFindMany.mockResolvedValue([{ ...vagueBase, code: "V-2026-001" }]);
 
     const result = await getCoutProductionVague(VAGUE_ID, SITE_ID);
 

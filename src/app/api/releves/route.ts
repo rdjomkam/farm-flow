@@ -396,15 +396,14 @@ async function triggerSeuilRulesAsync(
   const vague = await prisma.vague.findFirst({
     where: { id: vagueId, siteId, statut: StatutVague.EN_COURS },
     include: {
-      bacs: {
-        where: { vagueId: { not: null } },
+      // ADR-043 Phase 3: lire les données de production depuis AssignationBac
+      assignations: {
+        where: { dateFin: null },
         select: {
-          id: true,
-          nom: true,
-          volume: true,
-          nombrePoissons: true,
+          nombreActuel: true,
           nombreInitial: true,
           poidsMoyenInitial: true,
+          bac: { select: { id: true, nom: true, volume: true } },
         },
       },
       releves: {
@@ -498,9 +497,19 @@ async function triggerSeuilRulesAsync(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const configCast = (vague.configElevage ?? null) as any;
 
-  if (vague.bacs && vague.bacs.length > 0) {
-    const allBacsCast = vague.bacs as Parameters<typeof buildEvaluationContext>[5];
-    for (const bac of vague.bacs) {
+  // ADR-043 Phase 3: construire les bacs depuis les assignations actives
+  const vagueBacs = vague.assignations.map((a) => ({
+    id: a.bac.id,
+    nom: a.bac.nom,
+    volume: a.bac.volume,
+    nombrePoissons: a.nombreActuel ?? 0,
+    nombreInitial: a.nombreInitial ?? 0,
+    poidsMoyenInitial: a.poidsMoyenInitial ?? 0,
+  }));
+
+  if (vagueBacs.length > 0) {
+    const allBacsCast = vagueBacs as Parameters<typeof buildEvaluationContext>[5];
+    for (const bac of vagueBacs) {
       contexts.push(buildEvaluationContext(vagueCtx, relevesCast, stockCast, configCast, bac, allBacsCast));
     }
     // Vague-level for STOCK_BAS

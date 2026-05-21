@@ -29,7 +29,7 @@ export async function GET(
       poidsMoyenInitial: bac.poidsMoyenInitial,
       typeSysteme: bac.typeSysteme ?? null,
       vagueId: bac.vagueId,
-      vagueCode: bac.vague?.code ?? null,
+      vagueCode: bac.vagueCode ?? null,
       siteId: bac.siteId,
       createdAt: bac.createdAt,
       updatedAt: bac.updatedAt,
@@ -63,24 +63,6 @@ export async function PUT(
       }
     }
 
-    if (body.nombrePoissons !== undefined) {
-      if (typeof body.nombrePoissons !== "number" || !Number.isInteger(body.nombrePoissons) || body.nombrePoissons < 0) {
-        errors.push({ field: "nombrePoissons", message: "Le nombre de poissons doit etre un entier >= 0." });
-      }
-    }
-
-    if (body.nombreInitial !== undefined) {
-      if (typeof body.nombreInitial !== "number" || !Number.isInteger(body.nombreInitial) || body.nombreInitial < 0) {
-        errors.push({ field: "nombreInitial", message: "Le nombre initial doit etre un entier >= 0." });
-      }
-    }
-
-    if (body.poidsMoyenInitial !== undefined) {
-      if (typeof body.poidsMoyenInitial !== "number" || body.poidsMoyenInitial <= 0) {
-        errors.push({ field: "poidsMoyenInitial", message: "Le poids moyen initial doit etre superieur a 0." });
-      }
-    }
-
     if (body.typeSysteme !== undefined && body.typeSysteme !== null) {
       if (!Object.values(TypeSystemeBac).includes(body.typeSysteme as TypeSystemeBac)) {
         errors.push({
@@ -94,12 +76,10 @@ export async function PUT(
       return apiError(400, "Erreurs de validation", { errors });
     }
 
+    // ADR-043 Phase 3: Bac PATCH ne gère que les champs physiques du bac
     const data: UpdateBacDTO = {};
     if (body.nom !== undefined) data.nom = body.nom.trim();
     if (body.volume !== undefined) data.volume = body.volume;
-    if (body.nombrePoissons !== undefined) data.nombrePoissons = body.nombrePoissons;
-    if (body.nombreInitial !== undefined) data.nombreInitial = body.nombreInitial;
-    if (body.poidsMoyenInitial !== undefined) data.poidsMoyenInitial = body.poidsMoyenInitial;
     if (body.typeSysteme !== undefined) data.typeSysteme = body.typeSysteme ?? null;
 
     if (Object.keys(data).length === 0) {

@@ -25,7 +25,7 @@ import { prisma } from "@/lib/db";
 import { computeVivantsByBac } from "@/lib/calculs";
 import { genererCourbeGompertz, calibrerGompertz, isCachedGompertzValid, mergeLockedCurve, buildDisplayCurve, type LockedCurve } from "@/lib/gompertz";
 import { StatutVague, TypeReleve, CategorieProduit, Permission } from "@/types";
-import type { Bac, Releve, EvolutionPoidsPoint, IndicateursVague as IndicateursType, CalibrageWithRelations, AssignationBacForVague } from "@/types";
+import type { Bac, BacResponse, Releve, EvolutionPoidsPoint, IndicateursVague as IndicateursType, CalibrageWithRelations, AssignationBacForVague } from "@/types";
 import type { ProduitOption } from "@/components/releves/consommation-fields";
 
 const statutVariants: Record<StatutVague, "en_cours" | "terminee" | "annulee"> = {
@@ -351,7 +351,7 @@ export default async function VagueDetailPage({
               permissions={permissions}
               isEnCours={isEnCours}
               canExport={permissions.includes(Permission.EXPORT_DONNEES)}
-              currentBacs={vague.bacs as Bac[]}
+              currentBacs={vague.bacs as unknown as BacResponse[]}
               className="ml-auto"
             />
           )}

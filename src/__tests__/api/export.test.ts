@@ -82,6 +82,18 @@ vi.mock("@/lib/queries/finances", () => ({
   getRentabiliteParVague: (...args: unknown[]) => mockGetRentabiliteParVague(...args),
   getEvolutionFinanciere: (...args: unknown[]) => mockGetEvolutionFinanciere(...args),
   getTopClients: (...args: unknown[]) => mockGetTopClients(...args),
+  // Mock des fonctions ajoutées après Sprint 9
+  getCoutsParMoisParType: vi.fn().mockResolvedValue([]),
+  getCoutsDetailParMois: vi.fn().mockResolvedValue({ moisList: [], lignesParMois: {} }),
+  getCoutProductionVague: vi.fn().mockResolvedValue({
+    resume: {
+      coutTotal: 0,
+      coutParKg: 0,
+      prixMoyenVenteKg: 0,
+      margeParKg: 0,
+      roi: 0,
+    },
+  }),
 }));
 
 const mockGetReleves = vi.fn();
@@ -115,6 +127,25 @@ vi.mock("@/lib/db", () => ({
     },
     mouvementStock: {
       findMany: (...args: unknown[]) => mockPrismaMouvementFindMany(...args),
+    },
+    // ADR-043 Phase 3: additional prisma models used by export/vague/[id]/route
+    calibrage: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
+    assignationBac: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
+    gompertzVague: {
+      findFirst: vi.fn().mockResolvedValue(null),
+    },
+    vague: {
+      findUnique: vi.fn().mockResolvedValue(null),
+    },
+    configElevage: {
+      findUnique: vi.fn().mockResolvedValue(null),
+    },
+    vente: {
+      findMany: vi.fn().mockResolvedValue([]),
     },
   },
 }));
@@ -231,9 +262,11 @@ const FAKE_VAGUE = {
   nombreInitial: 500,
   poidsMoyenInitial: 50,
   origineAlevins: "Interne",
+  // ADR-043 Phase 3: bacs is reconstructed from assignations by getVagueById
+  // Field nombrePoissons removed; nombreInitial is the initial count per bac
   bacs: [
-    { id: "bac-1", nom: "Bac A", volume: 5000, nombrePoissons: 250 },
-    { id: "bac-2", nom: "Bac B", volume: 5000, nombrePoissons: 250 },
+    { id: "bac-1", nom: "Bac A", volume: 5000, nombreInitial: 250 },
+    { id: "bac-2", nom: "Bac B", volume: 5000, nombreInitial: 250 },
   ],
   releves: [
     {
@@ -269,11 +302,18 @@ const FAKE_RESUME_FINANCIER = {
   coutsTotaux: 200000,
   margeBrute: 300000,
   tauxMarge: 60,
+  // Champs additionnels requis par le rapport financier PDF
+  encaissements: 400000,
+  creances: 100000,
+  coutsDetail: {},
+  depensesTotales: 50000,
+  depensesPayees: 40000,
+  depensesImpayees: 10000,
 };
 
 const FAKE_RENTABILITE = {
   vagues: [
-    { code: "V-2026-001", poidsTotalVendu: 300, revenus: 300000 },
+    { code: "V-2026-001", poidsTotalVendu: 300, revenus: 300000, nombreVentes: 2 },
   ],
 };
 
@@ -287,8 +327,8 @@ const FAKE_EVOLUTION = {
 
 const FAKE_TOP_CLIENTS = {
   clients: [
-    { nom: "Client Alpha", totalVentes: 300000, nombreVentes: 3 },
-    { nom: "Client Beta", totalVentes: 200000, nombreVentes: 2 },
+    { nom: "Client Alpha", totalVentes: 300000, totalPaye: 300000, nombreVentes: 3 },
+    { nom: "Client Beta", totalVentes: 200000, totalPaye: 150000, nombreVentes: 2 },
   ],
 };
 
@@ -458,6 +498,8 @@ describe("GET /api/export/vague/[id]", () => {
     mockPrismaFindUnique.mockResolvedValue(FAKE_SITE);
     // ADR-038 : la route charge les releves separement via prisma.releve.findMany
     mockPrismaReleveFindMany.mockResolvedValue(FAKE_VAGUE.releves);
+    // La route export vague charge aussi les mouvements stock
+    mockPrismaMouvementFindMany.mockResolvedValue([]);
     const mod = await import("@/app/api/export/vague/[id]/route");
     GET = mod.GET;
   });
