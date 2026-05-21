@@ -167,6 +167,7 @@ function verifierTransition(
 const INCLUDE_LISTE_BESOINS = {
   demandeur: { select: { id: true, name: true } },
   valideur: { select: { id: true, name: true } },
+  uniteProduction: { select: { id: true, code: true, nom: true, type: true } },
   vagues: {
     select: {
       id: true,
@@ -347,6 +348,7 @@ export async function createListeBesoins(
         montantEstime,
         notes: data.notes ?? null,
         dateLimite: data.dateLimite ? new Date(data.dateLimite) : null,
+        uniteProductionId: data.uniteProductionId ?? null,
         siteId,
       },
     });
@@ -448,6 +450,10 @@ export async function updateListeBesoins(
         // dateLimite : null = supprimer, string = mettre a jour, undefined = inchange (ADR-017.2)
         ...(data.dateLimite !== undefined && {
           dateLimite: data.dateLimite ? new Date(data.dateLimite) : null,
+        }),
+        // uniteProductionId : null = dissocier, string = mettre a jour, undefined = inchange
+        ...(data.uniteProductionId !== undefined && {
+          uniteProductionId: data.uniteProductionId ?? null,
         }),
         montantEstime,
       },

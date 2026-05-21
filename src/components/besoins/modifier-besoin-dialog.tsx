@@ -53,11 +53,19 @@ interface LigneBesoinData {
   commande: { id: string; numero: string; statut: string } | null;
 }
 
+interface UniteProductionOption {
+  id: string;
+  code: string;
+  nom: string;
+  type: string;
+}
+
 interface ListeBesoinsEditData {
   id: string;
   titre: string;
   notes: string | null;
   dateLimite: string | null;
+  uniteProductionId?: string | null;
   /** Vagues associees avec ratios (multi-vague) */
   vagues?: { id: string; vagueId: string; ratio: number; vague?: { id: string; code: string } | null }[];
   lignes: LigneBesoinData[];
@@ -134,9 +142,11 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
   const [produits, setProduits] = useState<ProduitOption[]>([]);
   const [produitsLoading, setProduitsLoading] = useState(false);
   const [vagues, setVaguesOptions] = useState<VagueOption[]>([]);
+  const [unites, setUnites] = useState<UniteProductionOption[]>([]);
 
   // Form state — initialise depuis la liste courante
   const [titre, setTitre] = useState(liste.titre);
+  const [uniteProductionId, setUniteProductionId] = useState(liste.uniteProductionId ?? "");
   const [notes, setNotes] = useState(liste.notes ?? "");
   const [dateLimite, setDateLimite] = useState(
     liste.dateLimite ? new Date(liste.dateLimite).toISOString().split("T")[0] : ""
@@ -150,6 +160,9 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
     liste.lignes.length > 0 ? liste.lignes.map(toLigneForm) : [emptyLigne()]
   );
   const [validationError, setValidationError] = useState("");
+
+  const selectedUnite = unites.find((u) => u.id === uniteProductionId);
+  const isReproduction = selectedUnite?.type === "REPRODUCTION";
 
   const montantEstime = lignes.reduce((acc, l) => {
     const q = parseFloat(l.quantite) || 0;
@@ -190,6 +203,7 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
     if (isOpen) {
       // Re-initialiser les valeurs quand on rouvre le dialog
       setTitre(liste.titre);
+      setUniteProductionId(liste.uniteProductionId ?? "");
       setNotes(liste.notes ?? "");
       setDateLimite(
         liste.dateLimite ? new Date(liste.dateLimite).toISOString().split("T")[0] : ""
@@ -201,12 +215,13 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
       );
       setLignes(liste.lignes.length > 0 ? liste.lignes.map(toLigneForm) : [emptyLigne()]);
       setValidationError("");
-      // Charger les produits et les vagues si pas encore charges
+      // Charger les produits, vagues et unites si pas encore charges
       if (produits.length === 0) {
         setProduitsLoading(true);
-        const [produitsResult, vaguesResult] = await Promise.all([
+        const [produitsResult, vaguesResult, unitesResult] = await Promise.all([
           stockService.listProduits(),
           fetch("/api/vagues?limit=200").then((r) => r.json()).catch(() => null),
+          fetch("/api/unites-production?limit=200").then((r) => r.json()).catch(() => null),
         ]);
         if (produitsResult.ok && produitsResult.data) {
           setProduits(produitsResult.data.data as ProduitOption[]);
@@ -216,6 +231,16 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
             (vaguesResult.data as Array<{ id: string; code: string }>).map((v) => ({
               id: v.id,
               code: v.code,
+            }))
+          );
+        }
+        if (unitesResult?.data) {
+          setUnites(
+            (unitesResult.data as Array<{ id: string; code: string; nom: string; type: string }>).map((u) => ({
+              id: u.id,
+              code: u.code,
+              nom: u.nom,
+              type: u.type,
             }))
           );
         }
@@ -260,7 +285,8 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
 
     const result = await depenseService.updateBesoin(liste.id, {
       titre: titre.trim(),
-      vagues: vaguesRatios.length > 0 ? vaguesRatios : [],
+      uniteProductionId: uniteProductionId || null,
+      vagues: !isReproduction && vaguesRatios.length > 0 ? vaguesRatios : [],
       notes: notes.trim() || null,
       dateLimite: dateLimite || null,
       lignes: lignes.map((l) => ({
@@ -329,14 +355,42 @@ export function ModifierBesoinDialog({ liste, onSuccess }: Props) {
             )}
           </div>
 
-          {/* Vagues associees */}
+          {/* Unite de production */}
           <div>
-            <VagueRatioEditor
-              vagues={vagues}
-              value={vaguesRatios}
-              onChange={setVaguesRatios}
-            />
+            <label className="text-sm font-medium">
+              {t("modifierDialog.uniteProduction")}
+            </label>
+            <Select value={uniteProductionId || "none"} onValueChange={(val) => {
+              const newId = val === "none" ? "" : val;
+              setUniteProductionId(newId);
+              // Reset vague ratios when switching to reproduction
+              const unite = unites.find((u) => u.id === newId);
+              if (unite?.type === "REPRODUCTION") setVaguesRatios([]);
+            }}>
+              <SelectTrigger className="mt-1 w-full">
+                <SelectValue placeholder={t("modifierDialog.uniteProductionPlaceholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{t("modifierDialog.uniteProductionAucune")}</SelectItem>
+                {unites.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.nom} ({u.type === "REPRODUCTION" ? t("modifierDialog.typeReproduction") : t("modifierDialog.typeGrossissement")})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
+          {/* Vagues associees — only for GROSSISSEMENT */}
+          {!isReproduction && (
+            <div>
+              <VagueRatioEditor
+                vagues={vagues}
+                value={vaguesRatios}
+                onChange={setVaguesRatios}
+              />
+            </div>
+          )}
 
           {/* Notes */}
           <div>

@@ -20,8 +20,8 @@ export default async function NouvelleListeBesoinsPage() {
 
   const t = await getTranslations("besoins.page");
 
-  // Charger les vagues actives et produits pour les selects
-  const [vagues, produits] = await Promise.all([
+  // Charger les vagues actives, produits et unités de production pour les selects
+  const [vagues, produits, unites] = await Promise.all([
     prisma.vague.findMany({
       where: { siteId: session.activeSiteId, statut: "EN_COURS" },
       select: { id: true, code: true },
@@ -32,6 +32,11 @@ export default async function NouvelleListeBesoinsPage() {
       select: { id: true, nom: true, unite: true, prixUnitaire: true },
       orderBy: { nom: "asc" },
     }),
+    prisma.uniteProduction.findMany({
+      where: { siteId: session.activeSiteId, isActive: true },
+      select: { id: true, code: true, nom: true, type: true },
+      orderBy: { nom: "asc" },
+    }),
   ]);
 
   return (
@@ -40,6 +45,7 @@ export default async function NouvelleListeBesoinsPage() {
       <BesoinsFormClient
         vagues={JSON.parse(JSON.stringify(vagues))}
         produits={JSON.parse(JSON.stringify(produits))}
+        unites={JSON.parse(JSON.stringify(unites))}
       />
     </>
   );

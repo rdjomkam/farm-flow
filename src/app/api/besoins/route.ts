@@ -210,6 +210,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Validation uniteProductionId (optionnel)
+    let uniteProductionId: string | undefined;
+    if (body.uniteProductionId != null && body.uniteProductionId !== "") {
+      if (typeof body.uniteProductionId !== "string") {
+        errors.push({ field: "uniteProductionId", message: "L'identifiant de l'unite de production doit etre une chaine." });
+      } else {
+        // Verify it belongs to the site
+        const { prisma: db } = await import("@/lib/db");
+        const unite = await db.uniteProduction.findFirst({
+          where: { id: body.uniteProductionId, siteId: auth.activeSiteId },
+          select: { id: true },
+        });
+        if (!unite) {
+          errors.push({ field: "uniteProductionId", message: "Unite de production introuvable ou non accessible." });
+        } else {
+          uniteProductionId = body.uniteProductionId;
+        }
+      }
+    }
+
     if (errors.length > 0) {
       return apiError(400, "Erreurs de validation", { errors });
     }
@@ -228,6 +248,7 @@ export async function POST(request: NextRequest) {
       titre: body.titre.trim(),
       vagues: vagues && vagues.length > 0 ? vagues : undefined,
       notes: body.notes?.trim() || undefined,
+      uniteProductionId: uniteProductionId,
       lignes: body.lignes.map((l: {
         designation: string;
         produitId?: string;

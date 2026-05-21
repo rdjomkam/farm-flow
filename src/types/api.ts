@@ -1747,6 +1747,8 @@ export interface CreateListeBesoinsDTO {
   notes?: string;
   /** Date limite de traitement (ISO 8601, optionnelle, doit etre dans le futur) */
   dateLimite?: string;
+  /** Unité de production rattachée (GROSSISSEMENT ou REPRODUCTION) */
+  uniteProductionId?: string;
 }
 
 /** DTO pour modifier une liste de besoins (seulement si SOUMISE) */
@@ -1763,6 +1765,8 @@ export interface UpdateListeBesoinsDTO {
   lignes?: CreateLigneBesoinDTO[];
   /** Modifier la date limite (null = supprimer) */
   dateLimite?: string | null;
+  /** Unité de production (null = dissocier) */
+  uniteProductionId?: string | null;
 }
 
 /** Filtres pour lister les listes de besoins */

@@ -65,8 +65,13 @@
       "auMoinsUneLigne": "La liste doit contenir au moins une ligne.",
       "designationRequise": "La designation de la ligne {index} est obligatoire.",
       "quantitePositive": "La quantite de la ligne {index} doit etre un nombre positif.",
-      "prixPositif": "Le prix estime de la ligne {index} doit etre un nombre positif ou zero."
-    }
+      "prixPositif": "Le prix estime de la ligne {index} doit etre un nombre positif ou zero.",
+      "uniteProductionRequise": "L'unité de production est obligatoire."
+    },
+    "uniteProduction": "Unité de production",
+    "uniteProductionPlaceholder": "Sélectionner une unité",
+    "typeGrossissement": "Grossissement",
+    "typeReproduction": "Reproduction"
   },
   "modifierDialog": {
     "trigger": "Modifier",
@@ -101,7 +106,12 @@
       "designationRequise": "La designation de la ligne {index} est obligatoire.",
       "quantitePositive": "La quantite de la ligne {index} doit etre positive.",
       "prixPositif": "Le prix de la ligne {index} doit etre positif ou zero."
-    }
+    },
+    "uniteProduction": "Unité de production",
+    "uniteProductionPlaceholder": "Sélectionner une unité",
+    "uniteProductionAucune": "-- Aucune unité --",
+    "typeGrossissement": "Grossissement",
+    "typeReproduction": "Reproduction"
   },
   "vagueEditor": {
     "titre": "Vagues associees",

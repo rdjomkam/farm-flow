@@ -38,6 +38,13 @@ interface ProduitOption {
   prixUnitaire: number;
 }
 
+interface UniteProductionOption {
+  id: string;
+  code: string;
+  nom: string;
+  type: string;
+}
+
 interface LigneForm {
   id: string; // local only
   designation: string;
@@ -50,6 +57,7 @@ interface LigneForm {
 interface Props {
   vagues: VagueOption[];
   produits: ProduitOption[];
+  unites: UniteProductionOption[];
 }
 
 // ---------------------------------------------------------------------------
@@ -82,7 +90,7 @@ function emptyLigne(): LigneForm {
 // Component
 // ---------------------------------------------------------------------------
 
-export function BesoinsFormClient({ vagues, produits }: Props) {
+export function BesoinsFormClient({ vagues, produits, unites }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const depenseService = useDepenseService();
@@ -91,11 +99,15 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
   const locale = useLocale();
 
   const [titre, setTitre] = useState("");
+  const [uniteProductionId, setUniteProductionId] = useState("");
   const [vaguesRatios, setVaguesRatios] = useState<VagueRatioItem[]>([]);
   const [notes, setNotes] = useState("");
   const [dateLimite, setDateLimite] = useState("");
   const [lignes, setLignes] = useState<LigneForm[]>([emptyLigne()]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  const selectedUnite = unites.find((u) => u.id === uniteProductionId);
+  const isReproduction = selectedUnite?.type === "REPRODUCTION";
 
   // Calculated montantEstime
   const montantEstime = lignes.reduce((acc, l) => {
@@ -140,6 +152,10 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
       errors.push(t("form.erreurs.titreRequis"));
     }
 
+    if (!uniteProductionId) {
+      errors.push(t("form.erreurs.uniteProductionRequise"));
+    }
+
     if (lignes.length === 0) {
       errors.push(t("form.erreurs.auMoinsUneLigne"));
     }
@@ -166,7 +182,8 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
 
     const result = await depenseService.createBesoin({
       titre: titre.trim(),
-      vagues: vaguesRatios.length > 0 ? vaguesRatios : undefined,
+      uniteProductionId: uniteProductionId || undefined,
+      vagues: !isReproduction && vaguesRatios.length > 0 ? vaguesRatios : undefined,
       notes: notes.trim() || undefined,
       dateLimite: dateLimite || undefined,
       lignes: lignes.map((l) => ({
@@ -212,12 +229,37 @@ export function BesoinsFormClient({ vagues, produits }: Props) {
           </div>
 
           <div>
-            <VagueRatioEditor
-              vagues={vagues}
-              value={vaguesRatios}
-              onChange={setVaguesRatios}
-            />
+            <label className="text-sm font-medium">
+              {t("form.uniteProduction")} <span className="text-destructive">*</span>
+            </label>
+            <Select value={uniteProductionId} onValueChange={(val) => {
+              setUniteProductionId(val === "none" ? "" : val);
+              // Reset vague ratios when switching to reproduction
+              const unite = unites.find((u) => u.id === val);
+              if (unite?.type === "REPRODUCTION") setVaguesRatios([]);
+            }}>
+              <SelectTrigger className="mt-1 w-full">
+                <SelectValue placeholder={t("form.uniteProductionPlaceholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                {unites.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.nom} ({u.type === "REPRODUCTION" ? t("form.typeReproduction") : t("form.typeGrossissement")})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
+          {!isReproduction && (
+            <div>
+              <VagueRatioEditor
+                vagues={vagues}
+                value={vaguesRatios}
+                onChange={setVaguesRatios}
+              />
+            </div>
+          )}
 
           <div>
             <label className="text-sm font-medium">{t("form.notes")}</label>

@@ -65,8 +65,13 @@
       "auMoinsUneLigne": "The list must contain at least one line.",
       "designationRequise": "Designation for line {index} is required.",
       "quantitePositive": "Quantity for line {index} must be a positive number.",
-      "prixPositif": "Estimated price for line {index} must be a positive number or zero."
-    }
+      "prixPositif": "Estimated price for line {index} must be a positive number or zero.",
+      "uniteProductionRequise": "The production unit is required."
+    },
+    "uniteProduction": "Production unit",
+    "uniteProductionPlaceholder": "Select a unit",
+    "typeGrossissement": "Grow-out",
+    "typeReproduction": "Reproduction"
   },
   "modifierDialog": {
     "trigger": "Edit",
@@ -101,7 +106,12 @@
       "designationRequise": "Designation for line {index} is required.",
       "quantitePositive": "Quantity for line {index} must be positive.",
       "prixPositif": "Price for line {index} must be positive or zero."
-    }
+    },
+    "uniteProduction": "Production unit",
+    "uniteProductionPlaceholder": "Select a unit",
+    "uniteProductionAucune": "-- No unit --",
+    "typeGrossissement": "Grow-out",
+    "typeReproduction": "Reproduction"
   },
   "vagueEditor": {
     "titre": "Associated batches",
